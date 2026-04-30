@@ -1,0 +1,125 @@
+export interface Tenant {
+  tenantId: string;
+  name: string;
+  email: string;
+  plan: "free" | "pro" | "enterprise";
+  status: "active" | "suspended" | "pending";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Bot {
+  botId: string;
+  tenantId: string;
+  name: string;
+  systemPrompt: string;
+  model: "gpt-4o" | "gpt-4o-mini" | "gpt-4-turbo";
+  temperature: number;
+  maxTokens: number;
+  phoneNumberId: string;
+  whatsappBusinessAccountId: string;
+  status: "active" | "inactive";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Conversation {
+  conversationId: string;
+  tenantId: string;
+  botId: string;
+  phoneNumber: string;
+  contactName?: string;
+  status: "active" | "closed";
+  messageCount: number;
+  lastMessageAt: string;
+  createdAt: string;
+}
+
+export interface Message {
+  messageId: string;
+  conversationId: string;
+  tenantId: string;
+  role: "user" | "assistant";
+  content: string;
+  whatsappMessageId?: string;
+  timestamp: string;
+}
+
+export interface DynamoDBItem {
+  PK: string;
+  SK: string;
+  GSI1PK?: string;
+  GSI1SK?: string;
+  ttl?: number;
+  [key: string]: unknown;
+}
+
+export interface WhatsAppWebhookEvent {
+  object: string;
+  entry: WhatsAppEntry[];
+}
+
+export interface WhatsAppEntry {
+  id: string;
+  changes: WhatsAppChange[];
+}
+
+export interface WhatsAppChange {
+  value: WhatsAppValue;
+  field: string;
+}
+
+export interface WhatsAppValue {
+  messaging_product: string;
+  metadata: {
+    display_phone_number: string;
+    phone_number_id: string;
+  };
+  contacts?: WhatsAppContact[];
+  messages?: WhatsAppMessage[];
+  statuses?: WhatsAppStatus[];
+}
+
+export interface WhatsAppContact {
+  profile: { name: string };
+  wa_id: string;
+}
+
+export interface WhatsAppMessage {
+  from: string;
+  id: string;
+  timestamp: string;
+  type: "text" | "image" | "audio" | "video" | "document" | "location" | "interactive";
+  text?: { body: string };
+  image?: { id: string; mime_type: string; caption?: string };
+  audio?: { id: string; mime_type: string };
+}
+
+export interface WhatsAppStatus {
+  id: string;
+  status: "sent" | "delivered" | "read" | "failed";
+  timestamp: string;
+  recipient_id: string;
+}
+
+export interface SQSMessageBody {
+  tenantId: string;
+  botId: string;
+  conversationId: string;
+  phoneNumberId: string;
+  message: WhatsAppMessage;
+  contact: WhatsAppContact;
+}
+
+export interface ApiResponse<T = unknown> {
+  statusCode: number;
+  body: string;
+  headers: Record<string, string>;
+}
+
+export interface AuthContext {
+  tenantId: string;
+  userId: string;
+  email: string;
+  role: "admin" | "member";
+}

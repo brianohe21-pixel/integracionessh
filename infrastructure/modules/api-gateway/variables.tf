@@ -1,0 +1,57 @@
+variable "project" {
+  type = string
+}
+
+variable "environment" {
+  type = string
+}
+
+variable "cognito_client_id" {
+  type = string
+}
+
+variable "cognito_issuer_url" {
+  type = string
+}
+
+variable "webhook_invoke_arn" {
+  type = string
+}
+
+variable "webhook_function_arn" {
+  type = string
+}
+
+variable "tenants_invoke_arn" {
+  type = string
+}
+
+variable "tenants_function_arn" {
+  type = string
+}
+
+variable "bots_invoke_arn" {
+  type = string
+}
+
+variable "bots_function_arn" {
+  type = string
+}
+
+variable "conversations_invoke_arn" {
+  type = string
+}
+
+variable "conversations_function_arn" {
+  type = string
+}
+
+variable "allowed_origins" {
+  type    = list(string)
+  default = ["*"]
+}
+
+variable "tags" {
+  type    = map(string)
+  default = {}
+}

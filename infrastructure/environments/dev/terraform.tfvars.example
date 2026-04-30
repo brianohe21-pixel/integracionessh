@@ -1,0 +1,9 @@
+aws_region            = "us-east-1"
+repository_url        = "https://github.com/your-org/chatbot-platform"
+github_access_token   = "ghp_xxxxxxxxxxxx"
+whatsapp_verify_token = "your-random-verify-token"
+lambda_zip_path       = "../../backend/dist/functions.zip"
+
+extra_callback_urls   = []
+extra_logout_urls       = []
+extra_allowed_origins   = []
