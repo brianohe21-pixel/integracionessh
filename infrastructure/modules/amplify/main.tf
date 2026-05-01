@@ -23,8 +23,11 @@ resource "aws_amplify_app" "frontend" {
             build:
               commands:
                 - npm run build
+                - cp -r public .next/standalone/public
+                - mkdir -p .next/standalone/.next
+                - cp -r .next/static .next/standalone/.next/static
           artifacts:
-            baseDirectory: frontend/.next
+            baseDirectory: frontend/.next/standalone
             files:
               - '**/*'
           cache:
