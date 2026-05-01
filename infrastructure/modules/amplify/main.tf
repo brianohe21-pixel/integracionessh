@@ -23,14 +23,11 @@ resource "aws_amplify_app" "frontend" {
             build:
               commands:
                 - npm run build
-                - cp .next/required-server-files.json .next/standalone/required-server-files.json
-                - cp .next/*.nft.json .next/standalone/
-                - cp -r public .next/standalone/public
-                - mkdir -p .next/standalone/.next
-                - cp -r .next/server .next/standalone/.next/server
-                - cp -r .next/static .next/standalone/.next/static
+            build:
+              commands:
+                - npm run build
           artifacts:
-            baseDirectory: frontend/.next/standalone
+            baseDirectory: frontend/.next
             files:
               - '**/*'
           cache:
