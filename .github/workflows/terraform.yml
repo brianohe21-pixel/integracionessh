@@ -6,10 +6,12 @@ on:
     branches: [main, develop]
     paths:
       - "infrastructure/**"
+      - ".github/workflows/terraform.yml"
   pull_request:
     branches: [main, develop]
     paths:
       - "infrastructure/**"
+      - ".github/workflows/terraform.yml"
 
 permissions:
   contents: read
