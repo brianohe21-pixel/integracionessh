@@ -6,8 +6,10 @@ resource "aws_amplify_app" "frontend" {
   name       = "${var.project}-${var.environment}"
   repository = var.repository_url
 
-  access_token = var.github_access_token
-  platform     = "WEB_COMPUTE"
+  access_token           = var.github_access_token
+  iam_service_role_arn   = aws_iam_role.amplify_service.arn
+  compute_role_arn       = aws_iam_role.amplify_service.arn
+  platform               = "WEB_COMPUTE"
 
   build_spec = <<-EOT
     version: 1
