@@ -49,12 +49,11 @@ export async function getOrCreateConversation(
       TableName: TABLE_NAME,
       IndexName: "GSI1",
       KeyConditionExpression: "GSI1PK = :gsi1pk",
-      ExpressionAttributeValues: { ":gsi1pk": gsi1pk },
       FilterExpression: "#status = :status",
       ExpressionAttributeNames: { "#status": "status" },
-      ExpressionAttributeValues2: { ":status": "active" },
+      ExpressionAttributeValues: { ":gsi1pk": gsi1pk, ":status": "active" },
       Limit: 1,
-    } as Parameters<typeof docClient.send>[0]["input"] & { ExpressionAttributeValues2?: Record<string, unknown> })
+    })
   );
 
   if (existing.Items?.length) {
@@ -92,7 +91,7 @@ export async function getOrCreateConversation(
   return conversation;
 }
 
-export async function addMessage(message: Message): Promise<void> {
+export async function addMessage(message: Message, botId: string): Promise<void> {
   const now = message.timestamp;
 
   await docClient.send(
@@ -114,7 +113,7 @@ export async function addMessage(message: Message): Promise<void> {
           Update: {
             TableName: TABLE_NAME,
             Key: {
-              PK: `TENANT#${message.tenantId}#BOT#*`,
+              PK: `TENANT#${message.tenantId}#BOT#${botId}`,
               SK: `CONV#${message.conversationId}`,
             },
             UpdateExpression: "SET messageCount = messageCount + :inc, lastMessageAt = :now",

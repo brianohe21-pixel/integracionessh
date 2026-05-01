@@ -5,6 +5,7 @@ import { signUp, confirmSignUp } from "aws-amplify/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { COGNITO_PASSWORD_HINT, validateCognitoPassword } from "@/lib/passwordPolicy";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -19,6 +20,11 @@ export default function RegisterPage() {
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    const pwdErr = validateCognitoPassword(password);
+    if (pwdErr) {
+      setError(pwdErr);
+      return;
+    }
     setLoading(true);
 
     try {
@@ -146,10 +152,12 @@ export default function RegisterPage() {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            autoComplete="new-password"
             minLength={8}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            placeholder="Mínimo 8 caracteres"
+            placeholder="Contraseña segura"
           />
+          <p className="mt-1 text-xs text-gray-500">{COGNITO_PASSWORD_HINT}</p>
         </div>
 
         {error && (

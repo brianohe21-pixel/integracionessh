@@ -86,8 +86,8 @@ async function processRecord(record: SQSRecord): Promise<void> {
       timestamp: aiTimestamp,
     };
 
-    await addMessage(userMessage);
-    await addMessage(assistantMessage);
+    await addMessage(userMessage, botId);
+    await addMessage(assistantMessage, botId);
 
     await sendTextMessage({
       phoneNumberId,

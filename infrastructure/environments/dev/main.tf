@@ -90,7 +90,7 @@ module "lambda" {
   cognito_user_pool_id  = module.cognito.user_pool_id
   cognito_client_id     = module.cognito.client_id
   whatsapp_verify_token = var.whatsapp_verify_token
-  lambda_zip_path       = var.lambda_zip_path
+  lambda_zip_path       = var.lambda_zip_path != "" ? abspath("${path.module}/${var.lambda_zip_path}") : ""
   tags                  = local.tags
 }
 
