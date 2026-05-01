@@ -21,7 +21,7 @@ resource "aws_amplify_app" "frontend" {
                 - cd frontend && npm ci
             build:
               commands:
-                - cd frontend && npm run build
+                - npm run build
           artifacts:
             baseDirectory: frontend/.next
             files:
