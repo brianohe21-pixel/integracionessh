@@ -27,6 +27,7 @@ resource "aws_amplify_app" "frontend" {
                 - cp .next/*.nft.json .next/standalone/
                 - cp -r public .next/standalone/public
                 - mkdir -p .next/standalone/.next
+                - cp -r .next/server .next/standalone/.next/server
                 - cp -r .next/static .next/standalone/.next/static
           artifacts:
             baseDirectory: frontend/.next/standalone
