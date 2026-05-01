@@ -50,6 +50,26 @@ jobs:
       - name: Terraform Validate
         run: terraform validate
 
+      - name: Require Terraform secrets and variables
+        env:
+          GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+          WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
+          REPOSITORY_URL: ${{ vars.REPOSITORY_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_ACCESS_TOKEN}" ]; then
+            echo "::error::GH_ACCESS_TOKEN is missing or empty. Add it under Settings → Environments → dev → Secrets (classic PAT or fine-grained token with repo access for Amplify)."
+            exit 1
+          fi
+          if [ -z "${WHATSAPP_VERIFY_TOKEN}" ]; then
+            echo "::error::WHATSAPP_VERIFY_TOKEN is missing or empty. Add it under Settings → Environments → dev → Secrets."
+            exit 1
+          fi
+          if [ -z "${REPOSITORY_URL}" ]; then
+            echo "::error::REPOSITORY_URL is missing or empty. Add it under Settings → Secrets and variables → Actions → Variables (e.g. https://github.com/org/repo)."
+            exit 1
+          fi
+
       - name: Terraform Plan
         id: plan
         run: |
@@ -108,6 +128,26 @@ jobs:
 
       - name: Terraform Init
         run: terraform init
+
+      - name: Require Terraform secrets and variables
+        env:
+          GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+          WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
+          REPOSITORY_URL: ${{ vars.REPOSITORY_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_ACCESS_TOKEN}" ]; then
+            echo "::error::GH_ACCESS_TOKEN is missing or empty. Add it under Settings → Environments → prod → Secrets."
+            exit 1
+          fi
+          if [ -z "${WHATSAPP_VERIFY_TOKEN}" ]; then
+            echo "::error::WHATSAPP_VERIFY_TOKEN is missing or empty. Add it under Settings → Environments → prod → Secrets."
+            exit 1
+          fi
+          if [ -z "${REPOSITORY_URL}" ]; then
+            echo "::error::REPOSITORY_URL is missing or empty. Add it under Settings → Secrets and variables → Actions → Variables."
+            exit 1
+          fi
 
       - name: Terraform Plan
         run: |
