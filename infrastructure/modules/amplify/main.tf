@@ -11,25 +11,29 @@ resource "aws_amplify_app" "frontend" {
 
   build_spec = <<-EOT
     version: 1
-    frontend:
-      phases:
-        preBuild:
-          commands:
-            - cd frontend && npm ci
-        build:
-          commands:
-            - cd frontend && npm run build
-      artifacts:
-        baseDirectory: frontend/.next
-        files:
-          - '**/*'
-      cache:
-        paths:
-          - frontend/node_modules/**/*
-          - frontend/.next/cache/**/*
+    applications:
+      - appRoot: frontend
+        frontend:
+          buildPath: /
+          phases:
+            preBuild:
+              commands:
+                - cd frontend && npm ci
+            build:
+              commands:
+                - cd frontend && npm run build
+          artifacts:
+            baseDirectory: frontend/.next
+            files:
+              - '**/*'
+          cache:
+            paths:
+              - frontend/node_modules/**/*
+              - frontend/.next/cache/**/*
   EOT
 
   environment_variables = {
+    AMPLIFY_MONOREPO_APP_ROOT    = "frontend"
     NEXT_PUBLIC_API_URL          = local.api_public_url
     NEXT_PUBLIC_COGNITO_REGION   = var.aws_region
     NEXT_PUBLIC_USER_POOL_ID     = var.cognito_user_pool_id
