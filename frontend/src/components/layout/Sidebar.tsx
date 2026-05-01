@@ -10,7 +10,6 @@ import {
   MessageSquare,
   Settings,
   LogOut,
-  LayoutDashboard,
 } from "lucide-react";
 
 const navItems = [
