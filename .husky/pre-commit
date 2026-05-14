@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+set -e
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+pnpm --filter chatbot-platform-backend run type-check
+pnpm --filter chatbot-platform-backend run test
+pnpm --filter frontend run lint

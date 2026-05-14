@@ -11,7 +11,7 @@ import {
 import { useBots } from "@/hooks/useBots";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { formatDate, cn } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import type { WhatsAppTemplate, TemplateComponent } from "@/types";
 import {
   LayoutTemplate,

@@ -19,10 +19,12 @@ resource "aws_amplify_app" "frontend" {
           phases:
             preBuild:
               commands:
-                - cd frontend && npm ci
+                - corepack enable
+                - corepack prepare pnpm@9.15.9 --activate
+                - pnpm install --frozen-lockfile
             build:
               commands:
-                - npm run build
+                - pnpm --filter frontend run build
           artifacts:
             baseDirectory: frontend/.next
             files:

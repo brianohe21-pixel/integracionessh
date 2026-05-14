@@ -42,7 +42,7 @@ variable "whatsapp_verify_token" {
 variable "lambda_zip_path" {
   type        = string
   default     = "../../backend/dist/functions.zip"
-  description = "Path to deployment zip. If the file is missing, a minimal bootstrap zip in the module is used so terraform plan/apply can run; run `npm run build` in backend/ and apply again to deploy real code."
+  description = "Path to deployment zip. If the file is missing, a minimal bootstrap zip in the module is used so terraform plan/apply can run; run `pnpm --filter chatbot-platform-backend run build` from repo root and apply again to deploy real code."
 }
 
 variable "tags" {

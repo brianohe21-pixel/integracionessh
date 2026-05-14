@@ -5,11 +5,27 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 First, run the development server:
 
 ```bash
+pnpm dev
+```
+
+From the monorepo root (after `pnpm install`):
+
+```bash
+pnpm --filter frontend dev
+```
+
+Or from the `frontend` directory:
+
+```bash
+cd frontend && pnpm dev
+```
+
+Other package managers:
+
+```bash
 npm run dev
 # or
 yarn dev
-# or
-pnpm dev
 # or
 bun dev
 ```
