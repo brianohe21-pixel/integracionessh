@@ -6,17 +6,21 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
   return new Intl.DateTimeFormat("es-ES", {
     day: "2-digit",
     month: "short",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  }).format(new Date(iso));
+  }).format(d);
 }
 
 export function formatRelativeTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  const diff = Date.now() - d.getTime();
   const minutes = Math.floor(diff / 60000);
   if (minutes < 1) return "Ahora mismo";
   if (minutes < 60) return `Hace ${minutes} min`;

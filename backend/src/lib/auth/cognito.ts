@@ -6,10 +6,10 @@ export function extractAuthContext(
 ): AuthContext {
   const claims = event.requestContext.authorizer.jwt.claims;
 
-  const tenantId = claims["custom:tenantId"] as string;
-  const userId = claims["sub"] as string;
-  const email = claims["email"] as string;
-  const role = (claims["custom:role"] as string) ?? "member";
+  const tenantId = String(claims["custom:tenantId"] ?? "").trim();
+  const userId = String(claims["sub"] ?? "").trim();
+  const email = String(claims["email"] ?? "").trim();
+  const role = String((claims["custom:role"] as string) ?? "member").trim() || "member";
 
   if (!tenantId || !userId) {
     throw new Error("Missing required claims in JWT token");

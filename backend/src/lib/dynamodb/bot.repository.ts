@@ -54,7 +54,7 @@ export async function createBot(bot: Bot): Promise<void> {
         GSI1SK: `BOT#${bot.botId}`,
         ...bot,
       },
-      ConditionExpression: "attribute_not_exists(PK)",
+      ConditionExpression: "attribute_not_exists(SK)",
     })
   );
 }
@@ -118,6 +118,7 @@ export async function listBots(tenantId: string): Promise<Bot[]> {
         ":pk": `TENANT#${tenantId}`,
         ":sk": "BOT#",
       },
+      ConsistentRead: true,
     })
   );
 

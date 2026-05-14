@@ -49,7 +49,8 @@ export default function BotsPage() {
 
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-          <p className="text-sm text-red-600">Error al cargar los bots. Intenta de nuevo.</p>
+          <p className="text-sm text-red-600 font-medium">Error al cargar los bots</p>
+          <p className="text-xs text-red-500 mt-1 break-words">{error.message}</p>
         </div>
       )}
 

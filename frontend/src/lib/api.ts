@@ -2,6 +2,12 @@ import { fetchAuthSession } from "aws-amplify/auth";
 
 const BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
+function assertApiBaseUrl(): void {
+  if (!BASE_URL) {
+    throw new Error("NEXT_PUBLIC_API_URL is not set. Add your API Gateway URL to .env.local.");
+  }
+}
+
 async function getAuthHeader(): Promise<Record<string, string>> {
   try {
     const session = await fetchAuthSession();
@@ -17,6 +23,7 @@ async function request<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
+  assertApiBaseUrl();
   const authHeader = await getAuthHeader();
 
   const response = await fetch(`${BASE_URL}${path}`, {

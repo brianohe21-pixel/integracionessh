@@ -38,11 +38,14 @@ locals {
   }
 
   cognito_callback_urls = concat(
-    ["http://localhost:3000/api/auth/callback/cognito"],
+    [
+      "http://localhost:3000/api/auth/callback/cognito",
+      "http://127.0.0.1:3000/api/auth/callback/cognito",
+    ],
     var.extra_callback_urls
   )
-  cognito_logout_urls = concat(["http://localhost:3000"], var.extra_logout_urls)
-  browser_origins     = concat(["http://localhost:3000"], var.extra_allowed_origins)
+  cognito_logout_urls = concat(["http://localhost:3000", "http://127.0.0.1:3000"], var.extra_logout_urls)
+  browser_origins     = concat(["http://localhost:3000", "http://127.0.0.1:3000"], var.extra_allowed_origins)
 }
 
 module "dynamodb" {
