@@ -1,7 +1,6 @@
 import {
   GetCommand,
   PutCommand,
-  UpdateCommand,
   QueryCommand,
   TransactWriteCommand,
 } from "@aws-sdk/lib-dynamodb";
@@ -70,11 +69,13 @@ export async function getOrCreateConversation(
     tenantId,
     botId,
     phoneNumber,
-    contactName,
     status: "active",
     messageCount: 0,
     lastMessageAt: now,
     createdAt: now,
+    ...(contactName !== undefined && contactName !== ""
+      ? { contactName }
+      : {}),
   };
 
   await docClient.send(

@@ -76,7 +76,10 @@ export async function handler(
       const parsed = UpdateTenantSchema.safeParse(body);
       if (!parsed.success) return badRequest(parsed.error.message);
 
-      const updated = await updateTenant(resolvedId, parsed.data);
+      const updated = await updateTenant(
+        resolvedId,
+        parsed.data as Partial<Omit<Tenant, "tenantId" | "createdAt">>
+      );
       return ok(updated);
     }
 

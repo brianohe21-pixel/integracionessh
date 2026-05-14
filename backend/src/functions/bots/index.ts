@@ -81,7 +81,11 @@ export async function handler(
       const parsed = UpdateBotSchema.safeParse(body);
       if (!parsed.success) return badRequest(parsed.error.message);
 
-      const updated = await updateBot(auth.tenantId, botId, parsed.data);
+      const updated = await updateBot(
+        auth.tenantId,
+        botId,
+        parsed.data as Partial<Omit<Bot, "tenantId" | "botId" | "createdAt">>
+      );
       return ok(updated);
     }
 

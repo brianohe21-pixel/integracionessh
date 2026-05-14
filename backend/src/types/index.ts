@@ -111,7 +111,7 @@ export interface SQSMessageBody {
   contact: WhatsAppContact;
 }
 
-export interface ApiResponse<T = unknown> {
+export interface ApiResponse {
   statusCode: number;
   body: string;
   headers: Record<string, string>;

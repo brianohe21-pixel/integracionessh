@@ -31,7 +31,7 @@ async function processRecord(record: SQSRecord): Promise<void> {
     return;
   }
 
-  const { tenantId, botId, conversationId, phoneNumberId, message, contact } = body;
+  const { tenantId, botId, phoneNumberId, message, contact } = body;
 
   try {
     const [bot, accessToken, openAIKey] = await Promise.all([
