@@ -3,6 +3,12 @@ import type { TemplateComponent } from "../../types/index.js";
 
 const GRAPH_API_URL = "https://graph.facebook.com/v20.0";
 
+function throwGraphApiError(status: number, body: string): never {
+  const err = new Error(`WhatsApp API error ${status}: ${body}`) as Error & { statusCode?: number };
+  err.statusCode = 502;
+  throw err;
+}
+
 export interface MetaTemplate {
   id: string;
   name: string;
@@ -81,7 +87,7 @@ export async function sendTextMessage(
 
   if (!response.ok) {
     const error = await response.text();
-    throw new Error(`WhatsApp API error ${response.status}: ${error}`);
+    throwGraphApiError(response.status, error);
   }
 
   return response.json() as Promise<SendTextMessageResponse>;
@@ -181,11 +187,11 @@ export async function listMetaTemplates(
 
     if (!response.ok) {
       const error = await response.text();
-      throw new Error(`WhatsApp API error ${response.status}: ${error}`);
+      throwGraphApiError(response.status, error);
     }
 
     const json = (await response.json()) as MetaTemplatesResponse;
-    templates.push(...json.data);
+    templates.push(...(json.data ?? []));
     url = json.paging?.next ?? null;
   }
 
@@ -211,7 +217,7 @@ export async function createMetaTemplate(
 
   if (!response.ok) {
     const error = await response.text();
-    throw new Error(`WhatsApp API error ${response.status}: ${error}`);
+    throwGraphApiError(response.status, error);
   }
 
   return response.json() as Promise<{ id: string; status: string }>;
@@ -236,7 +242,7 @@ export async function editMetaTemplate(
 
   if (!response.ok) {
     const error = await response.text();
-    throw new Error(`WhatsApp API error ${response.status}: ${error}`);
+    throwGraphApiError(response.status, error);
   }
 
   return response.json() as Promise<{ success: boolean }>;
@@ -257,7 +263,7 @@ export async function deleteMetaTemplate(
 
   if (!response.ok) {
     const error = await response.text();
-    throw new Error(`WhatsApp API error ${response.status}: ${error}`);
+    throwGraphApiError(response.status, error);
   }
 
   return response.json() as Promise<{ success: boolean }>;
@@ -294,7 +300,7 @@ export async function sendTemplateMessage(
 
   if (!response.ok) {
     const error = await response.text();
-    throw new Error(`WhatsApp API error ${response.status}: ${error}`);
+    throwGraphApiError(response.status, error);
   }
 
   return response.json() as Promise<SendTextMessageResponse>;

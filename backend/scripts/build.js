@@ -11,6 +11,7 @@ const entryPoints = [
   "src/functions/tenants/index.ts",
   "src/functions/bots/index.ts",
   "src/functions/conversations/index.ts",
+  "src/functions/templates/index.ts",
   "src/functions/authorizer/index.ts",
 ];
 

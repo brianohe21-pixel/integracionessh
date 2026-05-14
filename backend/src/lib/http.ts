@@ -71,6 +71,14 @@ export function internalError(message = "Internal server error"): APIGatewayProx
   };
 }
 
+export function badGateway(message: string): APIGatewayProxyResultV2 {
+  return {
+    statusCode: 502,
+    headers: CORS_HEADERS,
+    body: JSON.stringify({ error: message }),
+  };
+}
+
 export function handleError(error: unknown): APIGatewayProxyResultV2 {
   console.error("Handler error:", error);
 
@@ -79,6 +87,7 @@ export function handleError(error: unknown): APIGatewayProxyResultV2 {
   if (err.statusCode === 400) return badRequest(err.message);
   if (err.statusCode === 403) return forbidden(err.message);
   if (err.statusCode === 404) return notFound(err.message);
+  if (err.statusCode === 502) return badGateway(err.message);
 
   return internalError();
 }
