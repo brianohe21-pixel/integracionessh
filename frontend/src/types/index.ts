@@ -44,3 +44,33 @@ export interface Message {
   whatsappMessageId?: string;
   timestamp: string;
 }
+
+export interface TemplateComponent {
+  type: "HEADER" | "BODY" | "FOOTER" | "BUTTONS";
+  format?: "TEXT" | "IMAGE" | "VIDEO" | "DOCUMENT";
+  text?: string;
+  example?: { header_text?: string[]; body_text?: string[][] };
+  buttons?: TemplateButton[];
+}
+
+export interface TemplateButton {
+  type: "QUICK_REPLY" | "URL" | "PHONE_NUMBER";
+  text: string;
+  url?: string;
+  phone_number?: string;
+  example?: string[];
+}
+
+export interface WhatsAppTemplate {
+  templateId: string;
+  tenantId: string;
+  botId: string;
+  name: string;
+  language: string;
+  category: "MARKETING" | "UTILITY" | "AUTHENTICATION";
+  status: "APPROVED" | "PENDING" | "REJECTED";
+  components: TemplateComponent[];
+  metaTemplateId?: string;
+  syncedAt: string;
+  createdAt: string;
+}

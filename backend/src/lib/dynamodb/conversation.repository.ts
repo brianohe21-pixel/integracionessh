@@ -6,6 +6,7 @@ import {
   TransactWriteCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { docClient, TABLE_NAME } from "./client.js";
+import { listBots } from "./bot.repository.js";
 import type { Conversation, Message } from "../../types/index.js";
 
 const conversationKeys = (tenantId: string, botId: string, conversationId: string) => ({
@@ -156,24 +157,45 @@ export async function listConversations(
   botId?: string,
   limit = 20
 ): Promise<Conversation[]> {
-  const pk = botId
-    ? `TENANT#${tenantId}#BOT#${botId}`
-    : `TENANT#${tenantId}#BOT#`;
+  const queryByBotPk = (pk: string) =>
+    docClient.send(
+      new QueryCommand({
+        TableName: TABLE_NAME,
+        KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+        ExpressionAttributeValues: {
+          ":pk": pk,
+          ":sk": "CONV#",
+        },
+        ScanIndexForward: false,
+        Limit: limit,
+      })
+    );
 
-  const result = await docClient.send(
-    new QueryCommand({
-      TableName: TABLE_NAME,
-      KeyConditionExpression: botId
-        ? "PK = :pk AND begins_with(SK, :sk)"
-        : "PK = :pk AND begins_with(SK, :sk)",
-      ExpressionAttributeValues: {
-        ":pk": pk,
-        ":sk": "CONV#",
-      },
-      ScanIndexForward: false,
-      Limit: limit,
-    })
+  if (botId) {
+    const result = await queryByBotPk(`TENANT#${tenantId}#BOT#${botId}`);
+    return (result.Items ?? []).map(({ PK, SK, GSI1PK, GSI1SK, ...rest }) => rest as Conversation);
+  }
+
+  const bots = await listBots(tenantId);
+  if (bots.length === 0) {
+    return [];
+  }
+
+  const pages = await Promise.all(
+    bots.map((b) => queryByBotPk(`TENANT#${tenantId}#BOT#${b.botId}`))
   );
 
-  return (result.Items ?? []).map(({ PK, SK, GSI1PK, GSI1SK, ...rest }) => rest as Conversation);
+  const merged: Conversation[] = [];
+  for (const result of pages) {
+    for (const item of result.Items ?? []) {
+      const { PK, SK, GSI1PK, GSI1SK, ...rest } = item;
+      merged.push(rest as Conversation);
+    }
+  }
+
+  merged.sort(
+    (a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime()
+  );
+
+  return merged.slice(0, limit);
 }

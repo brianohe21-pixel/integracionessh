@@ -72,7 +72,7 @@ jobs:
 
       - name: Deploy Lambdas
         run: |
-          for fn in webhook process-message tenants bots conversations authorizer; do
+          for fn in webhook process-message tenants bots conversations templates authorizer; do
             FUNCTION_NAME="chatbot-platform-dev-${fn//_/-}"
             echo "Deploying $FUNCTION_NAME..."
             aws lambda update-function-code \
@@ -117,7 +117,7 @@ jobs:
 
       - name: Deploy Lambdas
         run: |
-          for fn in webhook process-message tenants bots conversations authorizer; do
+          for fn in webhook process-message tenants bots conversations templates authorizer; do
             FUNCTION_NAME="chatbot-platform-prod-${fn//_/-}"
             echo "Deploying $FUNCTION_NAME..."
             aws lambda update-function-code \

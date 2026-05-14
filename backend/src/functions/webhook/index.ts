@@ -71,8 +71,11 @@ async function handleWebhook(
       for (const message of messages) {
         if (message.type !== "text" || !message.text?.body) continue;
 
-        const contact = contacts.find((c) => c.wa_id === message.from);
-        if (!contact) continue;
+        const contact =
+          contacts.find((c) => c.wa_id === message.from) ?? {
+            wa_id: message.from,
+            profile: { name: "WhatsApp User" },
+          };
 
         const bot = await getBotByPhoneNumberId(phoneNumberId);
         if (!bot || bot.status !== "active") {

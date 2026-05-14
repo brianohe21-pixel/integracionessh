@@ -46,6 +46,14 @@ variable "conversations_function_arn" {
   type = string
 }
 
+variable "templates_invoke_arn" {
+  type = string
+}
+
+variable "templates_function_arn" {
+  type = string
+}
+
 variable "allowed_origins" {
   type    = list(string)
   default = ["*"]

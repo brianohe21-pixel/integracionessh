@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import {
   BotMessageSquare,
   MessageSquare,
+  LayoutTemplate,
   Settings,
   LogOut,
 } from "lucide-react";
@@ -15,6 +16,7 @@ import {
 const navItems = [
   { href: "/bots", label: "Chatbots", icon: BotMessageSquare },
   { href: "/conversations", label: "Conversaciones", icon: MessageSquare },
+  { href: "/templates", label: "Templates", icon: LayoutTemplate },
   { href: "/settings", label: "Configuración", icon: Settings },
 ];
 

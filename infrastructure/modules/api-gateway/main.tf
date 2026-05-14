@@ -129,6 +129,36 @@ locals {
       function_arn = var.conversations_function_arn
       protected    = true
     }
+    templates_list = {
+      route_key    = "GET /templates"
+      invoke_arn   = var.templates_invoke_arn
+      function_arn = var.templates_function_arn
+      protected    = true
+    }
+    templates_create = {
+      route_key    = "POST /templates"
+      invoke_arn   = var.templates_invoke_arn
+      function_arn = var.templates_function_arn
+      protected    = true
+    }
+    templates_update = {
+      route_key    = "PUT /templates/{name}"
+      invoke_arn   = var.templates_invoke_arn
+      function_arn = var.templates_function_arn
+      protected    = true
+    }
+    templates_delete = {
+      route_key    = "DELETE /templates/{name}"
+      invoke_arn   = var.templates_invoke_arn
+      function_arn = var.templates_function_arn
+      protected    = true
+    }
+    templates_send = {
+      route_key    = "POST /templates/{name}/send"
+      invoke_arn   = var.templates_invoke_arn
+      function_arn = var.templates_function_arn
+      protected    = true
+    }
   }
 }
 
@@ -158,6 +188,7 @@ resource "aws_lambda_permission" "api_gw" {
     tenants       = var.tenants_function_arn
     bots          = var.bots_function_arn
     conversations = var.conversations_function_arn
+    templates     = var.templates_function_arn
   }
 
   statement_id  = "AllowAPIGatewayInvoke-${each.key}"

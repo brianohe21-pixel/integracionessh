@@ -117,6 +117,8 @@ module "api_gateway" {
   bots_function_arn          = module.lambda.function_arns["bots"]
   conversations_invoke_arn   = module.lambda.conversations_invoke_arn
   conversations_function_arn = module.lambda.function_arns["conversations"]
+  templates_invoke_arn       = module.lambda.templates_invoke_arn
+  templates_function_arn     = module.lambda.function_arns["templates"]
   allowed_origins            = local.browser_origins
   tags                       = local.tags
 }
