@@ -22,6 +22,14 @@ variable "sqs_queue_arn" {
   type = string
 }
 
+variable "bulk_sqs_queue_url" {
+  type = string
+}
+
+variable "bulk_sqs_queue_arn" {
+  type = string
+}
+
 variable "media_bucket_arn" {
   type = string
 }

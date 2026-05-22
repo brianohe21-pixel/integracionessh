@@ -154,3 +154,32 @@ export interface WhatsAppTemplate {
   syncedAt: string;
   createdAt: string;
 }
+
+export type BulkSendJobStatus = "queued" | "processing" | "completed" | "failed";
+
+export interface BulkSendJob {
+  jobId: string;
+  tenantId: string;
+  botId: string;
+  templateName: string;
+  language: string;
+  status: BulkSendJobStatus;
+  total: number;
+  sent: number;
+  failed: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BulkSendSQSBody {
+  jobId: string;
+  tenantId: string;
+  botId: string;
+  templateName: string;
+  language: string;
+  to: string;
+  components?: Array<{
+    type: string;
+    parameters?: Array<{ type: string; text?: string; image?: { link: string } }>;
+  }>;
+}

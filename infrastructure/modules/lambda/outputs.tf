@@ -34,6 +34,14 @@ output "templates_function_arn" {
   value = aws_lambda_function.functions["templates"].arn
 }
 
+output "bulk_send_invoke_arn" {
+  value = aws_lambda_function.functions["bulk_send"].invoke_arn
+}
+
+output "bulk_send_function_arn" {
+  value = aws_lambda_function.functions["bulk_send"].arn
+}
+
 output "authorizer_invoke_arn" {
   value = aws_lambda_function.functions["authorizer"].invoke_arn
 }

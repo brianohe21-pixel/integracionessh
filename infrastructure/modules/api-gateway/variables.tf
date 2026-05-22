@@ -54,6 +54,14 @@ variable "templates_function_arn" {
   type = string
 }
 
+variable "bulk_send_invoke_arn" {
+  type = string
+}
+
+variable "bulk_send_function_arn" {
+  type = string
+}
+
 variable "allowed_origins" {
   type    = list(string)
   default = ["*"]

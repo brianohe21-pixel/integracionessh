@@ -9,6 +9,7 @@ import {
   BotMessageSquare,
   MessageSquare,
   LayoutTemplate,
+  SendHorizonal,
   Settings,
   LogOut,
 } from "lucide-react";
@@ -17,6 +18,7 @@ const navItems = [
   { href: "/bots", label: "Chatbots", icon: BotMessageSquare },
   { href: "/conversations", label: "Conversaciones", icon: MessageSquare },
   { href: "/templates", label: "Templates", icon: LayoutTemplate },
+  { href: "/bulk-send", label: "Envío masivo", icon: SendHorizonal },
   { href: "/settings", label: "Configuración", icon: Settings },
 ];
 

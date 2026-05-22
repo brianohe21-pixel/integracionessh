@@ -159,6 +159,18 @@ locals {
       function_arn = var.templates_function_arn
       protected    = true
     }
+    bulk_send_create = {
+      route_key    = "POST /bulk-send"
+      invoke_arn   = var.bulk_send_invoke_arn
+      function_arn = var.bulk_send_function_arn
+      protected    = true
+    }
+    bulk_send_get = {
+      route_key    = "GET /bulk-send/{jobId}"
+      invoke_arn   = var.bulk_send_invoke_arn
+      function_arn = var.bulk_send_function_arn
+      protected    = true
+    }
   }
 }
 
@@ -189,6 +201,7 @@ resource "aws_lambda_permission" "api_gw" {
     bots          = var.bots_function_arn
     conversations = var.conversations_function_arn
     templates     = var.templates_function_arn
+    bulk_send     = var.bulk_send_function_arn
   }
 
   statement_id  = "AllowAPIGatewayInvoke-${each.key}"

@@ -95,6 +95,8 @@ module "lambda" {
   dynamodb_table_arn    = module.dynamodb.table_arn
   sqs_queue_url         = module.sqs.queue_url
   sqs_queue_arn         = module.sqs.queue_arn
+  bulk_sqs_queue_url    = module.sqs.bulk_queue_url
+  bulk_sqs_queue_arn    = module.sqs.bulk_queue_arn
   media_bucket_arn      = module.s3.media_bucket_arn
   cognito_user_pool_id  = module.cognito.user_pool_id
   cognito_client_id     = module.cognito.client_id
@@ -119,6 +121,8 @@ module "api_gateway" {
   conversations_function_arn = module.lambda.function_arns["conversations"]
   templates_invoke_arn       = module.lambda.templates_invoke_arn
   templates_function_arn     = module.lambda.function_arns["templates"]
+  bulk_send_invoke_arn       = module.lambda.bulk_send_invoke_arn
+  bulk_send_function_arn     = module.lambda.function_arns["bulk_send"]
   allowed_origins            = local.browser_origins
   tags                       = local.tags
 }

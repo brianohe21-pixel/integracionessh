@@ -54,7 +54,10 @@ resource "aws_iam_role_policy" "lambda_permissions" {
           "sqs:DeleteMessage",
           "sqs:GetQueueAttributes",
         ]
-        Resource = var.sqs_queue_arn
+        Resource = [
+          var.sqs_queue_arn,
+          var.bulk_sqs_queue_arn,
+        ]
       },
       {
         Effect = "Allow"
@@ -150,6 +153,27 @@ locals {
         ENVIRONMENT = var.environment
       }
     }
+    bulk_send = {
+      handler     = "bulk-send/index.handler"
+      description = "Enqueues bulk template send campaigns"
+      timeout     = 60
+      memory      = 256
+      environment = {
+        TABLE_NAME          = var.dynamodb_table_name
+        BULK_SQS_QUEUE_URL  = var.bulk_sqs_queue_url
+        ENVIRONMENT         = var.environment
+      }
+    }
+    process_bulk_send = {
+      handler     = "process-bulk-send/index.handler"
+      description = "Processes bulk template send messages from SQS"
+      timeout     = 60
+      memory      = 256
+      environment = {
+        TABLE_NAME  = var.dynamodb_table_name
+        ENVIRONMENT = var.environment
+      }
+    }
     authorizer = {
       handler     = "authorizer/index.handler"
       description = "Cognito JWT authorizer for API Gateway"
@@ -189,6 +213,14 @@ resource "aws_lambda_event_source_mapping" "sqs_trigger" {
   function_name    = aws_lambda_function.functions["process_message"].arn
   batch_size       = 1
   enabled          = true
+}
+
+resource "aws_lambda_event_source_mapping" "bulk_sqs_trigger" {
+  event_source_arn                   = var.bulk_sqs_queue_arn
+  function_name                      = aws_lambda_function.functions["process_bulk_send"].arn
+  batch_size                         = 1
+  enabled                            = true
+  maximum_batching_window_in_seconds = 0
 }
 
 resource "aws_cloudwatch_log_group" "lambda_logs" {

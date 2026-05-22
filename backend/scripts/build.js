@@ -12,6 +12,8 @@ const entryPoints = [
   "src/functions/bots/index.ts",
   "src/functions/conversations/index.ts",
   "src/functions/templates/index.ts",
+  "src/functions/bulk-send/index.ts",
+  "src/functions/process-bulk-send/index.ts",
   "src/functions/authorizer/index.ts",
 ];
 
