@@ -28,6 +28,7 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
+      const tenantId = crypto.randomUUID();
       await signUp({
         username: email,
         password,
@@ -35,6 +36,8 @@ export default function RegisterPage() {
           userAttributes: {
             email,
             name,
+            "custom:tenantId": tenantId,
+            "custom:role": "member",
           },
         },
       });

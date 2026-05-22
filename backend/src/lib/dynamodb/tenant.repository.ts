@@ -82,6 +82,29 @@ export async function deleteTenant(tenantId: string): Promise<void> {
   );
 }
 
+export async function ensureTenant(
+  tenantId: string,
+  email: string,
+  name?: string
+): Promise<Tenant> {
+  const existing = await getTenant(tenantId);
+  if (existing) return existing;
+
+  const now = new Date().toISOString();
+  const tenant: Tenant = {
+    tenantId,
+    name: name?.trim() || email.split("@")[0] || "Tenant",
+    email,
+    plan: "free",
+    status: "active",
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  await createTenant(tenant);
+  return tenant;
+}
+
 export async function listTenants(): Promise<Tenant[]> {
   const result = await docClient.send(
     new QueryCommand({

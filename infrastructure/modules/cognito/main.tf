@@ -74,12 +74,14 @@ resource "aws_cognito_user_pool_client" "web" {
 
   read_attributes = [
     "email",
+    "name",
     "custom:tenantId",
     "custom:role",
   ]
 
   write_attributes = [
     "email",
+    "name",
     "custom:tenantId",
     "custom:role",
   ]

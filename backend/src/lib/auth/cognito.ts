@@ -9,6 +9,7 @@ export function extractAuthContext(
   const tenantId = String(claims["custom:tenantId"] ?? "").trim();
   const userId = String(claims["sub"] ?? "").trim();
   const email = String(claims["email"] ?? "").trim();
+  const name = String(claims["name"] ?? "").trim() || undefined;
   const role = String((claims["custom:role"] as string) ?? "member").trim() || "member";
 
   if (!tenantId || !userId) {
@@ -19,6 +20,7 @@ export function extractAuthContext(
     tenantId,
     userId,
     email,
+    ...(name !== undefined ? { name } : {}),
     role: role as "admin" | "member",
   };
 }

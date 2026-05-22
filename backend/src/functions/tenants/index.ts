@@ -3,6 +3,7 @@ import { z } from "zod";
 import { randomUUID } from "crypto";
 import {
   getTenant,
+  ensureTenant,
   createTenant,
   updateTenant,
   deleteTenant,
@@ -34,8 +35,7 @@ export async function handler(
 
     if (method === "GET" && !tenantId) {
       if (auth.role !== "admin") {
-        const tenant = await getTenant(auth.tenantId);
-        if (!tenant) return notFound("Tenant not found");
+        const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
         return ok([tenant]);
       }
       const tenants = await listTenants();
@@ -44,6 +44,10 @@ export async function handler(
 
     if (method === "GET" && tenantId) {
       const resolvedId = tenantId === "me" ? auth.tenantId : tenantId;
+      if (resolvedId === auth.tenantId) {
+        const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
+        return ok(tenant);
+      }
       const tenant = await getTenant(resolvedId);
       if (!tenant) return notFound("Tenant not found");
       return ok(tenant);
