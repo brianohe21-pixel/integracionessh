@@ -183,3 +183,33 @@ export interface BulkSendSQSBody {
     parameters?: Array<{ type: string; text?: string; image?: { link: string } }>;
   }>;
 }
+
+export interface BotUsageMetrics {
+  botId: string;
+  botName: string;
+  status: Bot["status"];
+  conversations: number;
+  activeConversations: number;
+  messages: number;
+  templates: number;
+  lastActivityAt: string | null;
+}
+
+export interface UsageMetricsSummary {
+  totalBots: number;
+  activeBots: number;
+  totalConversations: number;
+  activeConversations: number;
+  totalMessages: number;
+  totalTemplates: number;
+  bulkJobsCount: number;
+  bulkMessagesSent: number;
+  bulkMessagesFailed: number;
+  lastActivityAt: string | null;
+}
+
+export interface UsageMetrics {
+  summary: UsageMetricsSummary;
+  byBot: BotUsageMetrics[];
+  recentBulkJobs: BulkSendJob[];
+}

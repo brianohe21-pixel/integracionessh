@@ -15,6 +15,7 @@ const entryPoints = [
   "src/functions/bulk-send/index.ts",
   "src/functions/process-bulk-send/index.ts",
   "src/functions/authorizer/index.ts",
+  "src/functions/metrics/index.ts",
 ];
 
 const buildOptions = {
