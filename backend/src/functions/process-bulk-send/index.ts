@@ -1,6 +1,9 @@
 import type { SQSEvent, SQSRecord } from "aws-lambda";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
-import { incrementBulkJobProgress } from "../../lib/dynamodb/bulk-job.repository.js";
+import {
+  incrementBulkJobProgress,
+  saveMessageTracking,
+} from "../../lib/dynamodb/bulk-job.repository.js";
 import { sendTemplateMessage, getWhatsAppAccessToken } from "../../lib/whatsapp/client.js";
 import type { BulkSendSQSBody } from "../../types/index.js";
 
@@ -36,7 +39,7 @@ async function processRecord(record: SQSRecord): Promise<void> {
       return;
     }
 
-    await sendTemplateMessage({
+    const result = await sendTemplateMessage({
       phoneNumberId: bot.phoneNumberId,
       to,
       templateName,
@@ -44,6 +47,13 @@ async function processRecord(record: SQSRecord): Promise<void> {
       ...(components ? { components } : {}),
       accessToken,
     });
+
+    const messageId = result.messages?.[0]?.id;
+    if (messageId) {
+      await saveMessageTracking(messageId, jobId, tenantId).catch((err) =>
+        console.warn(`Failed to save message tracking for ${messageId}:`, err)
+      );
+    }
 
     await incrementBulkJobProgress(tenantId, jobId, "sent");
   } catch (error) {

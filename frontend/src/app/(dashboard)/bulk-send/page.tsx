@@ -44,8 +44,8 @@ export default function BulkSendPage() {
   const [csvRows, setCsvRows] = useState<ReturnType<typeof parseRecipientsCsv>>([]);
   const [fileName, setFileName] = useState("");
   const [parseError, setParseError] = useState("");
-  const [progress, setProgress] = useState({ current: 0, total: 0, failed: 0 });
-  const [result, setResult] = useState<{ sent: number; failed: number } | null>(null);
+  const [progress, setProgress] = useState({ current: 0, total: 0, failed: 0, deliveryFailed: 0 });
+  const [result, setResult] = useState<{ sent: number; failed: number; deliveryFailed: number } | null>(null);
 
   const { data: bots } = useBots();
   const { data: templates, isLoading: loadingTemplates } = useTemplates(botId || undefined);
@@ -121,10 +121,11 @@ export default function BulkSendPage() {
           current: job.sent + job.failed,
           total: job.total,
           failed: job.failed,
+          deliveryFailed: job.deliveryFailed ?? 0,
         }),
     });
 
-    setResult({ sent: res.sent, failed: res.failed });
+    setResult({ sent: res.sent, failed: res.failed, deliveryFailed: res.deliveryFailed });
   }
 
   const isSending = bulkMutation.isPending;
@@ -313,26 +314,40 @@ export default function BulkSendPage() {
               style={{ width: `${(progress.current / progress.total) * 100}%` }}
             />
           </div>
-          {progress.failed > 0 && (
-            <p className="text-xs text-red-600 mt-2">{progress.failed} fallidos hasta ahora</p>
-          )}
+          <div className="flex gap-4 mt-2">
+            {progress.failed > 0 && (
+              <p className="text-xs text-red-600">{progress.failed} rechazados por Meta</p>
+            )}
+            {progress.deliveryFailed > 0 && (
+              <p className="text-xs text-orange-600">{progress.deliveryFailed} fallos de entrega</p>
+            )}
+          </div>
         </div>
       )}
 
       {result && (
-        <div className="flex items-start gap-4 bg-white rounded-xl border border-gray-200 p-5">
-          <div className="flex items-center gap-6">
+        <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
+          <div className="flex flex-wrap items-center gap-6">
             <div className="flex items-center gap-2 text-green-700">
               <CheckCircle2 className="w-5 h-5" />
-              <span className="text-sm font-medium">{result.sent} enviados</span>
+              <span className="text-sm font-medium">{result.sent} aceptados por Meta</span>
             </div>
             {result.failed > 0 && (
               <div className="flex items-center gap-2 text-red-600">
                 <XCircle className="w-5 h-5" />
-                <span className="text-sm font-medium">{result.failed} fallidos</span>
+                <span className="text-sm font-medium">{result.failed} rechazados por Meta</span>
+              </div>
+            )}
+            {result.deliveryFailed > 0 && (
+              <div className="flex items-center gap-2 text-orange-600">
+                <XCircle className="w-5 h-5" />
+                <span className="text-sm font-medium">{result.deliveryFailed} fallos de entrega</span>
               </div>
             )}
           </div>
+          <p className="text-xs text-gray-400 border-t border-gray-100 pt-3">
+            <strong>Aceptados:</strong> Meta recibió el mensaje. <strong>Fallos de entrega:</strong> el número no existe en WhatsApp, el contacto bloqueó el número, o hay restricciones de la cuenta. Los fallos de entrega pueden reportarse minutos después del envío.
+          </p>
         </div>
       )}
     </div>

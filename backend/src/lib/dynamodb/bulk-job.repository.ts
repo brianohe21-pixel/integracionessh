@@ -1,4 +1,4 @@
-import { GetCommand, PutCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import { GetCommand, PutCommand, UpdateCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
 import { docClient, TABLE_NAME } from "./client.js";
 import type { BulkSendJob, BulkSendJobStatus } from "../../types/index.js";
 
@@ -7,12 +7,63 @@ const keys = (tenantId: string, jobId: string) => ({
   SK: `BULKJOB#${jobId}`,
 });
 
+const msgTrackingKeys = (messageId: string) => ({
+  PK: `MSGTRACK#${messageId}`,
+  SK: `MSGTRACK#${messageId}`,
+});
+
+export async function saveMessageTracking(
+  messageId: string,
+  jobId: string,
+  tenantId: string
+): Promise<void> {
+  const ttl = Math.floor(Date.now() / 1000) + 72 * 60 * 60;
+  await docClient.send(
+    new PutCommand({
+      TableName: TABLE_NAME,
+      Item: { ...msgTrackingKeys(messageId), jobId, tenantId, ttl },
+    })
+  );
+}
+
+export async function getMessageTracking(
+  messageId: string
+): Promise<{ jobId: string; tenantId: string } | null> {
+  const result = await docClient.send(
+    new GetCommand({ TableName: TABLE_NAME, Key: msgTrackingKeys(messageId) })
+  );
+  if (!result.Item) return null;
+  return { jobId: result.Item.jobId as string, tenantId: result.Item.tenantId as string };
+}
+
+export async function deleteMessageTracking(messageId: string): Promise<void> {
+  await docClient.send(
+    new DeleteCommand({ TableName: TABLE_NAME, Key: msgTrackingKeys(messageId) })
+  );
+}
+
+export async function incrementBulkJobDeliveryFailed(
+  tenantId: string,
+  jobId: string
+): Promise<void> {
+  const now = new Date().toISOString();
+  await docClient.send(
+    new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: keys(tenantId, jobId),
+      UpdateExpression: "ADD deliveryFailed :one SET updatedAt = :now",
+      ExpressionAttributeValues: { ":one": 1, ":now": now },
+    })
+  );
+}
+
 export async function createBulkJob(
-  job: Omit<BulkSendJob, "sent" | "failed"> & { sent?: number; failed?: number }
+  job: Omit<BulkSendJob, "sent" | "failed" | "deliveryFailed"> & { sent?: number; failed?: number; deliveryFailed?: number }
 ): Promise<BulkSendJob> {
   const record: BulkSendJob = {
     sent: 0,
     failed: 0,
+    deliveryFailed: 0,
     ...job,
   };
 

@@ -100,6 +100,7 @@ export interface WhatsAppStatus {
   status: "sent" | "delivered" | "read" | "failed";
   timestamp: string;
   recipient_id: string;
+  errors?: Array<{ code: number; title: string }>;
 }
 
 export interface SQSMessageBody {
@@ -167,6 +168,7 @@ export interface BulkSendJob {
   total: number;
   sent: number;
   failed: number;
+  deliveryFailed: number;
   createdAt: string;
   updatedAt: string;
 }

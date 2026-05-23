@@ -2,6 +2,11 @@ import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda
 import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
 import { validateWebhookSignature } from "../../lib/whatsapp/client.js";
 import { getBotByPhoneNumberId } from "../../lib/dynamodb/bot.repository.js";
+import {
+  getMessageTracking,
+  deleteMessageTracking,
+  incrementBulkJobDeliveryFailed,
+} from "../../lib/dynamodb/bulk-job.repository.js";
 import type { WhatsAppWebhookEvent, SQSMessageBody } from "../../types/index.js";
 
 const sqs = new SQSClient({});
@@ -64,6 +69,28 @@ async function handleWebhook(
 
       const value = change.value;
       const phoneNumberId = value.metadata.phone_number_id;
+
+      const statuses = value.statuses ?? [];
+      for (const status of statuses) {
+        if (status.status !== "failed") continue;
+        sqsPromises.push(
+          (async () => {
+            try {
+              const tracking = await getMessageTracking(status.id);
+              if (!tracking) return;
+              await Promise.all([
+                incrementBulkJobDeliveryFailed(tracking.tenantId, tracking.jobId),
+                deleteMessageTracking(status.id),
+              ]);
+              console.log(
+                `Delivery failure recorded for job=${tracking.jobId} messageId=${status.id} errors=${JSON.stringify(status.errors ?? [])}`
+              );
+            } catch (err) {
+              console.error(`Failed to process delivery status for messageId=${status.id}:`, err);
+            }
+          })()
+        );
+      }
 
       const messages = value.messages ?? [];
       const contacts = value.contacts ?? [];

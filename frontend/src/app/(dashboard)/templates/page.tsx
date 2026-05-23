@@ -22,6 +22,10 @@ import {
   X,
   Languages,
   Tag,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Info,
 } from "lucide-react";
 
 type DialogMode = "create" | "edit" | null;
@@ -230,6 +234,35 @@ export default function TemplatesPage() {
         </select>
       </div>
 
+      <div className="mb-6 bg-blue-50 border border-blue-200 rounded-xl p-4">
+        <div className="flex items-start gap-3">
+          <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-blue-800 mb-2">Ciclo de vida de un template</p>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-blue-700">
+              <div className="flex items-center gap-1.5 bg-white border border-blue-200 rounded-lg px-2.5 py-1.5">
+                <Clock className="w-3.5 h-3.5 text-yellow-500" />
+                <span className="font-medium">Pendiente</span>
+                <span className="text-blue-500">— Meta lo está revisando (minutos a 24 h)</span>
+              </div>
+              <span className="text-blue-400">→</span>
+              <div className="flex items-center gap-1.5 bg-white border border-blue-200 rounded-lg px-2.5 py-1.5">
+                <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                <span className="font-medium">Aprobado</span>
+                <span className="text-blue-500">— Listo para enviar</span>
+              </div>
+              <span className="text-blue-400">o</span>
+              <div className="flex items-center gap-1.5 bg-white border border-blue-200 rounded-lg px-2.5 py-1.5">
+                <XCircle className="w-3.5 h-3.5 text-red-500" />
+                <span className="font-medium">Rechazado</span>
+                <span className="text-blue-500">— Edita y vuelve a enviar</span>
+              </div>
+            </div>
+            <p className="text-xs text-blue-600 mt-2">Recarga la página para ver el estado actualizado desde Meta.</p>
+          </div>
+        </div>
+      </div>
+
       {!botFilter && (
         <EmptyState
           icon={<LayoutTemplate className="w-6 h-6" />}
@@ -328,7 +361,17 @@ export default function TemplatesPage() {
                       </div>
                     </td>
                     <td className="px-5 py-4">
-                      <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+                      <div
+                        title={
+                          t.status === "PENDING"
+                            ? "Meta está revisando este template. Puede tardar minutos o hasta 24 h."
+                            : t.status === "REJECTED"
+                            ? "Meta rechazó este template. Edítalo para corregirlo y volver a enviarlo."
+                            : "Aprobado por Meta. Listo para enviar."
+                        }
+                      >
+                        <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+                      </div>
                     </td>
                     <td className="px-5 py-4 text-sm text-gray-500">
                       {formatDate(t.syncedAt)}

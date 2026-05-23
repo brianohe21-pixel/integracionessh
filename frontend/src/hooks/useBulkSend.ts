@@ -21,6 +21,7 @@ export interface BulkSendJob {
   total: number;
   sent: number;
   failed: number;
+  deliveryFailed: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -37,6 +38,7 @@ export interface BulkSendResult {
   jobId: string;
   sent: number;
   failed: number;
+  deliveryFailed: number;
   total: number;
   status: BulkSendJob["status"];
 }
@@ -86,6 +88,7 @@ export function useBulkSend() {
         jobId: finalJob.jobId,
         sent: finalJob.sent,
         failed: finalJob.failed,
+        deliveryFailed: finalJob.deliveryFailed ?? 0,
         total: finalJob.total,
         status: finalJob.status,
       };
