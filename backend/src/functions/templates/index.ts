@@ -24,28 +24,41 @@ import type { WhatsAppTemplate, TemplateComponent } from "../../types/index.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 
-const ComponentSchema = z.object({
-  type: z.enum(["HEADER", "BODY", "FOOTER", "BUTTONS"]),
-  format: z.enum(["TEXT", "IMAGE", "VIDEO", "DOCUMENT"]).optional(),
-  text: z.string().optional(),
-  example: z
-    .object({
-      header_text: z.array(z.string()).optional(),
-      body_text: z.array(z.array(z.string())).optional(),
-    })
-    .optional(),
-  buttons: z
-    .array(
-      z.object({
-        type: z.enum(["QUICK_REPLY", "URL", "PHONE_NUMBER"]),
-        text: z.string(),
-        url: z.string().optional(),
-        phone_number: z.string().optional(),
-        example: z.array(z.string()).optional(),
+const ComponentSchema = z
+  .object({
+    type: z.enum(["HEADER", "BODY", "FOOTER", "BUTTONS"]),
+    format: z.enum(["TEXT", "IMAGE", "VIDEO", "DOCUMENT"]).optional(),
+    text: z.string().optional(),
+    example: z
+      .object({
+        header_text: z.array(z.string()).optional(),
+        body_text: z.array(z.array(z.string())).optional(),
       })
-    )
-    .optional(),
-});
+      .optional(),
+    buttons: z
+      .array(
+        z.object({
+          type: z.enum(["QUICK_REPLY", "URL", "PHONE_NUMBER"]),
+          text: z.string(),
+          url: z.string().optional(),
+          phone_number: z.string().optional(),
+          example: z.array(z.string()).optional(),
+        })
+      )
+      .optional(),
+  })
+  .superRefine((comp, ctx) => {
+    if (comp.type === "BODY" && comp.text && /\{\{\d+\}\}/.test(comp.text)) {
+      const rows = comp.example?.body_text;
+      if (!rows?.length || !rows[0]?.length || rows[0].some((v) => !v.trim())) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            'BODY component has variables ({{N}}) but is missing "example.body_text" with non-empty sample values. Meta requires examples for every variable.',
+        });
+      }
+    }
+  });
 
 const CreateTemplateSchema = z.object({
   botId: z.string().min(1),

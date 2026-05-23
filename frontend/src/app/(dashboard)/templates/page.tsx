@@ -72,6 +72,7 @@ export default function TemplatesPage() {
   const [formHeaderText, setFormHeaderText] = useState("");
   const [formBodyText, setFormBodyText] = useState("");
   const [formFooterText, setFormFooterText] = useState("");
+  const [formBodyExamples, setFormBodyExamples] = useState<Record<string, string>>({});
 
   const [sendTo, setSendTo] = useState("");
   const [sendParams, setSendParams] = useState<Record<string, string>>({});
@@ -83,6 +84,7 @@ export default function TemplatesPage() {
     setFormHeaderText("");
     setFormBodyText("");
     setFormFooterText("");
+    setFormBodyExamples({});
     setEditingTemplate(null);
     setDialogMode("create");
   }
@@ -92,8 +94,18 @@ export default function TemplatesPage() {
     setFormLanguage(t.language);
     setFormCategory(t.category);
     setFormHeaderText(t.components.find((c) => c.type === "HEADER")?.text ?? "");
-    setFormBodyText(t.components.find((c) => c.type === "BODY")?.text ?? "");
+    const bodyComp = t.components.find((c) => c.type === "BODY");
+    const bodyText = bodyComp?.text ?? "";
+    setFormBodyText(bodyText);
     setFormFooterText(t.components.find((c) => c.type === "FOOTER")?.text ?? "");
+    const vars = extractBodyVariables(bodyText).sort(
+      (a, b) => parseInt(a.replace(/\D/g, "")) - parseInt(b.replace(/\D/g, ""))
+    );
+    const examples: Record<string, string> = {};
+    if (bodyComp?.example?.body_text?.[0]) {
+      vars.forEach((v, i) => { examples[v] = bodyComp.example!.body_text![0][i] ?? ""; });
+    }
+    setFormBodyExamples(examples);
     setEditingTemplate(t);
     setDialogMode("edit");
   }
@@ -113,7 +125,16 @@ export default function TemplatesPage() {
     if (formHeaderText.trim()) {
       components.push({ type: "HEADER", format: "TEXT", text: formHeaderText.trim() });
     }
-    components.push({ type: "BODY", text: formBodyText.trim() });
+    const bodyVars = extractBodyVariables(formBodyText).sort(
+      (a, b) => parseInt(a.replace(/\D/g, "")) - parseInt(b.replace(/\D/g, ""))
+    );
+    const bodyComp: TemplateComponent = { type: "BODY", text: formBodyText.trim() };
+    if (bodyVars.length > 0) {
+      bodyComp.example = {
+        body_text: [bodyVars.map((v) => formBodyExamples[v]?.trim() || v)],
+      };
+    }
+    components.push(bodyComp);
     if (formFooterText.trim()) {
       components.push({ type: "FOOTER", text: formFooterText.trim() });
     }
@@ -418,13 +439,45 @@ export default function TemplatesPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Body</label>
                 <textarea
                   value={formBodyText}
-                  onChange={(e) => setFormBodyText(e.target.value)}
+                  onChange={(e) => {
+                    setFormBodyText(e.target.value);
+                    const newVars = extractBodyVariables(e.target.value);
+                    setFormBodyExamples((prev) => {
+                      const next: Record<string, string> = {};
+                      newVars.forEach((v) => { next[v] = prev[v] ?? ""; });
+                      return next;
+                    });
+                  }}
                   rows={4}
                   placeholder={"Hola {{1}}, tu pedido {{2}} esta listo."}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
                 />
                 <p className="text-xs text-gray-400 mt-1">{"Usa {{1}}, {{2}}, etc. para variables dinamicas"}</p>
               </div>
+
+              {extractBodyVariables(formBodyText).length > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-3">
+                  <div>
+                    <p className="text-sm font-medium text-amber-800">Ejemplos de variables</p>
+                    <p className="text-xs text-amber-600 mt-0.5">Meta requiere un valor de ejemplo por cada variable</p>
+                  </div>
+                  {extractBodyVariables(formBodyText)
+                    .sort((a, b) => parseInt(a.replace(/\D/g, "")) - parseInt(b.replace(/\D/g, "")))
+                    .map((v) => (
+                      <div key={v} className="flex items-center gap-3">
+                        <span className="text-xs font-mono bg-amber-100 text-amber-700 px-2 py-1 rounded w-12 text-center shrink-0">{v}</span>
+                        <input
+                          type="text"
+                          value={formBodyExamples[v] ?? ""}
+                          onChange={(e) => setFormBodyExamples((prev) => ({ ...prev, [v]: e.target.value }))}
+                          placeholder={`Ej: Juan`}
+                          className="flex-1 px-3 py-1.5 border border-amber-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
+                        />
+                      </div>
+                    ))}
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Footer <span className="text-gray-400 font-normal">(opcional)</span>
@@ -447,7 +500,12 @@ export default function TemplatesPage() {
               </button>
               <button
                 onClick={handleCreateOrUpdate}
-                disabled={isSubmitting || !formBodyText.trim() || (dialogMode === "create" && !formName.trim())}
+                disabled={
+                  isSubmitting ||
+                  !formBodyText.trim() ||
+                  (dialogMode === "create" && !formName.trim()) ||
+                  extractBodyVariables(formBodyText).some((v) => !formBodyExamples[v]?.trim())
+                }
                 className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? "Guardando..." : dialogMode === "create" ? "Crear" : "Actualizar"}
