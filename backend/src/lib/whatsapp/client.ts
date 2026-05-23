@@ -1,7 +1,7 @@
 import { createHmac } from "crypto";
 import type { TemplateComponent } from "../../types/index.js";
 
-const GRAPH_API_URL = "https://graph.facebook.com/v20.0";
+const GRAPH_API_URL = "https://graph.facebook.com/v22.0";
 
 function throwGraphApiError(status: number, body: string): never {
   const err = new Error(`WhatsApp API error ${status}: ${body}`) as Error & { statusCode?: number };
@@ -173,6 +173,27 @@ export async function getWhatsAppSecrets(
   };
 }
 
+function enrichGraphApiError(status: number, body: string, wabId: string): never {
+  try {
+    const parsed = JSON.parse(body) as { error?: { message?: string; code?: number } };
+    const msg = parsed.error?.message ?? "";
+    const code = parsed.error?.code;
+
+    if (code === 100 && msg.includes("message_templates")) {
+      const enriched = new Error(
+        `WhatsApp API error ${status}: The access token lacks the "whatsapp_business_management" permission, ` +
+        `or the app is not associated with WABA ${wabId}. ` +
+        `Generate a permanent System User token with both "whatsapp_business_messaging" and "whatsapp_business_management" scopes.`
+      ) as Error & { statusCode?: number };
+      enriched.statusCode = 502;
+      throw enriched;
+    }
+  } catch (e) {
+    if ((e as Error & { statusCode?: number }).statusCode) throw e;
+  }
+  throwGraphApiError(status, body);
+}
+
 export async function listMetaTemplates(
   wabId: string,
   accessToken: string
@@ -187,7 +208,7 @@ export async function listMetaTemplates(
 
     if (!response.ok) {
       const error = await response.text();
-      throwGraphApiError(response.status, error);
+      enrichGraphApiError(response.status, error, wabId);
     }
 
     const json = (await response.json()) as MetaTemplatesResponse;
