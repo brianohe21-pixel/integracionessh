@@ -155,7 +155,7 @@ export function BotForm({ bot }: BotFormProps) {
 
         <div className="col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            WhatsApp Business Account ID
+            WhatsApp Business Account ID (WABA)
           </label>
           <input
             name="whatsappBusinessAccountId"
@@ -164,7 +164,7 @@ export function BotForm({ bot }: BotFormProps) {
             value={form.whatsappBusinessAccountId}
             onChange={handleChange}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
-            placeholder="9876543210"
+            placeholder="No es el Phone Number ID"
           />
         </div>
       </div>
