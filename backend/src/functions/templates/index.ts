@@ -1,7 +1,7 @@
 import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
 import { z } from "zod";
 import { randomUUID } from "crypto";
-import { getBot } from "../../lib/dynamodb/bot.repository.js";
+import { getBot, updateBot } from "../../lib/dynamodb/bot.repository.js";
 import {
   listCachedTemplates,
   getCachedTemplate,
@@ -16,6 +16,7 @@ import {
   deleteMetaTemplate,
   sendTemplateMessage,
   getWhatsAppAccessToken,
+  resolveWabaIdFromPhoneNumber,
 } from "../../lib/whatsapp/client.js";
 import type { SendTemplateOptions } from "../../lib/whatsapp/client.js";
 import { extractAuthContext } from "../../lib/auth/cognito.js";
@@ -93,6 +94,20 @@ async function loadBotAndToken(tenantId: string, botId: string) {
   return { bot, accessToken };
 }
 
+async function resolveWabaId(
+  tenantId: string,
+  botId: string,
+  phoneNumberId: string,
+  storedWabaId: string,
+  accessToken: string
+): Promise<string> {
+  const wabaId = await resolveWabaIdFromPhoneNumber(phoneNumberId, accessToken);
+  if (wabaId !== storedWabaId) {
+    await updateBot(tenantId, botId, { whatsappBusinessAccountId: wabaId });
+  }
+  return wabaId;
+}
+
 export async function handler(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): Promise<APIGatewayProxyResultV2> {
@@ -109,7 +124,14 @@ export async function handler(
       if (!botId) return badRequest("botId query parameter is required");
 
       const { bot, accessToken } = await loadBotAndToken(auth.tenantId, botId);
-      const metaTemplates = await listMetaTemplates(bot.whatsappBusinessAccountId, accessToken);
+      const wabaId = await resolveWabaId(
+        auth.tenantId,
+        botId,
+        bot.phoneNumberId,
+        bot.whatsappBusinessAccountId,
+        accessToken
+      );
+      const metaTemplates = await listMetaTemplates(wabaId, accessToken);
 
       const now = new Date().toISOString();
       const templates: WhatsAppTemplate[] = metaTemplates.map((mt) => ({
@@ -159,8 +181,15 @@ export async function handler(
       const { botId, name, language, category } = parsed.data;
       const comps = parsed.data.components as TemplateComponent[];
       const { bot, accessToken } = await loadBotAndToken(auth.tenantId, botId);
+      const wabaId = await resolveWabaId(
+        auth.tenantId,
+        botId,
+        bot.phoneNumberId,
+        bot.whatsappBusinessAccountId,
+        accessToken
+      );
 
-      const metaResult = await createMetaTemplate(bot.whatsappBusinessAccountId, accessToken, {
+      const metaResult = await createMetaTemplate(wabaId, accessToken, {
         name,
         language,
         category,
@@ -219,8 +248,15 @@ export async function handler(
       if (!botId) return badRequest("botId query parameter is required");
 
       const { bot: deleteBot, accessToken } = await loadBotAndToken(auth.tenantId, botId);
+      const wabaId = await resolveWabaId(
+        auth.tenantId,
+        botId,
+        deleteBot.phoneNumberId,
+        deleteBot.whatsappBusinessAccountId,
+        accessToken
+      );
 
-      await deleteMetaTemplate(deleteBot.whatsappBusinessAccountId, templateName, accessToken);
+      await deleteMetaTemplate(wabaId, templateName, accessToken);
 
       const cached = await listCachedTemplates(auth.tenantId, botId);
       const toDelete = cached.filter((t) => t.name === templateName);
