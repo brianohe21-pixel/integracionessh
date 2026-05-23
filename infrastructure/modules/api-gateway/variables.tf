@@ -62,6 +62,14 @@ variable "bulk_send_function_arn" {
   type = string
 }
 
+variable "metrics_invoke_arn" {
+  type = string
+}
+
+variable "metrics_function_arn" {
+  type = string
+}
+
 variable "allowed_origins" {
   type    = list(string)
   default = ["*"]

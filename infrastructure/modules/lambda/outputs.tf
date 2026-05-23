@@ -42,6 +42,14 @@ output "bulk_send_function_arn" {
   value = aws_lambda_function.functions["bulk_send"].arn
 }
 
+output "metrics_invoke_arn" {
+  value = aws_lambda_function.functions["metrics"].invoke_arn
+}
+
+output "metrics_function_arn" {
+  value = aws_lambda_function.functions["metrics"].arn
+}
+
 output "authorizer_invoke_arn" {
   value = aws_lambda_function.functions["authorizer"].invoke_arn
 }

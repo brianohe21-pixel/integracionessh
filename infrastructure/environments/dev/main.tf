@@ -117,6 +117,8 @@ module "api_gateway" {
   templates_function_arn     = module.lambda.function_arns["templates"]
   bulk_send_invoke_arn       = module.lambda.bulk_send_invoke_arn
   bulk_send_function_arn     = module.lambda.function_arns["bulk_send"]
+  metrics_invoke_arn         = module.lambda.metrics_invoke_arn
+  metrics_function_arn       = module.lambda.function_arns["metrics"]
   allowed_origins            = local.browser_origins
   tags                       = local.tags
 }
