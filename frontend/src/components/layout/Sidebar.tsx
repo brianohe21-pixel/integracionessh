@@ -10,12 +10,14 @@ import {
   MessageSquare,
   LayoutTemplate,
   SendHorizonal,
+  BarChart3,
   Settings,
   LogOut,
 } from "lucide-react";
 
 const navItems = [
   { href: "/bots", label: "Chatbots", icon: BotMessageSquare },
+  { href: "/metrics", label: "Métricas", icon: BarChart3 },
   { href: "/conversations", label: "Conversaciones", icon: MessageSquare },
   { href: "/templates", label: "Templates", icon: LayoutTemplate },
   { href: "/bulk-send", label: "Envío masivo", icon: SendHorizonal },

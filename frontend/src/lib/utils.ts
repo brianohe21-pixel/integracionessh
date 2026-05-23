@@ -30,6 +30,10 @@ export function formatRelativeTime(iso: string): string {
   return `Hace ${days} d`;
 }
 
+export function formatNumber(n: number): string {
+  return new Intl.NumberFormat("es-ES").format(n);
+}
+
 export function planLabel(plan: string): string {
   const labels: Record<string, string> = {
     free: "Gratuito",
