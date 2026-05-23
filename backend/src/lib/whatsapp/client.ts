@@ -173,41 +173,6 @@ export async function getWhatsAppSecrets(
   };
 }
 
-export async function resolveWabaIdFromPhoneNumber(
-  phoneNumberId: string,
-  accessToken: string
-): Promise<string> {
-  const response = await fetch(
-    `${GRAPH_API_URL}/${phoneNumberId}?fields=whatsapp_business_account`,
-    { headers: { Authorization: `Bearer ${accessToken}` } }
-  );
-
-  if (!response.ok) {
-    const error = await response.text();
-    throwGraphApiError(response.status, error);
-  }
-
-  const json = (await response.json()) as {
-    whatsapp_business_account?: { id: string };
-  };
-
-  const wabaId = json.whatsapp_business_account?.id;
-  if (!wabaId) {
-    throwGraphApiError(
-      400,
-      JSON.stringify({
-        error: {
-          message: "Could not resolve WhatsApp Business Account from phone number ID",
-          type: "OAuthException",
-          code: 100,
-        },
-      })
-    );
-  }
-
-  return wabaId;
-}
-
 export async function listMetaTemplates(
   wabId: string,
   accessToken: string

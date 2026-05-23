@@ -1,7 +1,7 @@
 import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
 import { z } from "zod";
 import { randomUUID } from "crypto";
-import { getBot, updateBot } from "../../lib/dynamodb/bot.repository.js";
+import { getBot } from "../../lib/dynamodb/bot.repository.js";
 import {
   listCachedTemplates,
   getCachedTemplate,
@@ -16,7 +16,6 @@ import {
   deleteMetaTemplate,
   sendTemplateMessage,
   getWhatsAppAccessToken,
-  resolveWabaIdFromPhoneNumber,
 } from "../../lib/whatsapp/client.js";
 import type { SendTemplateOptions } from "../../lib/whatsapp/client.js";
 import { extractAuthContext } from "../../lib/auth/cognito.js";
@@ -94,18 +93,22 @@ async function loadBotAndToken(tenantId: string, botId: string) {
   return { bot, accessToken };
 }
 
-async function resolveWabaId(
-  tenantId: string,
-  botId: string,
-  phoneNumberId: string,
-  storedWabaId: string,
-  accessToken: string
-): Promise<string> {
-  const wabaId = await resolveWabaIdFromPhoneNumber(phoneNumberId, accessToken);
-  if (wabaId !== storedWabaId) {
-    await updateBot(tenantId, botId, { whatsappBusinessAccountId: wabaId });
+function assertWabaId(wabaId: string, phoneNumberId: string): void {
+  if (!wabaId) {
+    throw Object.assign(
+      new Error("Bot misconfigured: whatsappBusinessAccountId is empty. Update the bot settings."),
+      { statusCode: 400 }
+    );
   }
-  return wabaId;
+  if (wabaId === phoneNumberId) {
+    throw Object.assign(
+      new Error(
+        "Bot misconfigured: whatsappBusinessAccountId must be the WABA ID, not the Phone Number ID. " +
+        "Go to Meta Business Suite → WhatsApp Manager → Account settings to find the correct WABA ID."
+      ),
+      { statusCode: 400 }
+    );
+  }
 }
 
 export async function handler(
@@ -124,14 +127,8 @@ export async function handler(
       if (!botId) return badRequest("botId query parameter is required");
 
       const { bot, accessToken } = await loadBotAndToken(auth.tenantId, botId);
-      const wabaId = await resolveWabaId(
-        auth.tenantId,
-        botId,
-        bot.phoneNumberId,
-        bot.whatsappBusinessAccountId,
-        accessToken
-      );
-      const metaTemplates = await listMetaTemplates(wabaId, accessToken);
+      assertWabaId(bot.whatsappBusinessAccountId, bot.phoneNumberId);
+      const metaTemplates = await listMetaTemplates(bot.whatsappBusinessAccountId, accessToken);
 
       const now = new Date().toISOString();
       const templates: WhatsAppTemplate[] = metaTemplates.map((mt) => ({
@@ -181,15 +178,9 @@ export async function handler(
       const { botId, name, language, category } = parsed.data;
       const comps = parsed.data.components as TemplateComponent[];
       const { bot, accessToken } = await loadBotAndToken(auth.tenantId, botId);
-      const wabaId = await resolveWabaId(
-        auth.tenantId,
-        botId,
-        bot.phoneNumberId,
-        bot.whatsappBusinessAccountId,
-        accessToken
-      );
+      assertWabaId(bot.whatsappBusinessAccountId, bot.phoneNumberId);
 
-      const metaResult = await createMetaTemplate(wabaId, accessToken, {
+      const metaResult = await createMetaTemplate(bot.whatsappBusinessAccountId, accessToken, {
         name,
         language,
         category,
@@ -248,15 +239,9 @@ export async function handler(
       if (!botId) return badRequest("botId query parameter is required");
 
       const { bot: deleteBot, accessToken } = await loadBotAndToken(auth.tenantId, botId);
-      const wabaId = await resolveWabaId(
-        auth.tenantId,
-        botId,
-        deleteBot.phoneNumberId,
-        deleteBot.whatsappBusinessAccountId,
-        accessToken
-      );
+      assertWabaId(deleteBot.whatsappBusinessAccountId, deleteBot.phoneNumberId);
 
-      await deleteMetaTemplate(wabaId, templateName, accessToken);
+      await deleteMetaTemplate(deleteBot.whatsappBusinessAccountId, templateName, accessToken);
 
       const cached = await listCachedTemplates(auth.tenantId, botId);
       const toDelete = cached.filter((t) => t.name === templateName);
