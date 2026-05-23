@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
 export interface BulkRecipient {
@@ -70,7 +70,16 @@ async function pollJob(
   throw new Error("Timeout esperando la finalizacion del envio masivo");
 }
 
+export function useBulkHistory() {
+  return useQuery({
+    queryKey: ["bulk-history"],
+    queryFn: () => api.get<BulkSendJob[]>("/bulk-send"),
+    refetchInterval: 30_000,
+  });
+}
+
 export function useBulkSend() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: BulkSendInput): Promise<BulkSendResult> => {
       const job = await api.post<BulkSendJob>("/bulk-send", {
@@ -92,6 +101,9 @@ export function useBulkSend() {
         total: finalJob.total,
         status: finalJob.status,
       };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bulk-history"] });
     },
   });
 }

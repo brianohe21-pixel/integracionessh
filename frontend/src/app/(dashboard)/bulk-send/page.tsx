@@ -3,7 +3,9 @@
 import { useRef, useState } from "react";
 import { useBots } from "@/hooks/useBots";
 import { useTemplates } from "@/hooks/useTemplates";
-import { useBulkSend, type BulkRecipient } from "@/hooks/useBulkSend";
+import { useBulkSend, useBulkHistory, type BulkRecipient, type BulkSendJob } from "@/hooks/useBulkSend";
+import { formatDate } from "@/lib/utils";
+import { Badge } from "@/components/ui/Badge";
 import { parseRecipientsCsv } from "@/lib/csv";
 import { EmptyState } from "@/components/ui/EmptyState";
 import type { WhatsAppTemplate } from "@/types";
@@ -14,6 +16,8 @@ import {
   CheckCircle2,
   XCircle,
   Download,
+  History,
+  RefreshCw,
 } from "lucide-react";
 
 function extractBodyVariables(text: string): string[] {
@@ -50,6 +54,7 @@ export default function BulkSendPage() {
   const { data: bots } = useBots();
   const { data: templates, isLoading: loadingTemplates } = useTemplates(botId || undefined);
   const bulkMutation = useBulkSend();
+  const { data: history, isLoading: loadingHistory, refetch: refetchHistory } = useBulkHistory();
 
   const approvedTemplates = templates?.filter((t) => t.status === "APPROVED") ?? [];
   const selectedTemplate: WhatsAppTemplate | undefined = approvedTemplates.find(
@@ -326,7 +331,7 @@ export default function BulkSendPage() {
       )}
 
       {result && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
+        <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3 mb-8">
           <div className="flex flex-wrap items-center gap-6">
             <div className="flex items-center gap-2 text-green-700">
               <CheckCircle2 className="w-5 h-5" />
@@ -350,6 +355,97 @@ export default function BulkSendPage() {
           </p>
         </div>
       )}
+
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 bg-gray-50">
+          <div className="flex items-center gap-2">
+            <History className="w-4 h-4 text-gray-400" />
+            <span className="text-sm font-semibold text-gray-900">Historial de envíos</span>
+          </div>
+          <button
+            onClick={() => void refetchHistory()}
+            disabled={loadingHistory}
+            className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loadingHistory ? "animate-spin" : ""}`} />
+            Actualizar
+          </button>
+        </div>
+
+        {loadingHistory && (
+          <div className="divide-y divide-gray-100">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="px-5 py-4 animate-pulse flex items-center gap-4">
+                <div className="h-3 w-32 bg-gray-200 rounded" />
+                <div className="h-3 w-20 bg-gray-200 rounded" />
+                <div className="flex-1" />
+                <div className="h-3 w-24 bg-gray-200 rounded" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!loadingHistory && (!history || history.length === 0) && (
+          <div className="px-5 py-10 text-center">
+            <p className="text-sm text-gray-400">No hay envíos registrados</p>
+          </div>
+        )}
+
+        {!loadingHistory && history && history.length > 0 && (
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-200">
+                <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">Template</th>
+                <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">Estado</th>
+                <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">Total</th>
+                <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">Aceptados</th>
+                <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">Rechazados</th>
+                <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">Fallos entrega</th>
+                <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">Fecha</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {history.map((job: BulkSendJob) => {
+                const statusVariant =
+                  job.status === "completed" ? "success"
+                  : job.status === "failed" ? "danger"
+                  : "warning";
+                const statusLabel =
+                  job.status === "completed" ? "Completado"
+                  : job.status === "failed" ? "Fallido"
+                  : job.status === "processing" ? "Procesando"
+                  : "En cola";
+                return (
+                  <tr key={job.jobId} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-5 py-3 text-sm font-medium text-gray-900">
+                      {job.templateName}
+                      <span className="ml-1.5 text-xs text-gray-400 font-normal">({job.language})</span>
+                    </td>
+                    <td className="px-5 py-3">
+                      <Badge variant={statusVariant}>{statusLabel}</Badge>
+                    </td>
+                    <td className="px-5 py-3 text-sm text-gray-600 text-right">{job.total}</td>
+                    <td className="px-5 py-3 text-right">
+                      <span className="text-sm font-medium text-green-700">{job.sent}</span>
+                    </td>
+                    <td className="px-5 py-3 text-right">
+                      <span className={`text-sm font-medium ${job.failed > 0 ? "text-red-600" : "text-gray-400"}`}>
+                        {job.failed}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 text-right">
+                      <span className={`text-sm font-medium ${(job.deliveryFailed ?? 0) > 0 ? "text-orange-600" : "text-gray-400"}`}>
+                        {job.deliveryFailed ?? 0}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 text-sm text-gray-500">{formatDate(job.createdAt)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   );
 }

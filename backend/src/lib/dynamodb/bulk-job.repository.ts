@@ -1,4 +1,4 @@
-import { GetCommand, PutCommand, UpdateCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
+import { GetCommand, PutCommand, UpdateCommand, DeleteCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { docClient, TABLE_NAME } from "./client.js";
 import type { BulkSendJob, BulkSendJobStatus } from "../../types/index.js";
 
@@ -109,6 +109,26 @@ export async function updateBulkJobStatus(
       ExpressionAttributeValues: { ":status": status, ":now": now },
     })
   );
+}
+
+export async function listBulkJobs(
+  tenantId: string,
+  limit = 20
+): Promise<BulkSendJob[]> {
+  const result = await docClient.send(
+    new QueryCommand({
+      TableName: TABLE_NAME,
+      KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+      ExpressionAttributeValues: {
+        ":pk": `TENANT#${tenantId}`,
+        ":sk": "BULKJOB#",
+      },
+      ScanIndexForward: false,
+      Limit: limit,
+    })
+  );
+
+  return (result.Items ?? []).map(({ PK, SK, ...rest }) => rest as BulkSendJob);
 }
 
 export async function incrementBulkJobProgress(

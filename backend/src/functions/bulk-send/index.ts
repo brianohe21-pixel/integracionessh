@@ -6,6 +6,7 @@ import { getBot } from "../../lib/dynamodb/bot.repository.js";
 import {
   createBulkJob,
   getBulkJob,
+  listBulkJobs,
   updateBulkJobStatus,
 } from "../../lib/dynamodb/bulk-job.repository.js";
 import { extractAuthContext } from "../../lib/auth/cognito.js";
@@ -95,6 +96,11 @@ export async function handler(
     const auth = extractAuthContext(event);
     const method = event.requestContext.http.method;
     const jobId = event.pathParameters?.jobId;
+
+    if (method === "GET" && !jobId) {
+      const jobs = await listBulkJobs(auth.tenantId);
+      return ok(jobs);
+    }
 
     if (method === "GET" && jobId) {
       const job = await getBulkJob(auth.tenantId, jobId);
