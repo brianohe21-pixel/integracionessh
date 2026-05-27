@@ -11,6 +11,22 @@ export function truncateWhatsAppText(text: string): string {
 }
 
 function throwGraphApiError(status: number, body: string): never {
+  try {
+    const parsed = JSON.parse(body) as {
+      error?: { error_subcode?: number; error_user_msg?: string };
+    };
+    if (parsed.error?.error_subcode === 2388003) {
+      const err = new Error(
+        parsed.error.error_user_msg ??
+          "Message templates can only be edited when Meta has rejected them."
+      ) as Error & { statusCode?: number };
+      err.statusCode = 400;
+      throw err;
+    }
+  } catch (e) {
+    if ((e as Error & { statusCode?: number }).statusCode) throw e;
+  }
+
   const err = new Error(`WhatsApp API error ${status}: ${body}`) as Error & { statusCode?: number };
   err.statusCode = 502;
   throw err;

@@ -233,6 +233,12 @@ export async function handler(
       const cached = await getCachedTemplate(auth.tenantId, botId, templateName, language);
       if (!cached?.metaTemplateId) return notFound("Template not found in cache");
 
+      if (cached.status !== "REJECTED") {
+        return badRequest(
+          "Templates can only be edited when Meta has rejected them. Approved or pending templates cannot be modified."
+        );
+      }
+
       await editMetaTemplate(cached.metaTemplateId, accessToken, { components: comps });
 
       const updated: WhatsAppTemplate = {

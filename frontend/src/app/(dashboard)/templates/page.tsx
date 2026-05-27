@@ -80,8 +80,10 @@ export default function TemplatesPage() {
 
   const [sendTo, setSendTo] = useState("");
   const [sendParams, setSendParams] = useState<Record<string, string>>({});
+  const [formError, setFormError] = useState("");
 
   function openCreate() {
+    setFormError("");
     setFormName("");
     setFormLanguage("es");
     setFormCategory("UTILITY");
@@ -94,6 +96,8 @@ export default function TemplatesPage() {
   }
 
   function openEdit(t: WhatsAppTemplate) {
+    if (t.status !== "REJECTED") return;
+    setFormError("");
     setFormName(t.name);
     setFormLanguage(t.language);
     setFormCategory(t.category);
@@ -148,25 +152,30 @@ export default function TemplatesPage() {
   async function handleCreateOrUpdate() {
     if (!botFilter || !formBodyText.trim()) return;
 
-    if (dialogMode === "create") {
-      await createMutation.mutateAsync({
-        botId: botFilter,
-        name: formName,
-        language: formLanguage,
-        category: formCategory,
-        components: buildComponents(),
-      });
-    } else if (dialogMode === "edit" && editingTemplate) {
-      await updateMutation.mutateAsync({
-        name: editingTemplate.name,
-        botId: botFilter,
-        language: editingTemplate.language,
-        components: buildComponents(),
-      });
-    }
+    setFormError("");
+    try {
+      if (dialogMode === "create") {
+        await createMutation.mutateAsync({
+          botId: botFilter,
+          name: formName,
+          language: formLanguage,
+          category: formCategory,
+          components: buildComponents(),
+        });
+      } else if (dialogMode === "edit" && editingTemplate) {
+        await updateMutation.mutateAsync({
+          name: editingTemplate.name,
+          botId: botFilter,
+          language: editingTemplate.language,
+          components: buildComponents(),
+        });
+      }
 
-    setDialogMode(null);
-    refetch();
+      setDialogMode(null);
+      refetch();
+    } catch (err) {
+      setFormError((err as Error).message ?? "Error al guardar el template");
+    }
   }
 
   async function handleDelete() {
@@ -249,16 +258,18 @@ export default function TemplatesPage() {
               <div className="flex items-center gap-1.5 bg-white border border-blue-200 rounded-lg px-2.5 py-1.5">
                 <CheckCircle className="w-3.5 h-3.5 text-green-500" />
                 <span className="font-medium">Aprobado</span>
-                <span className="text-blue-500">— Listo para enviar</span>
+                <span className="text-blue-500">— Listo para enviar (no editable)</span>
               </div>
               <span className="text-blue-400">o</span>
               <div className="flex items-center gap-1.5 bg-white border border-blue-200 rounded-lg px-2.5 py-1.5">
                 <XCircle className="w-3.5 h-3.5 text-red-500" />
                 <span className="font-medium">Rechazado</span>
-                <span className="text-blue-500">— Edita y vuelve a enviar</span>
+                <span className="text-blue-500">— Unico estado que permite editar</span>
               </div>
             </div>
-            <p className="text-xs text-blue-600 mt-2">Recarga la página para ver el estado actualizado desde Meta.</p>
+            <p className="text-xs text-blue-600 mt-2">
+              Meta no permite editar plantillas aprobadas ni pendientes. Si necesitas cambios, elimina la plantilla y crea una nueva con otro nombre.
+            </p>
           </div>
         </div>
       </div>
@@ -387,13 +398,26 @@ export default function TemplatesPage() {
                             <Send className="w-4 h-4" />
                           </button>
                         )}
-                        <button
-                          onClick={() => openEdit(t)}
-                          className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-                          title="Editar"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
+                        {t.status === "REJECTED" ? (
+                          <button
+                            onClick={() => openEdit(t)}
+                            className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                            title="Editar y reenviar a Meta"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                        ) : (
+                          <span
+                            className="p-1.5 rounded-md text-gray-300 cursor-not-allowed"
+                            title={
+                              t.status === "APPROVED"
+                                ? "Las plantillas aprobadas no se pueden editar en Meta"
+                                : "Espera la revision de Meta; solo se editan si son rechazadas"
+                            }
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </span>
+                        )}
                         <button
                           onClick={() => setDeleteConfirm(t)}
                           className="p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
@@ -426,6 +450,11 @@ export default function TemplatesPage() {
               </button>
             </div>
             <div className="px-6 py-5 space-y-4">
+              {formError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                  <p className="text-sm text-red-600">{formError}</p>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
                 <input
