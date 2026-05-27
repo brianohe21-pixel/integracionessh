@@ -11,6 +11,7 @@ import {
   markMessageAsRead,
   getWhatsAppAccessToken,
 } from "../../lib/whatsapp/client.js";
+import { callCustomWebhook } from "../../lib/webhook/client.js";
 import type { SQSMessageBody, Message } from "../../types/index.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
@@ -34,10 +35,9 @@ async function processRecord(record: SQSRecord): Promise<void> {
   const { tenantId, botId, phoneNumberId, message, contact } = body;
 
   try {
-    const [bot, accessToken, openAIKey] = await Promise.all([
+    const [bot, accessToken] = await Promise.all([
       getBot(tenantId, botId),
       getWhatsAppAccessToken(tenantId, ENVIRONMENT),
-      getOpenAIApiKey(tenantId, ENVIRONMENT),
     ]);
 
     if (!bot) {
@@ -72,7 +72,19 @@ async function processRecord(record: SQSRecord): Promise<void> {
       timestamp: now,
     };
 
-    const aiResponse = await generateChatResponse(bot, history, userMessageText, openAIKey);
+    let aiResponse: string;
+    if (bot.responseMode === "webhook" && bot.webhookUrl) {
+      aiResponse = await callCustomWebhook(bot.webhookUrl, bot.webhookSecret, {
+        message: userMessageText,
+        from: message.from,
+        conversationId: conversation.conversationId,
+        botId,
+        contact: { name: contact.profile.name },
+      });
+    } else {
+      const openAIKey = await getOpenAIApiKey(tenantId, ENVIRONMENT);
+      aiResponse = await generateChatResponse(bot, history, userMessageText, openAIKey);
+    }
 
     const aiMessageId = `ai-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const aiTimestamp = new Date().toISOString();

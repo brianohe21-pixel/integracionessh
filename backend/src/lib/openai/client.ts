@@ -44,8 +44,13 @@ export async function generateChatResponse(
 ): Promise<string> {
   const client = getOpenAIClient(apiKey);
 
+  const systemPrompt = bot.systemPrompt ?? "";
+  const model = bot.model ?? "gpt-4o";
+  const temperature = bot.temperature ?? 0.7;
+  const maxTokens = bot.maxTokens ?? 1024;
+
   const messages: OpenAI.ChatCompletionMessageParam[] = [
-    { role: "system", content: bot.systemPrompt },
+    { role: "system", content: systemPrompt },
     ...conversationHistory.slice(-20).map((msg) => ({
       role: msg.role as "user" | "assistant",
       content: msg.content,
@@ -54,10 +59,10 @@ export async function generateChatResponse(
   ];
 
   const completion = await client.chat.completions.create({
-    model: bot.model,
+    model,
     messages,
-    temperature: bot.temperature,
-    max_tokens: bot.maxTokens,
+    temperature,
+    max_tokens: maxTokens,
   });
 
   const content = completion.choices[0]?.message?.content;
