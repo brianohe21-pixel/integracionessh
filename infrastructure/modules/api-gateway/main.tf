@@ -165,6 +165,12 @@ locals {
       function_arn = var.bulk_send_function_arn
       protected    = true
     }
+    bulk_send_list = {
+      route_key    = "GET /bulk-send"
+      invoke_arn   = var.bulk_send_invoke_arn
+      function_arn = var.bulk_send_function_arn
+      protected    = true
+    }
     bulk_send_get = {
       route_key    = "GET /bulk-send/{jobId}"
       invoke_arn   = var.bulk_send_invoke_arn
