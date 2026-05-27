@@ -6,7 +6,7 @@ import { useTemplates } from "@/hooks/useTemplates";
 import { useBulkSend, useBulkHistory, type BulkRecipient, type BulkSendJob } from "@/hooks/useBulkSend";
 import { formatDate } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
-import { parseRecipientsCsv } from "@/lib/csv";
+import { decodeCsvBytes, parseRecipientsCsv } from "@/lib/csv";
 import { EmptyState } from "@/components/ui/EmptyState";
 import type { WhatsAppTemplate } from "@/types";
 import {
@@ -77,9 +77,8 @@ export default function BulkSendPage() {
     setResult(null);
     setFileName(file.name);
 
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const text = ev.target?.result as string;
+    void file.arrayBuffer().then((buffer) => {
+      const text = decodeCsvBytes(new Uint8Array(buffer));
       const rows = parseRecipientsCsv(text);
       if (rows.length === 0) {
         setParseError(
@@ -89,17 +88,19 @@ export default function BulkSendPage() {
         return;
       }
       setCsvRows(rows);
-    };
-    reader.readAsText(file);
+    }).catch(() => {
+      setParseError("No se pudo leer el archivo CSV.");
+      setCsvRows([]);
+    });
   }
 
   function downloadSample() {
     const headers = ["phone", ...bodyVars.map((_, i) => `var${i + 1}`)];
     const sample = [
       headers.join(","),
-      ["573001234567", ...bodyVars.map(() => "valor")].join(","),
+      ["573001234567", ...bodyVars.map(() => "Ejemplo")].join(","),
     ].join("\n");
-    const blob = new Blob([sample], { type: "text/csv" });
+    const blob = new Blob(["\uFEFF" + sample], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
