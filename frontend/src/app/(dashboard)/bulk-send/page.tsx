@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { Fragment, useRef, useState } from "react";
 import { useBots } from "@/hooks/useBots";
 import { useTemplates } from "@/hooks/useTemplates";
 import { useBulkSend, useBulkHistory, type BulkRecipient, type BulkSendJob } from "@/hooks/useBulkSend";
+import { BulkJobFailures } from "@/components/bulk-send/BulkJobFailures";
 import { formatDate } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
 import { decodeCsvBytes, parseRecipientsCsv } from "@/lib/csv";
@@ -18,6 +19,8 @@ import {
   Download,
   History,
   RefreshCw,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 
 function extractBodyVariables(text: string): string[] {
@@ -53,6 +56,8 @@ export default function BulkSendPage() {
   const [parseError, setParseError] = useState("");
   const [progress, setProgress] = useState({ current: 0, total: 0, failed: 0, deliveryFailed: 0 });
   const [result, setResult] = useState<{ sent: number; failed: number; deliveryFailed: number } | null>(null);
+  const [lastCompletedJobId, setLastCompletedJobId] = useState<string | null>(null);
+  const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
 
   const { data: bots } = useBots();
   const { data: templates, isLoading: loadingTemplates } = useTemplates(botId || undefined);
@@ -135,6 +140,10 @@ export default function BulkSendPage() {
     });
 
     setResult({ sent: res.sent, failed: res.failed, deliveryFailed: res.deliveryFailed });
+    setLastCompletedJobId(res.jobId);
+    if (res.failed > 0 || res.deliveryFailed > 0) {
+      setExpandedJobId(res.jobId);
+    }
     setTab("history");
   }
 
@@ -436,6 +445,9 @@ export default function BulkSendPage() {
               <p className="text-xs text-gray-400 border-t border-gray-100 pt-3">
                 <strong>Aceptados:</strong> Meta recibió el mensaje. <strong>Fallos de entrega:</strong> el número no existe en WhatsApp, el contacto bloqueó el número, o hay restricciones de la cuenta. Los fallos de entrega pueden reportarse minutos después del envío.
               </p>
+              {(result.failed > 0 || result.deliveryFailed > 0) && lastCompletedJobId && (
+                <BulkJobFailures jobId={lastCompletedJobId} />
+              )}
             </div>
           )}
         </>
@@ -486,6 +498,7 @@ export default function BulkSendPage() {
                   <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">Rechazados</th>
                   <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">Fallos entrega</th>
                   <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">Fecha</th>
+                  <th className="w-10 px-2 py-3" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -499,31 +512,51 @@ export default function BulkSendPage() {
                     : job.status === "failed" ? "Fallido"
                     : job.status === "processing" ? "Procesando"
                     : "En cola";
+                  const hasFailures = job.failed > 0 || (job.deliveryFailed ?? 0) > 0;
+                  const isExpanded = expandedJobId === job.jobId;
                   return (
-                    <tr key={job.jobId} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-5 py-3 text-sm font-medium text-gray-900">
-                        {job.templateName}
-                        <span className="ml-1.5 text-xs text-gray-400 font-normal">({job.language})</span>
-                      </td>
-                      <td className="px-5 py-3">
-                        <Badge variant={statusVariant}>{statusLabel}</Badge>
-                      </td>
-                      <td className="px-5 py-3 text-sm text-gray-600 text-right">{job.total}</td>
-                      <td className="px-5 py-3 text-right">
-                        <span className="text-sm font-medium text-green-700">{job.sent}</span>
-                      </td>
-                      <td className="px-5 py-3 text-right">
-                        <span className={`text-sm font-medium ${job.failed > 0 ? "text-red-600" : "text-gray-400"}`}>
-                          {job.failed}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3 text-right">
-                        <span className={`text-sm font-medium ${(job.deliveryFailed ?? 0) > 0 ? "text-orange-600" : "text-gray-400"}`}>
-                          {job.deliveryFailed ?? 0}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3 text-sm text-gray-500">{formatDate(job.createdAt)}</td>
-                    </tr>
+                    <Fragment key={job.jobId}>
+                      <tr
+                        className={`transition-colors ${hasFailures ? "cursor-pointer hover:bg-gray-50" : ""}`}
+                        onClick={() => {
+                          if (!hasFailures) return;
+                          setExpandedJobId(isExpanded ? null : job.jobId);
+                        }}
+                      >
+                        <td className="px-5 py-3 text-sm font-medium text-gray-900">
+                          {job.templateName}
+                          <span className="ml-1.5 text-xs text-gray-400 font-normal">({job.language})</span>
+                        </td>
+                        <td className="px-5 py-3">
+                          <Badge variant={statusVariant}>{statusLabel}</Badge>
+                        </td>
+                        <td className="px-5 py-3 text-sm text-gray-600 text-right">{job.total}</td>
+                        <td className="px-5 py-3 text-right">
+                          <span className="text-sm font-medium text-green-700">{job.sent}</span>
+                        </td>
+                        <td className="px-5 py-3 text-right">
+                          <span className={`text-sm font-medium ${job.failed > 0 ? "text-red-600" : "text-gray-400"}`}>
+                            {job.failed}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3 text-right">
+                          <span className={`text-sm font-medium ${(job.deliveryFailed ?? 0) > 0 ? "text-orange-600" : "text-gray-400"}`}>
+                            {job.deliveryFailed ?? 0}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3 text-sm text-gray-500">{formatDate(job.createdAt)}</td>
+                        <td className="px-2 py-3 text-gray-400">
+                          {hasFailures && (isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />)}
+                        </td>
+                      </tr>
+                      {isExpanded && hasFailures && (
+                        <tr key={`${job.jobId}-failures`}>
+                          <td colSpan={8} className="p-0">
+                            <BulkJobFailures jobId={job.jobId} />
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   );
                 })}
               </tbody>

@@ -177,6 +177,12 @@ locals {
       function_arn = var.bulk_send_function_arn
       protected    = true
     }
+    bulk_send_failures = {
+      route_key    = "GET /bulk-send/{jobId}/failures"
+      invoke_arn   = var.bulk_send_invoke_arn
+      function_arn = var.bulk_send_function_arn
+      protected    = true
+    }
     metrics_get = {
       route_key    = "GET /metrics"
       invoke_arn   = var.metrics_invoke_arn

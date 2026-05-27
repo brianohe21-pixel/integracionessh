@@ -98,12 +98,47 @@ export interface WhatsAppMessage {
   audio?: { id: string; mime_type: string };
 }
 
+export interface WhatsAppStatusError {
+  code: number;
+  title: string;
+  message?: string;
+  error_data?: { details?: string };
+}
+
 export interface WhatsAppStatus {
   id: string;
   status: "sent" | "delivered" | "read" | "failed";
   timestamp: string;
   recipient_id: string;
-  errors?: Array<{ code: number; title: string }>;
+  errors?: WhatsAppStatusError[];
+}
+
+export type BulkSendFailureKind = "send" | "delivery";
+
+export interface BulkSendFailure {
+  jobId: string;
+  tenantId: string;
+  kind: BulkSendFailureKind;
+  to: string;
+  messageId?: string;
+  errorCode?: number;
+  errorTitle?: string;
+  errorMessage: string;
+  failedAt: string;
+}
+
+export interface BulkSendFailureSummary {
+  kind: BulkSendFailureKind;
+  errorCode?: number;
+  errorTitle: string;
+  count: number;
+}
+
+export interface BulkSendFailuresResponse {
+  jobId: string;
+  items: BulkSendFailure[];
+  summary: BulkSendFailureSummary[];
+  total: number;
 }
 
 export interface SQSMessageBody {

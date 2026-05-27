@@ -5,7 +5,8 @@ import { getBotByPhoneNumberId } from "../../lib/dynamodb/bot.repository.js";
 import {
   getMessageTracking,
   deleteMessageTracking,
-  incrementBulkJobDeliveryFailed,
+  parseDeliveryFailureError,
+  recordBulkDeliveryFailure,
 } from "../../lib/dynamodb/bulk-job.repository.js";
 import type { WhatsAppWebhookEvent, SQSMessageBody } from "../../types/index.js";
 
@@ -78,8 +79,13 @@ async function handleWebhook(
             try {
               const tracking = await getMessageTracking(status.id);
               if (!tracking) return;
+              const parsedError = parseDeliveryFailureError(status.errors);
               await Promise.all([
-                incrementBulkJobDeliveryFailed(tracking.tenantId, tracking.jobId),
+                recordBulkDeliveryFailure(tracking.tenantId, tracking.jobId, {
+                  to: tracking.to ?? status.recipient_id,
+                  messageId: status.id,
+                  ...parsedError,
+                }),
                 deleteMessageTracking(status.id),
               ]);
               console.log(

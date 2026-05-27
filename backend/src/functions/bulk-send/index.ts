@@ -7,6 +7,7 @@ import {
   createBulkJob,
   getBulkJob,
   listBulkJobs,
+  listBulkSendFailures,
   updateBulkJobStatus,
 } from "../../lib/dynamodb/bulk-job.repository.js";
 import { extractAuthContext } from "../../lib/auth/cognito.js";
@@ -103,6 +104,18 @@ export async function handler(
     }
 
     if (method === "GET" && jobId) {
+      const rawPath = event.rawPath ?? event.requestContext.http.path ?? "";
+      if (rawPath.endsWith("/failures")) {
+        const job = await getBulkJob(auth.tenantId, jobId);
+        if (!job) return notFound("Job not found");
+        const limit = Math.min(
+          Math.max(parseInt(event.queryStringParameters?.limit ?? "500", 10) || 500, 1),
+          1000
+        );
+        const failures = await listBulkSendFailures(auth.tenantId, jobId, limit);
+        return ok(failures);
+      }
+
       const job = await getBulkJob(auth.tenantId, jobId);
       if (!job) return notFound("Job not found");
       return ok(job);

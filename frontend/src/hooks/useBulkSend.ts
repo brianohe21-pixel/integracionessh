@@ -11,6 +11,34 @@ export interface BulkRecipient {
   }>;
 }
 
+export type BulkSendFailureKind = "send" | "delivery";
+
+export interface BulkSendFailure {
+  jobId: string;
+  tenantId: string;
+  kind: BulkSendFailureKind;
+  to: string;
+  messageId?: string;
+  errorCode?: number;
+  errorTitle?: string;
+  errorMessage: string;
+  failedAt: string;
+}
+
+export interface BulkSendFailureSummary {
+  kind: BulkSendFailureKind;
+  errorCode?: number;
+  errorTitle: string;
+  count: number;
+}
+
+export interface BulkSendFailuresResponse {
+  jobId: string;
+  items: BulkSendFailure[];
+  summary: BulkSendFailureSummary[];
+  total: number;
+}
+
 export interface BulkSendJob {
   jobId: string;
   tenantId: string;
