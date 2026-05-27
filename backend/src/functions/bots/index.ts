@@ -87,19 +87,42 @@ export async function handler(
       if (!parsed.success) return badRequest(parsed.error.message);
 
       const now = new Date().toISOString();
-      const { responseMode, systemPrompt, model, temperature, maxTokens, webhookUrl, webhookSecret, ...rest } = parsed.data;
-      const newBot: Bot = {
+      const data = parsed.data;
+
+      const base = {
         botId: randomUUID(),
         tenantId: auth.tenantId,
-        responseMode,
-        ...(responseMode === "openai"
-          ? { systemPrompt, model, temperature, maxTokens }
-          : { webhookUrl, webhookSecret }),
-        ...rest,
-        status: "active",
+        responseMode: data.responseMode,
+        name: data.name,
+        phoneNumberId: data.phoneNumberId,
+        whatsappBusinessAccountId: data.whatsappBusinessAccountId,
+        status: "active" as const,
         createdAt: now,
         updatedAt: now,
       };
+
+      let newBot: Bot;
+      if (data.responseMode === "openai") {
+        if (!data.systemPrompt) {
+          return badRequest("systemPrompt is required when responseMode is openai");
+        }
+        newBot = {
+          ...base,
+          systemPrompt: data.systemPrompt,
+          model: data.model,
+          temperature: data.temperature,
+          maxTokens: data.maxTokens,
+        };
+      } else {
+        if (!data.webhookUrl) {
+          return badRequest("webhookUrl is required when responseMode is webhook");
+        }
+        newBot = {
+          ...base,
+          webhookUrl: data.webhookUrl,
+          ...(data.webhookSecret !== undefined ? { webhookSecret: data.webhookSecret } : {}),
+        };
+      }
 
       await createBot(newBot);
       return created(newBot);

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BotMessageSquare, Phone, Trash2, Edit, Power, PowerOff } from "lucide-react";
+import { BotMessageSquare, Phone, Trash2, Edit, Power, PowerOff, Webhook } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { formatDate } from "@/lib/utils";
 import type { Bot } from "@/types";
@@ -34,7 +34,14 @@ export function BotCard({ bot }: BotCardProps) {
           </div>
           <div>
             <h3 className="font-semibold text-gray-900 text-sm">{bot.name}</h3>
-            <p className="text-xs text-gray-400">{bot.model}</p>
+            {bot.responseMode === "webhook" ? (
+              <p className="text-xs text-indigo-500 flex items-center gap-1">
+                <Webhook className="w-3 h-3" />
+                Webhook propio
+              </p>
+            ) : (
+              <p className="text-xs text-gray-400">{bot.model}</p>
+            )}
           </div>
         </div>
         <Badge variant={bot.status === "active" ? "success" : "default"}>
@@ -43,7 +50,7 @@ export function BotCard({ bot }: BotCardProps) {
       </div>
 
       <p className="text-xs text-gray-500 line-clamp-2 mb-4 leading-relaxed">
-        {bot.systemPrompt}
+        {bot.responseMode === "webhook" ? bot.webhookUrl : bot.systemPrompt}
       </p>
 
       <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-4">

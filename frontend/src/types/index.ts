@@ -12,10 +12,13 @@ export interface Bot {
   botId: string;
   tenantId: string;
   name: string;
-  systemPrompt: string;
-  model: "gpt-4o" | "gpt-4o-mini" | "gpt-4-turbo";
-  temperature: number;
-  maxTokens: number;
+  responseMode: "openai" | "webhook";
+  systemPrompt?: string;
+  model?: "gpt-4o" | "gpt-4o-mini" | "gpt-4-turbo";
+  temperature?: number;
+  maxTokens?: number;
+  webhookUrl?: string;
+  webhookSecret?: string;
   phoneNumberId: string;
   whatsappBusinessAccountId: string;
   status: "active" | "inactive";

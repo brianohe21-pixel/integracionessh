@@ -10,6 +10,7 @@ import {
   sendTextMessage,
   markMessageAsRead,
   getWhatsAppAccessToken,
+  truncateWhatsAppText,
 } from "../../lib/whatsapp/client.js";
 import { callCustomWebhook } from "../../lib/webhook/client.js";
 import type { SQSMessageBody, Message } from "../../types/index.js";
@@ -86,6 +87,8 @@ async function processRecord(record: SQSRecord): Promise<void> {
       aiResponse = await generateChatResponse(bot, history, userMessageText, openAIKey);
     }
 
+    const outboundText = truncateWhatsAppText(aiResponse);
+
     const aiMessageId = `ai-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const aiTimestamp = new Date().toISOString();
 
@@ -94,7 +97,7 @@ async function processRecord(record: SQSRecord): Promise<void> {
       conversationId: conversation.conversationId,
       tenantId,
       role: "assistant",
-      content: aiResponse,
+      content: outboundText,
       timestamp: aiTimestamp,
     };
 
@@ -104,7 +107,7 @@ async function processRecord(record: SQSRecord): Promise<void> {
     await sendTextMessage({
       phoneNumberId,
       to: message.from,
-      text: aiResponse,
+      text: outboundText,
       accessToken,
       replyToMessageId: message.id,
     });

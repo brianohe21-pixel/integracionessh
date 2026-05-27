@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { promises as dns } from "dns";
 
 const TIMEOUT_MS = 10_000;
-const MAX_REPLY_LENGTH = 4_096;
+const MAX_REPLY_LENGTH = 1_024;
 const MAX_RESPONSE_BYTES = 64 * 1024;
 
 const PRIVATE_RANGES: Array<[number, number, number]> = [

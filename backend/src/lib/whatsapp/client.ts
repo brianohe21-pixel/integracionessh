@@ -3,6 +3,13 @@ import type { TemplateComponent } from "../../types/index.js";
 
 const GRAPH_API_URL = "https://graph.facebook.com/v22.0";
 
+export const WHATSAPP_MAX_TEXT_BODY_LENGTH = 1024;
+
+export function truncateWhatsAppText(text: string): string {
+  if (text.length <= WHATSAPP_MAX_TEXT_BODY_LENGTH) return text;
+  return text.slice(0, WHATSAPP_MAX_TEXT_BODY_LENGTH);
+}
+
 function throwGraphApiError(status: number, body: string): never {
   const err = new Error(`WhatsApp API error ${status}: ${body}`) as Error & { statusCode?: number };
   err.statusCode = 502;
@@ -59,7 +66,8 @@ export interface SendTextMessageResponse {
 export async function sendTextMessage(
   options: SendTextMessageOptions
 ): Promise<SendTextMessageResponse> {
-  const { phoneNumberId, to, text, accessToken, replyToMessageId } = options;
+  const { phoneNumberId, to, accessToken, replyToMessageId } = options;
+  const text = truncateWhatsAppText(options.text);
 
   const body: Record<string, unknown> = {
     messaging_product: "whatsapp",
