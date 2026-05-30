@@ -155,47 +155,10 @@ export function validateWebhookSignature(
   return expectedBuffer.every((byte, i) => byte === receivedBuffer[i]);
 }
 
-export async function getWhatsAppAccessToken(
-  tenantId: string,
-  environment: string
-): Promise<string> {
-  const { SecretsManagerClient, GetSecretValueCommand } = await import(
-    "@aws-sdk/client-secrets-manager"
-  );
-
-  const client = new SecretsManagerClient({});
-  const command = new GetSecretValueCommand({
-    SecretId: `/${environment}/tenants/${tenantId}/whatsapp`,
-  });
-
-  const response = await client.send(command);
-  const secret = JSON.parse(response.SecretString ?? "{}") as {
-    accessToken: string;
-    appSecret: string;
-  };
-
-  return secret.accessToken;
-}
-
-export async function getWhatsAppSecrets(
-  tenantId: string,
-  environment: string
-): Promise<{ accessToken: string; appSecret: string }> {
-  const { SecretsManagerClient, GetSecretValueCommand } = await import(
-    "@aws-sdk/client-secrets-manager"
-  );
-
-  const client = new SecretsManagerClient({});
-  const command = new GetSecretValueCommand({
-    SecretId: `/${environment}/tenants/${tenantId}/whatsapp`,
-  });
-
-  const response = await client.send(command);
-  return JSON.parse(response.SecretString ?? "{}") as {
-    accessToken: string;
-    appSecret: string;
-  };
-}
+export {
+  getWhatsAppAccessToken,
+  getWhatsAppSecrets,
+} from "./secrets.js";
 
 function enrichGraphApiError(status: number, body: string, wabId: string): never {
   try {

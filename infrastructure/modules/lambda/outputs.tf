@@ -50,6 +50,14 @@ output "metrics_function_arn" {
   value = aws_lambda_function.functions["metrics"].arn
 }
 
+output "whatsapp_connect_invoke_arn" {
+  value = aws_lambda_function.functions["whatsapp_connect"].invoke_arn
+}
+
+output "whatsapp_connect_function_arn" {
+  value = aws_lambda_function.functions["whatsapp_connect"].arn
+}
+
 output "authorizer_invoke_arn" {
   value = aws_lambda_function.functions["authorizer"].invoke_arn
 }

@@ -70,6 +70,14 @@ variable "metrics_function_arn" {
   type = string
 }
 
+variable "whatsapp_connect_invoke_arn" {
+  type = string
+}
+
+variable "whatsapp_connect_function_arn" {
+  type = string
+}
+
 variable "allowed_origins" {
   type    = list(string)
   default = ["*"]

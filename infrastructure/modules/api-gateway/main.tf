@@ -189,6 +189,12 @@ locals {
       function_arn = var.metrics_function_arn
       protected    = true
     }
+    whatsapp_connect = {
+      route_key    = "POST /whatsapp/connect"
+      invoke_arn   = var.whatsapp_connect_invoke_arn
+      function_arn = var.whatsapp_connect_function_arn
+      protected    = true
+    }
   }
 }
 
@@ -220,7 +226,8 @@ resource "aws_lambda_permission" "api_gw" {
     conversations = var.conversations_function_arn
     templates     = var.templates_function_arn
     bulk_send     = var.bulk_send_function_arn
-    metrics       = var.metrics_function_arn
+    metrics           = var.metrics_function_arn
+    whatsapp_connect  = var.whatsapp_connect_function_arn
   }
 
   statement_id  = "AllowAPIGatewayInvoke-${each.key}"

@@ -47,6 +47,26 @@ variable "whatsapp_verify_token" {
   sensitive = true
 }
 
+variable "meta_app_id" {
+  type        = string
+  default     = ""
+  description = "Meta App ID for WhatsApp Embedded Signup token exchange"
+}
+
+variable "meta_app_secret" {
+  type        = string
+  default     = ""
+  sensitive   = true
+  description = "Meta App Secret for WhatsApp Embedded Signup token exchange"
+}
+
+variable "whatsapp_app_secret" {
+  type        = string
+  default     = ""
+  sensitive   = true
+  description = "Meta App Secret used for webhook signature validation and tenant secret storage"
+}
+
 variable "lambda_zip_path" {
   type        = string
   default     = "../../backend/dist/functions.zip"

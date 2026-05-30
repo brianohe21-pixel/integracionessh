@@ -16,6 +16,7 @@ const entryPoints = [
   "src/functions/process-bulk-send/index.ts",
   "src/functions/authorizer/index.ts",
   "src/functions/metrics/index.ts",
+  "src/functions/whatsapp-connect/index.ts",
 ];
 
 const buildOptions = {

@@ -41,8 +41,10 @@ resource "aws_amplify_app" "frontend" {
     NEXT_PUBLIC_COGNITO_REGION   = var.aws_region
     NEXT_PUBLIC_USER_POOL_ID     = var.cognito_user_pool_id
     NEXT_PUBLIC_USER_POOL_CLIENT = var.cognito_client_id
-    NEXT_PUBLIC_ENV              = var.environment
-    NODE_VERSION                 = "20"
+    NEXT_PUBLIC_ENV                            = var.environment
+    NEXT_PUBLIC_META_APP_ID                    = var.meta_app_id
+    NEXT_PUBLIC_META_EMBEDDED_SIGNUP_CONFIG_ID = var.meta_embedded_signup_config_id
+    NODE_VERSION                               = "20"
   }
 
   tags = var.tags

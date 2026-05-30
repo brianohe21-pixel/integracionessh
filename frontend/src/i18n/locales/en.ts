@@ -169,6 +169,23 @@ export const en: Messages = {
     webhookContractResponse: "It must respond with (max 1,024 characters):",
     webhookUrlPlaceholder: "https://my-server.com/chatbot/webhook",
     phonePlaceholder: "1234567890",
+    advancedMode: "Advanced: enter IDs manually",
+    advancedModeHide: "Hide manual IDs",
+    whatsappRequired: "Connect WhatsApp or enter IDs in advanced mode before saving.",
+    sharedTokenNote:
+      "The WhatsApp token is stored per account. Connecting again updates credentials for all bots on this account.",
+  },
+  whatsapp: {
+    sectionTitle: "WhatsApp Business",
+    sectionDescription:
+      "Connect your WhatsApp Business account with Meta Embedded Signup. Phone Number ID and WABA will be filled automatically.",
+    connectButton: "Connect with WhatsApp",
+    reconnect: "Reconnect WhatsApp",
+    connecting: "Connecting...",
+    connected: "WhatsApp connected",
+    sdkLoading: "Loading Meta SDK...",
+    notConfigured:
+      "WhatsApp Embedded Signup is not configured. Set NEXT_PUBLIC_META_APP_ID and NEXT_PUBLIC_META_EMBEDDED_SIGNUP_CONFIG_ID.",
   },
   conversations: {
     title: "Conversations",
@@ -379,7 +396,7 @@ export const en: Messages = {
     step3: "Subscribe to the messages field",
     secretsTitle: "API Keys",
     secretsDescription:
-      "WhatsApp and OpenAI credentials are stored securely in AWS Secrets Manager. Contact your administrator to update them.",
+      "WhatsApp credentials are saved when you connect a bot via Embedded Signup. OpenAI uses the platform key unless you have your own.",
     whatsappToken: "WhatsApp Access Token",
     whatsappTokenStored: "Stored in Secrets Manager",
     configured: "Configured",

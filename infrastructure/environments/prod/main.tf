@@ -101,6 +101,9 @@ module "lambda" {
   cognito_user_pool_id  = module.cognito.user_pool_id
   cognito_client_id     = module.cognito.client_id
   whatsapp_verify_token = var.whatsapp_verify_token
+  meta_app_id           = var.meta_app_id
+  meta_app_secret       = var.meta_app_secret
+  whatsapp_app_secret   = var.whatsapp_app_secret
   lambda_zip_path       = var.lambda_zip_path
   tags                  = local.tags
 }
@@ -123,10 +126,12 @@ module "api_gateway" {
   templates_function_arn     = module.lambda.function_arns["templates"]
   bulk_send_invoke_arn       = module.lambda.bulk_send_invoke_arn
   bulk_send_function_arn     = module.lambda.function_arns["bulk_send"]
-  metrics_invoke_arn         = module.lambda.metrics_invoke_arn
-  metrics_function_arn       = module.lambda.function_arns["metrics"]
-  allowed_origins            = local.browser_origins
-  tags                       = local.tags
+  metrics_invoke_arn            = module.lambda.metrics_invoke_arn
+  metrics_function_arn          = module.lambda.function_arns["metrics"]
+  whatsapp_connect_invoke_arn   = module.lambda.whatsapp_connect_invoke_arn
+  whatsapp_connect_function_arn = module.lambda.whatsapp_connect_function_arn
+  allowed_origins               = local.browser_origins
+  tags                          = local.tags
 }
 
 module "amplify" {
@@ -138,7 +143,9 @@ module "amplify" {
   branch_name          = "main"
   api_endpoint         = module.api_gateway.api_endpoint
   aws_region           = var.aws_region
-  cognito_user_pool_id = module.cognito.user_pool_id
-  cognito_client_id    = module.cognito.client_id
-  tags                 = local.tags
+  cognito_user_pool_id              = module.cognito.user_pool_id
+  cognito_client_id                 = module.cognito.client_id
+  meta_app_id                       = var.meta_app_id
+  meta_embedded_signup_config_id    = var.meta_embedded_signup_config_id
+  tags                              = local.tags
 }

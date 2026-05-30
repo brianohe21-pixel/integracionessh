@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useCreateBot, useUpdateBot } from "@/hooks/useBots";
 import { useT } from "@/i18n/context";
+import { EmbeddedSignupLauncher } from "@/components/whatsapp/EmbeddedSignupLauncher";
 import type { Bot } from "@/types";
 
 interface BotFormProps {
@@ -30,11 +31,18 @@ export function BotForm({ bot }: BotFormProps) {
   });
 
   const [error, setError] = useState("");
+  const [whatsappConnected, setWhatsappConnected] = useState(
+    Boolean(bot?.phoneNumberId && bot?.whatsappBusinessAccountId)
+  );
+  const [advancedMode, setAdvancedMode] = useState(false);
   const createBot = useCreateBot();
   const updateBot = useUpdateBot(bot?.botId ?? "");
 
   const isPending = createBot.isPending || updateBot.isPending;
   const isWebhookMode = form.responseMode === "webhook";
+  const hasManualIds =
+    form.phoneNumberId.trim().length > 0 && form.whatsappBusinessAccountId.trim().length > 0;
+  const canSubmit = whatsappConnected || (advancedMode && hasManualIds);
 
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -49,6 +57,11 @@ export function BotForm({ bot }: BotFormProps) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+
+    if (!canSubmit) {
+      setError(t("bots.whatsappRequired"));
+      return;
+    }
 
     try {
       const payload: Record<string, unknown> = {
@@ -253,35 +266,72 @@ export function BotForm({ bot }: BotFormProps) {
           </>
         )}
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            {t("bots.phoneNumberId")}
-          </label>
-          <input
-            name="phoneNumberId"
-            type="text"
-            required
-            value={form.phoneNumberId}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
-            placeholder={t("bots.phonePlaceholder")}
+        <div className="col-span-2">
+          <EmbeddedSignupLauncher
+            alreadyConnected={whatsappConnected}
+            onConnected={({ phoneNumberId, whatsappBusinessAccountId }) => {
+              setForm((prev) => ({
+                ...prev,
+                phoneNumberId,
+                whatsappBusinessAccountId,
+              }));
+              setWhatsappConnected(true);
+            }}
           />
+          <p className="mt-2 text-xs text-gray-500">{t("bots.sharedTokenNote")}</p>
         </div>
 
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            {t("bots.wabaId")}
-          </label>
-          <input
-            name="whatsappBusinessAccountId"
-            type="text"
-            required
-            value={form.whatsappBusinessAccountId}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
-            placeholder={t("bots.wabaPlaceholder")}
-          />
+          <button
+            type="button"
+            onClick={() => setAdvancedMode((v) => !v)}
+            className="text-xs font-medium text-indigo-600 hover:text-indigo-700"
+          >
+            {advancedMode ? t("bots.advancedModeHide") : t("bots.advancedMode")}
+          </button>
         </div>
+
+        {advancedMode && (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {t("bots.phoneNumberId")}
+              </label>
+              <input
+                name="phoneNumberId"
+                type="text"
+                value={form.phoneNumberId}
+                onChange={(e) => {
+                  handleChange(e);
+                  if (e.target.value && form.whatsappBusinessAccountId) {
+                    setWhatsappConnected(true);
+                  }
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
+                placeholder={t("bots.phonePlaceholder")}
+              />
+            </div>
+
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {t("bots.wabaId")}
+              </label>
+              <input
+                name="whatsappBusinessAccountId"
+                type="text"
+                value={form.whatsappBusinessAccountId}
+                onChange={(e) => {
+                  handleChange(e);
+                  if (e.target.value && form.phoneNumberId) {
+                    setWhatsappConnected(true);
+                  }
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
+                placeholder={t("bots.wabaPlaceholder")}
+              />
+            </div>
+          </>
+        )}
       </div>
 
       {error && (
@@ -293,10 +343,12 @@ export function BotForm({ bot }: BotFormProps) {
       <div className="flex items-center gap-3 pt-2">
         <button
           type="submit"
-          disabled={isPending}
+          disabled={isPending || !canSubmit}
           className={cn(
             "px-5 py-2 rounded-lg text-sm font-medium text-white transition-colors",
-            isPending ? "bg-indigo-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"
+            isPending || !canSubmit
+              ? "bg-indigo-400 cursor-not-allowed"
+              : "bg-indigo-600 hover:bg-indigo-700"
           )}
         >
           {isPending

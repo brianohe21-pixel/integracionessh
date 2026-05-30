@@ -36,6 +36,16 @@ variable "cognito_client_id" {
   type = string
 }
 
+variable "meta_app_id" {
+  type    = string
+  default = ""
+}
+
+variable "meta_embedded_signup_config_id" {
+  type    = string
+  default = ""
+}
+
 variable "tags" {
   type    = map(string)
   default = {}

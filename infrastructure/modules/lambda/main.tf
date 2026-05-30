@@ -70,6 +70,15 @@ resource "aws_iam_role_policy" "lambda_permissions" {
       {
         Effect = "Allow"
         Action = [
+          "secretsmanager:CreateSecret",
+          "secretsmanager:PutSecretValue",
+          "secretsmanager:UpdateSecret",
+        ]
+        Resource = "arn:aws:secretsmanager:*:*:secret:/${var.environment}/tenants/*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
           "s3:GetObject",
           "s3:PutObject",
           "s3:DeleteObject",
@@ -192,6 +201,18 @@ locals {
       environment = {
         COGNITO_USER_POOL_ID = var.cognito_user_pool_id
         COGNITO_CLIENT_ID    = var.cognito_client_id
+      }
+    }
+    whatsapp_connect = {
+      handler     = "whatsapp-connect/index.handler"
+      description = "Completes WhatsApp Embedded Signup and stores tenant credentials"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        ENVIRONMENT         = var.environment
+        META_APP_ID         = var.meta_app_id
+        META_APP_SECRET     = var.meta_app_secret
+        WHATSAPP_APP_SECRET = var.whatsapp_app_secret != "" ? var.whatsapp_app_secret : var.meta_app_secret
       }
     }
   }

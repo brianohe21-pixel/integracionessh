@@ -2,6 +2,9 @@ aws_region            = "us-east-1"
 repository_url        = "https://github.com/your-org/chatbot-platform"
 github_access_token   = "ghp_xxxxxxxxxxxx"
 whatsapp_verify_token = "your-random-verify-token"
+meta_app_id           = "your-meta-app-id"
+meta_app_secret       = "your-meta-app-secret"
+meta_embedded_signup_config_id = "your-embedded-signup-config-id"
 lambda_zip_path       = "../../../backend/dist/functions.zip"
 
 extra_callback_urls   = []
