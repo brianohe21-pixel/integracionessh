@@ -5,11 +5,14 @@ import { useConversations, useConversationMessages } from "@/hooks/useConversati
 import { useBots } from "@/hooks/useBots";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { formatRelativeTime, formatDate } from "@/lib/utils";
+import { useFormatters } from "@/hooks/useFormatters";
+import { useT } from "@/i18n/context";
 import { MessageSquare, User, Bot, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function ConversationsPage() {
+  const t = useT();
+  const { formatRelativeTime, formatDate } = useFormatters();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [botFilter, setBotFilter] = useState<string>("");
 
@@ -25,13 +28,13 @@ export default function ConversationsPage() {
     <div className="flex h-screen">
       <div className="w-80 flex-shrink-0 border-r border-gray-200 bg-white flex flex-col">
         <div className="p-4 border-b border-gray-200">
-          <h1 className="font-bold text-gray-900 mb-3">Conversaciones</h1>
+          <h1 className="font-bold text-gray-900 mb-3">{t("conversations.title")}</h1>
           <select
             value={botFilter}
             onChange={(e) => setBotFilter(e.target.value)}
             className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
-            <option value="">Todos los bots</option>
+            <option value="">{t("conversations.allBots")}</option>
             {bots?.map((bot) => (
               <option key={bot.botId} value={bot.botId}>
                 {bot.name}
@@ -60,8 +63,8 @@ export default function ConversationsPage() {
           {!isLoading && conversations?.length === 0 && (
             <EmptyState
               icon={<MessageSquare className="w-5 h-5" />}
-              title="Sin conversaciones"
-              description="Las conversaciones de tus bots aparecerán aquí."
+              title={t("conversations.emptyTitle")}
+              description={t("conversations.emptyDescription")}
               className="py-12"
             />
           )}
@@ -89,9 +92,13 @@ export default function ConversationsPage() {
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-400">{conv.messageCount} mensajes</span>
+                    <span className="text-xs text-gray-400">
+                      {t("conversations.messageCount", { count: conv.messageCount })}
+                    </span>
                     <Badge variant={conv.status === "active" ? "success" : "default"} className="text-[10px]">
-                      {conv.status === "active" ? "Activa" : "Cerrada"}
+                      {conv.status === "active"
+                        ? t("conversations.conversationActive")
+                        : t("conversations.conversationClosed")}
                     </Badge>
                   </div>
                 </div>
@@ -106,8 +113,8 @@ export default function ConversationsPage() {
           <div className="flex-1 flex items-center justify-center">
             <EmptyState
               icon={<MessageSquare className="w-6 h-6" />}
-              title="Selecciona una conversación"
-              description="Elige una conversación de la lista para ver el historial de mensajes."
+              title={t("conversations.selectConversation")}
+              description={t("conversations.selectDescription")}
             />
           </div>
         ) : (
@@ -166,10 +173,12 @@ export default function ConversationsPage() {
                     )}
                   >
                     <p>{msg.content}</p>
-                    <p className={cn(
-                      "text-[10px] mt-1",
-                      msg.role === "user" ? "text-gray-400" : "text-indigo-200"
-                    )}>
+                    <p
+                      className={cn(
+                        "text-[10px] mt-1",
+                        msg.role === "user" ? "text-gray-400" : "text-indigo-200"
+                      )}
+                    >
                       {formatDate(msg.timestamp)}
                     </p>
                   </div>

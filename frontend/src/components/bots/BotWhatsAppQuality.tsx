@@ -2,13 +2,14 @@
 
 import { Phone, Signal } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
+import { useT } from "@/i18n/context";
 import type { WhatsAppPhoneInfo, WhatsAppQualityRating } from "@/types";
 
-const QUALITY_LABELS: Record<WhatsAppQualityRating, string> = {
-  GREEN: "Alta",
-  YELLOW: "Media",
-  RED: "Baja",
-  NA: "Sin datos",
+const QUALITY_KEYS: Record<WhatsAppQualityRating, "bots.qualityHigh" | "bots.qualityMedium" | "bots.qualityLow" | "bots.qualityNa"> = {
+  GREEN: "bots.qualityHigh",
+  YELLOW: "bots.qualityMedium",
+  RED: "bots.qualityLow",
+  NA: "bots.qualityNa",
 };
 
 const QUALITY_VARIANTS: Record<
@@ -21,13 +22,13 @@ const QUALITY_VARIANTS: Record<
   NA: "default",
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  CONNECTED: "Conectado",
-  RESTRICTED: "Restringido",
-  FLAGGED: "Marcado",
-  DISCONNECTED: "Desconectado",
-  PENDING: "Pendiente",
-  DELETED: "Eliminado",
+const STATUS_KEYS: Record<string, string> = {
+  CONNECTED: "bots.statusConnected",
+  RESTRICTED: "bots.statusRestricted",
+  FLAGGED: "bots.statusFlagged",
+  DISCONNECTED: "bots.statusDisconnected",
+  PENDING: "bots.statusPending",
+  DELETED: "bots.statusDeleted",
 };
 
 function formatMessagingLimit(limit?: string): string | null {
@@ -52,6 +53,8 @@ export function BotWhatsAppQuality({
   whatsappPhone,
   isLoading,
 }: BotWhatsAppQualityProps) {
+  const t = useT();
+
   if (isLoading) {
     return (
       <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 animate-pulse">
@@ -65,45 +68,42 @@ export function BotWhatsAppQuality({
     <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
       <div className="flex items-center gap-2 mb-3">
         <Signal className="w-4 h-4 text-indigo-600" />
-        <h2 className="text-sm font-semibold text-gray-900">WhatsApp</h2>
+        <h2 className="text-sm font-semibold text-gray-900">{t("bots.whatsappSection")}</h2>
       </div>
 
       {whatsappPhone === undefined || whatsappPhone === null ? (
-        <p className="text-xs text-gray-500">
-          No se pudo obtener la calidad del número. Verifica el token de WhatsApp y el Phone
-          Number ID.
-        </p>
+        <p className="text-xs text-gray-500">{t("bots.qualityLoadError")}</p>
       ) : (
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
           <div>
-            <dt className="text-xs text-gray-500 mb-1">Calidad del número</dt>
+            <dt className="text-xs text-gray-500 mb-1">{t("bots.qualityTitle")}</dt>
             <dd>
               <Badge variant={QUALITY_VARIANTS[whatsappPhone.qualityRating]}>
-                {QUALITY_LABELS[whatsappPhone.qualityRating]}
+                {t(QUALITY_KEYS[whatsappPhone.qualityRating])}
               </Badge>
             </dd>
           </div>
           <div>
-            <dt className="text-xs text-gray-500 mb-1">Estado</dt>
+            <dt className="text-xs text-gray-500 mb-1">{t("common.status")}</dt>
             <dd className="text-gray-900 font-medium">
-              {STATUS_LABELS[whatsappPhone.status] ?? whatsappPhone.status}
+              {t(STATUS_KEYS[whatsappPhone.status] ?? whatsappPhone.status)}
             </dd>
           </div>
           {whatsappPhone.displayPhoneNumber && (
             <div>
-              <dt className="text-xs text-gray-500 mb-1">Número</dt>
+              <dt className="text-xs text-gray-500 mb-1">{t("bots.displayNumber")}</dt>
               <dd className="text-gray-900">{whatsappPhone.displayPhoneNumber}</dd>
             </div>
           )}
           {whatsappPhone.verifiedName && (
             <div>
-              <dt className="text-xs text-gray-500 mb-1">Nombre verificado</dt>
+              <dt className="text-xs text-gray-500 mb-1">{t("bots.verifiedName")}</dt>
               <dd className="text-gray-900">{whatsappPhone.verifiedName}</dd>
             </div>
           )}
           {formatMessagingLimit(whatsappPhone.messagingLimit) && (
             <div>
-              <dt className="text-xs text-gray-500 mb-1">Límite de mensajería</dt>
+              <dt className="text-xs text-gray-500 mb-1">{t("bots.messagingLimit")}</dt>
               <dd className="text-gray-900">
                 {formatMessagingLimit(whatsappPhone.messagingLimit)}
               </dd>

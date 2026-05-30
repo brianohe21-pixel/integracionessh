@@ -95,7 +95,7 @@ async function pollJob(
     await delay(POLL_INTERVAL_MS);
   }
 
-  throw new Error("Timeout esperando la finalizacion del envio masivo");
+  throw new Error("bulk_send_timeout");
 }
 
 export function useBulkHistory() {

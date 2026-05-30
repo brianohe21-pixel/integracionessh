@@ -4,10 +4,12 @@ import { useParams } from "next/navigation";
 import { useBot } from "@/hooks/useBots";
 import { BotForm } from "@/components/bots/BotForm";
 import { BotWhatsAppQuality } from "@/components/bots/BotWhatsAppQuality";
+import { useT } from "@/i18n/context";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 
 export default function EditBotPage() {
+  const t = useT();
   const { botId } = useParams<{ botId: string }>();
   const { data: bot, isLoading } = useBot(botId);
 
@@ -35,12 +37,12 @@ export default function EditBotPage() {
           className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-4"
         >
           <ChevronLeft className="w-4 h-4" />
-          Volver a bots
+          {t("bots.backToBots")}
         </Link>
         <h1 className="text-2xl font-bold text-gray-900">
-          Editar: {bot?.name ?? "Chatbot"}
+          {t("bots.editBot", { name: bot?.name ?? t("bots.defaultName") })}
         </h1>
-        <p className="text-sm text-gray-500 mt-1">Modifica la configuración del bot</p>
+        <p className="text-sm text-gray-500 mt-1">{t("bots.editSubtitle")}</p>
       </div>
 
       <div className="max-w-2xl space-y-4">

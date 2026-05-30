@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { BotMessageSquare, Phone, Trash2, Edit, Power, PowerOff, Webhook } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
-import { formatDate } from "@/lib/utils";
+import { useFormatters } from "@/hooks/useFormatters";
+import { useT } from "@/i18n/context";
 import type { Bot } from "@/types";
 import { useDeleteBot, useUpdateBot } from "@/hooks/useBots";
 
@@ -12,11 +13,13 @@ interface BotCardProps {
 }
 
 export function BotCard({ bot }: BotCardProps) {
+  const t = useT();
+  const { formatDate } = useFormatters();
   const deleteBot = useDeleteBot();
   const updateBot = useUpdateBot(bot.botId);
 
   function handleDelete() {
-    if (confirm(`¿Eliminar el bot "${bot.name}"?`)) {
+    if (confirm(t("common.confirmDelete", { name: bot.name }))) {
       deleteBot.mutate(bot.botId);
     }
   }
@@ -37,7 +40,7 @@ export function BotCard({ bot }: BotCardProps) {
             {bot.responseMode === "webhook" ? (
               <p className="text-xs text-indigo-500 flex items-center gap-1">
                 <Webhook className="w-3 h-3" />
-                Webhook propio
+                {t("bots.webhookOwn")}
               </p>
             ) : (
               <p className="text-xs text-gray-400">{bot.model}</p>
@@ -45,7 +48,7 @@ export function BotCard({ bot }: BotCardProps) {
           </div>
         </div>
         <Badge variant={bot.status === "active" ? "success" : "default"}>
-          {bot.status === "active" ? "Activo" : "Inactivo"}
+          {bot.status === "active" ? t("common.active") : t("common.inactive")}
         </Badge>
       </div>
 
@@ -59,7 +62,7 @@ export function BotCard({ bot }: BotCardProps) {
       </div>
 
       <div className="text-xs text-gray-400 mb-4">
-        Creado {formatDate(bot.createdAt)}
+        {t("bots.created", { date: formatDate(bot.createdAt) })}
       </div>
 
       <div className="flex items-center gap-2 pt-4 border-t border-gray-100">
@@ -68,7 +71,7 @@ export function BotCard({ bot }: BotCardProps) {
           className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
         >
           <Edit className="w-3.5 h-3.5" />
-          Editar
+          {t("common.edit")}
         </Link>
 
         <button
@@ -81,7 +84,7 @@ export function BotCard({ bot }: BotCardProps) {
           ) : (
             <Power className="w-3.5 h-3.5" />
           )}
-          {bot.status === "active" ? "Desactivar" : "Activar"}
+          {bot.status === "active" ? t("bots.deactivate") : t("bots.activate")}
         </button>
 
         <button
@@ -90,7 +93,7 @@ export function BotCard({ bot }: BotCardProps) {
           className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors ml-auto"
         >
           <Trash2 className="w-3.5 h-3.5" />
-          Eliminar
+          {t("common.delete")}
         </button>
       </div>
     </div>

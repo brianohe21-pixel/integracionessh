@@ -5,10 +5,12 @@ import { signUp, confirmSignUp } from "aws-amplify/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { COGNITO_PASSWORD_HINT, validateCognitoPassword } from "@/lib/passwordPolicy";
+import { getPasswordHint, validateCognitoPassword } from "@/lib/passwordPolicy";
+import { useT } from "@/i18n/context";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const t = useT();
   const [step, setStep] = useState<"form" | "confirm">("form");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -20,7 +22,7 @@ export default function RegisterPage() {
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    const pwdErr = validateCognitoPassword(password);
+    const pwdErr = validateCognitoPassword(password, t);
     if (pwdErr) {
       setError(pwdErr);
       return;
@@ -43,7 +45,7 @@ export default function RegisterPage() {
       });
       setStep("confirm");
     } catch (err) {
-      setError((err as Error).message ?? "Error al registrarse");
+      setError((err as Error).message ?? t("auth.registerError"));
     } finally {
       setLoading(false);
     }
@@ -58,7 +60,7 @@ export default function RegisterPage() {
       await confirmSignUp({ username: email, confirmationCode: code });
       router.push("/login");
     } catch (err) {
-      setError((err as Error).message ?? "Código inválido");
+      setError((err as Error).message ?? t("auth.invalidCode"));
     } finally {
       setLoading(false);
     }
@@ -67,15 +69,15 @@ export default function RegisterPage() {
   if (step === "confirm") {
     return (
       <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">Confirma tu email</h2>
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">{t("auth.confirmEmailTitle")}</h2>
         <p className="text-sm text-gray-500 mb-6">
-          Ingresa el código que enviamos a <strong>{email}</strong>
+          {t("auth.confirmEmailBody")} <strong>{email}</strong>
         </p>
 
         <form onSubmit={handleConfirm} className="space-y-4">
           <div>
             <label htmlFor="code" className="block text-sm font-medium text-gray-700 mb-1">
-              Código de verificación
+              {t("auth.verificationCode")}
             </label>
             <input
               id="code"
@@ -103,7 +105,7 @@ export default function RegisterPage() {
               loading ? "bg-indigo-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"
             )}
           >
-            {loading ? "Verificando..." : "Confirmar cuenta"}
+            {loading ? t("auth.verifying") : t("auth.confirmAccount")}
           </button>
         </form>
       </div>
@@ -112,12 +114,12 @@ export default function RegisterPage() {
 
   return (
     <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-      <h2 className="text-xl font-semibold text-gray-900 mb-6">Crear cuenta</h2>
+      <h2 className="text-xl font-semibold text-gray-900 mb-6">{t("auth.createAccount")}</h2>
 
       <form onSubmit={handleRegister} className="space-y-4">
         <div>
           <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-            Nombre de la empresa
+            {t("auth.companyName")}
           </label>
           <input
             id="name"
@@ -126,13 +128,13 @@ export default function RegisterPage() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            placeholder="Mi Empresa S.A."
+            placeholder={t("auth.companyPlaceholder")}
           />
         </div>
 
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-            Email
+            {t("common.email")}
           </label>
           <input
             id="email"
@@ -141,13 +143,13 @@ export default function RegisterPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            placeholder="tu@empresa.com"
+            placeholder={t("auth.emailPlaceholder")}
           />
         </div>
 
         <div>
           <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-            Contraseña
+            {t("common.password")}
           </label>
           <input
             id="password"
@@ -158,9 +160,9 @@ export default function RegisterPage() {
             autoComplete="new-password"
             minLength={8}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            placeholder="Contraseña segura"
+            placeholder={t("auth.securePasswordPlaceholder")}
           />
-          <p className="mt-1 text-xs text-gray-500">{COGNITO_PASSWORD_HINT}</p>
+          <p className="mt-1 text-xs text-gray-500">{getPasswordHint(t)}</p>
         </div>
 
         {error && (
@@ -177,14 +179,14 @@ export default function RegisterPage() {
             loading ? "bg-indigo-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"
           )}
         >
-          {loading ? "Creando cuenta..." : "Crear cuenta"}
+          {loading ? t("auth.creatingAccount") : t("auth.createAccount")}
         </button>
       </form>
 
       <p className="text-center text-sm text-gray-500 mt-6">
-        ¿Ya tienes cuenta?{" "}
+        {t("auth.hasAccount")}{" "}
         <Link href="/login" className="text-indigo-600 hover:underline font-medium">
-          Inicia sesión
+          {t("auth.signIn")}
         </Link>
       </p>
     </div>

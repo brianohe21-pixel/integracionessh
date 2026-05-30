@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useT } from "@/i18n/context";
+import { useFormatters } from "@/hooks/useFormatters";
 import {
   useTemplates,
   useCreateTemplate,
@@ -11,7 +13,6 @@ import {
 import { useBots } from "@/hooks/useBots";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { formatDate } from "@/lib/utils";
 import type { WhatsAppTemplate, TemplateComponent } from "@/types";
 import {
   LayoutTemplate,
@@ -30,33 +31,45 @@ import {
 
 type DialogMode = "create" | "edit" | null;
 
-const STATUS_BADGE: Record<string, { label: string; variant: "success" | "warning" | "danger" }> = {
-  APPROVED: { label: "Aprobado", variant: "success" },
-  PENDING: { label: "Pendiente", variant: "warning" },
-  REJECTED: { label: "Rechazado", variant: "danger" },
-};
-
-const CATEGORY_LABELS: Record<string, string> = {
-  MARKETING: "Marketing",
-  UTILITY: "Utilidad",
-  AUTHENTICATION: "Autenticacion",
-};
-
-const LANGUAGES = [
-  { code: "es", label: "Espanol" },
-  { code: "en", label: "Ingles" },
-  { code: "en_US", label: "Ingles (US)" },
-  { code: "es_AR", label: "Espanol (AR)" },
-  { code: "es_MX", label: "Espanol (MX)" },
-  { code: "pt_BR", label: "Portugues (BR)" },
-];
-
 function extractBodyVariables(text: string): string[] {
   const matches = text.match(/\{\{\d+\}\}/g);
   return matches ? [...new Set(matches)] : [];
 }
 
 export default function TemplatesPage() {
+  const t = useT();
+  const { formatDate } = useFormatters();
+
+  const STATUS_BADGE = useMemo(
+    () => ({
+      APPROVED: { label: t("templates.statusApproved"), variant: "success" as const },
+      PENDING: { label: t("templates.statusPending"), variant: "warning" as const },
+      REJECTED: { label: t("templates.statusRejected"), variant: "danger" as const },
+    }),
+    [t]
+  );
+
+  const CATEGORY_LABELS = useMemo(
+    () => ({
+      MARKETING: t("templates.categoryMarketing"),
+      UTILITY: t("templates.categoryUtility"),
+      AUTHENTICATION: t("templates.categoryAuth"),
+    }),
+    [t]
+  );
+
+  const LANGUAGES = useMemo(
+    () => [
+      { code: "es", label: t("templates.langEs") },
+      { code: "en", label: t("templates.langEn") },
+      { code: "en_US", label: t("templates.langEnUs") },
+      { code: "es_AR", label: t("templates.langEsAr") },
+      { code: "es_MX", label: t("templates.langEsMx") },
+      { code: "pt_BR", label: t("templates.langPtBr") },
+    ],
+    [t]
+  );
+
   const [botFilter, setBotFilter] = useState<string>("");
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
   const [editingTemplate, setEditingTemplate] = useState<WhatsAppTemplate | null>(null);
@@ -174,7 +187,7 @@ export default function TemplatesPage() {
       setDialogMode(null);
       refetch();
     } catch (err) {
-      setFormError((err as Error).message ?? "Error al guardar el template");
+      setFormError((err as Error).message ?? t("templates.saveError"));
     }
   }
 
@@ -213,10 +226,8 @@ export default function TemplatesPage() {
     <div className="p-8">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Templates</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Gestiona las plantillas de mensaje de WhatsApp Business
-          </p>
+          <h1 className="text-2xl font-bold text-gray-900">{t("templates.title")}</h1>
+          <p className="text-sm text-gray-500 mt-1">{t("templates.subtitle")}</p>
         </div>
         <button
           onClick={openCreate}
@@ -224,7 +235,7 @@ export default function TemplatesPage() {
           className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Plus className="w-4 h-4" />
-          Crear template
+          {t("templates.createTemplate")}
         </button>
       </div>
 
@@ -234,7 +245,7 @@ export default function TemplatesPage() {
           onChange={(e) => setBotFilter(e.target.value)}
           className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 w-72"
         >
-          <option value="">Selecciona un bot</option>
+          <option value="">{t("templates.selectBotTitle")}</option>
           {bots?.map((bot) => (
             <option key={bot.botId} value={bot.botId}>
               {bot.name}
@@ -247,29 +258,27 @@ export default function TemplatesPage() {
         <div className="flex items-start gap-3">
           <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
           <div>
-            <p className="text-sm font-medium text-blue-800 mb-2">Ciclo de vida de un template</p>
+            <p className="text-sm font-medium text-blue-800 mb-2">{t("templates.lifecycleTitle")}</p>
             <div className="flex flex-wrap items-center gap-2 text-xs text-blue-700">
               <div className="flex items-center gap-1.5 bg-white border border-blue-200 rounded-lg px-2.5 py-1.5">
                 <Clock className="w-3.5 h-3.5 text-yellow-500" />
-                <span className="font-medium">Pendiente</span>
-                <span className="text-blue-500">— Meta lo está revisando (minutos a 24 h)</span>
+                <span className="font-medium">{t("templates.lifecyclePending")}</span>
+                <span className="text-blue-500">{t("templates.lifecyclePendingDesc")}</span>
               </div>
               <span className="text-blue-400">→</span>
               <div className="flex items-center gap-1.5 bg-white border border-blue-200 rounded-lg px-2.5 py-1.5">
                 <CheckCircle className="w-3.5 h-3.5 text-green-500" />
-                <span className="font-medium">Aprobado</span>
-                <span className="text-blue-500">— Listo para enviar (no editable)</span>
+                <span className="font-medium">{t("templates.lifecycleApproved")}</span>
+                <span className="text-blue-500">{t("templates.lifecycleApprovedDesc")}</span>
               </div>
-              <span className="text-blue-400">o</span>
+              <span className="text-blue-400">{t("templates.lifecycleOr")}</span>
               <div className="flex items-center gap-1.5 bg-white border border-blue-200 rounded-lg px-2.5 py-1.5">
                 <XCircle className="w-3.5 h-3.5 text-red-500" />
-                <span className="font-medium">Rechazado</span>
-                <span className="text-blue-500">— Unico estado que permite editar</span>
+                <span className="font-medium">{t("templates.lifecycleRejected")}</span>
+                <span className="text-blue-500">{t("templates.lifecycleRejectedDesc")}</span>
               </div>
             </div>
-            <p className="text-xs text-blue-600 mt-2">
-              Meta no permite editar plantillas aprobadas ni pendientes. Si necesitas cambios, elimina la plantilla y crea una nueva con otro nombre.
-            </p>
+            <p className="text-xs text-blue-600 mt-2">{t("templates.lifecycleNote")}</p>
           </div>
         </div>
       </div>
@@ -277,8 +286,8 @@ export default function TemplatesPage() {
       {!botFilter && (
         <EmptyState
           icon={<LayoutTemplate className="w-6 h-6" />}
-          title="Selecciona un bot"
-          description="Elige un bot para ver y gestionar sus templates de WhatsApp."
+          title={t("templates.selectBotTitle")}
+          description={t("templates.selectBotDescription")}
         />
       )}
 
@@ -300,22 +309,22 @@ export default function TemplatesPage() {
 
       {botFilter && error && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-          <p className="text-sm text-red-600">Error al cargar los templates. Intenta de nuevo.</p>
+          <p className="text-sm text-red-600">{t("templates.loadErrorRetry")}</p>
         </div>
       )}
 
       {botFilter && !isLoading && !error && templates?.length === 0 && (
         <EmptyState
           icon={<LayoutTemplate className="w-6 h-6" />}
-          title="Sin templates"
-          description="No se encontraron plantillas. Crea una o sincroniza desde Meta."
+          title={t("templates.emptyTitle")}
+          description={t("templates.emptyDescription")}
           action={
             <button
               onClick={openCreate}
               className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
             >
               <Plus className="w-4 h-4" />
-              Crear template
+              {t("templates.createTemplate")}
             </button>
           }
         />
@@ -327,82 +336,82 @@ export default function TemplatesPage() {
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50">
                 <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">
-                  Nombre
+                  {t("templates.colName")}
                 </th>
                 <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">
-                  Idioma
+                  {t("templates.language")}
                 </th>
                 <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">
-                  Categoria
+                  {t("templates.category")}
                 </th>
                 <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">
-                  Estado
+                  {t("common.status")}
                 </th>
                 <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">
-                  Sincronizado
+                  {t("templates.colSynced")}
                 </th>
                 <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">
-                  Acciones
+                  {t("templates.colActions")}
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {templates.map((t) => {
-                const statusInfo = STATUS_BADGE[t.status] ?? STATUS_BADGE.PENDING;
+              {templates.map((tpl) => {
+                const statusInfo = STATUS_BADGE[tpl.status as keyof typeof STATUS_BADGE] ?? STATUS_BADGE.PENDING;
                 return (
-                  <tr key={`${t.name}-${t.language}`} className="hover:bg-gray-50 transition-colors">
+                  <tr key={`${tpl.name}-${tpl.language}`} className="hover:bg-gray-50 transition-colors">
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2">
                         <LayoutTemplate className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm font-medium text-gray-900">{t.name}</span>
+                        <span className="text-sm font-medium text-gray-900">{tpl.name}</span>
                       </div>
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-1.5">
                         <Languages className="w-3.5 h-3.5 text-gray-400" />
-                        <span className="text-sm text-gray-600">{t.language}</span>
+                        <span className="text-sm text-gray-600">{tpl.language}</span>
                       </div>
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-1.5">
                         <Tag className="w-3.5 h-3.5 text-gray-400" />
                         <span className="text-sm text-gray-600">
-                          {CATEGORY_LABELS[t.category] ?? t.category}
+                          {CATEGORY_LABELS[tpl.category as keyof typeof CATEGORY_LABELS] ?? tpl.category}
                         </span>
                       </div>
                     </td>
                     <td className="px-5 py-4">
                       <div
                         title={
-                          t.status === "PENDING"
-                            ? "Meta está revisando este template. Puede tardar minutos o hasta 24 h."
-                            : t.status === "REJECTED"
-                            ? "Meta rechazó este template. Edítalo para corregirlo y volver a enviarlo."
-                            : "Aprobado por Meta. Listo para enviar."
+                          tpl.status === "PENDING"
+                            ? t("templates.tooltipPending")
+                            : tpl.status === "REJECTED"
+                            ? t("templates.tooltipRejected")
+                            : t("templates.tooltipApproved")
                         }
                       >
                         <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
                       </div>
                     </td>
                     <td className="px-5 py-4 text-sm text-gray-500">
-                      {formatDate(t.syncedAt)}
+                      {formatDate(tpl.syncedAt)}
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex items-center justify-end gap-1">
-                        {t.status === "APPROVED" && (
+                        {tpl.status === "APPROVED" && (
                           <button
-                            onClick={() => openSend(t)}
+                            onClick={() => openSend(tpl)}
                             className="p-1.5 rounded-md text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
-                            title="Enviar"
+                            title={t("templates.send")}
                           >
                             <Send className="w-4 h-4" />
                           </button>
                         )}
-                        {t.status === "REJECTED" ? (
+                        {tpl.status === "REJECTED" ? (
                           <button
-                            onClick={() => openEdit(t)}
+                            onClick={() => openEdit(tpl)}
                             className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-                            title="Editar y reenviar a Meta"
+                            title={t("templates.editResubmit")}
                           >
                             <Pencil className="w-4 h-4" />
                           </button>
@@ -410,18 +419,18 @@ export default function TemplatesPage() {
                           <span
                             className="p-1.5 rounded-md text-gray-300 cursor-not-allowed"
                             title={
-                              t.status === "APPROVED"
-                                ? "Las plantillas aprobadas no se pueden editar en Meta"
-                                : "Espera la revision de Meta; solo se editan si son rechazadas"
+                              tpl.status === "APPROVED"
+                                ? t("templates.cannotEditApproved")
+                                : t("templates.waitMetaReview")
                             }
                           >
                             <Pencil className="w-4 h-4" />
                           </span>
                         )}
                         <button
-                          onClick={() => setDeleteConfirm(t)}
+                          onClick={() => setDeleteConfirm(tpl)}
                           className="p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                          title="Eliminar"
+                          title={t("common.delete")}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -440,7 +449,7 @@ export default function TemplatesPage() {
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">
-                {dialogMode === "create" ? "Crear Template" : "Editar Template"}
+                {dialogMode === "create" ? t("templates.createDialog") : t("templates.editDialog")}
               </h2>
               <button
                 onClick={() => setDialogMode(null)}
@@ -456,20 +465,20 @@ export default function TemplatesPage() {
                 </div>
               )}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t("templates.name")}</label>
                 <input
                   type="text"
                   value={formName}
                   onChange={(e) => setFormName(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_"))}
                   disabled={dialogMode === "edit"}
-                  placeholder="mi_plantilla"
+                  placeholder={t("templates.namePlaceholder")}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-50 disabled:text-gray-500"
                 />
-                <p className="text-xs text-gray-400 mt-1">Solo letras minusculas, numeros y guion bajo</p>
+                <p className="text-xs text-gray-400 mt-1">{t("templates.nameHint")}</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Idioma</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t("templates.language")}</label>
                   <select
                     value={formLanguage}
                     onChange={(e) => setFormLanguage(e.target.value)}
@@ -482,33 +491,33 @@ export default function TemplatesPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t("templates.category")}</label>
                   <select
                     value={formCategory}
                     onChange={(e) => setFormCategory(e.target.value as typeof formCategory)}
                     disabled={dialogMode === "edit"}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-50"
                   >
-                    <option value="UTILITY">Utilidad</option>
-                    <option value="MARKETING">Marketing</option>
-                    <option value="AUTHENTICATION">Autenticacion</option>
+                    <option value="UTILITY">{t("templates.categoryUtility")}</option>
+                    <option value="MARKETING">{t("templates.categoryMarketing")}</option>
+                    <option value="AUTHENTICATION">{t("templates.categoryAuth")}</option>
                   </select>
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Header <span className="text-gray-400 font-normal">(opcional)</span>
+                  {t("templates.header")} <span className="text-gray-400 font-normal">{t("templates.optional")}</span>
                 </label>
                 <input
                   type="text"
                   value={formHeaderText}
                   onChange={(e) => setFormHeaderText(e.target.value)}
-                  placeholder="Titulo del mensaje"
+                  placeholder={t("templates.headerPlaceholder")}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Body</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t("templates.body")}</label>
                 <textarea
                   value={formBodyText}
                   onChange={(e) => {
@@ -521,17 +530,17 @@ export default function TemplatesPage() {
                     });
                   }}
                   rows={4}
-                  placeholder={"Hola {{1}}, tu pedido {{2}} esta listo."}
+                  placeholder={t("templates.bodyPlaceholder")}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
                 />
-                <p className="text-xs text-gray-400 mt-1">{"Usa {{1}}, {{2}}, etc. para variables dinamicas"}</p>
+                <p className="text-xs text-gray-400 mt-1">{t("templates.bodyVarsHint")}</p>
               </div>
 
               {extractBodyVariables(formBodyText).length > 0 && (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-3">
                   <div>
-                    <p className="text-sm font-medium text-amber-800">Ejemplos de variables</p>
-                    <p className="text-xs text-amber-600 mt-0.5">Meta requiere un valor de ejemplo por cada variable</p>
+                    <p className="text-sm font-medium text-amber-800">{t("templates.examplesTitle")}</p>
+                    <p className="text-xs text-amber-600 mt-0.5">{t("templates.examplesRequired")}</p>
                   </div>
                   {extractBodyVariables(formBodyText)
                     .sort((a, b) => parseInt(a.replace(/\D/g, "")) - parseInt(b.replace(/\D/g, "")))
@@ -542,7 +551,7 @@ export default function TemplatesPage() {
                           type="text"
                           value={formBodyExamples[v] ?? ""}
                           onChange={(e) => setFormBodyExamples((prev) => ({ ...prev, [v]: e.target.value }))}
-                          placeholder={`Ej: Juan`}
+                          placeholder={t("templates.exampleVar", { var: "Juan" })}
                           className="flex-1 px-3 py-1.5 border border-amber-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
                         />
                       </div>
@@ -552,13 +561,13 @@ export default function TemplatesPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Footer <span className="text-gray-400 font-normal">(opcional)</span>
+                  {t("templates.footer")} <span className="text-gray-400 font-normal">{t("templates.optional")}</span>
                 </label>
                 <input
                   type="text"
                   value={formFooterText}
                   onChange={(e) => setFormFooterText(e.target.value)}
-                  placeholder="Texto al pie del mensaje"
+                  placeholder={t("templates.footerPlaceholder")}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
@@ -568,7 +577,7 @@ export default function TemplatesPage() {
                 onClick={() => setDialogMode(null)}
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                Cancelar
+                {t("templates.cancelDialog")}
               </button>
               <button
                 onClick={handleCreateOrUpdate}
@@ -580,7 +589,7 @@ export default function TemplatesPage() {
                 }
                 className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? "Guardando..." : dialogMode === "create" ? "Crear" : "Actualizar"}
+                {isSubmitting ? t("auth.saving") : dialogMode === "create" ? t("common.create") : t("common.update")}
               </button>
             </div>
           </div>
@@ -592,7 +601,7 @@ export default function TemplatesPage() {
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">
-                Enviar: {sendTarget.name}
+                {t("templates.sendTitle", { name: sendTarget.name })}
               </h2>
               <button
                 onClick={() => setSendTarget(null)}
@@ -604,21 +613,21 @@ export default function TemplatesPage() {
             <div className="px-6 py-5 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Numero de destino
+                  {t("templates.sendTo")}
                 </label>
                 <input
                   type="tel"
                   value={sendTo}
                   onChange={(e) => setSendTo(e.target.value.replace(/\D/g, ""))}
-                  placeholder="573001234567"
+                  placeholder={t("templates.sendToPlaceholder")}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
-                <p className="text-xs text-gray-400 mt-1">Codigo de pais + numero sin espacios</p>
+                <p className="text-xs text-gray-400 mt-1">{t("templates.sendToHint")}</p>
               </div>
 
               {Object.keys(sendParams).length > 0 && (
                 <div className="space-y-3">
-                  <p className="text-sm font-medium text-gray-700">Variables del template</p>
+                  <p className="text-sm font-medium text-gray-700">{t("templates.templateVars")}</p>
                   {Object.keys(sendParams).map((key) => (
                     <div key={key}>
                       <label className="block text-xs text-gray-500 mb-1">{key}</label>
@@ -628,7 +637,7 @@ export default function TemplatesPage() {
                         onChange={(e) =>
                           setSendParams((prev) => ({ ...prev, [key]: e.target.value }))
                         }
-                        placeholder={`Valor para ${key}`}
+                        placeholder={t("templates.valueFor", { key })}
                         className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       />
                     </div>
@@ -637,7 +646,7 @@ export default function TemplatesPage() {
               )}
 
               <div className="bg-gray-50 rounded-xl p-4">
-                <p className="text-xs font-medium text-gray-500 mb-2">Preview</p>
+                <p className="text-xs font-medium text-gray-500 mb-2">{t("templates.previewLabel")}</p>
                 <div className="bg-white rounded-lg p-3 border border-gray-200">
                   {sendTarget.components.find((c) => c.type === "HEADER")?.text && (
                     <p className="text-sm font-semibold text-gray-900 mb-1">
@@ -666,7 +675,7 @@ export default function TemplatesPage() {
                 onClick={() => setSendTarget(null)}
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                Cancelar
+                {t("templates.cancelDialog")}
               </button>
               <button
                 onClick={handleSend}
@@ -674,7 +683,7 @@ export default function TemplatesPage() {
                 className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Send className="w-4 h-4" />
-                {sendMutation.isPending ? "Enviando..." : "Enviar"}
+                {sendMutation.isPending ? t("templates.sending") : t("templates.send")}
               </button>
             </div>
           </div>
@@ -685,10 +694,9 @@ export default function TemplatesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4">
             <div className="px-6 py-5">
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">Eliminar template</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">{t("templates.confirmDeleteTitle")}</h2>
               <p className="text-sm text-gray-500">
-                Estas seguro de eliminar <span className="font-medium text-gray-900">{deleteConfirm.name}</span>?
-                Se eliminara de Meta y no se puede deshacer.
+                {t("templates.confirmDeleteBody", { name: deleteConfirm.name })}
               </p>
             </div>
             <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200">
@@ -696,14 +704,14 @@ export default function TemplatesPage() {
                 onClick={() => setDeleteConfirm(null)}
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                Cancelar
+                {t("templates.cancelDialog")}
               </button>
               <button
                 onClick={handleDelete}
                 disabled={deleteMutation.isPending}
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
               >
-                {deleteMutation.isPending ? "Eliminando..." : "Eliminar"}
+                {deleteMutation.isPending ? t("templates.deleting") : t("common.delete")}
               </button>
             </div>
           </div>

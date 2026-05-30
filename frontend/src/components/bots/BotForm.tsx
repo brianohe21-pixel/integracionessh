@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useCreateBot, useUpdateBot } from "@/hooks/useBots";
+import { useT } from "@/i18n/context";
 import type { Bot } from "@/types";
 
 interface BotFormProps {
@@ -11,6 +12,7 @@ interface BotFormProps {
 }
 
 export function BotForm({ bot }: BotFormProps) {
+  const t = useT();
   const router = useRouter();
   const isEditing = !!bot;
 
@@ -73,7 +75,7 @@ export function BotForm({ bot }: BotFormProps) {
       }
       router.push("/bots");
     } catch (err) {
-      setError((err as Error).message ?? "Error al guardar el bot");
+      setError((err as Error).message ?? t("bots.saveError"));
     }
   }
 
@@ -82,7 +84,7 @@ export function BotForm({ bot }: BotFormProps) {
       <div className="grid grid-cols-2 gap-4">
         <div className="col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Nombre del bot
+            {t("bots.botName")}
           </label>
           <input
             name="name"
@@ -91,13 +93,13 @@ export function BotForm({ bot }: BotFormProps) {
             value={form.name}
             onChange={handleChange}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="Ej: Asistente de Ventas"
+            placeholder={t("bots.botNamePlaceholder")}
           />
         </div>
 
         <div className="col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Modo de respuesta
+            {t("bots.responseMode")}
           </label>
           <div className="grid grid-cols-2 gap-3">
             <button
@@ -110,8 +112,8 @@ export function BotForm({ bot }: BotFormProps) {
                   : "border-gray-200 hover:border-gray-300"
               )}
             >
-              <span className="text-sm font-medium text-gray-900">OpenAI</span>
-              <span className="text-xs text-gray-500">Respuestas generadas por GPT</span>
+              <span className="text-sm font-medium text-gray-900">{t("bots.openAiMode")}</span>
+              <span className="text-xs text-gray-500">{t("bots.openAiModeDesc")}</span>
             </button>
             <button
               type="button"
@@ -123,8 +125,8 @@ export function BotForm({ bot }: BotFormProps) {
                   : "border-gray-200 hover:border-gray-300"
               )}
             >
-              <span className="text-sm font-medium text-gray-900">Webhook propio</span>
-              <span className="text-xs text-gray-500">Tu servidor procesa los mensajes</span>
+              <span className="text-sm font-medium text-gray-900">{t("bots.webhookMode")}</span>
+              <span className="text-xs text-gray-500">{t("bots.webhookModeDesc")}</span>
             </button>
           </div>
         </div>
@@ -133,7 +135,7 @@ export function BotForm({ bot }: BotFormProps) {
           <>
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Prompt del sistema
+                {t("bots.systemPrompt")}
               </label>
               <textarea
                 name="systemPrompt"
@@ -142,12 +144,12 @@ export function BotForm({ bot }: BotFormProps) {
                 value={form.systemPrompt}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-                placeholder="Eres un asistente virtual de [empresa]. Tu función es..."
+                placeholder={t("bots.systemPromptPlaceholder")}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Modelo</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t("bots.model")}</label>
               <select
                 name="model"
                 value={form.model}
@@ -162,7 +164,7 @@ export function BotForm({ bot }: BotFormProps) {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Temperatura ({form.temperature})
+                {t("bots.temperature")} ({form.temperature})
               </label>
               <input
                 name="temperature"
@@ -175,14 +177,14 @@ export function BotForm({ bot }: BotFormProps) {
                 className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 mt-3"
               />
               <div className="flex justify-between text-xs text-gray-400 mt-1">
-                <span>Preciso (0)</span>
-                <span>Creativo (2)</span>
+                <span>{t("bots.tempPrecise")}</span>
+                <span>{t("bots.tempCreative")}</span>
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Máximo de tokens
+                {t("bots.maxTokens")}
               </label>
               <input
                 name="maxTokens"
@@ -201,7 +203,7 @@ export function BotForm({ bot }: BotFormProps) {
           <>
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                URL del webhook
+                {t("bots.webhookUrl")}
               </label>
               <input
                 name="webhookUrl"
@@ -210,15 +212,15 @@ export function BotForm({ bot }: BotFormProps) {
                 value={form.webhookUrl}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
-                placeholder="https://mi-servidor.com/chatbot/webhook"
+                placeholder={t("bots.webhookUrlPlaceholder")}
               />
-              <p className="mt-1 text-xs text-gray-500">Solo se aceptan URLs con HTTPS.</p>
+              <p className="mt-1 text-xs text-gray-500">{t("bots.webhookHttpsOnly")}</p>
             </div>
 
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Secret del webhook{" "}
-                <span className="font-normal text-gray-400">(opcional)</span>
+                {t("bots.webhookSecret")}{" "}
+                <span className="font-normal text-gray-400">{t("bots.webhookSecretOptional")}</span>
               </label>
               <input
                 name="webhookSecret"
@@ -226,18 +228,18 @@ export function BotForm({ bot }: BotFormProps) {
                 value={form.webhookSecret}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
-                placeholder={isEditing && bot?.webhookSecret ? "••••••••  (dejar vacío para no cambiar)" : "Mínimo 8 caracteres"}
+                placeholder={
+                  isEditing && bot?.webhookSecret
+                    ? t("bots.webhookSecretKeep")
+                    : t("bots.webhookSecretPlaceholder")
+                }
               />
-              <p className="mt-1 text-xs text-gray-500">
-                Si lo configuras, cada request incluirá el header{" "}
-                <code className="bg-gray-100 px-1 rounded">X-Webhook-Signature: sha256=…</code>{" "}
-                que puedes verificar en tu servidor con HMAC-SHA256.
-              </p>
+              <p className="mt-1 text-xs text-gray-500">{t("bots.webhookSecretHint")}</p>
             </div>
 
             <div className="col-span-2 rounded-lg border border-gray-200 bg-gray-50 p-4 text-xs text-gray-600 space-y-2">
-              <p className="font-medium text-gray-700">Contrato del webhook</p>
-              <p>Tu endpoint recibirá un <code className="bg-white border border-gray-200 px-1 rounded">POST</code> con:</p>
+              <p className="font-medium text-gray-700">{t("bots.webhookContractTitle")}</p>
+              <p>{t("bots.webhookContractPost")}</p>
               <pre className="bg-white border border-gray-200 rounded p-2 overflow-x-auto text-xs">{`{
   "message": "texto del usuario",
   "from": "número de teléfono",
@@ -245,7 +247,7 @@ export function BotForm({ bot }: BotFormProps) {
   "botId": "uuid",
   "contact": { "name": "Nombre" }
 }`}</pre>
-              <p>Debe responder con (máximo 1.024 caracteres):</p>
+              <p>{t("bots.webhookContractResponse")}</p>
               <pre className="bg-white border border-gray-200 rounded p-2 overflow-x-auto text-xs">{`{ "reply": "texto de respuesta" }`}</pre>
             </div>
           </>
@@ -253,7 +255,7 @@ export function BotForm({ bot }: BotFormProps) {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Phone Number ID (WhatsApp)
+            {t("bots.phoneNumberId")}
           </label>
           <input
             name="phoneNumberId"
@@ -262,13 +264,13 @@ export function BotForm({ bot }: BotFormProps) {
             value={form.phoneNumberId}
             onChange={handleChange}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
-            placeholder="1234567890"
+            placeholder={t("bots.phonePlaceholder")}
           />
         </div>
 
         <div className="col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            WhatsApp Business Account ID (WABA)
+            {t("bots.wabaId")}
           </label>
           <input
             name="whatsappBusinessAccountId"
@@ -277,7 +279,7 @@ export function BotForm({ bot }: BotFormProps) {
             value={form.whatsappBusinessAccountId}
             onChange={handleChange}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
-            placeholder="No es el Phone Number ID"
+            placeholder={t("bots.wabaPlaceholder")}
           />
         </div>
       </div>
@@ -297,7 +299,11 @@ export function BotForm({ bot }: BotFormProps) {
             isPending ? "bg-indigo-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"
           )}
         >
-          {isPending ? "Guardando..." : isEditing ? "Guardar cambios" : "Crear bot"}
+          {isPending
+            ? t("bots.saving")
+            : isEditing
+              ? t("bots.saveChanges")
+              : t("bots.createBot")}
         </button>
 
         <button
@@ -305,7 +311,7 @@ export function BotForm({ bot }: BotFormProps) {
           onClick={() => router.back()}
           className="px-5 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
         >
-          Cancelar
+          {t("common.cancel")}
         </button>
       </div>
     </form>

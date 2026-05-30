@@ -1,4 +1,10 @@
+"use client";
+
+import { useT } from "@/i18n/context";
+
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
+  const t = useT();
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50">
       <div className="w-full max-w-md px-4">
@@ -8,8 +14,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">ChatBot Platform</h1>
-          <p className="text-sm text-gray-500 mt-1">Chatbots con WhatsApp & OpenAI</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t("common.appName")}</h1>
+          <p className="text-sm text-gray-500 mt-1">{t("common.appTagline")}</p>
         </div>
         {children}
       </div>

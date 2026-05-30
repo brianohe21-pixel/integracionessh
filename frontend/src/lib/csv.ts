@@ -95,6 +95,31 @@ function parseLine(line: string): string[] {
   return line.split(",").map((cell) => cell.trim().replace(/^"|"$/g, ""));
 }
 
+export function escapeCsvCell(value: string): string {
+  if (/[",\n\r]/.test(value)) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
+export function buildCsv(headers: string[], rows: string[][]): string {
+  const lines = [
+    headers.map(escapeCsvCell).join(","),
+    ...rows.map((row) => row.map((cell) => escapeCsvCell(String(cell ?? ""))).join(",")),
+  ];
+  return `\uFEFF${lines.join("\n")}`;
+}
+
+export function downloadCsvFile(filename: string, content: string): void {
+  const blob = new Blob([content], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
 export function parseRecipientsCsv(text: string): CsvRow[] {
   const lines = sanitizeLatinText(text).trim().split(/\r?\n/).filter(Boolean);
   if (lines.length < 2) return [];

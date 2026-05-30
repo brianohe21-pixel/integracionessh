@@ -1,49 +1,87 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { Download } from "lucide-react";
 import { api } from "@/lib/api";
-import type { BulkSendFailureKind, BulkSendFailuresResponse } from "@/hooks/useBulkSend";
+import { buildCsv, downloadCsvFile } from "@/lib/csv";
+import type { BulkSendFailure, BulkSendFailureKind, BulkSendFailuresResponse } from "@/hooks/useBulkSend";
+import { useT } from "@/i18n/context";
 
-function kindLabel(kind: BulkSendFailureKind): string {
-  return kind === "delivery" ? "Entrega" : "Envío";
+const FAILURE_HEADERS = ["phone", "type", "error_code", "error_title", "error_message", "failed_at", "message_id"];
+
+function failureKindLabel(kind: BulkSendFailureKind): string {
+  return kind === "delivery" ? "delivery" : "send";
 }
 
-function kindVariant(kind: BulkSendFailureKind): string {
-  return kind === "delivery"
-    ? "bg-orange-50 text-orange-700"
-    : "bg-red-50 text-red-700";
+function downloadFailuresCsv(templateName: string, jobId: string, items: BulkSendFailure[]): void {
+  const rows = items.map((item) => [
+    item.to,
+    failureKindLabel(item.kind),
+    item.errorCode != null ? String(item.errorCode) : "",
+    item.errorTitle ?? "",
+    item.errorMessage,
+    item.failedAt,
+    item.messageId ?? "",
+  ]);
+  downloadCsvFile(
+    `fallos_${templateName}_${jobId.slice(0, 8)}.csv`,
+    buildCsv(FAILURE_HEADERS, rows)
+  );
 }
 
 interface BulkJobFailuresProps {
   jobId: string;
+  templateName?: string;
   enabled?: boolean;
 }
 
-export function BulkJobFailures({ jobId, enabled = true }: BulkJobFailuresProps) {
+export function BulkJobFailures({ jobId, templateName = "campana", enabled = true }: BulkJobFailuresProps) {
+  const t = useT();
   const { data, isLoading, isError } = useQuery({
     queryKey: ["bulk-failures", jobId],
     queryFn: () => api.get<BulkSendFailuresResponse>(`/bulk-send/${jobId}/failures`),
     enabled,
   });
 
+  function kindLabel(kind: BulkSendFailureKind): string {
+    return kind === "delivery" ? t("bulkSend.failureKindDelivery") : t("bulkSend.failureKindSend");
+  }
+
+  function kindVariant(kind: BulkSendFailureKind): string {
+    return kind === "delivery"
+      ? "bg-orange-50 text-orange-700"
+      : "bg-red-50 text-red-700";
+  }
+
   if (isLoading) {
-    return <p className="text-xs text-gray-400 px-5 py-3">Cargando detalle de fallos...</p>;
+    return <p className="text-xs text-gray-400 px-5 py-3">{t("bulkSend.failuresLoading")}</p>;
   }
 
   if (isError) {
-    return <p className="text-xs text-red-600 px-5 py-3">No se pudo cargar el detalle de fallos.</p>;
+    return <p className="text-xs text-red-600 px-5 py-3">{t("bulkSend.failuresLoadError")}</p>;
   }
 
   if (!data || data.total === 0) {
     return (
       <p className="text-xs text-gray-400 px-5 py-3">
-        No hay detalle de fallos guardado para esta campaña.
+        {t("bulkSend.failuresEmpty")}
       </p>
     );
   }
 
   return (
     <div className="px-5 py-4 bg-gray-50 border-t border-gray-100 space-y-4">
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => downloadFailuresCsv(templateName, jobId, data.items)}
+          className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-700"
+        >
+          <Download className="w-3.5 h-3.5" />
+          {t("bulkSend.downloadCsv")}
+        </button>
+      </div>
+
       {data.summary.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {data.summary.map((row) => (
@@ -64,10 +102,10 @@ export function BulkJobFailures({ jobId, enabled = true }: BulkJobFailuresProps)
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50">
-              <th className="text-left text-xs font-medium text-gray-500 uppercase px-3 py-2">Teléfono</th>
-              <th className="text-left text-xs font-medium text-gray-500 uppercase px-3 py-2">Tipo</th>
-              <th className="text-left text-xs font-medium text-gray-500 uppercase px-3 py-2">Código</th>
-              <th className="text-left text-xs font-medium text-gray-500 uppercase px-3 py-2">Causa</th>
+              <th className="text-left text-xs font-medium text-gray-500 uppercase px-3 py-2">{t("common.phone")}</th>
+              <th className="text-left text-xs font-medium text-gray-500 uppercase px-3 py-2">{t("common.status")}</th>
+              <th className="text-left text-xs font-medium text-gray-500 uppercase px-3 py-2">{t("bulkSend.failureColCode")}</th>
+              <th className="text-left text-xs font-medium text-gray-500 uppercase px-3 py-2">{t("bulkSend.failureColCause")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
@@ -90,7 +128,7 @@ export function BulkJobFailures({ jobId, enabled = true }: BulkJobFailuresProps)
       </div>
 
       {data.total >= 500 && (
-        <p className="text-xs text-gray-400">Mostrando los primeros 500 registros.</p>
+        <p className="text-xs text-gray-400">{t("bulkSend.failuresLimit")}</p>
       )}
     </div>
   );

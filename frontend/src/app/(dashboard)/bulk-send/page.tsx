@@ -5,9 +5,11 @@ import { useBots } from "@/hooks/useBots";
 import { useTemplates } from "@/hooks/useTemplates";
 import { useBulkSend, useBulkHistory, type BulkRecipient, type BulkSendJob } from "@/hooks/useBulkSend";
 import { BulkJobFailures } from "@/components/bulk-send/BulkJobFailures";
-import { formatDate } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
-import { decodeCsvBytes, parseRecipientsCsv } from "@/lib/csv";
+import { useFormatters } from "@/hooks/useFormatters";
+import { useT, useLocale } from "@/i18n/context";
+import { buildCsv, decodeCsvBytes, downloadCsvFile, parseRecipientsCsv } from "@/lib/csv";
+import { downloadBulkHistoryCsv, downloadBulkJobFailuresCsv } from "@/lib/bulk-send-csv";
 import { EmptyState } from "@/components/ui/EmptyState";
 import type { WhatsAppTemplate } from "@/types";
 import {
@@ -47,6 +49,9 @@ function buildComponents(
 type Tab = "send" | "history";
 
 export default function BulkSendPage() {
+  const t = useT();
+  const locale = useLocale();
+  const { formatDate } = useFormatters();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [tab, setTab] = useState<Tab>("send");
   const [botId, setBotId] = useState("");
@@ -58,6 +63,7 @@ export default function BulkSendPage() {
   const [result, setResult] = useState<{ sent: number; failed: number; deliveryFailed: number } | null>(null);
   const [lastCompletedJobId, setLastCompletedJobId] = useState<string | null>(null);
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
+  const [downloadingJobId, setDownloadingJobId] = useState<string | null>(null);
 
   const { data: bots } = useBots();
   const { data: templates, isLoading: loadingTemplates } = useTemplates(botId || undefined);
@@ -86,32 +92,30 @@ export default function BulkSendPage() {
       const text = decodeCsvBytes(new Uint8Array(buffer));
       const rows = parseRecipientsCsv(text);
       if (rows.length === 0) {
-        setParseError(
-          "No se encontraron filas validas. El CSV debe tener encabezado con columna phone, telefono o numero."
-        );
+        setParseError(t("bulkSend.parseErrorEmpty"));
         setCsvRows([]);
         return;
       }
       setCsvRows(rows);
     }).catch(() => {
-      setParseError("No se pudo leer el archivo CSV.");
+      setParseError(t("bulkSend.parseErrorRead"));
       setCsvRows([]);
     });
   }
 
   function downloadSample() {
     const headers = ["phone", ...bodyVars.map((_, i) => `var${i + 1}`)];
-    const sample = [
-      headers.join(","),
-      ["573001234567", ...bodyVars.map(() => "Ejemplo")].join(","),
-    ].join("\n");
-    const blob = new Blob(["\uFEFF" + sample], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "plantilla_envio_masivo.csv";
-    a.click();
-    URL.revokeObjectURL(url);
+    const rows = [["573001234567", ...bodyVars.map(() => t("common.example"))]];
+    downloadCsvFile("plantilla_envio_masivo.csv", buildCsv(headers, rows));
+  }
+
+  async function handleDownloadJobCsv(job: BulkSendJob) {
+    setDownloadingJobId(job.jobId);
+    try {
+      await downloadBulkJobFailuresCsv(job);
+    } finally {
+      setDownloadingJobId(null);
+    }
   }
 
   async function handleBulkSend() {
@@ -151,32 +155,30 @@ export default function BulkSendPage() {
   const canSend = !!botId && !!templateName && csvRows.length > 0 && !isSending;
 
   const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: "send", label: "Nuevo envío", icon: <SendHorizonal className="w-4 h-4" /> },
-    { id: "history", label: "Historial", icon: <History className="w-4 h-4" /> },
+    { id: "send", label: t("bulkSend.tabSend"), icon: <SendHorizonal className="w-4 h-4" /> },
+    { id: "history", label: t("bulkSend.tabHistory"), icon: <History className="w-4 h-4" /> },
   ];
 
   return (
     <div className="p-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Envío masivo</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Envía un template de WhatsApp a multiples destinatarios desde un archivo CSV
-        </p>
+        <h1 className="text-2xl font-bold text-gray-900">{t("bulkSend.title")}</h1>
+        <p className="text-sm text-gray-500 mt-1">{t("bulkSend.subtitle")}</p>
       </div>
 
       <div className="flex gap-1 border-b border-gray-200 mb-6">
-        {TABS.map((t) => (
+        {TABS.map((tabItem) => (
           <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
+            key={tabItem.id}
+            onClick={() => setTab(tabItem.id)}
             className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
-              tab === t.id
+              tab === tabItem.id
                 ? "border-indigo-600 text-indigo-600"
                 : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
             }`}
           >
-            {t.icon}
-            {t.label}
+            {tabItem.icon}
+            {tabItem.label}
           </button>
         ))}
       </div>
@@ -185,10 +187,10 @@ export default function BulkSendPage() {
         <>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-              <h2 className="text-sm font-semibold text-gray-900">Configuracion</h2>
+              <h2 className="text-sm font-semibold text-gray-900">{t("bulkSend.config")}</h2>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Bot</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t("bulkSend.bot")}</label>
                 <select
                   value={botId}
                   onChange={(e) => {
@@ -199,7 +201,7 @@ export default function BulkSendPage() {
                   }}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
-                  <option value="">Selecciona un bot</option>
+                  <option value="">{t("bulkSend.selectBot")}</option>
                   {bots?.map((bot) => (
                     <option key={bot.botId} value={bot.botId}>
                       {bot.name}
@@ -209,17 +211,17 @@ export default function BulkSendPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Template</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t("bulkSend.template")}</label>
                 <select
                   value={templateName}
                   onChange={(e) => setTemplateName(e.target.value)}
                   disabled={!botId || loadingTemplates}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
                 >
-                  <option value="">Selecciona un template aprobado</option>
-                  {approvedTemplates.map((t) => (
-                    <option key={`${t.name}-${t.language}`} value={t.name}>
-                      {t.name} ({t.language})
+                  <option value="">{t("bulkSend.selectTemplate")}</option>
+                  {approvedTemplates.map((tpl) => (
+                    <option key={`${tpl.name}-${tpl.language}`} value={tpl.name}>
+                      {tpl.name} ({tpl.language})
                     </option>
                   ))}
                 </select>
@@ -227,13 +229,13 @@ export default function BulkSendPage() {
 
               {selectedTemplate && bodyVars.length > 0 && (
                 <p className="text-xs text-gray-500">
-                  Variables requeridas: {bodyVars.join(", ")}. Agrega columnas adicionales en el CSV en el mismo orden.
+                  {t("bulkSend.varsRequired", { vars: bodyVars.join(", ") })}
                 </p>
               )}
 
               {selectedTemplate && (
                 <div className="space-y-2">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Vista previa</p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{t("bulkSend.preview")}</p>
                   <div className="bg-[#e5ddd5] rounded-xl p-4">
                     <div className="max-w-xs ml-auto">
                       <div className="bg-white rounded-2xl rounded-tr-sm shadow-sm overflow-hidden">
@@ -276,7 +278,7 @@ export default function BulkSendPage() {
                         )}
                         <div className="flex justify-end px-3 pb-2">
                           <span className="text-[10px] text-gray-400">
-                            {new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" })}
+                            {new Date().toLocaleTimeString(locale === "en" ? "en-US" : "es-CO", { hour: "2-digit", minute: "2-digit" })}
                           </span>
                         </div>
                       </div>
@@ -288,7 +290,7 @@ export default function BulkSendPage() {
 
             <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
               <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-gray-900">Archivo CSV</h2>
+                <h2 className="text-sm font-semibold text-gray-900">{t("bulkSend.csvFile")}</h2>
                 {selectedTemplate && (
                   <button
                     type="button"
@@ -296,7 +298,7 @@ export default function BulkSendPage() {
                     className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-700"
                   >
                     <Download className="w-3.5 h-3.5" />
-                    Descargar plantilla
+                    {t("bulkSend.downloadSample")}
                   </button>
                 )}
               </div>
@@ -317,11 +319,9 @@ export default function BulkSendPage() {
               >
                 <Upload className="w-8 h-8 text-gray-400 mb-2" />
                 <span className="text-sm font-medium text-gray-700">
-                  {fileName || "Seleccionar archivo CSV"}
+                  {fileName || t("bulkSend.selectCsv")}
                 </span>
-                <span className="text-xs text-gray-400 mt-1">
-                  Columna obligatoria: phone, telefono o numero
-                </span>
+                <span className="text-xs text-gray-400 mt-1">{t("bulkSend.csvColumnHint")}</span>
               </button>
 
               {parseError && (
@@ -333,8 +333,8 @@ export default function BulkSendPage() {
           {!botId && (
             <EmptyState
               icon={<SendHorizonal className="w-6 h-6" />}
-              title="Selecciona un bot"
-              description="Elige un bot y un template aprobado para comenzar el envio masivo."
+              title={t("bulkSend.selectBotTitle")}
+              description={t("bulkSend.selectBotDescription")}
             />
           )}
 
@@ -344,7 +344,9 @@ export default function BulkSendPage() {
                 <div className="flex items-center gap-2">
                   <FileSpreadsheet className="w-4 h-4 text-gray-400" />
                   <span className="text-sm font-medium text-gray-900">
-                    {csvRows.length} destinatario{csvRows.length !== 1 ? "s" : ""}
+                    {csvRows.length === 1
+                      ? t("bulkSend.recipients", { count: csvRows.length })
+                      : t("bulkSend.recipientsPlural", { count: csvRows.length })}
                   </span>
                 </div>
                 <button
@@ -354,7 +356,7 @@ export default function BulkSendPage() {
                   className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <SendHorizonal className="w-4 h-4" />
-                  {isSending ? "Enviando..." : "Iniciar envio"}
+                  {isSending ? t("bulkSend.sending") : t("bulkSend.startSend")}
                 </button>
               </div>
 
@@ -363,7 +365,7 @@ export default function BulkSendPage() {
                   <thead>
                     <tr className="border-b border-gray-200 bg-gray-50">
                       <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-2">
-                        Telefono
+                        {t("bulkSend.colPhone")}
                       </th>
                       {bodyVars.map((v) => (
                         <th
@@ -390,7 +392,7 @@ export default function BulkSendPage() {
                 </table>
                 {csvRows.length > 50 && (
                   <p className="text-xs text-gray-400 px-5 py-2 border-t border-gray-100">
-                    Mostrando 50 de {csvRows.length} filas
+                    {t("bulkSend.showingRows", { total: csvRows.length })}
                   </p>
                 )}
               </div>
@@ -400,7 +402,7 @@ export default function BulkSendPage() {
           {isSending && progress.total > 0 && (
             <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-900">Progreso</span>
+                <span className="text-sm font-medium text-gray-900">{t("bulkSend.progress")}</span>
                 <span className="text-sm text-gray-500">
                   {progress.current} / {progress.total}
                 </span>
@@ -413,10 +415,10 @@ export default function BulkSendPage() {
               </div>
               <div className="flex gap-4 mt-2">
                 {progress.failed > 0 && (
-                  <p className="text-xs text-red-600">{progress.failed} rechazados por Meta</p>
+                  <p className="text-xs text-red-600">{t("bulkSend.rejectedMeta", { count: progress.failed })}</p>
                 )}
                 {progress.deliveryFailed > 0 && (
-                  <p className="text-xs text-orange-600">{progress.deliveryFailed} fallos de entrega</p>
+                  <p className="text-xs text-orange-600">{t("bulkSend.deliveryFailed", { count: progress.deliveryFailed })}</p>
                 )}
               </div>
             </div>
@@ -427,26 +429,27 @@ export default function BulkSendPage() {
               <div className="flex flex-wrap items-center gap-6">
                 <div className="flex items-center gap-2 text-green-700">
                   <CheckCircle2 className="w-5 h-5" />
-                  <span className="text-sm font-medium">{result.sent} aceptados por Meta</span>
+                  <span className="text-sm font-medium">{t("bulkSend.acceptedMeta", { count: result.sent })}</span>
                 </div>
                 {result.failed > 0 && (
                   <div className="flex items-center gap-2 text-red-600">
                     <XCircle className="w-5 h-5" />
-                    <span className="text-sm font-medium">{result.failed} rechazados por Meta</span>
+                    <span className="text-sm font-medium">{t("bulkSend.rejectedMeta", { count: result.failed })}</span>
                   </div>
                 )}
                 {result.deliveryFailed > 0 && (
                   <div className="flex items-center gap-2 text-orange-600">
                     <XCircle className="w-5 h-5" />
-                    <span className="text-sm font-medium">{result.deliveryFailed} fallos de entrega</span>
+                    <span className="text-sm font-medium">{t("bulkSend.deliveryFailed", { count: result.deliveryFailed })}</span>
                   </div>
                 )}
               </div>
-              <p className="text-xs text-gray-400 border-t border-gray-100 pt-3">
-                <strong>Aceptados:</strong> Meta recibió el mensaje. <strong>Fallos de entrega:</strong> el número no existe en WhatsApp, el contacto bloqueó el número, o hay restricciones de la cuenta. Los fallos de entrega pueden reportarse minutos después del envío.
-              </p>
+              <p className="text-xs text-gray-400 border-t border-gray-100 pt-3">{t("bulkSend.resultHint")}</p>
               {(result.failed > 0 || result.deliveryFailed > 0) && lastCompletedJobId && (
-                <BulkJobFailures jobId={lastCompletedJobId} />
+                <BulkJobFailures
+                  jobId={lastCompletedJobId}
+                  templateName={selectedTemplate?.name ?? "campana"}
+                />
               )}
             </div>
           )}
@@ -456,15 +459,28 @@ export default function BulkSendPage() {
       {tab === "history" && (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 bg-gray-50">
-            <span className="text-sm font-semibold text-gray-900">Historial de envíos</span>
-            <button
-              onClick={() => void refetchHistory()}
-              disabled={loadingHistory}
-              className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${loadingHistory ? "animate-spin" : ""}`} />
-              Actualizar
-            </button>
+            <span className="text-sm font-semibold text-gray-900">{t("bulkSend.historyTitle")}</span>
+            <div className="flex items-center gap-3">
+              {history && history.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => downloadBulkHistoryCsv(history)}
+                  className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  {t("bulkSend.downloadHistory")}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => void refetchHistory()}
+                disabled={loadingHistory}
+                className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingHistory ? "animate-spin" : ""}`} />
+                {t("common.refresh")}
+              </button>
+            </div>
           </div>
 
           {loadingHistory && (
@@ -483,7 +499,7 @@ export default function BulkSendPage() {
           {!loadingHistory && (!history || history.length === 0) && (
             <div className="px-5 py-16 text-center">
               <History className="w-8 h-8 text-gray-300 mx-auto mb-3" />
-              <p className="text-sm text-gray-400">No hay envíos registrados</p>
+              <p className="text-sm text-gray-400">{t("bulkSend.noHistory")}</p>
             </div>
           )}
 
@@ -491,13 +507,14 @@ export default function BulkSendPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-200">
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">Template</th>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">Estado</th>
-                  <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">Total</th>
-                  <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">Aceptados</th>
-                  <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">Rechazados</th>
-                  <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">Fallos entrega</th>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">Fecha</th>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">{t("bulkSend.colTemplate")}</th>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">{t("common.status")}</th>
+                  <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">{t("common.total")}</th>
+                  <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">{t("bulkSend.colAccepted")}</th>
+                  <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">{t("bulkSend.colRejected")}</th>
+                  <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">{t("bulkSend.colDeliveryFailed")}</th>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">{t("common.date")}</th>
+                  <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wider px-3 py-3">{t("common.csv")}</th>
                   <th className="w-10 px-2 py-3" />
                 </tr>
               </thead>
@@ -508,10 +525,10 @@ export default function BulkSendPage() {
                     : job.status === "failed" ? "danger"
                     : "warning";
                   const statusLabel =
-                    job.status === "completed" ? "Completado"
-                    : job.status === "failed" ? "Fallido"
-                    : job.status === "processing" ? "Procesando"
-                    : "En cola";
+                    job.status === "completed" ? t("bulkSend.statusCompleted")
+                    : job.status === "failed" ? t("bulkSend.statusFailed")
+                    : job.status === "processing" ? t("bulkSend.statusProcessing")
+                    : t("bulkSend.statusQueued");
                   const hasFailures = job.failed > 0 || (job.deliveryFailed ?? 0) > 0;
                   const isExpanded = expandedJobId === job.jobId;
                   return (
@@ -545,14 +562,28 @@ export default function BulkSendPage() {
                           </span>
                         </td>
                         <td className="px-5 py-3 text-sm text-gray-500">{formatDate(job.createdAt)}</td>
+                        <td className="px-3 py-3 text-right">
+                          <button
+                            type="button"
+                            title={t("bulkSend.downloadDetail")}
+                            disabled={downloadingJobId === job.jobId}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void handleDownloadJobCsv(job);
+                            }}
+                            className="inline-flex items-center justify-center p-1.5 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition-colors disabled:opacity-50"
+                          >
+                            <Download className={`w-4 h-4 ${downloadingJobId === job.jobId ? "animate-pulse" : ""}`} />
+                          </button>
+                        </td>
                         <td className="px-2 py-3 text-gray-400">
                           {hasFailures && (isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />)}
                         </td>
                       </tr>
                       {isExpanded && hasFailures && (
                         <tr key={`${job.jobId}-failures`}>
-                          <td colSpan={8} className="p-0">
-                            <BulkJobFailures jobId={job.jobId} />
+                          <td colSpan={9} className="p-0">
+                            <BulkJobFailures jobId={job.jobId} templateName={job.templateName} />
                           </td>
                         </tr>
                       )}

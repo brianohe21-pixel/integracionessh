@@ -12,7 +12,8 @@ import {
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { COGNITO_PASSWORD_HINT, validateCognitoPassword } from "@/lib/passwordPolicy";
+import { getPasswordHint, validateCognitoPassword } from "@/lib/passwordPolicy";
+import { useT } from "@/i18n/context";
 
 function isUserAlreadyAuthenticatedError(err: unknown): boolean {
   return (
@@ -25,6 +26,7 @@ function isUserAlreadyAuthenticatedError(err: unknown): boolean {
 
 export default function LoginPage() {
   const router = useRouter();
+  const t = useT();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -95,10 +97,10 @@ export default function LoginPage() {
       }
       const result = applySignInResult(out);
       if (result === "unsupported") {
-        setError("Este inicio de sesión requiere un paso adicional que aún no está soportado en la app.");
+        setError(t("auth.unsupportedStep"));
       }
     } catch (err) {
-      setError((err as Error).message ?? "Error al iniciar sesión");
+      setError((err as Error).message ?? t("auth.signInError"));
     } finally {
       setLoading(false);
     }
@@ -108,17 +110,17 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     if (newPassword !== confirmNewPassword) {
-      setError("Las contraseñas nuevas no coinciden");
+      setError(t("auth.newPasswordsMismatch"));
       return;
     }
-    const pwdErr = validateCognitoPassword(newPassword);
+    const pwdErr = validateCognitoPassword(newPassword, t);
     if (pwdErr) {
       setError(pwdErr);
       return;
     }
     for (const k of missingAttrs) {
       if (!attrValues[k]?.trim()) {
-        setError(`Completa el campo: ${k}`);
+        setError(t("auth.completeField", { field: k }));
         return;
       }
     }
@@ -138,9 +140,9 @@ export default function LoginPage() {
         router.push("/bots");
         return;
       }
-      setError("No se pudo completar el cambio de contraseña. Intenta de nuevo.");
+      setError(t("auth.passwordChangeFailed"));
     } catch (err) {
-      setError((err as Error).message ?? "Error al establecer la contraseña");
+      setError((err as Error).message ?? t("auth.setPasswordError"));
     } finally {
       setLoading(false);
     }
@@ -151,7 +153,7 @@ export default function LoginPage() {
     setError("");
     setSuccessMessage("");
     if (!email.trim()) {
-      setError("Introduce tu email");
+      setError(t("auth.enterEmail"));
       return;
     }
     setLoading(true);
@@ -162,7 +164,7 @@ export default function LoginPage() {
       setForgotConfirmPassword("");
       setPhase("forgotConfirm");
     } catch (err) {
-      setError((err as Error).message ?? "No se pudo enviar el código");
+      setError((err as Error).message ?? t("auth.sendCodeError"));
     } finally {
       setLoading(false);
     }
@@ -173,10 +175,10 @@ export default function LoginPage() {
     setError("");
     setSuccessMessage("");
     if (forgotNewPassword !== forgotConfirmPassword) {
-      setError("Las contraseñas no coinciden");
+      setError(t("auth.passwordsMismatch"));
       return;
     }
-    const pwdErr = validateCognitoPassword(forgotNewPassword);
+    const pwdErr = validateCognitoPassword(forgotNewPassword, t);
     if (pwdErr) {
       setError(pwdErr);
       return;
@@ -193,9 +195,9 @@ export default function LoginPage() {
       setForgotConfirmPassword("");
       setPassword("");
       setPhase("credentials");
-      setSuccessMessage("Contraseña actualizada. Ya puedes iniciar sesión.");
+      setSuccessMessage(t("auth.passwordUpdated"));
     } catch (err) {
-      setError((err as Error).message ?? "No se pudo restablecer la contraseña");
+      setError((err as Error).message ?? t("auth.resetError"));
     } finally {
       setLoading(false);
     }
@@ -205,15 +207,15 @@ export default function LoginPage() {
     setError("");
     setSuccessMessage("");
     if (!email.trim()) {
-      setError("Introduce tu email");
+      setError(t("auth.enterEmail"));
       return;
     }
     setLoading(true);
     try {
       await resetPassword({ username: email.trim() });
-      setSuccessMessage("Se ha enviado un nuevo código a tu correo.");
+      setSuccessMessage(t("auth.codeResent"));
     } catch (err) {
-      setError((err as Error).message ?? "No se pudo reenviar el código");
+      setError((err as Error).message ?? t("auth.resendError"));
     } finally {
       setLoading(false);
     }
@@ -222,15 +224,13 @@ export default function LoginPage() {
   if (phase === "newPassword") {
     return (
       <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">Nueva contraseña</h2>
-        <p className="text-sm text-gray-500 mb-6">
-          Tu cuenta requiere definir una contraseña permanente antes de continuar.
-        </p>
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">{t("auth.newPassword")}</h2>
+        <p className="text-sm text-gray-500 mb-6">{t("auth.newPasswordRequired")}</p>
 
         <form onSubmit={handleNewPasswordSubmit} className="space-y-4">
           <div>
             <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1">
-              Nueva contraseña
+              {t("auth.newPassword")}
             </label>
             <input
               id="newPassword"
@@ -242,11 +242,11 @@ export default function LoginPage() {
               minLength={8}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             />
-            <p className="mt-1 text-xs text-gray-500">{COGNITO_PASSWORD_HINT}</p>
+            <p className="mt-1 text-xs text-gray-500">{getPasswordHint(t)}</p>
           </div>
           <div>
             <label htmlFor="confirmNewPassword" className="block text-sm font-medium text-gray-700 mb-1">
-              Confirmar contraseña
+              {t("auth.confirmPassword")}
             </label>
             <input
               id="confirmNewPassword"
@@ -301,7 +301,7 @@ export default function LoginPage() {
               }}
               className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-50"
             >
-              Volver
+              {t("common.back")}
             </button>
             <button
               type="submit"
@@ -313,7 +313,7 @@ export default function LoginPage() {
                   : "bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800"
               )}
             >
-              {loading ? "Guardando..." : "Continuar"}
+              {loading ? t("auth.saving") : t("auth.continue")}
             </button>
           </div>
         </form>
@@ -324,15 +324,13 @@ export default function LoginPage() {
   if (phase === "forgotRequest") {
     return (
       <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">Recuperar contraseña</h2>
-        <p className="text-sm text-gray-500 mb-6">
-          Te enviaremos un código de verificación al correo asociado a tu cuenta.
-        </p>
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">{t("auth.recoverPassword")}</h2>
+        <p className="text-sm text-gray-500 mb-6">{t("auth.recoverBody")}</p>
 
         <form onSubmit={handleForgotRequest} className="space-y-4">
           <div>
             <label htmlFor="forgot-email" className="block text-sm font-medium text-gray-700 mb-1">
-              Email
+              {t("common.email")}
             </label>
             <input
               id="forgot-email"
@@ -341,7 +339,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              placeholder="tu@empresa.com"
+              placeholder={t("auth.emailPlaceholder")}
             />
           </div>
 
@@ -360,7 +358,7 @@ export default function LoginPage() {
               }}
               className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-50"
             >
-              Volver
+              {t("common.back")}
             </button>
             <button
               type="submit"
@@ -372,7 +370,7 @@ export default function LoginPage() {
                   : "bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800"
               )}
             >
-              {loading ? "Enviando..." : "Enviar código"}
+              {loading ? t("auth.sending") : t("auth.sendCode")}
             </button>
           </div>
         </form>
@@ -383,15 +381,13 @@ export default function LoginPage() {
   if (phase === "forgotConfirm") {
     return (
       <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">Nueva contraseña</h2>
-        <p className="text-sm text-gray-500 mb-6">
-          Introduce el código que recibiste por correo y define una contraseña nueva.
-        </p>
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">{t("auth.newPassword")}</h2>
+        <p className="text-sm text-gray-500 mb-6">{t("auth.forgotConfirmBody")}</p>
 
         <form onSubmit={handleForgotConfirm} className="space-y-4">
           <div>
             <label htmlFor="forgot-code" className="block text-sm font-medium text-gray-700 mb-1">
-              Código de verificación
+              {t("auth.verificationCode")}
             </label>
             <input
               id="forgot-code"
@@ -406,7 +402,7 @@ export default function LoginPage() {
           </div>
           <div>
             <label htmlFor="forgot-new" className="block text-sm font-medium text-gray-700 mb-1">
-              Nueva contraseña
+              {t("auth.newPassword")}
             </label>
             <input
               id="forgot-new"
@@ -418,11 +414,11 @@ export default function LoginPage() {
               minLength={8}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             />
-            <p className="mt-1 text-xs text-gray-500">{COGNITO_PASSWORD_HINT}</p>
+            <p className="mt-1 text-xs text-gray-500">{getPasswordHint(t)}</p>
           </div>
           <div>
             <label htmlFor="forgot-confirm" className="block text-sm font-medium text-gray-700 mb-1">
-              Confirmar contraseña
+              {t("auth.confirmPassword")}
             </label>
             <input
               id="forgot-confirm"
@@ -453,7 +449,7 @@ export default function LoginPage() {
             disabled={loading}
             className="text-sm text-indigo-600 hover:underline disabled:opacity-50"
           >
-            Reenviar código
+            {t("auth.resendCode")}
           </button>
 
           <div className="flex gap-3 pt-2">
@@ -466,7 +462,7 @@ export default function LoginPage() {
               }}
               className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-50"
             >
-              Volver
+              {t("common.back")}
             </button>
             <button
               type="submit"
@@ -478,7 +474,7 @@ export default function LoginPage() {
                   : "bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800"
               )}
             >
-              {loading ? "Guardando..." : "Restablecer contraseña"}
+              {loading ? t("auth.saving") : t("auth.resetPassword")}
             </button>
           </div>
         </form>
@@ -488,12 +484,12 @@ export default function LoginPage() {
 
   return (
     <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-      <h2 className="text-xl font-semibold text-gray-900 mb-6">Iniciar sesión</h2>
+      <h2 className="text-xl font-semibold text-gray-900 mb-6">{t("auth.signIn")}</h2>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-            Email
+            {t("common.email")}
           </label>
           <input
             id="email"
@@ -502,14 +498,14 @@ export default function LoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            placeholder="tu@empresa.com"
+            placeholder={t("auth.emailPlaceholder")}
           />
         </div>
 
         <div>
           <div className="flex items-center justify-between mb-1">
             <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-              Contraseña
+              {t("common.password")}
             </label>
             <button
               type="button"
@@ -520,7 +516,7 @@ export default function LoginPage() {
               }}
               className="text-sm text-indigo-600 hover:underline"
             >
-              ¿Olvidaste tu contraseña?
+              {t("auth.forgotPassword")}
             </button>
           </div>
           <input
@@ -556,14 +552,14 @@ export default function LoginPage() {
               : "bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800"
           )}
         >
-          {loading ? "Iniciando sesión..." : "Iniciar sesión"}
+          {loading ? t("auth.signingIn") : t("auth.signIn")}
         </button>
       </form>
 
       <p className="text-center text-sm text-gray-500 mt-6">
-        ¿No tienes cuenta?{" "}
+        {t("auth.noAccount")}{" "}
         <Link href="/register" className="text-indigo-600 hover:underline font-medium">
-          Regístrate
+          {t("auth.signUp")}
         </Link>
       </p>
     </div>
