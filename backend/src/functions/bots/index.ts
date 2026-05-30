@@ -9,6 +9,8 @@ import {
   listBots,
 } from "../../lib/dynamodb/bot.repository.js";
 import { extractAuthContext, assertTenantAccess } from "../../lib/auth/cognito.js";
+import { ensureTenant } from "../../lib/dynamodb/tenant.repository.js";
+import { assertCanCreateBot } from "../../lib/billing/assert-plan.js";
 import {
   getWhatsAppAccessToken,
   getPhoneNumberInfo,
@@ -103,6 +105,9 @@ export async function handler(
       const body = JSON.parse(event.body ?? "{}");
       const parsed = CreateBotSchema.safeParse(body);
       if (!parsed.success) return badRequest(parsed.error.message);
+
+      const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
+      await assertCanCreateBot(tenant);
 
       const now = new Date().toISOString();
       const data = parsed.data;

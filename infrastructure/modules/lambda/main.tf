@@ -89,6 +89,14 @@ resource "aws_iam_role_policy" "lambda_permissions" {
       {
         Effect = "Allow"
         Action = [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret",
+        ]
+        Resource = "arn:aws:secretsmanager:*:*:secret:/${var.environment}/platform/*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
           "secretsmanager:CreateSecret",
           "secretsmanager:PutSecretValue",
           "secretsmanager:UpdateSecret",
@@ -223,6 +231,29 @@ locals {
       environment = {
         TABLE_NAME  = var.dynamodb_table_name
         ENVIRONMENT = var.environment
+      }
+    }
+    billing = {
+      handler     = "billing/index.handler"
+      description = "Billing checkout (Wompi/Stripe), portal and webhooks"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME               = var.dynamodb_table_name
+        ENVIRONMENT              = var.environment
+        FRONTEND_URL             = var.frontend_url
+        WOMPI_PUBLIC_KEY         = var.wompi_public_key
+        WOMPI_PRIVATE_KEY        = var.wompi_private_key
+        WOMPI_INTEGRITY_SECRET   = var.wompi_integrity_secret
+        WOMPI_EVENTS_SECRET      = var.wompi_events_secret
+        WOMPI_AMOUNT_PRO_CENTS   = var.wompi_amount_pro_cents
+        WOMPI_AMOUNT_ENTERPRISE_CENTS = var.wompi_amount_enterprise_cents
+        WOMPI_API_BASE           = var.wompi_api_base
+        WOMPI_CHECKOUT_URL       = var.wompi_checkout_url
+        STRIPE_SECRET_KEY        = var.stripe_secret_key
+        STRIPE_WEBHOOK_SECRET    = var.stripe_webhook_secret
+        STRIPE_PRICE_PRO         = var.stripe_price_pro
+        STRIPE_PRICE_ENTERPRISE  = var.stripe_price_enterprise
       }
     }
     authorizer = {

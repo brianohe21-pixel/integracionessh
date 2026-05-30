@@ -47,6 +47,7 @@ export const en: Messages = {
     campaigns: "Campaigns",
     support: "Support",
     settings: "Settings",
+    adminSupport: "Admin support",
     signOut: "Sign out",
   },
   auth: {
@@ -528,6 +529,107 @@ export const en: Messages = {
     status: {
       open: "Open",
       closed: "Closed",
+    },
+  },
+  billing: {
+    title: "Plan and billing",
+    currentPlan: "Current plan",
+    unlimited: "Unlimited",
+    usageBots: "Active bots",
+    usageMessages: "AI messages (month)",
+    usageBulk: "Bulk recipients (month)",
+    usageCampaigns: "Campaigns started (month)",
+    upgradePro: "Upgrade to Pro",
+    upgradeEnterprise: "Upgrade to Enterprise",
+    manageSubscription: "Manage subscription",
+    checkoutError: "Could not start checkout",
+    portalError: "Could not open billing portal",
+    subscriptionStatus: {
+      none: "No subscription",
+      active: "Active",
+      past_due: "Past due",
+      canceled: "Canceled",
+      trialing: "Trial",
+    },
+    wompiNote: "Payments are processed with Wompi (Colombia). Your plan activates for 30 days after approval.",
+    wompiSuccess: "Payment confirmed. Your plan is now active.",
+    wompiConfirmError: "Could not confirm payment. If you already paid, wait a few minutes or contact support.",
+  },
+  legal: {
+    footerTerms: "Terms",
+    footerPrivacy: "Privacy",
+    acceptLabel: "I accept the",
+    and: "and the",
+    mustAccept: "You must accept the terms and privacy policy",
+    terms: {
+      title: "Terms of service",
+      updated: "Last updated: May 2026",
+      sections: {
+        intro: {
+          title: "1. Acceptance",
+          body: "By using ChatBot Platform you agree to these terms. The service connects chatbots with WhatsApp Business and AI models.",
+        },
+        data: {
+          title: "2. Use of the service",
+          body: "You are responsible for content sent, data protection compliance, and obtaining consent from contacts before messaging.",
+        },
+        whatsapp: {
+          title: "3. WhatsApp and Meta",
+          body: "You must comply with Meta and WhatsApp Business policies. Templates must be Meta-approved. The platform is not liable for blocks due to misuse.",
+        },
+        openai: {
+          title: "4. Artificial intelligence",
+          body: "AI responses may contain errors. Review critical flows and do not use the service for medical, legal, or financial advice without human oversight.",
+        },
+        cookies: {
+          title: "5. Account and plans",
+          body: "Paid plans are billed via active Stripe subscription. Cancel from the billing portal. The free plan has usage limits.",
+        },
+        contact: {
+          title: "6. Contact",
+          body: "Use the in-app Support section or your service provider contact email for help.",
+        },
+      },
+    },
+    privacy: {
+      title: "Privacy policy",
+      updated: "Last updated: May 2026",
+      sections: {
+        intro: {
+          title: "1. Controller",
+          body: "The data controller is the operator of ChatBot Platform providing your access. Data is processed to deliver the contracted service.",
+        },
+        data: {
+          title: "2. Data we process",
+          body: "Email, company name, WhatsApp messages, bot configuration, usage metrics, and billing data handled by Stripe.",
+        },
+        whatsapp: {
+          title: "3. WhatsApp",
+          body: "Messages flow through Meta's API. See Meta's privacy policy for processing on their systems.",
+        },
+        openai: {
+          title: "4. OpenAI",
+          body: "In OpenAI mode, conversation content may be processed on OpenAI servers per their privacy policy.",
+        },
+        cookies: {
+          title: "5. Local storage",
+          body: "We store preferences such as language in your browser localStorage. Sessions are managed with Amazon Cognito.",
+        },
+        contact: {
+          title: "6. Your rights",
+          body: "You may request access, correction, or deletion via support. We retain data while your account remains active.",
+        },
+      },
+    },
+  },
+  admin: {
+    support: {
+      title: "Support tickets",
+      subtitle: "Manage requests from all customers",
+      empty: "No tickets",
+      replyPlaceholder: "Reply to customer…",
+      saveReply: "Save reply",
+      close: "Close ticket",
     },
   },
 };

@@ -10,6 +10,7 @@ import {
   listTenants,
 } from "../../lib/dynamodb/tenant.repository.js";
 import { extractAuthContext } from "../../lib/auth/cognito.js";
+import { recordLegalAcceptance, getLegalAcceptance } from "../../lib/dynamodb/legal.repository.js";
 import { ok, created, noContent, badRequest, notFound, handleError } from "../../lib/http.js";
 import type { Tenant } from "../../types/index.js";
 
@@ -40,6 +41,16 @@ export async function handler(
       }
       const tenants = await listTenants();
       return ok(tenants);
+    }
+
+    if (method === "POST" && event.rawPath?.endsWith("/accept-terms")) {
+      const acceptance = await recordLegalAcceptance(auth.tenantId, auth.userId);
+      return ok(acceptance);
+    }
+
+    if (method === "GET" && event.rawPath?.endsWith("/legal")) {
+      const acceptance = await getLegalAcceptance(auth.tenantId, auth.userId);
+      return ok(acceptance ?? { accepted: false });
     }
 
     if (method === "GET" && tenantId) {
@@ -75,14 +86,23 @@ export async function handler(
 
     if (method === "PUT" && tenantId) {
       const resolvedId = tenantId === "me" ? auth.tenantId : tenantId;
+      if (resolvedId !== auth.tenantId && auth.role !== "admin") {
+        return handleError(Object.assign(new Error("Forbidden"), { statusCode: 403 }));
+      }
 
       const body = JSON.parse(event.body ?? "{}");
       const parsed = UpdateTenantSchema.safeParse(body);
       if (!parsed.success) return badRequest(parsed.error.message);
 
+      const updates = { ...parsed.data };
+      if (auth.role !== "admin") {
+        delete updates.plan;
+        delete updates.status;
+      }
+
       const updated = await updateTenant(
         resolvedId,
-        parsed.data as Partial<Omit<Tenant, "tenantId" | "createdAt">>
+        updates as Partial<Omit<Tenant, "tenantId" | "createdAt">>
       );
       return ok(updated);
     }

@@ -94,6 +94,14 @@ variable "support_tickets_function_arn" {
   type = string
 }
 
+variable "billing_invoke_arn" {
+  type = string
+}
+
+variable "billing_function_arn" {
+  type = string
+}
+
 variable "allowed_origins" {
   type    = list(string)
   default = ["*"]

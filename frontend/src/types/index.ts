@@ -1,11 +1,47 @@
+export type TenantPlan = "free" | "pro" | "enterprise";
+
+export type SubscriptionStatus =
+  | "none"
+  | "active"
+  | "past_due"
+  | "canceled"
+  | "trialing";
+
 export interface Tenant {
   tenantId: string;
   name: string;
   email: string;
-  plan: "free" | "pro" | "enterprise";
+  plan: TenantPlan;
   status: "active" | "suspended" | "pending";
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
+  subscriptionStatus?: SubscriptionStatus;
+  currentPeriodEnd?: string;
+  paymentProvider?: "stripe" | "wompi";
   createdAt: string;
   updatedAt: string;
+}
+
+export interface MonthlyUsage {
+  tenantId: string;
+  period: string;
+  messagesCount: number;
+  bulkRecipientsCount: number;
+  campaignsStarted: number;
+}
+
+export interface PlanLimits {
+  maxActiveBots: number;
+  maxMessagesPerMonth: number;
+  maxBulkRecipientsPerJob: number;
+  maxActiveCampaigns: number;
+}
+
+export interface BillingUsageResponse {
+  usage: MonthlyUsage;
+  limits: PlanLimits;
+  plan: TenantPlan;
+  subscription?: SubscriptionStatus;
 }
 
 export type WhatsAppQualityRating = "GREEN" | "YELLOW" | "RED" | "NA";
@@ -179,6 +215,8 @@ export interface SupportTicket {
   subject: string;
   message: string;
   status: SupportTicketStatus;
+  adminReply?: string;
+  closedAt?: string;
   createdAt: string;
   updatedAt: string;
 }

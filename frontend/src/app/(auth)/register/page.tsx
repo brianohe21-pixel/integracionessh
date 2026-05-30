@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { getPasswordHint, validateCognitoPassword } from "@/lib/passwordPolicy";
+import { markPendingTermsAcceptance } from "@/components/legal/TermsAcceptanceSync";
 import { useT } from "@/i18n/context";
 
 export default function RegisterPage() {
@@ -18,10 +19,15 @@ export default function RegisterPage() {
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    if (!acceptedTerms) {
+      setError(t("legal.mustAccept"));
+      return;
+    }
     const pwdErr = validateCognitoPassword(password, t);
     if (pwdErr) {
       setError(pwdErr);
@@ -43,6 +49,7 @@ export default function RegisterPage() {
           },
         },
       });
+      markPendingTermsAcceptance();
       setStep("confirm");
     } catch (err) {
       setError((err as Error).message ?? t("auth.registerError"));
@@ -164,6 +171,25 @@ export default function RegisterPage() {
           />
           <p className="mt-1 text-xs text-gray-500">{getPasswordHint(t)}</p>
         </div>
+
+        <label className="flex items-start gap-2 text-sm text-gray-600">
+          <input
+            type="checkbox"
+            checked={acceptedTerms}
+            onChange={(e) => setAcceptedTerms(e.target.checked)}
+            className="mt-1 rounded border-gray-300"
+          />
+          <span>
+            {t("legal.acceptLabel")}{" "}
+            <Link href="/legal/terms" target="_blank" className="text-indigo-600 hover:underline">
+              {t("legal.footerTerms")}
+            </Link>{" "}
+            {t("legal.and")}{" "}
+            <Link href="/legal/privacy" target="_blank" className="text-indigo-600 hover:underline">
+              {t("legal.footerPrivacy")}
+            </Link>
+          </span>
+        </label>
 
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-3">

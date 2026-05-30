@@ -62,3 +62,78 @@ variable "extra_allowed_origins" {
   default     = []
   description = "After first apply, add Amplify origin for API Gateway and S3 CORS."
 }
+
+variable "stripe_secret_key" {
+  type      = string
+  default   = ""
+  sensitive = true
+}
+
+variable "stripe_webhook_secret" {
+  type      = string
+  default   = ""
+  sensitive = true
+}
+
+variable "stripe_price_pro" {
+  type    = string
+  default = ""
+}
+
+variable "stripe_price_enterprise" {
+  type    = string
+  default = ""
+}
+
+variable "frontend_url" {
+  type    = string
+  default = "http://localhost:3000"
+}
+
+variable "ops_alert_email" {
+  type    = string
+  default = ""
+}
+
+variable "wompi_public_key" {
+  type    = string
+  default = ""
+}
+
+variable "wompi_private_key" {
+  type      = string
+  default   = ""
+  sensitive = true
+}
+
+variable "wompi_integrity_secret" {
+  type      = string
+  default   = ""
+  sensitive = true
+}
+
+variable "wompi_events_secret" {
+  type      = string
+  default   = ""
+  sensitive = true
+}
+
+variable "wompi_amount_pro_cents" {
+  type    = string
+  default = "9900000"
+}
+
+variable "wompi_amount_enterprise_cents" {
+  type    = string
+  default = "29900000"
+}
+
+variable "wompi_api_base" {
+  type    = string
+  default = "https://sandbox.wompi.co/v1"
+}
+
+variable "wompi_checkout_url" {
+  type    = string
+  default = "https://checkout.wompi.co/p/"
+}

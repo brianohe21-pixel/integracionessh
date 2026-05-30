@@ -4,7 +4,7 @@ resource "aws_apigatewayv2_api" "main" {
 
   cors_configuration {
     allow_headers = ["Content-Type", "Authorization", "X-Api-Key"]
-    allow_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    allow_methods = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
     allow_origins = var.allowed_origins
     max_age       = 300
   }
@@ -261,6 +261,72 @@ locals {
       function_arn = var.support_tickets_function_arn
       protected    = true
     }
+    admin_support_tickets_list = {
+      route_key    = "GET /admin/support/tickets"
+      invoke_arn   = var.support_tickets_invoke_arn
+      function_arn = var.support_tickets_function_arn
+      protected    = true
+    }
+    admin_support_tickets_patch = {
+      route_key    = "PATCH /admin/support/tickets/{ticketId}"
+      invoke_arn   = var.support_tickets_invoke_arn
+      function_arn = var.support_tickets_function_arn
+      protected    = true
+    }
+    billing_checkout = {
+      route_key    = "POST /billing/checkout"
+      invoke_arn   = var.billing_invoke_arn
+      function_arn = var.billing_function_arn
+      protected    = true
+    }
+    billing_portal = {
+      route_key    = "POST /billing/portal"
+      invoke_arn   = var.billing_invoke_arn
+      function_arn = var.billing_function_arn
+      protected    = true
+    }
+    billing_usage = {
+      route_key    = "GET /billing/usage"
+      invoke_arn   = var.billing_invoke_arn
+      function_arn = var.billing_function_arn
+      protected    = true
+    }
+    billing_webhook = {
+      route_key    = "POST /billing/webhook"
+      invoke_arn   = var.billing_invoke_arn
+      function_arn = var.billing_function_arn
+      protected    = false
+    }
+    billing_wompi_webhook = {
+      route_key    = "POST /billing/wompi/webhook"
+      invoke_arn   = var.billing_invoke_arn
+      function_arn = var.billing_function_arn
+      protected    = false
+    }
+    billing_wompi_confirm = {
+      route_key    = "POST /billing/wompi/confirm"
+      invoke_arn   = var.billing_invoke_arn
+      function_arn = var.billing_function_arn
+      protected    = true
+    }
+    billing_providers = {
+      route_key    = "GET /billing/providers"
+      invoke_arn   = var.billing_invoke_arn
+      function_arn = var.billing_function_arn
+      protected    = true
+    }
+    tenants_accept_terms = {
+      route_key    = "POST /tenants/me/accept-terms"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_legal = {
+      route_key    = "GET /tenants/me/legal"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
   }
 }
 
@@ -296,6 +362,7 @@ resource "aws_lambda_permission" "api_gw" {
     whatsapp_connect = var.whatsapp_connect_function_arn
     campaigns        = var.campaigns_function_arn
     support_tickets  = var.support_tickets_function_arn
+    billing          = var.billing_function_arn
   }
 
   statement_id  = "AllowAPIGatewayInvoke-${each.key}"

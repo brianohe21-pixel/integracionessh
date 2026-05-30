@@ -97,6 +97,7 @@ export async function ensureTenant(
     email,
     plan: "free",
     status: "active",
+    subscriptionStatus: "none",
     createdAt: now,
     updatedAt: now,
   };

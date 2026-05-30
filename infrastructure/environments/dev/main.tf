@@ -130,8 +130,21 @@ module "lambda" {
   meta_app_id            = var.meta_app_id
   meta_app_secret        = var.meta_app_secret
   whatsapp_app_secret    = var.whatsapp_app_secret
-  lambda_zip_path        = var.lambda_zip_path != "" ? abspath("${path.module}/${var.lambda_zip_path}") : ""
-  tags                   = local.tags
+  lambda_zip_path         = var.lambda_zip_path != "" ? abspath("${path.module}/${var.lambda_zip_path}") : ""
+  stripe_secret_key       = var.stripe_secret_key
+  stripe_webhook_secret   = var.stripe_webhook_secret
+  stripe_price_pro        = var.stripe_price_pro
+  stripe_price_enterprise = var.stripe_price_enterprise
+  frontend_url            = var.frontend_url
+  wompi_public_key        = var.wompi_public_key
+  wompi_private_key       = var.wompi_private_key
+  wompi_integrity_secret  = var.wompi_integrity_secret
+  wompi_events_secret     = var.wompi_events_secret
+  wompi_amount_pro_cents  = var.wompi_amount_pro_cents
+  wompi_amount_enterprise_cents = var.wompi_amount_enterprise_cents
+  wompi_api_base          = var.wompi_api_base
+  wompi_checkout_url      = var.wompi_checkout_url
+  tags                    = local.tags
 }
 
 module "api_gateway" {
@@ -160,8 +173,25 @@ module "api_gateway" {
   campaigns_function_arn        = module.lambda.campaigns_function_arn
   support_tickets_invoke_arn    = module.lambda.support_tickets_invoke_arn
   support_tickets_function_arn  = module.lambda.support_tickets_function_arn
+  billing_invoke_arn            = module.lambda.billing_invoke_arn
+  billing_function_arn          = module.lambda.billing_function_arn
   allowed_origins               = local.browser_origins
   tags                          = local.tags
+}
+
+module "monitoring" {
+  source      = "../../modules/monitoring"
+  project     = local.project
+  environment = local.environment
+  alert_email = var.ops_alert_email
+  api_id      = module.api_gateway.api_id
+  dlq_arn     = module.sqs.dlq_arn
+  lambda_function_names = [
+    "${local.project}-${local.environment}-webhook",
+    "${local.project}-${local.environment}-process-message",
+    "${local.project}-${local.environment}-billing",
+  ]
+  tags = local.tags
 }
 
 module "amplify" {

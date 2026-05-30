@@ -20,6 +20,9 @@ import {
 } from "../../lib/dynamodb/campaign.repository.js";
 import { listBulkSendFailures } from "../../lib/dynamodb/bulk-job.repository.js";
 import { extractAuthContext } from "../../lib/auth/cognito.js";
+import { ensureTenant } from "../../lib/dynamodb/tenant.repository.js";
+import { assertBulkRecipients, assertCanStartCampaign } from "../../lib/billing/assert-plan.js";
+import { incrementBulkRecipients, incrementCampaignsStarted } from "../../lib/dynamodb/usage.repository.js";
 import { ok, created, badRequest, notFound, forbidden, handleError } from "../../lib/http.js";
 import type { CampaignSQSBody, CampaignRecipient as CampaignRecipientType } from "../../types/index.js";
 
@@ -225,6 +228,9 @@ export async function handler(
       const bot = await getBot(auth.tenantId, botId);
       if (!bot) return notFound("Bot not found");
 
+      const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
+      await assertBulkRecipients(tenant, recipients.length);
+
       const newCampaignId = makeCampaignId();
       const now = new Date().toISOString();
       const status = scheduledAt ? "scheduled" : "draft";
@@ -286,6 +292,9 @@ export async function handler(
       const bot = await getBot(auth.tenantId, campaign.botId);
       if (!bot) return notFound("Bot not found");
 
+      const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
+      await assertCanStartCampaign(tenant);
+
       await deleteSchedule(campaignId);
       await startCampaign(
         auth.tenantId,
@@ -294,6 +303,8 @@ export async function handler(
         campaign.templateName,
         campaign.language
       );
+      await incrementCampaignsStarted(auth.tenantId);
+      await incrementBulkRecipients(auth.tenantId, campaign.total);
       const updated = await getCampaign(auth.tenantId, campaignId);
       return ok(updated);
     }

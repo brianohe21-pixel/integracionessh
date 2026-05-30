@@ -45,6 +45,7 @@ export const es = {
     campaigns: "Campañas",
     support: "Soporte",
     settings: "Configuración",
+    adminSupport: "Admin soporte",
     signOut: "Cerrar sesión",
   },
   auth: {
@@ -526,6 +527,107 @@ export const es = {
     status: {
       open: "Abierto",
       closed: "Cerrado",
+    },
+  },
+  billing: {
+    title: "Plan y facturación",
+    currentPlan: "Plan actual",
+    unlimited: "Ilimitado",
+    usageBots: "Bots activos",
+    usageMessages: "Mensajes IA (mes)",
+    usageBulk: "Destinatarios bulk (mes)",
+    usageCampaigns: "Campañas iniciadas (mes)",
+    upgradePro: "Mejorar a Pro",
+    upgradeEnterprise: "Mejorar a Enterprise",
+    manageSubscription: "Gestionar suscripción",
+    checkoutError: "No se pudo iniciar el pago",
+    portalError: "No se pudo abrir el portal de facturación",
+    subscriptionStatus: {
+      none: "Sin suscripción",
+      active: "Activa",
+      past_due: "Pago pendiente",
+      canceled: "Cancelada",
+      trialing: "Prueba",
+    },
+    wompiNote: "Pagos procesados con Wompi (Colombia). El plan se activa por 30 días tras el pago aprobado.",
+    wompiSuccess: "Pago confirmado. Tu plan ya está activo.",
+    wompiConfirmError: "No se pudo confirmar el pago. Si ya pagaste, espera unos minutos o contacta soporte.",
+  },
+  legal: {
+    footerTerms: "Términos",
+    footerPrivacy: "Privacidad",
+    acceptLabel: "Acepto los",
+    and: "y la",
+    mustAccept: "Debes aceptar los términos y la política de privacidad",
+    terms: {
+      title: "Términos de servicio",
+      updated: "Última actualización: mayo 2026",
+      sections: {
+        intro: {
+          title: "1. Aceptación",
+          body: "Al usar ChatBot Platform aceptas estos términos. El servicio permite conectar chatbots con WhatsApp Business y modelos de IA.",
+        },
+        data: {
+          title: "2. Uso del servicio",
+          body: "Eres responsable del contenido enviado, del cumplimiento de la ley de protección de datos y de obtener consentimiento de tus contactos antes de enviar mensajes.",
+        },
+        whatsapp: {
+          title: "3. WhatsApp y Meta",
+          body: "Debes cumplir las políticas de Meta y WhatsApp Business. Los templates deben estar aprobados por Meta. La plataforma no se hace responsable de bloqueos por uso indebido.",
+        },
+        openai: {
+          title: "4. Inteligencia artificial",
+          body: "Las respuestas generadas por IA pueden contener errores. Revisa los flujos críticos y no uses el servicio para asesoría médica, legal o financiera sin supervisión humana.",
+        },
+        cookies: {
+          title: "5. Cuenta y planes",
+          body: "Los planes de pago se facturan según la suscripción activa en Stripe. Puedes cancelar desde el portal de facturación. El plan gratuito tiene límites de uso.",
+        },
+        contact: {
+          title: "6. Contacto",
+          body: "Para soporte usa la sección Soporte dentro de la aplicación o el email de contacto de tu proveedor del servicio.",
+        },
+      },
+    },
+    privacy: {
+      title: "Política de privacidad",
+      updated: "Última actualización: mayo 2026",
+      sections: {
+        intro: {
+          title: "1. Responsable",
+          body: "El responsable del tratamiento es el operador de ChatBot Platform que te proporciona acceso. Los datos se procesan para prestar el servicio contratado.",
+        },
+        data: {
+          title: "2. Datos que tratamos",
+          body: "Email, nombre de empresa, mensajes de WhatsApp, configuración de bots, métricas de uso y datos de facturación gestionados por Stripe.",
+        },
+        whatsapp: {
+          title: "3. WhatsApp",
+          body: "Los mensajes pasan por la API de Meta. Consulta también la política de privacidad de Meta para el tratamiento en sus sistemas.",
+        },
+        openai: {
+          title: "4. OpenAI",
+          body: "Si usas el modo OpenAI, el contenido de las conversaciones puede procesarse en los servidores de OpenAI según su política de privacidad.",
+        },
+        cookies: {
+          title: "5. Almacenamiento local",
+          body: "Guardamos preferencias como el idioma en localStorage de tu navegador. La sesión se gestiona con Amazon Cognito.",
+        },
+        contact: {
+          title: "6. Derechos",
+          body: "Puedes solicitar acceso, rectificación o eliminación de tus datos contactando a soporte. Conservamos datos mientras mantengas una cuenta activa.",
+        },
+      },
+    },
+  },
+  admin: {
+    support: {
+      title: "Tickets de soporte",
+      subtitle: "Gestión de solicitudes de todos los clientes",
+      empty: "No hay tickets",
+      replyPlaceholder: "Respuesta al cliente…",
+      saveReply: "Guardar respuesta",
+      close: "Cerrar ticket",
     },
   },
 } as const;

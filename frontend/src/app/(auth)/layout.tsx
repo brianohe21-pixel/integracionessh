@@ -18,6 +18,15 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <p className="text-sm text-gray-500 mt-1">{t("common.appTagline")}</p>
         </div>
         {children}
+        <p className="text-center text-xs text-gray-400 mt-6">
+          <a href="/legal/terms" className="hover:text-gray-600">
+            {t("legal.footerTerms")}
+          </a>
+          {" · "}
+          <a href="/legal/privacy" className="hover:text-gray-600">
+            {t("legal.footerPrivacy")}
+          </a>
+        </p>
       </div>
     </div>
   );

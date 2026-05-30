@@ -81,3 +81,11 @@ output "support_tickets_invoke_arn" {
 output "support_tickets_function_arn" {
   value = aws_lambda_function.functions["support_tickets"].arn
 }
+
+output "billing_invoke_arn" {
+  value = aws_lambda_function.functions["billing"].invoke_arn
+}
+
+output "billing_function_arn" {
+  value = aws_lambda_function.functions["billing"].arn
+}

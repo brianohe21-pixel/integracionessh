@@ -10,3 +10,18 @@ lambda_zip_path       = "../../../backend/dist/functions.zip"
 extra_callback_urls   = []
 extra_logout_urls       = []
 extra_allowed_origins   = []
+
+wompi_public_key        = "pub_test_..."
+wompi_private_key       = "prv_test_..."
+wompi_integrity_secret  = "prod_integrity_..."
+wompi_events_secret     = "prod_events_..."
+wompi_amount_pro_cents  = "9900000"
+wompi_amount_enterprise_cents = "29900000"
+wompi_api_base          = "https://sandbox.wompi.co/v1"
+
+stripe_secret_key       = ""
+stripe_webhook_secret   = ""
+stripe_price_pro        = ""
+stripe_price_enterprise = ""
+frontend_url            = "http://localhost:3000"
+ops_alert_email         = "ops@example.com"

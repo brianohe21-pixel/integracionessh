@@ -1,5 +1,9 @@
 import type { SQSEvent, SQSRecord } from "aws-lambda";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
+import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
+import { assertCanSendMessages } from "../../lib/billing/assert-plan.js";
+import { incrementMessages } from "../../lib/dynamodb/usage.repository.js";
+import { PlanLimitError } from "../../lib/billing/plan-limits.js";
 import {
   getOrCreateConversation,
   getConversationMessages,
@@ -73,6 +77,19 @@ async function processRecord(record: SQSRecord): Promise<void> {
       timestamp: now,
     };
 
+    const tenant = await getTenant(tenantId);
+    if (tenant) {
+      try {
+        await assertCanSendMessages(tenant);
+      } catch (err) {
+        if (err instanceof PlanLimitError) {
+          console.warn(`Plan limit for tenant ${tenantId}:`, err.message);
+          return;
+        }
+        throw err;
+      }
+    }
+
     let aiResponse: string;
     if (bot.responseMode === "webhook" && bot.webhookUrl) {
       aiResponse = await callCustomWebhook(bot.webhookUrl, bot.webhookSecret, {
@@ -103,6 +120,7 @@ async function processRecord(record: SQSRecord): Promise<void> {
 
     await addMessage(userMessage, botId);
     await addMessage(assistantMessage, botId);
+    await incrementMessages(tenantId);
 
     await sendTextMessage({
       phoneNumberId,

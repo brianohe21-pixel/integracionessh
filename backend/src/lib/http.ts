@@ -4,7 +4,7 @@ const CORS_HEADERS = {
   "Content-Type": "application/json",
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
 };
 
 export function ok<T>(data: T): APIGatewayProxyResultV2 {
@@ -55,6 +55,17 @@ export function forbidden(message = "Forbidden"): APIGatewayProxyResultV2 {
   };
 }
 
+export function paymentRequired(
+  message: string,
+  code?: string
+): APIGatewayProxyResultV2 {
+  return {
+    statusCode: 402,
+    headers: CORS_HEADERS,
+    body: JSON.stringify({ error: message, code: code ?? "PAYMENT_REQUIRED" }),
+  };
+}
+
 export function notFound(message = "Not found"): APIGatewayProxyResultV2 {
   return {
     statusCode: 404,
@@ -85,6 +96,9 @@ export function handleError(error: unknown): APIGatewayProxyResultV2 {
   const err = error as Error & { statusCode?: number };
 
   if (err.statusCode === 400) return badRequest(err.message);
+  if (err.statusCode === 402) {
+    return paymentRequired(err.message, (err as Error & { code?: string }).code);
+  }
   if (err.statusCode === 403) return forbidden(err.message);
   if (err.statusCode === 404) return notFound(err.message);
   if (err.statusCode === 502) return badGateway(err.message);

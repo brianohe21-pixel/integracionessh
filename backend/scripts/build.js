@@ -19,6 +19,7 @@ const entryPoints = [
   "src/functions/authorizer/index.ts",
   "src/functions/metrics/index.ts",
   "src/functions/support-tickets/index.ts",
+  "src/functions/billing/index.ts",
   "src/functions/whatsapp-connect/index.ts",
 ];
 

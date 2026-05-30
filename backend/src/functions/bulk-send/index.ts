@@ -12,6 +12,9 @@ import {
   updateBulkJobStatus,
 } from "../../lib/dynamodb/bulk-job.repository.js";
 import { extractAuthContext } from "../../lib/auth/cognito.js";
+import { ensureTenant } from "../../lib/dynamodb/tenant.repository.js";
+import { assertBulkRecipients } from "../../lib/billing/assert-plan.js";
+import { incrementBulkRecipients } from "../../lib/dynamodb/usage.repository.js";
 import { ok, created, badRequest, notFound, handleError } from "../../lib/http.js";
 import type { BulkSendSQSBody } from "../../types/index.js";
 
@@ -135,6 +138,9 @@ export async function handler(
       const bot = await getBot(auth.tenantId, botId);
       if (!bot) return notFound("Bot not found");
 
+      const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
+      await assertBulkRecipients(tenant, recipients.length);
+
       const newJobId = randomUUID();
       const now = new Date().toISOString();
 
@@ -160,6 +166,7 @@ export async function handler(
       );
 
       await updateBulkJobStatus(auth.tenantId, newJobId, "processing");
+      await incrementBulkRecipients(auth.tenantId, recipients.length);
 
       const job = await getBulkJob(auth.tenantId, newJobId);
       return created(job);

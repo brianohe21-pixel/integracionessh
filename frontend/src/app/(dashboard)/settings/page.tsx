@@ -8,6 +8,7 @@ import { useFormatters } from "@/hooks/useFormatters";
 import { useT } from "@/i18n/context";
 import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
 import { Building2, Key, Webhook, CheckCircle, Languages } from "lucide-react";
+import { PlanUsageCard } from "@/components/billing/PlanUsageCard";
 import type { Tenant } from "@/types";
 
 export default function SettingsPage() {
@@ -44,6 +45,8 @@ export default function SettingsPage() {
           <p className="text-sm text-gray-500 mb-4">{t("settings.languageDescription")}</p>
           <LanguageSwitcher />
         </div>
+
+        <PlanUsageCard />
 
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <div className="flex items-center gap-2 mb-4">
