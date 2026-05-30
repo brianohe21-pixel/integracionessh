@@ -1,3 +1,6 @@
+data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
+
 data "aws_iam_policy_document" "assume_role" {
   statement {
     effect = "Allow"
@@ -114,6 +117,9 @@ locals {
   lambda_zip_effective = (
     var.lambda_zip_path != "" && fileexists(var.lambda_zip_path)
     ) ? var.lambda_zip_path : "${path.module}/bootstrap/functions.zip"
+
+  campaigns_function_name = "${var.project}-${var.environment}-campaigns"
+  campaigns_function_arn  = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.campaigns_function_name}"
 
   functions = {
     webhook = {
@@ -241,7 +247,7 @@ locals {
         CAMPAIGN_SQS_QUEUE_URL   = var.campaign_sqs_queue_url
         ENVIRONMENT              = var.environment
         SCHEDULER_ROLE_ARN       = var.scheduler_role_arn
-        CAMPAIGNS_FUNCTION_ARN   = aws_lambda_function.functions["campaigns"].arn
+        CAMPAIGNS_FUNCTION_ARN   = local.campaigns_function_arn
       }
     }
     process_campaign = {
