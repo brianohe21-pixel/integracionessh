@@ -86,6 +86,14 @@ variable "campaigns_function_arn" {
   type = string
 }
 
+variable "support_tickets_invoke_arn" {
+  type = string
+}
+
+variable "support_tickets_function_arn" {
+  type = string
+}
+
 variable "allowed_origins" {
   type    = list(string)
   default = ["*"]

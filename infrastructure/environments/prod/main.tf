@@ -164,6 +164,8 @@ module "api_gateway" {
   whatsapp_connect_function_arn = module.lambda.whatsapp_connect_function_arn
   campaigns_invoke_arn          = module.lambda.campaigns_invoke_arn
   campaigns_function_arn        = module.lambda.campaigns_function_arn
+  support_tickets_invoke_arn    = module.lambda.support_tickets_invoke_arn
+  support_tickets_function_arn  = module.lambda.support_tickets_function_arn
   allowed_origins               = local.browser_origins
   tags                          = local.tags
 }

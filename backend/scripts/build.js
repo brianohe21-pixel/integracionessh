@@ -18,6 +18,7 @@ const entryPoints = [
   "src/functions/process-campaign/index.ts",
   "src/functions/authorizer/index.ts",
   "src/functions/metrics/index.ts",
+  "src/functions/support-tickets/index.ts",
   "src/functions/whatsapp-connect/index.ts",
 ];
 

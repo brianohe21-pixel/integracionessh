@@ -45,6 +45,7 @@ export const en: Messages = {
     templates: "Templates",
     bulkSend: "Bulk send",
     campaigns: "Campaigns",
+    support: "Support",
     settings: "Settings",
     signOut: "Sign out",
   },
@@ -465,6 +466,68 @@ export const en: Messages = {
       config: "Configuration",
       recipients: "Recipients",
       review: "Review",
+    },
+  },
+  support: {
+    title: "Support",
+    subtitle: "Frequently asked questions and contact",
+    faqTitle: "Frequently asked questions",
+    faq: {
+      bots: {
+        question: "How do I create a chatbot?",
+        answer:
+          "Go to Chatbots and click Create chatbot. Set the name, system prompt, and response mode (OpenAI or external webhook). Then connect WhatsApp via Embedded Signup from the bot form.",
+      },
+      whatsapp: {
+        question: "How do I connect WhatsApp to my bot?",
+        answer:
+          "Open the bot for editing and use the Meta connection button (Embedded Signup). You need a Meta Business account and a configured WhatsApp app. Credentials are stored securely when the flow completes.",
+      },
+      templates: {
+        question: "What are templates and why does Meta approve them?",
+        answer:
+          "Templates are pre-approved messages by Meta to start conversations or bulk sends outside the 24-hour window. Create or sync them under Templates, linked to a connected bot. Status can be Approved, Pending, or Rejected.",
+      },
+      bulkSend: {
+        question: "How does bulk send work?",
+        answer:
+          "In Bulk send, pick a bot, an approved template, and upload a CSV with a to column (international phone format). The system queues messages and shows progress and per-recipient failures.",
+      },
+      campaigns: {
+        question: "How are campaigns different from bulk send?",
+        answer:
+          "Campaigns let you schedule sends, pause/resume, tag segments, and view delivery and read analytics. Bulk send is more direct for one-off batches without a metrics funnel.",
+      },
+      webhook: {
+        question: "Where do I configure the WhatsApp webhook?",
+        answer:
+          "In Settings you will find the webhook URL and steps to register it in Meta for Developers. Subscribe to the messages field to receive inbound messages on the platform.",
+      },
+    },
+    contactTitle: "Contact support",
+    contactDescription: "Describe your issue and we will get back to you as soon as possible.",
+    category: "Category",
+    categories: {
+      general: "General",
+      technical: "Technical",
+      billing: "Billing",
+      whatsapp: "WhatsApp",
+    },
+    subject: "Subject",
+    subjectPlaceholder: "Brief summary of the issue",
+    message: "Message",
+    messagePlaceholder: "Describe what happens, steps to reproduce, and screenshots if applicable",
+    submit: "Submit ticket",
+    submitting: "Submitting...",
+    success: "Ticket submitted successfully",
+    submitError: "Could not submit ticket",
+    validationSubject: "Subject must be at least 5 characters",
+    validationMessage: "Message must be at least 20 characters",
+    myTickets: "My tickets",
+    emptyTickets: "You have not submitted any tickets yet",
+    status: {
+      open: "Open",
+      closed: "Closed",
     },
   },
 };

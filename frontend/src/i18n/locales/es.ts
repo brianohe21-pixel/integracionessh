@@ -43,6 +43,7 @@ export const es = {
     templates: "Templates",
     bulkSend: "Envío masivo",
     campaigns: "Campañas",
+    support: "Soporte",
     settings: "Configuración",
     signOut: "Cerrar sesión",
   },
@@ -463,6 +464,68 @@ export const es = {
       config: "Configuración",
       recipients: "Destinatarios",
       review: "Revisión",
+    },
+  },
+  support: {
+    title: "Soporte",
+    subtitle: "Preguntas frecuentes y contacto con el equipo",
+    faqTitle: "Preguntas frecuentes",
+    faq: {
+      bots: {
+        question: "¿Cómo creo un chatbot?",
+        answer:
+          "Ve a Chatbots y pulsa Crear chatbot. Define nombre, prompt del sistema y el modo de respuesta (OpenAI o webhook externo). Después conecta WhatsApp con Embedded Signup desde el formulario del bot.",
+      },
+      whatsapp: {
+        question: "¿Cómo conecto WhatsApp a mi bot?",
+        answer:
+          "Abre el bot en edición y usa el botón de conexión con Meta (Embedded Signup). Necesitas una cuenta de Meta Business y una app de WhatsApp configurada. Las credenciales se guardan de forma segura al completar el flujo.",
+      },
+      templates: {
+        question: "¿Qué son los templates y por qué Meta los aprueba?",
+        answer:
+          "Los templates son mensajes preaprobados por Meta para iniciar conversaciones o envíos masivos fuera de la ventana de 24 horas. Créalos o sincronízalos en Templates, asociados a un bot conectado. El estado puede ser Aprobado, Pendiente o Rechazado.",
+      },
+      bulkSend: {
+        question: "¿Cómo funciona el envío masivo?",
+        answer:
+          "En Envío masivo selecciona un bot, un template aprobado y sube un CSV con la columna to (teléfono en formato internacional). El sistema encola los mensajes y muestra progreso y fallos por destinatario.",
+      },
+      campaigns: {
+        question: "¿En qué se diferencian las campañas del envío masivo?",
+        answer:
+          "Las campañas permiten programar envíos, pausar/reanudar, segmentar con etiquetas y ver analíticas de entrega y lectura. El envío masivo es más directo para lotes puntuales sin embudo de métricas.",
+      },
+      webhook: {
+        question: "¿Dónde configuro el webhook de WhatsApp?",
+        answer:
+          "En Configuración encontrarás la URL del webhook y los pasos para registrarla en Meta for Developers. Debes suscribirte al campo messages para recibir mensajes entrantes en la plataforma.",
+      },
+    },
+    contactTitle: "Contactar soporte",
+    contactDescription: "Describe tu problema y te responderemos lo antes posible.",
+    category: "Categoría",
+    categories: {
+      general: "General",
+      technical: "Técnico",
+      billing: "Facturación",
+      whatsapp: "WhatsApp",
+    },
+    subject: "Asunto",
+    subjectPlaceholder: "Resumen breve del problema",
+    message: "Mensaje",
+    messagePlaceholder: "Detalla qué ocurre, pasos para reproducirlo y capturas si aplica",
+    submit: "Enviar ticket",
+    submitting: "Enviando...",
+    success: "Ticket enviado correctamente",
+    submitError: "No se pudo enviar el ticket",
+    validationSubject: "El asunto debe tener al menos 5 caracteres",
+    validationMessage: "El mensaje debe tener al menos 20 caracteres",
+    myTickets: "Mis tickets",
+    emptyTickets: "Aún no has enviado ningún ticket",
+    status: {
+      open: "Abierto",
+      closed: "Cerrado",
     },
   },
 } as const;

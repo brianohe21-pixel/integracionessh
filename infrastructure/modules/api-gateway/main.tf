@@ -249,6 +249,18 @@ locals {
       function_arn = var.campaigns_function_arn
       protected    = true
     }
+    support_tickets_list = {
+      route_key    = "GET /support/tickets"
+      invoke_arn   = var.support_tickets_invoke_arn
+      function_arn = var.support_tickets_function_arn
+      protected    = true
+    }
+    support_tickets_create = {
+      route_key    = "POST /support/tickets"
+      invoke_arn   = var.support_tickets_invoke_arn
+      function_arn = var.support_tickets_function_arn
+      protected    = true
+    }
   }
 }
 
@@ -283,6 +295,7 @@ resource "aws_lambda_permission" "api_gw" {
     metrics          = var.metrics_function_arn
     whatsapp_connect = var.whatsapp_connect_function_arn
     campaigns        = var.campaigns_function_arn
+    support_tickets  = var.support_tickets_function_arn
   }
 
   statement_id  = "AllowAPIGatewayInvoke-${each.key}"

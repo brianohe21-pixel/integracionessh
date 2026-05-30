@@ -73,3 +73,11 @@ output "campaigns_invoke_arn" {
 output "campaigns_function_arn" {
   value = aws_lambda_function.functions["campaigns"].arn
 }
+
+output "support_tickets_invoke_arn" {
+  value = aws_lambda_function.functions["support_tickets"].invoke_arn
+}
+
+output "support_tickets_function_arn" {
+  value = aws_lambda_function.functions["support_tickets"].arn
+}

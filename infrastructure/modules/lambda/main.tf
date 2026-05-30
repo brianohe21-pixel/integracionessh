@@ -215,6 +215,16 @@ locals {
         ENVIRONMENT = var.environment
       }
     }
+    support_tickets = {
+      handler     = "support-tickets/index.handler"
+      description = "Support ticket creation and listing"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME  = var.dynamodb_table_name
+        ENVIRONMENT = var.environment
+      }
+    }
     authorizer = {
       handler     = "authorizer/index.handler"
       description = "Cognito JWT authorizer for API Gateway"

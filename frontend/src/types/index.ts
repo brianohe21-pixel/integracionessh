@@ -165,3 +165,20 @@ export interface UsageMetrics {
   byBot: BotUsageMetrics[];
   recentBulkJobs: BulkSendJob[];
 }
+
+export type SupportTicketCategory = "general" | "technical" | "billing" | "whatsapp";
+
+export type SupportTicketStatus = "open" | "closed";
+
+export interface SupportTicket {
+  ticketId: string;
+  tenantId: string;
+  createdBy: string;
+  email: string;
+  category: SupportTicketCategory;
+  subject: string;
+  message: string;
+  status: SupportTicketStatus;
+  createdAt: string;
+  updatedAt: string;
+}
