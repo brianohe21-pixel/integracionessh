@@ -110,11 +110,6 @@ resource "aws_iam_role_policy" "scheduler_invoke" {
   })
 }
 
-resource "aws_scheduler_schedule_group" "campaigns" {
-  name = "${local.project}-${local.environment}"
-  tags = local.tags
-}
-
 module "lambda" {
   source                 = "../../modules/lambda"
   project                = local.project

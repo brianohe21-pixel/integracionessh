@@ -26,7 +26,6 @@ const sqs = new SQSClient({});
 const scheduler = new SchedulerClient({});
 
 const CAMPAIGN_QUEUE_URL = process.env.CAMPAIGN_SQS_QUEUE_URL ?? "";
-const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 const SCHEDULER_ROLE_ARN = process.env.SCHEDULER_ROLE_ARN ?? "";
 const CAMPAIGNS_FUNCTION_ARN = process.env.CAMPAIGNS_FUNCTION_ARN ?? "";
 
@@ -121,7 +120,7 @@ async function createSchedule(
   await scheduler.send(
     new CreateScheduleCommand({
       Name: `campaign-${campaignId}`,
-      GroupName: `chatbot-platform-${ENVIRONMENT}`,
+      GroupName: "default",
       ScheduleExpression: scheduleExpression,
       ScheduleExpressionTimezone: "UTC",
       FlexibleTimeWindow: { Mode: "OFF" },
@@ -145,7 +144,7 @@ async function deleteSchedule(campaignId: string): Promise<void> {
     await scheduler.send(
       new DeleteScheduleCommand({
         Name: `campaign-${campaignId}`,
-        GroupName: `chatbot-platform-${ENVIRONMENT}`,
+        GroupName: "default",
       })
     );
   } catch {

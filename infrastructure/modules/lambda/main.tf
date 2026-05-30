@@ -63,7 +63,7 @@ resource "aws_iam_role_policy" "lambda_permissions" {
       {
         Effect   = "Allow"
         Action   = ["scheduler:CreateSchedule", "scheduler:DeleteSchedule", "scheduler:GetSchedule"]
-        Resource = "arn:aws:scheduler:*:*:schedule/chatbot-platform-${var.environment}/*"
+        Resource = "arn:aws:scheduler:*:*:schedule/default/*"
       },
       {
         Effect   = "Allow"
@@ -241,7 +241,7 @@ locals {
         CAMPAIGN_SQS_QUEUE_URL   = var.campaign_sqs_queue_url
         ENVIRONMENT              = var.environment
         SCHEDULER_ROLE_ARN       = var.scheduler_role_arn
-        CAMPAIGNS_FUNCTION_ARN   = ""
+        CAMPAIGNS_FUNCTION_ARN   = aws_lambda_function.functions["campaigns"].arn
       }
     }
     process_campaign = {
