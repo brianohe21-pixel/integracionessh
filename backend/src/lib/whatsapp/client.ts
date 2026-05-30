@@ -314,6 +314,59 @@ export async function deleteMetaTemplate(
   return response.json() as Promise<{ success: boolean }>;
 }
 
+export type WhatsAppQualityRating = "GREEN" | "YELLOW" | "RED" | "NA";
+
+export interface WhatsAppPhoneInfo {
+  qualityRating: WhatsAppQualityRating;
+  status: string;
+  displayPhoneNumber?: string;
+  verifiedName?: string;
+  messagingLimit?: string;
+}
+
+export async function getPhoneNumberInfo(
+  phoneNumberId: string,
+  accessToken: string
+): Promise<WhatsAppPhoneInfo> {
+  const fields = [
+    "quality_rating",
+    "status",
+    "display_phone_number",
+    "verified_name",
+    "whatsapp_business_manager_messaging_limit",
+  ].join(",");
+
+  const response = await fetch(
+    `${GRAPH_API_URL}/${phoneNumberId}?fields=${fields}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    throwGraphApiError(response.status, error);
+  }
+
+  const json = (await response.json()) as {
+    quality_rating?: WhatsAppQualityRating;
+    status?: string;
+    display_phone_number?: string;
+    verified_name?: string;
+    whatsapp_business_manager_messaging_limit?: string;
+  };
+
+  return {
+    qualityRating: json.quality_rating ?? "NA",
+    status: json.status ?? "UNKNOWN",
+    ...(json.display_phone_number
+      ? { displayPhoneNumber: json.display_phone_number }
+      : {}),
+    ...(json.verified_name ? { verifiedName: json.verified_name } : {}),
+    ...(json.whatsapp_business_manager_messaging_limit
+      ? { messagingLimit: json.whatsapp_business_manager_messaging_limit }
+      : {}),
+  };
+}
+
 export async function sendTemplateMessage(
   options: SendTemplateOptions
 ): Promise<SendTextMessageResponse> {

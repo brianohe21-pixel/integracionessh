@@ -9,8 +9,17 @@ import {
   listBots,
 } from "../../lib/dynamodb/bot.repository.js";
 import { extractAuthContext, assertTenantAccess } from "../../lib/auth/cognito.js";
+import {
+  getWhatsAppAccessToken,
+  getPhoneNumberInfo,
+  type WhatsAppPhoneInfo,
+} from "../../lib/whatsapp/client.js";
 import { ok, created, noContent, badRequest, notFound, handleError } from "../../lib/http.js";
 import type { Bot } from "../../types/index.js";
+
+const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
+
+type BotDetailResponse = Bot & { whatsappPhone?: WhatsAppPhoneInfo | null };
 
 function maskBot(bot: Bot): Bot {
   if (!bot.webhookSecret) return bot;
@@ -78,7 +87,16 @@ export async function handler(
       const bot = await getBot(auth.tenantId, botId);
       if (!bot) return notFound("Bot not found");
       assertTenantAccess(auth, bot.tenantId);
-      return ok(maskBot(bot));
+
+      const response: BotDetailResponse = maskBot(bot);
+      try {
+        const accessToken = await getWhatsAppAccessToken(auth.tenantId, ENVIRONMENT);
+        response.whatsappPhone = await getPhoneNumberInfo(bot.phoneNumberId, accessToken);
+      } catch {
+        response.whatsappPhone = null;
+      }
+
+      return ok(response);
     }
 
     if (method === "POST") {

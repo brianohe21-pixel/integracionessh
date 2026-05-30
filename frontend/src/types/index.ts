@@ -8,6 +8,16 @@ export interface Tenant {
   updatedAt: string;
 }
 
+export type WhatsAppQualityRating = "GREEN" | "YELLOW" | "RED" | "NA";
+
+export interface WhatsAppPhoneInfo {
+  qualityRating: WhatsAppQualityRating;
+  status: string;
+  displayPhoneNumber?: string;
+  verifiedName?: string;
+  messagingLimit?: string;
+}
+
 export interface Bot {
   botId: string;
   tenantId: string;
@@ -24,6 +34,7 @@ export interface Bot {
   status: "active" | "inactive";
   createdAt: string;
   updatedAt: string;
+  whatsappPhone?: WhatsAppPhoneInfo | null;
 }
 
 export interface Conversation {

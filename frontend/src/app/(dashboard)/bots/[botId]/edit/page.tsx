@@ -3,6 +3,7 @@
 import { useParams } from "next/navigation";
 import { useBot } from "@/hooks/useBots";
 import { BotForm } from "@/components/bots/BotForm";
+import { BotWhatsAppQuality } from "@/components/bots/BotWhatsAppQuality";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 
@@ -42,8 +43,17 @@ export default function EditBotPage() {
         <p className="text-sm text-gray-500 mt-1">Modifica la configuración del bot</p>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        {bot && <BotForm bot={bot} />}
+      <div className="max-w-2xl space-y-4">
+        {bot && (
+          <BotWhatsAppQuality
+            phoneNumberId={bot.phoneNumberId}
+            whatsappPhone={bot.whatsappPhone}
+          />
+        )}
+
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          {bot && <BotForm bot={bot} />}
+        </div>
       </div>
     </div>
   );
