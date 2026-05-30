@@ -195,6 +195,54 @@ locals {
       function_arn = var.whatsapp_connect_function_arn
       protected    = true
     }
+    campaigns_list = {
+      route_key    = "GET /campaigns"
+      invoke_arn   = var.campaigns_invoke_arn
+      function_arn = var.campaigns_function_arn
+      protected    = true
+    }
+    campaigns_create = {
+      route_key    = "POST /campaigns"
+      invoke_arn   = var.campaigns_invoke_arn
+      function_arn = var.campaigns_function_arn
+      protected    = true
+    }
+    campaigns_get = {
+      route_key    = "GET /campaigns/{campaignId}"
+      invoke_arn   = var.campaigns_invoke_arn
+      function_arn = var.campaigns_function_arn
+      protected    = true
+    }
+    campaigns_update = {
+      route_key    = "PUT /campaigns/{campaignId}"
+      invoke_arn   = var.campaigns_invoke_arn
+      function_arn = var.campaigns_function_arn
+      protected    = true
+    }
+    campaigns_delete = {
+      route_key    = "DELETE /campaigns/{campaignId}"
+      invoke_arn   = var.campaigns_invoke_arn
+      function_arn = var.campaigns_function_arn
+      protected    = true
+    }
+    campaigns_start = {
+      route_key    = "POST /campaigns/{campaignId}/start"
+      invoke_arn   = var.campaigns_invoke_arn
+      function_arn = var.campaigns_function_arn
+      protected    = true
+    }
+    campaigns_pause = {
+      route_key    = "POST /campaigns/{campaignId}/pause"
+      invoke_arn   = var.campaigns_invoke_arn
+      function_arn = var.campaigns_function_arn
+      protected    = true
+    }
+    campaigns_resume = {
+      route_key    = "POST /campaigns/{campaignId}/resume"
+      invoke_arn   = var.campaigns_invoke_arn
+      function_arn = var.campaigns_function_arn
+      protected    = true
+    }
   }
 }
 
@@ -220,14 +268,15 @@ resource "aws_apigatewayv2_route" "routes" {
 
 resource "aws_lambda_permission" "api_gw" {
   for_each = {
-    webhook       = var.webhook_function_arn
-    tenants       = var.tenants_function_arn
-    bots          = var.bots_function_arn
-    conversations = var.conversations_function_arn
-    templates     = var.templates_function_arn
-    bulk_send     = var.bulk_send_function_arn
-    metrics           = var.metrics_function_arn
-    whatsapp_connect  = var.whatsapp_connect_function_arn
+    webhook          = var.webhook_function_arn
+    tenants          = var.tenants_function_arn
+    bots             = var.bots_function_arn
+    conversations    = var.conversations_function_arn
+    templates        = var.templates_function_arn
+    bulk_send        = var.bulk_send_function_arn
+    metrics          = var.metrics_function_arn
+    whatsapp_connect = var.whatsapp_connect_function_arn
+    campaigns        = var.campaigns_function_arn
   }
 
   statement_id  = "AllowAPIGatewayInvoke-${each.key}"

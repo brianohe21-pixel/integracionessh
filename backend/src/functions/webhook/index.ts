@@ -8,6 +8,7 @@ import {
   parseDeliveryFailureError,
   recordBulkDeliveryFailure,
 } from "../../lib/dynamodb/bulk-job.repository.js";
+import { incrementCampaignAnalytics } from "../../lib/dynamodb/campaign.repository.js";
 import type { WhatsAppWebhookEvent, SQSMessageBody } from "../../types/index.js";
 
 const sqs = new SQSClient({});
@@ -73,24 +74,61 @@ async function handleWebhook(
 
       const statuses = value.statuses ?? [];
       for (const status of statuses) {
-        if (status.status !== "failed") continue;
+        if (status.status === "sent") continue;
+
         sqsPromises.push(
           (async () => {
             try {
               const tracking = await getMessageTracking(status.id);
               if (!tracking) return;
-              const parsedError = parseDeliveryFailureError(status.errors);
-              await Promise.all([
-                recordBulkDeliveryFailure(tracking.tenantId, tracking.jobId, {
-                  to: tracking.to ?? status.recipient_id,
-                  messageId: status.id,
-                  ...parsedError,
-                }),
-                deleteMessageTracking(status.id),
-              ]);
-              console.log(
-                `Delivery failure recorded for job=${tracking.jobId} messageId=${status.id} errors=${JSON.stringify(status.errors ?? [])}`
-              );
+
+              const isCampaign =
+                (tracking as Record<string, unknown>).kind === "campaign" &&
+                (tracking as Record<string, unknown>).campaignId;
+              const campaignId = isCampaign
+                ? ((tracking as Record<string, unknown>).campaignId as string)
+                : undefined;
+
+              if (status.status === "delivered") {
+                if (isCampaign && campaignId) {
+                  await incrementCampaignAnalytics(tracking.tenantId, campaignId, "deliveredCount");
+                  console.log(`Delivery tracked for campaign=${campaignId} messageId=${status.id}`);
+                }
+                return;
+              }
+
+              if (status.status === "read") {
+                if (isCampaign && campaignId) {
+                  await incrementCampaignAnalytics(tracking.tenantId, campaignId, "readCount");
+                  console.log(`Read tracked for campaign=${campaignId} messageId=${status.id}`);
+                }
+                return;
+              }
+
+              if (status.status === "failed") {
+                const parsedError = parseDeliveryFailureError(status.errors);
+                if (isCampaign && campaignId) {
+                  await Promise.all([
+                    incrementCampaignAnalytics(tracking.tenantId, campaignId, "deliveryFailed"),
+                    deleteMessageTracking(status.id),
+                  ]);
+                  console.log(
+                    `Campaign delivery failure for campaign=${campaignId} messageId=${status.id}`
+                  );
+                } else {
+                  await Promise.all([
+                    recordBulkDeliveryFailure(tracking.tenantId, tracking.jobId, {
+                      to: tracking.to ?? status.recipient_id,
+                      messageId: status.id,
+                      ...parsedError,
+                    }),
+                    deleteMessageTracking(status.id),
+                  ]);
+                  console.log(
+                    `Delivery failure recorded for job=${tracking.jobId} messageId=${status.id} errors=${JSON.stringify(status.errors ?? [])}`
+                  );
+                }
+              }
             } catch (err) {
               console.error(`Failed to process delivery status for messageId=${status.id}:`, err);
             }

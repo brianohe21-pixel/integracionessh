@@ -194,6 +194,55 @@ export interface WhatsAppTemplate {
   createdAt: string;
 }
 
+export type CampaignStatus =
+  | "draft"
+  | "scheduled"
+  | "running"
+  | "paused"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
+export interface Campaign {
+  campaignId: string;
+  tenantId: string;
+  botId: string;
+  name: string;
+  templateName: string;
+  language: string;
+  status: CampaignStatus;
+  segments: string[];
+  scheduledAt?: string;
+  total: number;
+  sent: number;
+  failed: number;
+  deliveredCount: number;
+  readCount: number;
+  deliveryFailed: number;
+  createdAt: string;
+  updatedAt: string;
+  startedAt?: string;
+  completedAt?: string;
+}
+
+export interface CampaignRecipient {
+  to: string;
+  components?: Array<{
+    type: string;
+    parameters?: Array<{ type: string; text?: string; image?: { link: string } }>;
+  }>;
+}
+
+export interface CampaignSQSBody {
+  campaignId: string;
+  tenantId: string;
+  botId: string;
+  templateName: string;
+  language: string;
+  to: string;
+  components?: CampaignRecipient["components"];
+}
+
 export type BulkSendJobStatus = "queued" | "processing" | "completed" | "failed";
 
 export interface BulkSendJob {

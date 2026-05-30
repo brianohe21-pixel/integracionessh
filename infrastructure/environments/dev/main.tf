@@ -81,49 +81,88 @@ module "s3" {
   tags            = local.tags
 }
 
+resource "aws_iam_role" "scheduler" {
+  name = "${local.project}-${local.environment}-scheduler"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "scheduler.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+
+  tags = local.tags
+}
+
+resource "aws_iam_role_policy" "scheduler_invoke" {
+  name = "${local.project}-${local.environment}-scheduler-invoke"
+  role = aws_iam_role.scheduler.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["lambda:InvokeFunction"]
+      Resource = module.lambda.campaigns_function_arn
+    }]
+  })
+}
+
+resource "aws_scheduler_schedule_group" "campaigns" {
+  name = "${local.project}-${local.environment}"
+  tags = local.tags
+}
+
 module "lambda" {
-  source                = "../../modules/lambda"
-  project               = local.project
-  environment           = local.environment
-  dynamodb_table_name   = module.dynamodb.table_name
-  dynamodb_table_arn    = module.dynamodb.table_arn
-  sqs_queue_url         = module.sqs.queue_url
-  sqs_queue_arn         = module.sqs.queue_arn
-  bulk_sqs_queue_url    = module.sqs.bulk_queue_url
-  bulk_sqs_queue_arn    = module.sqs.bulk_queue_arn
-  media_bucket_arn      = module.s3.media_bucket_arn
-  cognito_user_pool_id  = module.cognito.user_pool_id
-  cognito_client_id     = module.cognito.client_id
-  whatsapp_verify_token = var.whatsapp_verify_token
-  meta_app_id           = var.meta_app_id
-  meta_app_secret       = var.meta_app_secret
-  whatsapp_app_secret   = var.whatsapp_app_secret
-  lambda_zip_path       = var.lambda_zip_path != "" ? abspath("${path.module}/${var.lambda_zip_path}") : ""
-  tags                  = local.tags
+  source                 = "../../modules/lambda"
+  project                = local.project
+  environment            = local.environment
+  dynamodb_table_name    = module.dynamodb.table_name
+  dynamodb_table_arn     = module.dynamodb.table_arn
+  sqs_queue_url          = module.sqs.queue_url
+  sqs_queue_arn          = module.sqs.queue_arn
+  bulk_sqs_queue_url     = module.sqs.bulk_queue_url
+  bulk_sqs_queue_arn     = module.sqs.bulk_queue_arn
+  campaign_sqs_queue_url = module.sqs.campaign_queue_url
+  campaign_sqs_queue_arn = module.sqs.campaign_queue_arn
+  scheduler_role_arn     = aws_iam_role.scheduler.arn
+  media_bucket_arn       = module.s3.media_bucket_arn
+  cognito_user_pool_id   = module.cognito.user_pool_id
+  cognito_client_id      = module.cognito.client_id
+  whatsapp_verify_token  = var.whatsapp_verify_token
+  meta_app_id            = var.meta_app_id
+  meta_app_secret        = var.meta_app_secret
+  whatsapp_app_secret    = var.whatsapp_app_secret
+  lambda_zip_path        = var.lambda_zip_path != "" ? abspath("${path.module}/${var.lambda_zip_path}") : ""
+  tags                   = local.tags
 }
 
 module "api_gateway" {
-  source                     = "../../modules/api-gateway"
-  project                    = local.project
-  environment                = local.environment
-  cognito_client_id          = module.cognito.client_id
-  cognito_issuer_url         = module.cognito.endpoint
-  webhook_invoke_arn         = module.lambda.webhook_invoke_arn
-  webhook_function_arn       = module.lambda.function_arns["webhook"]
-  tenants_invoke_arn         = module.lambda.tenants_invoke_arn
-  tenants_function_arn       = module.lambda.function_arns["tenants"]
-  bots_invoke_arn            = module.lambda.bots_invoke_arn
-  bots_function_arn          = module.lambda.function_arns["bots"]
-  conversations_invoke_arn   = module.lambda.conversations_invoke_arn
-  conversations_function_arn = module.lambda.function_arns["conversations"]
-  templates_invoke_arn       = module.lambda.templates_invoke_arn
-  templates_function_arn     = module.lambda.function_arns["templates"]
-  bulk_send_invoke_arn       = module.lambda.bulk_send_invoke_arn
-  bulk_send_function_arn     = module.lambda.function_arns["bulk_send"]
+  source                        = "../../modules/api-gateway"
+  project                       = local.project
+  environment                   = local.environment
+  cognito_client_id             = module.cognito.client_id
+  cognito_issuer_url            = module.cognito.endpoint
+  webhook_invoke_arn            = module.lambda.webhook_invoke_arn
+  webhook_function_arn          = module.lambda.function_arns["webhook"]
+  tenants_invoke_arn            = module.lambda.tenants_invoke_arn
+  tenants_function_arn          = module.lambda.function_arns["tenants"]
+  bots_invoke_arn               = module.lambda.bots_invoke_arn
+  bots_function_arn             = module.lambda.function_arns["bots"]
+  conversations_invoke_arn      = module.lambda.conversations_invoke_arn
+  conversations_function_arn    = module.lambda.function_arns["conversations"]
+  templates_invoke_arn          = module.lambda.templates_invoke_arn
+  templates_function_arn        = module.lambda.function_arns["templates"]
+  bulk_send_invoke_arn          = module.lambda.bulk_send_invoke_arn
+  bulk_send_function_arn        = module.lambda.function_arns["bulk_send"]
   metrics_invoke_arn            = module.lambda.metrics_invoke_arn
   metrics_function_arn          = module.lambda.function_arns["metrics"]
   whatsapp_connect_invoke_arn   = module.lambda.whatsapp_connect_invoke_arn
   whatsapp_connect_function_arn = module.lambda.whatsapp_connect_function_arn
+  campaigns_invoke_arn          = module.lambda.campaigns_invoke_arn
+  campaigns_function_arn        = module.lambda.campaigns_function_arn
   allowed_origins               = local.browser_origins
   tags                          = local.tags
 }

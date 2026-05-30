@@ -17,3 +17,11 @@ output "bulk_queue_url" {
 output "bulk_queue_arn" {
   value = aws_sqs_queue.bulk_send.arn
 }
+
+output "campaign_queue_url" {
+  value = aws_sqs_queue.campaign_send.url
+}
+
+output "campaign_queue_arn" {
+  value = aws_sqs_queue.campaign_send.arn
+}

@@ -30,6 +30,20 @@ variable "bulk_sqs_queue_arn" {
   type = string
 }
 
+variable "campaign_sqs_queue_url" {
+  type = string
+}
+
+variable "campaign_sqs_queue_arn" {
+  type = string
+}
+
+variable "scheduler_role_arn" {
+  type        = string
+  default     = ""
+  description = "IAM role ARN for EventBridge Scheduler to invoke the campaigns Lambda"
+}
+
 variable "media_bucket_arn" {
   type = string
 }

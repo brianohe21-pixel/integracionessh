@@ -14,6 +14,7 @@ import {
   BarChart3,
   Settings,
   LogOut,
+  Megaphone,
 } from "lucide-react";
 
 export function Sidebar() {
@@ -27,6 +28,7 @@ export function Sidebar() {
     { href: "/conversations", labelKey: "nav.conversations" as const, icon: MessageSquare },
     { href: "/templates", labelKey: "nav.templates" as const, icon: LayoutTemplate },
     { href: "/bulk-send", labelKey: "nav.bulkSend" as const, icon: SendHorizonal },
+    { href: "/campaigns", labelKey: "nav.campaigns" as const, icon: Megaphone },
     { href: "/settings", labelKey: "nav.settings" as const, icon: Settings },
   ];
 

@@ -57,7 +57,23 @@ resource "aws_iam_role_policy" "lambda_permissions" {
         Resource = [
           var.sqs_queue_arn,
           var.bulk_sqs_queue_arn,
+          var.campaign_sqs_queue_arn,
         ]
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["scheduler:CreateSchedule", "scheduler:DeleteSchedule", "scheduler:GetSchedule"]
+        Resource = "arn:aws:scheduler:*:*:schedule/chatbot-platform-${var.environment}/*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["iam:PassRole"]
+        Resource = var.scheduler_role_arn != "" ? var.scheduler_role_arn : "arn:aws:iam::*:role/*"
+        Condition = {
+          StringEquals = {
+            "iam:PassedToService" = "scheduler.amazonaws.com"
+          }
+        }
       },
       {
         Effect = "Allow"
@@ -215,6 +231,29 @@ locals {
         WHATSAPP_APP_SECRET = var.whatsapp_app_secret != "" ? var.whatsapp_app_secret : var.meta_app_secret
       }
     }
+    campaigns = {
+      handler     = "campaigns/index.handler"
+      description = "CRUD API and control for WhatsApp bulk campaigns"
+      timeout     = 60
+      memory      = 256
+      environment = {
+        TABLE_NAME               = var.dynamodb_table_name
+        CAMPAIGN_SQS_QUEUE_URL   = var.campaign_sqs_queue_url
+        ENVIRONMENT              = var.environment
+        SCHEDULER_ROLE_ARN       = var.scheduler_role_arn
+        CAMPAIGNS_FUNCTION_ARN   = ""
+      }
+    }
+    process_campaign = {
+      handler     = "process-campaign/index.handler"
+      description = "Processes campaign messages from SQS"
+      timeout     = 60
+      memory      = 256
+      environment = {
+        TABLE_NAME  = var.dynamodb_table_name
+        ENVIRONMENT = var.environment
+      }
+    }
   }
 }
 
@@ -249,6 +288,14 @@ resource "aws_lambda_event_source_mapping" "sqs_trigger" {
 resource "aws_lambda_event_source_mapping" "bulk_sqs_trigger" {
   event_source_arn                   = var.bulk_sqs_queue_arn
   function_name                      = aws_lambda_function.functions["process_bulk_send"].arn
+  batch_size                         = 1
+  enabled                            = true
+  maximum_batching_window_in_seconds = 0
+}
+
+resource "aws_lambda_event_source_mapping" "campaign_sqs_trigger" {
+  event_source_arn                   = var.campaign_sqs_queue_arn
+  function_name                      = aws_lambda_function.functions["process_campaign"].arn
   batch_size                         = 1
   enabled                            = true
   maximum_batching_window_in_seconds = 0

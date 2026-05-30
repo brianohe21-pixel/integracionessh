@@ -57,7 +57,9 @@ resource "aws_amplify_branch" "main" {
   enable_auto_build = false
 
   environment_variables = {
-    NEXT_PUBLIC_ENV = var.environment
+    NEXT_PUBLIC_ENV                            = var.environment
+    NEXT_PUBLIC_META_APP_ID                    = var.meta_app_id
+    NEXT_PUBLIC_META_EMBEDDED_SIGNUP_CONFIG_ID = var.meta_embedded_signup_config_id
   }
 
   tags = var.tags

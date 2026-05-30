@@ -65,3 +65,11 @@ output "authorizer_invoke_arn" {
 output "authorizer_arn" {
   value = aws_lambda_function.functions["authorizer"].arn
 }
+
+output "campaigns_invoke_arn" {
+  value = aws_lambda_function.functions["campaigns"].invoke_arn
+}
+
+output "campaigns_function_arn" {
+  value = aws_lambda_function.functions["campaigns"].arn
+}

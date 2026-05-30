@@ -14,6 +14,8 @@ const entryPoints = [
   "src/functions/templates/index.ts",
   "src/functions/bulk-send/index.ts",
   "src/functions/process-bulk-send/index.ts",
+  "src/functions/campaigns/index.ts",
+  "src/functions/process-campaign/index.ts",
   "src/functions/authorizer/index.ts",
   "src/functions/metrics/index.ts",
   "src/functions/whatsapp-connect/index.ts",
