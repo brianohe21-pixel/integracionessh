@@ -52,7 +52,7 @@ resource "aws_amplify_branch" "main" {
   app_id      = aws_amplify_app.frontend.id
   branch_name = var.branch_name
 
-  enable_auto_build = true
+  enable_auto_build = false
 
   environment_variables = {
     NEXT_PUBLIC_ENV = var.environment

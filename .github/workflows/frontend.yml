@@ -54,6 +54,8 @@ jobs:
     if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
 
     steps:
+      - uses: actions/checkout@v4
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -62,12 +64,10 @@ jobs:
           aws-region: us-east-1
 
       - name: Start Amplify job
-        run: |
-          aws amplify start-job \
-            --app-id ${{ vars.AMPLIFY_APP_ID_DEV }} \
-            --branch-name develop \
-            --job-type RELEASE \
-            --no-cli-pager
+        env:
+          AMPLIFY_APP_ID: ${{ vars.AMPLIFY_APP_ID_DEV }}
+          AMPLIFY_BRANCH: develop
+        run: .github/scripts/amplify-start-release.sh
 
   deploy-amplify-prod:
     name: Trigger Amplify Deploy (Prod)
@@ -77,6 +77,8 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
+      - uses: actions/checkout@v4
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -85,9 +87,7 @@ jobs:
           aws-region: us-east-1
 
       - name: Start Amplify job
-        run: |
-          aws amplify start-job \
-            --app-id ${{ vars.AMPLIFY_APP_ID_PROD }} \
-            --branch-name main \
-            --job-type RELEASE \
-            --no-cli-pager
+        env:
+          AMPLIFY_APP_ID: ${{ vars.AMPLIFY_APP_ID_PROD }}
+          AMPLIFY_BRANCH: main
+        run: .github/scripts/amplify-start-release.sh
