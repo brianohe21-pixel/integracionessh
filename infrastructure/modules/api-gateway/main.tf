@@ -243,6 +243,12 @@ locals {
       function_arn = var.campaigns_function_arn
       protected    = true
     }
+    campaigns_failures = {
+      route_key    = "GET /campaigns/{campaignId}/failures"
+      invoke_arn   = var.campaigns_invoke_arn
+      function_arn = var.campaigns_function_arn
+      protected    = true
+    }
   }
 }
 

@@ -3,6 +3,7 @@ import { SQSClient, SendMessageBatchCommand } from "@aws-sdk/client-sqs";
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
+import { getCampaign } from "../../lib/dynamodb/campaign.repository.js";
 import {
   createBulkJob,
   getBulkJob,
@@ -107,7 +108,10 @@ export async function handler(
       const rawPath = event.rawPath ?? event.requestContext.http.path ?? "";
       if (rawPath.endsWith("/failures")) {
         const job = await getBulkJob(auth.tenantId, jobId);
-        if (!job) return notFound("Job not found");
+        if (!job) {
+          const campaign = await getCampaign(auth.tenantId, jobId);
+          if (!campaign) return notFound("Job not found");
+        }
         const limit = Math.min(
           Math.max(parseInt(event.queryStringParameters?.limit ?? "500", 10) || 500, 1),
           1000

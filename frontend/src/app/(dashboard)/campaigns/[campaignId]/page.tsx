@@ -270,6 +270,7 @@ export default function CampaignDetailPage({
           <BulkJobFailures
             jobId={campaign.campaignId}
             templateName={campaign.templateName}
+            resource="campaign"
             enabled={true}
           />
         </div>

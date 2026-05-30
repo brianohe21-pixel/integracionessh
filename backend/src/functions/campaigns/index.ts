@@ -18,6 +18,7 @@ import {
   makeCampaignId,
   type PendingRecipient,
 } from "../../lib/dynamodb/campaign.repository.js";
+import { listBulkSendFailures } from "../../lib/dynamodb/bulk-job.repository.js";
 import { extractAuthContext } from "../../lib/auth/cognito.js";
 import { ok, created, badRequest, notFound, forbidden, handleError } from "../../lib/http.js";
 import type { CampaignSQSBody, CampaignRecipient as CampaignRecipientType } from "../../types/index.js";
@@ -198,6 +199,17 @@ export async function handler(
     }
 
     if (method === "GET" && campaignId) {
+      if (rawPath.endsWith("/failures")) {
+        const campaign = await getCampaign(auth.tenantId, campaignId);
+        if (!campaign) return notFound("Campaign not found");
+        const limit = Math.min(
+          Math.max(parseInt(event.queryStringParameters?.limit ?? "500", 10) || 500, 1),
+          1000
+        );
+        const failures = await listBulkSendFailures(auth.tenantId, campaignId, limit);
+        return ok(failures);
+      }
+
       const campaign = await getCampaign(auth.tenantId, campaignId);
       if (!campaign) return notFound("Campaign not found");
       return ok(campaign);

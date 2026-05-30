@@ -33,13 +33,24 @@ interface BulkJobFailuresProps {
   jobId: string;
   templateName?: string;
   enabled?: boolean;
+  resource?: "bulk" | "campaign";
 }
 
-export function BulkJobFailures({ jobId, templateName = "campana", enabled = true }: BulkJobFailuresProps) {
+export function BulkJobFailures({
+  jobId,
+  templateName = "campana",
+  enabled = true,
+  resource = "bulk",
+}: BulkJobFailuresProps) {
   const t = useT();
+  const failuresPath =
+    resource === "campaign"
+      ? `/campaigns/${jobId}/failures`
+      : `/bulk-send/${jobId}/failures`;
+
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["bulk-failures", jobId],
-    queryFn: () => api.get<BulkSendFailuresResponse>(`/bulk-send/${jobId}/failures`),
+    queryKey: ["bulk-failures", resource, jobId],
+    queryFn: () => api.get<BulkSendFailuresResponse>(failuresPath),
     enabled,
   });
 
