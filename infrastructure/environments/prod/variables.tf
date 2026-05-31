@@ -100,6 +100,12 @@ variable "ops_alert_email" {
   default = ""
 }
 
+variable "enable_monitoring" {
+  type        = bool
+  default     = false
+  description = "Deploy SNS/CloudWatch ops alerts (requires SNS and CloudWatch IAM permissions)"
+}
+
 variable "wompi_public_key" {
   type    = string
   default = ""

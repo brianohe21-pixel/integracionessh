@@ -70,6 +70,18 @@ jobs:
             exit 1
           fi
 
+      - name: Remove monitoring from state when disabled
+        run: |
+          set -euo pipefail
+          if [ "${ENABLE_MONITORING:-false}" != "true" ]; then
+            for addr in $(terraform state list 2>/dev/null | grep '^module\.monitoring' || true); do
+              echo "Removing $addr from state (enable_monitoring=false)"
+              terraform state rm "$addr"
+            done
+          fi
+        env:
+          ENABLE_MONITORING: ${{ vars.ENABLE_MONITORING }}
+
       - name: Terraform Plan
         id: plan
         run: |

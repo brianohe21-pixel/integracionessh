@@ -185,7 +185,9 @@ module "api_gateway" {
 }
 
 module "monitoring" {
-  source      = "../../modules/monitoring"
+  count  = var.enable_monitoring ? 1 : 0
+  source = "../../modules/monitoring"
+
   project     = local.project
   environment = local.environment
   alert_email = var.ops_alert_email

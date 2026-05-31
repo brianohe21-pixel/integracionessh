@@ -24,4 +24,6 @@ stripe_webhook_secret   = ""
 stripe_price_pro        = ""
 stripe_price_enterprise = ""
 frontend_url            = "http://localhost:3000"
+
+enable_monitoring       = false
 ops_alert_email         = "ops@example.com"
