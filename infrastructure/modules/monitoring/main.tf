@@ -24,14 +24,8 @@ variable "dlq_arn" {
   type = string
 }
 
-variable "tags" {
-  type    = map(string)
-  default = {}
-}
-
 resource "aws_sns_topic" "alerts" {
   name = "${var.project}-${var.environment}-ops-alerts"
-  tags = var.tags
 }
 
 resource "aws_sns_topic_subscription" "email" {
@@ -59,8 +53,6 @@ resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
   dimensions = {
     FunctionName = each.value
   }
-
-  tags = var.tags
 }
 
 resource "aws_cloudwatch_metric_alarm" "dlq_messages" {
@@ -79,8 +71,6 @@ resource "aws_cloudwatch_metric_alarm" "dlq_messages" {
   dimensions = {
     QueueName = split(":", var.dlq_arn)[5]
   }
-
-  tags = var.tags
 }
 
 resource "aws_cloudwatch_metric_alarm" "api_5xx" {
@@ -99,6 +89,4 @@ resource "aws_cloudwatch_metric_alarm" "api_5xx" {
   dimensions = {
     ApiId = var.api_id
   }
-
-  tags = var.tags
 }

@@ -25,6 +25,11 @@ provider "aws" {
   }
 }
 
+provider "aws" {
+  alias  = "untagged"
+  region = var.aws_region
+}
+
 data "aws_caller_identity" "current" {}
 
 locals {
@@ -197,7 +202,10 @@ module "monitoring" {
     "${local.project}-${local.environment}-process-message",
     "${local.project}-${local.environment}-billing",
   ]
-  tags = local.tags
+
+  providers = {
+    aws = aws.untagged
+  }
 }
 
 module "amplify" {
