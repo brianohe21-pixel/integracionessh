@@ -28,8 +28,11 @@ const LIMITS: Record<TenantPlan, PlanLimits> = {
   },
 };
 
-export function getPlanLimits(plan: TenantPlan): PlanLimits {
-  return LIMITS[plan];
+export function getPlanLimits(plan: TenantPlan | string | undefined): PlanLimits {
+  if (plan === "pro" || plan === "enterprise" || plan === "free") {
+    return LIMITS[plan];
+  }
+  return LIMITS.free;
 }
 
 export function isUnlimited(value: number): boolean {

@@ -28,7 +28,10 @@ export function BillingActions() {
     queryFn: () => api.get<Tenant>("/tenants/me"),
   });
 
-  const defaultProvider = providers?.default ?? "wompi";
+  const defaultProvider: "wompi" | "stripe" | null =
+    providers?.default ??
+    (providers?.wompi ? "wompi" : providers?.stripe ? "stripe" : null);
+  const canCheckout = Boolean(defaultProvider);
 
   useEffect(() => {
     const billing = searchParams.get("billing");
@@ -52,6 +55,10 @@ export function BillingActions() {
   async function goToCheckout(plan: "pro" | "enterprise") {
     setError("");
     setSuccess("");
+    if (!defaultProvider) {
+      setError(t("billing.noProviderConfigured"));
+      return;
+    }
     try {
       const result = await checkout.mutateAsync({
         plan,
@@ -86,7 +93,7 @@ export function BillingActions() {
           <button
             type="button"
             onClick={() => goToCheckout("pro")}
-            disabled={checkout.isPending || confirmWompi.isPending}
+            disabled={!canCheckout || checkout.isPending || confirmWompi.isPending}
             className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
           >
             {t("billing.upgradePro")}
@@ -96,7 +103,7 @@ export function BillingActions() {
           <button
             type="button"
             onClick={() => goToCheckout("enterprise")}
-            disabled={checkout.isPending || confirmWompi.isPending}
+            disabled={!canCheckout || checkout.isPending || confirmWompi.isPending}
             className="rounded-lg border border-indigo-600 px-4 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-50 disabled:opacity-50"
           >
             {t("billing.upgradeEnterprise")}

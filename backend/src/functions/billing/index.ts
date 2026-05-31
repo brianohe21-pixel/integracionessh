@@ -13,6 +13,8 @@ import {
   updatePaymentIntent,
 } from "../../lib/dynamodb/payment.repository.js";
 import { activateTenantPlan } from "../../lib/billing/activate-plan.js";
+import { getPlanLimits } from "../../lib/billing/plan-limits.js";
+import { getMonthlyUsage } from "../../lib/dynamodb/usage.repository.js";
 import {
   getStripe,
   getStripeWebhookSecret,
@@ -48,6 +50,23 @@ const WompiConfirmSchema = z.object({
   id: z.string().min(1),
   reference: z.string().min(1).optional(),
 });
+
+function isStripeConfigured(): boolean {
+  return Boolean(process.env.STRIPE_SECRET_KEY);
+}
+
+function resolveBillingProvider(
+  requested?: "wompi" | "stripe"
+): "wompi" | "stripe" | null {
+  const wompi = isWompiConfigured();
+  const stripe = isStripeConfigured();
+
+  if (requested === "wompi") return wompi ? "wompi" : null;
+  if (requested === "stripe") return stripe ? "stripe" : null;
+  if (wompi) return "wompi";
+  if (stripe) return "stripe";
+  return null;
+}
 
 function getRawBody(event: APIGatewayProxyEventV2): string {
   if (!event.body) return "";
@@ -211,26 +230,26 @@ export async function handler(
     const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
 
     if (method === "GET" && path.endsWith("/billing/usage")) {
-      const { getMonthlyUsage } = await import(
-        "../../lib/dynamodb/usage.repository.js"
-      );
-      const { getPlanLimits } = await import("../../lib/billing/plan-limits.js");
       const usage = await getMonthlyUsage(tenant.tenantId);
-      const limits = getPlanLimits(tenant.plan);
+      const plan = tenant.plan ?? "free";
+      const limits = getPlanLimits(plan);
       return ok({
         usage,
         limits,
-        plan: tenant.plan,
-        subscription: tenant.subscriptionStatus,
+        plan,
+        subscription: tenant.subscriptionStatus ?? "none",
         paymentProvider: tenant.paymentProvider ?? (isWompiConfigured() ? "wompi" : "stripe"),
       });
     }
 
     if (method === "GET" && path.endsWith("/billing/providers")) {
+      const wompi = isWompiConfigured();
+      const stripe = isStripeConfigured();
+      const defaultProvider = wompi ? "wompi" : stripe ? "stripe" : null;
       return ok({
-        wompi: isWompiConfigured(),
-        stripe: Boolean(process.env.STRIPE_SECRET_KEY),
-        default: isWompiConfigured() ? "wompi" : "stripe",
+        wompi,
+        stripe,
+        default: defaultProvider,
       });
     }
 
@@ -259,20 +278,17 @@ export async function handler(
       const parsed = CheckoutSchema.safeParse(body);
       if (!parsed.success) return badRequest(parsed.error.message);
 
-      const provider =
-        parsed.data.provider ??
-        (isWompiConfigured() ? "wompi" : "stripe");
+      const provider = resolveBillingProvider(parsed.data.provider);
+      if (!provider) {
+        return badRequest(
+          "No payment provider configured. Deploy billing env vars (Wompi or Stripe) via Terraform."
+        );
+      }
 
       if (provider === "wompi") {
-        if (!isWompiConfigured()) {
-          return badRequest("Wompi is not configured");
-        }
         return handleWompiCheckout(auth.tenantId, auth.email, parsed.data.plan);
       }
 
-      if (!process.env.STRIPE_SECRET_KEY) {
-        return badRequest("Stripe is not configured");
-      }
       return handleStripeCheckout(tenant, parsed.data.plan);
     }
 

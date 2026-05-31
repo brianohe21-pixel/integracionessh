@@ -9,7 +9,7 @@ export type BillingProvider = "wompi" | "stripe";
 export interface BillingProvidersResponse {
   wompi: boolean;
   stripe: boolean;
-  default: BillingProvider;
+  default: BillingProvider | null;
 }
 
 export function useBillingProviders() {

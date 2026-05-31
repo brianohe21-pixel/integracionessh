@@ -554,6 +554,8 @@ export const en: Messages = {
     wompiNote: "Payments are processed with Wompi (Colombia). Your plan activates for 30 days after approval.",
     wompiSuccess: "Payment confirmed. Your plan is now active.",
     wompiConfirmError: "Could not confirm payment. If you already paid, wait a few minutes or contact support.",
+    noProviderConfigured:
+      "Payments are not configured on the server. Run terraform apply with Wompi keys.",
   },
   legal: {
     footerTerms: "Terms",

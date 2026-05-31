@@ -13,7 +13,9 @@ export function extractAuthContext(
   const role = String((claims["custom:role"] as string) ?? "member").trim() || "member";
 
   if (!tenantId || !userId) {
-    throw new Error("Missing required claims in JWT token");
+    const error = new Error("Missing required claims in JWT token");
+    (error as Error & { statusCode: number }).statusCode = 401;
+    throw error;
   }
 
   return {

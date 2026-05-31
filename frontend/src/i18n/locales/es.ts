@@ -552,6 +552,8 @@ export const es = {
     wompiNote: "Pagos procesados con Wompi (Colombia). El plan se activa por 30 días tras el pago aprobado.",
     wompiSuccess: "Pago confirmado. Tu plan ya está activo.",
     wompiConfirmError: "No se pudo confirmar el pago. Si ya pagaste, espera unos minutos o contacta soporte.",
+    noProviderConfigured:
+      "Pagos no configurados en el servidor. Ejecuta terraform apply con las claves Wompi.",
   },
   legal: {
     footerTerms: "Términos",

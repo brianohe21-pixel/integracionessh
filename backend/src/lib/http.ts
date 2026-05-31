@@ -95,6 +95,7 @@ export function handleError(error: unknown): APIGatewayProxyResultV2 {
 
   const err = error as Error & { statusCode?: number };
 
+  if (err.statusCode === 401) return unauthorized(err.message);
   if (err.statusCode === 400) return badRequest(err.message);
   if (err.statusCode === 402) {
     return paymentRequired(err.message, (err as Error & { code?: string }).code);
