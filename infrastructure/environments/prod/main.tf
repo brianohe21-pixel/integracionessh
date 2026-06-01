@@ -142,7 +142,7 @@ module "lambda" {
   meta_app_id            = var.meta_app_id
   meta_app_secret        = var.meta_app_secret
   whatsapp_app_secret    = var.whatsapp_app_secret
-  lambda_zip_path         = var.lambda_zip_path
+  lambda_zip_path         = var.lambda_zip_path != "" ? abspath("${path.module}/${var.lambda_zip_path}") : ""
   stripe_secret_key       = var.stripe_secret_key
   stripe_webhook_secret   = var.stripe_webhook_secret
   stripe_price_pro        = var.stripe_price_pro

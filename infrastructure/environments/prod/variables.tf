@@ -42,7 +42,7 @@ variable "meta_embedded_signup_config_id" {
 
 variable "lambda_zip_path" {
   type    = string
-  default = "../../backend/dist/functions.zip"
+  default = "../../../backend/dist/functions.zip"
 }
 
 variable "custom_domain" {

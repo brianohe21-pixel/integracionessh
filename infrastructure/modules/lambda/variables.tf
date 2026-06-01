@@ -87,7 +87,7 @@ variable "whatsapp_app_secret" {
 
 variable "lambda_zip_path" {
   type        = string
-  default     = "../../backend/dist/functions.zip"
+  default     = ""
   description = "Path to deployment zip. If the file is missing, a minimal bootstrap zip in the module is used so terraform plan/apply can run; run `pnpm --filter chatbot-platform-backend run build` from repo root and apply again to deploy real code."
 }
 

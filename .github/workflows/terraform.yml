@@ -29,6 +29,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Build Lambda package
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --filter chatbot-platform-backend run build
+        env:
+          NODE_ENV: production
+
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.11.4"
@@ -126,6 +141,21 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Build Lambda package
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --filter chatbot-platform-backend run build
+        env:
+          NODE_ENV: production
 
       - uses: hashicorp/setup-terraform@v3
         with:

@@ -5,7 +5,7 @@ whatsapp_verify_token = "your-random-verify-token"
 meta_app_id           = "your-meta-app-id"
 meta_app_secret       = "your-meta-app-secret"
 meta_embedded_signup_config_id = "your-embedded-signup-config-id"
-lambda_zip_path       = "../../backend/dist/functions.zip"
+lambda_zip_path       = "../../../backend/dist/functions.zip"
 custom_domain         = "app.yourdomain.com"
 
 extra_callback_urls   = []
