@@ -1,6 +1,6 @@
 import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
 import { z } from "zod";
-import { extractAuthContext } from "../../lib/auth/cognito.js";
+import { extractAuthContext, assertMemberRole } from "../../lib/auth/cognito.js";
 import { completeEmbeddedSignup } from "../../lib/whatsapp/embedded-signup.js";
 import { ok, badRequest, handleError } from "../../lib/http.js";
 
@@ -28,6 +28,7 @@ export async function handler(
     }
 
     const auth = extractAuthContext(event);
+    assertMemberRole(auth);
     const body = JSON.parse(event.body ?? "{}");
     const parsed = ConnectSchema.safeParse(body);
 

@@ -11,7 +11,7 @@ import {
   listBulkSendFailures,
   updateBulkJobStatus,
 } from "../../lib/dynamodb/bulk-job.repository.js";
-import { extractAuthContext } from "../../lib/auth/cognito.js";
+import { extractAuthContext, assertMemberRole } from "../../lib/auth/cognito.js";
 import { ensureTenant } from "../../lib/dynamodb/tenant.repository.js";
 import { assertBulkRecipients } from "../../lib/billing/assert-plan.js";
 import { incrementBulkRecipients } from "../../lib/dynamodb/usage.repository.js";
@@ -99,6 +99,7 @@ export async function handler(
 ): Promise<APIGatewayProxyResultV2> {
   try {
     const auth = extractAuthContext(event);
+    assertMemberRole(auth);
     const method = event.requestContext.http.method;
     const jobId = event.pathParameters?.jobId;
 

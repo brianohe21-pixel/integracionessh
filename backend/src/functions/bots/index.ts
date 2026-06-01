@@ -8,7 +8,7 @@ import {
   deleteBot,
   listBots,
 } from "../../lib/dynamodb/bot.repository.js";
-import { extractAuthContext, assertTenantAccess } from "../../lib/auth/cognito.js";
+import { extractAuthContext, assertTenantAccess, assertMemberRole } from "../../lib/auth/cognito.js";
 import { ensureTenant } from "../../lib/dynamodb/tenant.repository.js";
 import { assertCanCreateBot } from "../../lib/billing/assert-plan.js";
 import {
@@ -77,6 +77,7 @@ export async function handler(
 ): Promise<APIGatewayProxyResultV2> {
   try {
     const auth = extractAuthContext(event);
+    assertMemberRole(auth);
     const method = event.requestContext.http.method;
     const botId = event.pathParameters?.botId;
 

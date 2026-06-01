@@ -59,6 +59,9 @@ export async function handler(
         const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
         return ok(tenant);
       }
+      if (auth.role !== "admin") {
+        return handleError(Object.assign(new Error("Forbidden"), { statusCode: 403 }));
+      }
       const tenant = await getTenant(resolvedId);
       if (!tenant) return notFound("Tenant not found");
       return ok(tenant);

@@ -136,6 +136,7 @@ module "lambda" {
   scheduler_role_arn     = aws_iam_role.scheduler.arn
   media_bucket_arn       = module.s3.media_bucket_arn
   cognito_user_pool_id   = module.cognito.user_pool_id
+  cognito_user_pool_arn  = module.cognito.user_pool_arn
   cognito_client_id      = module.cognito.client_id
   whatsapp_verify_token  = var.whatsapp_verify_token
   meta_app_id            = var.meta_app_id
@@ -186,6 +187,8 @@ module "api_gateway" {
   support_tickets_function_arn  = module.lambda.support_tickets_function_arn
   billing_invoke_arn            = module.lambda.billing_invoke_arn
   billing_function_arn          = module.lambda.billing_function_arn
+  admin_invoke_arn              = module.lambda.admin_invoke_arn
+  admin_function_arn            = module.lambda.admin_function_arn
   allowed_origins               = local.browser_origins
   tags                          = local.tags
 }

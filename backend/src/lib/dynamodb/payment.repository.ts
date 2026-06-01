@@ -1,4 +1,4 @@
-import { PutCommand, GetCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import { PutCommand, GetCommand, UpdateCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
 import { docClient, TABLE_NAME } from "./client.js";
 import type { TenantPlan } from "../../types/index.js";
 
@@ -96,4 +96,36 @@ export async function updatePaymentIntent(
 
   const { PK, SK, ...rest } = result.Attributes ?? {};
   return rest as PaymentIntent;
+}
+
+export async function listAllPayments(): Promise<PaymentIntent[]> {
+  const items: PaymentIntent[] = [];
+  let lastKey: Record<string, unknown> | undefined;
+
+  do {
+    const result = await docClient.send(
+      new ScanCommand({
+        TableName: TABLE_NAME,
+        FilterExpression: "begins_with(SK, :sk)",
+        ExpressionAttributeValues: { ":sk": "PAYMENT#" },
+        ExclusiveStartKey: lastKey,
+      })
+    );
+
+    for (const item of result.Items ?? []) {
+      const { PK, SK, ...rest } = item;
+      const pk = String(PK ?? "");
+      const tenantFromPk = pk.startsWith("TENANT#") ? pk.slice(7) : "";
+      items.push({
+        ...(rest as PaymentIntent),
+        tenantId: (rest as PaymentIntent).tenantId || tenantFromPk,
+      });
+    }
+
+    lastKey = result.LastEvaluatedKey;
+  } while (lastKey);
+
+  return items.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
 }

@@ -89,3 +89,11 @@ output "billing_invoke_arn" {
 output "billing_function_arn" {
   value = aws_lambda_function.functions["billing"].arn
 }
+
+output "admin_invoke_arn" {
+  value = aws_lambda_function.functions["admin"].invoke_arn
+}
+
+output "admin_function_arn" {
+  value = aws_lambda_function.functions["admin"].arn
+}

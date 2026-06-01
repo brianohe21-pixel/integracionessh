@@ -1,5 +1,5 @@
 import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
-import { extractAuthContext } from "../../lib/auth/cognito.js";
+import { extractAuthContext, assertMemberRole } from "../../lib/auth/cognito.js";
 import { getTenantUsageMetrics } from "../../lib/dynamodb/metrics.repository.js";
 import { ok, badRequest, handleError } from "../../lib/http.js";
 
@@ -8,6 +8,7 @@ export async function handler(
 ): Promise<APIGatewayProxyResultV2> {
   try {
     const auth = extractAuthContext(event);
+    assertMemberRole(auth);
     const method = event.requestContext.http.method;
 
     if (method === "GET") {

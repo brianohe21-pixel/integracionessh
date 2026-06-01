@@ -97,6 +97,17 @@ resource "aws_iam_role_policy" "lambda_permissions" {
       {
         Effect = "Allow"
         Action = [
+          "cognito-idp:ListUsers",
+          "cognito-idp:AdminGetUser",
+          "cognito-idp:AdminEnableUser",
+          "cognito-idp:AdminDisableUser",
+          "cognito-idp:AdminUpdateUserAttributes",
+        ]
+        Resource = var.cognito_user_pool_arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
           "secretsmanager:CreateSecret",
           "secretsmanager:PutSecretValue",
           "secretsmanager:UpdateSecret",
@@ -231,6 +242,16 @@ locals {
       environment = {
         TABLE_NAME  = var.dynamodb_table_name
         ENVIRONMENT = var.environment
+      }
+    }
+    admin = {
+      handler     = "admin/index.handler"
+      description = "Platform admin APIs for Cognito users and payments"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME           = var.dynamodb_table_name
+        COGNITO_USER_POOL_ID = var.cognito_user_pool_id
       }
     }
     billing = {

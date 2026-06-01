@@ -3,7 +3,7 @@ import {
   listConversations,
   getConversationMessages,
 } from "../../lib/dynamodb/conversation.repository.js";
-import { extractAuthContext } from "../../lib/auth/cognito.js";
+import { extractAuthContext, assertMemberRole } from "../../lib/auth/cognito.js";
 import { ok, badRequest, handleError } from "../../lib/http.js";
 
 export async function handler(
@@ -11,6 +11,7 @@ export async function handler(
 ): Promise<APIGatewayProxyResultV2> {
   try {
     const auth = extractAuthContext(event);
+    assertMemberRole(auth);
     const method = event.requestContext.http.method;
     const conversationId = event.pathParameters?.conversationId;
     const params = event.queryStringParameters ?? {};

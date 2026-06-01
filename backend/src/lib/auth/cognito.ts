@@ -37,3 +37,19 @@ export function assertTenantAccess(
     throw error;
   }
 }
+
+export function assertMemberRole(authContext: AuthContext): void {
+  if (authContext.role === "admin") {
+    const error = new Error("Platform admin cannot access tenant product APIs");
+    (error as Error & { statusCode: number }).statusCode = 403;
+    throw error;
+  }
+}
+
+export function assertAdminRole(authContext: AuthContext): void {
+  if (authContext.role !== "admin") {
+    const error = new Error("Admin access required");
+    (error as Error & { statusCode: number }).statusCode = 403;
+    throw error;
+  }
+}

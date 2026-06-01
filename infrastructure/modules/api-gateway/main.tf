@@ -273,6 +273,24 @@ locals {
       function_arn = var.support_tickets_function_arn
       protected    = true
     }
+    admin_cognito_users_list = {
+      route_key    = "GET /admin/cognito/users"
+      invoke_arn   = var.admin_invoke_arn
+      function_arn = var.admin_function_arn
+      protected    = true
+    }
+    admin_cognito_users_patch = {
+      route_key    = "PATCH /admin/cognito/users/{username}"
+      invoke_arn   = var.admin_invoke_arn
+      function_arn = var.admin_function_arn
+      protected    = true
+    }
+    admin_payments_list = {
+      route_key    = "GET /admin/payments"
+      invoke_arn   = var.admin_invoke_arn
+      function_arn = var.admin_function_arn
+      protected    = true
+    }
     billing_checkout = {
       route_key    = "POST /billing/checkout"
       invoke_arn   = var.billing_invoke_arn

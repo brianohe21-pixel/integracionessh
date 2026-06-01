@@ -21,6 +21,7 @@ const entryPoints = [
   "src/functions/support-tickets/index.ts",
   "src/functions/billing/index.ts",
   "src/functions/whatsapp-connect/index.ts",
+  "src/functions/admin/index.ts",
 ];
 
 const buildOptions = {

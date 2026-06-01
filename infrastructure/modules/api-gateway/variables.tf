@@ -102,6 +102,14 @@ variable "billing_function_arn" {
   type = string
 }
 
+variable "admin_invoke_arn" {
+  type = string
+}
+
+variable "admin_function_arn" {
+  type = string
+}
+
 variable "allowed_origins" {
   type    = list(string)
   default = ["*"]

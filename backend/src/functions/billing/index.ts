@@ -5,7 +5,7 @@ import type {
 } from "aws-lambda";
 import { z } from "zod";
 import Stripe from "stripe";
-import { extractAuthContext } from "../../lib/auth/cognito.js";
+import { extractAuthContext, assertMemberRole } from "../../lib/auth/cognito.js";
 import { ensureTenant, updateTenant } from "../../lib/dynamodb/tenant.repository.js";
 import {
   createPaymentIntent,
@@ -227,6 +227,7 @@ export async function handler(
     const auth = extractAuthContext(
       event as APIGatewayProxyEventV2WithJWTAuthorizer
     );
+    assertMemberRole(auth);
     const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
 
     if (method === "GET" && path.endsWith("/billing/usage")) {

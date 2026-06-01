@@ -1,6 +1,6 @@
 import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
 import { z } from "zod";
-import { extractAuthContext } from "../../lib/auth/cognito.js";
+import { extractAuthContext, assertMemberRole } from "../../lib/auth/cognito.js";
 import {
   createTicket,
   listTicketsByUser,
@@ -57,11 +57,13 @@ export async function handler(
     }
 
     if (method === "GET") {
+      assertMemberRole(auth);
       const tickets = await listTicketsByUser(auth.tenantId, auth.userId);
       return ok(tickets);
     }
 
     if (method === "POST") {
+      assertMemberRole(auth);
       const body = JSON.parse(event.body ?? "{}");
       const parsed = CreateTicketSchema.safeParse(body);
       if (!parsed.success) return badRequest(parsed.error.message);
