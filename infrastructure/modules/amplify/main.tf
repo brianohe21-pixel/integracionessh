@@ -24,6 +24,7 @@ resource "aws_amplify_app" "frontend" {
                 - pnpm install --frozen-lockfile
             build:
               commands:
+                - env | grep '^NEXT_PUBLIC_' > frontend/.env.production || true
                 - pnpm --filter frontend run build
           artifacts:
             baseDirectory: frontend/.next

@@ -381,6 +381,7 @@ resource "aws_lambda_permission" "api_gw" {
     campaigns        = var.campaigns_function_arn
     support_tickets  = var.support_tickets_function_arn
     billing          = var.billing_function_arn
+    admin            = var.admin_function_arn
   }
 
   statement_id  = "AllowAPIGatewayInvoke-${each.key}"
