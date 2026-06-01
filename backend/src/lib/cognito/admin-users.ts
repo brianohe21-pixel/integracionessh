@@ -48,14 +48,21 @@ function mapUser(
 
 export async function listCognitoUsers(
   limit: number,
-  paginationToken?: string
+  paginationToken?: string,
+  role?: string
 ): Promise<{ users: CognitoUserSummary[]; paginationToken?: string }> {
   const client = new CognitoIdentityProviderClient({});
+  const filter =
+    role === "admin" || role === "member"
+      ? `"custom:role" = "${role}"`
+      : undefined;
+
   const result = await client.send(
     new ListUsersCommand({
       UserPoolId: getUserPoolId(),
       Limit: Math.min(Math.max(limit, 1), 60),
       PaginationToken: paginationToken,
+      ...(filter ? { Filter: filter } : {}),
     })
   );
 

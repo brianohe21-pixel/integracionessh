@@ -28,7 +28,12 @@ export async function handler(
         60
       );
       const paginationToken = event.queryStringParameters?.paginationToken;
-      const result = await listCognitoUsers(limit, paginationToken);
+      const role = event.queryStringParameters?.role;
+      const result = await listCognitoUsers(
+        limit,
+        paginationToken,
+        role === "admin" || role === "member" ? role : undefined
+      );
       return ok(result);
     }
 
