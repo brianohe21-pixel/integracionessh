@@ -14,6 +14,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { getPasswordHint, validateCognitoPassword } from "@/lib/passwordPolicy";
 import { useT } from "@/i18n/context";
+import { getPostLoginPath } from "@/lib/post-login-path";
 
 function isUserAlreadyAuthenticatedError(err: unknown): boolean {
   return (
@@ -46,8 +47,8 @@ export default function LoginPage() {
   useEffect(() => {
     let cancelled = false;
     getCurrentUser()
-      .then(() => {
-        if (!cancelled) router.replace("/bots");
+      .then(async () => {
+        if (!cancelled) router.replace(await getPostLoginPath());
       })
       .catch(() => {});
     return () => {
@@ -59,7 +60,7 @@ export default function LoginPage() {
     out: Awaited<ReturnType<typeof signIn>>
   ): "done" | "newPassword" | "unsupported" {
     if (out.isSignedIn) {
-      router.push("/bots");
+      void getPostLoginPath().then((path) => router.push(path));
       return "done";
     }
     const step = out.nextStep?.signInStep;
@@ -137,7 +138,7 @@ export default function LoginPage() {
           : {}),
       });
       if (out.isSignedIn) {
-        router.push("/bots");
+        router.push(await getPostLoginPath());
         return;
       }
       setError(t("auth.passwordChangeFailed"));

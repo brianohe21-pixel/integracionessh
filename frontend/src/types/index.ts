@@ -206,6 +206,34 @@ export type SupportTicketCategory = "general" | "technical" | "billing" | "whats
 
 export type SupportTicketStatus = "open" | "closed";
 
+export type PaymentStatus = "pending" | "approved" | "declined";
+
+export interface PaymentIntent {
+  reference: string;
+  tenantId: string;
+  plan: TenantPlan;
+  amountInCents: number;
+  status: PaymentStatus;
+  wompiTransactionId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CognitoUserSummary {
+  username: string;
+  sub: string;
+  email: string;
+  tenantId: string;
+  role: string;
+  enabled: boolean;
+  createdAt: string;
+}
+
+export interface CognitoUsersPage {
+  users: CognitoUserSummary[];
+  paginationToken?: string;
+}
+
 export interface SupportTicket {
   ticketId: string;
   tenantId: string;

@@ -16,29 +16,35 @@ import {
   LogOut,
   Megaphone,
   LifeBuoy,
-  Shield,
+  Users,
+  CreditCard,
 } from "lucide-react";
 import { useAdminRole } from "@/hooks/useAdminRole";
+
+const memberNavItems = [
+  { href: "/bots", labelKey: "nav.bots" as const, icon: BotMessageSquare },
+  { href: "/metrics", labelKey: "nav.metrics" as const, icon: BarChart3 },
+  { href: "/conversations", labelKey: "nav.conversations" as const, icon: MessageSquare },
+  { href: "/templates", labelKey: "nav.templates" as const, icon: LayoutTemplate },
+  { href: "/bulk-send", labelKey: "nav.bulkSend" as const, icon: SendHorizonal },
+  { href: "/campaigns", labelKey: "nav.campaigns" as const, icon: Megaphone },
+  { href: "/support", labelKey: "nav.support" as const, icon: LifeBuoy },
+  { href: "/settings", labelKey: "nav.settings" as const, icon: Settings },
+];
+
+const adminNavItems = [
+  { href: "/admin/users", labelKey: "nav.adminUsers" as const, icon: Users },
+  { href: "/admin/payments", labelKey: "nav.adminPayments" as const, icon: CreditCard },
+  { href: "/admin/support", labelKey: "nav.adminSupport" as const, icon: LifeBuoy },
+];
 
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const t = useT();
-  const { isAdmin } = useAdminRole();
+  const { isAdmin, loading } = useAdminRole();
 
-  const navItems = [
-    { href: "/bots", labelKey: "nav.bots" as const, icon: BotMessageSquare },
-    { href: "/metrics", labelKey: "nav.metrics" as const, icon: BarChart3 },
-    { href: "/conversations", labelKey: "nav.conversations" as const, icon: MessageSquare },
-    { href: "/templates", labelKey: "nav.templates" as const, icon: LayoutTemplate },
-    { href: "/bulk-send", labelKey: "nav.bulkSend" as const, icon: SendHorizonal },
-    { href: "/campaigns", labelKey: "nav.campaigns" as const, icon: Megaphone },
-    { href: "/support", labelKey: "nav.support" as const, icon: LifeBuoy },
-    { href: "/settings", labelKey: "nav.settings" as const, icon: Settings },
-    ...(isAdmin
-      ? [{ href: "/admin/support", labelKey: "nav.adminSupport" as const, icon: Shield }]
-      : []),
-  ];
+  const navItems = loading ? [] : isAdmin ? adminNavItems : memberNavItems;
 
   async function handleSignOut() {
     await signOut();

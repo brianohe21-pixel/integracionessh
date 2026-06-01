@@ -3,25 +3,16 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { useAdminSupportTickets, useAdminUpdateTicket } from "@/hooks/useAdminSupport";
-import { useAdminRole } from "@/hooks/useAdminRole";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useT } from "@/i18n/context";
-import { useRouter } from "next/navigation";
 import type { SupportTicket } from "@/types";
 
 export default function AdminSupportPage() {
   const t = useT();
-  const router = useRouter();
-  const { isAdmin, loading: roleLoading } = useAdminRole();
   const { data: tickets, isLoading } = useAdminSupportTickets();
   const updateTicket = useAdminUpdateTicket();
   const { formatDate } = useFormatters();
   const [replyDraft, setReplyDraft] = useState<Record<string, string>>({});
-
-  if (!roleLoading && !isAdmin) {
-    router.replace("/bots");
-    return null;
-  }
 
   async function handleClose(ticket: SupportTicket) {
     await updateTicket.mutateAsync({

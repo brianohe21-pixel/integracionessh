@@ -1,4 +1,5 @@
 import { Sidebar } from "@/components/layout/Sidebar";
+import { DashboardRoleGuard } from "@/components/layout/DashboardRoleGuard";
 import { TermsAcceptanceSync } from "@/components/legal/TermsAcceptanceSync";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -7,7 +8,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <TermsAcceptanceSync />
       <Sidebar />
       <main className="flex-1 overflow-auto bg-gray-50">
-        {children}
+        <DashboardRoleGuard>{children}</DashboardRoleGuard>
       </main>
     </div>
   );
