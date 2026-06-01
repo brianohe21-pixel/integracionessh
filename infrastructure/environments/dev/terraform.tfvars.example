@@ -10,6 +10,7 @@ lambda_zip_path       = "../../../backend/dist/functions.zip"
 extra_callback_urls   = []
 extra_logout_urls       = []
 extra_allowed_origins   = []
+# Amplify origin (https://develop.<appId>.amplifyapp.com) is added automatically when the Amplify app exists.
 
 wompi_public_key        = "pub_test_..."
 wompi_private_key       = "prv_test_..."

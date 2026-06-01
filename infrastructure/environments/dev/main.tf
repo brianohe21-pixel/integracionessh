@@ -6,6 +6,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    external = {
+      source  = "hashicorp/external"
+      version = "~> 2.3"
+    }
   }
 
   backend "s3" {
@@ -32,6 +36,16 @@ provider "aws" {
 
 data "aws_caller_identity" "current" {}
 
+data "external" "amplify_browser_origin" {
+  program = [
+    "${path.module}/../../scripts/amplify-browser-origin.sh",
+    local.project,
+    local.environment,
+    var.aws_region,
+    "develop",
+  ]
+}
+
 locals {
   project     = "chatbot-platform"
   environment = "dev"
@@ -50,7 +64,11 @@ locals {
     var.extra_callback_urls
   )
   cognito_logout_urls = concat(["http://localhost:3000", "http://127.0.0.1:3000"], var.extra_logout_urls)
-  browser_origins     = concat(["http://localhost:3000", "http://127.0.0.1:3000"], var.extra_allowed_origins)
+  browser_origins = concat(
+    ["http://localhost:3000", "http://127.0.0.1:3000"],
+    data.external.amplify_browser_origin.result.origin != "" ? [data.external.amplify_browser_origin.result.origin] : [],
+    var.extra_allowed_origins
+  )
 }
 
 module "dynamodb" {

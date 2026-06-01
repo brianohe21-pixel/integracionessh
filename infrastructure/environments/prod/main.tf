@@ -6,6 +6,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    external = {
+      source  = "hashicorp/external"
+      version = "~> 2.3"
+    }
   }
 
   backend "s3" {
@@ -32,6 +36,16 @@ provider "aws" {
 
 data "aws_caller_identity" "current" {}
 
+data "external" "amplify_browser_origin" {
+  program = [
+    "${path.module}/../../scripts/amplify-browser-origin.sh",
+    local.project,
+    local.environment,
+    var.aws_region,
+    "main",
+  ]
+}
+
 locals {
   project     = "chatbot-platform"
   environment = "prod"
@@ -55,6 +69,7 @@ locals {
   )
   browser_origins = concat(
     local.has_custom_domain ? ["https://${local.custom_domain_trimmed}"] : [],
+    data.external.amplify_browser_origin.result.origin != "" ? [data.external.amplify_browser_origin.result.origin] : [],
     var.extra_allowed_origins
   )
 }
