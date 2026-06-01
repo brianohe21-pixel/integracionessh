@@ -52,27 +52,41 @@ export async function listCognitoUsers(
   role?: string
 ): Promise<{ users: CognitoUserSummary[]; paginationToken?: string }> {
   const client = new CognitoIdentityProviderClient({});
-  const filter =
-    role === "admin" || role === "member"
-      ? `"custom:role" = "${role}"`
-      : undefined;
+  const poolId = getUserPoolId();
+  const target = Math.min(Math.max(limit, 1), 60);
+  const roleFilter = role === "admin" || role === "member" ? role : undefined;
 
-  const result = await client.send(
-    new ListUsersCommand({
-      UserPoolId: getUserPoolId(),
-      Limit: Math.min(Math.max(limit, 1), 60),
-      PaginationToken: paginationToken,
-      ...(filter ? { Filter: filter } : {}),
-    })
-  );
+  const matched: CognitoUserSummary[] = [];
+  let cognitoToken = paginationToken;
 
-  const users = (result.Users ?? []).map((u) =>
-    mapUser(u.Username ?? "", u.Enabled ?? false, u.UserCreateDate, u.Attributes)
-  );
+  while (matched.length < target) {
+    const result = await client.send(
+      new ListUsersCommand({
+        UserPoolId: poolId,
+        Limit: 60,
+        PaginationToken: cognitoToken,
+      })
+    );
+
+    for (const u of result.Users ?? []) {
+      const summary = mapUser(
+        u.Username ?? "",
+        u.Enabled ?? false,
+        u.UserCreateDate,
+        u.Attributes
+      );
+      if (roleFilter && summary.role !== roleFilter) continue;
+      matched.push(summary);
+      if (matched.length >= target) break;
+    }
+
+    cognitoToken = result.PaginationToken;
+    if (!cognitoToken) break;
+  }
 
   return {
-    users,
-    ...(result.PaginationToken ? { paginationToken: result.PaginationToken } : {}),
+    users: matched,
+    ...(cognitoToken ? { paginationToken: cognitoToken } : {}),
   };
 }
 

@@ -1,10 +1,25 @@
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 import type { AuthContext } from "../../types/index.js";
 
+function readJwtClaims(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer
+): Record<string, unknown> {
+  const authorizer = event.requestContext.authorizer as
+    | { jwt?: { claims?: Record<string, unknown> } }
+    | undefined;
+  const claims = authorizer?.jwt?.claims;
+  if (!claims || typeof claims !== "object") {
+    const error = new Error("Missing JWT claims in request context");
+    (error as Error & { statusCode: number }).statusCode = 401;
+    throw error;
+  }
+  return claims;
+}
+
 export function extractAuthContext(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): AuthContext {
-  const claims = event.requestContext.authorizer.jwt.claims;
+  const claims = readJwtClaims(event);
 
   const tenantId = String(claims["custom:tenantId"] ?? "").trim();
   const userId = String(claims["sub"] ?? "").trim();
@@ -12,7 +27,13 @@ export function extractAuthContext(
   const name = String(claims["name"] ?? "").trim() || undefined;
   const role = String((claims["custom:role"] as string) ?? "member").trim() || "member";
 
-  if (!tenantId || !userId) {
+  if (!userId) {
+    const error = new Error("Missing required claims in JWT token");
+    (error as Error & { statusCode: number }).statusCode = 401;
+    throw error;
+  }
+
+  if (!tenantId && role !== "admin") {
     const error = new Error("Missing required claims in JWT token");
     (error as Error & { statusCode: number }).statusCode = 401;
     throw error;
