@@ -37,10 +37,13 @@ jobs:
           cache: "pnpm"
           cache-dependency-path: pnpm-lock.yaml
 
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        env:
+          HUSKY: "0"
+
       - name: Build Lambda package
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm --filter chatbot-platform-backend run build
+        run: pnpm --filter chatbot-platform-backend run build
         env:
           NODE_ENV: production
 
@@ -150,10 +153,13 @@ jobs:
           cache: "pnpm"
           cache-dependency-path: pnpm-lock.yaml
 
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        env:
+          HUSKY: "0"
+
       - name: Build Lambda package
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm --filter chatbot-platform-backend run build
+        run: pnpm --filter chatbot-platform-backend run build
         env:
           NODE_ENV: production
 
