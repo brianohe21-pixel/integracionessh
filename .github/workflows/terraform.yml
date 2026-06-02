@@ -105,25 +105,78 @@ jobs:
 
       - name: Terraform Plan
         id: plan
+        env:
+          META_APP_ID: ${{ vars.META_APP_ID }}
+          META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
+          META_EMBEDDED_SIGNUP_CONFIG_ID: ${{ vars.META_EMBEDDED_SIGNUP_CONFIG_ID }}
+          FRONTEND_URL: ${{ vars.FRONTEND_URL }}
+          API_CUSTOM_DOMAIN: ${{ vars.API_CUSTOM_DOMAIN }}
+          WOMPI_PUBLIC_KEY: ${{ vars.WOMPI_PUBLIC_KEY }}
+          WOMPI_PRIVATE_KEY: ${{ secrets.WOMPI_PRIVATE_KEY }}
+          WOMPI_INTEGRITY_SECRET: ${{ secrets.WOMPI_INTEGRITY_SECRET }}
+          WOMPI_EVENTS_SECRET: ${{ secrets.WOMPI_EVENTS_SECRET }}
         run: |
-          terraform plan \
-            -var-file=terraform.tfvars \
-            -var="github_access_token=${{ secrets.GH_ACCESS_TOKEN }}" \
-            -var="whatsapp_verify_token=${{ secrets.WHATSAPP_VERIFY_TOKEN }}" \
-            -var="repository_url=${{ vars.REPOSITORY_URL }}" \
-            -out=tfplan \
+          set -euo pipefail
+          PLAN_ARGS=(
             -no-color
-        continue-on-error: true
+            -var="github_access_token=${{ secrets.GH_ACCESS_TOKEN }}"
+            -var="whatsapp_verify_token=${{ secrets.WHATSAPP_VERIFY_TOKEN }}"
+            -var="repository_url=${{ vars.REPOSITORY_URL }}"
+          )
+          if [ -f terraform.tfvars ]; then
+            PLAN_ARGS+=(-var-file=terraform.tfvars)
+          fi
+          if [ -n "${META_APP_ID:-}" ]; then
+            PLAN_ARGS+=(-var="meta_app_id=${META_APP_ID}")
+          fi
+          if [ -n "${META_APP_SECRET:-}" ]; then
+            PLAN_ARGS+=(-var="meta_app_secret=${META_APP_SECRET}")
+          fi
+          if [ -n "${META_EMBEDDED_SIGNUP_CONFIG_ID:-}" ]; then
+            PLAN_ARGS+=(-var="meta_embedded_signup_config_id=${META_EMBEDDED_SIGNUP_CONFIG_ID}")
+          fi
+          if [ -n "${FRONTEND_URL:-}" ]; then
+            PLAN_ARGS+=(-var="frontend_url=${FRONTEND_URL}")
+          fi
+          if [ -n "${API_CUSTOM_DOMAIN:-}" ]; then
+            PLAN_ARGS+=(-var="api_custom_domain=${API_CUSTOM_DOMAIN}")
+          fi
+          if [ -n "${WOMPI_PUBLIC_KEY:-}" ]; then
+            PLAN_ARGS+=(-var="wompi_public_key=${WOMPI_PUBLIC_KEY}")
+          fi
+          if [ -n "${WOMPI_PRIVATE_KEY:-}" ]; then
+            PLAN_ARGS+=(-var="wompi_private_key=${WOMPI_PRIVATE_KEY}")
+          fi
+          if [ -n "${WOMPI_INTEGRITY_SECRET:-}" ]; then
+            PLAN_ARGS+=(-var="wompi_integrity_secret=${WOMPI_INTEGRITY_SECRET}")
+          fi
+          if [ -n "${WOMPI_EVENTS_SECRET:-}" ]; then
+            PLAN_ARGS+=(-var="wompi_events_secret=${WOMPI_EVENTS_SECRET}")
+          fi
+          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/develop" ]; then
+            terraform plan "${PLAN_ARGS[@]}" -out=tfplan | tee plan.txt
+          else
+            terraform plan "${PLAN_ARGS[@]}" | tee plan.txt
+          fi
 
       - name: Comment PR
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && always()
         uses: actions/github-script@v7
         with:
           script: |
+            const fs = require('fs');
+            const planPath = 'infrastructure/environments/dev/plan.txt';
+            let plan = '';
+            try {
+              plan = fs.readFileSync(planPath, 'utf8');
+            } catch {
+              plan = 'Plan output not available.';
+            }
+            const truncated = plan.length > 60000 ? plan.slice(0, 60000) + '\n...(truncated)' : plan;
             const output = `#### Terraform Plan (dev) \`${{ steps.plan.outcome }}\`
             <details><summary>Show Plan</summary>
 
-            \`\`\`\n${{ steps.plan.outputs.stdout }}\`\`\`
+            \`\`\`\n${truncated}\`\`\`
 
             </details>`;
             github.rest.issues.createComment({
@@ -134,8 +187,11 @@ jobs:
             })
 
       - name: Terraform Apply
-        if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
-        run: terraform apply -auto-approve -parallelism=1 tfplan
+        if: github.ref == 'refs/heads/develop' && github.event_name == 'push' && steps.plan.outcome == 'success'
+        run: |
+          set -euo pipefail
+          test -f tfplan
+          terraform apply -auto-approve -parallelism=1 tfplan
 
   terraform-prod:
     name: Terraform Prod
