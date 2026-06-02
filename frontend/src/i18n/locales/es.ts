@@ -43,6 +43,7 @@ export const es = {
     templates: "Templates",
     bulkSend: "Envío masivo",
     campaigns: "Campañas",
+    developer: "API para desarrolladores",
     support: "Soporte",
     settings: "Configuración",
     adminUsers: "Usuarios",

@@ -18,6 +18,7 @@ import {
   LifeBuoy,
   Users,
   CreditCard,
+  KeyRound,
 } from "lucide-react";
 import { useAdminRole } from "@/hooks/useAdminRole";
 
@@ -28,6 +29,7 @@ const memberNavItems = [
   { href: "/templates", labelKey: "nav.templates" as const, icon: LayoutTemplate },
   { href: "/bulk-send", labelKey: "nav.bulkSend" as const, icon: SendHorizonal },
   { href: "/campaigns", labelKey: "nav.campaigns" as const, icon: Megaphone },
+  { href: "/developer", labelKey: "nav.developer" as const, icon: KeyRound },
   { href: "/support", labelKey: "nav.support" as const, icon: LifeBuoy },
   { href: "/settings", labelKey: "nav.settings" as const, icon: Settings },
 ];

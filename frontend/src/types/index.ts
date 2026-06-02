@@ -202,6 +202,48 @@ export interface UsageMetrics {
   recentBulkJobs: BulkSendJob[];
 }
 
+export interface ApiKey {
+  keyId: string;
+  tenantId: string;
+  botId: string;
+  name: string;
+  prefix: string;
+  scopes: string[];
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+  lastUsedAt?: string;
+  expiresAt?: string;
+}
+
+export interface ApiKeyWithSecret extends ApiKey {
+  key: string;
+}
+
+export interface ApiKeyUsageLog {
+  logId: string;
+  tenantId: string;
+  keyId: string;
+  endpoint: string;
+  method: string;
+  statusCode: number;
+  durationMs: number;
+  messageId?: string;
+  maskedPhone?: string;
+  createdAt: string;
+}
+
+export interface ApiKeyUsageSummary {
+  keyId: string;
+  keyName: string;
+  prefix: string;
+  totalRequests: number;
+  successRequests: number;
+  errorRequests: number;
+  messagesThisMonth: number;
+  lastUsedAt?: string;
+}
+
 export type SupportTicketCategory = "general" | "technical" | "billing" | "whatsapp";
 
 export type SupportTicketStatus = "open" | "closed";

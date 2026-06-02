@@ -45,6 +45,7 @@ export const en: Messages = {
     templates: "Templates",
     bulkSend: "Bulk send",
     campaigns: "Campaigns",
+    developer: "Developer API",
     support: "Support",
     settings: "Settings",
     adminUsers: "Users",
