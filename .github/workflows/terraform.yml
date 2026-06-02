@@ -107,6 +107,7 @@ jobs:
         id: plan
         run: |
           terraform plan \
+            -var-file=terraform.tfvars \
             -var="github_access_token=${{ secrets.GH_ACCESS_TOKEN }}" \
             -var="whatsapp_verify_token=${{ secrets.WHATSAPP_VERIFY_TOKEN }}" \
             -var="repository_url=${{ vars.REPOSITORY_URL }}" \

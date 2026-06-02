@@ -145,7 +145,13 @@ export function CreateApiKeyModal({ bots, onClose }: CreateApiKeyModalProps) {
                 Example usage
               </p>
               <p>curl -X POST \</p>
-              <p className="pl-4">{`$API_BASE_URL/v1/messages \\`}</p>
+              <p className="pl-4">
+                {(process.env.NEXT_PUBLIC_API_URL ?? "https://api.integracionessh.lat").replace(
+                  /\/$/,
+                  ""
+                )}
+                /v1/messages \
+              </p>
               <p className="pl-4">{`-H "X-API-Key: ${createdKey.key.slice(0, 20)}…" \\`}</p>
               <p className="pl-4">{`-H "Content-Type: application/json" \\`}</p>
               <p className="pl-4">{`-d '{"to":"521234567890","type":"text","text":"Hello!"}'`}</p>

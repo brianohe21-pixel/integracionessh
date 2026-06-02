@@ -131,6 +131,12 @@ variable "allowed_origins" {
   default = ["*"]
 }
 
+variable "api_custom_domain" {
+  type        = string
+  default     = ""
+  description = "Optional custom hostname for API Gateway (e.g. api.example.com). DNS must be configured externally (CNAME to api_gateway_domain_target output)."
+}
+
 variable "tags" {
   type    = map(string)
   default = {}

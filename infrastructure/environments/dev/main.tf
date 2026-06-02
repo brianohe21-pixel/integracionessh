@@ -206,6 +206,7 @@ module "api_gateway" {
   api_keys_invoke_arn           = module.lambda.api_keys_invoke_arn
   api_keys_function_arn         = module.lambda.api_keys_function_arn
   allowed_origins               = local.browser_origins
+  api_custom_domain             = var.api_custom_domain
   tags                          = local.tags
 }
 

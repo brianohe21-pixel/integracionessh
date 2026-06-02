@@ -2,6 +2,21 @@ output "api_endpoint" {
   value = module.api_gateway.api_endpoint
 }
 
+output "api_invoke_url" {
+  value       = module.api_gateway.api_invoke_url
+  description = "Default execute-api URL (unchanged when custom domain is enabled)."
+}
+
+output "api_gateway_domain_target" {
+  value       = module.api_gateway.api_gateway_domain_target
+  description = "cPanel CNAME for api: Name=api, Record=this hostname."
+}
+
+output "acm_dns_validation" {
+  value       = module.api_gateway.acm_dns_validation
+  description = "cPanel CNAME for ACM certificate validation (required before custom domain works)."
+}
+
 output "cognito_user_pool_id" {
   value = module.cognito.user_pool_id
 }

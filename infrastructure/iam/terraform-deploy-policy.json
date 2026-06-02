@@ -5,6 +5,7 @@
       "Sid": "TerraformDeployChatbotPlatform",
       "Effect": "Allow",
       "Action": [
+        "acm:*",
         "amplify:*",
         "apigateway:*",
         "cloudwatch:*",
@@ -12,6 +13,7 @@
         "dynamodb:*",
         "events:*",
         "iam:AttachRolePolicy",
+        "iam:CreateServiceLinkedRole",
         "iam:CreatePolicy",
         "iam:CreateRole",
         "iam:DeletePolicy",

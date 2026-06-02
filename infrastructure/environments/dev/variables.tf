@@ -63,6 +63,12 @@ variable "extra_allowed_origins" {
   description = "After first apply, add Amplify origin for API Gateway and S3 CORS."
 }
 
+variable "api_custom_domain" {
+  type        = string
+  default     = ""
+  description = "Custom API hostname (e.g. api.integracionessh.lat). Requires DNS CNAME in cPanel; see terraform outputs acm_dns_validation and api_gateway_domain_target."
+}
+
 variable "stripe_secret_key" {
   type      = string
   default   = ""

@@ -45,6 +45,8 @@ jobs:
           NEXT_PUBLIC_USER_POOL_ID: ${{ vars.NEXT_PUBLIC_USER_POOL_ID }}
           NEXT_PUBLIC_USER_POOL_CLIENT: ${{ vars.NEXT_PUBLIC_USER_POOL_CLIENT }}
           NEXT_PUBLIC_ENV: ${{ vars.NEXT_PUBLIC_ENV }}
+          NEXT_PUBLIC_META_APP_ID: ${{ vars.NEXT_PUBLIC_META_APP_ID }}
+          NEXT_PUBLIC_META_EMBEDDED_SIGNUP_CONFIG_ID: ${{ vars.NEXT_PUBLIC_META_EMBEDDED_SIGNUP_CONFIG_ID }}
 
   deploy-amplify-dev:
     name: Trigger Amplify Deploy (Dev)
