@@ -66,6 +66,20 @@ export function paymentRequired(
   };
 }
 
+export function tooManyRequests(
+  message: string,
+  retryAfter?: number
+): APIGatewayProxyResultV2 {
+  return {
+    statusCode: 429,
+    headers: {
+      ...CORS_HEADERS,
+      ...(retryAfter !== undefined ? { "Retry-After": String(retryAfter) } : {}),
+    },
+    body: JSON.stringify({ error: message, ...(retryAfter !== undefined ? { retryAfter } : {}) }),
+  };
+}
+
 export function notFound(message = "Not found"): APIGatewayProxyResultV2 {
   return {
     statusCode: 404,
@@ -102,6 +116,7 @@ export function handleError(error: unknown): APIGatewayProxyResultV2 {
   }
   if (err.statusCode === 403) return forbidden(err.message);
   if (err.statusCode === 404) return notFound(err.message);
+  if (err.statusCode === 429) return tooManyRequests(err.message);
   if (err.statusCode === 502) return badGateway(err.message);
 
   return internalError();
