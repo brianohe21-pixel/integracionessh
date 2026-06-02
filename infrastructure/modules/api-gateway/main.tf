@@ -345,6 +345,48 @@ locals {
       function_arn = var.tenants_function_arn
       protected    = true
     }
+    public_api_messages = {
+      route_key    = "POST /v1/messages"
+      invoke_arn   = var.public_api_invoke_arn
+      function_arn = var.public_api_function_arn
+      protected    = false
+    }
+    api_keys_list = {
+      route_key    = "GET /api-keys"
+      invoke_arn   = var.api_keys_invoke_arn
+      function_arn = var.api_keys_function_arn
+      protected    = true
+    }
+    api_keys_create = {
+      route_key    = "POST /api-keys"
+      invoke_arn   = var.api_keys_invoke_arn
+      function_arn = var.api_keys_function_arn
+      protected    = true
+    }
+    api_keys_update = {
+      route_key    = "PATCH /api-keys/{keyId}"
+      invoke_arn   = var.api_keys_invoke_arn
+      function_arn = var.api_keys_function_arn
+      protected    = true
+    }
+    api_keys_delete = {
+      route_key    = "DELETE /api-keys/{keyId}"
+      invoke_arn   = var.api_keys_invoke_arn
+      function_arn = var.api_keys_function_arn
+      protected    = true
+    }
+    api_keys_usage = {
+      route_key    = "GET /api-keys/usage"
+      invoke_arn   = var.api_keys_invoke_arn
+      function_arn = var.api_keys_function_arn
+      protected    = true
+    }
+    api_keys_logs = {
+      route_key    = "GET /api-keys/{keyId}/logs"
+      invoke_arn   = var.api_keys_invoke_arn
+      function_arn = var.api_keys_function_arn
+      protected    = true
+    }
   }
 }
 
@@ -382,6 +424,8 @@ resource "aws_lambda_permission" "api_gw" {
     support_tickets  = var.support_tickets_function_arn
     billing          = var.billing_function_arn
     admin            = var.admin_function_arn
+    public_api       = var.public_api_function_arn
+    api_keys         = var.api_keys_function_arn
   }
 
   statement_id  = "AllowAPIGatewayInvoke-${each.key}"

@@ -110,6 +110,22 @@ variable "admin_function_arn" {
   type = string
 }
 
+variable "public_api_invoke_arn" {
+  type = string
+}
+
+variable "public_api_function_arn" {
+  type = string
+}
+
+variable "api_keys_invoke_arn" {
+  type = string
+}
+
+variable "api_keys_function_arn" {
+  type = string
+}
+
 variable "allowed_origins" {
   type    = list(string)
   default = ["*"]

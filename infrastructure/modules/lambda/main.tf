@@ -322,6 +322,26 @@ locals {
         ENVIRONMENT = var.environment
       }
     }
+    public_api = {
+      handler     = "public-api/index.handler"
+      description = "Public REST API for external WhatsApp message sending"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME  = var.dynamodb_table_name
+        ENVIRONMENT = var.environment
+      }
+    }
+    api_keys = {
+      handler     = "api-keys/index.handler"
+      description = "API key management for public REST API"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME  = var.dynamodb_table_name
+        ENVIRONMENT = var.environment
+      }
+    }
   }
 }
 

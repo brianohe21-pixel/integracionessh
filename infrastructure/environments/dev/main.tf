@@ -201,6 +201,10 @@ module "api_gateway" {
   billing_function_arn          = module.lambda.billing_function_arn
   admin_invoke_arn              = module.lambda.admin_invoke_arn
   admin_function_arn            = module.lambda.admin_function_arn
+  public_api_invoke_arn         = module.lambda.public_api_invoke_arn
+  public_api_function_arn       = module.lambda.public_api_function_arn
+  api_keys_invoke_arn           = module.lambda.api_keys_invoke_arn
+  api_keys_function_arn         = module.lambda.api_keys_function_arn
   allowed_origins               = local.browser_origins
   tags                          = local.tags
 }

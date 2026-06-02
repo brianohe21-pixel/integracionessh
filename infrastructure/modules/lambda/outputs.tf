@@ -97,3 +97,19 @@ output "admin_invoke_arn" {
 output "admin_function_arn" {
   value = aws_lambda_function.functions["admin"].arn
 }
+
+output "public_api_invoke_arn" {
+  value = aws_lambda_function.functions["public_api"].invoke_arn
+}
+
+output "public_api_function_arn" {
+  value = aws_lambda_function.functions["public_api"].arn
+}
+
+output "api_keys_invoke_arn" {
+  value = aws_lambda_function.functions["api_keys"].invoke_arn
+}
+
+output "api_keys_function_arn" {
+  value = aws_lambda_function.functions["api_keys"].arn
+}
