@@ -42,8 +42,44 @@ export interface MetaTemplate {
 }
 
 export interface MetaTemplatesResponse {
-  data: MetaTemplate[];
+  data: Array<Record<string, unknown>>;
   paging?: { cursors: { before: string; after: string }; next?: string };
+}
+
+function normalizeTemplateLanguage(language: unknown): string {
+  if (typeof language === "string" && language.trim()) return language.trim();
+  if (language && typeof language === "object" && "code" in language) {
+    const code = (language as { code?: unknown }).code;
+    if (typeof code === "string" && code.trim()) return code.trim();
+  }
+  return "en";
+}
+
+function normalizeTemplateCategory(category: unknown): MetaTemplate["category"] {
+  const value = String(category ?? "UTILITY").toUpperCase();
+  if (value === "MARKETING" || value === "AUTHENTICATION" || value === "UTILITY") {
+    return value;
+  }
+  return "UTILITY";
+}
+
+function normalizeTemplateStatus(status: unknown): MetaTemplate["status"] {
+  const value = String(status ?? "PENDING").toUpperCase();
+  if (value === "APPROVED" || value === "REJECTED" || value === "PENDING") {
+    return value;
+  }
+  return "PENDING";
+}
+
+export function normalizeMetaTemplate(raw: Record<string, unknown>): MetaTemplate {
+  return {
+    id: String(raw.id ?? ""),
+    name: String(raw.name ?? ""),
+    language: normalizeTemplateLanguage(raw.language),
+    category: normalizeTemplateCategory(raw.category),
+    status: normalizeTemplateStatus(raw.status),
+    components: Array.isArray(raw.components) ? (raw.components as TemplateComponent[]) : [],
+  };
 }
 
 export interface CreateTemplatePayload {
@@ -199,7 +235,11 @@ export async function listMetaTemplates(
     }
 
     const json = (await response.json()) as MetaTemplatesResponse;
-    templates.push(...(json.data ?? []));
+    for (const item of json.data ?? []) {
+      if (item?.name) {
+        templates.push(normalizeMetaTemplate(item));
+      }
+    }
     url = json.paging?.next ?? null;
   }
 

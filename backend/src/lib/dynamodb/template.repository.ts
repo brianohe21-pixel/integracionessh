@@ -90,20 +90,29 @@ export async function deleteCachedTemplate(
   );
 }
 
+function dedupeTemplates(templates: WhatsAppTemplate[]): WhatsAppTemplate[] {
+  const byKey = new Map<string, WhatsAppTemplate>();
+  for (const template of templates) {
+    byKey.set(`${template.name}#${template.language}`, template);
+  }
+  return Array.from(byKey.values());
+}
+
 export async function syncTemplates(
   tenantId: string,
   botId: string,
   templates: WhatsAppTemplate[]
 ): Promise<void> {
+  const uniqueTemplates = dedupeTemplates(templates);
   const existing = await listCachedTemplates(tenantId, botId);
-  const incomingKeys = new Set(templates.map((t) => `${t.name}#${t.language}`));
+  const incomingKeys = new Set(uniqueTemplates.map((t) => `${t.name}#${t.language}`));
 
   const toDelete = existing.filter((t) => !incomingKeys.has(`${t.name}#${t.language}`));
 
   const batches: Array<Record<string, unknown>[]> = [];
   const allOps: Array<Record<string, unknown>> = [];
 
-  for (const template of templates) {
+  for (const template of uniqueTemplates) {
     allOps.push({
       PutRequest: {
         Item: {

@@ -1,4 +1,5 @@
 import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
+import { ResourceNotFoundException } from "@aws-sdk/client-secrets-manager";
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
@@ -102,7 +103,27 @@ const SendTemplateSchema = z.object({
 async function loadBotAndToken(tenantId: string, botId: string) {
   const bot = await getBot(tenantId, botId);
   if (!bot) throw Object.assign(new Error("Bot not found"), { statusCode: 404 });
-  const accessToken = await getWhatsAppAccessToken(tenantId, ENVIRONMENT);
+
+  let accessToken: string;
+  try {
+    accessToken = await getWhatsAppAccessToken(tenantId, ENVIRONMENT);
+  } catch (error) {
+    if (error instanceof ResourceNotFoundException) {
+      throw Object.assign(
+        new Error("WhatsApp is not connected. Complete WhatsApp setup in bot settings."),
+        { statusCode: 400 }
+      );
+    }
+    throw error;
+  }
+
+  if (!accessToken.trim()) {
+    throw Object.assign(
+      new Error("WhatsApp access token is missing. Reconnect WhatsApp in bot settings."),
+      { statusCode: 400 }
+    );
+  }
+
   return { bot, accessToken };
 }
 
@@ -145,21 +166,27 @@ export async function handler(
       const metaTemplates = await listMetaTemplates(bot.whatsappBusinessAccountId, accessToken);
 
       const now = new Date().toISOString();
-      const templates: WhatsAppTemplate[] = metaTemplates.map((mt) => ({
-        templateId: mt.id,
-        tenantId: auth.tenantId,
-        botId,
-        name: mt.name,
-        language: mt.language,
-        category: mt.category,
-        status: mt.status,
-        components: mt.components,
-        metaTemplateId: mt.id,
-        syncedAt: now,
-        createdAt: now,
-      }));
+      const templates: WhatsAppTemplate[] = metaTemplates
+        .filter((mt) => mt.id && mt.name)
+        .map((mt) => ({
+          templateId: mt.id,
+          tenantId: auth.tenantId,
+          botId,
+          name: mt.name,
+          language: mt.language,
+          category: mt.category,
+          status: mt.status,
+          components: mt.components ?? [],
+          metaTemplateId: mt.id,
+          syncedAt: now,
+          createdAt: now,
+        }));
 
-      await syncTemplates(auth.tenantId, botId, templates);
+      try {
+        await syncTemplates(auth.tenantId, botId, templates);
+      } catch (syncError) {
+        console.error("syncTemplates failed:", syncError);
+      }
 
       return ok(templates);
     }
