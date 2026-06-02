@@ -46,6 +46,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
     environment: dev
+    concurrency:
+      group: lambda-deploy-dev
+      cancel-in-progress: false
     if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
 
     steps:
@@ -77,13 +80,14 @@ jobs:
       - name: Deploy Lambdas
         working-directory: backend
         run: |
-          for fn in webhook process_message tenants bots conversations templates bulk_send process_bulk_send campaigns process_campaign metrics authorizer whatsapp_connect billing support_tickets; do
+          for fn in webhook process_message tenants bots conversations templates bulk_send process_bulk_send campaigns process_campaign metrics authorizer whatsapp_connect billing support_tickets admin public_api api_keys; do
             FUNCTION_NAME="chatbot-platform-dev-${fn//_/-}"
             echo "Deploying $FUNCTION_NAME..."
             aws lambda update-function-code \
               --function-name "$FUNCTION_NAME" \
               --zip-file fileb://dist/functions.zip \
               --no-cli-pager
+            aws lambda wait function-updated --function-name "$FUNCTION_NAME"
           done
 
   deploy-prod:
@@ -91,6 +95,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
     environment: prod
+    concurrency:
+      group: lambda-deploy-prod
+      cancel-in-progress: false
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
@@ -122,11 +129,12 @@ jobs:
       - name: Deploy Lambdas
         working-directory: backend
         run: |
-          for fn in webhook process_message tenants bots conversations templates bulk_send process_bulk_send campaigns process_campaign metrics authorizer whatsapp_connect billing support_tickets; do
+          for fn in webhook process_message tenants bots conversations templates bulk_send process_bulk_send campaigns process_campaign metrics authorizer whatsapp_connect billing support_tickets admin public_api api_keys; do
             FUNCTION_NAME="chatbot-platform-prod-${fn//_/-}"
             echo "Deploying $FUNCTION_NAME..."
             aws lambda update-function-code \
               --function-name "$FUNCTION_NAME" \
               --zip-file fileb://dist/functions.zip \
               --no-cli-pager
+            aws lambda wait function-updated --function-name "$FUNCTION_NAME"
           done

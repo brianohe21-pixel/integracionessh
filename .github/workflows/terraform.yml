@@ -22,6 +22,9 @@ jobs:
     name: Terraform Dev
     runs-on: ubuntu-latest
     environment: dev
+    concurrency:
+      group: lambda-deploy-dev
+      cancel-in-progress: false
     defaults:
       run:
         working-directory: infrastructure/environments/dev
@@ -131,12 +134,15 @@ jobs:
 
       - name: Terraform Apply
         if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
-        run: terraform apply -auto-approve tfplan
+        run: terraform apply -auto-approve -parallelism=1 tfplan
 
   terraform-prod:
     name: Terraform Prod
     runs-on: ubuntu-latest
     environment: prod
+    concurrency:
+      group: lambda-deploy-prod
+      cancel-in-progress: false
     if: github.ref == 'refs/heads/main'
     defaults:
       run:
@@ -208,4 +214,4 @@ jobs:
             -no-color
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve tfplan
+        run: terraform apply -auto-approve -parallelism=1 tfplan

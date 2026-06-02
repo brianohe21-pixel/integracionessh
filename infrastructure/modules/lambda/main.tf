@@ -363,6 +363,13 @@ resource "aws_lambda_function" "functions" {
     variables = each.value.environment
   }
 
+  lifecycle {
+    ignore_changes = [
+      filename,
+      source_code_hash,
+    ]
+  }
+
   tags = var.tags
 }
 
