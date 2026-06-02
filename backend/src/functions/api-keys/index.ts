@@ -14,6 +14,8 @@ import {
   countApiKeyUsageByPeriod,
 } from "../../lib/dynamodb/api-key-usage.repository.js";
 import { listBots } from "../../lib/dynamodb/bot.repository.js";
+import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
+import { getPlanLimits } from "../../lib/billing/plan-limits.js";
 import {
   ok,
   created,
@@ -25,27 +27,23 @@ import {
 } from "../../lib/http.js";
 import type { ApiKey } from "../../types/index.js";
 
-const DEFAULT_RATE_LIMIT_MINUTE = 60;
-const DEFAULT_RATE_LIMIT_DAY = 1000;
-
 const CreateApiKeySchema = z.object({
   name: z.string().min(1).max(128),
   botId: z.string().uuid(),
-  rateLimitPerMinute: z.number().int().min(1).max(600).default(DEFAULT_RATE_LIMIT_MINUTE),
-  rateLimitPerDay: z.number().int().min(1).max(100000).default(DEFAULT_RATE_LIMIT_DAY),
-  expiresAt: z.string().datetime().optional(),
 });
 
 const UpdateApiKeySchema = z.object({
   name: z.string().min(1).max(128).optional(),
   enabled: z.boolean().optional(),
-  rateLimitPerMinute: z.number().int().min(1).max(600).optional(),
-  rateLimitPerDay: z.number().int().min(1).max(100000).optional(),
 });
 
-function safeApiKey(key: ApiKey): Omit<ApiKey, "hashedKey"> {
-  const { hashedKey, ...safe } = key;
+type ApiKeyPublic = Omit<ApiKey, "hashedKey" | "rateLimitPerMinute" | "rateLimitPerDay">;
+
+function safeApiKey(key: ApiKey): ApiKeyPublic {
+  const { hashedKey, rateLimitPerMinute, rateLimitPerDay, ...safe } = key;
   void hashedKey;
+  void rateLimitPerMinute;
+  void rateLimitPerDay;
   return safe;
 }
 
@@ -111,9 +109,14 @@ export async function handler(
       const parsed = CreateApiKeySchema.safeParse(body);
       if (!parsed.success) return badRequest(parsed.error.errors[0]?.message ?? "Invalid input");
 
-      const bots = await listBots(auth.tenantId);
+      const [bots, tenant] = await Promise.all([
+        listBots(auth.tenantId),
+        getTenant(auth.tenantId),
+      ]);
       const bot = bots.find((b) => b.botId === parsed.data.botId);
       if (!bot) return notFound("Bot not found");
+
+      const planLimits = getPlanLimits(tenant?.plan);
 
       const rawKey = generateApiKey();
       const hashedKey = hashApiKey(rawKey);
@@ -128,12 +131,11 @@ export async function handler(
         prefix,
         hashedKey,
         scopes: ["messages:send"],
-        rateLimitPerMinute: parsed.data.rateLimitPerMinute,
-        rateLimitPerDay: parsed.data.rateLimitPerDay,
+        rateLimitPerMinute: planLimits.apiRateLimitPerMinute,
+        rateLimitPerDay: planLimits.apiRateLimitPerDay,
         enabled: true,
         createdAt: now,
         updatedAt: now,
-        ...(parsed.data.expiresAt ? { expiresAt: parsed.data.expiresAt } : {}),
       };
 
       await createApiKey(newKey);
@@ -155,11 +157,9 @@ export async function handler(
 
       const now = new Date().toISOString();
       const fields: Parameters<typeof updateApiKey>[1] = { updatedAt: now };
-      const { name, enabled, rateLimitPerMinute, rateLimitPerDay } = parsed.data;
+      const { name, enabled } = parsed.data;
       if (name !== undefined) fields.name = name;
       if (enabled !== undefined) fields.enabled = enabled;
-      if (rateLimitPerMinute !== undefined) fields.rateLimitPerMinute = rateLimitPerMinute;
-      if (rateLimitPerDay !== undefined) fields.rateLimitPerDay = rateLimitPerDay;
 
       const updated = await updateApiKey(existing.hashedKey, fields);
 

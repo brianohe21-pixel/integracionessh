@@ -5,6 +5,8 @@ export interface PlanLimits {
   maxMessagesPerMonth: number;
   maxBulkRecipientsPerJob: number;
   maxActiveCampaigns: number;
+  apiRateLimitPerMinute: number;
+  apiRateLimitPerDay: number;
 }
 
 const LIMITS: Record<TenantPlan, PlanLimits> = {
@@ -13,18 +15,24 @@ const LIMITS: Record<TenantPlan, PlanLimits> = {
     maxMessagesPerMonth: 500,
     maxBulkRecipientsPerJob: 100,
     maxActiveCampaigns: 1,
+    apiRateLimitPerMinute: 20,
+    apiRateLimitPerDay: 500,
   },
   pro: {
     maxActiveBots: 5,
     maxMessagesPerMonth: 10_000,
     maxBulkRecipientsPerJob: 5_000,
     maxActiveCampaigns: 10,
+    apiRateLimitPerMinute: 60,
+    apiRateLimitPerDay: 10_000,
   },
   enterprise: {
     maxActiveBots: Number.MAX_SAFE_INTEGER,
     maxMessagesPerMonth: 100_000,
     maxBulkRecipientsPerJob: 50_000,
     maxActiveCampaigns: Number.MAX_SAFE_INTEGER,
+    apiRateLimitPerMinute: 120,
+    apiRateLimitPerDay: 100_000,
   },
 };
 
