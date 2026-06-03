@@ -17,6 +17,7 @@ import {
   truncateWhatsAppText,
 } from "../../lib/whatsapp/client.js";
 import { callCustomWebhook } from "../../lib/webhook/client.js";
+import { normalizeWhatsAppContact } from "../../lib/whatsapp/contact.js";
 import type { SQSMessageBody, Message } from "../../types/index.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
@@ -37,7 +38,9 @@ async function processRecord(record: SQSRecord): Promise<void> {
     return;
   }
 
-  const { tenantId, botId, phoneNumberId, message, contact } = body;
+  const { tenantId, botId, phoneNumberId, message } = body;
+  const contact = normalizeWhatsAppContact(body.contact);
+  const contactName = contact.profile.name;
 
   try {
     const [bot, accessToken] = await Promise.all([
@@ -58,7 +61,7 @@ async function processRecord(record: SQSRecord): Promise<void> {
       tenantId,
       botId,
       message.from,
-      contact.profile.name
+      contactName
     );
 
     const history = await getConversationMessages(tenantId, conversation.conversationId, 20);
@@ -97,7 +100,7 @@ async function processRecord(record: SQSRecord): Promise<void> {
         from: message.from,
         conversationId: conversation.conversationId,
         botId,
-        contact: { name: contact.profile.name },
+        contact: { name: contactName },
       });
     } else {
       const openAIKey = await getOpenAIApiKey(tenantId, ENVIRONMENT);

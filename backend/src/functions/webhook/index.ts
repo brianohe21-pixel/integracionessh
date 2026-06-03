@@ -1,6 +1,7 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
 import { validateWebhookSignature } from "../../lib/whatsapp/client.js";
+import { normalizeWhatsAppContact } from "../../lib/whatsapp/contact.js";
 import { getBotByPhoneNumberId } from "../../lib/dynamodb/bot.repository.js";
 import {
   getMessageTracking,
@@ -142,11 +143,9 @@ async function handleWebhook(
       for (const message of messages) {
         if (message.type !== "text" || !message.text?.body) continue;
 
-        const contact =
-          contacts.find((c) => c.wa_id === message.from) ?? {
-            wa_id: message.from,
-            profile: { name: "WhatsApp User" },
-          };
+        const contact = normalizeWhatsAppContact(
+          contacts.find((c) => c.wa_id === message.from) ?? { wa_id: message.from }
+        );
 
         const bot = await getBotByPhoneNumberId(phoneNumberId);
         if (!bot || bot.status !== "active") {

@@ -106,8 +106,9 @@ export interface WhatsAppValue {
 }
 
 export interface WhatsAppContact {
-  profile: { name: string };
+  profile?: { name: string };
   wa_id: string;
+  user_id?: string;
 }
 
 export interface WhatsAppMessage {
