@@ -231,6 +231,7 @@ async function processRecord(record: SQSRecord): Promise<void> {
           const openAIKey = await getOpenAIApiKey(tenantId, ENVIRONMENT);
           const fallback = await generateChatResponse(bot, history, userMessageText, openAIKey);
           aiResponse = fallback.reply ?? "En este momento no tenemos asesores disponibles. ¿Puedo ayudarte con algo más?";
+          console.warn(`Fallback to AI for tenant=${tenantId}: no active advisors`);
         } else {
           throw handoffErr;
         }

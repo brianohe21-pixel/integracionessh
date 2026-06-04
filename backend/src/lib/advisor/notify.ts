@@ -7,7 +7,7 @@ import type { Conversation } from "../../types/index.js";
 const NOTIFY_COOLDOWN_MS = 8 * 60 * 1000;
 
 const CLIENT_HANDOFF_MESSAGE =
-  "Un asesor humano te atenderá en breve. Puedes seguir escribiendo en este chat.";
+  "Un asesor te atenderá en breve. Puedes seguir escribiendo en este chat.";
 
 export function getClientHandoffMessage(): string {
   return CLIENT_HANDOFF_MESSAGE;

@@ -50,14 +50,14 @@ export async function generateChatResponse(
   apiKey: string
 ): Promise<ChatCompletionResult> {
   if (messageRequestsHandoff(userMessage)) {
-    return { reply: null, handoff: true, handoffReason: "Customer requested human assistance" };
+    return { reply: null, handoff: true, handoffReason: "El cliente solicitó un asesor" };
   }
 
   const client = getOpenAIClient(apiKey);
 
   const systemPrompt =
     (bot.systemPrompt ?? "") +
-    "\n\nIf the customer needs human help, use the transfer_to_human tool.";
+    "\n\nSi el cliente necesita hablar con un asesor, usa la herramienta transfer_to_human.";
   const model = bot.model ?? "gpt-4o";
   const temperature = bot.temperature ?? 0.7;
   const maxTokens = bot.maxTokens ?? 1024;
@@ -85,11 +85,11 @@ export async function generateChatResponse(
         type: "function",
         function: {
           name: "transfer_to_human",
-          description: "Transfer the conversation to a human advisor",
+          description: "Transfiere la conversación a un asesor",
           parameters: {
             type: "object",
             properties: {
-              reason: { type: "string", description: "Why human help is needed" },
+              reason: { type: "string", description: "Por qué el cliente necesita un asesor" },
             },
             required: ["reason"],
           },
@@ -103,7 +103,7 @@ export async function generateChatResponse(
   const toolCall = choice?.tool_calls?.[0];
 
   if (toolCall?.type === "function" && toolCall.function.name === "transfer_to_human") {
-    let reason = "AI requested human handoff";
+    let reason = "El cliente solicitó un asesor";
     try {
       const parsed = JSON.parse(toolCall.function.arguments) as { reason?: string };
       if (parsed.reason?.trim()) reason = parsed.reason.trim();

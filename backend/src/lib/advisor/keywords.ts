@@ -1,18 +1,18 @@
 const HANDOFF_KEYWORDS = [
   "asesor",
   "asesora",
-  "hablar con humano",
+  "hablar con alguien",
   "hablar con una persona",
   "quiero un asesor",
   "necesito un asesor",
-  "asesor humano",
-  "agente humano",
+  "hablar con agente",
+  "agente",
   "persona real",
   "operador",
   "representante",
-  "talk to a human",
-  "human agent",
+  "talk to a person",
   "speak to someone",
+  "speak to an agent",
   "agent",
 ];
 
