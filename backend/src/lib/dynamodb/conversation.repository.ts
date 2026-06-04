@@ -253,9 +253,22 @@ export async function getConversationMessages(
     })
   );
 
-  return (result.Items ?? [])
+  const chronological = (result.Items ?? [])
     .map(({ PK, SK, GSI1PK, GSI1SK, ttl, ...rest }) => rest as Message)
     .reverse();
+
+  return dedupeMessagesById(chronological);
+}
+
+function dedupeMessagesById(messages: Message[]): Message[] {
+  const byMessageId = new Map<string, Message>();
+  for (const msg of messages) {
+    const existing = byMessageId.get(msg.messageId);
+    if (!existing || msg.timestamp >= existing.timestamp) {
+      byMessageId.set(msg.messageId, msg);
+    }
+  }
+  return [...byMessageId.values()].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
 }
 
 export async function listConversations(

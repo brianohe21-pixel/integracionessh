@@ -209,20 +209,32 @@ async function processRecord(record: SQSRecord): Promise<void> {
     await addMessage(userMessage, botId);
 
     if (shouldHandoff) {
-      await executeHandoff({
-        tenantId,
-        botId,
-        conversationId: conversation.conversationId,
-        phoneNumberId,
-        customerPhone: message.from,
-        accessToken,
-        replyToMessageId: message.id,
-        reason: handoffReason,
-        lastMessagePreview: userMessageText,
-      });
-      await incrementMessages(tenantId);
-      console.log(`Handoff executed tenant=${tenantId} conversation=${conversation.conversationId}`);
-      return;
+      try {
+        await executeHandoff({
+          tenantId,
+          botId,
+          conversationId: conversation.conversationId,
+          phoneNumberId,
+          customerPhone: message.from,
+          accessToken,
+          replyToMessageId: message.id,
+          reason: handoffReason,
+          lastMessagePreview: userMessageText,
+        });
+        await incrementMessages(tenantId);
+        console.log(`Handoff executed tenant=${tenantId} conversation=${conversation.conversationId}`);
+        return;
+      } catch (handoffErr) {
+        const handoffErrMsg = (handoffErr as Error).message ?? "";
+        if (handoffErrMsg.includes("No active advisors")) {
+          console.warn(`No active advisors for tenant=${tenantId} bot=${botId}, falling back to AI`);
+          const openAIKey = await getOpenAIApiKey(tenantId, ENVIRONMENT);
+          const fallback = await generateChatResponse(bot, history, userMessageText, openAIKey);
+          aiResponse = fallback.reply ?? "En este momento no tenemos asesores disponibles. ¿Puedo ayudarte con algo más?";
+        } else {
+          throw handoffErr;
+        }
+      }
     }
 
     if (!aiResponse) {

@@ -7,7 +7,7 @@ import type { Conversation } from "../../types/index.js";
 const NOTIFY_COOLDOWN_MS = 8 * 60 * 1000;
 
 const CLIENT_HANDOFF_MESSAGE =
-  "A human advisor will assist you shortly. You can keep writing in this chat.";
+  "Un asesor humano te atenderá en breve. Puedes seguir escribiendo en este chat.";
 
 export function getClientHandoffMessage(): string {
   return CLIENT_HANDOFF_MESSAGE;
@@ -42,11 +42,11 @@ export async function notifyAdvisorOfConversation(params: {
 
   const body = truncateWhatsAppText(
     [
-      `New message from ${contactLabel}`,
-      `Phone: ${conversation.phoneNumber}`,
-      `Last message: ${params.lastMessagePreview.slice(0, 200)}`,
-      `Open chat: ${waLink}`,
-      "You can also reply from the conversations panel.",
+      `Nuevo mensaje de ${contactLabel}`,
+      `Teléfono: ${conversation.phoneNumber}`,
+      `Último mensaje: ${params.lastMessagePreview.slice(0, 200)}`,
+      `Abrir chat: ${waLink}`,
+      "También puedes responder desde el panel de conversaciones.",
     ].join("\n")
   );
 

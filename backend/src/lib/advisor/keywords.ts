@@ -1,4 +1,6 @@
 const HANDOFF_KEYWORDS = [
+  "asesor",
+  "asesora",
   "hablar con humano",
   "hablar con una persona",
   "quiero un asesor",
@@ -11,6 +13,7 @@ const HANDOFF_KEYWORDS = [
   "talk to a human",
   "human agent",
   "speak to someone",
+  "agent",
 ];
 
 export function messageRequestsHandoff(text: string): boolean {
