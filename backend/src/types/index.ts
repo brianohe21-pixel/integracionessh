@@ -48,6 +48,10 @@ export interface Bot {
   updatedAt: string;
 }
 
+export type HandoffMode = "bot" | "human";
+
+export type HandoffReason = "manual" | "ai" | "webhook";
+
 export interface Conversation {
   conversationId: string;
   tenantId: string;
@@ -55,19 +59,43 @@ export interface Conversation {
   phoneNumber: string;
   contactName?: string;
   status: "active" | "closed";
+  handoffMode?: HandoffMode;
+  assignedAdvisorId?: string;
+  handoffAt?: string;
+  handoffReason?: HandoffReason;
+  lastAdvisorNotifiedAt?: string;
   messageCount: number;
   lastMessageAt: string;
   createdAt: string;
 }
 
+export type MessageRole = "user" | "assistant" | "advisor" | "system";
+
+export type MessageSource = "panel" | "whatsapp_inbound";
+
 export interface Message {
   messageId: string;
   conversationId: string;
   tenantId: string;
-  role: "user" | "assistant";
+  role: MessageRole;
   content: string;
+  source?: MessageSource;
+  sentByAdvisorId?: string;
   whatsappMessageId?: string;
   timestamp: string;
+}
+
+export interface Advisor {
+  advisorId: string;
+  tenantId: string;
+  name: string;
+  phoneNumber: string;
+  cognitoUserId?: string;
+  status: "active" | "inactive";
+  botIds?: string[];
+  lastAssignedAt?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface DynamoDBItem {
@@ -184,7 +212,19 @@ export interface AuthContext {
   userId: string;
   email: string;
   name?: string;
-  role: "admin" | "member";
+  role: "admin" | "member" | "advisor";
+}
+
+export interface ChatCompletionResult {
+  reply: string | null;
+  handoff: boolean;
+  handoffReason?: string;
+}
+
+export interface WebhookCallResult {
+  reply: string;
+  handoff: boolean;
+  handoffReason?: string;
 }
 
 export interface TemplateComponent {

@@ -1,5 +1,6 @@
 import OpenAI from "openai";
-import type { Bot, Message } from "../../types/index.js";
+import type { Bot, ChatCompletionResult, Message } from "../../types/index.js";
+import { messageRequestsHandoff } from "../advisor/keywords.js";
 
 let openaiClient: OpenAI | null = null;
 
@@ -36,25 +37,41 @@ export async function getOpenAIApiKey(
   return platformKey;
 }
 
+function mapHistoryRole(msg: Message): "user" | "assistant" | null {
+  if (msg.role === "user") return "user";
+  if (msg.role === "assistant" || msg.role === "advisor") return "assistant";
+  return null;
+}
+
 export async function generateChatResponse(
   bot: Bot,
   conversationHistory: Message[],
   userMessage: string,
   apiKey: string
-): Promise<string> {
+): Promise<ChatCompletionResult> {
+  if (messageRequestsHandoff(userMessage)) {
+    return { reply: null, handoff: true, handoffReason: "Customer requested human assistance" };
+  }
+
   const client = getOpenAIClient(apiKey);
 
-  const systemPrompt = bot.systemPrompt ?? "";
+  const systemPrompt =
+    (bot.systemPrompt ?? "") +
+    "\n\nIf the customer needs human help, use the transfer_to_human tool.";
   const model = bot.model ?? "gpt-4o";
   const temperature = bot.temperature ?? 0.7;
   const maxTokens = bot.maxTokens ?? 1024;
 
+  const historyMessages: OpenAI.ChatCompletionMessageParam[] = [];
+  for (const msg of conversationHistory.slice(-20)) {
+    const role = mapHistoryRole(msg);
+    if (!role) continue;
+    historyMessages.push({ role, content: msg.content });
+  }
+
   const messages: OpenAI.ChatCompletionMessageParam[] = [
     { role: "system", content: systemPrompt },
-    ...conversationHistory.slice(-20).map((msg) => ({
-      role: msg.role as "user" | "assistant",
-      content: msg.content,
-    })),
+    ...historyMessages,
     { role: "user", content: userMessage },
   ];
 
@@ -63,10 +80,41 @@ export async function generateChatResponse(
     messages,
     temperature,
     max_tokens: maxTokens,
+    tools: [
+      {
+        type: "function",
+        function: {
+          name: "transfer_to_human",
+          description: "Transfer the conversation to a human advisor",
+          parameters: {
+            type: "object",
+            properties: {
+              reason: { type: "string", description: "Why human help is needed" },
+            },
+            required: ["reason"],
+          },
+        },
+      },
+    ],
+    tool_choice: "auto",
   });
 
-  const content = completion.choices[0]?.message?.content;
+  const choice = completion.choices[0]?.message;
+  const toolCall = choice?.tool_calls?.[0];
+
+  if (toolCall?.type === "function" && toolCall.function.name === "transfer_to_human") {
+    let reason = "AI requested human handoff";
+    try {
+      const parsed = JSON.parse(toolCall.function.arguments) as { reason?: string };
+      if (parsed.reason?.trim()) reason = parsed.reason.trim();
+    } catch {
+      // use default reason
+    }
+    return { reply: null, handoff: true, handoffReason: reason };
+  }
+
+  const content = choice?.content;
   if (!content) throw new Error("Empty response from OpenAI");
 
-  return content;
+  return { reply: content, handoff: false };
 }

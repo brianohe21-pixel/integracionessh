@@ -3,10 +3,25 @@ import {
   PutCommand,
   QueryCommand,
   TransactWriteCommand,
+  UpdateCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { docClient, TABLE_NAME } from "./client.js";
 import { listBots } from "./bot.repository.js";
-import type { Conversation, Message } from "../../types/index.js";
+import type { Conversation, HandoffMode, Message } from "../../types/index.js";
+
+export function normalizeConversation(conv: Conversation): Conversation {
+  return {
+    ...conv,
+    handoffMode: conv.handoffMode ?? "bot",
+  };
+}
+
+export interface ListConversationsOptions {
+  botId?: string;
+  handoffMode?: HandoffMode;
+  assignedAdvisorId?: string;
+  limit?: number;
+}
 
 const conversationKeys = (tenantId: string, botId: string, conversationId: string) => ({
   PK: `TENANT#${tenantId}#BOT#${botId}`,
@@ -33,7 +48,96 @@ export async function getConversation(
   if (!result.Item) return null;
 
   const { PK, SK, GSI1PK, GSI1SK, ...rest } = result.Item;
-  return rest as Conversation;
+  return normalizeConversation(rest as Conversation);
+}
+
+export async function findConversationById(
+  tenantId: string,
+  conversationId: string
+): Promise<Conversation | null> {
+  const bots = await listBots(tenantId);
+  for (const bot of bots) {
+    const conv = await getConversation(tenantId, bot.botId, conversationId);
+    if (conv) return conv;
+  }
+  return null;
+}
+
+export async function updateConversation(
+  tenantId: string,
+  botId: string,
+  conversationId: string,
+  updates: Partial<
+    Pick<
+      Conversation,
+      | "handoffMode"
+      | "assignedAdvisorId"
+      | "handoffAt"
+      | "handoffReason"
+      | "lastAdvisorNotifiedAt"
+      | "contactName"
+    >
+  >
+): Promise<Conversation | null> {
+  const existing = await getConversation(tenantId, botId, conversationId);
+  if (!existing) return null;
+
+  const values: Record<string, unknown> = {};
+  const parts: string[] = [];
+  const expressionNames: Record<string, string> = {};
+
+  for (const [key, value] of Object.entries(updates)) {
+    if (value === undefined) continue;
+    expressionNames[`#${key}`] = key;
+    values[`:${key}`] = value;
+    parts.push(`#${key} = :${key}`);
+  }
+
+  if (parts.length === 0) return existing;
+
+  await docClient.send(
+    new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: conversationKeys(tenantId, botId, conversationId),
+      UpdateExpression: `SET ${parts.join(", ")}`,
+      ExpressionAttributeNames: expressionNames,
+      ExpressionAttributeValues: values,
+    })
+  );
+
+  return normalizeConversation({ ...existing, ...updates });
+}
+
+export async function clearConversationHandoff(
+  tenantId: string,
+  botId: string,
+  conversationId: string
+): Promise<Conversation | null> {
+  const existing = await getConversation(tenantId, botId, conversationId);
+  if (!existing) return null;
+
+  await docClient.send(
+    new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: conversationKeys(tenantId, botId, conversationId),
+      UpdateExpression:
+        "SET handoffMode = :bot REMOVE assignedAdvisorId, handoffAt, handoffReason, lastAdvisorNotifiedAt",
+      ExpressionAttributeValues: { ":bot": "bot" },
+    })
+  );
+
+  const {
+    assignedAdvisorId: _a,
+    handoffAt: _h,
+    handoffReason: _r,
+    lastAdvisorNotifiedAt: _n,
+    ...cleared
+  } = existing;
+
+  return normalizeConversation({
+    ...cleared,
+    handoffMode: "bot",
+  });
 }
 
 export async function getOrCreateConversation(
@@ -58,7 +162,7 @@ export async function getOrCreateConversation(
 
   if (existing.Items?.length) {
     const { PK, SK, GSI1PK, GSI1SK, ...rest } = existing.Items[0];
-    return rest as Conversation;
+    return normalizeConversation(rest as Conversation);
   }
 
   const now = new Date().toISOString();
@@ -70,6 +174,7 @@ export async function getOrCreateConversation(
     botId,
     phoneNumber,
     status: "active",
+    handoffMode: "bot",
     messageCount: 0,
     lastMessageAt: now,
     createdAt: now,
@@ -90,7 +195,7 @@ export async function getOrCreateConversation(
     })
   );
 
-  return conversation;
+  return normalizeConversation(conversation);
 }
 
 export async function addMessage(message: Message, botId: string): Promise<void> {
@@ -155,9 +260,11 @@ export async function getConversationMessages(
 
 export async function listConversations(
   tenantId: string,
-  botId?: string,
-  limit = 20
+  options: ListConversationsOptions = {}
 ): Promise<Conversation[]> {
+  const limit = options.limit ?? 20;
+  const fetchLimit = Math.min(limit * 5, 100);
+
   const queryByBotPk = (pk: string) =>
     docClient.send(
       new QueryCommand({
@@ -168,30 +275,41 @@ export async function listConversations(
           ":sk": "CONV#",
         },
         ScanIndexForward: false,
-        Limit: limit,
+        Limit: fetchLimit,
       })
     );
 
-  if (botId) {
-    const result = await queryByBotPk(`TENANT#${tenantId}#BOT#${botId}`);
-    return (result.Items ?? []).map(({ PK, SK, GSI1PK, GSI1SK, ...rest }) => rest as Conversation);
-  }
+  let merged: Conversation[] = [];
 
-  const bots = await listBots(tenantId);
-  if (bots.length === 0) {
-    return [];
-  }
-
-  const pages = await Promise.all(
-    bots.map((b) => queryByBotPk(`TENANT#${tenantId}#BOT#${b.botId}`))
-  );
-
-  const merged: Conversation[] = [];
-  for (const result of pages) {
-    for (const item of result.Items ?? []) {
-      const { PK, SK, GSI1PK, GSI1SK, ...rest } = item;
-      merged.push(rest as Conversation);
+  if (options.botId) {
+    const result = await queryByBotPk(`TENANT#${tenantId}#BOT#${options.botId}`);
+    merged = (result.Items ?? []).map(({ PK, SK, GSI1PK, GSI1SK, ...rest }) =>
+      normalizeConversation(rest as Conversation)
+    );
+  } else {
+    const bots = await listBots(tenantId);
+    if (bots.length === 0) {
+      return [];
     }
+
+    const pages = await Promise.all(
+      bots.map((b) => queryByBotPk(`TENANT#${tenantId}#BOT#${b.botId}`))
+    );
+
+    for (const result of pages) {
+      for (const item of result.Items ?? []) {
+        const { PK, SK, GSI1PK, GSI1SK, ...rest } = item;
+        merged.push(normalizeConversation(rest as Conversation));
+      }
+    }
+  }
+
+  if (options.handoffMode) {
+    merged = merged.filter((c) => (c.handoffMode ?? "bot") === options.handoffMode);
+  }
+
+  if (options.assignedAdvisorId) {
+    merged = merged.filter((c) => c.assignedAdvisorId === options.assignedAdvisorId);
   }
 
   merged.sort(

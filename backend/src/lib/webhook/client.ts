@@ -90,6 +90,8 @@ export function verifyWebhookSignature(secret: string, body: string, signature: 
   }
 }
 
+import type { WebhookCallResult } from "../../types/index.js";
+
 export interface WebhookPayload {
   message: string;
   from: string;
@@ -102,7 +104,7 @@ export async function callCustomWebhook(
   webhookUrl: string,
   secret: string | undefined,
   payload: WebhookPayload
-): Promise<string> {
+): Promise<WebhookCallResult> {
   await assertSafeUrl(webhookUrl);
 
   const body = JSON.stringify(payload);
@@ -152,10 +154,15 @@ export async function callCustomWebhook(
     throw new Error('Webhook response must contain a "reply" string field');
   }
 
-  const reply = (json as { reply: string }).reply;
+  const record = json as { reply: string; handoff?: boolean; reason?: string };
+  const reply = record.reply;
   if (reply.length > MAX_REPLY_LENGTH) {
     throw new Error(`Webhook reply exceeds ${MAX_REPLY_LENGTH} characters`);
   }
 
-  return reply;
+  return {
+    reply,
+    handoff: record.handoff === true,
+    ...(typeof record.reason === "string" ? { handoffReason: record.reason } : {}),
+  };
 }

@@ -44,7 +44,7 @@ export function extractAuthContext(
     userId,
     email,
     ...(name !== undefined ? { name } : {}),
-    role: role as "admin" | "member",
+    role: role as AuthContext["role"],
   };
 }
 
@@ -62,6 +62,28 @@ export function assertTenantAccess(
 export function assertMemberRole(authContext: AuthContext): void {
   if (authContext.role === "admin") {
     const error = new Error("Platform admin cannot access tenant product APIs");
+    (error as Error & { statusCode: number }).statusCode = 403;
+    throw error;
+  }
+  if (authContext.role === "advisor") {
+    const error = new Error("Advisor cannot access this resource");
+    (error as Error & { statusCode: number }).statusCode = 403;
+    throw error;
+  }
+}
+
+export function assertTenantManagerRole(authContext: AuthContext): void {
+  assertMemberRole(authContext);
+}
+
+export function assertAdvisorOrMember(authContext: AuthContext): void {
+  if (authContext.role === "admin") {
+    const error = new Error("Platform admin cannot access tenant product APIs");
+    (error as Error & { statusCode: number }).statusCode = 403;
+    throw error;
+  }
+  if (authContext.role !== "member" && authContext.role !== "advisor") {
+    const error = new Error("Access denied");
     (error as Error & { statusCode: number }).statusCode = 403;
     throw error;
   }
