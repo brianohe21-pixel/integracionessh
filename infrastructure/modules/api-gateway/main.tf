@@ -129,6 +129,60 @@ locals {
       function_arn = var.conversations_function_arn
       protected    = true
     }
+    conversations_handoff = {
+      route_key    = "POST /conversations/{conversationId}/handoff"
+      invoke_arn   = var.conversations_invoke_arn
+      function_arn = var.conversations_function_arn
+      protected    = true
+    }
+    conversations_release = {
+      route_key    = "POST /conversations/{conversationId}/release"
+      invoke_arn   = var.conversations_invoke_arn
+      function_arn = var.conversations_function_arn
+      protected    = true
+    }
+    conversations_send_message = {
+      route_key    = "POST /conversations/{conversationId}/messages"
+      invoke_arn   = var.conversations_invoke_arn
+      function_arn = var.conversations_function_arn
+      protected    = true
+    }
+    conversations_wa_link = {
+      route_key    = "GET /conversations/{conversationId}/wa-link"
+      invoke_arn   = var.conversations_invoke_arn
+      function_arn = var.conversations_function_arn
+      protected    = true
+    }
+    advisors_list = {
+      route_key    = "GET /advisors"
+      invoke_arn   = var.advisors_invoke_arn
+      function_arn = var.advisors_function_arn
+      protected    = true
+    }
+    advisors_create = {
+      route_key    = "POST /advisors"
+      invoke_arn   = var.advisors_invoke_arn
+      function_arn = var.advisors_function_arn
+      protected    = true
+    }
+    advisors_get = {
+      route_key    = "GET /advisors/{advisorId}"
+      invoke_arn   = var.advisors_invoke_arn
+      function_arn = var.advisors_function_arn
+      protected    = true
+    }
+    advisors_update = {
+      route_key    = "PUT /advisors/{advisorId}"
+      invoke_arn   = var.advisors_invoke_arn
+      function_arn = var.advisors_function_arn
+      protected    = true
+    }
+    advisors_delete = {
+      route_key    = "DELETE /advisors/{advisorId}"
+      invoke_arn   = var.advisors_invoke_arn
+      function_arn = var.advisors_function_arn
+      protected    = true
+    }
     templates_list = {
       route_key    = "GET /templates"
       invoke_arn   = var.templates_invoke_arn
@@ -416,6 +470,7 @@ resource "aws_lambda_permission" "api_gw" {
     tenants          = var.tenants_function_arn
     bots             = var.bots_function_arn
     conversations    = var.conversations_function_arn
+    advisors         = var.advisors_function_arn
     templates        = var.templates_function_arn
     bulk_send        = var.bulk_send_function_arn
     metrics          = var.metrics_function_arn

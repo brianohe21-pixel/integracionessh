@@ -102,6 +102,7 @@ resource "aws_iam_role_policy" "lambda_permissions" {
           "cognito-idp:AdminEnableUser",
           "cognito-idp:AdminDisableUser",
           "cognito-idp:AdminUpdateUserAttributes",
+          "cognito-idp:AdminCreateUser",
         ]
         Resource = var.cognito_user_pool_arn
       },
@@ -191,6 +192,16 @@ locals {
       environment = {
         TABLE_NAME  = var.dynamodb_table_name
         ENVIRONMENT = var.environment
+      }
+    }
+    advisors = {
+      handler     = "advisors/index.handler"
+      description = "CRUD API for human advisors"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME           = var.dynamodb_table_name
+        COGNITO_USER_POOL_ID = var.cognito_user_pool_id
       }
     }
     templates = {

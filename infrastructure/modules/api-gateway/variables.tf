@@ -46,6 +46,14 @@ variable "conversations_function_arn" {
   type = string
 }
 
+variable "advisors_invoke_arn" {
+  type = string
+}
+
+variable "advisors_function_arn" {
+  type = string
+}
+
 variable "templates_invoke_arn" {
   type = string
 }
