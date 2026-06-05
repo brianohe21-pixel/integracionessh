@@ -115,6 +115,9 @@ jobs:
           WOMPI_PRIVATE_KEY: ${{ secrets.WOMPI_PRIVATE_KEY }}
           WOMPI_INTEGRITY_SECRET: ${{ secrets.WOMPI_INTEGRITY_SECRET }}
           WOMPI_EVENTS_SECRET: ${{ secrets.WOMPI_EVENTS_SECRET }}
+          EXTRA_ALLOWED_ORIGINS: ${{ vars.EXTRA_ALLOWED_ORIGINS }}
+          EXTRA_CALLBACK_URLS: ${{ vars.EXTRA_CALLBACK_URLS }}
+          EXTRA_LOGOUT_URLS: ${{ vars.EXTRA_LOGOUT_URLS }}
         run: |
           set -euo pipefail
           PLAN_ARGS=(
@@ -152,6 +155,15 @@ jobs:
           fi
           if [ -n "${WOMPI_EVENTS_SECRET:-}" ]; then
             PLAN_ARGS+=(-var="wompi_events_secret=${WOMPI_EVENTS_SECRET}")
+          fi
+          if [ -n "${EXTRA_ALLOWED_ORIGINS:-}" ]; then
+            PLAN_ARGS+=(-var="extra_allowed_origins=${EXTRA_ALLOWED_ORIGINS}")
+          fi
+          if [ -n "${EXTRA_CALLBACK_URLS:-}" ]; then
+            PLAN_ARGS+=(-var="extra_callback_urls=${EXTRA_CALLBACK_URLS}")
+          fi
+          if [ -n "${EXTRA_LOGOUT_URLS:-}" ]; then
+            PLAN_ARGS+=(-var="extra_logout_urls=${EXTRA_LOGOUT_URLS}")
           fi
           if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/develop" ]; then
             terraform plan "${PLAN_ARGS[@]}" -out=tfplan | tee plan.txt
