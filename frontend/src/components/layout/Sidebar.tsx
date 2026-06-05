@@ -21,17 +21,23 @@ import {
   KeyRound,
 } from "lucide-react";
 import { useAdminRole } from "@/hooks/useAdminRole";
+import { useTenantRole } from "@/hooks/useTenantRole";
 
 const memberNavItems = [
   { href: "/bots", labelKey: "nav.bots" as const, icon: BotMessageSquare },
   { href: "/metrics", labelKey: "nav.metrics" as const, icon: BarChart3 },
   { href: "/conversations", labelKey: "nav.conversations" as const, icon: MessageSquare },
+  { href: "/advisors", labelKey: "nav.advisors" as const, icon: Users },
   { href: "/templates", labelKey: "nav.templates" as const, icon: LayoutTemplate },
   { href: "/bulk-send", labelKey: "nav.bulkSend" as const, icon: SendHorizonal },
   { href: "/campaigns", labelKey: "nav.campaigns" as const, icon: Megaphone },
   { href: "/developer", labelKey: "nav.developer" as const, icon: KeyRound },
   { href: "/support", labelKey: "nav.support" as const, icon: LifeBuoy },
   { href: "/settings", labelKey: "nav.settings" as const, icon: Settings },
+];
+
+const advisorNavItems = [
+  { href: "/inbox", labelKey: "nav.inbox" as const, icon: MessageSquare },
 ];
 
 const adminNavItems = [
@@ -44,9 +50,17 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const t = useT();
-  const { isAdmin, loading } = useAdminRole();
+  const { isAdmin, loading: adminLoading } = useAdminRole();
+  const { isAdvisor, loading: roleLoading } = useTenantRole();
 
-  const navItems = loading ? [] : isAdmin ? adminNavItems : memberNavItems;
+  const loading = adminLoading || roleLoading;
+  const navItems = loading
+    ? []
+    : isAdmin
+      ? adminNavItems
+      : isAdvisor
+        ? advisorNavItems
+        : memberNavItems;
 
   async function handleSignOut() {
     await signOut();

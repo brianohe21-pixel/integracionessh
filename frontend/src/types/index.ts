@@ -73,6 +73,10 @@ export interface Bot {
   whatsappPhone?: WhatsAppPhoneInfo | null;
 }
 
+export type HandoffMode = "bot" | "human";
+
+export type HandoffReason = "manual" | "ai" | "webhook";
+
 export interface Conversation {
   conversationId: string;
   tenantId: string;
@@ -80,19 +84,48 @@ export interface Conversation {
   phoneNumber: string;
   contactName?: string;
   status: "active" | "closed";
+  handoffMode?: HandoffMode;
+  assignedAdvisorId?: string;
+  handoffAt?: string;
+  handoffReason?: HandoffReason;
   messageCount: number;
   lastMessageAt: string;
   createdAt: string;
 }
 
+export type MessageRole = "user" | "assistant" | "advisor" | "system";
+
 export interface Message {
   messageId: string;
   conversationId: string;
   tenantId: string;
-  role: "user" | "assistant";
+  role: MessageRole;
   content: string;
+  source?: "panel" | "whatsapp_inbound";
+  sentByAdvisorId?: string;
   whatsappMessageId?: string;
   timestamp: string;
+}
+
+export interface Advisor {
+  advisorId: string;
+  tenantId: string;
+  name: string;
+  phoneNumber: string;
+  cognitoUserId?: string;
+  status: "active" | "inactive";
+  botIds?: string[];
+  lastAssignedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdvisorInviteResponse {
+  advisor: Advisor;
+  invite?: {
+    username: string;
+    temporaryPassword: string;
+  };
 }
 
 export interface TemplateComponent {
