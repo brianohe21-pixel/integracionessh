@@ -8,7 +8,9 @@ import {
   LayoutTemplate,
   Activity,
 } from "lucide-react";
+import Link from "next/link";
 import { useMetrics } from "@/hooks/useMetrics";
+import { useMarketingMetrics } from "@/hooks/useMarketingMetrics";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useFormatters } from "@/hooks/useFormatters";
@@ -60,6 +62,7 @@ export default function MetricsPage() {
   const t = useT();
   const { formatDate, formatNumber, formatRelativeTime } = useFormatters();
   const { data: metrics, isLoading, error } = useMetrics();
+  const { data: marketing, isLoading: marketingLoading } = useMarketingMetrics();
 
   function bulkStatusLabel(status: BulkSendJobStatus): string {
     const labels: Record<BulkSendJobStatus, string> = {
@@ -154,6 +157,76 @@ export default function MetricsPage() {
               icon={<Activity className="w-5 h-5" />}
             />
           </div>
+
+          {!marketingLoading && marketing?.campaigns?.rates && marketing.inbox && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="font-semibold text-gray-900">{t("metrics.marketingTitle")}</h2>
+                <p className="text-sm text-gray-500">{t("metrics.marketingSubtitle")}</p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <KpiCard
+                  label={t("metrics.deliveryRate")}
+                  value={`${marketing.campaigns.rates.deliveryRate}%`}
+                  sub={`${formatNumber(marketing.campaigns.aggregates.delivered)} / ${formatNumber(marketing.campaigns.aggregates.sent)}`}
+                  icon={<SendHorizonal className="w-5 h-5" />}
+                />
+                <KpiCard
+                  label={t("metrics.readRate")}
+                  value={`${marketing.campaigns.rates.readRate}%`}
+                  sub={`${formatNumber(marketing.campaigns.aggregates.read)}`}
+                  icon={<BarChart3 className="w-5 h-5" />}
+                />
+                <KpiCard
+                  label={t("metrics.inboxOpen")}
+                  value={formatNumber(marketing.inbox.open)}
+                  sub={`${t("metrics.inboxPending")}: ${marketing.inbox.pending}`}
+                  icon={<MessageSquare className="w-5 h-5" />}
+                />
+                <KpiCard
+                  label={t("metrics.resolvedToday")}
+                  value={formatNumber(marketing.inbox.resolvedToday)}
+                  icon={<Activity className="w-5 h-5" />}
+                />
+              </div>
+              {(marketing.topCampaigns?.length ?? 0) > 0 && (
+                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                  <div className="px-6 py-4 border-b border-gray-100">
+                    <h3 className="font-semibold text-gray-900 text-sm">{t("metrics.topCampaigns")}</h3>
+                  </div>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-gray-50 text-left text-xs text-gray-500 uppercase">
+                        <th className="px-6 py-3">{t("campaigns.nameLabel")}</th>
+                        <th className="px-6 py-3 text-right">{t("metrics.colSent")}</th>
+                        <th className="px-6 py-3 text-right">{t("metrics.deliveryRate")}</th>
+                        <th className="px-6 py-3 text-right">{t("metrics.readRate")}</th>
+                        <th className="px-6 py-3" />
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {marketing.topCampaigns.map((c) => (
+                        <tr key={c.campaignId}>
+                          <td className="px-6 py-3 font-medium">{c.name}</td>
+                          <td className="px-6 py-3 text-right">{formatNumber(c.sent)}</td>
+                          <td className="px-6 py-3 text-right">{c.deliveryRate}%</td>
+                          <td className="px-6 py-3 text-right">{c.readRate}%</td>
+                          <td className="px-6 py-3 text-right">
+                            <Link
+                              href={`/campaigns/${c.campaignId}`}
+                              className="text-indigo-600 text-xs hover:underline"
+                            >
+                              {t("metrics.viewCampaign")}
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100">

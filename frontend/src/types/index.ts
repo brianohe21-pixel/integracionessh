@@ -35,6 +35,7 @@ export interface PlanLimits {
   maxMessagesPerMonth: number;
   maxBulkRecipientsPerJob: number;
   maxActiveCampaigns: number;
+  maxContacts: number;
 }
 
 export interface BillingUsageResponse {
@@ -77,6 +78,34 @@ export type HandoffMode = "bot" | "human";
 
 export type HandoffReason = "manual" | "ai" | "webhook";
 
+export type WorkflowStatus = "new" | "open" | "pending" | "resolved";
+
+export type MarketingConsent = "unknown" | "opt_in" | "opt_out";
+
+export type ContactSource = "sync" | "manual" | "import";
+
+export interface Contact {
+  phoneNumber: string;
+  tenantId: string;
+  displayName?: string;
+  tags: string[];
+  marketingConsent: MarketingConsent;
+  consentAt?: string;
+  consentSource?: string;
+  suppressed: boolean;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  lastBotId?: string;
+  source: ContactSource;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ContactsListResponse {
+  items: Contact[];
+  nextCursor?: string;
+}
+
 export interface Conversation {
   conversationId: string;
   tenantId: string;
@@ -88,9 +117,56 @@ export interface Conversation {
   assignedAdvisorId?: string;
   handoffAt?: string;
   handoffReason?: HandoffReason;
+  workflowStatus?: WorkflowStatus;
+  resolvedAt?: string;
+  firstHumanResponseAt?: string;
+  csatScore?: number;
+  csatSubmittedAt?: string;
+  internalNote?: string;
   messageCount: number;
   lastMessageAt: string;
   createdAt: string;
+}
+
+export interface MarketingMetrics {
+  campaigns: {
+    total: number;
+    active: number;
+    completed: number;
+    aggregates: {
+      totalRecipients: number;
+      sent: number;
+      delivered: number;
+      read: number;
+      deliveryFailed: number;
+    };
+    rates: {
+      deliveryRate: number;
+      readRate: number;
+      failureRate: number;
+      successRate: number;
+    };
+  };
+  bulk: {
+    jobsCount: number;
+    sent: number;
+    failed: number;
+    rates: { successRate: number };
+  };
+  topCampaigns: Array<{
+    campaignId: string;
+    name: string;
+    sent: number;
+    deliveredCount: number;
+    readCount: number;
+    deliveryRate: number;
+    readRate: number;
+  }>;
+  inbox: {
+    open: number;
+    pending: number;
+    resolvedToday: number;
+  };
 }
 
 export type MessageRole = "user" | "assistant" | "advisor" | "system";
