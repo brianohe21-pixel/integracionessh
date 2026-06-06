@@ -53,6 +53,17 @@ export async function assertBulkRecipients(tenant: Tenant, count: number): Promi
   }
 }
 
+export async function assertCanAddContacts(tenant: Tenant, totalAfter: number): Promise<void> {
+  const limits = getPlanLimits(tenant.plan);
+  if (isUnlimited(limits.maxContacts)) return;
+  if (totalAfter > limits.maxContacts) {
+    throw new PlanLimitError(
+      "PLAN_LIMIT_CONTACTS",
+      `Plan limit: maximum ${limits.maxContacts} contacts`
+    );
+  }
+}
+
 export async function assertCanStartCampaign(tenant: Tenant): Promise<void> {
   assertSubscriptionAllowsSending(tenant);
   const limits = getPlanLimits(tenant.plan);

@@ -9,6 +9,7 @@ import { useT } from "@/i18n/context";
 import {
   BotMessageSquare,
   MessageSquare,
+  BookUser,
   LayoutTemplate,
   SendHorizonal,
   BarChart3,
@@ -27,6 +28,7 @@ const memberNavItems = [
   { href: "/bots", labelKey: "nav.bots" as const, icon: BotMessageSquare },
   { href: "/metrics", labelKey: "nav.metrics" as const, icon: BarChart3 },
   { href: "/conversations", labelKey: "nav.conversations" as const, icon: MessageSquare },
+  { href: "/contacts", labelKey: "nav.contacts" as const, icon: BookUser },
   { href: "/advisors", labelKey: "nav.advisors" as const, icon: Users },
   { href: "/templates", labelKey: "nav.templates" as const, icon: LayoutTemplate },
   { href: "/bulk-send", labelKey: "nav.bulkSend" as const, icon: SendHorizonal },

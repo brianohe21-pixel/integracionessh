@@ -11,7 +11,7 @@ import {
 } from "../../lib/dynamodb/api-key.repository.js";
 import {
   listApiKeyUsageLogs,
-  countApiKeyUsageByPeriod,
+  summarizeApiKeyUsageByPeriod,
 } from "../../lib/dynamodb/api-key-usage.repository.js";
 import { listBots } from "../../lib/dynamodb/bot.repository.js";
 import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
@@ -66,22 +66,21 @@ export async function handler(
 
       const usageResults = await Promise.all(
         keys.map(async (key) => {
-          const [logs, monthCount] = await Promise.all([
-            listApiKeyUsageLogs(auth.tenantId, key.keyId, 5),
-            countApiKeyUsageByPeriod(auth.tenantId, key.keyId, monthStart, monthEnd),
-          ]);
-
-          const successCount = logs.filter((l) => l.statusCode < 400).length;
-          const errorCount = logs.filter((l) => l.statusCode >= 400).length;
+          const monthSummary = await summarizeApiKeyUsageByPeriod(
+            auth.tenantId,
+            key.keyId,
+            monthStart,
+            monthEnd
+          );
 
           return {
             keyId: key.keyId,
             keyName: key.name,
             prefix: key.prefix,
-            totalRequests: monthCount,
-            successRequests: successCount,
-            errorRequests: errorCount,
-            messagesThisMonth: monthCount,
+            totalRequests: monthSummary.total,
+            successRequests: monthSummary.success,
+            errorRequests: monthSummary.error,
+            messagesThisMonth: monthSummary.total,
             lastUsedAt: key.lastUsedAt,
           };
         })

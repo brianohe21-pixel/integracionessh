@@ -19,7 +19,8 @@ export interface CreateCampaignInput {
   language: string;
   segments?: string[];
   scheduledAt?: string;
-  recipients: CampaignRecipient[];
+  recipients?: CampaignRecipient[];
+  audienceTags?: string[];
 }
 
 export interface UpdateCampaignInput {

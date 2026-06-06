@@ -7,7 +7,8 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 import { docClient, TABLE_NAME } from "./client.js";
 import { listBots } from "./bot.repository.js";
-import type { Conversation, HandoffMode, Message } from "../../types/index.js";
+import type { Conversation, HandoffMode, Message, WorkflowStatus } from "../../types/index.js";
+import { upsertFromConversation } from "./contact.repository.js";
 
 export function normalizeConversation(conv: Conversation): Conversation {
   return {
@@ -19,6 +20,8 @@ export function normalizeConversation(conv: Conversation): Conversation {
 export interface ListConversationsOptions {
   botId?: string;
   handoffMode?: HandoffMode;
+  workflowStatus?: WorkflowStatus;
+  status?: Conversation["status"];
   assignedAdvisorId?: string;
   limit?: number;
 }
@@ -76,6 +79,13 @@ export async function updateConversation(
       | "handoffReason"
       | "lastAdvisorNotifiedAt"
       | "contactName"
+      | "workflowStatus"
+      | "resolvedAt"
+      | "firstHumanResponseAt"
+      | "csatScore"
+      | "csatSubmittedAt"
+      | "internalNote"
+      | "status"
     >
   >
 ): Promise<Conversation | null> {
@@ -195,6 +205,14 @@ export async function getOrCreateConversation(
     })
   );
 
+  upsertFromConversation({
+    tenantId,
+    phoneNumber,
+    botId,
+    source: "sync",
+    ...(contactName ? { displayName: contactName } : {}),
+  }).catch((err) => console.warn("Contact sync failed:", err));
+
   return normalizeConversation(conversation);
 }
 
@@ -223,7 +241,8 @@ export async function addMessage(message: Message, botId: string): Promise<void>
               PK: `TENANT#${message.tenantId}#BOT#${botId}`,
               SK: `CONV#${message.conversationId}`,
             },
-            UpdateExpression: "SET messageCount = messageCount + :inc, lastMessageAt = :now",
+            UpdateExpression:
+              "SET messageCount = messageCount + :inc, lastMessageAt = :now",
             ExpressionAttributeValues: {
               ":inc": 1,
               ":now": now,
@@ -319,6 +338,16 @@ export async function listConversations(
 
   if (options.handoffMode) {
     merged = merged.filter((c) => (c.handoffMode ?? "bot") === options.handoffMode);
+  }
+
+  if (options.workflowStatus) {
+    merged = merged.filter(
+      (c) => (c.workflowStatus ?? "open") === options.workflowStatus
+    );
+  }
+
+  if (options.status) {
+    merged = merged.filter((c) => c.status === options.status);
   }
 
   if (options.assignedAdvisorId) {

@@ -62,6 +62,7 @@ export default function NewCampaignPage() {
     scheduledAt: "",
   });
   const [recipients, setRecipients] = useState<CampaignRecipient[]>([]);
+  const [audienceTags, setAudienceTags] = useState<string[]>([]);
   const [parseError, setParseError] = useState("");
   const [submitError, setSubmitError] = useState("");
 
@@ -89,7 +90,7 @@ export default function NewCampaignPage() {
   }
 
   function canProceedRecipients() {
-    return recipients.length > 0;
+    return recipients.length > 0 || audienceTags.length > 0;
   }
 
   function nextStep() {
@@ -137,7 +138,8 @@ export default function NewCampaignPage() {
         language: config.language,
         segments: config.segments,
         ...(config.scheduledAt ? { scheduledAt: new Date(config.scheduledAt).toISOString() } : {}),
-        recipients,
+        ...(recipients.length ? { recipients } : {}),
+        ...(audienceTags.length ? { audienceTags } : {}),
       });
       router.push(`/campaigns/${campaign.campaignId}`);
     } catch (err) {
@@ -260,9 +262,19 @@ export default function NewCampaignPage() {
 
         {step === "recipients" && (
           <>
+            <div className="space-y-3 pb-4 border-b border-gray-100">
+              <label className="block text-sm font-medium text-gray-700">{t("campaigns.audienceTagsLabel")}</label>
+              <p className="text-xs text-gray-500">{t("campaigns.audienceTagsHint")}</p>
+              <SegmentInput
+                value={audienceTags}
+                onChange={setAudienceTags}
+                placeholder={t("campaigns.audienceTagsPlaceholder")}
+              />
+            </div>
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700">{t("bulkSend.csvFile")}</label>
+                <p className="text-xs text-gray-500 mt-0.5">{t("campaigns.recipientsOrTags")}</p>
                 <p className="text-xs text-gray-500 mt-0.5">{t("bulkSend.csvColumnHint")}</p>
               </div>
 

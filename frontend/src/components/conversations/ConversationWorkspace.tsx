@@ -7,6 +7,8 @@ import {
   useHandoffConversation,
   useReleaseConversation,
   useSendConversationMessage,
+  useUpdateConversationNote,
+  useResolveConversation,
 } from "@/hooks/useConversations";
 import { useAdvisors } from "@/hooks/useAdvisors";
 import { useBots } from "@/hooks/useBots";
@@ -17,7 +19,7 @@ import { useT } from "@/i18n/context";
 import { buildWaMeLink } from "@/lib/wa-link";
 import { MessageSquare, User, Bot, Phone, Headphones, Send, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Message } from "@/types";
+import type { Message, WorkflowStatus } from "@/types";
 
 function messageListKey(msg: Message, index: number): string {
   return `${msg.messageId}::${msg.timestamp}::${index}`;
@@ -33,8 +35,12 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [botFilter, setBotFilter] = useState<string>("");
   const [handoffFilter, setHandoffFilter] = useState<"" | "human" | "bot">("");
+  const [workflowFilter, setWorkflowFilter] = useState<"" | WorkflowStatus>("");
   const [draft, setDraft] = useState("");
+  const [internalNote, setInternalNote] = useState("");
   const [showHandoffModal, setShowHandoffModal] = useState(false);
+  const [showResolveModal, setShowResolveModal] = useState(false);
+  const [csatScore, setCsatScore] = useState<number | "">("");
   const [selectedAdvisorId, setSelectedAdvisorId] = useState("");
 
   const { data: bots } = useBots();
@@ -42,14 +48,28 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   const { data: conversations, isLoading } = useConversations({
     botId: botFilter || undefined,
     handoffMode: handoffFilter || undefined,
+    workflowStatus: workflowFilter || undefined,
   });
   const { data: messages, isLoading: loadingMessages } = useConversationMessages(selectedId ?? "");
 
   const handoff = useHandoffConversation();
   const release = useReleaseConversation();
   const sendMessage = useSendConversationMessage();
+  const updateNote = useUpdateConversationNote();
+  const resolveConv = useResolveConversation();
 
   const selectedConversation = conversations?.find((c) => c.conversationId === selectedId);
+
+  function workflowLabel(status?: WorkflowStatus): string {
+    const key = status ?? "open";
+    const map: Record<WorkflowStatus, string> = {
+      new: t("conversations.workflowNew"),
+      open: t("conversations.workflowOpen"),
+      pending: t("conversations.workflowPending"),
+      resolved: t("conversations.workflowResolved"),
+    };
+    return map[key] ?? map.open;
+  }
   const isHuman = (selectedConversation?.handoffMode ?? "bot") === "human";
   const canCompose = isHuman && !!selectedConversation;
 
@@ -83,6 +103,27 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     });
   }
 
+  async function handleSaveNote() {
+    if (!selectedConversation || !internalNote.trim()) return;
+    await updateNote.mutateAsync({
+      conversationId: selectedConversation.conversationId,
+      botId: selectedConversation.botId,
+      internalNote: internalNote.trim(),
+    });
+  }
+
+  async function handleResolve() {
+    if (!selectedConversation) return;
+    await resolveConv.mutateAsync({
+      conversationId: selectedConversation.conversationId,
+      botId: selectedConversation.botId,
+      ...(csatScore !== "" ? { csatScore: Number(csatScore) } : {}),
+    });
+    setShowResolveModal(false);
+    setCsatScore("");
+    setSelectedId(null);
+  }
+
   return (
     <div className="flex h-screen">
       <div className="w-80 flex-shrink-0 border-r border-gray-200 bg-white flex flex-col">
@@ -113,6 +154,19 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
             <option value="human">{t("conversations.filterHuman")}</option>
             <option value="bot">{t("conversations.filterBot")}</option>
           </select>
+          {handoffFilter === "human" && (
+            <select
+              value={workflowFilter}
+              onChange={(e) => setWorkflowFilter(e.target.value as "" | WorkflowStatus)}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
+            >
+              <option value="">{t("conversations.filterWorkflowAll")}</option>
+              <option value="new">{t("conversations.filterWorkflowNew")}</option>
+              <option value="open">{t("conversations.filterWorkflowOpen")}</option>
+              <option value="pending">{t("conversations.filterWorkflowPending")}</option>
+              <option value="resolved">{t("conversations.filterWorkflowResolved")}</option>
+            </select>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto">
@@ -159,6 +213,11 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                         ? t("conversations.modeHuman")
                         : t("conversations.modeBot")}
                     </Badge>
+                    {(conv.handoffMode ?? "bot") === "human" && (
+                      <Badge variant="info" className="text-[10px]">
+                        {workflowLabel(conv.workflowStatus)}
+                      </Badge>
+                    )}
                   </div>
                 </div>
               </div>
@@ -205,6 +264,16 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                 )}
                 {isHuman && (
                   <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setInternalNote(selectedConversation.internalNote ?? "");
+                        setShowResolveModal(true);
+                      }}
+                      className="px-3 py-1.5 text-xs font-medium bg-indigo-100 text-indigo-800 rounded-lg"
+                    >
+                      {t("conversations.resolve")}
+                    </button>
                     <a
                       href={buildWaMeLink(selectedConversation.phoneNumber)}
                       target="_blank"
@@ -231,6 +300,26 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
               <p className="px-6 py-2 text-xs text-amber-800 bg-amber-50 border-b border-amber-100">
                 {t("conversations.personalChannelHint")}
               </p>
+            )}
+
+            {isHuman && selectedConversation.workflowStatus !== "resolved" && (
+              <div className="px-6 py-3 bg-white border-b border-gray-100 space-y-2">
+                <label className="text-xs font-medium text-gray-600">{t("conversations.internalNote")}</label>
+                <textarea
+                  value={internalNote || selectedConversation.internalNote || ""}
+                  onChange={(e) => setInternalNote(e.target.value)}
+                  rows={2}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={handleSaveNote}
+                  disabled={updateNote.isPending}
+                  className="text-xs text-indigo-600 font-medium"
+                >
+                  {t("conversations.saveNote")}
+                </button>
+              </div>
             )}
 
             <div className="flex-1 overflow-y-auto p-6 space-y-3">
@@ -320,6 +409,44 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
           </>
         )}
       </div>
+
+      {showResolveModal && selectedConversation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 space-y-4">
+            <h2 className="text-lg font-semibold">{t("conversations.resolveTitle")}</h2>
+            <label className="block text-sm text-gray-600">{t("conversations.csatLabel")}</label>
+            <select
+              value={csatScore}
+              onChange={(e) => setCsatScore(e.target.value === "" ? "" : Number(e.target.value))}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+            >
+              <option value="">—</option>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowResolveModal(false)}
+                className="px-4 py-2 text-sm text-gray-600"
+              >
+                {t("common.cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={handleResolve}
+                disabled={resolveConv.isPending}
+                className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg"
+              >
+                {t("conversations.resolveConfirm")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showHandoffModal && selectedConversation && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">

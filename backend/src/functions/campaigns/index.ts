@@ -23,7 +23,9 @@ import { extractAuthContext, assertMemberRole } from "../../lib/auth/cognito.js"
 import { ensureTenant } from "../../lib/dynamodb/tenant.repository.js";
 import { assertBulkRecipients, assertCanStartCampaign } from "../../lib/billing/assert-plan.js";
 import { incrementBulkRecipients, incrementCampaignsStarted } from "../../lib/dynamodb/usage.repository.js";
-import { ok, created, badRequest, notFound, forbidden, handleError } from "../../lib/http.js";
+import { listContactsByTags } from "../../lib/dynamodb/contact.repository.js";
+import { checkMarketingRecipients } from "../../lib/compliance/recipient-policy.js";
+import { ok, created, badRequest, notFound, forbidden, unprocessableEntity, handleError } from "../../lib/http.js";
 import type { CampaignSQSBody, CampaignRecipient as CampaignRecipientType } from "../../types/index.js";
 
 const sqs = new SQSClient({});
@@ -53,15 +55,27 @@ const RecipientSchema = z.object({
     .optional(),
 });
 
-const CreateCampaignSchema = z.object({
-  name: z.string().min(1).max(120),
-  botId: z.string().min(1),
-  templateName: z.string().min(1),
-  language: z.string().min(2).max(10),
-  segments: z.array(z.string().max(50)).max(20).default([]),
-  scheduledAt: z.string().datetime().optional(),
-  recipients: z.array(RecipientSchema).min(1).max(5000),
-});
+const CreateCampaignSchema = z
+  .object({
+    name: z.string().min(1).max(120),
+    botId: z.string().min(1),
+    templateName: z.string().min(1),
+    language: z.string().min(2).max(10),
+    segments: z.array(z.string().max(50)).max(20).default([]),
+    scheduledAt: z.string().datetime().optional(),
+    recipients: z.array(RecipientSchema).max(5000).optional(),
+    audienceTags: z.array(z.string().max(50)).max(20).optional(),
+  })
+  .superRefine((data, ctx) => {
+    const hasRecipients = (data.recipients?.length ?? 0) > 0;
+    const hasTags = (data.audienceTags?.length ?? 0) > 0;
+    if (!hasRecipients && !hasTags) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Provide recipients or audienceTags",
+      });
+    }
+  });
 
 const UpdateCampaignSchema = z.object({
   name: z.string().min(1).max(120).optional(),
@@ -156,16 +170,29 @@ async function deleteSchedule(campaignId: string): Promise<void> {
   }
 }
 
+async function filterPendingForMarketing(
+  tenantId: string,
+  pending: PendingRecipient[],
+  actorUserId?: string
+): Promise<PendingRecipient[]> {
+  const phones = pending.map((r) => r.to.replace(/\D/g, ""));
+  const { allowed } = await checkMarketingRecipients(tenantId, phones, actorUserId);
+  const allowedSet = new Set(allowed);
+  return pending.filter((r) => allowedSet.has(r.to.replace(/\D/g, "")));
+}
+
 async function startCampaign(
   tenantId: string,
   campaignId: string,
   botId: string,
   templateName: string,
-  language: string
+  language: string,
+  actorUserId?: string
 ): Promise<void> {
   const now = new Date().toISOString();
   const pending = await listPendingRecipients(tenantId, campaignId, 5000);
-  await enqueueRecipients(campaignId, tenantId, botId, templateName, language, pending);
+  const eligible = await filterPendingForMarketing(tenantId, pending, actorUserId);
+  await enqueueRecipients(campaignId, tenantId, botId, templateName, language, eligible);
   await updateCampaignStatus(tenantId, campaignId, "running", { startedAt: now });
 }
 
@@ -185,7 +212,13 @@ export async function handler(
       }
       const bot = await getBot(tenantId, campaign.botId);
       if (!bot) return ok({ message: "Bot not found, skipping." });
-      await startCampaign(tenantId, campaignId, bot.botId, campaign.templateName, campaign.language);
+      await startCampaign(
+        tenantId,
+        campaignId,
+        bot.botId,
+        campaign.templateName,
+        campaign.language
+      );
       return ok({ message: "Campaign started." });
     }
 
@@ -224,13 +257,41 @@ export async function handler(
       const parsed = CreateCampaignSchema.safeParse(body);
       if (!parsed.success) return badRequest(parsed.error.message);
 
-      const { name, botId, templateName, language, segments, scheduledAt, recipients } = parsed.data;
+      const { name, botId, templateName, language, segments, scheduledAt, audienceTags } =
+        parsed.data;
+
+      let recipients = parsed.data.recipients ?? [];
+      if (audienceTags?.length) {
+        const contacts = await listContactsByTags(auth.tenantId, audienceTags);
+        const fromTags = contacts.map((c) => ({ to: c.phoneNumber }));
+        recipients = [...recipients, ...fromTags];
+      }
+
+      const uniqueRecipients = [
+        ...new Map(recipients.map((r) => [r.to.replace(/\D/g, ""), r])).values(),
+      ];
+
+      if (uniqueRecipients.length === 0) {
+        return badRequest("No eligible contacts found for this audience");
+      }
+
+      const phones = uniqueRecipients.map((r) => r.to.replace(/\D/g, ""));
+      const { blocked } = await checkMarketingRecipients(auth.tenantId, phones, auth.userId);
+      if (blocked.length > 0) {
+        return unprocessableEntity("Some recipients cannot receive marketing messages", {
+          blocked,
+        });
+      }
+
+      const mergedSegments = [
+        ...new Set([...segments, ...(audienceTags ?? [])]),
+      ];
 
       const bot = await getBot(auth.tenantId, botId);
       if (!bot) return notFound("Bot not found");
 
       const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
-      await assertBulkRecipients(tenant, recipients.length);
+      await assertBulkRecipients(tenant, uniqueRecipients.length);
 
       const newCampaignId = makeCampaignId();
       const now = new Date().toISOString();
@@ -244,9 +305,9 @@ export async function handler(
         templateName,
         language,
         status,
-        segments,
+        segments: mergedSegments,
         ...(scheduledAt ? { scheduledAt } : {}),
-        total: recipients.length,
+        total: uniqueRecipients.length,
         createdAt: now,
         updatedAt: now,
       });
@@ -254,7 +315,7 @@ export async function handler(
       await saveRecipients(
         auth.tenantId,
         newCampaignId,
-        recipients as CampaignRecipientType[]
+        uniqueRecipients as CampaignRecipientType[]
       );
 
       if (scheduledAt) {
@@ -297,12 +358,22 @@ export async function handler(
       await assertCanStartCampaign(tenant);
 
       await deleteSchedule(campaignId);
+      const pending = await listPendingRecipients(auth.tenantId, campaignId, 5000);
+      const phones = pending.map((r) => r.to.replace(/\D/g, ""));
+      const { blocked } = await checkMarketingRecipients(auth.tenantId, phones, auth.userId);
+      if (blocked.length > 0) {
+        return unprocessableEntity("Some recipients cannot receive marketing messages", {
+          blocked,
+        });
+      }
+
       await startCampaign(
         auth.tenantId,
         campaignId,
         campaign.botId,
         campaign.templateName,
-        campaign.language
+        campaign.language,
+        auth.userId
       );
       await incrementCampaignsStarted(auth.tenantId);
       await incrementBulkRecipients(auth.tenantId, campaign.total);
@@ -331,14 +402,19 @@ export async function handler(
       if (!bot) return notFound("Bot not found");
 
       const pending = await listPendingRecipients(auth.tenantId, campaignId, 5000);
-      if (pending.length > 0) {
+      const eligible = await filterPendingForMarketing(
+        auth.tenantId,
+        pending,
+        auth.userId
+      );
+      if (eligible.length > 0) {
         await enqueueRecipients(
           campaignId,
           auth.tenantId,
           campaign.botId,
           campaign.templateName,
           campaign.language,
-          pending
+          eligible
         );
       }
       await updateCampaignStatus(auth.tenantId, campaignId, "running");

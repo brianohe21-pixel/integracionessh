@@ -80,7 +80,7 @@ jobs:
       - name: Deploy Lambdas
         working-directory: backend
         run: |
-          for fn in webhook process_message tenants bots conversations templates bulk_send process_bulk_send campaigns process_campaign metrics authorizer whatsapp_connect billing support_tickets admin public_api api_keys; do
+          for fn in webhook process_message tenants bots conversations advisors contacts templates bulk_send process_bulk_send campaigns process_campaign metrics authorizer whatsapp_connect billing support_tickets admin public_api api_keys; do
             FUNCTION_NAME="chatbot-platform-dev-${fn//_/-}"
             echo "Deploying $FUNCTION_NAME..."
             aws lambda update-function-code \
@@ -129,7 +129,7 @@ jobs:
       - name: Deploy Lambdas
         working-directory: backend
         run: |
-          for fn in webhook process_message tenants bots conversations templates bulk_send process_bulk_send campaigns process_campaign metrics authorizer whatsapp_connect billing support_tickets admin public_api api_keys; do
+          for fn in webhook process_message tenants bots conversations advisors contacts templates bulk_send process_bulk_send campaigns process_campaign metrics authorizer whatsapp_connect billing support_tickets admin public_api api_keys; do
             FUNCTION_NAME="chatbot-platform-prod-${fn//_/-}"
             echo "Deploying $FUNCTION_NAME..."
             aws lambda update-function-code \

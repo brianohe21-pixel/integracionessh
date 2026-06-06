@@ -6,6 +6,7 @@ import {
   saveCampaignMessageTracking,
 } from "../../lib/dynamodb/campaign.repository.js";
 import { parseSendFailureError, saveBulkSendFailure } from "../../lib/dynamodb/bulk-job.repository.js";
+import { getContactByPhone } from "../../lib/dynamodb/contact.repository.js";
 import { sendTemplateMessage, getWhatsAppAccessToken } from "../../lib/whatsapp/client.js";
 import type { CampaignSQSBody } from "../../types/index.js";
 
@@ -42,6 +43,24 @@ async function processRecord(record: SQSRecord): Promise<void> {
 
   if (campaign.status === "completed" || campaign.status === "failed") {
     console.log(`Campaign ${campaignId} already finished, skipping`);
+    return;
+  }
+
+  const normalizedTo = to.replace(/\D/g, "");
+  const contact = await getContactByPhone(tenantId, normalizedTo);
+  if (
+    !contact ||
+    contact.suppressed ||
+    contact.marketingConsent !== "opt_in"
+  ) {
+    await saveBulkSendFailure({
+      jobId: campaignId,
+      tenantId,
+      kind: "compliance",
+      to: normalizedTo,
+      errorMessage: "Recipient not eligible for marketing",
+    });
+    await incrementCampaignProgress(tenantId, campaignId, "failed");
     return;
   }
 

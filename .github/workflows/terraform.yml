@@ -249,8 +249,15 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
+      - name: Terraform fmt
+        run: terraform fmt -check -recursive
+        continue-on-error: true
+
       - name: Terraform Init
         run: terraform init
+
+      - name: Terraform Validate
+        run: terraform validate
 
       - name: Require Terraform secrets and variables
         env:
@@ -272,15 +279,93 @@ jobs:
             exit 1
           fi
 
-      - name: Terraform Plan
+      - name: Remove monitoring from state when disabled
         run: |
-          terraform plan \
-            -var="github_access_token=${{ secrets.GH_ACCESS_TOKEN }}" \
-            -var="whatsapp_verify_token=${{ secrets.WHATSAPP_VERIFY_TOKEN }}" \
-            -var="repository_url=${{ vars.REPOSITORY_URL }}" \
-            -var="custom_domain=${{ vars.CUSTOM_DOMAIN }}" \
-            -out=tfplan \
+          set -euo pipefail
+          if [ "${ENABLE_MONITORING:-false}" != "true" ]; then
+            for addr in $(terraform state list 2>/dev/null | grep '^module\.monitoring' || true); do
+              echo "Removing $addr from state (enable_monitoring=false)"
+              terraform state rm "$addr"
+            done
+          fi
+        env:
+          ENABLE_MONITORING: ${{ vars.ENABLE_MONITORING }}
+
+      - name: Terraform Plan
+        id: plan
+        env:
+          META_APP_ID: ${{ vars.META_APP_ID }}
+          META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
+          META_EMBEDDED_SIGNUP_CONFIG_ID: ${{ vars.META_EMBEDDED_SIGNUP_CONFIG_ID }}
+          FRONTEND_URL: ${{ vars.FRONTEND_URL }}
+          CUSTOM_DOMAIN: ${{ vars.CUSTOM_DOMAIN }}
+          API_CUSTOM_DOMAIN: ${{ vars.API_CUSTOM_DOMAIN }}
+          WOMPI_PUBLIC_KEY: ${{ vars.WOMPI_PUBLIC_KEY }}
+          WOMPI_PRIVATE_KEY: ${{ secrets.WOMPI_PRIVATE_KEY }}
+          WOMPI_INTEGRITY_SECRET: ${{ secrets.WOMPI_INTEGRITY_SECRET }}
+          WOMPI_EVENTS_SECRET: ${{ secrets.WOMPI_EVENTS_SECRET }}
+          EXTRA_ALLOWED_ORIGINS: ${{ vars.EXTRA_ALLOWED_ORIGINS }}
+          EXTRA_CALLBACK_URLS: ${{ vars.EXTRA_CALLBACK_URLS }}
+          EXTRA_LOGOUT_URLS: ${{ vars.EXTRA_LOGOUT_URLS }}
+        run: |
+          set -euo pipefail
+          PLAN_ARGS=(
             -no-color
+            -var="github_access_token=${{ secrets.GH_ACCESS_TOKEN }}"
+            -var="whatsapp_verify_token=${{ secrets.WHATSAPP_VERIFY_TOKEN }}"
+            -var="repository_url=${{ vars.REPOSITORY_URL }}"
+          )
+          if [ -f terraform.tfvars ]; then
+            PLAN_ARGS+=(-var-file=terraform.tfvars)
+          fi
+          if [ -n "${META_APP_ID:-}" ]; then
+            PLAN_ARGS+=(-var="meta_app_id=${META_APP_ID}")
+          fi
+          if [ -n "${META_APP_SECRET:-}" ]; then
+            PLAN_ARGS+=(-var="meta_app_secret=${META_APP_SECRET}")
+          fi
+          if [ -n "${META_EMBEDDED_SIGNUP_CONFIG_ID:-}" ]; then
+            PLAN_ARGS+=(-var="meta_embedded_signup_config_id=${META_EMBEDDED_SIGNUP_CONFIG_ID}")
+          fi
+          if [ -n "${FRONTEND_URL:-}" ]; then
+            PLAN_ARGS+=(-var="frontend_url=${FRONTEND_URL}")
+          fi
+          if [ -n "${CUSTOM_DOMAIN:-}" ]; then
+            PLAN_ARGS+=(-var="custom_domain=${CUSTOM_DOMAIN}")
+          fi
+          if [ -n "${API_CUSTOM_DOMAIN:-}" ]; then
+            PLAN_ARGS+=(-var="api_custom_domain=${API_CUSTOM_DOMAIN}")
+          fi
+          if [ -n "${WOMPI_PUBLIC_KEY:-}" ]; then
+            PLAN_ARGS+=(-var="wompi_public_key=${WOMPI_PUBLIC_KEY}")
+          fi
+          if [ -n "${WOMPI_PRIVATE_KEY:-}" ]; then
+            PLAN_ARGS+=(-var="wompi_private_key=${WOMPI_PRIVATE_KEY}")
+          fi
+          if [ -n "${WOMPI_INTEGRITY_SECRET:-}" ]; then
+            PLAN_ARGS+=(-var="wompi_integrity_secret=${WOMPI_INTEGRITY_SECRET}")
+          fi
+          if [ -n "${WOMPI_EVENTS_SECRET:-}" ]; then
+            PLAN_ARGS+=(-var="wompi_events_secret=${WOMPI_EVENTS_SECRET}")
+          fi
+          if [ -n "${EXTRA_ALLOWED_ORIGINS:-}" ]; then
+            PLAN_ARGS+=(-var="extra_allowed_origins=${EXTRA_ALLOWED_ORIGINS}")
+          fi
+          if [ -n "${EXTRA_CALLBACK_URLS:-}" ]; then
+            PLAN_ARGS+=(-var="extra_callback_urls=${EXTRA_CALLBACK_URLS}")
+          fi
+          if [ -n "${EXTRA_LOGOUT_URLS:-}" ]; then
+            PLAN_ARGS+=(-var="extra_logout_urls=${EXTRA_LOGOUT_URLS}")
+          fi
+          if [ "${{ github.event_name }}" = "push" ]; then
+            terraform plan "${PLAN_ARGS[@]}" -out=tfplan | tee plan.txt
+          else
+            terraform plan "${PLAN_ARGS[@]}" | tee plan.txt
+          fi
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve -parallelism=1 tfplan
+        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && steps.plan.outcome == 'success'
+        run: |
+          set -euo pipefail
+          test -f tfplan
+          terraform apply -auto-approve -parallelism=1 tfplan

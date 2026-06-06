@@ -40,7 +40,7 @@ async function queryAll<T>(
   return items;
 }
 
-async function listAllConversationsForBot(
+export async function listAllConversationsForBot(
   tenantId: string,
   botId: string
 ): Promise<Conversation[]> {
@@ -54,7 +54,7 @@ async function listAllConversationsForBot(
   );
 }
 
-async function listAllBulkJobs(tenantId: string): Promise<BulkSendJob[]> {
+export async function listAllBulkJobs(tenantId: string): Promise<BulkSendJob[]> {
   const jobs = await queryAll(`TENANT#${tenantId}`, "BULKJOB#", (item) => {
     const { PK, SK, ...rest } = item;
     return rest as unknown as BulkSendJob;

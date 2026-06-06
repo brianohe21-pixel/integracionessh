@@ -52,6 +52,8 @@ export type HandoffMode = "bot" | "human";
 
 export type HandoffReason = "manual" | "ai" | "webhook";
 
+export type WorkflowStatus = "new" | "open" | "pending" | "resolved";
+
 export interface Conversation {
   conversationId: string;
   tenantId: string;
@@ -64,6 +66,12 @@ export interface Conversation {
   handoffAt?: string;
   handoffReason?: HandoffReason;
   lastAdvisorNotifiedAt?: string;
+  workflowStatus?: WorkflowStatus;
+  resolvedAt?: string;
+  firstHumanResponseAt?: string;
+  csatScore?: number;
+  csatSubmittedAt?: string;
+  internalNote?: string;
   messageCount: number;
   lastMessageAt: string;
   createdAt: string;
@@ -94,6 +102,30 @@ export interface Advisor {
   status: "active" | "inactive";
   botIds?: string[];
   lastAssignedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type MarketingConsent = "unknown" | "opt_in" | "opt_out";
+
+export type ConsentSource = "manual" | "import" | "whatsapp_keyword" | "panel";
+
+export type ContactSource = "sync" | "manual" | "import";
+
+export interface Contact {
+  phoneNumber: string;
+  tenantId: string;
+  displayName?: string;
+  tags: string[];
+  marketingConsent: MarketingConsent;
+  consentAt?: string;
+  consentSource?: ConsentSource;
+  suppressed: boolean;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  lastBotId?: string;
+  messageCount?: number;
+  source: ContactSource;
   createdAt: string;
   updatedAt: string;
 }
@@ -164,7 +196,7 @@ export interface WhatsAppStatus {
   errors?: WhatsAppStatusError[];
 }
 
-export type BulkSendFailureKind = "send" | "delivery";
+export type BulkSendFailureKind = "send" | "delivery" | "compliance";
 
 export interface BulkSendFailure {
   jobId: string;
@@ -364,6 +396,53 @@ export interface UsageMetrics {
   summary: UsageMetricsSummary;
   byBot: BotUsageMetrics[];
   recentBulkJobs: BulkSendJob[];
+}
+
+export interface MarketingMetricsRates {
+  deliveryRate: number;
+  readRate: number;
+  failureRate: number;
+  successRate: number;
+}
+
+export interface MarketingMetricsCampaignAggregate {
+  totalRecipients: number;
+  sent: number;
+  delivered: number;
+  read: number;
+  deliveryFailed: number;
+}
+
+export interface TopCampaignMetric {
+  campaignId: string;
+  name: string;
+  sent: number;
+  deliveredCount: number;
+  readCount: number;
+  deliveryRate: number;
+  readRate: number;
+}
+
+export interface MarketingMetrics {
+  campaigns: {
+    total: number;
+    active: number;
+    completed: number;
+    aggregates: MarketingMetricsCampaignAggregate;
+    rates: MarketingMetricsRates;
+  };
+  bulk: {
+    jobsCount: number;
+    sent: number;
+    failed: number;
+    rates: Pick<MarketingMetricsRates, "successRate">;
+  };
+  topCampaigns: TopCampaignMetric[];
+  inbox: {
+    open: number;
+    pending: number;
+    resolvedToday: number;
+  };
 }
 
 export interface ApiKey {

@@ -204,6 +204,16 @@ locals {
         COGNITO_USER_POOL_ID = var.cognito_user_pool_id
       }
     }
+    contacts = {
+      handler     = "contacts/index.handler"
+      description = "CRUD API for tenant contacts and compliance"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME  = var.dynamodb_table_name
+        ENVIRONMENT = var.environment
+      }
+    }
     templates = {
       handler     = "templates/index.handler"
       description = "CRUD and send WhatsApp message templates"

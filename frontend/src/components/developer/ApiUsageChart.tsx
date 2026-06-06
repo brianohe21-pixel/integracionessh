@@ -64,8 +64,9 @@ export function ApiUsageChart({ usage }: ApiUsageChartProps) {
   const totalMessages = usage.reduce((sum, u) => sum + u.messagesThisMonth, 0);
   const totalSuccess = usage.reduce((sum, u) => sum + u.successRequests, 0);
   const totalErrors = usage.reduce((sum, u) => sum + u.errorRequests, 0);
+  const totalAttempts = totalSuccess + totalErrors;
   const successRate =
-    totalMessages > 0 ? Math.round((totalSuccess / totalMessages) * 100) : 100;
+    totalAttempts > 0 ? Math.round((totalSuccess / totalAttempts) * 100) : 100;
 
   const chartData = usage.slice(0, 12).map((u) => ({
     label: u.keyName.slice(0, 8),

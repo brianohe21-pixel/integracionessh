@@ -183,6 +183,48 @@ locals {
       function_arn = var.advisors_function_arn
       protected    = true
     }
+    contacts_export = {
+      route_key    = "GET /contacts/export"
+      invoke_arn   = var.contacts_invoke_arn
+      function_arn = var.contacts_function_arn
+      protected    = true
+    }
+    contacts_import = {
+      route_key    = "POST /contacts/import"
+      invoke_arn   = var.contacts_invoke_arn
+      function_arn = var.contacts_function_arn
+      protected    = true
+    }
+    contacts_list = {
+      route_key    = "GET /contacts"
+      invoke_arn   = var.contacts_invoke_arn
+      function_arn = var.contacts_function_arn
+      protected    = true
+    }
+    contacts_create = {
+      route_key    = "POST /contacts"
+      invoke_arn   = var.contacts_invoke_arn
+      function_arn = var.contacts_function_arn
+      protected    = true
+    }
+    contacts_get = {
+      route_key    = "GET /contacts/{phone}"
+      invoke_arn   = var.contacts_invoke_arn
+      function_arn = var.contacts_function_arn
+      protected    = true
+    }
+    contacts_update = {
+      route_key    = "PATCH /contacts/{phone}"
+      invoke_arn   = var.contacts_invoke_arn
+      function_arn = var.contacts_function_arn
+      protected    = true
+    }
+    contacts_delete = {
+      route_key    = "DELETE /contacts/{phone}"
+      invoke_arn   = var.contacts_invoke_arn
+      function_arn = var.contacts_function_arn
+      protected    = true
+    }
     templates_list = {
       route_key    = "GET /templates"
       invoke_arn   = var.templates_invoke_arn
@@ -237,10 +279,34 @@ locals {
       function_arn = var.bulk_send_function_arn
       protected    = true
     }
+    metrics_marketing = {
+      route_key    = "GET /metrics/marketing"
+      invoke_arn   = var.metrics_invoke_arn
+      function_arn = var.metrics_function_arn
+      protected    = true
+    }
     metrics_get = {
       route_key    = "GET /metrics"
       invoke_arn   = var.metrics_invoke_arn
       function_arn = var.metrics_function_arn
+      protected    = true
+    }
+    conversations_status = {
+      route_key    = "PATCH /conversations/{conversationId}/status"
+      invoke_arn   = var.conversations_invoke_arn
+      function_arn = var.conversations_function_arn
+      protected    = true
+    }
+    conversations_note = {
+      route_key    = "PATCH /conversations/{conversationId}/note"
+      invoke_arn   = var.conversations_invoke_arn
+      function_arn = var.conversations_function_arn
+      protected    = true
+    }
+    conversations_resolve = {
+      route_key    = "POST /conversations/{conversationId}/resolve"
+      invoke_arn   = var.conversations_invoke_arn
+      function_arn = var.conversations_function_arn
       protected    = true
     }
     whatsapp_connect = {
@@ -471,6 +537,7 @@ resource "aws_lambda_permission" "api_gw" {
     bots             = var.bots_function_arn
     conversations    = var.conversations_function_arn
     advisors         = var.advisors_function_arn
+    contacts         = var.contacts_function_arn
     templates        = var.templates_function_arn
     bulk_send        = var.bulk_send_function_arn
     metrics          = var.metrics_function_arn

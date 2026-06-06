@@ -54,6 +54,14 @@ variable "advisors_function_arn" {
   type = string
 }
 
+variable "contacts_invoke_arn" {
+  type = string
+}
+
+variable "contacts_function_arn" {
+  type = string
+}
+
 variable "templates_invoke_arn" {
   type = string
 }
