@@ -15,6 +15,9 @@ Monorepo serverless para crear, configurar y operar chatbots de WhatsApp Busines
 | **API pública** | `POST /v1/messages` con API keys, rate limiting y logs de uso. |
 | **Facturación** | Planes `free`, `pro` y `enterprise`; pagos vía **Wompi** y/o **Stripe**. |
 | **Multi-tenant** | Aislamiento por tenant en DynamoDB; autenticación con **Amazon Cognito**. |
+| **Contactos** | Directorio por teléfono, etiquetas, opt-in/opt-out, importación CSV y exportación. |
+| **Compliance** | Bloqueo de envíos masivos/campañas sin opt-in; auditoría de bloqueos. |
+| **Inbox operativo** | Estados de conversación (nuevo/abierto/pendiente/resuelto), notas internas y CSAT al cerrar. |
 | **Admin** | Gestión de usuarios Cognito, pagos y tickets de soporte a nivel plataforma. |
 | **Legal** | Términos y privacidad con aceptación registrada por tenant. |
 | **i18n** | Interfaz en español e inglés. |
@@ -111,6 +114,7 @@ integracionessh/
 | `whatsapp-connect` | Embedded Signup y credenciales |
 | `billing` | Checkout, portal y webhooks Wompi/Stripe |
 | `api-keys` / `public-api` | Claves API y REST pública |
+| `contacts` | Directorio de contactos y compliance |
 | `support-tickets` / `admin` | Soporte y administración |
 | `authorizer` | Validación JWT Cognito en API Gateway |
 
@@ -124,6 +128,8 @@ Rutas expuestas (resumen). Las rutas autenticadas requieren JWT de Cognito salvo
 | * | `/tenants`, `/bots`, `/conversations` | Gestión multi-tenant |
 | * | `/templates`, `/bulk-send`, `/campaigns` | Mensajería y campañas |
 | GET | `/metrics` | Uso y estadísticas |
+| GET | `/metrics/marketing` | Embudo de campañas y bulk |
+| * | `/contacts` | CRUD contactos, import y export |
 | POST | `/whatsapp/connect` | Conexión Embedded Signup |
 | * | `/billing/*` | Planes y pagos |
 | POST | `/v1/messages` | API pública (header `X-API-Key`) |
@@ -142,6 +148,7 @@ Dominio personalizado configurable (ej. `api.integracionessh.lat`) vía módulo 
 | Campañas activas | 1 | 10 | Ilimitado |
 | API (req/min) | 20 | 60 | 120 |
 | API (req/día) | 500 | 10 000 | 100 000 |
+| Contactos | 500 | 10 000 | Ilimitado |
 
 Los límites se aplican en backend (`backend/src/lib/billing/plan-limits.ts`). Las acciones de envío pueden exigir suscripción activa según el plan.
 
@@ -151,7 +158,8 @@ Los límites se aplican en backend (`backend/src/lib/billing/plan-limits.ts`). L
 |------|---------|
 | `/login`, `/register` | Autenticación Cognito |
 | `/bots`, `/bots/new`, `/bots/[botId]/edit` | Gestión de bots |
-| `/conversations` | Historial |
+| `/contacts` | Contactos y consentimiento |
+| `/conversations` | Historial e inbox operativo |
 | `/templates` | Plantillas |
 | `/bulk-send` | Envío masivo CSV |
 | `/campaigns`, `/campaigns/new`, `/campaigns/[id]` | Campañas |
