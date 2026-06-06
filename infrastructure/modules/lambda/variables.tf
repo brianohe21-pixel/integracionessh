@@ -63,13 +63,11 @@ variable "knowledge_sqs_queue_arn" {
 }
 
 variable "flow_run_sqs_queue_url" {
-  type    = string
-  default = ""
+  type = string
 }
 
 variable "flow_run_sqs_queue_arn" {
-  type    = string
-  default = ""
+  type = string
 }
 
 variable "scheduler_role_arn" {

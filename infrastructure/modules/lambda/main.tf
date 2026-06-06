@@ -139,14 +139,14 @@ resource "aws_iam_role_policy" "lambda_permissions" {
 locals {
   lambda_zip_effective = (
     var.lambda_zip_path != "" && fileexists(var.lambda_zip_path)
-    ) ? var.lambda_zip_path : "${path.module}/bootstrap/functions.zip"
+  ) ? var.lambda_zip_path : "${path.module}/bootstrap/functions.zip"
 
   campaigns_function_name   = "${var.project}-${var.environment}-campaigns"
   campaigns_function_arn    = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.campaigns_function_name}"
   automations_function_name = "${var.project}-${var.environment}-automations"
   automations_function_arn  = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.automations_function_name}"
   flows_function_name       = "${var.project}-${var.environment}-flows"
-  flows_function_arn          = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.flows_function_name}"
+  flows_function_arn        = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.flows_function_name}"
 
   functions = {
     webhook = {
@@ -239,9 +239,9 @@ locals {
       timeout     = 60
       memory      = 256
       environment = {
-        TABLE_NAME          = var.dynamodb_table_name
-        BULK_SQS_QUEUE_URL  = var.bulk_sqs_queue_url
-        ENVIRONMENT         = var.environment
+        TABLE_NAME         = var.dynamodb_table_name
+        BULK_SQS_QUEUE_URL = var.bulk_sqs_queue_url
+        ENVIRONMENT        = var.environment
       }
     }
     process_bulk_send = {
@@ -290,21 +290,21 @@ locals {
       timeout     = 30
       memory      = 256
       environment = {
-        TABLE_NAME               = var.dynamodb_table_name
-        ENVIRONMENT              = var.environment
-        FRONTEND_URL             = var.frontend_url
-        WOMPI_PUBLIC_KEY         = var.wompi_public_key
-        WOMPI_PRIVATE_KEY        = var.wompi_private_key
-        WOMPI_INTEGRITY_SECRET   = var.wompi_integrity_secret
-        WOMPI_EVENTS_SECRET      = var.wompi_events_secret
-        WOMPI_AMOUNT_PRO_CENTS   = var.wompi_amount_pro_cents
+        TABLE_NAME                    = var.dynamodb_table_name
+        ENVIRONMENT                   = var.environment
+        FRONTEND_URL                  = var.frontend_url
+        WOMPI_PUBLIC_KEY              = var.wompi_public_key
+        WOMPI_PRIVATE_KEY             = var.wompi_private_key
+        WOMPI_INTEGRITY_SECRET        = var.wompi_integrity_secret
+        WOMPI_EVENTS_SECRET           = var.wompi_events_secret
+        WOMPI_AMOUNT_PRO_CENTS        = var.wompi_amount_pro_cents
         WOMPI_AMOUNT_ENTERPRISE_CENTS = var.wompi_amount_enterprise_cents
-        WOMPI_API_BASE           = var.wompi_api_base
-        WOMPI_CHECKOUT_URL       = var.wompi_checkout_url
-        STRIPE_SECRET_KEY        = var.stripe_secret_key
-        STRIPE_WEBHOOK_SECRET    = var.stripe_webhook_secret
-        STRIPE_PRICE_PRO         = var.stripe_price_pro
-        STRIPE_PRICE_ENTERPRISE  = var.stripe_price_enterprise
+        WOMPI_API_BASE                = var.wompi_api_base
+        WOMPI_CHECKOUT_URL            = var.wompi_checkout_url
+        STRIPE_SECRET_KEY             = var.stripe_secret_key
+        STRIPE_WEBHOOK_SECRET         = var.stripe_webhook_secret
+        STRIPE_PRICE_PRO              = var.stripe_price_pro
+        STRIPE_PRICE_ENTERPRISE       = var.stripe_price_enterprise
       }
     }
     authorizer = {
@@ -335,11 +335,11 @@ locals {
       timeout     = 60
       memory      = 256
       environment = {
-        TABLE_NAME               = var.dynamodb_table_name
-        CAMPAIGN_SQS_QUEUE_URL   = var.campaign_sqs_queue_url
-        ENVIRONMENT              = var.environment
-        SCHEDULER_ROLE_ARN       = var.scheduler_role_arn
-        CAMPAIGNS_FUNCTION_ARN   = local.campaigns_function_arn
+        TABLE_NAME             = var.dynamodb_table_name
+        CAMPAIGN_SQS_QUEUE_URL = var.campaign_sqs_queue_url
+        ENVIRONMENT            = var.environment
+        SCHEDULER_ROLE_ARN     = var.scheduler_role_arn
+        CAMPAIGNS_FUNCTION_ARN = local.campaigns_function_arn
       }
     }
     process_campaign = {
@@ -551,7 +551,6 @@ resource "aws_lambda_event_source_mapping" "knowledge_sqs_trigger" {
 }
 
 resource "aws_lambda_event_source_mapping" "flow_run_sqs_trigger" {
-  count                              = var.flow_run_sqs_queue_arn != "" ? 1 : 0
   event_source_arn                   = var.flow_run_sqs_queue_arn
   function_name                      = aws_lambda_function.functions["process_flow"].arn
   batch_size                         = 1
