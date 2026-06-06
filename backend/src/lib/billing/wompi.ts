@@ -1,4 +1,8 @@
 import { createHash, timingSafeEqual } from "crypto";
+import {
+  WOMPI_AMOUNT_ENTERPRISE_CENTS_DEFAULT,
+  WOMPI_AMOUNT_PRO_CENTS_DEFAULT,
+} from "./plan-config.js";
 
 const WOMPI_CHECKOUT_URL =
   process.env.WOMPI_CHECKOUT_URL ?? "https://checkout.wompi.co/p/";
@@ -21,7 +25,9 @@ export function amountInCentsForPlan(plan: "pro" | "enterprise"): number {
       : process.env.WOMPI_AMOUNT_ENTERPRISE_CENTS;
   const parsed = Number(raw);
   if (!parsed || parsed < 100000) {
-    return plan === "pro" ? 9_900_000 : 29_900_000;
+    return plan === "pro"
+      ? WOMPI_AMOUNT_PRO_CENTS_DEFAULT
+      : WOMPI_AMOUNT_ENTERPRISE_CENTS_DEFAULT;
   }
   return parsed;
 }

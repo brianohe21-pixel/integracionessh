@@ -1,21 +1,36 @@
 "use client";
 
 import { useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { FileText, Trash2, Upload } from "lucide-react";
+import { api } from "@/lib/api";
 import { useKnowledgeDocuments, useUploadKnowledgeDocument, useDeleteKnowledgeDocument } from "@/hooks/useKnowledge";
 import { useUpdateBot } from "@/hooks/useBots";
 import { useT } from "@/i18n/context";
-import type { Bot } from "@/types";
+import type { Bot, Tenant } from "@/types";
 
 export function BotKnowledge({ bot }: { bot: Bot }) {
   const t = useT();
   const fileRef = useRef<HTMLInputElement>(null);
+  const { data: tenant } = useQuery({
+    queryKey: ["tenant"],
+    queryFn: () => api.get<Tenant>("/tenants/me"),
+  });
   const { data, isLoading } = useKnowledgeDocuments(bot.botId);
   const upload = useUploadKnowledgeDocument(bot.botId);
   const remove = useDeleteKnowledgeDocument(bot.botId);
   const updateBot = useUpdateBot(bot.botId);
 
   const documents = data?.documents ?? [];
+
+  if (tenant?.plan === "free") {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <h2 className="text-lg font-semibold text-gray-900">{t("knowledge.title")}</h2>
+        <p className="text-sm text-gray-500 mt-2">{t("knowledge.planRequired")}</p>
+      </div>
+    );
+  }
 
   async function handleFile(file: File) {
     await upload.mutateAsync({ file });

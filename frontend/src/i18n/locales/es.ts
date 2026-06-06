@@ -132,6 +132,7 @@ export const es = {
     systemPrompt: "Prompt del sistema",
     systemPromptPlaceholder: "Eres un asistente virtual de [empresa]. Tu función es...",
     model: "Modelo",
+    modelPlanHint: "GPT-4o y GPT-4 Turbo están disponibles en el plan Enterprise.",
     temperature: "Temperatura",
     maxTokens: "Máximo de tokens",
     webhookUrl: "URL del webhook",
@@ -807,6 +808,7 @@ export const es = {
     upload: "Subir documento",
     uploading: "Subiendo…",
     empty: "Sin documentos. Sube TXT o MD.",
+    planRequired: "La base de conocimiento está disponible en los planes Pro y Enterprise.",
   },
   metaFlows: {
     title: "WhatsApp Flows (Meta)",

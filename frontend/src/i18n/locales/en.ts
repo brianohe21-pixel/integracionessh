@@ -134,6 +134,7 @@ export const en: Messages = {
     systemPrompt: "System prompt",
     systemPromptPlaceholder: "You are a virtual assistant for [company]. Your role is...",
     model: "Model",
+    modelPlanHint: "GPT-4o and GPT-4 Turbo are available on the Enterprise plan.",
     temperature: "Temperature",
     maxTokens: "Max tokens",
     webhookUrl: "Webhook URL",
@@ -809,6 +810,7 @@ export const en: Messages = {
     upload: "Upload document",
     uploading: "Uploading…",
     empty: "No documents. Upload TXT or MD.",
+    planRequired: "Knowledge base is available on Pro and Enterprise plans.",
   },
   metaFlows: {
     title: "WhatsApp Flows (Meta)",

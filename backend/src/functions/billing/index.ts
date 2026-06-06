@@ -251,6 +251,18 @@ export async function handler(
         wompi,
         stripe,
         default: defaultProvider,
+        plans: {
+          pro: {
+            amountCents: amountInCentsForPlan("pro"),
+            currency: "COP",
+            periodDays: 30,
+          },
+          enterprise: {
+            amountCents: amountInCentsForPlan("enterprise"),
+            currency: "COP",
+            periodDays: 30,
+          },
+        },
       });
     }
 

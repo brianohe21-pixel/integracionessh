@@ -153,26 +153,31 @@ Rutas expuestas (resumen). Las rutas autenticadas requieren JWT de Cognito salvo
 
 Dominio personalizado configurable (ej. `api.integracionessh.lat`) vía módulo `api-gateway/custom-domain.tf`.
 
-## Planes y límites
+## Planes, precios y límites
+
+| Plan | Precio (Wompi) | Mensajes / mes | Modelos IA |
+|------|----------------|----------------|------------|
+| **Free** | Gratis | 250 | GPT-4o mini |
+| **Pro** | $179.900 COP / 30 días | 4.000 | GPT-4o mini |
+| **Enterprise** | $749.900 COP / 30 días | 15.000 | GPT-4o mini, GPT-4o, GPT-4 Turbo |
 
 | Recurso | Free | Pro | Enterprise |
 |---------|------|-----|------------|
 | Bots activos | 1 | 5 | Ilimitado |
-| Mensajes / mes | 500 | 10 000 | 100 000 |
-| Destinatarios envío masivo / job | 100 | 5 000 | 50 000 |
-| Campañas activas | 1 | 10 | Ilimitado |
+| Destinatarios envío masivo / job | 50 | 2.000 | 10.000 |
+| Campañas activas | 1 | 5 | Ilimitado |
 | API (req/min) | 20 | 60 | 120 |
-| API (req/día) | 500 | 10 000 | 100 000 |
-| Contactos | 500 | 10 000 | Ilimitado |
-| Automatizaciones / bot | 3 | 20 | Ilimitado |
-| Automatizaciones programadas | 1 | 10 | Ilimitado |
+| API (req/día) | 250 | 5.000 | 50.000 |
+| Contactos | 250 | 5.000 | Ilimitado |
+| Automatizaciones / bot | 2 | 15 | Ilimitado |
+| Automatizaciones programadas | 1 | 5 | Ilimitado |
 | Meta Flows / bot | 1 | 5 | Ilimitado |
-| Flujos visuales / bot | 1 | 10 | Ilimitado |
-| Nodos por flujo visual | 10 | 50 | 200 |
-| Documentos RAG / bot | 2 | 20 | 100 |
-| Almacenamiento RAG / bot | 5 MB | 100 MB | 1 GB |
+| Flujos visuales / bot | 1 | 5 | Ilimitado |
+| Nodos por flujo visual | 10 | 40 | 100 |
+| Documentos RAG / bot | — | 10 | 50 |
+| Almacenamiento RAG / bot | — | 25 MB | 100 MB |
 
-Los límites se aplican en backend (`backend/src/lib/billing/plan-limits.ts`). Las acciones de envío pueden exigir suscripción activa según el plan.
+Los precios Wompi se configuran en `wompi_amount_pro_cents` y `wompi_amount_enterprise_cents` (Terraform). Los límites se aplican en backend (`backend/src/lib/billing/plan-limits.ts`). Las acciones de envío pueden exigir suscripción activa según el plan.
 
 ## Panel web (rutas)
 

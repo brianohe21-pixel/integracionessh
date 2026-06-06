@@ -18,6 +18,7 @@ import {
   PlanLimitError,
   assertSubscriptionAllowsSending,
 } from "./plan-limits.js";
+import { assertCanEnableKnowledge } from "./plan-config.js";
 
 export async function assertCanCreateBot(tenant: Tenant): Promise<void> {
   const limits = getPlanLimits(tenant.plan);
@@ -105,6 +106,7 @@ export async function assertCanAddKnowledgeDocument(
   botId: string,
   additionalBytes: number
 ): Promise<void> {
+  assertCanEnableKnowledge(tenant);
   const limits = getPlanLimits(tenant.plan);
   const docCount = await countDocumentsForBot(tenant.tenantId, botId);
   if (docCount >= limits.maxDocumentsPerBot) {

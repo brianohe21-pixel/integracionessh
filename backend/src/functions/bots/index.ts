@@ -11,6 +11,7 @@ import {
 import { extractAuthContext, assertTenantAccess, assertMemberRole } from "../../lib/auth/cognito.js";
 import { ensureTenant } from "../../lib/dynamodb/tenant.repository.js";
 import { assertCanCreateBot } from "../../lib/billing/assert-plan.js";
+import { assertAllowedModel, assertCanEnableKnowledge } from "../../lib/billing/plan-config.js";
 import {
   getWhatsAppAccessToken,
   getPhoneNumberInfo,
@@ -33,7 +34,7 @@ const CreateBotSchema = z
     name: z.string().min(1).max(128),
     responseMode: z.enum(["openai", "webhook"]).default("openai"),
     systemPrompt: z.string().min(1).max(4096).optional(),
-    model: z.enum(["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"]).default("gpt-4o"),
+    model: z.enum(["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"]).default("gpt-4o-mini"),
     temperature: z.number().min(0).max(2).default(0.7),
     maxTokens: z.number().int().min(1).max(4096).default(1024),
     webhookUrl: z.string().url().startsWith("https://").max(2048).optional(),
@@ -114,6 +115,10 @@ export async function handler(
       const now = new Date().toISOString();
       const data = parsed.data;
 
+      if (data.responseMode === "openai") {
+        assertAllowedModel(tenant, data.model);
+      }
+
       const base = {
         botId: randomUUID(),
         tenantId: auth.tenantId,
@@ -161,6 +166,14 @@ export async function handler(
       const body = JSON.parse(event.body ?? "{}");
       const parsed = UpdateBotSchema.safeParse(body);
       if (!parsed.success) return badRequest(parsed.error.message);
+
+      const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
+      if (parsed.data.model) {
+        assertAllowedModel(tenant, parsed.data.model);
+      }
+      if (parsed.data.knowledgeEnabled === true) {
+        assertCanEnableKnowledge(tenant);
+      }
 
       const updated = await updateBot(
         auth.tenantId,
