@@ -50,6 +50,11 @@ variable "custom_domain" {
   default = ""
 }
 
+variable "api_custom_domain" {
+  type    = string
+  default = ""
+}
+
 variable "extra_callback_urls" {
   type        = list(string)
   default     = []

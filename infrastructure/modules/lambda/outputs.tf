@@ -34,6 +34,14 @@ output "advisors_function_arn" {
   value = aws_lambda_function.functions["advisors"].arn
 }
 
+output "contacts_invoke_arn" {
+  value = aws_lambda_function.functions["contacts"].invoke_arn
+}
+
+output "contacts_function_arn" {
+  value = aws_lambda_function.functions["contacts"].arn
+}
+
 output "templates_invoke_arn" {
   value = aws_lambda_function.functions["templates"].invoke_arn
 }
