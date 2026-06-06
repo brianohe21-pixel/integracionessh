@@ -76,6 +76,9 @@ export interface Conversation {
   messageCount: number;
   lastMessageAt: string;
   welcomeSentAt?: string;
+  activeFlowRunId?: string;
+  pendingMetaFlowId?: string;
+  metaFlowToken?: string;
   createdAt: string;
 }
 
@@ -83,12 +86,24 @@ export type MessageRole = "user" | "assistant" | "advisor" | "system";
 
 export type MessageSource = "panel" | "whatsapp_inbound";
 
+export type MessageType =
+  | "text"
+  | "interactive"
+  | "flow_response"
+  | "image"
+  | "audio"
+  | "video"
+  | "document"
+  | "location";
+
 export interface Message {
   messageId: string;
   conversationId: string;
   tenantId: string;
   role: MessageRole;
   content: string;
+  messageType?: MessageType;
+  metadata?: Record<string, unknown>;
   source?: MessageSource;
   sentByAdvisorId?: string;
   whatsappMessageId?: string;
@@ -173,6 +188,13 @@ export interface WhatsAppContact {
   user_id?: string;
 }
 
+export interface WhatsAppInteractiveReply {
+  type: "button_reply" | "list_reply" | "nfm_reply";
+  button_reply?: { id: string; title: string };
+  list_reply?: { id: string; title: string; description?: string };
+  nfm_reply?: { response_json: string; body?: string; name?: string };
+}
+
 export interface WhatsAppMessage {
   from: string;
   id: string;
@@ -181,6 +203,19 @@ export interface WhatsAppMessage {
   text?: { body: string };
   image?: { id: string; mime_type: string; caption?: string };
   audio?: { id: string; mime_type: string };
+  interactive?: WhatsAppInteractiveReply;
+}
+
+export interface InboundNormalized {
+  text: string;
+  messageType: MessageType;
+  interactive?: {
+    kind: "button" | "list" | "nfm";
+    id?: string;
+    payload?: string;
+    responseJson?: string;
+  };
+  raw: WhatsAppMessage;
 }
 
 export interface WhatsAppStatusError {
@@ -514,7 +549,131 @@ export interface SupportTicket {
   updatedAt: string;
 }
 
-export type IntegrationEvent = "message.received" | "conversation.handoff" | "message.sent";
+export type IntegrationEvent =
+  | "message.received"
+  | "conversation.handoff"
+  | "message.sent"
+  | "flow.completed";
+
+export type MetaFlowStatus = "DRAFT" | "PUBLISHED" | "DEPRECATED";
+
+export interface MetaFlow {
+  metaFlowId: string;
+  tenantId: string;
+  botId: string;
+  name: string;
+  status: MetaFlowStatus;
+  categories: string[];
+  jsonDefinition: Record<string, unknown>;
+  metaStatus?: string;
+  createdAt: string;
+  updatedAt: string;
+  publishedAt?: string;
+}
+
+export interface FlowResponse {
+  responseId: string;
+  tenantId: string;
+  botId: string;
+  conversationId: string;
+  phone: string;
+  metaFlowId: string;
+  responseJson: Record<string, unknown>;
+  createdAt: string;
+}
+
+export type FlowNodeType =
+  | "trigger"
+  | "message"
+  | "template"
+  | "condition"
+  | "buttons"
+  | "meta_flow"
+  | "handoff"
+  | "delay"
+  | "set_variable"
+  | "http_request"
+  | "end";
+
+export type FlowTriggerType = "keyword" | "first_message" | "any_message";
+
+export interface FlowNodeData {
+  label?: string;
+  triggerType?: FlowTriggerType;
+  keywords?: string[];
+  matchMode?: AutomationMatchMode;
+  messageText?: string;
+  templateName?: string;
+  templateLanguage?: string;
+  templateVariables?: Record<string, string>;
+  conditionVariable?: string;
+  conditionOperator?: "contains" | "equals" | "not_equals";
+  conditionValue?: string;
+  buttons?: Array<{ id: string; title: string }>;
+  metaFlowId?: string;
+  metaFlowCta?: string;
+  delaySeconds?: number;
+  variableName?: string;
+  variableValue?: string;
+  httpUrl?: string;
+  httpMethod?: "GET" | "POST";
+  httpBody?: string;
+  haltPipeline?: boolean;
+}
+
+export interface FlowNode {
+  id: string;
+  type: FlowNodeType;
+  position: { x: number; y: number };
+  data: FlowNodeData;
+}
+
+export interface FlowEdge {
+  id: string;
+  source: string;
+  target: string;
+  sourceHandle?: string;
+}
+
+export interface FlowDefinition {
+  flowId: string;
+  tenantId: string;
+  botId: string;
+  name: string;
+  enabled: boolean;
+  version: number;
+  nodes: FlowNode[];
+  edges: FlowEdge[];
+  entryNodeId: string;
+  publishedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type FlowRunStatus = "active" | "waiting" | "completed" | "failed";
+
+export interface FlowRunStep {
+  nodeId: string;
+  at: string;
+  output?: string;
+}
+
+export interface FlowRun {
+  runId: string;
+  flowId: string;
+  tenantId: string;
+  botId: string;
+  conversationId: string;
+  customerPhone: string;
+  status: FlowRunStatus;
+  currentNodeId: string;
+  variables: Record<string, string>;
+  stepHistory: FlowRunStep[];
+  waitingUntil?: string;
+  stepCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface TenantIntegration {
   integrationId: string;

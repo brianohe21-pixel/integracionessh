@@ -10,6 +10,10 @@ export interface PlanLimits {
   maxScheduledAutomations: number;
   maxDocumentsPerBot: number;
   maxKnowledgeStorageMb: number;
+  maxMetaFlowsPerBot: number;
+  maxVisualFlowsPerBot: number;
+  maxFlowNodes: number;
+  maxActiveFlowRuns: number;
   apiRateLimitPerMinute: number;
   apiRateLimitPerDay: number;
 }
@@ -25,6 +29,10 @@ const LIMITS: Record<TenantPlan, PlanLimits> = {
     maxScheduledAutomations: 1,
     maxDocumentsPerBot: 2,
     maxKnowledgeStorageMb: 5,
+    maxMetaFlowsPerBot: 1,
+    maxVisualFlowsPerBot: 1,
+    maxFlowNodes: 10,
+    maxActiveFlowRuns: 5,
     apiRateLimitPerMinute: 20,
     apiRateLimitPerDay: 500,
   },
@@ -38,6 +46,10 @@ const LIMITS: Record<TenantPlan, PlanLimits> = {
     maxScheduledAutomations: 10,
     maxDocumentsPerBot: 20,
     maxKnowledgeStorageMb: 100,
+    maxMetaFlowsPerBot: 5,
+    maxVisualFlowsPerBot: 10,
+    maxFlowNodes: 50,
+    maxActiveFlowRuns: 100,
     apiRateLimitPerMinute: 60,
     apiRateLimitPerDay: 10_000,
   },
@@ -51,6 +63,10 @@ const LIMITS: Record<TenantPlan, PlanLimits> = {
     maxScheduledAutomations: Number.MAX_SAFE_INTEGER,
     maxDocumentsPerBot: 100,
     maxKnowledgeStorageMb: 1024,
+    maxMetaFlowsPerBot: Number.MAX_SAFE_INTEGER,
+    maxVisualFlowsPerBot: Number.MAX_SAFE_INTEGER,
+    maxFlowNodes: 200,
+    maxActiveFlowRuns: Number.MAX_SAFE_INTEGER,
     apiRateLimitPerMinute: 120,
     apiRateLimitPerDay: 100_000,
   },

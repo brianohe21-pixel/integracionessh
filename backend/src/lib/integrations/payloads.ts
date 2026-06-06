@@ -76,6 +76,27 @@ export function buildMessageSentPayload(params: {
   });
 }
 
+export function buildFlowCompletedPayload(params: {
+  tenantId: string;
+  botId: string;
+  conversationId: string;
+  phone: string;
+  metaFlowId: string;
+  responseJson: Record<string, unknown>;
+}): IntegrationEventPayload {
+  return buildIntegrationPayload({
+    event: "flow.completed",
+    tenantId: params.tenantId,
+    data: {
+      botId: params.botId,
+      conversationId: params.conversationId,
+      phone: params.phone,
+      metaFlowId: params.metaFlowId,
+      response: params.responseJson,
+    },
+  });
+}
+
 export function buildTestPayload(tenantId: string): IntegrationEventPayload {
   return buildIntegrationPayload({
     event: "message.received",

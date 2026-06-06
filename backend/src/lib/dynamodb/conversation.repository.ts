@@ -87,6 +87,9 @@ export async function updateConversation(
       | "internalNote"
       | "status"
       | "welcomeSentAt"
+      | "activeFlowRunId"
+      | "pendingMetaFlowId"
+      | "metaFlowToken"
     >
   >
 ): Promise<Conversation | null> {
@@ -148,6 +151,56 @@ export async function clearConversationHandoff(
   return normalizeConversation({
     ...cleared,
     handoffMode: "bot",
+  });
+}
+
+export async function clearActiveFlowRun(
+  tenantId: string,
+  botId: string,
+  conversationId: string
+): Promise<void> {
+  await docClient.send(
+    new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: conversationKeys(tenantId, botId, conversationId),
+      UpdateExpression: "REMOVE activeFlowRunId",
+    })
+  );
+}
+
+export async function clearMetaFlowSession(
+  tenantId: string,
+  botId: string,
+  conversationId: string
+): Promise<void> {
+  await docClient.send(
+    new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: conversationKeys(tenantId, botId, conversationId),
+      UpdateExpression: "REMOVE pendingMetaFlowId, metaFlowToken",
+    })
+  );
+}
+
+export async function setActiveFlowRun(
+  tenantId: string,
+  botId: string,
+  conversationId: string,
+  runId: string
+): Promise<void> {
+  await updateConversation(tenantId, botId, conversationId, { activeFlowRunId: runId });
+}
+
+export async function setMetaFlowSession(
+  tenantId: string,
+  botId: string,
+  conversationId: string,
+  metaFlowId: string,
+  metaFlowToken: string
+): Promise<void> {
+  await updateConversation(tenantId, botId, conversationId, {
+    pendingMetaFlowId: metaFlowId,
+    metaFlowToken,
   });
 }
 

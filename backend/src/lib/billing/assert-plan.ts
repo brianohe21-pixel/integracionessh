@@ -5,6 +5,11 @@ import {
   countScheduledAutomations,
 } from "../dynamodb/automation.repository.js";
 import { countDocumentsForBot, getTotalStorageBytesForBot } from "../dynamodb/knowledge.repository.js";
+import { countMetaFlowsForBot } from "../dynamodb/meta-flow.repository.js";
+import {
+  countActiveFlowRuns,
+  countFlowsForBot,
+} from "../dynamodb/flow.repository.js";
 import { getMonthlyUsage } from "../dynamodb/usage.repository.js";
 import type { Tenant } from "../../types/index.js";
 import {
@@ -115,6 +120,55 @@ export async function assertCanAddKnowledgeDocument(
     throw new PlanLimitError(
       "PLAN_LIMIT_KNOWLEDGE_STORAGE",
       `Plan limit: maximum ${limits.maxKnowledgeStorageMb} MB knowledge storage per bot`
+    );
+  }
+}
+
+export async function assertCanCreateMetaFlow(tenant: Tenant, botId: string): Promise<void> {
+  const limits = getPlanLimits(tenant.plan);
+  if (isUnlimited(limits.maxMetaFlowsPerBot)) return;
+
+  const count = await countMetaFlowsForBot(tenant.tenantId, botId);
+  if (count >= limits.maxMetaFlowsPerBot) {
+    throw new PlanLimitError(
+      "PLAN_LIMIT_META_FLOWS",
+      `Plan limit: maximum ${limits.maxMetaFlowsPerBot} Meta flow(s) per bot`
+    );
+  }
+}
+
+export async function assertCanCreateVisualFlow(
+  tenant: Tenant,
+  botId: string,
+  nodeCount: number
+): Promise<void> {
+  const limits = getPlanLimits(tenant.plan);
+  if (nodeCount > limits.maxFlowNodes) {
+    throw new PlanLimitError(
+      "PLAN_LIMIT_FLOW_NODES",
+      `Plan limit: maximum ${limits.maxFlowNodes} nodes per flow`
+    );
+  }
+  if (isUnlimited(limits.maxVisualFlowsPerBot)) return;
+
+  const count = await countFlowsForBot(tenant.tenantId, botId);
+  if (count >= limits.maxVisualFlowsPerBot) {
+    throw new PlanLimitError(
+      "PLAN_LIMIT_VISUAL_FLOWS",
+      `Plan limit: maximum ${limits.maxVisualFlowsPerBot} visual flow(s) per bot`
+    );
+  }
+}
+
+export async function assertCanEnableVisualFlow(tenant: Tenant): Promise<void> {
+  const limits = getPlanLimits(tenant.plan);
+  if (isUnlimited(limits.maxActiveFlowRuns)) return;
+
+  const count = await countActiveFlowRuns(tenant.tenantId);
+  if (count >= limits.maxActiveFlowRuns) {
+    throw new PlanLimitError(
+      "PLAN_LIMIT_ACTIVE_FLOW_RUNS",
+      `Plan limit: maximum ${limits.maxActiveFlowRuns} active flow run(s)`
     );
   }
 }

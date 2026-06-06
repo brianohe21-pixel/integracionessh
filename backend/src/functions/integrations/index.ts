@@ -17,7 +17,7 @@ const UpdateWebhookSchema = z.object({
   webhookUrl: z.string().url().max(2048),
   webhookSecret: z.string().max(256).optional(),
   subscribedEvents: z
-    .array(z.enum(["message.received", "conversation.handoff", "message.sent"]))
+    .array(z.enum(["message.received", "conversation.handoff", "message.sent", "flow.completed"]))
     .min(1),
   enabled: z.boolean(),
 });
