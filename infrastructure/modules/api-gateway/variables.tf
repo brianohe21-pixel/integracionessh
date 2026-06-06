@@ -142,6 +142,46 @@ variable "api_keys_function_arn" {
   type = string
 }
 
+variable "integrations_invoke_arn" {
+  type = string
+}
+
+variable "integrations_function_arn" {
+  type = string
+}
+
+variable "automations_invoke_arn" {
+  type = string
+}
+
+variable "automations_function_arn" {
+  type = string
+}
+
+variable "knowledge_invoke_arn" {
+  type = string
+}
+
+variable "knowledge_function_arn" {
+  type = string
+}
+
+variable "meta_flows_invoke_arn" {
+  type = string
+}
+
+variable "meta_flows_function_arn" {
+  type = string
+}
+
+variable "flows_invoke_arn" {
+  type = string
+}
+
+variable "flows_function_arn" {
+  type = string
+}
+
 variable "allowed_origins" {
   type    = list(string)
   default = ["*"]

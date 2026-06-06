@@ -129,3 +129,43 @@ output "api_keys_invoke_arn" {
 output "api_keys_function_arn" {
   value = aws_lambda_function.functions["api_keys"].arn
 }
+
+output "integrations_invoke_arn" {
+  value = aws_lambda_function.functions["integrations"].invoke_arn
+}
+
+output "integrations_function_arn" {
+  value = aws_lambda_function.functions["integrations"].arn
+}
+
+output "automations_invoke_arn" {
+  value = aws_lambda_function.functions["automations"].invoke_arn
+}
+
+output "automations_function_arn" {
+  value = aws_lambda_function.functions["automations"].arn
+}
+
+output "knowledge_invoke_arn" {
+  value = aws_lambda_function.functions["knowledge"].invoke_arn
+}
+
+output "knowledge_function_arn" {
+  value = aws_lambda_function.functions["knowledge"].arn
+}
+
+output "meta_flows_invoke_arn" {
+  value = aws_lambda_function.functions["meta_flows"].invoke_arn
+}
+
+output "meta_flows_function_arn" {
+  value = aws_lambda_function.functions["meta_flows"].arn
+}
+
+output "flows_invoke_arn" {
+  value = aws_lambda_function.functions["flows"].invoke_arn
+}
+
+output "flows_function_arn" {
+  value = aws_lambda_function.functions["flows"].arn
+}

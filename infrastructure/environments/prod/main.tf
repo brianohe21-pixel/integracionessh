@@ -129,49 +129,62 @@ resource "aws_iam_role_policy" "scheduler_invoke" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect   = "Allow"
-      Action   = ["lambda:InvokeFunction"]
-      Resource = module.lambda.campaigns_function_arn
+      Effect = "Allow"
+      Action = ["lambda:InvokeFunction"]
+      Resource = [
+        module.lambda.campaigns_function_arn,
+        module.lambda.automations_function_arn,
+        module.lambda.flows_function_arn,
+      ]
     }]
   })
 }
 
 module "lambda" {
-  source                 = "../../modules/lambda"
-  project                = local.project
-  environment            = local.environment
-  dynamodb_table_name    = module.dynamodb.table_name
-  dynamodb_table_arn     = module.dynamodb.table_arn
-  sqs_queue_url          = module.sqs.queue_url
-  sqs_queue_arn          = module.sqs.queue_arn
-  bulk_sqs_queue_url     = module.sqs.bulk_queue_url
-  bulk_sqs_queue_arn     = module.sqs.bulk_queue_arn
-  campaign_sqs_queue_url = module.sqs.campaign_queue_url
-  campaign_sqs_queue_arn = module.sqs.campaign_queue_arn
-  scheduler_role_arn     = aws_iam_role.scheduler.arn
-  media_bucket_arn       = module.s3.media_bucket_arn
-  cognito_user_pool_id   = module.cognito.user_pool_id
-  cognito_user_pool_arn  = module.cognito.user_pool_arn
-  cognito_client_id      = module.cognito.client_id
-  whatsapp_verify_token  = var.whatsapp_verify_token
-  meta_app_id            = var.meta_app_id
-  meta_app_secret        = var.meta_app_secret
-  whatsapp_app_secret    = var.whatsapp_app_secret
-  lambda_zip_path         = var.lambda_zip_path != "" ? abspath("${path.module}/${var.lambda_zip_path}") : ""
-  stripe_secret_key       = var.stripe_secret_key
-  stripe_webhook_secret   = var.stripe_webhook_secret
-  stripe_price_pro        = var.stripe_price_pro
-  stripe_price_enterprise = var.stripe_price_enterprise
-  frontend_url            = var.frontend_url
-  wompi_public_key        = var.wompi_public_key
-  wompi_private_key       = var.wompi_private_key
-  wompi_integrity_secret  = var.wompi_integrity_secret
-  wompi_events_secret     = var.wompi_events_secret
-  wompi_amount_pro_cents  = var.wompi_amount_pro_cents
+  source                        = "../../modules/lambda"
+  project                       = local.project
+  environment                   = local.environment
+  dynamodb_table_name           = module.dynamodb.table_name
+  dynamodb_table_arn            = module.dynamodb.table_arn
+  sqs_queue_url                 = module.sqs.queue_url
+  sqs_queue_arn                 = module.sqs.queue_arn
+  bulk_sqs_queue_url            = module.sqs.bulk_queue_url
+  bulk_sqs_queue_arn            = module.sqs.bulk_queue_arn
+  campaign_sqs_queue_url        = module.sqs.campaign_queue_url
+  campaign_sqs_queue_arn        = module.sqs.campaign_queue_arn
+  integration_sqs_queue_url     = module.sqs.integration_queue_url
+  integration_sqs_queue_arn     = module.sqs.integration_queue_arn
+  automation_sqs_queue_url      = module.sqs.automation_queue_url
+  automation_sqs_queue_arn      = module.sqs.automation_queue_arn
+  knowledge_sqs_queue_url       = module.sqs.knowledge_queue_url
+  knowledge_sqs_queue_arn       = module.sqs.knowledge_queue_arn
+  flow_run_sqs_queue_url        = module.sqs.flow_run_queue_url
+  flow_run_sqs_queue_arn        = module.sqs.flow_run_queue_arn
+  scheduler_role_arn            = aws_iam_role.scheduler.arn
+  media_bucket_arn              = module.s3.media_bucket_arn
+  media_bucket_name             = module.s3.media_bucket_name
+  cognito_user_pool_id          = module.cognito.user_pool_id
+  cognito_user_pool_arn         = module.cognito.user_pool_arn
+  cognito_client_id             = module.cognito.client_id
+  whatsapp_verify_token         = var.whatsapp_verify_token
+  meta_app_id                   = var.meta_app_id
+  meta_app_secret               = var.meta_app_secret
+  whatsapp_app_secret           = var.whatsapp_app_secret
+  lambda_zip_path               = var.lambda_zip_path != "" ? abspath("${path.module}/${var.lambda_zip_path}") : ""
+  stripe_secret_key             = var.stripe_secret_key
+  stripe_webhook_secret         = var.stripe_webhook_secret
+  stripe_price_pro              = var.stripe_price_pro
+  stripe_price_enterprise       = var.stripe_price_enterprise
+  frontend_url                  = var.frontend_url
+  wompi_public_key              = var.wompi_public_key
+  wompi_private_key             = var.wompi_private_key
+  wompi_integrity_secret        = var.wompi_integrity_secret
+  wompi_events_secret           = var.wompi_events_secret
+  wompi_amount_pro_cents        = var.wompi_amount_pro_cents
   wompi_amount_enterprise_cents = var.wompi_amount_enterprise_cents
-  wompi_api_base          = var.wompi_api_base
-  wompi_checkout_url      = var.wompi_checkout_url
-  tags                    = local.tags
+  wompi_api_base                = var.wompi_api_base
+  wompi_checkout_url            = var.wompi_checkout_url
+  tags                          = local.tags
 }
 
 module "api_gateway" {
@@ -212,6 +225,16 @@ module "api_gateway" {
   public_api_function_arn       = module.lambda.public_api_function_arn
   api_keys_invoke_arn           = module.lambda.api_keys_invoke_arn
   api_keys_function_arn         = module.lambda.api_keys_function_arn
+  integrations_invoke_arn       = module.lambda.integrations_invoke_arn
+  integrations_function_arn     = module.lambda.integrations_function_arn
+  automations_invoke_arn        = module.lambda.automations_invoke_arn
+  automations_function_arn      = module.lambda.automations_function_arn
+  knowledge_invoke_arn          = module.lambda.knowledge_invoke_arn
+  knowledge_function_arn        = module.lambda.knowledge_function_arn
+  meta_flows_invoke_arn         = module.lambda.meta_flows_invoke_arn
+  meta_flows_function_arn       = module.lambda.meta_flows_function_arn
+  flows_invoke_arn              = module.lambda.flows_invoke_arn
+  flows_function_arn            = module.lambda.flows_function_arn
   allowed_origins               = local.browser_origins
   api_custom_domain             = var.api_custom_domain
   tags                          = local.tags
@@ -238,17 +261,17 @@ module "monitoring" {
 }
 
 module "amplify" {
-  source               = "../../modules/amplify"
-  project              = local.project
-  environment          = local.environment
-  repository_url       = var.repository_url
-  github_access_token  = var.github_access_token
-  branch_name          = "main"
-  api_endpoint         = module.api_gateway.api_endpoint
-  aws_region           = var.aws_region
-  cognito_user_pool_id              = module.cognito.user_pool_id
-  cognito_client_id                 = module.cognito.client_id
-  meta_app_id                       = var.meta_app_id
-  meta_embedded_signup_config_id    = var.meta_embedded_signup_config_id
-  tags                              = local.tags
+  source                         = "../../modules/amplify"
+  project                        = local.project
+  environment                    = local.environment
+  repository_url                 = var.repository_url
+  github_access_token            = var.github_access_token
+  branch_name                    = "main"
+  api_endpoint                   = module.api_gateway.api_endpoint
+  aws_region                     = var.aws_region
+  cognito_user_pool_id           = module.cognito.user_pool_id
+  cognito_client_id              = module.cognito.client_id
+  meta_app_id                    = var.meta_app_id
+  meta_embedded_signup_config_id = var.meta_embedded_signup_config_id
+  tags                           = local.tags
 }

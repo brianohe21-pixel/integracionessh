@@ -25,3 +25,35 @@ output "campaign_queue_url" {
 output "campaign_queue_arn" {
   value = aws_sqs_queue.campaign_send.arn
 }
+
+output "integration_queue_url" {
+  value = aws_sqs_queue.integration_events.url
+}
+
+output "integration_queue_arn" {
+  value = aws_sqs_queue.integration_events.arn
+}
+
+output "automation_queue_url" {
+  value = aws_sqs_queue.automation_run.url
+}
+
+output "automation_queue_arn" {
+  value = aws_sqs_queue.automation_run.arn
+}
+
+output "knowledge_queue_url" {
+  value = aws_sqs_queue.knowledge_index.url
+}
+
+output "knowledge_queue_arn" {
+  value = aws_sqs_queue.knowledge_index.arn
+}
+
+output "flow_run_queue_url" {
+  value = aws_sqs_queue.flow_run.url
+}
+
+output "flow_run_queue_arn" {
+  value = aws_sqs_queue.flow_run.arn
+}

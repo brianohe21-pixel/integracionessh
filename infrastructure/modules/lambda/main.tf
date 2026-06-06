@@ -61,6 +61,9 @@ resource "aws_iam_role_policy" "lambda_permissions" {
           var.sqs_queue_arn,
           var.bulk_sqs_queue_arn,
           var.campaign_sqs_queue_arn,
+          var.integration_sqs_queue_arn,
+          var.automation_sqs_queue_arn,
+          var.knowledge_sqs_queue_arn,
         ]
       },
       {
@@ -136,10 +139,14 @@ resource "aws_iam_role_policy" "lambda_permissions" {
 locals {
   lambda_zip_effective = (
     var.lambda_zip_path != "" && fileexists(var.lambda_zip_path)
-    ) ? var.lambda_zip_path : "${path.module}/bootstrap/functions.zip"
+  ) ? var.lambda_zip_path : "${path.module}/bootstrap/functions.zip"
 
-  campaigns_function_name = "${var.project}-${var.environment}-campaigns"
-  campaigns_function_arn  = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.campaigns_function_name}"
+  campaigns_function_name   = "${var.project}-${var.environment}-campaigns"
+  campaigns_function_arn    = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.campaigns_function_name}"
+  automations_function_name = "${var.project}-${var.environment}-automations"
+  automations_function_arn  = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.automations_function_name}"
+  flows_function_name       = "${var.project}-${var.environment}-flows"
+  flows_function_arn        = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.flows_function_name}"
 
   functions = {
     webhook = {
@@ -159,9 +166,11 @@ locals {
       timeout     = 300
       memory      = 512
       environment = {
-        TABLE_NAME   = var.dynamodb_table_name
-        OPENAI_MODEL = "gpt-4o"
-        ENVIRONMENT  = var.environment
+        TABLE_NAME                = var.dynamodb_table_name
+        OPENAI_MODEL              = "gpt-4o"
+        ENVIRONMENT               = var.environment
+        INTEGRATION_SQS_QUEUE_URL = var.integration_sqs_queue_url
+        MEDIA_BUCKET              = var.media_bucket_name
       }
     }
     tenants = {
@@ -230,9 +239,9 @@ locals {
       timeout     = 60
       memory      = 256
       environment = {
-        TABLE_NAME          = var.dynamodb_table_name
-        BULK_SQS_QUEUE_URL  = var.bulk_sqs_queue_url
-        ENVIRONMENT         = var.environment
+        TABLE_NAME         = var.dynamodb_table_name
+        BULK_SQS_QUEUE_URL = var.bulk_sqs_queue_url
+        ENVIRONMENT        = var.environment
       }
     }
     process_bulk_send = {
@@ -281,21 +290,21 @@ locals {
       timeout     = 30
       memory      = 256
       environment = {
-        TABLE_NAME               = var.dynamodb_table_name
-        ENVIRONMENT              = var.environment
-        FRONTEND_URL             = var.frontend_url
-        WOMPI_PUBLIC_KEY         = var.wompi_public_key
-        WOMPI_PRIVATE_KEY        = var.wompi_private_key
-        WOMPI_INTEGRITY_SECRET   = var.wompi_integrity_secret
-        WOMPI_EVENTS_SECRET      = var.wompi_events_secret
-        WOMPI_AMOUNT_PRO_CENTS   = var.wompi_amount_pro_cents
+        TABLE_NAME                    = var.dynamodb_table_name
+        ENVIRONMENT                   = var.environment
+        FRONTEND_URL                  = var.frontend_url
+        WOMPI_PUBLIC_KEY              = var.wompi_public_key
+        WOMPI_PRIVATE_KEY             = var.wompi_private_key
+        WOMPI_INTEGRITY_SECRET        = var.wompi_integrity_secret
+        WOMPI_EVENTS_SECRET           = var.wompi_events_secret
+        WOMPI_AMOUNT_PRO_CENTS        = var.wompi_amount_pro_cents
         WOMPI_AMOUNT_ENTERPRISE_CENTS = var.wompi_amount_enterprise_cents
-        WOMPI_API_BASE           = var.wompi_api_base
-        WOMPI_CHECKOUT_URL       = var.wompi_checkout_url
-        STRIPE_SECRET_KEY        = var.stripe_secret_key
-        STRIPE_WEBHOOK_SECRET    = var.stripe_webhook_secret
-        STRIPE_PRICE_PRO         = var.stripe_price_pro
-        STRIPE_PRICE_ENTERPRISE  = var.stripe_price_enterprise
+        WOMPI_API_BASE                = var.wompi_api_base
+        WOMPI_CHECKOUT_URL            = var.wompi_checkout_url
+        STRIPE_SECRET_KEY             = var.stripe_secret_key
+        STRIPE_WEBHOOK_SECRET         = var.stripe_webhook_secret
+        STRIPE_PRICE_PRO              = var.stripe_price_pro
+        STRIPE_PRICE_ENTERPRISE       = var.stripe_price_enterprise
       }
     }
     authorizer = {
@@ -326,11 +335,11 @@ locals {
       timeout     = 60
       memory      = 256
       environment = {
-        TABLE_NAME               = var.dynamodb_table_name
-        CAMPAIGN_SQS_QUEUE_URL   = var.campaign_sqs_queue_url
-        ENVIRONMENT              = var.environment
-        SCHEDULER_ROLE_ARN       = var.scheduler_role_arn
-        CAMPAIGNS_FUNCTION_ARN   = local.campaigns_function_arn
+        TABLE_NAME             = var.dynamodb_table_name
+        CAMPAIGN_SQS_QUEUE_URL = var.campaign_sqs_queue_url
+        ENVIRONMENT            = var.environment
+        SCHEDULER_ROLE_ARN     = var.scheduler_role_arn
+        CAMPAIGNS_FUNCTION_ARN = local.campaigns_function_arn
       }
     }
     process_campaign = {
@@ -357,6 +366,106 @@ locals {
       handler     = "api-keys/index.handler"
       description = "API key management for public REST API"
       timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME  = var.dynamodb_table_name
+        ENVIRONMENT = var.environment
+      }
+    }
+    integrations = {
+      handler     = "integrations/index.handler"
+      description = "Outgoing webhook integration configuration"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME  = var.dynamodb_table_name
+        ENVIRONMENT = var.environment
+      }
+    }
+    process_integration = {
+      handler     = "process-integration/index.handler"
+      description = "Delivers integration webhook events from SQS"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME                = var.dynamodb_table_name
+        ENVIRONMENT               = var.environment
+        INTEGRATION_SQS_QUEUE_URL = var.integration_sqs_queue_url
+      }
+    }
+    automations = {
+      handler     = "automations/index.handler"
+      description = "CRUD API for automation rules"
+      timeout     = 60
+      memory      = 256
+      environment = {
+        TABLE_NAME               = var.dynamodb_table_name
+        AUTOMATION_SQS_QUEUE_URL = var.automation_sqs_queue_url
+        ENVIRONMENT              = var.environment
+        SCHEDULER_ROLE_ARN       = var.scheduler_role_arn
+        AUTOMATIONS_FUNCTION_ARN = local.automations_function_arn
+      }
+    }
+    process_automation = {
+      handler     = "process-automation/index.handler"
+      description = "Processes scheduled automation runs from SQS"
+      timeout     = 120
+      memory      = 256
+      environment = {
+        TABLE_NAME  = var.dynamodb_table_name
+        ENVIRONMENT = var.environment
+      }
+    }
+    knowledge = {
+      handler     = "knowledge/index.handler"
+      description = "Knowledge base document management per bot"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME              = var.dynamodb_table_name
+        KNOWLEDGE_SQS_QUEUE_URL = var.knowledge_sqs_queue_url
+        MEDIA_BUCKET            = var.media_bucket_name
+        ENVIRONMENT             = var.environment
+      }
+    }
+    process_knowledge = {
+      handler     = "process-knowledge/index.handler"
+      description = "Indexes knowledge documents from SQS"
+      timeout     = 300
+      memory      = 512
+      environment = {
+        TABLE_NAME   = var.dynamodb_table_name
+        MEDIA_BUCKET = var.media_bucket_name
+        ENVIRONMENT  = var.environment
+      }
+    }
+    meta_flows = {
+      handler     = "meta-flows/index.handler"
+      description = "WhatsApp Meta Flows CRUD per bot"
+      timeout     = 60
+      memory      = 256
+      environment = {
+        TABLE_NAME  = var.dynamodb_table_name
+        ENVIRONMENT = var.environment
+      }
+    }
+    flows = {
+      handler     = "flows/index.handler"
+      description = "Visual flow definitions CRUD"
+      timeout     = 60
+      memory      = 256
+      environment = {
+        TABLE_NAME             = var.dynamodb_table_name
+        FLOW_RUN_SQS_QUEUE_URL = var.flow_run_sqs_queue_url
+        SCHEDULER_ROLE_ARN     = var.scheduler_role_arn
+        FLOWS_FUNCTION_ARN     = local.flows_function_arn
+        ENVIRONMENT            = var.environment
+      }
+    }
+    process_flow = {
+      handler     = "process-flow/index.handler"
+      description = "Resumes visual flow runs from SQS"
+      timeout     = 120
       memory      = 256
       environment = {
         TABLE_NAME  = var.dynamodb_table_name
@@ -412,6 +521,38 @@ resource "aws_lambda_event_source_mapping" "bulk_sqs_trigger" {
 resource "aws_lambda_event_source_mapping" "campaign_sqs_trigger" {
   event_source_arn                   = var.campaign_sqs_queue_arn
   function_name                      = aws_lambda_function.functions["process_campaign"].arn
+  batch_size                         = 1
+  enabled                            = true
+  maximum_batching_window_in_seconds = 0
+}
+
+resource "aws_lambda_event_source_mapping" "integration_sqs_trigger" {
+  event_source_arn                   = var.integration_sqs_queue_arn
+  function_name                      = aws_lambda_function.functions["process_integration"].arn
+  batch_size                         = 1
+  enabled                            = true
+  maximum_batching_window_in_seconds = 0
+}
+
+resource "aws_lambda_event_source_mapping" "automation_sqs_trigger" {
+  event_source_arn                   = var.automation_sqs_queue_arn
+  function_name                      = aws_lambda_function.functions["process_automation"].arn
+  batch_size                         = 1
+  enabled                            = true
+  maximum_batching_window_in_seconds = 0
+}
+
+resource "aws_lambda_event_source_mapping" "knowledge_sqs_trigger" {
+  event_source_arn                   = var.knowledge_sqs_queue_arn
+  function_name                      = aws_lambda_function.functions["process_knowledge"].arn
+  batch_size                         = 1
+  enabled                            = true
+  maximum_batching_window_in_seconds = 0
+}
+
+resource "aws_lambda_event_source_mapping" "flow_run_sqs_trigger" {
+  event_source_arn                   = var.flow_run_sqs_queue_arn
+  function_name                      = aws_lambda_function.functions["process_flow"].arn
   batch_size                         = 1
   enabled                            = true
   maximum_batching_window_in_seconds = 0

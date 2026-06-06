@@ -9,6 +9,7 @@ import {
   getConversation,
   getConversationMessages,
   addMessage,
+  clearMetaFlowSession,
 } from "../../lib/dynamodb/conversation.repository.js";
 import { generateChatResponse, getOpenAIApiKey } from "../../lib/openai/client.js";
 import {
@@ -24,9 +25,52 @@ import {
   getClientHandoffMessage,
   notifyAdvisorOfConversation,
 } from "../../lib/advisor/notify.js";
+import { evaluateAutomations } from "../../lib/automation/evaluate.js";
+import { executeAutomation } from "../../lib/automation/execute.js";
+import { createFlowResponse } from "../../lib/dynamodb/meta-flow.repository.js";
+import { listEnabledFlowsForBot } from "../../lib/dynamodb/flow.repository.js";
+import { advanceFlowRun, startFlowRun } from "../../lib/flow/interpreter.js";
+import { findTriggerFlow } from "../../lib/flow/match-trigger.js";
+import { emitIntegrationEvent } from "../../lib/integrations/emit.js";
+import {
+  buildFlowCompletedPayload,
+  buildMessageReceivedPayload,
+  buildMessageSentPayload,
+} from "../../lib/integrations/payloads.js";
+import { normalizeInboundMessage } from "../../lib/whatsapp/inbound.js";
 import type { SQSMessageBody, Message } from "../../types/index.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
+
+async function emitMessageReceived(params: {
+  tenantId: string;
+  botId: string;
+  conversationId: string;
+  from: string;
+  message: string;
+  contactName?: string;
+}): Promise<void> {
+  await emitIntegrationEvent(
+    params.tenantId,
+    "message.received",
+    buildMessageReceivedPayload(params)
+  ).catch((err) => console.error("Failed to emit message.received:", err));
+}
+
+async function emitMessageSent(params: {
+  tenantId: string;
+  botId: string;
+  conversationId: string;
+  to: string;
+  message: string;
+  role: string;
+}): Promise<void> {
+  await emitIntegrationEvent(
+    params.tenantId,
+    "message.sent",
+    buildMessageSentPayload(params)
+  ).catch((err) => console.error("Failed to emit message.sent:", err));
+}
 
 export async function handler(event: SQSEvent): Promise<void> {
   for (const record of event.Records) {
@@ -129,7 +173,8 @@ async function processRecord(record: SQSRecord): Promise<void> {
 
     const history = await getConversationMessages(tenantId, conversation.conversationId, 20);
 
-    const userMessageText = message.text?.body ?? "";
+    const inbound = normalizeInboundMessage(message);
+    const userMessageText = inbound.text;
     const now = new Date().toISOString();
 
     const userMessage: Message = {
@@ -138,10 +183,47 @@ async function processRecord(record: SQSRecord): Promise<void> {
       tenantId,
       role: "user",
       content: userMessageText,
+      messageType: inbound.messageType,
+      ...(inbound.interactive?.responseJson
+        ? { metadata: { responseJson: inbound.interactive.responseJson } }
+        : {}),
       source: "whatsapp_inbound",
       whatsappMessageId: message.id,
       timestamp: now,
     };
+
+    if (inbound.interactive?.kind === "nfm" && inbound.interactive.responseJson) {
+      let responseJson: Record<string, unknown> = {};
+      try {
+        responseJson = JSON.parse(inbound.interactive.responseJson) as Record<string, unknown>;
+      } catch {
+        responseJson = { raw: inbound.interactive.responseJson };
+      }
+      const metaFlowId = conversation.pendingMetaFlowId ?? "unknown";
+      await createFlowResponse({
+        responseId: message.id,
+        tenantId,
+        botId,
+        conversationId: conversation.conversationId,
+        phone: message.from,
+        metaFlowId,
+        responseJson,
+        createdAt: now,
+      });
+      await emitIntegrationEvent(
+        tenantId,
+        "flow.completed",
+        buildFlowCompletedPayload({
+          tenantId,
+          botId,
+          conversationId: conversation.conversationId,
+          phone: message.from,
+          metaFlowId,
+          responseJson,
+        })
+      ).catch((err) => console.error("Failed to emit flow.completed:", err));
+      await clearMetaFlowSession(tenantId, botId, conversation.conversationId);
+    }
 
     const tenant = await getTenant(tenantId);
     if (tenant) {
@@ -156,8 +238,118 @@ async function processRecord(record: SQSRecord): Promise<void> {
       }
     }
 
+    const isNewConversation = conversation.messageCount === 0 && !conversation.welcomeSentAt;
+
+    const flowAdvance = await advanceFlowRun({
+      tenantId,
+      botId,
+      bot,
+      conversation,
+      phoneNumberId,
+      accessToken,
+      customerPhone: message.from,
+      replyToMessageId: message.id,
+      inbound,
+    });
+
+    if (flowAdvance.handled) {
+      await addMessage(userMessage, botId);
+      await emitMessageReceived({
+        tenantId,
+        botId,
+        conversationId: conversation.conversationId,
+        from: message.from,
+        message: userMessageText,
+        contactName,
+      });
+      await incrementMessages(tenantId);
+      if (flowAdvance.halt) return;
+    }
+
+    if (!flowAdvance.handled) {
+      const enabledFlows = await listEnabledFlowsForBot(tenantId, botId);
+      const matchedFlow = findTriggerFlow(enabledFlows, inbound, conversation, isNewConversation);
+      if (matchedFlow) {
+        const flowStart = await startFlowRun({
+          flow: matchedFlow,
+          tenantId,
+          botId,
+          bot,
+          conversation,
+          phoneNumberId,
+          accessToken,
+          customerPhone: message.from,
+          replyToMessageId: message.id,
+          inbound,
+        });
+        if (flowStart.handled) {
+          await addMessage(userMessage, botId);
+          await emitMessageReceived({
+            tenantId,
+            botId,
+            conversationId: conversation.conversationId,
+            from: message.from,
+            message: userMessageText,
+            contactName,
+          });
+          await incrementMessages(tenantId);
+          if (flowStart.halt) return;
+        }
+      }
+    }
+
+    const inboundTriggers = isNewConversation
+      ? (["first_message", "keyword"] as const)
+      : (["keyword"] as const);
+
+    const matchedRule = await evaluateAutomations({
+      tenantId,
+      botId,
+      triggers: [...inboundTriggers],
+      text: userMessageText,
+      conversation,
+      isNewConversation,
+    });
+
+    if (matchedRule) {
+      await executeAutomation(matchedRule, {
+        tenantId,
+        botId,
+        conversation,
+        phoneNumberId,
+        accessToken,
+        customerPhone: message.from,
+        replyToMessageId: message.id,
+      });
+
+      if (matchedRule.stopProcessing !== false) {
+        await addMessage(userMessage, botId);
+        await emitMessageReceived({
+          tenantId,
+          botId,
+          conversationId: conversation.conversationId,
+          from: message.from,
+          message: userMessageText,
+          contactName,
+        });
+        await incrementMessages(tenantId);
+        console.log(
+          `Automation ${matchedRule.ruleId} executed tenant=${tenantId} conversation=${conversation.conversationId}`
+        );
+        return;
+      }
+    }
+
     if ((conversation.handoffMode ?? "bot") === "human") {
       await addMessage(userMessage, botId);
+      await emitMessageReceived({
+        tenantId,
+        botId,
+        conversationId: conversation.conversationId,
+        from: message.from,
+        message: userMessageText,
+        contactName,
+      });
       await incrementMessages(tenantId);
 
       const refreshed = await getConversation(tenantId, botId, conversation.conversationId);
@@ -198,7 +390,7 @@ async function processRecord(record: SQSRecord): Promise<void> {
       }
     } else {
       const openAIKey = await getOpenAIApiKey(tenantId, ENVIRONMENT);
-      const result = await generateChatResponse(bot, history, userMessageText, openAIKey);
+      const result = await generateChatResponse(bot, history, userMessageText, openAIKey, tenantId);
       if (result.handoff) {
         shouldHandoff = true;
       } else {
@@ -207,6 +399,14 @@ async function processRecord(record: SQSRecord): Promise<void> {
     }
 
     await addMessage(userMessage, botId);
+    await emitMessageReceived({
+      tenantId,
+      botId,
+      conversationId: conversation.conversationId,
+      from: message.from,
+      message: userMessageText,
+      contactName,
+    });
 
     if (shouldHandoff) {
       try {
@@ -229,7 +429,7 @@ async function processRecord(record: SQSRecord): Promise<void> {
         if (handoffErrMsg.includes("No active advisors")) {
           console.warn(`No active advisors for tenant=${tenantId} bot=${botId}, falling back to AI`);
           const openAIKey = await getOpenAIApiKey(tenantId, ENVIRONMENT);
-          const fallback = await generateChatResponse(bot, history, userMessageText, openAIKey);
+          const fallback = await generateChatResponse(bot, history, userMessageText, openAIKey, tenantId);
           aiResponse = fallback.reply ?? "En este momento no tenemos asesores disponibles. ¿Puedo ayudarte con algo más?";
           console.warn(`Fallback to AI for tenant=${tenantId}: no active advisors`);
         } else {
@@ -265,6 +465,15 @@ async function processRecord(record: SQSRecord): Promise<void> {
       text: outboundText,
       accessToken,
       replyToMessageId: message.id,
+    });
+
+    await emitMessageSent({
+      tenantId,
+      botId,
+      conversationId: conversation.conversationId,
+      to: message.from,
+      message: outboundText,
+      role: "assistant",
     });
 
     console.log(

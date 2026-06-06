@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import type { Bot, ChatCompletionResult, Message } from "../../types/index.js";
 import { messageRequestsHandoff } from "../advisor/keywords.js";
+import { retrieveContext } from "../knowledge/retrieve.js";
 
 let openaiClient: OpenAI | null = null;
 
@@ -43,11 +44,23 @@ function mapHistoryRole(msg: Message): "user" | "assistant" | null {
   return null;
 }
 
+export async function generateEmbedding(text: string, apiKey: string): Promise<number[]> {
+  const client = getOpenAIClient(apiKey);
+  const response = await client.embeddings.create({
+    model: "text-embedding-3-small",
+    input: text.slice(0, 8000),
+  });
+  const embedding = response.data[0]?.embedding;
+  if (!embedding) throw new Error("Empty embedding from OpenAI");
+  return embedding;
+}
+
 export async function generateChatResponse(
   bot: Bot,
   conversationHistory: Message[],
   userMessage: string,
-  apiKey: string
+  apiKey: string,
+  tenantId?: string
 ): Promise<ChatCompletionResult> {
   if (messageRequestsHandoff(userMessage)) {
     return { reply: null, handoff: true, handoffReason: "El cliente solicitó un asesor" };
@@ -55,8 +68,18 @@ export async function generateChatResponse(
 
   const client = getOpenAIClient(apiKey);
 
+  let knowledgeContext = "";
+  if (bot.knowledgeEnabled && tenantId) {
+    knowledgeContext = await retrieveContext(tenantId, bot.botId, userMessage, apiKey);
+  }
+
+  const basePrompt = bot.systemPrompt ?? "";
+  const contextBlock = knowledgeContext
+    ? `\n\nContexto del negocio:\n${knowledgeContext}`
+    : "";
   const systemPrompt =
-    (bot.systemPrompt ?? "") +
+    basePrompt +
+    contextBlock +
     "\n\nSi el cliente necesita hablar con un asesor, usa la herramienta transfer_to_human.";
   const model = bot.model ?? "gpt-4o";
   const temperature = bot.temperature ?? 0.7;

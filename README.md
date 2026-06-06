@@ -18,6 +18,11 @@ Monorepo serverless para crear, configurar y operar chatbots de WhatsApp Busines
 | **Contactos** | Directorio por teléfono, etiquetas, opt-in/opt-out, importación CSV y exportación. |
 | **Compliance** | Bloqueo de envíos masivos/campañas sin opt-in; auditoría de bloqueos. |
 | **Inbox operativo** | Estados de conversación (nuevo/abierto/pendiente/resuelto), notas internas y CSAT al cerrar. |
+| **Automatizaciones** | Reglas por palabra clave, primer mensaje o programación (texto, plantilla, tags, handoff). |
+| **Base de conocimiento (RAG)** | Documentos por bot con embeddings para respuestas contextualizadas. |
+| **WhatsApp Flows (Meta)** | CRUD de flows nativos Meta, publicación, envío de prueba y recepción de respuestas (`nfm_reply`). |
+| **Flujos visuales** | Constructor no-code con grafo de nodos (mensaje, condición, botones, Meta Flow, handoff, delay). |
+| **Webhooks de integración** | Eventos salientes (`message.received`, `conversation.handoff`, `message.sent`, `flow.completed`) vía SQS. |
 | **Admin** | Gestión de usuarios Cognito, pagos y tickets de soporte a nivel plataforma. |
 | **Legal** | Términos y privacidad con aceptación registrada por tenant. |
 | **i18n** | Interfaz en español e inglés. |
@@ -115,6 +120,11 @@ integracionessh/
 | `billing` | Checkout, portal y webhooks Wompi/Stripe |
 | `api-keys` / `public-api` | Claves API y REST pública |
 | `contacts` | Directorio de contactos y compliance |
+| `automations` / `process-automation` | Reglas de automatización y ejecución programada |
+| `knowledge` / `process-knowledge` | Base de conocimiento RAG por bot |
+| `meta-flows` | WhatsApp Flows Meta por bot (CRUD, publish, test-send) |
+| `flows` / `process-flow` | Flujos visuales y motor de ejecución por grafo |
+| `integrations` / `process-integration` | Webhooks salientes e historial de entregas |
 | `support-tickets` / `admin` | Soporte y administración |
 | `authorizer` | Validación JWT Cognito en API Gateway |
 
@@ -130,6 +140,11 @@ Rutas expuestas (resumen). Las rutas autenticadas requieren JWT de Cognito salvo
 | GET | `/metrics` | Uso y estadísticas |
 | GET | `/metrics/marketing` | Embudo de campañas y bulk |
 | * | `/contacts` | CRUD contactos, import y export |
+| * | `/automations` | CRUD reglas de automatización |
+| * | `/flows` | Flujos visuales (constructor no-code) |
+| * | `/bots/{botId}/meta-flows` | WhatsApp Flows Meta por bot |
+| * | `/bots/{botId}/knowledge` | Documentos RAG por bot |
+| * | `/integrations/webhook` | Configuración webhooks salientes |
 | POST | `/whatsapp/connect` | Conexión Embedded Signup |
 | * | `/billing/*` | Planes y pagos |
 | POST | `/v1/messages` | API pública (header `X-API-Key`) |
@@ -149,6 +164,13 @@ Dominio personalizado configurable (ej. `api.integracionessh.lat`) vía módulo 
 | API (req/min) | 20 | 60 | 120 |
 | API (req/día) | 500 | 10 000 | 100 000 |
 | Contactos | 500 | 10 000 | Ilimitado |
+| Automatizaciones / bot | 3 | 20 | Ilimitado |
+| Automatizaciones programadas | 1 | 10 | Ilimitado |
+| Meta Flows / bot | 1 | 5 | Ilimitado |
+| Flujos visuales / bot | 1 | 10 | Ilimitado |
+| Nodos por flujo visual | 10 | 50 | 200 |
+| Documentos RAG / bot | 2 | 20 | 100 |
+| Almacenamiento RAG / bot | 5 MB | 100 MB | 1 GB |
 
 Los límites se aplican en backend (`backend/src/lib/billing/plan-limits.ts`). Las acciones de envío pueden exigir suscripción activa según el plan.
 
@@ -163,6 +185,9 @@ Los límites se aplican en backend (`backend/src/lib/billing/plan-limits.ts`). L
 | `/templates` | Plantillas |
 | `/bulk-send` | Envío masivo CSV |
 | `/campaigns`, `/campaigns/new`, `/campaigns/[id]` | Campañas |
+| `/automations` | Reglas de automatización |
+| `/flows` | Constructor visual de flujos |
+| `/bots/[botId]/meta-flows` | WhatsApp Flows Meta |
 | `/metrics` | Dashboard de uso |
 | `/developer` | API keys y documentación |
 | `/settings` | Tenant, WhatsApp, facturación |

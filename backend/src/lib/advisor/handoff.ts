@@ -7,6 +7,8 @@ import {
 } from "../dynamodb/conversation.repository.js";
 import { getAdvisor, touchAdvisorAssignment } from "../dynamodb/advisor.repository.js";
 import { pickAdvisor } from "./pick.js";
+import { emitIntegrationEvent } from "../integrations/emit.js";
+import { buildConversationHandoffPayload } from "../integrations/payloads.js";
 import type { Conversation, HandoffReason, Message } from "../../types/index.js";
 
 export async function performHandoff(params: {
@@ -60,6 +62,21 @@ export async function performHandoff(params: {
   };
 
   await addMessage(systemMessage, params.botId);
+
+  if (updated) {
+    await emitIntegrationEvent(
+      params.tenantId,
+      "conversation.handoff",
+      buildConversationHandoffPayload({
+        tenantId: params.tenantId,
+        botId: params.botId,
+        conversationId: params.conversationId,
+        phoneNumber: updated.phoneNumber,
+        reason: params.reason,
+        advisorId,
+      })
+    ).catch((err) => console.error("Failed to emit handoff integration event:", err));
+  }
 
   return updated;
 }

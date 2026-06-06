@@ -26,6 +26,15 @@ const entryPoints = [
   "src/functions/admin/index.ts",
   "src/functions/public-api/index.ts",
   "src/functions/api-keys/index.ts",
+  "src/functions/integrations/index.ts",
+  "src/functions/process-integration/index.ts",
+  "src/functions/automations/index.ts",
+  "src/functions/process-automation/index.ts",
+  "src/functions/knowledge/index.ts",
+  "src/functions/process-knowledge/index.ts",
+  "src/functions/meta-flows/index.ts",
+  "src/functions/flows/index.ts",
+  "src/functions/process-flow/index.ts",
 ];
 
 const buildOptions = {

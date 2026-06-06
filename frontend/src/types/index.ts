@@ -66,6 +66,7 @@ export interface Bot {
   maxTokens?: number;
   webhookUrl?: string;
   webhookSecret?: string;
+  knowledgeEnabled?: boolean;
   phoneNumberId: string;
   whatsappBusinessAccountId: string;
   status: "active" | "inactive";
@@ -396,6 +397,173 @@ export interface SupportTicket {
   status: SupportTicketStatus;
   adminReply?: string;
   closedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type IntegrationEvent =
+  | "message.received"
+  | "conversation.handoff"
+  | "message.sent"
+  | "flow.completed";
+
+export type MetaFlowStatus = "DRAFT" | "PUBLISHED" | "DEPRECATED";
+
+export interface MetaFlow {
+  metaFlowId: string;
+  tenantId: string;
+  botId: string;
+  name: string;
+  status: MetaFlowStatus;
+  categories: string[];
+  jsonDefinition: Record<string, unknown>;
+  metaStatus?: string;
+  createdAt: string;
+  updatedAt: string;
+  publishedAt?: string;
+}
+
+export interface FlowResponse {
+  responseId: string;
+  tenantId: string;
+  botId: string;
+  conversationId: string;
+  phone: string;
+  metaFlowId: string;
+  responseJson: Record<string, unknown>;
+  createdAt: string;
+}
+
+export type FlowNodeType =
+  | "trigger"
+  | "message"
+  | "template"
+  | "condition"
+  | "buttons"
+  | "meta_flow"
+  | "handoff"
+  | "delay"
+  | "set_variable"
+  | "http_request"
+  | "end";
+
+export type FlowTriggerType = "keyword" | "first_message" | "any_message";
+
+export interface FlowNodeData {
+  label?: string;
+  triggerType?: FlowTriggerType;
+  keywords?: string[];
+  matchMode?: "contains" | "exact";
+  messageText?: string;
+  templateName?: string;
+  templateLanguage?: string;
+  templateVariables?: Record<string, string>;
+  conditionVariable?: string;
+  conditionOperator?: "contains" | "equals" | "not_equals";
+  conditionValue?: string;
+  buttons?: Array<{ id: string; title: string }>;
+  metaFlowId?: string;
+  metaFlowCta?: string;
+  delaySeconds?: number;
+  variableName?: string;
+  variableValue?: string;
+  httpUrl?: string;
+  httpMethod?: "GET" | "POST";
+  httpBody?: string;
+  haltPipeline?: boolean;
+}
+
+export interface FlowNode {
+  id: string;
+  type: FlowNodeType;
+  position: { x: number; y: number };
+  data: FlowNodeData;
+}
+
+export interface FlowEdge {
+  id: string;
+  source: string;
+  target: string;
+  sourceHandle?: string;
+}
+
+export interface FlowDefinition {
+  flowId: string;
+  tenantId: string;
+  botId: string;
+  name: string;
+  enabled: boolean;
+  version: number;
+  nodes: FlowNode[];
+  edges: FlowEdge[];
+  entryNodeId: string;
+  publishedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TenantIntegration {
+  integrationId: string;
+  tenantId: string;
+  webhookUrl: string;
+  webhookSecret?: string;
+  subscribedEvents: IntegrationEvent[];
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IntegrationDelivery {
+  deliveryId: string;
+  tenantId: string;
+  event: IntegrationEvent;
+  status: "pending" | "delivered" | "failed";
+  attempts: number;
+  lastError?: string;
+  payload: Record<string, unknown>;
+  createdAt: string;
+}
+
+export type AutomationTrigger = "keyword" | "first_message" | "schedule";
+export type AutomationAction = "send_text" | "send_template" | "tag_contact" | "handoff";
+
+export interface AutomationRule {
+  ruleId: string;
+  tenantId: string;
+  botId: string;
+  name: string;
+  enabled: boolean;
+  priority: number;
+  trigger: AutomationTrigger;
+  keywords?: string[];
+  matchMode?: "contains" | "exact";
+  scheduledAt?: string;
+  targetPhones?: string[];
+  targetTags?: string[];
+  action: AutomationAction;
+  messageText?: string;
+  templateName?: string;
+  templateLanguage?: string;
+  templateVariables?: Record<string, string>;
+  tags?: string[];
+  stopProcessing?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type KnowledgeDocumentStatus = "pending" | "indexing" | "ready" | "failed";
+
+export interface KnowledgeDocument {
+  docId: string;
+  tenantId: string;
+  botId: string;
+  filename: string;
+  mimeType: string;
+  s3Key: string;
+  status: KnowledgeDocumentStatus;
+  chunkCount: number;
+  sizeBytes: number;
+  errorMessage?: string;
   createdAt: string;
   updatedAt: string;
 }
