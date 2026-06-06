@@ -24,9 +24,46 @@ import {
   getClientHandoffMessage,
   notifyAdvisorOfConversation,
 } from "../../lib/advisor/notify.js";
+import { evaluateAutomations } from "../../lib/automation/evaluate.js";
+import { executeAutomation } from "../../lib/automation/execute.js";
+import { emitIntegrationEvent } from "../../lib/integrations/emit.js";
+import {
+  buildMessageReceivedPayload,
+  buildMessageSentPayload,
+} from "../../lib/integrations/payloads.js";
 import type { SQSMessageBody, Message } from "../../types/index.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
+
+async function emitMessageReceived(params: {
+  tenantId: string;
+  botId: string;
+  conversationId: string;
+  from: string;
+  message: string;
+  contactName?: string;
+}): Promise<void> {
+  await emitIntegrationEvent(
+    params.tenantId,
+    "message.received",
+    buildMessageReceivedPayload(params)
+  ).catch((err) => console.error("Failed to emit message.received:", err));
+}
+
+async function emitMessageSent(params: {
+  tenantId: string;
+  botId: string;
+  conversationId: string;
+  to: string;
+  message: string;
+  role: string;
+}): Promise<void> {
+  await emitIntegrationEvent(
+    params.tenantId,
+    "message.sent",
+    buildMessageSentPayload(params)
+  ).catch((err) => console.error("Failed to emit message.sent:", err));
+}
 
 export async function handler(event: SQSEvent): Promise<void> {
   for (const record of event.Records) {
@@ -156,8 +193,59 @@ async function processRecord(record: SQSRecord): Promise<void> {
       }
     }
 
+    const isNewConversation = conversation.messageCount === 0 && !conversation.welcomeSentAt;
+    const inboundTriggers = isNewConversation
+      ? (["first_message", "keyword"] as const)
+      : (["keyword"] as const);
+
+    const matchedRule = await evaluateAutomations({
+      tenantId,
+      botId,
+      triggers: [...inboundTriggers],
+      text: userMessageText,
+      conversation,
+      isNewConversation,
+    });
+
+    if (matchedRule) {
+      await executeAutomation(matchedRule, {
+        tenantId,
+        botId,
+        conversation,
+        phoneNumberId,
+        accessToken,
+        customerPhone: message.from,
+        replyToMessageId: message.id,
+      });
+
+      if (matchedRule.stopProcessing !== false) {
+        await addMessage(userMessage, botId);
+        await emitMessageReceived({
+          tenantId,
+          botId,
+          conversationId: conversation.conversationId,
+          from: message.from,
+          message: userMessageText,
+          contactName,
+        });
+        await incrementMessages(tenantId);
+        console.log(
+          `Automation ${matchedRule.ruleId} executed tenant=${tenantId} conversation=${conversation.conversationId}`
+        );
+        return;
+      }
+    }
+
     if ((conversation.handoffMode ?? "bot") === "human") {
       await addMessage(userMessage, botId);
+      await emitMessageReceived({
+        tenantId,
+        botId,
+        conversationId: conversation.conversationId,
+        from: message.from,
+        message: userMessageText,
+        contactName,
+      });
       await incrementMessages(tenantId);
 
       const refreshed = await getConversation(tenantId, botId, conversation.conversationId);
@@ -198,7 +286,7 @@ async function processRecord(record: SQSRecord): Promise<void> {
       }
     } else {
       const openAIKey = await getOpenAIApiKey(tenantId, ENVIRONMENT);
-      const result = await generateChatResponse(bot, history, userMessageText, openAIKey);
+      const result = await generateChatResponse(bot, history, userMessageText, openAIKey, tenantId);
       if (result.handoff) {
         shouldHandoff = true;
       } else {
@@ -207,6 +295,14 @@ async function processRecord(record: SQSRecord): Promise<void> {
     }
 
     await addMessage(userMessage, botId);
+    await emitMessageReceived({
+      tenantId,
+      botId,
+      conversationId: conversation.conversationId,
+      from: message.from,
+      message: userMessageText,
+      contactName,
+    });
 
     if (shouldHandoff) {
       try {
@@ -229,7 +325,7 @@ async function processRecord(record: SQSRecord): Promise<void> {
         if (handoffErrMsg.includes("No active advisors")) {
           console.warn(`No active advisors for tenant=${tenantId} bot=${botId}, falling back to AI`);
           const openAIKey = await getOpenAIApiKey(tenantId, ENVIRONMENT);
-          const fallback = await generateChatResponse(bot, history, userMessageText, openAIKey);
+          const fallback = await generateChatResponse(bot, history, userMessageText, openAIKey, tenantId);
           aiResponse = fallback.reply ?? "En este momento no tenemos asesores disponibles. ¿Puedo ayudarte con algo más?";
           console.warn(`Fallback to AI for tenant=${tenantId}: no active advisors`);
         } else {
@@ -265,6 +361,15 @@ async function processRecord(record: SQSRecord): Promise<void> {
       text: outboundText,
       accessToken,
       replyToMessageId: message.id,
+    });
+
+    await emitMessageSent({
+      tenantId,
+      botId,
+      conversationId: conversation.conversationId,
+      to: message.from,
+      message: outboundText,
+      role: "assistant",
     });
 
     console.log(

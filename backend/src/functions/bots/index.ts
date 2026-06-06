@@ -70,6 +70,7 @@ const UpdateBotSchema = z.object({
   phoneNumberId: z.string().min(1).optional(),
   whatsappBusinessAccountId: z.string().min(1).optional(),
   status: z.enum(["active", "inactive"]).optional(),
+  knowledgeEnabled: z.boolean().optional(),
 });
 
 export async function handler(

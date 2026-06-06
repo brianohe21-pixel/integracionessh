@@ -86,6 +86,7 @@ export async function updateConversation(
       | "csatSubmittedAt"
       | "internalNote"
       | "status"
+      | "welcomeSentAt"
     >
   >
 ): Promise<Conversation | null> {

@@ -6,6 +6,10 @@ export interface PlanLimits {
   maxBulkRecipientsPerJob: number;
   maxActiveCampaigns: number;
   maxContacts: number;
+  maxAutomationsPerBot: number;
+  maxScheduledAutomations: number;
+  maxDocumentsPerBot: number;
+  maxKnowledgeStorageMb: number;
   apiRateLimitPerMinute: number;
   apiRateLimitPerDay: number;
 }
@@ -17,6 +21,10 @@ const LIMITS: Record<TenantPlan, PlanLimits> = {
     maxBulkRecipientsPerJob: 100,
     maxActiveCampaigns: 1,
     maxContacts: 500,
+    maxAutomationsPerBot: 3,
+    maxScheduledAutomations: 1,
+    maxDocumentsPerBot: 2,
+    maxKnowledgeStorageMb: 5,
     apiRateLimitPerMinute: 20,
     apiRateLimitPerDay: 500,
   },
@@ -26,6 +34,10 @@ const LIMITS: Record<TenantPlan, PlanLimits> = {
     maxBulkRecipientsPerJob: 5_000,
     maxActiveCampaigns: 10,
     maxContacts: 10_000,
+    maxAutomationsPerBot: 20,
+    maxScheduledAutomations: 10,
+    maxDocumentsPerBot: 20,
+    maxKnowledgeStorageMb: 100,
     apiRateLimitPerMinute: 60,
     apiRateLimitPerDay: 10_000,
   },
@@ -35,6 +47,10 @@ const LIMITS: Record<TenantPlan, PlanLimits> = {
     maxBulkRecipientsPerJob: 50_000,
     maxActiveCampaigns: Number.MAX_SAFE_INTEGER,
     maxContacts: Number.MAX_SAFE_INTEGER,
+    maxAutomationsPerBot: Number.MAX_SAFE_INTEGER,
+    maxScheduledAutomations: Number.MAX_SAFE_INTEGER,
+    maxDocumentsPerBot: 100,
+    maxKnowledgeStorageMb: 1024,
     apiRateLimitPerMinute: 120,
     apiRateLimitPerDay: 100_000,
   },

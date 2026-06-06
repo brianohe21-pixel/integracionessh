@@ -39,7 +39,7 @@ function isPrivateIpv6(ip: string): boolean {
   );
 }
 
-async function assertSafeUrl(rawUrl: string): Promise<void> {
+export async function assertSafeUrl(rawUrl: string): Promise<void> {
   let parsed: URL;
   try {
     parsed = new URL(rawUrl);
@@ -75,7 +75,7 @@ async function assertSafeUrl(rawUrl: string): Promise<void> {
   }
 }
 
-function buildSignature(secret: string, body: string): string {
+export function buildSignature(secret: string, body: string): string {
   const hmac = createHmac("sha256", secret);
   hmac.update(body);
   return `sha256=${hmac.digest("hex")}`;

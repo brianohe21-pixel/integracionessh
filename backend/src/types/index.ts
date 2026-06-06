@@ -41,6 +41,7 @@ export interface Bot {
   maxTokens?: number;
   webhookUrl?: string;
   webhookSecret?: string;
+  knowledgeEnabled?: boolean;
   phoneNumberId: string;
   whatsappBusinessAccountId: string;
   status: "active" | "inactive";
@@ -74,6 +75,7 @@ export interface Conversation {
   internalNote?: string;
   messageCount: number;
   lastMessageAt: string;
+  welcomeSentAt?: string;
   createdAt: string;
 }
 
@@ -510,4 +512,97 @@ export interface SupportTicket {
   closedAt?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export type IntegrationEvent = "message.received" | "conversation.handoff" | "message.sent";
+
+export interface TenantIntegration {
+  integrationId: string;
+  tenantId: string;
+  webhookUrl: string;
+  webhookSecret?: string;
+  subscribedEvents: IntegrationEvent[];
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type IntegrationDeliveryStatus = "pending" | "delivered" | "failed";
+
+export interface IntegrationDelivery {
+  deliveryId: string;
+  tenantId: string;
+  event: IntegrationEvent;
+  status: IntegrationDeliveryStatus;
+  attempts: number;
+  lastError?: string;
+  payload: Record<string, unknown>;
+  createdAt: string;
+}
+
+export type AutomationTrigger = "keyword" | "first_message" | "schedule";
+export type AutomationAction = "send_text" | "send_template" | "tag_contact" | "handoff";
+export type AutomationMatchMode = "contains" | "exact";
+
+export interface AutomationRule {
+  ruleId: string;
+  tenantId: string;
+  botId: string;
+  name: string;
+  enabled: boolean;
+  priority: number;
+  trigger: AutomationTrigger;
+  keywords?: string[];
+  matchMode?: AutomationMatchMode;
+  scheduledAt?: string;
+  targetPhones?: string[];
+  targetTags?: string[];
+  action: AutomationAction;
+  messageText?: string;
+  templateName?: string;
+  templateLanguage?: string;
+  templateVariables?: Record<string, string>;
+  tags?: string[];
+  stopProcessing?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type KnowledgeDocumentStatus = "pending" | "indexing" | "ready" | "failed";
+
+export interface KnowledgeDocument {
+  docId: string;
+  tenantId: string;
+  botId: string;
+  filename: string;
+  mimeType: string;
+  s3Key: string;
+  status: KnowledgeDocumentStatus;
+  chunkCount: number;
+  sizeBytes: number;
+  errorMessage?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface KnowledgeChunk {
+  docId: string;
+  chunkIndex: number;
+  content: string;
+  embedding: number[];
+}
+
+export interface IntegrationEventPayload {
+  event: IntegrationEvent;
+  timestamp: string;
+  tenantId: string;
+  data: Record<string, unknown>;
+}
+
+export interface IntegrationQueueMessage {
+  tenantId: string;
+  deliveryId: string;
+  event: IntegrationEvent;
+  payload: IntegrationEventPayload;
+  attempt: number;
 }
