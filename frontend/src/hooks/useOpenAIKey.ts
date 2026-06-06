@@ -29,7 +29,7 @@ export function useSaveOpenAIKey() {
 export function useDeleteOpenAIKey() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => api.delete<void>("/tenants/me/openai-key"),
+    mutationFn: () => api.delete("/tenants/me/openai-key"),
     onSuccess: () => {
       queryClient.setQueryData<OpenAIKeyStatus>(["openai-key-status"], { configured: false });
     },
