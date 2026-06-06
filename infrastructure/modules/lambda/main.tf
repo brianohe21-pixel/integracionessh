@@ -167,7 +167,7 @@ locals {
       memory      = 512
       environment = {
         TABLE_NAME                = var.dynamodb_table_name
-        OPENAI_MODEL              = "gpt-4o"
+        OPENAI_MODEL              = "gpt-4o-mini"
         ENVIRONMENT               = var.environment
         INTEGRATION_SQS_QUEUE_URL = var.integration_sqs_queue_url
         MEDIA_BUCKET              = var.media_bucket_name
