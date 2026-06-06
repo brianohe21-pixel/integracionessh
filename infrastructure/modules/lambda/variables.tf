@@ -38,6 +38,36 @@ variable "campaign_sqs_queue_arn" {
   type = string
 }
 
+variable "integration_sqs_queue_url" {
+  type    = string
+  default = ""
+}
+
+variable "integration_sqs_queue_arn" {
+  type    = string
+  default = ""
+}
+
+variable "automation_sqs_queue_url" {
+  type    = string
+  default = ""
+}
+
+variable "automation_sqs_queue_arn" {
+  type    = string
+  default = ""
+}
+
+variable "knowledge_sqs_queue_url" {
+  type    = string
+  default = ""
+}
+
+variable "knowledge_sqs_queue_arn" {
+  type    = string
+  default = ""
+}
+
 variable "scheduler_role_arn" {
   type        = string
   default     = ""
@@ -46,6 +76,11 @@ variable "scheduler_role_arn" {
 
 variable "media_bucket_arn" {
   type = string
+}
+
+variable "media_bucket_name" {
+  type    = string
+  default = ""
 }
 
 variable "cognito_user_pool_id" {

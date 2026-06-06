@@ -57,11 +57,14 @@ resource "aws_iam_role_policy" "lambda_permissions" {
           "sqs:DeleteMessage",
           "sqs:GetQueueAttributes",
         ]
-        Resource = [
+        Resource = compact([
           var.sqs_queue_arn,
           var.bulk_sqs_queue_arn,
           var.campaign_sqs_queue_arn,
-        ]
+          var.integration_sqs_queue_arn,
+          var.automation_sqs_queue_arn,
+          var.knowledge_sqs_queue_arn,
+        ])
       },
       {
         Effect   = "Allow"
@@ -138,8 +141,10 @@ locals {
     var.lambda_zip_path != "" && fileexists(var.lambda_zip_path)
     ) ? var.lambda_zip_path : "${path.module}/bootstrap/functions.zip"
 
-  campaigns_function_name = "${var.project}-${var.environment}-campaigns"
-  campaigns_function_arn  = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.campaigns_function_name}"
+  campaigns_function_name   = "${var.project}-${var.environment}-campaigns"
+  campaigns_function_arn    = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.campaigns_function_name}"
+  automations_function_name = "${var.project}-${var.environment}-automations"
+  automations_function_arn  = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.automations_function_name}"
 
   functions = {
     webhook = {
@@ -159,9 +164,11 @@ locals {
       timeout     = 300
       memory      = 512
       environment = {
-        TABLE_NAME   = var.dynamodb_table_name
-        OPENAI_MODEL = "gpt-4o"
-        ENVIRONMENT  = var.environment
+        TABLE_NAME                = var.dynamodb_table_name
+        OPENAI_MODEL              = "gpt-4o"
+        ENVIRONMENT               = var.environment
+        INTEGRATION_SQS_QUEUE_URL = var.integration_sqs_queue_url
+        MEDIA_BUCKET              = var.media_bucket_name
       }
     }
     tenants = {
@@ -363,6 +370,73 @@ locals {
         ENVIRONMENT = var.environment
       }
     }
+    integrations = {
+      handler     = "integrations/index.handler"
+      description = "Outgoing webhook integration configuration"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME  = var.dynamodb_table_name
+        ENVIRONMENT = var.environment
+      }
+    }
+    process_integration = {
+      handler     = "process-integration/index.handler"
+      description = "Delivers integration webhook events from SQS"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME                = var.dynamodb_table_name
+        ENVIRONMENT               = var.environment
+        INTEGRATION_SQS_QUEUE_URL = var.integration_sqs_queue_url
+      }
+    }
+    automations = {
+      handler     = "automations/index.handler"
+      description = "CRUD API for automation rules"
+      timeout     = 60
+      memory      = 256
+      environment = {
+        TABLE_NAME               = var.dynamodb_table_name
+        AUTOMATION_SQS_QUEUE_URL = var.automation_sqs_queue_url
+        ENVIRONMENT              = var.environment
+        SCHEDULER_ROLE_ARN       = var.scheduler_role_arn
+        AUTOMATIONS_FUNCTION_ARN = local.automations_function_arn
+      }
+    }
+    process_automation = {
+      handler     = "process-automation/index.handler"
+      description = "Processes scheduled automation runs from SQS"
+      timeout     = 120
+      memory      = 256
+      environment = {
+        TABLE_NAME  = var.dynamodb_table_name
+        ENVIRONMENT = var.environment
+      }
+    }
+    knowledge = {
+      handler     = "knowledge/index.handler"
+      description = "Knowledge base document management per bot"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME              = var.dynamodb_table_name
+        KNOWLEDGE_SQS_QUEUE_URL = var.knowledge_sqs_queue_url
+        MEDIA_BUCKET            = var.media_bucket_name
+        ENVIRONMENT             = var.environment
+      }
+    }
+    process_knowledge = {
+      handler     = "process-knowledge/index.handler"
+      description = "Indexes knowledge documents from SQS"
+      timeout     = 300
+      memory      = 512
+      environment = {
+        TABLE_NAME   = var.dynamodb_table_name
+        MEDIA_BUCKET = var.media_bucket_name
+        ENVIRONMENT  = var.environment
+      }
+    }
   }
 }
 
@@ -412,6 +486,33 @@ resource "aws_lambda_event_source_mapping" "bulk_sqs_trigger" {
 resource "aws_lambda_event_source_mapping" "campaign_sqs_trigger" {
   event_source_arn                   = var.campaign_sqs_queue_arn
   function_name                      = aws_lambda_function.functions["process_campaign"].arn
+  batch_size                         = 1
+  enabled                            = true
+  maximum_batching_window_in_seconds = 0
+}
+
+resource "aws_lambda_event_source_mapping" "integration_sqs_trigger" {
+  count                              = var.integration_sqs_queue_arn != "" ? 1 : 0
+  event_source_arn                   = var.integration_sqs_queue_arn
+  function_name                      = aws_lambda_function.functions["process_integration"].arn
+  batch_size                         = 1
+  enabled                            = true
+  maximum_batching_window_in_seconds = 0
+}
+
+resource "aws_lambda_event_source_mapping" "automation_sqs_trigger" {
+  count                              = var.automation_sqs_queue_arn != "" ? 1 : 0
+  event_source_arn                   = var.automation_sqs_queue_arn
+  function_name                      = aws_lambda_function.functions["process_automation"].arn
+  batch_size                         = 1
+  enabled                            = true
+  maximum_batching_window_in_seconds = 0
+}
+
+resource "aws_lambda_event_source_mapping" "knowledge_sqs_trigger" {
+  count                              = var.knowledge_sqs_queue_arn != "" ? 1 : 0
+  event_source_arn                   = var.knowledge_sqs_queue_arn
+  function_name                      = aws_lambda_function.functions["process_knowledge"].arn
   batch_size                         = 1
   enabled                            = true
   maximum_batching_window_in_seconds = 0

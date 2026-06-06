@@ -131,7 +131,10 @@ resource "aws_iam_role_policy" "scheduler_invoke" {
     Statement = [{
       Effect   = "Allow"
       Action   = ["lambda:InvokeFunction"]
-      Resource = module.lambda.campaigns_function_arn
+      Resource = [
+        module.lambda.campaigns_function_arn,
+        module.lambda.automations_function_arn,
+      ]
     }]
   })
 }
@@ -146,10 +149,17 @@ module "lambda" {
   sqs_queue_arn          = module.sqs.queue_arn
   bulk_sqs_queue_url     = module.sqs.bulk_queue_url
   bulk_sqs_queue_arn     = module.sqs.bulk_queue_arn
-  campaign_sqs_queue_url = module.sqs.campaign_queue_url
-  campaign_sqs_queue_arn = module.sqs.campaign_queue_arn
-  scheduler_role_arn     = aws_iam_role.scheduler.arn
-  media_bucket_arn       = module.s3.media_bucket_arn
+  campaign_sqs_queue_url    = module.sqs.campaign_queue_url
+  campaign_sqs_queue_arn    = module.sqs.campaign_queue_arn
+  integration_sqs_queue_url = module.sqs.integration_queue_url
+  integration_sqs_queue_arn = module.sqs.integration_queue_arn
+  automation_sqs_queue_url  = module.sqs.automation_queue_url
+  automation_sqs_queue_arn  = module.sqs.automation_queue_arn
+  knowledge_sqs_queue_url   = module.sqs.knowledge_queue_url
+  knowledge_sqs_queue_arn   = module.sqs.knowledge_queue_arn
+  scheduler_role_arn        = aws_iam_role.scheduler.arn
+  media_bucket_arn          = module.s3.media_bucket_arn
+  media_bucket_name         = module.s3.media_bucket_name
   cognito_user_pool_id   = module.cognito.user_pool_id
   cognito_user_pool_arn  = module.cognito.user_pool_arn
   cognito_client_id      = module.cognito.client_id
@@ -212,6 +222,12 @@ module "api_gateway" {
   public_api_function_arn       = module.lambda.public_api_function_arn
   api_keys_invoke_arn           = module.lambda.api_keys_invoke_arn
   api_keys_function_arn         = module.lambda.api_keys_function_arn
+  integrations_invoke_arn       = module.lambda.integrations_invoke_arn
+  integrations_function_arn     = module.lambda.integrations_function_arn
+  automations_invoke_arn        = module.lambda.automations_invoke_arn
+  automations_function_arn      = module.lambda.automations_function_arn
+  knowledge_invoke_arn          = module.lambda.knowledge_invoke_arn
+  knowledge_function_arn        = module.lambda.knowledge_function_arn
   allowed_origins               = local.browser_origins
   api_custom_domain             = var.api_custom_domain
   tags                          = local.tags
