@@ -401,7 +401,106 @@ export interface SupportTicket {
   updatedAt: string;
 }
 
-export type IntegrationEvent = "message.received" | "conversation.handoff" | "message.sent";
+export type IntegrationEvent =
+  | "message.received"
+  | "conversation.handoff"
+  | "message.sent"
+  | "flow.completed";
+
+export type MetaFlowStatus = "DRAFT" | "PUBLISHED" | "DEPRECATED";
+
+export interface MetaFlow {
+  metaFlowId: string;
+  tenantId: string;
+  botId: string;
+  name: string;
+  status: MetaFlowStatus;
+  categories: string[];
+  jsonDefinition: Record<string, unknown>;
+  metaStatus?: string;
+  createdAt: string;
+  updatedAt: string;
+  publishedAt?: string;
+}
+
+export interface FlowResponse {
+  responseId: string;
+  tenantId: string;
+  botId: string;
+  conversationId: string;
+  phone: string;
+  metaFlowId: string;
+  responseJson: Record<string, unknown>;
+  createdAt: string;
+}
+
+export type FlowNodeType =
+  | "trigger"
+  | "message"
+  | "template"
+  | "condition"
+  | "buttons"
+  | "meta_flow"
+  | "handoff"
+  | "delay"
+  | "set_variable"
+  | "http_request"
+  | "end";
+
+export type FlowTriggerType = "keyword" | "first_message" | "any_message";
+
+export interface FlowNodeData {
+  label?: string;
+  triggerType?: FlowTriggerType;
+  keywords?: string[];
+  matchMode?: "contains" | "exact";
+  messageText?: string;
+  templateName?: string;
+  templateLanguage?: string;
+  templateVariables?: Record<string, string>;
+  conditionVariable?: string;
+  conditionOperator?: "contains" | "equals" | "not_equals";
+  conditionValue?: string;
+  buttons?: Array<{ id: string; title: string }>;
+  metaFlowId?: string;
+  metaFlowCta?: string;
+  delaySeconds?: number;
+  variableName?: string;
+  variableValue?: string;
+  httpUrl?: string;
+  httpMethod?: "GET" | "POST";
+  httpBody?: string;
+  haltPipeline?: boolean;
+}
+
+export interface FlowNode {
+  id: string;
+  type: FlowNodeType;
+  position: { x: number; y: number };
+  data: FlowNodeData;
+}
+
+export interface FlowEdge {
+  id: string;
+  source: string;
+  target: string;
+  sourceHandle?: string;
+}
+
+export interface FlowDefinition {
+  flowId: string;
+  tenantId: string;
+  botId: string;
+  name: string;
+  enabled: boolean;
+  version: number;
+  nodes: FlowNode[];
+  edges: FlowEdge[];
+  entryNodeId: string;
+  publishedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface TenantIntegration {
   integrationId: string;

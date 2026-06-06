@@ -59,6 +59,19 @@ export default function EditBotPage() {
         </div>
 
         {bot && <BotKnowledge bot={bot} />}
+
+        {bot && (
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900">{t("metaFlows.title")}</h2>
+            <p className="text-sm text-gray-500 mt-1 mb-4">{t("metaFlows.subtitle")}</p>
+            <Link
+              href={`/bots/${bot.botId}/meta-flows`}
+              className="inline-flex px-4 py-2 text-sm font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50"
+            >
+              {t("metaFlows.manage")}
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -13,6 +13,7 @@ const EVENT_OPTIONS = [
   "message.received",
   "conversation.handoff",
   "message.sent",
+  "flow.completed",
 ] as const;
 
 export function IntegrationWebhooksPanel() {
