@@ -15,7 +15,8 @@ import { extractAuthContext, assertMemberRole } from "../../lib/auth/cognito.js"
 import { ensureTenant } from "../../lib/dynamodb/tenant.repository.js";
 import { assertBulkRecipients } from "../../lib/billing/assert-plan.js";
 import { incrementBulkRecipients } from "../../lib/dynamodb/usage.repository.js";
-import { ok, created, badRequest, notFound, handleError } from "../../lib/http.js";
+import { checkMarketingRecipients } from "../../lib/compliance/recipient-policy.js";
+import { ok, created, badRequest, notFound, unprocessableEntity, handleError } from "../../lib/http.js";
 import type { BulkSendSQSBody } from "../../types/index.js";
 
 const sqs = new SQSClient({});
@@ -142,6 +143,25 @@ export async function handler(
       const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
       await assertBulkRecipients(tenant, recipients.length);
 
+      const phones = recipients.map((r) => r.to.replace(/\D/g, ""));
+      const { allowed, blocked } = await checkMarketingRecipients(
+        auth.tenantId,
+        phones,
+        auth.userId
+      );
+      if (blocked.length > 0) {
+        return unprocessableEntity("Some recipients cannot receive marketing messages", {
+          blocked,
+        });
+      }
+      const allowedSet = new Set(allowed);
+      const filteredRecipients = recipients.filter((r) =>
+        allowedSet.has(r.to.replace(/\D/g, ""))
+      );
+      if (filteredRecipients.length === 0) {
+        return unprocessableEntity("No recipients eligible for marketing send", { blocked });
+      }
+
       const newJobId = randomUUID();
       const now = new Date().toISOString();
 
@@ -152,7 +172,7 @@ export async function handler(
         templateName,
         language,
         status: "queued",
-        total: recipients.length,
+        total: filteredRecipients.length,
         createdAt: now,
         updatedAt: now,
       });
@@ -163,11 +183,11 @@ export async function handler(
         botId,
         templateName,
         language,
-        recipients
+        filteredRecipients
       );
 
       await updateBulkJobStatus(auth.tenantId, newJobId, "processing");
-      await incrementBulkRecipients(auth.tenantId, recipients.length);
+      await incrementBulkRecipients(auth.tenantId, filteredRecipients.length);
 
       const job = await getBulkJob(auth.tenantId, newJobId);
       return created(job);

@@ -19,6 +19,8 @@ import {
   assertTenantManagerRole,
 } from "../../lib/auth/cognito.js";
 import { performHandoff, releaseToBot } from "../../lib/advisor/handoff.js";
+import { resolveConversation } from "../../lib/advisor/resolve.js";
+import { updateConversation } from "../../lib/dynamodb/conversation.repository.js";
 import {
   getClientHandoffMessage,
   notifyAdvisorOfConversation,
@@ -43,6 +45,22 @@ const HandoffSchema = z.object({
 const SendMessageSchema = z.object({
   botId: z.string().uuid(),
   content: z.string().min(1).max(1024),
+});
+
+const WorkflowStatusSchema = z.object({
+  botId: z.string().uuid(),
+  workflowStatus: z.enum(["new", "open", "pending", "resolved"]),
+});
+
+const NoteSchema = z.object({
+  botId: z.string().uuid(),
+  internalNote: z.string().max(2000),
+});
+
+const ResolveSchema = z.object({
+  botId: z.string().uuid(),
+  csatScore: z.number().int().min(1).max(5).optional(),
+  releaseToBot: z.boolean().optional(),
 });
 
 async function resolveAdvisorRecord(auth: AuthContext) {
@@ -88,6 +106,17 @@ export async function handler(
         params.handoffMode === "human" || params.handoffMode === "bot"
           ? params.handoffMode
           : undefined;
+      const workflowStatus =
+        params.workflowStatus === "new" ||
+        params.workflowStatus === "open" ||
+        params.workflowStatus === "pending" ||
+        params.workflowStatus === "resolved"
+          ? params.workflowStatus
+          : undefined;
+      const status =
+        params.status === "active" || params.status === "closed"
+          ? params.status
+          : undefined;
       const limit = params.limit ? parseInt(params.limit, 10) : 20;
 
       if (isNaN(limit) || limit < 1 || limit > 100) {
@@ -105,6 +134,8 @@ export async function handler(
       const listOptions: Parameters<typeof listConversations>[1] = { limit };
       if (botId) listOptions.botId = botId;
       if (handoffMode) listOptions.handoffMode = handoffMode;
+      if (workflowStatus) listOptions.workflowStatus = workflowStatus;
+      if (status) listOptions.status = status;
       if (assignedAdvisorId) listOptions.assignedAdvisorId = assignedAdvisorId;
 
       const conversations = await listConversations(auth.tenantId, listOptions);
@@ -131,6 +162,70 @@ export async function handler(
 
       const messages = await getConversationMessages(auth.tenantId, conversationId, limit);
       return ok(messages);
+    }
+
+    if (method === "PATCH" && subPath === "status") {
+      const body = JSON.parse(event.body ?? "{}");
+      const parsed = WorkflowStatusSchema.safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const conversation = await findConversationById(auth.tenantId, conversationId);
+      if (!conversation || conversation.botId !== parsed.data.botId) {
+        return notFound("Conversation not found");
+      }
+
+      await assertCanAccessConversation(auth, conversation);
+
+      const updated = await updateConversation(
+        auth.tenantId,
+        parsed.data.botId,
+        conversationId,
+        { workflowStatus: parsed.data.workflowStatus }
+      );
+      return ok(updated);
+    }
+
+    if (method === "PATCH" && subPath === "note") {
+      assertTenantManagerRole(auth);
+      const body = JSON.parse(event.body ?? "{}");
+      const parsed = NoteSchema.safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const conversation = await findConversationById(auth.tenantId, conversationId);
+      if (!conversation || conversation.botId !== parsed.data.botId) {
+        return notFound("Conversation not found");
+      }
+
+      const updated = await updateConversation(
+        auth.tenantId,
+        parsed.data.botId,
+        conversationId,
+        { internalNote: parsed.data.internalNote }
+      );
+      return ok(updated);
+    }
+
+    if (method === "POST" && subPath === "resolve") {
+      const body = JSON.parse(event.body ?? "{}");
+      const parsed = ResolveSchema.safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const conversation = await findConversationById(auth.tenantId, conversationId);
+      if (!conversation || conversation.botId !== parsed.data.botId) {
+        return notFound("Conversation not found");
+      }
+
+      await assertCanAccessConversation(auth, conversation);
+
+      const updated = await resolveConversation({
+        tenantId: auth.tenantId,
+        botId: parsed.data.botId,
+        conversationId,
+        ...(parsed.data.csatScore !== undefined ? { csatScore: parsed.data.csatScore } : {}),
+        ...(parsed.data.releaseToBot ? { releaseToBot: true } : {}),
+      });
+
+      return ok(updated);
     }
 
     if (method === "POST" && subPath === "handoff") {
@@ -269,6 +364,19 @@ export async function handler(
 
       await addMessage(message, parsed.data.botId);
       await incrementMessages(auth.tenantId);
+
+      const convPatch: Parameters<typeof updateConversation>[3] = {
+        workflowStatus: "open",
+      };
+      if (!conversation.firstHumanResponseAt) {
+        convPatch.firstHumanResponseAt = now;
+      }
+      await updateConversation(
+        auth.tenantId,
+        parsed.data.botId,
+        conversationId,
+        convPatch
+      );
 
       return created(message);
     }

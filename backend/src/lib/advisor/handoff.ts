@@ -45,6 +45,8 @@ export async function performHandoff(params: {
       assignedAdvisorId: advisorId,
       handoffAt: now,
       handoffReason: params.reason,
+      workflowStatus: "new",
+      status: "active",
     }
   );
 

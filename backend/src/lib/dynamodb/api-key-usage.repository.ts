@@ -48,13 +48,21 @@ export async function listApiKeyUsageLogs(
   });
 }
 
-export async function countApiKeyUsageByPeriod(
+export interface ApiKeyUsagePeriodSummary {
+  total: number;
+  success: number;
+  error: number;
+}
+
+export async function summarizeApiKeyUsageByPeriod(
   tenantId: string,
   keyId: string,
   fromIso: string,
   toIso: string
-): Promise<number> {
-  let count = 0;
+): Promise<ApiKeyUsagePeriodSummary> {
+  let total = 0;
+  let success = 0;
+  let error = 0;
   let lastKey: Record<string, unknown> | undefined;
 
   do {
@@ -67,14 +75,18 @@ export async function countApiKeyUsageByPeriod(
           ":from": fromIso,
           ":to": toIso,
         },
-        Select: "COUNT",
         ExclusiveStartKey: lastKey,
       })
     );
 
-    count += result.Count ?? 0;
+    for (const item of result.Items ?? []) {
+      total++;
+      const statusCode = item.statusCode as number;
+      if (statusCode < 400) success++;
+      else error++;
+    }
     lastKey = result.LastEvaluatedKey;
   } while (lastKey);
 
-  return count;
+  return { total, success, error };
 }

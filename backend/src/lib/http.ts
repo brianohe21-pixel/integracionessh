@@ -80,6 +80,17 @@ export function tooManyRequests(
   };
 }
 
+export function unprocessableEntity<T extends Record<string, unknown>>(
+  message: string,
+  details?: T
+): APIGatewayProxyResultV2 {
+  return {
+    statusCode: 422,
+    headers: CORS_HEADERS,
+    body: JSON.stringify({ error: message, ...details }),
+  };
+}
+
 export function notFound(message = "Not found"): APIGatewayProxyResultV2 {
   return {
     statusCode: 404,
@@ -116,6 +127,10 @@ export function handleError(error: unknown): APIGatewayProxyResultV2 {
   }
   if (err.statusCode === 403) return forbidden(err.message);
   if (err.statusCode === 404) return notFound(err.message);
+  if (err.statusCode === 422) {
+    const payload = (err as Error & { details?: Record<string, unknown> }).details;
+    return unprocessableEntity(err.message, payload);
+  }
   if (err.statusCode === 429) return tooManyRequests(err.message);
   if (err.statusCode === 502) return badGateway(err.message);
 
