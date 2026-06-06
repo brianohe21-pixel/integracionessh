@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useT } from "@/i18n/context";
 import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
+import { OpenAIKeyCard } from "@/components/settings/OpenAIKeyCard";
 import { Building2, Key, Webhook, CheckCircle, Languages } from "lucide-react";
 import { PlanUsageCard } from "@/components/billing/PlanUsageCard";
 import type { Tenant } from "@/types";
@@ -147,14 +148,7 @@ export default function SettingsPage() {
               <Badge variant="success">{t("settings.configured")}</Badge>
             </div>
 
-            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-              <div className="w-2 h-2 bg-green-400 rounded-full" />
-              <div className="flex-1">
-                <p className="text-xs font-medium text-gray-700">{t("settings.openaiKey")}</p>
-                <p className="text-xs text-gray-400">{t("settings.openaiKeyDesc")}</p>
-              </div>
-              <Badge variant="default">{t("settings.platformBadge")}</Badge>
-            </div>
+            <OpenAIKeyCard />
           </div>
         </div>
       </div>

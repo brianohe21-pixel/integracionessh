@@ -465,6 +465,24 @@ locals {
       function_arn = var.tenants_function_arn
       protected    = true
     }
+    tenants_openai_key_get = {
+      route_key    = "GET /tenants/me/openai-key"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_openai_key_save = {
+      route_key    = "PUT /tenants/me/openai-key"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_openai_key_delete = {
+      route_key    = "DELETE /tenants/me/openai-key"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
     public_api_messages = {
       route_key    = "POST /v1/messages"
       invoke_arn   = var.public_api_invoke_arn
