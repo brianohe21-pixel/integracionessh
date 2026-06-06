@@ -39,33 +39,27 @@ variable "campaign_sqs_queue_arn" {
 }
 
 variable "integration_sqs_queue_url" {
-  type    = string
-  default = ""
+  type = string
 }
 
 variable "integration_sqs_queue_arn" {
-  type    = string
-  default = ""
+  type = string
 }
 
 variable "automation_sqs_queue_url" {
-  type    = string
-  default = ""
+  type = string
 }
 
 variable "automation_sqs_queue_arn" {
-  type    = string
-  default = ""
+  type = string
 }
 
 variable "knowledge_sqs_queue_url" {
-  type    = string
-  default = ""
+  type = string
 }
 
 variable "knowledge_sqs_queue_arn" {
-  type    = string
-  default = ""
+  type = string
 }
 
 variable "scheduler_role_arn" {

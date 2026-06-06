@@ -57,14 +57,14 @@ resource "aws_iam_role_policy" "lambda_permissions" {
           "sqs:DeleteMessage",
           "sqs:GetQueueAttributes",
         ]
-        Resource = compact([
+        Resource = [
           var.sqs_queue_arn,
           var.bulk_sqs_queue_arn,
           var.campaign_sqs_queue_arn,
           var.integration_sqs_queue_arn,
           var.automation_sqs_queue_arn,
           var.knowledge_sqs_queue_arn,
-        ])
+        ]
       },
       {
         Effect   = "Allow"
@@ -492,7 +492,6 @@ resource "aws_lambda_event_source_mapping" "campaign_sqs_trigger" {
 }
 
 resource "aws_lambda_event_source_mapping" "integration_sqs_trigger" {
-  count                              = var.integration_sqs_queue_arn != "" ? 1 : 0
   event_source_arn                   = var.integration_sqs_queue_arn
   function_name                      = aws_lambda_function.functions["process_integration"].arn
   batch_size                         = 1
@@ -501,7 +500,6 @@ resource "aws_lambda_event_source_mapping" "integration_sqs_trigger" {
 }
 
 resource "aws_lambda_event_source_mapping" "automation_sqs_trigger" {
-  count                              = var.automation_sqs_queue_arn != "" ? 1 : 0
   event_source_arn                   = var.automation_sqs_queue_arn
   function_name                      = aws_lambda_function.functions["process_automation"].arn
   batch_size                         = 1
@@ -510,7 +508,6 @@ resource "aws_lambda_event_source_mapping" "automation_sqs_trigger" {
 }
 
 resource "aws_lambda_event_source_mapping" "knowledge_sqs_trigger" {
-  count                              = var.knowledge_sqs_queue_arn != "" ? 1 : 0
   event_source_arn                   = var.knowledge_sqs_queue_arn
   function_name                      = aws_lambda_function.functions["process_knowledge"].arn
   batch_size                         = 1
