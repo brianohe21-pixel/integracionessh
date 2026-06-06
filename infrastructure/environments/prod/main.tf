@@ -134,6 +134,7 @@ resource "aws_iam_role_policy" "scheduler_invoke" {
       Resource = [
         module.lambda.campaigns_function_arn,
         module.lambda.automations_function_arn,
+        module.lambda.flows_function_arn,
       ]
     }]
   })
@@ -157,6 +158,8 @@ module "lambda" {
   automation_sqs_queue_arn  = module.sqs.automation_queue_arn
   knowledge_sqs_queue_url   = module.sqs.knowledge_queue_url
   knowledge_sqs_queue_arn   = module.sqs.knowledge_queue_arn
+  flow_run_sqs_queue_url    = module.sqs.flow_run_queue_url
+  flow_run_sqs_queue_arn    = module.sqs.flow_run_queue_arn
   scheduler_role_arn        = aws_iam_role.scheduler.arn
   media_bucket_arn          = module.s3.media_bucket_arn
   media_bucket_name         = module.s3.media_bucket_name
@@ -228,6 +231,10 @@ module "api_gateway" {
   automations_function_arn      = module.lambda.automations_function_arn
   knowledge_invoke_arn          = module.lambda.knowledge_invoke_arn
   knowledge_function_arn        = module.lambda.knowledge_function_arn
+  meta_flows_invoke_arn         = module.lambda.meta_flows_invoke_arn
+  meta_flows_function_arn       = module.lambda.meta_flows_function_arn
+  flows_invoke_arn              = module.lambda.flows_invoke_arn
+  flows_function_arn            = module.lambda.flows_function_arn
   allowed_origins               = local.browser_origins
   api_custom_domain             = var.api_custom_domain
   tags                          = local.tags

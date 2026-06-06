@@ -145,6 +145,8 @@ locals {
   campaigns_function_arn    = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.campaigns_function_name}"
   automations_function_name = "${var.project}-${var.environment}-automations"
   automations_function_arn  = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.automations_function_name}"
+  flows_function_name       = "${var.project}-${var.environment}-flows"
+  flows_function_arn          = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.flows_function_name}"
 
   functions = {
     webhook = {
@@ -437,6 +439,39 @@ locals {
         ENVIRONMENT  = var.environment
       }
     }
+    meta_flows = {
+      handler     = "meta-flows/index.handler"
+      description = "WhatsApp Meta Flows CRUD per bot"
+      timeout     = 60
+      memory      = 256
+      environment = {
+        TABLE_NAME  = var.dynamodb_table_name
+        ENVIRONMENT = var.environment
+      }
+    }
+    flows = {
+      handler     = "flows/index.handler"
+      description = "Visual flow definitions CRUD"
+      timeout     = 60
+      memory      = 256
+      environment = {
+        TABLE_NAME             = var.dynamodb_table_name
+        FLOW_RUN_SQS_QUEUE_URL = var.flow_run_sqs_queue_url
+        SCHEDULER_ROLE_ARN     = var.scheduler_role_arn
+        FLOWS_FUNCTION_ARN     = local.flows_function_arn
+        ENVIRONMENT            = var.environment
+      }
+    }
+    process_flow = {
+      handler     = "process-flow/index.handler"
+      description = "Resumes visual flow runs from SQS"
+      timeout     = 120
+      memory      = 256
+      environment = {
+        TABLE_NAME  = var.dynamodb_table_name
+        ENVIRONMENT = var.environment
+      }
+    }
   }
 }
 
@@ -510,6 +545,15 @@ resource "aws_lambda_event_source_mapping" "automation_sqs_trigger" {
 resource "aws_lambda_event_source_mapping" "knowledge_sqs_trigger" {
   event_source_arn                   = var.knowledge_sqs_queue_arn
   function_name                      = aws_lambda_function.functions["process_knowledge"].arn
+  batch_size                         = 1
+  enabled                            = true
+  maximum_batching_window_in_seconds = 0
+}
+
+resource "aws_lambda_event_source_mapping" "flow_run_sqs_trigger" {
+  count                              = var.flow_run_sqs_queue_arn != "" ? 1 : 0
+  event_source_arn                   = var.flow_run_sqs_queue_arn
+  function_name                      = aws_lambda_function.functions["process_flow"].arn
   batch_size                         = 1
   enabled                            = true
   maximum_batching_window_in_seconds = 0

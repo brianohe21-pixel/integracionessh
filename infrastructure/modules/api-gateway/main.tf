@@ -597,6 +597,102 @@ locals {
       function_arn = var.knowledge_function_arn
       protected    = true
     }
+    meta_flows_responses = {
+      route_key    = "GET /bots/{botId}/meta-flows/responses"
+      invoke_arn   = var.meta_flows_invoke_arn
+      function_arn = var.meta_flows_function_arn
+      protected    = true
+    }
+    meta_flows_list = {
+      route_key    = "GET /bots/{botId}/meta-flows"
+      invoke_arn   = var.meta_flows_invoke_arn
+      function_arn = var.meta_flows_function_arn
+      protected    = true
+    }
+    meta_flows_create = {
+      route_key    = "POST /bots/{botId}/meta-flows"
+      invoke_arn   = var.meta_flows_invoke_arn
+      function_arn = var.meta_flows_function_arn
+      protected    = true
+    }
+    meta_flows_get = {
+      route_key    = "GET /bots/{botId}/meta-flows/{flowId}"
+      invoke_arn   = var.meta_flows_invoke_arn
+      function_arn = var.meta_flows_function_arn
+      protected    = true
+    }
+    meta_flows_update = {
+      route_key    = "PUT /bots/{botId}/meta-flows/{flowId}"
+      invoke_arn   = var.meta_flows_invoke_arn
+      function_arn = var.meta_flows_function_arn
+      protected    = true
+    }
+    meta_flows_delete = {
+      route_key    = "DELETE /bots/{botId}/meta-flows/{flowId}"
+      invoke_arn   = var.meta_flows_invoke_arn
+      function_arn = var.meta_flows_function_arn
+      protected    = true
+    }
+    meta_flows_publish = {
+      route_key    = "POST /bots/{botId}/meta-flows/{flowId}/publish"
+      invoke_arn   = var.meta_flows_invoke_arn
+      function_arn = var.meta_flows_function_arn
+      protected    = true
+    }
+    meta_flows_deprecate = {
+      route_key    = "POST /bots/{botId}/meta-flows/{flowId}/deprecate"
+      invoke_arn   = var.meta_flows_invoke_arn
+      function_arn = var.meta_flows_function_arn
+      protected    = true
+    }
+    meta_flows_test_send = {
+      route_key    = "POST /bots/{botId}/meta-flows/{flowId}/test-send"
+      invoke_arn   = var.meta_flows_invoke_arn
+      function_arn = var.meta_flows_function_arn
+      protected    = true
+    }
+    flows_list = {
+      route_key    = "GET /flows"
+      invoke_arn   = var.flows_invoke_arn
+      function_arn = var.flows_function_arn
+      protected    = true
+    }
+    flows_create = {
+      route_key    = "POST /flows"
+      invoke_arn   = var.flows_invoke_arn
+      function_arn = var.flows_function_arn
+      protected    = true
+    }
+    flows_get = {
+      route_key    = "GET /flows/{flowId}"
+      invoke_arn   = var.flows_invoke_arn
+      function_arn = var.flows_function_arn
+      protected    = true
+    }
+    flows_update = {
+      route_key    = "PUT /flows/{flowId}"
+      invoke_arn   = var.flows_invoke_arn
+      function_arn = var.flows_function_arn
+      protected    = true
+    }
+    flows_delete = {
+      route_key    = "DELETE /flows/{flowId}"
+      invoke_arn   = var.flows_invoke_arn
+      function_arn = var.flows_function_arn
+      protected    = true
+    }
+    flows_enable = {
+      route_key    = "POST /flows/{flowId}/enable"
+      invoke_arn   = var.flows_invoke_arn
+      function_arn = var.flows_function_arn
+      protected    = true
+    }
+    flows_disable = {
+      route_key    = "POST /flows/{flowId}/disable"
+      invoke_arn   = var.flows_invoke_arn
+      function_arn = var.flows_function_arn
+      protected    = true
+    }
   }
 }
 
@@ -641,6 +737,8 @@ resource "aws_lambda_permission" "api_gw" {
     integrations     = var.integrations_function_arn
     automations      = var.automations_function_arn
     knowledge        = var.knowledge_function_arn
+    meta_flows       = var.meta_flows_function_arn
+    flows            = var.flows_function_arn
   }
 
   statement_id  = "AllowAPIGatewayInvoke-${each.key}"

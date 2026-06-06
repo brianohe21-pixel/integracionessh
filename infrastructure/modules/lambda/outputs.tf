@@ -153,3 +153,19 @@ output "knowledge_invoke_arn" {
 output "knowledge_function_arn" {
   value = aws_lambda_function.functions["knowledge"].arn
 }
+
+output "meta_flows_invoke_arn" {
+  value = aws_lambda_function.functions["meta_flows"].invoke_arn
+}
+
+output "meta_flows_function_arn" {
+  value = aws_lambda_function.functions["meta_flows"].arn
+}
+
+output "flows_invoke_arn" {
+  value = aws_lambda_function.functions["flows"].invoke_arn
+}
+
+output "flows_function_arn" {
+  value = aws_lambda_function.functions["flows"].arn
+}

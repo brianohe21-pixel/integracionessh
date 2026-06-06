@@ -49,3 +49,11 @@ output "knowledge_queue_url" {
 output "knowledge_queue_arn" {
   value = aws_sqs_queue.knowledge_index.arn
 }
+
+output "flow_run_queue_url" {
+  value = aws_sqs_queue.flow_run.url
+}
+
+output "flow_run_queue_arn" {
+  value = aws_sqs_queue.flow_run.arn
+}

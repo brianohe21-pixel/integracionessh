@@ -166,6 +166,22 @@ variable "knowledge_function_arn" {
   type = string
 }
 
+variable "meta_flows_invoke_arn" {
+  type = string
+}
+
+variable "meta_flows_function_arn" {
+  type = string
+}
+
+variable "flows_invoke_arn" {
+  type = string
+}
+
+variable "flows_function_arn" {
+  type = string
+}
+
 variable "allowed_origins" {
   type    = list(string)
   default = ["*"]
