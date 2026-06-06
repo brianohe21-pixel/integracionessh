@@ -1,0 +1,31 @@
+aws_region            = "us-east-1"
+repository_url        = "https://github.com/your-org/chatbot-platform"
+github_access_token   = "ghp_xxxxxxxxxxxx"
+whatsapp_verify_token = "your-random-verify-token"
+meta_app_id           = "your-meta-app-id"
+meta_app_secret       = "your-meta-app-secret"
+meta_embedded_signup_config_id = "your-embedded-signup-config-id"
+lambda_zip_path       = "../../../backend/dist/functions.zip"
+
+extra_callback_urls   = []
+extra_logout_urls       = []
+extra_allowed_origins   = []
+# Amplify origin (https://develop.<appId>.amplifyapp.com) is added automatically when the Amplify app exists.
+
+wompi_public_key        = "pub_test_..."
+wompi_private_key       = "prv_test_..."
+wompi_integrity_secret  = "prod_integrity_..."
+wompi_events_secret     = "prod_events_..."
+wompi_amount_pro_cents  = "9900000"
+wompi_amount_enterprise_cents = "29900000"
+wompi_api_base          = "https://sandbox.wompi.co/v1"
+
+stripe_secret_key       = ""
+stripe_webhook_secret   = ""
+stripe_price_pro        = ""
+stripe_price_enterprise = ""
+frontend_url            = "http://localhost:3000"
+api_custom_domain       = "api.integracionessh.lat"
+
+enable_monitoring       = false
+ops_alert_email         = "ops@example.com"

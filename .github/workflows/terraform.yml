@@ -1,0 +1,286 @@
+name: Terraform
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, develop]
+    paths:
+      - "infrastructure/**"
+      - ".github/workflows/terraform.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "infrastructure/**"
+      - ".github/workflows/terraform.yml"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  terraform-dev:
+    name: Terraform Dev
+    runs-on: ubuntu-latest
+    environment: dev
+    concurrency:
+      group: lambda-deploy-dev
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: infrastructure/environments/dev
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        env:
+          HUSKY: "0"
+
+      - name: Build Lambda package
+        run: pnpm --filter chatbot-platform-backend run build
+        env:
+          NODE_ENV: production
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.11.4"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Terraform fmt
+        run: terraform fmt -check -recursive
+        continue-on-error: true
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Require Terraform secrets and variables
+        env:
+          GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+          WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
+          REPOSITORY_URL: ${{ vars.REPOSITORY_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_ACCESS_TOKEN}" ]; then
+            echo "::error::GH_ACCESS_TOKEN is missing or empty. Add it under Settings → Environments → dev → Secrets (classic PAT or fine-grained token with repo access for Amplify)."
+            exit 1
+          fi
+          if [ -z "${WHATSAPP_VERIFY_TOKEN}" ]; then
+            echo "::error::WHATSAPP_VERIFY_TOKEN is missing or empty. Add it under Settings → Environments → dev → Secrets."
+            exit 1
+          fi
+          if [ -z "${REPOSITORY_URL}" ]; then
+            echo "::error::REPOSITORY_URL is missing or empty. Add it under Settings → Secrets and variables → Actions → Variables (e.g. https://github.com/org/repo)."
+            exit 1
+          fi
+
+      - name: Remove monitoring from state when disabled
+        run: |
+          set -euo pipefail
+          if [ "${ENABLE_MONITORING:-false}" != "true" ]; then
+            for addr in $(terraform state list 2>/dev/null | grep '^module\.monitoring' || true); do
+              echo "Removing $addr from state (enable_monitoring=false)"
+              terraform state rm "$addr"
+            done
+          fi
+        env:
+          ENABLE_MONITORING: ${{ vars.ENABLE_MONITORING }}
+
+      - name: Terraform Plan
+        id: plan
+        env:
+          META_APP_ID: ${{ vars.META_APP_ID }}
+          META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
+          META_EMBEDDED_SIGNUP_CONFIG_ID: ${{ vars.META_EMBEDDED_SIGNUP_CONFIG_ID }}
+          FRONTEND_URL: ${{ vars.FRONTEND_URL }}
+          API_CUSTOM_DOMAIN: ${{ vars.API_CUSTOM_DOMAIN }}
+          WOMPI_PUBLIC_KEY: ${{ vars.WOMPI_PUBLIC_KEY }}
+          WOMPI_PRIVATE_KEY: ${{ secrets.WOMPI_PRIVATE_KEY }}
+          WOMPI_INTEGRITY_SECRET: ${{ secrets.WOMPI_INTEGRITY_SECRET }}
+          WOMPI_EVENTS_SECRET: ${{ secrets.WOMPI_EVENTS_SECRET }}
+          EXTRA_ALLOWED_ORIGINS: ${{ vars.EXTRA_ALLOWED_ORIGINS }}
+          EXTRA_CALLBACK_URLS: ${{ vars.EXTRA_CALLBACK_URLS }}
+          EXTRA_LOGOUT_URLS: ${{ vars.EXTRA_LOGOUT_URLS }}
+        run: |
+          set -euo pipefail
+          PLAN_ARGS=(
+            -no-color
+            -var="github_access_token=${{ secrets.GH_ACCESS_TOKEN }}"
+            -var="whatsapp_verify_token=${{ secrets.WHATSAPP_VERIFY_TOKEN }}"
+            -var="repository_url=${{ vars.REPOSITORY_URL }}"
+          )
+          if [ -f terraform.tfvars ]; then
+            PLAN_ARGS+=(-var-file=terraform.tfvars)
+          fi
+          if [ -n "${META_APP_ID:-}" ]; then
+            PLAN_ARGS+=(-var="meta_app_id=${META_APP_ID}")
+          fi
+          if [ -n "${META_APP_SECRET:-}" ]; then
+            PLAN_ARGS+=(-var="meta_app_secret=${META_APP_SECRET}")
+          fi
+          if [ -n "${META_EMBEDDED_SIGNUP_CONFIG_ID:-}" ]; then
+            PLAN_ARGS+=(-var="meta_embedded_signup_config_id=${META_EMBEDDED_SIGNUP_CONFIG_ID}")
+          fi
+          if [ -n "${FRONTEND_URL:-}" ]; then
+            PLAN_ARGS+=(-var="frontend_url=${FRONTEND_URL}")
+          fi
+          if [ -n "${API_CUSTOM_DOMAIN:-}" ]; then
+            PLAN_ARGS+=(-var="api_custom_domain=${API_CUSTOM_DOMAIN}")
+          fi
+          if [ -n "${WOMPI_PUBLIC_KEY:-}" ]; then
+            PLAN_ARGS+=(-var="wompi_public_key=${WOMPI_PUBLIC_KEY}")
+          fi
+          if [ -n "${WOMPI_PRIVATE_KEY:-}" ]; then
+            PLAN_ARGS+=(-var="wompi_private_key=${WOMPI_PRIVATE_KEY}")
+          fi
+          if [ -n "${WOMPI_INTEGRITY_SECRET:-}" ]; then
+            PLAN_ARGS+=(-var="wompi_integrity_secret=${WOMPI_INTEGRITY_SECRET}")
+          fi
+          if [ -n "${WOMPI_EVENTS_SECRET:-}" ]; then
+            PLAN_ARGS+=(-var="wompi_events_secret=${WOMPI_EVENTS_SECRET}")
+          fi
+          if [ -n "${EXTRA_ALLOWED_ORIGINS:-}" ]; then
+            PLAN_ARGS+=(-var="extra_allowed_origins=${EXTRA_ALLOWED_ORIGINS}")
+          fi
+          if [ -n "${EXTRA_CALLBACK_URLS:-}" ]; then
+            PLAN_ARGS+=(-var="extra_callback_urls=${EXTRA_CALLBACK_URLS}")
+          fi
+          if [ -n "${EXTRA_LOGOUT_URLS:-}" ]; then
+            PLAN_ARGS+=(-var="extra_logout_urls=${EXTRA_LOGOUT_URLS}")
+          fi
+          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/develop" ]; then
+            terraform plan "${PLAN_ARGS[@]}" -out=tfplan | tee plan.txt
+          else
+            terraform plan "${PLAN_ARGS[@]}" | tee plan.txt
+          fi
+
+      - name: Comment PR
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const planPath = 'infrastructure/environments/dev/plan.txt';
+            let plan = '';
+            try {
+              plan = fs.readFileSync(planPath, 'utf8');
+            } catch {
+              plan = 'Plan output not available.';
+            }
+            const truncated = plan.length > 60000 ? plan.slice(0, 60000) + '\n...(truncated)' : plan;
+            const output = `#### Terraform Plan (dev) \`${{ steps.plan.outcome }}\`
+            <details><summary>Show Plan</summary>
+
+            \`\`\`\n${truncated}\`\`\`
+
+            </details>`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/develop' && github.event_name == 'push' && steps.plan.outcome == 'success'
+        run: |
+          set -euo pipefail
+          test -f tfplan
+          terraform apply -auto-approve -parallelism=1 tfplan
+
+  terraform-prod:
+    name: Terraform Prod
+    runs-on: ubuntu-latest
+    environment: prod
+    concurrency:
+      group: lambda-deploy-prod
+      cancel-in-progress: false
+    if: github.ref == 'refs/heads/main'
+    defaults:
+      run:
+        working-directory: infrastructure/environments/prod
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        env:
+          HUSKY: "0"
+
+      - name: Build Lambda package
+        run: pnpm --filter chatbot-platform-backend run build
+        env:
+          NODE_ENV: production
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.11.4"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Require Terraform secrets and variables
+        env:
+          GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+          WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
+          REPOSITORY_URL: ${{ vars.REPOSITORY_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_ACCESS_TOKEN}" ]; then
+            echo "::error::GH_ACCESS_TOKEN is missing or empty. Add it under Settings → Environments → prod → Secrets."
+            exit 1
+          fi
+          if [ -z "${WHATSAPP_VERIFY_TOKEN}" ]; then
+            echo "::error::WHATSAPP_VERIFY_TOKEN is missing or empty. Add it under Settings → Environments → prod → Secrets."
+            exit 1
+          fi
+          if [ -z "${REPOSITORY_URL}" ]; then
+            echo "::error::REPOSITORY_URL is missing or empty. Add it under Settings → Secrets and variables → Actions → Variables."
+            exit 1
+          fi
+
+      - name: Terraform Plan
+        run: |
+          terraform plan \
+            -var="github_access_token=${{ secrets.GH_ACCESS_TOKEN }}" \
+            -var="whatsapp_verify_token=${{ secrets.WHATSAPP_VERIFY_TOKEN }}" \
+            -var="repository_url=${{ vars.REPOSITORY_URL }}" \
+            -var="custom_domain=${{ vars.CUSTOM_DOMAIN }}" \
+            -out=tfplan \
+            -no-color
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve -parallelism=1 tfplan

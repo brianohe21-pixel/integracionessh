@@ -1,0 +1,45 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "TerraformDeployChatbotPlatform",
+      "Effect": "Allow",
+      "Action": [
+        "acm:*",
+        "amplify:*",
+        "apigateway:*",
+        "cloudwatch:*",
+        "cognito-idp:*",
+        "dynamodb:*",
+        "events:*",
+        "iam:AttachRolePolicy",
+        "iam:CreateServiceLinkedRole",
+        "iam:CreatePolicy",
+        "iam:CreateRole",
+        "iam:DeletePolicy",
+        "iam:DeleteRole",
+        "iam:DeleteRolePolicy",
+        "iam:GetRole",
+        "iam:GetPolicy",
+        "iam:GetPolicyVersion",
+        "iam:ListAttachedRolePolicies",
+        "iam:ListRolePolicies",
+        "iam:PassRole",
+        "iam:PutRolePolicy",
+        "iam:TagRole",
+        "iam:UntagRole",
+        "iam:UpdateAssumeRolePolicy",
+        "lambda:*",
+        "logs:*",
+        "s3:*",
+        "secretsmanager:*",
+        "sqs:*",
+        "sts:GetCallerIdentity",
+        "tag:GetResources",
+        "tag:TagResources",
+        "tag:UntagResources"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

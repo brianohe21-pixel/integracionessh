@@ -1,0 +1,30 @@
+aws_region            = "us-east-1"
+repository_url        = "https://github.com/your-org/chatbot-platform"
+github_access_token   = "ghp_xxxxxxxxxxxx"
+whatsapp_verify_token = "your-random-verify-token"
+meta_app_id           = "your-meta-app-id"
+meta_app_secret       = "your-meta-app-secret"
+meta_embedded_signup_config_id = "your-embedded-signup-config-id"
+lambda_zip_path       = "../../../backend/dist/functions.zip"
+custom_domain         = "app.yourdomain.com"
+
+extra_callback_urls   = []
+extra_logout_urls     = []
+extra_allowed_origins = []
+
+wompi_public_key        = "pub_prod_..."
+wompi_private_key       = "prv_prod_..."
+wompi_integrity_secret  = "prod_integrity_..."
+wompi_events_secret     = "prod_events_..."
+wompi_amount_pro_cents  = "9900000"
+wompi_amount_enterprise_cents = "29900000"
+wompi_api_base          = "https://production.wompi.co/v1"
+
+stripe_secret_key       = ""
+stripe_webhook_secret   = ""
+stripe_price_pro        = ""
+stripe_price_enterprise = ""
+frontend_url            = "https://app.yourdomain.com"
+
+enable_monitoring       = true
+ops_alert_email         = "ops@example.com"
