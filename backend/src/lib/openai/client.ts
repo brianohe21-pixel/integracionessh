@@ -81,7 +81,7 @@ export async function generateChatResponse(
     basePrompt +
     contextBlock +
     "\n\nSi el cliente necesita hablar con un asesor, usa la herramienta transfer_to_human.";
-  const model = bot.model ?? "gpt-4o";
+  const model = bot.model ?? "gpt-4o-mini";
   const temperature = bot.temperature ?? 0.7;
   const maxTokens = bot.maxTokens ?? 1024;
 

@@ -6,10 +6,20 @@ import type { BillingUsageResponse, TenantPlan } from "@/types";
 
 export type BillingProvider = "wompi" | "stripe";
 
+export interface BillingPlanPrice {
+  amountCents: number;
+  currency: string;
+  periodDays: number;
+}
+
 export interface BillingProvidersResponse {
   wompi: boolean;
   stripe: boolean;
   default: BillingProvider | null;
+  plans?: {
+    pro: BillingPlanPrice;
+    enterprise: BillingPlanPrice;
+  };
 }
 
 export function useBillingProviders() {

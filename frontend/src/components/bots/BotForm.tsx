@@ -2,11 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import { api } from "@/lib/api";
 import { useCreateBot, useUpdateBot } from "@/hooks/useBots";
 import { useT } from "@/i18n/context";
+import { getAllowedModelsForPlan } from "@/lib/plan-config";
 import { EmbeddedSignupLauncher } from "@/components/whatsapp/EmbeddedSignupLauncher";
-import type { Bot } from "@/types";
+import type { Bot, Tenant } from "@/types";
 
 interface BotFormProps {
   bot?: Bot;
@@ -21,7 +24,7 @@ export function BotForm({ bot }: BotFormProps) {
     name: bot?.name ?? "",
     responseMode: bot?.responseMode ?? "openai",
     systemPrompt: bot?.systemPrompt ?? "",
-    model: bot?.model ?? "gpt-4o",
+    model: bot?.model ?? "gpt-4o-mini",
     temperature: bot?.temperature ?? 0.7,
     maxTokens: bot?.maxTokens ?? 1024,
     webhookUrl: bot?.webhookUrl ?? "",
@@ -37,6 +40,18 @@ export function BotForm({ bot }: BotFormProps) {
   const [advancedMode, setAdvancedMode] = useState(false);
   const createBot = useCreateBot();
   const updateBot = useUpdateBot(bot?.botId ?? "");
+
+  const { data: tenant } = useQuery({
+    queryKey: ["tenant"],
+    queryFn: () => api.get<Tenant>("/tenants/me"),
+  });
+
+  const allowedModels = getAllowedModelsForPlan(tenant?.plan ?? "free");
+  const modelLabels: Record<string, string> = {
+    "gpt-4o-mini": "GPT-4o Mini",
+    "gpt-4o": "GPT-4o",
+    "gpt-4-turbo": "GPT-4 Turbo",
+  };
 
   const isPending = createBot.isPending || updateBot.isPending;
   const isWebhookMode = form.responseMode === "webhook";
@@ -169,10 +184,15 @@ export function BotForm({ bot }: BotFormProps) {
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
               >
-                <option value="gpt-4o">GPT-4o</option>
-                <option value="gpt-4o-mini">GPT-4o Mini</option>
-                <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                {allowedModels.map((model) => (
+                  <option key={model} value={model}>
+                    {modelLabels[model] ?? model}
+                  </option>
+                ))}
               </select>
+              {tenant?.plan !== "enterprise" && (
+                <p className="mt-1 text-xs text-gray-500">{t("bots.modelPlanHint")}</p>
+              )}
             </div>
 
             <div>

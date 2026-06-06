@@ -11,8 +11,15 @@ import {
 } from "../../lib/dynamodb/tenant.repository.js";
 import { extractAuthContext } from "../../lib/auth/cognito.js";
 import { recordLegalAcceptance, getLegalAcceptance } from "../../lib/dynamodb/legal.repository.js";
+import {
+  saveOpenAIApiKey,
+  deleteOpenAIApiKey,
+  hasOpenAIApiKey,
+} from "../../lib/openai/secrets.js";
 import { ok, created, noContent, badRequest, notFound, handleError } from "../../lib/http.js";
 import type { Tenant } from "../../types/index.js";
+
+const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 
 const CreateTenantSchema = z.object({
   name: z.string().min(1).max(128),
@@ -51,6 +58,28 @@ export async function handler(
     if (method === "GET" && event.rawPath?.endsWith("/legal")) {
       const acceptance = await getLegalAcceptance(auth.tenantId, auth.userId);
       return ok(acceptance ?? { accepted: false });
+    }
+
+    if (event.rawPath?.endsWith("/openai-key")) {
+      if (method === "GET") {
+        const exists = await hasOpenAIApiKey(auth.tenantId, ENVIRONMENT);
+        return ok({ configured: exists });
+      }
+
+      if (method === "PUT") {
+        const body = JSON.parse(event.body ?? "{}") as { apiKey?: string };
+        const apiKey = (body.apiKey ?? "").trim();
+        if (!apiKey.startsWith("sk-") || apiKey.length < 20) {
+          return badRequest("Invalid OpenAI API key format");
+        }
+        await saveOpenAIApiKey(auth.tenantId, ENVIRONMENT, apiKey);
+        return ok({ configured: true });
+      }
+
+      if (method === "DELETE") {
+        await deleteOpenAIApiKey(auth.tenantId, ENVIRONMENT);
+        return noContent();
+      }
     }
 
     if (method === "GET" && tenantId) {

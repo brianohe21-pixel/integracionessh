@@ -10,6 +10,7 @@ import {
   useConfirmWompiPayment,
   useBillingProviders,
 } from "@/hooks/useBilling";
+import { formatCopPrice } from "@/lib/plan-config";
 import { useT } from "@/i18n/context";
 import type { Tenant } from "@/types";
 
@@ -82,6 +83,12 @@ export function BillingActions() {
 
   const hasStripePortal = Boolean(tenant?.stripeCustomerId);
   const showWompiNote = defaultProvider === "wompi";
+  const proPrice = providers?.plans?.pro
+    ? formatCopPrice(providers.plans.pro.amountCents)
+    : null;
+  const enterprisePrice = providers?.plans?.enterprise
+    ? formatCopPrice(providers.plans.enterprise.amountCents)
+    : null;
 
   return (
     <div className="flex flex-col gap-3 mt-4">
@@ -97,6 +104,7 @@ export function BillingActions() {
             className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
           >
             {t("billing.upgradePro")}
+            {proPrice ? ` · ${proPrice}` : ""}
           </button>
         )}
         {tenant?.plan !== "enterprise" && (
@@ -107,6 +115,7 @@ export function BillingActions() {
             className="rounded-lg border border-indigo-600 px-4 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-50 disabled:opacity-50"
           >
             {t("billing.upgradeEnterprise")}
+            {enterprisePrice ? ` · ${enterprisePrice}` : ""}
           </button>
         )}
         {hasStripePortal && (
