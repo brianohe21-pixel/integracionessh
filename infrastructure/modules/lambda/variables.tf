@@ -190,13 +190,13 @@ variable "wompi_events_secret" {
 variable "wompi_amount_pro_cents" {
   type        = string
   default     = "17990000"
-  description = "Pro plan price in COP cents (default 99000 COP)"
+  description = "Pro plan price in COP cents (default 179900 COP)"
 }
 
 variable "wompi_amount_enterprise_cents" {
   type        = string
   default     = "74990000"
-  description = "Enterprise plan price in COP cents (default 299000 COP)"
+  description = "Enterprise plan price in COP cents (default 749900 COP)"
 }
 
 variable "wompi_api_base" {
