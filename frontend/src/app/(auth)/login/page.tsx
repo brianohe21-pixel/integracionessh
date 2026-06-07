@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import {
   signIn,
   confirmSignIn,
-  signOut,
   getCurrentUser,
   resetPassword,
   confirmResetPassword,
@@ -21,6 +20,7 @@ import {
   isPaidBillingPlan,
   storePendingBillingPlan,
 } from "@/lib/post-login-path";
+import { signOutUser } from "@/lib/auth-session";
 
 function isUserAlreadyAuthenticatedError(err: unknown): boolean {
   return (
@@ -114,7 +114,7 @@ export default function LoginPage() {
         out = await signIn({ username: email, password });
       } catch (err) {
         if (isUserAlreadyAuthenticatedError(err)) {
-          await signOut();
+          await signOutUser();
           out = await signIn({ username: email, password });
         } else {
           throw err;
@@ -318,7 +318,7 @@ export default function LoginPage() {
                 setNewPassword("");
                 setConfirmNewPassword("");
                 try {
-                  await signOut();
+                  await signOutUser();
                 } catch {
                   /* ignore */
                 }

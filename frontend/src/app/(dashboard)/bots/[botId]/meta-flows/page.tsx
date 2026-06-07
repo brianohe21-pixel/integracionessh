@@ -11,6 +11,9 @@ import {
   useDeleteMetaFlow,
 } from "@/hooks/useMetaFlows";
 import { useState } from "react";
+import { DashboardPage } from "@/components/layout/DashboardPage";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { TableContainer } from "@/components/ui/TableContainer";
 
 export default function MetaFlowsPage() {
   const t = useT();
@@ -22,7 +25,7 @@ export default function MetaFlowsPage() {
   const remove = useDeleteMetaFlow(botId);
 
   return (
-    <div className="p-8 max-w-4xl">
+    <DashboardPage maxWidth="4xl">
       <Link
         href={`/bots/${botId}/edit`}
         className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-4"
@@ -31,40 +34,40 @@ export default function MetaFlowsPage() {
         {t("bots.backToBots")}
       </Link>
 
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{t("metaFlows.title")}</h1>
-          <p className="text-sm text-gray-500 mt-1">{t("metaFlows.subtitle")}</p>
-        </div>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              setSync(true);
-              void refetch().finally(() => setSync(false));
-            }}
-            className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
-          >
-            <RefreshCw className="w-4 h-4" />
-            {t("metaFlows.sync")}
-          </button>
-          <Link
-            href={`/bots/${botId}/meta-flows/new`}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700"
-          >
-            <Plus className="w-4 h-4" />
-            {t("metaFlows.new")}
-          </Link>
-        </div>
-      </div>
+      <PageHeader
+        title={t("metaFlows.title")}
+        subtitle={t("metaFlows.subtitle")}
+        actions={
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setSync(true);
+                void refetch().finally(() => setSync(false));
+              }}
+              className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              <RefreshCw className="w-4 h-4" />
+              {t("metaFlows.sync")}
+            </button>
+            <Link
+              href={`/bots/${botId}/meta-flows/new`}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700"
+            >
+              <Plus className="w-4 h-4" />
+              {t("metaFlows.new")}
+            </Link>
+          </div>
+        }
+      />
 
       {isLoading ? (
         <div className="h-32 bg-white border border-gray-200 rounded-xl animate-pulse" />
       ) : !flows?.length ? (
         <p className="text-sm text-gray-500">{t("metaFlows.empty")}</p>
       ) : (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
+        <TableContainer className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+          <table className="w-full min-w-[480px] text-sm">
             <thead className="bg-gray-50 text-left text-gray-600">
               <tr>
                 <th className="px-4 py-3">{t("flows.colName")}</th>
@@ -115,7 +118,7 @@ export default function MetaFlowsPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </TableContainer>
       )}
 
       <Link
@@ -124,6 +127,6 @@ export default function MetaFlowsPage() {
       >
         {t("metaFlows.responses")} →
       </Link>
-    </div>
+    </DashboardPage>
   );
 }

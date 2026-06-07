@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { buildCsv, downloadCsvFile } from "@/lib/csv";
 import type { BulkSendFailure, BulkSendFailureKind, BulkSendFailuresResponse } from "@/hooks/useBulkSend";
 import { useT } from "@/i18n/context";
+import { TableContainer } from "@/components/ui/TableContainer";
 
 const FAILURE_HEADERS = ["phone", "type", "error_code", "error_title", "error_message", "failed_at", "message_id"];
 
@@ -109,8 +110,8 @@ export function BulkJobFailures({
         </div>
       )}
 
-      <div className="max-h-64 overflow-y-auto rounded-lg border border-gray-200 bg-white">
-        <table className="w-full text-sm">
+      <TableContainer className="max-h-64 overflow-y-auto rounded-lg border border-gray-200 bg-white">
+        <table className="w-full min-w-[480px] text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50">
               <th className="text-left text-xs font-medium text-gray-500 uppercase px-3 py-2">{t("common.phone")}</th>
@@ -136,7 +137,7 @@ export function BulkJobFailures({
             ))}
           </tbody>
         </table>
-      </div>
+      </TableContainer>
 
       {data.total >= 500 && (
         <p className="text-xs text-gray-400">{t("bulkSend.failuresLimit")}</p>

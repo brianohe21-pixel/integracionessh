@@ -5,16 +5,18 @@ import { SupportTicketForm } from "@/components/support/SupportTicketForm";
 import { SupportTicketList } from "@/components/support/SupportTicketList";
 import { useT } from "@/i18n/context";
 import { CircleHelp, MessageSquare } from "lucide-react";
+import { DashboardPage } from "@/components/layout/DashboardPage";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 export default function SupportPage() {
   const t = useT();
 
   return (
-    <div className="p-8 max-w-3xl">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">{t("support.title")}</h1>
-        <p className="text-sm text-gray-500 mt-1">{t("support.subtitle")}</p>
-      </div>
+    <DashboardPage maxWidth="3xl">
+      <PageHeader
+        title={t("support.title")}
+        subtitle={t("support.subtitle")}
+      />
 
       <div className="space-y-6">
         <div className="bg-white rounded-xl border border-gray-200 p-6">
@@ -38,6 +40,6 @@ export default function SupportPage() {
           <SupportTicketList />
         </div>
       </div>
-    </div>
+    </DashboardPage>
   );
 }

@@ -11,6 +11,9 @@ import {
 import { useFormatters } from "@/hooks/useFormatters";
 import { useT } from "@/i18n/context";
 import type { CognitoUserSummary, Tenant, TenantPlan } from "@/types";
+import { DashboardPage } from "@/components/layout/DashboardPage";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { TableContainer } from "@/components/ui/TableContainer";
 
 type Tab = "tenants" | "cognito";
 
@@ -107,6 +110,10 @@ export default function AdminUsersPage() {
   const [cognitoEdits, setCognitoEdits] = useState<
     Record<string, { tenantId: string; role: "admin" | "member" }>
   >({});
+  const [tenantFeedback, setTenantFeedback] = useState<{
+    tenantId: string;
+    type: "success" | "error";
+  } | null>(null);
 
   const platformAdmins =
     adminsQuery.data?.pages.flatMap((page) => page.users) ?? [];
@@ -150,7 +157,16 @@ export default function AdminUsersPage() {
     tenant: Tenant,
     updates: { plan?: TenantPlan; status?: "active" | "suspended" }
   ) {
-    await updateTenant.mutateAsync({ tenantId: tenant.tenantId, ...updates });
+    try {
+      await updateTenant.mutateAsync({ tenantId: tenant.tenantId, ...updates });
+      if (updates.plan !== undefined) {
+        setTenantFeedback({ tenantId: tenant.tenantId, type: "success" });
+      }
+    } catch {
+      if (updates.plan !== undefined) {
+        setTenantFeedback({ tenantId: tenant.tenantId, type: "error" });
+      }
+    }
   }
 
   async function handleCognitoToggle(user: CognitoUserSummary) {
@@ -184,11 +200,8 @@ export default function AdminUsersPage() {
   );
 
   return (
-    <div className="p-8 max-w-6xl space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">{t("admin.users.title")}</h1>
-        <p className="text-sm text-gray-500 mt-1">{t("admin.users.subtitle")}</p>
-      </div>
+    <DashboardPage maxWidth="6xl" className="space-y-8">
+      <PageHeader title={t("admin.users.title")} subtitle={t("admin.users.subtitle")} />
 
       <section>
         <div className="mb-3">
@@ -203,7 +216,7 @@ export default function AdminUsersPage() {
           <p className="text-sm text-gray-500">{t("admin.users.emptyAdmins")}</p>
         ) : (
           <div className="space-y-4">
-            <div className="overflow-x-auto bg-white rounded-xl border border-indigo-200">
+            <TableContainer className="rounded-xl border border-indigo-200 bg-white">
               <table className="min-w-full text-sm">
                 {cognitoTableHeader}
                 <tbody className="divide-y divide-gray-100">
@@ -224,7 +237,7 @@ export default function AdminUsersPage() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </TableContainer>
             {adminsQuery.hasNextPage && (
               <button
                 type="button"
@@ -265,12 +278,14 @@ export default function AdminUsersPage() {
       </div>
 
       {tab === "tenants" ? (
-        tenantsLoading ? (
+        <>
+        <p className="text-sm text-gray-500">{t("admin.users.planManualHint")}</p>
+        {tenantsLoading ? (
           <div className="h-40 bg-gray-100 rounded-xl animate-pulse" />
         ) : !tenants?.length ? (
           <p className="text-sm text-gray-500">{t("admin.users.emptyTenants")}</p>
         ) : (
-          <div className="overflow-x-auto bg-white rounded-xl border border-gray-200">
+          <TableContainer className="rounded-xl border border-gray-200 bg-white">
             <table className="min-w-full text-sm">
               <thead className="bg-gray-50 text-left text-gray-500">
                 <tr>
@@ -280,6 +295,7 @@ export default function AdminUsersPage() {
                   <th className="px-4 py-3 font-medium">{t("admin.users.plan")}</th>
                   <th className="px-4 py-3 font-medium">{t("admin.users.tenantStatus")}</th>
                   <th className="px-4 py-3 font-medium">{t("admin.users.subscription")}</th>
+                  <th className="px-4 py-3 font-medium">{t("admin.users.periodEnd")}</th>
                   <th className="px-4 py-3 font-medium">{t("common.date")}</th>
                 </tr>
               </thead>
@@ -296,20 +312,35 @@ export default function AdminUsersPage() {
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <select
-                        value={tenant.plan}
-                        disabled={updateTenant.isPending}
-                        onChange={(e) =>
-                          void handleTenantUpdate(tenant, {
-                            plan: e.target.value as TenantPlan,
-                          })
-                        }
-                        className="rounded-lg border border-gray-300 px-2 py-1 text-sm"
-                      >
-                        <option value="free">{t("common.planFree")}</option>
-                        <option value="pro">{t("common.planPro")}</option>
-                        <option value="enterprise">{t("common.planEnterprise")}</option>
-                      </select>
+                      <div className="space-y-1">
+                        <select
+                          value={tenant.plan}
+                          disabled={updateTenant.isPending}
+                          onChange={(e) =>
+                            void handleTenantUpdate(tenant, {
+                              plan: e.target.value as TenantPlan,
+                            })
+                          }
+                          className="rounded-lg border border-gray-300 px-2 py-1 text-sm"
+                        >
+                          <option value="free">{t("common.planFree")}</option>
+                          <option value="pro">{t("common.planPro")}</option>
+                          <option value="enterprise">{t("common.planEnterprise")}</option>
+                        </select>
+                        {tenantFeedback?.tenantId === tenant.tenantId && (
+                          <p
+                            className={`text-xs ${
+                              tenantFeedback.type === "success"
+                                ? "text-green-600"
+                                : "text-red-600"
+                            }`}
+                          >
+                            {tenantFeedback.type === "success"
+                              ? t("admin.users.planUpdated")
+                              : t("admin.users.planUpdateError")}
+                          </p>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <select
@@ -334,20 +365,26 @@ export default function AdminUsersPage() {
                         {tenantPlanLabel(tenant.plan)}
                       </span>
                     </td>
+                    <td className="px-4 py-3 text-gray-500">
+                      {tenant.currentPeriodEnd
+                        ? formatDate(tenant.currentPeriodEnd)
+                        : "—"}
+                    </td>
                     <td className="px-4 py-3 text-gray-500">{formatDate(tenant.createdAt)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
-        )
+          </TableContainer>
+        )}
+        </>
       ) : cognitoQuery.isLoading ? (
         <div className="h-40 bg-gray-100 rounded-xl animate-pulse" />
       ) : !cognitoUsers.length ? (
         <p className="text-sm text-gray-500">{t("admin.users.emptyCognito")}</p>
       ) : (
         <div className="space-y-4">
-          <div className="overflow-x-auto bg-white rounded-xl border border-gray-200">
+          <TableContainer className="rounded-xl border border-gray-200 bg-white">
             <table className="min-w-full text-sm">
               {cognitoTableHeader}
               <tbody className="divide-y divide-gray-100">
@@ -367,8 +404,8 @@ export default function AdminUsersPage() {
                   />
                 ))}
               </tbody>
-            </table>
-          </div>
+              </table>
+            </TableContainer>
           {cognitoQuery.hasNextPage && (
             <button
               type="button"
@@ -381,6 +418,6 @@ export default function AdminUsersPage() {
           )}
         </div>
       )}
-    </div>
+    </DashboardPage>
   );
 }

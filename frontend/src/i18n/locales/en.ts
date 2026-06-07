@@ -58,6 +58,8 @@ export const en: Messages = {
     adminPayments: "Payment control",
     adminSupport: "Support tickets",
     signOut: "Sign out",
+    openMenu: "Open menu",
+    closeMenu: "Close menu",
   },
   auth: {
     signIn: "Sign in",
@@ -202,6 +204,7 @@ export const en: Messages = {
   },
   conversations: {
     title: "Conversations",
+    backToList: "Back to list",
     allBots: "All bots",
     emptyTitle: "No conversations",
     emptyDescription: "Your bots' conversations will appear here.",
@@ -775,6 +778,10 @@ export const en: Messages = {
       disable: "Disable",
       save: "Save changes",
       plan: "Plan",
+      planManualHint: "Plan changes apply limits immediately, without Wompi checkout.",
+      planUpdated: "Plan updated",
+      planUpdateError: "Could not update plan",
+      periodEnd: "Valid until",
       tenantStatus: "Account status",
       subscription: "Subscription",
       enabled: "Active",

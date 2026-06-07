@@ -4,6 +4,9 @@ import { useAdminPayments } from "@/hooks/useAdminPayments";
 import { useAdminTenants } from "@/hooks/useAdminTenants";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useT } from "@/i18n/context";
+import { DashboardPage } from "@/components/layout/DashboardPage";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { TableContainer } from "@/components/ui/TableContainer";
 
 function formatCents(cents: number): string {
   return new Intl.NumberFormat(undefined, {
@@ -20,11 +23,11 @@ export default function AdminPaymentsPage() {
   const { data: payments, isLoading: paymentsLoading } = useAdminPayments();
 
   return (
-    <div className="p-8 max-w-6xl space-y-10">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">{t("admin.payments.title")}</h1>
-        <p className="text-sm text-gray-500 mt-1">{t("admin.payments.subtitle")}</p>
-      </div>
+    <DashboardPage maxWidth="6xl" className="space-y-10">
+      <PageHeader
+        title={t("admin.payments.title")}
+        subtitle={t("admin.payments.subtitle")}
+      />
 
       <section>
         <h2 className="text-lg font-semibold text-gray-900 mb-4">
@@ -35,8 +38,8 @@ export default function AdminPaymentsPage() {
         ) : !tenants?.length ? (
           <p className="text-sm text-gray-500">{t("admin.payments.emptyTenants")}</p>
         ) : (
-          <div className="overflow-x-auto bg-white rounded-xl border border-gray-200">
-            <table className="min-w-full text-sm">
+          <TableContainer className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+            <table className="min-w-[720px] w-full text-sm">
               <thead className="bg-gray-50 text-left text-gray-500">
                 <tr>
                   <th className="px-4 py-3 font-medium">{t("auth.companyName")}</th>
@@ -72,7 +75,7 @@ export default function AdminPaymentsPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableContainer>
         )}
       </section>
 
@@ -85,8 +88,8 @@ export default function AdminPaymentsPage() {
         ) : !payments?.length ? (
           <p className="text-sm text-gray-500">{t("admin.payments.emptyPayments")}</p>
         ) : (
-          <div className="overflow-x-auto bg-white rounded-xl border border-gray-200">
-            <table className="min-w-full text-sm">
+          <TableContainer className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+            <table className="min-w-[640px] w-full text-sm">
               <thead className="bg-gray-50 text-left text-gray-500">
                 <tr>
                   <th className="px-4 py-3 font-medium">{t("admin.payments.reference")}</th>
@@ -116,9 +119,9 @@ export default function AdminPaymentsPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableContainer>
         )}
       </section>
-    </div>
+    </DashboardPage>
   );
 }

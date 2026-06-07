@@ -11,6 +11,8 @@ import { useBots } from "@/hooks/useBots";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Badge } from "@/components/ui/Badge";
 import { useT } from "@/i18n/context";
+import { DashboardPage } from "@/components/layout/DashboardPage";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 export default function AdvisorsPage() {
   const t = useT();
@@ -54,21 +56,21 @@ export default function AdvisorsPage() {
   }
 
   return (
-    <div className="p-8 max-w-5xl">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{t("advisors.title")}</h1>
-          <p className="text-sm text-gray-500 mt-1">{t("advisors.subtitle")}</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700"
-        >
-          <Plus className="w-4 h-4" />
-          {t("advisors.newAdvisor")}
-        </button>
-      </div>
+    <DashboardPage maxWidth="5xl">
+      <PageHeader
+        title={t("advisors.title")}
+        subtitle={t("advisors.subtitle")}
+        actions={
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700"
+          >
+            <Plus className="w-4 h-4" />
+            {t("advisors.newAdvisor")}
+          </button>
+        }
+      />
 
       {inviteInfo && (
         <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-900">
@@ -187,6 +189,6 @@ export default function AdvisorsPage() {
           </form>
         </div>
       )}
-    </div>
+    </DashboardPage>
   );
 }

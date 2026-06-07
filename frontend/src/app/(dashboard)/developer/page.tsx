@@ -8,6 +8,8 @@ import { ApiKeysList } from "@/components/developer/ApiKeysList";
 import { ApiUsageChart } from "@/components/developer/ApiUsageChart";
 import { CreateApiKeyModal } from "@/components/developer/CreateApiKeyModal";
 import { useBots } from "@/hooks/useBots";
+import { DashboardPage } from "@/components/layout/DashboardPage";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 type Tab = "keys" | "usage" | "webhooks";
 
@@ -24,24 +26,22 @@ export default function DeveloperPage() {
   const error = tab === "keys" ? keysError : tab === "usage" ? usageError : null;
 
   return (
-    <div className="p-8">
-      <div className="mb-8 flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Developer API</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Manage API keys and monitor message usage from your integrations.
-          </p>
-        </div>
-        {tab === "keys" && (
-          <button
-            onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            New API key
-          </button>
-        )}
-      </div>
+    <DashboardPage>
+      <PageHeader
+        title="Developer API"
+        subtitle="Manage API keys and monitor message usage from your integrations."
+        actions={
+          tab === "keys" ? (
+            <button
+              onClick={() => setShowCreate(true)}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              New API key
+            </button>
+          ) : undefined
+        }
+      />
 
       <div className="flex gap-1 mb-6 border-b border-gray-200">
         <button
@@ -136,6 +136,6 @@ export default function DeveloperPage() {
           </div>
         </div>
       )}
-    </div>
+    </DashboardPage>
   );
 }

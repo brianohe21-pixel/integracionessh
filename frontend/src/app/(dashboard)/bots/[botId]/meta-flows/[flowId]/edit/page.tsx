@@ -12,6 +12,7 @@ import {
   useTestSendMetaFlow,
 } from "@/hooks/useMetaFlows";
 import { MetaFlowJsonEditor } from "@/components/meta-flows/MetaFlowJsonEditor";
+import { DashboardPage } from "@/components/layout/DashboardPage";
 
 export default function EditMetaFlowPage() {
   const t = useT();
@@ -38,11 +39,15 @@ export default function EditMetaFlowPage() {
   }
 
   if (isLoading || !flow) {
-    return <div className="p-8 animate-pulse h-64 bg-gray-100 rounded-xl m-8" />;
+    return (
+      <DashboardPage maxWidth="3xl">
+        <div className="animate-pulse h-64 bg-gray-100 rounded-xl" />
+      </DashboardPage>
+    );
   }
 
   return (
-    <div className="p-8 max-w-3xl">
+    <DashboardPage maxWidth="3xl">
       <Link
         href={`/bots/${botId}/meta-flows`}
         className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-4"
@@ -100,6 +105,6 @@ export default function EditMetaFlowPage() {
           </button>
         </div>
       )}
-    </div>
+    </DashboardPage>
   );
 }

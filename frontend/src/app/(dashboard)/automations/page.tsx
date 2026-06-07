@@ -6,6 +6,9 @@ import { useAutomations, useCreateAutomation, useDeleteAutomation, useToggleAuto
 import { useBots } from "@/hooks/useBots";
 import { useT } from "@/i18n/context";
 import type { AutomationAction, AutomationRule, AutomationTrigger } from "@/types";
+import { DashboardPage } from "@/components/layout/DashboardPage";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { TableContainer } from "@/components/ui/TableContainer";
 
 const TRIGGERS: AutomationTrigger[] = ["keyword", "first_message", "schedule"];
 const ACTIONS: AutomationAction[] = ["send_text", "send_template", "tag_contact", "handoff"];
@@ -60,20 +63,21 @@ export default function AutomationsPage() {
   }
 
   return (
-    <div className="p-8">
-      <div className="mb-8 flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{t("automations.title")}</h1>
-          <p className="text-sm text-gray-500 mt-1">{t("automations.subtitle")}</p>
-        </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700"
-        >
-          <Plus className="w-4 h-4" />
-          {t("automations.new")}
-        </button>
-      </div>
+    <DashboardPage>
+      <PageHeader
+        title={t("automations.title")}
+        subtitle={t("automations.subtitle")}
+        actions={
+          <button
+            type="button"
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+          >
+            <Plus className="h-4 w-4" />
+            {t("automations.new")}
+          </button>
+        }
+      />
 
       <div className="mb-4">
         <select
@@ -104,7 +108,7 @@ export default function AutomationsPage() {
               <option key={b.botId} value={b.botId}>{b.name}</option>
             ))}
           </select>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <select value={trigger} onChange={(e) => setTrigger(e.target.value as AutomationTrigger)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
               {TRIGGERS.map((tr) => (
                 <option key={tr} value={tr}>{tr}</option>
@@ -154,7 +158,8 @@ export default function AutomationsPage() {
             <p>{t("automations.empty")}</p>
           </div>
         ) : (
-          <table className="w-full text-sm">
+          <TableContainer>
+          <table className="w-full min-w-[640px] text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr className="text-left text-gray-500">
                 <th className="px-4 py-3">{t("automations.colName")}</th>
@@ -192,8 +197,9 @@ export default function AutomationsPage() {
               ))}
             </tbody>
           </table>
+          </TableContainer>
         )}
       </div>
-    </div>
+    </DashboardPage>
   );
 }

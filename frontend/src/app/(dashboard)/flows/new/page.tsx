@@ -9,6 +9,8 @@ import {
   createDefaultFlowEdges,
   createDefaultFlowNodes,
 } from "@/components/flows/FlowCanvas";
+import { DashboardPage } from "@/components/layout/DashboardPage";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 export default function NewFlowPage() {
   const t = useT();
@@ -34,8 +36,8 @@ export default function NewFlowPage() {
   }
 
   return (
-    <div className="p-8 max-w-lg">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">{t("flows.new")}</h1>
+    <DashboardPage maxWidth="3xl">
+      <PageHeader title={t("flows.new")} />
       <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4 bg-white border rounded-xl p-6">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">{t("flows.colName")}</label>
@@ -71,6 +73,6 @@ export default function NewFlowPage() {
           {t("flows.new")}
         </button>
       </form>
-    </div>
+    </DashboardPage>
   );
 }

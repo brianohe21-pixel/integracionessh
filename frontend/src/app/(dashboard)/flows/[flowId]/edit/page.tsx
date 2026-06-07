@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { useT } from "@/i18n/context";
 import { useFlow, useUpdateFlow } from "@/hooks/useFlows";
 import type { FlowEdge, FlowNode, FlowNodeType } from "@/types";
+import { DashboardPage } from "@/components/layout/DashboardPage";
 
 const FlowCanvas = dynamic(
   () => import("@/components/flows/FlowCanvas").then((m) => m.FlowCanvas),
@@ -80,11 +81,15 @@ export default function EditFlowPage() {
   }
 
   if (isLoading || !flow) {
-    return <div className="p-8 h-64 animate-pulse bg-gray-100 m-8 rounded-xl" />;
+    return (
+      <DashboardPage>
+        <div className="h-64 animate-pulse bg-gray-100 rounded-xl" />
+      </DashboardPage>
+    );
   }
 
   return (
-    <div className="p-8">
+    <DashboardPage>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold text-gray-900">{flow.name}</h1>
         <button
@@ -165,6 +170,6 @@ export default function EditFlowPage() {
           )}
         </div>
       </div>
-    </div>
+    </DashboardPage>
   );
 }

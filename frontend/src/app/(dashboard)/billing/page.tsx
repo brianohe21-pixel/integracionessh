@@ -9,6 +9,8 @@ import { useFormatters } from "@/hooks/useFormatters";
 import { useT } from "@/i18n/context";
 import { isPaidBillingPlan, storePendingBillingPlan } from "@/lib/post-login-path";
 import type { TenantPlan } from "@/types";
+import { DashboardPage } from "@/components/layout/DashboardPage";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 function parsePlanParam(value: string | null): TenantPlan | null {
   if (value === "pro" || value === "enterprise" || value === "free") return value;
@@ -29,17 +31,21 @@ function BillingPageContent() {
   }, [planParam]);
 
   return (
-    <div className="p-8 max-w-4xl">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">{t("billing.pageTitle")}</h1>
-        <p className="text-sm text-gray-500 mt-1">{t("billing.pageSubtitle")}</p>
-        {status?.currentPeriodEnd && status.plan !== "free" && (
-          <p className="text-sm text-gray-500 mt-2">
-            {t("billing.renewsOn")}: {formatDate(status.currentPeriodEnd)}
-            {status.canRenew ? ` · ${t("billing.renewSoon")}` : ""}
-          </p>
-        )}
-      </div>
+    <DashboardPage maxWidth="4xl">
+      <PageHeader
+        title={t("billing.pageTitle")}
+        subtitle={
+          <>
+            {t("billing.pageSubtitle")}
+            {status?.currentPeriodEnd && status.plan !== "free" && (
+              <span className="block mt-2">
+                {t("billing.renewsOn")}: {formatDate(status.currentPeriodEnd)}
+                {status.canRenew ? ` · ${t("billing.renewSoon")}` : ""}
+              </span>
+            )}
+          </>
+        }
+      />
 
       <div className="space-y-6">
         <PlanUsageCard hideActions />
@@ -48,13 +54,13 @@ function BillingPageContent() {
           <BillingPlanCards autoCheckoutPlan={planParam} />
         </div>
       </div>
-    </div>
+    </DashboardPage>
   );
 }
 
 export default function BillingPage() {
   return (
-    <Suspense fallback={<div className="p-8 max-w-4xl animate-pulse h-64 bg-gray-100 rounded-xl" />}>
+    <Suspense fallback={<DashboardPage maxWidth="4xl"><div className="animate-pulse h-64 bg-gray-100 rounded-xl" /></DashboardPage>}>
       <BillingPageContent />
     </Suspense>
   );

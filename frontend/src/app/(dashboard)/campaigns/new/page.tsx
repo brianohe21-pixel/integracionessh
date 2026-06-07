@@ -10,6 +10,9 @@ import { useCreateCampaign, type CampaignRecipient } from "@/hooks/useCampaigns"
 import { SegmentInput } from "@/components/campaigns/SegmentInput";
 import { parseRecipientsCsv, decodeCsvBytes } from "@/lib/csv";
 import type { WhatsAppTemplate } from "@/types";
+import { DashboardPage } from "@/components/layout/DashboardPage";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { TableContainer } from "@/components/ui/TableContainer";
 
 type Step = "config" | "recipients" | "review";
 
@@ -148,11 +151,11 @@ export default function NewCampaignPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">{t("campaigns.newTitle")}</h1>
-        <p className="text-sm text-gray-500 mt-1">{t("campaigns.newSubtitle")}</p>
-      </div>
+    <DashboardPage maxWidth="3xl" className="space-y-6">
+      <PageHeader
+        title={t("campaigns.newTitle")}
+        subtitle={t("campaigns.newSubtitle")}
+      />
 
       <div className="flex items-center gap-2">
         {STEPS.map((s, i) => (
@@ -323,8 +326,8 @@ export default function NewCampaignPage() {
               )}
 
               {recipients.length > 0 && (
-                <div className="overflow-x-auto rounded-lg border border-gray-200 max-h-60">
-                  <table className="min-w-full text-xs">
+                <TableContainer className="rounded-lg border border-gray-200 max-h-60">
+                  <table className="min-w-[320px] w-full text-xs">
                     <thead className="bg-gray-50 sticky top-0">
                       <tr>
                         <th className="px-3 py-2 text-left text-gray-500 font-medium">{t("bulkSend.colPhone")}</th>
@@ -353,7 +356,7 @@ export default function NewCampaignPage() {
                       {t("bulkSend.showingRows", { total: recipients.length })}
                     </div>
                   )}
-                </div>
+                </TableContainer>
               )}
             </div>
           </>
@@ -431,6 +434,6 @@ export default function NewCampaignPage() {
           </button>
         )}
       </div>
-    </div>
+    </DashboardPage>
   );
 }

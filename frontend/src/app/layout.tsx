@@ -13,6 +13,11 @@ export const metadata: Metadata = {
   description: "Plataforma SaaS multitenant para chatbots con WhatsApp y OpenAI",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{

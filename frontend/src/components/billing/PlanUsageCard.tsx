@@ -22,6 +22,8 @@ export function PlanUsageCard({ hideActions = false }: { hideActions?: boolean }
     );
   }
 
+  const monthlyBulkLimit = data.limits.maxMessagesPerMonth * 10;
+
   const rows = [
     {
       label: t("billing.usageBots"),
@@ -30,17 +32,17 @@ export function PlanUsageCard({ hideActions = false }: { hideActions?: boolean }
     },
     {
       label: t("billing.usageMessages"),
-      used: String(data.usage.messagesCount),
+      used: String(data.usage.messagesCount ?? 0),
       max: formatLimit(data.limits.maxMessagesPerMonth, t),
     },
     {
       label: t("billing.usageBulk"),
-      used: String(data.usage.bulkRecipientsCount),
-      max: formatLimit(data.limits.maxBulkRecipientsPerJob, t),
+      used: String(data.usage.bulkRecipientsCount ?? 0),
+      max: formatLimit(monthlyBulkLimit, t),
     },
     {
       label: t("billing.usageCampaigns"),
-      used: String(data.usage.campaignsStarted),
+      used: String(data.usage.campaignsStarted ?? 0),
       max: formatLimit(data.limits.maxActiveCampaigns, t),
     },
   ];

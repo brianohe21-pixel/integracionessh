@@ -6,26 +6,28 @@ import { useBots } from "@/hooks/useBots";
 import { BotCard } from "@/components/bots/BotCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useT } from "@/i18n/context";
+import { DashboardPage } from "@/components/layout/DashboardPage";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 export default function BotsPage() {
   const t = useT();
   const { data: bots, isLoading, error } = useBots();
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{t("bots.title")}</h1>
-          <p className="text-sm text-gray-500 mt-1">{t("bots.subtitle")}</p>
-        </div>
-        <Link
-          href="/bots/new"
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          {t("bots.newBot")}
-        </Link>
-      </div>
+    <DashboardPage>
+      <PageHeader
+        title={t("bots.title")}
+        subtitle={t("bots.subtitle")}
+        actions={
+          <Link
+            href="/bots/new"
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            {t("bots.newBot")}
+          </Link>
+        }
+      />
 
       {isLoading && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -78,6 +80,6 @@ export default function BotsPage() {
           ))}
         </div>
       )}
-    </div>
+    </DashboardPage>
   );
 }
