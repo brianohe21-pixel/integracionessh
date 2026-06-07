@@ -1,13 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { signUp, confirmSignUp } from "aws-amplify/auth";
+import { signUp, confirmSignUp, getCurrentUser } from "aws-amplify/auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { getPasswordHint, validateCognitoPassword } from "@/lib/passwordPolicy";
 import { markPendingTermsAcceptance } from "@/components/legal/TermsAcceptanceSync";
-import { storePendingBillingPlan } from "@/lib/post-login-path";
+import {
+  billingRedirectForPlan,
+  getPostLoginPath,
+  isPaidBillingPlan,
+  storePendingBillingPlan,
+} from "@/lib/post-login-path";
 import { useT } from "@/i18n/context";
 
 export default function RegisterPage() {
@@ -25,10 +30,26 @@ export default function RegisterPage() {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   useEffect(() => {
-    if (planParam === "pro" || planParam === "enterprise") {
+    if (isPaidBillingPlan(planParam)) {
       storePendingBillingPlan(planParam);
     }
   }, [planParam]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getCurrentUser()
+      .then(async () => {
+        if (cancelled) return;
+        const target = isPaidBillingPlan(planParam)
+          ? billingRedirectForPlan(planParam)
+          : await getPostLoginPath();
+        router.replace(target);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [planParam, router]);
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
@@ -74,10 +95,9 @@ export default function RegisterPage() {
 
     try {
       await confirmSignUp({ username: email, confirmationCode: code });
-      const billingRedirect =
-        planParam === "pro" || planParam === "enterprise"
-          ? `/billing?plan=${planParam}`
-          : null;
+      const billingRedirect = isPaidBillingPlan(planParam)
+        ? billingRedirectForPlan(planParam)
+        : null;
       router.push(
         billingRedirect
           ? `/login?redirect=${encodeURIComponent(billingRedirect)}`
@@ -230,8 +250,8 @@ export default function RegisterPage() {
         {t("auth.hasAccount")}{" "}
         <Link
           href={
-            planParam === "pro" || planParam === "enterprise"
-              ? `/login?redirect=${encodeURIComponent(`/billing?plan=${planParam}`)}`
+            isPaidBillingPlan(planParam)
+              ? `/login?redirect=${encodeURIComponent(billingRedirectForPlan(planParam))}`
               : "/login"
           }
           className="text-indigo-600 hover:underline font-medium"

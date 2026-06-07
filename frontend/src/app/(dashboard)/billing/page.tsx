@@ -1,12 +1,13 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { PlanUsageCard } from "@/components/billing/PlanUsageCard";
 import { BillingPlanCards } from "@/components/billing/BillingPlanCards";
 import { useBillingStatus } from "@/hooks/useBilling";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useT } from "@/i18n/context";
+import { isPaidBillingPlan, storePendingBillingPlan } from "@/lib/post-login-path";
 import type { TenantPlan } from "@/types";
 
 function parsePlanParam(value: string | null): TenantPlan | null {
@@ -20,6 +21,12 @@ function BillingPageContent() {
   const searchParams = useSearchParams();
   const planParam = parsePlanParam(searchParams.get("plan"));
   const { data: status } = useBillingStatus();
+
+  useEffect(() => {
+    if (isPaidBillingPlan(planParam)) {
+      storePendingBillingPlan(planParam);
+    }
+  }, [planParam]);
 
   return (
     <div className="p-8 max-w-4xl">

@@ -14,7 +14,13 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { getPasswordHint, validateCognitoPassword } from "@/lib/passwordPolicy";
 import { useT } from "@/i18n/context";
-import { getPostLoginPath } from "@/lib/post-login-path";
+import {
+  billingPlanFromRedirect,
+  billingRedirectForPlan,
+  getPostLoginPath,
+  isPaidBillingPlan,
+  storePendingBillingPlan,
+} from "@/lib/post-login-path";
 
 function isUserAlreadyAuthenticatedError(err: unknown): boolean {
   return (
@@ -29,7 +35,16 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect");
+  const planParam = searchParams.get("plan");
   const t = useT();
+
+  const pendingPlan =
+    (isPaidBillingPlan(planParam) ? planParam : null) ??
+    billingPlanFromRedirect(redirectTo);
+
+  const registerHref = pendingPlan
+    ? `/register?plan=${pendingPlan}`
+    : "/register";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -47,16 +62,23 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    if (pendingPlan) storePendingBillingPlan(pendingPlan);
+  }, [pendingPlan]);
+
+  useEffect(() => {
     let cancelled = false;
     getCurrentUser()
       .then(async () => {
-        if (!cancelled) router.replace(await getPostLoginPath(redirectTo));
+        if (!cancelled) {
+          const target = redirectTo ?? (pendingPlan ? billingRedirectForPlan(pendingPlan) : null);
+          router.replace(await getPostLoginPath(target));
+        }
       })
       .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [router, redirectTo]);
+  }, [router, redirectTo, pendingPlan]);
 
   function applySignInResult(
     out: Awaited<ReturnType<typeof signIn>>
@@ -561,7 +583,7 @@ export default function LoginPage() {
 
       <p className="text-center text-sm text-gray-500 mt-6">
         {t("auth.noAccount")}{" "}
-        <Link href="/register" className="text-indigo-600 hover:underline font-medium">
+        <Link href={registerHref} className="text-indigo-600 hover:underline font-medium">
           {t("auth.signUp")}
         </Link>
       </p>
