@@ -9,6 +9,7 @@ import {
   deleteTenant,
   listTenants,
 } from "../../lib/dynamodb/tenant.repository.js";
+import { applyAdminTenantPlan } from "../../lib/billing/activate-plan.js";
 import { extractAuthContext } from "../../lib/auth/cognito.js";
 import { recordLegalAcceptance, getLegalAcceptance } from "../../lib/dynamodb/legal.repository.js";
 import {
@@ -130,6 +131,17 @@ export async function handler(
       if (auth.role !== "admin") {
         delete updates.plan;
         delete updates.status;
+      }
+
+      if (auth.role === "admin" && updates.plan !== undefined) {
+        const { plan, ...rest } = updates;
+        await applyAdminTenantPlan(resolvedId, plan);
+        if (Object.keys(rest).length === 0) {
+          const tenant = await getTenant(resolvedId);
+          if (!tenant) return notFound("Tenant not found");
+          return ok(tenant);
+        }
+        delete updates.plan;
       }
 
       const updated = await updateTenant(

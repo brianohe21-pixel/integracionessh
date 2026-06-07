@@ -1,4 +1,4 @@
-import { activateTenantPlan } from "./activate-plan.js";
+import { activateTenantPlan, applyAdminTenantPlan } from "./activate-plan.js";
 import { getTenant, updateTenant } from "../dynamodb/tenant.repository.js";
 
 jest.mock("../dynamodb/tenant.repository.js", () => ({
@@ -46,6 +46,55 @@ describe("activateTenantPlan", () => {
       subscriptionStatus: "active",
       currentPeriodEnd: "2026-07-07T12:00:00.000Z",
       paymentProvider: "wompi",
+    });
+  });
+});
+
+describe("applyAdminTenantPlan", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date("2026-06-07T12:00:00.000Z"));
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it("activates paid plan without payment provider", async () => {
+    (getTenant as jest.Mock).mockResolvedValue({
+      tenantId: "tenant-1",
+      currentPeriodEnd: "2026-05-01T12:00:00.000Z",
+    });
+    (updateTenant as jest.Mock).mockResolvedValue({
+      tenantId: "tenant-1",
+      plan: "pro",
+      subscriptionStatus: "active",
+    });
+
+    await applyAdminTenantPlan("tenant-1", "pro");
+
+    expect(updateTenant).toHaveBeenCalledWith("tenant-1", {
+      plan: "pro",
+      subscriptionStatus: "active",
+      currentPeriodEnd: "2026-07-07T12:00:00.000Z",
+    });
+  });
+
+  it("downgrades to free without active subscription", async () => {
+    (updateTenant as jest.Mock).mockResolvedValue({
+      tenantId: "tenant-1",
+      plan: "free",
+      subscriptionStatus: "none",
+    });
+
+    await applyAdminTenantPlan("tenant-1", "free");
+
+    expect(getTenant).not.toHaveBeenCalled();
+    expect(updateTenant).toHaveBeenCalledWith("tenant-1", {
+      plan: "free",
+      subscriptionStatus: "none",
+      currentPeriodEnd: "",
     });
   });
 });
