@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { signUp, confirmSignUp } from "aws-amplify/auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { getPasswordHint, validateCognitoPassword } from "@/lib/passwordPolicy";
 import { markPendingTermsAcceptance } from "@/components/legal/TermsAcceptanceSync";
+import { storePendingBillingPlan } from "@/lib/post-login-path";
 import { useT } from "@/i18n/context";
 
 export default function RegisterPage() {
@@ -22,6 +23,12 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+
+  useEffect(() => {
+    if (planParam === "pro" || planParam === "enterprise") {
+      storePendingBillingPlan(planParam);
+    }
+  }, [planParam]);
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
@@ -221,7 +228,14 @@ export default function RegisterPage() {
 
       <p className="text-center text-sm text-gray-500 mt-6">
         {t("auth.hasAccount")}{" "}
-        <Link href="/login" className="text-indigo-600 hover:underline font-medium">
+        <Link
+          href={
+            planParam === "pro" || planParam === "enterprise"
+              ? `/login?redirect=${encodeURIComponent(`/billing?plan=${planParam}`)}`
+              : "/login"
+          }
+          className="text-indigo-600 hover:underline font-medium"
+        >
           {t("auth.signIn")}
         </Link>
       </p>

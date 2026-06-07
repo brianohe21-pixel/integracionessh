@@ -56,7 +56,7 @@ export default function LoginPage() {
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [router, redirectTo]);
 
   function applySignInResult(
     out: Awaited<ReturnType<typeof signIn>>
