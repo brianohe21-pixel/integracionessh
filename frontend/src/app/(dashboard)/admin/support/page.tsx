@@ -6,6 +6,8 @@ import { useAdminSupportTickets, useAdminUpdateTicket } from "@/hooks/useAdminSu
 import { useFormatters } from "@/hooks/useFormatters";
 import { useT } from "@/i18n/context";
 import type { SupportTicket } from "@/types";
+import { DashboardPage } from "@/components/layout/DashboardPage";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 export default function AdminSupportPage() {
   const t = useT();
@@ -34,11 +36,11 @@ export default function AdminSupportPage() {
   }
 
   return (
-    <div className="p-8 max-w-5xl">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">{t("admin.support.title")}</h1>
-        <p className="text-sm text-gray-500 mt-1">{t("admin.support.subtitle")}</p>
-      </div>
+    <DashboardPage maxWidth="5xl">
+      <PageHeader
+        title={t("admin.support.title")}
+        subtitle={t("admin.support.subtitle")}
+      />
 
       {isLoading ? (
         <div className="space-y-3 animate-pulse">
@@ -102,6 +104,6 @@ export default function AdminSupportPage() {
           ))}
         </ul>
       )}
-    </div>
+    </DashboardPage>
   );
 }

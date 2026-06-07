@@ -52,10 +52,10 @@ export function BillingPlanCards({ autoCheckoutPlan }: { autoCheckoutPlan?: Tena
   const currentPlan = status?.plan ?? "free";
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      <div className="rounded-xl border border-gray-200 bg-white p-6">
+    <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+      <div className="min-w-0 rounded-xl border border-gray-200 bg-white p-4 sm:p-6">
         <p className="text-sm font-medium text-gray-500">Free</p>
-        <p className="mt-2 text-2xl font-bold text-gray-900">{t("billing.freePrice")}</p>
+        <p className="mt-2 text-xl font-bold text-gray-900 sm:text-2xl">{t("billing.freePrice")}</p>
         <p className="mt-2 text-sm text-gray-500">{t("billing.freeDescription")}</p>
         {currentPlan === "free" ? (
           <span className="mt-4 inline-block rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
@@ -72,12 +72,12 @@ export function BillingPlanCards({ autoCheckoutPlan }: { autoCheckoutPlan?: Tena
         return (
           <div
             key={plan}
-            className={`rounded-xl border bg-white p-6 ${
+            className={`min-w-0 rounded-xl border bg-white p-4 sm:p-6 ${
               plan === "pro" ? "border-indigo-200 ring-1 ring-indigo-100" : "border-gray-200"
             }`}
           >
             <p className="text-sm font-medium text-gray-500">{planLabel(plan)}</p>
-            <p className="mt-2 text-2xl font-bold text-gray-900">
+            <p className="mt-2 text-xl font-bold text-gray-900 sm:text-2xl">
               {price ? formatCopPrice(price.amountCents) : "—"}
             </p>
             <p className="mt-1 text-xs text-gray-400">

@@ -16,6 +16,9 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { useT } from "@/i18n/context";
 import type { Contact, MarketingConsent } from "@/types";
 import { decodeCsvBytes } from "@/lib/csv";
+import { DashboardPage } from "@/components/layout/DashboardPage";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { TableContainer } from "@/components/ui/TableContainer";
 
 function consentVariant(c: MarketingConsent): "success" | "warning" | "danger" | "default" {
   if (c === "opt_in") return "success";
@@ -93,13 +96,12 @@ export default function ContactsPage() {
   }
 
   return (
-    <div className="p-8 max-w-6xl">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{t("contacts.title")}</h1>
-          <p className="text-sm text-gray-500 mt-1">{t("contacts.subtitle")}</p>
-        </div>
-        <div className="flex gap-2">
+    <DashboardPage maxWidth="6xl">
+      <PageHeader
+        title={t("contacts.title")}
+        subtitle={t("contacts.subtitle")}
+        actions={
+          <>
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
@@ -125,8 +127,9 @@ export default function ContactsPage() {
             <Plus className="w-4 h-4" />
             {t("contacts.new")}
           </button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       <div className="mb-4 p-4 bg-indigo-50 border border-indigo-100 rounded-xl text-sm text-indigo-900">
         {t("contacts.complianceBanner")}{" "}
@@ -209,8 +212,8 @@ export default function ContactsPage() {
       )}
 
       {contacts.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <table className="w-full text-sm">
+        <TableContainer className="rounded-xl border border-gray-200 bg-white">
+          <table className="w-full min-w-[640px] text-sm">
             <thead>
               <tr className="bg-gray-50 text-left text-xs text-gray-500 uppercase">
                 <th className="px-4 py-3">{t("common.phone")}</th>
@@ -267,7 +270,7 @@ export default function ContactsPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </TableContainer>
       )}
 
       {contacts.length > 1 && (
@@ -281,6 +284,6 @@ export default function ContactsPage() {
           </button>
         </div>
       )}
-    </div>
+    </DashboardPage>
   );
 }

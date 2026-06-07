@@ -9,6 +9,7 @@ import {
   useConfirmWompiPayment,
 } from "@/hooks/useBilling";
 import { useT } from "@/i18n/context";
+import { DashboardPage } from "@/components/layout/DashboardPage";
 
 function BillingSuccessPageContent() {
   const t = useT();
@@ -35,8 +36,8 @@ function BillingSuccessPageContent() {
   const pending = isLoading || transaction?.status === "pending" || confirmWompi.isPending;
 
   return (
-    <div className="p-8 max-w-lg mx-auto">
-      <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+    <DashboardPage maxWidth="3xl">
+      <div className="bg-white rounded-xl border border-gray-200 p-6 sm:p-8 text-center">
         {pending && !declined && (
           <>
             <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mx-auto mb-4" />
@@ -75,7 +76,7 @@ function BillingSuccessPageContent() {
           </Link>
         </div>
       </div>
-    </div>
+    </DashboardPage>
   );
 }
 
@@ -83,11 +84,11 @@ export default function BillingSuccessPage() {
   return (
     <Suspense
       fallback={
-        <div className="p-8 max-w-lg mx-auto">
-          <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+        <DashboardPage maxWidth="3xl">
+          <div className="bg-white rounded-xl border border-gray-200 p-6 sm:p-8 text-center">
             <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mx-auto mb-4" />
           </div>
-        </div>
+        </DashboardPage>
       }
     >
       <BillingSuccessPageContent />

@@ -1,6 +1,7 @@
 "use client";
 
 import type { ApiKeyUsageSummary } from "@/types";
+import { TableContainer } from "@/components/ui/TableContainer";
 
 interface ApiUsageChartProps {
   usage: ApiKeyUsageSummary[];
@@ -11,7 +12,7 @@ function BarChart({ data }: { data: Array<{ label: string; value: number; color:
   const barWidth = Math.floor(560 / data.length) - 6;
 
   return (
-    <div className="overflow-x-auto">
+    <TableContainer>
       <svg
         viewBox={`0 0 580 180`}
         className="w-full"
@@ -56,7 +57,7 @@ function BarChart({ data }: { data: Array<{ label: string; value: number; color:
           );
         })}
       </svg>
-    </div>
+    </TableContainer>
   );
 }
 
@@ -121,8 +122,8 @@ export function ApiUsageChart({ usage }: ApiUsageChartProps) {
         {usage.length === 0 ? (
           <p className="text-sm text-gray-400 text-center py-10">No usage data yet</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <TableContainer>
+            <table className="w-full min-w-[480px] text-sm">
               <thead>
                 <tr className="bg-gray-50 text-left text-xs text-gray-500 uppercase tracking-wide">
                   <th className="px-6 py-3 font-medium">Key</th>
@@ -157,7 +158,7 @@ export function ApiUsageChart({ usage }: ApiUsageChartProps) {
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableContainer>
         )}
       </div>
     </div>

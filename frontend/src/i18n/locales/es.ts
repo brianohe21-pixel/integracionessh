@@ -56,6 +56,8 @@ export const es = {
     adminPayments: "Control de pagos",
     adminSupport: "Tickets de soporte",
     signOut: "Cerrar sesión",
+    openMenu: "Abrir menú",
+    closeMenu: "Cerrar menú",
   },
   auth: {
     signIn: "Iniciar sesión",
@@ -201,6 +203,7 @@ export const es = {
   },
   conversations: {
     title: "Conversaciones",
+    backToList: "Volver a la lista",
     allBots: "Todos los bots",
     emptyTitle: "Sin conversaciones",
     emptyDescription: "Las conversaciones de tus bots aparecerán aquí.",
@@ -773,6 +776,10 @@ export const es = {
       disable: "Deshabilitar",
       save: "Guardar cambios",
       plan: "Plan",
+      planManualHint: "El cambio de plan aplica los límites de inmediato, sin pasar por Wompi.",
+      planUpdated: "Plan actualizado",
+      planUpdateError: "No se pudo actualizar el plan",
+      periodEnd: "Vigencia",
       tenantStatus: "Estado cuenta",
       subscription: "Suscripción",
       enabled: "Activo",

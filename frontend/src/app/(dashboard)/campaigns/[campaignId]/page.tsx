@@ -28,6 +28,7 @@ import { CampaignStatusBadge } from "@/components/campaigns/CampaignStatusBadge"
 import { CampaignProgressBar } from "@/components/campaigns/CampaignProgressBar";
 import { CampaignFunnelChart } from "@/components/campaigns/CampaignFunnelChart";
 import { BulkJobFailures } from "@/components/bulk-send/BulkJobFailures";
+import { DashboardPage } from "@/components/layout/DashboardPage";
 
 function formatDate(iso?: string) {
   if (!iso) return "—";
@@ -83,11 +84,11 @@ export default function CampaignDetailPage({
 
   if (error || !campaign) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <DashboardPage maxWidth="4xl">
         <div className="rounded-lg bg-red-50 border border-red-200 p-4 text-sm text-red-700">
           {t("campaigns.loadError")}
         </div>
-      </div>
+      </DashboardPage>
     );
   }
 
@@ -98,7 +99,7 @@ export default function CampaignDetailPage({
     campaign.status !== "completed" && campaign.status !== "cancelled";
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+    <DashboardPage maxWidth="4xl" className="space-y-6">
       <div className="flex items-center gap-3">
         <Link
           href="/campaigns"
@@ -275,6 +276,6 @@ export default function CampaignDetailPage({
           />
         </div>
       )}
-    </div>
+    </DashboardPage>
   );
 }

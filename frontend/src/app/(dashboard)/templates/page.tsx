@@ -28,6 +28,9 @@ import {
   XCircle,
   Info,
 } from "lucide-react";
+import { DashboardPage } from "@/components/layout/DashboardPage";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { TableContainer } from "@/components/ui/TableContainer";
 
 type DialogMode = "create" | "edit" | null;
 
@@ -223,27 +226,28 @@ export default function TemplatesPage() {
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{t("templates.title")}</h1>
-          <p className="text-sm text-gray-500 mt-1">{t("templates.subtitle")}</p>
-        </div>
-        <button
-          onClick={openCreate}
-          disabled={!botFilter}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Plus className="w-4 h-4" />
-          {t("templates.createTemplate")}
-        </button>
-      </div>
+    <DashboardPage>
+      <PageHeader
+        title={t("templates.title")}
+        subtitle={t("templates.subtitle")}
+        actions={
+          <button
+            type="button"
+            onClick={openCreate}
+            disabled={!botFilter}
+            className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Plus className="h-4 w-4" />
+            {t("templates.createTemplate")}
+          </button>
+        }
+      />
 
       <div className="mb-6">
         <select
           value={botFilter}
           onChange={(e) => setBotFilter(e.target.value)}
-          className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 w-72"
+          className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:w-72"
         >
           <option value="">{t("templates.selectBotTitle")}</option>
           {bots?.map((bot) => (
@@ -331,8 +335,8 @@ export default function TemplatesPage() {
       )}
 
       {botFilter && !isLoading && templates && templates.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <table className="w-full">
+        <TableContainer className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+          <table className="w-full min-w-[720px]">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50">
                 <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">
@@ -441,7 +445,7 @@ export default function TemplatesPage() {
               })}
             </tbody>
           </table>
-        </div>
+        </TableContainer>
       )}
 
       {dialogMode && (
@@ -717,6 +721,6 @@ export default function TemplatesPage() {
           </div>
         </div>
       )}
-    </div>
+    </DashboardPage>
   );
 }

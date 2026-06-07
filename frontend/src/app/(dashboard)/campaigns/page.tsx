@@ -7,6 +7,8 @@ import { useCampaignList, useStartCampaign, usePauseCampaign, useResumeCampaign,
 import { CampaignStatusBadge } from "@/components/campaigns/CampaignStatusBadge";
 import { CampaignProgressBar } from "@/components/campaigns/CampaignProgressBar";
 import type { Campaign, CampaignStatus } from "@/types";
+import { DashboardPage } from "@/components/layout/DashboardPage";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, {
@@ -92,20 +94,20 @@ export default function CampaignsPage() {
   const { data: campaigns = [], isLoading, error } = useCampaignList();
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{t("campaigns.title")}</h1>
-          <p className="text-sm text-gray-500 mt-1">{t("campaigns.subtitle")}</p>
-        </div>
-        <Link
-          href="/campaigns/new"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
-        >
-          <Plus className="w-4 h-4" />
-          {t("campaigns.create")}
-        </Link>
-      </div>
+    <DashboardPage maxWidth="6xl" className="space-y-6">
+      <PageHeader
+        title={t("campaigns.title")}
+        subtitle={t("campaigns.subtitle")}
+        actions={
+          <Link
+            href="/campaigns/new"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
+          >
+            <Plus className="w-4 h-4" />
+            {t("campaigns.create")}
+          </Link>
+        }
+      />
 
       {isLoading && (
         <div className="text-center py-12 text-gray-400">{t("common.loading")}</div>
@@ -205,6 +207,6 @@ export default function CampaignsPage() {
           ))}
         </div>
       )}
-    </div>
+    </DashboardPage>
   );
 }

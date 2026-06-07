@@ -14,6 +14,9 @@ import { useMarketingMetrics } from "@/hooks/useMarketingMetrics";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useFormatters } from "@/hooks/useFormatters";
+import { DashboardPage } from "@/components/layout/DashboardPage";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { TableContainer } from "@/components/ui/TableContainer";
 import { useT } from "@/i18n/context";
 import type { BulkSendJobStatus } from "@/types";
 
@@ -75,11 +78,8 @@ export default function MetricsPage() {
   }
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">{t("metrics.title")}</h1>
-        <p className="text-sm text-gray-500 mt-1">{t("metrics.subtitle")}</p>
-      </div>
+    <DashboardPage>
+      <PageHeader title={t("metrics.title")} subtitle={t("metrics.subtitle")} />
 
       {isLoading && (
         <div className="space-y-6">
@@ -190,11 +190,12 @@ export default function MetricsPage() {
                 />
               </div>
               {(marketing.topCampaigns?.length ?? 0) > 0 && (
-                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                  <div className="px-6 py-4 border-b border-gray-100">
-                    <h3 className="font-semibold text-gray-900 text-sm">{t("metrics.topCampaigns")}</h3>
+                <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+                  <div className="border-b border-gray-100 px-4 py-4 sm:px-6">
+                    <h3 className="text-sm font-semibold text-gray-900">{t("metrics.topCampaigns")}</h3>
                   </div>
-                  <table className="w-full text-sm">
+                  <TableContainer>
+                  <table className="w-full min-w-[560px] text-sm">
                     <thead>
                       <tr className="bg-gray-50 text-left text-xs text-gray-500 uppercase">
                         <th className="px-6 py-3">{t("campaigns.nameLabel")}</th>
@@ -223,6 +224,7 @@ export default function MetricsPage() {
                       ))}
                     </tbody>
                   </table>
+                  </TableContainer>
                 </div>
               )}
             </div>
@@ -335,6 +337,6 @@ export default function MetricsPage() {
           )}
         </div>
       )}
-    </div>
+    </DashboardPage>
   );
 }

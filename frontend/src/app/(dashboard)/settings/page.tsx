@@ -11,6 +11,8 @@ import { OpenAIKeyCard } from "@/components/settings/OpenAIKeyCard";
 import { Building2, Key, Webhook, CheckCircle, Languages } from "lucide-react";
 import { PlanUsageCard } from "@/components/billing/PlanUsageCard";
 import type { Tenant } from "@/types";
+import { DashboardPage } from "@/components/layout/DashboardPage";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 export default function SettingsPage() {
   const t = useT();
@@ -31,11 +33,11 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="p-8 max-w-3xl">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">{t("settings.title")}</h1>
-        <p className="text-sm text-gray-500 mt-1">{t("settings.subtitle")}</p>
-      </div>
+    <DashboardPage maxWidth="3xl">
+      <PageHeader
+        title={t("settings.title")}
+        subtitle={t("settings.subtitle")}
+      />
 
       <div className="space-y-6">
         <div className="bg-white rounded-xl border border-gray-200 p-6">
@@ -152,6 +154,6 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
-    </div>
+    </DashboardPage>
   );
 }

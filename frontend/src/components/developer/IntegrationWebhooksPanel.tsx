@@ -8,6 +8,7 @@ import {
   useTestIntegrationWebhook,
 } from "@/hooks/useIntegrations";
 import { useT } from "@/i18n/context";
+import { TableContainer } from "@/components/ui/TableContainer";
 
 const EVENT_OPTIONS = [
   "message.received",
@@ -180,8 +181,8 @@ export function IntegrationWebhooksPanel() {
         ) : deliveries.length === 0 ? (
           <p className="text-sm text-gray-500">{t("integrations.noDeliveries")}</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <TableContainer>
+            <table className="w-full min-w-[480px] text-sm">
               <thead>
                 <tr className="border-b border-gray-200 text-left text-gray-500">
                   <th className="py-2 pr-4">{t("integrations.colEvent")}</th>
@@ -218,7 +219,7 @@ export function IntegrationWebhooksPanel() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableContainer>
         )}
       </div>
     </div>

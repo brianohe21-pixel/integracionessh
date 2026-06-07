@@ -17,7 +17,16 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useT } from "@/i18n/context";
 import { buildWaMeLink } from "@/lib/wa-link";
-import { MessageSquare, User, Bot, Phone, Headphones, Send, ExternalLink } from "lucide-react";
+import {
+  MessageSquare,
+  User,
+  Bot,
+  Phone,
+  Headphones,
+  Send,
+  ExternalLink,
+  ChevronLeft,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Message, WorkflowStatus } from "@/types";
 
@@ -124,10 +133,18 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     setSelectedId(null);
   }
 
+  const showListOnMobile = !selectedId;
+  const showDetailOnMobile = Boolean(selectedId);
+
   return (
-    <div className="flex h-screen">
-      <div className="w-80 flex-shrink-0 border-r border-gray-200 bg-white flex flex-col">
-        <div className="p-4 border-b border-gray-200 space-y-3">
+    <div className="flex h-[calc(100dvh-3.5rem)] lg:h-screen">
+      <div
+        className={cn(
+          "flex w-full flex-col border-r border-gray-200 bg-white lg:w-80 lg:flex-shrink-0",
+          showListOnMobile ? "flex" : "hidden lg:flex"
+        )}
+      >
+        <div className="space-y-3 border-b border-gray-200 p-4">
           <h1 className="font-bold text-gray-900">
             {advisorMode ? t("inbox.title") : t("conversations.title")}
           </h1>
@@ -226,9 +243,14 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col bg-gray-50 min-w-0">
+      <div
+        className={cn(
+          "flex min-w-0 flex-1 flex-col bg-gray-50",
+          showDetailOnMobile ? "flex" : "hidden lg:flex"
+        )}
+      >
         {!selectedConversation ? (
-          <div className="flex-1 flex items-center justify-center">
+          <div className="hidden flex-1 items-center justify-center lg:flex">
             <EmptyState
               icon={<MessageSquare className="w-6 h-6" />}
               title={t("conversations.selectConversation")}
@@ -237,8 +259,16 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
           </div>
         ) : (
           <>
-            <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3 min-w-0">
+            <div className="flex flex-col gap-3 border-b border-gray-200 bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+              <div className="flex min-w-0 items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSelectedId(null)}
+                  className="rounded-lg border border-gray-200 p-2 text-gray-600 hover:bg-gray-50 lg:hidden"
+                  aria-label={t("conversations.backToList")}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
                 <div className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center">
                   <User className="w-4 h-4 text-gray-400" />
                 </div>
@@ -252,7 +282,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
                 {!advisorMode && !isHuman && (
                   <button
                     type="button"
@@ -322,7 +352,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
               </div>
             )}
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-3">
+            <div className="flex-1 space-y-3 overflow-y-auto p-4 sm:p-6">
               {loadingMessages && <p className="text-sm text-gray-400">{t("common.loading")}</p>}
 
               {messages?.map((msg, index) => {
@@ -348,7 +378,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                     )}
                     <div
                       className={cn(
-                        "max-w-xs lg:max-w-md px-4 py-2.5 rounded-2xl text-sm leading-relaxed",
+                        "max-w-[85%] sm:max-w-xs lg:max-w-md px-4 py-2.5 rounded-2xl text-sm leading-relaxed",
                         isInbound
                           ? "bg-white border border-gray-200 text-gray-900 rounded-bl-sm"
                           : msg.role === "advisor"

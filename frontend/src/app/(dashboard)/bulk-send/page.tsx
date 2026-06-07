@@ -10,6 +10,9 @@ import { useFormatters } from "@/hooks/useFormatters";
 import { useT, useLocale } from "@/i18n/context";
 import { buildCsv, decodeCsvBytes, downloadCsvFile, parseRecipientsCsv } from "@/lib/csv";
 import { downloadBulkHistoryCsv, downloadBulkJobFailuresCsv } from "@/lib/bulk-send-csv";
+import { DashboardPage } from "@/components/layout/DashboardPage";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { TableContainer } from "@/components/ui/TableContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import type { WhatsAppTemplate } from "@/types";
 import {
@@ -160,13 +163,10 @@ export default function BulkSendPage() {
   ];
 
   return (
-    <div className="p-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">{t("bulkSend.title")}</h1>
-        <p className="text-sm text-gray-500 mt-1">{t("bulkSend.subtitle")}</p>
-      </div>
+    <DashboardPage>
+      <PageHeader title={t("bulkSend.title")} subtitle={t("bulkSend.subtitle")} />
 
-      <div className="flex gap-1 border-b border-gray-200 mb-6">
+      <div className="mb-6 flex gap-1 overflow-x-auto border-b border-gray-200">
         {TABS.map((tabItem) => (
           <button
             key={tabItem.id}
@@ -360,8 +360,8 @@ export default function BulkSendPage() {
                 </button>
               </div>
 
-              <div className="max-h-80 overflow-y-auto">
-                <table className="w-full">
+              <TableContainer className="max-h-80 overflow-y-auto">
+                <table className="w-full min-w-[480px]">
                   <thead>
                     <tr className="border-b border-gray-200 bg-gray-50">
                       <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-2">
@@ -395,7 +395,7 @@ export default function BulkSendPage() {
                     {t("bulkSend.showingRows", { total: csvRows.length })}
                   </p>
                 )}
-              </div>
+              </TableContainer>
             </div>
           )}
 
@@ -504,7 +504,8 @@ export default function BulkSendPage() {
           )}
 
           {!loadingHistory && history && history.length > 0 && (
-            <table className="w-full">
+            <TableContainer>
+            <table className="w-full min-w-[900px]">
               <thead>
                 <tr className="border-b border-gray-200">
                   <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">{t("bulkSend.colTemplate")}</th>
@@ -592,9 +593,10 @@ export default function BulkSendPage() {
                 })}
               </tbody>
             </table>
+            </TableContainer>
           )}
         </div>
       )}
-    </div>
+    </DashboardPage>
   );
 }

@@ -5,6 +5,9 @@ import { Plus } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { useFlows, useToggleFlow, useDeleteFlow } from "@/hooks/useFlows";
 import { useBots } from "@/hooks/useBots";
+import { DashboardPage } from "@/components/layout/DashboardPage";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { TableContainer } from "@/components/ui/TableContainer";
 
 export default function FlowsPage() {
   const t = useT();
@@ -16,28 +19,28 @@ export default function FlowsPage() {
   const botName = (botId: string) => bots?.find((b) => b.botId === botId)?.name ?? botId;
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{t("flows.title")}</h1>
-          <p className="text-sm text-gray-500 mt-1">{t("flows.subtitle")}</p>
-        </div>
-        <Link
-          href="/flows/new"
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700"
-        >
-          <Plus className="w-4 h-4" />
-          {t("flows.new")}
-        </Link>
-      </div>
+    <DashboardPage>
+      <PageHeader
+        title={t("flows.title")}
+        subtitle={t("flows.subtitle")}
+        actions={
+          <Link
+            href="/flows/new"
+            className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+          >
+            <Plus className="h-4 w-4" />
+            {t("flows.new")}
+          </Link>
+        }
+      />
 
       {isLoading ? (
-        <div className="h-32 bg-white border rounded-xl animate-pulse" />
+        <div className="h-32 animate-pulse rounded-xl border bg-white" />
       ) : !flows?.length ? (
         <p className="text-sm text-gray-500">{t("flows.empty")}</p>
       ) : (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
+        <TableContainer className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+          <table className="w-full min-w-[560px] text-sm">
             <thead className="bg-gray-50 text-left text-gray-600">
               <tr>
                 <th className="px-4 py-3">{t("flows.colName")}</th>
@@ -52,7 +55,7 @@ export default function FlowsPage() {
                   <td className="px-4 py-3">
                     <Link
                       href={`/flows/${flow.flowId}/edit`}
-                      className="text-indigo-600 hover:underline font-medium"
+                      className="font-medium text-indigo-600 hover:underline"
                     >
                       {flow.name}
                     </Link>
@@ -61,7 +64,7 @@ export default function FlowsPage() {
                   <td className="px-4 py-3">
                     {flow.enabled ? t("flows.enabled") : t("flows.disabled")}
                   </td>
-                  <td className="px-4 py-3 text-right space-x-2">
+                  <td className="space-x-2 px-4 py-3 text-right">
                     <button
                       type="button"
                       onClick={() =>
@@ -83,8 +86,8 @@ export default function FlowsPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </TableContainer>
       )}
-    </div>
+    </DashboardPage>
   );
 }

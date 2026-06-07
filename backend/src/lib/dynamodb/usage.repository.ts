@@ -14,6 +14,20 @@ export function currentUsagePeriod(): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
+function normalizeMonthlyUsage(
+  tenantId: string,
+  period: string,
+  item?: Record<string, unknown>
+): MonthlyUsage {
+  return {
+    tenantId,
+    period,
+    messagesCount: Number(item?.messagesCount) || 0,
+    bulkRecipientsCount: Number(item?.bulkRecipientsCount) || 0,
+    campaignsStarted: Number(item?.campaignsStarted) || 0,
+  };
+}
+
 export async function getMonthlyUsage(
   tenantId: string,
   period = currentUsagePeriod()
@@ -26,17 +40,11 @@ export async function getMonthlyUsage(
   );
 
   if (!result.Item) {
-    return {
-      tenantId,
-      period,
-      messagesCount: 0,
-      bulkRecipientsCount: 0,
-      campaignsStarted: 0,
-    };
+    return normalizeMonthlyUsage(tenantId, period);
   }
 
   const { PK, SK, ...rest } = result.Item;
-  return rest as MonthlyUsage;
+  return normalizeMonthlyUsage(tenantId, period, rest);
 }
 
 async function incrementField(

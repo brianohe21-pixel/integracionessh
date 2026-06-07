@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { AlertCircle } from "lucide-react";
 import { useT } from "@/i18n/context";
+import { DashboardPage } from "@/components/layout/DashboardPage";
 
 export default function BillingFailurePage() {
   const t = useT();
 
   return (
-    <div className="p-8 max-w-lg mx-auto">
-      <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+    <DashboardPage maxWidth="3xl">
+      <div className="bg-white rounded-xl border border-gray-200 p-6 sm:p-8 text-center">
         <AlertCircle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
         <h1 className="text-xl font-semibold text-gray-900">{t("billing.failureTitle")}</h1>
         <p className="text-sm text-gray-500 mt-2">{t("billing.failureBody")}</p>
@@ -20,6 +21,6 @@ export default function BillingFailurePage() {
           {t("billing.tryAgain")}
         </Link>
       </div>
-    </div>
+    </DashboardPage>
   );
 }

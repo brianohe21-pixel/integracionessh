@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useUpdateApiKey, useDeleteApiKey } from "@/hooks/useApiKeys";
 import type { ApiKey } from "@/types";
+import { TableContainer } from "@/components/ui/TableContainer";
 
 interface ApiKeysListProps {
   keys: ApiKey[];
@@ -49,8 +50,8 @@ export function ApiKeysList({ keys, bots }: ApiKeysListProps) {
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
+    <TableContainer>
+      <table className="w-full min-w-[720px] text-sm">
         <thead>
           <tr className="bg-gray-50 text-left text-xs text-gray-500 uppercase tracking-wide">
             <th className="px-6 py-3 font-medium">Name</th>
@@ -139,6 +140,6 @@ export function ApiKeysList({ keys, bots }: ApiKeysListProps) {
           ))}
         </tbody>
       </table>
-    </div>
+    </TableContainer>
   );
 }
