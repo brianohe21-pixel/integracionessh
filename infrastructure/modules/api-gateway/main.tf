@@ -429,6 +429,18 @@ locals {
       function_arn = var.billing_function_arn
       protected    = true
     }
+    billing_status = {
+      route_key    = "GET /billing/status"
+      invoke_arn   = var.billing_invoke_arn
+      function_arn = var.billing_function_arn
+      protected    = true
+    }
+    billing_transaction = {
+      route_key    = "GET /billing/transaction"
+      invoke_arn   = var.billing_invoke_arn
+      function_arn = var.billing_function_arn
+      protected    = true
+    }
     billing_webhook = {
       route_key    = "POST /billing/webhook"
       invoke_arn   = var.billing_invoke_arn
