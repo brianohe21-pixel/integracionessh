@@ -46,6 +46,12 @@ variable "meta_embedded_signup_config_id" {
   default = ""
 }
 
+variable "custom_domain" {
+  type        = string
+  default     = ""
+  description = "Frontend hostname only (e.g. app.example.com). Root/apex is not attached."
+}
+
 variable "tags" {
   type    = map(string)
   default = {}

@@ -273,5 +273,6 @@ module "amplify" {
   cognito_client_id              = module.cognito.client_id
   meta_app_id                    = var.meta_app_id
   meta_embedded_signup_config_id = var.meta_embedded_signup_config_id
+  custom_domain                  = var.custom_domain
   tags                           = local.tags
 }
