@@ -39,6 +39,7 @@ const memberNavItems = [
   { href: "/flows", labelKey: "nav.flows" as const, icon: GitBranch },
   { href: "/developer", labelKey: "nav.developer" as const, icon: KeyRound },
   { href: "/support", labelKey: "nav.support" as const, icon: LifeBuoy },
+  { href: "/billing", labelKey: "nav.billing" as const, icon: CreditCard },
   { href: "/settings", labelKey: "nav.settings" as const, icon: Settings },
 ];
 

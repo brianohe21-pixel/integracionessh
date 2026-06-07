@@ -9,7 +9,7 @@ import {
   resetPassword,
   confirmResetPassword,
 } from "aws-amplify/auth";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { getPasswordHint, validateCognitoPassword } from "@/lib/passwordPolicy";
@@ -27,6 +27,8 @@ function isUserAlreadyAuthenticatedError(err: unknown): boolean {
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirect");
   const t = useT();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -48,7 +50,7 @@ export default function LoginPage() {
     let cancelled = false;
     getCurrentUser()
       .then(async () => {
-        if (!cancelled) router.replace(await getPostLoginPath());
+        if (!cancelled) router.replace(await getPostLoginPath(redirectTo));
       })
       .catch(() => {});
     return () => {
@@ -60,7 +62,7 @@ export default function LoginPage() {
     out: Awaited<ReturnType<typeof signIn>>
   ): "done" | "newPassword" | "unsupported" {
     if (out.isSignedIn) {
-      void getPostLoginPath().then((path) => router.push(path));
+      void getPostLoginPath(redirectTo).then((path) => router.push(path));
       return "done";
     }
     const step = out.nextStep?.signInStep;
@@ -138,7 +140,7 @@ export default function LoginPage() {
           : {}),
       });
       if (out.isSignedIn) {
-        router.push(await getPostLoginPath());
+        router.push(await getPostLoginPath(redirectTo));
         return;
       }
       setError(t("auth.passwordChangeFailed"));

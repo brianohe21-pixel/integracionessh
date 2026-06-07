@@ -11,7 +11,7 @@ function formatLimit(value: number, t: (key: string) => string): string {
   return String(value);
 }
 
-export function PlanUsageCard() {
+export function PlanUsageCard({ hideActions = false }: { hideActions?: boolean }) {
   const t = useT();
   const { planLabel } = useFormatters();
   const { data, isLoading } = useBillingUsage();
@@ -75,7 +75,7 @@ export function PlanUsageCard() {
           </div>
         ))}
       </div>
-      <BillingActions />
+      {!hideActions && <BillingActions />}
     </div>
   );
 }

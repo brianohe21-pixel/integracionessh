@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { signUp, confirmSignUp } from "aws-amplify/auth";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { getPasswordHint, validateCognitoPassword } from "@/lib/passwordPolicy";
@@ -11,6 +11,8 @@ import { useT } from "@/i18n/context";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const planParam = searchParams.get("plan");
   const t = useT();
   const [step, setStep] = useState<"form" | "confirm">("form");
   const [email, setEmail] = useState("");
@@ -65,7 +67,15 @@ export default function RegisterPage() {
 
     try {
       await confirmSignUp({ username: email, confirmationCode: code });
-      router.push("/login");
+      const billingRedirect =
+        planParam === "pro" || planParam === "enterprise"
+          ? `/billing?plan=${planParam}`
+          : null;
+      router.push(
+        billingRedirect
+          ? `/login?redirect=${encodeURIComponent(billingRedirect)}`
+          : "/login"
+      );
     } catch (err) {
       setError((err as Error).message ?? t("auth.invalidCode"));
     } finally {
