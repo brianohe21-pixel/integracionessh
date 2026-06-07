@@ -92,8 +92,9 @@ variable "stripe_price_enterprise" {
 }
 
 variable "frontend_url" {
-  type    = string
-  default = "http://localhost:3000"
+  type        = string
+  default     = "https://develop.d5sepmwbbwly9.amplifyapp.com"
+  description = "Panel URL for Wompi/Stripe redirects. Run terraform output amplify_url after first apply."
 }
 
 variable "ops_alert_email" {

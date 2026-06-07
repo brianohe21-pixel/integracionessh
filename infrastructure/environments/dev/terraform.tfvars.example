@@ -25,7 +25,7 @@ stripe_secret_key       = ""
 stripe_webhook_secret   = ""
 stripe_price_pro        = ""
 stripe_price_enterprise = ""
-frontend_url            = "http://localhost:3000"
+frontend_url            = "https://develop.d5sepmwbbwly9.amplifyapp.com"
 api_custom_domain       = ""
 
 enable_monitoring       = false
