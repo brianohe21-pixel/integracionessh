@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
@@ -10,7 +10,7 @@ import {
 } from "@/hooks/useBilling";
 import { useT } from "@/i18n/context";
 
-export default function BillingSuccessPage() {
+function BillingSuccessPageContent() {
   const t = useT();
   const searchParams = useSearchParams();
   const reference = searchParams.get("reference");
@@ -76,5 +76,21 @@ export default function BillingSuccessPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function BillingSuccessPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="p-8 max-w-lg mx-auto">
+          <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+            <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mx-auto mb-4" />
+          </div>
+        </div>
+      }
+    >
+      <BillingSuccessPageContent />
+    </Suspense>
   );
 }

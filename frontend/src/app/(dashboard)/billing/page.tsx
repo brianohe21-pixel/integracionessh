@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { PlanUsageCard } from "@/components/billing/PlanUsageCard";
 import { BillingPlanCards } from "@/components/billing/BillingPlanCards";
@@ -13,7 +14,7 @@ function parsePlanParam(value: string | null): TenantPlan | null {
   return null;
 }
 
-export default function BillingPage() {
+function BillingPageContent() {
   const t = useT();
   const { formatDate } = useFormatters();
   const searchParams = useSearchParams();
@@ -41,5 +42,13 @@ export default function BillingPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function BillingPage() {
+  return (
+    <Suspense fallback={<div className="p-8 max-w-4xl animate-pulse h-64 bg-gray-100 rounded-xl" />}>
+      <BillingPageContent />
+    </Suspense>
   );
 }

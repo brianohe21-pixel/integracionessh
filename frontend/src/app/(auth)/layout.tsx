@@ -1,6 +1,20 @@
 "use client";
 
+import { Suspense } from "react";
 import { useT } from "@/i18n/context";
+
+function AuthPageFallback() {
+  return (
+    <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+      <div className="h-6 w-32 bg-gray-200 rounded animate-pulse mb-6" />
+      <div className="space-y-4">
+        <div className="h-10 bg-gray-100 rounded-lg animate-pulse" />
+        <div className="h-10 bg-gray-100 rounded-lg animate-pulse" />
+        <div className="h-10 bg-indigo-100 rounded-lg animate-pulse" />
+      </div>
+    </div>
+  );
+}
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   const t = useT();
@@ -17,7 +31,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <h1 className="text-2xl font-bold text-gray-900">{t("common.appName")}</h1>
           <p className="text-sm text-gray-500 mt-1">{t("common.appTagline")}</p>
         </div>
-        {children}
+        <Suspense fallback={<AuthPageFallback />}>{children}</Suspense>
         <p className="text-center text-xs text-gray-400 mt-6">
           <a href="/legal/terms" className="hover:text-gray-600">
             {t("legal.footerTerms")}
