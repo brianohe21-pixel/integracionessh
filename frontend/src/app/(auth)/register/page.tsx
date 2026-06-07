@@ -1,16 +1,24 @@
 "use client";
 
-import { useState } from "react";
-import { signUp, confirmSignUp } from "aws-amplify/auth";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { signUp, confirmSignUp, getCurrentUser } from "aws-amplify/auth";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { getPasswordHint, validateCognitoPassword } from "@/lib/passwordPolicy";
 import { markPendingTermsAcceptance } from "@/components/legal/TermsAcceptanceSync";
+import {
+  billingRedirectForPlan,
+  getPostLoginPath,
+  isPaidBillingPlan,
+  storePendingBillingPlan,
+} from "@/lib/post-login-path";
 import { useT } from "@/i18n/context";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const planParam = searchParams.get("plan");
   const t = useT();
   const [step, setStep] = useState<"form" | "confirm">("form");
   const [email, setEmail] = useState("");
@@ -20,6 +28,28 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+
+  useEffect(() => {
+    if (isPaidBillingPlan(planParam)) {
+      storePendingBillingPlan(planParam);
+    }
+  }, [planParam]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getCurrentUser()
+      .then(async () => {
+        if (cancelled) return;
+        const target = isPaidBillingPlan(planParam)
+          ? billingRedirectForPlan(planParam)
+          : await getPostLoginPath();
+        router.replace(target);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [planParam, router]);
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
@@ -65,7 +95,14 @@ export default function RegisterPage() {
 
     try {
       await confirmSignUp({ username: email, confirmationCode: code });
-      router.push("/login");
+      const billingRedirect = isPaidBillingPlan(planParam)
+        ? billingRedirectForPlan(planParam)
+        : null;
+      router.push(
+        billingRedirect
+          ? `/login?redirect=${encodeURIComponent(billingRedirect)}`
+          : "/login"
+      );
     } catch (err) {
       setError((err as Error).message ?? t("auth.invalidCode"));
     } finally {
@@ -211,7 +248,14 @@ export default function RegisterPage() {
 
       <p className="text-center text-sm text-gray-500 mt-6">
         {t("auth.hasAccount")}{" "}
-        <Link href="/login" className="text-indigo-600 hover:underline font-medium">
+        <Link
+          href={
+            isPaidBillingPlan(planParam)
+              ? `/login?redirect=${encodeURIComponent(billingRedirectForPlan(planParam))}`
+              : "/login"
+          }
+          className="text-indigo-600 hover:underline font-medium"
+        >
           {t("auth.signIn")}
         </Link>
       </p>

@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState } from "react";
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import {
   useCheckout,
   useBillingPortal,
-  useConfirmWompiPayment,
   useBillingProviders,
 } from "@/hooks/useBilling";
 import { formatCopPrice } from "@/lib/plan-config";
@@ -16,15 +15,12 @@ import type { Tenant } from "@/types";
 
 export function BillingActions() {
   const t = useT();
-  const searchParams = useSearchParams();
   const checkout = useCheckout();
   const portal = useBillingPortal();
-  const confirmWompi = useConfirmWompiPayment();
   const { data: providers } = useBillingProviders();
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
 
-  const { data: tenant, refetch: refetchTenant } = useQuery({
+  const { data: tenant } = useQuery({
     queryKey: ["tenant"],
     queryFn: () => api.get<Tenant>("/tenants/me"),
   });
@@ -34,28 +30,8 @@ export function BillingActions() {
     (providers?.wompi ? "wompi" : providers?.stripe ? "stripe" : null);
   const canCheckout = Boolean(defaultProvider);
 
-  useEffect(() => {
-    const billing = searchParams.get("billing");
-    const id = searchParams.get("id");
-    const reference = searchParams.get("reference");
-
-    if (billing !== "success" || !id) return;
-
-    confirmWompi
-      .mutateAsync({ id, reference: reference ?? "" })
-      .then(() => {
-        setSuccess(t("billing.wompiSuccess"));
-        refetchTenant();
-        window.history.replaceState({}, "", "/settings");
-      })
-      .catch(() => {
-        setError(t("billing.wompiConfirmError"));
-      });
-  }, [searchParams, confirmWompi, refetchTenant, t]);
-
   async function goToCheckout(plan: "pro" | "enterprise") {
     setError("");
-    setSuccess("");
     if (!defaultProvider) {
       setError(t("billing.noProviderConfigured"));
       return;
@@ -100,7 +76,7 @@ export function BillingActions() {
           <button
             type="button"
             onClick={() => goToCheckout("pro")}
-            disabled={!canCheckout || checkout.isPending || confirmWompi.isPending}
+            disabled={!canCheckout || checkout.isPending}
             className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
           >
             {t("billing.upgradePro")}
@@ -111,7 +87,7 @@ export function BillingActions() {
           <button
             type="button"
             onClick={() => goToCheckout("enterprise")}
-            disabled={!canCheckout || checkout.isPending || confirmWompi.isPending}
+            disabled={!canCheckout || checkout.isPending}
             className="rounded-lg border border-indigo-600 px-4 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-50 disabled:opacity-50"
           >
             {t("billing.upgradeEnterprise")}
@@ -129,7 +105,9 @@ export function BillingActions() {
           </button>
         )}
       </div>
-      {success && <p className="text-sm text-green-600">{success}</p>}
+      <Link href="/billing" className="text-sm text-indigo-600 hover:text-indigo-700">
+        {t("billing.viewAllPlans")}
+      </Link>
       {error && <p className="text-sm text-red-600">{error}</p>}
     </div>
   );

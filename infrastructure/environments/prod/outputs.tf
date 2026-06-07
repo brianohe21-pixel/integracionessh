@@ -26,6 +26,15 @@ output "amplify_url" {
   value = module.amplify.branch_url
 }
 
+output "amplify_custom_domain_url" {
+  value = module.amplify.custom_domain_url
+}
+
+output "amplify_domain_dns" {
+  value       = module.amplify.amplify_domain_dns
+  description = "CNAME records for app.integracionessh.lat in Namecheap."
+}
+
 output "amplify_oauth_followup" {
   value       = "After first apply: terraform output amplify_url. Put that URL in extra_logout_urls and extra_allowed_origins; append /api/auth/callback/cognito to the same host for extra_callback_urls; apply again."
   description = "Second apply wires Cognito OAuth and CORS to Amplify without a Terraform dependency cycle."

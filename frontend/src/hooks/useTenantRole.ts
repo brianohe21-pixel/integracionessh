@@ -14,7 +14,11 @@ export function useTenantRole() {
     fetchAuthSession()
       .then((session) => {
         if (cancelled) return;
-        const raw = session.tokens?.idToken?.payload?.["custom:role"];
+        if (!session.tokens?.idToken) {
+          setRole("unknown");
+          return;
+        }
+        const raw = session.tokens.idToken.payload?.["custom:role"];
         if (raw === "admin") setRole("admin");
         else if (raw === "advisor") setRole("advisor");
         else if (raw === "member") setRole("member");
