@@ -134,7 +134,7 @@ async function handleWompiCheckout(
     amountInCents,
   });
 
-  const redirectUrl = `${WOMPI_FRONTEND_URL}/settings?billing=success&reference=${encodeURIComponent(reference)}`;
+  const redirectUrl = `${WOMPI_FRONTEND_URL}/billing/success?reference=${encodeURIComponent(reference)}`;
   const url = buildCheckoutUrl({
     reference,
     amountInCents,
@@ -230,6 +230,31 @@ export async function handler(
     assertMemberRole(auth);
     const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
 
+    if (method === "GET" && path.endsWith("/billing/status")) {
+      const usage = await getMonthlyUsage(tenant.tenantId);
+      const plan = tenant.plan ?? "free";
+      const limits = getPlanLimits(plan);
+      const periodEnd = tenant.currentPeriodEnd
+        ? new Date(tenant.currentPeriodEnd)
+        : null;
+      const now = Date.now();
+      const msUntilExpiry = periodEnd ? periodEnd.getTime() - now : null;
+      const canRenew =
+        plan !== "free" &&
+        (msUntilExpiry === null || msUntilExpiry <= 7 * 24 * 60 * 60 * 1000);
+
+      return ok({
+        plan,
+        limits,
+        usage,
+        subscriptionStatus: tenant.subscriptionStatus ?? "none",
+        currentPeriodEnd: tenant.currentPeriodEnd ?? null,
+        paymentProvider: tenant.paymentProvider ?? (isWompiConfigured() ? "wompi" : "stripe"),
+        canRenew,
+        isExpired: periodEnd ? periodEnd.getTime() <= now : false,
+      });
+    }
+
     if (method === "GET" && path.endsWith("/billing/usage")) {
       const usage = await getMonthlyUsage(tenant.tenantId);
       const plan = tenant.plan ?? "free";
@@ -240,6 +265,23 @@ export async function handler(
         plan,
         subscription: tenant.subscriptionStatus ?? "none",
         paymentProvider: tenant.paymentProvider ?? (isWompiConfigured() ? "wompi" : "stripe"),
+      });
+    }
+
+    if (method === "GET" && path.endsWith("/billing/transaction")) {
+      const reference =
+        event.queryStringParameters?.reference?.trim() ?? "";
+      if (!reference) return badRequest("reference is required");
+
+      const payment = await getPaymentByReference(auth.tenantId, reference);
+      if (!payment) return badRequest("Transaction not found");
+
+      return ok({
+        reference: payment.reference,
+        plan: payment.plan,
+        status: payment.status,
+        amountInCents: payment.amountInCents,
+        wompiTransactionId: payment.wompiTransactionId ?? null,
       });
     }
 
