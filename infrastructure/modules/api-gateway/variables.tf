@@ -182,6 +182,14 @@ variable "flows_function_arn" {
   type = string
 }
 
+variable "calling_invoke_arn" {
+  type = string
+}
+
+variable "calling_function_arn" {
+  type = string
+}
+
 variable "allowed_origins" {
   type    = list(string)
   default = ["*"]
