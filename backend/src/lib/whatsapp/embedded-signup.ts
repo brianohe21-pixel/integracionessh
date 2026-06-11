@@ -51,6 +51,9 @@ export async function subscribeWabaWebhooks(wabaId: string, accessToken: string)
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
     },
+    body: JSON.stringify({
+      subscribed_fields: ["messages", "calls"],
+    }),
   });
 
   if (!response.ok) {

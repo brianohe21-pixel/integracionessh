@@ -179,7 +179,99 @@ export interface WhatsAppValue {
   };
   contacts?: WhatsAppContact[];
   messages?: WhatsAppMessage[];
-  statuses?: WhatsAppStatus[];
+  statuses?: Array<WhatsAppStatus | WhatsAppCallStatusItem>;
+  calls?: WhatsAppCallWebhookItem[];
+}
+
+export type WhatsAppCallAction =
+  | "connect"
+  | "pre_accept"
+  | "accept"
+  | "reject"
+  | "terminate";
+
+export type WhatsAppCallDirection = "USER_INITIATED" | "BUSINESS_INITIATED";
+
+export type WhatsAppCallLifecycleStatus =
+  | "RINGING"
+  | "ACCEPTED"
+  | "REJECTED"
+  | "COMPLETED"
+  | "FAILED";
+
+export interface WhatsAppCallSession {
+  sdp_type: "offer" | "answer";
+  sdp: string;
+}
+
+export interface WhatsAppCallWebhookItem {
+  id: string;
+  from?: string;
+  to?: string;
+  event: "connect" | "terminate";
+  timestamp: string;
+  direction?: WhatsAppCallDirection;
+  session?: WhatsAppCallSession;
+  connection?: { webrtc?: { sdp?: string } };
+  biz_opaque_callback_data?: string;
+  status?: string | string[];
+  start_time?: string;
+  end_time?: string;
+  duration?: number;
+}
+
+export interface WhatsAppCallStatusItem {
+  id: string;
+  type: "call";
+  status: "RINGING" | "ACCEPTED" | "REJECTED";
+  timestamp: string;
+  recipient_id: string;
+}
+
+export type CallRecordStatus =
+  | "initiated"
+  | "ringing"
+  | "accepted"
+  | "rejected"
+  | "completed"
+  | "failed"
+  | "terminated";
+
+export interface CallRecord {
+  callId: string;
+  tenantId: string;
+  botId: string;
+  phoneNumber: string;
+  businessPhoneNumber?: string;
+  direction: WhatsAppCallDirection;
+  status: CallRecordStatus;
+  duration?: number;
+  bizOpaqueCallbackData?: string;
+  startedAt?: string;
+  endedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CallQueueEventType = "connect" | "status" | "terminate";
+
+export interface CallQueueMessage {
+  tenantId: string;
+  botId: string;
+  phoneNumberId: string;
+  eventType: CallQueueEventType;
+  callId: string;
+  phoneNumber?: string;
+  direction?: WhatsAppCallDirection;
+  from?: string;
+  to?: string;
+  session?: WhatsAppCallSession;
+  status?: WhatsAppCallLifecycleStatus;
+  duration?: number;
+  bizOpaqueCallbackData?: string;
+  timestamp: string;
+  startTime?: string;
+  endTime?: string;
 }
 
 export interface WhatsAppContact {
@@ -508,6 +600,7 @@ export interface ApiKeyUsageLog {
   statusCode: number;
   durationMs: number;
   messageId?: string;
+  callId?: string;
   maskedPhone?: string;
   createdAt: string;
 }
@@ -553,7 +646,10 @@ export type IntegrationEvent =
   | "message.received"
   | "conversation.handoff"
   | "message.sent"
-  | "flow.completed";
+  | "flow.completed"
+  | "call.connect"
+  | "call.status"
+  | "call.terminated";
 
 export type MetaFlowStatus = "DRAFT" | "PUBLISHED" | "DEPRECATED";
 

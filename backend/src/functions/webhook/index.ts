@@ -11,10 +11,17 @@ import {
   recordBulkDeliveryFailure,
 } from "../../lib/dynamodb/bulk-job.repository.js";
 import { incrementCampaignAnalytics } from "../../lib/dynamodb/campaign.repository.js";
+import {
+  isCallStatusItem,
+  normalizeCallConnectEvent,
+  normalizeCallStatusEvent,
+  normalizeCallTerminateEvent,
+} from "../../lib/whatsapp/call-events.js";
 import type { WhatsAppWebhookEvent, SQSMessageBody } from "../../types/index.js";
 
 const sqs = new SQSClient({});
 const QUEUE_URL = process.env.SQS_QUEUE_URL ?? "";
+const CALL_QUEUE_URL = process.env.CALL_EVENTS_QUEUE_URL ?? "";
 const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN ?? "";
 const APP_SECRET = process.env.WHATSAPP_APP_SECRET ?? "";
 
@@ -69,6 +76,62 @@ async function handleWebhook(
 
   for (const entry of payload.entry) {
     for (const change of entry.changes) {
+      if (change.field === "calls") {
+        if (!CALL_QUEUE_URL) continue;
+
+        const value = change.value;
+        const phoneNumberId = value.metadata.phone_number_id;
+        const bot = await getBotByPhoneNumberId(phoneNumberId);
+        if (!bot || bot.status !== "active") {
+          console.log(`No active bot found for calls phoneNumberId: ${phoneNumberId}`);
+          continue;
+        }
+
+        const ctx = { tenantId: bot.tenantId, botId: bot.botId, phoneNumberId };
+
+        for (const call of value.calls ?? []) {
+          if (call.event === "connect") {
+            sqsPromises.push(
+              sqs.send(
+                new SendMessageCommand({
+                  QueueUrl: CALL_QUEUE_URL,
+                  MessageBody: JSON.stringify(normalizeCallConnectEvent(call, ctx)),
+                  MessageGroupId: `${bot.tenantId}-${call.id}`,
+                  MessageDeduplicationId: `connect-${call.id}-${call.timestamp}`,
+                })
+              )
+            );
+          } else if (call.event === "terminate") {
+            sqsPromises.push(
+              sqs.send(
+                new SendMessageCommand({
+                  QueueUrl: CALL_QUEUE_URL,
+                  MessageBody: JSON.stringify(normalizeCallTerminateEvent(call, ctx)),
+                  MessageGroupId: `${bot.tenantId}-${call.id}`,
+                  MessageDeduplicationId: `terminate-${call.id}-${call.timestamp}`,
+                })
+              )
+            );
+          }
+        }
+
+        for (const status of value.statuses ?? []) {
+          if (!isCallStatusItem(status)) continue;
+          sqsPromises.push(
+            sqs.send(
+              new SendMessageCommand({
+                QueueUrl: CALL_QUEUE_URL,
+                MessageBody: JSON.stringify(normalizeCallStatusEvent(status, ctx)),
+                MessageGroupId: `${bot.tenantId}-${status.id}`,
+                MessageDeduplicationId: `status-${status.id}-${status.timestamp}`,
+              })
+            )
+          );
+        }
+
+        continue;
+      }
+
       if (change.field !== "messages") continue;
 
       const value = change.value;
@@ -76,6 +139,7 @@ async function handleWebhook(
 
       const statuses = value.statuses ?? [];
       for (const status of statuses) {
+        if (isCallStatusItem(status)) continue;
         if (status.status === "sent") continue;
 
         sqsPromises.push(

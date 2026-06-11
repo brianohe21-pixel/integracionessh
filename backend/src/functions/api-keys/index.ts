@@ -25,6 +25,7 @@ import {
   forbidden,
   handleError,
 } from "../../lib/http.js";
+import { DEFAULT_API_KEY_SCOPES } from "../../lib/api-keys/scopes.js";
 import type { ApiKey } from "../../types/index.js";
 
 const CreateApiKeySchema = z.object({
@@ -129,7 +130,7 @@ export async function handler(
         name: parsed.data.name,
         prefix,
         hashedKey,
-        scopes: ["messages:send"],
+        scopes: [...DEFAULT_API_KEY_SCOPES],
         rateLimitPerMinute: planLimits.apiRateLimitPerMinute,
         rateLimitPerDay: planLimits.apiRateLimitPerDay,
         enabled: true,
