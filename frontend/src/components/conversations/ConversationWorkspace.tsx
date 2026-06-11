@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { api } from "@/lib/api";
 import {
   useConversations,
   useConversationMessages,
@@ -62,6 +64,10 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   const { data: messages, isLoading: loadingMessages } = useConversationMessages(selectedId ?? "");
 
   const handoff = useHandoffConversation();
+  const callPermission = useMutation({
+    mutationFn: (params: { botId: string; to: string }) =>
+      api.post(`/bots/${params.botId}/calling/calls/permission-request`, { to: params.to }),
+  });
   const release = useReleaseConversation();
   const sendMessage = useSendConversationMessage();
   const updateNote = useUpdateConversationNote();
@@ -290,6 +296,21 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                     className="px-3 py-1.5 text-xs font-medium bg-amber-100 text-amber-800 rounded-lg"
                   >
                     {t("conversations.transfer")}
+                  </button>
+                )}
+                {!advisorMode && selectedConversation.botId && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      callPermission.mutate({
+                        botId: selectedConversation.botId,
+                        to: selectedConversation.phoneNumber,
+                      })
+                    }
+                    disabled={callPermission.isPending}
+                    className="px-3 py-1.5 text-xs font-medium bg-violet-100 text-violet-800 rounded-lg"
+                  >
+                    {t("conversations.requestCallPermission")}
                   </button>
                 )}
                 {isHuman && (

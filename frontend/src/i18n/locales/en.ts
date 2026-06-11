@@ -186,6 +186,15 @@ export const en: Messages = {
     phonePlaceholder: "1234567890",
     advancedMode: "Advanced: enter IDs manually",
     advancedModeHide: "Hide manual IDs",
+    callingTitle: "WhatsApp Calling",
+    callingDescription:
+      "Enable voice calls via WhatsApp Business Calling API. API integrators handle WebRTC/SDP; the platform relays signaling and webhooks.",
+    callingPrerequisites:
+      "Meta requirements: Cloud API number, messaging limit ≥ 2,000 unique users/day (or test number), calls webhook field subscribed in your app, and user call permission for outbound calls.",
+    callingMetaDocs: "Meta Calling API documentation",
+    callingEnable: "Enable calling on this number",
+    callingSaved: "Calling settings updated",
+    callingSaveError: "Could not update calling settings",
     whatsappRequired: "Connect WhatsApp or enter IDs in advanced mode before saving.",
     sharedTokenNote:
       "The WhatsApp token is stored per account. Connecting again updates credentials for all bots on this account.",
@@ -223,6 +232,7 @@ export const en: Messages = {
     filterAll: "All",
     filterHuman: "Human handoff",
     filterBot: "Automated",
+    requestCallPermission: "Request call permission",
     transfer: "Transfer to advisor",
     release: "Return to bot",
     openWhatsApp: "Open in WhatsApp",
@@ -497,7 +507,7 @@ export const en: Messages = {
     step0: "Open Meta for Developers → Your app",
     step1: "Go to WhatsApp → Configuration → Webhooks",
     step2: "Paste the webhook URL and Verify Token from your deployment",
-    step3: "Subscribe to the messages field",
+    step3: "Subscribe to the messages and calls fields",
     secretsTitle: "API Keys",
     secretsDescription:
       "WhatsApp credentials are saved when you connect a bot via Embedded Signup. OpenAI uses the platform key unless you have your own.",

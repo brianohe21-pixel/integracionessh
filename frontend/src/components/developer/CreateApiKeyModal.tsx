@@ -155,6 +155,10 @@ export function CreateApiKeyModal({ bots, onClose }: CreateApiKeyModalProps) {
               <p className="pl-4">{`-H "X-API-Key: ${createdKey.key.slice(0, 20)}…" \\`}</p>
               <p className="pl-4">{`-H "Content-Type: application/json" \\`}</p>
               <p className="pl-4">{`-d '{"to":"521234567890","type":"text","text":"Hello!"}'`}</p>
+              <p className="text-gray-400 font-sans mt-3 mb-1 text-[11px] uppercase tracking-wide">
+                Calls (WebRTC signaling)
+              </p>
+              <p>POST /v1/calls · POST /v1/calls/{"{callId}"} · GET /v1/calls/settings</p>
             </div>
 
             <div className="flex justify-end">
