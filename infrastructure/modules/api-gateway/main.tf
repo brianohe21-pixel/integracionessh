@@ -501,6 +501,78 @@ locals {
       function_arn = var.public_api_function_arn
       protected    = false
     }
+    public_api_calls_create = {
+      route_key    = "POST /v1/calls"
+      invoke_arn   = var.public_api_invoke_arn
+      function_arn = var.public_api_function_arn
+      protected    = false
+    }
+    public_api_calls_action = {
+      route_key    = "POST /v1/calls/{callId}"
+      invoke_arn   = var.public_api_invoke_arn
+      function_arn = var.public_api_function_arn
+      protected    = false
+    }
+    public_api_calls_get = {
+      route_key    = "GET /v1/calls/{callId}"
+      invoke_arn   = var.public_api_invoke_arn
+      function_arn = var.public_api_function_arn
+      protected    = false
+    }
+    public_api_calls_settings_get = {
+      route_key    = "GET /v1/calls/settings"
+      invoke_arn   = var.public_api_invoke_arn
+      function_arn = var.public_api_function_arn
+      protected    = false
+    }
+    public_api_calls_settings_put = {
+      route_key    = "PUT /v1/calls/settings"
+      invoke_arn   = var.public_api_invoke_arn
+      function_arn = var.public_api_function_arn
+      protected    = false
+    }
+    public_api_calls_permission = {
+      route_key    = "POST /v1/calls/permission-request"
+      invoke_arn   = var.public_api_invoke_arn
+      function_arn = var.public_api_function_arn
+      protected    = false
+    }
+    bots_calling_settings_get = {
+      route_key    = "GET /bots/{botId}/calling/settings"
+      invoke_arn   = var.calling_invoke_arn
+      function_arn = var.calling_function_arn
+      protected    = true
+    }
+    bots_calling_settings_put = {
+      route_key    = "PUT /bots/{botId}/calling/settings"
+      invoke_arn   = var.calling_invoke_arn
+      function_arn = var.calling_function_arn
+      protected    = true
+    }
+    bots_calling_calls_list = {
+      route_key    = "GET /bots/{botId}/calling/calls"
+      invoke_arn   = var.calling_invoke_arn
+      function_arn = var.calling_function_arn
+      protected    = true
+    }
+    bots_calling_calls_get = {
+      route_key    = "GET /bots/{botId}/calling/calls/{callId}"
+      invoke_arn   = var.calling_invoke_arn
+      function_arn = var.calling_function_arn
+      protected    = true
+    }
+    bots_calling_permission_request = {
+      route_key    = "POST /bots/{botId}/calling/calls/permission-request"
+      invoke_arn   = var.calling_invoke_arn
+      function_arn = var.calling_function_arn
+      protected    = true
+    }
+    bots_calling_permission_status = {
+      route_key    = "GET /bots/{botId}/calling/calls/permission/{userWaId}"
+      invoke_arn   = var.calling_invoke_arn
+      function_arn = var.calling_function_arn
+      protected    = true
+    }
     api_keys_list = {
       route_key    = "GET /api-keys"
       invoke_arn   = var.api_keys_invoke_arn
@@ -769,6 +841,7 @@ resource "aws_lambda_permission" "api_gw" {
     knowledge        = var.knowledge_function_arn
     meta_flows       = var.meta_flows_function_arn
     flows            = var.flows_function_arn
+    calling          = var.calling_function_arn
   }
 
   statement_id  = "AllowAPIGatewayInvoke-${each.key}"

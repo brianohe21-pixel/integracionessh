@@ -97,6 +97,79 @@ export function buildFlowCompletedPayload(params: {
   });
 }
 
+export function buildCallConnectPayload(params: {
+  tenantId: string;
+  botId: string;
+  callId: string;
+  direction: string;
+  from: string;
+  to: string;
+  session?: { sdp_type: string; sdp: string };
+  bizOpaqueCallbackData?: string;
+}): IntegrationEventPayload {
+  return buildIntegrationPayload({
+    event: "call.connect",
+    tenantId: params.tenantId,
+    data: {
+      botId: params.botId,
+      callId: params.callId,
+      direction: params.direction,
+      from: params.from,
+      to: params.to,
+      ...(params.session ? { session: params.session } : {}),
+      ...(params.bizOpaqueCallbackData
+        ? { bizOpaqueCallbackData: params.bizOpaqueCallbackData }
+        : {}),
+    },
+  });
+}
+
+export function buildCallStatusPayload(params: {
+  tenantId: string;
+  botId: string;
+  callId: string;
+  status: string;
+  phoneNumber: string;
+}): IntegrationEventPayload {
+  return buildIntegrationPayload({
+    event: "call.status",
+    tenantId: params.tenantId,
+    data: {
+      botId: params.botId,
+      callId: params.callId,
+      status: params.status,
+      phoneNumber: params.phoneNumber,
+    },
+  });
+}
+
+export function buildCallTerminatedPayload(params: {
+  tenantId: string;
+  botId: string;
+  callId: string;
+  direction: string;
+  phoneNumber: string;
+  duration?: number;
+  status: string;
+  bizOpaqueCallbackData?: string;
+}): IntegrationEventPayload {
+  return buildIntegrationPayload({
+    event: "call.terminated",
+    tenantId: params.tenantId,
+    data: {
+      botId: params.botId,
+      callId: params.callId,
+      direction: params.direction,
+      phoneNumber: params.phoneNumber,
+      status: params.status,
+      ...(params.duration !== undefined ? { duration: params.duration } : {}),
+      ...(params.bizOpaqueCallbackData
+        ? { bizOpaqueCallbackData: params.bizOpaqueCallbackData }
+        : {}),
+    },
+  });
+}
+
 export function buildTestPayload(tenantId: string): IntegrationEventPayload {
   return buildIntegrationPayload({
     event: "message.received",

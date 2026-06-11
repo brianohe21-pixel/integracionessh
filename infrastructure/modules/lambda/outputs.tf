@@ -169,3 +169,11 @@ output "flows_invoke_arn" {
 output "flows_function_arn" {
   value = aws_lambda_function.functions["flows"].arn
 }
+
+output "calling_invoke_arn" {
+  value = aws_lambda_function.functions["calling"].invoke_arn
+}
+
+output "calling_function_arn" {
+  value = aws_lambda_function.functions["calling"].arn
+}

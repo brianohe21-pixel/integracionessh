@@ -35,6 +35,8 @@ const entryPoints = [
   "src/functions/meta-flows/index.ts",
   "src/functions/flows/index.ts",
   "src/functions/process-flow/index.ts",
+  "src/functions/process-call/index.ts",
+  "src/functions/calling/index.ts",
 ];
 
 const buildOptions = {

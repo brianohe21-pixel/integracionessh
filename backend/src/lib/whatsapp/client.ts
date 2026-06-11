@@ -10,7 +10,7 @@ export function truncateWhatsAppText(text: string): string {
   return text.slice(0, WHATSAPP_MAX_TEXT_BODY_LENGTH);
 }
 
-function throwGraphApiError(status: number, body: string): never {
+export function throwGraphApiError(status: number, body: string): never {
   try {
     const parsed = JSON.parse(body) as {
       error?: { error_subcode?: number; error_user_msg?: string };

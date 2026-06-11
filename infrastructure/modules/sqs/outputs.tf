@@ -57,3 +57,11 @@ output "flow_run_queue_url" {
 output "flow_run_queue_arn" {
   value = aws_sqs_queue.flow_run.arn
 }
+
+output "call_events_queue_url" {
+  value = aws_sqs_queue.call_events.url
+}
+
+output "call_events_queue_arn" {
+  value = aws_sqs_queue.call_events.arn
+}

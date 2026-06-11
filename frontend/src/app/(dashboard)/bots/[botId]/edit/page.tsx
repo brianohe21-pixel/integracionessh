@@ -5,6 +5,7 @@ import { useBot } from "@/hooks/useBots";
 import { BotForm } from "@/components/bots/BotForm";
 import { BotKnowledge } from "@/components/bots/BotKnowledge";
 import { BotWhatsAppQuality } from "@/components/bots/BotWhatsAppQuality";
+import { BotCallingSettings } from "@/components/bots/BotCallingSettings";
 import { useT } from "@/i18n/context";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
@@ -57,6 +58,8 @@ export default function EditBotPage() {
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           {bot && <BotForm bot={bot} />}
         </div>
+
+        {bot && <BotCallingSettings botId={bot.botId} />}
 
         {bot && <BotKnowledge bot={bot} />}
 

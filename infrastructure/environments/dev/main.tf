@@ -157,6 +157,8 @@ module "lambda" {
   knowledge_sqs_queue_arn       = module.sqs.knowledge_queue_arn
   flow_run_sqs_queue_url        = module.sqs.flow_run_queue_url
   flow_run_sqs_queue_arn        = module.sqs.flow_run_queue_arn
+  call_events_sqs_queue_url     = module.sqs.call_events_queue_url
+  call_events_sqs_queue_arn     = module.sqs.call_events_queue_arn
   scheduler_role_arn            = aws_iam_role.scheduler.arn
   media_bucket_arn              = module.s3.media_bucket_arn
   media_bucket_name             = module.s3.media_bucket_name
@@ -232,6 +234,8 @@ module "api_gateway" {
   meta_flows_function_arn       = module.lambda.meta_flows_function_arn
   flows_invoke_arn              = module.lambda.flows_invoke_arn
   flows_function_arn            = module.lambda.flows_function_arn
+  calling_invoke_arn            = module.lambda.calling_invoke_arn
+  calling_function_arn          = module.lambda.calling_function_arn
   allowed_origins               = local.browser_origins
   api_custom_domain             = var.api_custom_domain
   tags                          = local.tags

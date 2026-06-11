@@ -64,6 +64,8 @@ resource "aws_iam_role_policy" "lambda_permissions" {
           var.integration_sqs_queue_arn,
           var.automation_sqs_queue_arn,
           var.knowledge_sqs_queue_arn,
+          var.flow_run_sqs_queue_arn,
+          var.call_events_sqs_queue_arn,
         ]
       },
       {
@@ -155,9 +157,10 @@ locals {
       timeout     = 30
       memory      = 256
       environment = {
-        WHATSAPP_VERIFY_TOKEN = var.whatsapp_verify_token
-        SQS_QUEUE_URL         = var.sqs_queue_url
-        TABLE_NAME            = var.dynamodb_table_name
+        WHATSAPP_VERIFY_TOKEN    = var.whatsapp_verify_token
+        SQS_QUEUE_URL            = var.sqs_queue_url
+        CALL_EVENTS_QUEUE_URL    = var.call_events_sqs_queue_url
+        TABLE_NAME               = var.dynamodb_table_name
       }
     }
     process_message = {
@@ -472,6 +475,27 @@ locals {
         ENVIRONMENT = var.environment
       }
     }
+    process_call = {
+      handler     = "process-call/index.handler"
+      description = "Processes WhatsApp call events from SQS"
+      timeout     = 60
+      memory      = 256
+      environment = {
+        TABLE_NAME                = var.dynamodb_table_name
+        ENVIRONMENT               = var.environment
+        INTEGRATION_SQS_QUEUE_URL = var.integration_sqs_queue_url
+      }
+    }
+    calling = {
+      handler     = "calling/index.handler"
+      description = "WhatsApp calling settings and history API"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME  = var.dynamodb_table_name
+        ENVIRONMENT = var.environment
+      }
+    }
   }
 }
 
@@ -553,6 +577,14 @@ resource "aws_lambda_event_source_mapping" "knowledge_sqs_trigger" {
 resource "aws_lambda_event_source_mapping" "flow_run_sqs_trigger" {
   event_source_arn                   = var.flow_run_sqs_queue_arn
   function_name                      = aws_lambda_function.functions["process_flow"].arn
+  batch_size                         = 1
+  enabled                            = true
+  maximum_batching_window_in_seconds = 0
+}
+
+resource "aws_lambda_event_source_mapping" "call_events_sqs_trigger" {
+  event_source_arn                   = var.call_events_sqs_queue_arn
+  function_name                      = aws_lambda_function.functions["process_call"].arn
   batch_size                         = 1
   enabled                            = true
   maximum_batching_window_in_seconds = 0
