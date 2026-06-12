@@ -537,6 +537,12 @@ locals {
       function_arn = var.public_api_function_arn
       protected    = false
     }
+    public_api_calls_permission_status = {
+      route_key    = "GET /v1/calls/permission/{userWaId}"
+      invoke_arn   = var.public_api_invoke_arn
+      function_arn = var.public_api_function_arn
+      protected    = false
+    }
     bots_calling_settings_get = {
       route_key    = "GET /bots/{botId}/calling/settings"
       invoke_arn   = var.calling_invoke_arn

@@ -20,6 +20,7 @@ import {
   getCallSettings,
   updateCallSettings,
   sendCallPermissionRequest,
+  getCallPermissionStatus,
   type WhatsAppCallingSettings,
 } from "../../lib/whatsapp/calls.js";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
@@ -114,6 +115,8 @@ const PermissionRequestSchema = z.object({
   to: z.string().min(7).max(20).regex(/^\d+$/),
   bodyText: z.string().min(1).max(1024).optional(),
 });
+
+const UserWaIdParamSchema = z.string().min(7).max(20).regex(/^\d+$/);
 
 function maskPhone(phone: string): string {
   if (phone.length <= 6) return phone;
@@ -493,6 +496,35 @@ async function handleUpdateCallSettings(
   };
 }
 
+async function handleGetCallPermission(
+  event: APIGatewayProxyEventV2,
+  userWaId: string
+): Promise<APIGatewayProxyResultV2> {
+  const auth = await authenticateApiKey(event);
+  if (!isAuthResult(auth)) return auth;
+
+  const { apiKey, rateResult } = auth;
+  assertApiKeyScope(apiKey, API_KEY_SCOPES.callsInitiate);
+
+  const parsed = UserWaIdParamSchema.safeParse(userWaId);
+  if (!parsed.success) {
+    return badRequest(parsed.error.errors[0]?.message ?? "Invalid userWaId");
+  }
+
+  const { bot, accessToken } = await loadActiveBot(apiKey);
+  const permission = await getCallPermissionStatus(
+    bot.phoneNumberId,
+    parsed.data,
+    accessToken
+  );
+
+  return {
+    statusCode: 200,
+    headers: successHeaders(apiKey, rateResult),
+    body: JSON.stringify(permission),
+  };
+}
+
 async function handlePermissionRequest(
   event: APIGatewayProxyEventV2
 ): Promise<APIGatewayProxyResultV2> {
@@ -538,6 +570,11 @@ async function handlePermissionRequest(
   };
 }
 
+function extractUserWaIdFromPermissionPath(path: string): string | null {
+  const match = path.match(/\/v1\/calls\/permission\/([^/]+)$/);
+  return match?.[1] ? decodeURIComponent(match[1]) : null;
+}
+
 function extractCallIdFromPath(path: string): string | null {
   const match = path.match(/\/v1\/calls\/([^/]+)$/);
   if (!match?.[1]) return null;
@@ -570,6 +607,11 @@ export async function handler(
     }
     if (path.endsWith("/v1/calls/permission-request") && method === "POST") {
       return await handlePermissionRequest(event);
+    }
+
+    const userWaId = extractUserWaIdFromPermissionPath(path);
+    if (userWaId && method === "GET") {
+      return await handleGetCallPermission(event, userWaId);
     }
 
     const callId = extractCallIdFromPath(path);

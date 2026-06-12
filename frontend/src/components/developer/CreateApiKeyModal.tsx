@@ -158,7 +158,7 @@ export function CreateApiKeyModal({ bots, onClose }: CreateApiKeyModalProps) {
               <p className="text-gray-400 font-sans mt-3 mb-1 text-[11px] uppercase tracking-wide">
                 Calls (WebRTC signaling)
               </p>
-              <p>POST /v1/calls · POST /v1/calls/{"{callId}"} · GET /v1/calls/settings</p>
+              <p>POST /v1/calls · GET /v1/calls/permission/{"{userWaId}"} · POST /v1/calls/{"{callId}"}</p>
             </div>
 
             <div className="flex justify-end">
