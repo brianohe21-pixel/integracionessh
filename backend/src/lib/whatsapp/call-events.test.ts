@@ -30,6 +30,41 @@ describe("call-events", () => {
     expect(msg.session?.sdp_type).toBe("offer");
   });
 
+  it("normalizes business-initiated connect with SDP answer via connection.webrtc", () => {
+    const msg = normalizeCallConnectEvent(
+      {
+        id: "wacid.2",
+        event: "connect",
+        timestamp: "456",
+        from: "573002",
+        to: "573001",
+        direction: "BUSINESS_INITIATED",
+        connection: { webrtc: { sdp: "v=0\r\no=- answer" } },
+      },
+      ctx
+    );
+    expect(msg.eventType).toBe("connect");
+    expect(msg.phoneNumber).toBe("573001");
+    expect(msg.session?.sdp_type).toBe("answer");
+    expect(msg.session?.sdp).toContain("answer");
+  });
+
+  it("normalizes user-initiated connect with SDP offer via connection.webrtc", () => {
+    const msg = normalizeCallConnectEvent(
+      {
+        id: "wacid.3",
+        event: "connect",
+        timestamp: "789",
+        from: "573001",
+        to: "573002",
+        direction: "USER_INITIATED",
+        connection: { webrtc: { sdp: "v=0\r\no=- offer" } },
+      },
+      ctx
+    );
+    expect(msg.session?.sdp_type).toBe("offer");
+  });
+
   it("normalizes status events", () => {
     const msg = normalizeCallStatusEvent(
       {

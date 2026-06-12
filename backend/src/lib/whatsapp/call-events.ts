@@ -11,13 +11,21 @@ export function isCallStatusItem(
   return "type" in status && status.type === "call";
 }
 
-function resolveSession(call: WhatsAppCallWebhookItem) {
-  if (call.session) return call.session;
-  const webrtcSdp = call.connection?.webrtc?.sdp;
-  if (webrtcSdp) {
-    return { sdp_type: "answer" as const, sdp: webrtcSdp };
+function resolveSession(call: WhatsAppCallWebhookItem): CallQueueMessage["session"] {
+  if (call.session?.sdp) {
+    return call.session;
   }
-  return undefined;
+
+  const webrtcSdp = call.connection?.webrtc?.sdp;
+  if (!webrtcSdp) {
+    return undefined;
+  }
+
+  const sdpType =
+    call.session?.sdp_type ??
+    (call.direction === "BUSINESS_INITIATED" ? "answer" : "offer");
+
+  return { sdp_type: sdpType, sdp: webrtcSdp };
 }
 
 export function normalizeCallConnectEvent(

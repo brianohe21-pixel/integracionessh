@@ -10,17 +10,57 @@ export function truncateWhatsAppText(text: string): string {
   return text.slice(0, WHATSAPP_MAX_TEXT_BODY_LENGTH);
 }
 
+const GRAPH_API_CLIENT_ERROR_CODES = new Set([
+  100,
+  132000,
+  132001,
+  138006,
+  138017,
+]);
+
 export function throwGraphApiError(status: number, body: string): never {
   try {
     const parsed = JSON.parse(body) as {
-      error?: { error_subcode?: number; error_user_msg?: string };
+      error?: {
+        code?: number;
+        error_subcode?: number;
+        error_user_msg?: string;
+        message?: string;
+        is_transient?: boolean;
+      };
     };
-    if (parsed.error?.error_subcode === 2388003) {
+    const graphError = parsed.error;
+    if (!graphError) throw new SyntaxError();
+
+    const message =
+      graphError.error_user_msg ??
+      graphError.message ??
+      "WhatsApp API request failed";
+
+    if (graphError.error_subcode === 2388003) {
       const err = new Error(
-        parsed.error.error_user_msg ??
+        graphError.error_user_msg ??
           "Message templates can only be edited when Meta has rejected them."
       ) as Error & { statusCode?: number };
       err.statusCode = 400;
+      throw err;
+    }
+
+    if (graphError.code !== undefined && GRAPH_API_CLIENT_ERROR_CODES.has(graphError.code)) {
+      const err = new Error(message) as Error & { statusCode?: number };
+      err.statusCode = 400;
+      throw err;
+    }
+
+    if (graphError.code === 190 || status === 401) {
+      const err = new Error(message) as Error & { statusCode?: number };
+      err.statusCode = 401;
+      throw err;
+    }
+
+    if (graphError.is_transient || graphError.code === 2) {
+      const err = new Error(message) as Error & { statusCode?: number };
+      err.statusCode = 502;
       throw err;
     }
   } catch (e) {

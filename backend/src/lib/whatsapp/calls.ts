@@ -156,6 +156,9 @@ export async function sendCallPermissionRequest(options: {
       type: "interactive",
       interactive: {
         type: "call_permission_request",
+        action: {
+          name: "call_permission_request",
+        },
         body: {
           text: options.bodyText ?? "Would you like to receive a call from us on WhatsApp?",
         },
