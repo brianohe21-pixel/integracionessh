@@ -97,6 +97,7 @@ export interface WebhookPayload {
   from: string;
   conversationId: string;
   botId: string;
+  channel?: string;
   contact: { name: string };
 }
 

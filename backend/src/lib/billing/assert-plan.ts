@@ -11,7 +11,7 @@ import {
   countFlowsForBot,
 } from "../dynamodb/flow.repository.js";
 import { getMonthlyUsage } from "../dynamodb/usage.repository.js";
-import type { Tenant } from "../../types/index.js";
+import type { Tenant, Channel } from "../../types/index.js";
 import {
   getPlanLimits,
   isUnlimited,
@@ -188,6 +188,45 @@ export async function assertCanStartCampaign(tenant: Tenant): Promise<void> {
     throw new PlanLimitError(
       "PLAN_LIMIT_CAMPAIGNS",
       `Plan limit: maximum ${limits.maxActiveCampaigns} active campaign(s)`
+    );
+  }
+}
+
+export async function assertCanUseWebChat(tenant: Tenant): Promise<void> {
+  const limits = getPlanLimits(tenant.plan);
+  if (limits.maxActiveWebChatSessions <= 0) {
+    throw new PlanLimitError(
+      "PLAN_LIMIT_WEBCHAT",
+      "Web chat requires Pro plan or higher"
+    );
+  }
+}
+
+export async function assertCanEnableChannel(
+  tenant: Tenant,
+  bot: import("../../types/index.js").Bot,
+  channel: Channel
+): Promise<void> {
+  if (channel === "whatsapp") return;
+
+  const limits = getPlanLimits(tenant.plan);
+  if (tenant.plan === "free") {
+    throw new PlanLimitError(
+      "PLAN_LIMIT_CHANNEL",
+      "Additional channels require Pro plan or higher"
+    );
+  }
+
+  let enabled = 1;
+  if (bot.instagramPageId) enabled += 1;
+  if (bot.webchatEnabled) enabled += 1;
+  if (channel === "instagram" && !bot.instagramPageId) enabled += 1;
+  if (channel === "webchat" && !bot.webchatEnabled) enabled += 1;
+
+  if (enabled > limits.maxChannelsPerBot) {
+    throw new PlanLimitError(
+      "PLAN_LIMIT_CHANNELS",
+      `Plan limit: maximum ${limits.maxChannelsPerBot} channel(s) per bot`
     );
   }
 }

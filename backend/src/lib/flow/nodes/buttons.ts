@@ -1,12 +1,15 @@
 import { sendInteractiveButtons } from "../../whatsapp/flows.js";
 import type { FlowNode, FlowRun } from "../../../types/index.js";
 import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
+import { skipWhatsAppOnlyNode } from "./channel-guard.js";
 
 export async function executeButtonsNode(
   node: FlowNode,
   ctx: FlowExecutionContext,
   _run: FlowRun
 ): Promise<NodeExecutionResult> {
+  const skipped = skipWhatsAppOnlyNode(ctx, node.id, "buttons");
+  if (skipped) return skipped;
   const buttons = node.data.buttons ?? [];
   const bodyText = node.data.messageText ?? "Choose an option:";
 

@@ -12,6 +12,7 @@ import {
 } from "../dynamodb/conversation.repository.js";
 import type {
   Bot,
+  Channel,
   Conversation,
   FlowDefinition,
   FlowRun,
@@ -40,8 +41,13 @@ function buildContext(params: {
   inbound: InboundNormalized;
   flow: FlowDefinition;
   buttonReplyId?: string;
+  channel?: Channel;
 }): FlowExecutionContext {
-  return { ...params };
+  return {
+    ...params,
+    channel: params.channel ?? params.conversation.channel ?? "whatsapp",
+    environment: process.env.ENVIRONMENT ?? "dev",
+  };
 }
 
 async function runFromNode(
@@ -135,6 +141,7 @@ export async function startFlowRun(params: {
   customerPhone: string;
   replyToMessageId?: string;
   inbound: InboundNormalized;
+  channel?: Channel;
 }): Promise<FlowPipelineResult> {
   const now = new Date().toISOString();
   const entryId =
@@ -185,6 +192,7 @@ export async function advanceFlowRun(params: {
   replyToMessageId?: string;
   inbound: InboundNormalized;
   runId?: string;
+  channel?: Channel;
 }): Promise<FlowPipelineResult> {
   const run =
     (params.runId

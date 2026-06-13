@@ -41,6 +41,8 @@ const entryPoints = [
   "src/functions/process-flow/index.ts",
   "src/functions/process-call/index.ts",
   "src/functions/calling/index.ts",
+  "src/functions/instagram-connect/index.ts",
+  "src/functions/webchat/index.ts",
 ];
 
 const buildOptions = {

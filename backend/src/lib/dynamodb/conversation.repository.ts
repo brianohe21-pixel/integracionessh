@@ -8,18 +8,25 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 import { docClient, TABLE_NAME } from "./client.js";
 import { listBots } from "./bot.repository.js";
-import type { Conversation, HandoffMode, Message, WorkflowStatus } from "../../types/index.js";
+import type { Conversation, HandoffMode, Message, WorkflowStatus, Channel } from "../../types/index.js";
+import { conversationLookupGsi1pk, legacyPhoneGsi1pk } from "../channels/keys.js";
 import { upsertFromConversation } from "./contact.repository.js";
 
 export function normalizeConversation(conv: Conversation): Conversation {
+  const channel: Channel = conv.channel ?? "whatsapp";
+  const participantId = conv.participantId ?? conv.phoneNumber;
   return {
     ...conv,
+    channel,
+    participantId,
+    phoneNumber: conv.phoneNumber ?? participantId,
     handoffMode: conv.handoffMode ?? "bot",
   };
 }
 
 export interface ListConversationsOptions {
   botId?: string;
+  channel?: Channel;
   handoffMode?: HandoffMode;
   workflowStatus?: WorkflowStatus;
   status?: Conversation["status"];
@@ -270,10 +277,11 @@ export async function setMetaFlowSession(
 export async function getOrCreateConversation(
   tenantId: string,
   botId: string,
-  phoneNumber: string,
+  channel: Channel,
+  participantId: string,
   contactName?: string
 ): Promise<Conversation> {
-  const gsi1pk = `TENANT#${tenantId}#BOT#${botId}#PHONE#${phoneNumber}`;
+  const gsi1pk = conversationLookupGsi1pk(tenantId, botId, channel, participantId);
 
   const existing = await docClient.send(
     new QueryCommand({
@@ -292,13 +300,61 @@ export async function getOrCreateConversation(
     return normalizeConversation(rest as Conversation);
   }
 
+  if (channel === "whatsapp") {
+    const legacyGsi = legacyPhoneGsi1pk(tenantId, botId, participantId);
+    const legacy = await docClient.send(
+      new QueryCommand({
+        TableName: TABLE_NAME,
+        IndexName: "GSI1",
+        KeyConditionExpression: "GSI1PK = :gsi1pk",
+        FilterExpression: "#status = :status",
+        ExpressionAttributeNames: { "#status": "status" },
+        ExpressionAttributeValues: { ":gsi1pk": legacyGsi, ":status": "active" },
+        Limit: 1,
+      })
+    );
+    if (legacy.Items?.length) {
+      const { PK, SK, GSI1PK, GSI1SK, ...rest } = legacy.Items[0];
+      const conv = normalizeConversation(rest as Conversation);
+      if (!conv.channel || !conv.participantId) {
+        await docClient.send(
+          new UpdateCommand({
+            TableName: TABLE_NAME,
+            Key: conversationKeys(tenantId, botId, conv.conversationId),
+            UpdateExpression:
+              "SET #channel = :channel, participantId = :participantId, GSI1PK = :gsi1pk",
+            ExpressionAttributeNames: { "#channel": "channel" },
+            ExpressionAttributeValues: {
+              ":channel": "whatsapp",
+              ":participantId": participantId,
+              ":gsi1pk": gsi1pk,
+            },
+          })
+        );
+        return normalizeConversation({
+          ...conv,
+          channel: "whatsapp",
+          participantId,
+        });
+      }
+      return conv;
+    }
+  }
+
   const now = new Date().toISOString();
-  const conversationId = `${phoneNumber}-${Date.now()}`;
+  const conversationId =
+    channel === "whatsapp"
+      ? `${participantId}-${Date.now()}`
+      : `${channel}-${participantId}-${Date.now()}`;
+
+  const phoneNumber = channel === "whatsapp" ? participantId : "";
 
   const conversation: Conversation = {
     conversationId,
     tenantId,
     botId,
+    channel,
+    participantId,
     phoneNumber,
     status: "active",
     handoffMode: "bot",
@@ -322,13 +378,15 @@ export async function getOrCreateConversation(
     })
   );
 
-  upsertFromConversation({
-    tenantId,
-    phoneNumber,
-    botId,
-    source: "sync",
-    ...(contactName ? { displayName: contactName } : {}),
-  }).catch((err) => console.warn("Contact sync failed:", err));
+  if (channel === "whatsapp" && phoneNumber) {
+    upsertFromConversation({
+      tenantId,
+      phoneNumber,
+      botId,
+      source: "sync",
+      ...(contactName ? { displayName: contactName } : {}),
+    }).catch((err) => console.warn("Contact sync failed:", err));
+  }
 
   return normalizeConversation(conversation);
 }
@@ -431,6 +489,10 @@ export async function listConversations(
     for (const page of pages) {
       merged.push(...page);
     }
+  }
+
+  if (options.channel) {
+    merged = merged.filter((c) => (c.channel ?? "whatsapp") === options.channel);
   }
 
   if (options.handoffMode) {

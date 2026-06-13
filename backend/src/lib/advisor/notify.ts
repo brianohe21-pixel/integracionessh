@@ -1,3 +1,4 @@
+import { channelLabel } from "../process-inbound/parse.js";
 import { getAdvisor } from "../dynamodb/advisor.repository.js";
 import { updateConversation } from "../dynamodb/conversation.repository.js";
 import { sendTextMessage, truncateWhatsAppText } from "../whatsapp/client.js";
@@ -34,21 +35,39 @@ export async function notifyAdvisorOfConversation(params: {
     if (elapsed < NOTIFY_COOLDOWN_MS) return;
   }
 
-  const contactLabel = conversation.contactName ?? conversation.phoneNumber;
-  const waLink = buildWaMeLink(
-    conversation.phoneNumber,
-    `Hi ${contactLabel}, I'm following up on your request.`
-  );
+  const channel = conversation.channel ?? "whatsapp";
+  const participantId = conversation.participantId ?? conversation.phoneNumber;
+  const contactLabel = conversation.contactName ?? participantId;
+
+  const channelLine =
+    channel === "whatsapp"
+      ? `Teléfono: ${conversation.phoneNumber || participantId}`
+      : `Canal: ${channelLabel(channel)} · ID: ${participantId}`;
+
+  const waLinkLine =
+    channel === "whatsapp" && conversation.phoneNumber
+      ? `Abrir chat: ${buildWaMeLink(
+          conversation.phoneNumber,
+          `Hi ${contactLabel}, I'm following up on your request.`
+        )}`
+      : "Responde desde el panel de conversaciones.";
 
   const body = truncateWhatsAppText(
     [
       `Nuevo mensaje de ${contactLabel}`,
-      `Teléfono: ${conversation.phoneNumber}`,
+      channelLine,
       `Último mensaje: ${params.lastMessagePreview.slice(0, 200)}`,
-      `Abrir chat: ${waLink}`,
+      waLinkLine,
       "También puedes responder desde el panel de conversaciones.",
     ].join("\n")
   );
+
+  if (!params.accessToken) {
+    await updateConversation(tenantId, botId, conversation.conversationId, {
+      lastAdvisorNotifiedAt: new Date(now).toISOString(),
+    });
+    return;
+  }
 
   await sendTextMessage({
     phoneNumberId: params.phoneNumberId,

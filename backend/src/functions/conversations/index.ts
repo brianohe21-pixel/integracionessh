@@ -29,14 +29,31 @@ import {
 import { buildWaMeLink } from "../../lib/advisor/wa-link.js";
 import { getConversation } from "../../lib/dynamodb/conversation.repository.js";
 import {
-  sendTextMessage,
   getWhatsAppAccessToken,
   truncateWhatsAppText,
 } from "../../lib/whatsapp/client.js";
+import { getInstagramAccessToken } from "../../lib/instagram/secrets.js";
+import {
+  buildOutboundContext,
+  sendChannelText,
+} from "../../lib/channels/router.js";
 import { ok, created, badRequest, notFound, forbidden, noContent, handleError } from "../../lib/http.js";
-import type { AuthContext, Conversation, Message } from "../../types/index.js";
+import type { AuthContext, Conversation, Message, Channel } from "../../types/index.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
+
+async function resolveAccessTokenForChannel(
+  tenantId: string,
+  channel: Channel
+): Promise<string | undefined> {
+  if (channel === "instagram") {
+    return getInstagramAccessToken(tenantId, ENVIRONMENT);
+  }
+  if (channel === "whatsapp") {
+    return getWhatsAppAccessToken(tenantId, ENVIRONMENT);
+  }
+  return undefined;
+}
 
 const HandoffSchema = z.object({
   botId: z.string().uuid(),
@@ -118,6 +135,12 @@ export async function handler(
         params.status === "active" || params.status === "closed"
           ? params.status
           : undefined;
+      const channel =
+        params.channel === "whatsapp" ||
+        params.channel === "instagram" ||
+        params.channel === "webchat"
+          ? params.channel
+          : undefined;
       const limit = params.limit ? parseInt(params.limit, 10) : 20;
 
       if (isNaN(limit) || limit < 1 || limit > 100) {
@@ -137,6 +160,7 @@ export async function handler(
       if (handoffMode) listOptions.handoffMode = handoffMode;
       if (workflowStatus) listOptions.workflowStatus = workflowStatus;
       if (status) listOptions.status = status;
+      if (channel) listOptions.channel = channel;
       if (assignedAdvisorId) listOptions.assignedAdvisorId = assignedAdvisorId;
       if (params.cursor) listOptions.cursor = params.cursor;
 
@@ -258,19 +282,27 @@ export async function handler(
       );
 
       if (bot && refreshed) {
-        const accessToken = await getWhatsAppAccessToken(auth.tenantId, ENVIRONMENT);
-        await sendTextMessage({
-          phoneNumberId: bot.phoneNumberId,
-          to: refreshed.phoneNumber,
-          text: getClientHandoffMessage(),
-          accessToken,
-        });
+        const channel = refreshed.channel ?? "whatsapp";
+        const accessToken = await resolveAccessTokenForChannel(auth.tenantId, channel);
+        if (accessToken || channel === "webchat") {
+          await sendChannelText(
+            buildOutboundContext({
+              tenantId: auth.tenantId,
+              botId: parsed.data.botId,
+              bot,
+              conversation: refreshed,
+              accessToken,
+              environment: ENVIRONMENT,
+            }),
+            getClientHandoffMessage()
+          );
+        }
         await notifyAdvisorOfConversation({
           tenantId: auth.tenantId,
           botId: parsed.data.botId,
           conversation: refreshed,
           phoneNumberId: bot.phoneNumberId,
-          accessToken,
+          accessToken: accessToken ?? "",
           lastMessagePreview: "",
           force: true,
         });
@@ -321,6 +353,7 @@ export async function handler(
       const bot = await getBot(auth.tenantId, parsed.data.botId);
       if (!bot) return notFound("Bot not found");
 
+      const channel = conversation.channel ?? "whatsapp";
       const tenant = await getTenant(auth.tenantId);
       if (tenant) {
         try {
@@ -333,8 +366,9 @@ export async function handler(
         }
       }
 
-      const accessToken = await getWhatsAppAccessToken(auth.tenantId, ENVIRONMENT);
-      const text = truncateWhatsAppText(parsed.data.content);
+      const accessToken = await resolveAccessTokenForChannel(auth.tenantId, channel);
+      const text =
+        channel === "whatsapp" ? truncateWhatsAppText(parsed.data.content) : parsed.data.content;
 
       let sentByAdvisorId: string | undefined;
       if (auth.role === "advisor") {
@@ -342,29 +376,79 @@ export async function handler(
         sentByAdvisorId = advisor?.advisorId;
       }
 
-      const waResult = await sendTextMessage({
-        phoneNumberId: bot.phoneNumberId,
-        to: conversation.phoneNumber,
-        text,
-        accessToken,
-      });
+      const outbound = await (async () => {
+        if (channel === "webchat") {
+          const messageId = `adv-${randomUUID()}`;
+          await addMessage(
+            {
+              messageId,
+              conversationId,
+              tenantId: auth.tenantId,
+              role: "advisor",
+              content: text,
+              channel,
+              source: "panel",
+              ...(sentByAdvisorId ? { sentByAdvisorId } : {}),
+              externalMessageId: messageId,
+              timestamp: new Date().toISOString(),
+            },
+            parsed.data.botId
+          );
+          return { externalMessageId: messageId };
+        }
+        return sendChannelText(
+          buildOutboundContext({
+            tenantId: auth.tenantId,
+            botId: parsed.data.botId,
+            bot,
+            conversation,
+            accessToken,
+            environment: ENVIRONMENT,
+          }),
+          text
+        );
+      })();
 
       const now = new Date().toISOString();
-      const message: Message = {
-        messageId: `adv-${randomUUID()}`,
-        conversationId,
-        tenantId: auth.tenantId,
-        role: "advisor",
-        content: text,
-        source: "panel",
-        ...(sentByAdvisorId ? { sentByAdvisorId } : {}),
-        ...(waResult?.messages?.[0]?.id
-          ? { whatsappMessageId: waResult.messages[0].id }
-          : {}),
-        timestamp: now,
-      };
+      const message: Message =
+        channel === "webchat"
+          ? {
+              messageId: outbound.externalMessageId ?? `adv-${randomUUID()}`,
+              conversationId,
+              tenantId: auth.tenantId,
+              role: "advisor",
+              content: text,
+              channel,
+              source: "panel",
+              ...(sentByAdvisorId ? { sentByAdvisorId } : {}),
+              ...(outbound.externalMessageId
+                ? { externalMessageId: outbound.externalMessageId }
+                : {}),
+              timestamp: now,
+            }
+          : {
+              messageId: `adv-${randomUUID()}`,
+              conversationId,
+              tenantId: auth.tenantId,
+              role: "advisor",
+              content: text,
+              channel,
+              source: "panel",
+              ...(sentByAdvisorId ? { sentByAdvisorId } : {}),
+              ...(outbound.externalMessageId
+                ? {
+                    externalMessageId: outbound.externalMessageId,
+                    ...(channel === "whatsapp"
+                      ? { whatsappMessageId: outbound.externalMessageId }
+                      : {}),
+                  }
+                : {}),
+              timestamp: now,
+            };
 
-      await addMessage(message, parsed.data.botId);
+      if (channel !== "webchat") {
+        await addMessage(message, parsed.data.botId);
+      }
       await incrementMessages(auth.tenantId);
 
       const convPatch: Parameters<typeof updateConversation>[3] = {
@@ -388,6 +472,10 @@ export async function handler(
       if (!conversation) return notFound("Conversation not found");
 
       await assertCanAccessConversation(auth, conversation);
+
+      if ((conversation.channel ?? "whatsapp") !== "whatsapp") {
+        return badRequest("WhatsApp link is only available for WhatsApp conversations");
+      }
 
       return ok({
         url: buildWaMeLink(conversation.phoneNumber),

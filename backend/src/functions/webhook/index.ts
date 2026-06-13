@@ -3,7 +3,9 @@ import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
 import { validateWebhookSignature } from "../../lib/whatsapp/client.js";
 import { isProcessableInboundMessage } from "../../lib/whatsapp/inbound.js";
 import { normalizeWhatsAppContact } from "../../lib/whatsapp/contact.js";
+import { isProcessableInstagramMessage } from "../../lib/instagram/inbound.js";
 import { getBotByPhoneNumberId } from "../../lib/dynamodb/bot.repository.js";
+import { getBotByInstagramPageId } from "../../lib/dynamodb/bot-lookup.repository.js";
 import {
   getMessageTracking,
   deleteMessageTracking,
@@ -17,7 +19,11 @@ import {
   normalizeCallStatusEvent,
   normalizeCallTerminateEvent,
 } from "../../lib/whatsapp/call-events.js";
-import type { WhatsAppWebhookEvent, SQSMessageBody } from "../../types/index.js";
+import type {
+  InboundQueueMessage,
+  InstagramWebhookEvent,
+  WhatsAppWebhookEvent,
+} from "../../types/index.js";
 
 const sqs = new SQSClient({});
 const QUEUE_URL = process.env.SQS_QUEUE_URL ?? "";
@@ -61,17 +67,78 @@ async function handleWebhook(
     return { statusCode: 401, body: "Invalid signature" };
   }
 
-  let payload: WhatsAppWebhookEvent;
+  let payload: { object: string; entry: unknown[] };
   try {
-    payload = JSON.parse(rawBody) as WhatsAppWebhookEvent;
+    payload = JSON.parse(rawBody) as { object: string; entry: unknown[] };
   } catch {
     return { statusCode: 400, body: "Invalid JSON" };
+  }
+
+  if (payload.object === "instagram") {
+    await handleInstagramWebhook(payload as InstagramWebhookEvent);
+    return { statusCode: 200, body: "OK" };
   }
 
   if (payload.object !== "whatsapp_business_account") {
     return { statusCode: 200, body: "OK" };
   }
 
+  await handleWhatsAppWebhook(payload as WhatsAppWebhookEvent);
+  return { statusCode: 200, body: "OK" };
+}
+
+async function handleInstagramWebhook(payload: InstagramWebhookEvent): Promise<void> {
+  const sqsPromises: Promise<unknown>[] = [];
+
+  for (const entry of payload.entry) {
+    for (const event of entry.messaging ?? []) {
+      const message = event.message;
+      if (!message || !isProcessableInstagramMessage(message)) continue;
+
+      const pageId = event.recipient.id;
+      const senderId = event.sender.id;
+      const lookup = await getBotByInstagramPageId(pageId);
+      if (!lookup) {
+        console.log(`No bot for Instagram pageId: ${pageId}`);
+        continue;
+      }
+
+      const { getBot } = await import("../../lib/dynamodb/bot.repository.js");
+      const botRecord = await getBot(lookup.tenantId, lookup.botId);
+      if (!botRecord || botRecord.status !== "active") continue;
+
+      const conversationKey = `${lookup.tenantId}-${lookup.botId}-ig-${senderId}`;
+      const sqsBody: InboundQueueMessage = {
+        channel: "instagram",
+        tenantId: lookup.tenantId,
+        botId: lookup.botId,
+        participantId: senderId,
+        conversationKey,
+        replyToExternalId: message.mid,
+        payload: {
+          pageId,
+          senderId,
+          message,
+        },
+      };
+
+      sqsPromises.push(
+        sqs.send(
+          new SendMessageCommand({
+            QueueUrl: QUEUE_URL,
+            MessageBody: JSON.stringify(sqsBody),
+            MessageGroupId: conversationKey,
+            MessageDeduplicationId: message.mid,
+          })
+        )
+      );
+    }
+  }
+
+  await Promise.all(sqsPromises);
+}
+
+async function handleWhatsAppWebhook(payload: WhatsAppWebhookEvent): Promise<void> {
   const sqsPromises: Promise<unknown>[] = [];
 
   for (const entry of payload.entry) {
@@ -158,7 +225,6 @@ async function handleWebhook(
               if (status.status === "delivered") {
                 if (isCampaign && campaignId) {
                   await incrementCampaignAnalytics(tracking.tenantId, campaignId, "deliveredCount");
-                  console.log(`Delivery tracked for campaign=${campaignId} messageId=${status.id}`);
                 }
                 return;
               }
@@ -166,7 +232,6 @@ async function handleWebhook(
               if (status.status === "read") {
                 if (isCampaign && campaignId) {
                   await incrementCampaignAnalytics(tracking.tenantId, campaignId, "readCount");
-                  console.log(`Read tracked for campaign=${campaignId} messageId=${status.id}`);
                 }
                 return;
               }
@@ -178,9 +243,6 @@ async function handleWebhook(
                     incrementCampaignAnalytics(tracking.tenantId, campaignId, "deliveryFailed"),
                     deleteMessageTracking(status.id),
                   ]);
-                  console.log(
-                    `Campaign delivery failure for campaign=${campaignId} messageId=${status.id}`
-                  );
                 } else {
                   await Promise.all([
                     recordBulkDeliveryFailure(tracking.tenantId, tracking.jobId, {
@@ -190,9 +252,6 @@ async function handleWebhook(
                     }),
                     deleteMessageTracking(status.id),
                   ]);
-                  console.log(
-                    `Delivery failure recorded for job=${tracking.jobId} messageId=${status.id} errors=${JSON.stringify(status.errors ?? [])}`
-                  );
                 }
               }
             } catch (err) {
@@ -218,15 +277,20 @@ async function handleWebhook(
           continue;
         }
 
-        const conversationId = `${bot.tenantId}-${bot.botId}-${message.from}`;
-
-        const sqsBody: SQSMessageBody = {
+        const conversationKey = `${bot.tenantId}-${bot.botId}-${message.from}`;
+        const sqsBody: InboundQueueMessage = {
+          channel: "whatsapp",
           tenantId: bot.tenantId,
           botId: bot.botId,
-          conversationId,
-          phoneNumberId,
-          message,
-          contact,
+          participantId: message.from,
+          conversationKey,
+          displayName: contact.profile?.name,
+          replyToExternalId: message.id,
+          payload: {
+            phoneNumberId,
+            message,
+            contact,
+          },
         };
 
         sqsPromises.push(
@@ -234,7 +298,7 @@ async function handleWebhook(
             new SendMessageCommand({
               QueueUrl: QUEUE_URL,
               MessageBody: JSON.stringify(sqsBody),
-              MessageGroupId: conversationId,
+              MessageGroupId: conversationKey,
               MessageDeduplicationId: message.id,
             })
           )
@@ -244,6 +308,4 @@ async function handleWebhook(
   }
 
   await Promise.all(sqsPromises);
-
-  return { statusCode: 200, body: "OK" };
 }

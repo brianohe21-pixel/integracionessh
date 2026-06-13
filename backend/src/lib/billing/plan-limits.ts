@@ -14,6 +14,8 @@ export interface PlanLimits {
   maxVisualFlowsPerBot: number;
   maxFlowNodes: number;
   maxActiveFlowRuns: number;
+  maxChannelsPerBot: number;
+  maxActiveWebChatSessions: number;
   apiRateLimitPerMinute: number;
   apiRateLimitPerDay: number;
 }
@@ -33,6 +35,8 @@ const LIMITS: Record<TenantPlan, PlanLimits> = {
     maxVisualFlowsPerBot: 1,
     maxFlowNodes: 10,
     maxActiveFlowRuns: 3,
+    maxChannelsPerBot: 1,
+    maxActiveWebChatSessions: 0,
     apiRateLimitPerMinute: 20,
     apiRateLimitPerDay: 250,
   },
@@ -50,6 +54,8 @@ const LIMITS: Record<TenantPlan, PlanLimits> = {
     maxVisualFlowsPerBot: 5,
     maxFlowNodes: 40,
     maxActiveFlowRuns: 50,
+    maxChannelsPerBot: 2,
+    maxActiveWebChatSessions: 50,
     apiRateLimitPerMinute: 60,
     apiRateLimitPerDay: 5_000,
   },
@@ -67,6 +73,8 @@ const LIMITS: Record<TenantPlan, PlanLimits> = {
     maxVisualFlowsPerBot: Number.MAX_SAFE_INTEGER,
     maxFlowNodes: 100,
     maxActiveFlowRuns: Number.MAX_SAFE_INTEGER,
+    maxChannelsPerBot: 3,
+    maxActiveWebChatSessions: 500,
     apiRateLimitPerMinute: 120,
     apiRateLimitPerDay: 50_000,
   },

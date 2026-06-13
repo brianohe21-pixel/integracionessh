@@ -30,6 +30,8 @@ export interface MonthlyUsage {
   campaignsStarted: number;
 }
 
+export type Channel = "whatsapp" | "instagram" | "webchat";
+
 export interface Bot {
   botId: string;
   tenantId: string;
@@ -44,6 +46,10 @@ export interface Bot {
   knowledgeEnabled?: boolean;
   phoneNumberId: string;
   whatsappBusinessAccountId: string;
+  instagramPageId?: string;
+  instagramAccountId?: string;
+  webchatEnabled?: boolean;
+  webchatWidgetKey?: string;
   status: "active" | "inactive";
   createdAt: string;
   updatedAt: string;
@@ -59,6 +65,8 @@ export interface Conversation {
   conversationId: string;
   tenantId: string;
   botId: string;
+  channel: Channel;
+  participantId: string;
   phoneNumber: string;
   contactName?: string;
   status: "active" | "closed";
@@ -84,7 +92,11 @@ export interface Conversation {
 
 export type MessageRole = "user" | "assistant" | "advisor" | "system";
 
-export type MessageSource = "panel" | "whatsapp_inbound";
+export type MessageSource =
+  | "panel"
+  | "whatsapp_inbound"
+  | "instagram_inbound"
+  | "webchat_inbound";
 
 export type MessageType =
   | "text"
@@ -102,11 +114,13 @@ export interface Message {
   tenantId: string;
   role: MessageRole;
   content: string;
+  channel?: Channel;
   messageType?: MessageType;
   metadata?: Record<string, unknown>;
   source?: MessageSource;
   sentByAdvisorId?: string;
   whatsappMessageId?: string;
+  externalMessageId?: string | undefined;
   timestamp: string;
 }
 
@@ -307,7 +321,69 @@ export interface InboundNormalized {
     payload?: string;
     responseJson?: string;
   };
-  raw: WhatsAppMessage;
+  raw?: unknown;
+}
+
+export interface InstagramMessage {
+  mid: string;
+  text?: string;
+  attachments?: Array<{
+    type: string;
+    payload?: { url?: string };
+  }>;
+}
+
+export interface InstagramWebhookEvent {
+  object: string;
+  entry: Array<{
+    id: string;
+    messaging?: Array<{
+      sender: { id: string };
+      recipient: { id: string };
+      timestamp: number;
+      message?: InstagramMessage;
+    }>;
+  }>;
+}
+
+export interface WebChatInboundPayload {
+  messageId: string;
+  text: string;
+  sessionId: string;
+}
+
+export interface WhatsAppInboundPayload {
+  phoneNumberId: string;
+  message: WhatsAppMessage;
+  contact: WhatsAppContact;
+}
+
+export interface InstagramInboundPayload {
+  pageId: string;
+  senderId: string;
+  message: InstagramMessage;
+}
+
+export interface InboundQueueMessage {
+  channel: Channel;
+  tenantId: string;
+  botId: string;
+  participantId: string;
+  conversationKey: string;
+  displayName?: string | undefined;
+  replyToExternalId?: string | undefined;
+  payload: WhatsAppInboundPayload | InstagramInboundPayload | WebChatInboundPayload;
+}
+
+export interface WebChatSession {
+  sessionId: string;
+  tenantId: string;
+  botId: string;
+  conversationId: string;
+  visitorName?: string;
+  createdAt: string;
+  lastActivityAt: string;
+  ttl: number;
 }
 
 export interface WhatsAppStatusError {
