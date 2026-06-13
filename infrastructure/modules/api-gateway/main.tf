@@ -285,6 +285,12 @@ locals {
       function_arn = var.metrics_function_arn
       protected    = true
     }
+    metrics_calling = {
+      route_key    = "GET /metrics/calling"
+      invoke_arn   = var.metrics_invoke_arn
+      function_arn = var.metrics_function_arn
+      protected    = true
+    }
     metrics_get = {
       route_key    = "GET /metrics"
       invoke_arn   = var.metrics_invoke_arn
