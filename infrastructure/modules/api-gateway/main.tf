@@ -309,6 +309,12 @@ locals {
       function_arn = var.conversations_function_arn
       protected    = true
     }
+    conversations_delete = {
+      route_key    = "DELETE /conversations/{conversationId}"
+      invoke_arn   = var.conversations_invoke_arn
+      function_arn = var.conversations_function_arn
+      protected    = true
+    }
     whatsapp_connect = {
       route_key    = "POST /whatsapp/connect"
       invoke_arn   = var.whatsapp_connect_invoke_arn
