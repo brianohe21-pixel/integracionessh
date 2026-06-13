@@ -55,6 +55,8 @@ export interface WhatsAppPhoneInfo {
   messagingLimit?: string;
 }
 
+export type Channel = "whatsapp" | "instagram" | "webchat";
+
 export interface Bot {
   botId: string;
   tenantId: string;
@@ -69,6 +71,12 @@ export interface Bot {
   knowledgeEnabled?: boolean;
   phoneNumberId: string;
   whatsappBusinessAccountId: string;
+  instagramPageId?: string;
+  instagramAccountId?: string;
+  webchatEnabled?: boolean;
+  webchatWidgetKey?: string;
+  webchatVoiceEnabled?: boolean;
+  webchatVideoEnabled?: boolean;
   status: "active" | "inactive";
   createdAt: string;
   updatedAt: string;
@@ -107,10 +115,17 @@ export interface ContactsListResponse {
   nextCursor?: string;
 }
 
+export interface ConversationsListResponse {
+  items: Conversation[];
+  nextCursor?: string;
+}
+
 export interface Conversation {
   conversationId: string;
   tenantId: string;
   botId: string;
+  channel?: Channel;
+  participantId?: string;
   phoneNumber: string;
   contactName?: string;
   status: "active" | "closed";

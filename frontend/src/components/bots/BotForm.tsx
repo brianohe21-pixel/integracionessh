@@ -13,9 +13,10 @@ import type { Bot, Tenant } from "@/types";
 
 interface BotFormProps {
   bot?: Bot;
+  wide?: boolean;
 }
 
-export function BotForm({ bot }: BotFormProps) {
+export function BotForm({ bot, wide = false }: BotFormProps) {
   const t = useT();
   const router = useRouter();
   const isEditing = !!bot;
@@ -108,8 +109,8 @@ export function BotForm({ bot }: BotFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
-      <div className="grid grid-cols-2 gap-4">
+    <form onSubmit={handleSubmit} className={cn("space-y-6 w-full", !wide && "max-w-2xl")}>
+      <div className={cn("grid gap-4", wide ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-2")}>
         <div className="col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-1">
             {t("bots.botName")}
