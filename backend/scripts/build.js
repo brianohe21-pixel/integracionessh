@@ -43,6 +43,7 @@ const entryPoints = [
   "src/functions/calling/index.ts",
   "src/functions/instagram-connect/index.ts",
   "src/functions/webchat/index.ts",
+  "src/functions/realtime/index.ts",
 ];
 
 const buildOptions = {

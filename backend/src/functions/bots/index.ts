@@ -10,7 +10,7 @@ import {
 } from "../../lib/dynamodb/bot.repository.js";
 import { extractAuthContext, assertTenantAccess, assertMemberRole } from "../../lib/auth/cognito.js";
 import { ensureTenant } from "../../lib/dynamodb/tenant.repository.js";
-import { assertCanCreateBot, assertCanUseWebChat, assertCanEnableChannel } from "../../lib/billing/assert-plan.js";
+import { assertCanCreateBot, assertCanUseWebChat, assertCanEnableChannel, assertCanStartLiveKitCall } from "../../lib/billing/assert-plan.js";
 import { putWidgetKeyLookup } from "../../lib/dynamodb/bot-lookup.repository.js";
 import { generateWidgetKey } from "../../lib/webchat/session.repository.js";
 import { assertAllowedModel, assertCanEnableKnowledge } from "../../lib/billing/plan-config.js";
@@ -116,28 +116,47 @@ export async function handler(
       assertTenantAccess(auth, existing.tenantId);
 
       const body = JSON.parse(event.body ?? "{}");
-      const enabled = z.object({ enabled: z.boolean() }).safeParse(body);
-      if (!enabled.success) return badRequest(enabled.error.message);
+      const parsed = z
+        .object({
+          enabled: z.boolean().optional(),
+          webchatVoiceEnabled: z.boolean().optional(),
+          webchatVideoEnabled: z.boolean().optional(),
+        })
+        .safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
 
       const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
-      if (enabled.data.enabled) {
+
+      if (parsed.data.enabled === true) {
         await assertCanUseWebChat(tenant);
         await assertCanEnableChannel(tenant, existing, "webchat");
       }
 
       let widgetKey = existing.webchatWidgetKey;
-      if (enabled.data.enabled && !widgetKey) {
+      if (parsed.data.enabled === true && !widgetKey) {
         widgetKey = generateWidgetKey();
         await putWidgetKeyLookup(widgetKey, auth.tenantId, botId);
       }
 
-      const updated = await updateBot(auth.tenantId, botId, {
-        webchatEnabled: enabled.data.enabled,
-        ...(widgetKey ? { webchatWidgetKey: widgetKey } : {}),
-      });
+      const updates: Record<string, unknown> = {};
+      if (parsed.data.enabled !== undefined) {
+        updates.webchatEnabled = parsed.data.enabled;
+        if (widgetKey) updates.webchatWidgetKey = widgetKey;
+      }
+      if (parsed.data.webchatVoiceEnabled !== undefined) {
+        if (parsed.data.webchatVoiceEnabled) await assertCanStartLiveKitCall(tenant);
+        updates.webchatVoiceEnabled = parsed.data.webchatVoiceEnabled;
+      }
+      if (parsed.data.webchatVideoEnabled !== undefined) {
+        updates.webchatVideoEnabled = parsed.data.webchatVideoEnabled;
+      }
+
+      const updated = await updateBot(auth.tenantId, botId, updates);
       return ok({
         webchatEnabled: updated.webchatEnabled,
         webchatWidgetKey: updated.webchatWidgetKey,
+        webchatVoiceEnabled: updated.webchatVoiceEnabled,
+        webchatVideoEnabled: updated.webchatVideoEnabled,
       });
     }
 

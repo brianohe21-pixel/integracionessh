@@ -315,6 +315,30 @@ locals {
       function_arn = var.conversations_function_arn
       protected    = true
     }
+    conversations_calls_create = {
+      route_key    = "POST /conversations/{conversationId}/calls"
+      invoke_arn   = var.realtime_invoke_arn
+      function_arn = var.realtime_function_arn
+      protected    = true
+    }
+    conversations_calls_active = {
+      route_key    = "GET /conversations/{conversationId}/calls/active"
+      invoke_arn   = var.realtime_invoke_arn
+      function_arn = var.realtime_function_arn
+      protected    = true
+    }
+    conversations_calls_token = {
+      route_key    = "POST /conversations/{conversationId}/calls/{callId}/token"
+      invoke_arn   = var.realtime_invoke_arn
+      function_arn = var.realtime_function_arn
+      protected    = true
+    }
+    conversations_calls_end = {
+      route_key    = "POST /conversations/{conversationId}/calls/{callId}/end"
+      invoke_arn   = var.realtime_invoke_arn
+      function_arn = var.realtime_function_arn
+      protected    = true
+    }
     whatsapp_connect = {
       route_key    = "POST /whatsapp/connect"
       invoke_arn   = var.whatsapp_connect_invoke_arn
@@ -341,6 +365,24 @@ locals {
     }
     webchat_messages_poll = {
       route_key    = "GET /webchat/sessions/{sessionId}/messages"
+      invoke_arn   = var.webchat_invoke_arn
+      function_arn = var.webchat_function_arn
+      protected    = false
+    }
+    webchat_call_token = {
+      route_key    = "POST /webchat/sessions/{sessionId}/calls/{callId}/token"
+      invoke_arn   = var.webchat_invoke_arn
+      function_arn = var.webchat_function_arn
+      protected    = false
+    }
+    webchat_call_decline = {
+      route_key    = "POST /webchat/sessions/{sessionId}/calls/{callId}/decline"
+      invoke_arn   = var.webchat_invoke_arn
+      function_arn = var.webchat_function_arn
+      protected    = false
+    }
+    webchat_call_accept = {
+      route_key    = "POST /webchat/sessions/{sessionId}/calls/{callId}/accept"
       invoke_arn   = var.webchat_invoke_arn
       function_arn = var.webchat_function_arn
       protected    = false
@@ -621,6 +663,18 @@ locals {
       function_arn = var.calling_function_arn
       protected    = true
     }
+    bots_calling_initiate = {
+      route_key    = "POST /bots/{botId}/calling/calls/initiate"
+      invoke_arn   = var.calling_invoke_arn
+      function_arn = var.calling_function_arn
+      protected    = true
+    }
+    bots_calling_action = {
+      route_key    = "POST /bots/{botId}/calling/calls/{callId}/action"
+      invoke_arn   = var.calling_invoke_arn
+      function_arn = var.calling_function_arn
+      protected    = true
+    }
     api_keys_list = {
       route_key    = "GET /api-keys"
       invoke_arn   = var.api_keys_invoke_arn
@@ -892,6 +946,7 @@ resource "aws_lambda_permission" "api_gw" {
     meta_flows       = var.meta_flows_function_arn
     flows            = var.flows_function_arn
     calling          = var.calling_function_arn
+    realtime         = var.realtime_function_arn
   }
 
   statement_id  = "AllowAPIGatewayInvoke-${each.key}"

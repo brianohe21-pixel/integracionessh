@@ -206,6 +206,14 @@ variable "calling_function_arn" {
   type = string
 }
 
+variable "realtime_invoke_arn" {
+  type = string
+}
+
+variable "realtime_function_arn" {
+  type = string
+}
+
 variable "allowed_origins" {
   type    = list(string)
   default = ["*"]

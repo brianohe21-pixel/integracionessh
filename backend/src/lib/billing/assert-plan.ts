@@ -11,6 +11,7 @@ import {
   countFlowsForBot,
 } from "../dynamodb/flow.repository.js";
 import { getMonthlyUsage } from "../dynamodb/usage.repository.js";
+import { countActiveLiveKitCallsForTenant } from "../dynamodb/livekit-call.repository.js";
 import type { Tenant, Channel } from "../../types/index.js";
 import {
   getPlanLimits,
@@ -188,6 +189,24 @@ export async function assertCanStartCampaign(tenant: Tenant): Promise<void> {
     throw new PlanLimitError(
       "PLAN_LIMIT_CAMPAIGNS",
       `Plan limit: maximum ${limits.maxActiveCampaigns} active campaign(s)`
+    );
+  }
+}
+
+export async function assertCanStartLiveKitCall(tenant: Tenant): Promise<void> {
+  const limits = getPlanLimits(tenant.plan);
+  if (limits.maxConcurrentLiveKitCalls <= 0) {
+    throw new PlanLimitError(
+      "PLAN_LIMIT_LIVEKIT",
+      "Voice calls require Pro plan or higher"
+    );
+  }
+
+  const active = await countActiveLiveKitCallsForTenant(tenant.tenantId);
+  if (active >= limits.maxConcurrentLiveKitCalls) {
+    throw new PlanLimitError(
+      "PLAN_LIMIT_LIVEKIT_CONCURRENT",
+      `Plan limit: maximum ${limits.maxConcurrentLiveKitCalls} concurrent call(s)`
     );
   }
 }

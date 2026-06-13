@@ -183,6 +183,9 @@ module "lambda" {
   wompi_amount_enterprise_cents = var.wompi_amount_enterprise_cents
   wompi_api_base                = var.wompi_api_base
   wompi_checkout_url            = var.wompi_checkout_url
+  livekit_url                   = var.livekit_url
+  livekit_api_key               = var.livekit_api_key
+  livekit_api_secret            = var.livekit_api_secret
   tags                          = local.tags
 }
 
@@ -240,6 +243,8 @@ module "api_gateway" {
   flows_function_arn            = module.lambda.flows_function_arn
   calling_invoke_arn            = module.lambda.calling_invoke_arn
   calling_function_arn          = module.lambda.calling_function_arn
+  realtime_invoke_arn           = module.lambda.realtime_invoke_arn
+  realtime_function_arn         = module.lambda.realtime_function_arn
   allowed_origins               = local.browser_origins
   api_custom_domain             = var.api_custom_domain
   tags                          = local.tags

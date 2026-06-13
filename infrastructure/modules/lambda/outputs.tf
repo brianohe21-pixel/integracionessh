@@ -185,3 +185,11 @@ output "calling_invoke_arn" {
 output "calling_function_arn" {
   value = aws_lambda_function.functions["calling"].arn
 }
+
+output "realtime_invoke_arn" {
+  value = aws_lambda_function.functions["realtime"].invoke_arn
+}
+
+output "realtime_function_arn" {
+  value = aws_lambda_function.functions["realtime"].arn
+}

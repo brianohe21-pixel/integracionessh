@@ -50,6 +50,8 @@ export interface Bot {
   instagramAccountId?: string;
   webchatEnabled?: boolean;
   webchatWidgetKey?: string;
+  webchatVoiceEnabled?: boolean;
+  webchatVideoEnabled?: boolean;
   status: "active" | "inactive";
   createdAt: string;
   updatedAt: string;
@@ -106,7 +108,28 @@ export type MessageType =
   | "audio"
   | "video"
   | "document"
-  | "location";
+  | "location"
+  | "call_invite"
+  | "call_ended";
+
+export type LiveKitCallStatus = "ringing" | "active" | "ended" | "missed" | "declined";
+
+export interface LiveKitCall {
+  callId: string;
+  tenantId: string;
+  botId: string;
+  conversationId: string;
+  channel: "webchat";
+  roomName: string;
+  status: LiveKitCallStatus;
+  initiatedBy: "advisor" | "visitor" | "member";
+  initiatedById: string;
+  videoEnabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+  startedAt?: string;
+  endedAt?: string;
+}
 
 export interface Message {
   messageId: string;

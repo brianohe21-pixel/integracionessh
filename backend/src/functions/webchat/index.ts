@@ -17,6 +17,11 @@ import { assertCanUseWebChat } from "../../lib/billing/assert-plan.js";
 import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
 import { ok, created, badRequest, unauthorized, notFound, handleError } from "../../lib/http.js";
 import type { InboundQueueMessage } from "../../types/index.js";
+import { getLiveKitCall, updateLiveKitCallStatus } from "../../lib/dynamodb/livekit-call.repository.js";
+import { getLiveKitConfig } from "../../lib/livekit/config.js";
+import { createParticipantToken } from "../../lib/livekit/tokens.js";
+import { deleteLiveKitRoom } from "../../lib/livekit/rooms.js";
+import { addMessage } from "../../lib/dynamodb/conversation.repository.js";
 
 const sqs = new SQSClient({});
 const QUEUE_URL = process.env.SQS_QUEUE_URL ?? "";
@@ -41,9 +46,9 @@ function getSessionAuth(event: APIGatewayProxyEventV2): string | undefined {
   return auth.slice(7);
 }
 
-function parseSubPath(rawPath: string, sessionId: string): string {
+function parseSubPath(rawPath: string, sessionId: string): string[] {
   const suffix = rawPath.split(`/webchat/sessions/${sessionId}`)[1] ?? "";
-  return suffix.replace(/^\//, "").split("/")[0] ?? "";
+  return suffix.replace(/^\//, "").split("/").filter(Boolean);
 }
 
 export async function handler(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
@@ -60,12 +65,24 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
 
     const sub = parseSubPath(rawPath, sessionId);
 
-    if (method === "POST" && sub === "messages") {
+    if (method === "POST" && sub[0] === "messages") {
       return handleSendMessage(event, sessionId);
     }
 
-    if (method === "GET" && (sub === "messages" || sub === "")) {
+    if (method === "GET" && (sub[0] === "messages" || sub.length === 0)) {
       return handlePollMessages(event, sessionId);
+    }
+
+    if (method === "POST" && sub[0] === "calls" && sub[2] === "token" && sub[1]) {
+      return handleVisitorCallToken(event, sessionId, sub[1]);
+    }
+
+    if (method === "POST" && sub[0] === "calls" && sub[2] === "decline" && sub[1]) {
+      return handleVisitorCallDecline(event, sessionId, sub[1]);
+    }
+
+    if (method === "POST" && sub[0] === "calls" && sub[2] === "accept" && sub[1]) {
+      return handleVisitorCallToken(event, sessionId, sub[1]);
     }
 
     return badRequest("Route not found");
@@ -199,6 +216,114 @@ async function handlePollMessages(
       role: m.role,
       content: m.content,
       timestamp: m.timestamp,
+      messageType: m.messageType,
+      metadata: m.metadata,
     })),
   });
+}
+
+async function handleVisitorCallToken(
+  event: APIGatewayProxyEventV2,
+  sessionId: string,
+  callId: string
+): Promise<APIGatewayProxyResultV2> {
+  const token = getSessionAuth(event);
+  if (!token) return unauthorized("Missing session token");
+
+  const verifiedSessionId = verifySessionToken(token, SESSION_SECRET);
+  if (!verifiedSessionId || verifiedSessionId !== sessionId) {
+    return unauthorized("Invalid session token");
+  }
+
+  const session = await getWebChatSession(sessionId);
+  if (!session) return notFound("Session not found");
+
+  const config = getLiveKitConfig();
+  if (!config) {
+    return {
+      statusCode: 503,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "LiveKit is not configured" }),
+    };
+  }
+
+  const call = await getLiveKitCall(session.tenantId, callId);
+  if (!call || call.conversationId !== session.conversationId) {
+    return notFound("Call not found");
+  }
+
+  if (call.status !== "ringing" && call.status !== "active") {
+    return badRequest("Call is not joinable");
+  }
+
+  const livekitToken = await createParticipantToken(config, {
+    identity: `visitor:${sessionId}`,
+    roomName: call.roomName,
+    canPublishVideo: call.videoEnabled,
+  });
+
+  if (call.status === "ringing") {
+    await updateLiveKitCallStatus(session.tenantId, callId, "active", {
+      startedAt: new Date().toISOString(),
+    });
+  }
+
+  await touchWebChatSession(sessionId);
+
+  return ok({
+    token: livekitToken,
+    url: config.url,
+    roomName: call.roomName,
+    videoEnabled: call.videoEnabled,
+  });
+}
+
+async function handleVisitorCallDecline(
+  event: APIGatewayProxyEventV2,
+  sessionId: string,
+  callId: string
+): Promise<APIGatewayProxyResultV2> {
+  const token = getSessionAuth(event);
+  if (!token) return unauthorized("Missing session token");
+
+  const verifiedSessionId = verifySessionToken(token, SESSION_SECRET);
+  if (!verifiedSessionId || verifiedSessionId !== sessionId) {
+    return unauthorized("Invalid session token");
+  }
+
+  const session = await getWebChatSession(sessionId);
+  if (!session) return notFound("Session not found");
+
+  const config = getLiveKitConfig();
+  const call = await getLiveKitCall(session.tenantId, callId);
+  if (!call || call.conversationId !== session.conversationId) {
+    return notFound("Call not found");
+  }
+
+  if (call.status === "ended" || call.status === "declined") {
+    return ok({ callId, status: call.status });
+  }
+
+  const now = new Date().toISOString();
+  await updateLiveKitCallStatus(session.tenantId, callId, "declined", { endedAt: now });
+  if (config) await deleteLiveKitRoom(config, call.roomName);
+
+  await addMessage(
+    {
+      messageId: `call-declined-${callId}`,
+      conversationId: session.conversationId,
+      tenantId: session.tenantId,
+      role: "system",
+      content: "Call declined",
+      channel: "webchat",
+      messageType: "call_ended",
+      metadata: { callId, status: "declined" },
+      timestamp: now,
+    },
+    session.botId
+  );
+
+  await touchWebChatSession(sessionId);
+
+  return ok({ callId, status: "declined" });
 }

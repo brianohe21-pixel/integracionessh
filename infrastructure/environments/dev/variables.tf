@@ -150,3 +150,20 @@ variable "wompi_checkout_url" {
   type    = string
   default = "https://checkout.wompi.co/p/"
 }
+
+variable "livekit_url" {
+  type    = string
+  default = ""
+}
+
+variable "livekit_api_key" {
+  type      = string
+  default   = ""
+  sensitive = true
+}
+
+variable "livekit_api_secret" {
+  type      = string
+  default   = ""
+  sensitive = true
+}

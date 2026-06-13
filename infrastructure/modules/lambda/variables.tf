@@ -137,6 +137,26 @@ variable "webchat_session_secret" {
   description = "HMAC secret for web chat session tokens"
 }
 
+variable "livekit_url" {
+  type        = string
+  default     = ""
+  description = "LiveKit server WebSocket URL (wss://...)"
+}
+
+variable "livekit_api_key" {
+  type        = string
+  default     = ""
+  sensitive   = true
+  description = "LiveKit API key"
+}
+
+variable "livekit_api_secret" {
+  type        = string
+  default     = ""
+  sensitive   = true
+  description = "LiveKit API secret"
+}
+
 variable "lambda_zip_path" {
   type        = string
   default     = ""
