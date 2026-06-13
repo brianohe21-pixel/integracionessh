@@ -157,10 +157,11 @@ locals {
       timeout     = 30
       memory      = 256
       environment = {
-        WHATSAPP_VERIFY_TOKEN    = var.whatsapp_verify_token
-        SQS_QUEUE_URL            = var.sqs_queue_url
-        CALL_EVENTS_QUEUE_URL    = var.call_events_sqs_queue_url
-        TABLE_NAME               = var.dynamodb_table_name
+        WHATSAPP_VERIFY_TOKEN = var.whatsapp_verify_token
+        WHATSAPP_APP_SECRET   = var.whatsapp_app_secret != "" ? var.whatsapp_app_secret : var.meta_app_secret
+        SQS_QUEUE_URL         = var.sqs_queue_url
+        CALL_EVENTS_QUEUE_URL = var.call_events_sqs_queue_url
+        TABLE_NAME            = var.dynamodb_table_name
       }
     }
     process_message = {
@@ -170,7 +171,6 @@ locals {
       memory      = 512
       environment = {
         TABLE_NAME                = var.dynamodb_table_name
-        OPENAI_MODEL              = "gpt-4o-mini"
         ENVIRONMENT               = var.environment
         INTEGRATION_SQS_QUEUE_URL = var.integration_sqs_queue_url
         MEDIA_BUCKET              = var.media_bucket_name
@@ -308,16 +308,6 @@ locals {
         STRIPE_WEBHOOK_SECRET         = var.stripe_webhook_secret
         STRIPE_PRICE_PRO              = var.stripe_price_pro
         STRIPE_PRICE_ENTERPRISE       = var.stripe_price_enterprise
-      }
-    }
-    authorizer = {
-      handler     = "authorizer/index.handler"
-      description = "Cognito JWT authorizer for API Gateway"
-      timeout     = 10
-      memory      = 128
-      environment = {
-        COGNITO_USER_POOL_ID = var.cognito_user_pool_id
-        COGNITO_CLIENT_ID    = var.cognito_client_id
       }
     }
     whatsapp_connect = {

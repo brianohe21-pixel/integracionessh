@@ -74,14 +74,6 @@ output "whatsapp_connect_function_arn" {
   value = aws_lambda_function.functions["whatsapp_connect"].arn
 }
 
-output "authorizer_invoke_arn" {
-  value = aws_lambda_function.functions["authorizer"].invoke_arn
-}
-
-output "authorizer_arn" {
-  value = aws_lambda_function.functions["authorizer"].arn
-}
-
 output "campaigns_invoke_arn" {
   value = aws_lambda_function.functions["campaigns"].invoke_arn
 }

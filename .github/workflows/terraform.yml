@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: dev
     concurrency:
-      group: lambda-deploy-dev
+      group: terraform-dev
       cancel-in-progress: false
     defaults:
       run:
@@ -31,24 +31,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "pnpm"
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-        env:
-          HUSKY: "0"
-
-      - name: Build Lambda package
-        run: pnpm --filter chatbot-platform-backend run build
-        env:
-          NODE_ENV: production
 
       - uses: hashicorp/setup-terraform@v3
         with:
@@ -63,7 +45,6 @@ jobs:
 
       - name: Terraform fmt
         run: terraform fmt -check -recursive
-        continue-on-error: true
 
       - name: Terraform Init
         run: terraform init
@@ -210,7 +191,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: prod
     concurrency:
-      group: lambda-deploy-prod
+      group: terraform-prod
       cancel-in-progress: false
     if: github.ref == 'refs/heads/main'
     defaults:
@@ -219,24 +200,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "pnpm"
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-        env:
-          HUSKY: "0"
-
-      - name: Build Lambda package
-        run: pnpm --filter chatbot-platform-backend run build
-        env:
-          NODE_ENV: production
 
       - uses: hashicorp/setup-terraform@v3
         with:
@@ -251,7 +214,6 @@ jobs:
 
       - name: Terraform fmt
         run: terraform fmt -check -recursive
-        continue-on-error: true
 
       - name: Terraform Init
         run: terraform init

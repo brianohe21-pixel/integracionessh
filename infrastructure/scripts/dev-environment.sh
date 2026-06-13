@@ -14,6 +14,7 @@ IDLE_QUEUE_SUFFIXES=(
   "-automation-run.fifo"
   "-knowledge-index.fifo"
   "-flow-run.fifo"
+  "-call-events.fifo"
 )
 
 usage() {

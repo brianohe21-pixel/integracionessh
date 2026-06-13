@@ -5,6 +5,11 @@ const { execSync } = require("child_process");
 
 const isWatch = process.argv.includes("--watch");
 
+function entryPointToFunctionKey(entryPoint) {
+  const folder = path.basename(path.dirname(entryPoint));
+  return folder.replace(/-/g, "_");
+}
+
 const entryPoints = [
   "src/functions/webhook/index.ts",
   "src/functions/process-message/index.ts",
@@ -18,7 +23,6 @@ const entryPoints = [
   "src/functions/process-bulk-send/index.ts",
   "src/functions/campaigns/index.ts",
   "src/functions/process-campaign/index.ts",
-  "src/functions/authorizer/index.ts",
   "src/functions/metrics/index.ts",
   "src/functions/support-tickets/index.ts",
   "src/functions/billing/index.ts",
@@ -58,6 +62,11 @@ const buildOptions = {
 
 async function build() {
   try {
+    const distDir = path.resolve(__dirname, "../dist");
+    if (!isWatch && fs.existsSync(distDir)) {
+      fs.rmSync(distDir, { recursive: true, force: true });
+    }
+
     if (isWatch) {
       const ctx = await esbuild.context(buildOptions);
       await ctx.watch();
@@ -66,9 +75,20 @@ async function build() {
       await esbuild.build(buildOptions);
       console.log("Build complete.");
 
-      const distDir = path.resolve(__dirname, "../dist");
+      if (!fs.existsSync(distDir)) {
+        fs.mkdirSync(distDir, { recursive: true });
+      }
       execSync(`cd ${distDir} && zip -r functions.zip .`, { stdio: "inherit" });
       console.log("Zip created at dist/functions.zip");
+
+      const manifest = {
+        functions: entryPoints.map(entryPointToFunctionKey).sort(),
+      };
+      fs.writeFileSync(
+        path.join(distDir, "lambda-manifest.json"),
+        `${JSON.stringify(manifest, null, 2)}\n`
+      );
+      console.log("Manifest created at dist/lambda-manifest.json");
     }
   } catch (error) {
     console.error("Build failed:", error);
