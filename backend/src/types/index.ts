@@ -673,6 +673,35 @@ export interface MarketingMetrics {
   };
 }
 
+export type CallingMetricsHealth = "healthy" | "at_risk" | "insufficient_data";
+
+export interface CallingMetricsSummary {
+  totalCalls: number;
+  outboundAttempts: number;
+  outboundPickedUp: number;
+  outboundMissed: number;
+  inboundCalls: number;
+  inboundAnswered: number;
+  pickupRate: number;
+  inboundAnswerRate: number;
+  averageDurationSeconds: number;
+  health: CallingMetricsHealth;
+}
+
+export interface CallingMetricsBotRow extends CallingMetricsSummary {
+  botId: string;
+  botName: string;
+}
+
+export interface CallingMetrics {
+  from: string;
+  to: string;
+  windowDays: number;
+  metaPickupThreshold: number;
+  summary: CallingMetricsSummary;
+  byBot: CallingMetricsBotRow[];
+}
+
 export interface ApiKey {
   keyId: string;
   tenantId: string;

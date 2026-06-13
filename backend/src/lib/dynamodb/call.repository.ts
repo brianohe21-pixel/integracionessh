@@ -102,6 +102,39 @@ export async function updateCallRecordStatus(
   );
 }
 
+export async function listAllCallsForTenant(tenantId: string): Promise<CallRecord[]> {
+  const items: CallRecord[] = [];
+  let lastKey: Record<string, unknown> | undefined;
+
+  do {
+    const result = await docClient.send(
+      new QueryCommand({
+        TableName: TABLE_NAME,
+        KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+        ExpressionAttributeValues: {
+          ":pk": `TENANT#${tenantId}`,
+          ":sk": "CALL#",
+        },
+        ExclusiveStartKey: lastKey,
+      })
+    );
+
+    for (const item of result.Items ?? []) {
+      const { PK, SK, GSI1PK, GSI1SK, ttl, ...rest } = item;
+      void PK;
+      void SK;
+      void GSI1PK;
+      void GSI1SK;
+      void ttl;
+      items.push(rest as CallRecord);
+    }
+
+    lastKey = result.LastEvaluatedKey;
+  } while (lastKey);
+
+  return items;
+}
+
 export async function listCallsByBot(
   botId: string,
   limit = 50

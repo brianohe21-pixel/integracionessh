@@ -2,6 +2,7 @@ import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 }
 import { extractAuthContext, assertMemberRole } from "../../lib/auth/cognito.js";
 import { getTenantUsageMetrics } from "../../lib/dynamodb/metrics.repository.js";
 import { getMarketingMetrics } from "../../lib/dynamodb/marketing-metrics.repository.js";
+import { getCallingMetrics } from "../../lib/dynamodb/call-metrics.repository.js";
 import { ok, badRequest, handleError } from "../../lib/http.js";
 
 export async function handler(
@@ -16,6 +17,24 @@ export async function handler(
     if (method === "GET" && rawPath.endsWith("/metrics/marketing")) {
       const marketing = await getMarketingMetrics(auth.tenantId);
       return ok(marketing);
+    }
+
+    if (method === "GET" && rawPath.endsWith("/metrics/calling")) {
+      const qs = event.queryStringParameters ?? {};
+      const daysParam = qs.days ? parseInt(qs.days, 10) : undefined;
+      const options: {
+        from?: string;
+        to?: string;
+        days?: number;
+        botId?: string;
+      } = {};
+      if (qs.from) options.from = qs.from;
+      if (qs.to) options.to = qs.to;
+      if (daysParam !== undefined && Number.isFinite(daysParam)) options.days = daysParam;
+      const botId = qs.botId?.trim();
+      if (botId) options.botId = botId;
+      const calling = await getCallingMetrics(auth.tenantId, options);
+      return ok(calling);
     }
 
     if (method === "GET") {
