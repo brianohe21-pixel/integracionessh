@@ -6,6 +6,7 @@ import {
   getConversationMessages,
   findConversationById,
   addMessage,
+  deleteConversation,
 } from "../../lib/dynamodb/conversation.repository.js";
 import { getAdvisorByCognitoUserId } from "../../lib/dynamodb/advisor.repository.js";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
@@ -32,7 +33,7 @@ import {
   getWhatsAppAccessToken,
   truncateWhatsAppText,
 } from "../../lib/whatsapp/client.js";
-import { ok, created, badRequest, notFound, forbidden, handleError } from "../../lib/http.js";
+import { ok, created, badRequest, notFound, forbidden, noContent, handleError } from "../../lib/http.js";
 import type { AuthContext, Conversation, Message } from "../../types/index.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
@@ -392,6 +393,25 @@ export async function handler(
         url: buildWaMeLink(conversation.phoneNumber),
         phoneNumber: conversation.phoneNumber,
       });
+    }
+
+    if (method === "DELETE" && !subPath) {
+      assertTenantManagerRole(auth);
+
+      const botId = params.botId;
+      if (!botId || !z.string().uuid().safeParse(botId).success) {
+        return badRequest("botId query parameter is required");
+      }
+
+      const conversation = await findConversationById(auth.tenantId, conversationId);
+      if (!conversation || conversation.botId !== botId) {
+        return notFound("Conversation not found");
+      }
+
+      const deleted = await deleteConversation(auth.tenantId, botId, conversationId);
+      if (!deleted) return notFound("Conversation not found");
+
+      return noContent();
     }
 
     return badRequest("Route not found");

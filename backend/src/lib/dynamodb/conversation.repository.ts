@@ -4,6 +4,7 @@ import {
   QueryCommand,
   TransactWriteCommand,
   UpdateCommand,
+  BatchWriteCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { docClient, TABLE_NAME } from "./client.js";
 import { listBots } from "./bot.repository.js";
@@ -469,4 +470,73 @@ export async function listConversations(
       : undefined;
 
   return { items, ...(nextCursor ? { nextCursor } : {}) };
+}
+
+async function queryAllMessageKeys(
+  tenantId: string,
+  conversationId: string
+): Promise<Array<{ PK: string; SK: string }>> {
+  const keys: Array<{ PK: string; SK: string }> = [];
+  let lastKey: Record<string, unknown> | undefined;
+
+  do {
+    const result = await docClient.send(
+      new QueryCommand({
+        TableName: TABLE_NAME,
+        KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+        ExpressionAttributeValues: {
+          ":pk": `TENANT#${tenantId}#CONV#${conversationId}`,
+          ":sk": "MSG#",
+        },
+        ProjectionExpression: "PK, SK",
+        ...(lastKey ? { ExclusiveStartKey: lastKey } : {}),
+        Limit: 100,
+      })
+    );
+
+    for (const item of result.Items ?? []) {
+      keys.push({ PK: item.PK as string, SK: item.SK as string });
+    }
+
+    lastKey = result.LastEvaluatedKey;
+  } while (lastKey);
+
+  return keys;
+}
+
+export async function deleteConversation(
+  tenantId: string,
+  botId: string,
+  conversationId: string
+): Promise<boolean> {
+  const existing = await getConversation(tenantId, botId, conversationId);
+  if (!existing) return false;
+
+  const deleteRequests: Array<{ DeleteRequest: { Key: { PK: string; SK: string } } }> = [
+    { DeleteRequest: { Key: conversationKeys(tenantId, botId, conversationId) } },
+    ...(await queryAllMessageKeys(tenantId, conversationId)).map((key) => ({
+      DeleteRequest: { Key: key },
+    })),
+  ];
+
+  if (existing.activeFlowRunId) {
+    deleteRequests.push({
+      DeleteRequest: {
+        Key: {
+          PK: `TENANT#${tenantId}`,
+          SK: `FLOWRUN#${existing.activeFlowRunId}`,
+        },
+      },
+    });
+  }
+
+  for (let i = 0; i < deleteRequests.length; i += 25) {
+    await docClient.send(
+      new BatchWriteCommand({
+        RequestItems: { [TABLE_NAME]: deleteRequests.slice(i, i + 25) },
+      })
+    );
+  }
+
+  return true;
 }
