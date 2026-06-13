@@ -137,10 +137,11 @@ export async function handler(
       if (workflowStatus) listOptions.workflowStatus = workflowStatus;
       if (status) listOptions.status = status;
       if (assignedAdvisorId) listOptions.assignedAdvisorId = assignedAdvisorId;
+      if (params.cursor) listOptions.cursor = params.cursor;
 
-      const conversations = await listConversations(auth.tenantId, listOptions);
+      const result = await listConversations(auth.tenantId, listOptions);
 
-      return ok(conversations);
+      return ok(result);
     }
 
     if (!conversationId) {

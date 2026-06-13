@@ -24,6 +24,68 @@ export interface ListConversationsOptions {
   status?: Conversation["status"];
   assignedAdvisorId?: string;
   limit?: number;
+  cursor?: string;
+}
+
+export interface ListConversationsResult {
+  items: Conversation[];
+  nextCursor?: string;
+}
+
+interface ConversationCursor {
+  lastMessageAt: string;
+  conversationId: string;
+}
+
+function decodeConversationCursor(cursor: string): ConversationCursor | undefined {
+  try {
+    return JSON.parse(Buffer.from(cursor, "base64url").toString("utf8")) as ConversationCursor;
+  } catch {
+    return undefined;
+  }
+}
+
+function encodeConversationCursor(cursor: ConversationCursor): string {
+  return Buffer.from(JSON.stringify(cursor)).toString("base64url");
+}
+
+function isAfterCursor(conv: Conversation, cursor: ConversationCursor): boolean {
+  if (conv.lastMessageAt < cursor.lastMessageAt) return true;
+  if (conv.lastMessageAt > cursor.lastMessageAt) return false;
+  return conv.conversationId < cursor.conversationId;
+}
+
+async function queryAllConversationsByBot(
+  tenantId: string,
+  botId: string
+): Promise<Conversation[]> {
+  const items: Conversation[] = [];
+  let lastKey: Record<string, unknown> | undefined;
+
+  do {
+    const result = await docClient.send(
+      new QueryCommand({
+        TableName: TABLE_NAME,
+        KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+        ExpressionAttributeValues: {
+          ":pk": `TENANT#${tenantId}#BOT#${botId}`,
+          ":sk": "CONV#",
+        },
+        ScanIndexForward: false,
+        ...(lastKey ? { ExclusiveStartKey: lastKey } : {}),
+        Limit: 100,
+      })
+    );
+
+    for (const item of result.Items ?? []) {
+      const { PK, SK, GSI1PK, GSI1SK, ...rest } = item;
+      items.push(normalizeConversation(rest as Conversation));
+    }
+
+    lastKey = result.LastEvaluatedKey;
+  } while (lastKey);
+
+  return items;
 }
 
 const conversationKeys = (tenantId: string, botId: string, conversationId: string) => ({
@@ -347,46 +409,26 @@ function dedupeMessagesById(messages: Message[]): Message[] {
 export async function listConversations(
   tenantId: string,
   options: ListConversationsOptions = {}
-): Promise<Conversation[]> {
-  const limit = options.limit ?? 20;
-  const fetchLimit = Math.min(limit * 5, 100);
-
-  const queryByBotPk = (pk: string) =>
-    docClient.send(
-      new QueryCommand({
-        TableName: TABLE_NAME,
-        KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
-        ExpressionAttributeValues: {
-          ":pk": pk,
-          ":sk": "CONV#",
-        },
-        ScanIndexForward: false,
-        Limit: fetchLimit,
-      })
-    );
+): Promise<ListConversationsResult> {
+  const limit = Math.min(Math.max(options.limit ?? 20, 1), 100);
+  const cursor = options.cursor ? decodeConversationCursor(options.cursor) : undefined;
 
   let merged: Conversation[] = [];
 
   if (options.botId) {
-    const result = await queryByBotPk(`TENANT#${tenantId}#BOT#${options.botId}`);
-    merged = (result.Items ?? []).map(({ PK, SK, GSI1PK, GSI1SK, ...rest }) =>
-      normalizeConversation(rest as Conversation)
-    );
+    merged = await queryAllConversationsByBot(tenantId, options.botId);
   } else {
     const bots = await listBots(tenantId);
     if (bots.length === 0) {
-      return [];
+      return { items: [] };
     }
 
     const pages = await Promise.all(
-      bots.map((b) => queryByBotPk(`TENANT#${tenantId}#BOT#${b.botId}`))
+      bots.map((b) => queryAllConversationsByBot(tenantId, b.botId))
     );
 
-    for (const result of pages) {
-      for (const item of result.Items ?? []) {
-        const { PK, SK, GSI1PK, GSI1SK, ...rest } = item;
-        merged.push(normalizeConversation(rest as Conversation));
-      }
+    for (const page of pages) {
+      merged.push(...page);
     }
   }
 
@@ -412,5 +454,19 @@ export async function listConversations(
     (a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime()
   );
 
-  return merged.slice(0, limit);
+  if (cursor) {
+    merged = merged.filter((c) => isAfterCursor(c, cursor));
+  }
+
+  const items = merged.slice(0, limit);
+  const last = items[items.length - 1];
+  const nextCursor =
+    items.length === limit && last
+      ? encodeConversationCursor({
+          lastMessageAt: last.lastMessageAt,
+          conversationId: last.conversationId,
+        })
+      : undefined;
+
+  return { items, ...(nextCursor ? { nextCursor } : {}) };
 }
