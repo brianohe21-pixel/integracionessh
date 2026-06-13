@@ -239,6 +239,8 @@ export const es = {
     filterHuman: "En atención humana",
     filterBot: "Automáticas",
     requestCallPermission: "Solicitar permiso de llamada",
+    callPermissionSent: "Solicitud de permiso enviada por WhatsApp.",
+    callPermissionFailed: "No se pudo enviar la solicitud de permiso.",
     transfer: "Transferir a asesor",
     release: "Devolver al bot",
     openWhatsApp: "Abrir en WhatsApp",

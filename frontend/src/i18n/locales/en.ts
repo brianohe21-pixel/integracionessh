@@ -240,6 +240,8 @@ export const en: Messages = {
     filterHuman: "Human handoff",
     filterBot: "Automated",
     requestCallPermission: "Request call permission",
+    callPermissionSent: "Call permission request sent on WhatsApp.",
+    callPermissionFailed: "Could not send the call permission request.",
     transfer: "Transfer to advisor",
     release: "Return to bot",
     openWhatsApp: "Open in WhatsApp",

@@ -18,6 +18,7 @@ import {
 } from "../../lib/whatsapp/calls.js";
 import { getCallRecord, listCallsByBot, upsertCallRecord } from "../../lib/dynamodb/call.repository.js";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
+import { whatsappPhoneSchema } from "../../lib/whatsapp/phone.js";
 import { ok, badRequest, notFound, handleError } from "../../lib/http.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
@@ -34,7 +35,7 @@ const UpdateSettingsSchema = z.object({
 });
 
 const PermissionRequestSchema = z.object({
-  to: z.string().min(7).max(20).regex(/^\d+$/),
+  to: whatsappPhoneSchema,
   bodyText: z.string().min(1).max(1024).optional(),
 });
 
@@ -44,7 +45,7 @@ const SessionSchema = z.object({
 });
 
 const InitiateCallSchema = z.object({
-  to: z.string().min(7).max(20).regex(/^\d+$/),
+  to: whatsappPhoneSchema,
   session: SessionSchema.refine((s) => s.sdp_type === "offer", {
     message: "session.sdp_type must be offer when initiating a call",
   }),
@@ -80,7 +81,8 @@ export async function handler(
     if (!bot) return notFound("Bot not found");
     assertTenantAccess(auth, bot.tenantId);
 
-    const subPath = parseCallingSubPath(event.rawPath ?? "", botId);
+    const rawPath = event.rawPath ?? event.requestContext.http.path ?? "";
+    const subPath = parseCallingSubPath(rawPath, botId);
     const callIdParam = event.pathParameters?.callId;
     const userWaIdParam = event.pathParameters?.userWaId;
 
@@ -122,7 +124,11 @@ export async function handler(
       return ok(record);
     }
 
-    if (method === "POST" && subPath === "calls/permission-request") {
+    if (
+      method === "POST" &&
+      (subPath === "calls/permission-request" ||
+        rawPath.endsWith("/calling/calls/permission-request"))
+    ) {
       const parsed = PermissionRequestSchema.safeParse(JSON.parse(event.body ?? "{}"));
       if (!parsed.success) {
         return badRequest(parsed.error.errors[0]?.message ?? "Invalid input");

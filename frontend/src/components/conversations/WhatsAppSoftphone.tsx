@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Phone, PhoneOff } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { normalizeWhatsAppPhone } from "@/lib/wa-link";
 import { useT } from "@/i18n/context";
 import type { Conversation } from "@/types";
 
@@ -56,7 +57,7 @@ export function WhatsAppSoftphone({ conversation, advisorMode = false }: Props) 
       const response = await api.post<{ callId: string }>(
         `/bots/${encodeURIComponent(conversation.botId)}/calling/calls/initiate`,
         {
-          to: conversation.phoneNumber,
+          to: normalizeWhatsAppPhone(conversation.phoneNumber),
           session: {
             sdp_type: "offer",
             sdp: offer.sdp ?? "",

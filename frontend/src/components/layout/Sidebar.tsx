@@ -73,6 +73,7 @@ function SidebarNav({
   const t = useT();
 
   async function handleSignOut() {
+    onNavigate?.();
     try {
       await signOutUser();
     } finally {
@@ -82,7 +83,7 @@ function SidebarNav({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+      <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain px-3 py-4">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = pathname.startsWith(item.href);
@@ -105,7 +106,7 @@ function SidebarNav({
         })}
       </nav>
 
-      <div className="shrink-0 space-y-2 border-t border-gray-800 px-3 py-4">
+      <div className="shrink-0 space-y-2 border-t border-gray-800 bg-gray-900 px-3 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <div className="flex gap-3 px-3 text-xs text-gray-500">
           <a href="/legal/terms" className="hover:text-gray-300">
             {t("legal.footerTerms")}
@@ -164,7 +165,7 @@ export function Sidebar() {
 
   return (
     <>
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col overflow-hidden bg-gray-900 text-white lg:flex">
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex flex-col overflow-hidden bg-gray-900 text-white lg:flex">
         {brand}
         <SidebarNav navItems={navItems} />
       </aside>
@@ -180,7 +181,7 @@ export function Sidebar() {
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex h-screen w-72 flex-col overflow-hidden bg-gray-900 text-white transition-transform duration-200 lg:hidden",
+          "fixed inset-y-0 left-0 z-50 flex h-[100dvh] w-72 min-h-0 flex-col overflow-hidden bg-gray-900 text-white transition-transform duration-200 lg:hidden",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >

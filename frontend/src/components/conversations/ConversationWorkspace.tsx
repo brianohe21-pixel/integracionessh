@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useT } from "@/i18n/context";
-import { buildWaMeLink } from "@/lib/wa-link";
+import { buildWaMeLink, normalizeWhatsAppPhone } from "@/lib/wa-link";
 import {
   MessageSquare,
   User,
@@ -58,6 +58,10 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   const [showResolveModal, setShowResolveModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [csatScore, setCsatScore] = useState<number | "">("");
+  const [callPermissionFeedback, setCallPermissionFeedback] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
   const [selectedAdvisorId, setSelectedAdvisorId] = useState("");
 
   const { data: bots } = useBots();
@@ -101,7 +105,21 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   const handoff = useHandoffConversation();
   const callPermission = useMutation({
     mutationFn: (params: { botId: string; to: string }) =>
-      api.post(`/bots/${params.botId}/calling/calls/permission-request`, { to: params.to }),
+      api.post(`/bots/${params.botId}/calling/calls/permission-request`, {
+        to: normalizeWhatsAppPhone(params.to),
+      }),
+    onSuccess: () => {
+      setCallPermissionFeedback({
+        type: "success",
+        message: t("conversations.callPermissionSent"),
+      });
+    },
+    onError: (err: Error) => {
+      setCallPermissionFeedback({
+        type: "error",
+        message: err.message || t("conversations.callPermissionFailed"),
+      });
+    },
   });
   const release = useReleaseConversation();
   const sendMessage = useSendConversationMessage();
@@ -111,6 +129,13 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
 
   const selectedConversation = conversations.find((c) => c.conversationId === selectedId);
   const selectedBot = bots?.find((b) => b.botId === selectedConversation?.botId);
+  const selectedWhatsAppPhone = selectedConversation
+    ? normalizeWhatsAppPhone(selectedConversation.phoneNumber)
+    : "";
+
+  useEffect(() => {
+    setCallPermissionFeedback(null);
+  }, [selectedId]);
 
   function channelLabel(channel?: Channel): string {
     if (channel === "instagram") return t("conversations.channelInstagram");
@@ -395,19 +420,34 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                   </button>
                 )}
                 {!advisorMode && selectedConversation.botId && (selectedConversation.channel ?? "whatsapp") === "whatsapp" && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      callPermission.mutate({
-                        botId: selectedConversation.botId,
-                        to: selectedConversation.phoneNumber,
-                      })
-                    }
-                    disabled={callPermission.isPending}
-                    className="px-3 py-1.5 text-xs font-medium bg-violet-100 text-violet-800 rounded-lg"
-                  >
-                    {t("conversations.requestCallPermission")}
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCallPermissionFeedback(null);
+                        callPermission.mutate({
+                          botId: selectedConversation.botId,
+                          to: selectedConversation.phoneNumber,
+                        });
+                      }}
+                      disabled={callPermission.isPending || selectedWhatsAppPhone.length < 7}
+                      className="px-3 py-1.5 text-xs font-medium bg-violet-100 text-violet-800 rounded-lg disabled:opacity-50"
+                    >
+                      {t("conversations.requestCallPermission")}
+                    </button>
+                    {callPermissionFeedback ? (
+                      <p
+                        className={cn(
+                          "w-full text-xs",
+                          callPermissionFeedback.type === "success"
+                            ? "text-green-700"
+                            : "text-red-600"
+                        )}
+                      >
+                        {callPermissionFeedback.message}
+                      </p>
+                    ) : null}
+                  </>
                 )}
                 {isHuman && (
                   <>
