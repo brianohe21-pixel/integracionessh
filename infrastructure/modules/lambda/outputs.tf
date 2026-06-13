@@ -74,6 +74,22 @@ output "whatsapp_connect_function_arn" {
   value = aws_lambda_function.functions["whatsapp_connect"].arn
 }
 
+output "instagram_connect_invoke_arn" {
+  value = aws_lambda_function.functions["instagram_connect"].invoke_arn
+}
+
+output "instagram_connect_function_arn" {
+  value = aws_lambda_function.functions["instagram_connect"].arn
+}
+
+output "webchat_invoke_arn" {
+  value = aws_lambda_function.functions["webchat"].invoke_arn
+}
+
+output "webchat_function_arn" {
+  value = aws_lambda_function.functions["webchat"].arn
+}
+
 output "campaigns_invoke_arn" {
   value = aws_lambda_function.functions["campaigns"].invoke_arn
 }

@@ -322,6 +322,28 @@ locals {
         WHATSAPP_APP_SECRET = var.whatsapp_app_secret != "" ? var.whatsapp_app_secret : var.meta_app_secret
       }
     }
+    instagram_connect = {
+      handler     = "instagram-connect/index.handler"
+      description = "Connects Instagram DM page credentials for a bot"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME  = var.dynamodb_table_name
+        ENVIRONMENT = var.environment
+      }
+    }
+    webchat = {
+      handler     = "webchat/index.handler"
+      description = "Public web chat sessions and message polling"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME              = var.dynamodb_table_name
+        ENVIRONMENT             = var.environment
+        SQS_QUEUE_URL           = var.sqs_queue_url
+        WEBCHAT_SESSION_SECRET  = var.webchat_session_secret != "" ? var.webchat_session_secret : "dev-webchat-${var.environment}"
+      }
+    }
     campaigns = {
       handler     = "campaigns/index.handler"
       description = "CRUD API and control for WhatsApp bulk campaigns"

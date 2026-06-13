@@ -212,6 +212,10 @@ module "api_gateway" {
   metrics_function_arn          = module.lambda.function_arns["metrics"]
   whatsapp_connect_invoke_arn   = module.lambda.whatsapp_connect_invoke_arn
   whatsapp_connect_function_arn = module.lambda.whatsapp_connect_function_arn
+  instagram_connect_invoke_arn   = module.lambda.instagram_connect_invoke_arn
+  instagram_connect_function_arn = module.lambda.instagram_connect_function_arn
+  webchat_invoke_arn            = module.lambda.webchat_invoke_arn
+  webchat_function_arn          = module.lambda.webchat_function_arn
   campaigns_invoke_arn          = module.lambda.campaigns_invoke_arn
   campaigns_function_arn        = module.lambda.campaigns_function_arn
   support_tickets_invoke_arn    = module.lambda.support_tickets_invoke_arn

@@ -3,7 +3,7 @@ resource "aws_apigatewayv2_api" "main" {
   protocol_type = "HTTP"
 
   cors_configuration {
-    allow_headers = ["Content-Type", "Authorization", "X-Api-Key"]
+    allow_headers = ["Content-Type", "Authorization", "X-Api-Key", "X-Widget-Key"]
     allow_methods = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
     allow_origins = var.allowed_origins
     max_age       = 300
@@ -319,6 +319,42 @@ locals {
       route_key    = "POST /whatsapp/connect"
       invoke_arn   = var.whatsapp_connect_invoke_arn
       function_arn = var.whatsapp_connect_function_arn
+      protected    = true
+    }
+    instagram_connect = {
+      route_key    = "POST /instagram/connect"
+      invoke_arn   = var.instagram_connect_invoke_arn
+      function_arn = var.instagram_connect_function_arn
+      protected    = true
+    }
+    webchat_sessions_create = {
+      route_key    = "POST /webchat/sessions"
+      invoke_arn   = var.webchat_invoke_arn
+      function_arn = var.webchat_function_arn
+      protected    = false
+    }
+    webchat_messages_send = {
+      route_key    = "POST /webchat/sessions/{sessionId}/messages"
+      invoke_arn   = var.webchat_invoke_arn
+      function_arn = var.webchat_function_arn
+      protected    = false
+    }
+    webchat_messages_poll = {
+      route_key    = "GET /webchat/sessions/{sessionId}/messages"
+      invoke_arn   = var.webchat_invoke_arn
+      function_arn = var.webchat_function_arn
+      protected    = false
+    }
+    bots_webchat_put = {
+      route_key    = "PUT /bots/{botId}/webchat"
+      invoke_arn   = var.bots_invoke_arn
+      function_arn = var.bots_function_arn
+      protected    = true
+    }
+    bots_webchat_rotate_key = {
+      route_key    = "POST /bots/{botId}/webchat/rotate-key"
+      invoke_arn   = var.bots_invoke_arn
+      function_arn = var.bots_function_arn
       protected    = true
     }
     campaigns_list = {
@@ -842,6 +878,8 @@ resource "aws_lambda_permission" "api_gw" {
     bulk_send        = var.bulk_send_function_arn
     metrics          = var.metrics_function_arn
     whatsapp_connect = var.whatsapp_connect_function_arn
+    instagram_connect = var.instagram_connect_function_arn
+    webchat          = var.webchat_function_arn
     campaigns        = var.campaigns_function_arn
     support_tickets  = var.support_tickets_function_arn
     billing          = var.billing_function_arn

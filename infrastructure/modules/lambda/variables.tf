@@ -130,6 +130,13 @@ variable "whatsapp_app_secret" {
   description = "Meta App Secret used for webhook signature validation and tenant secret storage"
 }
 
+variable "webchat_session_secret" {
+  type        = string
+  default     = ""
+  sensitive   = true
+  description = "HMAC secret for web chat session tokens"
+}
+
 variable "lambda_zip_path" {
   type        = string
   default     = ""

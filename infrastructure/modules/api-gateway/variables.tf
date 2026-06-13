@@ -94,6 +94,22 @@ variable "whatsapp_connect_function_arn" {
   type = string
 }
 
+variable "instagram_connect_invoke_arn" {
+  type = string
+}
+
+variable "instagram_connect_function_arn" {
+  type = string
+}
+
+variable "webchat_invoke_arn" {
+  type = string
+}
+
+variable "webchat_function_arn" {
+  type = string
+}
+
 variable "campaigns_invoke_arn" {
   type = string
 }
