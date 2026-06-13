@@ -18,10 +18,17 @@ export function useApiKeyUsage() {
   });
 }
 
-export function useApiKeyLogs(keyId: string | null) {
+export function useApiKeyLogs(keyId: string | null, options?: { errorsOnly?: boolean }) {
+  const errorsOnly = options?.errorsOnly ?? false;
   return useQuery<ApiKeyUsageLog[]>({
-    queryKey: ["api-keys", keyId, "logs"],
-    queryFn: () => api.get<ApiKeyUsageLog[]>(`/api-keys/${keyId}/logs`),
+    queryKey: ["api-keys", keyId, "logs", errorsOnly ? "errors" : "all"],
+    queryFn: () => {
+      const params = new URLSearchParams({ limit: "50" });
+      if (errorsOnly) params.set("errorsOnly", "true");
+      return api.get<ApiKeyUsageLog[]>(
+        `/api-keys/${encodeURIComponent(keyId!)}/logs?${params.toString()}`
+      );
+    },
     enabled: keyId !== null,
   });
 }

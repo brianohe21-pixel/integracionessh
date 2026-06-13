@@ -95,8 +95,11 @@ export async function handler(
       const key = keys.find((k) => k.keyId === keyId);
       if (!key) return notFound("API key not found");
 
-      const logs = await listApiKeyUsageLogs(auth.tenantId, keyId, 20);
-      return ok(logs);
+      const limit = Math.min(parseInt(event.queryStringParameters?.limit ?? "50", 10) || 50, 100);
+      const errorsOnly = event.queryStringParameters?.errorsOnly === "true";
+      const logs = await listApiKeyUsageLogs(auth.tenantId, keyId, limit);
+      const filtered = errorsOnly ? logs.filter((log) => log.statusCode >= 400) : logs;
+      return ok(filtered);
     }
 
     if (method === "GET" && !keyId) {

@@ -730,6 +730,8 @@ export interface ApiKeyUsageLog {
   messageId?: string;
   callId?: string;
   maskedPhone?: string;
+  errorMessage?: string;
+  errorStack?: string;
   createdAt: string;
 }
 

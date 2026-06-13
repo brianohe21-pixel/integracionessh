@@ -383,7 +383,10 @@ export interface ApiKeyUsageLog {
   statusCode: number;
   durationMs: number;
   messageId?: string;
+  callId?: string;
   maskedPhone?: string;
+  errorMessage?: string;
+  errorStack?: string;
   createdAt: string;
 }
 
