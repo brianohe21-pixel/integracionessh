@@ -254,7 +254,7 @@ async function handleSendMessage(
 
   const { bot, accessToken } = await loadActiveBot(apiKey);
   let messageId: string | null = null;
-  let statusCode = 200;
+  const statusCode = 200;
 
   try {
     const data = parsed.data;
