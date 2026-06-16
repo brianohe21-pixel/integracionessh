@@ -99,6 +99,8 @@ jobs:
           EXTRA_ALLOWED_ORIGINS: ${{ vars.EXTRA_ALLOWED_ORIGINS }}
           EXTRA_CALLBACK_URLS: ${{ vars.EXTRA_CALLBACK_URLS }}
           EXTRA_LOGOUT_URLS: ${{ vars.EXTRA_LOGOUT_URLS }}
+          ENABLE_MONITORING: ${{ vars.ENABLE_MONITORING }}
+          OPS_ALERT_EMAIL: ${{ vars.OPS_ALERT_EMAIL }}
         run: |
           set -euo pipefail
           PLAN_ARGS=(
@@ -109,6 +111,12 @@ jobs:
           )
           if [ -f terraform.tfvars ]; then
             PLAN_ARGS+=(-var-file=terraform.tfvars)
+          fi
+          if [ "${ENABLE_MONITORING:-false}" = "true" ]; then
+            PLAN_ARGS+=(-var="enable_monitoring=true")
+          fi
+          if [ -n "${OPS_ALERT_EMAIL:-}" ]; then
+            PLAN_ARGS+=(-var="ops_alert_email=${OPS_ALERT_EMAIL}")
           fi
           if [ -n "${META_APP_ID:-}" ]; then
             PLAN_ARGS+=(-var="meta_app_id=${META_APP_ID}")
@@ -269,6 +277,8 @@ jobs:
           EXTRA_ALLOWED_ORIGINS: ${{ vars.EXTRA_ALLOWED_ORIGINS }}
           EXTRA_CALLBACK_URLS: ${{ vars.EXTRA_CALLBACK_URLS }}
           EXTRA_LOGOUT_URLS: ${{ vars.EXTRA_LOGOUT_URLS }}
+          ENABLE_MONITORING: ${{ vars.ENABLE_MONITORING }}
+          OPS_ALERT_EMAIL: ${{ vars.OPS_ALERT_EMAIL }}
         run: |
           set -euo pipefail
           PLAN_ARGS=(
@@ -279,6 +289,12 @@ jobs:
           )
           if [ -f terraform.tfvars ]; then
             PLAN_ARGS+=(-var-file=terraform.tfvars)
+          fi
+          if [ "${ENABLE_MONITORING:-false}" = "true" ]; then
+            PLAN_ARGS+=(-var="enable_monitoring=true")
+          fi
+          if [ -n "${OPS_ALERT_EMAIL:-}" ]; then
+            PLAN_ARGS+=(-var="ops_alert_email=${OPS_ALERT_EMAIL}")
           fi
           if [ -n "${META_APP_ID:-}" ]; then
             PLAN_ARGS+=(-var="meta_app_id=${META_APP_ID}")

@@ -102,6 +102,12 @@ variable "ops_alert_email" {
   default = ""
 }
 
+variable "ops_alert_emails" {
+  type        = list(string)
+  default     = []
+  description = "Operational alert recipients. Falls back to ops_alert_email when empty. Each address must confirm the AWS SNS subscription email after deploy."
+}
+
 variable "enable_monitoring" {
   type        = bool
   default     = false

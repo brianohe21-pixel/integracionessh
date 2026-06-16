@@ -72,6 +72,8 @@ locals {
     data.external.amplify_browser_origin.result.origin != "" ? [data.external.amplify_browser_origin.result.origin] : [],
     var.extra_allowed_origins
   )
+
+  ops_alert_emails = length(var.ops_alert_emails) > 0 ? var.ops_alert_emails : compact([var.ops_alert_email])
 }
 
 module "dynamodb" {
@@ -259,14 +261,14 @@ module "monitoring" {
 
   project     = local.project
   environment = local.environment
-  alert_email = var.ops_alert_email
-  api_id      = module.api_gateway.api_id
-  dlq_arn     = module.sqs.dlq_arn
-  lambda_function_names = [
-    "${local.project}-${local.environment}-webhook",
-    "${local.project}-${local.environment}-process-message",
-    "${local.project}-${local.environment}-billing",
-  ]
+  alert_emails          = local.ops_alert_emails
+  api_id                = module.api_gateway.api_id
+  dlq_arns              = module.sqs.dlq_arns
+  lambda_function_names = values(module.lambda.function_names)
+  sqs_queue_arns = {
+    for k, v in module.sqs.queue_arns : k => v
+    if contains(["messages", "bulk_send", "campaign", "integration"], k)
+  }
 
   providers = {
     aws = aws.untagged
