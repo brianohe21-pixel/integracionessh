@@ -585,6 +585,30 @@ locals {
       function_arn = var.tenants_function_arn
       protected    = true
     }
+    tenants_branding_get = {
+      route_key    = "GET /tenants/me/branding"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_branding_update = {
+      route_key    = "PUT /tenants/me/branding"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_branding_logo_upload = {
+      route_key    = "POST /tenants/me/branding/logo"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_branding_logo_delete = {
+      route_key    = "DELETE /tenants/me/branding/logo"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
     public_api_messages = {
       route_key    = "POST /v1/messages"
       invoke_arn   = var.public_api_invoke_arn
