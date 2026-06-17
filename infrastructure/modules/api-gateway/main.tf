@@ -225,6 +225,42 @@ locals {
       function_arn = var.contacts_function_arn
       protected    = true
     }
+    leads_list = {
+      route_key    = "GET /leads"
+      invoke_arn   = var.leads_invoke_arn
+      function_arn = var.leads_function_arn
+      protected    = true
+    }
+    leads_get = {
+      route_key    = "GET /leads/{leadId}"
+      invoke_arn   = var.leads_invoke_arn
+      function_arn = var.leads_function_arn
+      protected    = true
+    }
+    leads_update = {
+      route_key    = "PATCH /leads/{leadId}"
+      invoke_arn   = var.leads_invoke_arn
+      function_arn = var.leads_function_arn
+      protected    = true
+    }
+    leads_convert = {
+      route_key    = "POST /leads/{leadId}/convert"
+      invoke_arn   = var.leads_invoke_arn
+      function_arn = var.leads_function_arn
+      protected    = true
+    }
+    leads_lose = {
+      route_key    = "POST /leads/{leadId}/lose"
+      invoke_arn   = var.leads_invoke_arn
+      function_arn = var.leads_function_arn
+      protected    = true
+    }
+    leads_delete = {
+      route_key    = "DELETE /leads/{leadId}"
+      invoke_arn   = var.leads_invoke_arn
+      function_arn = var.leads_function_arn
+      protected    = true
+    }
     templates_list = {
       route_key    = "GET /templates"
       invoke_arn   = var.templates_invoke_arn
@@ -277,6 +313,12 @@ locals {
       route_key    = "GET /bulk-send/{jobId}/failures"
       invoke_arn   = var.bulk_send_invoke_arn
       function_arn = var.bulk_send_function_arn
+      protected    = true
+    }
+    metrics_leads = {
+      route_key    = "GET /metrics/leads"
+      invoke_arn   = var.metrics_invoke_arn
+      function_arn = var.metrics_function_arn
       protected    = true
     }
     metrics_marketing = {
@@ -958,6 +1000,7 @@ resource "aws_lambda_permission" "api_gw" {
     conversations    = var.conversations_function_arn
     advisors         = var.advisors_function_arn
     contacts         = var.contacts_function_arn
+    leads            = var.leads_function_arn
     templates        = var.templates_function_arn
     bulk_send        = var.bulk_send_function_arn
     metrics          = var.metrics_function_arn

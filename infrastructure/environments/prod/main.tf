@@ -212,6 +212,8 @@ module "api_gateway" {
   advisors_function_arn         = module.lambda.advisors_function_arn
   contacts_invoke_arn           = module.lambda.contacts_invoke_arn
   contacts_function_arn         = module.lambda.contacts_function_arn
+  leads_invoke_arn              = module.lambda.leads_invoke_arn
+  leads_function_arn            = module.lambda.leads_function_arn
   templates_invoke_arn          = module.lambda.templates_invoke_arn
   templates_function_arn        = module.lambda.function_arns["templates"]
   bulk_send_invoke_arn          = module.lambda.bulk_send_invoke_arn

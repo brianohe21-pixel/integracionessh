@@ -62,6 +62,14 @@ variable "contacts_function_arn" {
   type = string
 }
 
+variable "leads_invoke_arn" {
+  type = string
+}
+
+variable "leads_function_arn" {
+  type = string
+}
+
 variable "templates_invoke_arn" {
   type = string
 }
