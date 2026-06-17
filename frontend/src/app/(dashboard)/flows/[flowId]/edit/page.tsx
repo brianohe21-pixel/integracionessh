@@ -105,7 +105,12 @@ export default function EditFlowPage() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         <div className="lg:col-span-3">
           <FlowCanvas
-            flow={{ ...flow, nodes: localNodes, edges: localEdges }}
+            key={flow.flowId}
+            flow={{
+              ...flow,
+              nodes: localNodes.length > 0 ? localNodes : flow.nodes,
+              edges: localEdges.length > 0 ? localEdges : flow.edges,
+            }}
             onChange={handleCanvasChange}
           />
         </div>

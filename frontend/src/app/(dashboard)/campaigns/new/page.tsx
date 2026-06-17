@@ -246,7 +246,24 @@ export default function NewCampaignPage() {
                 value={config.segments}
                 onChange={(segs) => setConfig({ ...config, segments: segs })}
               />
+              <div className="flex flex-wrap gap-2 mt-1">
+                {["lead", "converted"].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => {
+                      if (!config.segments.includes(preset)) {
+                        setConfig({ ...config, segments: [...config.segments, preset] });
+                      }
+                    }}
+                    className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                  >
+                    + {preset}
+                  </button>
+                ))}
+              </div>
               <p className="text-xs text-gray-400">{t("campaigns.segmentsHint")}</p>
+              <p className="text-xs text-gray-400">{t("campaigns.leadSegmentsHint")}</p>
             </div>
 
             <div className="space-y-1.5">

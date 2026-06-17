@@ -15,6 +15,8 @@ const EVENT_OPTIONS = [
   "conversation.handoff",
   "message.sent",
   "flow.completed",
+  "lead.created",
+  "lead.converted",
   "call.connect",
   "call.status",
   "call.terminated",
@@ -162,17 +164,28 @@ export function IntegrationWebhooksPanel() {
       <div>
         <h3 className="text-sm font-semibold text-gray-900 mb-2">{t("integrations.payloadDoc")}</h3>
         <pre className="text-xs bg-gray-50 border border-gray-200 rounded-lg p-4 overflow-x-auto text-gray-700">
-{`{
+{`// message.received
+{
   "event": "message.received",
-  "timestamp": "2026-06-06T12:00:00.000Z",
-  "tenantId": "...",
-  "data": {
-    "botId": "...",
-    "conversationId": "...",
-    "from": "57300...",
-    "message": "hola",
-    "contact": { "name": "..." }
-  }
+  "data": { "botId", "conversationId", "from", "message", "contact": { "name" } }
+}
+
+// lead.created
+{
+  "event": "lead.created",
+  "data": { "botId", "leadId", "phone", "metaFlowId", "name", "email" }
+}
+
+// lead.converted
+{
+  "event": "lead.converted",
+  "data": { "botId", "leadId", "phone", "contact": { "phone", "name", "email", "tags" } }
+}
+
+// flow.completed
+{
+  "event": "flow.completed",
+  "data": { "botId", "phone", "metaFlowId", "response": { "name", "email" } }
 }`}
         </pre>
       </div>

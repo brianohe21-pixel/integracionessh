@@ -10,6 +10,7 @@ const ROUTE_LABEL_KEYS: Record<string, string> = {
   "/metrics": "nav.metrics",
   "/conversations": "nav.conversations",
   "/contacts": "nav.contacts",
+  "/leads": "nav.leads",
   "/advisors": "nav.advisors",
   "/inbox": "nav.inbox",
   "/templates": "nav.templates",

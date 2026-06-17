@@ -14,6 +14,11 @@
   var seenCallInvites = {};
   var callBundleLoading = false;
   var activeCallDisconnect = null;
+  var widgetBranding = {
+    brandName: "Chat",
+    primaryColor: "#4f46e5",
+    logoUrl: null,
+  };
 
   var root = document.createElement("div");
   root.style.cssText =
@@ -26,10 +31,17 @@
   root.appendChild(panel);
 
   var header = document.createElement("div");
-  header.textContent = "Chat";
   header.style.cssText =
-    "background:#4f46e5;color:#fff;padding:12px 14px;font-weight:600;font-size:14px;";
+    "background:#4f46e5;color:#fff;padding:12px 14px;font-weight:600;font-size:14px;display:flex;align-items:center;gap:8px;";
   panel.appendChild(header);
+
+  var headerLogo = document.createElement("img");
+  headerLogo.style.cssText = "display:none;width:24px;height:24px;border-radius:6px;object-fit:cover;";
+  header.appendChild(headerLogo);
+
+  var headerTitle = document.createElement("span");
+  headerTitle.textContent = "Chat";
+  header.appendChild(headerTitle);
 
   var messages = document.createElement("div");
   messages.style.cssText = "flex:1;overflow-y:auto;padding:12px;background:#f9fafb;";
@@ -60,13 +72,30 @@
     "margin-top:8px;background:#4f46e5;color:#fff;border:none;border-radius:999px;padding:12px 18px;font-size:14px;cursor:pointer;box-shadow:0 4px 14px rgba(79,70,229,.4);";
   root.appendChild(toggle);
 
+  function applyWidgetBranding() {
+    var color = widgetBranding.primaryColor || "#4f46e5";
+    header.style.background = color;
+    send.style.background = color;
+    toggle.style.background = color;
+    toggle.style.boxShadow = "0 4px 14px " + color + "66";
+    headerTitle.textContent = widgetBranding.brandName || "Chat";
+    toggle.textContent = widgetBranding.brandName || "Chat";
+    if (widgetBranding.logoUrl) {
+      headerLogo.src = widgetBranding.logoUrl;
+      headerLogo.style.display = "block";
+    } else {
+      headerLogo.style.display = "none";
+    }
+  }
+
   function renderMessage(role, content) {
     var bubble = document.createElement("div");
     bubble.textContent = content;
+    var userColor = widgetBranding.primaryColor || "#4f46e5";
     bubble.style.cssText =
       "max-width:85%;margin:6px 0;padding:8px 10px;border-radius:10px;font-size:13px;line-height:1.4;" +
       (role === "user"
-        ? "margin-left:auto;background:#4f46e5;color:#fff;"
+        ? "margin-left:auto;background:" + userColor + ";color:#fff;"
         : "background:#fff;border:1px solid #e5e7eb;color:#111;");
     messages.appendChild(bubble);
     messages.scrollTop = messages.scrollHeight;
@@ -91,6 +120,12 @@
     }).then(function (data) {
       sessionToken = data.sessionToken;
       sessionId = data.sessionId;
+      if (data.branding) {
+        widgetBranding.brandName = data.branding.brandName || widgetBranding.brandName;
+        widgetBranding.primaryColor = data.branding.primaryColor || widgetBranding.primaryColor;
+        widgetBranding.logoUrl = data.branding.logoUrl || null;
+        applyWidgetBranding();
+      }
     });
   }
 

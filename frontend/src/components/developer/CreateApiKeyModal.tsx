@@ -4,6 +4,7 @@ import { useState } from "react";
 import { X, Copy, CheckCircle, Eye, EyeOff } from "lucide-react";
 import { useCreateApiKey } from "@/hooks/useApiKeys";
 import type { ApiKeyWithSecret } from "@/types";
+import { buildSendMessageCurlExample, CALLS_ENDPOINT_HINT } from "@/lib/api-docs/curl";
 
 interface CreateApiKeyModalProps {
   bots: Array<{ botId: string; name: string }>;
@@ -144,21 +145,13 @@ export function CreateApiKeyModal({ bots, onClose }: CreateApiKeyModalProps) {
               <p className="text-gray-400 font-sans mb-2 text-[11px] uppercase tracking-wide">
                 Example usage
               </p>
-              <p>curl -X POST \</p>
-              <p className="pl-4">
-                {(process.env.NEXT_PUBLIC_API_URL ?? "https://api.integracionessh.lat").replace(
-                  /\/$/,
-                  ""
-                )}
-                /v1/messages \
-              </p>
-              <p className="pl-4">{`-H "X-API-Key: ${createdKey.key.slice(0, 20)}…" \\`}</p>
-              <p className="pl-4">{`-H "Content-Type: application/json" \\`}</p>
-              <p className="pl-4">{`-d '{"to":"521234567890","type":"text","text":"Hello!"}'`}</p>
+              <pre className="whitespace-pre-wrap break-all">
+                {buildSendMessageCurlExample(`${createdKey.key.slice(0, 20)}…`)}
+              </pre>
               <p className="text-gray-400 font-sans mt-3 mb-1 text-[11px] uppercase tracking-wide">
                 Calls (WebRTC signaling)
               </p>
-              <p>POST /v1/calls · GET /v1/calls/permission/{"{userWaId}"} · POST /v1/calls/{"{callId}"}</p>
+              <p>{CALLS_ENDPOINT_HINT}</p>
             </div>
 
             <div className="flex justify-end">

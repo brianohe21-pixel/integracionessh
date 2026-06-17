@@ -33,6 +33,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Message, WorkflowStatus, Channel } from "@/types";
+import { useActiveLeadByPhone, useConvertLead } from "@/hooks/useLeads";
+import Link from "next/link";
 import { AdvisorCallPanel } from "@/components/conversations/AdvisorCallPanel";
 import { WhatsAppSoftphone } from "@/components/conversations/WhatsAppSoftphone";
 
@@ -128,6 +130,8 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   const deleteConv = useDeleteConversation();
 
   const selectedConversation = conversations.find((c) => c.conversationId === selectedId);
+  const { data: activeLead } = useActiveLeadByPhone(selectedConversation?.phoneNumber);
+  const convertLead = useConvertLead();
   const selectedBot = bots?.find((b) => b.botId === selectedConversation?.botId);
   const selectedWhatsAppPhone = selectedConversation
     ? normalizeWhatsAppPhone(selectedConversation.phoneNumber)
@@ -496,6 +500,28 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                   channel: channelLabel(selectedConversation.channel),
                 })}
               </p>
+            )}
+
+            {selectedConversation && activeLead && (
+              <div className="mx-4 mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg flex flex-wrap items-center justify-between gap-2 text-sm">
+                <div>
+                  <span className="font-medium text-amber-900">{t("leads.leadStatus")}: </span>
+                  <span className="text-amber-800">{t(`leads.status_${activeLead.status}`)}</span>
+                </div>
+                <div className="flex gap-2">
+                  <Link href="/leads" className="text-indigo-600 hover:text-indigo-800 text-xs">
+                    {t("leads.viewLead")}
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => convertLead.mutate({ leadId: activeLead.leadId })}
+                    disabled={convertLead.isPending}
+                    className="text-xs font-medium text-indigo-600 hover:text-indigo-800"
+                  >
+                    {t("leads.convert")}
+                  </button>
+                </div>
+              </div>
             )}
 
             {selectedConversation && (

@@ -10,6 +10,7 @@ import {
   BotMessageSquare,
   MessageSquare,
   BookUser,
+  UserPlus,
   LayoutTemplate,
   SendHorizonal,
   BarChart3,
@@ -26,6 +27,7 @@ import {
 } from "lucide-react";
 import { useAdminRole } from "@/hooks/useAdminRole";
 import { useTenantRole } from "@/hooks/useTenantRole";
+import { useTenantBranding } from "@/hooks/useTenantBranding";
 import { useSidebar } from "@/components/layout/SidebarContext";
 
 const memberNavItems = [
@@ -33,6 +35,7 @@ const memberNavItems = [
   { href: "/metrics", labelKey: "nav.metrics" as const, icon: BarChart3 },
   { href: "/conversations", labelKey: "nav.conversations" as const, icon: MessageSquare },
   { href: "/contacts", labelKey: "nav.contacts" as const, icon: BookUser },
+  { href: "/leads", labelKey: "nav.leads" as const, icon: UserPlus },
   { href: "/advisors", labelKey: "nav.advisors" as const, icon: Users },
   { href: "/templates", labelKey: "nav.templates" as const, icon: LayoutTemplate },
   { href: "/bulk-send", labelKey: "nav.bulkSend" as const, icon: SendHorizonal },
@@ -95,9 +98,10 @@ function SidebarNav({
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                 active
-                  ? "bg-indigo-600 text-white"
+                  ? "text-white"
                   : "text-gray-400 hover:bg-gray-800 hover:text-white"
               )}
+              style={active ? { backgroundColor: "var(--brand-primary, #4f46e5)" } : undefined}
             >
               <Icon className="h-4 w-4 flex-shrink-0" />
               {t(item.labelKey)}
@@ -133,6 +137,7 @@ export function Sidebar() {
   const { isOpen, close } = useSidebar();
   const { isAdmin, loading: adminLoading } = useAdminRole();
   const { isAdvisor, loading: roleLoading } = useTenantRole();
+  const { data: branding } = useTenantBranding();
 
   const loading = adminLoading || roleLoading;
   const navItems = loading
@@ -143,13 +148,22 @@ export function Sidebar() {
         ? advisorNavItems
         : memberNavItems;
 
+  const displayName = branding?.brandName ?? t("common.appName");
+
   const brand = (
     <div className="flex shrink-0 items-center gap-3 border-b border-gray-800 px-6 py-5">
-      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600">
-        <BotMessageSquare className="h-5 w-5" />
+      <div
+        className="flex h-9 w-9 items-center justify-center rounded-xl overflow-hidden"
+        style={{ backgroundColor: "var(--brand-primary, #4f46e5)" }}
+      >
+        {branding?.logoUrl ? (
+          <img src={branding.logoUrl} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <BotMessageSquare className="h-5 w-5 text-white" />
+        )}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold leading-tight">{t("common.appName")}</p>
+        <p className="text-sm font-semibold leading-tight">{displayName}</p>
         <p className="text-xs text-gray-400">{t("common.appTagline")}</p>
       </div>
       <button

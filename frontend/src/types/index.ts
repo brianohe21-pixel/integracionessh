@@ -7,12 +7,25 @@ export type SubscriptionStatus =
   | "canceled"
   | "trialing";
 
+export interface TenantBranding {
+  brandName?: string;
+  primaryColor?: string;
+  logoS3Key?: string;
+}
+
+export interface ResolvedTenantBranding {
+  brandName: string;
+  primaryColor: string;
+  logoUrl?: string;
+}
+
 export interface Tenant {
   tenantId: string;
   name: string;
   email: string;
   plan: TenantPlan;
   status: "active" | "suspended" | "pending";
+  branding?: TenantBranding;
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   subscriptionStatus?: SubscriptionStatus;
@@ -91,12 +104,13 @@ export type WorkflowStatus = "new" | "open" | "pending" | "resolved";
 
 export type MarketingConsent = "unknown" | "opt_in" | "opt_out";
 
-export type ContactSource = "sync" | "manual" | "import";
+export type ContactSource = "sync" | "manual" | "import" | "lead_capture";
 
 export interface Contact {
   phoneNumber: string;
   tenantId: string;
   displayName?: string;
+  email?: string;
   tags: string[];
   marketingConsent: MarketingConsent;
   consentAt?: string;
@@ -105,9 +119,54 @@ export interface Contact {
   firstSeenAt: string;
   lastSeenAt: string;
   lastBotId?: string;
+  leadId?: string;
   source: ContactSource;
   createdAt: string;
   updatedAt: string;
+}
+
+export type LeadStatus = "new" | "contacted" | "qualified" | "converted" | "lost";
+
+export interface Lead {
+  leadId: string;
+  tenantId: string;
+  botId: string;
+  phone: string;
+  conversationId: string;
+  metaFlowId: string;
+  flowResponseId: string;
+  name?: string;
+  email?: string;
+  status: LeadStatus;
+  tags: string[];
+  notes?: string;
+  assignedAdvisorId?: string;
+  convertedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LeadsListResponse {
+  items: Lead[];
+  nextCursor?: string;
+}
+
+export interface LeadMetrics {
+  total: number;
+  byStatus: Record<LeadStatus, number>;
+  capturedToday: number;
+  capturedThisWeek: number;
+  conversionRate: number;
+  averageConversionHours: number;
+  topBots: Array<{ botId: string; count: number }>;
+  topFlows: Array<{ metaFlowId: string; count: number }>;
+  funnel: {
+    new: number;
+    contacted: number;
+    qualified: number;
+    converted: number;
+    lost: number;
+  };
 }
 
 export interface ContactsListResponse {
@@ -452,7 +511,12 @@ export type IntegrationEvent =
   | "message.received"
   | "conversation.handoff"
   | "message.sent"
-  | "flow.completed";
+  | "flow.completed"
+  | "lead.created"
+  | "lead.converted"
+  | "call.connect"
+  | "call.status"
+  | "call.terminated";
 
 export type MetaFlowStatus = "DRAFT" | "PUBLISHED" | "DEPRECATED";
 
@@ -478,6 +542,7 @@ export interface FlowResponse {
   phone: string;
   metaFlowId: string;
   responseJson: Record<string, unknown>;
+  leadId?: string;
   createdAt: string;
 }
 
@@ -571,7 +636,7 @@ export interface IntegrationDelivery {
   createdAt: string;
 }
 
-export type AutomationTrigger = "keyword" | "first_message" | "schedule";
+export type AutomationTrigger = "keyword" | "first_message" | "schedule" | "flow_completed";
 export type AutomationAction = "send_text" | "send_template" | "tag_contact" | "handoff";
 
 export interface AutomationRule {
@@ -584,6 +649,7 @@ export interface AutomationRule {
   trigger: AutomationTrigger;
   keywords?: string[];
   matchMode?: "contains" | "exact";
+  metaFlowId?: string;
   scheduledAt?: string;
   targetPhones?: string[];
   targetTags?: string[];

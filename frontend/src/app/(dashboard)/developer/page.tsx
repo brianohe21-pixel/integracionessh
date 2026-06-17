@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { KeyRound, BarChart3, Plus, Webhook } from "lucide-react";
+import Link from "next/link";
+import { KeyRound, BarChart3, Plus, Webhook, BookOpen } from "lucide-react";
 import { IntegrationWebhooksPanel } from "@/components/developer/IntegrationWebhooksPanel";
 import { useApiKeys, useApiKeyUsage } from "@/hooks/useApiKeys";
 import { ApiKeysList } from "@/components/developer/ApiKeysList";
@@ -10,10 +11,12 @@ import { CreateApiKeyModal } from "@/components/developer/CreateApiKeyModal";
 import { useBots } from "@/hooks/useBots";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { useT } from "@/i18n/context";
 
 type Tab = "keys" | "usage" | "webhooks";
 
 export default function DeveloperPage() {
+  const t = useT();
   const [tab, setTab] = useState<Tab>("keys");
   const [showCreate, setShowCreate] = useState(false);
 
@@ -32,13 +35,24 @@ export default function DeveloperPage() {
         subtitle="Manage API keys and monitor message usage from your integrations."
         actions={
           tab === "keys" ? (
-            <button
+            <>
+              <Link
+                href="/docs/api"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                <BookOpen className="w-4 h-4" />
+                {t("apiDocs.viewDocs")}
+              </Link>
+              <button
               onClick={() => setShowCreate(true)}
               className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
             >
               <Plus className="w-4 h-4" />
               New API key
             </button>
+            </>
           ) : undefined
         }
       />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   ReactFlow,
   Background,
@@ -63,33 +63,40 @@ interface FlowCanvasProps {
 }
 
 export function FlowCanvas({ flow, onChange }: FlowCanvasProps) {
+  const flowRef = useRef(flow);
+  flowRef.current = flow;
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+  const skipNextNotifyRef = useRef(true);
+
   const initialNodes = useMemo(() => toReactFlowNodes(flow.nodes), [flow.nodes]);
   const initialEdges = useMemo(() => toReactFlowEdges(flow.edges), [flow.edges]);
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
+  useEffect(() => {
+    if (skipNextNotifyRef.current) {
+      skipNextNotifyRef.current = false;
+      return;
+    }
+    const converted = fromReactFlow(nodes, edges, flowRef.current);
+    onChangeRef.current(converted.nodes, converted.edges);
+  }, [nodes, edges]);
+
   const onConnect = useCallback(
     (connection: Connection) => {
-      setEdges((eds) => {
-        const next = addEdge({ ...connection, id: `e-${connection.source}-${connection.target}` }, eds);
-        const converted = fromReactFlow(nodes, next, flow);
-        onChange(converted.nodes, converted.edges);
-        return next;
-      });
+      setEdges((eds) =>
+        addEdge({ ...connection, id: `e-${connection.source}-${connection.target}` }, eds)
+      );
     },
-    [flow, nodes, onChange, setEdges]
+    [setEdges]
   );
 
   const handleNodesChange = useCallback(
     (changes: Parameters<typeof onNodesChange>[0]) => {
       onNodesChange(changes);
-      setNodes((nds) => {
-        const converted = fromReactFlow(nds, edges, flow);
-        onChange(converted.nodes, converted.edges);
-        return nds;
-      });
     },
-    [edges, flow, onChange, onNodesChange, setNodes]
+    [onNodesChange]
   );
 
   return (

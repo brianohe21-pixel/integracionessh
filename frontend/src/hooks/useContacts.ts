@@ -61,6 +61,7 @@ export function useUpdateContact() {
     }: {
       phone: string;
       displayName?: string;
+      email?: string;
       tags?: string[];
       marketingConsent?: MarketingConsent;
       suppressed?: boolean;

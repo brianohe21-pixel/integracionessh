@@ -5,13 +5,30 @@ import { useParams } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { useMetaFlowResponses } from "@/hooks/useMetaFlows";
+import { useLeads, useConvertLead } from "@/hooks/useLeads";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { Badge } from "@/components/ui/Badge";
+import type { LeadStatus } from "@/types";
+
+function statusVariant(status: LeadStatus): "success" | "warning" | "danger" | "default" | "info" {
+  if (status === "converted") return "success";
+  if (status === "lost") return "danger";
+  if (status === "qualified") return "info";
+  if (status === "contacted") return "warning";
+  return "default";
+}
 
 export default function MetaFlowResponsesPage() {
   const t = useT();
   const { botId } = useParams<{ botId: string }>();
   const { data: responses, isLoading } = useMetaFlowResponses(botId);
+  const { data: leadsData } = useLeads({ botId });
+  const convertLead = useConvertLead();
+
+  const leadsByResponse = new Map(
+    (leadsData?.items ?? []).map((l) => [l.flowResponseId, l])
+  );
 
   return (
     <DashboardPage maxWidth="4xl">
@@ -28,20 +45,58 @@ export default function MetaFlowResponsesPage() {
       {isLoading ? (
         <div className="h-24 animate-pulse bg-gray-100 rounded-xl" />
       ) : !responses?.length ? (
-        <p className="text-sm text-gray-500">No responses yet.</p>
+        <p className="text-sm text-gray-500">{t("leads.noResponses")}</p>
       ) : (
         <div className="space-y-3">
-          {responses.map((r) => (
-            <div key={r.responseId} className="bg-white border border-gray-200 rounded-xl p-4 text-sm">
-              <div className="flex justify-between text-gray-500 mb-2">
-                <span>{r.phone}</span>
-                <span>{new Date(r.createdAt).toLocaleString()}</span>
+          {responses.map((r) => {
+            const name = typeof r.responseJson.name === "string" ? r.responseJson.name : undefined;
+            const email = typeof r.responseJson.email === "string" ? r.responseJson.email : undefined;
+            const lead = leadsByResponse.get(r.responseId) ?? (r.leadId
+              ? leadsData?.items.find((l) => l.leadId === r.leadId)
+              : undefined);
+
+            return (
+              <div key={r.responseId} className="bg-white border border-gray-200 rounded-xl p-4 text-sm">
+                <div className="flex flex-wrap justify-between gap-2 text-gray-500 mb-3">
+                  <span>{r.phone}</span>
+                  <span>{new Date(r.createdAt).toLocaleString()}</span>
+                </div>
+                <div className="space-y-1 mb-3">
+                  {name && <p><span className="text-gray-500">{t("leads.colName")}:</span> {name}</p>}
+                  {email && <p><span className="text-gray-500">{t("common.email")}:</span> {email}</p>}
+                  {!name && !email && (
+                    <pre className="text-xs bg-gray-50 p-2 rounded overflow-x-auto">
+                      {JSON.stringify(r.responseJson, null, 2)}
+                    </pre>
+                  )}
+                </div>
+                {lead && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-gray-500">{t("leads.leadStatus")}:</span>
+                    <Badge variant={statusVariant(lead.status)}>
+                      {t(`leads.status_${lead.status}`)}
+                    </Badge>
+                    <Link
+                      href="/leads"
+                      className="text-indigo-600 hover:text-indigo-800 text-xs"
+                    >
+                      {t("leads.viewLead")}
+                    </Link>
+                    {lead.status !== "converted" && lead.status !== "lost" && (
+                      <button
+                        type="button"
+                        onClick={() => convertLead.mutate({ leadId: lead.leadId })}
+                        disabled={convertLead.isPending}
+                        className="text-xs text-indigo-600 hover:text-indigo-800"
+                      >
+                        {t("leads.convert")}
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
-              <pre className="text-xs bg-gray-50 p-2 rounded overflow-x-auto">
-                {JSON.stringify(r.responseJson, null, 2)}
-              </pre>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </DashboardPage>
