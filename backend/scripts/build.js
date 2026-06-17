@@ -18,6 +18,7 @@ const entryPoints = [
   "src/functions/conversations/index.ts",
   "src/functions/advisors/index.ts",
   "src/functions/contacts/index.ts",
+  "src/functions/leads/index.ts",
   "src/functions/templates/index.ts",
   "src/functions/bulk-send/index.ts",
   "src/functions/process-bulk-send/index.ts",

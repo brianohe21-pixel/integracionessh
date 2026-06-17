@@ -2,6 +2,7 @@ import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 }
 import { extractAuthContext, assertMemberRole } from "../../lib/auth/cognito.js";
 import { getTenantUsageMetrics } from "../../lib/dynamodb/metrics.repository.js";
 import { getMarketingMetrics } from "../../lib/dynamodb/marketing-metrics.repository.js";
+import { getLeadMetrics } from "../../lib/dynamodb/lead-metrics.repository.js";
 import { getCallingMetrics } from "../../lib/dynamodb/call-metrics.repository.js";
 import { ok, badRequest, handleError } from "../../lib/http.js";
 
@@ -13,6 +14,11 @@ export async function handler(
     assertMemberRole(auth);
     const method = event.requestContext.http.method;
     const rawPath = event.rawPath ?? event.requestContext.http.path;
+
+    if (method === "GET" && rawPath.endsWith("/metrics/leads")) {
+      const leads = await getLeadMetrics(auth.tenantId);
+      return ok(leads);
+    }
 
     if (method === "GET" && rawPath.endsWith("/metrics/marketing")) {
       const marketing = await getMarketingMetrics(auth.tenantId);

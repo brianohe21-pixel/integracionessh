@@ -82,6 +82,57 @@ export function buildFlowCompletedPayload(params: {
   });
 }
 
+export function buildLeadCreatedPayload(params: {
+  tenantId: string;
+  botId: string;
+  leadId: string;
+  conversationId: string;
+  phone: string;
+  metaFlowId: string;
+  name?: string;
+  email?: string;
+}): IntegrationEventPayload {
+  return buildIntegrationPayload({
+    event: "lead.created",
+    tenantId: params.tenantId,
+    data: {
+      botId: params.botId,
+      leadId: params.leadId,
+      conversationId: params.conversationId,
+      phone: params.phone,
+      metaFlowId: params.metaFlowId,
+      ...(params.name ? { name: params.name } : {}),
+      ...(params.email ? { email: params.email } : {}),
+    },
+  });
+}
+
+export function buildLeadConvertedPayload(params: {
+  tenantId: string;
+  botId: string;
+  leadId: string;
+  conversationId: string;
+  phone: string;
+  contact: { phoneNumber: string; displayName?: string; email?: string; tags: string[] };
+}): IntegrationEventPayload {
+  return buildIntegrationPayload({
+    event: "lead.converted",
+    tenantId: params.tenantId,
+    data: {
+      botId: params.botId,
+      leadId: params.leadId,
+      conversationId: params.conversationId,
+      phone: params.phone,
+      contact: {
+        phone: params.contact.phoneNumber,
+        name: params.contact.displayName ?? "",
+        email: params.contact.email ?? "",
+        tags: params.contact.tags,
+      },
+    },
+  });
+}
+
 export function buildConversationHandoffPayload(params: {
   tenantId: string;
   botId: string;

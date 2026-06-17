@@ -18,9 +18,10 @@ import {
   getClientHandoffMessage,
   notifyAdvisorOfConversation,
 } from "../advisor/notify.js";
-import { evaluateAutomations } from "../automation/evaluate.js";
+import { evaluateAutomations, evaluateFlowCompletedAutomations } from "../automation/evaluate.js";
 import { executeAutomation } from "../automation/execute.js";
 import { createFlowResponse } from "../dynamodb/meta-flow.repository.js";
+import { createLeadFromFlowResponse } from "../leads/convert.js";
 import { listEnabledFlowsForBot } from "../dynamodb/flow.repository.js";
 import { advanceFlowRun, startFlowRun } from "../flow/interpreter.js";
 import { findTriggerFlow } from "../flow/match-trigger.js";
@@ -248,6 +249,21 @@ export async function processInboundMessage(
       responseJson,
       createdAt: now,
     });
+
+    const lead = await createLeadFromFlowResponse({
+      tenantId,
+      botId,
+      conversationId: conversation.conversationId,
+      phone: participantId,
+      metaFlowId,
+      flowResponseId: externalId,
+      responseJson,
+      createdAt: now,
+    }).catch((err) => {
+      console.error("Failed to create lead from flow response:", err);
+      return null;
+    });
+
     await emitIntegrationEvent(
       tenantId,
       "flow.completed",
@@ -261,6 +277,32 @@ export async function processInboundMessage(
         channel,
       })
     ).catch((err) => console.error("Failed to emit flow.completed:", err));
+
+    if (lead) {
+      const flowRule = await evaluateFlowCompletedAutomations({
+        tenantId,
+        botId,
+        metaFlowId,
+        conversation,
+      });
+      if (flowRule) {
+        await executeAutomation(flowRule, {
+          tenantId,
+          botId,
+          bot,
+          conversation,
+          phoneNumberId:
+            channel === "whatsapp"
+              ? (body.payload as import("../../types/index.js").WhatsAppInboundPayload).phoneNumberId
+              : bot.phoneNumberId,
+          accessToken: accessToken ?? "",
+          customerPhone: participantId,
+          replyToMessageId: externalId,
+          channel,
+        }).catch((err) => console.error("Failed to execute flow_completed automation:", err));
+      }
+    }
+
     await clearMetaFlowSession(tenantId, botId, conversation.conversationId);
   }
 

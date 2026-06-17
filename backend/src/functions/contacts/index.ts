@@ -32,12 +32,14 @@ import type { Contact, MarketingConsent } from "../../types/index.js";
 const CreateContactSchema = z.object({
   phoneNumber: z.string().min(10).max(20),
   displayName: z.string().max(128).optional(),
+  email: z.string().email().max(256).optional(),
   tags: z.array(z.string().max(50)).max(20).optional(),
   marketingConsent: z.enum(["unknown", "opt_in", "opt_out"]).optional(),
 });
 
 const UpdateContactSchema = z.object({
   displayName: z.string().max(128).optional(),
+  email: z.string().email().max(256).optional(),
   tags: z.array(z.string().max(50)).max(20).optional(),
   marketingConsent: z.enum(["unknown", "opt_in", "opt_out"]).optional(),
   suppressed: z.boolean().optional(),
@@ -49,6 +51,7 @@ const ImportSchema = z.object({
       z.object({
         phone: z.string().min(10),
         name: z.string().max(128).optional(),
+        email: z.string().email().max(256).optional(),
         tags: z.array(z.string().max(50)).optional(),
         marketingConsent: z.enum(["unknown", "opt_in", "opt_out"]).optional(),
       })
@@ -68,11 +71,12 @@ function parseSubPath(rawPath: string, phone: string): string | null {
 }
 
 function exportCsv(contacts: Contact[]): string {
-  const header = "phone,displayName,marketingConsent,suppressed,tags";
+  const header = "phone,displayName,email,marketingConsent,suppressed,tags";
   const rows = contacts.map((c) => {
     const tags = c.tags.join("|");
     const name = (c.displayName ?? "").replace(/"/g, '""');
-    return `${c.phoneNumber},"${name}",${c.marketingConsent},${c.suppressed},"${tags}"`;
+    const email = (c.email ?? "").replace(/"/g, '""');
+    return `${c.phoneNumber},"${name}","${email}",${c.marketingConsent},${c.suppressed},"${tags}"`;
   });
   return [header, ...rows].join("\n");
 }
@@ -157,6 +161,7 @@ export async function handler(
       const rows = parsed.data.rows.map((row) => ({
         phone: row.phone,
         ...(row.name ? { name: row.name } : {}),
+        ...(row.email ? { email: row.email } : {}),
         ...(row.tags?.length ? { tags: row.tags } : {}),
         ...(row.marketingConsent ? { marketingConsent: row.marketingConsent } : {}),
       }));
@@ -198,6 +203,7 @@ export async function handler(
         createdAt: now,
         updatedAt: now,
         ...(parsed.data.displayName ? { displayName: parsed.data.displayName } : {}),
+        ...(parsed.data.email ? { email: parsed.data.email } : {}),
         ...(consent !== "unknown"
           ? { consentAt: now, consentSource: "panel" as const }
           : {}),
@@ -228,6 +234,7 @@ export async function handler(
       const now = new Date().toISOString();
       const patch: Parameters<typeof updateContact>[2] = {};
       if (parsed.data.displayName !== undefined) patch.displayName = parsed.data.displayName;
+      if (parsed.data.email !== undefined) patch.email = parsed.data.email;
       if (parsed.data.tags !== undefined) patch.tags = parsed.data.tags;
       if (parsed.data.suppressed !== undefined) patch.suppressed = parsed.data.suppressed;
       if (parsed.data.marketingConsent !== undefined) {

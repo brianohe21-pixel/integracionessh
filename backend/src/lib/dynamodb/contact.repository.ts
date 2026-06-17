@@ -83,7 +83,8 @@ function matchesFilters(contact: Contact, options: ListContactsOptions): boolean
     const q = options.q.toLowerCase();
     const inPhone = contact.phoneNumber.includes(q);
     const inName = (contact.displayName ?? "").toLowerCase().includes(q);
-    if (!inPhone && !inName) return false;
+    const inEmail = (contact.email ?? "").toLowerCase().includes(q);
+    if (!inPhone && !inName && !inEmail) return false;
   }
   return true;
 }
@@ -184,8 +185,11 @@ export async function upsertFromConversation(params: {
   tenantId: string;
   phoneNumber: string;
   displayName?: string;
+  email?: string;
   botId?: string;
   source?: ContactSource;
+  leadId?: string;
+  tags?: string[];
 }): Promise<Contact> {
   const phone = normalizePhone(params.phoneNumber);
   const now = new Date().toISOString();
@@ -199,13 +203,22 @@ export async function upsertFromConversation(params: {
     if (params.displayName && params.displayName !== existing.displayName) {
       updates.displayName = params.displayName;
     }
+    if (params.email && params.email !== existing.email) {
+      updates.email = params.email;
+    }
+    if (params.leadId) {
+      updates.leadId = params.leadId;
+    }
+    if (params.tags?.length) {
+      updates.tags = [...new Set([...existing.tags, ...params.tags])];
+    }
     return (await updateContact(params.tenantId, phone, updates)) ?? existing;
   }
 
   const contact: Contact = {
     phoneNumber: phone,
     tenantId: params.tenantId,
-    tags: [],
+    tags: params.tags ?? [],
     marketingConsent: "unknown",
     suppressed: false,
     firstSeenAt: now,
@@ -214,7 +227,9 @@ export async function upsertFromConversation(params: {
     createdAt: now,
     updatedAt: now,
     ...(params.displayName ? { displayName: params.displayName } : {}),
+    ...(params.email ? { email: params.email } : {}),
     ...(params.botId ? { lastBotId: params.botId } : {}),
+    ...(params.leadId ? { leadId: params.leadId } : {}),
   };
 
   await docClient.send(
@@ -263,6 +278,7 @@ export async function updateContact(
     Pick<
       Contact,
       | "displayName"
+      | "email"
       | "tags"
       | "marketingConsent"
       | "consentAt"
@@ -271,6 +287,7 @@ export async function updateContact(
       | "lastSeenAt"
       | "lastBotId"
       | "messageCount"
+      | "leadId"
     >
   >
 ): Promise<Contact | null> {
@@ -300,6 +317,7 @@ export async function importContactsBatch(
   rows: Array<{
     phone: string;
     name?: string;
+    email?: string;
     tags?: string[];
     marketingConsent?: MarketingConsent;
   }>,
@@ -318,6 +336,7 @@ export async function importContactsBatch(
     if (existing) {
       const patch: Parameters<typeof updateContact>[2] = {};
       if (row.name) patch.displayName = row.name;
+      if (row.email) patch.email = row.email;
       if (row.tags?.length) {
         patch.tags = [...new Set([...existing.tags, ...row.tags])];
       }
@@ -343,6 +362,7 @@ export async function importContactsBatch(
         createdAt: now,
         updatedAt: now,
         ...(row.name ? { displayName: row.name } : {}),
+        ...(row.email ? { email: row.email } : {}),
         ...(row.marketingConsent
           ? { consentAt: now, consentSource }
           : {}),
