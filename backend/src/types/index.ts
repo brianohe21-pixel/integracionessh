@@ -7,12 +7,25 @@ export type SubscriptionStatus =
   | "canceled"
   | "trialing";
 
+export interface TenantBranding {
+  brandName?: string;
+  primaryColor?: string;
+  logoS3Key?: string;
+}
+
+export interface ResolvedTenantBranding {
+  brandName: string;
+  primaryColor: string;
+  logoUrl?: string;
+}
+
 export interface Tenant {
   tenantId: string;
   name: string;
   email: string;
   plan: TenantPlan;
   status: "active" | "suspended" | "pending";
+  branding?: TenantBranding;
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   subscriptionStatus?: SubscriptionStatus;

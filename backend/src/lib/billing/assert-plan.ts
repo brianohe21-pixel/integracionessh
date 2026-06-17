@@ -211,6 +211,16 @@ export async function assertCanStartLiveKitCall(tenant: Tenant): Promise<void> {
   }
 }
 
+export function assertCanCustomizeBranding(tenant: Tenant): void {
+  const limits = getPlanLimits(tenant.plan);
+  if (!limits.canCustomizeBranding) {
+    throw new PlanLimitError(
+      "PLAN_LIMIT_BRANDING",
+      "Custom branding requires Enterprise plan"
+    );
+  }
+}
+
 export async function assertCanUseWebChat(tenant: Tenant): Promise<void> {
   const limits = getPlanLimits(tenant.plan);
   if (limits.maxActiveWebChatSessions <= 0) {

@@ -50,3 +50,15 @@ export async function deleteObject(s3Key: string): Promise<void> {
   if (!BUCKET) return;
   await s3.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: s3Key }));
 }
+
+export async function getPresignedReadUrl(
+  s3Key: string,
+  expiresIn = 86400
+): Promise<string> {
+  if (!BUCKET) throw new Error("MEDIA_BUCKET not configured");
+  return getSignedUrl(
+    s3,
+    new GetObjectCommand({ Bucket: BUCKET, Key: s3Key }),
+    { expiresIn }
+  );
+}
