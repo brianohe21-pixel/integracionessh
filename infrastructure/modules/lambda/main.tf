@@ -190,11 +190,11 @@ locals {
       timeout     = 30
       memory      = 256
       environment = {
-        TABLE_NAME                  = var.dynamodb_table_name
-        ENVIRONMENT                 = var.environment
-        FRONTEND_URL                = var.frontend_url
-        SES_FROM_EMAIL              = var.ses_from_email
-        ADMIN_NOTIFICATION_EMAILS   = join(",", var.admin_notification_emails)
+        TABLE_NAME                = var.dynamodb_table_name
+        ENVIRONMENT               = var.environment
+        FRONTEND_URL              = var.frontend_url
+        SES_FROM_EMAIL            = var.ses_from_email
+        ADMIN_NOTIFICATION_EMAILS = join(",", var.admin_notification_emails)
       }
     }
     bots = {
@@ -359,13 +359,13 @@ locals {
       timeout     = 30
       memory      = 256
       environment = {
-        TABLE_NAME              = var.dynamodb_table_name
-        ENVIRONMENT             = var.environment
-        SQS_QUEUE_URL           = var.sqs_queue_url
-        WEBCHAT_SESSION_SECRET  = var.webchat_session_secret != "" ? var.webchat_session_secret : "dev-webchat-${var.environment}"
-        LIVEKIT_URL             = var.livekit_url
-        LIVEKIT_API_KEY         = var.livekit_api_key
-        LIVEKIT_API_SECRET      = var.livekit_api_secret
+        TABLE_NAME             = var.dynamodb_table_name
+        ENVIRONMENT            = var.environment
+        SQS_QUEUE_URL          = var.sqs_queue_url
+        WEBCHAT_SESSION_SECRET = var.webchat_session_secret != "" ? var.webchat_session_secret : "dev-webchat-${var.environment}"
+        LIVEKIT_URL            = var.livekit_url
+        LIVEKIT_API_KEY        = var.livekit_api_key
+        LIVEKIT_API_SECRET     = var.livekit_api_secret
       }
     }
     realtime = {
