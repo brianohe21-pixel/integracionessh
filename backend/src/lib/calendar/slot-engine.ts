@@ -49,7 +49,7 @@ export function getZonedParts(date: Date, timezone: string) {
     year: map.year ?? "1970",
     month: map.month ?? "01",
     day: map.day ?? "01",
-    hour: Number(map.hour ?? 0),
+    hour: Number(map.hour ?? 0) % 24,
     minute: Number(map.minute ?? 0),
     weekday: weekday ?? "monday",
     isoDate: `${map.year}-${map.month}-${map.day}`,
@@ -171,8 +171,11 @@ export function generateAvailableSlots(params: {
   const allSlots: AvailableSlot[] = [];
   const cursor = new Date(params.from);
   cursor.setUTCHours(0, 0, 0, 0);
+  let dayCount = 0;
+  const maxDays = 366;
 
-  while (cursor <= params.to) {
+  while (cursor <= params.to && dayCount < maxDays) {
+    dayCount += 1;
     const parts = getZonedParts(cursor, params.config.timezone);
     const weekday = parts.weekday;
     const ranges = params.config.weeklySchedule[weekday] ?? [];
@@ -221,15 +224,16 @@ export function getSlotsForDate(params: {
   now?: Date;
 }): AvailableSlot[] {
   const now = params.now ?? new Date();
-  const dayStart = localDateTimeToUtc(params.isoDate, "00:00", params.config.timezone);
-  const dayEnd = localDateTimeToUtc(params.isoDate, "23:59", params.config.timezone);
-  return generateAvailableSlots({
-    config: params.config,
-    bookings: params.bookings,
-    from: dayStart,
-    to: dayEnd,
-    now,
-  });
+  const anchor = localDateTimeToUtc(params.isoDate, "12:00", params.config.timezone);
+  const weekday = getZonedParts(anchor, params.config.timezone).weekday;
+  const ranges = params.config.weeklySchedule[weekday] ?? [];
+  return generateSlotsForDay(
+    params.isoDate,
+    ranges,
+    params.config,
+    params.bookings,
+    now
+  );
 }
 
 export function hasBookingOverlap(
