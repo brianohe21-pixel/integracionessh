@@ -557,6 +557,7 @@ export type FlowNodeType =
   | "delay"
   | "set_variable"
   | "http_request"
+  | "book_appointment"
   | "end";
 
 export type FlowTriggerType = "keyword" | "first_message" | "any_message";
@@ -583,6 +584,8 @@ export interface FlowNodeData {
   httpMethod?: "GET" | "POST";
   httpBody?: string;
   haltPipeline?: boolean;
+  confirmationMessage?: string;
+  maxDaysToShow?: number;
 }
 
 export interface FlowNode {
@@ -679,4 +682,66 @@ export interface KnowledgeDocument {
   errorMessage?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export type Weekday =
+  | "monday"
+  | "tuesday"
+  | "wednesday"
+  | "thursday"
+  | "friday"
+  | "saturday"
+  | "sunday";
+
+export interface TimeRange {
+  start: string;
+  end: string;
+}
+
+export type WeeklySchedule = Record<Weekday, TimeRange[]>;
+
+export interface CalendarConfig {
+  tenantId: string;
+  botId: string;
+  enabled: boolean;
+  timezone: string;
+  slotDurationMinutes: number;
+  bufferMinutes: number;
+  maxAdvanceDays: number;
+  minNoticeHours: number;
+  weeklySchedule: WeeklySchedule;
+  provider: "native";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type BookingStatus = "confirmed" | "cancelled" | "completed" | "no_show";
+
+export interface Booking {
+  bookingId: string;
+  tenantId: string;
+  botId: string;
+  contactPhone: string;
+  contactName?: string;
+  conversationId?: string;
+  startAt: string;
+  endAt: string;
+  status: BookingStatus;
+  source: "flow" | "openai" | "manual";
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AvailableSlot {
+  startAt: string;
+  endAt: string;
+  label: string;
+}
+
+export interface AppCatalogItem {
+  id: string;
+  name: string;
+  description: string;
+  installedBots: Array<{ botId: string; botName: string; enabled: boolean }>;
 }

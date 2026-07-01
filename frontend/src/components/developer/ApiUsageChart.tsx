@@ -1,14 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import type { ApiKeyUsageSummary } from "@/types";
 import { TableContainer } from "@/components/ui/TableContainer";
 import { ApiUsageLogsPanel } from "@/components/developer/ApiUsageLogsPanel";
+import { UsageDateFilters } from "@/components/developer/UsageDateFilters";
+import { useApiKeyUsage } from "@/hooks/useApiKeys";
+import { currentMonthRange, type MetricsDateRange } from "@/lib/metrics-date-range";
 import { useT } from "@/i18n/context";
-
-interface ApiUsageChartProps {
-  usage: ApiKeyUsageSummary[];
-}
 
 function BarChart({ data }: { data: Array<{ label: string; value: number; color: string }> }) {
   const max = Math.max(...data.map((d) => d.value), 1);
@@ -64,9 +62,11 @@ function BarChart({ data }: { data: Array<{ label: string; value: number; color:
   );
 }
 
-export function ApiUsageChart({ usage }: ApiUsageChartProps) {
+export function ApiUsageChart() {
   const t = useT();
+  const [dateRange, setDateRange] = useState<MetricsDateRange>(currentMonthRange);
   const [selectedKeyId, setSelectedKeyId] = useState<string | null>(null);
+  const { data: usage = [], isLoading } = useApiKeyUsage(dateRange);
   const totalMessages = usage.reduce((sum, u) => sum + u.messagesThisMonth, 0);
   const totalSuccess = usage.reduce((sum, u) => sum + u.successRequests, 0);
   const totalErrors = usage.reduce((sum, u) => sum + u.errorRequests, 0);
@@ -82,10 +82,20 @@ export function ApiUsageChart({ usage }: ApiUsageChartProps) {
 
   return (
     <div className="space-y-6">
+      <UsageDateFilters range={dateRange} onChange={setDateRange} />
+
+      {isLoading ? (
+        <div className="space-y-3">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 animate-pulse h-16" />
+          ))}
+        </div>
+      ) : (
+        <>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
-            {t("developer.messagesThisMonth")}
+            {t("developer.messagesInPeriod")}
           </p>
           <p className="text-2xl font-bold text-gray-900 mt-1">
             {totalMessages.toLocaleString()}
@@ -114,7 +124,7 @@ export function ApiUsageChart({ usage }: ApiUsageChartProps) {
       {usage.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h3 className="text-sm font-semibold text-gray-900 mb-4">
-            {t("developer.messagesByKey")}
+            {t("developer.messagesByKeyInPeriod")}
           </h3>
           {chartData.length > 0 ? (
             <BarChart data={chartData} />
@@ -185,7 +195,10 @@ export function ApiUsageChart({ usage }: ApiUsageChartProps) {
         keys={usage}
         selectedKeyId={selectedKeyId}
         onSelectKey={setSelectedKeyId}
+        dateRange={dateRange}
       />
+        </>
+      )}
     </div>
   );
 }

@@ -21,6 +21,7 @@ const NODE_TYPES: FlowNodeType[] = [
   "handoff",
   "delay",
   "set_variable",
+  "book_appointment",
   "end",
 ];
 
@@ -172,6 +173,26 @@ export default function EditFlowPage() {
               onChange={(e) => updateSelectedData({ delaySeconds: Number(e.target.value) })}
               className="w-full text-sm border border-gray-300 rounded-lg p-2"
             />
+          )}
+          {selected?.type === "book_appointment" && (
+            <div className="space-y-2">
+              <input
+                type="number"
+                min={1}
+                max={14}
+                value={selected.data.maxDaysToShow ?? 7}
+                onChange={(e) => updateSelectedData({ maxDaysToShow: Number(e.target.value) })}
+                placeholder="maxDaysToShow"
+                className="w-full text-sm border border-gray-300 rounded-lg p-2"
+              />
+              <textarea
+                value={selected.data.confirmationMessage ?? ""}
+                onChange={(e) => updateSelectedData({ confirmationMessage: e.target.value })}
+                rows={3}
+                placeholder="confirmationMessage"
+                className="w-full text-sm border border-gray-300 rounded-lg p-2"
+              />
+            </div>
           )}
         </div>
       </div>

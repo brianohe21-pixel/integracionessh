@@ -11,20 +11,39 @@ export function useApiKeys() {
   });
 }
 
-export function useApiKeyUsage() {
+import type { MetricsDateRange } from "@/lib/metrics-date-range";
+import { dateRangeToIso } from "@/lib/metrics-date-range";
+
+function usageQueryParams(range?: MetricsDateRange): string {
+  if (!range) return "";
+  const { from, to } = dateRangeToIso(range);
+  const params = new URLSearchParams({ from: from.slice(0, 10), to: to.slice(0, 10) });
+  return `?${params.toString()}`;
+}
+
+export function useApiKeyUsage(range?: MetricsDateRange) {
   return useQuery<ApiKeyUsageSummary[]>({
-    queryKey: ["api-keys", "usage"],
-    queryFn: () => api.get<ApiKeyUsageSummary[]>("/api-keys/usage"),
+    queryKey: ["api-keys", "usage", range?.from, range?.to],
+    queryFn: () => api.get<ApiKeyUsageSummary[]>(`/api-keys/usage${usageQueryParams(range)}`),
   });
 }
 
-export function useApiKeyLogs(keyId: string | null, options?: { errorsOnly?: boolean }) {
+export function useApiKeyLogs(
+  keyId: string | null,
+  options?: { errorsOnly?: boolean; range?: MetricsDateRange }
+) {
   const errorsOnly = options?.errorsOnly ?? false;
+  const range = options?.range;
   return useQuery<ApiKeyUsageLog[]>({
-    queryKey: ["api-keys", keyId, "logs", errorsOnly ? "errors" : "all"],
+    queryKey: ["api-keys", keyId, "logs", errorsOnly ? "errors" : "all", range?.from, range?.to],
     queryFn: () => {
       const params = new URLSearchParams({ limit: "50" });
       if (errorsOnly) params.set("errorsOnly", "true");
+      if (range) {
+        const { from, to } = dateRangeToIso(range);
+        params.set("from", from.slice(0, 10));
+        params.set("to", to.slice(0, 10));
+      }
       return api.get<ApiKeyUsageLog[]>(
         `/api-keys/${encodeURIComponent(keyId!)}/logs?${params.toString()}`
       );

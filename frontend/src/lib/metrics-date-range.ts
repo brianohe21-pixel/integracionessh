@@ -49,3 +49,22 @@ export function isPresetRange(range: MetricsDateRange, days: number): boolean {
   const preset = dateRangeFromDays(days);
   return range.from === preset.from && range.to === preset.to;
 }
+
+export function currentMonthRange(now = new Date()): MetricsDateRange {
+  const from = formatDateUtc(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)));
+  const to = formatDateUtc(now);
+  return { from, to };
+}
+
+export function isCurrentMonthRange(range: MetricsDateRange, now = new Date()): boolean {
+  const preset = currentMonthRange(now);
+  return range.from === preset.from && range.to === preset.to;
+}
+
+export function dateRangeToIso(range: MetricsDateRange): { from: string; to: string } {
+  const normalized = normalizeDateRange(range.from, range.to);
+  return {
+    from: `${normalized.from}T00:00:00.000Z`,
+    to: `${normalized.to}T23:59:59.999Z`,
+  };
+}

@@ -9,11 +9,13 @@ import { useT } from "@/i18n/context";
 import { Badge } from "@/components/ui/Badge";
 import { TableContainer } from "@/components/ui/TableContainer";
 import type { ApiKeyUsageSummary } from "@/types";
+import type { MetricsDateRange } from "@/lib/metrics-date-range";
 
 type ApiUsageLogsPanelProps = {
   keys: ApiKeyUsageSummary[];
   selectedKeyId: string | null;
   onSelectKey: (keyId: string | null) => void;
+  dateRange: MetricsDateRange;
 };
 
 function statusVariant(statusCode: number): "success" | "warning" | "danger" | "default" {
@@ -26,13 +28,14 @@ export function ApiUsageLogsPanel({
   keys,
   selectedKeyId,
   onSelectKey,
+  dateRange,
 }: ApiUsageLogsPanelProps) {
   const t = useT();
   const { formatDate } = useFormatters();
   const [errorsOnly, setErrorsOnly] = useState(false);
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
 
-  const { data: logs = [], isLoading } = useApiKeyLogs(selectedKeyId, { errorsOnly });
+  const { data: logs = [], isLoading } = useApiKeyLogs(selectedKeyId, { errorsOnly, range: dateRange });
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">

@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { KeyRound, BarChart3, Plus, Webhook, BookOpen } from "lucide-react";
 import { IntegrationWebhooksPanel } from "@/components/developer/IntegrationWebhooksPanel";
-import { useApiKeys, useApiKeyUsage } from "@/hooks/useApiKeys";
+import { useApiKeys } from "@/hooks/useApiKeys";
 import { ApiKeysList } from "@/components/developer/ApiKeysList";
 import { ApiUsageChart } from "@/components/developer/ApiUsageChart";
 import { CreateApiKeyModal } from "@/components/developer/CreateApiKeyModal";
@@ -21,12 +21,11 @@ export default function DeveloperPage() {
   const [showCreate, setShowCreate] = useState(false);
 
   const { data: keys = [], isLoading: keysLoading, error: keysError } = useApiKeys();
-  const { data: usage = [], isLoading: usageLoading, error: usageError } = useApiKeyUsage();
   const { data: botsData } = useBots();
   const bots = (botsData ?? []).map((b) => ({ botId: b.botId, name: b.name }));
 
-  const isLoading = tab === "keys" ? keysLoading : tab === "usage" ? usageLoading : false;
-  const error = tab === "keys" ? keysError : tab === "usage" ? usageError : null;
+  const isLoading = tab === "keys" ? keysLoading : false;
+  const error = tab === "keys" ? keysError : null;
 
   return (
     <DashboardPage>
@@ -124,7 +123,7 @@ export default function DeveloperPage() {
           {tab === "keys" && <ApiKeysList keys={keys} bots={bots} />}
           {tab === "usage" && (
             <div className="p-6">
-              <ApiUsageChart usage={usage} />
+              <ApiUsageChart />
             </div>
           )}
         </div>

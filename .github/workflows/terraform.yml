@@ -101,6 +101,7 @@ jobs:
           EXTRA_LOGOUT_URLS: ${{ vars.EXTRA_LOGOUT_URLS }}
           ENABLE_MONITORING: ${{ vars.ENABLE_MONITORING }}
           OPS_ALERT_EMAIL: ${{ vars.OPS_ALERT_EMAIL }}
+          SES_FROM_EMAIL: ${{ vars.SES_FROM_EMAIL }}
         run: |
           set -euo pipefail
           PLAN_ARGS=(
@@ -117,6 +118,10 @@ jobs:
           fi
           if [ -n "${OPS_ALERT_EMAIL:-}" ]; then
             PLAN_ARGS+=(-var="ops_alert_email=${OPS_ALERT_EMAIL}")
+          fi
+          SES_SENDER="${SES_FROM_EMAIL:-${OPS_ALERT_EMAIL:-}}"
+          if [ -n "${SES_SENDER}" ]; then
+            PLAN_ARGS+=(-var="ses_from_email=${SES_SENDER}")
           fi
           if [ -n "${META_APP_ID:-}" ]; then
             PLAN_ARGS+=(-var="meta_app_id=${META_APP_ID}")
@@ -279,6 +284,7 @@ jobs:
           EXTRA_LOGOUT_URLS: ${{ vars.EXTRA_LOGOUT_URLS }}
           ENABLE_MONITORING: ${{ vars.ENABLE_MONITORING }}
           OPS_ALERT_EMAIL: ${{ vars.OPS_ALERT_EMAIL }}
+          SES_FROM_EMAIL: ${{ vars.SES_FROM_EMAIL }}
         run: |
           set -euo pipefail
           PLAN_ARGS=(
@@ -295,6 +301,10 @@ jobs:
           fi
           if [ -n "${OPS_ALERT_EMAIL:-}" ]; then
             PLAN_ARGS+=(-var="ops_alert_email=${OPS_ALERT_EMAIL}")
+          fi
+          SES_SENDER="${SES_FROM_EMAIL:-${OPS_ALERT_EMAIL:-}}"
+          if [ -n "${SES_SENDER}" ]; then
+            PLAN_ARGS+=(-var="ses_from_email=${SES_SENDER}")
           fi
           if [ -n "${META_APP_ID:-}" ]; then
             PLAN_ARGS+=(-var="meta_app_id=${META_APP_ID}")

@@ -20,6 +20,8 @@ const EVENT_OPTIONS = [
   "call.connect",
   "call.status",
   "call.terminated",
+  "booking.created",
+  "booking.cancelled",
 ] as const;
 
 export function IntegrationWebhooksPanel() {
