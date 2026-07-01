@@ -840,7 +840,88 @@ export type IntegrationEvent =
   | "lead.converted"
   | "call.connect"
   | "call.status"
-  | "call.terminated";
+  | "call.terminated"
+  | "booking.created"
+  | "booking.cancelled";
+
+export type Weekday =
+  | "monday"
+  | "tuesday"
+  | "wednesday"
+  | "thursday"
+  | "friday"
+  | "saturday"
+  | "sunday";
+
+export interface TimeRange {
+  start: string;
+  end: string;
+}
+
+export type WeeklySchedule = Record<Weekday, TimeRange[]>;
+
+export type CalendarProviderType = "native";
+
+export interface CalendarConfig {
+  tenantId: string;
+  botId: string;
+  enabled: boolean;
+  timezone: string;
+  slotDurationMinutes: number;
+  bufferMinutes: number;
+  maxAdvanceDays: number;
+  minNoticeHours: number;
+  weeklySchedule: WeeklySchedule;
+  provider: CalendarProviderType;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type BookingStatus = "confirmed" | "cancelled" | "completed" | "no_show";
+export type BookingSource = "flow" | "openai" | "manual";
+
+export interface Booking {
+  bookingId: string;
+  tenantId: string;
+  botId: string;
+  contactPhone: string;
+  contactName?: string;
+  conversationId?: string;
+  startAt: string;
+  endAt: string;
+  status: BookingStatus;
+  source: BookingSource;
+  notes?: string;
+  externalEventId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AvailableSlot {
+  startAt: string;
+  endAt: string;
+  label: string;
+}
+
+export const WEEKDAYS: Weekday[] = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+];
+
+export const DEFAULT_WEEKLY_SCHEDULE: WeeklySchedule = {
+  monday: [{ start: "09:00", end: "17:00" }],
+  tuesday: [{ start: "09:00", end: "17:00" }],
+  wednesday: [{ start: "09:00", end: "17:00" }],
+  thursday: [{ start: "09:00", end: "17:00" }],
+  friday: [{ start: "09:00", end: "17:00" }],
+  saturday: [],
+  sunday: [],
+};
 
 export type MetaFlowStatus = "DRAFT" | "PUBLISHED" | "DEPRECATED";
 
@@ -881,6 +962,7 @@ export type FlowNodeType =
   | "delay"
   | "set_variable"
   | "http_request"
+  | "book_appointment"
   | "end";
 
 export type FlowTriggerType = "keyword" | "first_message" | "any_message";
@@ -907,6 +989,8 @@ export interface FlowNodeData {
   httpMethod?: "GET" | "POST";
   httpBody?: string;
   haltPipeline?: boolean;
+  confirmationMessage?: string;
+  maxDaysToShow?: number;
 }
 
 export interface FlowNode {

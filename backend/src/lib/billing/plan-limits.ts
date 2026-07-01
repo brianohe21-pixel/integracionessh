@@ -17,6 +17,7 @@ export interface PlanLimits {
   maxChannelsPerBot: number;
   maxActiveWebChatSessions: number;
   maxConcurrentLiveKitCalls: number;
+  maxCalendarAppsPerTenant: number;
   canCustomizeBranding: boolean;
   apiRateLimitPerMinute: number;
   apiRateLimitPerDay: number;
@@ -40,6 +41,7 @@ const LIMITS: Record<TenantPlan, PlanLimits> = {
     maxChannelsPerBot: 1,
     maxActiveWebChatSessions: 0,
     maxConcurrentLiveKitCalls: 0,
+    maxCalendarAppsPerTenant: 1,
     canCustomizeBranding: false,
     apiRateLimitPerMinute: 20,
     apiRateLimitPerDay: 250,
@@ -61,6 +63,7 @@ const LIMITS: Record<TenantPlan, PlanLimits> = {
     maxChannelsPerBot: 2,
     maxActiveWebChatSessions: 50,
     maxConcurrentLiveKitCalls: 2,
+    maxCalendarAppsPerTenant: 5,
     canCustomizeBranding: false,
     apiRateLimitPerMinute: 60,
     apiRateLimitPerDay: 5_000,
@@ -82,6 +85,7 @@ const LIMITS: Record<TenantPlan, PlanLimits> = {
     maxChannelsPerBot: 3,
     maxActiveWebChatSessions: 500,
     maxConcurrentLiveKitCalls: 10,
+    maxCalendarAppsPerTenant: Number.MAX_SAFE_INTEGER,
     canCustomizeBranding: true,
     apiRateLimitPerMinute: 120,
     apiRateLimitPerDay: 50_000,

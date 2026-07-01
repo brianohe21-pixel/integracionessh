@@ -237,6 +237,23 @@ export async function advanceFlowRun(params: {
     return runFromNode(run, flow, ctx);
   }
 
+  if (currentNode?.type === "book_appointment") {
+    const selection =
+      buttonReplyId ??
+      (params.inbound.text?.trim() && /^\d+$/.test(params.inbound.text.trim())
+        ? params.inbound.text.trim()
+        : params.inbound.interactive?.id);
+    if (selection || run.variables[`booking_${currentNode.id}_step`] === "confirm") {
+      const ctx = buildContext({
+        ...params,
+        flow,
+        ...(selection ? { buttonReplyId: selection } : {}),
+      });
+      return runFromNode(run, flow, ctx);
+    }
+    return { handled: true, halt: true };
+  }
+
   if (currentNode?.type === "meta_flow" && params.inbound.interactive?.kind === "nfm") {
     const nextEdge = flow.edges.find((e) => e.source === currentNode.id);
     const nextNodeId = nextEdge?.target ?? null;
@@ -258,7 +275,11 @@ export async function advanceFlowRun(params: {
     return { handled: true, halt: true };
   }
 
-  if (currentNode?.type === "buttons" || currentNode?.type === "meta_flow") {
+  const waitingNodeTypes = ["buttons", "meta_flow", "book_appointment"] as const;
+  if (
+    currentNode &&
+    waitingNodeTypes.includes(currentNode.type as (typeof waitingNodeTypes)[number])
+  ) {
     return { handled: true, halt: true };
   }
 

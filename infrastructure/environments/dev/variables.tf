@@ -108,6 +108,12 @@ variable "ops_alert_emails" {
   description = "Operational alert recipients. Falls back to ops_alert_email when empty. Each address must confirm the AWS SNS subscription email after deploy."
 }
 
+variable "ses_from_email" {
+  type        = string
+  default     = ""
+  description = "Verified SES sender for registration admin notifications. Must be verified in SES before deploy."
+}
+
 variable "enable_monitoring" {
   type        = bool
   default     = false

@@ -195,6 +195,18 @@ variable "frontend_url" {
   description = "Frontend base URL for billing redirect URLs"
 }
 
+variable "ses_from_email" {
+  type        = string
+  default     = ""
+  description = "Verified SES sender for platform emails. Leave empty to disable outbound email."
+}
+
+variable "admin_notification_emails" {
+  type        = list(string)
+  default     = []
+  description = "Admin recipients for new user registration notifications"
+}
+
 variable "wompi_public_key" {
   type        = string
   default     = ""

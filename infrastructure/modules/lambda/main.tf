@@ -134,6 +134,14 @@ resource "aws_iam_role_policy" "lambda_permissions" {
         Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
         Resource = "arn:aws:logs:*:*:*"
       },
+      {
+        Effect = "Allow"
+        Action = [
+          "ses:SendEmail",
+          "ses:SendRawEmail",
+        ]
+        Resource = "*"
+      },
     ]
   })
 }
@@ -182,8 +190,11 @@ locals {
       timeout     = 30
       memory      = 256
       environment = {
-        TABLE_NAME  = var.dynamodb_table_name
-        ENVIRONMENT = var.environment
+        TABLE_NAME                  = var.dynamodb_table_name
+        ENVIRONMENT                 = var.environment
+        FRONTEND_URL                = var.frontend_url
+        SES_FROM_EMAIL              = var.ses_from_email
+        ADMIN_NOTIFICATION_EMAILS   = join(",", var.admin_notification_emails)
       }
     }
     bots = {
@@ -534,6 +545,17 @@ locals {
         ENVIRONMENT = var.environment
       }
     }
+    calendar = {
+      handler     = "calendar/index.handler"
+      description = "Calendar app config and bookings per bot"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME                = var.dynamodb_table_name
+        ENVIRONMENT               = var.environment
+        INTEGRATION_SQS_QUEUE_URL = var.integration_sqs_queue_url
+      }
+    }
   }
 }
 
@@ -633,4 +655,9 @@ resource "aws_cloudwatch_log_group" "lambda_logs" {
   name              = "/aws/lambda/${var.project}-${var.environment}-${replace(each.key, "_", "-")}"
   retention_in_days = var.environment == "prod" ? 30 : 7
   tags              = var.tags
+}
+
+resource "aws_ses_email_identity" "from" {
+  count = var.ses_from_email != "" ? 1 : 0
+  email = var.ses_from_email
 }

@@ -188,6 +188,8 @@ module "lambda" {
   livekit_url                   = var.livekit_url
   livekit_api_key               = var.livekit_api_key
   livekit_api_secret            = var.livekit_api_secret
+  ses_from_email                = var.ses_from_email
+  admin_notification_emails     = local.ops_alert_emails
   tags                          = local.tags
 }
 
@@ -249,6 +251,8 @@ module "api_gateway" {
   calling_function_arn          = module.lambda.calling_function_arn
   realtime_invoke_arn           = module.lambda.realtime_invoke_arn
   realtime_function_arn         = module.lambda.realtime_function_arn
+  calendar_invoke_arn           = module.lambda.calendar_invoke_arn
+  calendar_function_arn         = module.lambda.calendar_function_arn
   allowed_origins               = local.browser_origins
   api_custom_domain             = var.api_custom_domain
   tags                          = local.tags

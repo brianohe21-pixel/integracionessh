@@ -28,6 +28,8 @@ const UpdateWebhookSchema = z.object({
         "call.connect",
         "call.status",
         "call.terminated",
+        "booking.created",
+        "booking.cancelled",
       ])
     )
     .min(1),

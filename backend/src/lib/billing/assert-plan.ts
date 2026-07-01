@@ -11,6 +11,7 @@ import {
   countFlowsForBot,
 } from "../dynamodb/flow.repository.js";
 import { getMonthlyUsage } from "../dynamodb/usage.repository.js";
+import { listEnabledCalendarsForTenant } from "../calendar/calendar.service.js";
 import { countActiveLiveKitCallsForTenant } from "../dynamodb/livekit-call.repository.js";
 import type { Tenant, Channel } from "../../types/index.js";
 import {
@@ -256,6 +257,22 @@ export async function assertCanEnableChannel(
     throw new PlanLimitError(
       "PLAN_LIMIT_CHANNELS",
       `Plan limit: maximum ${limits.maxChannelsPerBot} channel(s) per bot`
+    );
+  }
+}
+
+export async function assertCanEnableCalendar(tenant: Tenant, botId?: string): Promise<void> {
+  const limits = getPlanLimits(tenant.plan);
+  if (isUnlimited(limits.maxCalendarAppsPerTenant)) return;
+
+  const configs = await listEnabledCalendarsForTenant(tenant.tenantId);
+  const enabledCount = botId
+    ? configs.filter((c) => c.botId !== botId).length
+    : configs.length;
+  if (enabledCount >= limits.maxCalendarAppsPerTenant) {
+    throw new PlanLimitError(
+      "PLAN_LIMIT_CALENDAR",
+      `Plan limit: maximum ${limits.maxCalendarAppsPerTenant} calendar app(s) per tenant`
     );
   }
 }

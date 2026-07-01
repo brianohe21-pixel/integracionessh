@@ -201,3 +201,11 @@ output "realtime_invoke_arn" {
 output "realtime_function_arn" {
   value = aws_lambda_function.functions["realtime"].arn
 }
+
+output "calendar_invoke_arn" {
+  value = aws_lambda_function.functions["calendar"].invoke_arn
+}
+
+output "calendar_function_arn" {
+  value = aws_lambda_function.functions["calendar"].arn
+}

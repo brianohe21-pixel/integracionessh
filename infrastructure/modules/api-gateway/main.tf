@@ -849,6 +849,60 @@ locals {
       function_arn = var.automations_function_arn
       protected    = true
     }
+    apps_list = {
+      route_key    = "GET /apps"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_config_get = {
+      route_key    = "GET /calendar/{botId}/config"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_config_put = {
+      route_key    = "PUT /calendar/{botId}/config"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_enable = {
+      route_key    = "POST /calendar/{botId}/enable"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_disable = {
+      route_key    = "POST /calendar/{botId}/disable"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_slots = {
+      route_key    = "GET /calendar/{botId}/slots"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_bookings_list = {
+      route_key    = "GET /calendar/{botId}/bookings"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_bookings_create = {
+      route_key    = "POST /calendar/{botId}/bookings"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_bookings_patch = {
+      route_key    = "PATCH /calendar/{botId}/bookings/{bookingId}"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
     knowledge_list = {
       route_key    = "GET /bots/{botId}/knowledge"
       invoke_arn   = var.knowledge_invoke_arn
@@ -1020,6 +1074,7 @@ resource "aws_lambda_permission" "api_gw" {
     flows            = var.flows_function_arn
     calling          = var.calling_function_arn
     realtime         = var.realtime_function_arn
+    calendar         = var.calendar_function_arn
   }
 
   statement_id  = "AllowAPIGatewayInvoke-${each.key}"

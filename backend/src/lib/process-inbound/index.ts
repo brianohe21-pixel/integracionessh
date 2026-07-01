@@ -480,7 +480,14 @@ export async function processInboundMessage(
     }
   } else {
     const openAIKey = await getOpenAIApiKey(tenantId, environment);
-    const result = await generateChatResponse(bot, history, userMessageText, openAIKey, tenantId);
+    const result = await generateChatResponse(
+      bot,
+      history,
+      userMessageText,
+      openAIKey,
+      tenantId,
+      { contactPhone: participantId, conversationId: conversation.conversationId }
+    );
     if (result.handoff) {
       shouldHandoff = true;
     } else {
@@ -521,7 +528,8 @@ export async function processInboundMessage(
           history,
           userMessageText,
           openAIKey,
-          tenantId
+          tenantId,
+          { contactPhone: participantId, conversationId: conversation.conversationId }
         );
         aiResponse =
           fallback.reply ??
