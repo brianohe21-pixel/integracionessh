@@ -157,6 +157,8 @@ locals {
   automations_function_arn  = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.automations_function_name}"
   flows_function_name       = "${var.project}-${var.environment}-flows"
   flows_function_arn        = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.flows_function_name}"
+  calendar_function_name    = "${var.project}-${var.environment}-calendar"
+  calendar_function_arn     = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.calendar_function_name}"
 
   functions = {
     webhook = {
@@ -554,6 +556,22 @@ locals {
         TABLE_NAME                = var.dynamodb_table_name
         ENVIRONMENT               = var.environment
         INTEGRATION_SQS_QUEUE_URL = var.integration_sqs_queue_url
+        FRONTEND_URL              = var.frontend_url
+        SCHEDULER_ROLE_ARN        = var.scheduler_role_arn
+        CALENDAR_FUNCTION_ARN     = local.calendar_function_arn
+      }
+    }
+    public_calendar = {
+      handler     = "public-calendar/index.handler"
+      description = "Public calendar booking links for visitors"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME                = var.dynamodb_table_name
+        ENVIRONMENT               = var.environment
+        INTEGRATION_SQS_QUEUE_URL = var.integration_sqs_queue_url
+        FRONTEND_URL              = var.frontend_url
+        MEDIA_BUCKET              = var.media_bucket_name
       }
     }
   }

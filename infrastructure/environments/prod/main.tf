@@ -137,6 +137,7 @@ resource "aws_iam_role_policy" "scheduler_invoke" {
         module.lambda.campaigns_function_arn,
         module.lambda.automations_function_arn,
         module.lambda.flows_function_arn,
+        module.lambda.calendar_function_arn,
       ]
     }]
   })
@@ -256,6 +257,8 @@ module "api_gateway" {
   realtime_function_arn          = module.lambda.realtime_function_arn
   calendar_invoke_arn            = module.lambda.calendar_invoke_arn
   calendar_function_arn          = module.lambda.calendar_function_arn
+  public_calendar_invoke_arn     = module.lambda.public_calendar_invoke_arn
+  public_calendar_function_arn   = module.lambda.public_calendar_function_arn
   allowed_origins                = local.browser_origins
   api_custom_domain              = var.api_custom_domain
   tags                           = local.tags

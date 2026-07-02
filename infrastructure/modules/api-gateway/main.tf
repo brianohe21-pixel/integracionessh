@@ -903,6 +903,54 @@ locals {
       function_arn = var.calendar_function_arn
       protected    = true
     }
+    calendar_public_link_get = {
+      route_key    = "GET /calendar/{botId}/public-link"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_public_link_enable = {
+      route_key    = "POST /calendar/{botId}/public-link/enable"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_public_link_disable = {
+      route_key    = "POST /calendar/{botId}/public-link/disable"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_public_link_rotate = {
+      route_key    = "POST /calendar/{botId}/public-link/rotate-key"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    public_calendar_info = {
+      route_key    = "GET /public/calendar/{publicKey}"
+      invoke_arn   = var.public_calendar_invoke_arn
+      function_arn = var.public_calendar_function_arn
+      protected    = false
+    }
+    public_calendar_dates = {
+      route_key    = "GET /public/calendar/{publicKey}/dates"
+      invoke_arn   = var.public_calendar_invoke_arn
+      function_arn = var.public_calendar_function_arn
+      protected    = false
+    }
+    public_calendar_slots = {
+      route_key    = "GET /public/calendar/{publicKey}/slots"
+      invoke_arn   = var.public_calendar_invoke_arn
+      function_arn = var.public_calendar_function_arn
+      protected    = false
+    }
+    public_calendar_bookings = {
+      route_key    = "POST /public/calendar/{publicKey}/bookings"
+      invoke_arn   = var.public_calendar_invoke_arn
+      function_arn = var.public_calendar_function_arn
+      protected    = false
+    }
     knowledge_list = {
       route_key    = "GET /bots/{botId}/knowledge"
       invoke_arn   = var.knowledge_invoke_arn
@@ -1075,6 +1123,7 @@ resource "aws_lambda_permission" "api_gw" {
     calling           = var.calling_function_arn
     realtime          = var.realtime_function_arn
     calendar          = var.calendar_function_arn
+    public_calendar   = var.public_calendar_function_arn
   }
 
   statement_id  = "AllowAPIGatewayInvoke-${each.key}"

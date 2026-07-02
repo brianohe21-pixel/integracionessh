@@ -209,3 +209,11 @@ output "calendar_invoke_arn" {
 output "calendar_function_arn" {
   value = aws_lambda_function.functions["calendar"].arn
 }
+
+output "public_calendar_invoke_arn" {
+  value = aws_lambda_function.functions["public_calendar"].invoke_arn
+}
+
+output "public_calendar_function_arn" {
+  value = aws_lambda_function.functions["public_calendar"].arn
+}
