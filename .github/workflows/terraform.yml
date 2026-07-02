@@ -84,6 +84,12 @@ jobs:
         env:
           ENABLE_MONITORING: ${{ vars.ENABLE_MONITORING }}
 
+      - name: Import orphan Lambda log groups
+        run: |
+          set -euo pipefail
+          chmod +x ../../scripts/import-orphan-lambda-log-groups.sh
+          PROJECT=chatbot-platform ENVIRONMENT=dev ../../scripts/import-orphan-lambda-log-groups.sh
+
       - name: Terraform Plan
         id: plan
         env:
@@ -265,6 +271,12 @@ jobs:
           fi
         env:
           ENABLE_MONITORING: ${{ vars.ENABLE_MONITORING }}
+
+      - name: Import orphan Lambda log groups
+        run: |
+          set -euo pipefail
+          chmod +x ../../scripts/import-orphan-lambda-log-groups.sh
+          PROJECT=chatbot-platform ENVIRONMENT=prod ../../scripts/import-orphan-lambda-log-groups.sh
 
       - name: Terraform Plan
         id: plan

@@ -602,6 +602,8 @@ resource "aws_lambda_function" "functions" {
     ]
   }
 
+  depends_on = [aws_cloudwatch_log_group.lambda_logs]
+
   tags = var.tags
 }
 
