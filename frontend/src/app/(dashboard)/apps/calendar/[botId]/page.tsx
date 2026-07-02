@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useT } from "@/i18n/context";
 import {
   useCalendarBookings,
@@ -16,13 +16,21 @@ import { CalendarWeeklySchedule } from "@/components/calendar/CalendarWeeklySche
 import { CalendarSettingsForm } from "@/components/calendar/CalendarSettingsForm";
 import { CalendarBookingsTable } from "@/components/calendar/CalendarBookingsTable";
 import { CalendarSlotsPreview } from "@/components/calendar/CalendarSlotsPreview";
+import { CalendarPublicLinkPanel } from "@/components/calendar/CalendarPublicLinkPanel";
+import { CalendarReminderSettings } from "@/components/calendar/CalendarReminderSettings";
 
 type Tab = "availability" | "bookings";
 
+function parseTab(value: string | null): Tab {
+  return value === "bookings" ? "bookings" : "availability";
+}
+
 export default function CalendarBotPage() {
   const t = useT();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { botId } = useParams<{ botId: string }>();
-  const [tab, setTab] = useState<Tab>("availability");
+  const [tab, setTab] = useState<Tab>(() => parseTab(searchParams.get("tab")));
   const [draft, setDraft] = useState<CalendarConfig | null>(null);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
@@ -38,6 +46,22 @@ export default function CalendarBotPage() {
     }
   }, [configData]);
 
+  useEffect(() => {
+    setTab(parseTab(searchParams.get("tab")));
+  }, [searchParams]);
+
+  function selectTab(next: Tab) {
+    setTab(next);
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === "availability") {
+      params.delete("tab");
+    } else {
+      params.set("tab", next);
+    }
+    const qs = params.toString();
+    router.replace(`/apps/calendar/${botId}${qs ? `?${qs}` : ""}`, { scroll: false });
+  }
+
   async function handleSave() {
     if (!draft) return;
     setError("");
@@ -50,6 +74,12 @@ export default function CalendarBotPage() {
         maxAdvanceDays: draft.maxAdvanceDays,
         minNoticeHours: draft.minNoticeHours,
         weeklySchedule: draft.weeklySchedule,
+        reminderEnabled: draft.reminderEnabled,
+        reminderMinutesBefore: draft.reminderMinutesBefore,
+        reminderChannel: draft.reminderChannel,
+        reminderMessage: draft.reminderMessage,
+        reminderTemplateName: draft.reminderTemplateName,
+        reminderTemplateLanguage: draft.reminderTemplateLanguage,
       });
       setSaved(true);
     } catch (err) {
@@ -74,7 +104,7 @@ export default function CalendarBotPage() {
           <button
             key={key}
             type="button"
-            onClick={() => setTab(key)}
+            onClick={() => selectTab(key)}
             className={`border-b-2 px-4 py-2 text-sm font-medium ${
               tab === key
                 ? "border-indigo-600 text-indigo-600"
@@ -88,6 +118,12 @@ export default function CalendarBotPage() {
 
       {tab === "availability" ? (
         <div className="space-y-6">
+          <CalendarPublicLinkPanel botId={botId} calendarEnabled={draft.enabled} />
+          <CalendarReminderSettings
+            botId={botId}
+            config={draft}
+            onChange={(patch) => setDraft((prev) => (prev ? { ...prev, ...patch } : prev))}
+          />
           <section className="rounded-xl border border-gray-200 bg-white p-6">
             <h3 className="mb-4 font-semibold text-gray-900">{t("calendar.settings")}</h3>
             <CalendarSettingsForm

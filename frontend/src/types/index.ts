@@ -700,6 +700,9 @@ export interface TimeRange {
 
 export type WeeklySchedule = Record<Weekday, TimeRange[]>;
 
+export type CalendarReminderChannel = "whatsapp_text" | "whatsapp_template";
+export type BookingReminderStatus = "scheduled" | "sent" | "skipped" | "cancelled";
+
 export interface CalendarConfig {
   tenantId: string;
   botId: string;
@@ -711,6 +714,14 @@ export interface CalendarConfig {
   minNoticeHours: number;
   weeklySchedule: WeeklySchedule;
   provider: "native";
+  calendarPublicKey?: string;
+  publicLinkEnabled?: boolean;
+  reminderEnabled?: boolean;
+  reminderMinutesBefore?: number;
+  reminderChannel?: CalendarReminderChannel;
+  reminderMessage?: string;
+  reminderTemplateName?: string;
+  reminderTemplateLanguage?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -727,8 +738,11 @@ export interface Booking {
   startAt: string;
   endAt: string;
   status: BookingStatus;
-  source: "flow" | "openai" | "manual";
+  source: "flow" | "openai" | "manual" | "public_link";
   notes?: string;
+  reminderScheduleName?: string;
+  reminderSentAt?: string;
+  reminderStatus?: BookingReminderStatus;
   createdAt: string;
   updatedAt: string;
 }

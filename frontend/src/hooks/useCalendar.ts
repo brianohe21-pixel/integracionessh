@@ -93,3 +93,50 @@ export function useUpdateBookingStatus(botId: string) {
     },
   });
 }
+
+export interface CalendarPublicLinkStatus {
+  publicLinkEnabled: boolean;
+  calendarPublicKey?: string;
+  publicUrl?: string;
+}
+
+export function useCalendarPublicLink(botId: string) {
+  return useQuery<CalendarPublicLinkStatus>({
+    queryKey: ["calendar", botId, "public-link"],
+    queryFn: () => api.get<CalendarPublicLinkStatus>(`/calendar/${botId}/public-link`),
+    enabled: Boolean(botId),
+  });
+}
+
+export function useEnablePublicLink(botId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      api.post<CalendarPublicLinkStatus>(`/calendar/${botId}/public-link/enable`, {}),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["calendar", botId, "public-link"] });
+    },
+  });
+}
+
+export function useDisablePublicLink(botId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      api.post<CalendarPublicLinkStatus>(`/calendar/${botId}/public-link/disable`, {}),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["calendar", botId, "public-link"] });
+    },
+  });
+}
+
+export function useRotatePublicLink(botId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      api.post<CalendarPublicLinkStatus>(`/calendar/${botId}/public-link/rotate-key`, {}),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["calendar", botId, "public-link"] });
+    },
+  });
+}

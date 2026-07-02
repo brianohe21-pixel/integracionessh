@@ -33,6 +33,9 @@ export function CalendarBookingsTable({
             <th className="px-4 py-3 text-left font-medium text-gray-600">{t("calendar.colDate")}</th>
             <th className="px-4 py-3 text-left font-medium text-gray-600">{t("calendar.colContact")}</th>
             <th className="px-4 py-3 text-left font-medium text-gray-600">{t("calendar.colSource")}</th>
+            <th className="px-4 py-3 text-left font-medium text-gray-600">
+              {t("calendar.colReminder")}
+            </th>
             <th className="px-4 py-3 text-left font-medium text-gray-600">{t("common.status")}</th>
             <th className="px-4 py-3 text-left font-medium text-gray-600" />
           </tr>
@@ -40,7 +43,7 @@ export function CalendarBookingsTable({
         <tbody className="divide-y divide-gray-200 bg-white">
           {bookings.length === 0 ? (
             <tr>
-              <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+              <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
                 {t("calendar.noBookings")}
               </td>
             </tr>
@@ -54,7 +57,14 @@ export function CalendarBookingsTable({
                   <div>{booking.contactName || "—"}</div>
                   <div className="text-xs text-gray-500">{booking.contactPhone}</div>
                 </td>
-                <td className="px-4 py-3 text-gray-600">{booking.source}</td>
+                <td className="px-4 py-3 text-gray-600">
+                  {t(`calendar.source.${booking.source}` as "calendar.source.flow")}
+                </td>
+                <td className="px-4 py-3 text-gray-600">
+                  {booking.reminderStatus
+                    ? t(`calendar.reminder.status.${booking.reminderStatus}` as "calendar.reminder.status.sent")
+                    : "—"}
+                </td>
                 <td className="px-4 py-3">
                   <select
                     value={booking.status}
