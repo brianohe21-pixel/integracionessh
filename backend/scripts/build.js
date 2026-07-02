@@ -46,6 +46,7 @@ const entryPoints = [
   "src/functions/webchat/index.ts",
   "src/functions/realtime/index.ts",
   "src/functions/calendar/index.ts",
+  "src/functions/public-calendar/index.ts",
 ];
 
 const buildOptions = {

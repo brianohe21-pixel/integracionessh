@@ -15,6 +15,13 @@ import {
   saveCalendarConfig,
   updateBookingStatus,
 } from "../../lib/calendar/calendar.service.js";
+import {
+  disablePublicCalendarLink,
+  enablePublicCalendarLink,
+  getPublicLinkStatus,
+  rotatePublicCalendarLink,
+} from "../../lib/calendar/public-link.js";
+import { sendBookingReminder } from "../../lib/calendar/reminder-send.js";
 import { ok, badRequest, handleError } from "../../lib/http.js";
 import type { BookingStatus } from "../../types/index.js";
 
@@ -33,14 +40,47 @@ const WeeklyScheduleSchema = z.object({
   sunday: z.array(TimeRangeSchema),
 });
 
-const ConfigSchema = z.object({
-  timezone: z.string().min(1).max(64),
-  slotDurationMinutes: z.number().int().min(5).max(480),
-  bufferMinutes: z.number().int().min(0).max(120),
-  maxAdvanceDays: z.number().int().min(1).max(90),
-  minNoticeHours: z.number().int().min(0).max(168),
-  weeklySchedule: WeeklyScheduleSchema,
-});
+const ConfigSchema = z
+  .object({
+    timezone: z.string().min(1).max(64),
+    slotDurationMinutes: z.number().int().min(5).max(480),
+    bufferMinutes: z.number().int().min(0).max(120),
+    maxAdvanceDays: z.number().int().min(1).max(90),
+    minNoticeHours: z.number().int().min(0).max(168),
+    weeklySchedule: WeeklyScheduleSchema,
+    reminderEnabled: z.boolean().optional(),
+    reminderMinutesBefore: z.number().int().min(15).max(10080).optional(),
+    reminderChannel: z.enum(["whatsapp_text", "whatsapp_template"]).optional(),
+    reminderMessage: z.string().max(500).optional(),
+    reminderTemplateName: z.string().max(120).optional(),
+    reminderTemplateLanguage: z.string().min(2).max(10).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.reminderEnabled) return;
+    const channel = data.reminderChannel ?? "whatsapp_text";
+    if (channel === "whatsapp_template") {
+      if (!data.reminderTemplateName?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "reminderTemplateName is required",
+          path: ["reminderTemplateName"],
+        });
+      }
+      if (!data.reminderTemplateLanguage?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "reminderTemplateLanguage is required",
+          path: ["reminderTemplateLanguage"],
+        });
+      }
+    } else if (!data.reminderMessage?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "reminderMessage is required",
+        path: ["reminderMessage"],
+      });
+    }
+  });
 
 const CreateBookingSchema = z.object({
   startAt: z.string().datetime(),
@@ -60,9 +100,25 @@ async function assertBotBelongsToTenant(tenantId: string, botId: string): Promis
 }
 
 export async function handler(
-  event: APIGatewayProxyEventV2WithJWTAuthorizer
+  event: APIGatewayProxyEventV2WithJWTAuthorizer & {
+    action?: string;
+    tenantId?: string;
+    botId?: string;
+    bookingId?: string;
+  }
 ): Promise<APIGatewayProxyResultV2> {
   try {
+    if (event.action === "send-booking-reminder") {
+      const { tenantId, botId, bookingId } = event as {
+        action: string;
+        tenantId: string;
+        botId: string;
+        bookingId: string;
+      };
+      const result = await sendBookingReminder({ tenantId, botId, bookingId });
+      return ok(result);
+    }
+
     const auth = extractAuthContext(event);
     assertMemberRole(auth);
     const method = event.requestContext.http.method;
@@ -86,7 +142,11 @@ export async function handler(
 
     if (method === "PUT" && rawPath === `/calendar/${botId}/config`) {
       const body = ConfigSchema.parse(JSON.parse(event.body ?? "{}"));
-      const config = await saveCalendarConfig(auth.tenantId, botId, body);
+      const config = await saveCalendarConfig(
+        auth.tenantId,
+        botId,
+        body as Parameters<typeof saveCalendarConfig>[2]
+      );
       return ok({ config });
     }
 
@@ -101,6 +161,22 @@ export async function handler(
     if (method === "POST" && rawPath === `/calendar/${botId}/disable`) {
       const config = await disableCalendar(auth.tenantId, botId);
       return ok({ config });
+    }
+
+    if (method === "GET" && rawPath === `/calendar/${botId}/public-link`) {
+      return ok(await getPublicLinkStatus(auth.tenantId, botId));
+    }
+
+    if (method === "POST" && rawPath === `/calendar/${botId}/public-link/enable`) {
+      return ok(await enablePublicCalendarLink(auth.tenantId, botId));
+    }
+
+    if (method === "POST" && rawPath === `/calendar/${botId}/public-link/disable`) {
+      return ok(await disablePublicCalendarLink(auth.tenantId, botId));
+    }
+
+    if (method === "POST" && rawPath === `/calendar/${botId}/public-link/rotate-key`) {
+      return ok(await rotatePublicCalendarLink(auth.tenantId, botId));
     }
 
     if (method === "GET" && rawPath === `/calendar/${botId}/slots`) {

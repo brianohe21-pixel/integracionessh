@@ -33,6 +33,10 @@ import {
   getSlotsForDate,
   hasBookingOverlap,
 } from "./slot-engine.js";
+import {
+  cancelBookingReminder,
+  scheduleBookingReminder,
+} from "./reminder-schedule.js";
 
 export function defaultCalendarConfig(tenantId: string, botId: string): CalendarConfig {
   const now = new Date().toISOString();
@@ -47,6 +51,12 @@ export function defaultCalendarConfig(tenantId: string, botId: string): Calendar
     minNoticeHours: 2,
     weeklySchedule: DEFAULT_WEEKLY_SCHEDULE,
     provider: "native",
+    reminderEnabled: false,
+    reminderMinutesBefore: 60,
+    reminderChannel: "whatsapp_text",
+    reminderMessage:
+      "Hola {{name}}, te recordamos tu cita el {{date}} a las {{time}}.",
+    reminderTemplateLanguage: "es",
     createdAt: now,
     updatedAt: now,
   };
@@ -106,6 +116,12 @@ export async function saveCalendarConfig(
       | "maxAdvanceDays"
       | "minNoticeHours"
       | "weeklySchedule"
+      | "reminderEnabled"
+      | "reminderMinutesBefore"
+      | "reminderChannel"
+      | "reminderMessage"
+      | "reminderTemplateName"
+      | "reminderTemplateLanguage"
     >
   >
 ): Promise<CalendarConfig> {
@@ -290,6 +306,8 @@ export async function createBookingForBot(params: {
 
   const created = await createBooking(booking);
 
+  const withReminder = await scheduleBookingReminder(created, config);
+
   await emitIntegrationEvent(
     params.tenantId,
     "booking.created",
@@ -297,18 +315,18 @@ export async function createBookingForBot(params: {
       event: "booking.created",
       tenantId: params.tenantId,
       data: {
-        bookingId: created.bookingId,
-        botId: created.botId,
-        contactPhone: created.contactPhone,
-        contactName: created.contactName ?? "",
-        startAt: created.startAt,
-        endAt: created.endAt,
-        source: created.source,
+        bookingId: withReminder.bookingId,
+        botId: withReminder.botId,
+        contactPhone: withReminder.contactPhone,
+        contactName: withReminder.contactName ?? "",
+        startAt: withReminder.startAt,
+        endAt: withReminder.endAt,
+        source: withReminder.source,
       },
     })
   );
 
-  return created;
+  return withReminder;
 }
 
 export async function updateBookingStatus(params: {
@@ -327,10 +345,15 @@ export async function updateBookingStatus(params: {
   });
   if (!updated) throw new Error("Booking not found");
 
+  let bookingAfterReminder = updated;
+  if (params.status === "cancelled") {
+    bookingAfterReminder = await cancelBookingReminder(updated);
+  }
+
   if (params.status === "cancelled") {
     const provider = getCalendarProvider(config.provider);
     if (provider.cancelExternalEvent) {
-      await provider.cancelExternalEvent(updated, config);
+      await provider.cancelExternalEvent(bookingAfterReminder, config);
     }
     await emitIntegrationEvent(
       params.tenantId,
@@ -339,17 +362,17 @@ export async function updateBookingStatus(params: {
         event: "booking.cancelled",
         tenantId: params.tenantId,
         data: {
-          bookingId: updated.bookingId,
-          botId: updated.botId,
-          contactPhone: updated.contactPhone,
-          startAt: updated.startAt,
-          endAt: updated.endAt,
+          bookingId: bookingAfterReminder.bookingId,
+          botId: bookingAfterReminder.botId,
+          contactPhone: bookingAfterReminder.contactPhone,
+          startAt: bookingAfterReminder.startAt,
+          endAt: bookingAfterReminder.endAt,
         },
       })
     );
   }
 
-  return updated;
+  return bookingAfterReminder;
 }
 
 export async function countEnabledCalendarApps(tenantId: string): Promise<number> {

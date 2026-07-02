@@ -15,6 +15,13 @@ function widgetKeyKey(widgetKey: string) {
   };
 }
 
+function calendarPublicKeyKey(publicKey: string) {
+  return {
+    PK: `LOOKUP#CALENDAR#${publicKey}`,
+    SK: "META",
+  };
+}
+
 export async function putInstagramPageLookup(
   pageId: string,
   tenantId: string,
@@ -92,6 +99,49 @@ export async function getBotByWidgetKey(
     new GetCommand({
       TableName: TABLE_NAME,
       Key: widgetKeyKey(widgetKey),
+    })
+  );
+  if (!result.Item) return null;
+  return {
+    tenantId: result.Item.tenantId as string,
+    botId: result.Item.botId as string,
+  };
+}
+
+export async function putCalendarPublicKeyLookup(
+  publicKey: string,
+  tenantId: string,
+  botId: string
+): Promise<void> {
+  await docClient.send(
+    new PutCommand({
+      TableName: TABLE_NAME,
+      Item: {
+        ...calendarPublicKeyKey(publicKey),
+        tenantId,
+        botId,
+        updatedAt: new Date().toISOString(),
+      },
+    })
+  );
+}
+
+export async function deleteCalendarPublicKeyLookup(publicKey: string): Promise<void> {
+  await docClient.send(
+    new DeleteCommand({
+      TableName: TABLE_NAME,
+      Key: calendarPublicKeyKey(publicKey),
+    })
+  );
+}
+
+export async function getBotByCalendarPublicKey(
+  publicKey: string
+): Promise<{ tenantId: string; botId: string } | null> {
+  const result = await docClient.send(
+    new GetCommand({
+      TableName: TABLE_NAME,
+      Key: calendarPublicKeyKey(publicKey),
     })
   );
   if (!result.Item) return null;
