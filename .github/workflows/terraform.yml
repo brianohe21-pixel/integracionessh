@@ -23,8 +23,8 @@ jobs:
     runs-on: ubuntu-latest
     environment: dev
     concurrency:
-      group: terraform-dev
-      cancel-in-progress: false
+      group: terraform-dev-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
     defaults:
       run:
         working-directory: infrastructure/environments/dev
@@ -244,8 +244,8 @@ jobs:
     runs-on: ubuntu-latest
     environment: prod
     concurrency:
-      group: terraform-prod
-      cancel-in-progress: false
+      group: terraform-prod-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
     if: github.ref == 'refs/heads/main'
     defaults:
       run:
