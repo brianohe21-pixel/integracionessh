@@ -29,6 +29,26 @@ while IFS= read -r lambda_addr; do
   )"
   if [[ "$existing" == "$log_group" ]]; then
     echo "Importing orphan log group ${log_group} -> ${log_addr}"
-    terraform import "$log_addr" "$log_group"
+    import_attempts="${TF_IMPORT_ATTEMPTS:-3}"
+    import_retry_delay="${TF_IMPORT_RETRY_DELAY_SECONDS:-15}"
+    for attempt in $(seq 1 "$import_attempts"); do
+      set +e
+      import_output="$(terraform import -lock-timeout=10m "$log_addr" "$log_group" 2>&1)"
+      import_status=$?
+      set -e
+      if [ "$import_status" -eq 0 ]; then
+        echo "$import_output"
+        break
+      fi
+      if echo "$import_output" | grep -Eqi 'Error acquiring the state lock|PreconditionFailed|lock'; then
+        echo "State lock detected while importing ${log_group} (attempt $attempt/$import_attempts); retrying in ${import_retry_delay}s" >&2
+        if [ "$attempt" -lt "$import_attempts" ]; then
+          sleep "$import_retry_delay"
+          continue
+        fi
+      fi
+      echo "$import_output" >&2
+      exit "$import_status"
+    done
   fi
 done < <(terraform state list 2>/dev/null | grep '^module\.lambda\.aws_lambda_function\.functions\[' || true)

@@ -47,7 +47,7 @@ jobs:
         run: terraform fmt -check -recursive
 
       - name: Terraform Init
-        run: terraform init
+        run: terraform init -reconfigure -input=false
 
       - name: Terraform Validate
         run: terraform validate
@@ -165,11 +165,28 @@ jobs:
           if [ -n "${EXTRA_LOGOUT_URLS:-}" ]; then
             PLAN_ARGS+=(-var="extra_logout_urls=${EXTRA_LOGOUT_URLS}")
           fi
+          PLAN_OUTPUT_ARGS=()
           if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/develop" ]; then
-            terraform plan "${PLAN_ARGS[@]}" -out=tfplan | tee plan.txt
-          else
-            terraform plan "${PLAN_ARGS[@]}" | tee plan.txt
+            PLAN_OUTPUT_ARGS=(-out=tfplan)
           fi
+
+          for attempt in 1 2 3; do
+            set +e
+            terraform plan "${PLAN_ARGS[@]}" "${PLAN_OUTPUT_ARGS[@]}" -lock-timeout=10m | tee plan.txt
+            plan_status=${PIPESTATUS[0]}
+            set -e
+            if [ "$plan_status" -eq 0 ]; then
+              break
+            fi
+            if grep -Eqi 'Error acquiring the state lock|PreconditionFailed|lock' plan.txt; then
+              echo "::warning::Terraform plan hit a transient state lock (attempt $attempt/3); retrying in 15s"
+              if [ "$attempt" -lt 3 ]; then
+                sleep 15
+                continue
+              fi
+            fi
+            exit "$plan_status"
+          done
 
       - name: Comment PR
         if: github.event_name == 'pull_request' && always()
@@ -203,7 +220,23 @@ jobs:
         run: |
           set -euo pipefail
           test -f tfplan
-          terraform apply -auto-approve -parallelism=1 tfplan
+          for attempt in 1 2 3; do
+            set +e
+            terraform apply -auto-approve -parallelism=1 -lock-timeout=10m tfplan 2>&1 | tee apply.txt
+            apply_status=${PIPESTATUS[0]}
+            set -e
+            if [ "$apply_status" -eq 0 ]; then
+              break
+            fi
+            if grep -Eqi 'Error acquiring the state lock|PreconditionFailed|lock' apply.txt; then
+              echo "::warning::Terraform apply hit a transient state lock (attempt $attempt/3); retrying in 15s"
+              if [ "$attempt" -lt 3 ]; then
+                sleep 15
+                continue
+              fi
+            fi
+            exit "$apply_status"
+          done
 
   terraform-prod:
     name: Terraform Prod
@@ -235,7 +268,7 @@ jobs:
         run: terraform fmt -check -recursive
 
       - name: Terraform Init
-        run: terraform init
+        run: terraform init -reconfigure -input=false
 
       - name: Terraform Validate
         run: terraform validate
@@ -357,15 +390,48 @@ jobs:
           if [ -n "${EXTRA_LOGOUT_URLS:-}" ]; then
             PLAN_ARGS+=(-var="extra_logout_urls=${EXTRA_LOGOUT_URLS}")
           fi
+          PLAN_OUTPUT_ARGS=()
           if [ "${{ github.event_name }}" = "push" ]; then
-            terraform plan "${PLAN_ARGS[@]}" -out=tfplan | tee plan.txt
-          else
-            terraform plan "${PLAN_ARGS[@]}" | tee plan.txt
+            PLAN_OUTPUT_ARGS=(-out=tfplan)
           fi
+
+          for attempt in 1 2 3; do
+            set +e
+            terraform plan "${PLAN_ARGS[@]}" "${PLAN_OUTPUT_ARGS[@]}" -lock-timeout=10m | tee plan.txt
+            plan_status=${PIPESTATUS[0]}
+            set -e
+            if [ "$plan_status" -eq 0 ]; then
+              break
+            fi
+            if grep -Eqi 'Error acquiring the state lock|PreconditionFailed|lock' plan.txt; then
+              echo "::warning::Terraform plan hit a transient state lock (attempt $attempt/3); retrying in 15s"
+              if [ "$attempt" -lt 3 ]; then
+                sleep 15
+                continue
+              fi
+            fi
+            exit "$plan_status"
+          done
 
       - name: Terraform Apply
         if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && steps.plan.outcome == 'success'
         run: |
           set -euo pipefail
           test -f tfplan
-          terraform apply -auto-approve -parallelism=1 tfplan
+          for attempt in 1 2 3; do
+            set +e
+            terraform apply -auto-approve -parallelism=1 -lock-timeout=10m tfplan 2>&1 | tee apply.txt
+            apply_status=${PIPESTATUS[0]}
+            set -e
+            if [ "$apply_status" -eq 0 ]; then
+              break
+            fi
+            if grep -Eqi 'Error acquiring the state lock|PreconditionFailed|lock' apply.txt; then
+              echo "::warning::Terraform apply hit a transient state lock (attempt $attempt/3); retrying in 15s"
+              if [ "$attempt" -lt 3 ]; then
+                sleep 15
+                continue
+              fi
+            fi
+            exit "$apply_status"
+          done
