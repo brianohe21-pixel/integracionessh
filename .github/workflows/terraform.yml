@@ -85,7 +85,6 @@ jobs:
           ENABLE_MONITORING: ${{ vars.ENABLE_MONITORING }}
 
       - name: Import orphan Lambda log groups
-        if: github.event_name != 'pull_request'
         timeout-minutes: 3
         run: |
           set -euo pipefail
@@ -308,7 +307,6 @@ jobs:
           ENABLE_MONITORING: ${{ vars.ENABLE_MONITORING }}
 
       - name: Import orphan Lambda log groups
-        if: github.ref == 'refs/heads/main'
         timeout-minutes: 3
         run: |
           set -euo pipefail
