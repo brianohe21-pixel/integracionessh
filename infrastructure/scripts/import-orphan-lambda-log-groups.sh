@@ -38,7 +38,7 @@ while IFS= read -r lambda_addr; do
     echo "Importing orphan log group ${log_group} -> ${log_addr}"
     imported_count=$((imported_count + 1))
     set +e
-    import_output="$(terraform import -input=false -no-color -lock-timeout="${IMPORT_TIMEOUT_SECONDS}s" "$log_addr" "$log_group" 2>&1)"
+    import_output="$(terraform import -input=false -no-color -lock=false -lock-timeout="${IMPORT_TIMEOUT_SECONDS}s" "$log_addr" "$log_group" 2>&1)"
     import_status=$?
     set -e
     if [ "$import_status" -eq 0 ]; then
