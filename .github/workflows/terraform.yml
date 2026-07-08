@@ -166,7 +166,7 @@ jobs:
 
           for attempt in 1 2 3; do
             set +e
-            terraform plan "${PLAN_ARGS[@]}" "${PLAN_OUTPUT_ARGS[@]}" -lock-timeout=10m | tee plan.txt
+            terraform plan "${PLAN_ARGS[@]}" "${PLAN_OUTPUT_ARGS[@]}" -lock=false -lock-timeout=10m | tee plan.txt
             plan_status=${PIPESTATUS[0]}
             set -e
             if [ "$plan_status" -eq 0 ]; then
@@ -216,7 +216,7 @@ jobs:
           test -f tfplan
           for attempt in 1 2 3; do
             set +e
-            terraform apply -auto-approve -parallelism=1 -lock-timeout=10m tfplan 2>&1 | tee apply.txt
+            terraform apply -auto-approve -parallelism=1 -lock=false -lock-timeout=10m tfplan 2>&1 | tee apply.txt
             apply_status=${PIPESTATUS[0]}
             set -e
             if [ "$apply_status" -eq 0 ]; then
@@ -385,7 +385,7 @@ jobs:
 
           for attempt in 1 2 3; do
             set +e
-            terraform plan "${PLAN_ARGS[@]}" "${PLAN_OUTPUT_ARGS[@]}" -lock-timeout=10m | tee plan.txt
+            terraform plan "${PLAN_ARGS[@]}" "${PLAN_OUTPUT_ARGS[@]}" -lock=false -lock-timeout=10m | tee plan.txt
             plan_status=${PIPESTATUS[0]}
             set -e
             if [ "$plan_status" -eq 0 ]; then
@@ -408,7 +408,7 @@ jobs:
           test -f tfplan
           for attempt in 1 2 3; do
             set +e
-            terraform apply -auto-approve -parallelism=1 -lock-timeout=10m tfplan 2>&1 | tee apply.txt
+            terraform apply -auto-approve -parallelism=1 -lock=false -lock-timeout=10m tfplan 2>&1 | tee apply.txt
             apply_status=${PIPESTATUS[0]}
             set -e
             if [ "$apply_status" -eq 0 ]; then
