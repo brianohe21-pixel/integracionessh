@@ -16,6 +16,7 @@ import { ensureTenant } from "../../lib/dynamodb/tenant.repository.js";
 import { assertBulkRecipients } from "../../lib/billing/assert-plan.js";
 import { incrementBulkRecipients } from "../../lib/dynamodb/usage.repository.js";
 import { checkMarketingRecipients } from "../../lib/compliance/recipient-policy.js";
+import { normalizePhoneWithCountryCode } from "../../lib/phone/normalize.js";
 import { ok, created, badRequest, notFound, unprocessableEntity, handleError } from "../../lib/http.js";
 import type { BulkSendSQSBody } from "../../types/index.js";
 
@@ -77,7 +78,7 @@ async function enqueueRecipients(
             botId,
             templateName,
             language,
-            to: recipient.to.replace(/\D/g, ""),
+            to: normalizePhoneWithCountryCode(recipient.to),
           };
           if (recipient.components?.length) {
             body.components = recipient.components as NonNullable<BulkSendSQSBody["components"]>;
@@ -146,7 +147,7 @@ export async function handler(
 
       let filteredRecipients = recipients;
       if (requireOptIn) {
-        const phones = recipients.map((r) => r.to.replace(/\D/g, ""));
+        const phones = recipients.map((r) => normalizePhoneWithCountryCode(r.to));
         const { allowed, blocked } = await checkMarketingRecipients(
           auth.tenantId,
           phones,
@@ -159,7 +160,7 @@ export async function handler(
         }
         const allowedSet = new Set(allowed);
         filteredRecipients = recipients.filter((r) =>
-          allowedSet.has(r.to.replace(/\D/g, ""))
+          allowedSet.has(normalizePhoneWithCountryCode(r.to))
         );
         if (filteredRecipients.length === 0) {
           return unprocessableEntity("No recipients eligible for marketing send", { blocked });

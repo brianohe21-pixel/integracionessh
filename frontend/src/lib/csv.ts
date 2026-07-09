@@ -1,3 +1,5 @@
+import { normalizePhoneWithCountryCode } from "./phone";
+
 export interface CsvRow {
   phone: string;
   variables: string[];
@@ -134,7 +136,7 @@ export function parseRecipientsCsv(text: string): CsvRow[] {
 
   return lines.slice(1).map((line) => {
     const cells = parseLine(line);
-    const phone = (cells[phoneIndex] ?? "").replace(/\D/g, "");
+    const phone = normalizePhoneWithCountryCode(cells[phoneIndex] ?? "");
     const variables = varIndices.map((i) => sanitizeLatinText(cells[i] ?? ""));
     return { phone, variables };
   }).filter((row) => row.phone.length > 0);

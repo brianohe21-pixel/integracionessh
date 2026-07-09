@@ -514,7 +514,7 @@ export const en: Messages = {
     csvFile: "CSV file",
     downloadSample: "Download sample",
     selectCsv: "Select CSV file",
-    csvColumnHint: "Required column: phone, telefono, or numero",
+    csvColumnHint: "Required column: phone, telefono, or numero. If no country code is included, +57 (Colombia) is applied.",
     parseErrorEmpty:
       "No valid rows found. CSV must have a header with phone, telefono, or numero column.",
     parseErrorRead: "Could not read the CSV file.",
