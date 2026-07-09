@@ -512,7 +512,7 @@ export const es = {
     csvFile: "Archivo CSV",
     downloadSample: "Descargar plantilla",
     selectCsv: "Seleccionar archivo CSV",
-    csvColumnHint: "Columna obligatoria: phone, telefono o numero",
+    csvColumnHint: "Columna obligatoria: phone, telefono o numero. Si no incluyes código de país, se usará +57 (Colombia).",
     parseErrorEmpty:
       "No se encontraron filas válidas. El CSV debe tener encabezado con columna phone, telefono o numero.",
     parseErrorRead: "No se pudo leer el archivo CSV.",
