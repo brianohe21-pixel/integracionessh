@@ -5,6 +5,7 @@ import { useBots } from "@/hooks/useBots";
 import { useTemplates } from "@/hooks/useTemplates";
 import { useBulkSend, useBulkHistory, type BulkRecipient, type BulkSendJob } from "@/hooks/useBulkSend";
 import { BulkJobFailures } from "@/components/bulk-send/BulkJobFailures";
+import { BulkSendResultBanner } from "@/components/bulk-send/BulkSendResultBanner";
 import { Badge } from "@/components/ui/Badge";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useT, useLocale } from "@/i18n/context";
@@ -19,8 +20,6 @@ import {
   SendHorizonal,
   Upload,
   FileSpreadsheet,
-  CheckCircle2,
-  XCircle,
   Download,
   History,
   RefreshCw,
@@ -65,6 +64,8 @@ export default function BulkSendPage() {
   const [progress, setProgress] = useState({ current: 0, total: 0, failed: 0, deliveryFailed: 0 });
   const [result, setResult] = useState<{ sent: number; failed: number; deliveryFailed: number } | null>(null);
   const [lastCompletedJobId, setLastCompletedJobId] = useState<string | null>(null);
+  const [lastCompletedTemplateName, setLastCompletedTemplateName] = useState("");
+  const [sendError, setSendError] = useState("");
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
   const [downloadingJobId, setDownloadingJobId] = useState<string | null>(null);
 
@@ -125,6 +126,7 @@ export default function BulkSendPage() {
     if (!selectedTemplate || !botId || csvRows.length === 0) return;
 
     setResult(null);
+    setSendError("");
     setProgress({ current: 0, total: csvRows.length, failed: 0, deliveryFailed: 0 });
 
     const recipients: BulkRecipient[] = csvRows.map((row) => ({
@@ -132,26 +134,39 @@ export default function BulkSendPage() {
       components: buildComponents(bodyVars, row.variables),
     }));
 
-    const res = await bulkMutation.mutateAsync({
-      botId,
-      templateName: selectedTemplate.name,
-      language: selectedTemplate.language,
-      recipients,
-      onProgress: (job) =>
-        setProgress({
-          current: job.sent + job.failed,
-          total: job.total,
-          failed: job.failed,
-          deliveryFailed: job.deliveryFailed ?? 0,
-        }),
-    });
+    try {
+      const res = await bulkMutation.mutateAsync({
+        botId,
+        templateName: selectedTemplate.name,
+        language: selectedTemplate.language,
+        recipients,
+        onProgress: (job) =>
+          setProgress({
+            current: job.sent + job.failed,
+            total: job.total,
+            failed: job.failed,
+            deliveryFailed: job.deliveryFailed ?? 0,
+          }),
+      });
 
-    setResult({ sent: res.sent, failed: res.failed, deliveryFailed: res.deliveryFailed });
-    setLastCompletedJobId(res.jobId);
-    if (res.failed > 0 || res.deliveryFailed > 0) {
-      setExpandedJobId(res.jobId);
+      setResult({ sent: res.sent, failed: res.failed, deliveryFailed: res.deliveryFailed });
+      setLastCompletedJobId(res.jobId);
+      setLastCompletedTemplateName(selectedTemplate.name);
+      if (res.failed > 0 || res.deliveryFailed > 0) {
+        setExpandedJobId(res.jobId);
+      }
+      await refetchHistory();
+      setTab("history");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      setSendError(message === "bulk_send_timeout" ? t("bulkSend.pollTimeout") : t("bulkSend.sendError"));
     }
-    setTab("history");
+  }
+
+  function dismissResult() {
+    setResult(null);
+    setLastCompletedJobId(null);
+    setLastCompletedTemplateName("");
   }
 
   const isSending = bulkMutation.isPending;
@@ -182,6 +197,17 @@ export default function BulkSendPage() {
           </button>
         ))}
       </div>
+
+      {result && lastCompletedJobId && (
+        <BulkSendResultBanner
+          sent={result.sent}
+          failed={result.failed}
+          deliveryFailed={result.deliveryFailed}
+          jobId={lastCompletedJobId}
+          templateName={lastCompletedTemplateName}
+          onDismiss={dismissResult}
+        />
+      )}
 
       {tab === "send" && (
         <>
@@ -351,7 +377,7 @@ export default function BulkSendPage() {
                 </div>
                 <button
                   type="button"
-                  onClick={handleBulkSend}
+                  onClick={() => void handleBulkSend()}
                   disabled={!canSend}
                   className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -359,6 +385,12 @@ export default function BulkSendPage() {
                   {isSending ? t("bulkSend.sending") : t("bulkSend.startSend")}
                 </button>
               </div>
+
+              {sendError && (
+                <p className="px-5 py-3 text-sm text-red-600 border-b border-gray-100 bg-red-50">
+                  {sendError}
+                </p>
+              )}
 
               <TableContainer className="max-h-80 overflow-y-auto">
                 <table className="w-full min-w-[480px]">
@@ -424,35 +456,6 @@ export default function BulkSendPage() {
             </div>
           )}
 
-          {result && (
-            <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
-              <div className="flex flex-wrap items-center gap-6">
-                <div className="flex items-center gap-2 text-green-700">
-                  <CheckCircle2 className="w-5 h-5" />
-                  <span className="text-sm font-medium">{t("bulkSend.acceptedMeta", { count: result.sent })}</span>
-                </div>
-                {result.failed > 0 && (
-                  <div className="flex items-center gap-2 text-red-600">
-                    <XCircle className="w-5 h-5" />
-                    <span className="text-sm font-medium">{t("bulkSend.rejectedMeta", { count: result.failed })}</span>
-                  </div>
-                )}
-                {result.deliveryFailed > 0 && (
-                  <div className="flex items-center gap-2 text-orange-600">
-                    <XCircle className="w-5 h-5" />
-                    <span className="text-sm font-medium">{t("bulkSend.deliveryFailed", { count: result.deliveryFailed })}</span>
-                  </div>
-                )}
-              </div>
-              <p className="text-xs text-gray-400 border-t border-gray-100 pt-3">{t("bulkSend.resultHint")}</p>
-              {(result.failed > 0 || result.deliveryFailed > 0) && lastCompletedJobId && (
-                <BulkJobFailures
-                  jobId={lastCompletedJobId}
-                  templateName={selectedTemplate?.name ?? "campana"}
-                />
-              )}
-            </div>
-          )}
         </>
       )}
 

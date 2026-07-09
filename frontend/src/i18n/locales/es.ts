@@ -527,6 +527,12 @@ export const es = {
     rejectedMeta: "{{count}} rechazados por Meta",
     deliveryFailed: "{{count}} fallos de entrega",
     acceptedMeta: "{{count}} aceptados por Meta",
+    resultCompletedTitle: "Envío completado",
+    resultWithFailuresTitle: "Envío completado con errores",
+    resultWithFailuresHint:
+      "Algunos destinatarios no recibieron el mensaje. Revisa el detalle por teléfono y causa a continuación.",
+    dismissResult: "Cerrar resumen",
+    sendError: "No se pudo completar el envío masivo. Intenta de nuevo.",
     resultHint:
       "Aceptados: Meta recibió el mensaje. Fallos de entrega: el número no existe en WhatsApp, el contacto bloqueó el número, o hay restricciones de la cuenta. Los fallos de entrega pueden reportarse minutos después del envío.",
     historyTitle: "Historial de envíos",
@@ -543,7 +549,7 @@ export const es = {
     statusQueued: "En cola",
     failuresLoading: "Cargando detalle de fallos...",
     failuresLoadError: "No se pudo cargar el detalle de fallos.",
-    failuresEmpty: "No hay detalle de fallos guardado para esta campaña.",
+    failuresEmpty: "No hay detalle de fallos registrado.",
     failureKindSend: "Envío",
     failureKindDelivery: "Entrega",
     failureColCode: "Código",

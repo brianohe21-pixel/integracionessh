@@ -529,6 +529,12 @@ export const en: Messages = {
     rejectedMeta: "{{count}} rejected by Meta",
     deliveryFailed: "{{count}} delivery failures",
     acceptedMeta: "{{count}} accepted by Meta",
+    resultCompletedTitle: "Send completed",
+    resultWithFailuresTitle: "Send completed with errors",
+    resultWithFailuresHint:
+      "Some recipients did not receive the message. Review the per-phone details and causes below.",
+    dismissResult: "Dismiss summary",
+    sendError: "Bulk send could not be completed. Please try again.",
     resultHint:
       "Accepted: Meta received the message. Delivery failures: number not on WhatsApp, contact blocked your number, or account restrictions. Delivery failures may be reported minutes later.",
     historyTitle: "Send history",
@@ -545,7 +551,7 @@ export const en: Messages = {
     statusQueued: "Queued",
     failuresLoading: "Loading failure details...",
     failuresLoadError: "Could not load failure details.",
-    failuresEmpty: "No failure details stored for this campaign.",
+    failuresEmpty: "No failure details recorded.",
     failureKindSend: "Send",
     failureKindDelivery: "Delivery",
     failureColCode: "Code",
