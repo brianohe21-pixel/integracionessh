@@ -1,10 +1,11 @@
-import type { Bot, Conversation, FlowDefinition, InboundNormalized } from "../../types/index.js";
+import type { Bot, Conversation, FlowDefinition, InboundNormalized, Channel } from "../../types/index.js";
 
 export interface FlowExecutionContext {
   tenantId: string;
   botId: string;
   bot: Bot;
   conversation: Conversation;
+  channel: Channel;
   phoneNumberId: string;
   accessToken: string;
   customerPhone: string;
@@ -12,6 +13,7 @@ export interface FlowExecutionContext {
   inbound: InboundNormalized;
   flow: FlowDefinition;
   buttonReplyId?: string;
+  environment: string;
 }
 
 export interface NodeExecutionResult {

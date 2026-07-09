@@ -5,20 +5,28 @@ on:
     branches: [main, develop]
     paths:
       - "backend/**"
+      - "infrastructure/modules/lambda/main.tf"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
       - "package.json"
+      - ".github/workflows/backend.yml"
+      - ".github/scripts/deploy-lambdas.sh"
+      - ".github/scripts/validate-lambda-manifest.sh"
   pull_request:
     branches: [main, develop]
     paths:
       - "backend/**"
+      - "infrastructure/modules/lambda/main.tf"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
       - "package.json"
+      - ".github/workflows/backend.yml"
+      - ".github/scripts/deploy-lambdas.sh"
+      - ".github/scripts/validate-lambda-manifest.sh"
 
 jobs:
   test:
-    name: Type-check & Test
+    name: Type-check, Test & Build
     runs-on: ubuntu-latest
 
     steps:
@@ -41,34 +49,45 @@ jobs:
       - name: Run tests
         run: pnpm --filter chatbot-platform-backend run test
 
+      - name: Lint
+        run: pnpm --filter chatbot-platform-backend run lint
+
+      - name: Build
+        run: pnpm --filter chatbot-platform-backend run build
+        env:
+          NODE_ENV: production
+
+      - name: Validate Lambda manifest
+        run: bash .github/scripts/validate-lambda-manifest.sh
+
+      - name: Upload Lambda package
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main')
+        uses: actions/upload-artifact@v4
+        with:
+          name: lambda-package
+          path: |
+            backend/dist/functions.zip
+            backend/dist/lambda-manifest.json
+          retention-days: 1
+
   deploy-dev:
     name: Deploy to Dev
     runs-on: ubuntu-latest
     needs: test
     environment: dev
     concurrency:
-      group: lambda-deploy-dev
+      group: lambda-code-dev
       cancel-in-progress: false
     if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
 
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
+      - name: Download Lambda package
+        uses: actions/download-artifact@v4
         with:
-          node-version: "20"
-          cache: "pnpm"
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build
-        run: pnpm --filter chatbot-platform-backend run build
-        env:
-          NODE_ENV: production
+          name: lambda-package
+          path: backend/dist
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -78,17 +97,7 @@ jobs:
           aws-region: us-east-1
 
       - name: Deploy Lambdas
-        working-directory: backend
-        run: |
-          for fn in webhook process_message tenants bots conversations advisors contacts templates bulk_send process_bulk_send campaigns process_campaign metrics authorizer whatsapp_connect billing support_tickets admin public_api api_keys integrations process_integration automations process_automation knowledge process_knowledge meta_flows flows process_flow calling process_call; do
-            FUNCTION_NAME="chatbot-platform-dev-${fn//_/-}"
-            echo "Deploying $FUNCTION_NAME..."
-            aws lambda update-function-code \
-              --function-name "$FUNCTION_NAME" \
-              --zip-file fileb://dist/functions.zip \
-              --no-cli-pager
-            aws lambda wait function-updated --function-name "$FUNCTION_NAME"
-          done
+        run: bash .github/scripts/deploy-lambdas.sh dev
 
   deploy-prod:
     name: Deploy to Prod
@@ -96,28 +105,18 @@ jobs:
     needs: test
     environment: prod
     concurrency:
-      group: lambda-deploy-prod
+      group: lambda-code-prod
       cancel-in-progress: false
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
+      - name: Download Lambda package
+        uses: actions/download-artifact@v4
         with:
-          node-version: "20"
-          cache: "pnpm"
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build
-        run: pnpm --filter chatbot-platform-backend run build
-        env:
-          NODE_ENV: production
+          name: lambda-package
+          path: backend/dist
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -127,14 +126,4 @@ jobs:
           aws-region: us-east-1
 
       - name: Deploy Lambdas
-        working-directory: backend
-        run: |
-          for fn in webhook process_message tenants bots conversations advisors contacts templates bulk_send process_bulk_send campaigns process_campaign metrics authorizer whatsapp_connect billing support_tickets admin public_api api_keys integrations process_integration automations process_automation knowledge process_knowledge meta_flows flows process_flow calling process_call; do
-            FUNCTION_NAME="chatbot-platform-prod-${fn//_/-}"
-            echo "Deploying $FUNCTION_NAME..."
-            aws lambda update-function-code \
-              --function-name "$FUNCTION_NAME" \
-              --zip-file fileb://dist/functions.zip \
-              --no-cli-pager
-            aws lambda wait function-updated --function-name "$FUNCTION_NAME"
-          done
+        run: bash .github/scripts/deploy-lambdas.sh prod

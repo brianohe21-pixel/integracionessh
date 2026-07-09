@@ -1,35 +1,95 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { Conversation, HandoffMode, Message, WorkflowStatus } from "@/types";
+import type {
+  Channel,
+  Conversation,
+  ConversationsListResponse,
+  HandoffMode,
+  Message,
+  WorkflowStatus,
+} from "@/types";
+
+const CONVERSATIONS_PAGE_SIZE = 20;
+
+function isConversation(value: unknown): value is Conversation {
+  return (
+    value != null &&
+    typeof value === "object" &&
+    "conversationId" in value &&
+    typeof (value as Conversation).conversationId === "string"
+  );
+}
+
+function normalizeConversationsPage(raw: unknown): ConversationsListResponse {
+  if (Array.isArray(raw)) {
+    return { items: raw.filter(isConversation) };
+  }
+
+  if (raw != null && typeof raw === "object" && "items" in raw) {
+    const page = raw as ConversationsListResponse;
+    const items = Array.isArray(page.items) ? page.items.filter(isConversation) : [];
+    return {
+      items,
+      ...(page.nextCursor ? { nextCursor: page.nextCursor } : {}),
+    };
+  }
+
+  return { items: [] };
+}
+
+function conversationsListQueryKey(options?: {
+  botId?: string;
+  channel?: Channel;
+  handoffMode?: HandoffMode;
+  workflowStatus?: WorkflowStatus;
+  status?: "active" | "closed";
+}) {
+  return [
+    "conversations",
+    "list",
+    options?.botId ?? "all",
+    options?.channel ?? "all",
+    options?.handoffMode ?? "all",
+    options?.workflowStatus ?? "all",
+    options?.status ?? "all",
+  ] as const;
+}
+
+function fetchConversationsPage(
+  pageParam: string | undefined,
+  options?: {
+    botId?: string;
+    channel?: Channel;
+    handoffMode?: HandoffMode;
+    workflowStatus?: WorkflowStatus;
+    status?: "active" | "closed";
+  }
+): Promise<ConversationsListResponse> {
+  const params = new URLSearchParams({ limit: String(CONVERSATIONS_PAGE_SIZE) });
+  if (pageParam) params.set("cursor", pageParam);
+  if (options?.botId) params.set("botId", options.botId);
+  if (options?.channel) params.set("channel", options.channel);
+  if (options?.handoffMode) params.set("handoffMode", options.handoffMode);
+  if (options?.workflowStatus) params.set("workflowStatus", options.workflowStatus);
+  if (options?.status) params.set("status", options.status);
+  return api.get<unknown>(`/conversations?${params.toString()}`).then(normalizeConversationsPage);
+}
 
 export function useConversations(options?: {
   botId?: string;
+  channel?: Channel;
   handoffMode?: HandoffMode;
   workflowStatus?: WorkflowStatus;
   status?: "active" | "closed";
   assignedOnly?: boolean;
 }) {
-  const params = new URLSearchParams();
-  if (options?.botId) params.set("botId", options.botId);
-  if (options?.handoffMode) params.set("handoffMode", options.handoffMode);
-  if (options?.workflowStatus) params.set("workflowStatus", options.workflowStatus);
-  if (options?.status) params.set("status", options.status);
-  const qs = params.toString() ? `?${params.toString()}` : "";
-
-  return useQuery({
-    queryKey: [
-      "conversations",
-      "list",
-      options?.botId ?? "all",
-      options?.handoffMode ?? "all",
-      options?.workflowStatus ?? "all",
-    ],
-    queryFn: async () => {
-      const raw = await api.get<unknown>(`/conversations${qs}`);
-      return Array.isArray(raw) ? (raw as Conversation[]) : [];
-    },
+  return useInfiniteQuery({
+    queryKey: conversationsListQueryKey(options),
+    queryFn: ({ pageParam }) => fetchConversationsPage(pageParam, options),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) => last.nextCursor,
   });
 }
 
@@ -147,6 +207,23 @@ export function useResolveConversation() {
       qc.invalidateQueries({ queryKey: ["conversations"] });
       qc.invalidateQueries({ queryKey: ["conversation-messages", vars.conversationId] });
       qc.invalidateQueries({ queryKey: ["metrics", "marketing"] });
+    },
+  });
+}
+
+export function useDeleteConversation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { conversationId: string; botId: string }) => {
+      const params = new URLSearchParams({ botId: body.botId });
+      return api.delete(
+        `/conversations/${encodeURIComponent(body.conversationId)}?${params.toString()}`
+      );
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["conversations"] });
+      qc.removeQueries({ queryKey: ["conversation-messages", vars.conversationId] });
+      qc.invalidateQueries({ queryKey: ["metrics"] });
     },
   });
 }

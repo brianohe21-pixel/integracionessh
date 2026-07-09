@@ -12,6 +12,7 @@ import {
 } from "../dynamodb/conversation.repository.js";
 import type {
   Bot,
+  Channel,
   Conversation,
   FlowDefinition,
   FlowRun,
@@ -40,8 +41,13 @@ function buildContext(params: {
   inbound: InboundNormalized;
   flow: FlowDefinition;
   buttonReplyId?: string;
+  channel?: Channel;
 }): FlowExecutionContext {
-  return { ...params };
+  return {
+    ...params,
+    channel: params.channel ?? params.conversation.channel ?? "whatsapp",
+    environment: process.env.ENVIRONMENT ?? "dev",
+  };
 }
 
 async function runFromNode(
@@ -135,6 +141,7 @@ export async function startFlowRun(params: {
   customerPhone: string;
   replyToMessageId?: string;
   inbound: InboundNormalized;
+  channel?: Channel;
 }): Promise<FlowPipelineResult> {
   const now = new Date().toISOString();
   const entryId =
@@ -185,6 +192,7 @@ export async function advanceFlowRun(params: {
   replyToMessageId?: string;
   inbound: InboundNormalized;
   runId?: string;
+  channel?: Channel;
 }): Promise<FlowPipelineResult> {
   const run =
     (params.runId
@@ -229,6 +237,23 @@ export async function advanceFlowRun(params: {
     return runFromNode(run, flow, ctx);
   }
 
+  if (currentNode?.type === "book_appointment") {
+    const selection =
+      buttonReplyId ??
+      (params.inbound.text?.trim() && /^\d+$/.test(params.inbound.text.trim())
+        ? params.inbound.text.trim()
+        : params.inbound.interactive?.id);
+    if (selection || run.variables[`booking_${currentNode.id}_step`] === "confirm") {
+      const ctx = buildContext({
+        ...params,
+        flow,
+        ...(selection ? { buttonReplyId: selection } : {}),
+      });
+      return runFromNode(run, flow, ctx);
+    }
+    return { handled: true, halt: true };
+  }
+
   if (currentNode?.type === "meta_flow" && params.inbound.interactive?.kind === "nfm") {
     const nextEdge = flow.edges.find((e) => e.source === currentNode.id);
     const nextNodeId = nextEdge?.target ?? null;
@@ -250,7 +275,11 @@ export async function advanceFlowRun(params: {
     return { handled: true, halt: true };
   }
 
-  if (currentNode?.type === "buttons" || currentNode?.type === "meta_flow") {
+  const waitingNodeTypes = ["buttons", "meta_flow", "book_appointment"] as const;
+  if (
+    currentNode &&
+    waitingNodeTypes.includes(currentNode.type as (typeof waitingNodeTypes)[number])
+  ) {
     return { handled: true, halt: true };
   }
 

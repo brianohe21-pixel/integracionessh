@@ -10,8 +10,10 @@ import {
   BotMessageSquare,
   MessageSquare,
   BookUser,
+  UserPlus,
   LayoutTemplate,
   SendHorizonal,
+  LayoutGrid,
   BarChart3,
   Settings,
   LogOut,
@@ -26,6 +28,7 @@ import {
 } from "lucide-react";
 import { useAdminRole } from "@/hooks/useAdminRole";
 import { useTenantRole } from "@/hooks/useTenantRole";
+import { useTenantBranding } from "@/hooks/useTenantBranding";
 import { useSidebar } from "@/components/layout/SidebarContext";
 
 const memberNavItems = [
@@ -33,12 +36,14 @@ const memberNavItems = [
   { href: "/metrics", labelKey: "nav.metrics" as const, icon: BarChart3 },
   { href: "/conversations", labelKey: "nav.conversations" as const, icon: MessageSquare },
   { href: "/contacts", labelKey: "nav.contacts" as const, icon: BookUser },
+  { href: "/leads", labelKey: "nav.leads" as const, icon: UserPlus },
   { href: "/advisors", labelKey: "nav.advisors" as const, icon: Users },
   { href: "/templates", labelKey: "nav.templates" as const, icon: LayoutTemplate },
   { href: "/bulk-send", labelKey: "nav.bulkSend" as const, icon: SendHorizonal },
   { href: "/campaigns", labelKey: "nav.campaigns" as const, icon: Megaphone },
   { href: "/automations", labelKey: "nav.automations" as const, icon: Zap },
   { href: "/flows", labelKey: "nav.flows" as const, icon: GitBranch },
+  { href: "/apps", labelKey: "nav.apps" as const, icon: LayoutGrid },
   { href: "/developer", labelKey: "nav.developer" as const, icon: KeyRound },
   { href: "/support", labelKey: "nav.support" as const, icon: LifeBuoy },
   { href: "/billing", labelKey: "nav.billing" as const, icon: CreditCard },
@@ -73,6 +78,7 @@ function SidebarNav({
   const t = useT();
 
   async function handleSignOut() {
+    onNavigate?.();
     try {
       await signOutUser();
     } finally {
@@ -82,7 +88,7 @@ function SidebarNav({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+      <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain px-3 py-4">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = pathname.startsWith(item.href);
@@ -94,9 +100,10 @@ function SidebarNav({
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                 active
-                  ? "bg-indigo-600 text-white"
+                  ? "text-white"
                   : "text-gray-400 hover:bg-gray-800 hover:text-white"
               )}
+              style={active ? { backgroundColor: "var(--brand-primary, #4f46e5)" } : undefined}
             >
               <Icon className="h-4 w-4 flex-shrink-0" />
               {t(item.labelKey)}
@@ -105,7 +112,7 @@ function SidebarNav({
         })}
       </nav>
 
-      <div className="shrink-0 space-y-2 border-t border-gray-800 px-3 py-4">
+      <div className="shrink-0 space-y-2 border-t border-gray-800 bg-gray-900 px-3 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <div className="flex gap-3 px-3 text-xs text-gray-500">
           <a href="/legal/terms" className="hover:text-gray-300">
             {t("legal.footerTerms")}
@@ -132,6 +139,7 @@ export function Sidebar() {
   const { isOpen, close } = useSidebar();
   const { isAdmin, loading: adminLoading } = useAdminRole();
   const { isAdvisor, loading: roleLoading } = useTenantRole();
+  const { data: branding } = useTenantBranding();
 
   const loading = adminLoading || roleLoading;
   const navItems = loading
@@ -142,13 +150,22 @@ export function Sidebar() {
         ? advisorNavItems
         : memberNavItems;
 
+  const displayName = branding?.brandName ?? t("common.appName");
+
   const brand = (
     <div className="flex shrink-0 items-center gap-3 border-b border-gray-800 px-6 py-5">
-      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600">
-        <BotMessageSquare className="h-5 w-5" />
+      <div
+        className="flex h-9 w-9 items-center justify-center rounded-xl overflow-hidden"
+        style={{ backgroundColor: "var(--brand-primary, #4f46e5)" }}
+      >
+        {branding?.logoUrl ? (
+          <img src={branding.logoUrl} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <BotMessageSquare className="h-5 w-5 text-white" />
+        )}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold leading-tight">{t("common.appName")}</p>
+        <p className="text-sm font-semibold leading-tight">{displayName}</p>
         <p className="text-xs text-gray-400">{t("common.appTagline")}</p>
       </div>
       <button
@@ -164,7 +181,7 @@ export function Sidebar() {
 
   return (
     <>
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col overflow-hidden bg-gray-900 text-white lg:flex">
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex flex-col overflow-hidden bg-gray-900 text-white lg:flex">
         {brand}
         <SidebarNav navItems={navItems} />
       </aside>
@@ -180,7 +197,7 @@ export function Sidebar() {
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex h-screen w-72 flex-col overflow-hidden bg-gray-900 text-white transition-transform duration-200 lg:hidden",
+          "fixed inset-y-0 left-0 z-50 flex h-[100dvh] w-72 min-h-0 flex-col overflow-hidden bg-gray-900 text-white transition-transform duration-200 lg:hidden",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >

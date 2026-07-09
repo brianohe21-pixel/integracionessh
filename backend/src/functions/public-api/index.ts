@@ -123,6 +123,22 @@ function maskPhone(phone: string): string {
   return phone.slice(0, 3) + "***" + phone.slice(-3);
 }
 
+const MAX_ERROR_STACK_LENGTH = 4000;
+
+function captureError(error: unknown): { errorMessage?: string; errorStack?: string } {
+  if (!(error instanceof Error)) {
+    return { errorMessage: String(error) };
+  }
+  return {
+    errorMessage: error.message,
+    ...(error.stack ? { errorStack: error.stack.slice(0, MAX_ERROR_STACK_LENGTH) } : {}),
+  };
+}
+
+function resolveEndpoint(event: APIGatewayProxyEventV2): string {
+  return event.rawPath ?? event.requestContext.http.path ?? "unknown";
+}
+
 function extractApiKey(event: APIGatewayProxyEventV2): string | null {
   const header =
     event.headers?.["x-api-key"] ??
@@ -208,6 +224,8 @@ async function logUsage(params: {
   messageId?: string;
   callId?: string;
   maskedPhone?: string;
+  errorMessage?: string;
+  errorStack?: string;
 }): Promise<void> {
   const now = new Date().toISOString();
   await Promise.allSettled([
@@ -223,9 +241,46 @@ async function logUsage(params: {
       ...(params.messageId ? { messageId: params.messageId } : {}),
       ...(params.callId ? { callId: params.callId } : {}),
       ...(params.maskedPhone ? { maskedPhone: params.maskedPhone } : {}),
+      ...(params.errorMessage ? { errorMessage: params.errorMessage } : {}),
+      ...(params.errorStack ? { errorStack: params.errorStack } : {}),
     }),
     updateApiKey(params.hashedKey, { lastUsedAt: now, updatedAt: now }),
   ]);
+}
+
+async function tryAuthenticateForLogging(
+  event: APIGatewayProxyEventV2
+): Promise<Pick<AuthResult, "apiKey" | "hashedKey"> | null> {
+  const rawKey = extractApiKey(event);
+  if (!rawKey) return null;
+  const hashedKey = hashApiKey(rawKey);
+  const apiKey = await getApiKeyByHash(hashedKey);
+  if (!apiKey?.enabled) return null;
+  return { apiKey, hashedKey };
+}
+
+async function logUnhandledApiError(
+  event: APIGatewayProxyEventV2,
+  error: unknown,
+  durationMs = 0
+): Promise<void> {
+  const auth = await tryAuthenticateForLogging(event);
+  if (!auth) return;
+
+  const statusCode =
+    typeof (error as { statusCode?: number }).statusCode === "number"
+      ? (error as { statusCode: number }).statusCode
+      : 500;
+
+  await logUsage({
+    apiKey: auth.apiKey,
+    hashedKey: auth.hashedKey,
+    endpoint: resolveEndpoint(event),
+    method: event.requestContext.http.method,
+    statusCode,
+    durationMs,
+    ...captureError(error),
+  });
 }
 
 async function loadActiveBot(apiKey: ApiKey) {
@@ -254,7 +309,7 @@ async function handleSendMessage(
 
   const { bot, accessToken } = await loadActiveBot(apiKey);
   let messageId: string | null = null;
-  let statusCode = 200;
+  const statusCode = 200;
 
   try {
     const data = parsed.data;
@@ -284,6 +339,8 @@ async function handleSendMessage(
     }
     await incrementMessages(apiKey.tenantId);
   } catch (err) {
+    const loggedError = err as Error & { __apiUsageLogged?: boolean };
+    loggedError.__apiUsageLogged = true;
     await logUsage({
       apiKey,
       hashedKey,
@@ -292,8 +349,9 @@ async function handleSendMessage(
       statusCode: 502,
       durationMs: Date.now() - startMs,
       maskedPhone: maskPhone(parsed.data.to),
+      ...captureError(err),
     });
-    throw err;
+    throw loggedError;
   }
 
   const now = new Date().toISOString();
@@ -587,6 +645,7 @@ export async function handler(
 ): Promise<APIGatewayProxyResultV2> {
   const method = event.requestContext.http.method;
   const path = event.rawPath ?? "";
+  const startedAt = Date.now();
 
   if (method === "OPTIONS") {
     return { statusCode: 204, headers: CORS_HEADERS, body: "" };
@@ -628,6 +687,9 @@ export async function handler(
       body: JSON.stringify({ error: "Route not found" }),
     };
   } catch (error) {
+    if (!(error as { __apiUsageLogged?: boolean }).__apiUsageLogged) {
+      await logUnhandledApiError(event, error, Date.now() - startedAt);
+    }
     return handleError(error);
   }
 }

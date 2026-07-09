@@ -23,9 +23,13 @@ const UpdateWebhookSchema = z.object({
         "conversation.handoff",
         "message.sent",
         "flow.completed",
+        "lead.created",
+        "lead.converted",
         "call.connect",
         "call.status",
         "call.terminated",
+        "booking.created",
+        "booking.cancelled",
       ])
     )
     .min(1),

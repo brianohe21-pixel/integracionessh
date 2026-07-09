@@ -42,6 +42,14 @@ output "contacts_function_arn" {
   value = aws_lambda_function.functions["contacts"].arn
 }
 
+output "leads_invoke_arn" {
+  value = aws_lambda_function.functions["leads"].invoke_arn
+}
+
+output "leads_function_arn" {
+  value = aws_lambda_function.functions["leads"].arn
+}
+
 output "templates_invoke_arn" {
   value = aws_lambda_function.functions["templates"].invoke_arn
 }
@@ -74,12 +82,20 @@ output "whatsapp_connect_function_arn" {
   value = aws_lambda_function.functions["whatsapp_connect"].arn
 }
 
-output "authorizer_invoke_arn" {
-  value = aws_lambda_function.functions["authorizer"].invoke_arn
+output "instagram_connect_invoke_arn" {
+  value = aws_lambda_function.functions["instagram_connect"].invoke_arn
 }
 
-output "authorizer_arn" {
-  value = aws_lambda_function.functions["authorizer"].arn
+output "instagram_connect_function_arn" {
+  value = aws_lambda_function.functions["instagram_connect"].arn
+}
+
+output "webchat_invoke_arn" {
+  value = aws_lambda_function.functions["webchat"].invoke_arn
+}
+
+output "webchat_function_arn" {
+  value = aws_lambda_function.functions["webchat"].arn
 }
 
 output "campaigns_invoke_arn" {
@@ -176,4 +192,28 @@ output "calling_invoke_arn" {
 
 output "calling_function_arn" {
   value = aws_lambda_function.functions["calling"].arn
+}
+
+output "realtime_invoke_arn" {
+  value = aws_lambda_function.functions["realtime"].invoke_arn
+}
+
+output "realtime_function_arn" {
+  value = aws_lambda_function.functions["realtime"].arn
+}
+
+output "calendar_invoke_arn" {
+  value = aws_lambda_function.functions["calendar"].invoke_arn
+}
+
+output "calendar_function_arn" {
+  value = aws_lambda_function.functions["calendar"].arn
+}
+
+output "public_calendar_invoke_arn" {
+  value = aws_lambda_function.functions["public_calendar"].invoke_arn
+}
+
+output "public_calendar_function_arn" {
+  value = aws_lambda_function.functions["public_calendar"].arn
 }

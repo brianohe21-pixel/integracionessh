@@ -9,6 +9,9 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
             ChatBot Platform
           </Link>
           <nav className="flex gap-4 text-sm text-gray-600">
+            <Link href="/docs/api" className="hover:text-gray-900">
+              API
+            </Link>
             <Link href="/legal/terms" className="hover:text-gray-900">
               Terms
             </Link>

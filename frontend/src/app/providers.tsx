@@ -5,6 +5,8 @@ import { useState } from "react";
 import { configureAmplify } from "@/lib/amplify";
 import { I18nProvider } from "@/i18n/context";
 import { HtmlLang } from "@/components/layout/HtmlLang";
+import { TenantBrandingProvider } from "@/components/branding/TenantBrandingProvider";
+import { BrandDocumentTitle } from "@/components/branding/BrandDocumentTitle";
 
 if (typeof window !== "undefined") {
   configureAmplify();
@@ -26,7 +28,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <I18nProvider>
       <HtmlLang />
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      <QueryClientProvider client={queryClient}>
+        <TenantBrandingProvider>
+          <BrandDocumentTitle />
+          {children}
+        </TenantBrandingProvider>
+      </QueryClientProvider>
     </I18nProvider>
   );
 }

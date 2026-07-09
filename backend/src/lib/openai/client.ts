@@ -1,7 +1,19 @@
 import OpenAI from "openai";
 import type { Bot, ChatCompletionResult, Message } from "../../types/index.js";
 import { messageRequestsHandoff } from "../advisor/keywords.js";
+import { getCalendarConfig } from "../dynamodb/calendar-config.repository.js";
+import {
+  createBookingForBot,
+  formatBookingConfirmation,
+  getBookingSlotsForDate,
+  updateBookingStatus,
+} from "../calendar/calendar.service.js";
 import { retrieveContext } from "../knowledge/retrieve.js";
+
+export interface ChatCalendarContext {
+  contactPhone: string;
+  conversationId: string;
+}
 
 let openaiClient: OpenAI | null = null;
 
@@ -60,7 +72,8 @@ export async function generateChatResponse(
   conversationHistory: Message[],
   userMessage: string,
   apiKey: string,
-  tenantId?: string
+  tenantId?: string,
+  calendarContext?: ChatCalendarContext
 ): Promise<ChatCompletionResult> {
   if (messageRequestsHandoff(userMessage)) {
     return { reply: null, handoff: true, handoffReason: "El cliente solicitó un asesor" };
@@ -73,13 +86,23 @@ export async function generateChatResponse(
     knowledgeContext = await retrieveContext(tenantId, bot.botId, userMessage, apiKey);
   }
 
+  const calendarConfig =
+    tenantId && calendarContext
+      ? await getCalendarConfig(tenantId, bot.botId)
+      : null;
+  const calendarEnabled = calendarConfig?.enabled ?? false;
+
   const basePrompt = bot.systemPrompt ?? "";
   const contextBlock = knowledgeContext
     ? `\n\nContexto del negocio:\n${knowledgeContext}`
     : "";
+  const calendarBlock = calendarEnabled
+    ? "\n\nPuedes agendar citas con list_available_slots y create_booking. Usa cancel_booking si el cliente cancela."
+    : "";
   const systemPrompt =
     basePrompt +
     contextBlock +
+    calendarBlock +
     "\n\nSi el cliente necesita hablar con un asesor, usa la herramienta transfer_to_human.";
   const model = bot.model ?? "gpt-4o-mini";
   const temperature = bot.temperature ?? 0.7;
@@ -98,32 +121,131 @@ export async function generateChatResponse(
     { role: "user", content: userMessage },
   ];
 
+  const tools: OpenAI.ChatCompletionTool[] = [
+    {
+      type: "function",
+      function: {
+        name: "transfer_to_human",
+        description: "Transfiere la conversación a un asesor",
+        parameters: {
+          type: "object",
+          properties: {
+            reason: { type: "string", description: "Por qué el cliente necesita un asesor" },
+          },
+          required: ["reason"],
+        },
+      },
+    },
+  ];
+
+  if (calendarEnabled) {
+    tools.push(
+      {
+        type: "function",
+        function: {
+          name: "list_available_slots",
+          description: "Lista horarios disponibles para una fecha (YYYY-MM-DD)",
+          parameters: {
+            type: "object",
+            properties: {
+              date: { type: "string", description: "Fecha ISO YYYY-MM-DD" },
+            },
+            required: ["date"],
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "create_booking",
+          description: "Crea una reserva en un horario disponible",
+          parameters: {
+            type: "object",
+            properties: {
+              startAt: { type: "string", description: "Inicio en ISO 8601 UTC" },
+              contactName: { type: "string", description: "Nombre del contacto" },
+            },
+            required: ["startAt"],
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "cancel_booking",
+          description: "Cancela una reserva existente",
+          parameters: {
+            type: "object",
+            properties: {
+              bookingId: { type: "string", description: "ID de la reserva" },
+            },
+            required: ["bookingId"],
+          },
+        },
+      }
+    );
+  }
+
   const completion = await client.chat.completions.create({
     model,
     messages,
     temperature,
     max_tokens: maxTokens,
-    tools: [
-      {
-        type: "function",
-        function: {
-          name: "transfer_to_human",
-          description: "Transfiere la conversación a un asesor",
-          parameters: {
-            type: "object",
-            properties: {
-              reason: { type: "string", description: "Por qué el cliente necesita un asesor" },
-            },
-            required: ["reason"],
-          },
-        },
-      },
-    ],
+    tools,
     tool_choice: "auto",
   });
 
   const choice = completion.choices[0]?.message;
   const toolCall = choice?.tool_calls?.[0];
+
+  if (toolCall?.type === "function" && tenantId && calendarContext && calendarEnabled) {
+    if (toolCall.function.name === "list_available_slots") {
+      const parsed = JSON.parse(toolCall.function.arguments) as { date?: string };
+      if (parsed.date) {
+        const slots = await getBookingSlotsForDate({
+          tenantId,
+          botId: bot.botId,
+          isoDate: parsed.date,
+        });
+        const slotText =
+          slots.length === 0
+            ? "No hay horarios disponibles."
+            : slots.map((s) => `${s.label} (${s.startAt})`).join(", ");
+        return { reply: slotText, handoff: false };
+      }
+    }
+    if (toolCall.function.name === "create_booking") {
+      const parsed = JSON.parse(toolCall.function.arguments) as {
+        startAt?: string;
+        contactName?: string;
+      };
+      if (parsed.startAt) {
+        const booking = await createBookingForBot({
+          tenantId,
+          botId: bot.botId,
+          startAt: parsed.startAt,
+          contactPhone: calendarContext.contactPhone,
+          conversationId: calendarContext.conversationId,
+          ...(parsed.contactName ? { contactName: parsed.contactName } : {}),
+          source: "openai",
+        });
+        const label = formatBookingConfirmation(booking, calendarConfig!);
+        return { reply: `Cita agendada para ${label}. ID: ${booking.bookingId}`, handoff: false };
+      }
+    }
+    if (toolCall.function.name === "cancel_booking") {
+      const parsed = JSON.parse(toolCall.function.arguments) as { bookingId?: string };
+      if (parsed.bookingId) {
+        await updateBookingStatus({
+          tenantId,
+          botId: bot.botId,
+          bookingId: parsed.bookingId,
+          status: "cancelled",
+        });
+        return { reply: "La reserva fue cancelada.", handoff: false };
+      }
+    }
+  }
 
   if (toolCall?.type === "function" && toolCall.function.name === "transfer_to_human") {
     let reason = "El cliente solicitó un asesor";

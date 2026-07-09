@@ -105,6 +105,18 @@ variable "ops_alert_email" {
   default = ""
 }
 
+variable "ops_alert_emails" {
+  type        = list(string)
+  default     = []
+  description = "Operational alert recipients. Falls back to ops_alert_email when empty. Each address must confirm the AWS SNS subscription email after deploy."
+}
+
+variable "ses_from_email" {
+  type        = string
+  default     = ""
+  description = "Verified SES sender for registration admin notifications. Must be verified in SES before deploy."
+}
+
 variable "enable_monitoring" {
   type        = bool
   default     = false
@@ -152,4 +164,21 @@ variable "wompi_api_base" {
 variable "wompi_checkout_url" {
   type    = string
   default = "https://checkout.wompi.co/p/"
+}
+
+variable "livekit_url" {
+  type    = string
+  default = ""
+}
+
+variable "livekit_api_key" {
+  type      = string
+  default   = ""
+  sensitive = true
+}
+
+variable "livekit_api_secret" {
+  type      = string
+  default   = ""
+  sensitive = true
 }

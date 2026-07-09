@@ -7,12 +7,25 @@ export type SubscriptionStatus =
   | "canceled"
   | "trialing";
 
+export interface TenantBranding {
+  brandName?: string;
+  primaryColor?: string;
+  logoS3Key?: string;
+}
+
+export interface ResolvedTenantBranding {
+  brandName: string;
+  primaryColor: string;
+  logoUrl?: string;
+}
+
 export interface Tenant {
   tenantId: string;
   name: string;
   email: string;
   plan: TenantPlan;
   status: "active" | "suspended" | "pending";
+  branding?: TenantBranding;
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   subscriptionStatus?: SubscriptionStatus;
@@ -30,6 +43,8 @@ export interface MonthlyUsage {
   campaignsStarted: number;
 }
 
+export type Channel = "whatsapp" | "instagram" | "webchat";
+
 export interface Bot {
   botId: string;
   tenantId: string;
@@ -44,6 +59,12 @@ export interface Bot {
   knowledgeEnabled?: boolean;
   phoneNumberId: string;
   whatsappBusinessAccountId: string;
+  instagramPageId?: string;
+  instagramAccountId?: string;
+  webchatEnabled?: boolean;
+  webchatWidgetKey?: string;
+  webchatVoiceEnabled?: boolean;
+  webchatVideoEnabled?: boolean;
   status: "active" | "inactive";
   createdAt: string;
   updatedAt: string;
@@ -59,6 +80,8 @@ export interface Conversation {
   conversationId: string;
   tenantId: string;
   botId: string;
+  channel: Channel;
+  participantId: string;
   phoneNumber: string;
   contactName?: string;
   status: "active" | "closed";
@@ -84,7 +107,11 @@ export interface Conversation {
 
 export type MessageRole = "user" | "assistant" | "advisor" | "system";
 
-export type MessageSource = "panel" | "whatsapp_inbound";
+export type MessageSource =
+  | "panel"
+  | "whatsapp_inbound"
+  | "instagram_inbound"
+  | "webchat_inbound";
 
 export type MessageType =
   | "text"
@@ -94,7 +121,28 @@ export type MessageType =
   | "audio"
   | "video"
   | "document"
-  | "location";
+  | "location"
+  | "call_invite"
+  | "call_ended";
+
+export type LiveKitCallStatus = "ringing" | "active" | "ended" | "missed" | "declined";
+
+export interface LiveKitCall {
+  callId: string;
+  tenantId: string;
+  botId: string;
+  conversationId: string;
+  channel: "webchat";
+  roomName: string;
+  status: LiveKitCallStatus;
+  initiatedBy: "advisor" | "visitor" | "member";
+  initiatedById: string;
+  videoEnabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+  startedAt?: string;
+  endedAt?: string;
+}
 
 export interface Message {
   messageId: string;
@@ -102,11 +150,13 @@ export interface Message {
   tenantId: string;
   role: MessageRole;
   content: string;
+  channel?: Channel;
   messageType?: MessageType;
   metadata?: Record<string, unknown>;
   source?: MessageSource;
   sentByAdvisorId?: string;
   whatsappMessageId?: string;
+  externalMessageId?: string | undefined;
   timestamp: string;
 }
 
@@ -127,12 +177,13 @@ export type MarketingConsent = "unknown" | "opt_in" | "opt_out";
 
 export type ConsentSource = "manual" | "import" | "whatsapp_keyword" | "panel";
 
-export type ContactSource = "sync" | "manual" | "import";
+export type ContactSource = "sync" | "manual" | "import" | "lead_capture";
 
 export interface Contact {
   phoneNumber: string;
   tenantId: string;
   displayName?: string;
+  email?: string;
   tags: string[];
   marketingConsent: MarketingConsent;
   consentAt?: string;
@@ -142,9 +193,54 @@ export interface Contact {
   lastSeenAt: string;
   lastBotId?: string;
   messageCount?: number;
+  leadId?: string;
   source: ContactSource;
   createdAt: string;
   updatedAt: string;
+}
+
+export type LeadStatus = "new" | "contacted" | "qualified" | "converted" | "lost";
+
+export interface Lead {
+  leadId: string;
+  tenantId: string;
+  botId: string;
+  phone: string;
+  conversationId: string;
+  metaFlowId: string;
+  flowResponseId: string;
+  name?: string;
+  email?: string;
+  status: LeadStatus;
+  tags: string[];
+  notes?: string;
+  assignedAdvisorId?: string;
+  convertedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LeadsListResponse {
+  items: Lead[];
+  nextCursor?: string;
+}
+
+export interface LeadMetrics {
+  total: number;
+  byStatus: Record<LeadStatus, number>;
+  capturedToday: number;
+  capturedThisWeek: number;
+  conversionRate: number;
+  averageConversionHours: number;
+  topBots: Array<{ botId: string; count: number }>;
+  topFlows: Array<{ metaFlowId: string; count: number }>;
+  funnel: {
+    new: number;
+    contacted: number;
+    qualified: number;
+    converted: number;
+    lost: number;
+  };
 }
 
 export interface DynamoDBItem {
@@ -307,7 +403,69 @@ export interface InboundNormalized {
     payload?: string;
     responseJson?: string;
   };
-  raw: WhatsAppMessage;
+  raw?: unknown;
+}
+
+export interface InstagramMessage {
+  mid: string;
+  text?: string;
+  attachments?: Array<{
+    type: string;
+    payload?: { url?: string };
+  }>;
+}
+
+export interface InstagramWebhookEvent {
+  object: string;
+  entry: Array<{
+    id: string;
+    messaging?: Array<{
+      sender: { id: string };
+      recipient: { id: string };
+      timestamp: number;
+      message?: InstagramMessage;
+    }>;
+  }>;
+}
+
+export interface WebChatInboundPayload {
+  messageId: string;
+  text: string;
+  sessionId: string;
+}
+
+export interface WhatsAppInboundPayload {
+  phoneNumberId: string;
+  message: WhatsAppMessage;
+  contact: WhatsAppContact;
+}
+
+export interface InstagramInboundPayload {
+  pageId: string;
+  senderId: string;
+  message: InstagramMessage;
+}
+
+export interface InboundQueueMessage {
+  channel: Channel;
+  tenantId: string;
+  botId: string;
+  participantId: string;
+  conversationKey: string;
+  displayName?: string | undefined;
+  replyToExternalId?: string | undefined;
+  payload: WhatsAppInboundPayload | InstagramInboundPayload | WebChatInboundPayload;
+}
+
+export interface WebChatSession {
+  sessionId: string;
+  tenantId: string;
+  botId: string;
+  conversationId: string;
+  visitorName?: string;
+  createdAt: string;
+  lastActivityAt: string;
+  ttl: number;
 }
 
 export interface WhatsAppStatusError {
@@ -574,6 +732,35 @@ export interface MarketingMetrics {
   };
 }
 
+export type CallingMetricsHealth = "healthy" | "at_risk" | "insufficient_data";
+
+export interface CallingMetricsSummary {
+  totalCalls: number;
+  outboundAttempts: number;
+  outboundPickedUp: number;
+  outboundMissed: number;
+  inboundCalls: number;
+  inboundAnswered: number;
+  pickupRate: number;
+  inboundAnswerRate: number;
+  averageDurationSeconds: number;
+  health: CallingMetricsHealth;
+}
+
+export interface CallingMetricsBotRow extends CallingMetricsSummary {
+  botId: string;
+  botName: string;
+}
+
+export interface CallingMetrics {
+  from: string;
+  to: string;
+  windowDays: number;
+  metaPickupThreshold: number;
+  summary: CallingMetricsSummary;
+  byBot: CallingMetricsBotRow[];
+}
+
 export interface ApiKey {
   keyId: string;
   tenantId: string;
@@ -602,6 +789,8 @@ export interface ApiKeyUsageLog {
   messageId?: string;
   callId?: string;
   maskedPhone?: string;
+  errorMessage?: string;
+  errorStack?: string;
   createdAt: string;
 }
 
@@ -647,9 +836,106 @@ export type IntegrationEvent =
   | "conversation.handoff"
   | "message.sent"
   | "flow.completed"
+  | "lead.created"
+  | "lead.converted"
   | "call.connect"
   | "call.status"
-  | "call.terminated";
+  | "call.terminated"
+  | "booking.created"
+  | "booking.cancelled";
+
+export type Weekday =
+  | "monday"
+  | "tuesday"
+  | "wednesday"
+  | "thursday"
+  | "friday"
+  | "saturday"
+  | "sunday";
+
+export interface TimeRange {
+  start: string;
+  end: string;
+}
+
+export type WeeklySchedule = Record<Weekday, TimeRange[]>;
+
+export type CalendarProviderType = "native";
+
+export type CalendarReminderChannel = "whatsapp_text" | "whatsapp_template";
+export type BookingReminderStatus = "scheduled" | "sent" | "skipped" | "cancelled";
+
+export interface CalendarConfig {
+  tenantId: string;
+  botId: string;
+  enabled: boolean;
+  timezone: string;
+  slotDurationMinutes: number;
+  bufferMinutes: number;
+  maxAdvanceDays: number;
+  minNoticeHours: number;
+  weeklySchedule: WeeklySchedule;
+  provider: CalendarProviderType;
+  calendarPublicKey?: string;
+  publicLinkEnabled?: boolean;
+  reminderEnabled?: boolean;
+  reminderMinutesBefore?: number;
+  reminderChannel?: CalendarReminderChannel;
+  reminderMessage?: string;
+  reminderTemplateName?: string;
+  reminderTemplateLanguage?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type BookingStatus = "confirmed" | "cancelled" | "completed" | "no_show";
+export type BookingSource = "flow" | "openai" | "manual" | "public_link";
+
+export interface Booking {
+  bookingId: string;
+  tenantId: string;
+  botId: string;
+  contactPhone: string;
+  contactName?: string;
+  conversationId?: string;
+  startAt: string;
+  endAt: string;
+  status: BookingStatus;
+  source: BookingSource;
+  notes?: string;
+  externalEventId?: string;
+  reminderScheduleName?: string;
+  reminderSentAt?: string;
+  reminderStatus?: BookingReminderStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AvailableSlot {
+  startAt: string;
+  endAt: string;
+  label: string;
+}
+
+export const WEEKDAYS: Weekday[] = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+];
+
+export const DEFAULT_WEEKLY_SCHEDULE: WeeklySchedule = {
+  monday: [{ start: "09:00", end: "17:00" }],
+  tuesday: [{ start: "09:00", end: "17:00" }],
+  wednesday: [{ start: "09:00", end: "17:00" }],
+  thursday: [{ start: "09:00", end: "17:00" }],
+  friday: [{ start: "09:00", end: "17:00" }],
+  saturday: [],
+  sunday: [],
+};
 
 export type MetaFlowStatus = "DRAFT" | "PUBLISHED" | "DEPRECATED";
 
@@ -675,6 +961,7 @@ export interface FlowResponse {
   phone: string;
   metaFlowId: string;
   responseJson: Record<string, unknown>;
+  leadId?: string;
   createdAt: string;
 }
 
@@ -689,6 +976,7 @@ export type FlowNodeType =
   | "delay"
   | "set_variable"
   | "http_request"
+  | "book_appointment"
   | "end";
 
 export type FlowTriggerType = "keyword" | "first_message" | "any_message";
@@ -715,6 +1003,8 @@ export interface FlowNodeData {
   httpMethod?: "GET" | "POST";
   httpBody?: string;
   haltPipeline?: boolean;
+  confirmationMessage?: string;
+  maxDaysToShow?: number;
 }
 
 export interface FlowNode {
@@ -795,7 +1085,7 @@ export interface IntegrationDelivery {
   createdAt: string;
 }
 
-export type AutomationTrigger = "keyword" | "first_message" | "schedule";
+export type AutomationTrigger = "keyword" | "first_message" | "schedule" | "flow_completed";
 export type AutomationAction = "send_text" | "send_template" | "tag_contact" | "handoff";
 export type AutomationMatchMode = "contains" | "exact";
 
@@ -809,6 +1099,7 @@ export interface AutomationRule {
   trigger: AutomationTrigger;
   keywords?: string[];
   matchMode?: AutomationMatchMode;
+  metaFlowId?: string;
   scheduledAt?: string;
   targetPhones?: string[];
   targetTags?: string[];

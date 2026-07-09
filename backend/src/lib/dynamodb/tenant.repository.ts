@@ -7,6 +7,7 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 import { docClient, TABLE_NAME } from "./client.js";
 import type { Tenant } from "../../types/index.js";
+import { notifyAdminsOfNewRegistration } from "../email/registration-admin-notify.js";
 
 const keys = (tenantId: string) => ({
   PK: `TENANT#${tenantId}`,
@@ -103,6 +104,12 @@ export async function ensureTenant(
   };
 
   await createTenant(tenant);
+  void notifyAdminsOfNewRegistration(tenant).catch((error) => {
+    console.error("Failed to notify admins of new registration", {
+      tenantId: tenant.tenantId,
+      error,
+    });
+  });
   return tenant;
 }
 

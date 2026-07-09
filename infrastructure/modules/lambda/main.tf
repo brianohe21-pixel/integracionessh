@@ -134,6 +134,14 @@ resource "aws_iam_role_policy" "lambda_permissions" {
         Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
         Resource = "arn:aws:logs:*:*:*"
       },
+      {
+        Effect = "Allow"
+        Action = [
+          "ses:SendEmail",
+          "ses:SendRawEmail",
+        ]
+        Resource = "*"
+      },
     ]
   })
 }
@@ -149,6 +157,8 @@ locals {
   automations_function_arn  = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.automations_function_name}"
   flows_function_name       = "${var.project}-${var.environment}-flows"
   flows_function_arn        = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.flows_function_name}"
+  calendar_function_name    = "${var.project}-${var.environment}-calendar"
+  calendar_function_arn     = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.calendar_function_name}"
 
   functions = {
     webhook = {
@@ -157,10 +167,11 @@ locals {
       timeout     = 30
       memory      = 256
       environment = {
-        WHATSAPP_VERIFY_TOKEN    = var.whatsapp_verify_token
-        SQS_QUEUE_URL            = var.sqs_queue_url
-        CALL_EVENTS_QUEUE_URL    = var.call_events_sqs_queue_url
-        TABLE_NAME               = var.dynamodb_table_name
+        WHATSAPP_VERIFY_TOKEN = var.whatsapp_verify_token
+        WHATSAPP_APP_SECRET   = var.whatsapp_app_secret != "" ? var.whatsapp_app_secret : var.meta_app_secret
+        SQS_QUEUE_URL         = var.sqs_queue_url
+        CALL_EVENTS_QUEUE_URL = var.call_events_sqs_queue_url
+        TABLE_NAME            = var.dynamodb_table_name
       }
     }
     process_message = {
@@ -170,7 +181,6 @@ locals {
       memory      = 512
       environment = {
         TABLE_NAME                = var.dynamodb_table_name
-        OPENAI_MODEL              = "gpt-4o-mini"
         ENVIRONMENT               = var.environment
         INTEGRATION_SQS_QUEUE_URL = var.integration_sqs_queue_url
         MEDIA_BUCKET              = var.media_bucket_name
@@ -182,8 +192,11 @@ locals {
       timeout     = 30
       memory      = 256
       environment = {
-        TABLE_NAME  = var.dynamodb_table_name
-        ENVIRONMENT = var.environment
+        TABLE_NAME                = var.dynamodb_table_name
+        ENVIRONMENT               = var.environment
+        FRONTEND_URL              = var.frontend_url
+        SES_FROM_EMAIL            = var.ses_from_email
+        ADMIN_NOTIFICATION_EMAILS = join(",", var.admin_notification_emails)
       }
     }
     bots = {
@@ -219,6 +232,16 @@ locals {
     contacts = {
       handler     = "contacts/index.handler"
       description = "CRUD API for tenant contacts and compliance"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME  = var.dynamodb_table_name
+        ENVIRONMENT = var.environment
+      }
+    }
+    leads = {
+      handler     = "leads/index.handler"
+      description = "CRUD API for lead pipeline and conversion"
       timeout     = 30
       memory      = 256
       environment = {
@@ -310,16 +333,6 @@ locals {
         STRIPE_PRICE_ENTERPRISE       = var.stripe_price_enterprise
       }
     }
-    authorizer = {
-      handler     = "authorizer/index.handler"
-      description = "Cognito JWT authorizer for API Gateway"
-      timeout     = 10
-      memory      = 128
-      environment = {
-        COGNITO_USER_POOL_ID = var.cognito_user_pool_id
-        COGNITO_CLIENT_ID    = var.cognito_client_id
-      }
-    }
     whatsapp_connect = {
       handler     = "whatsapp-connect/index.handler"
       description = "Completes WhatsApp Embedded Signup and stores tenant credentials"
@@ -330,6 +343,44 @@ locals {
         META_APP_ID         = var.meta_app_id
         META_APP_SECRET     = var.meta_app_secret
         WHATSAPP_APP_SECRET = var.whatsapp_app_secret != "" ? var.whatsapp_app_secret : var.meta_app_secret
+      }
+    }
+    instagram_connect = {
+      handler     = "instagram-connect/index.handler"
+      description = "Connects Instagram DM page credentials for a bot"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME  = var.dynamodb_table_name
+        ENVIRONMENT = var.environment
+      }
+    }
+    webchat = {
+      handler     = "webchat/index.handler"
+      description = "Public web chat sessions and message polling"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME             = var.dynamodb_table_name
+        ENVIRONMENT            = var.environment
+        SQS_QUEUE_URL          = var.sqs_queue_url
+        WEBCHAT_SESSION_SECRET = var.webchat_session_secret != "" ? var.webchat_session_secret : "dev-webchat-${var.environment}"
+        LIVEKIT_URL            = var.livekit_url
+        LIVEKIT_API_KEY        = var.livekit_api_key
+        LIVEKIT_API_SECRET     = var.livekit_api_secret
+      }
+    }
+    realtime = {
+      handler     = "realtime/index.handler"
+      description = "LiveKit voice/video calls for webchat advisors"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME         = var.dynamodb_table_name
+        ENVIRONMENT        = var.environment
+        LIVEKIT_URL        = var.livekit_url
+        LIVEKIT_API_KEY    = var.livekit_api_key
+        LIVEKIT_API_SECRET = var.livekit_api_secret
       }
     }
     campaigns = {
@@ -496,6 +547,33 @@ locals {
         ENVIRONMENT = var.environment
       }
     }
+    calendar = {
+      handler     = "calendar/index.handler"
+      description = "Calendar app config and bookings per bot"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME                = var.dynamodb_table_name
+        ENVIRONMENT               = var.environment
+        INTEGRATION_SQS_QUEUE_URL = var.integration_sqs_queue_url
+        FRONTEND_URL              = var.frontend_url
+        SCHEDULER_ROLE_ARN        = var.scheduler_role_arn
+        CALENDAR_FUNCTION_ARN     = local.calendar_function_arn
+      }
+    }
+    public_calendar = {
+      handler     = "public-calendar/index.handler"
+      description = "Public calendar booking links for visitors"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME                = var.dynamodb_table_name
+        ENVIRONMENT               = var.environment
+        INTEGRATION_SQS_QUEUE_URL = var.integration_sqs_queue_url
+        FRONTEND_URL              = var.frontend_url
+        MEDIA_BUCKET              = var.media_bucket_name
+      }
+    }
   }
 }
 
@@ -523,6 +601,8 @@ resource "aws_lambda_function" "functions" {
       source_code_hash,
     ]
   }
+
+  depends_on = [aws_cloudwatch_log_group.lambda_logs]
 
   tags = var.tags
 }
@@ -595,4 +675,9 @@ resource "aws_cloudwatch_log_group" "lambda_logs" {
   name              = "/aws/lambda/${var.project}-${var.environment}-${replace(each.key, "_", "-")}"
   retention_in_days = var.environment == "prod" ? 30 : 7
   tags              = var.tags
+}
+
+resource "aws_ses_email_identity" "from" {
+  count = var.ses_from_email != "" ? 1 : 0
+  email = var.ses_from_email
 }

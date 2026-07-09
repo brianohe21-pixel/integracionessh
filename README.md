@@ -126,7 +126,6 @@ integracionessh/
 | `flows` / `process-flow` | Flujos visuales y motor de ejecución por grafo |
 | `integrations` / `process-integration` | Webhooks salientes e historial de entregas |
 | `support-tickets` / `admin` | Soporte y administración |
-| `authorizer` | Validación JWT Cognito en API Gateway |
 
 ## API REST (API Gateway)
 
@@ -282,16 +281,34 @@ Entidades: tenants, bots, conversaciones, mensajes, plantillas, jobs de bulk-sen
 
 | Workflow | Disparadores | Acciones |
 |----------|--------------|----------|
-| **Backend** | Cambios en `backend/` | type-check, tests; deploy Lambda a `develop` / `main` |
+| **Backend** | Cambios en `backend/` o `infrastructure/modules/lambda/main.tf` | type-check, tests, lint, build, validación de manifest; deploy de código Lambda a `develop` / `main` |
 | **Frontend** | Cambios en `frontend/` | lint, build; despliegue Amplify (rama `develop` / `main`) |
-| **Terraform** | Cambios en `infrastructure/` | plan/apply por entorno (`dev`, `prod`) |
+| **Terraform** | Cambios en `infrastructure/` | plan/apply de infraestructura y variables de entorno por entorno (`dev`, `prod`) |
+
+Separación de responsabilidades:
+
+- **Terraform** crea y actualiza recursos AWS (Lambda shell, IAM, API Gateway, env vars). No despliega código de aplicación.
+- **Backend** es la única vía de actualización del zip compartido (`functions.zip`) vía `update-function-code`.
 
 Ramas:
 
 - `develop` → entorno de desarrollo
 - `main` → producción
 
-Los secrets y variables de repositorio/entorno (`AWS_*`, `NEXT_PUBLIC_*`, `AMPLIFY_APP_ID_*`, etc.) deben configurarse en GitHub.
+Los secrets y variables de repositorio/entorno (`AWS_*`, `AMPLIFY_APP_ID_*`, etc.) deben configurarse en GitHub.
+
+Variables `NEXT_PUBLIC_*` del frontend deben coincidir entre GitHub Actions (workflow **Frontend**, job `lint-build`) y Terraform (`infrastructure/modules/amplify/main.tf`):
+
+| Variable | Uso |
+|----------|-----|
+| `NEXT_PUBLIC_API_URL` | URL del API Gateway |
+| `NEXT_PUBLIC_USER_POOL_ID` | Cognito User Pool |
+| `NEXT_PUBLIC_USER_POOL_CLIENT` | Cognito App Client |
+| `NEXT_PUBLIC_ENV` | `dev` o `prod` |
+| `NEXT_PUBLIC_META_APP_ID` | Meta App ID |
+| `NEXT_PUBLIC_META_EMBEDDED_SIGNUP_CONFIG_ID` | Embedded Signup config |
+
+Si difieren, el build de CI puede pasar mientras el deploy en Amplify falla o produce artefactos distintos.
 
 ## Scripts útiles
 

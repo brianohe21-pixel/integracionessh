@@ -4,26 +4,96 @@ import {
   QueryCommand,
   TransactWriteCommand,
   UpdateCommand,
+  BatchWriteCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { docClient, TABLE_NAME } from "./client.js";
 import { listBots } from "./bot.repository.js";
-import type { Conversation, HandoffMode, Message, WorkflowStatus } from "../../types/index.js";
+import type { Conversation, HandoffMode, Message, WorkflowStatus, Channel } from "../../types/index.js";
+import { conversationLookupGsi1pk, legacyPhoneGsi1pk } from "../channels/keys.js";
 import { upsertFromConversation } from "./contact.repository.js";
 
 export function normalizeConversation(conv: Conversation): Conversation {
+  const channel: Channel = conv.channel ?? "whatsapp";
+  const participantId = conv.participantId ?? conv.phoneNumber;
   return {
     ...conv,
+    channel,
+    participantId,
+    phoneNumber: conv.phoneNumber ?? participantId,
     handoffMode: conv.handoffMode ?? "bot",
   };
 }
 
 export interface ListConversationsOptions {
   botId?: string;
+  channel?: Channel;
   handoffMode?: HandoffMode;
   workflowStatus?: WorkflowStatus;
   status?: Conversation["status"];
   assignedAdvisorId?: string;
   limit?: number;
+  cursor?: string;
+}
+
+export interface ListConversationsResult {
+  items: Conversation[];
+  nextCursor?: string;
+}
+
+interface ConversationCursor {
+  lastMessageAt: string;
+  conversationId: string;
+}
+
+function decodeConversationCursor(cursor: string): ConversationCursor | undefined {
+  try {
+    return JSON.parse(Buffer.from(cursor, "base64url").toString("utf8")) as ConversationCursor;
+  } catch {
+    return undefined;
+  }
+}
+
+function encodeConversationCursor(cursor: ConversationCursor): string {
+  return Buffer.from(JSON.stringify(cursor)).toString("base64url");
+}
+
+function isAfterCursor(conv: Conversation, cursor: ConversationCursor): boolean {
+  if (conv.lastMessageAt < cursor.lastMessageAt) return true;
+  if (conv.lastMessageAt > cursor.lastMessageAt) return false;
+  return conv.conversationId < cursor.conversationId;
+}
+
+async function queryAllConversationsByBot(
+  tenantId: string,
+  botId: string
+): Promise<Conversation[]> {
+  const items: Conversation[] = [];
+  let lastKey: Record<string, unknown> | undefined;
+
+  do {
+    const result = await docClient.send(
+      new QueryCommand({
+        TableName: TABLE_NAME,
+        KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+        ExpressionAttributeValues: {
+          ":pk": `TENANT#${tenantId}#BOT#${botId}`,
+          ":sk": "CONV#",
+        },
+        ScanIndexForward: false,
+        ...(lastKey ? { ExclusiveStartKey: lastKey } : {}),
+        Limit: 100,
+      })
+    );
+
+    for (const item of result.Items ?? []) {
+      const { PK, SK, GSI1PK, GSI1SK, ...rest } = item;
+      items.push(normalizeConversation(rest as Conversation));
+    }
+
+    lastKey = result.LastEvaluatedKey;
+  } while (lastKey);
+
+  return items;
 }
 
 const conversationKeys = (tenantId: string, botId: string, conversationId: string) => ({
@@ -207,10 +277,11 @@ export async function setMetaFlowSession(
 export async function getOrCreateConversation(
   tenantId: string,
   botId: string,
-  phoneNumber: string,
+  channel: Channel,
+  participantId: string,
   contactName?: string
 ): Promise<Conversation> {
-  const gsi1pk = `TENANT#${tenantId}#BOT#${botId}#PHONE#${phoneNumber}`;
+  const gsi1pk = conversationLookupGsi1pk(tenantId, botId, channel, participantId);
 
   const existing = await docClient.send(
     new QueryCommand({
@@ -229,13 +300,61 @@ export async function getOrCreateConversation(
     return normalizeConversation(rest as Conversation);
   }
 
+  if (channel === "whatsapp") {
+    const legacyGsi = legacyPhoneGsi1pk(tenantId, botId, participantId);
+    const legacy = await docClient.send(
+      new QueryCommand({
+        TableName: TABLE_NAME,
+        IndexName: "GSI1",
+        KeyConditionExpression: "GSI1PK = :gsi1pk",
+        FilterExpression: "#status = :status",
+        ExpressionAttributeNames: { "#status": "status" },
+        ExpressionAttributeValues: { ":gsi1pk": legacyGsi, ":status": "active" },
+        Limit: 1,
+      })
+    );
+    if (legacy.Items?.length) {
+      const { PK, SK, GSI1PK, GSI1SK, ...rest } = legacy.Items[0];
+      const conv = normalizeConversation(rest as Conversation);
+      if (!conv.channel || !conv.participantId) {
+        await docClient.send(
+          new UpdateCommand({
+            TableName: TABLE_NAME,
+            Key: conversationKeys(tenantId, botId, conv.conversationId),
+            UpdateExpression:
+              "SET #channel = :channel, participantId = :participantId, GSI1PK = :gsi1pk",
+            ExpressionAttributeNames: { "#channel": "channel" },
+            ExpressionAttributeValues: {
+              ":channel": "whatsapp",
+              ":participantId": participantId,
+              ":gsi1pk": gsi1pk,
+            },
+          })
+        );
+        return normalizeConversation({
+          ...conv,
+          channel: "whatsapp",
+          participantId,
+        });
+      }
+      return conv;
+    }
+  }
+
   const now = new Date().toISOString();
-  const conversationId = `${phoneNumber}-${Date.now()}`;
+  const conversationId =
+    channel === "whatsapp"
+      ? `${participantId}-${Date.now()}`
+      : `${channel}-${participantId}-${Date.now()}`;
+
+  const phoneNumber = channel === "whatsapp" ? participantId : "";
 
   const conversation: Conversation = {
     conversationId,
     tenantId,
     botId,
+    channel,
+    participantId,
     phoneNumber,
     status: "active",
     handoffMode: "bot",
@@ -259,13 +378,15 @@ export async function getOrCreateConversation(
     })
   );
 
-  upsertFromConversation({
-    tenantId,
-    phoneNumber,
-    botId,
-    source: "sync",
-    ...(contactName ? { displayName: contactName } : {}),
-  }).catch((err) => console.warn("Contact sync failed:", err));
+  if (channel === "whatsapp" && phoneNumber) {
+    upsertFromConversation({
+      tenantId,
+      phoneNumber,
+      botId,
+      source: "sync",
+      ...(contactName ? { displayName: contactName } : {}),
+    }).catch((err) => console.warn("Contact sync failed:", err));
+  }
 
   return normalizeConversation(conversation);
 }
@@ -347,47 +468,31 @@ function dedupeMessagesById(messages: Message[]): Message[] {
 export async function listConversations(
   tenantId: string,
   options: ListConversationsOptions = {}
-): Promise<Conversation[]> {
-  const limit = options.limit ?? 20;
-  const fetchLimit = Math.min(limit * 5, 100);
-
-  const queryByBotPk = (pk: string) =>
-    docClient.send(
-      new QueryCommand({
-        TableName: TABLE_NAME,
-        KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
-        ExpressionAttributeValues: {
-          ":pk": pk,
-          ":sk": "CONV#",
-        },
-        ScanIndexForward: false,
-        Limit: fetchLimit,
-      })
-    );
+): Promise<ListConversationsResult> {
+  const limit = Math.min(Math.max(options.limit ?? 20, 1), 100);
+  const cursor = options.cursor ? decodeConversationCursor(options.cursor) : undefined;
 
   let merged: Conversation[] = [];
 
   if (options.botId) {
-    const result = await queryByBotPk(`TENANT#${tenantId}#BOT#${options.botId}`);
-    merged = (result.Items ?? []).map(({ PK, SK, GSI1PK, GSI1SK, ...rest }) =>
-      normalizeConversation(rest as Conversation)
-    );
+    merged = await queryAllConversationsByBot(tenantId, options.botId);
   } else {
     const bots = await listBots(tenantId);
     if (bots.length === 0) {
-      return [];
+      return { items: [] };
     }
 
     const pages = await Promise.all(
-      bots.map((b) => queryByBotPk(`TENANT#${tenantId}#BOT#${b.botId}`))
+      bots.map((b) => queryAllConversationsByBot(tenantId, b.botId))
     );
 
-    for (const result of pages) {
-      for (const item of result.Items ?? []) {
-        const { PK, SK, GSI1PK, GSI1SK, ...rest } = item;
-        merged.push(normalizeConversation(rest as Conversation));
-      }
+    for (const page of pages) {
+      merged.push(...page);
     }
+  }
+
+  if (options.channel) {
+    merged = merged.filter((c) => (c.channel ?? "whatsapp") === options.channel);
   }
 
   if (options.handoffMode) {
@@ -412,5 +517,88 @@ export async function listConversations(
     (a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime()
   );
 
-  return merged.slice(0, limit);
+  if (cursor) {
+    merged = merged.filter((c) => isAfterCursor(c, cursor));
+  }
+
+  const items = merged.slice(0, limit);
+  const last = items[items.length - 1];
+  const nextCursor =
+    items.length === limit && last
+      ? encodeConversationCursor({
+          lastMessageAt: last.lastMessageAt,
+          conversationId: last.conversationId,
+        })
+      : undefined;
+
+  return { items, ...(nextCursor ? { nextCursor } : {}) };
+}
+
+async function queryAllMessageKeys(
+  tenantId: string,
+  conversationId: string
+): Promise<Array<{ PK: string; SK: string }>> {
+  const keys: Array<{ PK: string; SK: string }> = [];
+  let lastKey: Record<string, unknown> | undefined;
+
+  do {
+    const result = await docClient.send(
+      new QueryCommand({
+        TableName: TABLE_NAME,
+        KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+        ExpressionAttributeValues: {
+          ":pk": `TENANT#${tenantId}#CONV#${conversationId}`,
+          ":sk": "MSG#",
+        },
+        ProjectionExpression: "PK, SK",
+        ...(lastKey ? { ExclusiveStartKey: lastKey } : {}),
+        Limit: 100,
+      })
+    );
+
+    for (const item of result.Items ?? []) {
+      keys.push({ PK: item.PK as string, SK: item.SK as string });
+    }
+
+    lastKey = result.LastEvaluatedKey;
+  } while (lastKey);
+
+  return keys;
+}
+
+export async function deleteConversation(
+  tenantId: string,
+  botId: string,
+  conversationId: string
+): Promise<boolean> {
+  const existing = await getConversation(tenantId, botId, conversationId);
+  if (!existing) return false;
+
+  const deleteRequests: Array<{ DeleteRequest: { Key: { PK: string; SK: string } } }> = [
+    { DeleteRequest: { Key: conversationKeys(tenantId, botId, conversationId) } },
+    ...(await queryAllMessageKeys(tenantId, conversationId)).map((key) => ({
+      DeleteRequest: { Key: key },
+    })),
+  ];
+
+  if (existing.activeFlowRunId) {
+    deleteRequests.push({
+      DeleteRequest: {
+        Key: {
+          PK: `TENANT#${tenantId}`,
+          SK: `FLOWRUN#${existing.activeFlowRunId}`,
+        },
+      },
+    });
+  }
+
+  for (let i = 0; i < deleteRequests.length; i += 25) {
+    await docClient.send(
+      new BatchWriteCommand({
+        RequestItems: { [TABLE_NAME]: deleteRequests.slice(i, i + 25) },
+      })
+    );
+  }
+
+  return true;
 }

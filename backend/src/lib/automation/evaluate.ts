@@ -43,3 +43,21 @@ export async function evaluateAutomations(params: {
 
   return null;
 }
+
+export async function evaluateFlowCompletedAutomations(params: {
+  tenantId: string;
+  botId: string;
+  metaFlowId: string;
+  conversation: Conversation;
+}): Promise<AutomationRule | null> {
+  const rules = await listEnabledAutomationsForBot(params.tenantId, params.botId);
+  const sorted = [...rules].sort((a, b) => a.priority - b.priority);
+
+  for (const rule of sorted) {
+    if (rule.trigger !== "flow_completed") continue;
+    if (rule.metaFlowId && rule.metaFlowId !== params.metaFlowId) continue;
+    return rule;
+  }
+
+  return null;
+}

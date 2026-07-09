@@ -3,7 +3,7 @@ resource "aws_apigatewayv2_api" "main" {
   protocol_type = "HTTP"
 
   cors_configuration {
-    allow_headers = ["Content-Type", "Authorization", "X-Api-Key"]
+    allow_headers = ["Content-Type", "Authorization", "X-Api-Key", "X-Widget-Key"]
     allow_methods = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
     allow_origins = var.allowed_origins
     max_age       = 300
@@ -225,6 +225,42 @@ locals {
       function_arn = var.contacts_function_arn
       protected    = true
     }
+    leads_list = {
+      route_key    = "GET /leads"
+      invoke_arn   = var.leads_invoke_arn
+      function_arn = var.leads_function_arn
+      protected    = true
+    }
+    leads_get = {
+      route_key    = "GET /leads/{leadId}"
+      invoke_arn   = var.leads_invoke_arn
+      function_arn = var.leads_function_arn
+      protected    = true
+    }
+    leads_update = {
+      route_key    = "PATCH /leads/{leadId}"
+      invoke_arn   = var.leads_invoke_arn
+      function_arn = var.leads_function_arn
+      protected    = true
+    }
+    leads_convert = {
+      route_key    = "POST /leads/{leadId}/convert"
+      invoke_arn   = var.leads_invoke_arn
+      function_arn = var.leads_function_arn
+      protected    = true
+    }
+    leads_lose = {
+      route_key    = "POST /leads/{leadId}/lose"
+      invoke_arn   = var.leads_invoke_arn
+      function_arn = var.leads_function_arn
+      protected    = true
+    }
+    leads_delete = {
+      route_key    = "DELETE /leads/{leadId}"
+      invoke_arn   = var.leads_invoke_arn
+      function_arn = var.leads_function_arn
+      protected    = true
+    }
     templates_list = {
       route_key    = "GET /templates"
       invoke_arn   = var.templates_invoke_arn
@@ -279,8 +315,20 @@ locals {
       function_arn = var.bulk_send_function_arn
       protected    = true
     }
+    metrics_leads = {
+      route_key    = "GET /metrics/leads"
+      invoke_arn   = var.metrics_invoke_arn
+      function_arn = var.metrics_function_arn
+      protected    = true
+    }
     metrics_marketing = {
       route_key    = "GET /metrics/marketing"
+      invoke_arn   = var.metrics_invoke_arn
+      function_arn = var.metrics_function_arn
+      protected    = true
+    }
+    metrics_calling = {
+      route_key    = "GET /metrics/calling"
       invoke_arn   = var.metrics_invoke_arn
       function_arn = var.metrics_function_arn
       protected    = true
@@ -309,10 +357,94 @@ locals {
       function_arn = var.conversations_function_arn
       protected    = true
     }
+    conversations_delete = {
+      route_key    = "DELETE /conversations/{conversationId}"
+      invoke_arn   = var.conversations_invoke_arn
+      function_arn = var.conversations_function_arn
+      protected    = true
+    }
+    conversations_calls_create = {
+      route_key    = "POST /conversations/{conversationId}/calls"
+      invoke_arn   = var.realtime_invoke_arn
+      function_arn = var.realtime_function_arn
+      protected    = true
+    }
+    conversations_calls_active = {
+      route_key    = "GET /conversations/{conversationId}/calls/active"
+      invoke_arn   = var.realtime_invoke_arn
+      function_arn = var.realtime_function_arn
+      protected    = true
+    }
+    conversations_calls_token = {
+      route_key    = "POST /conversations/{conversationId}/calls/{callId}/token"
+      invoke_arn   = var.realtime_invoke_arn
+      function_arn = var.realtime_function_arn
+      protected    = true
+    }
+    conversations_calls_end = {
+      route_key    = "POST /conversations/{conversationId}/calls/{callId}/end"
+      invoke_arn   = var.realtime_invoke_arn
+      function_arn = var.realtime_function_arn
+      protected    = true
+    }
     whatsapp_connect = {
       route_key    = "POST /whatsapp/connect"
       invoke_arn   = var.whatsapp_connect_invoke_arn
       function_arn = var.whatsapp_connect_function_arn
+      protected    = true
+    }
+    instagram_connect = {
+      route_key    = "POST /instagram/connect"
+      invoke_arn   = var.instagram_connect_invoke_arn
+      function_arn = var.instagram_connect_function_arn
+      protected    = true
+    }
+    webchat_sessions_create = {
+      route_key    = "POST /webchat/sessions"
+      invoke_arn   = var.webchat_invoke_arn
+      function_arn = var.webchat_function_arn
+      protected    = false
+    }
+    webchat_messages_send = {
+      route_key    = "POST /webchat/sessions/{sessionId}/messages"
+      invoke_arn   = var.webchat_invoke_arn
+      function_arn = var.webchat_function_arn
+      protected    = false
+    }
+    webchat_messages_poll = {
+      route_key    = "GET /webchat/sessions/{sessionId}/messages"
+      invoke_arn   = var.webchat_invoke_arn
+      function_arn = var.webchat_function_arn
+      protected    = false
+    }
+    webchat_call_token = {
+      route_key    = "POST /webchat/sessions/{sessionId}/calls/{callId}/token"
+      invoke_arn   = var.webchat_invoke_arn
+      function_arn = var.webchat_function_arn
+      protected    = false
+    }
+    webchat_call_decline = {
+      route_key    = "POST /webchat/sessions/{sessionId}/calls/{callId}/decline"
+      invoke_arn   = var.webchat_invoke_arn
+      function_arn = var.webchat_function_arn
+      protected    = false
+    }
+    webchat_call_accept = {
+      route_key    = "POST /webchat/sessions/{sessionId}/calls/{callId}/accept"
+      invoke_arn   = var.webchat_invoke_arn
+      function_arn = var.webchat_function_arn
+      protected    = false
+    }
+    bots_webchat_put = {
+      route_key    = "PUT /bots/{botId}/webchat"
+      invoke_arn   = var.bots_invoke_arn
+      function_arn = var.bots_function_arn
+      protected    = true
+    }
+    bots_webchat_rotate_key = {
+      route_key    = "POST /bots/{botId}/webchat/rotate-key"
+      invoke_arn   = var.bots_invoke_arn
+      function_arn = var.bots_function_arn
       protected    = true
     }
     campaigns_list = {
@@ -495,6 +627,30 @@ locals {
       function_arn = var.tenants_function_arn
       protected    = true
     }
+    tenants_branding_get = {
+      route_key    = "GET /tenants/me/branding"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_branding_update = {
+      route_key    = "PUT /tenants/me/branding"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_branding_logo_upload = {
+      route_key    = "POST /tenants/me/branding/logo"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_branding_logo_delete = {
+      route_key    = "DELETE /tenants/me/branding/logo"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
     public_api_messages = {
       route_key    = "POST /v1/messages"
       invoke_arn   = var.public_api_invoke_arn
@@ -575,6 +731,18 @@ locals {
     }
     bots_calling_permission_status = {
       route_key    = "GET /bots/{botId}/calling/calls/permission/{userWaId}"
+      invoke_arn   = var.calling_invoke_arn
+      function_arn = var.calling_function_arn
+      protected    = true
+    }
+    bots_calling_initiate = {
+      route_key    = "POST /bots/{botId}/calling/calls/initiate"
+      invoke_arn   = var.calling_invoke_arn
+      function_arn = var.calling_function_arn
+      protected    = true
+    }
+    bots_calling_action = {
+      route_key    = "POST /bots/{botId}/calling/calls/{callId}/action"
       invoke_arn   = var.calling_invoke_arn
       function_arn = var.calling_function_arn
       protected    = true
@@ -680,6 +848,108 @@ locals {
       invoke_arn   = var.automations_invoke_arn
       function_arn = var.automations_function_arn
       protected    = true
+    }
+    apps_list = {
+      route_key    = "GET /apps"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_config_get = {
+      route_key    = "GET /calendar/{botId}/config"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_config_put = {
+      route_key    = "PUT /calendar/{botId}/config"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_enable = {
+      route_key    = "POST /calendar/{botId}/enable"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_disable = {
+      route_key    = "POST /calendar/{botId}/disable"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_slots = {
+      route_key    = "GET /calendar/{botId}/slots"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_bookings_list = {
+      route_key    = "GET /calendar/{botId}/bookings"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_bookings_create = {
+      route_key    = "POST /calendar/{botId}/bookings"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_bookings_patch = {
+      route_key    = "PATCH /calendar/{botId}/bookings/{bookingId}"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_public_link_get = {
+      route_key    = "GET /calendar/{botId}/public-link"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_public_link_enable = {
+      route_key    = "POST /calendar/{botId}/public-link/enable"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_public_link_disable = {
+      route_key    = "POST /calendar/{botId}/public-link/disable"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_public_link_rotate = {
+      route_key    = "POST /calendar/{botId}/public-link/rotate-key"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    public_calendar_info = {
+      route_key    = "GET /public/calendar/{publicKey}"
+      invoke_arn   = var.public_calendar_invoke_arn
+      function_arn = var.public_calendar_function_arn
+      protected    = false
+    }
+    public_calendar_dates = {
+      route_key    = "GET /public/calendar/{publicKey}/dates"
+      invoke_arn   = var.public_calendar_invoke_arn
+      function_arn = var.public_calendar_function_arn
+      protected    = false
+    }
+    public_calendar_slots = {
+      route_key    = "GET /public/calendar/{publicKey}/slots"
+      invoke_arn   = var.public_calendar_invoke_arn
+      function_arn = var.public_calendar_function_arn
+      protected    = false
+    }
+    public_calendar_bookings = {
+      route_key    = "POST /public/calendar/{publicKey}/bookings"
+      invoke_arn   = var.public_calendar_invoke_arn
+      function_arn = var.public_calendar_function_arn
+      protected    = false
     }
     knowledge_list = {
       route_key    = "GET /bots/{botId}/knowledge"
@@ -826,28 +1096,34 @@ resource "aws_apigatewayv2_route" "routes" {
 
 resource "aws_lambda_permission" "api_gw" {
   for_each = {
-    webhook          = var.webhook_function_arn
-    tenants          = var.tenants_function_arn
-    bots             = var.bots_function_arn
-    conversations    = var.conversations_function_arn
-    advisors         = var.advisors_function_arn
-    contacts         = var.contacts_function_arn
-    templates        = var.templates_function_arn
-    bulk_send        = var.bulk_send_function_arn
-    metrics          = var.metrics_function_arn
-    whatsapp_connect = var.whatsapp_connect_function_arn
-    campaigns        = var.campaigns_function_arn
-    support_tickets  = var.support_tickets_function_arn
-    billing          = var.billing_function_arn
-    admin            = var.admin_function_arn
-    public_api       = var.public_api_function_arn
-    api_keys         = var.api_keys_function_arn
-    integrations     = var.integrations_function_arn
-    automations      = var.automations_function_arn
-    knowledge        = var.knowledge_function_arn
-    meta_flows       = var.meta_flows_function_arn
-    flows            = var.flows_function_arn
-    calling          = var.calling_function_arn
+    webhook           = var.webhook_function_arn
+    tenants           = var.tenants_function_arn
+    bots              = var.bots_function_arn
+    conversations     = var.conversations_function_arn
+    advisors          = var.advisors_function_arn
+    contacts          = var.contacts_function_arn
+    leads             = var.leads_function_arn
+    templates         = var.templates_function_arn
+    bulk_send         = var.bulk_send_function_arn
+    metrics           = var.metrics_function_arn
+    whatsapp_connect  = var.whatsapp_connect_function_arn
+    instagram_connect = var.instagram_connect_function_arn
+    webchat           = var.webchat_function_arn
+    campaigns         = var.campaigns_function_arn
+    support_tickets   = var.support_tickets_function_arn
+    billing           = var.billing_function_arn
+    admin             = var.admin_function_arn
+    public_api        = var.public_api_function_arn
+    api_keys          = var.api_keys_function_arn
+    integrations      = var.integrations_function_arn
+    automations       = var.automations_function_arn
+    knowledge         = var.knowledge_function_arn
+    meta_flows        = var.meta_flows_function_arn
+    flows             = var.flows_function_arn
+    calling           = var.calling_function_arn
+    realtime          = var.realtime_function_arn
+    calendar          = var.calendar_function_arn
+    public_calendar   = var.public_calendar_function_arn
   }
 
   statement_id  = "AllowAPIGatewayInvoke-${each.key}"

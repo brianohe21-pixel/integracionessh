@@ -7,12 +7,25 @@ export type SubscriptionStatus =
   | "canceled"
   | "trialing";
 
+export interface TenantBranding {
+  brandName?: string;
+  primaryColor?: string;
+  logoS3Key?: string;
+}
+
+export interface ResolvedTenantBranding {
+  brandName: string;
+  primaryColor: string;
+  logoUrl?: string;
+}
+
 export interface Tenant {
   tenantId: string;
   name: string;
   email: string;
   plan: TenantPlan;
   status: "active" | "suspended" | "pending";
+  branding?: TenantBranding;
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   subscriptionStatus?: SubscriptionStatus;
@@ -55,6 +68,8 @@ export interface WhatsAppPhoneInfo {
   messagingLimit?: string;
 }
 
+export type Channel = "whatsapp" | "instagram" | "webchat";
+
 export interface Bot {
   botId: string;
   tenantId: string;
@@ -69,6 +84,12 @@ export interface Bot {
   knowledgeEnabled?: boolean;
   phoneNumberId: string;
   whatsappBusinessAccountId: string;
+  instagramPageId?: string;
+  instagramAccountId?: string;
+  webchatEnabled?: boolean;
+  webchatWidgetKey?: string;
+  webchatVoiceEnabled?: boolean;
+  webchatVideoEnabled?: boolean;
   status: "active" | "inactive";
   createdAt: string;
   updatedAt: string;
@@ -83,12 +104,13 @@ export type WorkflowStatus = "new" | "open" | "pending" | "resolved";
 
 export type MarketingConsent = "unknown" | "opt_in" | "opt_out";
 
-export type ContactSource = "sync" | "manual" | "import";
+export type ContactSource = "sync" | "manual" | "import" | "lead_capture";
 
 export interface Contact {
   phoneNumber: string;
   tenantId: string;
   displayName?: string;
+  email?: string;
   tags: string[];
   marketingConsent: MarketingConsent;
   consentAt?: string;
@@ -97,9 +119,54 @@ export interface Contact {
   firstSeenAt: string;
   lastSeenAt: string;
   lastBotId?: string;
+  leadId?: string;
   source: ContactSource;
   createdAt: string;
   updatedAt: string;
+}
+
+export type LeadStatus = "new" | "contacted" | "qualified" | "converted" | "lost";
+
+export interface Lead {
+  leadId: string;
+  tenantId: string;
+  botId: string;
+  phone: string;
+  conversationId: string;
+  metaFlowId: string;
+  flowResponseId: string;
+  name?: string;
+  email?: string;
+  status: LeadStatus;
+  tags: string[];
+  notes?: string;
+  assignedAdvisorId?: string;
+  convertedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LeadsListResponse {
+  items: Lead[];
+  nextCursor?: string;
+}
+
+export interface LeadMetrics {
+  total: number;
+  byStatus: Record<LeadStatus, number>;
+  capturedToday: number;
+  capturedThisWeek: number;
+  conversionRate: number;
+  averageConversionHours: number;
+  topBots: Array<{ botId: string; count: number }>;
+  topFlows: Array<{ metaFlowId: string; count: number }>;
+  funnel: {
+    new: number;
+    contacted: number;
+    qualified: number;
+    converted: number;
+    lost: number;
+  };
 }
 
 export interface ContactsListResponse {
@@ -107,10 +174,17 @@ export interface ContactsListResponse {
   nextCursor?: string;
 }
 
+export interface ConversationsListResponse {
+  items: Conversation[];
+  nextCursor?: string;
+}
+
 export interface Conversation {
   conversationId: string;
   tenantId: string;
   botId: string;
+  channel?: Channel;
+  participantId?: string;
   phoneNumber: string;
   contactName?: string;
   status: "active" | "closed";
@@ -168,6 +242,35 @@ export interface MarketingMetrics {
     pending: number;
     resolvedToday: number;
   };
+}
+
+export type CallingMetricsHealth = "healthy" | "at_risk" | "insufficient_data";
+
+export interface CallingMetricsSummary {
+  totalCalls: number;
+  outboundAttempts: number;
+  outboundPickedUp: number;
+  outboundMissed: number;
+  inboundCalls: number;
+  inboundAnswered: number;
+  pickupRate: number;
+  inboundAnswerRate: number;
+  averageDurationSeconds: number;
+  health: CallingMetricsHealth;
+}
+
+export interface CallingMetricsBotRow extends CallingMetricsSummary {
+  botId: string;
+  botName: string;
+}
+
+export interface CallingMetrics {
+  from: string;
+  to: string;
+  windowDays: number;
+  metaPickupThreshold: number;
+  summary: CallingMetricsSummary;
+  byBot: CallingMetricsBotRow[];
 }
 
 export type MessageRole = "user" | "assistant" | "advisor" | "system";
@@ -339,7 +442,10 @@ export interface ApiKeyUsageLog {
   statusCode: number;
   durationMs: number;
   messageId?: string;
+  callId?: string;
   maskedPhone?: string;
+  errorMessage?: string;
+  errorStack?: string;
   createdAt: string;
 }
 
@@ -405,7 +511,12 @@ export type IntegrationEvent =
   | "message.received"
   | "conversation.handoff"
   | "message.sent"
-  | "flow.completed";
+  | "flow.completed"
+  | "lead.created"
+  | "lead.converted"
+  | "call.connect"
+  | "call.status"
+  | "call.terminated";
 
 export type MetaFlowStatus = "DRAFT" | "PUBLISHED" | "DEPRECATED";
 
@@ -431,6 +542,7 @@ export interface FlowResponse {
   phone: string;
   metaFlowId: string;
   responseJson: Record<string, unknown>;
+  leadId?: string;
   createdAt: string;
 }
 
@@ -445,6 +557,7 @@ export type FlowNodeType =
   | "delay"
   | "set_variable"
   | "http_request"
+  | "book_appointment"
   | "end";
 
 export type FlowTriggerType = "keyword" | "first_message" | "any_message";
@@ -471,6 +584,8 @@ export interface FlowNodeData {
   httpMethod?: "GET" | "POST";
   httpBody?: string;
   haltPipeline?: boolean;
+  confirmationMessage?: string;
+  maxDaysToShow?: number;
 }
 
 export interface FlowNode {
@@ -524,7 +639,7 @@ export interface IntegrationDelivery {
   createdAt: string;
 }
 
-export type AutomationTrigger = "keyword" | "first_message" | "schedule";
+export type AutomationTrigger = "keyword" | "first_message" | "schedule" | "flow_completed";
 export type AutomationAction = "send_text" | "send_template" | "tag_contact" | "handoff";
 
 export interface AutomationRule {
@@ -537,6 +652,7 @@ export interface AutomationRule {
   trigger: AutomationTrigger;
   keywords?: string[];
   matchMode?: "contains" | "exact";
+  metaFlowId?: string;
   scheduledAt?: string;
   targetPhones?: string[];
   targetTags?: string[];
@@ -566,4 +682,80 @@ export interface KnowledgeDocument {
   errorMessage?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export type Weekday =
+  | "monday"
+  | "tuesday"
+  | "wednesday"
+  | "thursday"
+  | "friday"
+  | "saturday"
+  | "sunday";
+
+export interface TimeRange {
+  start: string;
+  end: string;
+}
+
+export type WeeklySchedule = Record<Weekday, TimeRange[]>;
+
+export type CalendarReminderChannel = "whatsapp_text" | "whatsapp_template";
+export type BookingReminderStatus = "scheduled" | "sent" | "skipped" | "cancelled";
+
+export interface CalendarConfig {
+  tenantId: string;
+  botId: string;
+  enabled: boolean;
+  timezone: string;
+  slotDurationMinutes: number;
+  bufferMinutes: number;
+  maxAdvanceDays: number;
+  minNoticeHours: number;
+  weeklySchedule: WeeklySchedule;
+  provider: "native";
+  calendarPublicKey?: string;
+  publicLinkEnabled?: boolean;
+  reminderEnabled?: boolean;
+  reminderMinutesBefore?: number;
+  reminderChannel?: CalendarReminderChannel;
+  reminderMessage?: string;
+  reminderTemplateName?: string;
+  reminderTemplateLanguage?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type BookingStatus = "confirmed" | "cancelled" | "completed" | "no_show";
+
+export interface Booking {
+  bookingId: string;
+  tenantId: string;
+  botId: string;
+  contactPhone: string;
+  contactName?: string;
+  conversationId?: string;
+  startAt: string;
+  endAt: string;
+  status: BookingStatus;
+  source: "flow" | "openai" | "manual" | "public_link";
+  notes?: string;
+  reminderScheduleName?: string;
+  reminderSentAt?: string;
+  reminderStatus?: BookingReminderStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AvailableSlot {
+  startAt: string;
+  endAt: string;
+  label: string;
+}
+
+export interface AppCatalogItem {
+  id: string;
+  name: string;
+  description: string;
+  installedBots: Array<{ botId: string; botName: string; enabled: boolean }>;
 }

@@ -25,11 +25,11 @@ resource "aws_s3_bucket_lifecycle_configuration" "media" {
   bucket = aws_s3_bucket.media.id
 
   rule {
-    id     = "expire-old-media"
+    id     = "expire-knowledge-docs"
     status = "Enabled"
 
     filter {
-      prefix = ""
+      prefix = "tenants/"
     }
 
     expiration {

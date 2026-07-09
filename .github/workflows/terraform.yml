@@ -23,32 +23,14 @@ jobs:
     runs-on: ubuntu-latest
     environment: dev
     concurrency:
-      group: lambda-deploy-dev
-      cancel-in-progress: false
+      group: terraform-dev-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
     defaults:
       run:
         working-directory: infrastructure/environments/dev
 
     steps:
       - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "pnpm"
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-        env:
-          HUSKY: "0"
-
-      - name: Build Lambda package
-        run: pnpm --filter chatbot-platform-backend run build
-        env:
-          NODE_ENV: production
 
       - uses: hashicorp/setup-terraform@v3
         with:
@@ -63,10 +45,9 @@ jobs:
 
       - name: Terraform fmt
         run: terraform fmt -check -recursive
-        continue-on-error: true
 
       - name: Terraform Init
-        run: terraform init
+        run: terraform init -reconfigure -input=false
 
       - name: Terraform Validate
         run: terraform validate
@@ -103,6 +84,13 @@ jobs:
         env:
           ENABLE_MONITORING: ${{ vars.ENABLE_MONITORING }}
 
+      - name: Import orphan Lambda log groups
+        timeout-minutes: 3
+        run: |
+          set -euo pipefail
+          chmod +x ../../scripts/import-orphan-lambda-log-groups.sh
+          PROJECT=chatbot-platform ENVIRONMENT=dev TF_IMPORT_MAX_PER_RUN="${TF_IMPORT_MAX_PER_RUN:-5}" TF_IMPORT_LOCK_TIMEOUT_SECONDS="${TF_IMPORT_LOCK_TIMEOUT_SECONDS:-20}" ../../scripts/import-orphan-lambda-log-groups.sh
+
       - name: Terraform Plan
         id: plan
         env:
@@ -118,6 +106,9 @@ jobs:
           EXTRA_ALLOWED_ORIGINS: ${{ vars.EXTRA_ALLOWED_ORIGINS }}
           EXTRA_CALLBACK_URLS: ${{ vars.EXTRA_CALLBACK_URLS }}
           EXTRA_LOGOUT_URLS: ${{ vars.EXTRA_LOGOUT_URLS }}
+          ENABLE_MONITORING: ${{ vars.ENABLE_MONITORING }}
+          OPS_ALERT_EMAIL: ${{ vars.OPS_ALERT_EMAIL }}
+          SES_FROM_EMAIL: ${{ vars.SES_FROM_EMAIL }}
         run: |
           set -euo pipefail
           PLAN_ARGS=(
@@ -128,6 +119,16 @@ jobs:
           )
           if [ -f terraform.tfvars ]; then
             PLAN_ARGS+=(-var-file=terraform.tfvars)
+          fi
+          if [ "${ENABLE_MONITORING:-false}" = "true" ]; then
+            PLAN_ARGS+=(-var="enable_monitoring=true")
+          fi
+          if [ -n "${OPS_ALERT_EMAIL:-}" ]; then
+            PLAN_ARGS+=(-var="ops_alert_email=${OPS_ALERT_EMAIL}")
+          fi
+          SES_SENDER="${SES_FROM_EMAIL:-${OPS_ALERT_EMAIL:-}}"
+          if [ -n "${SES_SENDER}" ]; then
+            PLAN_ARGS+=(-var="ses_from_email=${SES_SENDER}")
           fi
           if [ -n "${META_APP_ID:-}" ]; then
             PLAN_ARGS+=(-var="meta_app_id=${META_APP_ID}")
@@ -165,11 +166,28 @@ jobs:
           if [ -n "${EXTRA_LOGOUT_URLS:-}" ]; then
             PLAN_ARGS+=(-var="extra_logout_urls=${EXTRA_LOGOUT_URLS}")
           fi
+          PLAN_OUTPUT_ARGS=()
           if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/develop" ]; then
-            terraform plan "${PLAN_ARGS[@]}" -out=tfplan | tee plan.txt
-          else
-            terraform plan "${PLAN_ARGS[@]}" | tee plan.txt
+            PLAN_OUTPUT_ARGS=(-out=tfplan)
           fi
+
+          for attempt in 1 2 3; do
+            set +e
+            terraform plan "${PLAN_ARGS[@]}" "${PLAN_OUTPUT_ARGS[@]}" -lock=false -lock-timeout=10m | tee plan.txt
+            plan_status=${PIPESTATUS[0]}
+            set -e
+            if [ "$plan_status" -eq 0 ]; then
+              break
+            fi
+            if grep -Eqi 'Error acquiring the state lock|PreconditionFailed|lock' plan.txt; then
+              echo "::warning::Terraform plan hit a transient state lock (attempt $attempt/3); retrying in 15s"
+              if [ "$attempt" -lt 3 ]; then
+                sleep 15
+                continue
+              fi
+            fi
+            exit "$plan_status"
+          done
 
       - name: Comment PR
         if: github.event_name == 'pull_request' && always()
@@ -203,15 +221,31 @@ jobs:
         run: |
           set -euo pipefail
           test -f tfplan
-          terraform apply -auto-approve -parallelism=1 tfplan
+          for attempt in 1 2 3; do
+            set +e
+            terraform apply -auto-approve -parallelism=1 -lock=false -lock-timeout=10m tfplan 2>&1 | tee apply.txt
+            apply_status=${PIPESTATUS[0]}
+            set -e
+            if [ "$apply_status" -eq 0 ]; then
+              break
+            fi
+            if grep -Eqi 'Error acquiring the state lock|PreconditionFailed|lock' apply.txt; then
+              echo "::warning::Terraform apply hit a transient state lock (attempt $attempt/3); retrying in 15s"
+              if [ "$attempt" -lt 3 ]; then
+                sleep 15
+                continue
+              fi
+            fi
+            exit "$apply_status"
+          done
 
   terraform-prod:
     name: Terraform Prod
     runs-on: ubuntu-latest
     environment: prod
     concurrency:
-      group: lambda-deploy-prod
-      cancel-in-progress: false
+      group: terraform-prod-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
     if: github.ref == 'refs/heads/main'
     defaults:
       run:
@@ -219,24 +253,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "pnpm"
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-        env:
-          HUSKY: "0"
-
-      - name: Build Lambda package
-        run: pnpm --filter chatbot-platform-backend run build
-        env:
-          NODE_ENV: production
 
       - uses: hashicorp/setup-terraform@v3
         with:
@@ -251,10 +267,9 @@ jobs:
 
       - name: Terraform fmt
         run: terraform fmt -check -recursive
-        continue-on-error: true
 
       - name: Terraform Init
-        run: terraform init
+        run: terraform init -reconfigure -input=false
 
       - name: Terraform Validate
         run: terraform validate
@@ -291,6 +306,13 @@ jobs:
         env:
           ENABLE_MONITORING: ${{ vars.ENABLE_MONITORING }}
 
+      - name: Import orphan Lambda log groups
+        timeout-minutes: 3
+        run: |
+          set -euo pipefail
+          chmod +x ../../scripts/import-orphan-lambda-log-groups.sh
+          PROJECT=chatbot-platform ENVIRONMENT=prod TF_IMPORT_MAX_PER_RUN="${TF_IMPORT_MAX_PER_RUN:-5}" TF_IMPORT_LOCK_TIMEOUT_SECONDS="${TF_IMPORT_LOCK_TIMEOUT_SECONDS:-20}" ../../scripts/import-orphan-lambda-log-groups.sh
+
       - name: Terraform Plan
         id: plan
         env:
@@ -307,6 +329,9 @@ jobs:
           EXTRA_ALLOWED_ORIGINS: ${{ vars.EXTRA_ALLOWED_ORIGINS }}
           EXTRA_CALLBACK_URLS: ${{ vars.EXTRA_CALLBACK_URLS }}
           EXTRA_LOGOUT_URLS: ${{ vars.EXTRA_LOGOUT_URLS }}
+          ENABLE_MONITORING: ${{ vars.ENABLE_MONITORING }}
+          OPS_ALERT_EMAIL: ${{ vars.OPS_ALERT_EMAIL }}
+          SES_FROM_EMAIL: ${{ vars.SES_FROM_EMAIL }}
         run: |
           set -euo pipefail
           PLAN_ARGS=(
@@ -317,6 +342,16 @@ jobs:
           )
           if [ -f terraform.tfvars ]; then
             PLAN_ARGS+=(-var-file=terraform.tfvars)
+          fi
+          if [ "${ENABLE_MONITORING:-false}" = "true" ]; then
+            PLAN_ARGS+=(-var="enable_monitoring=true")
+          fi
+          if [ -n "${OPS_ALERT_EMAIL:-}" ]; then
+            PLAN_ARGS+=(-var="ops_alert_email=${OPS_ALERT_EMAIL}")
+          fi
+          SES_SENDER="${SES_FROM_EMAIL:-${OPS_ALERT_EMAIL:-}}"
+          if [ -n "${SES_SENDER}" ]; then
+            PLAN_ARGS+=(-var="ses_from_email=${SES_SENDER}")
           fi
           if [ -n "${META_APP_ID:-}" ]; then
             PLAN_ARGS+=(-var="meta_app_id=${META_APP_ID}")
@@ -357,15 +392,48 @@ jobs:
           if [ -n "${EXTRA_LOGOUT_URLS:-}" ]; then
             PLAN_ARGS+=(-var="extra_logout_urls=${EXTRA_LOGOUT_URLS}")
           fi
+          PLAN_OUTPUT_ARGS=()
           if [ "${{ github.event_name }}" = "push" ]; then
-            terraform plan "${PLAN_ARGS[@]}" -out=tfplan | tee plan.txt
-          else
-            terraform plan "${PLAN_ARGS[@]}" | tee plan.txt
+            PLAN_OUTPUT_ARGS=(-out=tfplan)
           fi
+
+          for attempt in 1 2 3; do
+            set +e
+            terraform plan "${PLAN_ARGS[@]}" "${PLAN_OUTPUT_ARGS[@]}" -lock=false -lock-timeout=10m | tee plan.txt
+            plan_status=${PIPESTATUS[0]}
+            set -e
+            if [ "$plan_status" -eq 0 ]; then
+              break
+            fi
+            if grep -Eqi 'Error acquiring the state lock|PreconditionFailed|lock' plan.txt; then
+              echo "::warning::Terraform plan hit a transient state lock (attempt $attempt/3); retrying in 15s"
+              if [ "$attempt" -lt 3 ]; then
+                sleep 15
+                continue
+              fi
+            fi
+            exit "$plan_status"
+          done
 
       - name: Terraform Apply
         if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && steps.plan.outcome == 'success'
         run: |
           set -euo pipefail
           test -f tfplan
-          terraform apply -auto-approve -parallelism=1 tfplan
+          for attempt in 1 2 3; do
+            set +e
+            terraform apply -auto-approve -parallelism=1 -lock=false -lock-timeout=10m tfplan 2>&1 | tee apply.txt
+            apply_status=${PIPESTATUS[0]}
+            set -e
+            if [ "$apply_status" -eq 0 ]; then
+              break
+            fi
+            if grep -Eqi 'Error acquiring the state lock|PreconditionFailed|lock' apply.txt; then
+              echo "::warning::Terraform apply hit a transient state lock (attempt $attempt/3); retrying in 15s"
+              if [ "$attempt" -lt 3 ]; then
+                sleep 15
+                continue
+              fi
+            fi
+            exit "$apply_status"
+          done

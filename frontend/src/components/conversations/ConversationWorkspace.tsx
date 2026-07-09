@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import {
@@ -11,6 +11,7 @@ import {
   useSendConversationMessage,
   useUpdateConversationNote,
   useResolveConversation,
+  useDeleteConversation,
 } from "@/hooks/useConversations";
 import { useAdvisors } from "@/hooks/useAdvisors";
 import { useBots } from "@/hooks/useBots";
@@ -18,7 +19,7 @@ import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useT } from "@/i18n/context";
-import { buildWaMeLink } from "@/lib/wa-link";
+import { buildWaMeLink, normalizeWhatsAppPhone } from "@/lib/wa-link";
 import {
   MessageSquare,
   User,
@@ -28,9 +29,14 @@ import {
   Send,
   ExternalLink,
   ChevronLeft,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Message, WorkflowStatus } from "@/types";
+import type { Message, WorkflowStatus, Channel } from "@/types";
+import { useActiveLeadByPhone, useConvertLead } from "@/hooks/useLeads";
+import Link from "next/link";
+import { AdvisorCallPanel } from "@/components/conversations/AdvisorCallPanel";
+import { WhatsAppSoftphone } from "@/components/conversations/WhatsAppSoftphone";
 
 function messageListKey(msg: Message, index: number): string {
   return `${msg.messageId}::${msg.timestamp}::${index}`;
@@ -46,34 +52,106 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [botFilter, setBotFilter] = useState<string>("");
   const [handoffFilter, setHandoffFilter] = useState<"" | "human" | "bot">("");
+  const [channelFilter, setChannelFilter] = useState<"" | Channel>("");
   const [workflowFilter, setWorkflowFilter] = useState<"" | WorkflowStatus>("");
   const [draft, setDraft] = useState("");
   const [internalNote, setInternalNote] = useState("");
   const [showHandoffModal, setShowHandoffModal] = useState(false);
   const [showResolveModal, setShowResolveModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [csatScore, setCsatScore] = useState<number | "">("");
+  const [callPermissionFeedback, setCallPermissionFeedback] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
   const [selectedAdvisorId, setSelectedAdvisorId] = useState("");
 
   const { data: bots } = useBots();
   const { data: advisors } = useAdvisors();
-  const { data: conversations, isLoading } = useConversations({
+  const {
+    data: conversationsData,
+    isLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = useConversations({
     botId: botFilter || undefined,
+    channel: channelFilter || undefined,
     handoffMode: handoffFilter || undefined,
     workflowStatus: workflowFilter || undefined,
   });
+  const conversations =
+    conversationsData?.pages.flatMap((page) => page.items).filter((c) => c != null) ?? [];
+  const listScrollRef = useRef<HTMLDivElement>(null);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
   const { data: messages, isLoading: loadingMessages } = useConversationMessages(selectedId ?? "");
+
+  useEffect(() => {
+    const root = listScrollRef.current;
+    const target = loadMoreRef.current;
+    if (!root || !target) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          void fetchNextPage();
+        }
+      },
+      { root, threshold: 0.1 }
+    );
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, conversations.length]);
 
   const handoff = useHandoffConversation();
   const callPermission = useMutation({
     mutationFn: (params: { botId: string; to: string }) =>
-      api.post(`/bots/${params.botId}/calling/calls/permission-request`, { to: params.to }),
+      api.post(`/bots/${params.botId}/calling/calls/permission-request`, {
+        to: normalizeWhatsAppPhone(params.to),
+      }),
+    onSuccess: () => {
+      setCallPermissionFeedback({
+        type: "success",
+        message: t("conversations.callPermissionSent"),
+      });
+    },
+    onError: (err: Error) => {
+      setCallPermissionFeedback({
+        type: "error",
+        message: err.message || t("conversations.callPermissionFailed"),
+      });
+    },
   });
   const release = useReleaseConversation();
   const sendMessage = useSendConversationMessage();
   const updateNote = useUpdateConversationNote();
   const resolveConv = useResolveConversation();
+  const deleteConv = useDeleteConversation();
 
-  const selectedConversation = conversations?.find((c) => c.conversationId === selectedId);
+  const selectedConversation = conversations.find((c) => c.conversationId === selectedId);
+  const { data: activeLead } = useActiveLeadByPhone(selectedConversation?.phoneNumber);
+  const convertLead = useConvertLead();
+  const selectedBot = bots?.find((b) => b.botId === selectedConversation?.botId);
+  const selectedWhatsAppPhone = selectedConversation
+    ? normalizeWhatsAppPhone(selectedConversation.phoneNumber)
+    : "";
+
+  useEffect(() => {
+    setCallPermissionFeedback(null);
+  }, [selectedId]);
+
+  function channelLabel(channel?: Channel): string {
+    if (channel === "instagram") return t("conversations.channelInstagram");
+    if (channel === "webchat") return t("conversations.channelWebchat");
+    return t("conversations.channelWhatsapp");
+  }
+
+  function contactDisplay(conv: { contactName?: string; phoneNumber: string; participantId?: string; channel?: Channel }) {
+    if (conv.contactName) return conv.contactName;
+    if ((conv.channel ?? "whatsapp") === "whatsapp") return conv.phoneNumber;
+    return conv.participantId ?? conv.phoneNumber;
+  }
 
   function workflowLabel(status?: WorkflowStatus): string {
     const key = status ?? "open";
@@ -139,6 +217,16 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     setSelectedId(null);
   }
 
+  async function handleDelete() {
+    if (!selectedConversation) return;
+    await deleteConv.mutateAsync({
+      conversationId: selectedConversation.conversationId,
+      botId: selectedConversation.botId,
+    });
+    setShowDeleteModal(false);
+    setSelectedId(null);
+  }
+
   const showListOnMobile = !selectedId;
   const showDetailOnMobile = Boolean(selectedId);
 
@@ -169,6 +257,16 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
             </select>
           )}
           <select
+            value={channelFilter}
+            onChange={(e) => setChannelFilter(e.target.value as "" | Channel)}
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
+          >
+            <option value="">{t("conversations.filterChannelAll")}</option>
+            <option value="whatsapp">{t("conversations.channelWhatsapp")}</option>
+            <option value="instagram">{t("conversations.channelInstagram")}</option>
+            <option value="webchat">{t("conversations.channelWebchat")}</option>
+          </select>
+          <select
             value={handoffFilter}
             onChange={(e) => setHandoffFilter(e.target.value as "" | "human" | "bot")}
             className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
@@ -192,10 +290,10 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div ref={listScrollRef} className="flex-1 overflow-y-auto">
           {isLoading && <p className="p-4 text-sm text-gray-400">{t("common.loading")}</p>}
 
-          {!isLoading && conversations?.length === 0 && (
+          {!isLoading && conversations.length === 0 && (
             <EmptyState
               icon={<MessageSquare className="w-5 h-5" />}
               title={t("conversations.emptyTitle")}
@@ -204,7 +302,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
             />
           )}
 
-          {conversations?.map((conv) => (
+          {conversations.map((conv) => (
             <button
               key={conv.conversationId}
               type="button"
@@ -221,13 +319,16 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-0.5">
                     <p className="text-sm font-medium text-gray-900 truncate">
-                      {conv.contactName ?? conv.phoneNumber}
+                      {contactDisplay(conv)}
                     </p>
                     <span className="text-xs text-gray-400 flex-shrink-0 ml-2">
                       {formatRelativeTime(conv.lastMessageAt)}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant="default" className="text-[10px]">
+                      {channelLabel(conv.channel)}
+                    </Badge>
                     <Badge
                       variant={(conv.handoffMode ?? "bot") === "human" ? "warning" : "default"}
                       className="text-[10px]"
@@ -246,6 +347,11 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
               </div>
             </button>
           ))}
+
+          <div ref={loadMoreRef} className="h-1" />
+          {isFetchingNextPage && (
+            <p className="p-4 text-center text-sm text-gray-400">{t("common.loading")}</p>
+          )}
         </div>
       </div>
 
@@ -280,15 +386,34 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                 </div>
                 <div className="min-w-0">
                   <p className="font-semibold text-sm text-gray-900 truncate">
-                    {selectedConversation.contactName ?? selectedConversation.phoneNumber}
+                    {contactDisplay(selectedConversation)}
                   </p>
                   <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                    <Phone className="w-3 h-3 flex-shrink-0" />
-                    {selectedConversation.phoneNumber}
+                    <Badge variant="default" className="text-[10px]">
+                      {channelLabel(selectedConversation.channel)}
+                    </Badge>
+                    {(selectedConversation.channel ?? "whatsapp") === "whatsapp" ? (
+                      <>
+                        <Phone className="w-3 h-3 flex-shrink-0" />
+                        {selectedConversation.phoneNumber}
+                      </>
+                    ) : (
+                      <span>{selectedConversation.participantId}</span>
+                    )}
                   </div>
                 </div>
               </div>
               <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
+                {!advisorMode && selectedConversation.botId && (
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteModal(true)}
+                    className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-red-100 text-red-800 rounded-lg"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    {t("conversations.delete")}
+                  </button>
+                )}
                 {!advisorMode && !isHuman && (
                   <button
                     type="button"
@@ -298,20 +423,35 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                     {t("conversations.transfer")}
                   </button>
                 )}
-                {!advisorMode && selectedConversation.botId && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      callPermission.mutate({
-                        botId: selectedConversation.botId,
-                        to: selectedConversation.phoneNumber,
-                      })
-                    }
-                    disabled={callPermission.isPending}
-                    className="px-3 py-1.5 text-xs font-medium bg-violet-100 text-violet-800 rounded-lg"
-                  >
-                    {t("conversations.requestCallPermission")}
-                  </button>
+                {!advisorMode && selectedConversation.botId && (selectedConversation.channel ?? "whatsapp") === "whatsapp" && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCallPermissionFeedback(null);
+                        callPermission.mutate({
+                          botId: selectedConversation.botId,
+                          to: selectedConversation.phoneNumber,
+                        });
+                      }}
+                      disabled={callPermission.isPending || selectedWhatsAppPhone.length < 7}
+                      className="px-3 py-1.5 text-xs font-medium bg-violet-100 text-violet-800 rounded-lg disabled:opacity-50"
+                    >
+                      {t("conversations.requestCallPermission")}
+                    </button>
+                    {callPermissionFeedback ? (
+                      <p
+                        className={cn(
+                          "w-full text-xs",
+                          callPermissionFeedback.type === "success"
+                            ? "text-green-700"
+                            : "text-red-600"
+                        )}
+                      >
+                        {callPermissionFeedback.message}
+                      </p>
+                    ) : null}
+                  </>
                 )}
                 {isHuman && (
                   <>
@@ -325,15 +465,17 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                     >
                       {t("conversations.resolve")}
                     </button>
-                    <a
-                      href={buildWaMeLink(selectedConversation.phoneNumber)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-green-100 text-green-800 rounded-lg"
-                    >
-                      <ExternalLink className="w-3 h-3" />
-                      {t("conversations.openWhatsApp")}
-                    </a>
+                    {(selectedConversation.channel ?? "whatsapp") === "whatsapp" && (
+                      <a
+                        href={buildWaMeLink(selectedConversation.phoneNumber)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-green-100 text-green-800 rounded-lg"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        {t("conversations.openWhatsApp")}
+                      </a>
+                    )}
                     <button
                       type="button"
                       onClick={handleRelease}
@@ -347,10 +489,50 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
               </div>
             </div>
 
-            {isHuman && (
+            {isHuman && (selectedConversation.channel ?? "whatsapp") === "whatsapp" && (
               <p className="px-6 py-2 text-xs text-amber-800 bg-amber-50 border-b border-amber-100">
                 {t("conversations.personalChannelHint")}
               </p>
+            )}
+            {isHuman && (selectedConversation.channel ?? "whatsapp") !== "whatsapp" && (
+              <p className="px-6 py-2 text-xs text-indigo-800 bg-indigo-50 border-b border-indigo-100">
+                {t("conversations.replyViaChannel", {
+                  channel: channelLabel(selectedConversation.channel),
+                })}
+              </p>
+            )}
+
+            {selectedConversation && activeLead && (
+              <div className="mx-4 mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg flex flex-wrap items-center justify-between gap-2 text-sm">
+                <div>
+                  <span className="font-medium text-amber-900">{t("leads.leadStatus")}: </span>
+                  <span className="text-amber-800">{t(`leads.status_${activeLead.status}`)}</span>
+                </div>
+                <div className="flex gap-2">
+                  <Link href="/leads" className="text-indigo-600 hover:text-indigo-800 text-xs">
+                    {t("leads.viewLead")}
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => convertLead.mutate({ leadId: activeLead.leadId })}
+                    disabled={convertLead.isPending}
+                    className="text-xs font-medium text-indigo-600 hover:text-indigo-800"
+                  >
+                    {t("leads.convert")}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {selectedConversation && (
+              <>
+                <AdvisorCallPanel
+                  conversation={selectedConversation}
+                  advisorMode={advisorMode}
+                  voiceEnabled={selectedBot?.webchatVoiceEnabled}
+                />
+                <WhatsAppSoftphone conversation={selectedConversation} advisorMode={advisorMode} />
+              </>
             )}
 
             {isHuman && selectedConversation.workflowStatus !== "resolved" && (
@@ -493,6 +675,32 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                 className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg"
               >
                 {t("conversations.resolveConfirm")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeleteModal && selectedConversation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 space-y-4">
+            <h2 className="text-lg font-semibold">{t("conversations.deleteTitle")}</h2>
+            <p className="text-sm text-gray-600">{t("conversations.deleteConfirm")}</p>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                className="px-4 py-2 text-sm text-gray-600"
+              >
+                {t("common.cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deleteConv.isPending}
+                className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg disabled:opacity-50"
+              >
+                {t("conversations.delete")}
               </button>
             </div>
           </div>

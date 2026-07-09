@@ -17,6 +17,7 @@ export function buildMessageReceivedPayload(params: {
   tenantId: string;
   botId: string;
   conversationId: string;
+  channel?: string;
   from: string;
   message: string;
   contactName?: string;
@@ -27,9 +28,107 @@ export function buildMessageReceivedPayload(params: {
     data: {
       botId: params.botId,
       conversationId: params.conversationId,
+      channel: params.channel ?? "whatsapp",
       from: params.from,
       message: params.message,
       contact: { name: params.contactName ?? "" },
+    },
+  });
+}
+
+export function buildMessageSentPayload(params: {
+  tenantId: string;
+  botId: string;
+  conversationId: string;
+  channel?: string;
+  to: string;
+  message: string;
+  role: string;
+}): IntegrationEventPayload {
+  return buildIntegrationPayload({
+    event: "message.sent",
+    tenantId: params.tenantId,
+    data: {
+      botId: params.botId,
+      conversationId: params.conversationId,
+      channel: params.channel ?? "whatsapp",
+      to: params.to,
+      message: params.message,
+      role: params.role,
+    },
+  });
+}
+
+export function buildFlowCompletedPayload(params: {
+  tenantId: string;
+  botId: string;
+  conversationId: string;
+  phone: string;
+  metaFlowId: string;
+  responseJson: Record<string, unknown>;
+  channel?: string;
+}): IntegrationEventPayload {
+  return buildIntegrationPayload({
+    event: "flow.completed",
+    tenantId: params.tenantId,
+    data: {
+      botId: params.botId,
+      conversationId: params.conversationId,
+      channel: params.channel ?? "whatsapp",
+      phone: params.phone,
+      metaFlowId: params.metaFlowId,
+      response: params.responseJson,
+    },
+  });
+}
+
+export function buildLeadCreatedPayload(params: {
+  tenantId: string;
+  botId: string;
+  leadId: string;
+  conversationId: string;
+  phone: string;
+  metaFlowId: string;
+  name?: string;
+  email?: string;
+}): IntegrationEventPayload {
+  return buildIntegrationPayload({
+    event: "lead.created",
+    tenantId: params.tenantId,
+    data: {
+      botId: params.botId,
+      leadId: params.leadId,
+      conversationId: params.conversationId,
+      phone: params.phone,
+      metaFlowId: params.metaFlowId,
+      ...(params.name ? { name: params.name } : {}),
+      ...(params.email ? { email: params.email } : {}),
+    },
+  });
+}
+
+export function buildLeadConvertedPayload(params: {
+  tenantId: string;
+  botId: string;
+  leadId: string;
+  conversationId: string;
+  phone: string;
+  contact: { phoneNumber: string; displayName?: string; email?: string; tags: string[] };
+}): IntegrationEventPayload {
+  return buildIntegrationPayload({
+    event: "lead.converted",
+    tenantId: params.tenantId,
+    data: {
+      botId: params.botId,
+      leadId: params.leadId,
+      conversationId: params.conversationId,
+      phone: params.phone,
+      contact: {
+        phone: params.contact.phoneNumber,
+        name: params.contact.displayName ?? "",
+        email: params.contact.email ?? "",
+        tags: params.contact.tags,
+      },
     },
   });
 }
@@ -51,48 +150,6 @@ export function buildConversationHandoffPayload(params: {
       phoneNumber: params.phoneNumber,
       reason: params.reason,
       ...(params.advisorId ? { advisorId: params.advisorId } : {}),
-    },
-  });
-}
-
-export function buildMessageSentPayload(params: {
-  tenantId: string;
-  botId: string;
-  conversationId: string;
-  to: string;
-  message: string;
-  role: string;
-}): IntegrationEventPayload {
-  return buildIntegrationPayload({
-    event: "message.sent",
-    tenantId: params.tenantId,
-    data: {
-      botId: params.botId,
-      conversationId: params.conversationId,
-      to: params.to,
-      message: params.message,
-      role: params.role,
-    },
-  });
-}
-
-export function buildFlowCompletedPayload(params: {
-  tenantId: string;
-  botId: string;
-  conversationId: string;
-  phone: string;
-  metaFlowId: string;
-  responseJson: Record<string, unknown>;
-}): IntegrationEventPayload {
-  return buildIntegrationPayload({
-    event: "flow.completed",
-    tenantId: params.tenantId,
-    data: {
-      botId: params.botId,
-      conversationId: params.conversationId,
-      phone: params.phone,
-      metaFlowId: params.metaFlowId,
-      response: params.responseJson,
     },
   });
 }

@@ -27,15 +27,22 @@ export async function logApiKeyUsage(log: ApiKeyUsageLog): Promise<void> {
 export async function listApiKeyUsageLogs(
   tenantId: string,
   keyId: string,
-  limit = 20
+  limit = 20,
+  fromIso?: string,
+  toIso?: string
 ): Promise<ApiKeyUsageLog[]> {
+  const pk = `APIUSAGE#${tenantId}#${keyId}`;
+  const hasRange = Boolean(fromIso && toIso);
+
   const result = await docClient.send(
     new QueryCommand({
       TableName: TABLE_NAME,
-      KeyConditionExpression: "PK = :pk",
-      ExpressionAttributeValues: {
-        ":pk": `APIUSAGE#${tenantId}#${keyId}`,
-      },
+      KeyConditionExpression: hasRange
+        ? "PK = :pk AND SK BETWEEN :from AND :to"
+        : "PK = :pk",
+      ExpressionAttributeValues: hasRange
+        ? { ":pk": pk, ":from": fromIso!, ":to": toIso! }
+        : { ":pk": pk },
       ScanIndexForward: false,
       Limit: limit,
     })

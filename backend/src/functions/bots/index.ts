@@ -10,7 +10,9 @@ import {
 } from "../../lib/dynamodb/bot.repository.js";
 import { extractAuthContext, assertTenantAccess, assertMemberRole } from "../../lib/auth/cognito.js";
 import { ensureTenant } from "../../lib/dynamodb/tenant.repository.js";
-import { assertCanCreateBot } from "../../lib/billing/assert-plan.js";
+import { assertCanCreateBot, assertCanUseWebChat, assertCanEnableChannel, assertCanStartLiveKitCall } from "../../lib/billing/assert-plan.js";
+import { putWidgetKeyLookup } from "../../lib/dynamodb/bot-lookup.repository.js";
+import { generateWidgetKey } from "../../lib/webchat/session.repository.js";
 import { assertAllowedModel, assertCanEnableKnowledge } from "../../lib/billing/plan-config.js";
 import {
   getWhatsAppAccessToken,
@@ -82,6 +84,81 @@ export async function handler(
     assertMemberRole(auth);
     const method = event.requestContext.http.method;
     const botId = event.pathParameters?.botId;
+    const rawPath = event.rawPath ?? event.requestContext.http.path;
+
+    if (botId && method === "POST" && rawPath.includes("/webchat/rotate-key")) {
+      const existing = await getBot(auth.tenantId, botId);
+      if (!existing) return notFound("Bot not found");
+      assertTenantAccess(auth, existing.tenantId);
+
+      const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
+      await assertCanUseWebChat(tenant);
+      await assertCanEnableChannel(tenant, existing, "webchat");
+
+      const newKey = generateWidgetKey();
+      if (existing.webchatWidgetKey) {
+        const { deleteWidgetKeyLookup } = await import(
+          "../../lib/dynamodb/bot-lookup.repository.js"
+        );
+        await deleteWidgetKeyLookup(existing.webchatWidgetKey);
+      }
+      await putWidgetKeyLookup(newKey, auth.tenantId, botId);
+      const updated = await updateBot(auth.tenantId, botId, {
+        webchatWidgetKey: newKey,
+        webchatEnabled: true,
+      });
+      return ok({ webchatWidgetKey: updated.webchatWidgetKey, webchatEnabled: true });
+    }
+
+    if (botId && method === "PUT" && rawPath.includes("/webchat")) {
+      const existing = await getBot(auth.tenantId, botId);
+      if (!existing) return notFound("Bot not found");
+      assertTenantAccess(auth, existing.tenantId);
+
+      const body = JSON.parse(event.body ?? "{}");
+      const parsed = z
+        .object({
+          enabled: z.boolean().optional(),
+          webchatVoiceEnabled: z.boolean().optional(),
+          webchatVideoEnabled: z.boolean().optional(),
+        })
+        .safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
+
+      if (parsed.data.enabled === true) {
+        await assertCanUseWebChat(tenant);
+        await assertCanEnableChannel(tenant, existing, "webchat");
+      }
+
+      let widgetKey = existing.webchatWidgetKey;
+      if (parsed.data.enabled === true && !widgetKey) {
+        widgetKey = generateWidgetKey();
+        await putWidgetKeyLookup(widgetKey, auth.tenantId, botId);
+      }
+
+      const updates: Record<string, unknown> = {};
+      if (parsed.data.enabled !== undefined) {
+        updates.webchatEnabled = parsed.data.enabled;
+        if (widgetKey) updates.webchatWidgetKey = widgetKey;
+      }
+      if (parsed.data.webchatVoiceEnabled !== undefined) {
+        if (parsed.data.webchatVoiceEnabled) await assertCanStartLiveKitCall(tenant);
+        updates.webchatVoiceEnabled = parsed.data.webchatVoiceEnabled;
+      }
+      if (parsed.data.webchatVideoEnabled !== undefined) {
+        updates.webchatVideoEnabled = parsed.data.webchatVideoEnabled;
+      }
+
+      const updated = await updateBot(auth.tenantId, botId, updates);
+      return ok({
+        webchatEnabled: updated.webchatEnabled,
+        webchatWidgetKey: updated.webchatWidgetKey,
+        webchatVoiceEnabled: updated.webchatVoiceEnabled,
+        webchatVideoEnabled: updated.webchatVideoEnabled,
+      });
+    }
 
     if (method === "GET" && !botId) {
       const bots = await listBots(auth.tenantId);

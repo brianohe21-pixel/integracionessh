@@ -35,9 +35,14 @@ export default function ContactsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
+  const [tagFilter, setTagFilter] = useState("");
+  const [editingPhone, setEditingPhone] = useState<string | null>(null);
+  const [editTags, setEditTags] = useState("");
+
   const [error, setError] = useState("");
 
   const { data, isLoading } = useContacts({
+    tag: tagFilter || undefined,
     consent: consentFilter || undefined,
     suppressed: suppressedFilter === "" ? undefined : suppressedFilter === "true",
     q: q || undefined,
@@ -165,6 +170,15 @@ export default function ContactsPage() {
           <option value="false">{t("contacts.notSuppressed")}</option>
           <option value="true">{t("contacts.suppressed")}</option>
         </select>
+        <select
+          value={tagFilter}
+          onChange={(e) => setTagFilter(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+        >
+          <option value="">{t("contacts.colTags")}</option>
+          <option value="lead">{t("contacts.filterTagLead")}</option>
+          <option value="converted">{t("contacts.filterTagConverted")}</option>
+        </select>
       </div>
 
       {error && (
@@ -218,6 +232,7 @@ export default function ContactsPage() {
               <tr className="bg-gray-50 text-left text-xs text-gray-500 uppercase">
                 <th className="px-4 py-3">{t("common.phone")}</th>
                 <th className="px-4 py-3">{t("contacts.colName")}</th>
+                <th className="px-4 py-3">{t("contacts.colEmail")}</th>
                 <th className="px-4 py-3">{t("contacts.colConsent")}</th>
                 <th className="px-4 py-3">{t("contacts.colTags")}</th>
                 <th className="px-4 py-3 text-right">{t("contacts.colActions")}</th>
@@ -228,6 +243,7 @@ export default function ContactsPage() {
                 <tr key={c.phoneNumber} className="hover:bg-gray-50/50">
                   <td className="px-4 py-3 font-mono text-gray-900">{c.phoneNumber}</td>
                   <td className="px-4 py-3">{c.displayName ?? "—"}</td>
+                  <td className="px-4 py-3 text-gray-600">{c.email ?? "—"}</td>
                   <td className="px-4 py-3">
                     <Badge variant={consentVariant(c.marketingConsent)}>
                       {t(`contacts.consent_${c.marketingConsent}`)}
@@ -237,8 +253,48 @@ export default function ContactsPage() {
                         {t("contacts.suppressed")}
                       </Badge>
                     )}
+                    {c.leadId && (
+                      <Badge variant="info" className="ml-1">
+                        {c.tags.includes("converted") ? t("contacts.tagConverted") : t("contacts.tagLead")}
+                      </Badge>
+                    )}
                   </td>
-                  <td className="px-4 py-3 text-gray-600">{c.tags.join(", ") || "—"}</td>
+                  <td className="px-4 py-3 text-gray-600">
+                    {editingPhone === c.phoneNumber ? (
+                      <div className="flex gap-1">
+                        <input
+                          value={editTags}
+                          onChange={(e) => setEditTags(e.target.value)}
+                          placeholder={t("contacts.tagsPlaceholder")}
+                          className="px-2 py-1 border border-gray-300 rounded text-xs flex-1"
+                        />
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            await updateContact.mutateAsync({
+                              phone: c.phoneNumber,
+                              tags: editTags.split(",").map((t) => t.trim()).filter(Boolean),
+                            });
+                            setEditingPhone(null);
+                          }}
+                          className="text-xs text-indigo-600"
+                        >
+                          {t("common.save")}
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingPhone(c.phoneNumber);
+                          setEditTags(c.tags.join(", "));
+                        }}
+                        className="text-left hover:text-indigo-600"
+                      >
+                        {c.tags.join(", ") || "—"}
+                      </button>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-right space-x-2">
                     {c.marketingConsent !== "opt_in" && (
                       <button

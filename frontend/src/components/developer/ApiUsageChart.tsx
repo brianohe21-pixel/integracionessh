@@ -1,11 +1,12 @@
 "use client";
 
-import type { ApiKeyUsageSummary } from "@/types";
+import { useState } from "react";
 import { TableContainer } from "@/components/ui/TableContainer";
-
-interface ApiUsageChartProps {
-  usage: ApiKeyUsageSummary[];
-}
+import { ApiUsageLogsPanel } from "@/components/developer/ApiUsageLogsPanel";
+import { UsageDateFilters } from "@/components/developer/UsageDateFilters";
+import { useApiKeyUsage } from "@/hooks/useApiKeys";
+import { currentMonthRange, type MetricsDateRange } from "@/lib/metrics-date-range";
+import { useT } from "@/i18n/context";
 
 function BarChart({ data }: { data: Array<{ label: string; value: number; color: string }> }) {
   const max = Math.max(...data.map((d) => d.value), 1);
@@ -61,7 +62,11 @@ function BarChart({ data }: { data: Array<{ label: string; value: number; color:
   );
 }
 
-export function ApiUsageChart({ usage }: ApiUsageChartProps) {
+export function ApiUsageChart() {
+  const t = useT();
+  const [dateRange, setDateRange] = useState<MetricsDateRange>(currentMonthRange);
+  const [selectedKeyId, setSelectedKeyId] = useState<string | null>(null);
+  const { data: usage = [], isLoading } = useApiKeyUsage(dateRange);
   const totalMessages = usage.reduce((sum, u) => sum + u.messagesThisMonth, 0);
   const totalSuccess = usage.reduce((sum, u) => sum + u.successRequests, 0);
   const totalErrors = usage.reduce((sum, u) => sum + u.errorRequests, 0);
@@ -77,27 +82,41 @@ export function ApiUsageChart({ usage }: ApiUsageChartProps) {
 
   return (
     <div className="space-y-6">
+      <UsageDateFilters range={dateRange} onChange={setDateRange} />
+
+      {isLoading ? (
+        <div className="space-y-3">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 animate-pulse h-16" />
+          ))}
+        </div>
+      ) : (
+        <>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
-            Messages this month
+            {t("developer.messagesInPeriod")}
           </p>
           <p className="text-2xl font-bold text-gray-900 mt-1">
             {totalMessages.toLocaleString()}
           </p>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Success rate</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
+            {t("developer.successRate")}
+          </p>
           <p className="text-2xl font-bold text-green-600 mt-1">{successRate}%</p>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
-            Successful requests
+            {t("developer.successfulRequests")}
           </p>
           <p className="text-2xl font-bold text-gray-900 mt-1">{totalSuccess.toLocaleString()}</p>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Errors</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
+            {t("developer.errors")}
+          </p>
           <p className="text-2xl font-bold text-red-500 mt-1">{totalErrors.toLocaleString()}</p>
         </div>
       </div>
@@ -105,7 +124,7 @@ export function ApiUsageChart({ usage }: ApiUsageChartProps) {
       {usage.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h3 className="text-sm font-semibold text-gray-900 mb-4">
-            Messages this month by key
+            {t("developer.messagesByKeyInPeriod")}
           </h3>
           {chartData.length > 0 ? (
             <BarChart data={chartData} />
@@ -117,7 +136,7 @@ export function ApiUsageChart({ usage }: ApiUsageChartProps) {
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100">
-          <h3 className="text-sm font-semibold text-gray-900">Usage by key</h3>
+          <h3 className="text-sm font-semibold text-gray-900">{t("developer.usageByKey")}</h3>
         </div>
         {usage.length === 0 ? (
           <p className="text-sm text-gray-400 text-center py-10">No usage data yet</p>
@@ -126,11 +145,12 @@ export function ApiUsageChart({ usage }: ApiUsageChartProps) {
             <table className="w-full min-w-[480px] text-sm">
               <thead>
                 <tr className="bg-gray-50 text-left text-xs text-gray-500 uppercase tracking-wide">
-                  <th className="px-6 py-3 font-medium">Key</th>
-                  <th className="px-6 py-3 font-medium text-right">Requests</th>
-                  <th className="px-6 py-3 font-medium text-right">Success</th>
-                  <th className="px-6 py-3 font-medium text-right">Errors</th>
-                  <th className="px-6 py-3 font-medium">Last used</th>
+                  <th className="px-6 py-3 font-medium">{t("developer.colKey")}</th>
+                  <th className="px-6 py-3 font-medium text-right">{t("developer.colRequests")}</th>
+                  <th className="px-6 py-3 font-medium text-right">{t("developer.colSuccess")}</th>
+                  <th className="px-6 py-3 font-medium text-right">{t("developer.colErrors")}</th>
+                  <th className="px-6 py-3 font-medium">{t("developer.colLastUsed")}</th>
+                  <th className="px-6 py-3 font-medium" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -154,6 +174,15 @@ export function ApiUsageChart({ usage }: ApiUsageChartProps) {
                         ? new Date(u.lastUsedAt).toLocaleDateString()
                         : "—"}
                     </td>
+                    <td className="px-6 py-3.5 text-right">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedKeyId(u.keyId)}
+                        className="text-xs font-medium text-indigo-600 hover:underline"
+                      >
+                        {t("developer.viewLogs")}
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -161,6 +190,15 @@ export function ApiUsageChart({ usage }: ApiUsageChartProps) {
           </TableContainer>
         )}
       </div>
+
+      <ApiUsageLogsPanel
+        keys={usage}
+        selectedKeyId={selectedKeyId}
+        onSelectKey={setSelectedKeyId}
+        dateRange={dateRange}
+      />
+        </>
+      )}
     </div>
   );
 }

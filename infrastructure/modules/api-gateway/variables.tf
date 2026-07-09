@@ -62,6 +62,14 @@ variable "contacts_function_arn" {
   type = string
 }
 
+variable "leads_invoke_arn" {
+  type = string
+}
+
+variable "leads_function_arn" {
+  type = string
+}
+
 variable "templates_invoke_arn" {
   type = string
 }
@@ -91,6 +99,22 @@ variable "whatsapp_connect_invoke_arn" {
 }
 
 variable "whatsapp_connect_function_arn" {
+  type = string
+}
+
+variable "instagram_connect_invoke_arn" {
+  type = string
+}
+
+variable "instagram_connect_function_arn" {
+  type = string
+}
+
+variable "webchat_invoke_arn" {
+  type = string
+}
+
+variable "webchat_function_arn" {
   type = string
 }
 
@@ -187,6 +211,30 @@ variable "calling_invoke_arn" {
 }
 
 variable "calling_function_arn" {
+  type = string
+}
+
+variable "realtime_invoke_arn" {
+  type = string
+}
+
+variable "realtime_function_arn" {
+  type = string
+}
+
+variable "calendar_invoke_arn" {
+  type = string
+}
+
+variable "calendar_function_arn" {
+  type = string
+}
+
+variable "public_calendar_invoke_arn" {
+  type = string
+}
+
+variable "public_calendar_function_arn" {
   type = string
 }
 

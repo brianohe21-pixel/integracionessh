@@ -3,12 +3,15 @@ import { sendFlowMessage } from "../../whatsapp/flows.js";
 import { setMetaFlowSession } from "../../dynamodb/conversation.repository.js";
 import type { FlowNode, FlowRun } from "../../../types/index.js";
 import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
+import { skipWhatsAppOnlyNode } from "./channel-guard.js";
 
 export async function executeMetaFlowNode(
   node: FlowNode,
   ctx: FlowExecutionContext,
   _run: FlowRun
 ): Promise<NodeExecutionResult> {
+  const skipped = skipWhatsAppOnlyNode(ctx, node.id, "meta_flow");
+  if (skipped) return skipped;
   const metaFlowId = node.data.metaFlowId;
   if (!metaFlowId) throw new Error("metaFlowId required for meta_flow node");
 

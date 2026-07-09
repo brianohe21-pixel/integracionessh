@@ -32,6 +32,7 @@ const FlowNodeSchema = z.object({
     "delay",
     "set_variable",
     "http_request",
+    "book_appointment",
     "end",
   ]),
   position: z.object({ x: z.number(), y: z.number() }),

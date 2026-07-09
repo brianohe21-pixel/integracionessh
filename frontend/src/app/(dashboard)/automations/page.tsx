@@ -10,7 +10,7 @@ import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { TableContainer } from "@/components/ui/TableContainer";
 
-const TRIGGERS: AutomationTrigger[] = ["keyword", "first_message", "schedule"];
+const TRIGGERS: AutomationTrigger[] = ["keyword", "first_message", "schedule", "flow_completed"];
 const ACTIONS: AutomationAction[] = ["send_text", "send_template", "tag_contact", "handoff"];
 
 export default function AutomationsPage() {
@@ -23,6 +23,8 @@ export default function AutomationsPage() {
   const [action, setAction] = useState<AutomationAction>("send_text");
   const [keywords, setKeywords] = useState("");
   const [messageText, setMessageText] = useState("");
+  const [tags, setTags] = useState("");
+  const [metaFlowId, setMetaFlowId] = useState("");
   const [error, setError] = useState("");
 
   const { data: botsData } = useBots();
@@ -51,12 +53,16 @@ export default function AutomationsPage() {
         priority: 100,
         stopProcessing: true,
         ...(trigger === "keyword" ? { keywords: keywords.split(",").map((k) => k.trim()).filter(Boolean), matchMode: "contains" as const } : {}),
+        ...(trigger === "flow_completed" && metaFlowId ? { metaFlowId } : {}),
         ...(action === "send_text" ? { messageText } : {}),
+        ...(action === "tag_contact" ? { tags: tags.split(",").map((k) => k.trim()).filter(Boolean) } : {}),
       });
       setShowForm(false);
       setName("");
       setKeywords("");
       setMessageText("");
+      setTags("");
+      setMetaFlowId("");
     } catch (err) {
       setError((err as Error).message);
     }
@@ -111,7 +117,7 @@ export default function AutomationsPage() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <select value={trigger} onChange={(e) => setTrigger(e.target.value as AutomationTrigger)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
               {TRIGGERS.map((tr) => (
-                <option key={tr} value={tr}>{tr}</option>
+                <option key={tr} value={tr}>{t(`automations.trigger_${tr}` as "automations.trigger_keyword") || tr}</option>
               ))}
             </select>
             <select value={action} onChange={(e) => setAction(e.target.value as AutomationAction)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
@@ -128,6 +134,14 @@ export default function AutomationsPage() {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
             />
           )}
+          {trigger === "flow_completed" && (
+            <input
+              value={metaFlowId}
+              onChange={(e) => setMetaFlowId(e.target.value)}
+              placeholder={t("automations.metaFlowPlaceholder")}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            />
+          )}
           {action === "send_text" && (
             <textarea
               value={messageText}
@@ -135,6 +149,14 @@ export default function AutomationsPage() {
               placeholder={t("automations.messagePlaceholder")}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
               rows={3}
+            />
+          )}
+          {action === "tag_contact" && (
+            <input
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              placeholder={t("automations.tagsPlaceholder")}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
             />
           )}
           {error && <p className="text-sm text-red-600">{error}</p>}

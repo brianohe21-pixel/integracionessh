@@ -38,6 +38,31 @@ const UpdateApiKeySchema = z.object({
   enabled: z.boolean().optional(),
 });
 
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+
+function parseUsageDateRange(
+  params: Record<string, string | undefined> | undefined
+): { fromIso: string; toIso: string } {
+  const now = new Date();
+  const defaultFrom = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)
+  ).toISOString();
+  const defaultTo = now.toISOString();
+
+  const from = params?.from;
+  const to = params?.to;
+  if (!from || !to || !DATE_ONLY.test(from) || !DATE_ONLY.test(to)) {
+    return { fromIso: defaultFrom, toIso: defaultTo };
+  }
+
+  const [fromIso, toIso] =
+    from <= to
+      ? [`${from}T00:00:00.000Z`, `${to}T23:59:59.999Z`]
+      : [`${to}T00:00:00.000Z`, `${from}T23:59:59.999Z`];
+
+  return { fromIso, toIso };
+}
+
 type ApiKeyPublic = Omit<ApiKey, "hashedKey" | "rateLimitPerMinute" | "rateLimitPerDay">;
 
 function safeApiKey(key: ApiKey): ApiKeyPublic {
@@ -61,17 +86,15 @@ export async function handler(
 
     if (method === "GET" && path.endsWith("/api-keys/usage")) {
       const keys = await listApiKeysByTenant(auth.tenantId);
-      const now = new Date();
-      const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
-      const monthEnd = now.toISOString();
+      const { fromIso, toIso } = parseUsageDateRange(event.queryStringParameters);
 
       const usageResults = await Promise.all(
         keys.map(async (key) => {
           const monthSummary = await summarizeApiKeyUsageByPeriod(
             auth.tenantId,
             key.keyId,
-            monthStart,
-            monthEnd
+            fromIso,
+            toIso
           );
 
           return {
@@ -95,8 +118,12 @@ export async function handler(
       const key = keys.find((k) => k.keyId === keyId);
       if (!key) return notFound("API key not found");
 
-      const logs = await listApiKeyUsageLogs(auth.tenantId, keyId, 20);
-      return ok(logs);
+      const limit = Math.min(parseInt(event.queryStringParameters?.limit ?? "50", 10) || 50, 100);
+      const errorsOnly = event.queryStringParameters?.errorsOnly === "true";
+      const { fromIso, toIso } = parseUsageDateRange(event.queryStringParameters);
+      const logs = await listApiKeyUsageLogs(auth.tenantId, keyId, limit, fromIso, toIso);
+      const filtered = errorsOnly ? logs.filter((log) => log.statusCode >= 400) : logs;
+      return ok(filtered);
     }
 
     if (method === "GET" && !keyId) {

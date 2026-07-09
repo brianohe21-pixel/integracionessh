@@ -2,6 +2,23 @@
 set -e
 ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
-pnpm --filter chatbot-platform-backend run type-check
-pnpm --filter chatbot-platform-backend run test
-pnpm --filter frontend run lint
+
+STAGED="$(git diff --cached --name-only)"
+
+has_backend=false
+has_frontend=false
+
+for path in $STAGED; do
+  case "$path" in
+    backend/*) has_backend=true ;;
+    frontend/*) has_frontend=true ;;
+  esac
+done
+
+if [ "$has_backend" = true ]; then
+  pnpm --filter chatbot-platform-backend run type-check
+fi
+
+if [ "$has_frontend" = true ]; then
+  pnpm --filter frontend run lint
+fi

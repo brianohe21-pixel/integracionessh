@@ -28,5 +28,7 @@ stripe_price_pro        = ""
 stripe_price_enterprise = ""
 frontend_url            = "https://app.yourdomain.com"
 
-enable_monitoring       = true
-ops_alert_email         = "ops@example.com"
+enable_monitoring = true
+ops_alert_email   = "brianohe21@gmail.com"
+# ops_alert_emails = ["brianohe21@gmail.com", "oncall@example.com"]
+ses_from_email    = "brianohe21@gmail.com"

@@ -28,5 +28,7 @@ stripe_price_enterprise = ""
 frontend_url            = "https://develop.d5sepmwbbwly9.amplifyapp.com"
 api_custom_domain       = ""
 
-enable_monitoring       = false
-ops_alert_email         = "ops@example.com"
+enable_monitoring = false
+ops_alert_email   = "ops@example.com"
+# ops_alert_emails = ["ops@example.com", "oncall@example.com"]
+ses_from_email    = "ops@example.com"

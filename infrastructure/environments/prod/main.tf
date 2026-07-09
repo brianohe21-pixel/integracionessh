@@ -72,6 +72,8 @@ locals {
     data.external.amplify_browser_origin.result.origin != "" ? [data.external.amplify_browser_origin.result.origin] : [],
     var.extra_allowed_origins
   )
+
+  ops_alert_emails = length(var.ops_alert_emails) > 0 ? var.ops_alert_emails : compact([var.ops_alert_email])
 }
 
 module "dynamodb" {
@@ -135,6 +137,7 @@ resource "aws_iam_role_policy" "scheduler_invoke" {
         module.lambda.campaigns_function_arn,
         module.lambda.automations_function_arn,
         module.lambda.flows_function_arn,
+        module.lambda.calendar_function_arn,
       ]
     }]
   })
@@ -186,78 +189,95 @@ module "lambda" {
   wompi_amount_enterprise_cents = var.wompi_amount_enterprise_cents
   wompi_api_base                = var.wompi_api_base
   wompi_checkout_url            = var.wompi_checkout_url
+  livekit_url                   = var.livekit_url
+  livekit_api_key               = var.livekit_api_key
+  livekit_api_secret            = var.livekit_api_secret
+  ses_from_email                = var.ses_from_email
+  admin_notification_emails     = local.ops_alert_emails
   tags                          = local.tags
 }
 
 module "api_gateway" {
-  source                        = "../../modules/api-gateway"
-  project                       = local.project
-  environment                   = local.environment
-  cognito_client_id             = module.cognito.client_id
-  cognito_issuer_url            = module.cognito.endpoint
-  webhook_invoke_arn            = module.lambda.webhook_invoke_arn
-  webhook_function_arn          = module.lambda.function_arns["webhook"]
-  tenants_invoke_arn            = module.lambda.tenants_invoke_arn
-  tenants_function_arn          = module.lambda.function_arns["tenants"]
-  bots_invoke_arn               = module.lambda.bots_invoke_arn
-  bots_function_arn             = module.lambda.function_arns["bots"]
-  conversations_invoke_arn      = module.lambda.conversations_invoke_arn
-  conversations_function_arn    = module.lambda.function_arns["conversations"]
-  advisors_invoke_arn           = module.lambda.advisors_invoke_arn
-  advisors_function_arn         = module.lambda.advisors_function_arn
-  contacts_invoke_arn           = module.lambda.contacts_invoke_arn
-  contacts_function_arn         = module.lambda.contacts_function_arn
-  templates_invoke_arn          = module.lambda.templates_invoke_arn
-  templates_function_arn        = module.lambda.function_arns["templates"]
-  bulk_send_invoke_arn          = module.lambda.bulk_send_invoke_arn
-  bulk_send_function_arn        = module.lambda.function_arns["bulk_send"]
-  metrics_invoke_arn            = module.lambda.metrics_invoke_arn
-  metrics_function_arn          = module.lambda.function_arns["metrics"]
-  whatsapp_connect_invoke_arn   = module.lambda.whatsapp_connect_invoke_arn
-  whatsapp_connect_function_arn = module.lambda.whatsapp_connect_function_arn
-  campaigns_invoke_arn          = module.lambda.campaigns_invoke_arn
-  campaigns_function_arn        = module.lambda.campaigns_function_arn
-  support_tickets_invoke_arn    = module.lambda.support_tickets_invoke_arn
-  support_tickets_function_arn  = module.lambda.support_tickets_function_arn
-  billing_invoke_arn            = module.lambda.billing_invoke_arn
-  billing_function_arn          = module.lambda.billing_function_arn
-  admin_invoke_arn              = module.lambda.admin_invoke_arn
-  admin_function_arn            = module.lambda.admin_function_arn
-  public_api_invoke_arn         = module.lambda.public_api_invoke_arn
-  public_api_function_arn       = module.lambda.public_api_function_arn
-  api_keys_invoke_arn           = module.lambda.api_keys_invoke_arn
-  api_keys_function_arn         = module.lambda.api_keys_function_arn
-  integrations_invoke_arn       = module.lambda.integrations_invoke_arn
-  integrations_function_arn     = module.lambda.integrations_function_arn
-  automations_invoke_arn        = module.lambda.automations_invoke_arn
-  automations_function_arn      = module.lambda.automations_function_arn
-  knowledge_invoke_arn          = module.lambda.knowledge_invoke_arn
-  knowledge_function_arn        = module.lambda.knowledge_function_arn
-  meta_flows_invoke_arn         = module.lambda.meta_flows_invoke_arn
-  meta_flows_function_arn       = module.lambda.meta_flows_function_arn
-  flows_invoke_arn              = module.lambda.flows_invoke_arn
-  flows_function_arn            = module.lambda.flows_function_arn
-  calling_invoke_arn            = module.lambda.calling_invoke_arn
-  calling_function_arn          = module.lambda.calling_function_arn
-  allowed_origins               = local.browser_origins
-  api_custom_domain             = var.api_custom_domain
-  tags                          = local.tags
+  source                         = "../../modules/api-gateway"
+  project                        = local.project
+  environment                    = local.environment
+  cognito_client_id              = module.cognito.client_id
+  cognito_issuer_url             = module.cognito.endpoint
+  webhook_invoke_arn             = module.lambda.webhook_invoke_arn
+  webhook_function_arn           = module.lambda.function_arns["webhook"]
+  tenants_invoke_arn             = module.lambda.tenants_invoke_arn
+  tenants_function_arn           = module.lambda.function_arns["tenants"]
+  bots_invoke_arn                = module.lambda.bots_invoke_arn
+  bots_function_arn              = module.lambda.function_arns["bots"]
+  conversations_invoke_arn       = module.lambda.conversations_invoke_arn
+  conversations_function_arn     = module.lambda.function_arns["conversations"]
+  advisors_invoke_arn            = module.lambda.advisors_invoke_arn
+  advisors_function_arn          = module.lambda.advisors_function_arn
+  contacts_invoke_arn            = module.lambda.contacts_invoke_arn
+  contacts_function_arn          = module.lambda.contacts_function_arn
+  leads_invoke_arn               = module.lambda.leads_invoke_arn
+  leads_function_arn             = module.lambda.leads_function_arn
+  templates_invoke_arn           = module.lambda.templates_invoke_arn
+  templates_function_arn         = module.lambda.function_arns["templates"]
+  bulk_send_invoke_arn           = module.lambda.bulk_send_invoke_arn
+  bulk_send_function_arn         = module.lambda.function_arns["bulk_send"]
+  metrics_invoke_arn             = module.lambda.metrics_invoke_arn
+  metrics_function_arn           = module.lambda.function_arns["metrics"]
+  whatsapp_connect_invoke_arn    = module.lambda.whatsapp_connect_invoke_arn
+  whatsapp_connect_function_arn  = module.lambda.whatsapp_connect_function_arn
+  instagram_connect_invoke_arn   = module.lambda.instagram_connect_invoke_arn
+  instagram_connect_function_arn = module.lambda.instagram_connect_function_arn
+  webchat_invoke_arn             = module.lambda.webchat_invoke_arn
+  webchat_function_arn           = module.lambda.webchat_function_arn
+  campaigns_invoke_arn           = module.lambda.campaigns_invoke_arn
+  campaigns_function_arn         = module.lambda.campaigns_function_arn
+  support_tickets_invoke_arn     = module.lambda.support_tickets_invoke_arn
+  support_tickets_function_arn   = module.lambda.support_tickets_function_arn
+  billing_invoke_arn             = module.lambda.billing_invoke_arn
+  billing_function_arn           = module.lambda.billing_function_arn
+  admin_invoke_arn               = module.lambda.admin_invoke_arn
+  admin_function_arn             = module.lambda.admin_function_arn
+  public_api_invoke_arn          = module.lambda.public_api_invoke_arn
+  public_api_function_arn        = module.lambda.public_api_function_arn
+  api_keys_invoke_arn            = module.lambda.api_keys_invoke_arn
+  api_keys_function_arn          = module.lambda.api_keys_function_arn
+  integrations_invoke_arn        = module.lambda.integrations_invoke_arn
+  integrations_function_arn      = module.lambda.integrations_function_arn
+  automations_invoke_arn         = module.lambda.automations_invoke_arn
+  automations_function_arn       = module.lambda.automations_function_arn
+  knowledge_invoke_arn           = module.lambda.knowledge_invoke_arn
+  knowledge_function_arn         = module.lambda.knowledge_function_arn
+  meta_flows_invoke_arn          = module.lambda.meta_flows_invoke_arn
+  meta_flows_function_arn        = module.lambda.meta_flows_function_arn
+  flows_invoke_arn               = module.lambda.flows_invoke_arn
+  flows_function_arn             = module.lambda.flows_function_arn
+  calling_invoke_arn             = module.lambda.calling_invoke_arn
+  calling_function_arn           = module.lambda.calling_function_arn
+  realtime_invoke_arn            = module.lambda.realtime_invoke_arn
+  realtime_function_arn          = module.lambda.realtime_function_arn
+  calendar_invoke_arn            = module.lambda.calendar_invoke_arn
+  calendar_function_arn          = module.lambda.calendar_function_arn
+  public_calendar_invoke_arn     = module.lambda.public_calendar_invoke_arn
+  public_calendar_function_arn   = module.lambda.public_calendar_function_arn
+  allowed_origins                = local.browser_origins
+  api_custom_domain              = var.api_custom_domain
+  tags                           = local.tags
 }
 
 module "monitoring" {
   count  = var.enable_monitoring ? 1 : 0
   source = "../../modules/monitoring"
 
-  project     = local.project
-  environment = local.environment
-  alert_email = var.ops_alert_email
-  api_id      = module.api_gateway.api_id
-  dlq_arn     = module.sqs.dlq_arn
-  lambda_function_names = [
-    "${local.project}-${local.environment}-webhook",
-    "${local.project}-${local.environment}-process-message",
-    "${local.project}-${local.environment}-billing",
-  ]
+  project               = local.project
+  environment           = local.environment
+  alert_emails          = local.ops_alert_emails
+  api_id                = module.api_gateway.api_id
+  dlq_arns              = module.sqs.dlq_arns
+  lambda_function_names = values(module.lambda.function_names)
+  sqs_queue_arns = {
+    for k, v in module.sqs.queue_arns : k => v
+    if contains(["messages", "bulk_send", "campaign", "integration"], k)
+  }
 
   providers = {
     aws = aws.untagged

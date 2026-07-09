@@ -130,6 +130,33 @@ variable "whatsapp_app_secret" {
   description = "Meta App Secret used for webhook signature validation and tenant secret storage"
 }
 
+variable "webchat_session_secret" {
+  type        = string
+  default     = ""
+  sensitive   = true
+  description = "HMAC secret for web chat session tokens"
+}
+
+variable "livekit_url" {
+  type        = string
+  default     = ""
+  description = "LiveKit server WebSocket URL (wss://...)"
+}
+
+variable "livekit_api_key" {
+  type        = string
+  default     = ""
+  sensitive   = true
+  description = "LiveKit API key"
+}
+
+variable "livekit_api_secret" {
+  type        = string
+  default     = ""
+  sensitive   = true
+  description = "LiveKit API secret"
+}
+
 variable "lambda_zip_path" {
   type        = string
   default     = ""
@@ -166,6 +193,18 @@ variable "frontend_url" {
   type        = string
   default     = "http://localhost:3000"
   description = "Frontend base URL for billing redirect URLs"
+}
+
+variable "ses_from_email" {
+  type        = string
+  default     = ""
+  description = "Verified SES sender for platform emails. Leave empty to disable outbound email."
+}
+
+variable "admin_notification_emails" {
+  type        = list(string)
+  default     = []
+  description = "Admin recipients for new user registration notifications"
 }
 
 variable "wompi_public_key" {
