@@ -367,16 +367,6 @@ export async function handler(
       await assertCanStartCampaign(tenant);
 
       await deleteSchedule(campaignId);
-      if (campaign.requireOptIn) {
-        const pending = await listPendingRecipients(auth.tenantId, campaignId, 5000);
-        const phones = pending.map((r) => r.to.replace(/\D/g, ""));
-        const { blocked } = await checkMarketingRecipients(auth.tenantId, phones, auth.userId);
-        if (blocked.length > 0) {
-          return unprocessableEntity("Some recipients cannot receive marketing messages", {
-            blocked,
-          });
-        }
-      }
 
       await startCampaign(
         auth.tenantId,

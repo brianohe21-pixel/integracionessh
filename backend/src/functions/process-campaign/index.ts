@@ -47,21 +47,24 @@ async function processRecord(record: SQSRecord): Promise<void> {
   }
 
   const normalizedTo = to.replace(/\D/g, "");
-  const contact = await getContactByPhone(tenantId, normalizedTo);
-  if (
-    !contact ||
-    contact.suppressed ||
-    contact.marketingConsent !== "opt_in"
-  ) {
-    await saveBulkSendFailure({
-      jobId: campaignId,
-      tenantId,
-      kind: "compliance",
-      to: normalizedTo,
-      errorMessage: "Recipient not eligible for marketing",
-    });
-    await incrementCampaignProgress(tenantId, campaignId, "failed");
-    return;
+
+  if (campaign.requireOptIn) {
+    const contact = await getContactByPhone(tenantId, normalizedTo);
+    if (
+      !contact ||
+      contact.suppressed ||
+      contact.marketingConsent !== "opt_in"
+    ) {
+      await saveBulkSendFailure({
+        jobId: campaignId,
+        tenantId,
+        kind: "compliance",
+        to: normalizedTo,
+        errorMessage: "Recipient not eligible for marketing",
+      });
+      await incrementCampaignProgress(tenantId, campaignId, "failed");
+      return;
+    }
   }
 
   try {
