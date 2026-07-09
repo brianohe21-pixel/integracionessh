@@ -84,13 +84,6 @@ jobs:
         env:
           ENABLE_MONITORING: ${{ vars.ENABLE_MONITORING }}
 
-      - name: Import orphan Lambda log groups
-        timeout-minutes: 3
-        run: |
-          set -euo pipefail
-          chmod +x ../../scripts/import-orphan-lambda-log-groups.sh
-          PROJECT=chatbot-platform ENVIRONMENT=dev TF_IMPORT_MAX_PER_RUN="${TF_IMPORT_MAX_PER_RUN:-5}" TF_IMPORT_LOCK_TIMEOUT_SECONDS="${TF_IMPORT_LOCK_TIMEOUT_SECONDS:-20}" ../../scripts/import-orphan-lambda-log-groups.sh
-
       - name: Terraform Plan
         id: plan
         env:
@@ -305,13 +298,6 @@ jobs:
           fi
         env:
           ENABLE_MONITORING: ${{ vars.ENABLE_MONITORING }}
-
-      - name: Import orphan Lambda log groups
-        timeout-minutes: 3
-        run: |
-          set -euo pipefail
-          chmod +x ../../scripts/import-orphan-lambda-log-groups.sh
-          PROJECT=chatbot-platform ENVIRONMENT=prod TF_IMPORT_MAX_PER_RUN="${TF_IMPORT_MAX_PER_RUN:-5}" TF_IMPORT_LOCK_TIMEOUT_SECONDS="${TF_IMPORT_LOCK_TIMEOUT_SECONDS:-20}" ../../scripts/import-orphan-lambda-log-groups.sh
 
       - name: Terraform Plan
         id: plan
