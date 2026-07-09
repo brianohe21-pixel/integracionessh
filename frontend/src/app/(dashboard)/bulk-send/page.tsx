@@ -66,6 +66,7 @@ export default function BulkSendPage() {
   const [lastCompletedJobId, setLastCompletedJobId] = useState<string | null>(null);
   const [lastCompletedTemplateName, setLastCompletedTemplateName] = useState("");
   const [sendError, setSendError] = useState("");
+  const [requireOptIn, setRequireOptIn] = useState(false);
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
   const [downloadingJobId, setDownloadingJobId] = useState<string | null>(null);
 
@@ -140,6 +141,7 @@ export default function BulkSendPage() {
         templateName: selectedTemplate.name,
         language: selectedTemplate.language,
         recipients,
+        requireOptIn,
         onProgress: (job) =>
           setProgress({
             current: job.sent + job.failed,
@@ -159,7 +161,13 @@ export default function BulkSendPage() {
       setTab("history");
     } catch (error) {
       const message = error instanceof Error ? error.message : "";
-      setSendError(message === "bulk_send_timeout" ? t("bulkSend.pollTimeout") : t("bulkSend.sendError"));
+      if (message.includes("cannot receive marketing messages")) {
+        setSendError(t("bulkSend.blockedRecipientsError"));
+      } else if (message === "bulk_send_timeout") {
+        setSendError(t("bulkSend.pollTimeout"));
+      } else {
+        setSendError(message || t("bulkSend.sendError"));
+      }
     }
   }
 
@@ -258,6 +266,19 @@ export default function BulkSendPage() {
                   {t("bulkSend.varsRequired", { vars: bodyVars.join(", ") })}
                 </p>
               )}
+
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={requireOptIn}
+                  onChange={(e) => setRequireOptIn(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <span className="text-sm text-gray-700">
+                  <span className="font-medium">{t("bulkSend.requireOptIn")}</span>
+                  <span className="block text-xs text-gray-500 mt-0.5">{t("bulkSend.requireOptInHint")}</span>
+                </span>
+              </label>
 
               {selectedTemplate && (
                 <div className="space-y-2">

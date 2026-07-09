@@ -49,6 +49,7 @@ const CreateBulkSendSchema = z.object({
   templateName: z.string().min(1),
   language: z.string().min(2).max(10),
   recipients: z.array(RecipientSchema).min(1).max(MAX_RECIPIENTS),
+  requireOptIn: z.boolean().optional().default(false),
 });
 
 async function enqueueRecipients(
@@ -135,7 +136,7 @@ export async function handler(
       const parsed = CreateBulkSendSchema.safeParse(body);
       if (!parsed.success) return badRequest(parsed.error.message);
 
-      const { botId, templateName, language, recipients } = parsed.data;
+      const { botId, templateName, language, recipients, requireOptIn } = parsed.data;
 
       const bot = await getBot(auth.tenantId, botId);
       if (!bot) return notFound("Bot not found");
@@ -143,23 +144,26 @@ export async function handler(
       const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
       await assertBulkRecipients(tenant, recipients.length);
 
-      const phones = recipients.map((r) => r.to.replace(/\D/g, ""));
-      const { allowed, blocked } = await checkMarketingRecipients(
-        auth.tenantId,
-        phones,
-        auth.userId
-      );
-      if (blocked.length > 0) {
-        return unprocessableEntity("Some recipients cannot receive marketing messages", {
-          blocked,
-        });
-      }
-      const allowedSet = new Set(allowed);
-      const filteredRecipients = recipients.filter((r) =>
-        allowedSet.has(r.to.replace(/\D/g, ""))
-      );
-      if (filteredRecipients.length === 0) {
-        return unprocessableEntity("No recipients eligible for marketing send", { blocked });
+      let filteredRecipients = recipients;
+      if (requireOptIn) {
+        const phones = recipients.map((r) => r.to.replace(/\D/g, ""));
+        const { allowed, blocked } = await checkMarketingRecipients(
+          auth.tenantId,
+          phones,
+          auth.userId
+        );
+        if (blocked.length > 0) {
+          return unprocessableEntity("Some recipients cannot receive marketing messages", {
+            blocked,
+          });
+        }
+        const allowedSet = new Set(allowed);
+        filteredRecipients = recipients.filter((r) =>
+          allowedSet.has(r.to.replace(/\D/g, ""))
+        );
+        if (filteredRecipients.length === 0) {
+          return unprocessableEntity("No recipients eligible for marketing send", { blocked });
+        }
       }
 
       const newJobId = randomUUID();

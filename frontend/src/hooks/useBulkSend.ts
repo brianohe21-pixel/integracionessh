@@ -59,6 +59,7 @@ export interface BulkSendInput {
   templateName: string;
   language: string;
   recipients: BulkRecipient[];
+  requireOptIn?: boolean;
   onProgress?: (job: BulkSendJob) => void;
 }
 
@@ -115,6 +116,7 @@ export function useBulkSend() {
         templateName: data.templateName,
         language: data.language,
         recipients: data.recipients,
+        requireOptIn: data.requireOptIn ?? false,
       });
 
       data.onProgress?.(job);
