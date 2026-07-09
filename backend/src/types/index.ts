@@ -605,6 +605,7 @@ export interface Campaign {
   updatedAt: string;
   startedAt?: string;
   completedAt?: string;
+  requireOptIn?: boolean;
 }
 
 export interface CampaignRecipient {

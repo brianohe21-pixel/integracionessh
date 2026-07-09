@@ -367,6 +367,7 @@ export interface Campaign {
   updatedAt: string;
   startedAt?: string;
   completedAt?: string;
+  requireOptIn?: boolean;
 }
 
 export type BulkSendJobStatus = "queued" | "processing" | "completed" | "failed";

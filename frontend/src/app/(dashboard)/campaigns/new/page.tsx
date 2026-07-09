@@ -66,6 +66,7 @@ export default function NewCampaignPage() {
   });
   const [recipients, setRecipients] = useState<CampaignRecipient[]>([]);
   const [audienceTags, setAudienceTags] = useState<string[]>([]);
+  const [requireOptIn, setRequireOptIn] = useState(false);
   const [parseError, setParseError] = useState("");
   const [submitError, setSubmitError] = useState("");
 
@@ -143,10 +144,16 @@ export default function NewCampaignPage() {
         ...(config.scheduledAt ? { scheduledAt: new Date(config.scheduledAt).toISOString() } : {}),
         ...(recipients.length ? { recipients } : {}),
         ...(audienceTags.length ? { audienceTags } : {}),
+        requireOptIn,
       });
       router.push(`/campaigns/${campaign.campaignId}`);
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : t("campaigns.createError"));
+      const message = err instanceof Error ? err.message : "";
+      if (message.includes("cannot receive marketing messages")) {
+        setSubmitError(t("bulkSend.blockedRecipientsError"));
+      } else {
+        setSubmitError(message || t("campaigns.createError"));
+      }
     }
   }
 
@@ -277,6 +284,19 @@ export default function NewCampaignPage() {
               />
               <p className="text-xs text-gray-400">{t("campaigns.scheduledAtHint")}</p>
             </div>
+
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={requireOptIn}
+                onChange={(e) => setRequireOptIn(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <span className="text-sm text-gray-700">
+                <span className="font-medium">{t("bulkSend.requireOptIn")}</span>
+                <span className="block text-xs text-gray-500 mt-0.5">{t("bulkSend.requireOptInHint")}</span>
+              </span>
+            </label>
           </>
         )}
 
@@ -407,6 +427,10 @@ export default function NewCampaignPage() {
                   </dd>
                 </>
               )}
+              <dt className="text-gray-500">{t("bulkSend.requireOptIn")}</dt>
+              <dd className="font-medium text-gray-900">
+                {requireOptIn ? t("campaigns.requireOptInStatusOn") : t("campaigns.requireOptInStatusOff")}
+              </dd>
             </dl>
 
             {submitError && (

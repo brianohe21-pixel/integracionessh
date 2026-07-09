@@ -143,10 +143,12 @@ export async function listContacts(
 
 export async function listContactsByTags(
   tenantId: string,
-  tags: string[]
+  tags: string[],
+  options?: { requireOptIn?: boolean }
 ): Promise<Contact[]> {
   if (!tags.length) return [];
   const tagSet = new Set(tags.map((t) => t.toLowerCase()));
+  const requireOptIn = options?.requireOptIn ?? true;
   const matched: Contact[] = [];
   let cursor: string | undefined;
 
@@ -157,9 +159,9 @@ export async function listContactsByTags(
     });
     for (const contact of page.items) {
       const hasTag = contact.tags.some((t) => tagSet.has(t.toLowerCase()));
-      if (hasTag && contact.marketingConsent === "opt_in" && !contact.suppressed) {
-        matched.push(contact);
-      }
+      if (!hasTag || contact.suppressed) continue;
+      if (requireOptIn && contact.marketingConsent !== "opt_in") continue;
+      matched.push(contact);
     }
     cursor = page.nextCursor;
   } while (cursor);
