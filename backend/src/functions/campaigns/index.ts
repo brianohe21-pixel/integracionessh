@@ -65,6 +65,7 @@ const CreateCampaignSchema = z
     scheduledAt: z.string().datetime().optional(),
     recipients: z.array(RecipientSchema).max(5000).optional(),
     audienceTags: z.array(z.string().max(50)).max(20).optional(),
+    requireOptIn: z.boolean().optional().default(false),
   })
   .superRefine((data, ctx) => {
     const hasRecipients = (data.recipients?.length ?? 0) > 0;
@@ -173,8 +174,11 @@ async function deleteSchedule(campaignId: string): Promise<void> {
 async function filterPendingForMarketing(
   tenantId: string,
   pending: PendingRecipient[],
+  requireOptIn: boolean,
   actorUserId?: string
 ): Promise<PendingRecipient[]> {
+  if (!requireOptIn) return pending;
+
   const phones = pending.map((r) => r.to.replace(/\D/g, ""));
   const { allowed } = await checkMarketingRecipients(tenantId, phones, actorUserId);
   const allowedSet = new Set(allowed);
@@ -187,11 +191,12 @@ async function startCampaign(
   botId: string,
   templateName: string,
   language: string,
+  requireOptIn: boolean,
   actorUserId?: string
 ): Promise<void> {
   const now = new Date().toISOString();
   const pending = await listPendingRecipients(tenantId, campaignId, 5000);
-  const eligible = await filterPendingForMarketing(tenantId, pending, actorUserId);
+  const eligible = await filterPendingForMarketing(tenantId, pending, requireOptIn, actorUserId);
   await enqueueRecipients(campaignId, tenantId, botId, templateName, language, eligible);
   await updateCampaignStatus(tenantId, campaignId, "running", { startedAt: now });
 }
@@ -217,7 +222,8 @@ export async function handler(
         campaignId,
         bot.botId,
         campaign.templateName,
-        campaign.language
+        campaign.language,
+        campaign.requireOptIn ?? false
       );
       return ok({ message: "Campaign started." });
     }
@@ -257,12 +263,12 @@ export async function handler(
       const parsed = CreateCampaignSchema.safeParse(body);
       if (!parsed.success) return badRequest(parsed.error.message);
 
-      const { name, botId, templateName, language, segments, scheduledAt, audienceTags } =
+      const { name, botId, templateName, language, segments, scheduledAt, audienceTags, requireOptIn } =
         parsed.data;
 
       let recipients = parsed.data.recipients ?? [];
       if (audienceTags?.length) {
-        const contacts = await listContactsByTags(auth.tenantId, audienceTags);
+        const contacts = await listContactsByTags(auth.tenantId, audienceTags, { requireOptIn });
         const fromTags = contacts.map((c) => ({ to: c.phoneNumber }));
         recipients = [...recipients, ...fromTags];
       }
@@ -275,12 +281,14 @@ export async function handler(
         return badRequest("No eligible contacts found for this audience");
       }
 
-      const phones = uniqueRecipients.map((r) => r.to.replace(/\D/g, ""));
-      const { blocked } = await checkMarketingRecipients(auth.tenantId, phones, auth.userId);
-      if (blocked.length > 0) {
-        return unprocessableEntity("Some recipients cannot receive marketing messages", {
-          blocked,
-        });
+      if (requireOptIn) {
+        const phones = uniqueRecipients.map((r) => r.to.replace(/\D/g, ""));
+        const { blocked } = await checkMarketingRecipients(auth.tenantId, phones, auth.userId);
+        if (blocked.length > 0) {
+          return unprocessableEntity("Some recipients cannot receive marketing messages", {
+            blocked,
+          });
+        }
       }
 
       const mergedSegments = [
@@ -306,6 +314,7 @@ export async function handler(
         language,
         status,
         segments: mergedSegments,
+        requireOptIn,
         ...(scheduledAt ? { scheduledAt } : {}),
         total: uniqueRecipients.length,
         createdAt: now,
@@ -358,13 +367,15 @@ export async function handler(
       await assertCanStartCampaign(tenant);
 
       await deleteSchedule(campaignId);
-      const pending = await listPendingRecipients(auth.tenantId, campaignId, 5000);
-      const phones = pending.map((r) => r.to.replace(/\D/g, ""));
-      const { blocked } = await checkMarketingRecipients(auth.tenantId, phones, auth.userId);
-      if (blocked.length > 0) {
-        return unprocessableEntity("Some recipients cannot receive marketing messages", {
-          blocked,
-        });
+      if (campaign.requireOptIn) {
+        const pending = await listPendingRecipients(auth.tenantId, campaignId, 5000);
+        const phones = pending.map((r) => r.to.replace(/\D/g, ""));
+        const { blocked } = await checkMarketingRecipients(auth.tenantId, phones, auth.userId);
+        if (blocked.length > 0) {
+          return unprocessableEntity("Some recipients cannot receive marketing messages", {
+            blocked,
+          });
+        }
       }
 
       await startCampaign(
@@ -373,6 +384,7 @@ export async function handler(
         campaign.botId,
         campaign.templateName,
         campaign.language,
+        campaign.requireOptIn ?? false,
         auth.userId
       );
       await incrementCampaignsStarted(auth.tenantId);
@@ -405,6 +417,7 @@ export async function handler(
       const eligible = await filterPendingForMarketing(
         auth.tenantId,
         pending,
+        campaign.requireOptIn ?? false,
         auth.userId
       );
       if (eligible.length > 0) {

@@ -21,6 +21,7 @@ export interface CreateCampaignInput {
   scheduledAt?: string;
   recipients?: CampaignRecipient[];
   audienceTags?: string[];
+  requireOptIn?: boolean;
 }
 
 export interface UpdateCampaignInput {
