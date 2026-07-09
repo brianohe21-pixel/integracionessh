@@ -56,7 +56,7 @@ resource "aws_sns_topic_subscription" "email" {
 resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
   for_each = toset(var.lambda_function_names)
 
-  alarm_name          = "${var.project}-${var.environment}-${each.value}-errors"
+  alarm_name          = "${each.value}-errors"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 1
   metric_name         = "Errors"
@@ -67,7 +67,6 @@ resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
   treat_missing_data  = "notBreaching"
   alarm_description   = "Lambda ${each.value} reported errors"
   alarm_actions       = local.sns_actions
-  ok_actions          = local.sns_actions
 
   dimensions = {
     FunctionName = each.value
@@ -77,7 +76,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
 resource "aws_cloudwatch_metric_alarm" "lambda_throttles" {
   for_each = toset(var.lambda_function_names)
 
-  alarm_name          = "${var.project}-${var.environment}-${each.value}-throttles"
+  alarm_name          = "${each.value}-throttles"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 1
   metric_name         = "Throttles"
@@ -88,7 +87,6 @@ resource "aws_cloudwatch_metric_alarm" "lambda_throttles" {
   treat_missing_data  = "notBreaching"
   alarm_description   = "Lambda ${each.value} was throttled"
   alarm_actions       = local.sns_actions
-  ok_actions          = local.sns_actions
 
   dimensions = {
     FunctionName = each.value
@@ -109,7 +107,6 @@ resource "aws_cloudwatch_metric_alarm" "dlq_messages" {
   treat_missing_data  = "notBreaching"
   alarm_description   = "Messages visible in DLQ ${each.key}"
   alarm_actions       = local.sns_actions
-  ok_actions          = local.sns_actions
 
   dimensions = {
     QueueName = split(":", each.value)[5]
@@ -130,7 +127,6 @@ resource "aws_cloudwatch_metric_alarm" "sqs_queue_age" {
   treat_missing_data  = "notBreaching"
   alarm_description   = "Oldest message in queue ${each.key} exceeds ${var.sqs_queue_age_threshold_seconds}s"
   alarm_actions       = local.sns_actions
-  ok_actions          = local.sns_actions
 
   dimensions = {
     QueueName = split(":", each.value)[5]
@@ -149,7 +145,6 @@ resource "aws_cloudwatch_metric_alarm" "api_5xx" {
   treat_missing_data  = "notBreaching"
   alarm_description   = "API Gateway 5xx errors"
   alarm_actions       = local.sns_actions
-  ok_actions          = local.sns_actions
 
   dimensions = {
     ApiId = var.api_id
