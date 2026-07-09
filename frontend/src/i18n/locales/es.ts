@@ -558,6 +558,10 @@ export const es = {
     downloadCsv: "Descargar CSV",
     pollTimeout: "Tiempo de espera agotado para el envío masivo",
     colPhone: "Teléfono",
+    requireOptIn: "Exigir opt-in de contactos",
+    requireOptInHint:
+      "Si está activo, solo se enviará a contactos con consentimiento opt-in registrado en Contactos.",
+    blockedRecipientsError: "Algunos destinatarios no tienen opt-in registrado.",
   },
   metrics: {
     title: "Métricas de uso",

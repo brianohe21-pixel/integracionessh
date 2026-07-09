@@ -560,6 +560,10 @@ export const en: Messages = {
     downloadCsv: "Download CSV",
     pollTimeout: "Timed out waiting for bulk send to finish",
     colPhone: "Phone",
+    requireOptIn: "Require contact opt-in",
+    requireOptInHint:
+      "When enabled, sends only to contacts with recorded opt-in consent in Contacts.",
+    blockedRecipientsError: "Some recipients do not have recorded opt-in consent.",
   },
   metrics: {
     title: "Usage metrics",
