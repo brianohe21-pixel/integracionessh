@@ -41,10 +41,6 @@ export async function scheduleFlowResume(
         MessageBody: JSON.stringify({ tenantId, runId, action: "resume" }),
         MessageGroupId: runId,
         MessageDeduplicationId: `${runId}-resume-${randomUUID()}`,
-        DelaySeconds: Math.min(
-          900,
-          Math.max(0, Math.floor((new Date(resumeAt).getTime() - Date.now()) / 1000))
-        ),
       })
     );
   }
