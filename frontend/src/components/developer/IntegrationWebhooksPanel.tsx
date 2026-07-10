@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { ToggleLeft, ToggleRight } from "lucide-react";
 import {
   useIntegrationWebhook,
   useIntegrationDeliveries,
@@ -8,6 +9,7 @@ import {
   useTestIntegrationWebhook,
 } from "@/hooks/useIntegrations";
 import { useT } from "@/i18n/context";
+import { Badge } from "@/components/ui/Badge";
 import { TableContainer } from "@/components/ui/TableContainer";
 
 const EVENT_OPTIONS = [
@@ -33,17 +35,42 @@ export function IntegrationWebhooksPanel() {
 
   const [webhookUrl, setWebhookUrl] = useState("");
   const [webhookSecret, setWebhookSecret] = useState("");
-  const [enabled, setEnabled] = useState(false);
   const [events, setEvents] = useState<string[]>(["message.received"]);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [toggleError, setToggleError] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<string | null>(null);
+
+  const isEnabled = integration?.enabled ?? false;
 
   useEffect(() => {
     if (!integration) return;
     setWebhookUrl(integration.webhookUrl ?? "");
-    setEnabled(integration.enabled ?? false);
-    setEvents(integration.subscribedEvents?.length ? integration.subscribedEvents : ["message.received"]);
+    setEvents(
+      integration.subscribedEvents !== undefined
+        ? integration.subscribedEvents
+        : ["message.received"]
+    );
   }, [integration]);
+
+  async function handleToggle() {
+    if (!integration) return;
+    setToggleError(null);
+    const nextEnabled = !isEnabled;
+    const url = integration.webhookUrl?.trim() || webhookUrl.trim();
+    const subscribedEvents =
+      integration.subscribedEvents !== undefined ? integration.subscribedEvents : events;
+
+    try {
+      await updateMutation.mutateAsync({
+        webhookUrl: url,
+        subscribedEvents,
+        enabled: nextEnabled,
+      });
+    } catch (err) {
+      setToggleError((err as Error).message);
+    }
+  }
 
   function toggleEvent(event: string) {
     setEvents((prev) =>
@@ -54,14 +81,19 @@ export function IntegrationWebhooksPanel() {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setSaved(false);
-    await updateMutation.mutateAsync({
-      webhookUrl,
-      subscribedEvents: events,
-      enabled,
-      ...(webhookSecret ? { webhookSecret } : {}),
-    });
-    setWebhookSecret("");
-    setSaved(true);
+    setSaveError(null);
+    try {
+      await updateMutation.mutateAsync({
+        webhookUrl,
+        subscribedEvents: events,
+        enabled: isEnabled,
+        ...(webhookSecret ? { webhookSecret } : {}),
+      });
+      setWebhookSecret("");
+      setSaved(true);
+    } catch (err) {
+      setSaveError((err as Error).message);
+    }
   }
 
   async function handleTest() {
@@ -82,6 +114,32 @@ export function IntegrationWebhooksPanel() {
 
   return (
     <div className="p-6 space-y-8">
+      <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-gray-200">
+        <div>
+          <p className="text-sm font-medium text-gray-900">{t("integrations.enabled")}</p>
+          <p className="text-xs text-gray-500 mt-0.5">{t("integrations.toggleHint")}</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Badge variant={isEnabled ? "success" : "default"}>
+            {isEnabled ? t("common.active") : t("common.inactive")}
+          </Badge>
+          <button
+            type="button"
+            onClick={() => void handleToggle()}
+            disabled={updateMutation.isPending}
+            title={isEnabled ? t("integrations.toggleDisable") : t("integrations.toggleEnable")}
+            className="text-gray-400 hover:text-indigo-600 transition-colors disabled:opacity-40"
+          >
+            {isEnabled ? (
+              <ToggleRight className="w-8 h-8 text-indigo-500" />
+            ) : (
+              <ToggleLeft className="w-8 h-8" />
+            )}
+          </button>
+        </div>
+      </div>
+      {toggleError && <p className="text-sm text-red-600 -mt-4">{toggleError}</p>}
+
       <form onSubmit={handleSave} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -93,7 +151,7 @@ export function IntegrationWebhooksPanel() {
             onChange={(e) => setWebhookUrl(e.target.value)}
             placeholder="https://hooks.zapier.com/..."
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-            required
+            required={isEnabled}
           />
         </div>
 
@@ -127,20 +185,10 @@ export function IntegrationWebhooksPanel() {
           </div>
         </div>
 
-        <label className="flex items-center gap-2 text-sm text-gray-700">
-          <input
-            type="checkbox"
-            checked={enabled}
-            onChange={(e) => setEnabled(e.target.checked)}
-            className="rounded border-gray-300"
-          />
-          {t("integrations.enabled")}
-        </label>
-
         <div className="flex gap-3">
           <button
             type="submit"
-            disabled={updateMutation.isPending || events.length === 0}
+            disabled={updateMutation.isPending || (isEnabled && events.length === 0)}
             className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
           >
             {updateMutation.isPending ? t("auth.saving") : t("common.save")}
@@ -148,7 +196,7 @@ export function IntegrationWebhooksPanel() {
           <button
             type="button"
             onClick={handleTest}
-            disabled={testMutation.isPending || !webhookUrl}
+            disabled={testMutation.isPending || !webhookUrl || !isEnabled}
             className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50"
           >
             {t("integrations.sendTest")}
@@ -156,6 +204,7 @@ export function IntegrationWebhooksPanel() {
         </div>
 
         {saved && <p className="text-sm text-green-600">{t("integrations.saved")}</p>}
+        {saveError && <p className="text-sm text-red-600">{saveError}</p>}
         {testResult && (
           <p className={`text-sm ${testResult === t("integrations.testSuccess") ? "text-green-600" : "text-red-600"}`}>
             {testResult}
