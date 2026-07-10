@@ -29,13 +29,22 @@ const IntegrationEventSchema = z.enum([
 
 const UpdateWebhookSchema = z
   .object({
-    webhookUrl: z.string().url().max(2048),
+    webhookUrl: z.string().max(2048),
     webhookSecret: z.string().max(256).optional(),
     subscribedEvents: z.array(IntegrationEventSchema),
     enabled: z.boolean(),
   })
   .superRefine((data, ctx) => {
-    if (data.enabled && data.subscribedEvents.length === 0) {
+    if (!data.enabled) return;
+
+    if (!z.string().url().max(2048).safeParse(data.webhookUrl).success) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Invalid webhook URL",
+        path: ["webhookUrl"],
+      });
+    }
+    if (data.subscribedEvents.length === 0) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "Select at least one event when the webhook is enabled",
