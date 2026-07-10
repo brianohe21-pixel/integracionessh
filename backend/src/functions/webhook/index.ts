@@ -215,12 +215,8 @@ async function handleWhatsAppWebhook(payload: WhatsAppWebhookEvent): Promise<voi
               const tracking = await getMessageTracking(status.id);
               if (!tracking) return;
 
-              const isCampaign =
-                (tracking as Record<string, unknown>).kind === "campaign" &&
-                (tracking as Record<string, unknown>).campaignId;
-              const campaignId = isCampaign
-                ? ((tracking as Record<string, unknown>).campaignId as string)
-                : undefined;
+              const isCampaign = tracking.kind === "campaign" && Boolean(tracking.campaignId);
+              const campaignId = isCampaign ? tracking.campaignId : undefined;
 
               if (status.status === "delivered") {
                 if (isCampaign && campaignId) {
@@ -243,7 +239,7 @@ async function handleWhatsAppWebhook(payload: WhatsAppWebhookEvent): Promise<voi
                     incrementCampaignAnalytics(tracking.tenantId, campaignId, "deliveryFailed"),
                     deleteMessageTracking(status.id),
                   ]);
-                } else {
+                } else if (tracking.jobId) {
                   await Promise.all([
                     recordBulkDeliveryFailure(tracking.tenantId, tracking.jobId, {
                       to: tracking.to ?? status.recipient_id,
