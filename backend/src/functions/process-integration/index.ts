@@ -55,24 +55,37 @@ async function processRecord(record: SQSRecord): Promise<void> {
 
     if (shouldRetryDelivery(attempt) && QUEUE_URL) {
       await new Promise((resolve) => setTimeout(resolve, retryDelayMs(attempt)));
-      await sqs.send(
-        new SendMessageCommand({
-          QueueUrl: QUEUE_URL,
-          MessageBody: JSON.stringify({
-            ...message,
-            attempt: attempt + 1,
-            createdAt,
-          }),
-          MessageGroupId: tenantId,
-          MessageDeduplicationId: `retry-${deliveryId}-${attempt + 1}-${randomUUID()}`,
-          DelaySeconds: Math.min(Math.floor(retryDelayMs(attempt) / 1000), 900),
-        })
-      );
-      await updateIntegrationDelivery(tenantId, createdAt, deliveryId, {
-        attempts: attempt,
-        lastError: errMsg,
-      });
-      return;
+      try {
+        await sqs.send(
+          new SendMessageCommand({
+            QueueUrl: QUEUE_URL,
+            MessageBody: JSON.stringify({
+              ...message,
+              attempt: attempt + 1,
+              createdAt,
+            }),
+            MessageGroupId: tenantId,
+            MessageDeduplicationId: `retry-${deliveryId}-${attempt + 1}-${randomUUID()}`,
+          })
+        );
+        await updateIntegrationDelivery(tenantId, createdAt, deliveryId, {
+          attempts: attempt,
+          lastError: errMsg,
+        });
+        return;
+      } catch (enqueueError) {
+        const enqueueMsg = (enqueueError as Error).message ?? "Retry enqueue failed";
+        console.error(
+          `Integration retry enqueue failed tenant=${tenantId} attempt=${attempt}:`,
+          enqueueMsg
+        );
+        await updateIntegrationDelivery(tenantId, createdAt, deliveryId, {
+          status: "failed",
+          attempts: attempt,
+          lastError: `${errMsg}; retry enqueue: ${enqueueMsg}`,
+        });
+        return;
+      }
     }
 
     await updateIntegrationDelivery(tenantId, createdAt, deliveryId, {
