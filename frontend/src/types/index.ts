@@ -736,11 +736,35 @@ export interface CalendarConfig {
   reminderMessage?: string;
   reminderTemplateName?: string;
   reminderTemplateLanguage?: string;
+  autoCollectPayment?: boolean;
+  bookingPriceInCents?: number;
+  waitlistEnabled?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type WaitlistScope = "slot" | "date";
+export type WaitlistStatus = "active" | "contacted" | "fulfilled" | "cancelled";
+
+export interface WaitlistEntry {
+  waitlistId: string;
+  tenantId: string;
+  botId: string;
+  scope: WaitlistScope;
+  startAt?: string;
+  isoDate?: string;
+  contactPhone: string;
+  contactName: string;
+  notes?: string;
+  status: WaitlistStatus;
+  source: "public_link";
   createdAt: string;
   updatedAt: string;
 }
 
 export type BookingStatus = "confirmed" | "cancelled" | "completed" | "no_show";
+
+export type BookingPaymentStatus = "pending" | "paid" | "not_required";
 
 export interface Booking {
   bookingId: string;
@@ -754,6 +778,9 @@ export interface Booking {
   status: BookingStatus;
   source: "flow" | "openai" | "manual" | "public_link";
   notes?: string;
+  paymentId?: string;
+  amountInCents?: number;
+  paymentStatus?: BookingPaymentStatus;
   reminderScheduleName?: string;
   reminderSentAt?: string;
   reminderStatus?: BookingReminderStatus;
@@ -775,7 +802,7 @@ export interface AppCatalogItem {
 }
 
 export type PaymentRequestStatus = "pending" | "paid" | "declined" | "expired";
-export type PaymentRequestSource = "manual" | "flow" | "catalog_order";
+export type PaymentRequestSource = "manual" | "flow" | "catalog_order" | "calendar_booking";
 
 export type CatalogSyncStatus = "linked" | "syncing" | "error" | "not_linked";
 export type ProductAvailability = "in_stock" | "out_of_stock";
@@ -881,6 +908,7 @@ export interface PaymentRequest {
   contactName?: string;
   conversationId?: string;
   flowRunId?: string;
+  bookingId?: string;
   amountInCents: number;
   currency: "COP";
   description: string;

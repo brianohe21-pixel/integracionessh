@@ -11,6 +11,8 @@ import { getAllowedModelsForPlan } from "@/lib/plan-config";
 import { EmbeddedSignupLauncher } from "@/components/whatsapp/EmbeddedSignupLauncher";
 import type { Bot, Tenant } from "@/types";
 
+const SYSTEM_PROMPT_MAX_LENGTH = 4096;
+
 interface BotFormProps {
   bot?: Bot;
   wide?: boolean;
@@ -59,6 +61,8 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
   const hasManualIds =
     form.phoneNumberId.trim().length > 0 && form.whatsappBusinessAccountId.trim().length > 0;
   const canSubmit = whatsappConnected || (advancedMode && hasManualIds);
+  const systemPromptLength = form.systemPrompt.length;
+  const systemPromptTooLong = !isWebhookMode && systemPromptLength > SYSTEM_PROMPT_MAX_LENGTH;
 
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -76,6 +80,11 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
 
     if (!canSubmit) {
       setError(t("bots.whatsappRequired"));
+      return;
+    }
+
+    if (!isWebhookMode && systemPromptLength > SYSTEM_PROMPT_MAX_LENGTH) {
+      setError(t("bots.validationSystemPromptTooLong", { max: SYSTEM_PROMPT_MAX_LENGTH }));
       return;
     }
 
@@ -172,9 +181,34 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
                 rows={5}
                 value={form.systemPrompt}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                className={cn(
+                  "w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 resize-none",
+                  systemPromptTooLong
+                    ? "border-red-300 focus:ring-red-500"
+                    : "border-gray-300 focus:ring-indigo-500"
+                )}
                 placeholder={t("bots.systemPromptPlaceholder")}
               />
+              <div className="mt-1 flex items-center justify-between gap-2">
+                {systemPromptTooLong ? (
+                  <p className="text-xs text-red-600">
+                    {t("bots.validationSystemPromptTooLong", { max: SYSTEM_PROMPT_MAX_LENGTH })}
+                  </p>
+                ) : (
+                  <span />
+                )}
+                <p
+                  className={cn(
+                    "text-xs tabular-nums",
+                    systemPromptTooLong ? "text-red-600" : "text-gray-400"
+                  )}
+                >
+                  {t("bots.systemPromptCharCount", {
+                    current: systemPromptLength,
+                    max: SYSTEM_PROMPT_MAX_LENGTH,
+                  })}
+                </p>
+              </div>
             </div>
 
             <div>
@@ -364,10 +398,10 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
       <div className="flex items-center gap-3 pt-2">
         <button
           type="submit"
-          disabled={isPending || !canSubmit}
+          disabled={isPending || !canSubmit || systemPromptTooLong}
           className={cn(
             "px-5 py-2 rounded-lg text-sm font-medium text-white transition-colors",
-            isPending || !canSubmit
+            isPending || !canSubmit || systemPromptTooLong
               ? "bg-indigo-400 cursor-not-allowed"
               : "bg-indigo-600 hover:bg-indigo-700"
           )}

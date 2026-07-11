@@ -3,6 +3,7 @@
 import type { CalendarConfig } from "@/types";
 import { useT } from "@/i18n/context";
 import { useTemplates } from "@/hooks/useTemplates";
+import { FieldLabel } from "@/components/ui/FieldLabel";
 
 const REMINDER_PRESETS = [
   { minutes: 15, key: "15m" },
@@ -54,9 +55,10 @@ export function CalendarReminderSettings({
       {config.reminderEnabled ? (
         <div className="space-y-4">
           <div>
-            <span className="mb-2 block text-sm font-medium text-gray-700">
-              {t("calendar.reminder.advance")}
-            </span>
+            <FieldLabel
+              label={t("calendar.reminder.advance")}
+              tooltip={t("calendar.fieldHints.reminderAdvance")}
+            />
             <div className="mb-2 flex flex-wrap gap-2">
               {REMINDER_PRESETS.map((preset) => (
                 <button
@@ -73,8 +75,12 @@ export function CalendarReminderSettings({
                 </button>
               ))}
             </div>
-            <label className="block text-sm">
-              <span className="mb-1 block text-gray-600">{t("calendar.reminder.minutes")}</span>
+            <label className="mt-2 block text-sm">
+              <FieldLabel
+                label={t("calendar.reminder.minutes")}
+                tooltip={t("calendar.fieldHints.reminderMinutes")}
+                className="text-gray-600"
+              />
               <input
                 type="number"
                 min={15}
@@ -89,9 +95,10 @@ export function CalendarReminderSettings({
           </div>
 
           <label className="block text-sm">
-            <span className="mb-1 block font-medium text-gray-700">
-              {t("calendar.reminder.channel")}
-            </span>
+            <FieldLabel
+              label={t("calendar.reminder.channel")}
+              tooltip={t("calendar.fieldHints.reminderChannel")}
+            />
             <select
               value={channel}
               onChange={(e) =>
@@ -108,9 +115,10 @@ export function CalendarReminderSettings({
 
           {channel === "whatsapp_text" ? (
             <label className="block text-sm">
-              <span className="mb-1 block font-medium text-gray-700">
-                {t("calendar.reminder.message")}
-              </span>
+              <FieldLabel
+                label={t("calendar.reminder.message")}
+                tooltip={t("calendar.fieldHints.reminderMessage")}
+              />
               <textarea
                 rows={4}
                 value={config.reminderMessage ?? ""}
@@ -123,9 +131,10 @@ export function CalendarReminderSettings({
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block text-sm">
-                <span className="mb-1 block font-medium text-gray-700">
-                  {t("calendar.reminder.template")}
-                </span>
+                <FieldLabel
+                  label={t("calendar.reminder.template")}
+                  tooltip={t("calendar.fieldHints.reminderTemplate")}
+                />
                 <select
                   value={config.reminderTemplateName ?? ""}
                   onChange={(e) => onChange({ reminderTemplateName: e.target.value })}
@@ -140,9 +149,10 @@ export function CalendarReminderSettings({
                 </select>
               </label>
               <label className="block text-sm">
-                <span className="mb-1 block font-medium text-gray-700">
-                  {t("calendar.reminder.templateLanguage")}
-                </span>
+                <FieldLabel
+                  label={t("calendar.reminder.templateLanguage")}
+                  tooltip={t("calendar.fieldHints.reminderTemplateLanguage")}
+                />
                 <input
                   type="text"
                   value={config.reminderTemplateLanguage ?? "es"}

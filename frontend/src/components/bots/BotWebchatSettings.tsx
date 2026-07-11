@@ -23,6 +23,35 @@ function patchBotWebchatCache(
   );
 }
 
+function SettingsSwitch({
+  checked,
+  disabled,
+  onChange,
+}: {
+  checked: boolean;
+  disabled?: boolean;
+  onChange: (next: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${
+        checked ? "bg-indigo-600" : "bg-gray-200"
+      } ${disabled ? "opacity-50" : ""}`}
+    >
+      <span
+        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
+          checked ? "translate-x-5" : "translate-x-0"
+        }`}
+      />
+    </button>
+  );
+}
+
 export function BotWebchatSettings({ bot }: { bot: Bot }) {
   const t = useT();
   const qc = useQueryClient();
@@ -89,65 +118,50 @@ export function BotWebchatSettings({ bot }: { bot: Bot }) {
         </div>
       )}
 
-      <div className="flex items-center justify-between gap-4">
+      <label className="flex items-center justify-between gap-4 cursor-pointer">
         <div>
           <p className="font-medium text-gray-900">{t("webchat.enableLabel")}</p>
           <p className="text-sm text-gray-500">{t("webchat.enableHint")}</p>
         </div>
-        <button
-          type="button"
-          onClick={() => updateSettings.mutate({ enabled: !bot.webchatEnabled })}
+        <SettingsSwitch
+          checked={Boolean(bot.webchatEnabled)}
           disabled={updateSettings.isPending}
-          className={`px-4 py-2 rounded-lg text-sm font-medium ${
-            bot.webchatEnabled ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-700"
-          }`}
-        >
-          {bot.webchatEnabled ? t("webchat.enabled") : t("webchat.disabled")}
-        </button>
-      </div>
+          onChange={(enabled) => updateSettings.mutate({ enabled })}
+        />
+      </label>
 
       {bot.webchatEnabled && (
         <>
-          <div className="flex items-center justify-between gap-4 border-t border-gray-100 pt-4">
+          <label className="flex items-center justify-between gap-4 cursor-pointer border-t border-gray-100 pt-4">
             <div>
               <p className="font-medium text-gray-900">{t("webchat.voiceLabel")}</p>
               <p className="text-sm text-gray-500">{t("webchat.voiceHint")}</p>
             </div>
-            <button
-              type="button"
-              onClick={() =>
-                updateSettings.mutate({ webchatVoiceEnabled: !bot.webchatVoiceEnabled })
-              }
+            <SettingsSwitch
+              checked={Boolean(bot.webchatVoiceEnabled)}
               disabled={updateSettings.isPending}
-              className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                bot.webchatVoiceEnabled ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-700"
-              }`}
-            >
-              {bot.webchatVoiceEnabled ? t("webchat.enabled") : t("webchat.disabled")}
-            </button>
-          </div>
+              onChange={(webchatVoiceEnabled) =>
+                updateSettings.mutate({ webchatVoiceEnabled })
+              }
+            />
+          </label>
 
-          <div className="flex items-center justify-between gap-4">
+          <label className="flex items-center justify-between gap-4 cursor-pointer">
             <div>
               <p className="font-medium text-gray-900">{t("webchat.videoLabel")}</p>
               <p className="text-sm text-gray-500">{t("webchat.videoHint")}</p>
             </div>
-            <button
-              type="button"
-              onClick={() =>
+            <SettingsSwitch
+              checked={Boolean(bot.webchatVideoEnabled)}
+              disabled={updateSettings.isPending || !bot.webchatVoiceEnabled}
+              onChange={(webchatVideoEnabled) =>
                 updateSettings.mutate({
-                  webchatVideoEnabled: !bot.webchatVideoEnabled,
+                  webchatVideoEnabled,
                   webchatVoiceEnabled: true,
                 })
               }
-              disabled={updateSettings.isPending || !bot.webchatVoiceEnabled}
-              className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                bot.webchatVideoEnabled ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-700"
-              } disabled:opacity-50`}
-            >
-              {bot.webchatVideoEnabled ? t("webchat.enabled") : t("webchat.disabled")}
-            </button>
-          </div>
+            />
+          </label>
 
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 border-t border-gray-100 pt-4">
             <div className="space-y-2">

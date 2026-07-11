@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { Booking, BookingStatus, CalendarConfig, AvailableSlot } from "@/types";
+import type { Booking, BookingStatus, CalendarConfig, AvailableSlot, WaitlistEntry, WaitlistStatus } from "@/types";
 
 export function useCalendarConfig(botId: string) {
   return useQuery<{ config: CalendarConfig }>({
@@ -137,6 +137,55 @@ export function useRotatePublicLink(botId: string) {
       api.post<CalendarPublicLinkStatus>(`/calendar/${botId}/public-link/rotate-key`, {}),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["calendar", botId, "public-link"] });
+    },
+  });
+}
+
+export function useCalendarWaitlist(
+  botId: string,
+  filters?: { from?: string; to?: string; status?: WaitlistStatus }
+) {
+  const params = new URLSearchParams();
+  if (filters?.from) params.set("from", filters.from);
+  if (filters?.to) params.set("to", filters.to);
+  if (filters?.status) params.set("status", filters.status);
+  const qs = params.toString();
+  return useQuery<{ entries: WaitlistEntry[] }>({
+    queryKey: ["calendar", botId, "waitlist", filters],
+    queryFn: () =>
+      api.get<{ entries: WaitlistEntry[] }>(
+        `/calendar/${botId}/waitlist${qs ? `?${qs}` : ""}`
+      ),
+    enabled: Boolean(botId),
+  });
+}
+
+export function useUpdateWaitlistStatus(botId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { waitlistId: string; status: WaitlistStatus }) =>
+      api.patch<{ entry: WaitlistEntry }>(
+        `/calendar/${botId}/waitlist/${params.waitlistId}`,
+        { status: params.status }
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["calendar", botId, "waitlist"] });
+      void queryClient.invalidateQueries({ queryKey: ["calendar", botId, "bookings"] });
+    },
+  });
+}
+
+export function useConvertWaitlistEntry(botId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { waitlistId: string; startAt?: string }) =>
+      api.post<{ booking: Booking; waitlist: WaitlistEntry }>(
+        `/calendar/${botId}/waitlist/${params.waitlistId}/convert`,
+        params.startAt ? { startAt: params.startAt } : {}
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["calendar", botId, "waitlist"] });
+      void queryClient.invalidateQueries({ queryKey: ["calendar", botId, "bookings"] });
     },
   });
 }

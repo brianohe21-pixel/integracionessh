@@ -10,7 +10,7 @@
   var sessionToken = null;
   var sessionId = null;
   var pollTimer = null;
-  var lastSeen = "";
+  var seenMessageKeys = {};
   var seenCallInvites = {};
   var callBundleLoading = false;
   var activeCallDisconnect = null;
@@ -246,7 +246,8 @@
     }).then(function (data) {
       (data.items || []).forEach(function (msg) {
         var key = msg.messageId + msg.timestamp;
-        if (key === lastSeen) return;
+        if (seenMessageKeys[key]) return;
+        seenMessageKeys[key] = true;
         if (msg.messageType === "call_invite" && msg.metadata && msg.metadata.callId) {
           showCallInvite(msg.metadata.callId, msg.metadata.videoEnabled);
         } else if (msg.messageType === "call_ended") {
@@ -259,8 +260,6 @@
           renderMessage(msg.role, msg.content);
         }
       });
-      var last = (data.items || [])[data.items.length - 1];
-      if (last) lastSeen = last.messageId + last.timestamp;
     });
   }
 

@@ -1,7 +1,9 @@
 "use client";
 
 import type { CalendarConfig } from "@/types";
-import { useT } from "@/i18n/context";
+import { useLocale, useT } from "@/i18n/context";
+import { getCalendarTimezoneOptions } from "@/lib/timezones";
+import { FieldLabel } from "@/components/ui/FieldLabel";
 
 interface CalendarSettingsFormProps {
   config: CalendarConfig;
@@ -10,20 +12,30 @@ interface CalendarSettingsFormProps {
 
 export function CalendarSettingsForm({ config, onChange }: CalendarSettingsFormProps) {
   const t = useT();
+  const locale = useLocale();
+  const timezoneOptions = getCalendarTimezoneOptions(locale, config.timezone);
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <label className="block text-sm">
-        <span className="mb-1 block text-gray-700">{t("calendar.timezone")}</span>
-        <input
-          type="text"
+        <FieldLabel label={t("calendar.timezone")} tooltip={t("calendar.fieldHints.timezone")} />
+        <select
           value={config.timezone}
           onChange={(e) => onChange({ timezone: e.target.value })}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2"
-        />
+          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2"
+        >
+          {timezoneOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
       </label>
       <label className="block text-sm">
-        <span className="mb-1 block text-gray-700">{t("calendar.slotDuration")}</span>
+        <FieldLabel
+          label={t("calendar.slotDuration")}
+          tooltip={t("calendar.fieldHints.slotDuration")}
+        />
         <input
           type="number"
           min={5}
@@ -34,7 +46,7 @@ export function CalendarSettingsForm({ config, onChange }: CalendarSettingsFormP
         />
       </label>
       <label className="block text-sm">
-        <span className="mb-1 block text-gray-700">{t("calendar.buffer")}</span>
+        <FieldLabel label={t("calendar.buffer")} tooltip={t("calendar.fieldHints.buffer")} />
         <input
           type="number"
           min={0}
@@ -45,7 +57,10 @@ export function CalendarSettingsForm({ config, onChange }: CalendarSettingsFormP
         />
       </label>
       <label className="block text-sm">
-        <span className="mb-1 block text-gray-700">{t("calendar.maxAdvanceDays")}</span>
+        <FieldLabel
+          label={t("calendar.maxAdvanceDays")}
+          tooltip={t("calendar.fieldHints.maxAdvanceDays")}
+        />
         <input
           type="number"
           min={1}
@@ -56,7 +71,10 @@ export function CalendarSettingsForm({ config, onChange }: CalendarSettingsFormP
         />
       </label>
       <label className="block text-sm sm:col-span-2">
-        <span className="mb-1 block text-gray-700">{t("calendar.minNoticeHours")}</span>
+        <FieldLabel
+          label={t("calendar.minNoticeHours")}
+          tooltip={t("calendar.fieldHints.minNoticeHours")}
+        />
         <input
           type="number"
           min={0}
