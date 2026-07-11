@@ -25,6 +25,8 @@ const IntegrationEventSchema = z.enum([
   "call.terminated",
   "booking.created",
   "booking.cancelled",
+  "payment.completed",
+  "payment.failed",
 ]);
 
 const UpdateWebhookSchema = z

@@ -33,11 +33,11 @@ describe("wompi billing", () => {
   });
 
   it("builds integrity signature for checkout", () => {
-    process.env.WOMPI_INTEGRITY_SECRET = "test_secret";
+    const creds = { integritySecret: "test_secret" };
     const reference = "wompi|tenant-1|pro|abc123";
     const amount = 17_990_000;
 
-    const signature = buildIntegritySignature(reference, amount);
+    const signature = buildIntegritySignature(creds, reference, amount);
     const expected = createHash("sha256")
       .update(`${reference}${amount}COPtest_secret`)
       .digest("hex");
@@ -54,7 +54,7 @@ describe("wompi billing", () => {
   });
 
   it("verifies webhook checksum", () => {
-    process.env.WOMPI_EVENTS_SECRET = "events_secret";
+    const creds = { eventsSecret: "events_secret" };
 
     const timestamp = 1_700_000_000;
     const event: WompiWebhookEvent = {
@@ -86,6 +86,6 @@ describe("wompi billing", () => {
       .digest("hex")
       .toUpperCase();
 
-    expect(verifyWompiEvent(event)).toBe(true);
+    expect(verifyWompiEvent(creds, event)).toBe(true);
   });
 });

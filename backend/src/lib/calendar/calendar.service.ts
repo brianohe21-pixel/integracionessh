@@ -3,7 +3,6 @@ import { buildIntegrationPayload } from "../integrations/payloads.js";
 import {
   countEnabledCalendars,
   getCalendarConfig,
-  listCalendarConfigs,
   listEnabledCalendarConfigs,
   upsertCalendarConfig,
 } from "../dynamodb/calendar-config.repository.js";
@@ -14,7 +13,6 @@ import {
   makeBookingId,
   updateBooking,
 } from "../dynamodb/booking.repository.js";
-import { listBots } from "../dynamodb/bot.repository.js";
 import type {
   AvailableSlot,
   Booking,
@@ -33,8 +31,7 @@ import {
   getSlotsForDate,
   hasBookingOverlap,
 } from "./slot-engine.js";
-import {
-  cancelBookingReminder,
+import { cancelBookingReminder,
   scheduleBookingReminder,
 } from "./reminder-schedule.js";
 
@@ -59,30 +56,6 @@ export function defaultCalendarConfig(tenantId: string, botId: string): Calendar
     reminderTemplateLanguage: "es",
     createdAt: now,
     updatedAt: now,
-  };
-}
-
-export async function listAppsCatalog(tenantId: string) {
-  const bots = await listBots(tenantId);
-  const configs = await listCalendarConfigs(tenantId);
-  const configByBot = new Map(configs.map((c) => [c.botId, c]));
-
-  return {
-    apps: [
-      {
-        id: "calendar",
-        name: "Calendar",
-        description: "Schedule appointments and manage bookings per bot",
-        installedBots: bots.map((bot) => {
-          const config = configByBot.get(bot.botId);
-          return {
-            botId: bot.botId,
-            botName: bot.name,
-            enabled: config?.enabled ?? false,
-          };
-        }),
-      },
-    ],
   };
 }
 

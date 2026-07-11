@@ -30,6 +30,7 @@ import {
   parsePaymentReference,
   verifyWompiEvent,
   fetchWompiTransaction,
+  getPlatformWompiCredentials,
   FRONTEND_URL as WOMPI_FRONTEND_URL,
   type WompiWebhookEvent,
 } from "../../lib/billing/wompi.js";
@@ -135,7 +136,9 @@ async function handleWompiCheckout(
   });
 
   const redirectUrl = `${WOMPI_FRONTEND_URL}/billing/success?reference=${encodeURIComponent(reference)}`;
-  const url = buildCheckoutUrl({
+  const creds = getPlatformWompiCredentials();
+  if (!creds) throw new Error("Wompi is not configured");
+  const url = buildCheckoutUrl(creds, {
     reference,
     amountInCents,
     redirectUrl,
@@ -190,7 +193,9 @@ async function fulfillWompiPayment(
   if (payment.status === "approved") return true;
 
   if (transactionId) {
-    const tx = await fetchWompiTransaction(transactionId);
+    const creds = getPlatformWompiCredentials();
+    if (!creds) return false;
+    const tx = await fetchWompiTransaction(creds, transactionId);
     if (!tx || tx.reference !== reference) return false;
     if (tx.status !== "APPROVED") {
       await updatePaymentIntent(tenantId, reference, {
@@ -377,7 +382,8 @@ async function handleWompiWebhook(
     return badRequest("Invalid JSON");
   }
 
-  if (!verifyWompiEvent(payload)) {
+  const creds = getPlatformWompiCredentials();
+  if (!creds || !verifyWompiEvent(creds, payload)) {
     console.error("Wompi webhook signature invalid");
     return unauthorized("Invalid signature");
   }

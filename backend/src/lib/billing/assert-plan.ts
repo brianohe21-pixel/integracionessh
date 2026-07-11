@@ -12,6 +12,7 @@ import {
 } from "../dynamodb/flow.repository.js";
 import { getMonthlyUsage } from "../dynamodb/usage.repository.js";
 import { listEnabledCalendarsForTenant } from "../calendar/calendar.service.js";
+import { listEnabledPaymentsForTenant } from "../payments/payments.service.js";
 import { countActiveLiveKitCallsForTenant } from "../dynamodb/livekit-call.repository.js";
 import type { Tenant, Channel } from "../../types/index.js";
 import {
@@ -273,6 +274,22 @@ export async function assertCanEnableCalendar(tenant: Tenant, botId?: string): P
     throw new PlanLimitError(
       "PLAN_LIMIT_CALENDAR",
       `Plan limit: maximum ${limits.maxCalendarAppsPerTenant} calendar app(s) per tenant`
+    );
+  }
+}
+
+export async function assertCanEnablePayments(tenant: Tenant, botId?: string): Promise<void> {
+  const limits = getPlanLimits(tenant.plan);
+  if (isUnlimited(limits.maxPaymentsAppsPerTenant)) return;
+
+  const configs = await listEnabledPaymentsForTenant(tenant.tenantId);
+  const enabledCount = botId
+    ? configs.filter((c) => c.botId !== botId).length
+    : configs.length;
+  if (enabledCount >= limits.maxPaymentsAppsPerTenant) {
+    throw new PlanLimitError(
+      "PLAN_LIMIT_PAYMENTS",
+      `Plan limit: maximum ${limits.maxPaymentsAppsPerTenant} payments app(s) per tenant`
     );
   }
 }

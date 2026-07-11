@@ -843,7 +843,9 @@ export type IntegrationEvent =
   | "call.status"
   | "call.terminated"
   | "booking.created"
-  | "booking.cancelled";
+  | "booking.cancelled"
+  | "payment.completed"
+  | "payment.failed";
 
 export type Weekday =
   | "monday"
@@ -918,6 +920,50 @@ export interface AvailableSlot {
   label: string;
 }
 
+export type PaymentRequestStatus = "pending" | "paid" | "declined" | "expired";
+export type PaymentRequestSource = "manual" | "flow";
+
+export interface PaymentsConfig {
+  tenantId: string;
+  botId: string;
+  enabled: boolean;
+  currency: "COP";
+  defaultAmountInCents?: number;
+  paymentMessageTemplate?: string;
+  successRedirectUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PaymentRequest {
+  paymentId: string;
+  tenantId: string;
+  botId: string;
+  contactPhone: string;
+  contactName?: string;
+  conversationId?: string;
+  flowRunId?: string;
+  amountInCents: number;
+  currency: "COP";
+  description: string;
+  status: PaymentRequestStatus;
+  source: PaymentRequestSource;
+  reference: string;
+  checkoutUrl: string;
+  wompiTransactionId?: string;
+  paidAt?: string;
+  expiresAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AppCatalogItem {
+  id: string;
+  name: string;
+  description: string;
+  installedBots: Array<{ botId: string; botName: string; enabled: boolean }>;
+}
+
 export const WEEKDAYS: Weekday[] = [
   "monday",
   "tuesday",
@@ -978,6 +1024,7 @@ export type FlowNodeType =
   | "set_variable"
   | "http_request"
   | "book_appointment"
+  | "request_payment"
   | "end";
 
 export type FlowTriggerType = "keyword" | "first_message" | "any_message";
@@ -1006,6 +1053,10 @@ export interface FlowNodeData {
   haltPipeline?: boolean;
   confirmationMessage?: string;
   maxDaysToShow?: number;
+  amountInCents?: number;
+  paymentDescription?: string;
+  paymentMessageTemplate?: string;
+  waitForPayment?: boolean;
 }
 
 export interface FlowNode {

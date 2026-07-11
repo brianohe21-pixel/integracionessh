@@ -85,7 +85,7 @@ async function runFromNode(
     const history = [...run.stepHistory, step];
 
     if (result.wait) {
-      const status = result.waitingUntil ? "waiting" : "active";
+      const status = result.waitingUntil || result.externalWait ? "waiting" : "active";
       await updateFlowRun(ctx.tenantId, run.runId, {
         currentNodeId: result.nextNodeId ?? node.id,
         status,
@@ -275,7 +275,7 @@ export async function advanceFlowRun(params: {
     return { handled: true, halt: true };
   }
 
-  const waitingNodeTypes = ["buttons", "meta_flow", "book_appointment"] as const;
+  const waitingNodeTypes = ["buttons", "meta_flow", "book_appointment", "request_payment"] as const;
   if (
     currentNode &&
     waitingNodeTypes.includes(currentNode.type as (typeof waitingNodeTypes)[number])
@@ -309,8 +309,15 @@ export async function resumeFlowRunById(
   const flow = await getFlowDefinition(tenantId, run.flowId);
   if (!flow) return;
 
+  const currentNode = flow.nodes.find((n) => n.id === run.currentNodeId);
+  let nextNodeId = run.currentNodeId;
+  if (currentNode?.type === "request_payment") {
+    nextNodeId = flow.edges.find((e) => e.source === currentNode.id)?.target ?? run.currentNodeId;
+  }
+
   const resumed = await updateFlowRun(tenantId, runId, {
     status: "active",
+    currentNodeId: nextNodeId,
   });
   if (!resumed) return;
 

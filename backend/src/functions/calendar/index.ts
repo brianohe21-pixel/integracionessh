@@ -2,6 +2,7 @@ import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 }
 import { z } from "zod";
 import { extractAuthContext, assertMemberRole } from "../../lib/auth/cognito.js";
 import { assertCanEnableCalendar } from "../../lib/billing/assert-plan.js";
+import { listAppsCatalog } from "../../lib/apps/catalog.js";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
 import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
 import {
@@ -9,7 +10,6 @@ import {
   enableCalendar,
   getAvailableSlots,
   getConfigOrDefault,
-  listAppsCatalog,
   listBookings,
   createBookingForBot,
   saveCalendarConfig,
