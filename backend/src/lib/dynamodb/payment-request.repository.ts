@@ -18,10 +18,17 @@ function gsi1Keys(tenantId: string, botId: string, createdAt: string, paymentId:
 function stripItem(item: Record<string, unknown>): PaymentRequest {
   const { PK, SK, GSI1PK, GSI1SK, ...rest } = item;
   void PK;
-  void SK;
   void GSI1PK;
   void GSI1SK;
-  return rest as unknown as PaymentRequest;
+  const request = rest as unknown as PaymentRequest;
+  if (
+    !request.paymentId &&
+    typeof SK === "string" &&
+    SK.startsWith("PAYREQ#")
+  ) {
+    request.paymentId = SK.slice("PAYREQ#".length);
+  }
+  return request;
 }
 
 export function makePaymentId(): string {

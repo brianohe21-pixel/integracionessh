@@ -24,6 +24,8 @@ const EVENT_OPTIONS = [
   "call.terminated",
   "booking.created",
   "booking.cancelled",
+  "payment.completed",
+  "payment.failed",
 ] as const;
 
 export function IntegrationWebhooksPanel() {
@@ -42,6 +44,10 @@ export function IntegrationWebhooksPanel() {
   const [testResult, setTestResult] = useState<string | null>(null);
 
   const isEnabled = integration?.enabled ?? false;
+  const resolvedWebhookUrl = (integration?.webhookUrl || webhookUrl).trim();
+  const resolvedEvents =
+    integration?.subscribedEvents !== undefined ? integration.subscribedEvents : events;
+  const canEnable = resolvedWebhookUrl.length > 0 && resolvedEvents.length > 0;
 
   useEffect(() => {
     if (!integration) return;
@@ -57,9 +63,13 @@ export function IntegrationWebhooksPanel() {
     if (!integration) return;
     setToggleError(null);
     const nextEnabled = !isEnabled;
-    const url = integration.webhookUrl?.trim() || webhookUrl.trim();
-    const subscribedEvents =
-      integration.subscribedEvents !== undefined ? integration.subscribedEvents : events;
+    const url = resolvedWebhookUrl;
+    const subscribedEvents = resolvedEvents;
+
+    if (nextEnabled && !canEnable) {
+      setToggleError(t("integrations.urlRequiredToEnable"));
+      return;
+    }
 
     try {
       await updateMutation.mutateAsync({
@@ -126,7 +136,7 @@ export function IntegrationWebhooksPanel() {
           <button
             type="button"
             onClick={() => void handleToggle()}
-            disabled={updateMutation.isPending}
+            disabled={updateMutation.isPending || (!isEnabled && !canEnable)}
             title={isEnabled ? t("integrations.toggleDisable") : t("integrations.toggleEnable")}
             className="text-gray-400 hover:text-indigo-600 transition-colors disabled:opacity-40"
           >

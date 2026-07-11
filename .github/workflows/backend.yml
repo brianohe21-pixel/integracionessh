@@ -5,24 +5,30 @@ on:
     branches: [main, develop]
     paths:
       - "backend/**"
-      - "infrastructure/modules/lambda/main.tf"
+      - "infrastructure/modules/lambda/**"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
       - "package.json"
       - ".github/workflows/backend.yml"
       - ".github/scripts/deploy-lambdas.sh"
       - ".github/scripts/validate-lambda-manifest.sh"
+      - ".github/scripts/wait-for-terraform.sh"
   pull_request:
     branches: [main, develop]
     paths:
       - "backend/**"
-      - "infrastructure/modules/lambda/main.tf"
+      - "infrastructure/modules/lambda/**"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
       - "package.json"
       - ".github/workflows/backend.yml"
       - ".github/scripts/deploy-lambdas.sh"
       - ".github/scripts/validate-lambda-manifest.sh"
+      - ".github/scripts/wait-for-terraform.sh"
+
+permissions:
+  contents: read
+  actions: read
 
 jobs:
   test:
@@ -82,12 +88,27 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            lambda_infra:
+              - 'infrastructure/modules/lambda/**'
 
       - name: Download Lambda package
         uses: actions/download-artifact@v4
         with:
           name: lambda-package
           path: backend/dist
+
+      - name: Wait for Terraform workflow
+        if: steps.changes.outputs.lambda_infra == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/wait-for-terraform.sh "${GITHUB_REF_NAME}" "${GITHUB_SHA}"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -111,12 +132,27 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            lambda_infra:
+              - 'infrastructure/modules/lambda/**'
 
       - name: Download Lambda package
         uses: actions/download-artifact@v4
         with:
           name: lambda-package
           path: backend/dist
+
+      - name: Wait for Terraform workflow
+        if: steps.changes.outputs.lambda_infra == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/wait-for-terraform.sh "${GITHUB_REF_NAME}" "${GITHUB_SHA}"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4

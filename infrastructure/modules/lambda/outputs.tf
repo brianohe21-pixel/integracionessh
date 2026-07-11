@@ -219,9 +219,9 @@ output "public_calendar_function_arn" {
 }
 
 output "payments_invoke_arn" {
-  value = aws_lambda_function.functions["payments"].invoke_arn
+  value = try(aws_lambda_function.functions["payments"].invoke_arn, null)
 }
 
 output "payments_function_arn" {
-  value = aws_lambda_function.functions["payments"].arn
+  value = try(aws_lambda_function.functions["payments"].arn, null)
 }
