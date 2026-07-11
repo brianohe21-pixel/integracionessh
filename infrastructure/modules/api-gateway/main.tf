@@ -1190,6 +1190,7 @@ resource "aws_lambda_permission" "api_gw" {
     realtime          = var.realtime_function_arn
     calendar          = var.calendar_function_arn
     public_calendar   = var.public_calendar_function_arn
+    payments          = var.payments_function_arn
   }
 
   statement_id  = "AllowAPIGatewayInvoke-${each.key}"
