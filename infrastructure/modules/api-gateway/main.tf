@@ -927,6 +927,24 @@ locals {
       function_arn = var.calendar_function_arn
       protected    = true
     }
+    calendar_waitlist_list = {
+      route_key    = "GET /calendar/{botId}/waitlist"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_waitlist_patch = {
+      route_key    = "PATCH /calendar/{botId}/waitlist/{waitlistId}"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_waitlist_convert = {
+      route_key    = "POST /calendar/{botId}/waitlist/{waitlistId}/convert"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
     public_calendar_info = {
       route_key    = "GET /public/calendar/{publicKey}"
       invoke_arn   = var.public_calendar_invoke_arn
@@ -947,6 +965,12 @@ locals {
     }
     public_calendar_bookings = {
       route_key    = "POST /public/calendar/{publicKey}/bookings"
+      invoke_arn   = var.public_calendar_invoke_arn
+      function_arn = var.public_calendar_function_arn
+      protected    = false
+    }
+    public_calendar_waitlist = {
+      route_key    = "POST /public/calendar/{publicKey}/waitlist"
       invoke_arn   = var.public_calendar_invoke_arn
       function_arn = var.public_calendar_function_arn
       protected    = false
