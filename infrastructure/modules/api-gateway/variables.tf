@@ -238,6 +238,14 @@ variable "public_calendar_function_arn" {
   type = string
 }
 
+variable "payments_invoke_arn" {
+  type = string
+}
+
+variable "payments_function_arn" {
+  type = string
+}
+
 variable "allowed_origins" {
   type    = list(string)
   default = ["*"]

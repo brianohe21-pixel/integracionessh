@@ -217,3 +217,11 @@ output "public_calendar_invoke_arn" {
 output "public_calendar_function_arn" {
   value = aws_lambda_function.functions["public_calendar"].arn
 }
+
+output "payments_invoke_arn" {
+  value = aws_lambda_function.functions["payments"].invoke_arn
+}
+
+output "payments_function_arn" {
+  value = aws_lambda_function.functions["payments"].arn
+}

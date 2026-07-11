@@ -951,6 +951,72 @@ locals {
       function_arn = var.public_calendar_function_arn
       protected    = false
     }
+    payments_wompi_credentials_get = {
+      route_key    = "GET /payments/wompi/credentials"
+      invoke_arn   = var.payments_invoke_arn
+      function_arn = var.payments_function_arn
+      protected    = true
+    }
+    payments_wompi_credentials_put = {
+      route_key    = "PUT /payments/wompi/credentials"
+      invoke_arn   = var.payments_invoke_arn
+      function_arn = var.payments_function_arn
+      protected    = true
+    }
+    payments_wompi_credentials_delete = {
+      route_key    = "DELETE /payments/wompi/credentials"
+      invoke_arn   = var.payments_invoke_arn
+      function_arn = var.payments_function_arn
+      protected    = true
+    }
+    payments_config_get = {
+      route_key    = "GET /payments/{botId}/config"
+      invoke_arn   = var.payments_invoke_arn
+      function_arn = var.payments_function_arn
+      protected    = true
+    }
+    payments_config_put = {
+      route_key    = "PUT /payments/{botId}/config"
+      invoke_arn   = var.payments_invoke_arn
+      function_arn = var.payments_function_arn
+      protected    = true
+    }
+    payments_enable = {
+      route_key    = "POST /payments/{botId}/enable"
+      invoke_arn   = var.payments_invoke_arn
+      function_arn = var.payments_function_arn
+      protected    = true
+    }
+    payments_disable = {
+      route_key    = "POST /payments/{botId}/disable"
+      invoke_arn   = var.payments_invoke_arn
+      function_arn = var.payments_function_arn
+      protected    = true
+    }
+    payments_requests_list = {
+      route_key    = "GET /payments/{botId}/requests"
+      invoke_arn   = var.payments_invoke_arn
+      function_arn = var.payments_function_arn
+      protected    = true
+    }
+    payments_requests_create = {
+      route_key    = "POST /payments/{botId}/requests"
+      invoke_arn   = var.payments_invoke_arn
+      function_arn = var.payments_function_arn
+      protected    = true
+    }
+    payments_requests_get = {
+      route_key    = "GET /payments/{botId}/requests/{paymentId}"
+      invoke_arn   = var.payments_invoke_arn
+      function_arn = var.payments_function_arn
+      protected    = true
+    }
+    payments_wompi_webhook = {
+      route_key    = "POST /payments/wompi/webhook/{tenantId}"
+      invoke_arn   = var.payments_invoke_arn
+      function_arn = var.payments_function_arn
+      protected    = false
+    }
     knowledge_list = {
       route_key    = "GET /bots/{botId}/knowledge"
       invoke_arn   = var.knowledge_invoke_arn

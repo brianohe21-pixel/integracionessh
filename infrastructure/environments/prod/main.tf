@@ -259,6 +259,8 @@ module "api_gateway" {
   calendar_function_arn          = module.lambda.calendar_function_arn
   public_calendar_invoke_arn     = module.lambda.public_calendar_invoke_arn
   public_calendar_function_arn   = module.lambda.public_calendar_function_arn
+  payments_invoke_arn            = module.lambda.payments_invoke_arn
+  payments_function_arn          = module.lambda.payments_function_arn
   allowed_origins                = local.browser_origins
   api_custom_domain              = var.api_custom_domain
   tags                           = local.tags
