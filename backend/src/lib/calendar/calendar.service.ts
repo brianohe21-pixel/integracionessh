@@ -32,6 +32,7 @@ import {
   formatSlotLabel,
   generateAvailableSlots,
   getAvailableDates,
+  getSchedulableDates,
   getSlotsForDate,
   hasBookingOverlap,
 } from "./slot-engine.js";
@@ -101,6 +102,7 @@ export async function saveCalendarConfig(
       | "reminderTemplateLanguage"
       | "autoCollectPayment"
       | "bookingPriceInCents"
+      | "waitlistEnabled"
     >
   >
 ): Promise<CalendarConfig> {
@@ -284,6 +286,20 @@ export async function getBookingDates(params: {
   return getAvailableDates({
     config,
     bookings,
+    maxDays: params.maxDays,
+    now,
+  });
+}
+
+export async function getBookingSchedulableDates(params: {
+  tenantId: string;
+  botId: string;
+  maxDays: number;
+}) {
+  const config = await requireEnabledCalendar(params.tenantId, params.botId);
+  const now = new Date();
+  return getSchedulableDates({
+    config,
     maxDays: params.maxDays,
     now,
   });

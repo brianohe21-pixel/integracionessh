@@ -915,6 +915,26 @@ export interface CalendarConfig {
   reminderTemplateLanguage?: string;
   autoCollectPayment?: boolean;
   bookingPriceInCents?: number;
+  waitlistEnabled?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type WaitlistScope = "slot" | "date";
+export type WaitlistStatus = "active" | "contacted" | "fulfilled" | "cancelled";
+
+export interface WaitlistEntry {
+  waitlistId: string;
+  tenantId: string;
+  botId: string;
+  scope: WaitlistScope;
+  startAt?: string;
+  isoDate?: string;
+  contactPhone: string;
+  contactName: string;
+  notes?: string;
+  status: WaitlistStatus;
+  source: "public_link";
   createdAt: string;
   updatedAt: string;
 }
