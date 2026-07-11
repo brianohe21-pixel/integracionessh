@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ACTION="${1:?Usage: terraform-plan-apply.sh plan|apply}"
-LOCK_TIMEOUT="${LOCK_TIMEOUT:-10m}"
+LOCK_TIMEOUT="${LOCK_TIMEOUT:-2m}"
 MAX_ATTEMPTS="${MAX_ATTEMPTS:-3}"
 RETRY_SLEEP="${RETRY_SLEEP:-15}"
 

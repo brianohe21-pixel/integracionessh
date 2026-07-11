@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-STALE_MINUTES="${STALE_MINUTES:-20}"
+STALE_MINUTES="${STALE_MINUTES:-5}"
 BUCKET="${TF_STATE_BUCKET:-chatbot-platform-tfstate-979054355542}"
 REGION="${AWS_REGION:-us-east-1}"
 

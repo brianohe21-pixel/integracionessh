@@ -560,6 +560,9 @@ export type FlowNodeType =
   | "http_request"
   | "book_appointment"
   | "request_payment"
+  | "send_catalog"
+  | "send_products"
+  | "await_order"
   | "end";
 
 export type FlowTriggerType = "keyword" | "first_message" | "any_message";
@@ -592,6 +595,11 @@ export interface FlowNodeData {
   paymentDescription?: string;
   paymentMessageTemplate?: string;
   waitForPayment?: boolean;
+  catalogMessageText?: string;
+  productRetailerIds?: string[];
+  multiProductHeader?: string;
+  multiProductBody?: string;
+  orderConfirmationMessage?: string;
 }
 
 export interface FlowNode {
@@ -767,7 +775,91 @@ export interface AppCatalogItem {
 }
 
 export type PaymentRequestStatus = "pending" | "paid" | "declined" | "expired";
-export type PaymentRequestSource = "manual" | "flow";
+export type PaymentRequestSource = "manual" | "flow" | "catalog_order";
+
+export type CatalogSyncStatus = "linked" | "syncing" | "error" | "not_linked";
+export type ProductAvailability = "in_stock" | "out_of_stock";
+export type ProductSyncStatus = "synced" | "pending" | "error";
+export type OrderStatus =
+  | "pending"
+  | "confirmed"
+  | "preparing"
+  | "shipped"
+  | "delivered"
+  | "cancelled";
+export type OrderSource = "whatsapp_cart" | "manual" | "flow";
+
+export interface CatalogConfig {
+  tenantId: string;
+  botId: string;
+  enabled: boolean;
+  metaCatalogId?: string;
+  currency: "COP";
+  autoCollectPayment: boolean;
+  orderConfirmationMessage?: string;
+  orderStatusMessageTemplate?: string;
+  catalogMessageText?: string;
+  syncStatus: CatalogSyncStatus;
+  lastSyncAt?: string;
+  lastSyncError?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CatalogProduct {
+  productId: string;
+  tenantId: string;
+  botId: string;
+  retailerId: string;
+  name: string;
+  description: string;
+  priceInCents: number;
+  currency: "COP";
+  imageS3Key?: string;
+  imageUrl?: string;
+  availability: ProductAvailability;
+  metaProductId?: string;
+  syncStatus: ProductSyncStatus;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrderItem {
+  retailerId: string;
+  productId?: string;
+  name: string;
+  quantity: number;
+  unitPriceInCents: number;
+  currency: "COP";
+}
+
+export interface CatalogOrder {
+  orderId: string;
+  tenantId: string;
+  botId: string;
+  conversationId?: string;
+  contactPhone: string;
+  contactName?: string;
+  status: OrderStatus;
+  catalogId: string;
+  customerNote?: string;
+  items: OrderItem[];
+  subtotalInCents: number;
+  currency: "COP";
+  paymentId?: string;
+  source: OrderSource;
+  whatsappMessageId?: string;
+  unresolvedItems?: boolean;
+  internalNotes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MetaCatalogSummary {
+  id: string;
+  name: string;
+}
 
 export interface PaymentsConfig {
   tenantId: string;

@@ -25,7 +25,14 @@ function stripItem(item: Record<string, unknown>): CatalogOrder {
   if (!order.orderId && typeof SK === "string" && SK.startsWith("ORDER#")) {
     order.orderId = SK.slice("ORDER#".length);
   }
-  return order;
+  return {
+    ...order,
+    items: Array.isArray(order.items) ? order.items : [],
+    subtotalInCents:
+      typeof order.subtotalInCents === "number" && Number.isFinite(order.subtotalInCents)
+        ? order.subtotalInCents
+        : 0,
+  };
 }
 
 export function makeOrderId(): string {

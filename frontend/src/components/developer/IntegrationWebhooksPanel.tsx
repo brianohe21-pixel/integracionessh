@@ -26,6 +26,8 @@ const EVENT_OPTIONS = [
   "booking.cancelled",
   "payment.completed",
   "payment.failed",
+  "order.created",
+  "order.status_changed",
 ] as const;
 
 export function IntegrationWebhooksPanel() {
