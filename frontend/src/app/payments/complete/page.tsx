@@ -1,9 +1,10 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useT } from "@/i18n/context";
 
-export default function PaymentCompletePage() {
+function PaymentCompleteContent() {
   const t = useT();
   const searchParams = useSearchParams();
   const reference = searchParams.get("reference");
@@ -18,5 +19,19 @@ export default function PaymentCompletePage() {
         ) : null}
       </div>
     </main>
+  );
+}
+
+export default function PaymentCompletePage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+          <div className="h-40 w-full max-w-md animate-pulse rounded-xl bg-gray-100" />
+        </main>
+      }
+    >
+      <PaymentCompleteContent />
+    </Suspense>
   );
 }
