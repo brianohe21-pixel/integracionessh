@@ -3,12 +3,25 @@ set -euo pipefail
 
 BRANCH="${1:?Usage: wait-for-terraform.sh <branch> <sha>}"
 SHA="${2:?Usage: wait-for-terraform.sh <branch> <sha>}"
+BEFORE="${3:-}"
 WORKFLOW="${WORKFLOW:-terraform.yml}"
 POLL_INTERVAL="${POLL_INTERVAL:-15}"
 FIND_TIMEOUT="${FIND_TIMEOUT:-600}"
 WAIT_TIMEOUT="${WAIT_TIMEOUT:-3600}"
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+terraform_paths_changed() {
+  "$SCRIPT_DIR/changed-files-in-push.sh" "$SHA" "$BEFORE" \
+    | grep -qE '^(infrastructure/|\.github/workflows/terraform\.yml|\.github/scripts/terraform-plan-apply\.sh|\.github/scripts/terraform-unlock-stale\.sh)'
+}
+
 echo "Waiting for Terraform workflow (${WORKFLOW}) on ${BRANCH}@${SHA}..."
+
+if ! terraform_paths_changed; then
+  echo "No Terraform-related changes in this push; skipping wait."
+  exit 0
+fi
 
 elapsed=0
 run_id=""
