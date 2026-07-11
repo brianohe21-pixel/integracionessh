@@ -220,7 +220,7 @@ export async function generateChatResponse(
         contactName?: string;
       };
       if (parsed.startAt) {
-        const booking = await createBookingForBot({
+        const result = await createBookingForBot({
           tenantId,
           botId: bot.botId,
           startAt: parsed.startAt,
@@ -229,8 +229,15 @@ export async function generateChatResponse(
           ...(parsed.contactName ? { contactName: parsed.contactName } : {}),
           source: "openai",
         });
+        const booking = result.booking;
         const label = formatBookingConfirmation(booking, calendarConfig!);
-        return { reply: `Cita agendada para ${label}. ID: ${booking.bookingId}`, handoff: false };
+        const paymentNote = result.payment
+          ? " Te enviamos un link de pago por WhatsApp para confirmar la reserva."
+          : "";
+        return {
+          reply: `Cita agendada para ${label}.${paymentNote} ID: ${booking.bookingId}`,
+          handoff: false,
+        };
       }
     }
     if (toolCall.function.name === "cancel_booking") {

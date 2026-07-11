@@ -9,6 +9,10 @@ import { fetchWompiTransaction } from "../billing/wompi.js";
 import { getTenantWompiCredentials } from "./wompi-secrets.js";
 import { parseTenantPaymentReference } from "./checkout.js";
 import { sendPaymentConfirmationMessage } from "./notify.js";
+import {
+  cancelBookingForFailedPayment,
+  finalizeBookingAfterPayment,
+} from "../calendar/calendar.service.js";
 import type { PaymentRequest } from "../../types/index.js";
 
 export async function fulfillTenantPayment(params: {
@@ -82,6 +86,14 @@ export async function fulfillTenantPayment(params: {
     await resumeFlowRunById(params.tenantId, updated.flowRunId);
   }
 
+  if (updated.bookingId) {
+    await finalizeBookingAfterPayment({
+      tenantId: params.tenantId,
+      bookingId: updated.bookingId,
+      environment: params.environment,
+    });
+  }
+
   return updated;
 }
 
@@ -102,6 +114,13 @@ export async function declineTenantPayment(params: {
     ...(params.transactionId ? { wompiTransactionId: params.transactionId } : {}),
   });
   if (!updated) return null;
+
+  if (updated.bookingId) {
+    await cancelBookingForFailedPayment({
+      tenantId: params.tenantId,
+      bookingId: updated.bookingId,
+    });
+  }
 
   await emitIntegrationEvent(
     params.tenantId,

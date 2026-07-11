@@ -119,17 +119,22 @@ export async function executeBookAppointmentNode(
         return { nextNodeId: null, halt: true, wait: false };
       }
       try {
-        const booking = await createBookingForBot({
+        const result = await createBookingForBot({
           tenantId: ctx.tenantId,
           botId: ctx.botId,
           startAt,
           contactPhone: ctx.customerPhone,
           conversationId: ctx.conversation.conversationId,
           source: "flow",
+          environment: ctx.environment,
         });
-        const confirmation =
+        const booking = result.booking;
+        const confirmationBase =
           node.data.confirmationMessage?.trim() ||
           `Tu cita fue agendada para ${formatBookingConfirmation(booking, config)}.`;
+        const confirmation = result.payment
+          ? `${confirmationBase} Te enviamos un link de pago para confirmar la reserva.`
+          : confirmationBase;
         await sendChannelText(
           buildOutboundContext({
             tenantId: ctx.tenantId,

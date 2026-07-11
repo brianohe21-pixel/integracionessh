@@ -913,12 +913,16 @@ export interface CalendarConfig {
   reminderMessage?: string;
   reminderTemplateName?: string;
   reminderTemplateLanguage?: string;
+  autoCollectPayment?: boolean;
+  bookingPriceInCents?: number;
   createdAt: string;
   updatedAt: string;
 }
 
 export type BookingStatus = "confirmed" | "cancelled" | "completed" | "no_show";
 export type BookingSource = "flow" | "openai" | "manual" | "public_link";
+
+export type BookingPaymentStatus = "pending" | "paid" | "not_required";
 
 export interface Booking {
   bookingId: string;
@@ -933,6 +937,9 @@ export interface Booking {
   source: BookingSource;
   notes?: string;
   externalEventId?: string;
+  paymentId?: string;
+  amountInCents?: number;
+  paymentStatus?: BookingPaymentStatus;
   reminderScheduleName?: string;
   reminderSentAt?: string;
   reminderStatus?: BookingReminderStatus;
@@ -947,7 +954,7 @@ export interface AvailableSlot {
 }
 
 export type PaymentRequestStatus = "pending" | "paid" | "declined" | "expired";
-export type PaymentRequestSource = "manual" | "flow" | "catalog_order";
+export type PaymentRequestSource = "manual" | "flow" | "catalog_order" | "calendar_booking";
 
 export type CatalogSyncStatus = "linked" | "syncing" | "error" | "not_linked";
 export type ProductAvailability = "in_stock" | "out_of_stock";
@@ -1053,6 +1060,7 @@ export interface PaymentRequest {
   contactName?: string;
   conversationId?: string;
   flowRunId?: string;
+  bookingId?: string;
   amountInCents: number;
   currency: "COP";
   description: string;

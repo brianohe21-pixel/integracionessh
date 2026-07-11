@@ -54,6 +54,8 @@ const ConfigSchema = z
     reminderMessage: z.string().max(500).optional(),
     reminderTemplateName: z.string().max(120).optional(),
     reminderTemplateLanguage: z.string().min(2).max(10).optional(),
+    autoCollectPayment: z.boolean().optional(),
+    bookingPriceInCents: z.number().int().min(1000).max(100_000_000).optional(),
   })
   .superRefine((data, ctx) => {
     if (!data.reminderEnabled) return;
@@ -207,7 +209,7 @@ export async function handler(
 
     if (method === "POST" && rawPath === `/calendar/${botId}/bookings`) {
       const body = CreateBookingSchema.parse(JSON.parse(event.body ?? "{}"));
-      const booking = await createBookingForBot({
+      const result = await createBookingForBot({
         tenantId: auth.tenantId,
         botId,
         startAt: body.startAt,
@@ -217,7 +219,7 @@ export async function handler(
         ...(body.notes ? { notes: body.notes } : {}),
         source: "manual",
       });
-      return ok({ booking });
+      return ok({ booking: result.booking, ...(result.payment ? { payment: result.payment } : {}) });
     }
 
     if (method === "PATCH" && bookingId && rawPath === `/calendar/${botId}/bookings/${bookingId}`) {

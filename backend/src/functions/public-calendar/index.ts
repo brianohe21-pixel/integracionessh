@@ -8,8 +8,11 @@ import {
   getBookingDates,
   getBookingSlotsForDate,
 } from "../../lib/calendar/calendar.service.js";
+import { getCalendarPaymentInfo } from "../../lib/calendar/payment.js";
 import { resolvePublicCalendarContext } from "../../lib/calendar/public-link.js";
 import { ok, badRequest, created, handleError } from "../../lib/http.js";
+
+const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 
 const CreatePublicBookingSchema = z.object({
   startAt: z.string().datetime(),
@@ -39,11 +42,18 @@ export async function handler(
       const ctx = await resolvePublicCalendarContext(publicKey);
       const tenant = await getTenant(ctx.tenantId);
       const branding = tenant ? await getResolvedTenantBranding(tenant) : undefined;
+      const payment = await getCalendarPaymentInfo({
+        tenantId: ctx.tenantId,
+        botId: ctx.botId,
+        calendarConfig: ctx.config,
+        environment: ENVIRONMENT,
+      });
       return ok({
         botName: ctx.botName,
         timezone: ctx.config.timezone,
         maxAdvanceDays: ctx.config.maxAdvanceDays,
         slotDurationMinutes: ctx.config.slotDurationMinutes,
+        payment,
         branding: branding
           ? {
               brandName: branding.brandName,
@@ -81,7 +91,7 @@ export async function handler(
     if (method === "POST" && sub[0] === "bookings") {
       const ctx = await resolvePublicCalendarContext(publicKey);
       const body = CreatePublicBookingSchema.parse(JSON.parse(event.body ?? "{}"));
-      const booking = await createBookingForBot({
+      const result = await createBookingForBot({
         tenantId: ctx.tenantId,
         botId: ctx.botId,
         startAt: body.startAt,
@@ -89,15 +99,28 @@ export async function handler(
         contactName: body.contactName,
         ...(body.notes ? { notes: body.notes } : {}),
         source: "public_link",
+        environment: ENVIRONMENT,
+        sendPaymentWhatsApp: false,
       });
-      const label = formatBookingConfirmation(booking, ctx.config);
+      const label = formatBookingConfirmation(result.booking, ctx.config);
       return created({
         booking: {
-          bookingId: booking.bookingId,
-          startAt: booking.startAt,
-          endAt: booking.endAt,
+          bookingId: result.booking.bookingId,
+          startAt: result.booking.startAt,
+          endAt: result.booking.endAt,
           label,
+          paymentStatus: result.booking.paymentStatus,
         },
+        ...(result.payment
+          ? {
+              payment: {
+                paymentId: result.payment.paymentId,
+                checkoutUrl: result.payment.checkoutUrl,
+                amountInCents: result.payment.amountInCents,
+                reference: result.payment.reference,
+              },
+            }
+          : {}),
       });
     }
 

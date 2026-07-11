@@ -16,12 +16,16 @@ import {
 import type {
   AvailableSlot,
   Booking,
+  BookingPaymentStatus,
   BookingSource,
   BookingStatus,
   CalendarConfig,
   WeeklySchedule,
 } from "../../types/index.js";
 import { DEFAULT_WEEKLY_SCHEDULE } from "../../types/index.js";
+import { getPaymentsConfig } from "../dynamodb/payments-config.repository.js";
+import { createPaymentRequest } from "../payments/payments.service.js";
+import { resolveBookingAmountInCents } from "./payment.js";
 import { getCalendarProvider } from "./provider.js";
 import {
   formatDateLabel,
@@ -95,6 +99,8 @@ export async function saveCalendarConfig(
       | "reminderMessage"
       | "reminderTemplateName"
       | "reminderTemplateLanguage"
+      | "autoCollectPayment"
+      | "bookingPriceInCents"
     >
   >
 ): Promise<CalendarConfig> {
@@ -117,22 +123,127 @@ export async function requireEnabledCalendar(
   return config;
 }
 
+async function loadSlotBlockingBookings(
+  tenantId: string,
+  botId: string,
+  from?: string,
+  to?: string
+): Promise<Booking[]> {
+  const bookings = await listBookingsForBot({
+    tenantId,
+    botId,
+    ...(from ? { from } : {}),
+    ...(to ? { to } : {}),
+    status: "confirmed",
+  });
+  return bookings.filter((booking) => bookingBlocksSlot(booking));
+}
+
+function bookingBlocksSlot(booking: Booking): boolean {
+  if (booking.status !== "confirmed") return false;
+  if (!booking.paymentStatus || booking.paymentStatus === "pending") return true;
+  return booking.paymentStatus === "paid" || booking.paymentStatus === "not_required";
+}
+
+async function emitBookingCreated(booking: Booking, tenantId: string): Promise<void> {
+  await emitIntegrationEvent(
+    tenantId,
+    "booking.created",
+    buildIntegrationPayload({
+      event: "booking.created",
+      tenantId,
+      data: {
+        bookingId: booking.bookingId,
+        botId: booking.botId,
+        contactPhone: booking.contactPhone,
+        contactName: booking.contactName ?? "",
+        startAt: booking.startAt,
+        endAt: booking.endAt,
+        source: booking.source,
+        ...(booking.amountInCents ? { amountInCents: booking.amountInCents } : {}),
+        ...(booking.paymentStatus ? { paymentStatus: booking.paymentStatus } : {}),
+      },
+    })
+  );
+}
+
+export async function finalizeBookingAfterPayment(params: {
+  tenantId: string;
+  bookingId: string;
+  environment: string;
+}): Promise<Booking | null> {
+  const booking = await getBooking(params.tenantId, params.bookingId);
+  if (!booking || booking.paymentStatus !== "pending") return booking;
+
+  const config = await getConfigOrDefault(params.tenantId, booking.botId);
+  const updated = await updateBooking(params.tenantId, params.bookingId, {
+    paymentStatus: "paid",
+  });
+  if (!updated) return null;
+
+  const provider = getCalendarProvider(config.provider);
+  if (provider.createExternalEvent && !updated.externalEventId) {
+    const externalEventId = await provider.createExternalEvent(updated, config);
+    if (externalEventId) {
+      const withExternal = await updateBooking(params.tenantId, params.bookingId, {
+        externalEventId,
+      });
+      if (withExternal) {
+        const withReminder = await scheduleBookingReminder(withExternal, config);
+        await emitBookingCreated(withReminder, params.tenantId);
+        return withReminder;
+      }
+    }
+  }
+
+  const withReminder = await scheduleBookingReminder(updated, config);
+  await emitBookingCreated(withReminder, params.tenantId);
+  return withReminder;
+}
+
+export async function cancelBookingForFailedPayment(params: {
+  tenantId: string;
+  bookingId: string;
+}): Promise<Booking | null> {
+  const booking = await getBooking(params.tenantId, params.bookingId);
+  if (!booking || booking.status === "cancelled") return booking;
+
+  const config = await getConfigOrDefault(params.tenantId, booking.botId);
+  const updated = await updateBooking(params.tenantId, params.bookingId, {
+    status: "cancelled",
+  });
+  if (!updated) return null;
+
+  let bookingAfterReminder = await cancelBookingReminder(updated);
+  const provider = getCalendarProvider(config.provider);
+  if (provider.cancelExternalEvent) {
+    await provider.cancelExternalEvent(bookingAfterReminder, config);
+  }
+  await emitIntegrationEvent(
+    params.tenantId,
+    "booking.cancelled",
+    buildIntegrationPayload({
+      event: "booking.cancelled",
+      tenantId: params.tenantId,
+      data: {
+        bookingId: bookingAfterReminder.bookingId,
+        botId: bookingAfterReminder.botId,
+        contactPhone: bookingAfterReminder.contactPhone,
+        startAt: bookingAfterReminder.startAt,
+        endAt: bookingAfterReminder.endAt,
+      },
+    })
+  );
+  return bookingAfterReminder;
+}
+
 async function loadConfirmedBookings(
   tenantId: string,
   botId: string,
   from?: string,
   to?: string
 ): Promise<Booking[]> {
-  const params: {
-    tenantId: string;
-    botId: string;
-    status: "confirmed";
-    from?: string;
-    to?: string;
-  } = { tenantId, botId, status: "confirmed" };
-  if (from) params.from = from;
-  if (to) params.to = to;
-  return listBookingsForBot(params);
+  return loadSlotBlockingBookings(tenantId, botId, from, to);
 }
 
 export async function getAvailableSlots(params: {
@@ -212,6 +323,16 @@ export async function listBookings(params: {
   return listBookingsForBot(params);
 }
 
+export interface CreateBookingResult {
+  booking: Booking;
+  payment?: {
+    paymentId: string;
+    checkoutUrl: string;
+    amountInCents: number;
+    reference: string;
+  };
+}
+
 export async function createBookingForBot(params: {
   tenantId: string;
   botId: string;
@@ -221,8 +342,11 @@ export async function createBookingForBot(params: {
   conversationId?: string;
   notes?: string;
   source: BookingSource;
-}): Promise<Booking> {
+  environment?: string;
+  sendPaymentWhatsApp?: boolean;
+}): Promise<CreateBookingResult> {
   const config = await requireEnabledCalendar(params.tenantId, params.botId);
+  const environment = params.environment ?? process.env.ENVIRONMENT ?? "dev";
   const startAt = new Date(params.startAt);
   const endAt = new Date(startAt.getTime() + config.slotDurationMinutes * 60 * 1000);
   const now = new Date();
@@ -254,6 +378,11 @@ export async function createBookingForBot(params: {
     throw new Error("Selected slot is not available");
   }
 
+  const paymentsConfig = await getPaymentsConfig(params.tenantId, params.botId);
+  const amountInCents = resolveBookingAmountInCents(config, paymentsConfig);
+  const requiresPayment = Boolean(amountInCents && paymentsConfig?.enabled);
+  const paymentStatus: BookingPaymentStatus = requiresPayment ? "pending" : "not_required";
+
   const nowIso = new Date().toISOString();
   const booking: Booking = {
     bookingId: makeBookingId(),
@@ -266,40 +395,58 @@ export async function createBookingForBot(params: {
     endAt: endAt.toISOString(),
     status: "confirmed",
     source: params.source,
+    paymentStatus,
+    ...(requiresPayment && amountInCents ? { amountInCents } : {}),
     ...(params.notes ? { notes: params.notes } : {}),
     createdAt: nowIso,
     updatedAt: nowIso,
   };
 
-  const provider = getCalendarProvider(config.provider);
-  if (provider.createExternalEvent) {
-    const externalEventId = await provider.createExternalEvent(booking, config);
-    if (externalEventId) booking.externalEventId = externalEventId;
+  if (!requiresPayment) {
+    const provider = getCalendarProvider(config.provider);
+    if (provider.createExternalEvent) {
+      const externalEventId = await provider.createExternalEvent(booking, config);
+      if (externalEventId) booking.externalEventId = externalEventId;
+    }
   }
 
   const created = await createBooking(booking);
 
-  const withReminder = await scheduleBookingReminder(created, config);
+  if (!requiresPayment || !amountInCents) {
+    const withReminder = await scheduleBookingReminder(created, config);
+    await emitBookingCreated(withReminder, params.tenantId);
+    return { booking: withReminder };
+  }
 
-  await emitIntegrationEvent(
-    params.tenantId,
-    "booking.created",
-    buildIntegrationPayload({
-      event: "booking.created",
-      tenantId: params.tenantId,
-      data: {
-        bookingId: withReminder.bookingId,
-        botId: withReminder.botId,
-        contactPhone: withReminder.contactPhone,
-        contactName: withReminder.contactName ?? "",
-        startAt: withReminder.startAt,
-        endAt: withReminder.endAt,
-        source: withReminder.source,
-      },
-    })
-  );
+  const label = formatBookingConfirmation(created, config);
+  const payment = await createPaymentRequest({
+    tenantId: params.tenantId,
+    botId: params.botId,
+    amountInCents,
+    description: `Cita ${label}`,
+    contactPhone: params.contactPhone,
+    ...(params.contactName ? { contactName: params.contactName } : {}),
+    ...(params.conversationId ? { conversationId: params.conversationId } : {}),
+    source: "calendar_booking",
+    bookingId: created.bookingId,
+    environment,
+    sendWhatsApp: params.sendPaymentWhatsApp ?? params.source !== "public_link",
+  });
 
-  return withReminder;
+  const withPayment = await updateBooking(params.tenantId, created.bookingId, {
+    paymentId: payment.paymentId,
+  });
+  if (!withPayment) throw new Error("Failed to link payment to booking");
+
+  return {
+    booking: withPayment,
+    payment: {
+      paymentId: payment.paymentId,
+      checkoutUrl: payment.checkoutUrl,
+      amountInCents: payment.amountInCents,
+      reference: payment.reference,
+    },
+  };
 }
 
 export async function updateBookingStatus(params: {
