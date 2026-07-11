@@ -239,3 +239,11 @@ output "lambda_log_group_ids" {
     for k, _ in local.functions : k => "/aws/lambda/${var.project}-${var.environment}-${replace(k, "_", "-")}"
   }
 }
+
+output "lambda_log_group_ids_for_import" {
+  value = {
+    for k, id in {
+      for fn, _ in local.functions : fn => "/aws/lambda/${var.project}-${var.environment}-${replace(fn, "_", "-")}"
+    } : k => id if !contains(var.cloudwatch_log_group_import_exclude, k)
+  }
+}

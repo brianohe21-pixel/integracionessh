@@ -306,7 +306,7 @@ module "amplify" {
 }
 
 import {
-  for_each = module.lambda.lambda_log_group_ids
+  for_each = module.lambda.lambda_log_group_ids_for_import
   to       = module.lambda.aws_cloudwatch_log_group.lambda_logs[each.key]
   id       = each.value
 }
