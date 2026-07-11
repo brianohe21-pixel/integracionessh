@@ -216,7 +216,7 @@ export async function cancelBookingForFailedPayment(params: {
   });
   if (!updated) return null;
 
-  let bookingAfterReminder = await cancelBookingReminder(updated);
+  const bookingAfterReminder = await cancelBookingReminder(updated);
   const provider = getCalendarProvider(config.provider);
   if (provider.cancelExternalEvent) {
     await provider.cancelExternalEvent(bookingAfterReminder, config);
