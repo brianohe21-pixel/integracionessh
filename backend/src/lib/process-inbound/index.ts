@@ -46,6 +46,10 @@ import {
   assertPayloadMatchesChannel,
   externalMessageIdFromBody,
 } from "./parse.js";
+import {
+  handleInboundOrder,
+  isOrderInbound,
+} from "../catalog/order-handler.js";
 
 async function resolveAccessToken(
   tenantId: string,
@@ -209,6 +213,47 @@ export async function processInboundMessage(
   const userMessageText = inbound.text;
   const now = new Date().toISOString();
   const source = inboundSourceForChannel(channel);
+
+  if (channel === "whatsapp" && isOrderInbound(inbound) && inbound.order) {
+    const orderResult = await handleInboundOrder({
+      tenantId,
+      botId,
+      conversationId: conversation.conversationId,
+      contactPhone: participantId,
+      ...(displayName ? { contactName: displayName } : {}),
+      whatsappMessageId: externalId,
+      order: inbound.order,
+      environment,
+    });
+
+    if (orderResult.handled) {
+      const userMessage: Message = {
+        messageId: externalId,
+        conversationId: conversation.conversationId,
+        tenantId,
+        role: "user",
+        content: inbound.text,
+        channel,
+        messageType: "order",
+        metadata: { orderId: orderResult.orderId },
+        source,
+        externalMessageId: externalId,
+        whatsappMessageId: externalId,
+        timestamp: new Date().toISOString(),
+      };
+      await addMessage(userMessage, botId);
+      await emitMessageReceived({
+        tenantId,
+        botId,
+        conversationId: conversation.conversationId,
+        channel,
+        from: participantId,
+        message: inbound.text,
+        contactName: displayName,
+      });
+      return;
+    }
+  }
 
   const userMessage: Message = {
     messageId: externalId,

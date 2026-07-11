@@ -226,6 +226,14 @@ output "payments_function_arn" {
   value = try(aws_lambda_function.functions["payments"].arn, null)
 }
 
+output "catalog_invoke_arn" {
+  value = try(aws_lambda_function.functions["catalog"].invoke_arn, null)
+}
+
+output "catalog_function_arn" {
+  value = try(aws_lambda_function.functions["catalog"].arn, null)
+}
+
 output "lambda_log_group_ids" {
   value = {
     for k, _ in local.functions : k => "/aws/lambda/${var.project}-${var.environment}-${replace(k, "_", "-")}"

@@ -13,6 +13,11 @@ import {
 import { getMonthlyUsage } from "../dynamodb/usage.repository.js";
 import { listEnabledCalendarsForTenant } from "../calendar/calendar.service.js";
 import { listEnabledPaymentsForTenant } from "../payments/payments.service.js";
+import {
+  listEnabledCatalogsForTenant,
+  countOrdersThisMonth,
+  countProducts,
+} from "../catalog/catalog.service.js";
 import { countActiveLiveKitCallsForTenant } from "../dynamodb/livekit-call.repository.js";
 import type { Tenant, Channel } from "../../types/index.js";
 import {
@@ -290,6 +295,48 @@ export async function assertCanEnablePayments(tenant: Tenant, botId?: string): P
     throw new PlanLimitError(
       "PLAN_LIMIT_PAYMENTS",
       `Plan limit: maximum ${limits.maxPaymentsAppsPerTenant} payments app(s) per tenant`
+    );
+  }
+}
+
+export async function assertCanEnableCatalog(tenant: Tenant, botId?: string): Promise<void> {
+  const limits = getPlanLimits(tenant.plan);
+  if (isUnlimited(limits.maxCatalogAppsPerTenant)) return;
+
+  const configs = await listEnabledCatalogsForTenant(tenant.tenantId);
+  const enabledCount = botId
+    ? configs.filter((c) => c.botId !== botId).length
+    : configs.length;
+  if (enabledCount >= limits.maxCatalogAppsPerTenant) {
+    throw new PlanLimitError(
+      "PLAN_LIMIT_CATALOG",
+      `Plan limit: maximum ${limits.maxCatalogAppsPerTenant} catalog app(s) per tenant`
+    );
+  }
+}
+
+export async function assertCanAddProduct(tenant: Tenant, botId: string): Promise<void> {
+  const limits = getPlanLimits(tenant.plan);
+  if (isUnlimited(limits.maxProductsPerBot)) return;
+
+  const count = await countProducts(tenant.tenantId, botId);
+  if (count >= limits.maxProductsPerBot) {
+    throw new PlanLimitError(
+      "PLAN_LIMIT_PRODUCTS",
+      `Plan limit: maximum ${limits.maxProductsPerBot} products per bot`
+    );
+  }
+}
+
+export async function assertCanCreateOrder(tenant: Tenant): Promise<void> {
+  const limits = getPlanLimits(tenant.plan);
+  if (isUnlimited(limits.maxOrdersPerMonth)) return;
+
+  const count = await countOrdersThisMonth(tenant.tenantId);
+  if (count >= limits.maxOrdersPerMonth) {
+    throw new PlanLimitError(
+      "PLAN_LIMIT_ORDERS",
+      `Plan limit: maximum ${limits.maxOrdersPerMonth} orders per month`
     );
   }
 }

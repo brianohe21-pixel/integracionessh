@@ -246,6 +246,14 @@ variable "payments_function_arn" {
   type = string
 }
 
+variable "catalog_invoke_arn" {
+  type = string
+}
+
+variable "catalog_function_arn" {
+  type = string
+}
+
 variable "allowed_origins" {
   type    = list(string)
   default = ["*"]

@@ -48,6 +48,7 @@ const entryPoints = [
   "src/functions/calendar/index.ts",
   "src/functions/public-calendar/index.ts",
   "src/functions/payments/index.ts",
+  "src/functions/catalog/index.ts",
 ];
 
 const buildOptions = {
