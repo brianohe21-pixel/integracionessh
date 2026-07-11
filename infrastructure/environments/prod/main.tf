@@ -302,3 +302,9 @@ module "amplify" {
   custom_domain                  = var.custom_domain
   tags                           = local.tags
 }
+
+import {
+  for_each = module.lambda.lambda_log_group_ids
+  to       = module.lambda.aws_cloudwatch_log_group.lambda_logs[each.key]
+  id       = each.value
+}

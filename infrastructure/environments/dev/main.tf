@@ -298,3 +298,9 @@ module "amplify" {
   meta_embedded_signup_config_id = var.meta_embedded_signup_config_id
   tags                           = local.tags
 }
+
+import {
+  for_each = module.lambda.lambda_log_group_ids
+  to       = module.lambda.aws_cloudwatch_log_group.lambda_logs[each.key]
+  id       = each.value
+}

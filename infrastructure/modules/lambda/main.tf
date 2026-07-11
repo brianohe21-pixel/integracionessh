@@ -689,12 +689,6 @@ resource "aws_cloudwatch_log_group" "lambda_logs" {
   tags              = var.tags
 }
 
-import {
-  for_each = local.functions
-  to       = aws_cloudwatch_log_group.lambda_logs[each.key]
-  id       = "/aws/lambda/${var.project}-${var.environment}-${replace(each.key, "_", "-")}"
-}
-
 resource "aws_ses_email_identity" "from" {
   count = var.ses_from_email != "" ? 1 : 0
   email = var.ses_from_email
