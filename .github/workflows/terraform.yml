@@ -8,12 +8,14 @@ on:
       - "infrastructure/**"
       - ".github/workflows/terraform.yml"
       - ".github/scripts/terraform-plan-apply.sh"
+      - ".github/scripts/terraform-unlock-stale.sh"
   pull_request:
     branches: [main, develop]
     paths:
       - "infrastructure/**"
       - ".github/workflows/terraform.yml"
       - ".github/scripts/terraform-plan-apply.sh"
+      - ".github/scripts/terraform-unlock-stale.sh"
 
 permissions:
   contents: read
@@ -75,28 +77,10 @@ jobs:
             exit 1
           fi
 
-      - name: Terraform Refresh (permissions check)
+      - name: Clear stale Terraform state lock
         env:
-          GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
-          WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
-          REPOSITORY_URL: ${{ vars.REPOSITORY_URL }}
-          META_APP_ID: ${{ vars.META_APP_ID }}
-          META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
-          META_EMBEDDED_SIGNUP_CONFIG_ID: ${{ vars.META_EMBEDDED_SIGNUP_CONFIG_ID }}
-          FRONTEND_URL: ${{ vars.FRONTEND_URL }}
-          API_CUSTOM_DOMAIN: ${{ vars.API_CUSTOM_DOMAIN }}
-          WOMPI_PUBLIC_KEY: ${{ vars.WOMPI_PUBLIC_KEY }}
-          WOMPI_PRIVATE_KEY: ${{ secrets.WOMPI_PRIVATE_KEY }}
-          WOMPI_INTEGRITY_SECRET: ${{ secrets.WOMPI_INTEGRITY_SECRET }}
-          WOMPI_EVENTS_SECRET: ${{ secrets.WOMPI_EVENTS_SECRET }}
-          EXTRA_ALLOWED_ORIGINS: ${{ vars.EXTRA_ALLOWED_ORIGINS }}
-          EXTRA_CALLBACK_URLS: ${{ vars.EXTRA_CALLBACK_URLS }}
-          EXTRA_LOGOUT_URLS: ${{ vars.EXTRA_LOGOUT_URLS }}
-          ENABLE_MONITORING: ${{ vars.ENABLE_MONITORING }}
-          OPS_ALERT_EMAIL: ${{ vars.OPS_ALERT_EMAIL }}
-          SES_FROM_EMAIL: ${{ vars.SES_FROM_EMAIL }}
-          LOCK_TIMEOUT: 5m
-        run: bash ../../../.github/scripts/terraform-plan-apply.sh refresh-only
+          TF_STATE_KEY: dev/terraform.tfstate
+        run: bash ../../../.github/scripts/terraform-unlock-stale.sh
 
       - name: Terraform Plan
         id: plan
@@ -248,29 +232,10 @@ jobs:
             exit 1
           fi
 
-      - name: Terraform Refresh (permissions check)
+      - name: Clear stale Terraform state lock
         env:
-          GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
-          WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
-          REPOSITORY_URL: ${{ vars.REPOSITORY_URL }}
-          META_APP_ID: ${{ vars.META_APP_ID }}
-          META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
-          META_EMBEDDED_SIGNUP_CONFIG_ID: ${{ vars.META_EMBEDDED_SIGNUP_CONFIG_ID }}
-          FRONTEND_URL: ${{ vars.FRONTEND_URL }}
-          CUSTOM_DOMAIN: ${{ vars.CUSTOM_DOMAIN }}
-          API_CUSTOM_DOMAIN: ${{ vars.API_CUSTOM_DOMAIN }}
-          WOMPI_PUBLIC_KEY: ${{ vars.WOMPI_PUBLIC_KEY }}
-          WOMPI_PRIVATE_KEY: ${{ secrets.WOMPI_PRIVATE_KEY }}
-          WOMPI_INTEGRITY_SECRET: ${{ secrets.WOMPI_INTEGRITY_SECRET }}
-          WOMPI_EVENTS_SECRET: ${{ secrets.WOMPI_EVENTS_SECRET }}
-          EXTRA_ALLOWED_ORIGINS: ${{ vars.EXTRA_ALLOWED_ORIGINS }}
-          EXTRA_CALLBACK_URLS: ${{ vars.EXTRA_CALLBACK_URLS }}
-          EXTRA_LOGOUT_URLS: ${{ vars.EXTRA_LOGOUT_URLS }}
-          ENABLE_MONITORING: ${{ vars.ENABLE_MONITORING }}
-          OPS_ALERT_EMAIL: ${{ vars.OPS_ALERT_EMAIL }}
-          SES_FROM_EMAIL: ${{ vars.SES_FROM_EMAIL }}
-          LOCK_TIMEOUT: 5m
-        run: bash ../../../.github/scripts/terraform-plan-apply.sh refresh-only
+          TF_STATE_KEY: prod/terraform.tfstate
+        run: bash ../../../.github/scripts/terraform-unlock-stale.sh
 
       - name: Terraform Plan
         id: plan

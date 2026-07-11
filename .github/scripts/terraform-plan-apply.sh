@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ACTION="${1:?Usage: terraform-plan-apply.sh refresh-only|plan|apply}"
+ACTION="${1:?Usage: terraform-plan-apply.sh plan|apply}"
 LOCK_TIMEOUT="${LOCK_TIMEOUT:-10m}"
 MAX_ATTEMPTS="${MAX_ATTEMPTS:-3}"
 RETRY_SLEEP="${RETRY_SLEEP:-15}"
@@ -81,8 +81,12 @@ run_with_lock_retry() {
       return 0
     fi
     if grep -Eqi 'Error acquiring the state lock|PreconditionFailed|lock' "$log_file"; then
-      echo "::warning::Terraform hit a transient state lock (attempt ${attempt}/${MAX_ATTEMPTS}); retrying in ${RETRY_SLEEP}s"
+      echo "::warning::Terraform hit a state lock (attempt ${attempt}/${MAX_ATTEMPTS})"
+      if [ -f "$(dirname "$0")/terraform-unlock-stale.sh" ]; then
+        bash "$(dirname "$0")/terraform-unlock-stale.sh" || true
+      fi
       if [ "$attempt" -lt "$MAX_ATTEMPTS" ]; then
+        echo "Retrying in ${RETRY_SLEEP}s..."
         sleep "$RETRY_SLEEP"
         continue
       fi
@@ -94,10 +98,6 @@ run_with_lock_retry() {
 build_plan_args
 
 case "$ACTION" in
-  refresh-only)
-    run_with_lock_retry refresh.txt \
-      terraform plan -refresh-only "${PLAN_ARGS[@]}" -lock-timeout="$LOCK_TIMEOUT"
-    ;;
   plan)
     OUTPUT_ARGS=()
     if [ "${TF_PLAN_OUT:-false}" = "true" ]; then
