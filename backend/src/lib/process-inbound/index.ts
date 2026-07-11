@@ -210,6 +210,10 @@ export async function processInboundMessage(
   await markChannelRead(outboundCtxBase(), externalId).catch(() => {});
 
   const history = await getConversationMessages(tenantId, conversation.conversationId, 20);
+  if (history.some((m) => m.messageId === externalId && m.role === "user")) {
+    console.log(`Skipping duplicate inbound message ${externalId}`);
+    return;
+  }
   const userMessageText = inbound.text;
   const now = new Date().toISOString();
   const source = inboundSourceForChannel(channel);
@@ -524,7 +528,49 @@ export async function processInboundMessage(
       aiResponse = webhookResult.reply;
     }
   } else {
-    const openAIKey = await getOpenAIApiKey(tenantId, environment);
+    let openAIKey: string;
+    try {
+      openAIKey = await getOpenAIApiKey(tenantId, environment);
+    } catch (keyErr) {
+      const keyErrMsg = (keyErr as Error).message ?? "";
+      if (channel === "webchat" && keyErrMsg.includes("No OpenAI API key configured")) {
+        await addMessage(userMessage, botId);
+        await emitMessageReceived({
+          tenantId,
+          botId,
+          conversationId: conversation.conversationId,
+          channel,
+          from: participantId,
+          message: userMessageText,
+          contactName,
+        });
+        const fallback =
+          "El asistente no está disponible en este momento. Configura tu API key de OpenAI en Ajustes.";
+        await sendChannelText(
+          buildOutboundContext({
+            tenantId,
+            botId,
+            bot,
+            conversation,
+            accessToken,
+            environment,
+          }),
+          fallback
+        );
+        await incrementMessages(tenantId);
+        await emitMessageSent({
+          tenantId,
+          botId,
+          conversationId: conversation.conversationId,
+          channel,
+          to: participantId,
+          message: fallback,
+          role: "assistant",
+        });
+        return;
+      }
+      throw keyErr;
+    }
     const result = await generateChatResponse(
       bot,
       history,
