@@ -20,12 +20,11 @@ export function FieldLabel({ label, tooltip, htmlFor, className }: FieldLabelPro
       ) : (
         <span className="font-medium">{label}</span>
       )}
-      <span className="group relative inline-flex shrink-0">
+      <span className="group relative inline-flex shrink-0" title={tooltip}>
         <CircleHelp
           tabIndex={0}
           className="h-4 w-4 cursor-help text-gray-400 outline-none focus:text-gray-600"
           aria-label={tooltip}
-          title={tooltip}
         />
         <span
           role="tooltip"
