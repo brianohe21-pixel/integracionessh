@@ -43,6 +43,31 @@ describe("normalizeInboundMessage", () => {
     expect(result.messageType).toBe("flow_response");
     expect(result.interactive?.responseJson).toContain("Ana");
   });
+
+  it("normalizes order messages", () => {
+    const result = normalizeInboundMessage({
+      from: "57300",
+      id: "m4",
+      timestamp: "1",
+      type: "order",
+      order: {
+        catalog_id: "cat-1",
+        text: "Sin cebolla",
+        product_items: [
+          {
+            product_retailer_id: "sku-1",
+            quantity: 2,
+            item_price: 15000,
+            currency: "COP",
+          },
+        ],
+      },
+    });
+    expect(result.messageType).toBe("order");
+    expect(result.order?.catalog_id).toBe("cat-1");
+    expect(result.text).toContain("sku-1");
+    expect(result.text).toContain("Sin cebolla");
+  });
 });
 
 describe("isProcessableInboundMessage", () => {
@@ -64,5 +89,24 @@ describe("isProcessableInboundMessage", () => {
         type: "image",
       })
     ).toBe(false);
+    expect(
+      isProcessableInboundMessage({
+        from: "1",
+        id: "1",
+        timestamp: "1",
+        type: "order",
+        order: {
+          catalog_id: "cat-1",
+          product_items: [
+            {
+              product_retailer_id: "sku-1",
+              quantity: 1,
+              item_price: 10000,
+              currency: "COP",
+            },
+          ],
+        },
+      })
+    ).toBe(true);
   });
 });

@@ -187,18 +187,31 @@ export async function saveMessageTracking(
   );
 }
 
+export type MessageTracking = {
+  tenantId: string;
+  to?: string;
+  kind?: string;
+  campaignId?: string;
+  jobId?: string;
+};
+
 export async function getMessageTracking(
   messageId: string
-): Promise<{ jobId: string; tenantId: string; to?: string } | null> {
+): Promise<MessageTracking | null> {
   const result = await docClient.send(
     new GetCommand({ TableName: TABLE_NAME, Key: msgTrackingKeys(messageId) })
   );
   if (!result.Item) return null;
-  const tracking: { jobId: string; tenantId: string; to?: string } = {
-    jobId: result.Item.jobId as string,
+
+  const tracking: MessageTracking = {
     tenantId: result.Item.tenantId as string,
   };
+
   if (result.Item.to) tracking.to = result.Item.to as string;
+  if (result.Item.kind) tracking.kind = result.Item.kind as string;
+  if (result.Item.campaignId) tracking.campaignId = result.Item.campaignId as string;
+  if (result.Item.jobId) tracking.jobId = result.Item.jobId as string;
+
   return tracking;
 }
 

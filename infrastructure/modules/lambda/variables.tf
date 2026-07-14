@@ -262,3 +262,9 @@ variable "tags" {
   type    = map(string)
   default = {}
 }
+
+variable "cloudwatch_log_group_import_exclude" {
+  type        = set(string)
+  default     = ["catalog"]
+  description = "Lambda keys whose log groups are created by Terraform instead of imported (new functions without pre-existing log groups in AWS)"
+}

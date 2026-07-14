@@ -574,6 +574,31 @@ locals {
         MEDIA_BUCKET              = var.media_bucket_name
       }
     }
+    payments = {
+      handler     = "payments/index.handler"
+      description = "Payments app config and Wompi checkout per bot"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME                = var.dynamodb_table_name
+        ENVIRONMENT               = var.environment
+        INTEGRATION_SQS_QUEUE_URL = var.integration_sqs_queue_url
+        FRONTEND_URL              = var.frontend_url
+      }
+    }
+    catalog = {
+      handler     = "catalog/index.handler"
+      description = "Catalog app config, products and orders per bot"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME                = var.dynamodb_table_name
+        ENVIRONMENT               = var.environment
+        INTEGRATION_SQS_QUEUE_URL = var.integration_sqs_queue_url
+        FRONTEND_URL              = var.frontend_url
+        MEDIA_BUCKET              = var.media_bucket_name
+      }
+    }
   }
 }
 

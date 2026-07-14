@@ -217,3 +217,33 @@ output "public_calendar_invoke_arn" {
 output "public_calendar_function_arn" {
   value = aws_lambda_function.functions["public_calendar"].arn
 }
+
+output "payments_invoke_arn" {
+  value = try(aws_lambda_function.functions["payments"].invoke_arn, null)
+}
+
+output "payments_function_arn" {
+  value = try(aws_lambda_function.functions["payments"].arn, null)
+}
+
+output "catalog_invoke_arn" {
+  value = try(aws_lambda_function.functions["catalog"].invoke_arn, null)
+}
+
+output "catalog_function_arn" {
+  value = try(aws_lambda_function.functions["catalog"].arn, null)
+}
+
+output "lambda_log_group_ids" {
+  value = {
+    for k, _ in local.functions : k => "/aws/lambda/${var.project}-${var.environment}-${replace(k, "_", "-")}"
+  }
+}
+
+output "lambda_log_group_ids_for_import" {
+  value = {
+    for k, id in {
+      for fn, _ in local.functions : fn => "/aws/lambda/${var.project}-${var.environment}-${replace(fn, "_", "-")}"
+    } : k => id if !contains(var.cloudwatch_log_group_import_exclude, k)
+  }
+}

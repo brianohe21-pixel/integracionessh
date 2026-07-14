@@ -33,6 +33,7 @@ export function CalendarBookingsTable({
             <th className="px-4 py-3 text-left font-medium text-gray-600">{t("calendar.colDate")}</th>
             <th className="px-4 py-3 text-left font-medium text-gray-600">{t("calendar.colContact")}</th>
             <th className="px-4 py-3 text-left font-medium text-gray-600">{t("calendar.colSource")}</th>
+            <th className="px-4 py-3 text-left font-medium text-gray-600">{t("calendar.colPayment")}</th>
             <th className="px-4 py-3 text-left font-medium text-gray-600">
               {t("calendar.colReminder")}
             </th>
@@ -43,7 +44,7 @@ export function CalendarBookingsTable({
         <tbody className="divide-y divide-gray-200 bg-white">
           {bookings.length === 0 ? (
             <tr>
-              <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+              <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
                 {t("calendar.noBookings")}
               </td>
             </tr>
@@ -59,6 +60,20 @@ export function CalendarBookingsTable({
                 </td>
                 <td className="px-4 py-3 text-gray-600">
                   {t(`calendar.source.${booking.source}` as "calendar.source.flow")}
+                </td>
+                <td className="px-4 py-3 text-gray-600">
+                  {booking.paymentStatus
+                    ? t(
+                        `calendar.payment.status.${booking.paymentStatus}` as "calendar.payment.status.paid"
+                      )
+                    : "—"}
+                  {booking.amountInCents
+                    ? ` · ${new Intl.NumberFormat("es-CO", {
+                        style: "currency",
+                        currency: "COP",
+                        maximumFractionDigits: 0,
+                      }).format(booking.amountInCents / 100)}`
+                    : ""}
                 </td>
                 <td className="px-4 py-3 text-gray-600">
                   {booking.reminderStatus

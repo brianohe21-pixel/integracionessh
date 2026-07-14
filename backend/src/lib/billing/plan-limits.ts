@@ -18,6 +18,10 @@ export interface PlanLimits {
   maxActiveWebChatSessions: number;
   maxConcurrentLiveKitCalls: number;
   maxCalendarAppsPerTenant: number;
+  maxPaymentsAppsPerTenant: number;
+  maxCatalogAppsPerTenant: number;
+  maxProductsPerBot: number;
+  maxOrdersPerMonth: number;
   canCustomizeBranding: boolean;
   apiRateLimitPerMinute: number;
   apiRateLimitPerDay: number;
@@ -42,6 +46,10 @@ const LIMITS: Record<TenantPlan, PlanLimits> = {
     maxActiveWebChatSessions: 0,
     maxConcurrentLiveKitCalls: 0,
     maxCalendarAppsPerTenant: 1,
+    maxPaymentsAppsPerTenant: 1,
+    maxCatalogAppsPerTenant: 1,
+    maxProductsPerBot: 20,
+    maxOrdersPerMonth: 50,
     canCustomizeBranding: false,
     apiRateLimitPerMinute: 20,
     apiRateLimitPerDay: 250,
@@ -64,6 +72,10 @@ const LIMITS: Record<TenantPlan, PlanLimits> = {
     maxActiveWebChatSessions: 50,
     maxConcurrentLiveKitCalls: 2,
     maxCalendarAppsPerTenant: 5,
+    maxPaymentsAppsPerTenant: 5,
+    maxCatalogAppsPerTenant: 5,
+    maxProductsPerBot: 200,
+    maxOrdersPerMonth: 2_000,
     canCustomizeBranding: false,
     apiRateLimitPerMinute: 60,
     apiRateLimitPerDay: 5_000,
@@ -86,6 +98,10 @@ const LIMITS: Record<TenantPlan, PlanLimits> = {
     maxActiveWebChatSessions: 500,
     maxConcurrentLiveKitCalls: 10,
     maxCalendarAppsPerTenant: Number.MAX_SAFE_INTEGER,
+    maxPaymentsAppsPerTenant: Number.MAX_SAFE_INTEGER,
+    maxCatalogAppsPerTenant: Number.MAX_SAFE_INTEGER,
+    maxProductsPerBot: Number.MAX_SAFE_INTEGER,
+    maxOrdersPerMonth: Number.MAX_SAFE_INTEGER,
     canCustomizeBranding: true,
     apiRateLimitPerMinute: 120,
     apiRateLimitPerDay: 50_000,

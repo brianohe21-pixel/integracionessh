@@ -7,6 +7,7 @@ import {
   useCalendarBookings,
   useCalendarConfig,
   useCalendarSlots,
+  useCalendarWaitlist,
   useSaveCalendarConfig,
 } from "@/hooks/useCalendar";
 import type { CalendarConfig } from "@/types";
@@ -18,6 +19,10 @@ import { CalendarBookingsTable } from "@/components/calendar/CalendarBookingsTab
 import { CalendarSlotsPreview } from "@/components/calendar/CalendarSlotsPreview";
 import { CalendarPublicLinkPanel } from "@/components/calendar/CalendarPublicLinkPanel";
 import { CalendarReminderSettings } from "@/components/calendar/CalendarReminderSettings";
+import { CalendarPaymentSettings } from "@/components/calendar/CalendarPaymentSettings";
+import { CalendarWaitlistSettings } from "@/components/calendar/CalendarWaitlistSettings";
+import { CalendarWaitlistTable } from "@/components/calendar/CalendarWaitlistTable";
+import { usePaymentsConfig } from "@/hooks/usePayments";
 
 type Tab = "availability" | "bookings";
 
@@ -39,6 +44,8 @@ export default function CalendarBotPage() {
   const saveConfig = useSaveCalendarConfig(botId);
   const { data: slotsData, isLoading: slotsLoading } = useCalendarSlots(botId);
   const { data: bookingsData, isLoading: bookingsLoading } = useCalendarBookings(botId);
+  const { data: waitlistData, isLoading: waitlistLoading } = useCalendarWaitlist(botId);
+  const { data: paymentsData } = usePaymentsConfig(botId);
 
   useEffect(() => {
     if (configData?.config) {
@@ -80,6 +87,9 @@ export default function CalendarBotPage() {
         reminderMessage: draft.reminderMessage,
         reminderTemplateName: draft.reminderTemplateName,
         reminderTemplateLanguage: draft.reminderTemplateLanguage,
+        autoCollectPayment: draft.autoCollectPayment,
+        bookingPriceInCents: draft.bookingPriceInCents,
+        waitlistEnabled: draft.waitlistEnabled,
       });
       setSaved(true);
     } catch (err) {
@@ -124,6 +134,16 @@ export default function CalendarBotPage() {
             config={draft}
             onChange={(patch) => setDraft((prev) => (prev ? { ...prev, ...patch } : prev))}
           />
+          <CalendarPaymentSettings
+            config={draft}
+            paymentsEnabled={paymentsData?.config.enabled ?? false}
+            wompiConfigured={paymentsData?.wompiConfigured ?? false}
+            onChange={(patch) => setDraft((prev) => (prev ? { ...prev, ...patch } : prev))}
+          />
+          <CalendarWaitlistSettings
+            config={draft}
+            onChange={(patch) => setDraft((prev) => (prev ? { ...prev, ...patch } : prev))}
+          />
           <section className="rounded-xl border border-gray-200 bg-white p-6">
             <h3 className="mb-4 font-semibold text-gray-900">{t("calendar.settings")}</h3>
             <CalendarSettingsForm
@@ -156,11 +176,21 @@ export default function CalendarBotPage() {
           </div>
         </div>
       ) : (
-        <CalendarBookingsTable
-          botId={botId}
-          bookings={bookingsData?.bookings ?? []}
-          isLoading={bookingsLoading}
-        />
+        <div className="space-y-8">
+          <CalendarBookingsTable
+            botId={botId}
+            bookings={bookingsData?.bookings ?? []}
+            isLoading={bookingsLoading}
+          />
+          <section>
+            <h3 className="mb-4 font-semibold text-gray-900">{t("calendar.waitlist.title")}</h3>
+            <CalendarWaitlistTable
+              botId={botId}
+              entries={waitlistData?.entries ?? []}
+              isLoading={waitlistLoading}
+            />
+          </section>
+        </div>
       )}
     </DashboardPage>
   );

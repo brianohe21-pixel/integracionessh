@@ -4,18 +4,35 @@ import {
   WOMPI_AMOUNT_PRO_CENTS_DEFAULT,
 } from "./plan-config.js";
 
-const WOMPI_CHECKOUT_URL =
-  process.env.WOMPI_CHECKOUT_URL ?? "https://checkout.wompi.co/p/";
+const DEFAULT_CHECKOUT_URL = "https://checkout.wompi.co/p/";
+const DEFAULT_API_BASE = "https://production.wompi.co/v1";
 
-const WOMPI_API_BASE =
-  process.env.WOMPI_API_BASE ?? "https://production.wompi.co/v1";
+export interface WompiCredentials {
+  publicKey: string;
+  privateKey?: string;
+  integritySecret: string;
+  eventsSecret: string;
+  apiBase?: string;
+  checkoutUrl?: string;
+}
+
+export function getPlatformWompiCredentials(): WompiCredentials | null {
+  const publicKey = process.env.WOMPI_PUBLIC_KEY;
+  const integritySecret = process.env.WOMPI_INTEGRITY_SECRET;
+  const eventsSecret = process.env.WOMPI_EVENTS_SECRET;
+  if (!publicKey || !integritySecret || !eventsSecret) return null;
+  return {
+    publicKey,
+    integritySecret,
+    eventsSecret,
+    apiBase: process.env.WOMPI_API_BASE ?? DEFAULT_API_BASE,
+    checkoutUrl: process.env.WOMPI_CHECKOUT_URL ?? DEFAULT_CHECKOUT_URL,
+    ...(process.env.WOMPI_PRIVATE_KEY ? { privateKey: process.env.WOMPI_PRIVATE_KEY } : {}),
+  };
+}
 
 export function isWompiConfigured(): boolean {
-  return Boolean(
-    process.env.WOMPI_PUBLIC_KEY &&
-      process.env.WOMPI_INTEGRITY_SECRET &&
-      process.env.WOMPI_EVENTS_SECRET
-  );
+  return getPlatformWompiCredentials() !== null;
 }
 
 export function amountInCentsForPlan(plan: "pro" | "enterprise"): number {
@@ -33,29 +50,31 @@ export function amountInCentsForPlan(plan: "pro" | "enterprise"): number {
 }
 
 export function buildIntegritySignature(
+  creds: Pick<WompiCredentials, "integritySecret">,
   reference: string,
   amountInCents: number,
   currency = "COP"
 ): string {
-  const secret = process.env.WOMPI_INTEGRITY_SECRET;
-  if (!secret) throw new Error("WOMPI_INTEGRITY_SECRET is not configured");
-  const payload = `${reference}${amountInCents}${currency}${secret}`;
+  const payload = `${reference}${amountInCents}${currency}${creds.integritySecret}`;
   return createHash("sha256").update(payload).digest("hex");
 }
 
-export function buildCheckoutUrl(input: {
-  reference: string;
-  amountInCents: number;
-  redirectUrl: string;
-  customerEmail: string;
-}): string {
-  const publicKey = process.env.WOMPI_PUBLIC_KEY;
-  if (!publicKey) throw new Error("WOMPI_PUBLIC_KEY is not configured");
-
-  const signature = buildIntegritySignature(input.reference, input.amountInCents);
+export function buildCheckoutUrl(
+  creds: Pick<WompiCredentials, "publicKey" | "integritySecret" | "checkoutUrl">,
+  input: {
+    reference: string;
+    amountInCents: number;
+    redirectUrl: string;
+    customerEmail: string;
+    currency?: string;
+  }
+): string {
+  const currency = input.currency ?? "COP";
+  const signature = buildIntegritySignature(creds, input.reference, input.amountInCents, currency);
+  const checkoutUrl = creds.checkoutUrl ?? DEFAULT_CHECKOUT_URL;
   const params = new URLSearchParams({
-    "public-key": publicKey,
-    currency: "COP",
+    "public-key": creds.publicKey,
+    currency,
     "amount-in-cents": String(input.amountInCents),
     reference: input.reference,
     "signature:integrity": signature,
@@ -63,7 +82,7 @@ export function buildCheckoutUrl(input: {
     "customer-data:email": input.customerEmail,
   });
 
-  return `${WOMPI_CHECKOUT_URL}?${params.toString()}`;
+  return `${checkoutUrl}?${params.toString()}`;
 }
 
 function getNestedValue(obj: Record<string, unknown>, path: string): string {
@@ -88,16 +107,16 @@ export interface WompiWebhookEvent {
   sent_at: string;
 }
 
-export function verifyWompiEvent(event: WompiWebhookEvent): boolean {
-  const secret = process.env.WOMPI_EVENTS_SECRET;
-  if (!secret) return false;
-
+export function verifyWompiEvent(
+  creds: Pick<WompiCredentials, "eventsSecret">,
+  event: WompiWebhookEvent
+): boolean {
   let chain = "";
   for (const prop of event.signature.properties) {
     chain += getNestedValue(event.data, prop);
   }
   chain += String(event.timestamp);
-  chain += secret;
+  chain += creds.eventsSecret;
 
   const calculated = createHash("sha256").update(chain).digest("hex").toUpperCase();
   const expected = event.signature.checksum.toUpperCase();
@@ -118,12 +137,14 @@ export interface WompiTransaction {
 }
 
 export async function fetchWompiTransaction(
+  creds: Pick<WompiCredentials, "privateKey" | "apiBase">,
   transactionId: string
 ): Promise<WompiTransaction | null> {
-  const privateKey = process.env.WOMPI_PRIVATE_KEY;
-  if (!privateKey) throw new Error("WOMPI_PRIVATE_KEY is not configured");
+  const privateKey = creds.privateKey;
+  if (!privateKey) throw new Error("Wompi private key is not configured");
 
-  const response = await fetch(`${WOMPI_API_BASE}/transactions/${transactionId}`, {
+  const apiBase = creds.apiBase ?? DEFAULT_API_BASE;
+  const response = await fetch(`${apiBase}/transactions/${transactionId}`, {
     headers: { Authorization: `Bearer ${privateKey}` },
   });
 

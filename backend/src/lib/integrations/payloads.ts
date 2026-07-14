@@ -240,3 +240,46 @@ export function buildTestPayload(tenantId: string): IntegrationEventPayload {
     },
   });
 }
+
+export function buildOrderCreatedPayload(params: {
+  tenantId: string;
+  botId: string;
+  order: import("../../types/index.js").CatalogOrder;
+}): IntegrationEventPayload {
+  return buildIntegrationPayload({
+    event: "order.created",
+    tenantId: params.tenantId,
+    data: {
+      orderId: params.order.orderId,
+      botId: params.botId,
+      contactPhone: params.order.contactPhone,
+      status: params.order.status,
+      subtotalInCents: params.order.subtotalInCents,
+      currency: params.order.currency,
+      items: params.order.items,
+      source: params.order.source,
+      ...(params.order.paymentId ? { paymentId: params.order.paymentId } : {}),
+    },
+  });
+}
+
+export function buildOrderStatusChangedPayload(params: {
+  tenantId: string;
+  botId: string;
+  order: import("../../types/index.js").CatalogOrder;
+  previousStatus: string;
+}): IntegrationEventPayload {
+  return buildIntegrationPayload({
+    event: "order.status_changed",
+    tenantId: params.tenantId,
+    data: {
+      orderId: params.order.orderId,
+      botId: params.botId,
+      contactPhone: params.order.contactPhone,
+      status: params.order.status,
+      previousStatus: params.previousStatus,
+      subtotalInCents: params.order.subtotalInCents,
+      currency: params.order.currency,
+    },
+  });
+}

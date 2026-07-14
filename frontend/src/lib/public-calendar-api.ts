@@ -1,4 +1,4 @@
-import type { AvailableSlot } from "@/types";
+import type { AvailableSlot, WaitlistEntry } from "@/types";
 
 const BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
@@ -33,11 +33,20 @@ export interface PublicCalendarBranding {
   logoUrl?: string;
 }
 
+export interface PublicCalendarPaymentInfo {
+  required: boolean;
+  amountInCents?: number;
+  currency: "COP";
+  amountLabel?: string;
+}
+
 export interface PublicCalendarInfo {
   botName: string;
   timezone: string;
   maxAdvanceDays: number;
   slotDurationMinutes: number;
+  waitlistEnabled?: boolean;
+  payment?: PublicCalendarPaymentInfo;
   branding?: PublicCalendarBranding;
 }
 
@@ -52,6 +61,13 @@ export interface PublicBookingResult {
     startAt: string;
     endAt: string;
     label: string;
+    paymentStatus?: "pending" | "paid" | "not_required";
+  };
+  payment?: {
+    paymentId: string;
+    checkoutUrl: string;
+    amountInCents: number;
+    reference: string;
   };
 }
 
@@ -59,9 +75,9 @@ export const publicCalendarApi = {
   getInfo: (publicKey: string) =>
     publicRequest<PublicCalendarInfo>(`/public/calendar/${encodeURIComponent(publicKey)}`),
 
-  getDates: (publicKey: string) =>
+  getDates: (publicKey: string, options?: { all?: boolean }) =>
     publicRequest<{ dates: PublicCalendarDate[] }>(
-      `/public/calendar/${encodeURIComponent(publicKey)}/dates`
+      `/public/calendar/${encodeURIComponent(publicKey)}/dates${options?.all ? "?all=1" : ""}`
     ),
 
   getSlots: (publicKey: string, date: string) =>
@@ -75,6 +91,22 @@ export const publicCalendarApi = {
   ) =>
     publicRequest<PublicBookingResult>(
       `/public/calendar/${encodeURIComponent(publicKey)}/bookings`,
+      { method: "POST", body: JSON.stringify(body) }
+    ),
+
+  joinWaitlist: (
+    publicKey: string,
+    body: {
+      scope: "slot" | "date";
+      startAt?: string;
+      isoDate?: string;
+      contactPhone: string;
+      contactName: string;
+      notes?: string;
+    }
+  ) =>
+    publicRequest<{ entry: WaitlistEntry }>(
+      `/public/calendar/${encodeURIComponent(publicKey)}/waitlist`,
       { method: "POST", body: JSON.stringify(body) }
     ),
 };

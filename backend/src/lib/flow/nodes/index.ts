@@ -1,6 +1,10 @@
 import type { FlowNode, FlowRun } from "../../../types/index.js";
 import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
 import { executeBookAppointmentNode } from "./book-appointment.js";
+import { executeRequestPaymentNode } from "./request-payment.js";
+import { executeSendCatalogNode } from "./send-catalog.js";
+import { executeSendProductsNode } from "./send-products.js";
+import { executeAwaitOrderNode } from "./await-order.js";
 import { executeButtonsNode } from "./buttons.js";
 import { executeConditionNode } from "./condition.js";
 import { executeDelayNode } from "./delay.js";
@@ -41,6 +45,14 @@ export async function executeNode(
       return executeHttpRequestNode(node, ctx, run);
     case "book_appointment":
       return executeBookAppointmentNode(node, ctx, run);
+    case "request_payment":
+      return executeRequestPaymentNode(node, ctx, run);
+    case "send_catalog":
+      return executeSendCatalogNode(node, ctx, run);
+    case "send_products":
+      return executeSendProductsNode(node, ctx, run);
+    case "await_order":
+      return executeAwaitOrderNode(node, ctx, run);
     case "end":
       return executeEndNode(node, ctx, run);
     default:

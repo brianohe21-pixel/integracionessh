@@ -22,6 +22,7 @@ export interface NodeExecutionResult {
   halt: boolean;
   wait: boolean;
   waitingUntil?: string;
+  externalWait?: boolean;
   variables?: Record<string, string>;
   output?: string;
 }

@@ -1,4 +1,5 @@
 import type { APIGatewayProxyResultV2 } from "aws-lambda";
+import { ZodError } from "zod";
 
 const CORS_HEADERS = {
   "Content-Type": "application/json",
@@ -117,6 +118,10 @@ export function badGateway(message: string): APIGatewayProxyResultV2 {
 
 export function handleError(error: unknown): APIGatewayProxyResultV2 {
   console.error("Handler error:", error);
+
+  if (error instanceof ZodError) {
+    return badRequest(error.issues.map((issue) => issue.message).join("; "));
+  }
 
   const err = error as Error & { statusCode?: number };
 

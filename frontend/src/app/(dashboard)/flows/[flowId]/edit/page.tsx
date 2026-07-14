@@ -22,6 +22,10 @@ const NODE_TYPES: FlowNodeType[] = [
   "delay",
   "set_variable",
   "book_appointment",
+  "request_payment",
+  "send_catalog",
+  "send_products",
+  "await_order",
   "end",
 ];
 
@@ -190,6 +194,78 @@ export default function EditFlowPage() {
                 onChange={(e) => updateSelectedData({ confirmationMessage: e.target.value })}
                 rows={3}
                 placeholder="confirmationMessage"
+                className="w-full text-sm border border-gray-300 rounded-lg p-2"
+              />
+            </div>
+          )}
+          {selected?.type === "request_payment" && (
+            <div className="space-y-2">
+              <input
+                type="number"
+                min={1000}
+                value={selected.data.amountInCents ?? 50000}
+                onChange={(e) => updateSelectedData({ amountInCents: Number(e.target.value) })}
+                placeholder="amountInCents"
+                className="w-full text-sm border border-gray-300 rounded-lg p-2"
+              />
+              <input
+                value={selected.data.paymentDescription ?? ""}
+                onChange={(e) => updateSelectedData({ paymentDescription: e.target.value })}
+                placeholder="paymentDescription"
+                className="w-full text-sm border border-gray-300 rounded-lg p-2"
+              />
+              <textarea
+                value={selected.data.paymentMessageTemplate ?? ""}
+                onChange={(e) => updateSelectedData({ paymentMessageTemplate: e.target.value })}
+                rows={3}
+                placeholder="paymentMessageTemplate"
+                className="w-full text-sm border border-gray-300 rounded-lg p-2"
+              />
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={selected.data.waitForPayment ?? false}
+                  onChange={(e) => updateSelectedData({ waitForPayment: e.target.checked })}
+                />
+                waitForPayment
+              </label>
+            </div>
+          )}
+          {(selected?.type === "send_catalog" || selected?.type === "await_order") && (
+            <textarea
+              value={selected.data.catalogMessageText ?? selected.data.messageText ?? ""}
+              onChange={(e) =>
+                updateSelectedData(
+                  selected.type === "send_catalog"
+                    ? { catalogMessageText: e.target.value }
+                    : { messageText: e.target.value }
+                )
+              }
+              rows={3}
+              placeholder="message"
+              className="w-full text-sm border border-gray-300 rounded-lg p-2"
+            />
+          )}
+          {selected?.type === "send_products" && (
+            <div className="space-y-2">
+              <textarea
+                value={selected.data.messageText ?? ""}
+                onChange={(e) => updateSelectedData({ messageText: e.target.value })}
+                rows={2}
+                placeholder="messageText"
+                className="w-full text-sm border border-gray-300 rounded-lg p-2"
+              />
+              <input
+                value={(selected.data.productRetailerIds ?? []).join(",")}
+                onChange={(e) =>
+                  updateSelectedData({
+                    productRetailerIds: e.target.value
+                      .split(",")
+                      .map((v) => v.trim())
+                      .filter(Boolean),
+                  })
+                }
+                placeholder="productRetailerIds (comma separated)"
                 className="w-full text-sm border border-gray-300 rounded-lg p-2"
               />
             </div>

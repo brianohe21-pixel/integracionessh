@@ -7,11 +7,15 @@ on:
     paths:
       - "infrastructure/**"
       - ".github/workflows/terraform.yml"
+      - ".github/scripts/terraform-plan-apply.sh"
+      - ".github/scripts/terraform-unlock-stale.sh"
   pull_request:
     branches: [main, develop]
     paths:
       - "infrastructure/**"
       - ".github/workflows/terraform.yml"
+      - ".github/scripts/terraform-plan-apply.sh"
+      - ".github/scripts/terraform-unlock-stale.sh"
 
 permissions:
   contents: read
@@ -22,9 +26,10 @@ jobs:
     name: Terraform Dev
     runs-on: ubuntu-latest
     environment: dev
+    if: github.ref == 'refs/heads/develop' || github.event_name == 'pull_request'
     concurrency:
-      group: terraform-dev-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-      cancel-in-progress: true
+      group: terraform-dev
+      cancel-in-progress: false
     defaults:
       run:
         working-directory: infrastructure/environments/dev
@@ -72,21 +77,17 @@ jobs:
             exit 1
           fi
 
-      - name: Remove monitoring from state when disabled
-        run: |
-          set -euo pipefail
-          if [ "${ENABLE_MONITORING:-false}" != "true" ]; then
-            for addr in $(terraform state list 2>/dev/null | grep '^module\.monitoring' || true); do
-              echo "Removing $addr from state (enable_monitoring=false)"
-              terraform state rm "$addr"
-            done
-          fi
+      - name: Clear stale Terraform state lock
         env:
-          ENABLE_MONITORING: ${{ vars.ENABLE_MONITORING }}
+          TF_STATE_KEY: dev/terraform.tfstate
+        run: bash ../../../.github/scripts/terraform-unlock-stale.sh
 
       - name: Terraform Plan
         id: plan
         env:
+          GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+          WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
+          REPOSITORY_URL: ${{ vars.REPOSITORY_URL }}
           META_APP_ID: ${{ vars.META_APP_ID }}
           META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
           META_EMBEDDED_SIGNUP_CONFIG_ID: ${{ vars.META_EMBEDDED_SIGNUP_CONFIG_ID }}
@@ -102,85 +103,16 @@ jobs:
           ENABLE_MONITORING: ${{ vars.ENABLE_MONITORING }}
           OPS_ALERT_EMAIL: ${{ vars.OPS_ALERT_EMAIL }}
           SES_FROM_EMAIL: ${{ vars.SES_FROM_EMAIL }}
-        run: |
-          set -euo pipefail
-          PLAN_ARGS=(
-            -no-color
-            -var="github_access_token=${{ secrets.GH_ACCESS_TOKEN }}"
-            -var="whatsapp_verify_token=${{ secrets.WHATSAPP_VERIFY_TOKEN }}"
-            -var="repository_url=${{ vars.REPOSITORY_URL }}"
-          )
-          if [ -f terraform.tfvars ]; then
-            PLAN_ARGS+=(-var-file=terraform.tfvars)
-          fi
-          if [ "${ENABLE_MONITORING:-false}" = "true" ]; then
-            PLAN_ARGS+=(-var="enable_monitoring=true")
-          fi
-          if [ -n "${OPS_ALERT_EMAIL:-}" ]; then
-            PLAN_ARGS+=(-var="ops_alert_email=${OPS_ALERT_EMAIL}")
-          fi
-          SES_SENDER="${SES_FROM_EMAIL:-${OPS_ALERT_EMAIL:-}}"
-          if [ -n "${SES_SENDER}" ]; then
-            PLAN_ARGS+=(-var="ses_from_email=${SES_SENDER}")
-          fi
-          if [ -n "${META_APP_ID:-}" ]; then
-            PLAN_ARGS+=(-var="meta_app_id=${META_APP_ID}")
-          fi
-          if [ -n "${META_APP_SECRET:-}" ]; then
-            PLAN_ARGS+=(-var="meta_app_secret=${META_APP_SECRET}")
-          fi
-          if [ -n "${META_EMBEDDED_SIGNUP_CONFIG_ID:-}" ]; then
-            PLAN_ARGS+=(-var="meta_embedded_signup_config_id=${META_EMBEDDED_SIGNUP_CONFIG_ID}")
-          fi
-          if [ -n "${FRONTEND_URL:-}" ]; then
-            PLAN_ARGS+=(-var="frontend_url=${FRONTEND_URL}")
-          fi
-          if [ -n "${API_CUSTOM_DOMAIN:-}" ]; then
-            PLAN_ARGS+=(-var="api_custom_domain=${API_CUSTOM_DOMAIN}")
-          fi
-          if [ -n "${WOMPI_PUBLIC_KEY:-}" ]; then
-            PLAN_ARGS+=(-var="wompi_public_key=${WOMPI_PUBLIC_KEY}")
-          fi
-          if [ -n "${WOMPI_PRIVATE_KEY:-}" ]; then
-            PLAN_ARGS+=(-var="wompi_private_key=${WOMPI_PRIVATE_KEY}")
-          fi
-          if [ -n "${WOMPI_INTEGRITY_SECRET:-}" ]; then
-            PLAN_ARGS+=(-var="wompi_integrity_secret=${WOMPI_INTEGRITY_SECRET}")
-          fi
-          if [ -n "${WOMPI_EVENTS_SECRET:-}" ]; then
-            PLAN_ARGS+=(-var="wompi_events_secret=${WOMPI_EVENTS_SECRET}")
-          fi
-          if [ -n "${EXTRA_ALLOWED_ORIGINS:-}" ]; then
-            PLAN_ARGS+=(-var="extra_allowed_origins=${EXTRA_ALLOWED_ORIGINS}")
-          fi
-          if [ -n "${EXTRA_CALLBACK_URLS:-}" ]; then
-            PLAN_ARGS+=(-var="extra_callback_urls=${EXTRA_CALLBACK_URLS}")
-          fi
-          if [ -n "${EXTRA_LOGOUT_URLS:-}" ]; then
-            PLAN_ARGS+=(-var="extra_logout_urls=${EXTRA_LOGOUT_URLS}")
-          fi
-          PLAN_OUTPUT_ARGS=()
-          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/develop" ]; then
-            PLAN_OUTPUT_ARGS=(-out=tfplan)
-          fi
+          TF_PLAN_OUT: ${{ github.event_name == 'push' && github.ref == 'refs/heads/develop' && 'true' || 'false' }}
+        run: bash ../../../.github/scripts/terraform-plan-apply.sh plan
 
-          for attempt in 1 2 3; do
-            set +e
-            terraform plan "${PLAN_ARGS[@]}" "${PLAN_OUTPUT_ARGS[@]}" -lock=false -lock-timeout=10m | tee plan.txt
-            plan_status=${PIPESTATUS[0]}
-            set -e
-            if [ "$plan_status" -eq 0 ]; then
-              break
-            fi
-            if grep -Eqi 'Error acquiring the state lock|PreconditionFailed|lock' plan.txt; then
-              echo "::warning::Terraform plan hit a transient state lock (attempt $attempt/3); retrying in 15s"
-              if [ "$attempt" -lt 3 ]; then
-                sleep 15
-                continue
-              fi
-            fi
-            exit "$plan_status"
-          done
+      - name: Upload plan artifact
+        if: always() && hashFiles('infrastructure/environments/dev/plan.txt') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan-dev-${{ github.run_id }}
+          path: infrastructure/environments/dev/plan.txt
+          retention-days: 7
 
       - name: Comment PR
         if: github.event_name == 'pull_request' && always()
@@ -196,49 +128,62 @@ jobs:
               plan = 'Plan output not available.';
             }
             const truncated = plan.length > 60000 ? plan.slice(0, 60000) + '\n...(truncated)' : plan;
-            const output = `#### Terraform Plan (dev) \`${{ steps.plan.outcome }}\`
+            const marker = '<!-- terraform-plan-dev -->';
+            const output = `${marker}
+            #### Terraform Plan (dev) \`${{ steps.plan.outcome }}\`
             <details><summary>Show Plan</summary>
 
             \`\`\`\n${truncated}\`\`\`
 
             </details>`;
-            github.rest.issues.createComment({
+
+            const { data: comments } = await github.rest.issues.listComments({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: output
-            })
+            });
+            const existing = comments.find((c) =>
+              c.user.type === 'Bot' && c.body && c.body.includes(marker)
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body: output,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: output,
+              });
+            }
 
       - name: Terraform Apply
         if: github.ref == 'refs/heads/develop' && github.event_name == 'push' && steps.plan.outcome == 'success'
-        run: |
-          set -euo pipefail
-          test -f tfplan
-          for attempt in 1 2 3; do
-            set +e
-            terraform apply -auto-approve -parallelism=1 -lock=false -lock-timeout=10m tfplan 2>&1 | tee apply.txt
-            apply_status=${PIPESTATUS[0]}
-            set -e
-            if [ "$apply_status" -eq 0 ]; then
-              break
-            fi
-            if grep -Eqi 'Error acquiring the state lock|PreconditionFailed|lock' apply.txt; then
-              echo "::warning::Terraform apply hit a transient state lock (attempt $attempt/3); retrying in 15s"
-              if [ "$attempt" -lt 3 ]; then
-                sleep 15
-                continue
-              fi
-            fi
-            exit "$apply_status"
-          done
+        env:
+          GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+          WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
+          REPOSITORY_URL: ${{ vars.REPOSITORY_URL }}
+        run: bash ../../../.github/scripts/terraform-plan-apply.sh apply
+
+      - name: Upload apply artifact
+        if: always() && hashFiles('infrastructure/environments/dev/apply.txt') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-apply-dev-${{ github.run_id }}
+          path: infrastructure/environments/dev/apply.txt
+          retention-days: 7
 
   terraform-prod:
     name: Terraform Prod
     runs-on: ubuntu-latest
     environment: prod
     concurrency:
-      group: terraform-prod-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-      cancel-in-progress: true
+      group: terraform-prod
+      cancel-in-progress: false
     if: github.ref == 'refs/heads/main'
     defaults:
       run:
@@ -287,21 +232,17 @@ jobs:
             exit 1
           fi
 
-      - name: Remove monitoring from state when disabled
-        run: |
-          set -euo pipefail
-          if [ "${ENABLE_MONITORING:-false}" != "true" ]; then
-            for addr in $(terraform state list 2>/dev/null | grep '^module\.monitoring' || true); do
-              echo "Removing $addr from state (enable_monitoring=false)"
-              terraform state rm "$addr"
-            done
-          fi
+      - name: Clear stale Terraform state lock
         env:
-          ENABLE_MONITORING: ${{ vars.ENABLE_MONITORING }}
+          TF_STATE_KEY: prod/terraform.tfstate
+        run: bash ../../../.github/scripts/terraform-unlock-stale.sh
 
       - name: Terraform Plan
         id: plan
         env:
+          GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+          WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
+          REPOSITORY_URL: ${{ vars.REPOSITORY_URL }}
           META_APP_ID: ${{ vars.META_APP_ID }}
           META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
           META_EMBEDDED_SIGNUP_CONFIG_ID: ${{ vars.META_EMBEDDED_SIGNUP_CONFIG_ID }}
@@ -318,108 +259,29 @@ jobs:
           ENABLE_MONITORING: ${{ vars.ENABLE_MONITORING }}
           OPS_ALERT_EMAIL: ${{ vars.OPS_ALERT_EMAIL }}
           SES_FROM_EMAIL: ${{ vars.SES_FROM_EMAIL }}
-        run: |
-          set -euo pipefail
-          PLAN_ARGS=(
-            -no-color
-            -var="github_access_token=${{ secrets.GH_ACCESS_TOKEN }}"
-            -var="whatsapp_verify_token=${{ secrets.WHATSAPP_VERIFY_TOKEN }}"
-            -var="repository_url=${{ vars.REPOSITORY_URL }}"
-          )
-          if [ -f terraform.tfvars ]; then
-            PLAN_ARGS+=(-var-file=terraform.tfvars)
-          fi
-          if [ "${ENABLE_MONITORING:-false}" = "true" ]; then
-            PLAN_ARGS+=(-var="enable_monitoring=true")
-          fi
-          if [ -n "${OPS_ALERT_EMAIL:-}" ]; then
-            PLAN_ARGS+=(-var="ops_alert_email=${OPS_ALERT_EMAIL}")
-          fi
-          SES_SENDER="${SES_FROM_EMAIL:-${OPS_ALERT_EMAIL:-}}"
-          if [ -n "${SES_SENDER}" ]; then
-            PLAN_ARGS+=(-var="ses_from_email=${SES_SENDER}")
-          fi
-          if [ -n "${META_APP_ID:-}" ]; then
-            PLAN_ARGS+=(-var="meta_app_id=${META_APP_ID}")
-          fi
-          if [ -n "${META_APP_SECRET:-}" ]; then
-            PLAN_ARGS+=(-var="meta_app_secret=${META_APP_SECRET}")
-          fi
-          if [ -n "${META_EMBEDDED_SIGNUP_CONFIG_ID:-}" ]; then
-            PLAN_ARGS+=(-var="meta_embedded_signup_config_id=${META_EMBEDDED_SIGNUP_CONFIG_ID}")
-          fi
-          if [ -n "${FRONTEND_URL:-}" ]; then
-            PLAN_ARGS+=(-var="frontend_url=${FRONTEND_URL}")
-          fi
-          if [ -n "${CUSTOM_DOMAIN:-}" ]; then
-            PLAN_ARGS+=(-var="custom_domain=${CUSTOM_DOMAIN}")
-          fi
-          if [ -n "${API_CUSTOM_DOMAIN:-}" ]; then
-            PLAN_ARGS+=(-var="api_custom_domain=${API_CUSTOM_DOMAIN}")
-          fi
-          if [ -n "${WOMPI_PUBLIC_KEY:-}" ]; then
-            PLAN_ARGS+=(-var="wompi_public_key=${WOMPI_PUBLIC_KEY}")
-          fi
-          if [ -n "${WOMPI_PRIVATE_KEY:-}" ]; then
-            PLAN_ARGS+=(-var="wompi_private_key=${WOMPI_PRIVATE_KEY}")
-          fi
-          if [ -n "${WOMPI_INTEGRITY_SECRET:-}" ]; then
-            PLAN_ARGS+=(-var="wompi_integrity_secret=${WOMPI_INTEGRITY_SECRET}")
-          fi
-          if [ -n "${WOMPI_EVENTS_SECRET:-}" ]; then
-            PLAN_ARGS+=(-var="wompi_events_secret=${WOMPI_EVENTS_SECRET}")
-          fi
-          if [ -n "${EXTRA_ALLOWED_ORIGINS:-}" ]; then
-            PLAN_ARGS+=(-var="extra_allowed_origins=${EXTRA_ALLOWED_ORIGINS}")
-          fi
-          if [ -n "${EXTRA_CALLBACK_URLS:-}" ]; then
-            PLAN_ARGS+=(-var="extra_callback_urls=${EXTRA_CALLBACK_URLS}")
-          fi
-          if [ -n "${EXTRA_LOGOUT_URLS:-}" ]; then
-            PLAN_ARGS+=(-var="extra_logout_urls=${EXTRA_LOGOUT_URLS}")
-          fi
-          PLAN_OUTPUT_ARGS=()
-          if [ "${{ github.event_name }}" = "push" ]; then
-            PLAN_OUTPUT_ARGS=(-out=tfplan)
-          fi
+          TF_PLAN_OUT: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && 'true' || 'false' }}
+        run: bash ../../../.github/scripts/terraform-plan-apply.sh plan
 
-          for attempt in 1 2 3; do
-            set +e
-            terraform plan "${PLAN_ARGS[@]}" "${PLAN_OUTPUT_ARGS[@]}" -lock=false -lock-timeout=10m | tee plan.txt
-            plan_status=${PIPESTATUS[0]}
-            set -e
-            if [ "$plan_status" -eq 0 ]; then
-              break
-            fi
-            if grep -Eqi 'Error acquiring the state lock|PreconditionFailed|lock' plan.txt; then
-              echo "::warning::Terraform plan hit a transient state lock (attempt $attempt/3); retrying in 15s"
-              if [ "$attempt" -lt 3 ]; then
-                sleep 15
-                continue
-              fi
-            fi
-            exit "$plan_status"
-          done
+      - name: Upload plan artifact
+        if: always() && hashFiles('infrastructure/environments/prod/plan.txt') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan-prod-${{ github.run_id }}
+          path: infrastructure/environments/prod/plan.txt
+          retention-days: 7
 
       - name: Terraform Apply
         if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && steps.plan.outcome == 'success'
-        run: |
-          set -euo pipefail
-          test -f tfplan
-          for attempt in 1 2 3; do
-            set +e
-            terraform apply -auto-approve -parallelism=1 -lock=false -lock-timeout=10m tfplan 2>&1 | tee apply.txt
-            apply_status=${PIPESTATUS[0]}
-            set -e
-            if [ "$apply_status" -eq 0 ]; then
-              break
-            fi
-            if grep -Eqi 'Error acquiring the state lock|PreconditionFailed|lock' apply.txt; then
-              echo "::warning::Terraform apply hit a transient state lock (attempt $attempt/3); retrying in 15s"
-              if [ "$attempt" -lt 3 ]; then
-                sleep 15
-                continue
-              fi
-            fi
-            exit "$apply_status"
-          done
+        env:
+          GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+          WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
+          REPOSITORY_URL: ${{ vars.REPOSITORY_URL }}
+        run: bash ../../../.github/scripts/terraform-plan-apply.sh apply
+
+      - name: Upload apply artifact
+        if: always() && hashFiles('infrastructure/environments/prod/apply.txt') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-apply-prod-${{ github.run_id }}
+          path: infrastructure/environments/prod/apply.txt
+          retention-days: 7

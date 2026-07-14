@@ -2,6 +2,7 @@ import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 }
 import { z } from "zod";
 import { extractAuthContext, assertMemberRole } from "../../lib/auth/cognito.js";
 import { assertCanEnableCalendar } from "../../lib/billing/assert-plan.js";
+import { listAppsCatalog } from "../../lib/apps/catalog.js";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
 import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
 import {
@@ -9,7 +10,6 @@ import {
   enableCalendar,
   getAvailableSlots,
   getConfigOrDefault,
-  listAppsCatalog,
   listBookings,
   createBookingForBot,
   saveCalendarConfig,
@@ -22,8 +22,13 @@ import {
   rotatePublicCalendarLink,
 } from "../../lib/calendar/public-link.js";
 import { sendBookingReminder } from "../../lib/calendar/reminder-send.js";
+import {
+  convertWaitlistToBooking,
+  listWaitlist,
+  updateWaitlistStatus,
+} from "../../lib/calendar/waitlist.service.js";
 import { ok, badRequest, handleError } from "../../lib/http.js";
-import type { BookingStatus } from "../../types/index.js";
+import type { BookingStatus, WaitlistScope, WaitlistStatus } from "../../types/index.js";
 
 const TimeRangeSchema = z.object({
   start: z.string().regex(/^\d{2}:\d{2}$/),
@@ -54,6 +59,9 @@ const ConfigSchema = z
     reminderMessage: z.string().max(500).optional(),
     reminderTemplateName: z.string().max(120).optional(),
     reminderTemplateLanguage: z.string().min(2).max(10).optional(),
+    autoCollectPayment: z.boolean().optional(),
+    bookingPriceInCents: z.number().int().min(1000).max(100_000_000).optional(),
+    waitlistEnabled: z.boolean().optional(),
   })
   .superRefine((data, ctx) => {
     if (!data.reminderEnabled) return;
@@ -94,6 +102,14 @@ const PatchBookingSchema = z.object({
   status: z.enum(["confirmed", "cancelled", "completed", "no_show"]),
 });
 
+const PatchWaitlistSchema = z.object({
+  status: z.enum(["active", "contacted", "fulfilled", "cancelled"]),
+});
+
+const ConvertWaitlistSchema = z.object({
+  startAt: z.string().datetime().optional(),
+});
+
 async function assertBotBelongsToTenant(tenantId: string, botId: string): Promise<void> {
   const bot = await getBot(tenantId, botId);
   if (!bot) throw new Error("Bot not found");
@@ -125,6 +141,7 @@ export async function handler(
     const rawPath = event.rawPath;
     const botId = event.pathParameters?.botId;
     const bookingId = event.pathParameters?.bookingId;
+    const waitlistId = event.pathParameters?.waitlistId;
 
     if (method === "GET" && rawPath === "/apps") {
       return ok(await listAppsCatalog(auth.tenantId));
@@ -207,7 +224,7 @@ export async function handler(
 
     if (method === "POST" && rawPath === `/calendar/${botId}/bookings`) {
       const body = CreateBookingSchema.parse(JSON.parse(event.body ?? "{}"));
-      const booking = await createBookingForBot({
+      const result = await createBookingForBot({
         tenantId: auth.tenantId,
         botId,
         startAt: body.startAt,
@@ -217,7 +234,7 @@ export async function handler(
         ...(body.notes ? { notes: body.notes } : {}),
         source: "manual",
       });
-      return ok({ booking });
+      return ok({ booking: result.booking, ...(result.payment ? { payment: result.payment } : {}) });
     }
 
     if (method === "PATCH" && bookingId && rawPath === `/calendar/${botId}/bookings/${bookingId}`) {
@@ -229,6 +246,48 @@ export async function handler(
         status: body.status,
       });
       return ok({ booking });
+    }
+
+    if (method === "GET" && rawPath === `/calendar/${botId}/waitlist`) {
+      const from = event.queryStringParameters?.from;
+      const to = event.queryStringParameters?.to;
+      const status = event.queryStringParameters?.status as WaitlistStatus | undefined;
+      const scope = event.queryStringParameters?.scope as WaitlistScope | undefined;
+      const entries = await listWaitlist({
+        tenantId: auth.tenantId,
+        botId,
+        ...(from ? { from } : {}),
+        ...(to ? { to } : {}),
+        ...(status ? { status } : {}),
+        ...(scope ? { scope } : {}),
+      });
+      return ok({ entries });
+    }
+
+    if (method === "PATCH" && waitlistId && rawPath === `/calendar/${botId}/waitlist/${waitlistId}`) {
+      const body = PatchWaitlistSchema.parse(JSON.parse(event.body ?? "{}"));
+      const entry = await updateWaitlistStatus({
+        tenantId: auth.tenantId,
+        botId,
+        waitlistId,
+        status: body.status,
+      });
+      return ok({ entry });
+    }
+
+    if (
+      method === "POST" &&
+      waitlistId &&
+      rawPath === `/calendar/${botId}/waitlist/${waitlistId}/convert`
+    ) {
+      const body = ConvertWaitlistSchema.parse(JSON.parse(event.body ?? "{}"));
+      const result = await convertWaitlistToBooking({
+        tenantId: auth.tenantId,
+        botId,
+        waitlistId,
+        ...(body.startAt ? { startAt: body.startAt } : {}),
+      });
+      return ok(result);
     }
 
     return badRequest("Not found");

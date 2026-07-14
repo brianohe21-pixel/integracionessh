@@ -85,7 +85,7 @@ async function runFromNode(
     const history = [...run.stepHistory, step];
 
     if (result.wait) {
-      const status = result.waitingUntil ? "waiting" : "active";
+      const status = result.waitingUntil || result.externalWait ? "waiting" : "active";
       await updateFlowRun(ctx.tenantId, run.runId, {
         currentNodeId: result.nextNodeId ?? node.id,
         status,
@@ -254,6 +254,29 @@ export async function advanceFlowRun(params: {
     return { handled: true, halt: true };
   }
 
+  if (currentNode?.type === "await_order" && params.inbound.messageType === "order") {
+    const nextNodeId = flow.edges.find((e) => e.source === currentNode.id)?.target ?? null;
+    const updated = await updateFlowRun(params.tenantId, run.runId, {
+      currentNodeId: nextNodeId ?? currentNode.id,
+      status: nextNodeId ? "active" : "completed",
+      variables: {
+        ...run.variables,
+        last_input: params.inbound.text,
+        order_id: run.variables.order_id ?? "",
+        order_total: run.variables.order_total ?? "",
+        order_items_count: run.variables.order_items_count ?? "",
+      },
+    });
+    if (updated && nextNodeId) {
+      const ctx = buildContext({ ...params, flow });
+      return runFromNode(updated, flow, ctx);
+    }
+    if (updated) {
+      await clearActiveFlowRun(params.tenantId, params.botId, params.conversation.conversationId);
+    }
+    return { handled: true, halt: true };
+  }
+
   if (currentNode?.type === "meta_flow" && params.inbound.interactive?.kind === "nfm") {
     const nextEdge = flow.edges.find((e) => e.source === currentNode.id);
     const nextNodeId = nextEdge?.target ?? null;
@@ -275,7 +298,13 @@ export async function advanceFlowRun(params: {
     return { handled: true, halt: true };
   }
 
-  const waitingNodeTypes = ["buttons", "meta_flow", "book_appointment"] as const;
+  const waitingNodeTypes = [
+    "buttons",
+    "meta_flow",
+    "book_appointment",
+    "request_payment",
+    "await_order",
+  ] as const;
   if (
     currentNode &&
     waitingNodeTypes.includes(currentNode.type as (typeof waitingNodeTypes)[number])
@@ -309,8 +338,15 @@ export async function resumeFlowRunById(
   const flow = await getFlowDefinition(tenantId, run.flowId);
   if (!flow) return;
 
+  const currentNode = flow.nodes.find((n) => n.id === run.currentNodeId);
+  let nextNodeId = run.currentNodeId;
+  if (currentNode?.type === "request_payment") {
+    nextNodeId = flow.edges.find((e) => e.source === currentNode.id)?.target ?? run.currentNodeId;
+  }
+
   const resumed = await updateFlowRun(tenantId, runId, {
     status: "active",
+    currentNodeId: nextNodeId,
   });
   if (!resumed) return;
 
@@ -333,6 +369,73 @@ export async function resumeFlowRunById(
     accessToken,
     customerPhone: run.customerPhone,
     inbound: { text: "", messageType: "text", raw: { from: run.customerPhone, id: "", timestamp: "", type: "text" } },
+    flow,
+  });
+
+  await runFromNode(resumed, flow, ctx);
+}
+
+export async function resumeFlowRunOnOrder(params: {
+  tenantId: string;
+  botId: string;
+  conversationId: string;
+  orderId: string;
+  subtotalInCents: number;
+  itemsCount: number;
+}): Promise<void> {
+  const run = await getActiveFlowRunForConversation(params.tenantId, params.conversationId);
+  if (!run || run.status !== "waiting") return;
+
+  const flow = await getFlowDefinition(params.tenantId, run.flowId);
+  if (!flow) return;
+
+  const currentNode = flow.nodes.find((n) => n.id === run.currentNodeId);
+  if (currentNode?.type !== "await_order") return;
+
+  const nextNodeId = flow.edges.find((e) => e.source === currentNode.id)?.target ?? null;
+  const resumed = await updateFlowRun(params.tenantId, run.runId, {
+    status: nextNodeId ? "active" : "completed",
+    currentNodeId: nextNodeId ?? currentNode.id,
+    variables: {
+      ...run.variables,
+      order_id: params.orderId,
+      order_total: String(params.subtotalInCents),
+      order_items_count: String(params.itemsCount),
+    },
+  });
+  if (!resumed) return;
+
+  if (!nextNodeId) {
+    await clearActiveFlowRun(params.tenantId, params.botId, params.conversationId);
+    return;
+  }
+
+  const { getBot } = await import("../dynamodb/bot.repository.js");
+  const { getConversation } = await import("../dynamodb/conversation.repository.js");
+  const { getWhatsAppAccessToken } = await import("../whatsapp/client.js");
+
+  const bot = await getBot(params.tenantId, params.botId);
+  if (!bot) return;
+  const conversation = await getConversation(
+    params.tenantId,
+    params.botId,
+    params.conversationId
+  );
+  if (!conversation) return;
+  const accessToken = await getWhatsAppAccessToken(
+    params.tenantId,
+    process.env.ENVIRONMENT ?? "dev"
+  );
+
+  const ctx = buildContext({
+    tenantId: params.tenantId,
+    botId: params.botId,
+    bot,
+    conversation,
+    phoneNumberId: bot.phoneNumberId,
+    accessToken,
+    customerPhone: run.customerPhone,
+    inbound: { text: "", messageType: "order", raw: { from: run.customerPhone, id: "", timestamp: "", type: "order" } },
     flow,
   });
 

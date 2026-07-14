@@ -35,15 +35,18 @@ export async function executeAutomation(
   switch (rule.action) {
     case "send_text": {
       if (!rule.messageText) throw new Error("messageText required for send_text");
-      await sendChannelText(
-        { ...outboundCtx, channel, participantId: ctx.customerPhone },
-        rule.messageText
-      );
+      if (rule.trigger === "first_message" && ctx.conversation.welcomeSentAt) {
+        break;
+      }
       if (rule.trigger === "first_message") {
         await updateConversation(ctx.tenantId, ctx.botId, ctx.conversation.conversationId, {
           welcomeSentAt: new Date().toISOString(),
         });
       }
+      await sendChannelText(
+        { ...outboundCtx, channel, participantId: ctx.customerPhone },
+        rule.messageText
+      );
       break;
     }
     case "send_template": {

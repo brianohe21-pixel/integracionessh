@@ -6,10 +6,15 @@ import {
   createBookingForBot,
   formatBookingConfirmation,
   getBookingDates,
+  getBookingSchedulableDates,
   getBookingSlotsForDate,
 } from "../../lib/calendar/calendar.service.js";
+import { getCalendarPaymentInfo } from "../../lib/calendar/payment.js";
 import { resolvePublicCalendarContext } from "../../lib/calendar/public-link.js";
+import { joinWaitlist } from "../../lib/calendar/waitlist.service.js";
 import { ok, badRequest, created, handleError } from "../../lib/http.js";
+
+const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 
 const CreatePublicBookingSchema = z.object({
   startAt: z.string().datetime(),
@@ -17,6 +22,32 @@ const CreatePublicBookingSchema = z.object({
   contactName: z.string().min(1).max(120),
   notes: z.string().max(500).optional(),
 });
+
+const JoinWaitlistSchema = z
+  .object({
+    scope: z.enum(["slot", "date"]),
+    startAt: z.string().datetime().optional(),
+    isoDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    contactPhone: z.string().min(8).max(20),
+    contactName: z.string().min(1).max(120),
+    notes: z.string().max(500).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.scope === "slot" && !data.startAt) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "startAt is required for slot waitlist",
+        path: ["startAt"],
+      });
+    }
+    if (data.scope === "date" && !data.isoDate) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "isoDate is required for date waitlist",
+        path: ["isoDate"],
+      });
+    }
+  });
 
 function parseSubPath(rawPath: string, publicKey: string): string[] {
   const prefix = `/public/calendar/${publicKey}`;
@@ -39,11 +70,19 @@ export async function handler(
       const ctx = await resolvePublicCalendarContext(publicKey);
       const tenant = await getTenant(ctx.tenantId);
       const branding = tenant ? await getResolvedTenantBranding(tenant) : undefined;
+      const payment = await getCalendarPaymentInfo({
+        tenantId: ctx.tenantId,
+        botId: ctx.botId,
+        calendarConfig: ctx.config,
+        environment: ENVIRONMENT,
+      });
       return ok({
         botName: ctx.botName,
         timezone: ctx.config.timezone,
         maxAdvanceDays: ctx.config.maxAdvanceDays,
         slotDurationMinutes: ctx.config.slotDurationMinutes,
+        waitlistEnabled: Boolean(ctx.config.waitlistEnabled),
+        payment,
         branding: branding
           ? {
               brandName: branding.brandName,
@@ -56,11 +95,18 @@ export async function handler(
 
     if (method === "GET" && sub[0] === "dates") {
       const ctx = await resolvePublicCalendarContext(publicKey);
-      const dates = await getBookingDates({
-        tenantId: ctx.tenantId,
-        botId: ctx.botId,
-        maxDays: ctx.config.maxAdvanceDays,
-      });
+      const all = event.queryStringParameters?.all === "1";
+      const dates = all && ctx.config.waitlistEnabled
+        ? await getBookingSchedulableDates({
+            tenantId: ctx.tenantId,
+            botId: ctx.botId,
+            maxDays: ctx.config.maxAdvanceDays,
+          })
+        : await getBookingDates({
+            tenantId: ctx.tenantId,
+            botId: ctx.botId,
+            maxDays: ctx.config.maxAdvanceDays,
+          });
       return ok({ dates });
     }
 
@@ -81,7 +127,7 @@ export async function handler(
     if (method === "POST" && sub[0] === "bookings") {
       const ctx = await resolvePublicCalendarContext(publicKey);
       const body = CreatePublicBookingSchema.parse(JSON.parse(event.body ?? "{}"));
-      const booking = await createBookingForBot({
+      const result = await createBookingForBot({
         tenantId: ctx.tenantId,
         botId: ctx.botId,
         startAt: body.startAt,
@@ -89,16 +135,45 @@ export async function handler(
         contactName: body.contactName,
         ...(body.notes ? { notes: body.notes } : {}),
         source: "public_link",
+        environment: ENVIRONMENT,
+        sendPaymentWhatsApp: false,
       });
-      const label = formatBookingConfirmation(booking, ctx.config);
+      const label = formatBookingConfirmation(result.booking, ctx.config);
       return created({
         booking: {
-          bookingId: booking.bookingId,
-          startAt: booking.startAt,
-          endAt: booking.endAt,
+          bookingId: result.booking.bookingId,
+          startAt: result.booking.startAt,
+          endAt: result.booking.endAt,
           label,
+          paymentStatus: result.booking.paymentStatus,
         },
+        ...(result.payment
+          ? {
+              payment: {
+                paymentId: result.payment.paymentId,
+                checkoutUrl: result.payment.checkoutUrl,
+                amountInCents: result.payment.amountInCents,
+                reference: result.payment.reference,
+              },
+            }
+          : {}),
       });
+    }
+
+    if (method === "POST" && sub[0] === "waitlist") {
+      const ctx = await resolvePublicCalendarContext(publicKey);
+      const body = JoinWaitlistSchema.parse(JSON.parse(event.body ?? "{}"));
+      const entry = await joinWaitlist({
+        tenantId: ctx.tenantId,
+        botId: ctx.botId,
+        scope: body.scope,
+        ...(body.startAt ? { startAt: body.startAt } : {}),
+        ...(body.isoDate ? { isoDate: body.isoDate } : {}),
+        contactPhone: body.contactPhone,
+        contactName: body.contactName,
+        ...(body.notes ? { notes: body.notes } : {}),
+      });
+      return created({ entry });
     }
 
     return badRequest("Not found");

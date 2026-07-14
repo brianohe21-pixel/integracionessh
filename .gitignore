@@ -149,7 +149,6 @@ vite.config.ts.timestamp-*
 *.tfplan
 *.tfvars
 !*.tfvars.example
-.terraform.lock.hcl
 
 # Next.js
 frontend/.next/

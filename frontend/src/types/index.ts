@@ -559,6 +559,10 @@ export type FlowNodeType =
   | "set_variable"
   | "http_request"
   | "book_appointment"
+  | "request_payment"
+  | "send_catalog"
+  | "send_products"
+  | "await_order"
   | "end";
 
 export type FlowTriggerType = "keyword" | "first_message" | "any_message";
@@ -587,6 +591,15 @@ export interface FlowNodeData {
   haltPipeline?: boolean;
   confirmationMessage?: string;
   maxDaysToShow?: number;
+  amountInCents?: number;
+  paymentDescription?: string;
+  paymentMessageTemplate?: string;
+  waitForPayment?: boolean;
+  catalogMessageText?: string;
+  productRetailerIds?: string[];
+  multiProductHeader?: string;
+  multiProductBody?: string;
+  orderConfirmationMessage?: string;
 }
 
 export interface FlowNode {
@@ -723,11 +736,35 @@ export interface CalendarConfig {
   reminderMessage?: string;
   reminderTemplateName?: string;
   reminderTemplateLanguage?: string;
+  autoCollectPayment?: boolean;
+  bookingPriceInCents?: number;
+  waitlistEnabled?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type WaitlistScope = "slot" | "date";
+export type WaitlistStatus = "active" | "contacted" | "fulfilled" | "cancelled";
+
+export interface WaitlistEntry {
+  waitlistId: string;
+  tenantId: string;
+  botId: string;
+  scope: WaitlistScope;
+  startAt?: string;
+  isoDate?: string;
+  contactPhone: string;
+  contactName: string;
+  notes?: string;
+  status: WaitlistStatus;
+  source: "public_link";
   createdAt: string;
   updatedAt: string;
 }
 
 export type BookingStatus = "confirmed" | "cancelled" | "completed" | "no_show";
+
+export type BookingPaymentStatus = "pending" | "paid" | "not_required";
 
 export interface Booking {
   bookingId: string;
@@ -741,6 +778,9 @@ export interface Booking {
   status: BookingStatus;
   source: "flow" | "openai" | "manual" | "public_link";
   notes?: string;
+  paymentId?: string;
+  amountInCents?: number;
+  paymentStatus?: BookingPaymentStatus;
   reminderScheduleName?: string;
   reminderSentAt?: string;
   reminderStatus?: BookingReminderStatus;
@@ -759,4 +799,142 @@ export interface AppCatalogItem {
   name: string;
   description: string;
   installedBots: Array<{ botId: string; botName: string; enabled: boolean }>;
+}
+
+export type PaymentRequestStatus = "pending" | "paid" | "declined" | "expired";
+export type PaymentRequestSource = "manual" | "flow" | "catalog_order" | "calendar_booking";
+
+export type CatalogSyncStatus = "linked" | "syncing" | "error" | "not_linked";
+export type ProductAvailability = "in_stock" | "out_of_stock";
+export type ProductSyncStatus = "synced" | "pending" | "error";
+export type OrderStatus =
+  | "pending"
+  | "confirmed"
+  | "preparing"
+  | "shipped"
+  | "delivered"
+  | "cancelled";
+export type OrderSource = "whatsapp_cart" | "manual" | "flow";
+
+export interface CatalogConfig {
+  tenantId: string;
+  botId: string;
+  enabled: boolean;
+  metaCatalogId?: string;
+  currency: "COP";
+  autoCollectPayment: boolean;
+  orderConfirmationMessage?: string;
+  orderStatusMessageTemplate?: string;
+  catalogMessageText?: string;
+  syncStatus: CatalogSyncStatus;
+  lastSyncAt?: string;
+  lastSyncError?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CatalogProduct {
+  productId: string;
+  tenantId: string;
+  botId: string;
+  retailerId: string;
+  name: string;
+  description: string;
+  priceInCents: number;
+  currency: "COP";
+  imageS3Key?: string;
+  imageUrl?: string;
+  availability: ProductAvailability;
+  metaProductId?: string;
+  syncStatus: ProductSyncStatus;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrderItem {
+  retailerId: string;
+  productId?: string;
+  name: string;
+  quantity: number;
+  unitPriceInCents: number;
+  currency: "COP";
+}
+
+export interface CatalogOrder {
+  orderId: string;
+  tenantId: string;
+  botId: string;
+  conversationId?: string;
+  contactPhone: string;
+  contactName?: string;
+  status: OrderStatus;
+  catalogId: string;
+  customerNote?: string;
+  items: OrderItem[];
+  subtotalInCents: number;
+  currency: "COP";
+  paymentId?: string;
+  source: OrderSource;
+  whatsappMessageId?: string;
+  unresolvedItems?: boolean;
+  internalNotes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MetaCatalogSummary {
+  id: string;
+  name: string;
+}
+
+export interface PaymentsConfig {
+  tenantId: string;
+  botId: string;
+  enabled: boolean;
+  currency: "COP";
+  defaultAmountInCents?: number;
+  paymentMessageTemplate?: string;
+  successRedirectUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PaymentRequest {
+  paymentId: string;
+  tenantId: string;
+  botId: string;
+  contactPhone: string;
+  contactName?: string;
+  conversationId?: string;
+  flowRunId?: string;
+  bookingId?: string;
+  amountInCents: number;
+  currency: "COP";
+  description: string;
+  status: PaymentRequestStatus;
+  source: PaymentRequestSource;
+  reference: string;
+  checkoutUrl: string;
+  wompiTransactionId?: string;
+  paidAt?: string;
+  expiresAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MaskedWompiCredentials {
+  configured: boolean;
+  publicKey?: string;
+  privateKey?: string;
+  integritySecret?: string;
+  eventsSecret?: string;
+  tenantId?: string;
+}
+
+export interface TenantWompiSecretPayload {
+  publicKey: string;
+  privateKey: string;
+  integritySecret: string;
+  eventsSecret: string;
 }

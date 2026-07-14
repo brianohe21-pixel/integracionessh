@@ -13,28 +13,47 @@ import { assertSafeUrl } from "../../lib/webhook/client.js";
 import { ok, badRequest, handleError } from "../../lib/http.js";
 import type { IntegrationEvent, TenantIntegration } from "../../types/index.js";
 
-const UpdateWebhookSchema = z.object({
-  webhookUrl: z.string().url().max(2048),
-  webhookSecret: z.string().max(256).optional(),
-  subscribedEvents: z
-    .array(
-      z.enum([
-        "message.received",
-        "conversation.handoff",
-        "message.sent",
-        "flow.completed",
-        "lead.created",
-        "lead.converted",
-        "call.connect",
-        "call.status",
-        "call.terminated",
-        "booking.created",
-        "booking.cancelled",
-      ])
-    )
-    .min(1),
-  enabled: z.boolean(),
-});
+const IntegrationEventSchema = z.enum([
+  "message.received",
+  "conversation.handoff",
+  "message.sent",
+  "flow.completed",
+  "lead.created",
+  "lead.converted",
+  "call.connect",
+  "call.status",
+  "call.terminated",
+  "booking.created",
+  "booking.cancelled",
+  "payment.completed",
+  "payment.failed",
+]);
+
+const UpdateWebhookSchema = z
+  .object({
+    webhookUrl: z.string().max(2048),
+    webhookSecret: z.string().max(256).optional(),
+    subscribedEvents: z.array(IntegrationEventSchema),
+    enabled: z.boolean(),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.enabled) return;
+
+    if (!z.string().url().max(2048).safeParse(data.webhookUrl).success) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Invalid webhook URL",
+        path: ["webhookUrl"],
+      });
+    }
+    if (data.subscribedEvents.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Select at least one event when the webhook is enabled",
+        path: ["subscribedEvents"],
+      });
+    }
+  });
 
 const DEFAULT_INTEGRATION: TenantIntegration = {
   integrationId: "default",
@@ -66,7 +85,9 @@ export async function handler(
 
     if (method === "PUT" && path.endsWith("/integrations/webhook")) {
       const body = UpdateWebhookSchema.parse(JSON.parse(event.body ?? "{}"));
-      await assertSafeUrl(body.webhookUrl);
+      if (body.enabled) {
+        await assertSafeUrl(body.webhookUrl);
+      }
 
       const integration = await upsertTenantIntegration(auth.tenantId, {
         webhookUrl: body.webhookUrl,

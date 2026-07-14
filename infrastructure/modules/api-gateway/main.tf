@@ -927,6 +927,24 @@ locals {
       function_arn = var.calendar_function_arn
       protected    = true
     }
+    calendar_waitlist_list = {
+      route_key    = "GET /calendar/{botId}/waitlist"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_waitlist_patch = {
+      route_key    = "PATCH /calendar/{botId}/waitlist/{waitlistId}"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_waitlist_convert = {
+      route_key    = "POST /calendar/{botId}/waitlist/{waitlistId}/convert"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
     public_calendar_info = {
       route_key    = "GET /public/calendar/{publicKey}"
       invoke_arn   = var.public_calendar_invoke_arn
@@ -950,6 +968,180 @@ locals {
       invoke_arn   = var.public_calendar_invoke_arn
       function_arn = var.public_calendar_function_arn
       protected    = false
+    }
+    public_calendar_waitlist = {
+      route_key    = "POST /public/calendar/{publicKey}/waitlist"
+      invoke_arn   = var.public_calendar_invoke_arn
+      function_arn = var.public_calendar_function_arn
+      protected    = false
+    }
+    payments_wompi_credentials_get = {
+      route_key    = "GET /payments/wompi/credentials"
+      invoke_arn   = var.payments_invoke_arn
+      function_arn = var.payments_function_arn
+      protected    = true
+    }
+    payments_wompi_credentials_put = {
+      route_key    = "PUT /payments/wompi/credentials"
+      invoke_arn   = var.payments_invoke_arn
+      function_arn = var.payments_function_arn
+      protected    = true
+    }
+    payments_wompi_credentials_delete = {
+      route_key    = "DELETE /payments/wompi/credentials"
+      invoke_arn   = var.payments_invoke_arn
+      function_arn = var.payments_function_arn
+      protected    = true
+    }
+    payments_config_get = {
+      route_key    = "GET /payments/{botId}/config"
+      invoke_arn   = var.payments_invoke_arn
+      function_arn = var.payments_function_arn
+      protected    = true
+    }
+    payments_config_put = {
+      route_key    = "PUT /payments/{botId}/config"
+      invoke_arn   = var.payments_invoke_arn
+      function_arn = var.payments_function_arn
+      protected    = true
+    }
+    payments_enable = {
+      route_key    = "POST /payments/{botId}/enable"
+      invoke_arn   = var.payments_invoke_arn
+      function_arn = var.payments_function_arn
+      protected    = true
+    }
+    payments_disable = {
+      route_key    = "POST /payments/{botId}/disable"
+      invoke_arn   = var.payments_invoke_arn
+      function_arn = var.payments_function_arn
+      protected    = true
+    }
+    payments_requests_list = {
+      route_key    = "GET /payments/{botId}/requests"
+      invoke_arn   = var.payments_invoke_arn
+      function_arn = var.payments_function_arn
+      protected    = true
+    }
+    payments_requests_create = {
+      route_key    = "POST /payments/{botId}/requests"
+      invoke_arn   = var.payments_invoke_arn
+      function_arn = var.payments_function_arn
+      protected    = true
+    }
+    payments_requests_get = {
+      route_key    = "GET /payments/{botId}/requests/{paymentId}"
+      invoke_arn   = var.payments_invoke_arn
+      function_arn = var.payments_function_arn
+      protected    = true
+    }
+    payments_wompi_webhook = {
+      route_key    = "POST /payments/wompi/webhook/{tenantId}"
+      invoke_arn   = var.payments_invoke_arn
+      function_arn = var.payments_function_arn
+      protected    = false
+    }
+    catalog_config_get = {
+      route_key    = "GET /catalog/{botId}/config"
+      invoke_arn   = var.catalog_invoke_arn
+      function_arn = var.catalog_function_arn
+      protected    = true
+    }
+    catalog_config_put = {
+      route_key    = "PUT /catalog/{botId}/config"
+      invoke_arn   = var.catalog_invoke_arn
+      function_arn = var.catalog_function_arn
+      protected    = true
+    }
+    catalog_enable = {
+      route_key    = "POST /catalog/{botId}/enable"
+      invoke_arn   = var.catalog_invoke_arn
+      function_arn = var.catalog_function_arn
+      protected    = true
+    }
+    catalog_disable = {
+      route_key    = "POST /catalog/{botId}/disable"
+      invoke_arn   = var.catalog_invoke_arn
+      function_arn = var.catalog_function_arn
+      protected    = true
+    }
+    catalog_meta_catalogs = {
+      route_key    = "GET /catalog/{botId}/meta-catalogs"
+      invoke_arn   = var.catalog_invoke_arn
+      function_arn = var.catalog_function_arn
+      protected    = true
+    }
+    catalog_link = {
+      route_key    = "POST /catalog/{botId}/link-catalog"
+      invoke_arn   = var.catalog_invoke_arn
+      function_arn = var.catalog_function_arn
+      protected    = true
+    }
+    catalog_sync = {
+      route_key    = "POST /catalog/{botId}/sync"
+      invoke_arn   = var.catalog_invoke_arn
+      function_arn = var.catalog_function_arn
+      protected    = true
+    }
+    catalog_products_list = {
+      route_key    = "GET /catalog/{botId}/products"
+      invoke_arn   = var.catalog_invoke_arn
+      function_arn = var.catalog_function_arn
+      protected    = true
+    }
+    catalog_products_create = {
+      route_key    = "POST /catalog/{botId}/products"
+      invoke_arn   = var.catalog_invoke_arn
+      function_arn = var.catalog_function_arn
+      protected    = true
+    }
+    catalog_products_get = {
+      route_key    = "GET /catalog/{botId}/products/{productId}"
+      invoke_arn   = var.catalog_invoke_arn
+      function_arn = var.catalog_function_arn
+      protected    = true
+    }
+    catalog_products_put = {
+      route_key    = "PUT /catalog/{botId}/products/{productId}"
+      invoke_arn   = var.catalog_invoke_arn
+      function_arn = var.catalog_function_arn
+      protected    = true
+    }
+    catalog_products_delete = {
+      route_key    = "DELETE /catalog/{botId}/products/{productId}"
+      invoke_arn   = var.catalog_invoke_arn
+      function_arn = var.catalog_function_arn
+      protected    = true
+    }
+    catalog_products_image = {
+      route_key    = "POST /catalog/{botId}/products/{productId}/image"
+      invoke_arn   = var.catalog_invoke_arn
+      function_arn = var.catalog_function_arn
+      protected    = true
+    }
+    catalog_products_image_finalize = {
+      route_key    = "POST /catalog/{botId}/products/{productId}/image/finalize"
+      invoke_arn   = var.catalog_invoke_arn
+      function_arn = var.catalog_function_arn
+      protected    = true
+    }
+    catalog_orders_list = {
+      route_key    = "GET /catalog/{botId}/orders"
+      invoke_arn   = var.catalog_invoke_arn
+      function_arn = var.catalog_function_arn
+      protected    = true
+    }
+    catalog_orders_get = {
+      route_key    = "GET /catalog/{botId}/orders/{orderId}"
+      invoke_arn   = var.catalog_invoke_arn
+      function_arn = var.catalog_function_arn
+      protected    = true
+    }
+    catalog_orders_patch = {
+      route_key    = "PATCH /catalog/{botId}/orders/{orderId}"
+      invoke_arn   = var.catalog_invoke_arn
+      function_arn = var.catalog_function_arn
+      protected    = true
     }
     knowledge_list = {
       route_key    = "GET /bots/{botId}/knowledge"
@@ -1124,6 +1316,8 @@ resource "aws_lambda_permission" "api_gw" {
     realtime          = var.realtime_function_arn
     calendar          = var.calendar_function_arn
     public_calendar   = var.public_calendar_function_arn
+    payments          = var.payments_function_arn
+    catalog           = var.catalog_function_arn
   }
 
   statement_id  = "AllowAPIGatewayInvoke-${each.key}"

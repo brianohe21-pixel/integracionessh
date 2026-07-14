@@ -217,6 +217,36 @@ export function getAvailableDates(params: {
   return Array.from(dates.entries()).map(([isoDate, label]) => ({ isoDate, label }));
 }
 
+export function getSchedulableDates(params: {
+  config: CalendarConfig;
+  maxDays: number;
+  now?: Date;
+}): Array<{ isoDate: string; label: string }> {
+  const now = params.now ?? new Date();
+  const limit = Math.min(params.maxDays, params.config.maxAdvanceDays);
+  const minStart = new Date(now.getTime() + params.config.minNoticeHours * 60 * 60 * 1000);
+  const dates: Array<{ isoDate: string; label: string }> = [];
+  const cursor = new Date(now);
+  cursor.setUTCHours(0, 0, 0, 0);
+
+  for (let i = 0; i < limit + 1; i++) {
+    const parts = getZonedParts(cursor, params.config.timezone);
+    const ranges = params.config.weeklySchedule[parts.weekday] ?? [];
+    if (ranges.length > 0) {
+      const dayEnd = localDateTimeToUtc(parts.isoDate, "23:59", params.config.timezone);
+      if (dayEnd >= minStart) {
+        dates.push({
+          isoDate: parts.isoDate,
+          label: formatDateLabel(parts.isoDate, params.config.timezone),
+        });
+      }
+    }
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+
+  return dates;
+}
+
 export function getSlotsForDate(params: {
   config: CalendarConfig;
   bookings: Booking[];

@@ -256,6 +256,10 @@ module "api_gateway" {
   calendar_function_arn          = module.lambda.calendar_function_arn
   public_calendar_invoke_arn     = module.lambda.public_calendar_invoke_arn
   public_calendar_function_arn   = module.lambda.public_calendar_function_arn
+  payments_invoke_arn            = module.lambda.payments_invoke_arn
+  payments_function_arn          = module.lambda.payments_function_arn
+  catalog_invoke_arn             = module.lambda.catalog_invoke_arn
+  catalog_function_arn           = module.lambda.catalog_function_arn
   allowed_origins                = local.browser_origins
   api_custom_domain              = var.api_custom_domain
   tags                           = local.tags
@@ -295,4 +299,10 @@ module "amplify" {
   meta_app_id                    = var.meta_app_id
   meta_embedded_signup_config_id = var.meta_embedded_signup_config_id
   tags                           = local.tags
+}
+
+import {
+  for_each = module.lambda.lambda_log_group_ids_for_import
+  to       = module.lambda.aws_cloudwatch_log_group.lambda_logs[each.key]
+  id       = each.value
 }

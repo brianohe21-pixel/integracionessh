@@ -12,6 +12,7 @@ function formatFlowResponseJson(responseJson: string): string {
 
 export function isProcessableInboundMessage(message: WhatsAppMessage): boolean {
   if (message.type === "text" && message.text?.body) return true;
+  if (message.type === "order" && message.order?.product_items?.length) return true;
   if (message.type === "interactive" && message.interactive) {
     const t = message.interactive.type;
     return t === "button_reply" || t === "list_reply" || t === "nfm_reply";
@@ -26,6 +27,10 @@ export function normalizeInboundMessage(message: WhatsAppMessage): InboundNormal
       messageType: "text",
       raw: message,
     };
+  }
+
+  if (message.type === "order" && message.order) {
+    return normalizeOrderMessage(message);
   }
 
   const interactive = message.interactive;
@@ -73,6 +78,27 @@ export function normalizeInboundMessage(message: WhatsAppMessage): InboundNormal
   }
 
   return { text: "", messageType: "interactive", raw: message };
+}
+
+export function normalizeOrderMessage(message: WhatsAppMessage): InboundNormalized {
+  const order = message.order;
+  if (!order) {
+    return { text: "", messageType: "order", raw: message };
+  }
+  const items = order.product_items
+    .map((item) => {
+      const qty = Number(item.quantity);
+      return `${qty}x ${item.product_retailer_id}`;
+    })
+    .join(", ");
+  const note = order.text?.trim();
+  const text = note ? `Pedido: ${items}\n${note}` : `Pedido: ${items}`;
+  return {
+    text,
+    messageType: "order",
+    order,
+    raw: message,
+  };
 }
 
 export function inboundMessageTypeToMessageType(type: MessageType): MessageType {

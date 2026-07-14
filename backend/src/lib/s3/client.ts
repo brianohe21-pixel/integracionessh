@@ -19,6 +19,16 @@ export function buildKnowledgeS3Key(
   return `tenants/${tenantId}/bots/${botId}/docs/${docId}/${safeName}`;
 }
 
+export function buildCatalogImageS3Key(
+  tenantId: string,
+  botId: string,
+  productId: string,
+  filename: string
+): string {
+  const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
+  return `tenants/${tenantId}/bots/${botId}/catalog/${productId}/${safeName}`;
+}
+
 export async function getPresignedUploadUrl(
   s3Key: string,
   mimeType: string,
