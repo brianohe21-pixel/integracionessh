@@ -17,6 +17,10 @@ on:
       - ".github/scripts/terraform-plan-apply.sh"
       - ".github/scripts/terraform-unlock-stale.sh"
 
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && github.base_ref == 'main' && 'ci-main' || format('{0}-{1}', github.workflow, github.ref) }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
   pull-requests: write
@@ -182,7 +186,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: prod
     concurrency:
-      group: terraform-prod
+      group: deploy-main
       cancel-in-progress: false
     if: github.ref == 'refs/heads/main'
     defaults:

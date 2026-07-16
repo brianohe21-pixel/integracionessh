@@ -28,6 +28,10 @@ on:
       - ".github/scripts/wait-for-terraform.sh"
       - ".github/scripts/changed-files-in-push.sh"
 
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && github.base_ref == 'main' && 'ci-main' || format('{0}-{1}', github.workflow, github.ref) }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
   actions: read
@@ -132,7 +136,7 @@ jobs:
     needs: test
     environment: prod
     concurrency:
-      group: lambda-code-prod
+      group: deploy-main
       cancel-in-progress: false
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
