@@ -1,8 +1,11 @@
 "use client";
 
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Phone, Signal } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { useT } from "@/i18n/context";
+import { useWhatsAppConnect } from "@/hooks/useWhatsAppConnect";
 import type { WhatsAppPhoneInfo, WhatsAppQualityRating } from "@/types";
 
 const QUALITY_KEYS: Record<WhatsAppQualityRating, "bots.qualityHigh" | "bots.qualityMedium" | "bots.qualityLow" | "bots.qualityNa"> = {
@@ -43,18 +46,27 @@ function formatMessagingLimit(limit?: string): string | null {
 }
 
 interface BotWhatsAppQualityProps {
+  botId: string;
   phoneNumberId: string;
   whatsappPhone?: WhatsAppPhoneInfo | null;
   isLoading?: boolean;
 }
 
 export function BotWhatsAppQuality({
+  botId,
   phoneNumberId,
   whatsappPhone,
   isLoading,
 }: BotWhatsAppQualityProps) {
   const t = useT();
-
+  const queryClient = useQueryClient();
+  const { register, status, error, reset } = useWhatsAppConnect();
+  const [pin, setPin] = useState("");
+  const [pinError, setPinError] = useState("");
+  const [registerSuccess, setRegisterSuccess] = useState(false);
+  const pinValid = /^\d{6}$/.test(pin);
+  const isRegistering = status === "connecting";
+  const isPending = whatsappPhone?.status === "PENDING";
   if (isLoading) {
     return (
       <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 animate-pulse">
@@ -110,6 +122,59 @@ export function BotWhatsAppQuality({
             </div>
           )}
         </dl>
+      )}
+
+      {isPending && (
+        <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <p className="text-sm font-medium text-amber-900 mb-1">{t("whatsapp.pendingTitle")}</p>
+          <p className="text-xs text-amber-800 mb-3">{t("whatsapp.pendingDescription")}</p>
+          <label htmlFor={`register-pin-${botId}`} className="block text-xs font-medium text-amber-900 mb-1">
+            {t("whatsapp.pinLabel")}
+          </label>
+          <input
+            id={`register-pin-${botId}`}
+            type="password"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={6}
+            value={pin}
+            onChange={(e) => {
+              setPin(e.target.value.replace(/\D/g, "").slice(0, 6));
+              if (pinError) setPinError("");
+              if (registerSuccess) setRegisterSuccess(false);
+              if (error) reset();
+            }}
+            placeholder={t("whatsapp.pinPlaceholder")}
+            className="w-full max-w-xs rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm font-mono tracking-widest"
+          />
+          <p className="mt-1 text-xs text-amber-800">{t("whatsapp.pinHint")}</p>
+          {pinError && <p className="mt-1 text-xs text-red-600">{pinError}</p>}
+          {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+          {registerSuccess && (
+            <p className="mt-2 text-xs text-green-700">{t("whatsapp.registerSuccess")}</p>
+          )}
+          <button
+            type="button"
+            disabled={isRegistering}
+            onClick={async () => {
+              if (!pinValid) {
+                setPinError(t("whatsapp.pinInvalid"));
+                return;
+              }
+              setPinError("");
+              try {
+                await register({ phoneNumberId, pin });
+                setRegisterSuccess(true);
+                await queryClient.invalidateQueries({ queryKey: ["bots", "detail", botId] });
+              } catch {
+                setRegisterSuccess(false);
+              }
+            }}
+            className="mt-3 inline-flex items-center rounded-lg bg-amber-700 px-3 py-2 text-xs font-medium text-white hover:bg-amber-800 disabled:opacity-60"
+          >
+            {isRegistering ? t("whatsapp.registering") : t("whatsapp.registerButton")}
+          </button>
+        </div>
       )}
 
       <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-gray-200 text-xs text-gray-400">

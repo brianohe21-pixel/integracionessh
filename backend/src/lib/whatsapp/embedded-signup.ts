@@ -1,3 +1,4 @@
+import { getPhoneNumberInfo, registerPhoneNumber } from "./client.js";
 import { saveTenantWhatsAppSecret } from "./secrets.js";
 
 const GRAPH_API_URL = "https://graph.facebook.com/v22.0";
@@ -72,12 +73,22 @@ export async function completeEmbeddedSignup(params: {
   code: string;
   wabaId: string;
   phoneNumberId: string;
+  pin: string;
   appId: string;
   appSecret: string;
   platformAppSecret: string;
 }): Promise<{ phoneNumberId: string; whatsappBusinessAccountId: string }> {
-  const { tenantId, environment, code, wabaId, phoneNumberId, appId, appSecret, platformAppSecret } =
-    params;
+  const {
+    tenantId,
+    environment,
+    code,
+    wabaId,
+    phoneNumberId,
+    pin,
+    appId,
+    appSecret,
+    platformAppSecret,
+  } = params;
 
   assertDistinctWabaAndPhone(wabaId, phoneNumberId);
 
@@ -89,6 +100,52 @@ export async function completeEmbeddedSignup(params: {
   });
 
   await subscribeWabaWebhooks(wabaId, accessToken);
+  await registerPhoneNumber(phoneNumberId, accessToken, pin);
+
+  return {
+    phoneNumberId,
+    whatsappBusinessAccountId: wabaId,
+  };
+}
+
+async function validateTokenForPhone(phoneNumberId: string, accessToken: string): Promise<void> {
+  try {
+    await getPhoneNumberInfo(phoneNumberId, accessToken);
+  } catch (error) {
+    const statusCode = (error as Error & { statusCode?: number }).statusCode;
+    if (statusCode === 401 || statusCode === 403 || statusCode === 404) {
+      const err = new Error(
+        "Access token does not have permission for this phone number ID"
+      ) as Error & { statusCode?: number };
+      err.statusCode = 400;
+      throw err;
+    }
+    throw error;
+  }
+}
+
+export async function completeManualConnect(params: {
+  tenantId: string;
+  environment: string;
+  accessToken: string;
+  wabaId: string;
+  phoneNumberId: string;
+  pin: string;
+  platformAppSecret: string;
+}): Promise<{ phoneNumberId: string; whatsappBusinessAccountId: string }> {
+  const { tenantId, environment, accessToken, wabaId, phoneNumberId, pin, platformAppSecret } =
+    params;
+
+  assertDistinctWabaAndPhone(wabaId, phoneNumberId);
+  await validateTokenForPhone(phoneNumberId, accessToken);
+
+  await saveTenantWhatsAppSecret(tenantId, environment, {
+    accessToken,
+    appSecret: platformAppSecret,
+  });
+
+  await subscribeWabaWebhooks(wabaId, accessToken);
+  await registerPhoneNumber(phoneNumberId, accessToken, pin);
 
   return {
     phoneNumberId,

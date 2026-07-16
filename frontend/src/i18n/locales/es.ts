@@ -205,7 +205,31 @@ export const es = {
     callingSaved: "Configuración de llamadas actualizada",
     callingSaveError: "No se pudo actualizar la configuración de llamadas",
     whatsappRequired:
-      "Conecta WhatsApp o ingresa los IDs en modo avanzado antes de guardar.",
+      "Conecta WhatsApp o ingresa los IDs, token y PIN en modo avanzado antes de guardar.",
+    manualCredentialsRequired:
+      "En modo avanzado necesitas el access token de Meta y el PIN de verificación además de los IDs.",
+    manualModeHint:
+      "Los IDs solos no permiten enviar mensajes. Ingresa un access token permanente de Meta y el PIN del número.",
+    accessTokenLabel: "Access token de Meta",
+    accessTokenPlaceholder: "EAAxxxx...",
+    accessTokenHint:
+      "Token permanente con acceso al WABA y al Phone Number ID (System User o configuración de la app en Meta).",
+    accessTokenGuideTitle: "¿Cómo generar el access token?",
+    accessTokenGuideStep1:
+      "Entra a Meta Business Suite (business.facebook.com) con una cuenta administradora del negocio.",
+    accessTokenGuideStep2:
+      "Ve a Configuración del negocio → Usuarios → Usuarios del sistema y crea uno nuevo (o usa uno existente).",
+    accessTokenGuideStep3:
+      "Asigna al usuario del sistema tu app de WhatsApp y la cuenta de WhatsApp Business (WABA) con acceso completo.",
+    accessTokenGuideStep4:
+      "Pulsa «Generar token», elige tu app y activa los permisos whatsapp_business_management, whatsapp_business_messaging y business_management.",
+    accessTokenGuideStep5:
+      "Copia el token generado (empieza por EAA…). Es permanente hasta que lo revoques; no lo compartas públicamente.",
+    accessTokenGuideStep6:
+      "En developers.facebook.com → tu app → WhatsApp → Configuración de la API, copia el Phone number ID y el WhatsApp Business Account ID.",
+    accessTokenGuideStep7:
+      "Pega aquí el token, ambos IDs y el PIN de verificación en dos pasos del número de WhatsApp.",
+    accessTokenGuideMetaLink: "Guía oficial de Meta: token de usuario del sistema",
     sharedTokenNote:
       "El token de WhatsApp se guarda por cuenta. Volver a conectar actualiza las credenciales de todos los bots de esta cuenta.",
   },
@@ -220,6 +244,17 @@ export const es = {
     sdkLoading: "Cargando SDK de Meta...",
     notConfigured:
       "Embedded Signup no está configurado. Define NEXT_PUBLIC_META_APP_ID y NEXT_PUBLIC_META_EMBEDDED_SIGNUP_CONFIG_ID.",
+    pinLabel: "PIN de verificación (6 dígitos)",
+    pinPlaceholder: "123456",
+    pinHint:
+      "Define la verificación en dos pasos de WhatsApp. Si el número ya tenía PIN, usa el existente.",
+    pinInvalid: "Ingresa un PIN de exactamente 6 dígitos.",
+    pendingTitle: "Número pendiente de registro",
+    pendingDescription:
+      "Meta requiere registrar el número antes de enviar mensajes. Ingresa el PIN y pulsa registrar.",
+    registerButton: "Registrar número",
+    registering: "Registrando...",
+    registerSuccess: "Número registrado. El estado puede tardar unos minutos en actualizarse.",
   },
   conversations: {
     title: "Conversaciones",

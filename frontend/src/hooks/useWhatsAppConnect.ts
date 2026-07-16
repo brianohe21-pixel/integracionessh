@@ -14,7 +14,7 @@ export function useWhatsAppConnect() {
   const [status, setStatus] = useState<WhatsAppConnectStatus>("idle");
   const [error, setError] = useState("");
 
-  const connect = useCallback(async (payload: WhatsAppConnectResult & { code: string }) => {
+  const connect = useCallback(async (payload: WhatsAppConnectResult & { code: string; pin: string }) => {
     setStatus("connecting");
     setError("");
 
@@ -27,6 +27,7 @@ export function useWhatsAppConnect() {
         code: payload.code,
         wabaId: payload.whatsappBusinessAccountId,
         phoneNumberId: payload.phoneNumberId,
+        pin: payload.pin,
       });
 
       setStatus("connected");
@@ -39,10 +40,59 @@ export function useWhatsAppConnect() {
     }
   }, []);
 
+  const register = useCallback(async (payload: { phoneNumberId: string; pin: string }) => {
+    setStatus("connecting");
+    setError("");
+
+    try {
+      const result = await api.post<{
+        registered: boolean;
+        phoneNumberId: string;
+      }>("/whatsapp/register", payload);
+
+      setStatus("connected");
+      return result;
+    } catch (err) {
+      setStatus("error");
+      const message = (err as Error).message ?? "Registration failed";
+      setError(message);
+      throw err;
+    }
+  }, []);
+
+  const connectManual = useCallback(
+    async (payload: {
+      accessToken: string;
+      wabaId: string;
+      phoneNumberId: string;
+      pin: string;
+    }) => {
+      setStatus("connecting");
+      setError("");
+
+      try {
+        const result = await api.post<{
+          connected: boolean;
+          phoneNumberId: string;
+          whatsappBusinessAccountId: string;
+        }>("/whatsapp/connect-manual", payload);
+
+        setStatus("connected");
+        return result;
+      } catch (err) {
+        setStatus("error");
+        const message = (err as Error).message ?? "Connection failed";
+        setError(message);
+        throw err;
+      }
+    },
+    []
+  );
+
   const reset = useCallback(() => {
     setStatus("idle");
     setError("");
   }, []);
 
-  return { status, error, connect, reset, setStatus };
+  return { status, error, connect, connectManual, register, reset, setStatus };
 }

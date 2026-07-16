@@ -367,6 +367,43 @@ export interface WhatsAppPhoneInfo {
   messagingLimit?: string;
 }
 
+function isAlreadyRegisteredError(body: string): boolean {
+  const normalized = body.toLowerCase();
+  return (
+    normalized.includes("already registered") ||
+    normalized.includes("ya está registrado") ||
+    normalized.includes("phone number is registered")
+  );
+}
+
+export async function registerPhoneNumber(
+  phoneNumberId: string,
+  accessToken: string,
+  pin: string
+): Promise<{ success: boolean }> {
+  const response = await fetch(`${GRAPH_API_URL}/${phoneNumberId}/register`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      pin,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    if (isAlreadyRegisteredError(error)) {
+      return { success: true };
+    }
+    throwGraphApiError(response.status, error);
+  }
+
+  return response.json() as Promise<{ success: boolean }>;
+}
+
 export async function getPhoneNumberInfo(
   phoneNumberId: string,
   accessToken: string

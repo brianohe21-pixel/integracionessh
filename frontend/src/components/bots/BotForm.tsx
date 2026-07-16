@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { useCreateBot, useUpdateBot } from "@/hooks/useBots";
+import { useWhatsAppConnect } from "@/hooks/useWhatsAppConnect";
 import { useT } from "@/i18n/context";
 import { getAllowedModelsForPlan } from "@/lib/plan-config";
 import { EmbeddedSignupLauncher } from "@/components/whatsapp/EmbeddedSignupLauncher";
@@ -37,12 +38,14 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
   });
 
   const [error, setError] = useState("");
-  const [whatsappConnected, setWhatsappConnected] = useState(
-    Boolean(bot?.phoneNumberId && bot?.whatsappBusinessAccountId)
-  );
+  const [accessToken, setAccessToken] = useState("");
+  const [pin, setPin] = useState("");
+  const [pinError, setPinError] = useState("");
+  const [whatsappConnected, setWhatsappConnected] = useState(bot?.whatsappPhone != null);
   const [advancedMode, setAdvancedMode] = useState(false);
   const createBot = useCreateBot();
   const updateBot = useUpdateBot(bot?.botId ?? "");
+  const { connectManual, status: whatsappStatus } = useWhatsAppConnect();
 
   const { data: tenant } = useQuery({
     queryKey: ["tenant"],
@@ -56,11 +59,14 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
     "gpt-4-turbo": "GPT-4 Turbo",
   };
 
-  const isPending = createBot.isPending || updateBot.isPending;
+  const isPending = createBot.isPending || updateBot.isPending || whatsappStatus === "connecting";
   const isWebhookMode = form.responseMode === "webhook";
   const hasManualIds =
     form.phoneNumberId.trim().length > 0 && form.whatsappBusinessAccountId.trim().length > 0;
-  const canSubmit = whatsappConnected || (advancedMode && hasManualIds);
+  const pinValid = /^\d{6}$/.test(pin);
+  const hasManualCredentials = accessToken.trim().length > 0 && pinValid;
+  const canSubmit =
+    whatsappConnected || (advancedMode && hasManualIds && hasManualCredentials);
   const systemPromptLength = form.systemPrompt.length;
   const systemPromptTooLong = !isWebhookMode && systemPromptLength > SYSTEM_PROMPT_MAX_LENGTH;
 
@@ -79,8 +85,19 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
     setError("");
 
     if (!canSubmit) {
-      setError(t("bots.whatsappRequired"));
+      setError(
+        advancedMode && hasManualIds && !hasManualCredentials
+          ? t("bots.manualCredentialsRequired")
+          : t("bots.whatsappRequired")
+      );
       return;
+    }
+
+    if (advancedMode && hasManualIds && hasManualCredentials && !whatsappConnected) {
+      if (!pinValid) {
+        setPinError(t("whatsapp.pinInvalid"));
+        return;
+      }
     }
 
     if (!isWebhookMode && systemPromptLength > SYSTEM_PROMPT_MAX_LENGTH) {
@@ -89,6 +106,22 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
     }
 
     try {
+      if (
+        advancedMode &&
+        hasManualIds &&
+        hasManualCredentials &&
+        (!whatsappConnected || accessToken.trim().length > 0)
+      ) {
+        setPinError("");
+        await connectManual({
+          accessToken: accessToken.trim(),
+          wabaId: form.whatsappBusinessAccountId.trim(),
+          phoneNumberId: form.phoneNumberId.trim(),
+          pin,
+        });
+        setWhatsappConnected(true);
+      }
+
       const payload: Record<string, unknown> = {
         name: form.name,
         responseMode: form.responseMode,
@@ -321,20 +354,22 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
           </>
         )}
 
-        <div className="col-span-2">
-          <EmbeddedSignupLauncher
-            alreadyConnected={whatsappConnected}
-            onConnected={({ phoneNumberId, whatsappBusinessAccountId }) => {
-              setForm((prev) => ({
-                ...prev,
-                phoneNumberId,
-                whatsappBusinessAccountId,
-              }));
-              setWhatsappConnected(true);
-            }}
-          />
-          <p className="mt-2 text-xs text-gray-500">{t("bots.sharedTokenNote")}</p>
-        </div>
+        {!advancedMode && (
+          <div className="col-span-2">
+            <EmbeddedSignupLauncher
+              alreadyConnected={whatsappConnected}
+              onConnected={({ phoneNumberId, whatsappBusinessAccountId }) => {
+                setForm((prev) => ({
+                  ...prev,
+                  phoneNumberId,
+                  whatsappBusinessAccountId,
+                }));
+                setWhatsappConnected(true);
+              }}
+            />
+            <p className="mt-2 text-xs text-gray-500">{t("bots.sharedTokenNote")}</p>
+          </div>
+        )}
 
         <div className="col-span-2">
           <button
@@ -348,6 +383,32 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
 
         {advancedMode && (
           <>
+            <p className="col-span-2 text-xs text-gray-500">{t("bots.manualModeHint")}</p>
+            <p className="col-span-2 text-xs text-gray-500">{t("bots.sharedTokenNote")}</p>
+
+            <details className="col-span-2 rounded-lg border border-indigo-100 bg-indigo-50/60 p-4 text-xs text-gray-600">
+              <summary className="font-medium text-indigo-900 cursor-pointer select-none">
+                {t("bots.accessTokenGuideTitle")}
+              </summary>
+              <ol className="mt-3 space-y-2 list-decimal list-inside text-gray-700">
+                <li>{t("bots.accessTokenGuideStep1")}</li>
+                <li>{t("bots.accessTokenGuideStep2")}</li>
+                <li>{t("bots.accessTokenGuideStep3")}</li>
+                <li>{t("bots.accessTokenGuideStep4")}</li>
+                <li>{t("bots.accessTokenGuideStep5")}</li>
+                <li>{t("bots.accessTokenGuideStep6")}</li>
+                <li>{t("bots.accessTokenGuideStep7")}</li>
+              </ol>
+              <a
+                href="https://developers.facebook.com/docs/whatsapp/business-management-api/get-started#system-user-access-tokens"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-block text-indigo-700 underline hover:text-indigo-900"
+              >
+                {t("bots.accessTokenGuideMetaLink")}
+              </a>
+            </details>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 {t("bots.phoneNumberId")}
@@ -356,18 +417,13 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
                 name="phoneNumberId"
                 type="text"
                 value={form.phoneNumberId}
-                onChange={(e) => {
-                  handleChange(e);
-                  if (e.target.value && form.whatsappBusinessAccountId) {
-                    setWhatsappConnected(true);
-                  }
-                }}
+                onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
                 placeholder={t("bots.phonePlaceholder")}
               />
             </div>
 
-            <div className="col-span-2">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 {t("bots.wabaId")}
               </label>
@@ -375,15 +431,45 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
                 name="whatsappBusinessAccountId"
                 type="text"
                 value={form.whatsappBusinessAccountId}
-                onChange={(e) => {
-                  handleChange(e);
-                  if (e.target.value && form.phoneNumberId) {
-                    setWhatsappConnected(true);
-                  }
-                }}
+                onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
                 placeholder={t("bots.wabaPlaceholder")}
               />
+            </div>
+
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {t("bots.accessTokenLabel")}
+              </label>
+              <input
+                type="password"
+                value={accessToken}
+                onChange={(e) => setAccessToken(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
+                placeholder={t("bots.accessTokenPlaceholder")}
+              />
+              <p className="mt-1 text-xs text-gray-500">{t("bots.accessTokenHint")}</p>
+            </div>
+
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {t("whatsapp.pinLabel")}
+              </label>
+              <input
+                type="password"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                value={pin}
+                onChange={(e) => {
+                  setPin(e.target.value.replace(/\D/g, "").slice(0, 6));
+                  if (pinError) setPinError("");
+                }}
+                className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono tracking-widest"
+                placeholder={t("whatsapp.pinPlaceholder")}
+              />
+              <p className="mt-1 text-xs text-gray-500">{t("whatsapp.pinHint")}</p>
+              {pinError && <p className="mt-1 text-xs text-red-600">{pinError}</p>}
             </div>
           </>
         )}
