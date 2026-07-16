@@ -120,10 +120,34 @@ jobs:
 
       - name: Comment PR
         if: github.event_name == 'pull_request' && always()
-        uses: actions/github-script@v7
+        continue-on-error: true
+        uses: actions/github-script@v8
         with:
           script: |
             const fs = require('fs');
+
+            const withRetry = async (fn, { retries = 5, delayMs = 15000 } = {}) => {
+              for (let attempt = 1; attempt <= retries; attempt++) {
+                try {
+                  return await fn();
+                } catch (error) {
+                  const status = error.status ?? error.response?.status;
+                  const message = String(error.message ?? error);
+                  const retryable =
+                    (status >= 500 && status < 600) ||
+                    status === 429 ||
+                    /Service Unavailable|<!DOCTYPE html>|rate limit/i.test(message);
+                  if (!retryable || attempt === retries) {
+                    throw error;
+                  }
+                  core.warning(
+                    `GitHub API transient error (attempt ${attempt}/${retries}): ${message.slice(0, 200)}`
+                  );
+                  await new Promise((resolve) => setTimeout(resolve, delayMs));
+                }
+              }
+            };
+
             const planPath = 'infrastructure/environments/dev/plan.txt';
             let plan = '';
             try {
@@ -141,28 +165,34 @@ jobs:
 
             </details>`;
 
-            const { data: comments } = await github.rest.issues.listComments({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-            });
+            const { data: comments } = await withRetry(() =>
+              github.rest.issues.listComments({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+              })
+            );
             const existing = comments.find((c) =>
               c.user.type === 'Bot' && c.body && c.body.includes(marker)
             );
             if (existing) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: existing.id,
-                body: output,
-              });
+              await withRetry(() =>
+                github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: existing.id,
+                  body: output,
+                })
+              );
             } else {
-              await github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: output,
-              });
+              await withRetry(() =>
+                github.rest.issues.createComment({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: output,
+                })
+              );
             }
 
       - name: Terraform Apply
