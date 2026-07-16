@@ -10,6 +10,7 @@ import { MessageCircle, Loader2, CheckCircle } from "lucide-react";
 const META_APP_ID = process.env.NEXT_PUBLIC_META_APP_ID ?? "";
 const CONFIG_ID = process.env.NEXT_PUBLIC_META_EMBEDDED_SIGNUP_CONFIG_ID ?? "";
 const FB_SDK_VERSION = "v22.0";
+const PIN_LENGTH = 6;
 
 interface EmbeddedSignupLauncherProps {
   onConnected: (data: {
@@ -53,6 +54,8 @@ export function EmbeddedSignupLauncher({
   const { status, error, connect, reset } = useWhatsAppConnect();
   const [sdkReady, setSdkReady] = useState(false);
   const [localConnected, setLocalConnected] = useState(alreadyConnected);
+  const [pin, setPin] = useState("");
+  const [pinError, setPinError] = useState("");
   const pendingRef = useRef<{
     code?: string;
     wabaId?: string;
@@ -61,16 +64,18 @@ export function EmbeddedSignupLauncher({
   const messageHandlerRef = useRef<((event: MessageEvent) => void) | null>(null);
 
   const isConfigured = Boolean(META_APP_ID && CONFIG_ID);
+  const pinValid = /^\d{6}$/.test(pin);
 
   const tryComplete = useCallback(async () => {
     const { code, wabaId, phoneNumberId } = pendingRef.current;
-    if (!code || !wabaId || !phoneNumberId) return;
+    if (!code || !wabaId || !phoneNumberId || !pinValid) return;
 
     try {
       const result = await connect({
         code,
         phoneNumberId,
         whatsappBusinessAccountId: wabaId,
+        pin,
       });
       pendingRef.current = {};
       setLocalConnected(true);
@@ -81,7 +86,7 @@ export function EmbeddedSignupLauncher({
     } catch {
       pendingRef.current = {};
     }
-  }, [connect, onConnected]);
+  }, [connect, onConnected, pin, pinValid]);
 
   useEffect(() => {
     setLocalConnected(alreadyConnected);
@@ -100,6 +105,12 @@ export function EmbeddedSignupLauncher({
       return;
     }
 
+    if (!pinValid) {
+      setPinError(t("whatsapp.pinInvalid"));
+      return;
+    }
+
+    setPinError("");
     reset();
     pendingRef.current = {};
 
@@ -153,7 +164,7 @@ export function EmbeddedSignupLauncher({
         override_default_response_type: true,
       }
     );
-  }, [reset, sdkReady, tryComplete]);
+  }, [pinValid, reset, sdkReady, t, tryComplete]);
 
   const isConnecting = status === "connecting";
   const showConnected = localConnected || status === "connected";
@@ -192,6 +203,29 @@ export function EmbeddedSignupLauncher({
       <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
         <p className="text-sm font-medium text-gray-900 mb-1">{t("whatsapp.sectionTitle")}</p>
         <p className="text-xs text-gray-500 mb-4">{t("whatsapp.sectionDescription")}</p>
+
+        <div className="mb-4">
+          <label htmlFor="whatsapp-pin" className="block text-xs font-medium text-gray-700 mb-1">
+            {t("whatsapp.pinLabel")}
+          </label>
+          <input
+            id="whatsapp-pin"
+            type="password"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={PIN_LENGTH}
+            value={pin}
+            onChange={(e) => {
+              const next = e.target.value.replace(/\D/g, "").slice(0, PIN_LENGTH);
+              setPin(next);
+              if (pinError) setPinError("");
+            }}
+            placeholder={t("whatsapp.pinPlaceholder")}
+            className="w-full max-w-xs rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono tracking-widest"
+          />
+          <p className="mt-1 text-xs text-gray-500">{t("whatsapp.pinHint")}</p>
+          {pinError && <p className="mt-1 text-xs text-red-600">{pinError}</p>}
+        </div>
 
         {showConnected ? (
           <div className="flex items-center gap-2 text-sm text-green-700">

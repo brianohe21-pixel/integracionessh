@@ -129,6 +129,7 @@ export default function EditBotPage() {
       {bot && activeTab === "whatsapp" && (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
           <BotWhatsAppQuality
+            botId={bot.botId}
             phoneNumberId={bot.phoneNumberId}
             whatsappPhone={bot.whatsappPhone}
           />

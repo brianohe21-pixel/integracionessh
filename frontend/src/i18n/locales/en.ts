@@ -206,7 +206,31 @@ export const en: Messages = {
     callingEnable: "Enable calling on this number",
     callingSaved: "Calling settings updated",
     callingSaveError: "Could not update calling settings",
-    whatsappRequired: "Connect WhatsApp or enter IDs in advanced mode before saving.",
+    whatsappRequired: "Connect WhatsApp or enter IDs, token, and PIN in advanced mode before saving.",
+    manualCredentialsRequired:
+      "Advanced mode requires the Meta access token and verification PIN in addition to the IDs.",
+    manualModeHint:
+      "IDs alone cannot send messages. Enter a permanent Meta access token and the number PIN.",
+    accessTokenLabel: "Meta access token",
+    accessTokenPlaceholder: "EAAxxxx...",
+    accessTokenHint:
+      "Permanent token with access to the WABA and Phone Number ID (System User or app settings in Meta).",
+    accessTokenGuideTitle: "How to generate the access token?",
+    accessTokenGuideStep1:
+      "Sign in to Meta Business Suite (business.facebook.com) with a business admin account.",
+    accessTokenGuideStep2:
+      "Go to Business settings → Users → System users and create a new one (or use an existing user).",
+    accessTokenGuideStep3:
+      "Assign your WhatsApp app and WhatsApp Business Account (WABA) to the system user with full access.",
+    accessTokenGuideStep4:
+      "Click Generate token, select your app, and enable whatsapp_business_management, whatsapp_business_messaging, and business_management permissions.",
+    accessTokenGuideStep5:
+      "Copy the generated token (starts with EAA…). It is permanent until revoked; do not share it publicly.",
+    accessTokenGuideStep6:
+      "In developers.facebook.com → your app → WhatsApp → API Setup, copy the Phone number ID and WhatsApp Business Account ID.",
+    accessTokenGuideStep7:
+      "Paste the token, both IDs, and the WhatsApp two-step verification PIN here.",
+    accessTokenGuideMetaLink: "Official Meta guide: system user access token",
     sharedTokenNote:
       "The WhatsApp token is stored per account. Connecting again updates credentials for all bots on this account.",
   },
@@ -221,6 +245,17 @@ export const en: Messages = {
     sdkLoading: "Loading Meta SDK...",
     notConfigured:
       "WhatsApp Embedded Signup is not configured. Set NEXT_PUBLIC_META_APP_ID and NEXT_PUBLIC_META_EMBEDDED_SIGNUP_CONFIG_ID.",
+    pinLabel: "Verification PIN (6 digits)",
+    pinPlaceholder: "123456",
+    pinHint:
+      "Sets WhatsApp two-step verification. If the number already had a PIN, use the existing one.",
+    pinInvalid: "Enter a PIN with exactly 6 digits.",
+    pendingTitle: "Phone number pending registration",
+    pendingDescription:
+      "Meta requires registering the number before sending messages. Enter the PIN and register.",
+    registerButton: "Register number",
+    registering: "Registering...",
+    registerSuccess: "Number registered. Status may take a few minutes to update.",
   },
   conversations: {
     title: "Conversations",
