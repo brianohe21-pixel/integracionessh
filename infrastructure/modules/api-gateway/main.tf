@@ -399,6 +399,12 @@ locals {
       function_arn = var.whatsapp_connect_function_arn
       protected    = true
     }
+    whatsapp_connect_manual = {
+      route_key    = "POST /whatsapp/connect-manual"
+      invoke_arn   = var.whatsapp_connect_invoke_arn
+      function_arn = var.whatsapp_connect_function_arn
+      protected    = true
+    }
     instagram_connect = {
       route_key    = "POST /instagram/connect"
       invoke_arn   = var.instagram_connect_invoke_arn
