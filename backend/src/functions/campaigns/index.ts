@@ -25,6 +25,8 @@ import { assertBulkRecipients, assertCanStartCampaign } from "../../lib/billing/
 import { incrementBulkRecipients, incrementCampaignsStarted } from "../../lib/dynamodb/usage.repository.js";
 import { listContactsByTags } from "../../lib/dynamodb/contact.repository.js";
 import { checkMarketingRecipients } from "../../lib/compliance/recipient-policy.js";
+import { getWhatsAppAccessToken } from "../../lib/whatsapp/client.js";
+import { assertWhatsAppQualityForCampaign } from "../../lib/whatsapp/assert-campaign-quality.js";
 import { ok, created, badRequest, notFound, forbidden, unprocessableEntity, handleError } from "../../lib/http.js";
 import type { CampaignSQSBody, CampaignRecipient as CampaignRecipientType } from "../../types/index.js";
 
@@ -34,6 +36,15 @@ const scheduler = new SchedulerClient({});
 const CAMPAIGN_QUEUE_URL = process.env.CAMPAIGN_SQS_QUEUE_URL ?? "";
 const SCHEDULER_ROLE_ARN = process.env.SCHEDULER_ROLE_ARN ?? "";
 const CAMPAIGNS_FUNCTION_ARN = process.env.CAMPAIGNS_FUNCTION_ARN ?? "";
+const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
+
+async function assertBotReadyForCampaign(
+  tenantId: string,
+  phoneNumberId: string
+): Promise<void> {
+  const accessToken = await getWhatsAppAccessToken(tenantId, ENVIRONMENT);
+  await assertWhatsAppQualityForCampaign(phoneNumberId, accessToken);
+}
 
 const RecipientSchema = z.object({
   to: z.string().min(10),
@@ -217,6 +228,7 @@ export async function handler(
       }
       const bot = await getBot(tenantId, campaign.botId);
       if (!bot) return ok({ message: "Bot not found, skipping." });
+      await assertBotReadyForCampaign(tenantId, bot.phoneNumberId);
       await startCampaign(
         tenantId,
         campaignId,
@@ -365,6 +377,7 @@ export async function handler(
 
       const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
       await assertCanStartCampaign(tenant);
+      await assertBotReadyForCampaign(auth.tenantId, bot.phoneNumberId);
 
       await deleteSchedule(campaignId);
 
@@ -402,6 +415,8 @@ export async function handler(
       }
       const bot = await getBot(auth.tenantId, campaign.botId);
       if (!bot) return notFound("Bot not found");
+
+      await assertBotReadyForCampaign(auth.tenantId, bot.phoneNumberId);
 
       const pending = await listPendingRecipients(auth.tenantId, campaignId, 5000);
       const eligible = await filterPendingForMarketing(
