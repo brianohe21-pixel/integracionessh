@@ -90,6 +90,26 @@ export async function listCognitoUsers(
   };
 }
 
+export async function disableCognitoUserBySub(sub: string): Promise<void> {
+  const client = new CognitoIdentityProviderClient({});
+  const poolId = getUserPoolId();
+
+  const result = await client.send(
+    new ListUsersCommand({
+      UserPoolId: poolId,
+      Filter: `sub = "${sub}"`,
+      Limit: 1,
+    })
+  );
+
+  const username = result.Users?.[0]?.Username;
+  if (!username) return;
+
+  await client.send(
+    new AdminDisableUserCommand({ UserPoolId: poolId, Username: username })
+  );
+}
+
 export async function updateCognitoUser(
   username: string,
   updates: { enabled?: boolean; tenantId?: string; role?: string }

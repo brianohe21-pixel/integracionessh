@@ -227,6 +227,8 @@ locals {
       environment = {
         TABLE_NAME           = var.dynamodb_table_name
         COGNITO_USER_POOL_ID = var.cognito_user_pool_id
+        FRONTEND_URL         = var.frontend_url
+        SES_FROM_EMAIL       = var.ses_from_email
       }
     }
     contacts = {

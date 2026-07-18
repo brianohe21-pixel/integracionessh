@@ -3,6 +3,7 @@ import {
   PutCommand,
   QueryCommand,
   UpdateCommand,
+  DeleteCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { docClient, TABLE_NAME } from "./client.js";
 import type { Advisor } from "../../types/index.js";
@@ -158,4 +159,18 @@ export async function touchAdvisorAssignment(tenantId: string, advisorId: string
       ExpressionAttributeValues: { ":now": now },
     })
   );
+}
+
+export async function deleteAdvisor(tenantId: string, advisorId: string): Promise<boolean> {
+  const existing = await getAdvisor(tenantId, advisorId);
+  if (!existing) return false;
+
+  await docClient.send(
+    new DeleteCommand({
+      TableName: TABLE_NAME,
+      Key: advisorKeys(tenantId, advisorId),
+    })
+  );
+
+  return true;
 }

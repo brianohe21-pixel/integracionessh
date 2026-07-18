@@ -3,6 +3,7 @@ import { z } from "zod";
 import { randomUUID } from "crypto";
 import {
   createAdvisor,
+  deleteAdvisor,
   getAdvisor,
   getAdvisorByPhone,
   listAdvisors,
@@ -13,6 +14,10 @@ import {
   assertTenantManagerRole,
 } from "../../lib/auth/cognito.js";
 import { inviteAdvisorUser } from "../../lib/cognito/invite-advisor.js";
+import { disableCognitoUserBySub } from "../../lib/cognito/admin-users.js";
+import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
+import { resolveBranding } from "../../lib/branding/resolve.js";
+import { sendAdvisorInviteEmail } from "../../lib/email/advisor-invite.js";
 import { ok, created, noContent, badRequest, notFound, handleError } from "../../lib/http.js";
 import type { Advisor } from "../../types/index.js";
 
@@ -79,11 +84,23 @@ export async function handler(
         });
         advisor.cognitoUserId = invited.cognitoUserId;
         await createAdvisor(advisor);
+
+        const tenant = await getTenant(auth.tenantId);
+        const tenantName = tenant ? resolveBranding(tenant).brandName : "la plataforma";
+        const emailSent = await sendAdvisorInviteEmail({
+          to: parsed.data.inviteEmail,
+          advisorName: parsed.data.name,
+          tenantName,
+          temporaryPassword: invited.temporaryPassword,
+        });
+
         return created({
           advisor,
           invite: {
             username: invited.username,
-            temporaryPassword: invited.temporaryPassword,
+            ...(emailSent
+              ? { emailSent: true }
+              : { temporaryPassword: invited.temporaryPassword }),
           },
         });
       }
@@ -121,7 +138,15 @@ export async function handler(
       const existing = await getAdvisor(auth.tenantId, advisorId);
       if (!existing) return notFound("Advisor not found");
 
-      await updateAdvisor(auth.tenantId, advisorId, { status: "inactive" });
+      if (existing.cognitoUserId) {
+        try {
+          await disableCognitoUserBySub(existing.cognitoUserId);
+        } catch {
+          // Advisor record is still removed even if Cognito disable fails.
+        }
+      }
+
+      await deleteAdvisor(auth.tenantId, advisorId);
       return noContent();
     }
 
