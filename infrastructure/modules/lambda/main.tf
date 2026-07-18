@@ -108,6 +108,7 @@ resource "aws_iam_role_policy" "lambda_permissions" {
           "cognito-idp:AdminDisableUser",
           "cognito-idp:AdminUpdateUserAttributes",
           "cognito-idp:AdminCreateUser",
+          "cognito-idp:AdminSetUserPassword",
         ]
         Resource = var.cognito_user_pool_arn
       },
