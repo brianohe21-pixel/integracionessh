@@ -8,6 +8,8 @@ import {
   getBookingSlotsForDate,
   updateBookingStatus,
 } from "../calendar/calendar.service.js";
+import { getZonedParts } from "../calendar/slot-engine.js";
+import type { CalendarConfig } from "../../types/index.js";
 import { retrieveContext } from "../knowledge/retrieve.js";
 
 export interface ChatCalendarContext {
@@ -56,6 +58,156 @@ function mapHistoryRole(msg: Message): "user" | "assistant" | null {
   return null;
 }
 
+const MAX_TOOL_ROUNDS = 4;
+
+function buildCalendarContextBlock(config: CalendarConfig): string {
+  const now = new Date();
+  const parts = getZonedParts(now, config.timezone);
+  const formattedNow = new Intl.DateTimeFormat("es-CO", {
+    timeZone: config.timezone,
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(now);
+
+  return `\n\nCalendario activo. Fecha y hora actual (${config.timezone}): ${formattedNow} (hoy = ${parts.isoDate}).
+Convierte "hoy", "mañana" y días de la semana a YYYY-MM-DD antes de llamar list_available_slots.
+Puedes agendar citas con list_available_slots y create_booking. Usa cancel_booking si el cliente cancela.
+Si el cliente indica una hora, usa el startAt del slot coincidente en create_booking.`;
+}
+
+function buildCalendarTools(): OpenAI.ChatCompletionTool[] {
+  return [
+    {
+      type: "function",
+      function: {
+        name: "list_available_slots",
+        description:
+          "Lista horarios disponibles para una fecha en YYYY-MM-DD (zona horaria del calendario). Convierte fechas relativas como mañana antes de llamar.",
+        parameters: {
+          type: "object",
+          properties: {
+            date: { type: "string", description: "Fecha ISO YYYY-MM-DD" },
+          },
+          required: ["date"],
+        },
+      },
+    },
+    {
+      type: "function",
+      function: {
+        name: "create_booking",
+        description: "Crea una reserva en un horario disponible",
+        parameters: {
+          type: "object",
+          properties: {
+            startAt: { type: "string", description: "Inicio en ISO 8601 UTC del slot elegido" },
+            contactName: { type: "string", description: "Nombre del contacto" },
+          },
+          required: ["startAt"],
+        },
+      },
+    },
+    {
+      type: "function",
+      function: {
+        name: "cancel_booking",
+        description: "Cancela una reserva existente",
+        parameters: {
+          type: "object",
+          properties: {
+            bookingId: { type: "string", description: "ID de la reserva" },
+          },
+          required: ["bookingId"],
+        },
+      },
+    },
+  ];
+}
+
+async function executeCalendarToolCall(params: {
+  toolCall: OpenAI.ChatCompletionMessageToolCall;
+  tenantId: string;
+  botId: string;
+  calendarConfig: CalendarConfig;
+  calendarContext: ChatCalendarContext;
+}): Promise<string> {
+  const { toolCall, tenantId, botId, calendarConfig, calendarContext } = params;
+  if (toolCall.type !== "function") {
+    return JSON.stringify({ error: "Unsupported tool call" });
+  }
+
+  if (toolCall.function.name === "list_available_slots") {
+    const parsed = JSON.parse(toolCall.function.arguments) as { date?: string };
+    if (!parsed.date) {
+      return JSON.stringify({ error: "date is required in YYYY-MM-DD format" });
+    }
+    const slots = await getBookingSlotsForDate({
+      tenantId,
+      botId,
+      isoDate: parsed.date,
+    });
+    return JSON.stringify({
+      date: parsed.date,
+      timezone: calendarConfig.timezone,
+      slots: slots.map((slot) => ({ label: slot.label, startAt: slot.startAt })),
+      count: slots.length,
+      ...(slots.length === 0
+        ? {
+            hint: "Si el cliente dijo mañana u otra fecha relativa, verifica que usaste la fecha correcta.",
+          }
+        : {}),
+    });
+  }
+
+  if (toolCall.function.name === "create_booking") {
+    const parsed = JSON.parse(toolCall.function.arguments) as {
+      startAt?: string;
+      contactName?: string;
+    };
+    if (!parsed.startAt) {
+      return JSON.stringify({ error: "startAt is required" });
+    }
+    const result = await createBookingForBot({
+      tenantId,
+      botId,
+      startAt: parsed.startAt,
+      contactPhone: calendarContext.contactPhone,
+      conversationId: calendarContext.conversationId,
+      ...(parsed.contactName ? { contactName: parsed.contactName } : {}),
+      source: "openai",
+    });
+    const booking = result.booking;
+    const label = formatBookingConfirmation(booking, calendarConfig);
+    return JSON.stringify({
+      success: true,
+      bookingId: booking.bookingId,
+      label,
+      paymentRequired: Boolean(result.payment),
+    });
+  }
+
+  if (toolCall.function.name === "cancel_booking") {
+    const parsed = JSON.parse(toolCall.function.arguments) as { bookingId?: string };
+    if (!parsed.bookingId) {
+      return JSON.stringify({ error: "bookingId is required" });
+    }
+    await updateBookingStatus({
+      tenantId,
+      botId,
+      bookingId: parsed.bookingId,
+      status: "cancelled",
+    });
+    return JSON.stringify({ success: true, bookingId: parsed.bookingId });
+  }
+
+  return JSON.stringify({ error: `Unknown tool: ${toolCall.function.name}` });
+}
+
 export async function generateEmbedding(text: string, apiKey: string): Promise<number[]> {
   const client = getOpenAIClient(apiKey);
   const response = await client.embeddings.create({
@@ -96,9 +248,10 @@ export async function generateChatResponse(
   const contextBlock = knowledgeContext
     ? `\n\nContexto del negocio:\n${knowledgeContext}`
     : "";
-  const calendarBlock = calendarEnabled
-    ? "\n\nPuedes agendar citas con list_available_slots y create_booking. Usa cancel_booking si el cliente cancela."
-    : "";
+  const calendarBlock =
+    calendarEnabled && calendarConfig
+      ? buildCalendarContextBlock(calendarConfig)
+      : "";
   const systemPrompt =
     basePrompt +
     contextBlock +
@@ -139,134 +292,71 @@ export async function generateChatResponse(
   ];
 
   if (calendarEnabled) {
-    tools.push(
-      {
-        type: "function",
-        function: {
-          name: "list_available_slots",
-          description: "Lista horarios disponibles para una fecha (YYYY-MM-DD)",
-          parameters: {
-            type: "object",
-            properties: {
-              date: { type: "string", description: "Fecha ISO YYYY-MM-DD" },
-            },
-            required: ["date"],
-          },
-        },
-      },
-      {
-        type: "function",
-        function: {
-          name: "create_booking",
-          description: "Crea una reserva en un horario disponible",
-          parameters: {
-            type: "object",
-            properties: {
-              startAt: { type: "string", description: "Inicio en ISO 8601 UTC" },
-              contactName: { type: "string", description: "Nombre del contacto" },
-            },
-            required: ["startAt"],
-          },
-        },
-      },
-      {
-        type: "function",
-        function: {
-          name: "cancel_booking",
-          description: "Cancela una reserva existente",
-          parameters: {
-            type: "object",
-            properties: {
-              bookingId: { type: "string", description: "ID de la reserva" },
-            },
-            required: ["bookingId"],
-          },
-        },
-      }
-    );
+    tools.push(...buildCalendarTools());
   }
 
-  const completion = await client.chat.completions.create({
-    model,
-    messages,
-    temperature,
-    max_tokens: maxTokens,
-    tools,
-    tool_choice: "auto",
-  });
+  for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+    const completion = await client.chat.completions.create({
+      model,
+      messages,
+      temperature,
+      max_tokens: maxTokens,
+      tools,
+      tool_choice: "auto",
+    });
 
-  const choice = completion.choices[0]?.message;
-  const toolCall = choice?.tool_calls?.[0];
+    const choice = completion.choices[0]?.message;
+    if (!choice) throw new Error("Empty response from OpenAI");
 
-  if (toolCall?.type === "function" && tenantId && calendarContext && calendarEnabled) {
-    if (toolCall.function.name === "list_available_slots") {
-      const parsed = JSON.parse(toolCall.function.arguments) as { date?: string };
-      if (parsed.date) {
-        const slots = await getBookingSlotsForDate({
-          tenantId,
-          botId: bot.botId,
-          isoDate: parsed.date,
-        });
-        const slotText =
-          slots.length === 0
-            ? "No hay horarios disponibles."
-            : slots.map((s) => `${s.label} (${s.startAt})`).join(", ");
-        return { reply: slotText, handoff: false };
-      }
+    const toolCalls = choice.tool_calls ?? [];
+    if (toolCalls.length === 0) {
+      if (!choice.content) throw new Error("Empty response from OpenAI");
+      return { reply: choice.content, handoff: false };
     }
-    if (toolCall.function.name === "create_booking") {
-      const parsed = JSON.parse(toolCall.function.arguments) as {
-        startAt?: string;
-        contactName?: string;
-      };
-      if (parsed.startAt) {
-        const result = await createBookingForBot({
+
+    messages.push(choice);
+
+    for (const toolCall of toolCalls) {
+      if (toolCall.type === "function" && toolCall.function.name === "transfer_to_human") {
+        let reason = "El cliente solicitó un asesor";
+        try {
+          const parsed = JSON.parse(toolCall.function.arguments) as { reason?: string };
+          if (parsed.reason?.trim()) reason = parsed.reason.trim();
+        } catch {
+          // use default reason
+        }
+        return { reply: null, handoff: true, handoffReason: reason };
+      }
+
+      if (
+        toolCall.type === "function" &&
+        tenantId &&
+        calendarContext &&
+        calendarEnabled &&
+        calendarConfig
+      ) {
+        const toolResult = await executeCalendarToolCall({
+          toolCall,
           tenantId,
           botId: bot.botId,
-          startAt: parsed.startAt,
-          contactPhone: calendarContext.contactPhone,
-          conversationId: calendarContext.conversationId,
-          ...(parsed.contactName ? { contactName: parsed.contactName } : {}),
-          source: "openai",
+          calendarConfig,
+          calendarContext,
         });
-        const booking = result.booking;
-        const label = formatBookingConfirmation(booking, calendarConfig!);
-        const paymentNote = result.payment
-          ? " Te enviamos un link de pago por WhatsApp para confirmar la reserva."
-          : "";
-        return {
-          reply: `Cita agendada para ${label}.${paymentNote} ID: ${booking.bookingId}`,
-          handoff: false,
-        };
-      }
-    }
-    if (toolCall.function.name === "cancel_booking") {
-      const parsed = JSON.parse(toolCall.function.arguments) as { bookingId?: string };
-      if (parsed.bookingId) {
-        await updateBookingStatus({
-          tenantId,
-          botId: bot.botId,
-          bookingId: parsed.bookingId,
-          status: "cancelled",
+        messages.push({
+          role: "tool",
+          tool_call_id: toolCall.id,
+          content: toolResult,
         });
-        return { reply: "La reserva fue cancelada.", handoff: false };
+        continue;
       }
+
+      messages.push({
+        role: "tool",
+        tool_call_id: toolCall.id,
+        content: JSON.stringify({ error: "Tool not available" }),
+      });
     }
   }
 
-  if (toolCall?.type === "function" && toolCall.function.name === "transfer_to_human") {
-    let reason = "El cliente solicitó un asesor";
-    try {
-      const parsed = JSON.parse(toolCall.function.arguments) as { reason?: string };
-      if (parsed.reason?.trim()) reason = parsed.reason.trim();
-    } catch {
-      // use default reason
-    }
-    return { reply: null, handoff: true, handoffReason: reason };
-  }
-
-  const content = choice?.content;
-  if (!content) throw new Error("Empty response from OpenAI");
-
-  return { reply: content, handoff: false };
+  throw new Error("Tool loop exceeded maximum rounds");
 }
