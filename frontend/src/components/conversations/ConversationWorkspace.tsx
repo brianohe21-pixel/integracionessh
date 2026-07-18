@@ -412,7 +412,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                   <p className="truncate text-sm font-semibold text-primary">
                     {contactDisplay(selectedConversation)}
                   </p>
-                  <div className="flex items-center gap-1.5 text-xs text-muted">
+                  <div className="flex items-center gap-1.5 text-xs text-secondary">
                     <Badge variant="accent" className="text-[10px]">
                       {channelLabel(selectedConversation.channel)}
                     </Badge>
@@ -429,23 +429,26 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
               </div>
               <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
                 {!advisorMode && selectedConversation.botId && (
-                  <button
+                  <Button
                     type="button"
+                    variant="danger"
+                    size="sm"
                     onClick={() => setShowDeleteModal(true)}
-                    className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-red-100 text-red-800 rounded-lg"
+                    className="gap-1"
                   >
                     <Trash2 className="w-3 h-3" />
                     {t("conversations.delete")}
-                  </button>
+                  </Button>
                 )}
                 {!advisorMode && !isHuman && (
-                  <button
+                  <Button
                     type="button"
+                    size="sm"
                     onClick={() => setShowHandoffModal(true)}
-                    className="px-3 py-1.5 text-xs font-medium bg-amber-100 text-amber-800 rounded-lg"
+                    className="bg-warning/15 text-warning hover:bg-warning/25"
                   >
                     {t("conversations.transfer")}
-                  </button>
+                  </Button>
                 )}
                 {!advisorMode && selectedConversation.botId && (selectedConversation.channel ?? "whatsapp") === "whatsapp" && (
                   <>
@@ -459,17 +462,17 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                         });
                       }}
                       disabled={callPermission.isPending || selectedWhatsAppPhone.length < 7}
-                      className="px-3 py-1.5 text-xs font-medium bg-violet-100 text-violet-800 rounded-lg disabled:opacity-50"
+                      className="rounded-lg bg-human/15 px-3 py-1.5 text-xs font-medium text-human hover:bg-human/25 disabled:opacity-50"
                     >
                       {t("conversations.requestCallPermission")}
                     </button>
                     {callPermissionFeedback ? (
                       <p
                         className={cn(
-                          "w-full text-xs",
+                          "w-full text-xs font-medium",
                           callPermissionFeedback.type === "success"
-                            ? "text-green-700"
-                            : "text-red-600"
+                            ? "text-success"
+                            : "text-danger"
                         )}
                       >
                         {callPermissionFeedback.message}
@@ -479,47 +482,48 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                 )}
                 {isHuman && (
                   <>
-                    <button
+                    <Button
                       type="button"
+                      size="sm"
                       onClick={() => {
                         setInternalNote(selectedConversation.internalNote ?? "");
                         setShowResolveModal(true);
                       }}
-                      className="rounded-lg bg-accent-muted px-3 py-1.5 text-xs font-medium text-accent"
                     >
                       {t("conversations.resolve")}
-                    </button>
+                    </Button>
                     {(selectedConversation.channel ?? "whatsapp") === "whatsapp" && (
                       <a
                         href={buildWaMeLink(selectedConversation.phoneNumber)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-green-100 text-green-800 rounded-lg"
+                        className="inline-flex items-center gap-1 rounded-lg bg-success/15 px-3 py-1.5 text-xs font-medium text-success hover:bg-success/25"
                       >
                         <ExternalLink className="w-3 h-3" />
                         {t("conversations.openWhatsApp")}
                       </a>
                     )}
-                    <button
+                    <Button
                       type="button"
+                      variant="secondary"
+                      size="sm"
                       onClick={handleRelease}
                       disabled={release.isPending}
-                      className="px-3 py-1.5 text-xs font-medium bg-surface-muted text-secondary rounded-lg"
                     >
                       {t("conversations.release")}
-                    </button>
+                    </Button>
                   </>
                 )}
               </div>
             </div>
 
             {isHuman && (selectedConversation.channel ?? "whatsapp") === "whatsapp" && (
-              <p className="px-6 py-2 text-xs text-amber-800 bg-amber-50 border-b border-amber-100">
+              <p className="border-b border-warning/30 bg-warning/10 px-6 py-2.5 text-xs font-medium text-primary">
                 {t("conversations.personalChannelHint")}
               </p>
             )}
             {isHuman && (selectedConversation.channel ?? "whatsapp") !== "whatsapp" && (
-              <p className="px-6 py-2 text-xs text-accent bg-accent-muted border-b border-accent/20">
+              <p className="border-b border-default border-l-4 border-l-accent bg-surface-muted px-6 py-2.5 text-xs font-medium text-primary">
                 {t("conversations.replyViaChannel", {
                   channel: channelLabel(selectedConversation.channel),
                 })}
@@ -527,10 +531,10 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
             )}
 
             {selectedConversation && activeLead && (
-              <div className="mx-4 mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg flex flex-wrap items-center justify-between gap-2 text-sm">
+              <div className="mx-4 mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-primary">
                 <div>
-                  <span className="font-medium text-amber-900">{t("leads.leadStatus")}: </span>
-                  <span className="text-amber-800">{t(`leads.status_${activeLead.status}`)}</span>
+                  <span className="font-semibold">{t("leads.leadStatus")}: </span>
+                  <span>{t(`leads.status_${activeLead.status}`)}</span>
                 </div>
                 <div className="flex gap-2">
                   <Link href="/leads" className="text-accent hover:text-accent text-xs">
@@ -560,22 +564,25 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
             )}
 
             {isHuman && selectedConversation.workflowStatus !== "resolved" && (
-              <div className="px-6 py-3 bg-surface-elevated border-b border-subtle space-y-2">
-                <label className="text-xs font-medium text-secondary">{t("conversations.internalNote")}</label>
-                <textarea
+              <div className="space-y-2 border-b border-default bg-surface-elevated px-6 py-3">
+                <label className="text-xs font-semibold text-primary">
+                  {t("conversations.internalNote")}
+                </label>
+                <Textarea
                   value={internalNote || selectedConversation.internalNote || ""}
                   onChange={(e) => setInternalNote(e.target.value)}
                   rows={2}
-                  className="w-full px-3 py-2 border border-default rounded-lg text-sm"
                 />
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={handleSaveNote}
                   disabled={updateNote.isPending}
-                  className="text-xs text-accent font-medium"
+                  className="text-accent hover:text-accent"
                 >
                   {t("conversations.saveNote")}
-                </button>
+                </Button>
               </div>
             )}
 

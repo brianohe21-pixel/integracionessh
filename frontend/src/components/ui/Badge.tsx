@@ -8,11 +8,11 @@ interface BadgeProps {
 
 const variants = {
   default: "bg-surface-muted text-secondary",
-  success: "bg-success/15 text-success",
-  warning: "bg-warning/15 text-warning",
-  danger: "bg-danger/15 text-danger",
-  info: "bg-info/15 text-info",
-  accent: "bg-accent-muted text-accent",
+  success: "bg-success/20 text-success",
+  warning: "bg-warning/20 text-warning",
+  danger: "bg-danger/20 text-danger",
+  info: "bg-info/20 text-info",
+  accent: "bg-accent-muted text-accent ring-1 ring-accent/30",
 };
 
 export function Badge({ children, variant = "default", className }: BadgeProps) {

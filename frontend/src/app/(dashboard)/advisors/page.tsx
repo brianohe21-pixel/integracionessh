@@ -10,6 +10,7 @@ import {
 import { useBots } from "@/hooks/useBots";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { useT } from "@/i18n/context";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -27,7 +28,34 @@ export default function AdvisorsPage() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [selectedBots, setSelectedBots] = useState<string[]>([]);
   const [inviteInfo, setInviteInfo] = useState<string | null>(null);
+  const [inviteInfoType, setInviteInfoType] = useState<"success" | "warning">("success");
   const [error, setError] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<{ advisorId: string; name: string } | null>(
+    null
+  );
+
+  function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleteError("");
+    deleteAdvisor.mutate(deleteTarget.advisorId, {
+      onSuccess: () => setDeleteTarget(null),
+      onError: (err) => {
+        setDeleteError(err.message || t("advisors.deleteError"));
+        setDeleteTarget(null);
+      },
+    });
+  }
+
+  function advisorErrorMessage(message: string): string {
+    if (message === "A user with this email already exists") {
+      return t("advisors.emailAlreadyExists");
+    }
+    if (message === "This email is already linked to an active advisor") {
+      return t("advisors.emailAlreadyLinked");
+    }
+    return message;
+  }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -40,9 +68,15 @@ export default function AdvisorsPage() {
         ...(inviteEmail ? { inviteEmail } : {}),
         ...(selectedBots.length ? { botIds: selectedBots } : {}),
       });
-      if (result.invite) {
+      if (result.invite?.emailSent) {
+        setInviteInfoType("success");
+        setInviteInfo(t("advisors.inviteEmailSent", { email: result.invite.email }));
+      } else if (result.invite) {
+        setInviteInfoType("warning");
         setInviteInfo(
-          `${t("advisors.inviteCreated")} ${result.invite.username} / ${result.invite.temporaryPassword}`
+          result.invite.emailFailureReason === "recipient_not_verified"
+            ? t("advisors.inviteEmailFailedSandbox", { email: result.invite.email })
+            : t("advisors.inviteEmailFailed", { email: result.invite.email })
         );
       }
       setName("");
@@ -51,7 +85,7 @@ export default function AdvisorsPage() {
       setSelectedBots([]);
       setOpen(false);
     } catch (err) {
-      setError((err as Error).message);
+      setError(advisorErrorMessage((err as Error).message));
     }
   }
 
@@ -73,8 +107,20 @@ export default function AdvisorsPage() {
       />
 
       {inviteInfo && (
-        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-900">
+        <div
+          className={`mb-4 p-3 rounded-lg text-sm border ${
+            inviteInfoType === "success"
+              ? "bg-green-50 border-green-200 text-green-900"
+              : "bg-amber-50 border-amber-200 text-amber-900"
+          }`}
+        >
           {inviteInfo}
+        </div>
+      )}
+
+      {deleteError && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          {deleteError}
         </div>
       )}
 
@@ -107,9 +153,12 @@ export default function AdvisorsPage() {
               </Badge>
               <button
                 type="button"
-                onClick={() => deleteAdvisor.mutate(advisor.advisorId)}
-                className="p-2 text-muted hover:text-red-600"
-                aria-label={t("advisors.deactivate")}
+                onClick={() =>
+                  setDeleteTarget({ advisorId: advisor.advisorId, name: advisor.name })
+                }
+                disabled={deleteAdvisor.isPending}
+                className="p-2 text-muted hover:text-red-600 disabled:opacity-50"
+                aria-label={t("advisors.delete")}
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -117,6 +166,35 @@ export default function AdvisorsPage() {
           </div>
         ))}
       </div>
+
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm space-y-4 rounded-xl border border-default bg-surface-elevated p-6 shadow-xl">
+            <h2 className="text-lg font-semibold text-primary">{t("advisors.confirmDeleteTitle")}</h2>
+            <p className="text-sm text-secondary">
+              {t("advisors.confirmDelete", { name: deleteTarget.name })}
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleteAdvisor.isPending}
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                onClick={confirmDelete}
+                disabled={deleteAdvisor.isPending}
+              >
+                {deleteAdvisor.isPending ? t("common.loading") : t("common.delete")}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">

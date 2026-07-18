@@ -304,7 +304,9 @@ export interface AdvisorInviteResponse {
   advisor: Advisor;
   invite?: {
     username: string;
-    temporaryPassword: string;
+    email: string;
+    emailSent?: boolean;
+    emailFailureReason?: "not_configured" | "recipient_not_verified" | "send_failed";
   };
 }
 

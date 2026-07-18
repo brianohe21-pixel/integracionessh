@@ -41,14 +41,15 @@
   --surface-muted: #252932;
   --canvas: #141820;
 
-  --text-primary: #f0f2f5;
-  --text-secondary: #9ca3af;
-  --text-muted: #6b7280;
+  --text-primary: #f3f4f6;
+  --text-secondary: #c5cdd8;
+  --text-muted: #9aa3b0;
 
-  --border: #2d3239;
-  --border-subtle: #23272e;
+  --border: #3a414c;
+  --border-subtle: #2d3239;
 
-  --glow-accent: rgba(37, 211, 102, 0.12);
+  --accent-muted: rgba(37, 211, 102, 0.22);
+  --glow-accent: rgba(37, 211, 102, 0.14);
 
   --background: var(--surface);
   --foreground: var(--text-primary);

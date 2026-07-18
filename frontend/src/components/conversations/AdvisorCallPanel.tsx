@@ -38,11 +38,11 @@ export function AdvisorCallPanel({ conversation, voiceEnabled = true }: Props) {
   const ringing = callState === "ringing";
 
   return (
-    <div className="border-b border-default bg-slate-50 px-4 py-3">
+    <div className="border-b border-default bg-surface-muted px-4 py-3">
       <audio ref={audioRef} autoPlay playsInline className="hidden" />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-primary">{t("livekit.panelTitle")}</p>
+          <p className="text-sm font-semibold text-primary">{t("livekit.panelTitle")}</p>
           <p className="text-xs text-secondary">
             {callState === "idle" && t("livekit.stateIdle")}
             {ringing && t("livekit.stateRinging")}
