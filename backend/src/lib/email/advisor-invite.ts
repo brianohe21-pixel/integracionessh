@@ -13,16 +13,29 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
+export type AdvisorInviteEmailResult = {
+  sent: boolean;
+  failureReason?: "not_configured" | "recipient_not_verified" | "send_failed";
+};
+
+function inviteEmailFailureReason(error: unknown): NonNullable<AdvisorInviteEmailResult["failureReason"]> {
+  const message = error instanceof Error ? error.message : String(error);
+  if (message.includes("not verified") || message.includes("MessageRejected")) {
+    return "recipient_not_verified";
+  }
+  return "send_failed";
+}
+
 export async function sendAdvisorInviteEmail(params: {
   to: string;
   advisorName: string;
   tenantName: string;
   temporaryPassword: string;
-}): Promise<boolean> {
+}): Promise<AdvisorInviteEmailResult> {
   const from = process.env.SES_FROM_EMAIL?.trim();
   if (!from) {
     console.warn("SES_FROM_EMAIL is not configured; skipping advisor invite email");
-    return false;
+    return { sent: false, failureReason: "not_configured" };
   }
 
   const url = loginUrl();
@@ -60,9 +73,9 @@ export async function sendAdvisorInviteEmail(params: {
       text,
       html,
     });
-    return true;
+    return { sent: true };
   } catch (error) {
     console.error("Failed to send advisor invite email:", error);
-    return false;
+    return { sent: false, failureReason: inviteEmailFailureReason(error) };
   }
 }

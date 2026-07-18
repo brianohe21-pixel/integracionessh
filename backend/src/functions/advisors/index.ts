@@ -88,24 +88,28 @@ export async function handler(
         const tenant = await getTenant(auth.tenantId);
         const tenantName = tenant ? resolveBranding(tenant).brandName : "la plataforma";
         let emailSent = false;
+        let emailFailureReason: string | undefined;
         try {
-          emailSent = await sendAdvisorInviteEmail({
+          const emailResult = await sendAdvisorInviteEmail({
             to: parsed.data.inviteEmail,
             advisorName: parsed.data.name,
             tenantName,
             temporaryPassword: invited.temporaryPassword,
           });
+          emailSent = emailResult.sent;
+          emailFailureReason = emailResult.failureReason;
         } catch (error) {
           console.error("Advisor invite email failed:", error);
+          emailFailureReason = "send_failed";
         }
 
         return created({
           advisor,
           invite: {
             username: invited.username,
-            ...(emailSent
-              ? { emailSent: true }
-              : { temporaryPassword: invited.temporaryPassword }),
+            email: parsed.data.inviteEmail,
+            emailSent,
+            ...(emailFailureReason ? { emailFailureReason } : {}),
           },
         });
       }

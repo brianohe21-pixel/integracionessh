@@ -36,7 +36,7 @@ describe("sendAdvisorInviteEmail", () => {
       temporaryPassword: "Aa1!temp-pass",
     });
 
-    expect(sent).toBe(true);
+    expect(sent).toEqual({ sent: true });
     expect(mockedSendEmail).toHaveBeenCalledWith(
       expect.objectContaining({
         to: ["advisor@example.com"],
@@ -59,13 +59,15 @@ describe("sendAdvisorInviteEmail", () => {
       temporaryPassword: "Aa1!temp-pass",
     });
 
-    expect(sent).toBe(false);
+    expect(sent).toEqual({ sent: false, failureReason: "not_configured" });
     expect(mockedSendEmail).not.toHaveBeenCalled();
   });
 
-  it("returns false when SES send fails", async () => {
+  it("returns recipient_not_verified when SES rejects unverified recipient", async () => {
     process.env.SES_FROM_EMAIL = "noreply@example.com";
-    mockedSendEmail.mockRejectedValueOnce(new Error("MessageRejected"));
+    mockedSendEmail.mockRejectedValueOnce(
+      new Error("Email address is not verified. The following identities failed the check in region US-EAST-1: advisor@example.com")
+    );
 
     const sent = await sendAdvisorInviteEmail({
       to: "advisor@example.com",
@@ -74,6 +76,20 @@ describe("sendAdvisorInviteEmail", () => {
       temporaryPassword: "Aa1!temp-pass",
     });
 
-    expect(sent).toBe(false);
+    expect(sent).toEqual({ sent: false, failureReason: "recipient_not_verified" });
+  });
+
+  it("returns send_failed when SES send fails", async () => {
+    process.env.SES_FROM_EMAIL = "noreply@example.com";
+    mockedSendEmail.mockRejectedValueOnce(new Error("Throttled"));
+
+    const sent = await sendAdvisorInviteEmail({
+      to: "advisor@example.com",
+      advisorName: "Ana",
+      tenantName: "Acme Corp",
+      temporaryPassword: "Aa1!temp-pass",
+    });
+
+    expect(sent).toEqual({ sent: false, failureReason: "send_failed" });
   });
 });
