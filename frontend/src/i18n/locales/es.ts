@@ -243,6 +243,32 @@ export const es = {
     sharedTokenNote:
       "El token de WhatsApp se guarda por cuenta. Volver a conectar actualiza las credenciales de todos los bots de esta cuenta.",
   },
+  botTemplates: {
+    title: "Plantilla por industria",
+    description: "Elige una plantilla con prompt y flujo prearmados, o configura todo manualmente.",
+    custom: "Personalizado",
+    customDescription: "Define tu propio prompt y flujo desde cero.",
+    health: {
+      name: "Salud",
+      description: "Citas, horarios y atención al paciente.",
+      flowName: "Atención al paciente",
+    },
+    retail: {
+      name: "Retail",
+      description: "Catálogo, pedidos y ofertas.",
+      flowName: "Ventas y pedidos",
+    },
+    real_estate: {
+      name: "Inmobiliaria",
+      description: "Propiedades, visitas y precios.",
+      flowName: "Atención inmobiliaria",
+    },
+    support: {
+      name: "Soporte",
+      description: "Tickets, pedidos y preguntas frecuentes.",
+      flowName: "Soporte al cliente",
+    },
+  },
   whatsapp: {
     sectionTitle: "WhatsApp Business",
     sectionDescription:
@@ -1687,6 +1713,169 @@ export const es = {
       shipped: "Enviado",
       delivered: "Entregado",
       cancelled: "Cancelado",
+    },
+  },
+  onboarding: {
+    title: "Configura tu cuenta",
+    subtitle: "Conecta WhatsApp, crea tu primer bot y activa tu primer flujo en pocos minutos.",
+    skip: "Saltar por ahora",
+    next: "Siguiente",
+    back: "Atrás",
+    stepOf: "Paso {{current}} de {{total}}",
+    bannerTitle: "Termina de configurar tu cuenta",
+    bannerDescription: "Te faltan unos pasos para tener tu bot listo en WhatsApp.",
+    bannerResume: "Continuar configuración",
+    step: {
+      whatsapp: "WhatsApp",
+      createBot: "Crear bot",
+      testMessage: "Probar mensaje",
+      activateFlow: "Activar flujo",
+    },
+    whatsapp: {
+      title: "Conecta WhatsApp",
+      description: "Vincula tu número de WhatsApp Business con Meta para recibir y enviar mensajes.",
+      connected: "WhatsApp conectado correctamente.",
+    },
+    createBot: {
+      title: "Crea tu primer bot",
+      description: "Dale un nombre a tu asistente. Usará inteligencia artificial para responder mensajes.",
+      nameLabel: "Nombre del bot",
+      namePlaceholder: "Ej. Soporte, Ventas, Mi negocio",
+      create: "Crear bot",
+      creating: "Creando…",
+    },
+    testMessage: {
+      title: "Prueba tu bot",
+      description: "Envía un mensaje de WhatsApp al número de tu bot desde tu teléfono para verificar que todo funciona.",
+      openWhatsApp: "Abrir en WhatsApp",
+      confirm: "Ya lo probé",
+      confirming: "Guardando…",
+      noPhone: "El número de WhatsApp aparecerá aquí cuando el bot esté listo.",
+    },
+    activateFlow: {
+      title: "Activa tu primer flujo",
+      description: "Este flujo responderá automáticamente cuando alguien te escriba por WhatsApp.",
+      previewTrigger: "Cuando llegue cualquier mensaje",
+      previewTriggerFirstMessage: "Cuando llegue el primer mensaje",
+      previewMessage: "¡Hola! Gracias por escribirnos. ¿En qué podemos ayudarte?",
+      activate: "Activar flujo",
+      activating: "Activando…",
+    },
+    done: {
+      title: "¡Todo listo!",
+      description: "Tu bot está configurado y tu flujo de bienvenida está activo.",
+      goToConversations: "Ver conversaciones",
+      goToBots: "Ir a mis bots",
+    },
+  },
+  helpCenter: {
+    title: "Centro de ayuda",
+    subtitle: "Guías, checklist y soporte en un solo lugar.",
+    openButton: "Abrir centro de ayuda",
+    close: "Cerrar",
+    tabs: {
+      checklist: "Checklist",
+      tours: "Tours",
+      help: "Ayuda",
+    },
+    faqTitle: "Preguntas frecuentes",
+    contactSupport: "Contactar soporte",
+    startTour: "Iniciar tour",
+    replayTour: "Repetir tour",
+    tourCompleted: "Tour completado",
+    tourNext: "Siguiente",
+    tourPrev: "Anterior",
+    tourDone: "Finalizar",
+    tourProgress: "Paso {{current}} de {{total}}",
+    checklist: {
+      progress: "{{current}} de {{total}} pasos completados",
+      completeTitle: "Configuración completa",
+      continue: "Continuar",
+      whatsappDescription: "Conecta tu número de WhatsApp Business con Meta.",
+      createBotDescription: "Crea tu primer asistente con inteligencia artificial.",
+      testMessageDescription: "Envía un mensaje de prueba desde tu teléfono.",
+      activateFlowDescription: "Activa un flujo automático de bienvenida.",
+    },
+    tours: {
+      intro: "Recorre las secciones principales con un tour guiado paso a paso.",
+      bots: {
+        name: "Tour de Bots",
+        description: "Aprende a crear y gestionar tus bots.",
+        steps: {
+          header: {
+            title: "Tus bots",
+            description: "Aquí ves todos tus asistentes y su estado.",
+          },
+          create: {
+            title: "Crear bot",
+            description: "Usa este botón para crear un nuevo asistente.",
+          },
+          onboarding: {
+            title: "Configuración pendiente",
+            description: "Si saltaste el setup, puedes retomarlo desde este banner.",
+          },
+          grid: {
+            title: "Lista de bots",
+            description: "Cada tarjeta te lleva a editar y configurar el bot.",
+          },
+        },
+      },
+      flows: {
+        name: "Tour de Flujos",
+        description: "Automatiza respuestas con flujos visuales.",
+        steps: {
+          header: {
+            title: "Flujos de automatización",
+            description: "Los flujos definen qué hace tu bot cuando llega un mensaje.",
+          },
+          create: {
+            title: "Nuevo flujo",
+            description: "Crea un flujo desde cero con el editor visual.",
+          },
+          table: {
+            title: "Lista de flujos",
+            description: "Aquí ves todos tus flujos y a qué bot pertenecen.",
+          },
+          toggle: {
+            title: "Activar o desactivar",
+            description: "Solo los flujos activos responden automáticamente.",
+          },
+        },
+      },
+      templates: {
+        name: "Tour de Templates",
+        description: "Crea y gestiona plantillas de WhatsApp aprobadas por Meta.",
+        steps: {
+          header: {
+            title: "Templates de WhatsApp",
+            description: "Las plantillas permiten enviar mensajes proactivos fuera de la ventana de 24 h.",
+          },
+          filter: {
+            title: "Seleccionar bot",
+            description: "Elige el bot al que pertenecen los templates.",
+          },
+          create: {
+            title: "Crear template",
+            description: "Envía un nuevo template a revisión de Meta.",
+          },
+          table: {
+            title: "Estado de templates",
+            description: "Revisa si están pendientes, aprobados o rechazados.",
+          },
+        },
+      },
+    },
+    hints: {
+      gotIt: "Entendido",
+      dismiss: "Ahora no",
+      tourSuggest: {
+        bots: "¿Primera vez aquí? Te guiamos por la sección de bots.",
+        flows: "¿Quieres un tour rápido por los flujos de automatización?",
+        templates: "¿Necesitas ayuda con los templates de WhatsApp?",
+      },
+      botsCreate: "Crea tu primer bot para empezar a recibir mensajes.",
+      flowsCreate: "Los flujos automatizan las respuestas de tu bot.",
+      templatesFilter: "Selecciona un bot para ver y crear sus templates.",
     },
   },
   publicBook: {

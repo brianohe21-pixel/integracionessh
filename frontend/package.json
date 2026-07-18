@@ -17,6 +17,7 @@
     "aws-amplify": "^6.16.4",
     "axios": "^1.15.2",
     "clsx": "^2.1.1",
+    "driver.js": "^1.8.0",
     "livekit-client": "^2.19.2",
     "lucide-react": "^1.14.0",
     "next": "15.5.15",

@@ -31,6 +31,8 @@ import {
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { TableContainer } from "@/components/ui/TableContainer";
+import { ContextualHint } from "@/components/help-center/ContextualHint";
+import { TourPageSuggestion } from "@/components/help-center/TourList";
 
 type DialogMode = "create" | "edit" | null;
 
@@ -227,28 +229,35 @@ export default function TemplatesPage() {
 
   return (
     <DashboardPage>
-      <PageHeader
-        title={t("templates.title")}
-        subtitle={t("templates.subtitle")}
-        actions={
-          <button
-            type="button"
-            onClick={openCreate}
-            disabled={!botFilter}
-            className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <Plus className="h-4 w-4" />
-            {t("templates.createTemplate")}
-          </button>
-        }
-      />
+      <div data-tour="templates-header">
+        <PageHeader
+          title={t("templates.title")}
+          subtitle={t("templates.subtitle")}
+          actions={
+            <button
+              type="button"
+              data-tour="templates-create"
+              onClick={openCreate}
+              disabled={!botFilter}
+              className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Plus className="h-4 w-4" />
+              {t("templates.createTemplate")}
+            </button>
+          }
+        />
+      </div>
+
+      <TourPageSuggestion tourId="templates" />
 
       <div className="mb-6">
-        <select
-          value={botFilter}
-          onChange={(e) => setBotFilter(e.target.value)}
-          className="w-full rounded-lg border border-default bg-surface-elevated px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent sm:w-72"
-        >
+        <ContextualHint hintId="templates-filter" content={t("helpCenter.hints.templatesFilter")}>
+          <select
+            data-tour="templates-filter"
+            value={botFilter}
+            onChange={(e) => setBotFilter(e.target.value)}
+            className="w-full rounded-lg border border-default bg-surface-elevated px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent sm:w-72"
+          >
           <option value="">{t("templates.selectBotTitle")}</option>
           {bots?.map((bot) => (
             <option key={bot.botId} value={bot.botId}>
@@ -256,6 +265,7 @@ export default function TemplatesPage() {
             </option>
           ))}
         </select>
+        </ContextualHint>
       </div>
 
       <div className="mb-6 bg-blue-50 border border-blue-200 rounded-xl p-4">
@@ -335,6 +345,7 @@ export default function TemplatesPage() {
       )}
 
       {botFilter && !isLoading && templates && templates.length > 0 && (
+        <div data-tour="templates-table">
         <TableContainer className="overflow-hidden rounded-xl border border-default bg-surface-elevated">
           <table className="w-full min-w-[720px]">
             <thead>
@@ -446,6 +457,7 @@ export default function TemplatesPage() {
             </tbody>
           </table>
         </TableContainer>
+        </div>
       )}
 
       {dialogMode && (

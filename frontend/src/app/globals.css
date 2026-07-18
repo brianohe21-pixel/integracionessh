@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@import "driver.js/dist/driver.css";
+
 :root {
   --brand-primary: #25d366;
   --brand-primary-hover: #1fb855;
@@ -132,4 +134,40 @@ body {
 .react-flow-dark .react-flow__handle {
   width: 10px;
   height: 10px;
+}
+
+.driver-popover {
+  background: var(--surface-elevated) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border) !important;
+}
+
+.driver-popover-title {
+  color: var(--text-primary) !important;
+  font-size: 0.875rem !important;
+}
+
+.driver-popover-description {
+  color: var(--text-secondary) !important;
+  font-size: 0.75rem !important;
+}
+
+.driver-popover-footer button {
+  border-radius: 0.5rem !important;
+  font-size: 0.75rem !important;
+  text-shadow: none !important;
+}
+
+.driver-popover-next-btn,
+.driver-popover-done-btn {
+  background: var(--accent) !important;
+  color: #fff !important;
+}
+
+.driver-popover-prev-btn {
+  color: var(--text-secondary) !important;
+}
+
+.driver-popover-progress-text {
+  color: var(--text-muted) !important;
 }

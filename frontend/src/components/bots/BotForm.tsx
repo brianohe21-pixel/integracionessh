@@ -6,10 +6,14 @@ import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { useCreateBot, useUpdateBot } from "@/hooks/useBots";
+import { useCreateFlow, useToggleFlow } from "@/hooks/useFlows";
 import { useWhatsAppConnect } from "@/hooks/useWhatsAppConnect";
-import { useT } from "@/i18n/context";
+import { useLocale, useT } from "@/i18n/context";
 import { getAllowedModelsForPlan } from "@/lib/plan-config";
+import { getBotTemplate } from "@/lib/bot-templates";
+import type { BotIndustryTemplateId } from "@/lib/bot-templates";
 import { EmbeddedSignupLauncher } from "@/components/whatsapp/EmbeddedSignupLauncher";
+import { BotTemplatePicker } from "@/components/bots/BotTemplatePicker";
 import type { Bot, Tenant } from "@/types";
 
 const SYSTEM_PROMPT_MAX_LENGTH = 4096;
@@ -21,8 +25,12 @@ interface BotFormProps {
 
 export function BotForm({ bot, wide = false }: BotFormProps) {
   const t = useT();
+  const locale = useLocale();
   const router = useRouter();
   const isEditing = !!bot;
+
+  const [templateId, setTemplateId] = useState<BotIndustryTemplateId | null>(null);
+  const [formTouched, setFormTouched] = useState({ name: false, systemPrompt: false });
 
   const [form, setForm] = useState({
     name: bot?.name ?? "",
@@ -45,6 +53,8 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
   const [advancedMode, setAdvancedMode] = useState(false);
   const createBot = useCreateBot();
   const updateBot = useUpdateBot(bot?.botId ?? "");
+  const createFlow = useCreateFlow();
+  const toggleFlow = useToggleFlow();
   const { connectManual, status: whatsappStatus } = useWhatsAppConnect();
 
   const { data: tenant } = useQuery({
@@ -59,7 +69,12 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
     "gpt-4-turbo": "GPT-4 Turbo",
   };
 
-  const isPending = createBot.isPending || updateBot.isPending || whatsappStatus === "connecting";
+  const isPending =
+    createBot.isPending ||
+    updateBot.isPending ||
+    createFlow.isPending ||
+    toggleFlow.isPending ||
+    whatsappStatus === "connecting";
   const isWebhookMode = form.responseMode === "webhook";
   const hasManualIds =
     form.phoneNumberId.trim().length > 0 && form.whatsappBusinessAccountId.trim().length > 0;
@@ -74,9 +89,28 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) {
     const { name, value } = e.target;
+    if (name === "name") {
+      setFormTouched((prev) => ({ ...prev, name: true }));
+    }
+    if (name === "systemPrompt") {
+      setFormTouched((prev) => ({ ...prev, systemPrompt: true }));
+    }
     setForm((prev) => ({
       ...prev,
       [name]: name === "temperature" || name === "maxTokens" ? Number(value) : value,
+    }));
+  }
+
+  function handleTemplateChange(nextTemplateId: BotIndustryTemplateId | null) {
+    setTemplateId(nextTemplateId);
+    if (!nextTemplateId) return;
+
+    const template = getBotTemplate(nextTemplateId);
+    setForm((prev) => ({
+      ...prev,
+      name: formTouched.name ? prev.name : template.getDefaultBotName(locale),
+      systemPrompt: formTouched.systemPrompt ? prev.systemPrompt : template.getSystemPrompt(locale),
+      responseMode: "openai",
     }));
   }
 
@@ -141,10 +175,28 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
 
       if (isEditing) {
         await updateBot.mutateAsync(payload as Parameters<typeof updateBot.mutateAsync>[0]);
+        router.push("/bots");
       } else {
-        await createBot.mutateAsync(payload as Parameters<typeof createBot.mutateAsync>[0]);
+        const createdBot = await createBot.mutateAsync(
+          payload as Parameters<typeof createBot.mutateAsync>[0]
+        );
+
+        if (templateId) {
+          const flowDefinition = getBotTemplate(templateId).getFlowDefinition(locale);
+          const flow = await createFlow.mutateAsync({
+            name: flowDefinition.name,
+            botId: createdBot.botId,
+            enabled: false,
+            nodes: flowDefinition.nodes,
+            edges: flowDefinition.edges,
+            entryNodeId: flowDefinition.entryNodeId,
+          });
+          await toggleFlow.mutateAsync({ flowId: flow.flowId, enabled: true });
+          router.push(`/bots/${createdBot.botId}/edit`);
+        } else {
+          router.push("/bots");
+        }
       }
-      router.push("/bots");
     } catch (err) {
       setError((err as Error).message ?? t("bots.saveError"));
     }
@@ -152,6 +204,12 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className={cn("space-y-6 w-full", !wide && "max-w-2xl")}>
+      {!isEditing && (
+        <div className="col-span-2">
+          <BotTemplatePicker value={templateId} onChange={handleTemplateChange} />
+        </div>
+      )}
+
       <div className={cn("grid gap-4", wide ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-2")}>
         <div className="col-span-2">
           <label className="block text-sm font-medium text-secondary mb-1">

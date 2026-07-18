@@ -8,6 +8,9 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { useT } from "@/i18n/context";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { OnboardingBanner } from "@/components/onboarding/OnboardingBanner";
+import { ContextualHint } from "@/components/help-center/ContextualHint";
+import { TourPageSuggestion } from "@/components/help-center/TourList";
 
 export default function BotsPage() {
   const t = useT();
@@ -15,19 +18,30 @@ export default function BotsPage() {
 
   return (
     <DashboardPage>
-      <PageHeader
-        title={t("bots.title")}
-        subtitle={t("bots.subtitle")}
-        actions={
-          <Link
-            href="/bots/new"
-            className="flex items-center gap-2 px-4 py-2 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-hover transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            {t("bots.newBot")}
-          </Link>
-        }
-      />
+      <div data-tour="bots-header">
+        <PageHeader
+          title={t("bots.title")}
+          subtitle={t("bots.subtitle")}
+          actions={
+            <ContextualHint hintId="bots-create" content={t("helpCenter.hints.botsCreate")}>
+              <Link
+                data-tour="bots-create"
+                href="/bots/new"
+                className="flex items-center gap-2 px-4 py-2 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-hover transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                {t("bots.newBot")}
+              </Link>
+            </ContextualHint>
+          }
+        />
+      </div>
+
+      <TourPageSuggestion tourId="bots" />
+
+      <div data-tour="bots-onboarding">
+        <OnboardingBanner />
+      </div>
 
       {isLoading && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -57,24 +71,26 @@ export default function BotsPage() {
       )}
 
       {!isLoading && !error && bots?.length === 0 && (
-        <EmptyState
-          icon={<BotMessageSquare className="w-6 h-6" />}
-          title={t("bots.emptyTitle")}
-          description={t("bots.emptyDescription")}
-          action={
-            <Link
-              href="/bots/new"
-              className="flex items-center gap-2 px-4 py-2 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-hover transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              {t("bots.createFirst")}
-            </Link>
-          }
-        />
+        <div data-tour="bots-grid">
+          <EmptyState
+            icon={<BotMessageSquare className="w-6 h-6" />}
+            title={t("bots.emptyTitle")}
+            description={t("bots.emptyDescription")}
+            action={
+              <Link
+                href="/bots/new"
+                className="flex items-center gap-2 px-4 py-2 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-hover transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                {t("bots.createFirst")}
+              </Link>
+            }
+          />
+        </div>
       )}
 
       {!isLoading && bots && bots.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div data-tour="bots-grid" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {bots.map((bot) => (
             <BotCard key={bot.botId} bot={bot} />
           ))}
