@@ -110,7 +110,7 @@ export default function ContactsPage() {
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
-            className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+            className="flex items-center gap-2 px-3 py-2 text-sm border border-default rounded-lg hover:bg-surface"
           >
             <Upload className="w-4 h-4" />
             {t("contacts.import")}
@@ -119,7 +119,7 @@ export default function ContactsPage() {
           <button
             type="button"
             onClick={() => downloadContactsExport("opt_out")}
-            className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+            className="flex items-center gap-2 px-3 py-2 text-sm border border-default rounded-lg hover:bg-surface"
           >
             <Download className="w-4 h-4" />
             {t("contacts.export")}
@@ -127,7 +127,7 @@ export default function ContactsPage() {
           <button
             type="button"
             onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700"
+            className="flex items-center gap-2 px-4 py-2 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-hover"
           >
             <Plus className="w-4 h-4" />
             {t("contacts.new")}
@@ -136,7 +136,7 @@ export default function ContactsPage() {
         }
       />
 
-      <div className="mb-4 p-4 bg-indigo-50 border border-indigo-100 rounded-xl text-sm text-indigo-900">
+      <div className="mb-4 p-4 bg-accent-muted border border-accent/20 rounded-xl text-sm text-accent">
         {t("contacts.complianceBanner")}{" "}
         <Link href="/legal/privacy" className="underline font-medium">
           {t("contacts.privacyLink")}
@@ -149,12 +149,12 @@ export default function ContactsPage() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder={t("contacts.searchPlaceholder")}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm flex-1 min-w-[200px]"
+          className="px-3 py-2 border border-default rounded-lg text-sm flex-1 min-w-[200px]"
         />
         <select
           value={consentFilter}
           onChange={(e) => setConsentFilter(e.target.value as "" | MarketingConsent)}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+          className="px-3 py-2 border border-default rounded-lg text-sm bg-surface-elevated"
         >
           <option value="">{t("contacts.filterAllConsent")}</option>
           <option value="opt_in">{t("contacts.consentOptIn")}</option>
@@ -164,7 +164,7 @@ export default function ContactsPage() {
         <select
           value={suppressedFilter}
           onChange={(e) => setSuppressedFilter(e.target.value as "" | "true" | "false")}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+          className="px-3 py-2 border border-default rounded-lg text-sm bg-surface-elevated"
         >
           <option value="">{t("contacts.filterAllSuppressed")}</option>
           <option value="false">{t("contacts.notSuppressed")}</option>
@@ -173,7 +173,7 @@ export default function ContactsPage() {
         <select
           value={tagFilter}
           onChange={(e) => setTagFilter(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+          className="px-3 py-2 border border-default rounded-lg text-sm bg-surface-elevated"
         >
           <option value="">{t("contacts.colTags")}</option>
           <option value="lead">{t("contacts.filterTagLead")}</option>
@@ -188,34 +188,34 @@ export default function ContactsPage() {
       )}
 
       {showCreate && (
-        <form onSubmit={handleCreate} className="mb-6 p-4 bg-white border border-gray-200 rounded-xl space-y-3">
+        <form onSubmit={handleCreate} className="mb-6 p-4 bg-surface-elevated border border-default rounded-xl space-y-3">
           <input
             type="tel"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder={t("contacts.phonePlaceholder")}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            className="w-full px-3 py-2 border border-default rounded-lg text-sm"
           />
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={t("contacts.namePlaceholder")}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            className="w-full px-3 py-2 border border-default rounded-lg text-sm"
           />
           <div className="flex gap-2">
-            <button type="submit" className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg">
+            <button type="submit" className="px-4 py-2 bg-accent text-white text-sm rounded-lg">
               {t("common.save")}
             </button>
-            <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-gray-600">
+            <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-secondary">
               {t("common.cancel")}
             </button>
           </div>
         </form>
       )}
 
-      {isLoading && <p className="text-sm text-gray-500">{t("common.loading")}</p>}
+      {isLoading && <p className="text-sm text-secondary">{t("common.loading")}</p>}
 
       {!isLoading && contacts.length === 0 && (
         <EmptyState
@@ -226,10 +226,10 @@ export default function ContactsPage() {
       )}
 
       {contacts.length > 0 && (
-        <TableContainer className="rounded-xl border border-gray-200 bg-white">
+        <TableContainer className="rounded-xl border border-default bg-surface-elevated">
           <table className="w-full min-w-[640px] text-sm">
             <thead>
-              <tr className="bg-gray-50 text-left text-xs text-gray-500 uppercase">
+              <tr className="bg-surface text-left text-xs text-secondary uppercase">
                 <th className="px-4 py-3">{t("common.phone")}</th>
                 <th className="px-4 py-3">{t("contacts.colName")}</th>
                 <th className="px-4 py-3">{t("contacts.colEmail")}</th>
@@ -240,10 +240,10 @@ export default function ContactsPage() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {contacts.map((c: Contact) => (
-                <tr key={c.phoneNumber} className="hover:bg-gray-50/50">
-                  <td className="px-4 py-3 font-mono text-gray-900">{c.phoneNumber}</td>
+                <tr key={c.phoneNumber} className="hover:bg-surface/50">
+                  <td className="px-4 py-3 font-mono text-primary">{c.phoneNumber}</td>
                   <td className="px-4 py-3">{c.displayName ?? "—"}</td>
-                  <td className="px-4 py-3 text-gray-600">{c.email ?? "—"}</td>
+                  <td className="px-4 py-3 text-secondary">{c.email ?? "—"}</td>
                   <td className="px-4 py-3">
                     <Badge variant={consentVariant(c.marketingConsent)}>
                       {t(`contacts.consent_${c.marketingConsent}`)}
@@ -259,14 +259,14 @@ export default function ContactsPage() {
                       </Badge>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-gray-600">
+                  <td className="px-4 py-3 text-secondary">
                     {editingPhone === c.phoneNumber ? (
                       <div className="flex gap-1">
                         <input
                           value={editTags}
                           onChange={(e) => setEditTags(e.target.value)}
                           placeholder={t("contacts.tagsPlaceholder")}
-                          className="px-2 py-1 border border-gray-300 rounded text-xs flex-1"
+                          className="px-2 py-1 border border-default rounded text-xs flex-1"
                         />
                         <button
                           type="button"
@@ -277,7 +277,7 @@ export default function ContactsPage() {
                             });
                             setEditingPhone(null);
                           }}
-                          className="text-xs text-indigo-600"
+                          className="text-xs text-accent"
                         >
                           {t("common.save")}
                         </button>
@@ -289,7 +289,7 @@ export default function ContactsPage() {
                           setEditingPhone(c.phoneNumber);
                           setEditTags(c.tags.join(", "));
                         }}
-                        className="text-left hover:text-indigo-600"
+                        className="text-left hover:text-accent"
                       >
                         {c.tags.join(", ") || "—"}
                       </button>
@@ -300,7 +300,7 @@ export default function ContactsPage() {
                       <button
                         type="button"
                         onClick={() => updateContact.mutate({ phone: c.phoneNumber, marketingConsent: "opt_in" })}
-                        className="text-xs text-indigo-600 hover:underline"
+                        className="text-xs text-accent hover:underline"
                       >
                         {t("contacts.markOptIn")}
                       </button>
@@ -317,7 +317,7 @@ export default function ContactsPage() {
                     <button
                       type="button"
                       onClick={() => deleteContact.mutate(c.phoneNumber)}
-                      className="text-xs text-gray-500 hover:underline"
+                      className="text-xs text-secondary hover:underline"
                     >
                       {t("common.delete")}
                     </button>

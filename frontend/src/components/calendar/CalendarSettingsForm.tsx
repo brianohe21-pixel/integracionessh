@@ -22,7 +22,7 @@ export function CalendarSettingsForm({ config, onChange }: CalendarSettingsFormP
         <select
           value={config.timezone}
           onChange={(e) => onChange({ timezone: e.target.value })}
-          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2"
+          className="w-full rounded-lg border border-default bg-surface-elevated px-3 py-2"
         >
           {timezoneOptions.map((option) => (
             <option key={option.value} value={option.value}>
@@ -42,7 +42,7 @@ export function CalendarSettingsForm({ config, onChange }: CalendarSettingsFormP
           max={480}
           value={config.slotDurationMinutes}
           onChange={(e) => onChange({ slotDurationMinutes: Number(e.target.value) })}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2"
+          className="w-full rounded-lg border border-default px-3 py-2"
         />
       </label>
       <label className="block text-sm">
@@ -53,7 +53,7 @@ export function CalendarSettingsForm({ config, onChange }: CalendarSettingsFormP
           max={120}
           value={config.bufferMinutes}
           onChange={(e) => onChange({ bufferMinutes: Number(e.target.value) })}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2"
+          className="w-full rounded-lg border border-default px-3 py-2"
         />
       </label>
       <label className="block text-sm">
@@ -67,7 +67,7 @@ export function CalendarSettingsForm({ config, onChange }: CalendarSettingsFormP
           max={90}
           value={config.maxAdvanceDays}
           onChange={(e) => onChange({ maxAdvanceDays: Number(e.target.value) })}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2"
+          className="w-full rounded-lg border border-default px-3 py-2"
         />
       </label>
       <label className="block text-sm sm:col-span-2">
@@ -81,7 +81,7 @@ export function CalendarSettingsForm({ config, onChange }: CalendarSettingsFormP
           max={168}
           value={config.minNoticeHours}
           onChange={(e) => onChange({ minNoticeHours: Number(e.target.value) })}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2"
+          className="w-full rounded-lg border border-default px-3 py-2"
         />
       </label>
     </div>

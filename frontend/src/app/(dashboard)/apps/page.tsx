@@ -14,7 +14,7 @@ export default function AppsPage() {
     <DashboardPage>
       <PageHeader title={t("apps.title")} subtitle={t("apps.subtitle")} />
       {isLoading ? (
-        <div className="h-48 animate-pulse rounded-xl bg-gray-100" />
+        <div className="h-48 animate-pulse rounded-xl bg-surface-muted" />
       ) : (
         <AppsGrid apps={data?.apps ?? []} />
       )}

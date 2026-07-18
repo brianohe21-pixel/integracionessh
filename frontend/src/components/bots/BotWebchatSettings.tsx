@@ -40,11 +40,11 @@ function SettingsSwitch({
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${
-        checked ? "bg-indigo-600" : "bg-gray-200"
+        checked ? "bg-accent" : "bg-gray-200"
       } ${disabled ? "opacity-50" : ""}`}
     >
       <span
-        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
+        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-surface-elevated shadow transition ${
           checked ? "translate-x-5" : "translate-x-0"
         }`}
       />
@@ -106,10 +106,10 @@ export function BotWebchatSettings({ bot }: { bot: Bot }) {
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+    <div className="bg-surface-elevated rounded-xl border border-default p-6 space-y-4">
       <div>
-        <h2 className="text-lg font-semibold text-gray-900">{t("webchat.title")}</h2>
-        <p className="text-sm text-gray-500 mt-1">{t("webchat.subtitle")}</p>
+        <h2 className="text-lg font-semibold text-primary">{t("webchat.title")}</h2>
+        <p className="text-sm text-secondary mt-1">{t("webchat.subtitle")}</p>
       </div>
 
       {error && (
@@ -120,8 +120,8 @@ export function BotWebchatSettings({ bot }: { bot: Bot }) {
 
       <label className="flex items-center justify-between gap-4 cursor-pointer">
         <div>
-          <p className="font-medium text-gray-900">{t("webchat.enableLabel")}</p>
-          <p className="text-sm text-gray-500">{t("webchat.enableHint")}</p>
+          <p className="font-medium text-primary">{t("webchat.enableLabel")}</p>
+          <p className="text-sm text-secondary">{t("webchat.enableHint")}</p>
         </div>
         <SettingsSwitch
           checked={Boolean(bot.webchatEnabled)}
@@ -132,10 +132,10 @@ export function BotWebchatSettings({ bot }: { bot: Bot }) {
 
       {bot.webchatEnabled && (
         <>
-          <label className="flex items-center justify-between gap-4 cursor-pointer border-t border-gray-100 pt-4">
+          <label className="flex items-center justify-between gap-4 cursor-pointer border-t border-subtle pt-4">
             <div>
-              <p className="font-medium text-gray-900">{t("webchat.voiceLabel")}</p>
-              <p className="text-sm text-gray-500">{t("webchat.voiceHint")}</p>
+              <p className="font-medium text-primary">{t("webchat.voiceLabel")}</p>
+              <p className="text-sm text-secondary">{t("webchat.voiceHint")}</p>
             </div>
             <SettingsSwitch
               checked={Boolean(bot.webchatVoiceEnabled)}
@@ -148,8 +148,8 @@ export function BotWebchatSettings({ bot }: { bot: Bot }) {
 
           <label className="flex items-center justify-between gap-4 cursor-pointer">
             <div>
-              <p className="font-medium text-gray-900">{t("webchat.videoLabel")}</p>
-              <p className="text-sm text-gray-500">{t("webchat.videoHint")}</p>
+              <p className="font-medium text-primary">{t("webchat.videoLabel")}</p>
+              <p className="text-sm text-secondary">{t("webchat.videoHint")}</p>
             </div>
             <SettingsSwitch
               checked={Boolean(bot.webchatVideoEnabled)}
@@ -163,34 +163,34 @@ export function BotWebchatSettings({ bot }: { bot: Bot }) {
             />
           </label>
 
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 border-t border-gray-100 pt-4">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 border-t border-subtle pt-4">
             <div className="space-y-2">
-              <p className="text-sm font-medium text-gray-700">{t("webchat.widgetKey")}</p>
-              <code className="block text-xs bg-gray-50 border border-gray-200 rounded-lg p-3 break-all">
+              <p className="text-sm font-medium text-secondary">{t("webchat.widgetKey")}</p>
+              <code className="block text-xs bg-surface border border-default rounded-lg p-3 break-all">
                 {bot.webchatWidgetKey}
               </code>
               <button
                 type="button"
                 onClick={() => rotateKey.mutate()}
                 disabled={rotateKey.isPending}
-                className="text-sm text-indigo-600 hover:underline"
+                className="text-sm text-accent hover:underline"
               >
                 {t("webchat.rotateKey")}
               </button>
             </div>
 
             <div className="space-y-2">
-              <p className="text-sm font-medium text-gray-700">{t("webchat.embedSnippet")}</p>
+              <p className="text-sm font-medium text-secondary">{t("webchat.embedSnippet")}</p>
               <textarea
                 readOnly
                 value={snippet}
                 rows={4}
-                className="w-full text-xs font-mono border border-gray-200 rounded-lg p-3 bg-gray-50"
+                className="w-full text-xs font-mono border border-default rounded-lg p-3 bg-surface"
               />
               <button
                 type="button"
                 onClick={() => void copySnippet()}
-                className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg"
+                className="px-4 py-2 bg-accent text-white text-sm rounded-lg"
               >
                 {copied ? t("webchat.copied") : t("webchat.copy")}
               </button>

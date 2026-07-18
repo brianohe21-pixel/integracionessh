@@ -38,12 +38,12 @@ export function AdvisorCallPanel({ conversation, voiceEnabled = true }: Props) {
   const ringing = liveKit.callState === "ringing";
 
   return (
-    <div className="border-b border-gray-200 bg-slate-50 px-4 py-3">
+    <div className="border-b border-default bg-slate-50 px-4 py-3">
       <audio ref={audioRef} autoPlay playsInline className="hidden" />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-gray-900">{t("livekit.panelTitle")}</p>
-          <p className="text-xs text-gray-500">
+          <p className="text-sm font-medium text-primary">{t("livekit.panelTitle")}</p>
+          <p className="text-xs text-secondary">
             {liveKit.callState === "idle" && t("livekit.stateIdle")}
             {ringing && t("livekit.stateRinging")}
             {liveKit.callState === "connecting" && t("livekit.stateConnecting")}
@@ -83,7 +83,7 @@ export function AdvisorCallPanel({ conversation, voiceEnabled = true }: Props) {
               <button
                 type="button"
                 onClick={() => void liveKit.toggleMute()}
-                className="p-2 rounded-lg bg-white border border-gray-200 text-gray-700"
+                className="p-2 rounded-lg bg-surface-elevated border border-default text-secondary"
                 title={liveKit.muted ? t("livekit.unmute") : t("livekit.mute")}
               >
                 {liveKit.muted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
@@ -92,7 +92,7 @@ export function AdvisorCallPanel({ conversation, voiceEnabled = true }: Props) {
                 <button
                   type="button"
                   onClick={() => void liveKit.toggleVideo()}
-                  className="p-2 rounded-lg bg-white border border-gray-200 text-gray-700"
+                  className="p-2 rounded-lg bg-surface-elevated border border-default text-secondary"
                 >
                   {liveKit.cameraOn ? (
                     <Video className="w-4 h-4" />

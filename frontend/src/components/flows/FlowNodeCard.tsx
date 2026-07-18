@@ -3,6 +3,7 @@
 import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import type { FlowNodeType } from "@/types";
+import { cn } from "@/lib/utils";
 import { CATEGORY_STYLES, FLOW_NODE_META } from "./nodeConfig";
 
 export interface FlowNodeCardData {
@@ -22,31 +23,43 @@ function FlowNodeCardComponent({ data, selected }: NodeProps) {
   const Icon = meta.icon;
   const buttons =
     nodeData.flowType === "buttons"
-      ? (nodeData.buttons?.length ? nodeData.buttons : [{ id: "btn-1", title: "…" }])
+      ? nodeData.buttons?.length
+        ? nodeData.buttons
+        : [{ id: "btn-1", title: "…" }]
       : [];
 
   return (
     <div
-      className={`min-w-[180px] max-w-[220px] rounded-xl border-2 shadow-sm px-3 py-2.5 ${styles.border} ${styles.bg} ${
-        selected ? "ring-2 ring-indigo-500 ring-offset-1" : ""
-      }`}
+      className={cn(
+        "min-w-[220px] max-w-[280px] rounded-xl border px-4 py-3 shadow-lg shadow-black/25",
+        styles.border,
+        styles.bg,
+        selected && "ring-2 ring-accent ring-offset-2 ring-offset-canvas"
+      )}
     >
       {meta.hasInput && (
         <Handle
           type="target"
           position={Position.Top}
-          className="!w-2.5 !h-2.5 !bg-gray-500 !border-2 !border-white"
+          className={cn("!h-2.5 !w-2.5 !border-2 !border-surface-elevated", styles.handle)}
         />
       )}
 
-      <div className="flex items-start gap-2">
-        <Icon className={`h-4 w-4 mt-0.5 shrink-0 ${styles.icon}`} />
+      <div className="flex items-start gap-2.5">
+        <Icon className={cn("mt-0.5 h-5 w-5 shrink-0", styles.icon)} />
         <div className="min-w-0 flex-1">
-          <span className={`inline-block text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded ${styles.badge}`}>
+          <span
+            className={cn(
+              "inline-block rounded px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide",
+              styles.badge
+            )}
+          >
             {nodeData.typeLabel}
           </span>
           {nodeData.preview ? (
-            <p className="mt-1 text-xs text-gray-700 line-clamp-2 break-words">{nodeData.preview}</p>
+            <p className="mt-1.5 line-clamp-3 break-words text-sm leading-snug text-secondary">
+              {nodeData.preview}
+            </p>
           ) : null}
         </div>
       </div>
@@ -58,19 +71,19 @@ function FlowNodeCardComponent({ data, selected }: NodeProps) {
             id="true"
             position={Position.Bottom}
             style={{ left: "25%" }}
-            className="!w-2.5 !h-2.5 !bg-emerald-500 !border-2 !border-white"
+            className="!h-2.5 !w-2.5 !border-2 !border-surface-elevated !bg-success"
           />
           <Handle
             type="source"
             id="false"
             position={Position.Bottom}
             style={{ left: "75%" }}
-            className="!w-2.5 !h-2.5 !bg-red-500 !border-2 !border-white"
+            className="!h-2.5 !w-2.5 !border-2 !border-surface-elevated !bg-danger"
           />
-          <span className="absolute left-[18%] -bottom-4 text-[9px] text-emerald-700 font-medium">
+          <span className="absolute -bottom-4 left-[18%] text-[9px] font-medium text-success">
             {nodeData.trueLabel ?? "true"}
           </span>
-          <span className="absolute left-[68%] -bottom-4 text-[9px] text-red-700 font-medium">
+          <span className="absolute -bottom-4 left-[68%] text-[9px] font-medium text-danger">
             {nodeData.falseLabel ?? "false"}
           </span>
         </div>
@@ -87,10 +100,10 @@ function FlowNodeCardComponent({ data, selected }: NodeProps) {
                   id={btn.id}
                   position={Position.Bottom}
                   style={{ left }}
-                  className="!w-2.5 !h-2.5 !bg-blue-500 !border-2 !border-white"
+                  className="!h-2.5 !w-2.5 !border-2 !border-surface-elevated !bg-info"
                 />
                 <span
-                  className="absolute -bottom-4 text-[9px] text-gray-600 max-w-[56px] truncate text-center"
+                  className="absolute -bottom-4 max-w-[56px] truncate text-center text-[9px] text-muted"
                   style={{ left, transform: "translateX(-50%)" }}
                 >
                   {btn.title || `#${i + 1}`}
@@ -105,7 +118,7 @@ function FlowNodeCardComponent({ data, selected }: NodeProps) {
         <Handle
           type="source"
           position={Position.Bottom}
-          className="!w-2.5 !h-2.5 !bg-gray-500 !border-2 !border-white"
+          className={cn("!h-2.5 !w-2.5 !border-2 !border-surface-elevated", styles.handle)}
         />
       )}
     </div>

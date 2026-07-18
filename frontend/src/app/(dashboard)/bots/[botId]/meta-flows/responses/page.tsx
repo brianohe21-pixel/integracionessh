@@ -34,7 +34,7 @@ export default function MetaFlowResponsesPage() {
     <DashboardPage maxWidth="4xl">
       <Link
         href={`/bots/${botId}/meta-flows`}
-        className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-4"
+        className="flex items-center gap-1 text-sm text-secondary hover:text-secondary mb-4"
       >
         <ChevronLeft className="w-4 h-4" />
         {t("metaFlows.title")}
@@ -43,9 +43,9 @@ export default function MetaFlowResponsesPage() {
       <PageHeader title={t("metaFlows.responses")} />
 
       {isLoading ? (
-        <div className="h-24 animate-pulse bg-gray-100 rounded-xl" />
+        <div className="h-24 animate-pulse bg-surface-muted rounded-xl" />
       ) : !responses?.length ? (
-        <p className="text-sm text-gray-500">{t("leads.noResponses")}</p>
+        <p className="text-sm text-secondary">{t("leads.noResponses")}</p>
       ) : (
         <div className="space-y-3">
           {responses.map((r) => {
@@ -56,29 +56,29 @@ export default function MetaFlowResponsesPage() {
               : undefined);
 
             return (
-              <div key={r.responseId} className="bg-white border border-gray-200 rounded-xl p-4 text-sm">
-                <div className="flex flex-wrap justify-between gap-2 text-gray-500 mb-3">
+              <div key={r.responseId} className="bg-surface-elevated border border-default rounded-xl p-4 text-sm">
+                <div className="flex flex-wrap justify-between gap-2 text-secondary mb-3">
                   <span>{r.phone}</span>
                   <span>{new Date(r.createdAt).toLocaleString()}</span>
                 </div>
                 <div className="space-y-1 mb-3">
-                  {name && <p><span className="text-gray-500">{t("leads.colName")}:</span> {name}</p>}
-                  {email && <p><span className="text-gray-500">{t("common.email")}:</span> {email}</p>}
+                  {name && <p><span className="text-secondary">{t("leads.colName")}:</span> {name}</p>}
+                  {email && <p><span className="text-secondary">{t("common.email")}:</span> {email}</p>}
                   {!name && !email && (
-                    <pre className="text-xs bg-gray-50 p-2 rounded overflow-x-auto">
+                    <pre className="text-xs bg-surface p-2 rounded overflow-x-auto">
                       {JSON.stringify(r.responseJson, null, 2)}
                     </pre>
                   )}
                 </div>
                 {lead && (
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-gray-500">{t("leads.leadStatus")}:</span>
+                    <span className="text-secondary">{t("leads.leadStatus")}:</span>
                     <Badge variant={statusVariant(lead.status)}>
                       {t(`leads.status_${lead.status}`)}
                     </Badge>
                     <Link
                       href="/leads"
-                      className="text-indigo-600 hover:text-indigo-800 text-xs"
+                      className="text-accent hover:text-accent text-xs"
                     >
                       {t("leads.viewLead")}
                     </Link>
@@ -87,7 +87,7 @@ export default function MetaFlowResponsesPage() {
                         type="button"
                         onClick={() => convertLead.mutate({ leadId: lead.leadId })}
                         disabled={convertLead.isPending}
-                        className="text-xs text-indigo-600 hover:text-indigo-800"
+                        className="text-xs text-accent hover:text-accent"
                       >
                         {t("leads.convert")}
                       </button>

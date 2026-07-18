@@ -9,6 +9,7 @@ import {
   addEdge,
   useNodesState,
   useEdgesState,
+  useReactFlow,
   ReactFlowProvider,
   type Connection,
   type Node,
@@ -57,13 +58,22 @@ function toReactFlowNodes(
   }));
 }
 
-function toReactFlowEdges(edges: FlowEdge[]): Edge[] {
-  return edges.map((e) => ({
-    id: e.id,
-    source: e.source,
-    target: e.target,
-    sourceHandle: e.sourceHandle,
-  }));
+function toReactFlowEdges(edges: FlowEdge[], nodes: FlowNode[]): Edge[] {
+  const nodeTypeById = new Map(nodes.map((n) => [n.id, n.type]));
+  return edges.map((e) => {
+    const sourceType = nodeTypeById.get(e.source);
+    const isHumanEdge = sourceType === "handoff";
+    return {
+      id: e.id,
+      source: e.source,
+      target: e.target,
+      sourceHandle: e.sourceHandle,
+      style: isHumanEdge
+        ? { stroke: "var(--human)", strokeDasharray: "6 4" }
+        : { stroke: "var(--accent)" },
+      className: isHumanEdge ? "human-edge" : undefined,
+    };
+  });
 }
 
 function fromReactFlow(
@@ -127,7 +137,7 @@ function FlowCanvasInner({
     () => toReactFlowNodes(flow.nodes, selectedNodeId, getTypeLabel, getBranchLabel),
     [flow.nodes, selectedNodeId, getTypeLabel, getBranchLabel]
   );
-  const reactFlowEdges = useMemo(() => toReactFlowEdges(flow.edges), [flow.edges]);
+  const reactFlowEdges = useMemo(() => toReactFlowEdges(flow.edges, flow.nodes), [flow.edges, flow.nodes]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(reactFlowNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(reactFlowEdges);
@@ -145,7 +155,7 @@ function FlowCanvasInner({
         getBranchLabelRef.current
       )
     );
-    setEdges(toReactFlowEdges(flow.edges));
+    setEdges(toReactFlowEdges(flow.edges, flow.nodes));
   }, [flow.nodes, flow.edges, selectedNodeId, setNodes, setEdges]);
 
   useEffect(() => {
@@ -178,6 +188,19 @@ function FlowCanvasInner({
     onSelectNodeRef.current(null);
   }, []);
 
+  const { fitView } = useReactFlow();
+
+  const initialFitDoneRef = useRef(false);
+
+  useEffect(() => {
+    if (initialFitDoneRef.current) return;
+    const frame = requestAnimationFrame(() => {
+      void fitView({ padding: 0.3, minZoom: 0.9, maxZoom: 1.15, duration: 150 });
+      initialFitDoneRef.current = true;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [fitView]);
+
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
       const filtered = changes.filter((change) => {
@@ -200,7 +223,7 @@ function FlowCanvasInner({
   );
 
   return (
-    <div className="h-[520px] border border-gray-200 rounded-xl overflow-hidden bg-white">
+    <div className="react-flow-dark h-full min-h-0 overflow-hidden bg-canvas">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -211,12 +234,22 @@ function FlowCanvasInner({
         onNodeClick={onNodeClick}
         onPaneClick={onPaneClick}
         deleteKeyCode={["Backspace", "Delete"]}
-        fitView
+        defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+        minZoom={0.5}
+        maxZoom={2}
         proOptions={{ hideAttribution: true }}
       >
-        <Background />
-        <Controls />
-        <MiniMap />
+        <Background color="var(--text-muted)" gap={24} size={1} />
+        <Controls position="bottom-left" showInteractive={false} />
+        <MiniMap
+          position="bottom-right"
+          pannable
+          zoomable
+          maskColor="var(--surface)"
+          nodeColor="var(--accent)"
+          className="!m-3"
+          style={{ background: "var(--surface-elevated)", width: 140, height: 90 }}
+        />
       </ReactFlow>
     </div>
   );
@@ -235,19 +268,19 @@ export function createDefaultFlowNodes(): FlowNode[] {
     {
       id: "trigger-1",
       type: "trigger",
-      position: { x: 80, y: 120 },
+      position: { x: 240, y: 40 },
       data: { label: "Start", triggerType: "any_message" },
     },
     {
       id: "message-1",
       type: "message",
-      position: { x: 320, y: 120 },
+      position: { x: 240, y: 200 },
       data: { label: "Welcome", messageText: "Hello! How can we help you?" },
     },
     {
       id: "end-1",
       type: "end",
-      position: { x: 560, y: 120 },
+      position: { x: 240, y: 360 },
       data: { label: "End", haltPipeline: true },
     },
   ];

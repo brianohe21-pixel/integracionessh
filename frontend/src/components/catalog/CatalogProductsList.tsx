@@ -61,29 +61,29 @@ export function CatalogProductsList({ botId }: { botId: string }) {
   }
 
   if (isLoading) {
-    return <div className="h-40 animate-pulse rounded-xl bg-gray-100" />;
+    return <div className="h-40 animate-pulse rounded-xl bg-surface-muted" />;
   }
 
   const products = data?.products ?? [];
 
   return (
     <div className="space-y-6">
-      <form onSubmit={(e) => void handleCreate(e)} className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
-        <h3 className="text-sm font-semibold text-gray-900">{t("catalog.createProduct")}</h3>
+      <form onSubmit={(e) => void handleCreate(e)} className="rounded-xl border border-default bg-surface-elevated p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-primary">{t("catalog.createProduct")}</h3>
         <div className="grid gap-3 sm:grid-cols-2">
           <input
             required
             value={form.retailerId}
             onChange={(e) => setForm((f) => ({ ...f, retailerId: e.target.value }))}
             placeholder={t("catalog.retailerId")}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            className="px-3 py-2 border border-default rounded-lg text-sm"
           />
           <input
             required
             value={form.name}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
             placeholder={t("catalog.productName")}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            className="px-3 py-2 border border-default rounded-lg text-sm"
           />
           <input
             type="number"
@@ -91,14 +91,14 @@ export function CatalogProductsList({ botId }: { botId: string }) {
             value={form.priceInCents}
             onChange={(e) => setForm((f) => ({ ...f, priceInCents: Number(e.target.value) }))}
             placeholder={t("catalog.priceInCents")}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            className="px-3 py-2 border border-default rounded-lg text-sm"
           />
           <select
             value={form.availability}
             onChange={(e) =>
               setForm((f) => ({ ...f, availability: e.target.value as ProductAvailability }))
             }
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+            className="px-3 py-2 border border-default rounded-lg text-sm bg-surface-elevated"
           >
             <option value="in_stock">{t("catalog.availability.in_stock")}</option>
             <option value="out_of_stock">{t("catalog.availability.out_of_stock")}</option>
@@ -109,12 +109,12 @@ export function CatalogProductsList({ botId }: { botId: string }) {
           onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
           placeholder={t("catalog.productDescription")}
           rows={2}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+          className="w-full px-3 py-2 border border-default rounded-lg text-sm"
         />
         <button
           type="submit"
           disabled={createProduct.isPending}
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover"
         >
           {t("catalog.addProduct")}
         </button>
@@ -127,11 +127,11 @@ export function CatalogProductsList({ botId }: { botId: string }) {
       ) : null}
 
       {products.length === 0 ? (
-        <p className="text-sm text-gray-500">{t("catalog.noProducts")}</p>
+        <p className="text-sm text-secondary">{t("catalog.noProducts")}</p>
       ) : (
-        <TableContainer className="rounded-xl border border-gray-200">
+        <TableContainer className="rounded-xl border border-default">
           <table className="min-w-full text-sm">
-            <thead className="bg-gray-50 text-left text-gray-500">
+            <thead className="bg-surface text-left text-secondary">
               <tr>
                 <th className="px-4 py-3">{t("catalog.colName")}</th>
                 <th className="px-4 py-3">{t("catalog.retailerId")}</th>
@@ -144,8 +144,8 @@ export function CatalogProductsList({ botId }: { botId: string }) {
             <tbody className="divide-y divide-gray-100">
               {products.map((product) => (
                 <tr key={product.productId}>
-                  <td className="px-4 py-3 font-medium text-gray-900">{product.name}</td>
-                  <td className="px-4 py-3 text-gray-600">{product.retailerId}</td>
+                  <td className="px-4 py-3 font-medium text-primary">{product.name}</td>
+                  <td className="px-4 py-3 text-secondary">{product.retailerId}</td>
                   <td className="px-4 py-3">{formatCop(product.priceInCents)}</td>
                   <td className="px-4 py-3">
                     {t(`catalog.availability.${product.availability}`)}
@@ -157,7 +157,7 @@ export function CatalogProductsList({ botId }: { botId: string }) {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-2">
-                      <label className="cursor-pointer text-xs text-indigo-600 hover:underline">
+                      <label className="cursor-pointer text-xs text-accent hover:underline">
                         {t("catalog.uploadImage")}
                         <input
                           type="file"

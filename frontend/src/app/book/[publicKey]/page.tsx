@@ -38,7 +38,7 @@ export default function PublicBookPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const accent = info?.branding?.primaryColor ?? "#4f46e5";
+  const accent = info?.branding?.primaryColor ?? "#25D366";
   const waitlistEnabled = Boolean(info?.waitlistEnabled);
 
   const availableIsoDates = useMemo(() => new Set(dates.map((d) => d.isoDate)), [dates]);
@@ -182,16 +182,16 @@ export default function PublicBookPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <div className="h-10 w-10 animate-spin rounded-full border-2 border-gray-300 border-t-indigo-600" />
+      <div className="flex min-h-screen items-center justify-center bg-surface">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-default border-t-accent" />
       </div>
     );
   }
 
   if (error && !info) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-        <div className="max-w-md rounded-xl border border-red-200 bg-white p-6 text-center">
+      <div className="flex min-h-screen items-center justify-center bg-surface px-4">
+        <div className="max-w-md rounded-xl border border-red-200 bg-surface-elevated p-6 text-center">
           <p className="text-sm text-red-600">{error}</p>
         </div>
       </div>
@@ -199,8 +199,8 @@ export default function PublicBookPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="border-b border-gray-200 bg-white">
+    <div className="min-h-screen bg-surface">
+      <header className="border-b border-default bg-surface-elevated">
         <div className="mx-auto flex max-w-lg items-center gap-3 px-4 py-4">
           {info?.branding?.logoUrl ? (
             <img
@@ -210,34 +210,34 @@ export default function PublicBookPage() {
             />
           ) : null}
           <div>
-            <h1 className="text-lg font-semibold text-gray-900">
+            <h1 className="text-lg font-semibold text-primary">
               {info?.branding?.brandName ?? info?.botName}
             </h1>
-            <p className="text-sm text-gray-500">{t("publicBook.title")}</p>
+            <p className="text-sm text-secondary">{t("publicBook.title")}</p>
           </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-lg px-4 py-6">
         {step === "done" && booking ? (
-          <div className="rounded-xl border border-green-200 bg-white p-6 text-center">
-            <p className="text-lg font-semibold text-gray-900">{t("publicBook.confirmed")}</p>
-            <p className="mt-2 text-gray-600">{booking.label}</p>
-            <p className="mt-4 text-xs text-gray-400">
+          <div className="rounded-xl border border-green-200 bg-surface-elevated p-6 text-center">
+            <p className="text-lg font-semibold text-primary">{t("publicBook.confirmed")}</p>
+            <p className="mt-2 text-secondary">{booking.label}</p>
+            <p className="mt-4 text-xs text-muted">
               {t("publicBook.reference")}: {booking.bookingId.slice(0, 8)}
             </p>
           </div>
         ) : null}
 
         {step === "waitlist_done" && waitlistEntry ? (
-          <div className="rounded-xl border border-amber-200 bg-white p-6 text-center">
-            <p className="text-lg font-semibold text-gray-900">{t("publicBook.waitlistConfirmed")}</p>
-            <p className="mt-2 text-gray-600">
+          <div className="rounded-xl border border-amber-200 bg-surface-elevated p-6 text-center">
+            <p className="text-lg font-semibold text-primary">{t("publicBook.waitlistConfirmed")}</p>
+            <p className="mt-2 text-secondary">
               {waitlistScope === "slot" && selectedSlot
                 ? `${selectedDate?.label} · ${selectedSlot.label}`
                 : selectedDate?.label}
             </p>
-            <p className="mt-4 text-xs text-gray-400">
+            <p className="mt-4 text-xs text-muted">
               {t("publicBook.reference")}: {waitlistEntry.waitlistId.slice(0, 8)}
             </p>
           </div>
@@ -245,9 +245,9 @@ export default function PublicBookPage() {
 
         {step === "date" ? (
           <section className="space-y-4">
-            <h2 className="text-base font-medium text-gray-900">{t("publicBook.pickDate")}</h2>
+            <h2 className="text-base font-medium text-primary">{t("publicBook.pickDate")}</h2>
             {calendarDates.length === 0 ? (
-              <p className="text-sm text-gray-500">{t("publicBook.noDates")}</p>
+              <p className="text-sm text-secondary">{t("publicBook.noDates")}</p>
             ) : (
               <>
                 {waitlistEnabled && waitlistIsoDates.size > 0 ? (
@@ -275,11 +275,11 @@ export default function PublicBookPage() {
                 setSelectedSlot(null);
                 setSlots([]);
               }}
-              className="text-sm text-gray-500 hover:text-gray-700"
+              className="text-sm text-secondary hover:text-secondary"
             >
               {t("publicBook.back")}
             </button>
-            <h2 className="text-base font-medium text-gray-900">
+            <h2 className="text-base font-medium text-primary">
               {t("publicBook.pickSlot")} — {selectedDate?.label}
             </h2>
             <div className="grid grid-cols-2 gap-2">
@@ -288,7 +288,7 @@ export default function PublicBookPage() {
                   key={slot.startAt}
                   type="button"
                   onClick={() => handleSelectSlot(slot)}
-                  className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-900 hover:border-gray-300"
+                  className="rounded-lg border border-default bg-surface-elevated px-3 py-2 text-sm font-medium text-primary hover:border-default"
                 >
                   {slot.label}
                 </button>
@@ -302,23 +302,23 @@ export default function PublicBookPage() {
             <button
               type="button"
               onClick={() => setStep("slot")}
-              className="text-sm text-gray-500 hover:text-gray-700"
+              className="text-sm text-secondary hover:text-secondary"
             >
               {t("publicBook.back")}
             </button>
-            <h2 className="text-base font-medium text-gray-900">{t("publicBook.yourDetails")}</h2>
-            <p className="text-sm text-gray-500">
+            <h2 className="text-base font-medium text-primary">{t("publicBook.yourDetails")}</h2>
+            <p className="text-sm text-secondary">
               {selectedDate?.label} · {selectedSlot.label}
             </p>
             {info?.payment?.required && info.payment.amountLabel ? (
-              <p className="rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700">
+              <p className="rounded-lg border border-default bg-surface-elevated px-4 py-3 text-sm text-secondary">
                 {t("publicBook.paymentAmount")}:{" "}
-                <span className="font-semibold text-gray-900">{info.payment.amountLabel}</span>
+                <span className="font-semibold text-primary">{info.payment.amountLabel}</span>
               </p>
             ) : null}
             <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
+                <label className="mb-1 block text-sm font-medium text-secondary">
                   {t("publicBook.name")}
                 </label>
                 <input
@@ -327,11 +327,11 @@ export default function PublicBookPage() {
                   maxLength={120}
                   value={contactName}
                   onChange={(e) => setContactName(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-default px-3 py-2 text-sm"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
+                <label className="mb-1 block text-sm font-medium text-secondary">
                   {t("publicBook.phone")}
                 </label>
                 <input
@@ -341,7 +341,7 @@ export default function PublicBookPage() {
                   maxLength={20}
                   value={contactPhone}
                   onChange={(e) => setContactPhone(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-default px-3 py-2 text-sm"
                 />
               </div>
               <button
@@ -363,7 +363,7 @@ export default function PublicBookPage() {
                 <button
                   type="button"
                   onClick={startSlotWaitlist}
-                  className="mt-3 w-full rounded-lg border border-amber-300 bg-white px-4 py-2 text-sm font-medium text-amber-900 hover:bg-amber-100"
+                  className="mt-3 w-full rounded-lg border border-amber-300 bg-surface-elevated px-4 py-2 text-sm font-medium text-amber-900 hover:bg-amber-100"
                 >
                   {t("publicBook.joinWaitlist")}
                 </button>
@@ -380,24 +380,24 @@ export default function PublicBookPage() {
                 setStep(waitlistScope === "slot" && selectedSlot ? "contact" : "date");
                 setError("");
               }}
-              className="text-sm text-gray-500 hover:text-gray-700"
+              className="text-sm text-secondary hover:text-secondary"
             >
               {t("publicBook.back")}
             </button>
-            <h2 className="text-base font-medium text-gray-900">{t("publicBook.joinWaitlist")}</h2>
-            <p className="text-sm text-gray-500">
+            <h2 className="text-base font-medium text-primary">{t("publicBook.joinWaitlist")}</h2>
+            <p className="text-sm text-secondary">
               {waitlistScope === "slot" && selectedSlot
                 ? `${selectedDate?.label} · ${selectedSlot.label}`
                 : selectedDate?.label}
             </p>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-secondary">
               {waitlistScope === "slot"
                 ? t("publicBook.waitlistForSlot")
                 : t("publicBook.waitlistForDate")}
             </p>
             <form onSubmit={(e) => void handleWaitlistSubmit(e)} className="space-y-4">
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
+                <label className="mb-1 block text-sm font-medium text-secondary">
                   {t("publicBook.name")}
                 </label>
                 <input
@@ -406,11 +406,11 @@ export default function PublicBookPage() {
                   maxLength={120}
                   value={contactName}
                   onChange={(e) => setContactName(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-default px-3 py-2 text-sm"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
+                <label className="mb-1 block text-sm font-medium text-secondary">
                   {t("publicBook.phone")}
                 </label>
                 <input
@@ -420,11 +420,11 @@ export default function PublicBookPage() {
                   maxLength={20}
                   value={contactPhone}
                   onChange={(e) => setContactPhone(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-default px-3 py-2 text-sm"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
+                <label className="mb-1 block text-sm font-medium text-secondary">
                   {t("publicBook.notes")}
                 </label>
                 <textarea
@@ -432,7 +432,7 @@ export default function PublicBookPage() {
                   rows={3}
                   value={waitlistNotes}
                   onChange={(e) => setWaitlistNotes(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-default px-3 py-2 text-sm"
                 />
               </div>
               <button

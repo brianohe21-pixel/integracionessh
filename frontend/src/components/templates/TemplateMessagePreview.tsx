@@ -36,34 +36,34 @@ export function TemplateMessagePreview({
   return (
     <div className={className}>
       {label && (
-        <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">{label}</p>
+        <p className="text-xs font-medium text-secondary uppercase tracking-wider mb-2">{label}</p>
       )}
       <div className="bg-[#e5ddd5] rounded-xl p-4">
         <div className="max-w-xs ml-auto">
-          <div className="bg-white rounded-2xl rounded-tr-sm shadow-sm overflow-hidden">
+          <div className="bg-surface-elevated rounded-2xl rounded-tr-sm shadow-sm overflow-hidden">
             {header?.text && (
               <div className="px-3 pt-3 pb-1">
-                <p className="text-sm font-semibold text-gray-900 leading-snug">{header.text}</p>
+                <p className="text-sm font-semibold text-primary leading-snug">{header.text}</p>
               </div>
             )}
             {body?.text && (
               <div className="px-3 py-2">
-                <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">
+                <p className="text-sm text-primary whitespace-pre-wrap leading-relaxed">
                   {formatBodyText(body.text, variableValues)}
                 </p>
               </div>
             )}
             {footer?.text && (
               <div className="px-3 pb-2">
-                <p className="text-xs text-gray-400 leading-snug">{footer.text}</p>
+                <p className="text-xs text-muted leading-snug">{footer.text}</p>
               </div>
             )}
             {buttons?.buttons && buttons.buttons.length > 0 && (
-              <div className="border-t border-gray-100">
+              <div className="border-t border-subtle">
                 {buttons.buttons.map((btn, i) => (
                   <div
                     key={i}
-                    className="px-3 py-2 text-center text-xs font-medium text-indigo-600 border-t border-gray-100 first:border-t-0"
+                    className="px-3 py-2 text-center text-xs font-medium text-accent border-t border-subtle first:border-t-0"
                   >
                     {btn.text}
                   </div>
@@ -71,7 +71,7 @@ export function TemplateMessagePreview({
               </div>
             )}
             <div className="flex justify-end px-3 pb-2">
-              <span className="text-[10px] text-gray-400">
+              <span className="text-[10px] text-muted">
                 {new Date().toLocaleTimeString(locale === "en" ? "en-US" : "es-CO", {
                   hour: "2-digit",
                   minute: "2-digit",

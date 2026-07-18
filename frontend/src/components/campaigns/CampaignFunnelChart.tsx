@@ -22,8 +22,8 @@ export function CampaignFunnelChart({ campaign }: CampaignFunnelChartProps) {
     {
       labelKey: "campaigns.analytics.total",
       value: total,
-      color: "text-gray-700",
-      bg: "bg-gray-100",
+      color: "text-secondary",
+      bg: "bg-surface-muted",
     },
     {
       labelKey: "campaigns.analytics.sent",
@@ -40,8 +40,8 @@ export function CampaignFunnelChart({ campaign }: CampaignFunnelChartProps) {
     {
       labelKey: "campaigns.analytics.read",
       value: readCount,
-      color: "text-indigo-700",
-      bg: "bg-indigo-100",
+      color: "text-accent",
+      bg: "bg-accent-muted",
     },
   ];
 
@@ -57,10 +57,10 @@ export function CampaignFunnelChart({ campaign }: CampaignFunnelChartProps) {
               <span className={`font-medium ${step.color}`}>{t(step.labelKey)}</span>
               <span className="font-semibold tabular-nums">
                 {step.value.toLocaleString()}
-                <span className="text-xs text-gray-400 ml-1">({pct}%)</span>
+                <span className="text-xs text-muted ml-1">({pct}%)</span>
               </span>
             </div>
-            <div className="h-3 rounded-full bg-gray-100 overflow-hidden">
+            <div className="h-3 rounded-full bg-surface-muted overflow-hidden">
               <div
                 className={`h-full ${step.bg.replace("100", "400")} rounded-full transition-all duration-500`}
                 style={{ width: `${pct}%` }}

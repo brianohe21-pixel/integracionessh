@@ -49,8 +49,8 @@ function BillingPageContent() {
 
       <div className="space-y-6">
         <PlanUsageCard hideActions />
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h2 className="font-semibold text-gray-900 text-sm mb-4">{t("billing.choosePlan")}</h2>
+        <div className="bg-surface-elevated rounded-xl border border-default p-6">
+          <h2 className="font-semibold text-primary text-sm mb-4">{t("billing.choosePlan")}</h2>
           <BillingPlanCards autoCheckoutPlan={planParam} />
         </div>
       </div>
@@ -60,7 +60,7 @@ function BillingPageContent() {
 
 export default function BillingPage() {
   return (
-    <Suspense fallback={<DashboardPage maxWidth="4xl"><div className="animate-pulse h-64 bg-gray-100 rounded-xl" /></DashboardPage>}>
+    <Suspense fallback={<DashboardPage maxWidth="4xl"><div className="animate-pulse h-64 bg-surface-muted rounded-xl" /></DashboardPage>}>
       <BillingPageContent />
     </Suspense>
   );

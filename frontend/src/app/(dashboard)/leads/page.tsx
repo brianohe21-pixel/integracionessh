@@ -59,25 +59,25 @@ export default function LeadsPage() {
 
       {metrics && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <p className="text-xs text-gray-500">{t("leads.metricsTotal")}</p>
-            <p className="text-xl font-bold text-gray-900">{metrics.total}</p>
+          <div className="bg-surface-elevated rounded-xl border border-default p-4">
+            <p className="text-xs text-secondary">{t("leads.metricsTotal")}</p>
+            <p className="text-xl font-bold text-primary">{metrics.total}</p>
           </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <p className="text-xs text-gray-500">{t("leads.metricsToday")}</p>
-            <p className="text-xl font-bold text-gray-900">{metrics.capturedToday}</p>
+          <div className="bg-surface-elevated rounded-xl border border-default p-4">
+            <p className="text-xs text-secondary">{t("leads.metricsToday")}</p>
+            <p className="text-xl font-bold text-primary">{metrics.capturedToday}</p>
           </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <p className="text-xs text-gray-500">{t("leads.metricsWeek")}</p>
-            <p className="text-xl font-bold text-gray-900">{metrics.capturedThisWeek}</p>
+          <div className="bg-surface-elevated rounded-xl border border-default p-4">
+            <p className="text-xs text-secondary">{t("leads.metricsWeek")}</p>
+            <p className="text-xl font-bold text-primary">{metrics.capturedThisWeek}</p>
           </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <p className="text-xs text-gray-500">{t("leads.metricsConversionRate")}</p>
-            <p className="text-xl font-bold text-gray-900">{metrics.conversionRate}%</p>
+          <div className="bg-surface-elevated rounded-xl border border-default p-4">
+            <p className="text-xs text-secondary">{t("leads.metricsConversionRate")}</p>
+            <p className="text-xl font-bold text-primary">{metrics.conversionRate}%</p>
           </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <p className="text-xs text-gray-500">{t("leads.metricsAvgHours")}</p>
-            <p className="text-xl font-bold text-gray-900">{metrics.averageConversionHours}h</p>
+          <div className="bg-surface-elevated rounded-xl border border-default p-4">
+            <p className="text-xs text-secondary">{t("leads.metricsAvgHours")}</p>
+            <p className="text-xl font-bold text-primary">{metrics.averageConversionHours}h</p>
           </div>
         </div>
       )}
@@ -87,12 +87,12 @@ export default function LeadsPage() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder={t("leads.searchPlaceholder")}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm min-w-[200px]"
+          className="px-3 py-2 border border-default rounded-lg text-sm min-w-[200px]"
         />
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as "" | LeadStatus)}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+          className="px-3 py-2 border border-default rounded-lg text-sm"
         >
           <option value="">{t("leads.filterAllStatus")}</option>
           {STATUSES.map((s) => (
@@ -102,7 +102,7 @@ export default function LeadsPage() {
         <select
           value={botFilter}
           onChange={(e) => setBotFilter(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+          className="px-3 py-2 border border-default rounded-lg text-sm"
         >
           <option value="">{t("automations.allBots")}</option>
           {(bots ?? []).map((b) => (
@@ -113,14 +113,14 @@ export default function LeadsPage() {
           <button
             type="button"
             onClick={() => setView("table")}
-            className={`p-2 rounded-lg border ${view === "table" ? "bg-indigo-50 border-indigo-200 text-indigo-700" : "border-gray-200 text-gray-500"}`}
+            className={`p-2 rounded-lg border ${view === "table" ? "bg-accent-muted border-accent/30 text-accent" : "border-default text-secondary"}`}
           >
             <List className="w-4 h-4" />
           </button>
           <button
             type="button"
             onClick={() => setView("kanban")}
-            className={`p-2 rounded-lg border ${view === "kanban" ? "bg-indigo-50 border-indigo-200 text-indigo-700" : "border-gray-200 text-gray-500"}`}
+            className={`p-2 rounded-lg border ${view === "kanban" ? "bg-accent-muted border-accent/30 text-accent" : "border-default text-secondary"}`}
           >
             <LayoutGrid className="w-4 h-4" />
           </button>
@@ -128,7 +128,7 @@ export default function LeadsPage() {
       </div>
 
       {isLoading ? (
-        <div className="h-32 animate-pulse bg-gray-100 rounded-xl" />
+        <div className="h-32 animate-pulse bg-surface-muted rounded-xl" />
       ) : leads.length === 0 ? (
         <EmptyState
           icon={<UserPlus className="w-6 h-6" />}
@@ -136,11 +136,11 @@ export default function LeadsPage() {
           description={t("leads.emptyDescription")}
         />
       ) : view === "table" ? (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="bg-surface-elevated rounded-xl border border-default overflow-hidden">
           <TableContainer>
             <table className="w-full min-w-[800px] text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr className="text-left text-gray-500">
+              <thead className="bg-surface border-b border-default">
+                <tr className="text-left text-secondary">
                   <th className="px-4 py-3">{t("leads.colName")}</th>
                   <th className="px-4 py-3">{t("common.phone")}</th>
                   <th className="px-4 py-3">{t("common.email")}</th>
@@ -154,24 +154,24 @@ export default function LeadsPage() {
                 {leads.map((lead) => {
                   const botName = bots?.find((b) => b.botId === lead.botId)?.name ?? "—";
                   return (
-                    <tr key={lead.leadId} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="px-4 py-3 font-medium text-gray-900">{lead.name ?? "—"}</td>
-                      <td className="px-4 py-3 text-gray-600">{lead.phone}</td>
-                      <td className="px-4 py-3 text-gray-600">{lead.email ?? "—"}</td>
-                      <td className="px-4 py-3 text-gray-600">{botName}</td>
+                    <tr key={lead.leadId} className="border-b border-subtle hover:bg-surface">
+                      <td className="px-4 py-3 font-medium text-primary">{lead.name ?? "—"}</td>
+                      <td className="px-4 py-3 text-secondary">{lead.phone}</td>
+                      <td className="px-4 py-3 text-secondary">{lead.email ?? "—"}</td>
+                      <td className="px-4 py-3 text-secondary">{botName}</td>
                       <td className="px-4 py-3">
                         <Badge variant={statusVariant(lead.status)}>
                           {t(`leads.status_${lead.status}`)}
                         </Badge>
                       </td>
-                      <td className="px-4 py-3 text-gray-500">
+                      <td className="px-4 py-3 text-secondary">
                         {new Date(lead.createdAt).toLocaleString()}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <button
                           type="button"
                           onClick={() => setSelectedLead(lead)}
-                          className="text-indigo-600 hover:text-indigo-800 text-sm"
+                          className="text-accent hover:text-accent text-sm"
                         >
                           {t("common.edit")}
                         </button>
@@ -188,14 +188,14 @@ export default function LeadsPage() {
           {(["new", "contacted", "qualified", "converted", "lost"] as LeadStatus[]).map((status) => (
             <div
               key={status}
-              className="bg-gray-50 rounded-xl border border-gray-200 p-3 min-h-[200px]"
+              className="bg-surface rounded-xl border border-default p-3 min-h-[200px]"
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {
                 const leadId = e.dataTransfer.getData("leadId");
                 if (leadId) void handleKanbanDrop(leadId, status);
               }}
             >
-              <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">
+              <h3 className="text-xs font-semibold text-secondary uppercase mb-3">
                 {t(`leads.status_${status}`)} ({leads.filter((l) => l.status === status).length})
               </h3>
               <div className="space-y-2">
@@ -207,10 +207,10 @@ export default function LeadsPage() {
                       draggable={status !== "converted" && status !== "lost"}
                       onDragStart={(e) => e.dataTransfer.setData("leadId", lead.leadId)}
                       onClick={() => setSelectedLead(lead)}
-                      className="bg-white rounded-lg border border-gray-200 p-3 cursor-pointer hover:border-indigo-300 text-sm"
+                      className="bg-surface-elevated rounded-lg border border-default p-3 cursor-pointer hover:border-accent/30 text-sm"
                     >
-                      <p className="font-medium text-gray-900 truncate">{lead.name ?? lead.phone}</p>
-                      {lead.email && <p className="text-xs text-gray-500 truncate">{lead.email}</p>}
+                      <p className="font-medium text-primary truncate">{lead.name ?? lead.phone}</p>
+                      {lead.email && <p className="text-xs text-secondary truncate">{lead.email}</p>}
                     </div>
                   ))}
               </div>

@@ -18,7 +18,7 @@ export function PlanUsageCard({ hideActions = false }: { hideActions?: boolean }
 
   if (isLoading || !data) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-6 animate-pulse h-48" />
+      <div className="bg-surface-elevated rounded-xl border border-default p-6 animate-pulse h-48" />
     );
   }
 
@@ -48,17 +48,17 @@ export function PlanUsageCard({ hideActions = false }: { hideActions?: boolean }
   ];
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6">
+    <div className="bg-surface-elevated rounded-xl border border-default p-6">
       <div className="flex items-center gap-2 mb-4">
-        <CreditCard className="w-4 h-4 text-gray-500" />
-        <h2 className="font-semibold text-gray-900 text-sm">{t("billing.title")}</h2>
+        <CreditCard className="w-4 h-4 text-secondary" />
+        <h2 className="font-semibold text-primary text-sm">{t("billing.title")}</h2>
       </div>
 
       <div className="flex flex-wrap items-center gap-2 mb-4 text-sm">
-        <span className="text-gray-500">{t("billing.currentPlan")}:</span>
-        <span className="font-medium text-gray-900">{planLabel(data.plan)}</span>
+        <span className="text-secondary">{t("billing.currentPlan")}:</span>
+        <span className="font-medium text-primary">{planLabel(data.plan)}</span>
         {data.subscription && data.subscription !== "none" && (
-          <span className="text-gray-400">
+          <span className="text-muted">
             · {t(`billing.subscriptionStatus.${data.subscription}`)}
           </span>
         )}
@@ -70,8 +70,8 @@ export function PlanUsageCard({ hideActions = false }: { hideActions?: boolean }
             key={row.label}
             className="flex justify-between text-sm py-1.5 border-b border-gray-50 last:border-0"
           >
-            <span className="text-gray-600">{row.label}</span>
-            <span className="text-gray-900 font-medium">
+            <span className="text-secondary">{row.label}</span>
+            <span className="text-primary font-medium">
               {row.used} / {row.max}
             </span>
           </div>

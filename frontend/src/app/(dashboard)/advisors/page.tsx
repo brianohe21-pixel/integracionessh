@@ -64,7 +64,7 @@ export default function AdvisorsPage() {
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700"
+            className="flex items-center gap-2 px-4 py-2 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-hover"
           >
             <Plus className="w-4 h-4" />
             {t("advisors.newAdvisor")}
@@ -78,7 +78,7 @@ export default function AdvisorsPage() {
         </div>
       )}
 
-      {isLoading && <p className="text-sm text-gray-500">{t("common.loading")}</p>}
+      {isLoading && <p className="text-sm text-secondary">{t("common.loading")}</p>}
 
       {!isLoading && advisors?.length === 0 && (
         <EmptyState
@@ -92,13 +92,13 @@ export default function AdvisorsPage() {
         {advisors?.map((advisor) => (
           <div
             key={advisor.advisorId}
-            className="flex items-center justify-between bg-white border border-gray-200 rounded-xl px-5 py-4"
+            className="flex items-center justify-between bg-surface-elevated border border-default rounded-xl px-5 py-4"
           >
             <div>
-              <p className="font-medium text-gray-900">{advisor.name}</p>
-              <p className="text-sm text-gray-500">{advisor.phoneNumber}</p>
+              <p className="font-medium text-primary">{advisor.name}</p>
+              <p className="text-sm text-secondary">{advisor.phoneNumber}</p>
               {advisor.cognitoUserId && (
-                <p className="text-xs text-gray-400 mt-1">{t("advisors.panelAccess")}</p>
+                <p className="text-xs text-muted mt-1">{t("advisors.panelAccess")}</p>
               )}
             </div>
             <div className="flex items-center gap-3">
@@ -108,7 +108,7 @@ export default function AdvisorsPage() {
               <button
                 type="button"
                 onClick={() => deleteAdvisor.mutate(advisor.advisorId)}
-                className="p-2 text-gray-400 hover:text-red-600"
+                className="p-2 text-muted hover:text-red-600"
                 aria-label={t("advisors.deactivate")}
               >
                 <Trash2 className="w-4 h-4" />
@@ -122,34 +122,34 @@ export default function AdvisorsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <form
             onSubmit={handleCreate}
-            className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4"
+            className="bg-surface-elevated rounded-xl shadow-xl w-full max-w-md p-6 space-y-4"
           >
-            <h2 className="text-lg font-semibold text-gray-900">{t("advisors.newAdvisor")}</h2>
+            <h2 className="text-lg font-semibold text-primary">{t("advisors.newAdvisor")}</h2>
             {error && <p className="text-sm text-red-600">{error}</p>}
             <input
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={t("advisors.namePlaceholder")}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+              className="w-full px-3 py-2 border border-default rounded-lg text-sm"
             />
             <input
               required
               value={phoneNumber}
               onChange={(e) => setPhoneNumber(e.target.value)}
               placeholder={t("advisors.phonePlaceholder")}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+              className="w-full px-3 py-2 border border-default rounded-lg text-sm"
             />
             <input
               type="email"
               value={inviteEmail}
               onChange={(e) => setInviteEmail(e.target.value)}
               placeholder={t("advisors.emailPlaceholder")}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+              className="w-full px-3 py-2 border border-default rounded-lg text-sm"
             />
             {bots && bots.length > 0 && (
               <div className="space-y-2">
-                <p className="text-xs text-gray-500">{t("advisors.botsOptional")}</p>
+                <p className="text-xs text-secondary">{t("advisors.botsOptional")}</p>
                 <div className="max-h-32 overflow-y-auto space-y-1">
                   {bots.map((bot) => (
                     <label key={bot.botId} className="flex items-center gap-2 text-sm">
@@ -174,14 +174,14 @@ export default function AdvisorsPage() {
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="px-4 py-2 text-sm text-gray-600"
+                className="px-4 py-2 text-sm text-secondary"
               >
                 {t("common.cancel")}
               </button>
               <button
                 type="submit"
                 disabled={createAdvisor.isPending}
-                className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg"
+                className="px-4 py-2 text-sm bg-accent text-white rounded-lg"
               >
                 {t("common.save")}
               </button>

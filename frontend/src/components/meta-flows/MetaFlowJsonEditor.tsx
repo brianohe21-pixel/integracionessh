@@ -13,7 +13,7 @@ export function MetaFlowJsonEditor({ value, onChange, readOnly }: MetaFlowJsonEd
       onChange={(e) => onChange(e.target.value)}
       readOnly={readOnly}
       rows={18}
-      className="w-full font-mono text-xs border border-gray-300 rounded-lg p-3 bg-gray-50 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+      className="w-full font-mono text-xs border border-default rounded-lg p-3 bg-surface focus:ring-2 focus:ring-accent focus:border-accent/30"
       spellCheck={false}
     />
   );

@@ -70,7 +70,7 @@ function buildMonthCells(year: number, month: number, weekStartsOn: 0 | 1) {
 export function PublicBookingCalendar({
   dates,
   selectedIsoDate,
-  accent = "#4f46e5",
+  accent = "#25D366",
   disabled = false,
   waitlistIsoDates,
   onSelectDate,
@@ -175,24 +175,24 @@ export function PublicBookingCalendar({
   }
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+    <div className="rounded-xl border border-default bg-surface-elevated p-4 shadow-sm">
       <div className="mb-4 flex items-center justify-between">
         <button
           type="button"
           onClick={goPrevMonth}
           disabled={!canGoPrev || disabled}
           aria-label={t("publicBook.prevMonth")}
-          className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-30"
+          className="rounded-lg p-2 text-secondary hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-30"
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
-        <h3 className="text-sm font-semibold text-gray-900">{monthLabel}</h3>
+        <h3 className="text-sm font-semibold text-primary">{monthLabel}</h3>
         <button
           type="button"
           onClick={goNextMonth}
           disabled={!canGoNext || disabled}
           aria-label={t("publicBook.nextMonth")}
-          className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-30"
+          className="rounded-lg p-2 text-secondary hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-30"
         >
           <ChevronRight className="h-5 w-5" />
         </button>
@@ -202,7 +202,7 @@ export function PublicBookingCalendar({
         {weekdayLabels.map((label) => (
           <div
             key={label}
-            className="py-1 text-center text-xs font-medium uppercase tracking-wide text-gray-400"
+            className="py-1 text-center text-xs font-medium uppercase tracking-wide text-muted"
           >
             {label}
           </div>
@@ -232,7 +232,7 @@ export function PublicBookingCalendar({
                 !cell.inCurrentMonth && "text-gray-300",
                 cell.inCurrentMonth && !selectable && "cursor-not-allowed text-gray-300",
                 cell.inCurrentMonth && waitlistOnly && !selected && "font-medium text-amber-700 hover:bg-amber-50",
-                cell.inCurrentMonth && available && !selected && "font-medium text-gray-900 hover:bg-gray-100",
+                cell.inCurrentMonth && available && !selected && "font-medium text-primary hover:bg-surface-muted",
                 selected && "font-semibold text-white"
               )}
               style={

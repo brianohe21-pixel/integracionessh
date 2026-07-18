@@ -18,7 +18,7 @@ export function FaqAccordion() {
   }
 
   return (
-    <div className="divide-y divide-gray-100 border border-gray-100 rounded-lg overflow-hidden">
+    <div className="divide-y divide-gray-100 border border-subtle rounded-lg overflow-hidden">
       {FAQ_KEYS.map((key) => {
         const open = openKey === key;
         return (
@@ -26,14 +26,14 @@ export function FaqAccordion() {
             <button
               type="button"
               onClick={() => toggle(key)}
-              className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
+              className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-surface transition-colors"
             >
               {open ? (
-                <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
+                <ChevronDown className="w-4 h-4 text-muted shrink-0" />
               ) : (
-                <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
+                <ChevronRight className="w-4 h-4 text-muted shrink-0" />
               )}
-              <span className="text-sm font-medium text-gray-900">
+              <span className="text-sm font-medium text-primary">
                 {t(`support.faq.${key}.question`)}
               </span>
             </button>
@@ -43,7 +43,7 @@ export function FaqAccordion() {
                 open ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
               )}
             >
-              <p className="px-4 pb-4 pl-11 text-sm text-gray-600 leading-relaxed">
+              <p className="px-4 pb-4 pl-11 text-sm text-secondary leading-relaxed">
                 {t(`support.faq.${key}.answer`)}
               </p>
             </div>

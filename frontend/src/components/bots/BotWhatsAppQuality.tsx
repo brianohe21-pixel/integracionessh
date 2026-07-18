@@ -69,7 +69,7 @@ export function BotWhatsAppQuality({
   const isPending = whatsappPhone?.status === "PENDING";
   if (isLoading) {
     return (
-      <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 animate-pulse">
+      <div className="rounded-xl border border-default bg-surface p-4 animate-pulse">
         <div className="h-4 w-40 bg-gray-200 rounded mb-3" />
         <div className="h-6 w-24 bg-gray-200 rounded" />
       </div>
@@ -77,18 +77,18 @@ export function BotWhatsAppQuality({
   }
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+    <div className="rounded-xl border border-default bg-surface p-4">
       <div className="flex items-center gap-2 mb-3">
-        <Signal className="w-4 h-4 text-indigo-600" />
-        <h2 className="text-sm font-semibold text-gray-900">{t("bots.whatsappSection")}</h2>
+        <Signal className="w-4 h-4 text-accent" />
+        <h2 className="text-sm font-semibold text-primary">{t("bots.whatsappSection")}</h2>
       </div>
 
       {whatsappPhone === undefined || whatsappPhone === null ? (
-        <p className="text-xs text-gray-500">{t("bots.qualityLoadError")}</p>
+        <p className="text-xs text-secondary">{t("bots.qualityLoadError")}</p>
       ) : (
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
           <div>
-            <dt className="text-xs text-gray-500 mb-1">{t("bots.qualityTitle")}</dt>
+            <dt className="text-xs text-secondary mb-1">{t("bots.qualityTitle")}</dt>
             <dd>
               <Badge variant={QUALITY_VARIANTS[whatsappPhone.qualityRating]}>
                 {t(QUALITY_KEYS[whatsappPhone.qualityRating])}
@@ -96,27 +96,27 @@ export function BotWhatsAppQuality({
             </dd>
           </div>
           <div>
-            <dt className="text-xs text-gray-500 mb-1">{t("common.status")}</dt>
-            <dd className="text-gray-900 font-medium">
+            <dt className="text-xs text-secondary mb-1">{t("common.status")}</dt>
+            <dd className="text-primary font-medium">
               {t(STATUS_KEYS[whatsappPhone.status] ?? whatsappPhone.status)}
             </dd>
           </div>
           {whatsappPhone.displayPhoneNumber && (
             <div>
-              <dt className="text-xs text-gray-500 mb-1">{t("bots.displayNumber")}</dt>
-              <dd className="text-gray-900">{whatsappPhone.displayPhoneNumber}</dd>
+              <dt className="text-xs text-secondary mb-1">{t("bots.displayNumber")}</dt>
+              <dd className="text-primary">{whatsappPhone.displayPhoneNumber}</dd>
             </div>
           )}
           {whatsappPhone.verifiedName && (
             <div>
-              <dt className="text-xs text-gray-500 mb-1">{t("bots.verifiedName")}</dt>
-              <dd className="text-gray-900">{whatsappPhone.verifiedName}</dd>
+              <dt className="text-xs text-secondary mb-1">{t("bots.verifiedName")}</dt>
+              <dd className="text-primary">{whatsappPhone.verifiedName}</dd>
             </div>
           )}
           {formatMessagingLimit(whatsappPhone.messagingLimit) && (
             <div>
-              <dt className="text-xs text-gray-500 mb-1">{t("bots.messagingLimit")}</dt>
-              <dd className="text-gray-900">
+              <dt className="text-xs text-secondary mb-1">{t("bots.messagingLimit")}</dt>
+              <dd className="text-primary">
                 {formatMessagingLimit(whatsappPhone.messagingLimit)}
               </dd>
             </div>
@@ -145,7 +145,7 @@ export function BotWhatsAppQuality({
               if (error) reset();
             }}
             placeholder={t("whatsapp.pinPlaceholder")}
-            className="w-full max-w-xs rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm font-mono tracking-widest"
+            className="w-full max-w-xs rounded-lg border border-amber-300 bg-surface-elevated px-3 py-2 text-sm font-mono tracking-widest"
           />
           <p className="mt-1 text-xs text-amber-800">{t("whatsapp.pinHint")}</p>
           {pinError && <p className="mt-1 text-xs text-red-600">{pinError}</p>}
@@ -177,7 +177,7 @@ export function BotWhatsAppQuality({
         </div>
       )}
 
-      <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-gray-200 text-xs text-gray-400">
+      <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-default text-xs text-muted">
         <Phone className="w-3.5 h-3.5" />
         <span className="font-mono">{phoneNumberId}</span>
       </div>

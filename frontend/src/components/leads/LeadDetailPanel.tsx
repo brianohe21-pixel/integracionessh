@@ -76,10 +76,10 @@ export function LeadDetailPanel({
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/30">
-      <div className="w-full max-w-md bg-white h-full shadow-xl flex flex-col">
-        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
-          <h2 className="font-semibold text-gray-900">{t("leads.detailTitle")}</h2>
-          <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600">
+      <div className="w-full max-w-md bg-surface-elevated h-full shadow-xl flex flex-col">
+        <div className="flex items-center justify-between border-b border-default px-5 py-4">
+          <h2 className="font-semibold text-primary">{t("leads.detailTitle")}</h2>
+          <button type="button" onClick={onClose} className="text-muted hover:text-secondary">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -87,17 +87,17 @@ export function LeadDetailPanel({
         <div className="flex-1 overflow-y-auto p-5 space-y-4 text-sm">
           <div className="flex items-center gap-2">
             <Badge variant={statusVariant(lead.status)}>{t(`leads.status_${lead.status}`)}</Badge>
-            <span className="text-gray-500">{new Date(lead.createdAt).toLocaleString()}</span>
+            <span className="text-secondary">{new Date(lead.createdAt).toLocaleString()}</span>
           </div>
 
           <div className="space-y-2">
-            <p><span className="text-gray-500">{t("common.phone")}:</span> {lead.phone}</p>
-            {lead.name && <p><span className="text-gray-500">{t("leads.colName")}:</span> {lead.name}</p>}
-            {lead.email && <p><span className="text-gray-500">{t("common.email")}:</span> {lead.email}</p>}
-            <p><span className="text-gray-500">{t("leads.colBot")}:</span> {botName}</p>
+            <p><span className="text-secondary">{t("common.phone")}:</span> {lead.phone}</p>
+            {lead.name && <p><span className="text-secondary">{t("leads.colName")}:</span> {lead.name}</p>}
+            {lead.email && <p><span className="text-secondary">{t("common.email")}:</span> {lead.email}</p>}
+            <p><span className="text-secondary">{t("leads.colBot")}:</span> {botName}</p>
             {lead.tags.length > 0 && (
               <p className="flex flex-wrap gap-1 items-center">
-                <span className="text-gray-500">{t("contacts.colTags")}:</span>
+                <span className="text-secondary">{t("contacts.colTags")}:</span>
                 {lead.tags.map((tag) => (
                   <Badge key={tag} variant="default">{tag}</Badge>
                 ))}
@@ -106,7 +106,7 @@ export function LeadDetailPanel({
           </div>
 
           <div>
-            <label className="block text-gray-500 mb-1">{t("leads.assignedAdvisor")}</label>
+            <label className="block text-secondary mb-1">{t("leads.assignedAdvisor")}</label>
             <select
               value={lead.assignedAdvisorId ?? ""}
               disabled={isClosed}
@@ -116,7 +116,7 @@ export function LeadDetailPanel({
                   assignedAdvisorId: e.target.value || null,
                 })
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              className="w-full px-3 py-2 border border-default rounded-lg text-sm"
             >
               <option value="">{t("leads.unassigned")}</option>
               {(advisors ?? []).map((a) => (
@@ -126,19 +126,19 @@ export function LeadDetailPanel({
           </div>
 
           <div>
-            <label className="block text-gray-500 mb-1">{t("leads.notes")}</label>
+            <label className="block text-secondary mb-1">{t("leads.notes")}</label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               disabled={isClosed}
               rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              className="w-full px-3 py-2 border border-default rounded-lg text-sm"
             />
             {!isClosed && (
               <button
                 type="button"
                 onClick={saveNotes}
-                className="mt-2 text-sm text-indigo-600 hover:text-indigo-800"
+                className="mt-2 text-sm text-accent hover:text-accent"
               >
                 {t("common.save")}
               </button>
@@ -147,7 +147,7 @@ export function LeadDetailPanel({
 
           <Link
             href={`/conversations?botId=${lead.botId}&phone=${encodeURIComponent(lead.phone)}`}
-            className="inline-block text-indigo-600 hover:text-indigo-800"
+            className="inline-block text-accent hover:text-accent"
           >
             {t("leads.openConversation")}
           </Link>
@@ -155,7 +155,7 @@ export function LeadDetailPanel({
           {lead.status === "converted" && (
             <Link
               href={`/contacts?q=${encodeURIComponent(lead.phone)}`}
-              className="inline-block text-indigo-600 hover:text-indigo-800 ml-4"
+              className="inline-block text-accent hover:text-accent ml-4"
             >
               {t("leads.viewContact")}
             </Link>
@@ -165,13 +165,13 @@ export function LeadDetailPanel({
         </div>
 
         {!isClosed && (
-          <div className="border-t border-gray-200 p-5 space-y-3">
-            <label className="flex items-center gap-2 text-sm text-gray-600">
+          <div className="border-t border-default p-5 space-y-3">
+            <label className="flex items-center gap-2 text-sm text-secondary">
               <input
                 type="checkbox"
                 checked={optInOnConvert}
                 onChange={(e) => setOptInOnConvert(e.target.checked)}
-                className="rounded border-gray-300"
+                className="rounded border-default"
               />
               {t("leads.optInOnConvert")}
             </label>
@@ -180,7 +180,7 @@ export function LeadDetailPanel({
                 type="button"
                 onClick={handleConvert}
                 disabled={convertLead.isPending}
-                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700"
+                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-accent rounded-lg hover:bg-accent-hover"
               >
                 {t("leads.convert")}
               </button>
@@ -188,7 +188,7 @@ export function LeadDetailPanel({
                 type="button"
                 onClick={handleLose}
                 disabled={loseLead.isPending}
-                className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="px-4 py-2 text-sm text-secondary border border-default rounded-lg hover:bg-surface"
               >
                 {t("leads.markLost")}
               </button>

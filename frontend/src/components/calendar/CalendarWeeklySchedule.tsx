@@ -46,19 +46,19 @@ export function CalendarWeeklySchedule({ schedule, onChange }: CalendarWeeklySch
   return (
     <div className="space-y-4">
       {WEEKDAYS.map((day) => (
-        <div key={day} className="rounded-lg border border-gray-200 p-4">
+        <div key={day} className="rounded-lg border border-default p-4">
           <div className="mb-3 flex items-center justify-between">
-            <h4 className="font-medium text-gray-900">{t(`calendar.days.${day}`)}</h4>
+            <h4 className="font-medium text-primary">{t(`calendar.days.${day}`)}</h4>
             <button
               type="button"
               onClick={() => addRange(day)}
-              className="text-sm text-indigo-600 hover:text-indigo-700"
+              className="text-sm text-accent hover:text-accent"
             >
               {t("calendar.addRange")}
             </button>
           </div>
           {schedule[day].length === 0 ? (
-            <p className="text-sm text-gray-400">{t("calendar.noRanges")}</p>
+            <p className="text-sm text-muted">{t("calendar.noRanges")}</p>
           ) : (
             <div className="space-y-2">
               {schedule[day].map((range, index) => (
@@ -67,14 +67,14 @@ export function CalendarWeeklySchedule({ schedule, onChange }: CalendarWeeklySch
                     type="time"
                     value={range.start}
                     onChange={(e) => patchRange(day, index, { start: e.target.value })}
-                    className="rounded border border-gray-300 px-2 py-1 text-sm"
+                    className="rounded border border-default px-2 py-1 text-sm"
                   />
-                  <span className="text-gray-400">—</span>
+                  <span className="text-muted">—</span>
                   <input
                     type="time"
                     value={range.end}
                     onChange={(e) => patchRange(day, index, { end: e.target.value })}
-                    className="rounded border border-gray-300 px-2 py-1 text-sm"
+                    className="rounded border border-default px-2 py-1 text-sm"
                   />
                   <button
                     type="button"

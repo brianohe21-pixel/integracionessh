@@ -1,26 +1,134 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --brand-primary: #25d366;
+  --brand-primary-hover: #1fb855;
+  --brand-primary-light: rgba(37, 211, 102, 0.08);
+
+  --surface: #f4f6f8;
+  --surface-elevated: #ffffff;
+  --surface-muted: #e8ecf0;
+  --canvas: #eef1f5;
+
+  --text-primary: #0f1419;
+  --text-secondary: #5c6670;
+  --text-muted: #8b95a1;
+
+  --border: #dde3ea;
+  --border-subtle: #e8ecf0;
+
+  --accent: var(--brand-primary);
+  --accent-hover: var(--brand-primary-hover);
+  --accent-muted: var(--brand-primary-light);
+
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --info: #2563eb;
+  --human: #a855f7;
+
+  --glow-accent: rgba(37, 211, 102, 0.15);
+
+  --background: var(--surface);
+  --foreground: var(--text-primary);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --surface: #0f1115;
+  --surface-elevated: #1a1d24;
+  --surface-muted: #252932;
+  --canvas: #141820;
+
+  --text-primary: #f0f2f5;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+
+  --border: #2d3239;
+  --border-subtle: #23272e;
+
+  --glow-accent: rgba(37, 211, 102, 0.12);
+
+  --background: var(--surface);
+  --foreground: var(--text-primary);
+}
+
+[data-theme="light"] {
+  color-scheme: light;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-surface-muted: var(--surface-muted);
+  --color-canvas: var(--canvas);
+
+  --color-primary: var(--text-primary);
+  --color-secondary: var(--text-secondary);
+  --color-muted: var(--text-muted);
+
+  --color-default: var(--border);
+  --color-subtle: var(--border-subtle);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-muted: var(--accent-muted);
+
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+  --color-human: var(--human);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+.react-flow-dark .react-flow__controls {
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  box-shadow: none;
+  margin: 12px;
+}
+
+.react-flow-dark .react-flow__controls-button {
+  background: var(--surface-elevated);
+  border-bottom: 1px solid var(--border);
+  fill: var(--text-secondary);
+}
+
+.react-flow-dark .react-flow__controls-button:hover {
+  background: var(--surface-muted);
+}
+
+.react-flow-dark .react-flow__minimap {
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+}
+
+.react-flow-dark .react-flow__edge-path {
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.react-flow-dark .react-flow__edge-path.human-edge {
+  stroke: var(--human);
+  stroke-dasharray: 6 4;
+}
+
+.react-flow-dark .react-flow__handle {
+  width: 10px;
+  height: 10px;
 }

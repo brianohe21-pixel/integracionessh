@@ -235,7 +235,7 @@ export default function TemplatesPage() {
             type="button"
             onClick={openCreate}
             disabled={!botFilter}
-            className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Plus className="h-4 w-4" />
             {t("templates.createTemplate")}
@@ -247,7 +247,7 @@ export default function TemplatesPage() {
         <select
           value={botFilter}
           onChange={(e) => setBotFilter(e.target.value)}
-          className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:w-72"
+          className="w-full rounded-lg border border-default bg-surface-elevated px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent sm:w-72"
         >
           <option value="">{t("templates.selectBotTitle")}</option>
           {bots?.map((bot) => (
@@ -264,19 +264,19 @@ export default function TemplatesPage() {
           <div>
             <p className="text-sm font-medium text-blue-800 mb-2">{t("templates.lifecycleTitle")}</p>
             <div className="flex flex-wrap items-center gap-2 text-xs text-blue-700">
-              <div className="flex items-center gap-1.5 bg-white border border-blue-200 rounded-lg px-2.5 py-1.5">
+              <div className="flex items-center gap-1.5 bg-surface-elevated border border-blue-200 rounded-lg px-2.5 py-1.5">
                 <Clock className="w-3.5 h-3.5 text-yellow-500" />
                 <span className="font-medium">{t("templates.lifecyclePending")}</span>
                 <span className="text-blue-500">{t("templates.lifecyclePendingDesc")}</span>
               </div>
               <span className="text-blue-400">→</span>
-              <div className="flex items-center gap-1.5 bg-white border border-blue-200 rounded-lg px-2.5 py-1.5">
+              <div className="flex items-center gap-1.5 bg-surface-elevated border border-blue-200 rounded-lg px-2.5 py-1.5">
                 <CheckCircle className="w-3.5 h-3.5 text-green-500" />
                 <span className="font-medium">{t("templates.lifecycleApproved")}</span>
                 <span className="text-blue-500">{t("templates.lifecycleApprovedDesc")}</span>
               </div>
               <span className="text-blue-400">{t("templates.lifecycleOr")}</span>
-              <div className="flex items-center gap-1.5 bg-white border border-blue-200 rounded-lg px-2.5 py-1.5">
+              <div className="flex items-center gap-1.5 bg-surface-elevated border border-blue-200 rounded-lg px-2.5 py-1.5">
                 <XCircle className="w-3.5 h-3.5 text-red-500" />
                 <span className="font-medium">{t("templates.lifecycleRejected")}</span>
                 <span className="text-blue-500">{t("templates.lifecycleRejectedDesc")}</span>
@@ -298,7 +298,7 @@ export default function TemplatesPage() {
       {botFilter && isLoading && (
         <div className="space-y-3">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-white rounded-xl border border-gray-200 p-5 animate-pulse">
+            <div key={i} className="bg-surface-elevated rounded-xl border border-default p-5 animate-pulse">
               <div className="flex items-center gap-4">
                 <div className="h-4 w-40 bg-gray-200 rounded" />
                 <div className="h-4 w-16 bg-gray-200 rounded-full" />
@@ -325,7 +325,7 @@ export default function TemplatesPage() {
           action={
             <button
               onClick={openCreate}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-hover transition-colors"
             >
               <Plus className="w-4 h-4" />
               {t("templates.createTemplate")}
@@ -335,26 +335,26 @@ export default function TemplatesPage() {
       )}
 
       {botFilter && !isLoading && templates && templates.length > 0 && (
-        <TableContainer className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+        <TableContainer className="overflow-hidden rounded-xl border border-default bg-surface-elevated">
           <table className="w-full min-w-[720px]">
             <thead>
-              <tr className="border-b border-gray-200 bg-gray-50">
-                <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">
+              <tr className="border-b border-default bg-surface">
+                <th className="text-left text-xs font-medium text-secondary uppercase tracking-wider px-5 py-3">
                   {t("templates.colName")}
                 </th>
-                <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">
+                <th className="text-left text-xs font-medium text-secondary uppercase tracking-wider px-5 py-3">
                   {t("templates.language")}
                 </th>
-                <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">
+                <th className="text-left text-xs font-medium text-secondary uppercase tracking-wider px-5 py-3">
                   {t("templates.category")}
                 </th>
-                <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">
+                <th className="text-left text-xs font-medium text-secondary uppercase tracking-wider px-5 py-3">
                   {t("common.status")}
                 </th>
-                <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">
+                <th className="text-left text-xs font-medium text-secondary uppercase tracking-wider px-5 py-3">
                   {t("templates.colSynced")}
                 </th>
-                <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">
+                <th className="text-right text-xs font-medium text-secondary uppercase tracking-wider px-5 py-3">
                   {t("templates.colActions")}
                 </th>
               </tr>
@@ -363,23 +363,23 @@ export default function TemplatesPage() {
               {templates.map((tpl) => {
                 const statusInfo = STATUS_BADGE[tpl.status as keyof typeof STATUS_BADGE] ?? STATUS_BADGE.PENDING;
                 return (
-                  <tr key={`${tpl.name}-${tpl.language}`} className="hover:bg-gray-50 transition-colors">
+                  <tr key={`${tpl.name}-${tpl.language}`} className="hover:bg-surface transition-colors">
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2">
-                        <LayoutTemplate className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm font-medium text-gray-900">{tpl.name}</span>
+                        <LayoutTemplate className="w-4 h-4 text-muted" />
+                        <span className="text-sm font-medium text-primary">{tpl.name}</span>
                       </div>
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-1.5">
-                        <Languages className="w-3.5 h-3.5 text-gray-400" />
-                        <span className="text-sm text-gray-600">{tpl.language}</span>
+                        <Languages className="w-3.5 h-3.5 text-muted" />
+                        <span className="text-sm text-secondary">{tpl.language}</span>
                       </div>
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-1.5">
-                        <Tag className="w-3.5 h-3.5 text-gray-400" />
-                        <span className="text-sm text-gray-600">
+                        <Tag className="w-3.5 h-3.5 text-muted" />
+                        <span className="text-sm text-secondary">
                           {CATEGORY_LABELS[tpl.category as keyof typeof CATEGORY_LABELS] ?? tpl.category}
                         </span>
                       </div>
@@ -397,7 +397,7 @@ export default function TemplatesPage() {
                         <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
                       </div>
                     </td>
-                    <td className="px-5 py-4 text-sm text-gray-500">
+                    <td className="px-5 py-4 text-sm text-secondary">
                       {formatDate(tpl.syncedAt)}
                     </td>
                     <td className="px-5 py-4">
@@ -405,7 +405,7 @@ export default function TemplatesPage() {
                         {tpl.status === "APPROVED" && (
                           <button
                             onClick={() => openSend(tpl)}
-                            className="p-1.5 rounded-md text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                            className="p-1.5 rounded-md text-muted hover:text-accent hover:bg-accent-muted transition-colors"
                             title={t("templates.send")}
                           >
                             <Send className="w-4 h-4" />
@@ -414,7 +414,7 @@ export default function TemplatesPage() {
                         {tpl.status === "REJECTED" ? (
                           <button
                             onClick={() => openEdit(tpl)}
-                            className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                            className="p-1.5 rounded-md text-muted hover:text-secondary hover:bg-surface-muted transition-colors"
                             title={t("templates.editResubmit")}
                           >
                             <Pencil className="w-4 h-4" />
@@ -433,7 +433,7 @@ export default function TemplatesPage() {
                         )}
                         <button
                           onClick={() => setDeleteConfirm(tpl)}
-                          className="p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                          className="p-1.5 rounded-md text-muted hover:text-red-600 hover:bg-red-50 transition-colors"
                           title={t("common.delete")}
                         >
                           <Trash2 className="w-4 h-4" />
@@ -450,14 +450,14 @@ export default function TemplatesPage() {
 
       {dialogMode && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">
+          <div className="bg-surface-elevated rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-default">
+              <h2 className="text-lg font-semibold text-primary">
                 {dialogMode === "create" ? t("templates.createDialog") : t("templates.editDialog")}
               </h2>
               <button
                 onClick={() => setDialogMode(null)}
-                className="p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                className="p-1 rounded-md text-muted hover:text-secondary hover:bg-surface-muted"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -469,25 +469,25 @@ export default function TemplatesPage() {
                 </div>
               )}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t("templates.name")}</label>
+                <label className="block text-sm font-medium text-secondary mb-1">{t("templates.name")}</label>
                 <input
                   type="text"
                   value={formName}
                   onChange={(e) => setFormName(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_"))}
                   disabled={dialogMode === "edit"}
                   placeholder={t("templates.namePlaceholder")}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-50 disabled:text-gray-500"
+                  className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent disabled:bg-surface disabled:text-secondary"
                 />
-                <p className="text-xs text-gray-400 mt-1">{t("templates.nameHint")}</p>
+                <p className="text-xs text-muted mt-1">{t("templates.nameHint")}</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t("templates.language")}</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">{t("templates.language")}</label>
                   <select
                     value={formLanguage}
                     onChange={(e) => setFormLanguage(e.target.value)}
                     disabled={dialogMode === "edit"}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-50"
+                    className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent disabled:bg-surface"
                   >
                     {LANGUAGES.map((l) => (
                       <option key={l.code} value={l.code}>{l.label}</option>
@@ -495,12 +495,12 @@ export default function TemplatesPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t("templates.category")}</label>
+                  <label className="block text-sm font-medium text-secondary mb-1">{t("templates.category")}</label>
                   <select
                     value={formCategory}
                     onChange={(e) => setFormCategory(e.target.value as typeof formCategory)}
                     disabled={dialogMode === "edit"}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-50"
+                    className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent disabled:bg-surface"
                   >
                     <option value="UTILITY">{t("templates.categoryUtility")}</option>
                     <option value="MARKETING">{t("templates.categoryMarketing")}</option>
@@ -509,19 +509,19 @@ export default function TemplatesPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t("templates.header")} <span className="text-gray-400 font-normal">{t("templates.optional")}</span>
+                <label className="block text-sm font-medium text-secondary mb-1">
+                  {t("templates.header")} <span className="text-muted font-normal">{t("templates.optional")}</span>
                 </label>
                 <input
                   type="text"
                   value={formHeaderText}
                   onChange={(e) => setFormHeaderText(e.target.value)}
                   placeholder={t("templates.headerPlaceholder")}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t("templates.body")}</label>
+                <label className="block text-sm font-medium text-secondary mb-1">{t("templates.body")}</label>
                 <textarea
                   value={formBodyText}
                   onChange={(e) => {
@@ -535,9 +535,9 @@ export default function TemplatesPage() {
                   }}
                   rows={4}
                   placeholder={t("templates.bodyPlaceholder")}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                  className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent resize-none"
                 />
-                <p className="text-xs text-gray-400 mt-1">{t("templates.bodyVarsHint")}</p>
+                <p className="text-xs text-muted mt-1">{t("templates.bodyVarsHint")}</p>
               </div>
 
               {extractBodyVariables(formBodyText).length > 0 && (
@@ -556,7 +556,7 @@ export default function TemplatesPage() {
                           value={formBodyExamples[v] ?? ""}
                           onChange={(e) => setFormBodyExamples((prev) => ({ ...prev, [v]: e.target.value }))}
                           placeholder={t("templates.exampleVar", { var: "Juan" })}
-                          className="flex-1 px-3 py-1.5 border border-amber-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
+                          className="flex-1 px-3 py-1.5 border border-amber-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-surface-elevated"
                         />
                       </div>
                     ))}
@@ -564,22 +564,22 @@ export default function TemplatesPage() {
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t("templates.footer")} <span className="text-gray-400 font-normal">{t("templates.optional")}</span>
+                <label className="block text-sm font-medium text-secondary mb-1">
+                  {t("templates.footer")} <span className="text-muted font-normal">{t("templates.optional")}</span>
                 </label>
                 <input
                   type="text"
                   value={formFooterText}
                   onChange={(e) => setFormFooterText(e.target.value)}
                   placeholder={t("templates.footerPlaceholder")}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
                 />
               </div>
             </div>
-            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200">
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-default">
               <button
                 onClick={() => setDialogMode(null)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 text-sm font-medium text-secondary bg-surface-elevated border border-default rounded-lg hover:bg-surface transition-colors"
               >
                 {t("templates.cancelDialog")}
               </button>
@@ -591,7 +591,7 @@ export default function TemplatesPage() {
                   (dialogMode === "create" && !formName.trim()) ||
                   extractBodyVariables(formBodyText).some((v) => !formBodyExamples[v]?.trim())
                 }
-                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 text-sm font-medium text-white bg-accent rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? t("auth.saving") : dialogMode === "create" ? t("common.create") : t("common.update")}
               </button>
@@ -602,21 +602,21 @@ export default function TemplatesPage() {
 
       {sendTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">
+          <div className="bg-surface-elevated rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-default">
+              <h2 className="text-lg font-semibold text-primary">
                 {t("templates.sendTitle", { name: sendTarget.name })}
               </h2>
               <button
                 onClick={() => setSendTarget(null)}
-                className="p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                className="p-1 rounded-md text-muted hover:text-secondary hover:bg-surface-muted"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="px-6 py-5 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-secondary mb-1">
                   {t("templates.sendTo")}
                 </label>
                 <input
@@ -624,17 +624,17 @@ export default function TemplatesPage() {
                   value={sendTo}
                   onChange={(e) => setSendTo(e.target.value.replace(/\D/g, ""))}
                   placeholder={t("templates.sendToPlaceholder")}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
                 />
-                <p className="text-xs text-gray-400 mt-1">{t("templates.sendToHint")}</p>
+                <p className="text-xs text-muted mt-1">{t("templates.sendToHint")}</p>
               </div>
 
               {Object.keys(sendParams).length > 0 && (
                 <div className="space-y-3">
-                  <p className="text-sm font-medium text-gray-700">{t("templates.templateVars")}</p>
+                  <p className="text-sm font-medium text-secondary">{t("templates.templateVars")}</p>
                   {Object.keys(sendParams).map((key) => (
                     <div key={key}>
-                      <label className="block text-xs text-gray-500 mb-1">{key}</label>
+                      <label className="block text-xs text-secondary mb-1">{key}</label>
                       <input
                         type="text"
                         value={sendParams[key]}
@@ -642,22 +642,22 @@ export default function TemplatesPage() {
                           setSendParams((prev) => ({ ...prev, [key]: e.target.value }))
                         }
                         placeholder={t("templates.valueFor", { key })}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
                       />
                     </div>
                   ))}
                 </div>
               )}
 
-              <div className="bg-gray-50 rounded-xl p-4">
-                <p className="text-xs font-medium text-gray-500 mb-2">{t("templates.previewLabel")}</p>
-                <div className="bg-white rounded-lg p-3 border border-gray-200">
+              <div className="bg-surface rounded-xl p-4">
+                <p className="text-xs font-medium text-secondary mb-2">{t("templates.previewLabel")}</p>
+                <div className="bg-surface-elevated rounded-lg p-3 border border-default">
                   {sendTarget.components.find((c) => c.type === "HEADER")?.text && (
-                    <p className="text-sm font-semibold text-gray-900 mb-1">
+                    <p className="text-sm font-semibold text-primary mb-1">
                       {sendTarget.components.find((c) => c.type === "HEADER")!.text}
                     </p>
                   )}
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                  <p className="text-sm text-secondary whitespace-pre-wrap">
                     {(() => {
                       let body = sendTarget.components.find((c) => c.type === "BODY")?.text ?? "";
                       Object.entries(sendParams).forEach(([key, val]) => {
@@ -667,24 +667,24 @@ export default function TemplatesPage() {
                     })()}
                   </p>
                   {sendTarget.components.find((c) => c.type === "FOOTER")?.text && (
-                    <p className="text-xs text-gray-400 mt-2">
+                    <p className="text-xs text-muted mt-2">
                       {sendTarget.components.find((c) => c.type === "FOOTER")!.text}
                     </p>
                   )}
                 </div>
               </div>
             </div>
-            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200">
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-default">
               <button
                 onClick={() => setSendTarget(null)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 text-sm font-medium text-secondary bg-surface-elevated border border-default rounded-lg hover:bg-surface transition-colors"
               >
                 {t("templates.cancelDialog")}
               </button>
               <button
                 onClick={handleSend}
                 disabled={sendMutation.isPending || !sendTo.trim()}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-accent rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Send className="w-4 h-4" />
                 {sendMutation.isPending ? t("templates.sending") : t("templates.send")}
@@ -696,17 +696,17 @@ export default function TemplatesPage() {
 
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4">
+          <div className="bg-surface-elevated rounded-2xl shadow-xl w-full max-w-sm mx-4">
             <div className="px-6 py-5">
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">{t("templates.confirmDeleteTitle")}</h2>
-              <p className="text-sm text-gray-500">
+              <h2 className="text-lg font-semibold text-primary mb-2">{t("templates.confirmDeleteTitle")}</h2>
+              <p className="text-sm text-secondary">
                 {t("templates.confirmDeleteBody", { name: deleteConfirm.name })}
               </p>
             </div>
-            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200">
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-default">
               <button
                 onClick={() => setDeleteConfirm(null)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 text-sm font-medium text-secondary bg-surface-elevated border border-default rounded-lg hover:bg-surface transition-colors"
               >
                 {t("templates.cancelDialog")}
               </button>

@@ -14,22 +14,22 @@ export function ApiEndpointCard({ endpoint }: { endpoint: ApiDocEndpoint }) {
   return (
     <article
       id={endpoint.id}
-      className="rounded-xl border border-gray-200 bg-white p-5 space-y-4 scroll-mt-6"
+      className="rounded-xl border border-default bg-surface-elevated p-5 space-y-4 scroll-mt-6"
     >
       <div className="flex flex-wrap items-center gap-2">
         <span
-          className={`px-2 py-0.5 rounded text-xs font-semibold font-mono ${METHOD_STYLES[endpoint.method] ?? "bg-gray-100 text-gray-700"}`}
+          className={`px-2 py-0.5 rounded text-xs font-semibold font-mono ${METHOD_STYLES[endpoint.method] ?? "bg-surface-muted text-secondary"}`}
         >
           {endpoint.method}
         </span>
-        <code className="text-sm font-mono text-gray-900">{endpoint.path}</code>
-        <span className="text-xs text-gray-400 font-mono ml-auto">{endpoint.scope}</span>
+        <code className="text-sm font-mono text-primary">{endpoint.path}</code>
+        <span className="text-xs text-muted font-mono ml-auto">{endpoint.scope}</span>
       </div>
 
-      <p className="text-sm text-gray-600 leading-relaxed">{t(endpoint.descriptionKey)}</p>
+      <p className="text-sm text-secondary leading-relaxed">{t(endpoint.descriptionKey)}</p>
 
       {endpoint.notesKey ? (
-        <p className="text-sm text-gray-500 leading-relaxed">{t(endpoint.notesKey)}</p>
+        <p className="text-sm text-secondary leading-relaxed">{t(endpoint.notesKey)}</p>
       ) : null}
 
       {endpoint.requestExample ? (

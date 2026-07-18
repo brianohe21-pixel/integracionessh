@@ -1,4 +1,4 @@
-export const DEFAULT_PRIMARY_COLOR = "#4f46e5";
+export const DEFAULT_PRIMARY_COLOR = "#25D366";
 
 export function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
   const match = /^#?([0-9A-Fa-f]{6})$/.exec(hex.trim());
@@ -22,7 +22,7 @@ export function adjustHexBrightness(hex: string, percent: number): string {
 
 export function hexToRgba(hex: string, alpha: number): string {
   const rgb = hexToRgb(hex);
-  if (!rgb) return `rgba(79, 70, 229, ${alpha})`;
+  if (!rgb) return `rgba(37, 211, 102, ${alpha})`;
   return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
 }
 

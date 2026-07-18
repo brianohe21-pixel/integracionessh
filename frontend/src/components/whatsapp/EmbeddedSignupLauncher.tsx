@@ -200,12 +200,12 @@ export function EmbeddedSignupLauncher({
         }}
       />
 
-      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-        <p className="text-sm font-medium text-gray-900 mb-1">{t("whatsapp.sectionTitle")}</p>
-        <p className="text-xs text-gray-500 mb-4">{t("whatsapp.sectionDescription")}</p>
+      <div className="rounded-lg border border-default bg-surface p-4">
+        <p className="text-sm font-medium text-primary mb-1">{t("whatsapp.sectionTitle")}</p>
+        <p className="text-xs text-secondary mb-4">{t("whatsapp.sectionDescription")}</p>
 
         <div className="mb-4">
-          <label htmlFor="whatsapp-pin" className="block text-xs font-medium text-gray-700 mb-1">
+          <label htmlFor="whatsapp-pin" className="block text-xs font-medium text-secondary mb-1">
             {t("whatsapp.pinLabel")}
           </label>
           <input
@@ -221,9 +221,9 @@ export function EmbeddedSignupLauncher({
               if (pinError) setPinError("");
             }}
             placeholder={t("whatsapp.pinPlaceholder")}
-            className="w-full max-w-xs rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono tracking-widest"
+            className="w-full max-w-xs rounded-lg border border-default px-3 py-2 text-sm font-mono tracking-widest"
           />
-          <p className="mt-1 text-xs text-gray-500">{t("whatsapp.pinHint")}</p>
+          <p className="mt-1 text-xs text-secondary">{t("whatsapp.pinHint")}</p>
           {pinError && <p className="mt-1 text-xs text-red-600">{pinError}</p>}
         </div>
 
@@ -266,14 +266,14 @@ export function EmbeddedSignupLauncher({
               handleLaunch();
             }}
             disabled={isConnecting || !sdkReady}
-            className="mt-3 text-xs font-medium text-indigo-600 hover:text-indigo-700"
+            className="mt-3 text-xs font-medium text-accent hover:text-accent"
           >
             {t("whatsapp.reconnect")}
           </button>
         )}
 
         {!sdkReady && (
-          <p className="mt-2 text-xs text-gray-400">{t("whatsapp.sdkLoading")}</p>
+          <p className="mt-2 text-xs text-muted">{t("whatsapp.sdkLoading")}</p>
         )}
       </div>
 

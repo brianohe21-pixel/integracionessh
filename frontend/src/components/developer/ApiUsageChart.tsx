@@ -77,7 +77,7 @@ export function ApiUsageChart() {
   const chartData = usage.slice(0, 12).map((u) => ({
     label: u.keyName.slice(0, 8),
     value: u.messagesThisMonth,
-    color: "fill-indigo-400",
+    color: "fill-accent",
   }));
 
   return (
@@ -87,34 +87,34 @@ export function ApiUsageChart() {
       {isLoading ? (
         <div className="space-y-3">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 animate-pulse h-16" />
+            <div key={i} className="bg-surface-elevated rounded-xl border border-default p-4 animate-pulse h-16" />
           ))}
         </div>
       ) : (
         <>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
+        <div className="bg-surface-elevated rounded-xl border border-default p-4">
+          <p className="text-xs text-secondary uppercase tracking-wide font-medium">
             {t("developer.messagesInPeriod")}
           </p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">
+          <p className="text-2xl font-bold text-primary mt-1">
             {totalMessages.toLocaleString()}
           </p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
+        <div className="bg-surface-elevated rounded-xl border border-default p-4">
+          <p className="text-xs text-secondary uppercase tracking-wide font-medium">
             {t("developer.successRate")}
           </p>
           <p className="text-2xl font-bold text-green-600 mt-1">{successRate}%</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
+        <div className="bg-surface-elevated rounded-xl border border-default p-4">
+          <p className="text-xs text-secondary uppercase tracking-wide font-medium">
             {t("developer.successfulRequests")}
           </p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{totalSuccess.toLocaleString()}</p>
+          <p className="text-2xl font-bold text-primary mt-1">{totalSuccess.toLocaleString()}</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
+        <div className="bg-surface-elevated rounded-xl border border-default p-4">
+          <p className="text-xs text-secondary uppercase tracking-wide font-medium">
             {t("developer.errors")}
           </p>
           <p className="text-2xl font-bold text-red-500 mt-1">{totalErrors.toLocaleString()}</p>
@@ -122,29 +122,29 @@ export function ApiUsageChart() {
       </div>
 
       {usage.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h3 className="text-sm font-semibold text-gray-900 mb-4">
+        <div className="bg-surface-elevated rounded-xl border border-default p-6">
+          <h3 className="text-sm font-semibold text-primary mb-4">
             {t("developer.messagesByKeyInPeriod")}
           </h3>
           {chartData.length > 0 ? (
             <BarChart data={chartData} />
           ) : (
-            <p className="text-sm text-gray-400 text-center py-8">No data yet</p>
+            <p className="text-sm text-muted text-center py-8">No data yet</p>
           )}
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100">
-          <h3 className="text-sm font-semibold text-gray-900">{t("developer.usageByKey")}</h3>
+      <div className="bg-surface-elevated rounded-xl border border-default overflow-hidden">
+        <div className="px-6 py-4 border-b border-subtle">
+          <h3 className="text-sm font-semibold text-primary">{t("developer.usageByKey")}</h3>
         </div>
         {usage.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-10">No usage data yet</p>
+          <p className="text-sm text-muted text-center py-10">No usage data yet</p>
         ) : (
           <TableContainer>
             <table className="w-full min-w-[480px] text-sm">
               <thead>
-                <tr className="bg-gray-50 text-left text-xs text-gray-500 uppercase tracking-wide">
+                <tr className="bg-surface text-left text-xs text-secondary uppercase tracking-wide">
                   <th className="px-6 py-3 font-medium">{t("developer.colKey")}</th>
                   <th className="px-6 py-3 font-medium text-right">{t("developer.colRequests")}</th>
                   <th className="px-6 py-3 font-medium text-right">{t("developer.colSuccess")}</th>
@@ -155,12 +155,12 @@ export function ApiUsageChart() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {usage.map((u) => (
-                  <tr key={u.keyId} className="hover:bg-gray-50/50">
+                  <tr key={u.keyId} className="hover:bg-surface/50">
                     <td className="px-6 py-3.5">
-                      <div className="font-medium text-gray-900">{u.keyName}</div>
-                      <code className="text-xs text-gray-400 font-mono">{u.prefix}…</code>
+                      <div className="font-medium text-primary">{u.keyName}</div>
+                      <code className="text-xs text-muted font-mono">{u.prefix}…</code>
                     </td>
-                    <td className="px-6 py-3.5 text-right text-gray-700 font-medium">
+                    <td className="px-6 py-3.5 text-right text-secondary font-medium">
                       {u.totalRequests.toLocaleString()}
                     </td>
                     <td className="px-6 py-3.5 text-right text-green-700">
@@ -169,7 +169,7 @@ export function ApiUsageChart() {
                     <td className="px-6 py-3.5 text-right text-red-500">
                       {u.errorRequests.toLocaleString()}
                     </td>
-                    <td className="px-6 py-3.5 text-gray-500">
+                    <td className="px-6 py-3.5 text-secondary">
                       {u.lastUsedAt
                         ? new Date(u.lastUsedAt).toLocaleDateString()
                         : "—"}
@@ -178,7 +178,7 @@ export function ApiUsageChart() {
                       <button
                         type="button"
                         onClick={() => setSelectedKeyId(u.keyId)}
-                        className="text-xs font-medium text-indigo-600 hover:underline"
+                        className="text-xs font-medium text-accent hover:underline"
                       >
                         {t("developer.viewLogs")}
                       </button>

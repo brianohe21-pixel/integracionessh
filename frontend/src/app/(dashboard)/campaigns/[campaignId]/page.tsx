@@ -51,11 +51,11 @@ interface MetricCardProps {
 
 function MetricCard({ icon, label, value, colorClass }: MetricCardProps) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5 flex items-center gap-4">
+    <div className="bg-surface-elevated rounded-xl border border-default p-5 flex items-center gap-4">
       <div className={`p-3 rounded-xl ${colorClass}`}>{icon}</div>
       <div>
-        <p className="text-2xl font-bold text-gray-900 tabular-nums">{value.toLocaleString()}</p>
-        <p className="text-sm text-gray-500">{label}</p>
+        <p className="text-2xl font-bold text-primary tabular-nums">{value.toLocaleString()}</p>
+        <p className="text-sm text-secondary">{label}</p>
       </div>
     </div>
   );
@@ -109,7 +109,7 @@ export default function CampaignDetailPage({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64 text-gray-400">
+      <div className="flex items-center justify-center h-64 text-muted">
         {t("common.loading")}
       </div>
     );
@@ -136,16 +136,16 @@ export default function CampaignDetailPage({
       <div className="flex items-center gap-3">
         <Link
           href="/campaigns"
-          className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+          className="p-2 rounded-lg text-secondary hover:bg-surface-muted hover:text-secondary transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
         </Link>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-xl font-bold text-gray-900 truncate">{campaign.name}</h1>
+            <h1 className="text-xl font-bold text-primary truncate">{campaign.name}</h1>
             <CampaignStatusBadge status={campaign.status} />
           </div>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-secondary">
             {t("campaigns.templateLabel")}: <span className="font-medium">{campaign.templateName}</span>
             {" · "}
             {t("campaigns.languageLabel")}: {campaign.language}
@@ -193,7 +193,7 @@ export default function CampaignDetailPage({
                 }
               }}
               disabled={isActionPending}
-              className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 disabled:opacity-50 text-sm font-medium transition-colors"
+              className="inline-flex items-center gap-2 px-3 py-2 border border-default text-secondary rounded-lg hover:bg-surface disabled:opacity-50 text-sm font-medium transition-colors"
             >
               <X className="w-4 h-4" />
               {t("campaigns.cancel")}
@@ -212,10 +212,10 @@ export default function CampaignDetailPage({
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         <MetricCard
-          icon={<Users className="w-5 h-5 text-gray-600" />}
+          icon={<Users className="w-5 h-5 text-secondary" />}
           label={t("campaigns.analytics.total")}
           value={campaign.total}
-          colorClass="bg-gray-100"
+          colorClass="bg-surface-muted"
         />
         <MetricCard
           icon={<CheckCircle2 className="w-5 h-5 text-blue-600" />}
@@ -230,10 +230,10 @@ export default function CampaignDetailPage({
           colorClass="bg-green-50"
         />
         <MetricCard
-          icon={<Eye className="w-5 h-5 text-indigo-600" />}
+          icon={<Eye className="w-5 h-5 text-accent" />}
           label={t("campaigns.analytics.read")}
           value={campaign.readCount}
-          colorClass="bg-indigo-50"
+          colorClass="bg-accent-muted"
         />
         <MetricCard
           icon={<XCircle className="w-5 h-5 text-red-600" />}
@@ -244,49 +244,49 @@ export default function CampaignDetailPage({
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-          <h2 className="font-semibold text-gray-900">{t("campaigns.progressTitle")}</h2>
+        <div className="bg-surface-elevated rounded-xl border border-default p-5 space-y-4">
+          <h2 className="font-semibold text-primary">{t("campaigns.progressTitle")}</h2>
           <CampaignProgressBar campaign={campaign} />
-          <div className="text-xs text-gray-500">
+          <div className="text-xs text-secondary">
             {campaign.sent + campaign.failed} / {campaign.total} {t("campaigns.processed")}
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-          <h2 className="font-semibold text-gray-900">{t("campaigns.funnelTitle")}</h2>
+        <div className="bg-surface-elevated rounded-xl border border-default p-5 space-y-4">
+          <h2 className="font-semibold text-primary">{t("campaigns.funnelTitle")}</h2>
           <CampaignFunnelChart campaign={campaign} />
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
-        <h2 className="font-semibold text-gray-900">{t("campaigns.details")}</h2>
+      <div className="bg-surface-elevated rounded-xl border border-default p-5 space-y-3">
+        <h2 className="font-semibold text-primary">{t("campaigns.details")}</h2>
         <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-          <dt className="text-gray-500">{t("campaigns.createdAt")}</dt>
-          <dd className="text-gray-900">{formatDate(campaign.createdAt)}</dd>
+          <dt className="text-secondary">{t("campaigns.createdAt")}</dt>
+          <dd className="text-primary">{formatDate(campaign.createdAt)}</dd>
           {campaign.startedAt && (
             <>
-              <dt className="text-gray-500">{t("campaigns.startedAt")}</dt>
-              <dd className="text-gray-900">{formatDate(campaign.startedAt)}</dd>
+              <dt className="text-secondary">{t("campaigns.startedAt")}</dt>
+              <dd className="text-primary">{formatDate(campaign.startedAt)}</dd>
             </>
           )}
           {campaign.completedAt && (
             <>
-              <dt className="text-gray-500">{t("campaigns.completedAt")}</dt>
-              <dd className="text-gray-900">{formatDate(campaign.completedAt)}</dd>
+              <dt className="text-secondary">{t("campaigns.completedAt")}</dt>
+              <dd className="text-primary">{formatDate(campaign.completedAt)}</dd>
             </>
           )}
           {campaign.scheduledAt && (
             <>
-              <dt className="text-gray-500 flex items-center gap-1">
+              <dt className="text-secondary flex items-center gap-1">
                 <Calendar className="w-3.5 h-3.5" />
                 {t("campaigns.scheduledAtLabel")}
               </dt>
-              <dd className="text-gray-900">{formatDate(campaign.scheduledAt)}</dd>
+              <dd className="text-primary">{formatDate(campaign.scheduledAt)}</dd>
             </>
           )}
           {campaign.segments.length > 0 && (
             <>
-              <dt className="text-gray-500 flex items-center gap-1">
+              <dt className="text-secondary flex items-center gap-1">
                 <Tag className="w-3.5 h-3.5" />
                 {t("campaigns.segmentsLabel")}
               </dt>
@@ -294,7 +294,7 @@ export default function CampaignDetailPage({
                 {campaign.segments.map((seg) => (
                   <span
                     key={seg}
-                    className="bg-indigo-50 text-indigo-700 text-xs px-2 py-0.5 rounded font-medium"
+                    className="bg-accent-muted text-accent text-xs px-2 py-0.5 rounded font-medium"
                   >
                     {seg}
                   </span>
@@ -306,8 +306,8 @@ export default function CampaignDetailPage({
       </div>
 
       {campaignTemplate && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h2 className="font-semibold text-gray-900 mb-4">{t("bulkSend.preview")}</h2>
+        <div className="bg-surface-elevated rounded-xl border border-default p-5">
+          <h2 className="font-semibold text-primary mb-4">{t("bulkSend.preview")}</h2>
           <TemplateMessagePreview template={campaignTemplate} />
         </div>
       )}
@@ -316,8 +316,8 @@ export default function CampaignDetailPage({
         campaign.status === "failed" ||
         campaign.status === "running" ||
         campaign.status === "paused") && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h2 className="font-semibold text-gray-900 mb-4">{t("campaigns.failuresTitle")}</h2>
+        <div className="bg-surface-elevated rounded-xl border border-default p-5">
+          <h2 className="font-semibold text-primary mb-4">{t("campaigns.failuresTitle")}</h2>
           <BulkJobFailures
             jobId={campaign.campaignId}
             templateName={campaign.templateName}

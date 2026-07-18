@@ -28,7 +28,7 @@ export function CatalogOrdersList({ botId }: { botId: string }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   if (isLoading) {
-    return <div className="h-40 animate-pulse rounded-xl bg-gray-100" />;
+    return <div className="h-40 animate-pulse rounded-xl bg-surface-muted" />;
   }
 
   const orders = data?.orders ?? [];
@@ -37,11 +37,11 @@ export function CatalogOrdersList({ botId }: { botId: string }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
-        <label className="text-sm text-gray-600">{t("catalog.filterStatus")}</label>
+        <label className="text-sm text-secondary">{t("catalog.filterStatus")}</label>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as OrderStatus | "")}
-          className="rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white"
+          className="rounded-lg border border-default px-3 py-2 text-sm bg-surface-elevated"
         >
           <option value="">{t("catalog.allStatuses")}</option>
           {STATUSES.map((status) => (
@@ -53,11 +53,11 @@ export function CatalogOrdersList({ botId }: { botId: string }) {
       </div>
 
       {orders.length === 0 ? (
-        <p className="text-sm text-gray-500">{t("catalog.noOrders")}</p>
+        <p className="text-sm text-secondary">{t("catalog.noOrders")}</p>
       ) : (
-        <TableContainer className="rounded-xl border border-gray-200">
+        <TableContainer className="rounded-xl border border-default">
           <table className="min-w-full text-sm">
-            <thead className="bg-gray-50 text-left text-gray-500">
+            <thead className="bg-surface text-left text-secondary">
               <tr>
                 <th className="px-4 py-3">{t("catalog.colDate")}</th>
                 <th className="px-4 py-3">{t("catalog.colContact")}</th>
@@ -72,13 +72,13 @@ export function CatalogOrdersList({ botId }: { botId: string }) {
                 const orderItems = order.items ?? [];
                 return (
                 <tr key={order.orderId}>
-                  <td className="px-4 py-3 text-gray-600">
+                  <td className="px-4 py-3 text-secondary">
                     {new Date(order.createdAt).toLocaleString()}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="font-medium text-gray-900">{order.contactPhone}</div>
+                    <div className="font-medium text-primary">{order.contactPhone}</div>
                     {order.contactName ? (
-                      <div className="text-gray-500">{order.contactName}</div>
+                      <div className="text-secondary">{order.contactName}</div>
                     ) : null}
                   </td>
                   <td className="px-4 py-3">{orderItems.length}</td>
@@ -92,7 +92,7 @@ export function CatalogOrdersList({ botId }: { botId: string }) {
                     <button
                       type="button"
                       onClick={() => setSelectedId(order.orderId)}
-                      className="text-xs text-indigo-600 hover:underline"
+                      className="text-xs text-accent hover:underline"
                     >
                       {t("common.edit")}
                     </button>
@@ -105,9 +105,9 @@ export function CatalogOrdersList({ botId }: { botId: string }) {
       )}
 
       {selected ? (
-        <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-4">
-          <h3 className="font-semibold text-gray-900">{t("catalog.orderDetail")}</h3>
-          <ul className="space-y-1 text-sm text-gray-700">
+        <div className="rounded-xl border border-default bg-surface-elevated p-4 space-y-4">
+          <h3 className="font-semibold text-primary">{t("catalog.orderDetail")}</h3>
+          <ul className="space-y-1 text-sm text-secondary">
             {(selected.items ?? []).map((item) => (
               <li key={`${selected.orderId}-${item.retailerId}`}>
                 {item.quantity}x {item.name} — {formatCop(item.unitPriceInCents * item.quantity)}
@@ -115,7 +115,7 @@ export function CatalogOrdersList({ botId }: { botId: string }) {
             ))}
           </ul>
           {selected.customerNote ? (
-            <p className="text-sm text-gray-600">{selected.customerNote}</p>
+            <p className="text-sm text-secondary">{selected.customerNote}</p>
           ) : null}
           <div className="flex flex-wrap items-center gap-3">
             <select
@@ -126,7 +126,7 @@ export function CatalogOrdersList({ botId }: { botId: string }) {
                   status: e.target.value as OrderStatus,
                 })
               }
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white"
+              className="rounded-lg border border-default px-3 py-2 text-sm bg-surface-elevated"
             >
               {STATUSES.map((status) => (
                 <option key={status} value={status}>
@@ -135,7 +135,7 @@ export function CatalogOrdersList({ botId }: { botId: string }) {
               ))}
             </select>
             {selected.paymentId ? (
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-secondary">
                 {t("catalog.paymentLinked")}: {selected.paymentId.slice(0, 8)}
               </span>
             ) : null}

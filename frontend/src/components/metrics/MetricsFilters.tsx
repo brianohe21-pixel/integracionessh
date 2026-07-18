@@ -153,17 +153,17 @@ export function MetricsFiltersBar({ filters, bots, onChange }: MetricsFiltersBar
   const t = useT();
 
   const selectClass =
-    "w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500";
+    "w-full px-3 py-2 border border-default rounded-lg text-sm bg-surface-elevated focus:outline-none focus:ring-2 focus:ring-accent";
 
   const inputClass =
-    "w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500";
+    "w-full px-3 py-2 border border-default rounded-lg text-sm bg-surface-elevated focus:outline-none focus:ring-2 focus:ring-accent";
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-4">
+    <div className="rounded-xl border border-default bg-surface-elevated p-4 space-y-4">
       <div className="flex flex-col gap-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="space-y-1">
-            <label className="text-xs font-medium uppercase tracking-wide text-gray-500">
+            <label className="text-xs font-medium uppercase tracking-wide text-secondary">
               {t("metrics.filterDateFrom")}
             </label>
             <input
@@ -175,7 +175,7 @@ export function MetricsFiltersBar({ filters, bots, onChange }: MetricsFiltersBar
             />
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-medium uppercase tracking-wide text-gray-500">
+            <label className="text-xs font-medium uppercase tracking-wide text-secondary">
               {t("metrics.filterDateTo")}
             </label>
             <input
@@ -187,7 +187,7 @@ export function MetricsFiltersBar({ filters, bots, onChange }: MetricsFiltersBar
             />
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-medium uppercase tracking-wide text-gray-500">
+            <label className="text-xs font-medium uppercase tracking-wide text-secondary">
               {t("metrics.filterBot")}
             </label>
             <select
@@ -204,7 +204,7 @@ export function MetricsFiltersBar({ filters, bots, onChange }: MetricsFiltersBar
             </select>
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-medium uppercase tracking-wide text-gray-500">
+            <label className="text-xs font-medium uppercase tracking-wide text-secondary">
               {t("metrics.filterSection")}
             </label>
             <select
@@ -221,7 +221,7 @@ export function MetricsFiltersBar({ filters, bots, onChange }: MetricsFiltersBar
         </div>
 
         <div className="space-y-2">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+          <p className="text-xs font-medium uppercase tracking-wide text-secondary">
             {t("metrics.filterPeriod")}
           </p>
           <div className="flex flex-wrap gap-2">
@@ -233,8 +233,8 @@ export function MetricsFiltersBar({ filters, bots, onChange }: MetricsFiltersBar
                 className={cn(
                   "px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors",
                   isPresetRange(filters, days)
-                    ? "border-indigo-600 bg-indigo-50 text-indigo-700"
-                    : "border-gray-200 text-gray-600 hover:border-gray-300 hover:text-gray-800"
+                    ? "border-accent bg-accent-muted text-accent"
+                    : "border-default text-secondary hover:border-default hover:text-primary"
                 )}
               >
                 {t("metrics.filterPeriodDays", { days })}

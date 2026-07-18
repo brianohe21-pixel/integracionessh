@@ -13,7 +13,7 @@ export function LanguageSwitcher() {
 
   return (
     <div
-      className="inline-flex items-center gap-1 rounded-lg p-0.5 bg-gray-100"
+      className="inline-flex items-center gap-1 rounded-lg p-0.5 bg-surface-muted"
       role="group"
       aria-label={t("common.language")}
     >
@@ -25,8 +25,8 @@ export function LanguageSwitcher() {
           className={cn(
             "px-3 py-1.5 text-sm font-medium rounded-md transition-colors",
             locale === opt.value
-              ? "bg-white text-indigo-600 shadow-sm"
-              : "text-gray-500 hover:text-gray-700"
+              ? "bg-surface-elevated text-accent shadow-sm"
+              : "text-secondary hover:text-secondary"
           )}
         >
           {t(opt.labelKey)}

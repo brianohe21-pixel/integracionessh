@@ -26,7 +26,7 @@ export default function FlowsPage() {
         actions={
           <Link
             href="/flows/new"
-            className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+            className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover"
           >
             <Plus className="h-4 w-4" />
             {t("flows.new")}
@@ -35,13 +35,13 @@ export default function FlowsPage() {
       />
 
       {isLoading ? (
-        <div className="h-32 animate-pulse rounded-xl border bg-white" />
+        <div className="h-32 animate-pulse rounded-xl border bg-surface-elevated" />
       ) : !flows?.length ? (
-        <p className="text-sm text-gray-500">{t("flows.empty")}</p>
+        <p className="text-sm text-secondary">{t("flows.empty")}</p>
       ) : (
-        <TableContainer className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+        <TableContainer className="overflow-hidden rounded-xl border border-default bg-surface-elevated">
           <table className="w-full min-w-[560px] text-sm">
-            <thead className="bg-gray-50 text-left text-gray-600">
+            <thead className="bg-surface text-left text-secondary">
               <tr>
                 <th className="px-4 py-3">{t("flows.colName")}</th>
                 <th className="px-4 py-3">{t("flows.colBot")}</th>
@@ -51,16 +51,16 @@ export default function FlowsPage() {
             </thead>
             <tbody>
               {flows.map((flow) => (
-                <tr key={flow.flowId} className="border-t border-gray-100">
+                <tr key={flow.flowId} className="border-t border-subtle">
                   <td className="px-4 py-3">
                     <Link
                       href={`/flows/${flow.flowId}/edit`}
-                      className="font-medium text-indigo-600 hover:underline"
+                      className="font-medium text-accent hover:underline"
                     >
                       {flow.name}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-gray-600">{botName(flow.botId)}</td>
+                  <td className="px-4 py-3 text-secondary">{botName(flow.botId)}</td>
                   <td className="px-4 py-3">
                     {flow.enabled ? t("flows.enabled") : t("flows.disabled")}
                   </td>
@@ -70,7 +70,7 @@ export default function FlowsPage() {
                       onClick={() =>
                         toggle.mutate({ flowId: flow.flowId, enabled: !flow.enabled })
                       }
-                      className="text-indigo-600 hover:underline"
+                      className="text-accent hover:underline"
                     >
                       {flow.enabled ? t("flows.disable") : t("flows.enable")}
                     </button>

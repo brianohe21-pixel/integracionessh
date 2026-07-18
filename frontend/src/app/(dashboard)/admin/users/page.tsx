@@ -38,7 +38,7 @@ function CognitoUserActions({
 }) {
   return (
     <tr>
-      <td className="px-4 py-3 text-gray-900">
+      <td className="px-4 py-3 text-primary">
         <div className="flex items-center gap-2">
           <span>{user.email || user.username}</span>
           {user.role === "admin" && (
@@ -55,7 +55,7 @@ function CognitoUserActions({
               role: e.target.value as "admin" | "member",
             })
           }
-          className="rounded-lg border border-gray-300 px-2 py-1 text-sm"
+          className="rounded-lg border border-default px-2 py-1 text-sm"
         >
           <option value="member">{t("admin.users.roleMember")}</option>
           <option value="admin">{t("admin.users.roleAdmin")}</option>
@@ -65,13 +65,13 @@ function CognitoUserActions({
         <input
           value={edits.tenantId}
           onChange={(e) => onEditsChange({ ...edits, tenantId: e.target.value })}
-          className="w-full min-w-[12rem] rounded-lg border border-gray-300 px-2 py-1 text-sm"
+          className="w-full min-w-[12rem] rounded-lg border border-default px-2 py-1 text-sm"
         />
       </td>
-      <td className="px-4 py-3 text-gray-600">
+      <td className="px-4 py-3 text-secondary">
         {user.enabled ? t("admin.users.enabled") : t("admin.users.disabled")}
       </td>
-      <td className="px-4 py-3 text-gray-500">
+      <td className="px-4 py-3 text-secondary">
         {user.createdAt ? formatDate(user.createdAt) : "—"}
       </td>
       <td className="px-4 py-3">
@@ -80,7 +80,7 @@ function CognitoUserActions({
             type="button"
             onClick={onToggle}
             disabled={pending}
-            className="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
+            className="text-xs px-2 py-1 rounded border border-default hover:bg-surface disabled:opacity-50"
           >
             {user.enabled ? t("admin.users.disable") : t("admin.users.enable")}
           </button>
@@ -88,7 +88,7 @@ function CognitoUserActions({
             type="button"
             onClick={onSave}
             disabled={pending}
-            className="text-xs px-2 py-1 rounded bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
+            className="text-xs px-2 py-1 rounded bg-accent text-white hover:bg-accent-hover disabled:opacity-50"
           >
             {t("admin.users.save")}
           </button>
@@ -187,7 +187,7 @@ export default function AdminUsersPage() {
   }
 
   const cognitoTableHeader = (
-    <thead className="bg-gray-50 text-left text-gray-500">
+    <thead className="bg-surface text-left text-secondary">
       <tr>
         <th className="px-4 py-3 font-medium">{t("common.email")}</th>
         <th className="px-4 py-3 font-medium">{t("admin.users.role")}</th>
@@ -205,18 +205,18 @@ export default function AdminUsersPage() {
 
       <section>
         <div className="mb-3">
-          <h2 className="text-lg font-semibold text-gray-900">
+          <h2 className="text-lg font-semibold text-primary">
             {t("admin.users.adminsSection")}
           </h2>
-          <p className="text-sm text-gray-500">{t("admin.users.adminsSectionHint")}</p>
+          <p className="text-sm text-secondary">{t("admin.users.adminsSectionHint")}</p>
         </div>
         {adminsQuery.isLoading ? (
-          <div className="h-24 bg-gray-100 rounded-xl animate-pulse" />
+          <div className="h-24 bg-surface-muted rounded-xl animate-pulse" />
         ) : !platformAdmins.length ? (
-          <p className="text-sm text-gray-500">{t("admin.users.emptyAdmins")}</p>
+          <p className="text-sm text-secondary">{t("admin.users.emptyAdmins")}</p>
         ) : (
           <div className="space-y-4">
-            <TableContainer className="rounded-xl border border-indigo-200 bg-white">
+            <TableContainer className="rounded-xl border border-accent/30 bg-surface-elevated">
               <table className="min-w-full text-sm">
                 {cognitoTableHeader}
                 <tbody className="divide-y divide-gray-100">
@@ -243,7 +243,7 @@ export default function AdminUsersPage() {
                 type="button"
                 onClick={() => void adminsQuery.fetchNextPage()}
                 disabled={adminsQuery.isFetchingNextPage}
-                className="text-sm px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                className="text-sm px-4 py-2 rounded-lg border border-default text-secondary hover:bg-surface disabled:opacity-50"
               >
                 {t("admin.users.loadMore")}
               </button>
@@ -258,8 +258,8 @@ export default function AdminUsersPage() {
           onClick={() => setTab("tenants")}
           className={`px-4 py-2 rounded-lg text-sm font-medium ${
             tab === "tenants"
-              ? "bg-indigo-600 text-white"
-              : "bg-white border border-gray-200 text-gray-700"
+              ? "bg-accent text-white"
+              : "bg-surface-elevated border border-default text-secondary"
           }`}
         >
           {t("admin.users.tabTenants")}
@@ -269,8 +269,8 @@ export default function AdminUsersPage() {
           onClick={() => setTab("cognito")}
           className={`px-4 py-2 rounded-lg text-sm font-medium ${
             tab === "cognito"
-              ? "bg-indigo-600 text-white"
-              : "bg-white border border-gray-200 text-gray-700"
+              ? "bg-accent text-white"
+              : "bg-surface-elevated border border-default text-secondary"
           }`}
         >
           {t("admin.users.tabCognito")}
@@ -279,15 +279,15 @@ export default function AdminUsersPage() {
 
       {tab === "tenants" ? (
         <>
-        <p className="text-sm text-gray-500">{t("admin.users.planManualHint")}</p>
+        <p className="text-sm text-secondary">{t("admin.users.planManualHint")}</p>
         {tenantsLoading ? (
-          <div className="h-40 bg-gray-100 rounded-xl animate-pulse" />
+          <div className="h-40 bg-surface-muted rounded-xl animate-pulse" />
         ) : !tenants?.length ? (
-          <p className="text-sm text-gray-500">{t("admin.users.emptyTenants")}</p>
+          <p className="text-sm text-secondary">{t("admin.users.emptyTenants")}</p>
         ) : (
-          <TableContainer className="rounded-xl border border-gray-200 bg-white">
+          <TableContainer className="rounded-xl border border-default bg-surface-elevated">
             <table className="min-w-full text-sm">
-              <thead className="bg-gray-50 text-left text-gray-500">
+              <thead className="bg-surface text-left text-secondary">
                 <tr>
                   <th className="px-4 py-3 font-medium">{t("auth.companyName")}</th>
                   <th className="px-4 py-3 font-medium">{t("common.email")}</th>
@@ -302,8 +302,8 @@ export default function AdminUsersPage() {
               <tbody className="divide-y divide-gray-100">
                 {tenants.map((tenant) => (
                   <tr key={tenant.tenantId}>
-                    <td className="px-4 py-3 text-gray-900">{tenant.name}</td>
-                    <td className="px-4 py-3 text-gray-600">{tenant.email}</td>
+                    <td className="px-4 py-3 text-primary">{tenant.name}</td>
+                    <td className="px-4 py-3 text-secondary">{tenant.email}</td>
                     <td className="px-4 py-3">
                       {isTenantAlsoAdmin(tenant) ? (
                         <Badge variant="info">{t("admin.users.roleAdmin")}</Badge>
@@ -321,7 +321,7 @@ export default function AdminUsersPage() {
                               plan: e.target.value as TenantPlan,
                             })
                           }
-                          className="rounded-lg border border-gray-300 px-2 py-1 text-sm"
+                          className="rounded-lg border border-default px-2 py-1 text-sm"
                         >
                           <option value="free">{t("common.planFree")}</option>
                           <option value="pro">{t("common.planPro")}</option>
@@ -351,26 +351,26 @@ export default function AdminUsersPage() {
                             status: e.target.value as "active" | "suspended",
                           })
                         }
-                        className="rounded-lg border border-gray-300 px-2 py-1 text-sm"
+                        className="rounded-lg border border-default px-2 py-1 text-sm"
                       >
                         <option value="active">{t("common.active")}</option>
                         <option value="suspended">{t("common.suspended")}</option>
                       </select>
                     </td>
-                    <td className="px-4 py-3 text-gray-600">
+                    <td className="px-4 py-3 text-secondary">
                       {tenant.subscriptionStatus
                         ? t(`billing.subscriptionStatus.${tenant.subscriptionStatus}`)
                         : "—"}
-                      <span className="block text-xs text-gray-400">
+                      <span className="block text-xs text-muted">
                         {tenantPlanLabel(tenant.plan)}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-gray-500">
+                    <td className="px-4 py-3 text-secondary">
                       {tenant.currentPeriodEnd
                         ? formatDate(tenant.currentPeriodEnd)
                         : "—"}
                     </td>
-                    <td className="px-4 py-3 text-gray-500">{formatDate(tenant.createdAt)}</td>
+                    <td className="px-4 py-3 text-secondary">{formatDate(tenant.createdAt)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -379,12 +379,12 @@ export default function AdminUsersPage() {
         )}
         </>
       ) : cognitoQuery.isLoading ? (
-        <div className="h-40 bg-gray-100 rounded-xl animate-pulse" />
+        <div className="h-40 bg-surface-muted rounded-xl animate-pulse" />
       ) : !cognitoUsers.length ? (
-        <p className="text-sm text-gray-500">{t("admin.users.emptyCognito")}</p>
+        <p className="text-sm text-secondary">{t("admin.users.emptyCognito")}</p>
       ) : (
         <div className="space-y-4">
-          <TableContainer className="rounded-xl border border-gray-200 bg-white">
+          <TableContainer className="rounded-xl border border-default bg-surface-elevated">
             <table className="min-w-full text-sm">
               {cognitoTableHeader}
               <tbody className="divide-y divide-gray-100">
@@ -411,7 +411,7 @@ export default function AdminUsersPage() {
               type="button"
               onClick={() => void cognitoQuery.fetchNextPage()}
               disabled={cognitoQuery.isFetchingNextPage}
-              className="text-sm px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              className="text-sm px-4 py-2 rounded-lg border border-default text-secondary hover:bg-surface disabled:opacity-50"
             >
               {t("admin.users.loadMore")}
             </button>
