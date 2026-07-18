@@ -1,11 +1,13 @@
 export const META_FLOW_TEMPLATES: Record<string, Record<string, unknown>> = {
   lead_capture: {
-    version: "7.0",
+    version: "7.3",
     screens: [
       {
         id: "LEAD_FORM",
         title: "Contact us",
         terminal: true,
+        success: true,
+        data: {},
         layout: {
           type: "SingleColumnLayout",
           children: [
@@ -23,7 +25,7 @@ export const META_FLOW_TEMPLATES: Record<string, Record<string, unknown>> = {
                   type: "TextInput",
                   name: "email",
                   label: "Email",
-                  input_type: "EMAIL",
+                  "input-type": "email",
                   required: true,
                 },
                 {
@@ -45,12 +47,14 @@ export const META_FLOW_TEMPLATES: Record<string, Record<string, unknown>> = {
     ],
   },
   feedback: {
-    version: "7.0",
+    version: "7.3",
     screens: [
       {
         id: "FEEDBACK",
         title: "Rate us",
         terminal: true,
+        success: true,
+        data: {},
         layout: {
           type: "SingleColumnLayout",
           children: [
