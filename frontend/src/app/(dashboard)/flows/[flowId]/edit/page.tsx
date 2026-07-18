@@ -2,32 +2,18 @@
 
 import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useT } from "@/i18n/context";
 import { useFlow, useUpdateFlow } from "@/hooks/useFlows";
 import type { FlowEdge, FlowNode, FlowNodeType } from "@/types";
 import { DashboardPage } from "@/components/layout/DashboardPage";
+import { NodePalette } from "@/components/flows/NodePalette";
+import { NodePropertiesPanel } from "@/components/flows/NodePropertiesPanel";
 
 const FlowCanvas = dynamic(
   () => import("@/components/flows/FlowCanvas").then((m) => m.FlowCanvas),
   { ssr: false, loading: () => <div className="h-[520px] bg-gray-100 rounded-xl animate-pulse" /> }
 );
-
-const NODE_TYPES: FlowNodeType[] = [
-  "message",
-  "condition",
-  "buttons",
-  "meta_flow",
-  "handoff",
-  "delay",
-  "set_variable",
-  "book_appointment",
-  "request_payment",
-  "send_catalog",
-  "send_products",
-  "await_order",
-  "end",
-];
 
 export default function EditFlowPage() {
   const t = useT();
@@ -37,6 +23,7 @@ export default function EditFlowPage() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [localNodes, setLocalNodes] = useState<FlowNode[]>([]);
   const [localEdges, setLocalEdges] = useState<FlowEdge[]>([]);
+  const [triggerWarning, setTriggerWarning] = useState(false);
 
   useEffect(() => {
     if (flow) {
@@ -46,6 +33,19 @@ export default function EditFlowPage() {
   }, [flow]);
 
   const selected = localNodes.find((n) => n.id === selectedNodeId);
+  const triggerCount = localNodes.filter((n) => n.type === "trigger").length;
+  const canDeleteSelected =
+    !!selected && !(selected.type === "trigger" && triggerCount <= 1);
+
+  const getTypeLabel = useCallback(
+    (type: FlowNodeType) => t(`flows.nodeTypes.${type}`),
+    [t]
+  );
+
+  const getBranchLabel = useCallback(
+    (key: "true" | "false") => t(`flows.fields.branch${key === "true" ? "True" : "False"}`),
+    [t]
+  );
 
   function handleCanvasChange(nodes: FlowNode[], edges: FlowEdge[]) {
     setLocalNodes(nodes);
@@ -63,16 +63,41 @@ export default function EditFlowPage() {
 
   function addNode(type: FlowNodeType) {
     const id = `${type}-${Date.now()}`;
+    const defaultData: Record<string, unknown> = { label: t(`flows.nodeTypes.${type}`) };
+    if (type === "message") defaultData.messageText = "";
+    if (type === "buttons") {
+      defaultData.messageText = t("flows.fields.defaultButtonPrompt");
+      defaultData.buttons = [{ id: "btn-1", title: "" }];
+    }
+    if (type === "delay") defaultData.delaySeconds = 5;
+    if (type === "condition") {
+      defaultData.conditionVariable = "last_input";
+      defaultData.conditionOperator = "contains";
+    }
     setLocalNodes((nodes) => [
       ...nodes,
       {
         id,
         type,
-        position: { x: 120 + nodes.length * 40, y: 200 },
-        data: { label: type },
+        position: { x: 120 + (nodes.length % 5) * 48, y: 80 + Math.floor(nodes.length / 5) * 100 },
+        data: defaultData,
       },
     ]);
     setSelectedNodeId(id);
+  }
+
+  function deleteSelectedNode() {
+    if (!selectedNodeId || !canDeleteSelected) return;
+    setLocalNodes((nodes) => nodes.filter((n) => n.id !== selectedNodeId));
+    setLocalEdges((edges) =>
+      edges.filter((e) => e.source !== selectedNodeId && e.target !== selectedNodeId)
+    );
+    setSelectedNodeId(null);
+  }
+
+  function handleCannotDeleteTrigger() {
+    setTriggerWarning(true);
+    setTimeout(() => setTriggerWarning(false), 3000);
   }
 
   async function handleSave() {
@@ -101,175 +126,44 @@ export default function EditFlowPage() {
           type="button"
           onClick={() => void handleSave()}
           disabled={update.isPending}
-          className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg"
+          className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
         >
           {t("flows.save")}
         </button>
       </div>
 
+      {triggerWarning && (
+        <p className="mb-3 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+          {t("flows.cannotDeleteTrigger")}
+        </p>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         <div className="lg:col-span-3">
           <FlowCanvas
-            key={flow.flowId}
             flow={{
               ...flow,
               nodes: localNodes.length > 0 ? localNodes : flow.nodes,
-              edges: localEdges.length > 0 ? localEdges : flow.edges,
+              edges: localEdges,
             }}
+            selectedNodeId={selectedNodeId}
+            onSelectNode={setSelectedNodeId}
             onChange={handleCanvasChange}
+            getTypeLabel={getTypeLabel}
+            getBranchLabel={getBranchLabel}
+            onCannotDeleteTrigger={handleCannotDeleteTrigger}
           />
         </div>
-        <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
-          <p className="text-sm font-semibold text-gray-900">{t("flows.addNode")}</p>
-          <div className="flex flex-wrap gap-1">
-            {NODE_TYPES.map((type) => (
-              <button
-                key={type}
-                type="button"
-                onClick={() => addNode(type)}
-                className="text-xs px-2 py-1 border border-gray-300 rounded hover:bg-gray-50"
-              >
-                {type}
-              </button>
-            ))}
-          </div>
-
-          <p className="text-sm font-semibold text-gray-900 pt-2">{t("flows.nodePanel")}</p>
-          <select
-            value={selectedNodeId ?? ""}
-            onChange={(e) => setSelectedNodeId(e.target.value || null)}
-            className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm bg-white"
-          >
-            <option value="">—</option>
-            {localNodes.map((n) => (
-              <option key={n.id} value={n.id}>
-                {n.type} ({n.id})
-              </option>
-            ))}
-          </select>
-
-          {selected?.type === "message" && (
-            <textarea
-              value={selected.data.messageText ?? ""}
-              onChange={(e) => updateSelectedData({ messageText: e.target.value })}
-              rows={4}
-              className="w-full text-sm border border-gray-300 rounded-lg p-2"
-            />
-          )}
-          {selected?.type === "trigger" && (
-            <select
-              value={selected.data.triggerType ?? "any_message"}
-              onChange={(e) =>
-                updateSelectedData({ triggerType: e.target.value })
-              }
-              className="w-full text-sm border border-gray-300 rounded-lg p-2 bg-white"
-            >
-              <option value="any_message">any_message</option>
-              <option value="first_message">first_message</option>
-              <option value="keyword">keyword</option>
-            </select>
-          )}
-          {selected?.type === "delay" && (
-            <input
-              type="number"
-              min={1}
-              value={selected.data.delaySeconds ?? 5}
-              onChange={(e) => updateSelectedData({ delaySeconds: Number(e.target.value) })}
-              className="w-full text-sm border border-gray-300 rounded-lg p-2"
-            />
-          )}
-          {selected?.type === "book_appointment" && (
-            <div className="space-y-2">
-              <input
-                type="number"
-                min={1}
-                max={14}
-                value={selected.data.maxDaysToShow ?? 7}
-                onChange={(e) => updateSelectedData({ maxDaysToShow: Number(e.target.value) })}
-                placeholder="maxDaysToShow"
-                className="w-full text-sm border border-gray-300 rounded-lg p-2"
-              />
-              <textarea
-                value={selected.data.confirmationMessage ?? ""}
-                onChange={(e) => updateSelectedData({ confirmationMessage: e.target.value })}
-                rows={3}
-                placeholder="confirmationMessage"
-                className="w-full text-sm border border-gray-300 rounded-lg p-2"
-              />
-            </div>
-          )}
-          {selected?.type === "request_payment" && (
-            <div className="space-y-2">
-              <input
-                type="number"
-                min={1000}
-                value={selected.data.amountInCents ?? 50000}
-                onChange={(e) => updateSelectedData({ amountInCents: Number(e.target.value) })}
-                placeholder="amountInCents"
-                className="w-full text-sm border border-gray-300 rounded-lg p-2"
-              />
-              <input
-                value={selected.data.paymentDescription ?? ""}
-                onChange={(e) => updateSelectedData({ paymentDescription: e.target.value })}
-                placeholder="paymentDescription"
-                className="w-full text-sm border border-gray-300 rounded-lg p-2"
-              />
-              <textarea
-                value={selected.data.paymentMessageTemplate ?? ""}
-                onChange={(e) => updateSelectedData({ paymentMessageTemplate: e.target.value })}
-                rows={3}
-                placeholder="paymentMessageTemplate"
-                className="w-full text-sm border border-gray-300 rounded-lg p-2"
-              />
-              <label className="flex items-center gap-2 text-sm text-gray-700">
-                <input
-                  type="checkbox"
-                  checked={selected.data.waitForPayment ?? false}
-                  onChange={(e) => updateSelectedData({ waitForPayment: e.target.checked })}
-                />
-                waitForPayment
-              </label>
-            </div>
-          )}
-          {(selected?.type === "send_catalog" || selected?.type === "await_order") && (
-            <textarea
-              value={selected.data.catalogMessageText ?? selected.data.messageText ?? ""}
-              onChange={(e) =>
-                updateSelectedData(
-                  selected.type === "send_catalog"
-                    ? { catalogMessageText: e.target.value }
-                    : { messageText: e.target.value }
-                )
-              }
-              rows={3}
-              placeholder="message"
-              className="w-full text-sm border border-gray-300 rounded-lg p-2"
-            />
-          )}
-          {selected?.type === "send_products" && (
-            <div className="space-y-2">
-              <textarea
-                value={selected.data.messageText ?? ""}
-                onChange={(e) => updateSelectedData({ messageText: e.target.value })}
-                rows={2}
-                placeholder="messageText"
-                className="w-full text-sm border border-gray-300 rounded-lg p-2"
-              />
-              <input
-                value={(selected.data.productRetailerIds ?? []).join(",")}
-                onChange={(e) =>
-                  updateSelectedData({
-                    productRetailerIds: e.target.value
-                      .split(",")
-                      .map((v) => v.trim())
-                      .filter(Boolean),
-                  })
-                }
-                placeholder="productRetailerIds (comma separated)"
-                className="w-full text-sm border border-gray-300 rounded-lg p-2"
-              />
-            </div>
-          )}
+        <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-4 max-h-[calc(100vh-12rem)] overflow-y-auto">
+          <NodePalette onAddNode={addNode} />
+          <hr className="border-gray-100" />
+          <NodePropertiesPanel
+            selected={selected}
+            botId={flow.botId}
+            onUpdate={updateSelectedData}
+            onDelete={deleteSelectedNode}
+            canDelete={canDeleteSelected}
+          />
         </div>
       </div>
     </DashboardPage>
