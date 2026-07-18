@@ -128,15 +128,47 @@ async function handleRegister(
   });
 }
 
+async function handleStatus(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer
+): Promise<APIGatewayProxyResultV2> {
+  const auth = extractAuthContext(event);
+  assertMemberRole(auth);
+
+  let connected = false;
+  try {
+    await getWhatsAppAccessToken(auth.tenantId, ENVIRONMENT);
+    connected = true;
+  } catch {
+    connected = false;
+  }
+
+  const bots = await listBots(auth.tenantId);
+  const firstBot = bots[0];
+
+  return ok({
+    connected,
+    ...(firstBot?.phoneNumberId ? { phoneNumberId: firstBot.phoneNumberId } : {}),
+    ...(firstBot?.whatsappBusinessAccountId
+      ? { whatsappBusinessAccountId: firstBot.whatsappBusinessAccountId }
+      : {}),
+  });
+}
+
 export async function handler(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): Promise<APIGatewayProxyResultV2> {
   try {
-    if (event.requestContext.http.method !== "POST") {
+    const method = event.requestContext.http.method;
+    const path = event.rawPath ?? event.requestContext.http.path;
+
+    if (method === "GET" && path.endsWith("/status")) {
+      return await handleStatus(event);
+    }
+
+    if (method !== "POST") {
       return badRequest("Method not allowed");
     }
 
-    const path = event.rawPath ?? event.requestContext.http.path;
     if (path.endsWith("/register")) {
       return await handleRegister(event);
     }
