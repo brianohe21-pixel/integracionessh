@@ -28,6 +28,10 @@ import { CampaignStatusBadge } from "@/components/campaigns/CampaignStatusBadge"
 import { CampaignProgressBar } from "@/components/campaigns/CampaignProgressBar";
 import { CampaignFunnelChart } from "@/components/campaigns/CampaignFunnelChart";
 import { BulkJobFailures } from "@/components/bulk-send/BulkJobFailures";
+import { TemplateMessagePreview } from "@/components/templates/TemplateMessagePreview";
+import { CampaignQualityAlert } from "@/components/campaigns/CampaignQualityAlert";
+import { useTemplates } from "@/hooks/useTemplates";
+import { useWhatsAppQualityGuard } from "@/hooks/useWhatsAppQualityGuard";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 
 function formatDate(iso?: string) {
@@ -66,13 +70,42 @@ export default function CampaignDetailPage({
   const t = useT();
 
   const { data: campaign, isLoading, error } = useCampaign(campaignId);
+  const { data: templates = [] } = useTemplates(campaign?.botId);
+  const campaignTemplate = templates.find(
+    (tmpl) => tmpl.name === campaign?.templateName && tmpl.language === campaign?.language
+  );
   const start = useStartCampaign();
   const pause = usePauseCampaign();
   const resume = useResumeCampaign();
   const cancel = useCancelCampaign();
+  const { assessment, phone, isLoading: qualityLoading, confirmStart } = useWhatsAppQualityGuard(
+    campaign?.botId
+  );
 
   const isActionPending =
     start.isPending || pause.isPending || resume.isPending || cancel.isPending;
+
+  const startBlocked = assessment.risk === "block";
+
+  async function handleStart() {
+    if (startBlocked) {
+      window.alert(t("campaigns.qualityStartBlocked"));
+      return;
+    }
+    const confirmed = await confirmStart("start");
+    if (!confirmed) return;
+    start.mutate(campaignId);
+  }
+
+  async function handleResume() {
+    if (startBlocked) {
+      window.alert(t("campaigns.qualityStartBlocked"));
+      return;
+    }
+    const confirmed = await confirmStart("resume");
+    if (!confirmed) return;
+    resume.mutate(campaignId);
+  }
 
   if (isLoading) {
     return (
@@ -122,8 +155,9 @@ export default function CampaignDetailPage({
         <div className="flex items-center gap-2 flex-shrink-0">
           {canStart && (
             <button
-              onClick={() => start.mutate(campaign.campaignId)}
-              disabled={isActionPending}
+              onClick={handleStart}
+              disabled={isActionPending || startBlocked || qualityLoading}
+              title={startBlocked ? t("campaigns.qualityStartBlocked") : undefined}
               className="inline-flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 text-sm font-medium transition-colors"
             >
               <Play className="w-4 h-4" />
@@ -142,8 +176,9 @@ export default function CampaignDetailPage({
           )}
           {canResume && (
             <button
-              onClick={() => resume.mutate(campaign.campaignId)}
-              disabled={isActionPending}
+              onClick={handleResume}
+              disabled={isActionPending || startBlocked || qualityLoading}
+              title={startBlocked ? t("campaigns.qualityStartBlocked") : undefined}
               className="inline-flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 text-sm font-medium transition-colors"
             >
               <RotateCcw className="w-4 h-4" />
@@ -166,6 +201,14 @@ export default function CampaignDetailPage({
           )}
         </div>
       </div>
+
+      {(canStart || canResume) && (
+        <CampaignQualityAlert
+          phone={phone}
+          assessment={assessment}
+          isLoading={qualityLoading}
+        />
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         <MetricCard
@@ -261,6 +304,13 @@ export default function CampaignDetailPage({
           )}
         </dl>
       </div>
+
+      {campaignTemplate && (
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <h2 className="font-semibold text-gray-900 mb-4">{t("bulkSend.preview")}</h2>
+          <TemplateMessagePreview template={campaignTemplate} />
+        </div>
+      )}
 
       {(campaign.status === "completed" ||
         campaign.status === "failed" ||
