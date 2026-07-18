@@ -105,6 +105,10 @@ variable "cognito_client_id" {
   type = string
 }
 
+variable "cognito_issuer_url" {
+  type = string
+}
+
 variable "whatsapp_verify_token" {
   type      = string
   sensitive = true

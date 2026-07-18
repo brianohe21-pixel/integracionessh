@@ -202,6 +202,22 @@ output "realtime_function_arn" {
   value = aws_lambda_function.functions["realtime"].arn
 }
 
+output "realtime_ws_invoke_arn" {
+  value = aws_lambda_function.functions["realtime_ws"].invoke_arn
+}
+
+output "realtime_ws_function_arn" {
+  value = aws_lambda_function.functions["realtime_ws"].arn
+}
+
+output "websocket_url" {
+  value = local.websocket_url
+}
+
+output "websocket_management_endpoint" {
+  value = local.websocket_management_endpoint
+}
+
 output "calendar_invoke_arn" {
   value = aws_lambda_function.functions["calendar"].invoke_arn
 }

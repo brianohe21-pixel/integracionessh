@@ -131,6 +131,13 @@ resource "aws_iam_role_policy" "lambda_permissions" {
         Resource = "${var.media_bucket_arn}/*"
       },
       {
+        Effect = "Allow"
+        Action = [
+          "execute-api:ManageConnections",
+        ]
+        Resource = "${aws_apigatewayv2_api.websocket.execution_arn}/*"
+      },
+      {
         Effect   = "Allow"
         Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
         Resource = "arn:aws:logs:*:*:*"
@@ -185,6 +192,7 @@ locals {
         ENVIRONMENT               = var.environment
         INTEGRATION_SQS_QUEUE_URL = var.integration_sqs_queue_url
         MEDIA_BUCKET              = var.media_bucket_name
+        WEBSOCKET_API_ENDPOINT    = local.websocket_management_endpoint
       }
     }
     tenants = {
@@ -216,8 +224,9 @@ locals {
       timeout     = 30
       memory      = 256
       environment = {
-        TABLE_NAME  = var.dynamodb_table_name
-        ENVIRONMENT = var.environment
+        TABLE_NAME             = var.dynamodb_table_name
+        ENVIRONMENT            = var.environment
+        WEBSOCKET_API_ENDPOINT = local.websocket_management_endpoint
       }
     }
     advisors = {
@@ -384,6 +393,18 @@ locals {
         LIVEKIT_URL        = var.livekit_url
         LIVEKIT_API_KEY    = var.livekit_api_key
         LIVEKIT_API_SECRET = var.livekit_api_secret
+      }
+    }
+    realtime_ws = {
+      handler     = "realtime-ws/index.handler"
+      description = "WebSocket connections for realtime inbox updates"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME         = var.dynamodb_table_name
+        ENVIRONMENT        = var.environment
+        COGNITO_CLIENT_ID  = var.cognito_client_id
+        COGNITO_ISSUER_URL = var.cognito_issuer_url
       }
     }
     campaigns = {

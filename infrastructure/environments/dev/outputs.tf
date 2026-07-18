@@ -17,6 +17,10 @@ output "acm_dns_validation" {
   description = "cPanel CNAME for ACM certificate validation (required before custom domain works)."
 }
 
+output "websocket_url" {
+  value = module.lambda.websocket_url
+}
+
 output "cognito_user_pool_id" {
   value = module.cognito.user_pool_id
 }

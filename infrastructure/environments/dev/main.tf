@@ -168,6 +168,7 @@ module "lambda" {
   cognito_user_pool_id          = module.cognito.user_pool_id
   cognito_user_pool_arn         = module.cognito.user_pool_arn
   cognito_client_id             = module.cognito.client_id
+  cognito_issuer_url            = module.cognito.endpoint
   whatsapp_verify_token         = var.whatsapp_verify_token
   meta_app_id                   = var.meta_app_id
   meta_app_secret               = var.meta_app_secret
@@ -293,6 +294,7 @@ module "amplify" {
   github_access_token            = var.github_access_token
   branch_name                    = "develop"
   api_endpoint                   = module.api_gateway.api_endpoint
+  websocket_url                  = module.lambda.websocket_url
   aws_region                     = var.aws_region
   cognito_user_pool_id           = module.cognito.user_pool_id
   cognito_client_id              = module.cognito.client_id
