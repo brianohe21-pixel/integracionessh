@@ -174,13 +174,13 @@ export default function NewCampaignPage() {
             <div
               className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                 s === step
-                  ? "bg-indigo-600 text-white"
+                  ? "bg-accent text-white"
                   : stepIndex > i
-                  ? "bg-indigo-100 text-indigo-700"
-                  : "bg-gray-100 text-gray-400"
+                  ? "bg-accent-muted text-accent"
+                  : "bg-surface-muted text-muted"
               }`}
             >
-              <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">
+              <span className="w-5 h-5 rounded-full bg-surface-elevated/20 flex items-center justify-center text-xs font-bold">
                 {i + 1}
               </span>
               {t(`campaigns.step.${s}`)}
@@ -192,29 +192,29 @@ export default function NewCampaignPage() {
         ))}
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-5">
+      <div className="bg-surface-elevated rounded-xl border border-default p-6 space-y-5">
         {step === "config" && (
           <>
             <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-gray-700">{t("campaigns.nameLabel")}</label>
+              <label className="block text-sm font-medium text-secondary">{t("campaigns.nameLabel")}</label>
               <input
                 type="text"
                 value={config.name}
                 onChange={(e) => setConfig({ ...config, name: e.target.value })}
                 placeholder={t("campaigns.namePlaceholder")}
                 maxLength={120}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent/30"
               />
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-gray-700">{t("bulkSend.bot")}</label>
+              <label className="block text-sm font-medium text-secondary">{t("bulkSend.bot")}</label>
               <select
                 value={config.botId}
                 onChange={(e) =>
                   setConfig({ ...config, botId: e.target.value, templateName: "", language: "" })
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent/30 bg-surface-elevated"
               >
                 <option value="">{t("bulkSend.selectBot")}</option>
                 {bots.map((b) => (
@@ -227,14 +227,14 @@ export default function NewCampaignPage() {
 
             {config.botId && (
               <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-gray-700">{t("bulkSend.template")}</label>
+                <label className="block text-sm font-medium text-secondary">{t("bulkSend.template")}</label>
                 <select
                   value={`${config.templateName}||${config.language}`}
                   onChange={(e) => {
                     const [name, lang] = e.target.value.split("||");
                     setConfig({ ...config, templateName: name, language: lang });
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                  className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent/30 bg-surface-elevated"
                 >
                   <option value="||">{t("bulkSend.selectTemplate")}</option>
                   {approvedTemplates.map((tmpl) => (
@@ -259,7 +259,7 @@ export default function NewCampaignPage() {
             )}
 
             <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-gray-700">{t("campaigns.segmentsLabel")}</label>
+              <label className="block text-sm font-medium text-secondary">{t("campaigns.segmentsLabel")}</label>
               <SegmentInput
                 value={config.segments}
                 onChange={(segs) => setConfig({ ...config, segments: segs })}
@@ -274,26 +274,26 @@ export default function NewCampaignPage() {
                         setConfig({ ...config, segments: [...config.segments, preset] });
                       }
                     }}
-                    className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                    className="text-xs px-2 py-1 bg-surface-muted text-secondary rounded hover:bg-gray-200"
                   >
                     + {preset}
                   </button>
                 ))}
               </div>
-              <p className="text-xs text-gray-400">{t("campaigns.segmentsHint")}</p>
-              <p className="text-xs text-gray-400">{t("campaigns.leadSegmentsHint")}</p>
+              <p className="text-xs text-muted">{t("campaigns.segmentsHint")}</p>
+              <p className="text-xs text-muted">{t("campaigns.leadSegmentsHint")}</p>
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-gray-700">{t("campaigns.scheduledAtLabel")}</label>
+              <label className="block text-sm font-medium text-secondary">{t("campaigns.scheduledAtLabel")}</label>
               <input
                 type="datetime-local"
                 value={config.scheduledAt}
                 onChange={(e) => setConfig({ ...config, scheduledAt: e.target.value })}
                 min={new Date(Date.now() + 60_000).toISOString().slice(0, 16)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent/30"
               />
-              <p className="text-xs text-gray-400">{t("campaigns.scheduledAtHint")}</p>
+              <p className="text-xs text-muted">{t("campaigns.scheduledAtHint")}</p>
             </div>
 
             <label className="flex items-start gap-3 cursor-pointer">
@@ -301,11 +301,11 @@ export default function NewCampaignPage() {
                 type="checkbox"
                 checked={requireOptIn}
                 onChange={(e) => setRequireOptIn(e.target.checked)}
-                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                className="mt-0.5 h-4 w-4 rounded border-default text-accent focus:ring-accent"
               />
-              <span className="text-sm text-gray-700">
+              <span className="text-sm text-secondary">
                 <span className="font-medium">{t("bulkSend.requireOptIn")}</span>
-                <span className="block text-xs text-gray-500 mt-0.5">{t("bulkSend.requireOptInHint")}</span>
+                <span className="block text-xs text-secondary mt-0.5">{t("bulkSend.requireOptInHint")}</span>
               </span>
             </label>
           </>
@@ -313,9 +313,9 @@ export default function NewCampaignPage() {
 
         {step === "recipients" && (
           <>
-            <div className="space-y-3 pb-4 border-b border-gray-100">
-              <label className="block text-sm font-medium text-gray-700">{t("campaigns.audienceTagsLabel")}</label>
-              <p className="text-xs text-gray-500">{t("campaigns.audienceTagsHint")}</p>
+            <div className="space-y-3 pb-4 border-b border-subtle">
+              <label className="block text-sm font-medium text-secondary">{t("campaigns.audienceTagsLabel")}</label>
+              <p className="text-xs text-secondary">{t("campaigns.audienceTagsHint")}</p>
               <SegmentInput
                 value={audienceTags}
                 onChange={setAudienceTags}
@@ -324,16 +324,16 @@ export default function NewCampaignPage() {
             </div>
             <div className="space-y-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700">{t("bulkSend.csvFile")}</label>
-                <p className="text-xs text-gray-500 mt-0.5">{t("campaigns.recipientsOrTags")}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{t("bulkSend.csvColumnHint")}</p>
+                <label className="block text-sm font-medium text-secondary">{t("bulkSend.csvFile")}</label>
+                <p className="text-xs text-secondary mt-0.5">{t("campaigns.recipientsOrTags")}</p>
+                <p className="text-xs text-secondary mt-0.5">{t("bulkSend.csvColumnHint")}</p>
               </div>
 
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => fileRef.current?.click()}
-                  className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                  className="inline-flex items-center gap-2 px-4 py-2 border border-default rounded-lg text-sm font-medium text-secondary hover:bg-surface transition-colors"
                 >
                   <Upload className="w-4 h-4" />
                   {t("bulkSend.selectCsv")}
@@ -345,7 +345,7 @@ export default function NewCampaignPage() {
                       setRecipients([]);
                       if (fileRef.current) fileRef.current.value = "";
                     }}
-                    className="inline-flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-500 hover:bg-gray-50 transition-colors"
+                    className="inline-flex items-center gap-2 px-3 py-2 border border-default rounded-lg text-sm text-secondary hover:bg-surface transition-colors"
                   >
                     <X className="w-3.5 h-3.5" />
                     {t("common.delete")}
@@ -374,13 +374,13 @@ export default function NewCampaignPage() {
               )}
 
               {recipients.length > 0 && (
-                <TableContainer className="rounded-lg border border-gray-200 max-h-60">
+                <TableContainer className="rounded-lg border border-default max-h-60">
                   <table className="min-w-[320px] w-full text-xs">
-                    <thead className="bg-gray-50 sticky top-0">
+                    <thead className="bg-surface sticky top-0">
                       <tr>
-                        <th className="px-3 py-2 text-left text-gray-500 font-medium">{t("bulkSend.colPhone")}</th>
+                        <th className="px-3 py-2 text-left text-secondary font-medium">{t("bulkSend.colPhone")}</th>
                         {bodyVars.map((v) => (
-                          <th key={v} className="px-3 py-2 text-left text-gray-500 font-medium">
+                          <th key={v} className="px-3 py-2 text-left text-secondary font-medium">
                             {v}
                           </th>
                         ))}
@@ -388,10 +388,10 @@ export default function NewCampaignPage() {
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                       {recipients.slice(0, 50).map((r, i) => (
-                        <tr key={i} className="hover:bg-gray-50">
-                          <td className="px-3 py-2 text-gray-700 font-mono">{r.to}</td>
+                        <tr key={i} className="hover:bg-surface">
+                          <td className="px-3 py-2 text-secondary font-mono">{r.to}</td>
                           {(r.components?.[0]?.parameters ?? []).map((p, pi) => (
-                            <td key={pi} className="px-3 py-2 text-gray-600">
+                            <td key={pi} className="px-3 py-2 text-secondary">
                               {p.text ?? ""}
                             </td>
                           ))}
@@ -400,7 +400,7 @@ export default function NewCampaignPage() {
                     </tbody>
                   </table>
                   {recipients.length > 50 && (
-                    <div className="px-3 py-2 text-xs text-gray-400 bg-gray-50 border-t border-gray-100">
+                    <div className="px-3 py-2 text-xs text-muted bg-surface border-t border-subtle">
                       {t("bulkSend.showingRows", { total: recipients.length })}
                     </div>
                   )}
@@ -412,34 +412,34 @@ export default function NewCampaignPage() {
 
         {step === "review" && (
           <div className="space-y-4">
-            <h3 className="font-medium text-gray-900">{t("campaigns.reviewTitle")}</h3>
+            <h3 className="font-medium text-primary">{t("campaigns.reviewTitle")}</h3>
             <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-              <dt className="text-gray-500">{t("campaigns.nameLabel")}</dt>
-              <dd className="font-medium text-gray-900">{config.name}</dd>
-              <dt className="text-gray-500">{t("bulkSend.bot")}</dt>
-              <dd className="font-medium text-gray-900">{selectedBot?.name}</dd>
-              <dt className="text-gray-500">{t("bulkSend.template")}</dt>
-              <dd className="font-medium text-gray-900">
+              <dt className="text-secondary">{t("campaigns.nameLabel")}</dt>
+              <dd className="font-medium text-primary">{config.name}</dd>
+              <dt className="text-secondary">{t("bulkSend.bot")}</dt>
+              <dd className="font-medium text-primary">{selectedBot?.name}</dd>
+              <dt className="text-secondary">{t("bulkSend.template")}</dt>
+              <dd className="font-medium text-primary">
                 {config.templateName} ({config.language})
               </dd>
-              <dt className="text-gray-500">{t("common.total")}</dt>
-              <dd className="font-medium text-gray-900">{recipients.length}</dd>
+              <dt className="text-secondary">{t("common.total")}</dt>
+              <dd className="font-medium text-primary">{recipients.length}</dd>
               {config.segments.length > 0 && (
                 <>
-                  <dt className="text-gray-500">{t("campaigns.segmentsLabel")}</dt>
-                  <dd className="font-medium text-gray-900">{config.segments.join(", ")}</dd>
+                  <dt className="text-secondary">{t("campaigns.segmentsLabel")}</dt>
+                  <dd className="font-medium text-primary">{config.segments.join(", ")}</dd>
                 </>
               )}
               {config.scheduledAt && (
                 <>
-                  <dt className="text-gray-500">{t("campaigns.scheduledAtLabel")}</dt>
-                  <dd className="font-medium text-gray-900">
+                  <dt className="text-secondary">{t("campaigns.scheduledAtLabel")}</dt>
+                  <dd className="font-medium text-primary">
                     {new Date(config.scheduledAt).toLocaleString()}
                   </dd>
                 </>
               )}
-              <dt className="text-gray-500">{t("bulkSend.requireOptIn")}</dt>
-              <dd className="font-medium text-gray-900">
+              <dt className="text-secondary">{t("bulkSend.requireOptIn")}</dt>
+              <dd className="font-medium text-primary">
                 {requireOptIn ? t("campaigns.requireOptInStatusOn") : t("campaigns.requireOptInStatusOff")}
               </dd>
             </dl>
@@ -474,7 +474,7 @@ export default function NewCampaignPage() {
           type="button"
           onClick={isFirstStep ? () => router.push("/campaigns") : prevStep}
           disabled={createCampaign.isPending}
-          className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 border border-default rounded-lg text-sm font-medium text-secondary hover:bg-surface disabled:opacity-40 transition-colors"
         >
           <ChevronLeft className="w-4 h-4" />
           {isFirstStep ? t("common.cancel") : t("campaigns.back")}
@@ -485,7 +485,7 @@ export default function NewCampaignPage() {
             type="button"
             onClick={handleSubmit}
             disabled={createCampaign.isPending}
-            className="inline-flex items-center gap-2 px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-60 transition-colors text-sm font-medium"
+            className="inline-flex items-center gap-2 px-5 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover disabled:opacity-60 transition-colors text-sm font-medium"
           >
             {createCampaign.isPending ? t("campaigns.creating") : t("campaigns.createBtn")}
           </button>
@@ -497,7 +497,7 @@ export default function NewCampaignPage() {
               (step === "config" && !canProceedConfig()) ||
               (step === "recipients" && !canProceedRecipients())
             }
-            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-40 transition-colors text-sm font-medium"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover disabled:opacity-40 transition-colors text-sm font-medium"
           >
             {t("campaigns.next")}
             <ChevronRight className="w-4 h-4" />

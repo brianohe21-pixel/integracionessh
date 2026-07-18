@@ -9,6 +9,7 @@ import { getAdvisor, touchAdvisorAssignment } from "../dynamodb/advisor.reposito
 import { pickAdvisor } from "./pick.js";
 import { emitIntegrationEvent } from "../integrations/emit.js";
 import { buildConversationHandoffPayload } from "../integrations/payloads.js";
+import { publishRealtimeEventSafe } from "../realtime/publish.js";
 import type { Conversation, HandoffReason, Message } from "../../types/index.js";
 
 export async function performHandoff(params: {
@@ -64,6 +65,11 @@ export async function performHandoff(params: {
   await addMessage(systemMessage, params.botId);
 
   if (updated) {
+    publishRealtimeEventSafe(params.tenantId, {
+      type: "conversation.handoff",
+      conversation: updated,
+    });
+
     await emitIntegrationEvent(
       params.tenantId,
       "conversation.handoff",

@@ -46,20 +46,20 @@ export function SegmentInput({
   return (
     <div
       className={cn(
-        "flex flex-wrap gap-1.5 p-2 border border-gray-300 rounded-lg bg-white min-h-[42px] focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500",
+        "flex flex-wrap gap-1.5 p-2 border border-default rounded-lg bg-surface-elevated min-h-[42px] focus-within:ring-2 focus-within:ring-accent focus-within:border-accent/30",
         className
       )}
     >
       {value.map((tag) => (
         <span
           key={tag}
-          className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded text-sm font-medium"
+          className="inline-flex items-center gap-1 px-2 py-0.5 bg-accent-muted text-accent rounded text-sm font-medium"
         >
           {tag}
           <button
             type="button"
             onClick={() => removeSegment(tag)}
-            className="hover:text-indigo-900 transition-colors"
+            className="hover:text-accent transition-colors"
           >
             <X className="w-3 h-3" />
           </button>
@@ -73,7 +73,7 @@ export function SegmentInput({
           onKeyDown={handleKeyDown}
           onBlur={() => addSegment(input)}
           placeholder={value.length === 0 ? (placeholder ?? t("campaigns.segmentsPlaceholder")) : undefined}
-          className="flex-1 min-w-[120px] outline-none text-sm text-gray-700 placeholder:text-gray-400 bg-transparent"
+          className="flex-1 min-w-[120px] outline-none text-sm text-secondary placeholder:text-muted bg-transparent"
         />
       )}
     </div>

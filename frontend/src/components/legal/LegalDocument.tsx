@@ -9,15 +9,15 @@ export function LegalDocument({ namespace }: { namespace: "legal.terms" | "legal
 
   return (
     <article className="prose prose-sm max-w-none">
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">{t(`${namespace}.title`)}</h1>
-      <p className="text-sm text-gray-500 mb-8">{t(`${namespace}.updated`)}</p>
+      <h1 className="text-2xl font-bold text-primary mb-2">{t(`${namespace}.title`)}</h1>
+      <p className="text-sm text-secondary mb-8">{t(`${namespace}.updated`)}</p>
       <div className="space-y-6">
         {SECTION_KEYS.map((key) => (
           <section key={key}>
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">
+            <h2 className="text-lg font-semibold text-primary mb-2">
               {t(`${namespace}.sections.${key}.title`)}
             </h2>
-            <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
+            <p className="text-sm text-secondary leading-relaxed whitespace-pre-line">
               {t(`${namespace}.sections.${key}.body`)}
             </p>
           </section>

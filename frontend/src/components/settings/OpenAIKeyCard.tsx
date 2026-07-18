@@ -42,7 +42,7 @@ export function OpenAIKeyCard() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 animate-pulse">
+      <div className="flex items-center gap-3 p-3 bg-surface rounded-lg border border-default animate-pulse">
         <div className="w-2 h-2 bg-gray-300 rounded-full" />
         <div className="flex-1 h-4 bg-gray-200 rounded" />
       </div>
@@ -50,12 +50,12 @@ export function OpenAIKeyCard() {
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 overflow-hidden">
-      <div className="flex items-center gap-3 p-3 bg-gray-50">
-        <div className={`w-2 h-2 rounded-full ${isConfigured ? "bg-indigo-500" : "bg-gray-300"}`} />
+    <div className="rounded-lg border border-default overflow-hidden">
+      <div className="flex items-center gap-3 p-3 bg-surface">
+        <div className={`w-2 h-2 rounded-full ${isConfigured ? "bg-accent" : "bg-gray-300"}`} />
         <div className="flex-1">
-          <p className="text-xs font-medium text-gray-700">{t("settings.openaiKey")}</p>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs font-medium text-secondary">{t("settings.openaiKey")}</p>
+          <p className="text-xs text-muted">
             {isConfigured ? t("settings.openaiKeyOwn") : t("settings.openaiKeyDesc")}
           </p>
         </div>
@@ -69,7 +69,7 @@ export function OpenAIKeyCard() {
               onClick={handleDelete}
               disabled={remove.isPending}
               title={t("settings.openaiKeyRemove")}
-              className="p-1 text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50"
+              className="p-1 text-muted hover:text-red-500 transition-colors disabled:opacity-50"
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
@@ -77,7 +77,7 @@ export function OpenAIKeyCard() {
             <button
               type="button"
               onClick={() => { setEditing((v) => !v); setError(""); setValue(""); }}
-              className="text-xs font-medium text-indigo-600 hover:text-indigo-700 px-2 py-1 rounded hover:bg-indigo-50 transition-colors"
+              className="text-xs font-medium text-accent hover:text-accent px-2 py-1 rounded hover:bg-accent-muted transition-colors"
             >
               {editing ? t("settings.cancel") : t("settings.openaiKeyAdd")}
             </button>
@@ -86,7 +86,7 @@ export function OpenAIKeyCard() {
       </div>
 
       {editing && !isConfigured && (
-        <form onSubmit={handleSave} className="p-3 border-t border-gray-100 bg-white space-y-2">
+        <form onSubmit={handleSave} className="p-3 border-t border-subtle bg-surface-elevated space-y-2">
           <div className="relative">
             <input
               type={showKey ? "text" : "password"}
@@ -94,13 +94,13 @@ export function OpenAIKeyCard() {
               onChange={(e) => setValue(e.target.value)}
               placeholder="sk-..."
               autoFocus
-              className="w-full pr-9 px-3 py-2 text-sm border border-gray-200 rounded-lg font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full pr-9 px-3 py-2 text-sm border border-default rounded-lg font-mono focus:outline-none focus:ring-2 focus:ring-accent"
             />
             <button
               type="button"
               tabIndex={-1}
               onClick={() => setShowKey((v) => !v)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-secondary"
             >
               {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
@@ -110,14 +110,14 @@ export function OpenAIKeyCard() {
             <button
               type="button"
               onClick={() => { setEditing(false); setValue(""); setError(""); }}
-              className="px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50"
+              className="px-3 py-1.5 text-xs font-medium text-secondary border border-default rounded-lg hover:bg-surface"
             >
               {t("common.cancel")}
             </button>
             <button
               type="submit"
               disabled={save.isPending || value.trim().length < 10}
-              className="px-3 py-1.5 text-xs font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+              className="px-3 py-1.5 text-xs font-medium text-white bg-accent rounded-lg hover:bg-accent-hover disabled:opacity-50"
             >
               {save.isPending ? t("settings.openaiKeySaving") : t("common.save")}
             </button>

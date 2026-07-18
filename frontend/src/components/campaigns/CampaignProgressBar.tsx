@@ -19,7 +19,7 @@ export function CampaignProgressBar({ campaign, className }: CampaignProgressBar
 
   return (
     <div className={cn("space-y-1.5", className)}>
-      <div className="flex h-2.5 rounded-full overflow-hidden bg-gray-100 gap-px">
+      <div className="flex h-2.5 rounded-full overflow-hidden bg-surface-muted gap-px">
         {sentPct > 0 && (
           <div
             className="bg-green-500 transition-all duration-300"
@@ -46,7 +46,7 @@ export function CampaignProgressBar({ campaign, className }: CampaignProgressBar
         )}
       </div>
 
-      <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
+      <div className="flex items-center gap-3 text-xs text-secondary flex-wrap">
         <span className="flex items-center gap-1">
           <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
           {sent}/{total}

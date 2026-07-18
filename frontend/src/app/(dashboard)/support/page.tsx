@@ -19,24 +19,24 @@ export default function SupportPage() {
       />
 
       <div className="space-y-6">
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="bg-surface-elevated rounded-xl border border-default p-6">
           <div className="flex items-center gap-2 mb-4">
-            <CircleHelp className="w-4 h-4 text-gray-500" />
-            <h2 className="font-semibold text-gray-900 text-sm">{t("support.faqTitle")}</h2>
+            <CircleHelp className="w-4 h-4 text-secondary" />
+            <h2 className="font-semibold text-primary text-sm">{t("support.faqTitle")}</h2>
           </div>
           <FaqAccordion />
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="bg-surface-elevated rounded-xl border border-default p-6">
           <div className="flex items-center gap-2 mb-4">
-            <MessageSquare className="w-4 h-4 text-gray-500" />
-            <h2 className="font-semibold text-gray-900 text-sm">{t("support.contactTitle")}</h2>
+            <MessageSquare className="w-4 h-4 text-secondary" />
+            <h2 className="font-semibold text-primary text-sm">{t("support.contactTitle")}</h2>
           </div>
           <SupportTicketForm />
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h2 className="font-semibold text-gray-900 text-sm mb-4">{t("support.myTickets")}</h2>
+        <div className="bg-surface-elevated rounded-xl border border-default p-6">
+          <h2 className="font-semibold text-primary text-sm mb-4">{t("support.myTickets")}</h2>
           <SupportTicketList />
         </div>
       </div>

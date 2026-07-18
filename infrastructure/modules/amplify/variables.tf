@@ -24,6 +24,10 @@ variable "api_endpoint" {
   type = string
 }
 
+variable "websocket_url" {
+  type = string
+}
+
 variable "aws_region" {
   type = string
 }

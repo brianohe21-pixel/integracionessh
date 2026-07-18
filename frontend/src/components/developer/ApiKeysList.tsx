@@ -53,7 +53,7 @@ export function ApiKeysList({ keys, bots }: ApiKeysListProps) {
     <TableContainer>
       <table className="w-full min-w-[720px] text-sm">
         <thead>
-          <tr className="bg-gray-50 text-left text-xs text-gray-500 uppercase tracking-wide">
+          <tr className="bg-surface text-left text-xs text-secondary uppercase tracking-wide">
             <th className="px-6 py-3 font-medium">Name</th>
             <th className="px-6 py-3 font-medium">Key prefix</th>
             <th className="px-6 py-3 font-medium">Bot</th>
@@ -65,15 +65,15 @@ export function ApiKeysList({ keys, bots }: ApiKeysListProps) {
         </thead>
         <tbody className="divide-y divide-gray-100">
           {keys.map((key) => (
-            <tr key={key.keyId} className="hover:bg-gray-50/50">
-              <td className="px-6 py-3.5 font-medium text-gray-900">{key.name}</td>
+            <tr key={key.keyId} className="hover:bg-surface/50">
+              <td className="px-6 py-3.5 font-medium text-primary">{key.name}</td>
               <td className="px-6 py-3.5">
-                <code className="text-xs bg-gray-100 px-2 py-1 rounded font-mono text-gray-700">
+                <code className="text-xs bg-surface-muted px-2 py-1 rounded font-mono text-secondary">
                   {key.prefix}…
                 </code>
               </td>
               <td className="px-6 py-3.5">
-                <span className="flex items-center gap-1.5 text-gray-600">
+                <span className="flex items-center gap-1.5 text-secondary">
                   <Bot className="w-3.5 h-3.5 flex-shrink-0" />
                   {botName(key.botId)}
                 </span>
@@ -83,7 +83,7 @@ export function ApiKeysList({ keys, bots }: ApiKeysListProps) {
                   {key.enabled ? "Active" : "Disabled"}
                 </Badge>
               </td>
-              <td className="px-6 py-3.5 text-gray-500">
+              <td className="px-6 py-3.5 text-secondary">
                 {key.lastUsedAt ? (
                   <span className="flex items-center gap-1">
                     <Clock className="w-3 h-3" />
@@ -93,17 +93,17 @@ export function ApiKeysList({ keys, bots }: ApiKeysListProps) {
                   <span className="text-gray-300">Never</span>
                 )}
               </td>
-              <td className="px-6 py-3.5 text-gray-500">{formatDate(key.createdAt)}</td>
+              <td className="px-6 py-3.5 text-secondary">{formatDate(key.createdAt)}</td>
               <td className="px-6 py-3.5">
                 <div className="flex items-center gap-2 justify-end">
                   <button
                     onClick={() => handleToggle(key)}
                     disabled={updateKey.isPending}
                     title={key.enabled ? "Disable key" : "Enable key"}
-                    className="text-gray-400 hover:text-indigo-600 transition-colors disabled:opacity-40"
+                    className="text-muted hover:text-accent transition-colors disabled:opacity-40"
                   >
                     {key.enabled ? (
-                      <ToggleRight className="w-5 h-5 text-indigo-500" />
+                      <ToggleRight className="w-5 h-5 text-accent" />
                     ) : (
                       <ToggleLeft className="w-5 h-5" />
                     )}
@@ -120,7 +120,7 @@ export function ApiKeysList({ keys, bots }: ApiKeysListProps) {
                       </button>
                       <button
                         onClick={() => setConfirmDelete(null)}
-                        className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200"
+                        className="text-xs px-2 py-1 bg-surface-muted text-secondary rounded hover:bg-gray-200"
                       >
                         Cancel
                       </button>
@@ -129,7 +129,7 @@ export function ApiKeysList({ keys, bots }: ApiKeysListProps) {
                     <button
                       onClick={() => setConfirmDelete(key.keyId)}
                       title="Revoke key"
-                      className="text-gray-400 hover:text-red-500 transition-colors"
+                      className="text-muted hover:text-red-500 transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

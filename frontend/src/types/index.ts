@@ -31,6 +31,9 @@ export interface Tenant {
   subscriptionStatus?: SubscriptionStatus;
   currentPeriodEnd?: string;
   paymentProvider?: "stripe" | "wompi";
+  onboardingCompletedAt?: string;
+  onboardingSkippedAt?: string;
+  onboardingTestConfirmedAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -304,7 +307,9 @@ export interface AdvisorInviteResponse {
   advisor: Advisor;
   invite?: {
     username: string;
-    temporaryPassword: string;
+    email: string;
+    emailSent?: boolean;
+    emailFailureReason?: "not_configured" | "recipient_not_verified" | "send_failed";
   };
 }
 

@@ -189,15 +189,15 @@ export default function BulkSendPage() {
     <DashboardPage>
       <PageHeader title={t("bulkSend.title")} subtitle={t("bulkSend.subtitle")} />
 
-      <div className="mb-6 flex gap-1 overflow-x-auto border-b border-gray-200">
+      <div className="mb-6 flex gap-1 overflow-x-auto border-b border-default">
         {TABS.map((tabItem) => (
           <button
             key={tabItem.id}
             onClick={() => setTab(tabItem.id)}
             className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
               tab === tabItem.id
-                ? "border-indigo-600 text-indigo-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                ? "border-accent text-accent"
+                : "border-transparent text-secondary hover:text-secondary hover:border-default"
             }`}
           >
             {tabItem.icon}
@@ -220,11 +220,11 @@ export default function BulkSendPage() {
       {tab === "send" && (
         <>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-              <h2 className="text-sm font-semibold text-gray-900">{t("bulkSend.config")}</h2>
+            <div className="bg-surface-elevated rounded-xl border border-default p-5 space-y-4">
+              <h2 className="text-sm font-semibold text-primary">{t("bulkSend.config")}</h2>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t("bulkSend.bot")}</label>
+                <label className="block text-sm font-medium text-secondary mb-1">{t("bulkSend.bot")}</label>
                 <select
                   value={botId}
                   onChange={(e) => {
@@ -233,7 +233,7 @@ export default function BulkSendPage() {
                     setCsvRows([]);
                     setFileName("");
                   }}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-default rounded-lg text-sm bg-surface-elevated focus:outline-none focus:ring-2 focus:ring-accent"
                 >
                   <option value="">{t("bulkSend.selectBot")}</option>
                   {bots?.map((bot) => (
@@ -245,12 +245,12 @@ export default function BulkSendPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t("bulkSend.template")}</label>
+                <label className="block text-sm font-medium text-secondary mb-1">{t("bulkSend.template")}</label>
                 <select
                   value={templateName}
                   onChange={(e) => setTemplateName(e.target.value)}
                   disabled={!botId || loadingTemplates}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+                  className="w-full px-3 py-2 border border-default rounded-lg text-sm bg-surface-elevated focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50"
                 >
                   <option value="">{t("bulkSend.selectTemplate")}</option>
                   {approvedTemplates.map((tpl) => (
@@ -262,7 +262,7 @@ export default function BulkSendPage() {
               </div>
 
               {selectedTemplate && bodyVars.length > 0 && (
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-secondary">
                   {t("bulkSend.varsRequired", { vars: bodyVars.join(", ") })}
                 </p>
               )}
@@ -272,30 +272,30 @@ export default function BulkSendPage() {
                   type="checkbox"
                   checked={requireOptIn}
                   onChange={(e) => setRequireOptIn(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  className="mt-0.5 h-4 w-4 rounded border-default text-accent focus:ring-accent"
                 />
-                <span className="text-sm text-gray-700">
+                <span className="text-sm text-secondary">
                   <span className="font-medium">{t("bulkSend.requireOptIn")}</span>
-                  <span className="block text-xs text-gray-500 mt-0.5">{t("bulkSend.requireOptInHint")}</span>
+                  <span className="block text-xs text-secondary mt-0.5">{t("bulkSend.requireOptInHint")}</span>
                 </span>
               </label>
 
               {selectedTemplate && (
                 <div className="space-y-2">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{t("bulkSend.preview")}</p>
+                  <p className="text-xs font-medium text-secondary uppercase tracking-wider">{t("bulkSend.preview")}</p>
                   <div className="bg-[#e5ddd5] rounded-xl p-4">
                     <div className="max-w-xs ml-auto">
-                      <div className="bg-white rounded-2xl rounded-tr-sm shadow-sm overflow-hidden">
+                      <div className="bg-surface-elevated rounded-2xl rounded-tr-sm shadow-sm overflow-hidden">
                         {selectedTemplate.components.find((c) => c.type === "HEADER")?.text && (
                           <div className="px-3 pt-3 pb-1">
-                            <p className="text-sm font-semibold text-gray-900 leading-snug">
+                            <p className="text-sm font-semibold text-primary leading-snug">
                               {selectedTemplate.components.find((c) => c.type === "HEADER")!.text}
                             </p>
                           </div>
                         )}
                         {selectedTemplate.components.find((c) => c.type === "BODY")?.text && (
                           <div className="px-3 py-2">
-                            <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">
+                            <p className="text-sm text-primary whitespace-pre-wrap leading-relaxed">
                               {selectedTemplate.components
                                 .find((c) => c.type === "BODY")!
                                 .text!.replace(/\{\{(\d+)\}\}/g, (_: string, n: string) => `{{var${n}}}`)}
@@ -304,19 +304,19 @@ export default function BulkSendPage() {
                         )}
                         {selectedTemplate.components.find((c) => c.type === "FOOTER")?.text && (
                           <div className="px-3 pb-2">
-                            <p className="text-xs text-gray-400 leading-snug">
+                            <p className="text-xs text-muted leading-snug">
                               {selectedTemplate.components.find((c) => c.type === "FOOTER")!.text}
                             </p>
                           </div>
                         )}
                         {selectedTemplate.components.find((c) => c.type === "BUTTONS") && (
-                          <div className="border-t border-gray-100">
+                          <div className="border-t border-subtle">
                             {selectedTemplate.components
                               .find((c) => c.type === "BUTTONS")!
                               .buttons?.map((btn, i) => (
                                 <div
                                   key={i}
-                                  className="px-3 py-2 text-center text-xs font-medium text-indigo-600 border-t border-gray-100 first:border-t-0"
+                                  className="px-3 py-2 text-center text-xs font-medium text-accent border-t border-subtle first:border-t-0"
                                 >
                                   {btn.text}
                                 </div>
@@ -324,7 +324,7 @@ export default function BulkSendPage() {
                           </div>
                         )}
                         <div className="flex justify-end px-3 pb-2">
-                          <span className="text-[10px] text-gray-400">
+                          <span className="text-[10px] text-muted">
                             {new Date().toLocaleTimeString(locale === "en" ? "en-US" : "es-CO", { hour: "2-digit", minute: "2-digit" })}
                           </span>
                         </div>
@@ -335,14 +335,14 @@ export default function BulkSendPage() {
               )}
             </div>
 
-            <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+            <div className="bg-surface-elevated rounded-xl border border-default p-5 space-y-4">
               <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-gray-900">{t("bulkSend.csvFile")}</h2>
+                <h2 className="text-sm font-semibold text-primary">{t("bulkSend.csvFile")}</h2>
                 {selectedTemplate && (
                   <button
                     type="button"
                     onClick={downloadSample}
-                    className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-700"
+                    className="flex items-center gap-1.5 text-xs font-medium text-accent hover:text-accent"
                   >
                     <Download className="w-3.5 h-3.5" />
                     {t("bulkSend.downloadSample")}
@@ -362,13 +362,13 @@ export default function BulkSendPage() {
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={!botId || !templateName}
-                className="flex flex-col items-center justify-center w-full py-10 border-2 border-dashed border-gray-200 rounded-xl hover:border-indigo-400 hover:bg-indigo-50/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex flex-col items-center justify-center w-full py-10 border-2 border-dashed border-default rounded-xl hover:border-accent/30 hover:bg-accent-muted/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                <span className="text-sm font-medium text-gray-700">
+                <Upload className="w-8 h-8 text-muted mb-2" />
+                <span className="text-sm font-medium text-secondary">
                   {fileName || t("bulkSend.selectCsv")}
                 </span>
-                <span className="text-xs text-gray-400 mt-1">{t("bulkSend.csvColumnHint")}</span>
+                <span className="text-xs text-muted mt-1">{t("bulkSend.csvColumnHint")}</span>
               </button>
 
               {parseError && (
@@ -386,11 +386,11 @@ export default function BulkSendPage() {
           )}
 
           {botId && csvRows.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-6">
-              <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 bg-gray-50">
+            <div className="bg-surface-elevated rounded-xl border border-default overflow-hidden mb-6">
+              <div className="flex items-center justify-between px-5 py-3 border-b border-default bg-surface">
                 <div className="flex items-center gap-2">
-                  <FileSpreadsheet className="w-4 h-4 text-gray-400" />
-                  <span className="text-sm font-medium text-gray-900">
+                  <FileSpreadsheet className="w-4 h-4 text-muted" />
+                  <span className="text-sm font-medium text-primary">
                     {csvRows.length === 1
                       ? t("bulkSend.recipients", { count: csvRows.length })
                       : t("bulkSend.recipientsPlural", { count: csvRows.length })}
@@ -400,7 +400,7 @@ export default function BulkSendPage() {
                   type="button"
                   onClick={() => void handleBulkSend()}
                   disabled={!canSend}
-                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 px-4 py-2 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <SendHorizonal className="w-4 h-4" />
                   {isSending ? t("bulkSend.sending") : t("bulkSend.startSend")}
@@ -408,7 +408,7 @@ export default function BulkSendPage() {
               </div>
 
               {sendError && (
-                <p className="px-5 py-3 text-sm text-red-600 border-b border-gray-100 bg-red-50">
+                <p className="px-5 py-3 text-sm text-red-600 border-b border-subtle bg-red-50">
                   {sendError}
                 </p>
               )}
@@ -416,14 +416,14 @@ export default function BulkSendPage() {
               <TableContainer className="max-h-80 overflow-y-auto">
                 <table className="w-full min-w-[480px]">
                   <thead>
-                    <tr className="border-b border-gray-200 bg-gray-50">
-                      <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-2">
+                    <tr className="border-b border-default bg-surface">
+                      <th className="text-left text-xs font-medium text-secondary uppercase tracking-wider px-5 py-2">
                         {t("bulkSend.colPhone")}
                       </th>
                       {bodyVars.map((v) => (
                         <th
                           key={v}
-                          className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-2"
+                          className="text-left text-xs font-medium text-secondary uppercase tracking-wider px-5 py-2"
                         >
                           {v}
                         </th>
@@ -432,10 +432,10 @@ export default function BulkSendPage() {
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {csvRows.slice(0, 50).map((row, i) => (
-                      <tr key={i} className="hover:bg-gray-50">
-                        <td className="px-5 py-2 text-sm text-gray-900">{row.phone}</td>
+                      <tr key={i} className="hover:bg-surface">
+                        <td className="px-5 py-2 text-sm text-primary">{row.phone}</td>
                         {bodyVars.map((_, vi) => (
-                          <td key={vi} className="px-5 py-2 text-sm text-gray-600">
+                          <td key={vi} className="px-5 py-2 text-sm text-secondary">
                             {row.variables[vi] || "—"}
                           </td>
                         ))}
@@ -444,7 +444,7 @@ export default function BulkSendPage() {
                   </tbody>
                 </table>
                 {csvRows.length > 50 && (
-                  <p className="text-xs text-gray-400 px-5 py-2 border-t border-gray-100">
+                  <p className="text-xs text-muted px-5 py-2 border-t border-subtle">
                     {t("bulkSend.showingRows", { total: csvRows.length })}
                   </p>
                 )}
@@ -453,16 +453,16 @@ export default function BulkSendPage() {
           )}
 
           {isSending && progress.total > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
+            <div className="bg-surface-elevated rounded-xl border border-default p-5 mb-6">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-900">{t("bulkSend.progress")}</span>
-                <span className="text-sm text-gray-500">
+                <span className="text-sm font-medium text-primary">{t("bulkSend.progress")}</span>
+                <span className="text-sm text-secondary">
                   {progress.current} / {progress.total}
                 </span>
               </div>
-              <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div className="w-full h-2 bg-surface-muted rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-indigo-600 transition-all duration-300"
+                  className="h-full bg-accent transition-all duration-300"
                   style={{ width: `${(progress.current / progress.total) * 100}%` }}
                 />
               </div>
@@ -481,15 +481,15 @@ export default function BulkSendPage() {
       )}
 
       {tab === "history" && (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 bg-gray-50">
-            <span className="text-sm font-semibold text-gray-900">{t("bulkSend.historyTitle")}</span>
+        <div className="bg-surface-elevated rounded-xl border border-default overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-default bg-surface">
+            <span className="text-sm font-semibold text-primary">{t("bulkSend.historyTitle")}</span>
             <div className="flex items-center gap-3">
               {history && history.length > 0 && (
                 <button
                   type="button"
                   onClick={() => downloadBulkHistoryCsv(history)}
-                  className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
+                  className="flex items-center gap-1.5 text-xs font-medium text-accent hover:text-accent transition-colors"
                 >
                   <Download className="w-3.5 h-3.5" />
                   {t("bulkSend.downloadHistory")}
@@ -499,7 +499,7 @@ export default function BulkSendPage() {
                 type="button"
                 onClick={() => void refetchHistory()}
                 disabled={loadingHistory}
-                className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
+                className="flex items-center gap-1.5 text-xs font-medium text-secondary hover:text-secondary transition-colors disabled:opacity-50"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${loadingHistory ? "animate-spin" : ""}`} />
                 {t("common.refresh")}
@@ -523,7 +523,7 @@ export default function BulkSendPage() {
           {!loadingHistory && (!history || history.length === 0) && (
             <div className="px-5 py-16 text-center">
               <History className="w-8 h-8 text-gray-300 mx-auto mb-3" />
-              <p className="text-sm text-gray-400">{t("bulkSend.noHistory")}</p>
+              <p className="text-sm text-muted">{t("bulkSend.noHistory")}</p>
             </div>
           )}
 
@@ -531,15 +531,15 @@ export default function BulkSendPage() {
             <TableContainer>
             <table className="w-full min-w-[900px]">
               <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">{t("bulkSend.colTemplate")}</th>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">{t("common.status")}</th>
-                  <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">{t("common.total")}</th>
-                  <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">{t("bulkSend.colAccepted")}</th>
-                  <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">{t("bulkSend.colRejected")}</th>
-                  <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">{t("bulkSend.colDeliveryFailed")}</th>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-5 py-3">{t("common.date")}</th>
-                  <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wider px-3 py-3">{t("common.csv")}</th>
+                <tr className="border-b border-default">
+                  <th className="text-left text-xs font-medium text-secondary uppercase tracking-wider px-5 py-3">{t("bulkSend.colTemplate")}</th>
+                  <th className="text-left text-xs font-medium text-secondary uppercase tracking-wider px-5 py-3">{t("common.status")}</th>
+                  <th className="text-right text-xs font-medium text-secondary uppercase tracking-wider px-5 py-3">{t("common.total")}</th>
+                  <th className="text-right text-xs font-medium text-secondary uppercase tracking-wider px-5 py-3">{t("bulkSend.colAccepted")}</th>
+                  <th className="text-right text-xs font-medium text-secondary uppercase tracking-wider px-5 py-3">{t("bulkSend.colRejected")}</th>
+                  <th className="text-right text-xs font-medium text-secondary uppercase tracking-wider px-5 py-3">{t("bulkSend.colDeliveryFailed")}</th>
+                  <th className="text-left text-xs font-medium text-secondary uppercase tracking-wider px-5 py-3">{t("common.date")}</th>
+                  <th className="text-right text-xs font-medium text-secondary uppercase tracking-wider px-3 py-3">{t("common.csv")}</th>
                   <th className="w-10 px-2 py-3" />
                 </tr>
               </thead>
@@ -559,34 +559,34 @@ export default function BulkSendPage() {
                   return (
                     <Fragment key={job.jobId}>
                       <tr
-                        className={`transition-colors ${hasFailures ? "cursor-pointer hover:bg-gray-50" : ""}`}
+                        className={`transition-colors ${hasFailures ? "cursor-pointer hover:bg-surface" : ""}`}
                         onClick={() => {
                           if (!hasFailures) return;
                           setExpandedJobId(isExpanded ? null : job.jobId);
                         }}
                       >
-                        <td className="px-5 py-3 text-sm font-medium text-gray-900">
+                        <td className="px-5 py-3 text-sm font-medium text-primary">
                           {job.templateName}
-                          <span className="ml-1.5 text-xs text-gray-400 font-normal">({job.language})</span>
+                          <span className="ml-1.5 text-xs text-muted font-normal">({job.language})</span>
                         </td>
                         <td className="px-5 py-3">
                           <Badge variant={statusVariant}>{statusLabel}</Badge>
                         </td>
-                        <td className="px-5 py-3 text-sm text-gray-600 text-right">{job.total}</td>
+                        <td className="px-5 py-3 text-sm text-secondary text-right">{job.total}</td>
                         <td className="px-5 py-3 text-right">
                           <span className="text-sm font-medium text-green-700">{job.sent}</span>
                         </td>
                         <td className="px-5 py-3 text-right">
-                          <span className={`text-sm font-medium ${job.failed > 0 ? "text-red-600" : "text-gray-400"}`}>
+                          <span className={`text-sm font-medium ${job.failed > 0 ? "text-red-600" : "text-muted"}`}>
                             {job.failed}
                           </span>
                         </td>
                         <td className="px-5 py-3 text-right">
-                          <span className={`text-sm font-medium ${(job.deliveryFailed ?? 0) > 0 ? "text-orange-600" : "text-gray-400"}`}>
+                          <span className={`text-sm font-medium ${(job.deliveryFailed ?? 0) > 0 ? "text-orange-600" : "text-muted"}`}>
                             {job.deliveryFailed ?? 0}
                           </span>
                         </td>
-                        <td className="px-5 py-3 text-sm text-gray-500">{formatDate(job.createdAt)}</td>
+                        <td className="px-5 py-3 text-sm text-secondary">{formatDate(job.createdAt)}</td>
                         <td className="px-3 py-3 text-right">
                           <button
                             type="button"
@@ -596,12 +596,12 @@ export default function BulkSendPage() {
                               e.stopPropagation();
                               void handleDownloadJobCsv(job);
                             }}
-                            className="inline-flex items-center justify-center p-1.5 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition-colors disabled:opacity-50"
+                            className="inline-flex items-center justify-center p-1.5 text-accent hover:text-accent hover:bg-accent-muted rounded-lg transition-colors disabled:opacity-50"
                           >
                             <Download className={`w-4 h-4 ${downloadingJobId === job.jobId ? "animate-pulse" : ""}`} />
                           </button>
                         </td>
-                        <td className="px-2 py-3 text-gray-400">
+                        <td className="px-2 py-3 text-muted">
                           {hasFailures && (isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />)}
                         </td>
                       </tr>

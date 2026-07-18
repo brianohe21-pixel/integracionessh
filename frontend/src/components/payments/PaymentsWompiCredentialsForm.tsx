@@ -42,13 +42,13 @@ export function PaymentsWompiCredentialsForm() {
   }
 
   if (isLoading) {
-    return <div className="h-32 animate-pulse rounded-xl bg-gray-100" />;
+    return <div className="h-32 animate-pulse rounded-xl bg-surface-muted" />;
   }
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6">
-      <h2 className="text-base font-semibold text-gray-900">{t("payments.wompiTitle")}</h2>
-      <p className="mt-1 text-sm text-gray-500">{t("payments.wompiSubtitle")}</p>
+    <div className="rounded-xl border border-default bg-surface-elevated p-6">
+      <h2 className="text-base font-semibold text-primary">{t("payments.wompiTitle")}</h2>
+      <p className="mt-1 text-sm text-secondary">{t("payments.wompiSubtitle")}</p>
 
       {data?.configured ? (
         <p className="mt-3 text-sm text-green-700">{t("payments.wompiConfigured")}</p>
@@ -57,9 +57,9 @@ export function PaymentsWompiCredentialsForm() {
       )}
 
       {webhookUrl ? (
-        <div className="mt-4 rounded-lg bg-gray-50 p-3">
-          <p className="text-xs font-medium text-gray-600">{t("payments.webhookUrl")}</p>
-          <code className="mt-1 block break-all text-xs text-gray-800">{webhookUrl}</code>
+        <div className="mt-4 rounded-lg bg-surface p-3">
+          <p className="text-xs font-medium text-secondary">{t("payments.webhookUrl")}</p>
+          <code className="mt-1 block break-all text-xs text-primary">{webhookUrl}</code>
         </div>
       ) : null}
 
@@ -73,12 +73,12 @@ export function PaymentsWompiCredentialsForm() {
           ] as const
         ).map(([key, value, setter, label]) => (
           <div key={key}>
-            <label className="mb-1 block text-sm font-medium text-gray-700">{label}</label>
+            <label className="mb-1 block text-sm font-medium text-secondary">{label}</label>
             <input
               type="password"
               value={value}
               onChange={(e) => setter(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-default px-3 py-2 text-sm"
               required
             />
           </div>
@@ -87,7 +87,7 @@ export function PaymentsWompiCredentialsForm() {
           <button
             type="submit"
             disabled={save.isPending}
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover"
           >
             {t("payments.saveCredentials")}
           </button>

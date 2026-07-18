@@ -1,3 +1,5 @@
+import { formatMetaValidationErrors, validateMetaFlowJson } from "../meta-flow/validate.js";
+
 const GRAPH_API_URL = "https://graph.facebook.com/v22.0";
 
 function throwGraphApiError(status: number, body: string): never {
@@ -59,13 +61,40 @@ export async function createMetaFlow(
   return response.json() as Promise<{ id: string }>;
 }
 
+export interface FlowJsonUploadResult {
+  success: boolean;
+  validation_errors: Array<{
+    error?: string;
+    error_type?: string;
+    message?: string;
+    path?: string;
+    pointers?: Array<{ path?: string }>;
+  }>;
+}
+
+function formatUploadValidationErrors(
+  errors: FlowJsonUploadResult["validation_errors"]
+): string {
+  return formatMetaValidationErrors(
+    errors.map((issue) => {
+      const mapped: { message?: string; path?: string; error?: string } = {};
+      const message = issue.message ?? issue.error;
+      const path = issue.path ?? issue.pointers?.[0]?.path;
+      if (message !== undefined) mapped.message = message;
+      if (path !== undefined) mapped.path = path;
+      return mapped;
+    })
+  );
+}
+
 export async function uploadFlowJson(
   flowId: string,
   jsonDefinition: Record<string, unknown>,
   accessToken: string
-): Promise<void> {
+): Promise<FlowJsonUploadResult> {
+  const normalized = validateMetaFlowJson(jsonDefinition);
   const formData = new FormData();
-  const blob = new Blob([JSON.stringify(jsonDefinition)], { type: "application/json" });
+  const blob = new Blob([JSON.stringify(normalized)], { type: "application/json" });
   formData.append("file", blob, "flow.json");
   formData.append("name", "flow.json");
   formData.append("asset_type", "FLOW_JSON");
@@ -75,7 +104,30 @@ export async function uploadFlowJson(
     headers: { Authorization: `Bearer ${accessToken}` },
     body: formData,
   });
+  const body = (await response.json()) as FlowJsonUploadResult;
+  if (!response.ok) throwGraphApiError(response.status, JSON.stringify(body));
+
+  if (body.validation_errors?.length) {
+    const err = new Error(formatUploadValidationErrors(body.validation_errors)) as Error & {
+      statusCode?: number;
+    };
+    err.statusCode = 400;
+    throw err;
+  }
+
+  return body;
+}
+
+export async function getMetaFlowWithValidation(
+  flowId: string,
+  accessToken: string
+): Promise<Record<string, unknown>> {
+  const response = await fetch(
+    `${GRAPH_API_URL}/${flowId}?fields=id,name,status,validation_errors,json_version`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
   if (!response.ok) throwGraphApiError(response.status, await response.text());
+  return response.json() as Promise<Record<string, unknown>>;
 }
 
 export async function publishMetaFlow(flowId: string, accessToken: string): Promise<void> {

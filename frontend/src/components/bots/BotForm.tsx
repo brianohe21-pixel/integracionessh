@@ -6,10 +6,14 @@ import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { useCreateBot, useUpdateBot } from "@/hooks/useBots";
+import { useCreateFlow, useToggleFlow } from "@/hooks/useFlows";
 import { useWhatsAppConnect } from "@/hooks/useWhatsAppConnect";
-import { useT } from "@/i18n/context";
+import { useLocale, useT } from "@/i18n/context";
 import { getAllowedModelsForPlan } from "@/lib/plan-config";
+import { getBotTemplate } from "@/lib/bot-templates";
+import type { BotIndustryTemplateId } from "@/lib/bot-templates";
 import { EmbeddedSignupLauncher } from "@/components/whatsapp/EmbeddedSignupLauncher";
+import { BotTemplatePicker } from "@/components/bots/BotTemplatePicker";
 import type { Bot, Tenant } from "@/types";
 
 const SYSTEM_PROMPT_MAX_LENGTH = 4096;
@@ -21,8 +25,12 @@ interface BotFormProps {
 
 export function BotForm({ bot, wide = false }: BotFormProps) {
   const t = useT();
+  const locale = useLocale();
   const router = useRouter();
   const isEditing = !!bot;
+
+  const [templateId, setTemplateId] = useState<BotIndustryTemplateId | null>(null);
+  const [formTouched, setFormTouched] = useState({ name: false, systemPrompt: false });
 
   const [form, setForm] = useState({
     name: bot?.name ?? "",
@@ -45,6 +53,8 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
   const [advancedMode, setAdvancedMode] = useState(false);
   const createBot = useCreateBot();
   const updateBot = useUpdateBot(bot?.botId ?? "");
+  const createFlow = useCreateFlow();
+  const toggleFlow = useToggleFlow();
   const { connectManual, status: whatsappStatus } = useWhatsAppConnect();
 
   const { data: tenant } = useQuery({
@@ -59,7 +69,12 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
     "gpt-4-turbo": "GPT-4 Turbo",
   };
 
-  const isPending = createBot.isPending || updateBot.isPending || whatsappStatus === "connecting";
+  const isPending =
+    createBot.isPending ||
+    updateBot.isPending ||
+    createFlow.isPending ||
+    toggleFlow.isPending ||
+    whatsappStatus === "connecting";
   const isWebhookMode = form.responseMode === "webhook";
   const hasManualIds =
     form.phoneNumberId.trim().length > 0 && form.whatsappBusinessAccountId.trim().length > 0;
@@ -74,9 +89,28 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) {
     const { name, value } = e.target;
+    if (name === "name") {
+      setFormTouched((prev) => ({ ...prev, name: true }));
+    }
+    if (name === "systemPrompt") {
+      setFormTouched((prev) => ({ ...prev, systemPrompt: true }));
+    }
     setForm((prev) => ({
       ...prev,
       [name]: name === "temperature" || name === "maxTokens" ? Number(value) : value,
+    }));
+  }
+
+  function handleTemplateChange(nextTemplateId: BotIndustryTemplateId | null) {
+    setTemplateId(nextTemplateId);
+    if (!nextTemplateId) return;
+
+    const template = getBotTemplate(nextTemplateId);
+    setForm((prev) => ({
+      ...prev,
+      name: formTouched.name ? prev.name : template.getDefaultBotName(locale),
+      systemPrompt: formTouched.systemPrompt ? prev.systemPrompt : template.getSystemPrompt(locale),
+      responseMode: "openai",
     }));
   }
 
@@ -141,10 +175,28 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
 
       if (isEditing) {
         await updateBot.mutateAsync(payload as Parameters<typeof updateBot.mutateAsync>[0]);
+        router.push("/bots");
       } else {
-        await createBot.mutateAsync(payload as Parameters<typeof createBot.mutateAsync>[0]);
+        const createdBot = await createBot.mutateAsync(
+          payload as Parameters<typeof createBot.mutateAsync>[0]
+        );
+
+        if (templateId) {
+          const flowDefinition = getBotTemplate(templateId).getFlowDefinition(locale);
+          const flow = await createFlow.mutateAsync({
+            name: flowDefinition.name,
+            botId: createdBot.botId,
+            enabled: false,
+            nodes: flowDefinition.nodes,
+            edges: flowDefinition.edges,
+            entryNodeId: flowDefinition.entryNodeId,
+          });
+          await toggleFlow.mutateAsync({ flowId: flow.flowId, enabled: true });
+          router.push(`/bots/${createdBot.botId}/edit`);
+        } else {
+          router.push("/bots");
+        }
       }
-      router.push("/bots");
     } catch (err) {
       setError((err as Error).message ?? t("bots.saveError"));
     }
@@ -152,9 +204,15 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className={cn("space-y-6 w-full", !wide && "max-w-2xl")}>
+      {!isEditing && (
+        <div className="col-span-2">
+          <BotTemplatePicker value={templateId} onChange={handleTemplateChange} />
+        </div>
+      )}
+
       <div className={cn("grid gap-4", wide ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-2")}>
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-secondary mb-1">
             {t("bots.botName")}
           </label>
           <input
@@ -163,13 +221,13 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
             required
             value={form.name}
             onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
             placeholder={t("bots.botNamePlaceholder")}
           />
         </div>
 
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-secondary mb-2">
             {t("bots.responseMode")}
           </label>
           <div className="grid grid-cols-2 gap-3">
@@ -179,12 +237,12 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
               className={cn(
                 "flex flex-col items-start gap-1 px-4 py-3 rounded-lg border-2 text-left transition-colors",
                 !isWebhookMode
-                  ? "border-indigo-600 bg-indigo-50"
-                  : "border-gray-200 hover:border-gray-300"
+                  ? "border-accent bg-accent-muted"
+                  : "border-default hover:border-default"
               )}
             >
-              <span className="text-sm font-medium text-gray-900">{t("bots.openAiMode")}</span>
-              <span className="text-xs text-gray-500">{t("bots.openAiModeDesc")}</span>
+              <span className="text-sm font-medium text-primary">{t("bots.openAiMode")}</span>
+              <span className="text-xs text-secondary">{t("bots.openAiModeDesc")}</span>
             </button>
             <button
               type="button"
@@ -192,12 +250,12 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
               className={cn(
                 "flex flex-col items-start gap-1 px-4 py-3 rounded-lg border-2 text-left transition-colors",
                 isWebhookMode
-                  ? "border-indigo-600 bg-indigo-50"
-                  : "border-gray-200 hover:border-gray-300"
+                  ? "border-accent bg-accent-muted"
+                  : "border-default hover:border-default"
               )}
             >
-              <span className="text-sm font-medium text-gray-900">{t("bots.webhookMode")}</span>
-              <span className="text-xs text-gray-500">{t("bots.webhookModeDesc")}</span>
+              <span className="text-sm font-medium text-primary">{t("bots.webhookMode")}</span>
+              <span className="text-xs text-secondary">{t("bots.webhookModeDesc")}</span>
             </button>
           </div>
         </div>
@@ -205,7 +263,7 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
         {!isWebhookMode && (
           <>
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-secondary mb-1">
                 {t("bots.systemPrompt")}
               </label>
               <textarea
@@ -218,7 +276,7 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
                   "w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 resize-none",
                   systemPromptTooLong
                     ? "border-red-300 focus:ring-red-500"
-                    : "border-gray-300 focus:ring-indigo-500"
+                    : "border-default focus:ring-accent"
                 )}
                 placeholder={t("bots.systemPromptPlaceholder")}
               />
@@ -233,7 +291,7 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
                 <p
                   className={cn(
                     "text-xs tabular-nums",
-                    systemPromptTooLong ? "text-red-600" : "text-gray-400"
+                    systemPromptTooLong ? "text-red-600" : "text-muted"
                   )}
                 >
                   {t("bots.systemPromptCharCount", {
@@ -245,12 +303,12 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t("bots.model")}</label>
+              <label className="block text-sm font-medium text-secondary mb-1">{t("bots.model")}</label>
               <select
                 name="model"
                 value={form.model}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent bg-surface-elevated"
               >
                 {allowedModels.map((model) => (
                   <option key={model} value={model}>
@@ -259,12 +317,12 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
                 ))}
               </select>
               {tenant?.plan !== "enterprise" && (
-                <p className="mt-1 text-xs text-gray-500">{t("bots.modelPlanHint")}</p>
+                <p className="mt-1 text-xs text-secondary">{t("bots.modelPlanHint")}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-secondary mb-1">
                 {t("bots.temperature")} ({form.temperature})
               </label>
               <input
@@ -275,16 +333,16 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
                 step="0.1"
                 value={form.temperature}
                 onChange={handleChange}
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 mt-3"
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-accent mt-3"
               />
-              <div className="flex justify-between text-xs text-gray-400 mt-1">
+              <div className="flex justify-between text-xs text-muted mt-1">
                 <span>{t("bots.tempPrecise")}</span>
                 <span>{t("bots.tempCreative")}</span>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-secondary mb-1">
                 {t("bots.maxTokens")}
               </label>
               <input
@@ -294,7 +352,7 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
                 max="4096"
                 value={form.maxTokens}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
               />
             </div>
           </>
@@ -303,7 +361,7 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
         {isWebhookMode && (
           <>
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-secondary mb-1">
                 {t("bots.webhookUrl")}
               </label>
               <input
@@ -312,36 +370,36 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
                 required
                 value={form.webhookUrl}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
+                className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent font-mono"
                 placeholder={t("bots.webhookUrlPlaceholder")}
               />
-              <p className="mt-1 text-xs text-gray-500">{t("bots.webhookHttpsOnly")}</p>
+              <p className="mt-1 text-xs text-secondary">{t("bots.webhookHttpsOnly")}</p>
             </div>
 
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-secondary mb-1">
                 {t("bots.webhookSecret")}{" "}
-                <span className="font-normal text-gray-400">{t("bots.webhookSecretOptional")}</span>
+                <span className="font-normal text-muted">{t("bots.webhookSecretOptional")}</span>
               </label>
               <input
                 name="webhookSecret"
                 type="password"
                 value={form.webhookSecret}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
+                className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent font-mono"
                 placeholder={
                   isEditing && bot?.webhookSecret
                     ? t("bots.webhookSecretKeep")
                     : t("bots.webhookSecretPlaceholder")
                 }
               />
-              <p className="mt-1 text-xs text-gray-500">{t("bots.webhookSecretHint")}</p>
+              <p className="mt-1 text-xs text-secondary">{t("bots.webhookSecretHint")}</p>
             </div>
 
-            <div className="col-span-2 rounded-lg border border-gray-200 bg-gray-50 p-4 text-xs text-gray-600 space-y-2">
-              <p className="font-medium text-gray-700">{t("bots.webhookContractTitle")}</p>
+            <div className="col-span-2 rounded-lg border border-default bg-surface p-4 text-xs text-secondary space-y-2">
+              <p className="font-medium text-secondary">{t("bots.webhookContractTitle")}</p>
               <p>{t("bots.webhookContractPost")}</p>
-              <pre className="bg-white border border-gray-200 rounded p-2 overflow-x-auto text-xs">{`{
+              <pre className="bg-surface-elevated border border-default rounded p-2 overflow-x-auto text-xs">{`{
   "message": "texto del usuario",
   "from": "número de teléfono",
   "conversationId": "uuid",
@@ -349,7 +407,7 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
   "contact": { "name": "Nombre" }
 }`}</pre>
               <p>{t("bots.webhookContractResponse")}</p>
-              <pre className="bg-white border border-gray-200 rounded p-2 overflow-x-auto text-xs">{`{ "reply": "texto de respuesta" }`}</pre>
+              <pre className="bg-surface-elevated border border-default rounded p-2 overflow-x-auto text-xs">{`{ "reply": "texto de respuesta" }`}</pre>
             </div>
           </>
         )}
@@ -367,7 +425,7 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
                 setWhatsappConnected(true);
               }}
             />
-            <p className="mt-2 text-xs text-gray-500">{t("bots.sharedTokenNote")}</p>
+            <p className="mt-2 text-xs text-secondary">{t("bots.sharedTokenNote")}</p>
           </div>
         )}
 
@@ -375,7 +433,7 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
           <button
             type="button"
             onClick={() => setAdvancedMode((v) => !v)}
-            className="text-xs font-medium text-indigo-600 hover:text-indigo-700"
+            className="text-xs font-medium text-accent hover:text-accent"
           >
             {advancedMode ? t("bots.advancedModeHide") : t("bots.advancedMode")}
           </button>
@@ -383,14 +441,14 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
 
         {advancedMode && (
           <>
-            <p className="col-span-2 text-xs text-gray-500">{t("bots.manualModeHint")}</p>
-            <p className="col-span-2 text-xs text-gray-500">{t("bots.sharedTokenNote")}</p>
+            <p className="col-span-2 text-xs text-secondary">{t("bots.manualModeHint")}</p>
+            <p className="col-span-2 text-xs text-secondary">{t("bots.sharedTokenNote")}</p>
 
-            <details className="col-span-2 rounded-lg border border-indigo-100 bg-indigo-50/60 p-4 text-xs text-gray-600">
-              <summary className="font-medium text-indigo-900 cursor-pointer select-none">
+            <details className="col-span-2 rounded-lg border border-accent/20 bg-accent-muted/60 p-4 text-xs text-secondary">
+              <summary className="font-medium text-accent cursor-pointer select-none">
                 {t("bots.accessTokenGuideTitle")}
               </summary>
-              <ol className="mt-3 space-y-2 list-decimal list-inside text-gray-700">
+              <ol className="mt-3 space-y-2 list-decimal list-inside text-secondary">
                 <li>{t("bots.accessTokenGuideStep1")}</li>
                 <li>{t("bots.accessTokenGuideStep2")}</li>
                 <li>{t("bots.accessTokenGuideStep3")}</li>
@@ -403,14 +461,14 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
                 href="https://developers.facebook.com/docs/whatsapp/business-management-api/get-started#system-user-access-tokens"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-3 inline-block text-indigo-700 underline hover:text-indigo-900"
+                className="mt-3 inline-block text-accent underline hover:text-accent"
               >
                 {t("bots.accessTokenGuideMetaLink")}
               </a>
             </details>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-secondary mb-1">
                 {t("bots.phoneNumberId")}
               </label>
               <input
@@ -418,13 +476,13 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
                 type="text"
                 value={form.phoneNumberId}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
+                className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent font-mono"
                 placeholder={t("bots.phonePlaceholder")}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-secondary mb-1">
                 {t("bots.wabaId")}
               </label>
               <input
@@ -432,27 +490,27 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
                 type="text"
                 value={form.whatsappBusinessAccountId}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
+                className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent font-mono"
                 placeholder={t("bots.wabaPlaceholder")}
               />
             </div>
 
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-secondary mb-1">
                 {t("bots.accessTokenLabel")}
               </label>
               <input
                 type="password"
                 value={accessToken}
                 onChange={(e) => setAccessToken(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
+                className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent font-mono"
                 placeholder={t("bots.accessTokenPlaceholder")}
               />
-              <p className="mt-1 text-xs text-gray-500">{t("bots.accessTokenHint")}</p>
+              <p className="mt-1 text-xs text-secondary">{t("bots.accessTokenHint")}</p>
             </div>
 
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-secondary mb-1">
                 {t("whatsapp.pinLabel")}
               </label>
               <input
@@ -465,10 +523,10 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
                   setPin(e.target.value.replace(/\D/g, "").slice(0, 6));
                   if (pinError) setPinError("");
                 }}
-                className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono tracking-widest"
+                className="w-full max-w-xs px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent font-mono tracking-widest"
                 placeholder={t("whatsapp.pinPlaceholder")}
               />
-              <p className="mt-1 text-xs text-gray-500">{t("whatsapp.pinHint")}</p>
+              <p className="mt-1 text-xs text-secondary">{t("whatsapp.pinHint")}</p>
               {pinError && <p className="mt-1 text-xs text-red-600">{pinError}</p>}
             </div>
           </>
@@ -488,8 +546,8 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
           className={cn(
             "px-5 py-2 rounded-lg text-sm font-medium text-white transition-colors",
             isPending || !canSubmit || systemPromptTooLong
-              ? "bg-indigo-400 cursor-not-allowed"
-              : "bg-indigo-600 hover:bg-indigo-700"
+              ? "bg-accent/60 cursor-not-allowed"
+              : "bg-accent hover:bg-accent-hover"
           )}
         >
           {isPending
@@ -502,7 +560,7 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
         <button
           type="button"
           onClick={() => router.back()}
-          className="px-5 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+          className="px-5 py-2 rounded-lg text-sm font-medium text-secondary hover:bg-surface-muted transition-colors"
         >
           {t("common.cancel")}
         </button>

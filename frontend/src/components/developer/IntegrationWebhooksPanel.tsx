@@ -119,17 +119,17 @@ export function IntegrationWebhooksPanel() {
   }
 
   if (isLoading) {
-    return <div className="p-6 animate-pulse h-48 bg-gray-50" />;
+    return <div className="p-6 animate-pulse h-48 bg-surface" />;
   }
 
   const deliveries = deliveriesData?.deliveries ?? [];
 
   return (
     <div className="p-6 space-y-8">
-      <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-gray-200">
+      <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-default">
         <div>
-          <p className="text-sm font-medium text-gray-900">{t("integrations.enabled")}</p>
-          <p className="text-xs text-gray-500 mt-0.5">{t("integrations.toggleHint")}</p>
+          <p className="text-sm font-medium text-primary">{t("integrations.enabled")}</p>
+          <p className="text-xs text-secondary mt-0.5">{t("integrations.toggleHint")}</p>
         </div>
         <div className="flex items-center gap-3">
           <Badge variant={isEnabled ? "success" : "default"}>
@@ -140,10 +140,10 @@ export function IntegrationWebhooksPanel() {
             onClick={() => void handleToggle()}
             disabled={updateMutation.isPending || (!isEnabled && !canEnable)}
             title={isEnabled ? t("integrations.toggleDisable") : t("integrations.toggleEnable")}
-            className="text-gray-400 hover:text-indigo-600 transition-colors disabled:opacity-40"
+            className="text-muted hover:text-accent transition-colors disabled:opacity-40"
           >
             {isEnabled ? (
-              <ToggleRight className="w-8 h-8 text-indigo-500" />
+              <ToggleRight className="w-8 h-8 text-accent" />
             ) : (
               <ToggleLeft className="w-8 h-8" />
             )}
@@ -154,7 +154,7 @@ export function IntegrationWebhooksPanel() {
 
       <form onSubmit={handleSave} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-secondary mb-1">
             {t("integrations.webhookUrl")}
           </label>
           <input
@@ -162,13 +162,13 @@ export function IntegrationWebhooksPanel() {
             value={webhookUrl}
             onChange={(e) => setWebhookUrl(e.target.value)}
             placeholder="https://hooks.zapier.com/..."
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            className="w-full px-3 py-2 border border-default rounded-lg text-sm"
             required={isEnabled}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-secondary mb-1">
             {t("integrations.webhookSecret")}
           </label>
           <input
@@ -176,20 +176,20 @@ export function IntegrationWebhooksPanel() {
             value={webhookSecret}
             onChange={(e) => setWebhookSecret(e.target.value)}
             placeholder={integration?.webhookSecret === "***" ? "••••••••" : ""}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            className="w-full px-3 py-2 border border-default rounded-lg text-sm"
           />
         </div>
 
         <div>
-          <p className="text-sm font-medium text-gray-700 mb-2">{t("integrations.events")}</p>
+          <p className="text-sm font-medium text-secondary mb-2">{t("integrations.events")}</p>
           <div className="flex flex-wrap gap-3">
             {EVENT_OPTIONS.map((event) => (
-              <label key={event} className="flex items-center gap-2 text-sm text-gray-600">
+              <label key={event} className="flex items-center gap-2 text-sm text-secondary">
                 <input
                   type="checkbox"
                   checked={events.includes(event)}
                   onChange={() => toggleEvent(event)}
-                  className="rounded border-gray-300"
+                  className="rounded border-default"
                 />
                 {event}
               </label>
@@ -201,7 +201,7 @@ export function IntegrationWebhooksPanel() {
           <button
             type="submit"
             disabled={updateMutation.isPending || (isEnabled && events.length === 0)}
-            className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+            className="px-4 py-2 text-sm font-medium text-white bg-accent rounded-lg hover:bg-accent-hover disabled:opacity-50"
           >
             {updateMutation.isPending ? t("auth.saving") : t("common.save")}
           </button>
@@ -209,7 +209,7 @@ export function IntegrationWebhooksPanel() {
             type="button"
             onClick={handleTest}
             disabled={testMutation.isPending || !webhookUrl || !isEnabled}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50"
+            className="px-4 py-2 text-sm font-medium text-secondary bg-surface-muted rounded-lg hover:bg-gray-200 disabled:opacity-50"
           >
             {t("integrations.sendTest")}
           </button>
@@ -225,8 +225,8 @@ export function IntegrationWebhooksPanel() {
       </form>
 
       <div>
-        <h3 className="text-sm font-semibold text-gray-900 mb-2">{t("integrations.payloadDoc")}</h3>
-        <pre className="text-xs bg-gray-50 border border-gray-200 rounded-lg p-4 overflow-x-auto text-gray-700">
+        <h3 className="text-sm font-semibold text-primary mb-2">{t("integrations.payloadDoc")}</h3>
+        <pre className="text-xs bg-surface border border-default rounded-lg p-4 overflow-x-auto text-secondary">
 {`// message.received
 {
   "event": "message.received",
@@ -254,16 +254,16 @@ export function IntegrationWebhooksPanel() {
       </div>
 
       <div>
-        <h3 className="text-sm font-semibold text-gray-900 mb-3">{t("integrations.recentDeliveries")}</h3>
+        <h3 className="text-sm font-semibold text-primary mb-3">{t("integrations.recentDeliveries")}</h3>
         {deliveriesLoading ? (
-          <div className="animate-pulse h-24 bg-gray-50 rounded-lg" />
+          <div className="animate-pulse h-24 bg-surface rounded-lg" />
         ) : deliveries.length === 0 ? (
-          <p className="text-sm text-gray-500">{t("integrations.noDeliveries")}</p>
+          <p className="text-sm text-secondary">{t("integrations.noDeliveries")}</p>
         ) : (
           <TableContainer>
             <table className="w-full min-w-[480px] text-sm">
               <thead>
-                <tr className="border-b border-gray-200 text-left text-gray-500">
+                <tr className="border-b border-default text-left text-secondary">
                   <th className="py-2 pr-4">{t("integrations.colEvent")}</th>
                   <th className="py-2 pr-4">{t("integrations.colStatus")}</th>
                   <th className="py-2 pr-4">{t("integrations.colAttempts")}</th>
@@ -272,7 +272,7 @@ export function IntegrationWebhooksPanel() {
               </thead>
               <tbody>
                 {deliveries.map((d) => (
-                  <tr key={d.deliveryId} className="border-b border-gray-100">
+                  <tr key={d.deliveryId} className="border-b border-subtle">
                     <td className="py-2 pr-4 font-mono text-xs">{d.event}</td>
                     <td className="py-2 pr-4">
                       <span
@@ -288,7 +288,7 @@ export function IntegrationWebhooksPanel() {
                       </span>
                     </td>
                     <td className="py-2 pr-4">{d.attempts}</td>
-                    <td className="py-2 text-gray-500 text-xs">
+                    <td className="py-2 text-secondary text-xs">
                       {new Date(d.createdAt).toLocaleString()}
                       {d.lastError && (
                         <span className="block text-red-500 truncate max-w-xs">{d.lastError}</span>

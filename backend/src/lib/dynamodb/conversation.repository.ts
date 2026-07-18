@@ -11,6 +11,14 @@ import { listBots } from "./bot.repository.js";
 import type { Conversation, HandoffMode, Message, WorkflowStatus, Channel } from "../../types/index.js";
 import { conversationLookupGsi1pk, legacyPhoneGsi1pk } from "../channels/keys.js";
 import { upsertFromConversation } from "./contact.repository.js";
+import { publishRealtimeEventSafe } from "../realtime/publish.js";
+
+const REALTIME_CONVERSATION_FIELDS = new Set([
+  "handoffMode",
+  "assignedAdvisorId",
+  "workflowStatus",
+  "status",
+]);
 
 export function normalizeConversation(conv: Conversation): Conversation {
   const channel: Channel = conv.channel ?? "whatsapp";
@@ -189,7 +197,19 @@ export async function updateConversation(
     })
   );
 
-  return normalizeConversation({ ...existing, ...updates });
+  const updated = normalizeConversation({ ...existing, ...updates });
+
+  const shouldPublish = Object.keys(updates).some((key) =>
+    REALTIME_CONVERSATION_FIELDS.has(key)
+  );
+  if (shouldPublish) {
+    publishRealtimeEventSafe(tenantId, {
+      type: "conversation.updated",
+      conversation: updated,
+    });
+  }
+
+  return updated;
 }
 
 export async function clearConversationHandoff(
@@ -218,10 +238,17 @@ export async function clearConversationHandoff(
     ...cleared
   } = existing;
 
-  return normalizeConversation({
+  const updated = normalizeConversation({
     ...cleared,
     handoffMode: "bot",
   });
+
+  publishRealtimeEventSafe(tenantId, {
+    type: "conversation.updated",
+    conversation: updated,
+  });
+
+  return updated;
 }
 
 export async function clearActiveFlowRun(
@@ -427,6 +454,20 @@ export async function addMessage(message: Message, botId: string): Promise<void>
       ],
     })
   );
+
+  const conversation = await getConversation(message.tenantId, botId, message.conversationId);
+  if (conversation) {
+    publishRealtimeEventSafe(message.tenantId, {
+      type: "message.created",
+      conversationId: message.conversationId,
+      message,
+      conversation: {
+        ...conversation,
+        lastMessageAt: now,
+        messageCount: (conversation.messageCount ?? 0) + 1,
+      },
+    });
+  }
 }
 
 export async function getConversationMessages(

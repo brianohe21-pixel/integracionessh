@@ -28,7 +28,7 @@ export default function MetaFlowsPage() {
     <DashboardPage maxWidth="4xl">
       <Link
         href={`/bots/${botId}/edit`}
-        className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-4"
+        className="flex items-center gap-1 text-sm text-secondary hover:text-secondary mb-4"
       >
         <ChevronLeft className="w-4 h-4" />
         {t("bots.backToBots")}
@@ -45,14 +45,14 @@ export default function MetaFlowsPage() {
                 setSync(true);
                 void refetch().finally(() => setSync(false));
               }}
-              className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+              className="flex items-center gap-2 px-3 py-2 text-sm border border-default rounded-lg hover:bg-surface"
             >
               <RefreshCw className="w-4 h-4" />
               {t("metaFlows.sync")}
             </button>
             <Link
               href={`/bots/${botId}/meta-flows/new`}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700"
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-accent rounded-lg hover:bg-accent-hover"
             >
               <Plus className="w-4 h-4" />
               {t("metaFlows.new")}
@@ -62,13 +62,13 @@ export default function MetaFlowsPage() {
       />
 
       {isLoading ? (
-        <div className="h-32 bg-white border border-gray-200 rounded-xl animate-pulse" />
+        <div className="h-32 bg-surface-elevated border border-default rounded-xl animate-pulse" />
       ) : !flows?.length ? (
-        <p className="text-sm text-gray-500">{t("metaFlows.empty")}</p>
+        <p className="text-sm text-secondary">{t("metaFlows.empty")}</p>
       ) : (
-        <TableContainer className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+        <TableContainer className="overflow-hidden rounded-xl border border-default bg-surface-elevated">
           <table className="w-full min-w-[480px] text-sm">
-            <thead className="bg-gray-50 text-left text-gray-600">
+            <thead className="bg-surface text-left text-secondary">
               <tr>
                 <th className="px-4 py-3">{t("flows.colName")}</th>
                 <th className="px-4 py-3">{t("flows.colStatus")}</th>
@@ -77,22 +77,22 @@ export default function MetaFlowsPage() {
             </thead>
             <tbody>
               {flows.map((flow) => (
-                <tr key={flow.metaFlowId} className="border-t border-gray-100">
+                <tr key={flow.metaFlowId} className="border-t border-subtle">
                   <td className="px-4 py-3">
                     <Link
                       href={`/bots/${botId}/meta-flows/${flow.metaFlowId}/edit`}
-                      className="text-indigo-600 hover:underline font-medium"
+                      className="text-accent hover:underline font-medium"
                     >
                       {flow.name}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-gray-600">{flow.status}</td>
+                  <td className="px-4 py-3 text-secondary">{flow.status}</td>
                   <td className="px-4 py-3 text-right space-x-2">
                     {flow.status === "DRAFT" && (
                       <button
                         type="button"
                         onClick={() => publish.mutate(flow.metaFlowId)}
-                        className="text-indigo-600 hover:underline"
+                        className="text-accent hover:underline"
                       >
                         {t("metaFlows.publish")}
                       </button>
@@ -123,7 +123,7 @@ export default function MetaFlowsPage() {
 
       <Link
         href={`/bots/${botId}/meta-flows/responses`}
-        className="inline-block mt-6 text-sm text-indigo-600 hover:underline"
+        className="inline-block mt-6 text-sm text-accent hover:underline"
       >
         {t("metaFlows.responses")} →
       </Link>

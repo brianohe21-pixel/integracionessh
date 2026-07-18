@@ -120,12 +120,12 @@ export function WhatsAppSoftphone({ conversation, advisorMode = false }: Props) 
   const inCall = status === "in_call" || status === "calling";
 
   return (
-    <div className="border-b border-gray-200 bg-violet-50 px-4 py-3">
+    <div className="border-b border-default bg-violet-50 px-4 py-3">
       <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-gray-900">{t("softphone.title")}</p>
-          <p className="text-xs text-gray-500">
+          <p className="text-sm font-medium text-primary">{t("softphone.title")}</p>
+          <p className="text-xs text-secondary">
             {status === "idle" && t("softphone.stateIdle")}
             {status === "calling" && t("softphone.stateCalling")}
             {status === "in_call" && t("softphone.stateInCall")}

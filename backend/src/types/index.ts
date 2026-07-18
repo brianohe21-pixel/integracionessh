@@ -31,6 +31,9 @@ export interface Tenant {
   subscriptionStatus?: SubscriptionStatus;
   currentPeriodEnd?: string;
   paymentProvider?: "stripe" | "wompi";
+  onboardingCompletedAt?: string;
+  onboardingSkippedAt?: string;
+  onboardingTestConfirmedAt?: string;
   createdAt: string;
   updatedAt: string;
 }

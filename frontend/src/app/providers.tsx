@@ -7,6 +7,7 @@ import { I18nProvider } from "@/i18n/context";
 import { HtmlLang } from "@/components/layout/HtmlLang";
 import { TenantBrandingProvider } from "@/components/branding/TenantBrandingProvider";
 import { BrandDocumentTitle } from "@/components/branding/BrandDocumentTitle";
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
 
 if (typeof window !== "undefined") {
   configureAmplify();
@@ -26,14 +27,16 @@ export function Providers({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <I18nProvider>
-      <HtmlLang />
-      <QueryClientProvider client={queryClient}>
-        <TenantBrandingProvider>
-          <BrandDocumentTitle />
-          {children}
-        </TenantBrandingProvider>
-      </QueryClientProvider>
-    </I18nProvider>
+    <ThemeProvider>
+      <I18nProvider>
+        <HtmlLang />
+        <QueryClientProvider client={queryClient}>
+          <TenantBrandingProvider>
+            <BrandDocumentTitle />
+            {children}
+          </TenantBrandingProvider>
+        </QueryClientProvider>
+      </I18nProvider>
+    </ThemeProvider>
   );
 }

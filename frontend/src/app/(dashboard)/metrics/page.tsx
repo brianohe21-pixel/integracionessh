@@ -41,14 +41,14 @@ function KpiCard({
   icon: React.ReactNode;
 }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5">
+    <div className="bg-surface-elevated rounded-xl border border-default p-5">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
-          {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
+          <p className="text-xs font-medium text-secondary uppercase tracking-wide">{label}</p>
+          <p className="text-2xl font-bold text-primary mt-1">{value}</p>
+          {sub && <p className="text-xs text-muted mt-1">{sub}</p>}
         </div>
-        <div className="flex items-center justify-center w-10 h-10 bg-indigo-50 rounded-xl text-indigo-600">
+        <div className="flex items-center justify-center w-10 h-10 bg-accent-muted rounded-xl text-accent">
           {icon}
         </div>
       </div>
@@ -141,10 +141,10 @@ export default function MetricsPage() {
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="bg-white rounded-xl border border-gray-200 p-5 animate-pulse h-24" />
+              <div key={i} className="bg-surface-elevated rounded-xl border border-default p-5 animate-pulse h-24" />
             ))}
           </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-6 animate-pulse h-48" />
+          <div className="bg-surface-elevated rounded-xl border border-default p-6 animate-pulse h-48" />
         </div>
       )}
 
@@ -221,8 +221,8 @@ export default function MetricsPage() {
           {showMarketing && !marketingLoading && marketing?.campaigns?.rates && marketing.inbox && (
             <div className="space-y-4">
               <div>
-                <h2 className="font-semibold text-gray-900">{t("metrics.marketingTitle")}</h2>
-                <p className="text-sm text-gray-500">{t("metrics.marketingSubtitle")}</p>
+                <h2 className="font-semibold text-primary">{t("metrics.marketingTitle")}</h2>
+                <p className="text-sm text-secondary">{t("metrics.marketingSubtitle")}</p>
                 {filters.botId && (
                   <p className="text-xs text-amber-700 mt-1">{t("metrics.marketingTenantScope")}</p>
                 )}
@@ -253,14 +253,14 @@ export default function MetricsPage() {
                 />
               </div>
               {(marketing.topCampaigns?.length ?? 0) > 0 && (
-                <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-                  <div className="border-b border-gray-100 px-4 py-4 sm:px-6">
-                    <h3 className="text-sm font-semibold text-gray-900">{t("metrics.topCampaigns")}</h3>
+                <div className="overflow-hidden rounded-xl border border-default bg-surface-elevated">
+                  <div className="border-b border-subtle px-4 py-4 sm:px-6">
+                    <h3 className="text-sm font-semibold text-primary">{t("metrics.topCampaigns")}</h3>
                   </div>
                   <TableContainer>
                   <table className="w-full min-w-[560px] text-sm">
                     <thead>
-                      <tr className="bg-gray-50 text-left text-xs text-gray-500 uppercase">
+                      <tr className="bg-surface text-left text-xs text-secondary uppercase">
                         <th className="px-6 py-3">{t("campaigns.nameLabel")}</th>
                         <th className="px-6 py-3 text-right">{t("metrics.colSent")}</th>
                         <th className="px-6 py-3 text-right">{t("metrics.deliveryRate")}</th>
@@ -278,7 +278,7 @@ export default function MetricsPage() {
                           <td className="px-6 py-3 text-right">
                             <Link
                               href={`/campaigns/${c.campaignId}`}
-                              className="text-indigo-600 text-xs hover:underline"
+                              className="text-accent text-xs hover:underline"
                             >
                               {t("metrics.viewCampaign")}
                             </Link>
@@ -297,8 +297,8 @@ export default function MetricsPage() {
             <div className="space-y-4">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <h2 className="font-semibold text-gray-900">{t("metrics.callingTitle")}</h2>
-                  <p className="text-sm text-gray-500">
+                  <h2 className="font-semibold text-primary">{t("metrics.callingTitle")}</h2>
+                  <p className="text-sm text-secondary">
                     {t("metrics.callingSubtitle", {
                       from: formatRangeDate(calling.from),
                       to: formatRangeDate(calling.to),
@@ -359,16 +359,16 @@ export default function MetricsPage() {
               </div>
 
               {calling.byBot.length > 0 && (
-                <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-                  <div className="border-b border-gray-100 px-4 py-4 sm:px-6">
-                    <h3 className="text-sm font-semibold text-gray-900">
+                <div className="overflow-hidden rounded-xl border border-default bg-surface-elevated">
+                  <div className="border-b border-subtle px-4 py-4 sm:px-6">
+                    <h3 className="text-sm font-semibold text-primary">
                       {t("metrics.callingByBot")}
                     </h3>
                   </div>
                   <TableContainer>
                     <table className="w-full min-w-[720px] text-sm">
                       <thead>
-                        <tr className="bg-gray-50 text-left text-xs text-gray-500 uppercase">
+                        <tr className="bg-surface text-left text-xs text-secondary uppercase">
                           <th className="px-6 py-3">{t("metrics.colBot")}</th>
                           <th className="px-6 py-3 text-right">{t("metrics.pickupRate")}</th>
                           <th className="px-6 py-3 text-right">{t("metrics.colOutbound")}</th>
@@ -405,7 +405,7 @@ export default function MetricsPage() {
               )}
 
               {calling.summary.totalCalls === 0 && (
-                <div className="rounded-xl border border-gray-200 bg-white p-6">
+                <div className="rounded-xl border border-default bg-surface-elevated p-6">
                   <EmptyState
                     icon={<Phone className="w-6 h-6" />}
                     title={t("metrics.callingEmptyTitle")}
@@ -417,9 +417,9 @@ export default function MetricsPage() {
           )}
 
           {showUsage && (
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100">
-              <h2 className="font-semibold text-gray-900 text-sm">{t("metrics.usageByBot")}</h2>
+          <div className="bg-surface-elevated rounded-xl border border-default overflow-hidden">
+            <div className="px-6 py-4 border-b border-subtle">
+              <h2 className="font-semibold text-primary text-sm">{t("metrics.usageByBot")}</h2>
             </div>
 
             {filteredUsage.byBot.length === 0 ? (
@@ -434,7 +434,7 @@ export default function MetricsPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-gray-50 text-left text-xs text-gray-500 uppercase tracking-wide">
+                    <tr className="bg-surface text-left text-xs text-secondary uppercase tracking-wide">
                       <th className="px-6 py-3 font-medium">{t("metrics.colBot")}</th>
                       <th className="px-6 py-3 font-medium">{t("common.status")}</th>
                       <th className="px-6 py-3 font-medium text-right">{t("metrics.colConversations")}</th>
@@ -445,28 +445,28 @@ export default function MetricsPage() {
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {filteredUsage.byBot.map((bot) => (
-                      <tr key={bot.botId} className="hover:bg-gray-50/50">
-                        <td className="px-6 py-3.5 font-medium text-gray-900">{bot.botName}</td>
+                      <tr key={bot.botId} className="hover:bg-surface/50">
+                        <td className="px-6 py-3.5 font-medium text-primary">{bot.botName}</td>
                         <td className="px-6 py-3.5">
                           <Badge variant={bot.status === "active" ? "success" : "default"}>
                             {bot.status === "active" ? t("common.active") : t("common.inactive")}
                           </Badge>
                         </td>
-                        <td className="px-6 py-3.5 text-right text-gray-700">
+                        <td className="px-6 py-3.5 text-right text-secondary">
                           {formatNumber(bot.conversations)}
                           {bot.activeConversations > 0 && (
-                            <span className="text-gray-400 ml-1">
+                            <span className="text-muted ml-1">
                               {t("metrics.activeInline", { count: bot.activeConversations })}
                             </span>
                           )}
                         </td>
-                        <td className="px-6 py-3.5 text-right text-gray-700 font-medium">
+                        <td className="px-6 py-3.5 text-right text-secondary font-medium">
                           {formatNumber(bot.messages)}
                         </td>
-                        <td className="px-6 py-3.5 text-right text-gray-700">
+                        <td className="px-6 py-3.5 text-right text-secondary">
                           {formatNumber(bot.templates)}
                         </td>
-                        <td className="px-6 py-3.5 text-right text-gray-500">
+                        <td className="px-6 py-3.5 text-right text-secondary">
                           {bot.lastActivityAt ? formatRelativeTime(bot.lastActivityAt) : "—"}
                         </td>
                       </tr>
@@ -479,14 +479,14 @@ export default function MetricsPage() {
           )}
 
           {showUsage && filteredUsage.recentBulkJobs.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-100">
-                <h2 className="font-semibold text-gray-900 text-sm">{t("metrics.recentBulkTitle")}</h2>
+            <div className="bg-surface-elevated rounded-xl border border-default overflow-hidden">
+              <div className="px-6 py-4 border-b border-subtle">
+                <h2 className="font-semibold text-primary text-sm">{t("metrics.recentBulkTitle")}</h2>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-gray-50 text-left text-xs text-gray-500 uppercase tracking-wide">
+                    <tr className="bg-surface text-left text-xs text-secondary uppercase tracking-wide">
                       <th className="px-6 py-3 font-medium">{t("bulkSend.colTemplate")}</th>
                       <th className="px-6 py-3 font-medium">{t("common.status")}</th>
                       <th className="px-6 py-3 font-medium text-right">{t("metrics.colSent")}</th>
@@ -497,8 +497,8 @@ export default function MetricsPage() {
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {filteredUsage.recentBulkJobs.map((job) => (
-                      <tr key={job.jobId} className="hover:bg-gray-50/50">
-                        <td className="px-6 py-3.5 font-medium text-gray-900">{job.templateName}</td>
+                      <tr key={job.jobId} className="hover:bg-surface/50">
+                        <td className="px-6 py-3.5 font-medium text-primary">{job.templateName}</td>
                         <td className="px-6 py-3.5">
                           <Badge variant={bulkStatusVariant(job.status)}>
                             {bulkStatusLabel(job.status)}
@@ -510,10 +510,10 @@ export default function MetricsPage() {
                         <td className="px-6 py-3.5 text-right text-red-600">
                           {formatNumber(job.failed)}
                         </td>
-                        <td className="px-6 py-3.5 text-right text-gray-700">
+                        <td className="px-6 py-3.5 text-right text-secondary">
                           {formatNumber(job.total)}
                         </td>
-                        <td className="px-6 py-3.5 text-right text-gray-500">
+                        <td className="px-6 py-3.5 text-right text-secondary">
                           {formatDate(job.createdAt)}
                         </td>
                       </tr>

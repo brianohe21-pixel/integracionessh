@@ -17,7 +17,7 @@ function statusClass(status: PaymentRequest["status"]): string {
   if (status === "paid") return "bg-green-100 text-green-800";
   if (status === "pending") return "bg-yellow-100 text-yellow-800";
   if (status === "declined") return "bg-red-100 text-red-800";
-  return "bg-gray-100 text-gray-800";
+  return "bg-surface-muted text-primary";
 }
 
 export function PaymentRequestsList({ botId }: { botId: string }) {
@@ -54,13 +54,13 @@ export function PaymentRequestsList({ botId }: { botId: string }) {
   const requests = data?.requests ?? [];
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6">
+    <div className="rounded-xl border border-default bg-surface-elevated p-6">
       <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="text-base font-semibold text-gray-900">{t("payments.requestsTitle")}</h2>
+        <h2 className="text-base font-semibold text-primary">{t("payments.requestsTitle")}</h2>
         <button
           type="button"
           onClick={() => setShowForm((v) => !v)}
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover"
         >
           {t("payments.createRequest")}
         </button>
@@ -73,13 +73,13 @@ export function PaymentRequestsList({ botId }: { botId: string }) {
             value={contactPhone}
             onChange={(e) => setContactPhone(e.target.value)}
             placeholder={t("payments.contactPhone")}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            className="rounded-lg border border-default px-3 py-2 text-sm"
           />
           <input
             value={contactName}
             onChange={(e) => setContactName(e.target.value)}
             placeholder={t("payments.contactName")}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            className="rounded-lg border border-default px-3 py-2 text-sm"
           />
           <input
             required
@@ -88,27 +88,27 @@ export function PaymentRequestsList({ botId }: { botId: string }) {
             value={amountInCents}
             onChange={(e) => setAmountInCents(e.target.value)}
             placeholder={t("payments.amountInCents")}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            className="rounded-lg border border-default px-3 py-2 text-sm"
           />
           <input
             required
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder={t("payments.description")}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            className="rounded-lg border border-default px-3 py-2 text-sm"
           />
           <div className="sm:col-span-2 flex gap-2">
             <button
               type="submit"
               disabled={create.isPending}
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white"
+              className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white"
             >
               {t("payments.sendLink")}
             </button>
             <button
               type="button"
               onClick={() => setShowForm(false)}
-              className="rounded-lg border border-gray-300 px-4 py-2 text-sm"
+              className="rounded-lg border border-default px-4 py-2 text-sm"
             >
               {t("common.cancel")}
             </button>
@@ -118,14 +118,14 @@ export function PaymentRequestsList({ botId }: { botId: string }) {
       ) : null}
 
       {isLoading ? (
-        <div className="h-24 animate-pulse rounded-lg bg-gray-100" />
+        <div className="h-24 animate-pulse rounded-lg bg-surface-muted" />
       ) : requests.length === 0 ? (
-        <p className="text-sm text-gray-500">{t("payments.noRequests")}</p>
+        <p className="text-sm text-secondary">{t("payments.noRequests")}</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
-              <tr className="border-b text-left text-gray-500">
+              <tr className="border-b text-left text-secondary">
                 <th className="py-2 pr-4">{t("payments.colContact")}</th>
                 <th className="py-2 pr-4">{t("payments.colAmount")}</th>
                 <th className="py-2 pr-4">{t("payments.colDescription")}</th>
@@ -137,7 +137,7 @@ export function PaymentRequestsList({ botId }: { botId: string }) {
               {requests.map((req, index) => (
                 <tr
                   key={req.paymentId ?? req.reference ?? `${req.createdAt}-${index}`}
-                  className="border-b border-gray-100"
+                  className="border-b border-subtle"
                 >
                   <td className="py-2 pr-4">{req.contactPhone}</td>
                   <td className="py-2 pr-4">{formatCop(req.amountInCents)}</td>

@@ -14,11 +14,12 @@ import {
   upsertMetaFlow,
 } from "../../lib/dynamodb/meta-flow.repository.js";
 import { META_FLOW_TEMPLATES } from "../../lib/meta-flow/templates.js";
-import { validateMetaFlowJson } from "../../lib/meta-flow/validate.js";
+import { validateMetaFlowJson, formatMetaValidationErrors } from "../../lib/meta-flow/validate.js";
 import {
   createMetaFlow,
   deprecateMetaFlow,
   getMetaFlow as getMetaFlowApi,
+  getMetaFlowWithValidation,
   listMetaFlows as listMetaFlowsApi,
   publishMetaFlow,
   sendFlowMessage,
@@ -175,6 +176,19 @@ export async function handler(
     if (method === "POST" && flowId && path.endsWith("/publish")) {
       const flow = await getMetaFlow(auth.tenantId, botId, flowId);
       if (!flow) return notFound("Flow not found");
+
+      const jsonDefinition = validateMetaFlowJson(flow.jsonDefinition);
+      await uploadFlowJson(flowId, jsonDefinition, accessToken);
+
+      const prePublish = await getMetaFlowWithValidation(flowId, accessToken);
+      const validationErrors = prePublish.validation_errors;
+      if (Array.isArray(validationErrors) && validationErrors.length > 0) {
+        return badRequest(
+          formatMetaValidationErrors(
+            validationErrors as Array<{ message?: string; path?: string; error?: string }>
+          )
+        );
+      }
 
       await publishMetaFlow(flowId, accessToken);
       const remote = await getMetaFlowApi(flowId, accessToken);

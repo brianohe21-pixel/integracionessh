@@ -17,7 +17,7 @@ export default function BotWebchatPage() {
   if (isLoading || !bot) {
     return (
       <DashboardPage className="lg:px-6">
-        <div className="animate-pulse h-48 bg-gray-100 rounded-xl" />
+        <div className="animate-pulse h-48 bg-surface-muted rounded-xl" />
       </DashboardPage>
     );
   }
@@ -26,7 +26,7 @@ export default function BotWebchatPage() {
     <DashboardPage className="lg:px-6">
       <Link
         href={`/bots/${botId}/edit?tab=webchat`}
-        className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-4"
+        className="flex items-center gap-1 text-sm text-secondary hover:text-secondary mb-4"
       >
         <ChevronLeft className="w-4 h-4" />
         {t("bots.backToEdit")}

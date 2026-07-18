@@ -45,6 +45,7 @@ const entryPoints = [
   "src/functions/instagram-connect/index.ts",
   "src/functions/webchat/index.ts",
   "src/functions/realtime/index.ts",
+  "src/functions/realtime-ws/index.ts",
   "src/functions/calendar/index.ts",
   "src/functions/public-calendar/index.ts",
   "src/functions/payments/index.ts",

@@ -393,6 +393,12 @@ locals {
       function_arn = var.whatsapp_connect_function_arn
       protected    = true
     }
+    whatsapp_status = {
+      route_key    = "GET /whatsapp/status"
+      invoke_arn   = var.whatsapp_connect_invoke_arn
+      function_arn = var.whatsapp_connect_function_arn
+      protected    = true
+    }
     whatsapp_register = {
       route_key    = "POST /whatsapp/register"
       invoke_arn   = var.whatsapp_connect_invoke_arn
@@ -611,6 +617,12 @@ locals {
     }
     tenants_accept_terms = {
       route_key    = "POST /tenants/me/accept-terms"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_onboarding = {
+      route_key    = "PATCH /tenants/me/onboarding"
       invoke_arn   = var.tenants_invoke_arn
       function_arn = var.tenants_function_arn
       protected    = true

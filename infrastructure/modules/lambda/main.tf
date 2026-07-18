@@ -108,6 +108,7 @@ resource "aws_iam_role_policy" "lambda_permissions" {
           "cognito-idp:AdminDisableUser",
           "cognito-idp:AdminUpdateUserAttributes",
           "cognito-idp:AdminCreateUser",
+          "cognito-idp:AdminDeleteUser",
         ]
         Resource = var.cognito_user_pool_arn
       },
@@ -128,6 +129,13 @@ resource "aws_iam_role_policy" "lambda_permissions" {
           "s3:DeleteObject",
         ]
         Resource = "${var.media_bucket_arn}/*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "execute-api:ManageConnections",
+        ]
+        Resource = "${aws_apigatewayv2_api.websocket.execution_arn}/*"
       },
       {
         Effect   = "Allow"
@@ -184,6 +192,7 @@ locals {
         ENVIRONMENT               = var.environment
         INTEGRATION_SQS_QUEUE_URL = var.integration_sqs_queue_url
         MEDIA_BUCKET              = var.media_bucket_name
+        WEBSOCKET_API_ENDPOINT    = local.websocket_management_endpoint
       }
     }
     tenants = {
@@ -215,8 +224,9 @@ locals {
       timeout     = 30
       memory      = 256
       environment = {
-        TABLE_NAME  = var.dynamodb_table_name
-        ENVIRONMENT = var.environment
+        TABLE_NAME             = var.dynamodb_table_name
+        ENVIRONMENT            = var.environment
+        WEBSOCKET_API_ENDPOINT = local.websocket_management_endpoint
       }
     }
     advisors = {
@@ -227,6 +237,8 @@ locals {
       environment = {
         TABLE_NAME           = var.dynamodb_table_name
         COGNITO_USER_POOL_ID = var.cognito_user_pool_id
+        FRONTEND_URL         = var.frontend_url
+        SES_FROM_EMAIL       = var.ses_from_email
       }
     }
     contacts = {
@@ -381,6 +393,18 @@ locals {
         LIVEKIT_URL        = var.livekit_url
         LIVEKIT_API_KEY    = var.livekit_api_key
         LIVEKIT_API_SECRET = var.livekit_api_secret
+      }
+    }
+    realtime_ws = {
+      handler     = "realtime-ws/index.handler"
+      description = "WebSocket connections for realtime inbox updates"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME         = var.dynamodb_table_name
+        ENVIRONMENT        = var.environment
+        COGNITO_CLIENT_ID  = var.cognito_client_id
+        COGNITO_ISSUER_URL = var.cognito_issuer_url
       }
     }
     campaigns = {

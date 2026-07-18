@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Palette, Upload, Trash2 } from "lucide-react";
@@ -26,14 +27,14 @@ export function BrandingSettingsCard() {
 
   useEffect(() => {
     if (!data) return;
-    setBrandName(data.brandName);
-    setPrimaryColor(data.primaryColor);
+    setBrandName(data.brandName ?? "");
+    setPrimaryColor(data.primaryColor ?? DEFAULT_PRIMARY_COLOR);
   }, [data]);
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <div className="h-24 bg-gray-100 rounded-lg animate-pulse" />
+      <div className="bg-surface-elevated rounded-xl border border-default p-6">
+        <div className="h-24 bg-surface-muted rounded-lg animate-pulse" />
       </div>
     );
   }
@@ -75,12 +76,12 @@ export function BrandingSettingsCard() {
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6">
+    <div className="bg-surface-elevated rounded-xl border border-default p-6">
       <div className="flex items-center gap-2 mb-2">
-        <Palette className="w-4 h-4 text-gray-500" />
-        <h2 className="font-semibold text-gray-900 text-sm">{t("settings.brandingTitle")}</h2>
+        <Palette className="w-4 h-4 text-secondary" />
+        <h2 className="font-semibold text-primary text-sm">{t("settings.brandingTitle")}</h2>
       </div>
-      <p className="text-sm text-gray-500 mb-4">{t("settings.brandingDescription")}</p>
+      <p className="text-sm text-secondary mb-4">{t("settings.brandingDescription")}</p>
 
       {!canCustomize && (
         <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -96,10 +97,17 @@ export function BrandingSettingsCard() {
         style={{ backgroundColor: primaryColor }}
       >
         {data?.logoUrl ? (
-          <img src={data.logoUrl} alt="" className="h-8 w-8 rounded-lg object-cover bg-white/20" />
+          <Image
+            src={data.logoUrl}
+            alt=""
+            width={32}
+            height={32}
+            unoptimized
+            className="h-8 w-8 rounded-lg object-cover bg-surface-elevated/20"
+          />
         ) : (
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/20 text-sm font-bold">
-            {brandName.slice(0, 1).toUpperCase() || "?"}
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-elevated/20 text-sm font-bold">
+            {(brandName.trim().charAt(0) || "?").toUpperCase()}
           </div>
         )}
         <span className="font-semibold">{brandName || t("settings.brandingPreviewFallback")}</span>
@@ -107,7 +115,7 @@ export function BrandingSettingsCard() {
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-secondary mb-1">
             {t("settings.brandingName")}
           </label>
           <input
@@ -116,12 +124,12 @@ export function BrandingSettingsCard() {
             onChange={(e) => setBrandName(e.target.value)}
             disabled={!canCustomize}
             maxLength={128}
-            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm disabled:bg-gray-50"
+            className="w-full rounded-lg border border-default px-3 py-2 text-sm disabled:bg-surface"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-secondary mb-1">
             {t("settings.brandingColor")}
           </label>
           <div className="flex items-center gap-3">
@@ -130,7 +138,7 @@ export function BrandingSettingsCard() {
               value={primaryColor}
               onChange={(e) => setPrimaryColor(e.target.value)}
               disabled={!canCustomize}
-              className="h-10 w-14 cursor-pointer rounded border border-gray-200 disabled:cursor-not-allowed"
+              className="h-10 w-14 cursor-pointer rounded border border-default disabled:cursor-not-allowed"
             />
             <input
               type="text"
@@ -138,19 +146,19 @@ export function BrandingSettingsCard() {
               onChange={(e) => setPrimaryColor(e.target.value)}
               disabled={!canCustomize}
               pattern="^#[0-9A-Fa-f]{6}$"
-              className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm font-mono disabled:bg-gray-50"
+              className="flex-1 rounded-lg border border-default px-3 py-2 text-sm font-mono disabled:bg-surface"
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-secondary mb-1">
             {t("settings.brandingLogo")}
           </label>
           <div className="flex flex-wrap items-center gap-2">
             <label
-              className={`inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium ${
-                canCustomize ? "cursor-pointer hover:bg-gray-50" : "cursor-not-allowed opacity-50"
+              className={`inline-flex items-center gap-1.5 rounded-lg border border-default px-3 py-2 text-sm font-medium ${
+                canCustomize ? "cursor-pointer hover:bg-surface" : "cursor-not-allowed opacity-50"
               }`}
             >
               <Upload className="w-4 h-4" />
@@ -186,7 +194,7 @@ export function BrandingSettingsCard() {
             onClick={() => void handleSave()}
             disabled={updateBranding.isPending}
             className="rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-            style={{ backgroundColor: "var(--brand-primary, #4f46e5)" }}
+            style={{ backgroundColor: "var(--brand-primary, #25D366)" }}
           >
             {updateBranding.isPending ? t("auth.saving") : t("settings.brandingSave")}
           </button>

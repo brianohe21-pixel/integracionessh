@@ -66,7 +66,7 @@ export default function PaymentsBotPage() {
   if (isLoading || !draft) {
     return (
       <DashboardPage>
-        <div className="h-64 animate-pulse rounded-xl bg-gray-100" />
+        <div className="h-64 animate-pulse rounded-xl bg-surface-muted" />
       </DashboardPage>
     );
   }
@@ -81,7 +81,7 @@ export default function PaymentsBotPage() {
         </p>
       ) : null}
 
-      <div className="mb-6 flex gap-2 border-b border-gray-200">
+      <div className="mb-6 flex gap-2 border-b border-default">
         {(["config", "requests"] as Tab[]).map((key) => (
           <button
             key={key}
@@ -89,8 +89,8 @@ export default function PaymentsBotPage() {
             onClick={() => selectTab(key)}
             className={`border-b-2 px-4 py-2 text-sm font-medium ${
               tab === key
-                ? "border-indigo-600 text-indigo-600"
-                : "border-transparent text-gray-500 hover:text-gray-700"
+                ? "border-accent text-accent"
+                : "border-transparent text-secondary hover:text-secondary"
             }`}
           >
             {t(`payments.tabs.${key}`)}
@@ -107,7 +107,7 @@ export default function PaymentsBotPage() {
               type="button"
               onClick={() => void handleSave()}
               disabled={saveConfig.isPending}
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+              className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover"
             >
               {t("common.save")}
             </button>

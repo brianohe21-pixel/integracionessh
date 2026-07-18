@@ -13,11 +13,11 @@ export function CalendarSlotsPreview({
   const t = useT();
 
   if (isLoading) {
-    return <div className="h-24 animate-pulse rounded-lg bg-gray-100" />;
+    return <div className="h-24 animate-pulse rounded-lg bg-surface-muted" />;
   }
 
   if (slots.length === 0) {
-    return <p className="text-sm text-gray-500">{t("calendar.noSlots")}</p>;
+    return <p className="text-sm text-secondary">{t("calendar.noSlots")}</p>;
   }
 
   return (
@@ -25,7 +25,7 @@ export function CalendarSlotsPreview({
       {slots.slice(0, 24).map((slot) => (
         <span
           key={slot.startAt}
-          className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-sm text-indigo-700"
+          className="rounded-full border border-accent/30 bg-accent-muted px-3 py-1 text-sm text-accent"
         >
           {new Date(slot.startAt).toLocaleString(undefined, {
             weekday: "short",
@@ -37,7 +37,7 @@ export function CalendarSlotsPreview({
         </span>
       ))}
       {slots.length > 24 ? (
-        <span className="text-sm text-gray-500">+{slots.length - 24}</span>
+        <span className="text-sm text-secondary">+{slots.length - 24}</span>
       ) : null}
     </div>
   );

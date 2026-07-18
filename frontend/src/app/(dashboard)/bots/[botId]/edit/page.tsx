@@ -74,7 +74,7 @@ export default function EditBotPage() {
           <div className="h-6 w-48 bg-gray-200 rounded" />
           <div className="h-4 w-64 bg-gray-200 rounded" />
           <div className="h-10 bg-gray-200 rounded" />
-          <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+          <div className="bg-surface-elevated rounded-xl border border-default p-6 space-y-4">
             <div className="h-10 bg-gray-200 rounded" />
             <div className="h-32 bg-gray-200 rounded" />
             <div className="h-10 bg-gray-200 rounded" />
@@ -88,7 +88,7 @@ export default function EditBotPage() {
     <DashboardPage className="lg:px-6">
       <Link
         href="/bots"
-        className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-4"
+        className="flex items-center gap-1 text-sm text-secondary hover:text-secondary mb-4"
       >
         <ChevronLeft className="w-4 h-4" />
         {t("bots.backToBots")}
@@ -98,7 +98,7 @@ export default function EditBotPage() {
         subtitle={t("bots.editSubtitle")}
       />
 
-      <div className="mb-6 flex flex-wrap gap-x-1 gap-y-0 border-b border-gray-200">
+      <div className="mb-6 flex flex-wrap gap-x-1 gap-y-0 border-b border-default">
         {tabs.map((tabItem) => (
           <button
             key={tabItem.id}
@@ -106,8 +106,8 @@ export default function EditBotPage() {
             onClick={() => setTab(tabItem.id)}
             className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
               activeTab === tabItem.id
-                ? "border-indigo-600 text-indigo-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                ? "border-accent text-accent"
+                : "border-transparent text-secondary hover:text-secondary hover:border-default"
             }`}
           >
             {tabItem.icon}
@@ -117,10 +117,10 @@ export default function EditBotPage() {
       </div>
 
       {bot && activeTab === "general" && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="bg-surface-elevated rounded-xl border border-default p-6">
           <div className="flex items-center gap-2 mb-6">
-            <MessageCircle className="w-5 h-5 text-indigo-600" />
-            <h2 className="text-lg font-semibold text-gray-900">{t("bots.tabGeneral")}</h2>
+            <MessageCircle className="w-5 h-5 text-accent" />
+            <h2 className="text-lg font-semibold text-primary">{t("bots.tabGeneral")}</h2>
           </div>
           <BotForm bot={bot} wide />
         </div>

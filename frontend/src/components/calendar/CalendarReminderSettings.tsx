@@ -31,11 +31,11 @@ export function CalendarReminderSettings({
   const minutes = config.reminderMinutesBefore ?? 60;
 
   return (
-    <section className="rounded-xl border border-gray-200 bg-white p-6">
+    <section className="rounded-xl border border-default bg-surface-elevated p-6">
       <div className="mb-4 flex items-center justify-between gap-4">
         <div>
-          <h3 className="font-semibold text-gray-900">{t("calendar.reminder.title")}</h3>
-          <p className="mt-1 text-sm text-gray-500">{t("calendar.reminder.subtitle")}</p>
+          <h3 className="font-semibold text-primary">{t("calendar.reminder.title")}</h3>
+          <p className="mt-1 text-sm text-secondary">{t("calendar.reminder.subtitle")}</p>
         </div>
         <button
           type="button"
@@ -43,7 +43,7 @@ export function CalendarReminderSettings({
           className={`rounded-lg px-4 py-2 text-sm font-medium text-white ${
             config.reminderEnabled
               ? "bg-gray-600 hover:bg-gray-700"
-              : "bg-indigo-600 hover:bg-indigo-700"
+              : "bg-accent hover:bg-accent-hover"
           }`}
         >
           {config.reminderEnabled
@@ -67,8 +67,8 @@ export function CalendarReminderSettings({
                   onClick={() => onChange({ reminderMinutesBefore: preset.minutes })}
                   className={`rounded-lg border px-3 py-1.5 text-sm ${
                     minutes === preset.minutes
-                      ? "border-indigo-600 bg-indigo-50 text-indigo-700"
-                      : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                      ? "border-accent bg-accent-muted text-accent"
+                      : "border-default text-secondary hover:bg-surface"
                   }`}
                 >
                   {t(`calendar.reminder.presets.${preset.key}`)}
@@ -79,7 +79,7 @@ export function CalendarReminderSettings({
               <FieldLabel
                 label={t("calendar.reminder.minutes")}
                 tooltip={t("calendar.fieldHints.reminderMinutes")}
-                className="text-gray-600"
+                className="text-secondary"
               />
               <input
                 type="number"
@@ -89,7 +89,7 @@ export function CalendarReminderSettings({
                 onChange={(e) =>
                   onChange({ reminderMinutesBefore: Number(e.target.value) })
                 }
-                className="w-full max-w-xs rounded-lg border border-gray-300 px-3 py-2"
+                className="w-full max-w-xs rounded-lg border border-default px-3 py-2"
               />
             </label>
           </div>
@@ -106,7 +106,7 @@ export function CalendarReminderSettings({
                   reminderChannel: e.target.value as CalendarConfig["reminderChannel"],
                 })
               }
-              className="w-full max-w-md rounded-lg border border-gray-300 px-3 py-2"
+              className="w-full max-w-md rounded-lg border border-default px-3 py-2"
             >
               <option value="whatsapp_text">{t("calendar.reminder.channelText")}</option>
               <option value="whatsapp_template">{t("calendar.reminder.channelTemplate")}</option>
@@ -123,9 +123,9 @@ export function CalendarReminderSettings({
                 rows={4}
                 value={config.reminderMessage ?? ""}
                 onChange={(e) => onChange({ reminderMessage: e.target.value })}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                className="w-full rounded-lg border border-default px-3 py-2"
               />
-              <p className="mt-1 text-xs text-gray-500">{t("calendar.reminder.placeholders")}</p>
+              <p className="mt-1 text-xs text-secondary">{t("calendar.reminder.placeholders")}</p>
               <p className="mt-1 text-xs text-amber-700">{t("calendar.reminder.textHint")}</p>
             </label>
           ) : (
@@ -138,7 +138,7 @@ export function CalendarReminderSettings({
                 <select
                   value={config.reminderTemplateName ?? ""}
                   onChange={(e) => onChange({ reminderTemplateName: e.target.value })}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                  className="w-full rounded-lg border border-default px-3 py-2"
                 >
                   <option value="">{t("calendar.reminder.chooseTemplate")}</option>
                   {(templates ?? []).map((tpl) => (
@@ -157,10 +157,10 @@ export function CalendarReminderSettings({
                   type="text"
                   value={config.reminderTemplateLanguage ?? "es"}
                   onChange={(e) => onChange({ reminderTemplateLanguage: e.target.value })}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                  className="w-full rounded-lg border border-default px-3 py-2"
                 />
               </label>
-              <p className="text-xs text-gray-500 sm:col-span-2">
+              <p className="text-xs text-secondary sm:col-span-2">
                 {t("calendar.reminder.templateHint")}
               </p>
             </div>

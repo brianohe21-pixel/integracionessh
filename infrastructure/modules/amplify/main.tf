@@ -39,6 +39,7 @@ resource "aws_amplify_app" "frontend" {
   environment_variables = {
     AMPLIFY_MONOREPO_APP_ROOT                  = "frontend"
     NEXT_PUBLIC_API_URL                        = local.api_public_url
+    NEXT_PUBLIC_WS_URL                         = var.websocket_url
     NEXT_PUBLIC_COGNITO_REGION                 = var.aws_region
     NEXT_PUBLIC_USER_POOL_ID                   = var.cognito_user_pool_id
     NEXT_PUBLIC_USER_POOL_CLIENT               = var.cognito_client_id

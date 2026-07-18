@@ -112,15 +112,15 @@ export default function RegisterPage() {
 
   if (step === "confirm") {
     return (
-      <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">{t("auth.confirmEmailTitle")}</h2>
-        <p className="text-sm text-gray-500 mb-6">
+      <div className="bg-surface-elevated rounded-2xl shadow-xl p-8 border border-subtle">
+        <h2 className="text-xl font-semibold text-primary mb-2">{t("auth.confirmEmailTitle")}</h2>
+        <p className="text-sm text-secondary mb-6">
           {t("auth.confirmEmailBody")} <strong>{email}</strong>
         </p>
 
         <form onSubmit={handleConfirm} className="space-y-4">
           <div>
-            <label htmlFor="code" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="code" className="block text-sm font-medium text-secondary mb-1">
               {t("auth.verificationCode")}
             </label>
             <input
@@ -129,7 +129,7 @@ export default function RegisterPage() {
               required
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-center tracking-widest text-lg"
+              className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent text-center tracking-widest text-lg"
               placeholder="000000"
               maxLength={6}
             />
@@ -146,7 +146,7 @@ export default function RegisterPage() {
             disabled={loading}
             className={cn(
               "w-full py-2.5 px-4 rounded-lg text-sm font-medium text-white transition-colors",
-              loading ? "bg-indigo-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"
+              loading ? "bg-accent/60 cursor-not-allowed" : "bg-accent hover:bg-accent-hover"
             )}
           >
             {loading ? t("auth.verifying") : t("auth.confirmAccount")}
@@ -157,12 +157,12 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-      <h2 className="text-xl font-semibold text-gray-900 mb-6">{t("auth.createAccount")}</h2>
+    <div className="bg-surface-elevated rounded-2xl shadow-xl p-8 border border-subtle">
+      <h2 className="text-xl font-semibold text-primary mb-6">{t("auth.createAccount")}</h2>
 
       <form onSubmit={handleRegister} className="space-y-4">
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="name" className="block text-sm font-medium text-secondary mb-1">
             {t("auth.companyName")}
           </label>
           <input
@@ -171,13 +171,13 @@ export default function RegisterPage() {
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
             placeholder={t("auth.companyPlaceholder")}
           />
         </div>
 
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="email" className="block text-sm font-medium text-secondary mb-1">
             {t("common.email")}
           </label>
           <input
@@ -186,13 +186,13 @@ export default function RegisterPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
             placeholder={t("auth.emailPlaceholder")}
           />
         </div>
 
         <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="password" className="block text-sm font-medium text-secondary mb-1">
             {t("common.password")}
           </label>
           <input
@@ -203,26 +203,26 @@ export default function RegisterPage() {
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="new-password"
             minLength={8}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
             placeholder={t("auth.securePasswordPlaceholder")}
           />
-          <p className="mt-1 text-xs text-gray-500">{getPasswordHint(t)}</p>
+          <p className="mt-1 text-xs text-secondary">{getPasswordHint(t)}</p>
         </div>
 
-        <label className="flex items-start gap-2 text-sm text-gray-600">
+        <label className="flex items-start gap-2 text-sm text-secondary">
           <input
             type="checkbox"
             checked={acceptedTerms}
             onChange={(e) => setAcceptedTerms(e.target.checked)}
-            className="mt-1 rounded border-gray-300"
+            className="mt-1 rounded border-default"
           />
           <span>
             {t("legal.acceptLabel")}{" "}
-            <Link href="/legal/terms" target="_blank" className="text-indigo-600 hover:underline">
+            <Link href="/legal/terms" target="_blank" className="text-accent hover:underline">
               {t("legal.footerTerms")}
             </Link>{" "}
             {t("legal.and")}{" "}
-            <Link href="/legal/privacy" target="_blank" className="text-indigo-600 hover:underline">
+            <Link href="/legal/privacy" target="_blank" className="text-accent hover:underline">
               {t("legal.footerPrivacy")}
             </Link>
           </span>
@@ -239,14 +239,14 @@ export default function RegisterPage() {
           disabled={loading}
           className={cn(
             "w-full py-2.5 px-4 rounded-lg text-sm font-medium text-white transition-colors",
-            loading ? "bg-indigo-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"
+            loading ? "bg-accent/60 cursor-not-allowed" : "bg-accent hover:bg-accent-hover"
           )}
         >
           {loading ? t("auth.creatingAccount") : t("auth.createAccount")}
         </button>
       </form>
 
-      <p className="text-center text-sm text-gray-500 mt-6">
+      <p className="text-center text-sm text-secondary mt-6">
         {t("auth.hasAccount")}{" "}
         <Link
           href={
@@ -254,7 +254,7 @@ export default function RegisterPage() {
               ? `/login?redirect=${encodeURIComponent(billingRedirectForPlan(planParam))}`
               : "/login"
           }
-          className="text-indigo-600 hover:underline font-medium"
+          className="text-accent hover:underline font-medium"
         >
           {t("auth.signIn")}
         </Link>

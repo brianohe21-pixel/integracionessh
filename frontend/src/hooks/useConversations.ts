@@ -2,6 +2,7 @@
 
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { useRealtimeConnection } from "@/components/realtime/RealtimeProvider";
 import type {
   Channel,
   Conversation,
@@ -94,6 +95,8 @@ export function useConversations(options?: {
 }
 
 export function useConversationMessages(conversationId: string) {
+  const { connected } = useRealtimeConnection();
+
   return useQuery({
     queryKey: ["conversation-messages", conversationId],
     queryFn: async () => {
@@ -103,7 +106,8 @@ export function useConversationMessages(conversationId: string) {
       return Array.isArray(raw) ? (raw as Message[]) : [];
     },
     enabled: !!conversationId,
-    refetchInterval: 5000,
+    refetchInterval: connected ? false : 30_000,
+    refetchIntervalInBackground: false,
   });
 }
 

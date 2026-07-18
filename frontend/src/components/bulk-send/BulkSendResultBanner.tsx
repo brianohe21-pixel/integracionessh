@@ -62,12 +62,12 @@ export function BulkSendResultBanner({
           {hasFailures && (
             <p className="text-sm text-amber-800">{t("bulkSend.resultWithFailuresHint")}</p>
           )}
-          <p className="text-xs text-gray-500">{t("bulkSend.resultHint")}</p>
+          <p className="text-xs text-secondary">{t("bulkSend.resultHint")}</p>
         </div>
         <button
           type="button"
           onClick={onDismiss}
-          className="shrink-0 p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-white/60 transition-colors"
+          className="shrink-0 p-1 rounded-lg text-muted hover:text-secondary hover:bg-surface-elevated/60 transition-colors"
           aria-label={t("bulkSend.dismissResult")}
         >
           <X className="w-4 h-4" />
@@ -75,7 +75,7 @@ export function BulkSendResultBanner({
       </div>
 
       {hasFailures && (
-        <div className="rounded-lg border border-amber-200 bg-white overflow-hidden">
+        <div className="rounded-lg border border-amber-200 bg-surface-elevated overflow-hidden">
           <BulkJobFailures jobId={jobId} templateName={templateName} />
         </div>
       )}

@@ -11,7 +11,7 @@ import {
   usePublishMetaFlow,
   useTestSendMetaFlow,
 } from "@/hooks/useMetaFlows";
-import { MetaFlowJsonEditor } from "@/components/meta-flows/MetaFlowJsonEditor";
+import { MetaFlowEditorPanel } from "@/components/meta-flows/MetaFlowEditorPanel";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 
 export default function EditMetaFlowPage() {
@@ -38,10 +38,16 @@ export default function EditMetaFlowPage() {
     setTimeout(() => setSaved(false), 2000);
   }
 
+  async function handlePublish() {
+    const jsonDefinition = JSON.parse(jsonText) as Record<string, unknown>;
+    await update.mutateAsync({ jsonDefinition });
+    publish.mutate(flowId);
+  }
+
   if (isLoading || !flow) {
     return (
       <DashboardPage maxWidth="3xl">
-        <div className="animate-pulse h-64 bg-gray-100 rounded-xl" />
+        <div className="animate-pulse h-64 bg-surface-muted rounded-xl" />
       </DashboardPage>
     );
   }
@@ -50,19 +56,22 @@ export default function EditMetaFlowPage() {
     <DashboardPage maxWidth="3xl">
       <Link
         href={`/bots/${botId}/meta-flows`}
-        className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-4"
+        className="flex items-center gap-1 text-sm text-secondary hover:text-secondary mb-4"
       >
         <ChevronLeft className="w-4 h-4" />
         {flow.name}
       </Link>
 
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold text-gray-900">{flow.name}</h1>
-        <span className="text-sm text-gray-500">{flow.status}</span>
+        <h1 className="text-2xl font-bold text-primary">{flow.name}</h1>
+        <span className="text-sm text-secondary">{flow.status}</span>
       </div>
 
-      <p className="text-sm text-gray-600 mb-2">{t("metaFlows.jsonEditor")}</p>
-      <MetaFlowJsonEditor value={jsonText} onChange={setJsonText} readOnly={flow.status !== "DRAFT"} />
+      <MetaFlowEditorPanel
+        value={jsonText}
+        onChange={setJsonText}
+        readOnly={flow.status !== "DRAFT"}
+      />
 
       <div className="flex flex-wrap gap-2 mt-4">
         {flow.status === "DRAFT" && (
@@ -70,7 +79,7 @@ export default function EditMetaFlowPage() {
             type="button"
             onClick={() => void handleSave()}
             disabled={update.isPending}
-            className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg"
+            className="px-4 py-2 text-sm font-medium text-white bg-accent rounded-lg"
           >
             {t("flows.save")}
           </button>
@@ -78,28 +87,35 @@ export default function EditMetaFlowPage() {
         {flow.status === "DRAFT" && (
           <button
             type="button"
-            onClick={() => publish.mutate(flowId)}
-            className="px-4 py-2 text-sm font-medium border border-indigo-600 text-indigo-600 rounded-lg"
+            onClick={() => void handlePublish()}
+            disabled={update.isPending || publish.isPending}
+            className="px-4 py-2 text-sm font-medium border border-accent text-accent rounded-lg"
           >
             {t("metaFlows.publish")}
           </button>
         )}
         {saved && <span className="text-sm text-green-600 self-center">Saved</span>}
+        {update.isError && (
+          <p className="w-full text-sm text-red-600">{update.error.message}</p>
+        )}
+        {publish.isError && (
+          <p className="w-full text-sm text-red-600">{publish.error.message}</p>
+        )}
       </div>
 
       {flow.status === "PUBLISHED" && (
-        <div className="mt-6 p-4 border border-gray-200 rounded-xl space-y-2">
-          <p className="text-sm font-medium text-gray-700">{t("metaFlows.testSend")}</p>
+        <div className="mt-6 p-4 border border-default rounded-xl space-y-2">
+          <p className="text-sm font-medium text-secondary">{t("metaFlows.testSend")}</p>
           <input
             value={testPhone}
             onChange={(e) => setTestPhone(e.target.value)}
             placeholder={t("metaFlows.phonePlaceholder")}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            className="w-full border border-default rounded-lg px-3 py-2 text-sm"
           />
           <button
             type="button"
             onClick={() => testSend.mutate({ flowId, to: testPhone, flowCta: "Open" })}
-            className="px-4 py-2 text-sm bg-gray-900 text-white rounded-lg"
+            className="px-4 py-2 text-sm bg-surface text-white rounded-lg"
           >
             {t("metaFlows.testSend")}
           </button>

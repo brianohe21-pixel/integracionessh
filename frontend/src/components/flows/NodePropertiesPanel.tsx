@@ -1,7 +1,11 @@
 "use client";
 
+import { useState } from "react";
+import { ExternalLink } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { useMetaFlows } from "@/hooks/useMetaFlows";
+import { MetaFlowsModal } from "@/components/meta-flows/MetaFlowsModal";
+import { Button } from "@/components/ui/Button";
 import type { FlowNode, FlowNodeType } from "@/types";
 
 interface NodePropertiesPanelProps {
@@ -13,7 +17,7 @@ interface NodePropertiesPanelProps {
 }
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
-  return <label className="block text-xs font-medium text-gray-600 mb-1">{children}</label>;
+  return <label className="block text-xs font-medium text-secondary mb-1">{children}</label>;
 }
 
 function textInput(
@@ -25,7 +29,7 @@ function textInput(
     <input
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full text-sm border border-gray-300 rounded-lg p-2"
+      className="w-full text-sm border border-default rounded-lg p-2"
       {...props}
     />
   );
@@ -43,7 +47,7 @@ function textArea(
       onChange={(e) => onChange(e.target.value)}
       rows={rows}
       placeholder={placeholder}
-      className="w-full text-sm border border-gray-300 rounded-lg p-2"
+      className="w-full text-sm border border-default rounded-lg p-2"
     />
   );
 }
@@ -57,12 +61,13 @@ export function NodePropertiesPanel({
 }: NodePropertiesPanelProps) {
   const t = useT();
   const { data: metaFlows } = useMetaFlows(botId);
+  const [metaFlowsModalOpen, setMetaFlowsModalOpen] = useState(false);
 
   if (!selected) {
     return (
       <div className="pt-2">
-        <p className="text-sm font-semibold text-gray-900">{t("flows.nodePanel")}</p>
-        <p className="mt-3 text-sm text-gray-500">{t("flows.selectNode")}</p>
+        <p className="text-sm font-semibold text-primary">{t("flows.nodePanel")}</p>
+        <p className="mt-3 text-sm text-secondary">{t("flows.selectNode")}</p>
       </div>
     );
   }
@@ -74,8 +79,8 @@ export function NodePropertiesPanel({
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <p className="text-sm font-semibold text-gray-900">{t("flows.nodePanel")}</p>
-          <p className="text-xs text-gray-500 mt-0.5">{t(`flows.nodeTypes.${type}`)}</p>
+          <p className="text-sm font-semibold text-primary">{t("flows.nodePanel")}</p>
+          <p className="text-xs text-secondary mt-0.5">{t(`flows.nodeTypes.${type}`)}</p>
         </div>
         {canDelete && (
           <button
@@ -100,7 +105,7 @@ export function NodePropertiesPanel({
             <select
               value={d.triggerType ?? "any_message"}
               onChange={(e) => onUpdate({ triggerType: e.target.value })}
-              className="w-full text-sm border border-gray-300 rounded-lg p-2 bg-white"
+              className="w-full text-sm border border-default rounded-lg p-2 bg-surface-elevated"
             >
               <option value="any_message">{t("flows.fields.triggerAnyMessage")}</option>
               <option value="first_message">{t("flows.fields.triggerFirstMessage")}</option>
@@ -125,7 +130,7 @@ export function NodePropertiesPanel({
                 <select
                   value={d.matchMode ?? "contains"}
                   onChange={(e) => onUpdate({ matchMode: e.target.value })}
-                  className="w-full text-sm border border-gray-300 rounded-lg p-2 bg-white"
+                  className="w-full text-sm border border-default rounded-lg p-2 bg-surface-elevated"
                 >
                   <option value="contains">{t("flows.fields.matchContains")}</option>
                   <option value="exact">{t("flows.fields.matchExact")}</option>
@@ -184,7 +189,7 @@ export function NodePropertiesPanel({
             <select
               value={d.conditionOperator ?? "contains"}
               onChange={(e) => onUpdate({ conditionOperator: e.target.value })}
-              className="w-full text-sm border border-gray-300 rounded-lg p-2 bg-white"
+              className="w-full text-sm border border-default rounded-lg p-2 bg-surface-elevated"
             >
               <option value="contains">{t("flows.fields.opContains")}</option>
               <option value="equals">{t("flows.fields.opEquals")}</option>
@@ -206,8 +211,8 @@ export function NodePropertiesPanel({
             {textArea(d.messageText ?? "", (v) => onUpdate({ messageText: v }), 2)}
           </div>
           {(d.buttons ?? [{ id: "btn-1", title: "" }]).map((btn, i) => (
-            <div key={btn.id} className="space-y-1 border border-gray-100 rounded-lg p-2">
-              <p className="text-xs text-gray-500">{t("flows.fields.button")} {i + 1}</p>
+            <div key={btn.id} className="space-y-1 border border-subtle rounded-lg p-2">
+              <p className="text-xs text-secondary">{t("flows.fields.button")} {i + 1}</p>
               <FieldLabel>{t("flows.fields.buttonId")}</FieldLabel>
               {textInput(btn.id, (v) => {
                 const buttons = [...(d.buttons ?? [])];
@@ -233,7 +238,7 @@ export function NodePropertiesPanel({
                   ],
                 })
               }
-              className="text-xs text-indigo-600 hover:underline"
+              className="text-xs text-accent hover:underline"
             >
               {t("flows.fields.addButton")}
             </button>
@@ -243,17 +248,27 @@ export function NodePropertiesPanel({
 
       {type === "meta_flow" && (
         <>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="w-full"
+            onClick={() => setMetaFlowsModalOpen(true)}
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            {t("metaFlows.openManager")}
+          </Button>
           <div>
             <FieldLabel>{t("flows.fields.metaFlowId")}</FieldLabel>
             <select
               value={d.metaFlowId ?? ""}
               onChange={(e) => onUpdate({ metaFlowId: e.target.value })}
-              className="w-full text-sm border border-gray-300 rounded-lg p-2 bg-white"
+              className="w-full text-sm border border-default rounded-lg p-2 bg-surface-elevated"
             >
               <option value="">—</option>
               {metaFlows?.map((mf) => (
                 <option key={mf.metaFlowId} value={mf.metaFlowId}>
                   {mf.name}
+                  {mf.status !== "PUBLISHED" ? ` (${mf.status})` : ""}
                 </option>
               ))}
             </select>
@@ -264,11 +279,22 @@ export function NodePropertiesPanel({
               placeholder: t("metaFlows.ctaPlaceholder"),
             })}
           </div>
+          {metaFlowsModalOpen && (
+            <MetaFlowsModal
+              botId={botId}
+              selectedFlowId={d.metaFlowId}
+              onClose={() => setMetaFlowsModalOpen(false)}
+              onSelect={(metaFlowId) => onUpdate({ metaFlowId })}
+              onFlowDeleted={(metaFlowId) => {
+                if (d.metaFlowId === metaFlowId) onUpdate({ metaFlowId: "" });
+              }}
+            />
+          )}
         </>
       )}
 
       {type === "handoff" && (
-        <label className="flex items-center gap-2 text-sm text-gray-700">
+        <label className="flex items-center gap-2 text-sm text-secondary">
           <input
             type="checkbox"
             checked={d.haltPipeline !== false}
@@ -314,7 +340,7 @@ export function NodePropertiesPanel({
             <select
               value={d.httpMethod ?? "GET"}
               onChange={(e) => onUpdate({ httpMethod: e.target.value })}
-              className="w-full text-sm border border-gray-300 rounded-lg p-2 bg-white"
+              className="w-full text-sm border border-default rounded-lg p-2 bg-surface-elevated"
             >
               <option value="GET">GET</option>
               <option value="POST">POST</option>
@@ -357,7 +383,7 @@ export function NodePropertiesPanel({
             {textArea(d.paymentMessageTemplate ?? "", (v) =>
               onUpdate({ paymentMessageTemplate: v }), 3)}
           </div>
-          <label className="flex items-center gap-2 text-sm text-gray-700">
+          <label className="flex items-center gap-2 text-sm text-secondary">
             <input
               type="checkbox"
               checked={d.waitForPayment ?? false}
@@ -403,7 +429,7 @@ export function NodePropertiesPanel({
       )}
 
       {type === "end" && (
-        <label className="flex items-center gap-2 text-sm text-gray-700">
+        <label className="flex items-center gap-2 text-sm text-secondary">
           <input
             type="checkbox"
             checked={d.haltPipeline !== false}

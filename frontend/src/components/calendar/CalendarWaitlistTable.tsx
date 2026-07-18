@@ -38,7 +38,7 @@ export function CalendarWaitlistTable({
   const [error, setError] = useState("");
 
   if (isLoading) {
-    return <div className="h-48 animate-pulse rounded-xl bg-gray-100" />;
+    return <div className="h-48 animate-pulse rounded-xl bg-surface-muted" />;
   }
 
   async function handleConvert(entry: WaitlistEntry) {
@@ -64,39 +64,39 @@ export function CalendarWaitlistTable({
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
       <TableContainer>
         <table className="min-w-full divide-y divide-gray-200 text-sm">
-          <thead className="bg-gray-50">
+          <thead className="bg-surface">
             <tr>
-              <th className="px-4 py-3 text-left font-medium text-gray-600">
+              <th className="px-4 py-3 text-left font-medium text-secondary">
                 {t("calendar.colDate")}
               </th>
-              <th className="px-4 py-3 text-left font-medium text-gray-600">
+              <th className="px-4 py-3 text-left font-medium text-secondary">
                 {t("calendar.colContact")}
               </th>
-              <th className="px-4 py-3 text-left font-medium text-gray-600">
+              <th className="px-4 py-3 text-left font-medium text-secondary">
                 {t("calendar.waitlist.colScope")}
               </th>
-              <th className="px-4 py-3 text-left font-medium text-gray-600">
+              <th className="px-4 py-3 text-left font-medium text-secondary">
                 {t("common.status")}
               </th>
-              <th className="px-4 py-3 text-left font-medium text-gray-600" />
+              <th className="px-4 py-3 text-left font-medium text-secondary" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 bg-white">
+          <tbody className="divide-y divide-gray-200 bg-surface-elevated">
             {entries.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={5} className="px-4 py-8 text-center text-secondary">
                   {t("calendar.waitlist.empty")}
                 </td>
               </tr>
             ) : (
               entries.map((entry) => (
                 <tr key={entry.waitlistId}>
-                  <td className="px-4 py-3 text-gray-900">{formatWhen(entry)}</td>
-                  <td className="px-4 py-3 text-gray-700">
+                  <td className="px-4 py-3 text-primary">{formatWhen(entry)}</td>
+                  <td className="px-4 py-3 text-secondary">
                     <div>{entry.contactName}</div>
-                    <div className="text-xs text-gray-500">{entry.contactPhone}</div>
+                    <div className="text-xs text-secondary">{entry.contactPhone}</div>
                   </td>
-                  <td className="px-4 py-3 text-gray-600">
+                  <td className="px-4 py-3 text-secondary">
                     {t(`calendar.waitlist.scope.${entry.scope}` as "calendar.waitlist.scope.slot")}
                   </td>
                   <td className="px-4 py-3">
@@ -108,7 +108,7 @@ export function CalendarWaitlistTable({
                           status: e.target.value as WaitlistStatus,
                         })
                       }
-                      className="rounded border border-gray-300 px-2 py-1 text-sm"
+                      className="rounded border border-default px-2 py-1 text-sm"
                     >
                       {STATUS_OPTIONS.map((status) => (
                         <option key={status} value={status}>
@@ -123,12 +123,12 @@ export function CalendarWaitlistTable({
                         type="button"
                         onClick={() => void handleConvert(entry)}
                         disabled={convertEntry.isPending}
-                        className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                        className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover disabled:opacity-50"
                       >
                         {t("calendar.waitlist.convert")}
                       </button>
                     ) : (
-                      <span className="text-xs text-gray-400">{entry.waitlistId.slice(0, 8)}</span>
+                      <span className="text-xs text-muted">{entry.waitlistId.slice(0, 8)}</span>
                     )}
                   </td>
                 </tr>

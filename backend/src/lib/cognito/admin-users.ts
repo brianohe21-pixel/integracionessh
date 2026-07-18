@@ -1,5 +1,6 @@
 import {
   AdminDisableUserCommand,
+  AdminDeleteUserCommand,
   AdminEnableUserCommand,
   AdminUpdateUserAttributesCommand,
   CognitoIdentityProviderClient,
@@ -88,6 +89,46 @@ export async function listCognitoUsers(
     users: matched,
     ...(cognitoToken ? { paginationToken: cognitoToken } : {}),
   };
+}
+
+export async function deleteCognitoUserBySub(sub: string): Promise<void> {
+  const client = new CognitoIdentityProviderClient({});
+  const poolId = getUserPoolId();
+
+  const result = await client.send(
+    new ListUsersCommand({
+      UserPoolId: poolId,
+      Filter: `sub = "${sub}"`,
+      Limit: 1,
+    })
+  );
+
+  const username = result.Users?.[0]?.Username;
+  if (!username) return;
+
+  await client.send(
+    new AdminDeleteUserCommand({ UserPoolId: poolId, Username: username })
+  );
+}
+
+export async function disableCognitoUserBySub(sub: string): Promise<void> {
+  const client = new CognitoIdentityProviderClient({});
+  const poolId = getUserPoolId();
+
+  const result = await client.send(
+    new ListUsersCommand({
+      UserPoolId: poolId,
+      Filter: `sub = "${sub}"`,
+      Limit: 1,
+    })
+  );
+
+  const username = result.Users?.[0]?.Username;
+  if (!username) return;
+
+  await client.send(
+    new AdminDisableUserCommand({ UserPoolId: poolId, Username: username })
+  );
 }
 
 export async function updateCognitoUser(

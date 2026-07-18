@@ -37,44 +37,44 @@ export function AppsGrid({ apps }: { apps: AppCatalogItem[] }) {
         return (
           <div
             key={app.id}
-            className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm"
+            className="rounded-xl border border-default bg-surface-elevated p-6 shadow-sm"
           >
             <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent-muted text-accent">
                 <Icon className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900">
+                <h3 className="font-semibold text-primary">
                   {i18n ? t(i18n.name) : app.name}
                 </h3>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-secondary">
                   {enabledCount > 0
                     ? t("apps.installedOn", { count: String(enabledCount) })
                     : t("apps.notInstalled")}
                 </p>
               </div>
             </div>
-            <p className="mb-4 text-sm text-gray-600">
+            <p className="mb-4 text-sm text-secondary">
               {i18n ? t(i18n.description) : app.description}
             </p>
             {route ? (
               <Link
                 href={route}
-                className="inline-flex rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                className="inline-flex rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover"
               >
                 {t("apps.configure")}
               </Link>
             ) : (
-              <span className="inline-flex rounded-lg bg-gray-100 px-4 py-2 text-sm text-gray-500">
+              <span className="inline-flex rounded-lg bg-surface-muted px-4 py-2 text-sm text-secondary">
                 {t("apps.comingSoon")}
               </span>
             )}
           </div>
         );
       })}
-      <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-6">
-        <p className="text-sm font-medium text-gray-500">{t("apps.comingSoon")}</p>
-        <p className="mt-1 text-sm text-gray-400">{t("apps.moreAppsHint")}</p>
+      <div className="rounded-xl border border-dashed border-default bg-surface p-6">
+        <p className="text-sm font-medium text-secondary">{t("apps.comingSoon")}</p>
+        <p className="mt-1 text-sm text-muted">{t("apps.moreAppsHint")}</p>
       </div>
     </div>
   );

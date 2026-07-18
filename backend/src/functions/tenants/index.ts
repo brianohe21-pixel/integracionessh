@@ -64,6 +64,16 @@ const LogoUploadSchema = z.object({
   ]),
 });
 
+const UpdateOnboardingSchema = z
+  .object({
+    skip: z.boolean().optional(),
+    testConfirmed: z.boolean().optional(),
+    complete: z.boolean().optional(),
+  })
+  .refine((data) => data.skip || data.testConfirmed || data.complete, {
+    message: "At least one action is required",
+  });
+
 async function handleBrandingRoutes(
   event: APIGatewayProxyEventV2WithJWTAuthorizer,
   method: string,
@@ -162,6 +172,31 @@ export async function handler(
       }
       const tenants = await listTenants();
       return ok(tenants);
+    }
+
+    if (method === "PATCH" && event.rawPath?.endsWith("/onboarding")) {
+      await ensureTenant(auth.tenantId, auth.email, auth.name);
+      const body = JSON.parse(event.body ?? "{}");
+      const parsed = UpdateOnboardingSchema.safeParse(body);
+      if (!parsed.success) {
+        return badRequest(parsed.error.errors[0]?.message ?? "Invalid input");
+      }
+
+      const now = new Date().toISOString();
+      const updates: Partial<Omit<Tenant, "tenantId" | "createdAt">> = {};
+
+      if (parsed.data.skip) {
+        updates.onboardingSkippedAt = now;
+      }
+      if (parsed.data.testConfirmed) {
+        updates.onboardingTestConfirmedAt = now;
+      }
+      if (parsed.data.complete) {
+        updates.onboardingCompletedAt = now;
+      }
+
+      const updated = await updateTenant(auth.tenantId, updates);
+      return ok(updated);
     }
 
     if (method === "POST" && event.rawPath?.endsWith("/accept-terms")) {

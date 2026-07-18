@@ -45,18 +45,16 @@ export function MobileTopBar() {
   const { toggle } = useSidebar();
 
   return (
-    <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-gray-200 bg-white px-4 py-3 lg:hidden">
+    <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-default bg-surface-elevated px-4 py-3 lg:hidden">
       <button
         type="button"
         onClick={toggle}
-        className="inline-flex items-center justify-center rounded-lg border border-gray-200 p-2 text-gray-700 hover:bg-gray-50"
+        className="inline-flex items-center justify-center rounded-lg border border-default p-2 text-secondary hover:bg-surface-muted"
         aria-label={t("nav.openMenu")}
       >
         <PanelLeft className="h-5 w-5" />
       </button>
-      <p className="truncate text-sm font-semibold text-gray-900">
-        {resolveTitle(pathname, t)}
-      </p>
+      <p className="truncate text-sm font-semibold text-primary">{resolveTitle(pathname, t)}</p>
     </header>
   );
 }

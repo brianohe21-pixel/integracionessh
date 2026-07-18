@@ -248,13 +248,13 @@ export default function LoginPage() {
 
   if (phase === "newPassword") {
     return (
-      <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">{t("auth.newPassword")}</h2>
-        <p className="text-sm text-gray-500 mb-6">{t("auth.newPasswordRequired")}</p>
+      <div className="bg-surface-elevated rounded-2xl shadow-xl p-8 border border-subtle">
+        <h2 className="text-xl font-semibold text-primary mb-2">{t("auth.newPassword")}</h2>
+        <p className="text-sm text-secondary mb-6">{t("auth.newPasswordRequired")}</p>
 
         <form onSubmit={handleNewPasswordSubmit} className="space-y-4">
           <div>
-            <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="newPassword" className="block text-sm font-medium text-secondary mb-1">
               {t("auth.newPassword")}
             </label>
             <input
@@ -265,12 +265,12 @@ export default function LoginPage() {
               onChange={(e) => setNewPassword(e.target.value)}
               autoComplete="new-password"
               minLength={8}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
             />
-            <p className="mt-1 text-xs text-gray-500">{getPasswordHint(t)}</p>
+            <p className="mt-1 text-xs text-secondary">{getPasswordHint(t)}</p>
           </div>
           <div>
-            <label htmlFor="confirmNewPassword" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="confirmNewPassword" className="block text-sm font-medium text-secondary mb-1">
               {t("auth.confirmPassword")}
             </label>
             <input
@@ -279,13 +279,13 @@ export default function LoginPage() {
               required
               value={confirmNewPassword}
               onChange={(e) => setConfirmNewPassword(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
             />
           </div>
 
           {missingAttrs.map((key) => (
             <div key={key}>
-              <label htmlFor={`attr-${key}`} className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor={`attr-${key}`} className="block text-sm font-medium text-secondary mb-1">
                 {key}
               </label>
               <input
@@ -299,7 +299,7 @@ export default function LoginPage() {
                     [key]: e.target.value,
                   }))
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
               />
             </div>
           ))}
@@ -324,7 +324,7 @@ export default function LoginPage() {
                 }
                 setPhase("credentials");
               }}
-              className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-50"
+              className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium border border-default text-secondary hover:bg-surface"
             >
               {t("common.back")}
             </button>
@@ -334,8 +334,8 @@ export default function LoginPage() {
               className={cn(
                 "flex-1 py-2.5 px-4 rounded-lg text-sm font-medium text-white transition-colors",
                 loading
-                  ? "bg-indigo-400 cursor-not-allowed"
-                  : "bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800"
+                  ? "bg-accent/60 cursor-not-allowed"
+                  : "bg-accent hover:bg-accent-hover active:bg-accent-hover"
               )}
             >
               {loading ? t("auth.saving") : t("auth.continue")}
@@ -348,13 +348,13 @@ export default function LoginPage() {
 
   if (phase === "forgotRequest") {
     return (
-      <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">{t("auth.recoverPassword")}</h2>
-        <p className="text-sm text-gray-500 mb-6">{t("auth.recoverBody")}</p>
+      <div className="bg-surface-elevated rounded-2xl shadow-xl p-8 border border-subtle">
+        <h2 className="text-xl font-semibold text-primary mb-2">{t("auth.recoverPassword")}</h2>
+        <p className="text-sm text-secondary mb-6">{t("auth.recoverBody")}</p>
 
         <form onSubmit={handleForgotRequest} className="space-y-4">
           <div>
-            <label htmlFor="forgot-email" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="forgot-email" className="block text-sm font-medium text-secondary mb-1">
               {t("common.email")}
             </label>
             <input
@@ -363,7 +363,7 @@ export default function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
               placeholder={t("auth.emailPlaceholder")}
             />
           </div>
@@ -381,7 +381,7 @@ export default function LoginPage() {
                 setError("");
                 setPhase("credentials");
               }}
-              className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-50"
+              className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium border border-default text-secondary hover:bg-surface"
             >
               {t("common.back")}
             </button>
@@ -391,8 +391,8 @@ export default function LoginPage() {
               className={cn(
                 "flex-1 py-2.5 px-4 rounded-lg text-sm font-medium text-white transition-colors",
                 loading
-                  ? "bg-indigo-400 cursor-not-allowed"
-                  : "bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800"
+                  ? "bg-accent/60 cursor-not-allowed"
+                  : "bg-accent hover:bg-accent-hover active:bg-accent-hover"
               )}
             >
               {loading ? t("auth.sending") : t("auth.sendCode")}
@@ -405,13 +405,13 @@ export default function LoginPage() {
 
   if (phase === "forgotConfirm") {
     return (
-      <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">{t("auth.newPassword")}</h2>
-        <p className="text-sm text-gray-500 mb-6">{t("auth.forgotConfirmBody")}</p>
+      <div className="bg-surface-elevated rounded-2xl shadow-xl p-8 border border-subtle">
+        <h2 className="text-xl font-semibold text-primary mb-2">{t("auth.newPassword")}</h2>
+        <p className="text-sm text-secondary mb-6">{t("auth.forgotConfirmBody")}</p>
 
         <form onSubmit={handleForgotConfirm} className="space-y-4">
           <div>
-            <label htmlFor="forgot-code" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="forgot-code" className="block text-sm font-medium text-secondary mb-1">
               {t("auth.verificationCode")}
             </label>
             <input
@@ -421,12 +421,12 @@ export default function LoginPage() {
               autoComplete="one-time-code"
               value={forgotCode}
               onChange={(e) => setForgotCode(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
               placeholder="123456"
             />
           </div>
           <div>
-            <label htmlFor="forgot-new" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="forgot-new" className="block text-sm font-medium text-secondary mb-1">
               {t("auth.newPassword")}
             </label>
             <input
@@ -437,12 +437,12 @@ export default function LoginPage() {
               onChange={(e) => setForgotNewPassword(e.target.value)}
               autoComplete="new-password"
               minLength={8}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
             />
-            <p className="mt-1 text-xs text-gray-500">{getPasswordHint(t)}</p>
+            <p className="mt-1 text-xs text-secondary">{getPasswordHint(t)}</p>
           </div>
           <div>
-            <label htmlFor="forgot-confirm" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="forgot-confirm" className="block text-sm font-medium text-secondary mb-1">
               {t("auth.confirmPassword")}
             </label>
             <input
@@ -452,7 +452,7 @@ export default function LoginPage() {
               value={forgotConfirmPassword}
               onChange={(e) => setForgotConfirmPassword(e.target.value)}
               autoComplete="new-password"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
             />
           </div>
 
@@ -472,7 +472,7 @@ export default function LoginPage() {
             type="button"
             onClick={handleResendForgotCode}
             disabled={loading}
-            className="text-sm text-indigo-600 hover:underline disabled:opacity-50"
+            className="text-sm text-accent hover:underline disabled:opacity-50"
           >
             {t("auth.resendCode")}
           </button>
@@ -485,7 +485,7 @@ export default function LoginPage() {
                 setSuccessMessage("");
                 setPhase("forgotRequest");
               }}
-              className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-50"
+              className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium border border-default text-secondary hover:bg-surface"
             >
               {t("common.back")}
             </button>
@@ -495,8 +495,8 @@ export default function LoginPage() {
               className={cn(
                 "flex-1 py-2.5 px-4 rounded-lg text-sm font-medium text-white transition-colors",
                 loading
-                  ? "bg-indigo-400 cursor-not-allowed"
-                  : "bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800"
+                  ? "bg-accent/60 cursor-not-allowed"
+                  : "bg-accent hover:bg-accent-hover active:bg-accent-hover"
               )}
             >
               {loading ? t("auth.saving") : t("auth.resetPassword")}
@@ -508,12 +508,12 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-      <h2 className="text-xl font-semibold text-gray-900 mb-6">{t("auth.signIn")}</h2>
+    <div className="bg-surface-elevated rounded-2xl shadow-xl p-8 border border-subtle">
+      <h2 className="text-xl font-semibold text-primary mb-6">{t("auth.signIn")}</h2>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="email" className="block text-sm font-medium text-secondary mb-1">
             {t("common.email")}
           </label>
           <input
@@ -522,14 +522,14 @@ export default function LoginPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
             placeholder={t("auth.emailPlaceholder")}
           />
         </div>
 
         <div>
           <div className="flex items-center justify-between mb-1">
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="password" className="block text-sm font-medium text-secondary">
               {t("common.password")}
             </label>
             <button
@@ -539,7 +539,7 @@ export default function LoginPage() {
                 setSuccessMessage("");
                 setPhase("forgotRequest");
               }}
-              className="text-sm text-indigo-600 hover:underline"
+              className="text-sm text-accent hover:underline"
             >
               {t("auth.forgotPassword")}
             </button>
@@ -550,7 +550,7 @@ export default function LoginPage() {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
             placeholder="••••••••"
           />
         </div>
@@ -573,17 +573,17 @@ export default function LoginPage() {
           className={cn(
             "w-full py-2.5 px-4 rounded-lg text-sm font-medium text-white transition-colors",
             loading
-              ? "bg-indigo-400 cursor-not-allowed"
-              : "bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800"
+              ? "bg-accent/60 cursor-not-allowed"
+              : "bg-accent hover:bg-accent-hover active:bg-accent-hover"
           )}
         >
           {loading ? t("auth.signingIn") : t("auth.signIn")}
         </button>
       </form>
 
-      <p className="text-center text-sm text-gray-500 mt-6">
+      <p className="text-center text-sm text-secondary mt-6">
         {t("auth.noAccount")}{" "}
-        <Link href={registerHref} className="text-indigo-600 hover:underline font-medium">
+        <Link href={registerHref} className="text-accent hover:underline font-medium">
           {t("auth.signUp")}
         </Link>
       </p>

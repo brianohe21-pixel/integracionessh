@@ -38,12 +38,12 @@ export function CreateApiKeyModal({ bots, onClose }: CreateApiKeyModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
-        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100">
-          <h2 className="text-base font-semibold text-gray-900">
+      <div className="bg-surface-elevated rounded-2xl shadow-xl w-full max-w-lg">
+        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-subtle">
+          <h2 className="text-base font-semibold text-primary">
             {step === "form" ? "Create API Key" : "Your new API Key"}
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+          <button onClick={onClose} className="text-muted hover:text-secondary transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -51,24 +51,24 @@ export function CreateApiKeyModal({ bots, onClose }: CreateApiKeyModalProps) {
         {step === "form" && (
           <form onSubmit={(e) => void handleSubmit(e)} className="p-6 space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Key name</label>
+              <label className="block text-sm font-medium text-secondary mb-1.5">Key name</label>
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Production key"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Bot</label>
+              <label className="block text-sm font-medium text-secondary mb-1.5">Bot</label>
               <select
                 value={botId}
                 onChange={(e) => setBotId(e.target.value)}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent bg-surface-elevated"
               >
                 {bots.map((b) => (
                   <option key={b.botId} value={b.botId}>
@@ -88,14 +88,14 @@ export function CreateApiKeyModal({ bots, onClose }: CreateApiKeyModalProps) {
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                className="px-4 py-2 text-sm font-medium text-secondary bg-surface-muted rounded-lg hover:bg-gray-200"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={createKey.isPending || bots.length === 0}
-                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+                className="px-4 py-2 text-sm font-medium text-white bg-accent rounded-lg hover:bg-accent-hover disabled:opacity-50"
               >
                 {createKey.isPending ? "Creating…" : "Create key"}
               </button>
@@ -112,7 +112,7 @@ export function CreateApiKeyModal({ bots, onClose }: CreateApiKeyModalProps) {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">
+              <label className="block text-xs font-medium text-secondary mb-1.5 uppercase tracking-wide">
                 API Key
               </label>
               <div className="flex items-center gap-2">
@@ -121,19 +121,19 @@ export function CreateApiKeyModal({ bots, onClose }: CreateApiKeyModalProps) {
                     readOnly
                     type={showKey ? "text" : "password"}
                     value={createdKey.key}
-                    className="w-full px-3 py-2 pr-9 border border-gray-300 rounded-lg text-sm font-mono bg-gray-50 focus:outline-none"
+                    className="w-full px-3 py-2 pr-9 border border-default rounded-lg text-sm font-mono bg-surface focus:outline-none"
                   />
                   <button
                     type="button"
                     onClick={() => setShowKey((v) => !v)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-secondary"
                   >
                     {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
                 <button
                   onClick={() => void handleCopy()}
-                  className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-accent border border-accent/30 rounded-lg hover:bg-accent-muted transition-colors"
                 >
                   {copied ? <CheckCircle className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
                   {copied ? "Copied!" : "Copy"}
@@ -141,14 +141,14 @@ export function CreateApiKeyModal({ bots, onClose }: CreateApiKeyModalProps) {
               </div>
             </div>
 
-            <div className="bg-gray-50 rounded-lg p-4 text-xs font-mono text-gray-600 space-y-1">
-              <p className="text-gray-400 font-sans mb-2 text-[11px] uppercase tracking-wide">
+            <div className="bg-surface rounded-lg p-4 text-xs font-mono text-secondary space-y-1">
+              <p className="text-muted font-sans mb-2 text-[11px] uppercase tracking-wide">
                 Example usage
               </p>
               <pre className="whitespace-pre-wrap break-all">
                 {buildSendMessageCurlExample(`${createdKey.key.slice(0, 20)}…`)}
               </pre>
-              <p className="text-gray-400 font-sans mt-3 mb-1 text-[11px] uppercase tracking-wide">
+              <p className="text-muted font-sans mt-3 mb-1 text-[11px] uppercase tracking-wide">
                 Calls (WebRTC signaling)
               </p>
               <p>{CALLS_ENDPOINT_HINT}</p>
@@ -157,7 +157,7 @@ export function CreateApiKeyModal({ bots, onClose }: CreateApiKeyModalProps) {
             <div className="flex justify-end">
               <button
                 onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700"
+                className="px-4 py-2 text-sm font-medium text-white bg-accent rounded-lg hover:bg-accent-hover"
               >
                 Done
               </button>

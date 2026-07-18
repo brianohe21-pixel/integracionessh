@@ -20,35 +20,35 @@ export function AdvisorCallPanel({ conversation, voiceEnabled = true }: Props) {
   const isHuman = conversation.handoffMode === "human";
   const canCall = isWebchat && isHuman && voiceEnabled;
 
-  const liveKit = useLiveKitCall({
+  const { callState, attachRemoteAudio, ...liveKit } = useLiveKitCall({
     conversationId: conversation.conversationId,
     botId: conversation.botId,
     enabled: canCall && Boolean(conversation.conversationId),
   });
 
   useEffect(() => {
-    if (liveKit.callState === "in_call") {
-      liveKit.attachRemoteAudio(audioRef.current);
+    if (callState === "in_call") {
+      attachRemoteAudio(audioRef.current);
     }
-  }, [liveKit.callState, liveKit.attachRemoteAudio]);
+  }, [callState, attachRemoteAudio]);
 
   if (!canCall) return null;
 
-  const inCall = liveKit.callState === "in_call" || liveKit.callState === "connecting";
-  const ringing = liveKit.callState === "ringing";
+  const inCall = callState === "in_call" || callState === "connecting";
+  const ringing = callState === "ringing";
 
   return (
-    <div className="border-b border-gray-200 bg-slate-50 px-4 py-3">
+    <div className="border-b border-default bg-surface-muted px-4 py-3">
       <audio ref={audioRef} autoPlay playsInline className="hidden" />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-gray-900">{t("livekit.panelTitle")}</p>
-          <p className="text-xs text-gray-500">
-            {liveKit.callState === "idle" && t("livekit.stateIdle")}
+          <p className="text-sm font-semibold text-primary">{t("livekit.panelTitle")}</p>
+          <p className="text-xs text-secondary">
+            {callState === "idle" && t("livekit.stateIdle")}
             {ringing && t("livekit.stateRinging")}
-            {liveKit.callState === "connecting" && t("livekit.stateConnecting")}
+            {callState === "connecting" && t("livekit.stateConnecting")}
             {inCall && t("livekit.stateInCall")}
-            {liveKit.callState === "ended" && t("livekit.stateEnded")}
+            {callState === "ended" && t("livekit.stateEnded")}
           </p>
           {liveKit.error && <p className="text-xs text-red-600 mt-1">{liveKit.error}</p>}
         </div>
@@ -83,7 +83,7 @@ export function AdvisorCallPanel({ conversation, voiceEnabled = true }: Props) {
               <button
                 type="button"
                 onClick={() => void liveKit.toggleMute()}
-                className="p-2 rounded-lg bg-white border border-gray-200 text-gray-700"
+                className="p-2 rounded-lg bg-surface-elevated border border-default text-secondary"
                 title={liveKit.muted ? t("livekit.unmute") : t("livekit.mute")}
               >
                 {liveKit.muted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
@@ -92,7 +92,7 @@ export function AdvisorCallPanel({ conversation, voiceEnabled = true }: Props) {
                 <button
                   type="button"
                   onClick={() => void liveKit.toggleVideo()}
-                  className="p-2 rounded-lg bg-white border border-gray-200 text-gray-700"
+                  className="p-2 rounded-lg bg-surface-elevated border border-default text-secondary"
                 >
                   {liveKit.cameraOn ? (
                     <Video className="w-4 h-4" />

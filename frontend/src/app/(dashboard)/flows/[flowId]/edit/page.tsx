@@ -6,13 +6,13 @@ import { useState, useEffect, useCallback } from "react";
 import { useT } from "@/i18n/context";
 import { useFlow, useUpdateFlow } from "@/hooks/useFlows";
 import type { FlowEdge, FlowNode, FlowNodeType } from "@/types";
-import { DashboardPage } from "@/components/layout/DashboardPage";
 import { NodePalette } from "@/components/flows/NodePalette";
 import { NodePropertiesPanel } from "@/components/flows/NodePropertiesPanel";
+import { FlowEditorToolbar } from "@/components/flows/FlowEditorToolbar";
 
 const FlowCanvas = dynamic(
   () => import("@/components/flows/FlowCanvas").then((m) => m.FlowCanvas),
-  { ssr: false, loading: () => <div className="h-[520px] bg-gray-100 rounded-xl animate-pulse" /> }
+  { ssr: false, loading: () => <div className="h-[520px] animate-pulse rounded-xl bg-surface-muted" /> }
 );
 
 export default function EditFlowPage() {
@@ -79,7 +79,7 @@ export default function EditFlowPage() {
       {
         id,
         type,
-        position: { x: 120 + (nodes.length % 5) * 48, y: 80 + Math.floor(nodes.length / 5) * 100 },
+        position: { x: 220 + (nodes.length % 3) * 48, y: 60 + Math.floor(nodes.length / 3) * 150 },
         data: defaultData,
       },
     ]);
@@ -112,34 +112,31 @@ export default function EditFlowPage() {
 
   if (isLoading || !flow) {
     return (
-      <DashboardPage>
-        <div className="h-64 animate-pulse bg-gray-100 rounded-xl" />
-      </DashboardPage>
+      <div className="h-64 animate-pulse bg-surface-muted" />
     );
   }
 
   return (
-    <DashboardPage>
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold text-gray-900">{flow.name}</h1>
-        <button
-          type="button"
-          onClick={() => void handleSave()}
-          disabled={update.isPending}
-          className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
-        >
-          {t("flows.save")}
-        </button>
-      </div>
+    <div className="flex h-[calc(100dvh-3.5rem)] w-full max-w-full flex-col overflow-hidden lg:h-full">
+      <FlowEditorToolbar
+        flowName={flow.name}
+        isPublished={flow.enabled}
+        isSaving={update.isPending}
+        onSave={() => void handleSave()}
+      />
 
       {triggerWarning && (
-        <p className="mb-3 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+        <p className="border-b border-warning/30 bg-warning/10 px-4 py-2 text-sm text-warning">
           {t("flows.cannotDeleteTrigger")}
         </p>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        <div className="lg:col-span-3">
+      <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
+        <aside className="hidden w-44 flex-shrink-0 overflow-y-auto border-r border-default bg-surface-elevated p-3 lg:block xl:w-48">
+          <NodePalette onAddNode={addNode} />
+        </aside>
+
+        <div className="min-h-0 min-w-0 flex-1">
           <FlowCanvas
             flow={{
               ...flow,
@@ -154,9 +151,8 @@ export default function EditFlowPage() {
             onCannotDeleteTrigger={handleCannotDeleteTrigger}
           />
         </div>
-        <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-4 max-h-[calc(100vh-12rem)] overflow-y-auto">
-          <NodePalette onAddNode={addNode} />
-          <hr className="border-gray-100" />
+
+        <aside className="hidden w-60 flex-shrink-0 overflow-y-auto border-l border-default bg-surface-elevated p-3 lg:block xl:w-64">
           <NodePropertiesPanel
             selected={selected}
             botId={flow.botId}
@@ -164,8 +160,8 @@ export default function EditFlowPage() {
             onDelete={deleteSelectedNode}
             canDelete={canDeleteSelected}
           />
-        </div>
+        </aside>
       </div>
-    </DashboardPage>
+    </div>
   );
 }

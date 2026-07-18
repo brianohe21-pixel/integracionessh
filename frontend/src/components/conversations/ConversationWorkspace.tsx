@@ -16,7 +16,11 @@ import {
 import { useAdvisors } from "@/hooks/useAdvisors";
 import { useBots } from "@/hooks/useBots";
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Select } from "@/components/ui/Input";
+import { Tabs } from "@/components/ui/Tabs";
+import { Textarea } from "@/components/ui/Input";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useT } from "@/i18n/context";
 import { buildWaMeLink, normalizeWhatsAppPhone } from "@/lib/wa-link";
@@ -37,6 +41,7 @@ import { useActiveLeadByPhone, useConvertLead } from "@/hooks/useLeads";
 import Link from "next/link";
 import { AdvisorCallPanel } from "@/components/conversations/AdvisorCallPanel";
 import { WhatsAppSoftphone } from "@/components/conversations/WhatsAppSoftphone";
+import { ConversationContactPanel } from "@/components/conversations/ConversationContactPanel";
 
 function messageListKey(msg: Message, index: number): string {
   return `${msg.messageId}::${msg.timestamp}::${index}`;
@@ -65,6 +70,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     message: string;
   } | null>(null);
   const [selectedAdvisorId, setSelectedAdvisorId] = useState("");
+  const [listTab, setListTab] = useState<"all" | "unread" | "mine">("all");
 
   const { data: bots } = useBots();
   const { data: advisors } = useAdvisors();
@@ -82,6 +88,14 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   });
   const conversations =
     conversationsData?.pages.flatMap((page) => page.items).filter((c) => c != null) ?? [];
+
+  const filteredConversations = conversations.filter((conv) => {
+    if (listTab === "unread") return conv.workflowStatus === "new";
+    if (listTab === "mine") return (conv.handoffMode ?? "bot") === "human";
+    return true;
+  });
+
+  const unreadCount = conversations.filter((c) => c.workflowStatus === "new").length;
   const listScrollRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const { data: messages, isLoading: loadingMessages } = useConversationMessages(selectedId ?? "");
@@ -234,66 +248,68 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     <div className="flex h-[calc(100dvh-3.5rem)] lg:h-screen">
       <div
         className={cn(
-          "flex w-full flex-col border-r border-gray-200 bg-white lg:w-80 lg:flex-shrink-0",
+          "flex w-full flex-col border-r border-default bg-surface-elevated lg:w-80 lg:flex-shrink-0",
           showListOnMobile ? "flex" : "hidden lg:flex"
         )}
       >
-        <div className="space-y-3 border-b border-gray-200 p-4">
-          <h1 className="font-bold text-gray-900">
+        <div className="space-y-3 border-b border-default p-4">
+          <h1 className="font-bold text-primary">
             {advisorMode ? t("inbox.title") : t("conversations.title")}
           </h1>
+          <Tabs
+            items={[
+              { id: "all", label: t("conversations.filterTabAll") },
+              { id: "unread", label: t("conversations.filterTabUnread"), count: unreadCount },
+              { id: "mine", label: t("conversations.filterTabMine") },
+            ]}
+            value={listTab}
+            onChange={setListTab}
+          />
           {!advisorMode && (
-            <select
-              value={botFilter}
-              onChange={(e) => setBotFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
+            <Select value={botFilter} onChange={(e) => setBotFilter(e.target.value)}>
               <option value="">{t("conversations.allBots")}</option>
               {bots?.map((bot) => (
                 <option key={bot.botId} value={bot.botId}>
                   {bot.name}
                 </option>
               ))}
-            </select>
+            </Select>
           )}
-          <select
+          <Select
             value={channelFilter}
             onChange={(e) => setChannelFilter(e.target.value as "" | Channel)}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
           >
             <option value="">{t("conversations.filterChannelAll")}</option>
             <option value="whatsapp">{t("conversations.channelWhatsapp")}</option>
             <option value="instagram">{t("conversations.channelInstagram")}</option>
             <option value="webchat">{t("conversations.channelWebchat")}</option>
-          </select>
-          <select
+          </Select>
+          <Select
             value={handoffFilter}
             onChange={(e) => setHandoffFilter(e.target.value as "" | "human" | "bot")}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
           >
             <option value="">{t("conversations.filterAll")}</option>
             <option value="human">{t("conversations.filterHuman")}</option>
             <option value="bot">{t("conversations.filterBot")}</option>
-          </select>
+          </Select>
           {handoffFilter === "human" && (
-            <select
+            <Select
               value={workflowFilter}
               onChange={(e) => setWorkflowFilter(e.target.value as "" | WorkflowStatus)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
             >
               <option value="">{t("conversations.filterWorkflowAll")}</option>
               <option value="new">{t("conversations.filterWorkflowNew")}</option>
               <option value="open">{t("conversations.filterWorkflowOpen")}</option>
               <option value="pending">{t("conversations.filterWorkflowPending")}</option>
               <option value="resolved">{t("conversations.filterWorkflowResolved")}</option>
-            </select>
+            </Select>
           )}
         </div>
 
         <div ref={listScrollRef} className="flex-1 overflow-y-auto">
-          {isLoading && <p className="p-4 text-sm text-gray-400">{t("common.loading")}</p>}
+          {isLoading && <p className="p-4 text-sm text-muted">{t("common.loading")}</p>}
 
-          {!isLoading && conversations.length === 0 && (
+          {!isLoading && filteredConversations.length === 0 && (
             <EmptyState
               icon={<MessageSquare className="w-5 h-5" />}
               title={t("conversations.emptyTitle")}
@@ -302,30 +318,34 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
             />
           )}
 
-          {conversations.map((conv) => (
+          {filteredConversations.map((conv) => (
             <button
               key={conv.conversationId}
               type="button"
               onClick={() => setSelectedId(conv.conversationId)}
               className={cn(
-                "w-full text-left px-4 py-3 border-b border-gray-100 hover:bg-gray-50",
-                selectedId === conv.conversationId && "bg-indigo-50 border-l-2 border-l-indigo-600"
+                "w-full border-b border-subtle px-4 py-3 text-left transition-colors hover:bg-surface-muted",
+                selectedId === conv.conversationId &&
+                  "border-l-2 border-l-accent bg-accent-muted"
               )}
             >
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <User className="w-4 h-4 text-gray-400" />
+                <div className="relative flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-surface-muted">
+                  <User className="h-4 w-4 text-muted" />
+                  {conv.workflowStatus === "new" && (
+                    <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-accent ring-2 ring-surface-elevated" />
+                  )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-0.5">
-                    <p className="text-sm font-medium text-gray-900 truncate">
+                <div className="min-w-0 flex-1">
+                  <div className="mb-0.5 flex items-center justify-between">
+                    <p className="truncate text-sm font-medium text-primary">
                       {contactDisplay(conv)}
                     </p>
-                    <span className="text-xs text-gray-400 flex-shrink-0 ml-2">
+                    <span className="ml-2 flex-shrink-0 text-xs text-muted">
                       {formatRelativeTime(conv.lastMessageAt)}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Badge variant="default" className="text-[10px]">
                       {channelLabel(conv.channel)}
                     </Badge>
@@ -350,17 +370,21 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
 
           <div ref={loadMoreRef} className="h-1" />
           {isFetchingNextPage && (
-            <p className="p-4 text-center text-sm text-gray-400">{t("common.loading")}</p>
+            <p className="p-4 text-center text-sm text-muted">{t("common.loading")}</p>
           )}
         </div>
       </div>
 
       <div
         className={cn(
-          "flex min-w-0 flex-1 flex-col bg-gray-50",
+          "relative flex min-w-0 flex-1 flex-col bg-surface",
           showDetailOnMobile ? "flex" : "hidden lg:flex"
         )}
       >
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-[var(--glow-accent)] to-transparent"
+          aria-hidden
+        />
         {!selectedConversation ? (
           <div className="hidden flex-1 items-center justify-center lg:flex">
             <EmptyState
@@ -371,30 +395,30 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
           </div>
         ) : (
           <>
-            <div className="flex flex-col gap-3 border-b border-gray-200 bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <div className="relative z-10 flex flex-col gap-3 border-b border-default bg-surface-elevated px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
               <div className="flex min-w-0 items-center gap-3">
                 <button
                   type="button"
                   onClick={() => setSelectedId(null)}
-                  className="rounded-lg border border-gray-200 p-2 text-gray-600 hover:bg-gray-50 lg:hidden"
+                  className="rounded-lg border border-default p-2 text-secondary hover:bg-surface-muted lg:hidden"
                   aria-label={t("conversations.backToList")}
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
-                <div className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center">
-                  <User className="w-4 h-4 text-gray-400" />
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-muted">
+                  <User className="h-4 w-4 text-muted" />
                 </div>
                 <div className="min-w-0">
-                  <p className="font-semibold text-sm text-gray-900 truncate">
+                  <p className="truncate text-sm font-semibold text-primary">
                     {contactDisplay(selectedConversation)}
                   </p>
-                  <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                    <Badge variant="default" className="text-[10px]">
+                  <div className="flex items-center gap-1.5 text-xs text-secondary">
+                    <Badge variant="accent" className="text-[10px]">
                       {channelLabel(selectedConversation.channel)}
                     </Badge>
                     {(selectedConversation.channel ?? "whatsapp") === "whatsapp" ? (
                       <>
-                        <Phone className="w-3 h-3 flex-shrink-0" />
+                        <Phone className="h-3 w-3 flex-shrink-0" />
                         {selectedConversation.phoneNumber}
                       </>
                     ) : (
@@ -405,23 +429,26 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
               </div>
               <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
                 {!advisorMode && selectedConversation.botId && (
-                  <button
+                  <Button
                     type="button"
+                    variant="danger"
+                    size="sm"
                     onClick={() => setShowDeleteModal(true)}
-                    className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-red-100 text-red-800 rounded-lg"
+                    className="gap-1"
                   >
                     <Trash2 className="w-3 h-3" />
                     {t("conversations.delete")}
-                  </button>
+                  </Button>
                 )}
                 {!advisorMode && !isHuman && (
-                  <button
+                  <Button
                     type="button"
+                    size="sm"
                     onClick={() => setShowHandoffModal(true)}
-                    className="px-3 py-1.5 text-xs font-medium bg-amber-100 text-amber-800 rounded-lg"
+                    className="bg-warning/15 text-warning hover:bg-warning/25"
                   >
                     {t("conversations.transfer")}
-                  </button>
+                  </Button>
                 )}
                 {!advisorMode && selectedConversation.botId && (selectedConversation.channel ?? "whatsapp") === "whatsapp" && (
                   <>
@@ -435,17 +462,17 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                         });
                       }}
                       disabled={callPermission.isPending || selectedWhatsAppPhone.length < 7}
-                      className="px-3 py-1.5 text-xs font-medium bg-violet-100 text-violet-800 rounded-lg disabled:opacity-50"
+                      className="rounded-lg bg-human/15 px-3 py-1.5 text-xs font-medium text-human hover:bg-human/25 disabled:opacity-50"
                     >
                       {t("conversations.requestCallPermission")}
                     </button>
                     {callPermissionFeedback ? (
                       <p
                         className={cn(
-                          "w-full text-xs",
+                          "w-full text-xs font-medium",
                           callPermissionFeedback.type === "success"
-                            ? "text-green-700"
-                            : "text-red-600"
+                            ? "text-success"
+                            : "text-danger"
                         )}
                       >
                         {callPermissionFeedback.message}
@@ -455,47 +482,48 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                 )}
                 {isHuman && (
                   <>
-                    <button
+                    <Button
                       type="button"
+                      size="sm"
                       onClick={() => {
                         setInternalNote(selectedConversation.internalNote ?? "");
                         setShowResolveModal(true);
                       }}
-                      className="px-3 py-1.5 text-xs font-medium bg-indigo-100 text-indigo-800 rounded-lg"
                     >
                       {t("conversations.resolve")}
-                    </button>
+                    </Button>
                     {(selectedConversation.channel ?? "whatsapp") === "whatsapp" && (
                       <a
                         href={buildWaMeLink(selectedConversation.phoneNumber)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-green-100 text-green-800 rounded-lg"
+                        className="inline-flex items-center gap-1 rounded-lg bg-success/15 px-3 py-1.5 text-xs font-medium text-success hover:bg-success/25"
                       >
                         <ExternalLink className="w-3 h-3" />
                         {t("conversations.openWhatsApp")}
                       </a>
                     )}
-                    <button
+                    <Button
                       type="button"
+                      variant="secondary"
+                      size="sm"
                       onClick={handleRelease}
                       disabled={release.isPending}
-                      className="px-3 py-1.5 text-xs font-medium bg-gray-100 text-gray-700 rounded-lg"
                     >
                       {t("conversations.release")}
-                    </button>
+                    </Button>
                   </>
                 )}
               </div>
             </div>
 
             {isHuman && (selectedConversation.channel ?? "whatsapp") === "whatsapp" && (
-              <p className="px-6 py-2 text-xs text-amber-800 bg-amber-50 border-b border-amber-100">
+              <p className="border-b border-warning/30 bg-warning/10 px-6 py-2.5 text-xs font-medium text-primary">
                 {t("conversations.personalChannelHint")}
               </p>
             )}
             {isHuman && (selectedConversation.channel ?? "whatsapp") !== "whatsapp" && (
-              <p className="px-6 py-2 text-xs text-indigo-800 bg-indigo-50 border-b border-indigo-100">
+              <p className="border-b border-default border-l-4 border-l-accent bg-surface-muted px-6 py-2.5 text-xs font-medium text-primary">
                 {t("conversations.replyViaChannel", {
                   channel: channelLabel(selectedConversation.channel),
                 })}
@@ -503,20 +531,20 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
             )}
 
             {selectedConversation && activeLead && (
-              <div className="mx-4 mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg flex flex-wrap items-center justify-between gap-2 text-sm">
+              <div className="mx-4 mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-primary">
                 <div>
-                  <span className="font-medium text-amber-900">{t("leads.leadStatus")}: </span>
-                  <span className="text-amber-800">{t(`leads.status_${activeLead.status}`)}</span>
+                  <span className="font-semibold">{t("leads.leadStatus")}: </span>
+                  <span>{t(`leads.status_${activeLead.status}`)}</span>
                 </div>
                 <div className="flex gap-2">
-                  <Link href="/leads" className="text-indigo-600 hover:text-indigo-800 text-xs">
+                  <Link href="/leads" className="text-accent hover:text-accent text-xs">
                     {t("leads.viewLead")}
                   </Link>
                   <button
                     type="button"
                     onClick={() => convertLead.mutate({ leadId: activeLead.leadId })}
                     disabled={convertLead.isPending}
-                    className="text-xs font-medium text-indigo-600 hover:text-indigo-800"
+                    className="text-xs font-medium text-accent hover:text-accent"
                   >
                     {t("leads.convert")}
                   </button>
@@ -536,27 +564,30 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
             )}
 
             {isHuman && selectedConversation.workflowStatus !== "resolved" && (
-              <div className="px-6 py-3 bg-white border-b border-gray-100 space-y-2">
-                <label className="text-xs font-medium text-gray-600">{t("conversations.internalNote")}</label>
-                <textarea
+              <div className="space-y-2 border-b border-default bg-surface-elevated px-6 py-3">
+                <label className="text-xs font-semibold text-primary">
+                  {t("conversations.internalNote")}
+                </label>
+                <Textarea
                   value={internalNote || selectedConversation.internalNote || ""}
                   onChange={(e) => setInternalNote(e.target.value)}
                   rows={2}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
                 />
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={handleSaveNote}
                   disabled={updateNote.isPending}
-                  className="text-xs text-indigo-600 font-medium"
+                  className="text-accent hover:text-accent"
                 >
                   {t("conversations.saveNote")}
-                </button>
+                </Button>
               </div>
             )}
 
-            <div className="flex-1 space-y-3 overflow-y-auto p-4 sm:p-6">
-              {loadingMessages && <p className="text-sm text-gray-400">{t("common.loading")}</p>}
+            <div className="relative z-10 flex-1 space-y-3 overflow-y-auto p-4 sm:p-6">
+              {loadingMessages && <p className="text-sm text-muted">{t("common.loading")}</p>}
 
               {messages?.map((msg, index) => {
                 const listKey = messageListKey(msg, index);
@@ -564,7 +595,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                 const isSystem = msg.role === "system";
                 if (isSystem) {
                   return (
-                    <p key={listKey} className="text-center text-xs text-gray-400 py-1">
+                    <p key={listKey} className="py-1 text-center text-xs text-muted">
                       {msg.content}
                     </p>
                   );
@@ -575,25 +606,25 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                     className={cn("flex items-end gap-2", isInbound ? "justify-start" : "justify-end")}
                   >
                     {isInbound && (
-                      <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
-                        <User className="w-3.5 h-3.5 text-gray-500" />
+                      <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-surface-muted">
+                        <User className="h-3.5 w-3.5 text-muted" />
                       </div>
                     )}
                     <div
                       className={cn(
-                        "max-w-[85%] sm:max-w-xs lg:max-w-md px-4 py-2.5 rounded-2xl text-sm leading-relaxed",
+                        "max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed sm:max-w-xs lg:max-w-md",
                         isInbound
-                          ? "bg-white border border-gray-200 text-gray-900 rounded-bl-sm"
+                          ? "rounded-bl-sm border border-default bg-surface-elevated text-primary"
                           : msg.role === "advisor"
-                            ? "bg-emerald-600 text-white rounded-br-sm"
-                            : "bg-indigo-600 text-white rounded-br-sm"
+                            ? "rounded-br-sm bg-success text-white"
+                            : "rounded-br-sm border border-accent/30 bg-accent-muted text-primary"
                       )}
                     >
                       <p>{msg.content}</p>
                       <p
                         className={cn(
-                          "text-[10px] mt-1",
-                          isInbound ? "text-gray-400" : "text-white/70"
+                          "mt-1 text-[10px]",
+                          isInbound ? "text-muted" : msg.role === "advisor" ? "text-white/70" : "text-secondary"
                         )}
                       >
                         {formatDate(msg.timestamp)}
@@ -602,14 +633,14 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                     {!isInbound && (
                       <div
                         className={cn(
-                          "w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0",
-                          msg.role === "advisor" ? "bg-emerald-100" : "bg-indigo-100"
+                          "flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full",
+                          msg.role === "advisor" ? "bg-success/15" : "bg-accent-muted"
                         )}
                       >
                         {msg.role === "advisor" ? (
-                          <Headphones className="w-3.5 h-3.5 text-emerald-700" />
+                          <Headphones className="h-3.5 w-3.5 text-success" />
                         ) : (
-                          <Bot className="w-3.5 h-3.5 text-indigo-600" />
+                          <Bot className="h-3.5 w-3.5 text-accent" />
                         )}
                       </div>
                     )}
@@ -621,37 +652,45 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
             {canCompose && (
               <form
                 onSubmit={handleSend}
-                className="bg-white border-t border-gray-200 p-4 flex gap-2"
+                className="relative z-10 flex gap-2 border-t border-default bg-surface-elevated p-4"
               >
-                <textarea
+                <Textarea
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   rows={2}
-                  placeholder={t("conversations.messagePlaceholder")}
-                  className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder={t("conversations.messagePlaceholderShort")}
+                  className="resize-none"
                 />
-                <button
+                <Button
                   type="submit"
                   disabled={!draft.trim() || sendMessage.isPending}
-                  className="self-end px-4 py-2 bg-indigo-600 text-white rounded-lg disabled:opacity-50"
+                  className="h-10 w-10 self-end rounded-full p-0"
                 >
-                  <Send className="w-4 h-4" />
-                </button>
+                  <Send className="h-4 w-4" />
+                </Button>
               </form>
             )}
           </>
         )}
       </div>
 
+      {selectedConversation && (
+        <ConversationContactPanel
+          conversation={selectedConversation}
+          activeLead={activeLead}
+          onAssignAdvisor={() => setShowHandoffModal(true)}
+          channelLabel={channelLabel}
+        />
+      )}
+
       {showResolveModal && selectedConversation && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 space-y-4">
-            <h2 className="text-lg font-semibold">{t("conversations.resolveTitle")}</h2>
-            <label className="block text-sm text-gray-600">{t("conversations.csatLabel")}</label>
-            <select
+          <div className="w-full max-w-sm space-y-4 rounded-xl border border-default bg-surface-elevated p-6 shadow-xl">
+            <h2 className="text-lg font-semibold text-primary">{t("conversations.resolveTitle")}</h2>
+            <label className="block text-sm text-secondary">{t("conversations.csatLabel")}</label>
+            <Select
               value={csatScore}
               onChange={(e) => setCsatScore(e.target.value === "" ? "" : Number(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
             >
               <option value="">—</option>
               {[1, 2, 3, 4, 5].map((n) => (
@@ -659,23 +698,14 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                   {n}
                 </option>
               ))}
-            </select>
+            </Select>
             <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setShowResolveModal(false)}
-                className="px-4 py-2 text-sm text-gray-600"
-              >
+              <Button type="button" variant="ghost" onClick={() => setShowResolveModal(false)}>
                 {t("common.cancel")}
-              </button>
-              <button
-                type="button"
-                onClick={handleResolve}
-                disabled={resolveConv.isPending}
-                className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg"
-              >
+              </Button>
+              <Button type="button" onClick={handleResolve} disabled={resolveConv.isPending}>
                 {t("conversations.resolveConfirm")}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -683,25 +713,16 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
 
       {showDeleteModal && selectedConversation && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 space-y-4">
-            <h2 className="text-lg font-semibold">{t("conversations.deleteTitle")}</h2>
-            <p className="text-sm text-gray-600">{t("conversations.deleteConfirm")}</p>
+          <div className="w-full max-w-sm space-y-4 rounded-xl border border-default bg-surface-elevated p-6 shadow-xl">
+            <h2 className="text-lg font-semibold text-primary">{t("conversations.deleteTitle")}</h2>
+            <p className="text-sm text-secondary">{t("conversations.deleteConfirm")}</p>
             <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setShowDeleteModal(false)}
-                className="px-4 py-2 text-sm text-gray-600"
-              >
+              <Button type="button" variant="ghost" onClick={() => setShowDeleteModal(false)}>
                 {t("common.cancel")}
-              </button>
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={deleteConv.isPending}
-                className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg disabled:opacity-50"
-              >
+              </Button>
+              <Button type="button" variant="danger" onClick={handleDelete} disabled={deleteConv.isPending}>
                 {t("conversations.delete")}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -709,13 +730,9 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
 
       {showHandoffModal && selectedConversation && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 space-y-4">
-            <h2 className="text-lg font-semibold">{t("conversations.transfer")}</h2>
-            <select
-              value={selectedAdvisorId}
-              onChange={(e) => setSelectedAdvisorId(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-            >
+          <div className="w-full max-w-sm space-y-4 rounded-xl border border-default bg-surface-elevated p-6 shadow-xl">
+            <h2 className="text-lg font-semibold text-primary">{t("conversations.transfer")}</h2>
+            <Select value={selectedAdvisorId} onChange={(e) => setSelectedAdvisorId(e.target.value)}>
               <option value="">{t("conversations.autoAssign")}</option>
               {advisors
                 ?.filter((a) => a.status === "active")
@@ -724,23 +741,14 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                     {a.name}
                   </option>
                 ))}
-            </select>
+            </Select>
             <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setShowHandoffModal(false)}
-                className="px-4 py-2 text-sm text-gray-600"
-              >
+              <Button type="button" variant="ghost" onClick={() => setShowHandoffModal(false)}>
                 {t("common.cancel")}
-              </button>
-              <button
-                type="button"
-                onClick={handleHandoff}
-                disabled={handoff.isPending}
-                className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg"
-              >
+              </Button>
+              <Button type="button" onClick={handleHandoff} disabled={handoff.isPending}>
                 {t("conversations.transfer")}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

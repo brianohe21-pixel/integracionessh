@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/Badge";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useT } from "@/i18n/context";
 import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
+import { ThemeSwitcher } from "@/components/theme/ThemeSwitcher";
 import { OpenAIKeyCard } from "@/components/settings/OpenAIKeyCard";
 import { BrandingSettingsCard } from "@/components/branding/BrandingSettingsCard";
 import {
@@ -19,6 +20,7 @@ import {
   Palette,
   Settings2,
   Plug,
+  SunMoon,
 } from "lucide-react";
 import { PlanUsageCard } from "@/components/billing/PlanUsageCard";
 import type { Tenant } from "@/types";
@@ -61,7 +63,7 @@ export default function SettingsPage() {
     <DashboardPage maxWidth="5xl">
       <PageHeader title={t("settings.title")} subtitle={t("settings.subtitle")} />
 
-      <nav className="mb-6 border-b border-gray-200" aria-label={t("settings.title")}>
+      <nav className="mb-6 border-b border-default" aria-label={t("settings.title")}>
         <div className="flex flex-wrap gap-1 -mb-px">
           {tabs.map((tabItem) => {
             const active = tab === tabItem.id;
@@ -73,10 +75,10 @@ export default function SettingsPage() {
                 className={cn(
                   "flex shrink-0 items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors",
                   active
-                    ? "text-[var(--brand-primary,#4f46e5)]"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    ? "text-[var(--brand-primary,#25D366)]"
+                    : "border-transparent text-secondary hover:text-secondary hover:border-default"
                 )}
-                style={active ? { borderBottomColor: "var(--brand-primary, #4f46e5)" } : undefined}
+                style={active ? { borderBottomColor: "var(--brand-primary, #25D366)" } : undefined}
               >
                 {tabItem.icon}
                 {tabItem.label}
@@ -89,52 +91,61 @@ export default function SettingsPage() {
       <div className="space-y-6">
         {tab === "general" && (
           <>
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <div className="bg-surface-elevated rounded-xl border border-default p-6">
               <div className="flex items-center gap-2 mb-2">
-                <Languages className="w-4 h-4 text-gray-500" />
-                <h2 className="font-semibold text-gray-900 text-sm">{t("settings.languageTitle")}</h2>
+                <Languages className="w-4 h-4 text-secondary" />
+                <h2 className="font-semibold text-primary text-sm">{t("settings.languageTitle")}</h2>
               </div>
-              <p className="text-sm text-gray-500 mb-4">{t("settings.languageDescription")}</p>
+              <p className="text-sm text-secondary mb-4">{t("settings.languageDescription")}</p>
               <LanguageSwitcher />
+            </div>
+
+            <div className="bg-surface-elevated rounded-xl border border-default p-6">
+              <div className="flex items-center gap-2 mb-2">
+                <SunMoon className="w-4 h-4 text-secondary" />
+                <h2 className="font-semibold text-primary text-sm">{t("settings.themeTitle")}</h2>
+              </div>
+              <p className="text-sm text-secondary mb-4">{t("settings.themeDescription")}</p>
+              <ThemeSwitcher />
             </div>
 
             <PlanUsageCard />
 
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <div className="bg-surface-elevated rounded-xl border border-default p-6">
               <div className="flex items-center gap-2 mb-4">
-                <Building2 className="w-4 h-4 text-gray-500" />
-                <h2 className="font-semibold text-gray-900 text-sm">{t("settings.accountInfo")}</h2>
+                <Building2 className="w-4 h-4 text-secondary" />
+                <h2 className="font-semibold text-primary text-sm">{t("settings.accountInfo")}</h2>
               </div>
 
               {tenant ? (
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                    <span className="text-sm text-gray-500">{t("settings.company")}</span>
-                    <span className="text-sm font-medium text-gray-900">{tenant.name}</span>
+                  <div className="flex items-center justify-between py-2 border-b border-subtle">
+                    <span className="text-sm text-secondary">{t("settings.company")}</span>
+                    <span className="text-sm font-medium text-primary">{tenant.name}</span>
                   </div>
-                  <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                    <span className="text-sm text-gray-500">{t("common.email")}</span>
-                    <span className="text-sm font-medium text-gray-900">{tenant.email}</span>
+                  <div className="flex items-center justify-between py-2 border-b border-subtle">
+                    <span className="text-sm text-secondary">{t("common.email")}</span>
+                    <span className="text-sm font-medium text-primary">{tenant.email}</span>
                   </div>
-                  <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                    <span className="text-sm text-gray-500">{t("settings.plan")}</span>
+                  <div className="flex items-center justify-between py-2 border-b border-subtle">
+                    <span className="text-sm text-secondary">{t("settings.plan")}</span>
                     <Badge variant="info">{planLabel(tenant.plan)}</Badge>
                   </div>
-                  <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                    <span className="text-sm text-gray-500">{t("common.status")}</span>
+                  <div className="flex items-center justify-between py-2 border-b border-subtle">
+                    <span className="text-sm text-secondary">{t("common.status")}</span>
                     <Badge variant={tenant.status === "active" ? "success" : "warning"}>
                       {tenant.status === "active" ? t("common.active") : t("common.suspended")}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between py-2">
-                    <span className="text-sm text-gray-500">{t("settings.memberSince")}</span>
-                    <span className="text-sm text-gray-700">{formatDate(tenant.createdAt)}</span>
+                    <span className="text-sm text-secondary">{t("settings.memberSince")}</span>
+                    <span className="text-sm text-secondary">{formatDate(tenant.createdAt)}</span>
                   </div>
                 </div>
               ) : (
                 <div className="space-y-3 animate-pulse">
                   {[...Array(4)].map((_, i) => (
-                    <div key={i} className="flex justify-between py-2 border-b border-gray-100">
+                    <div key={i} className="flex justify-between py-2 border-b border-subtle">
                       <div className="h-4 w-24 bg-gray-200 rounded" />
                       <div className="h-4 w-32 bg-gray-200 rounded" />
                     </div>
@@ -148,22 +159,22 @@ export default function SettingsPage() {
         {tab === "branding" && <BrandingSettingsCard />}
 
         {tab === "integrations" && (
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="bg-surface-elevated rounded-xl border border-default p-6">
             <div className="flex items-center gap-2 mb-4">
-              <Webhook className="w-4 h-4 text-gray-500" />
-              <h2 className="font-semibold text-gray-900 text-sm">{t("settings.webhookTitle")}</h2>
+              <Webhook className="w-4 h-4 text-secondary" />
+              <h2 className="font-semibold text-primary text-sm">{t("settings.webhookTitle")}</h2>
             </div>
 
-            <p className="text-sm text-gray-500 mb-4">{t("settings.webhookDescription")}</p>
+            <p className="text-sm text-secondary mb-4">{t("settings.webhookDescription")}</p>
 
             <div className="flex items-center gap-2">
-              <code className="flex-1 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-mono text-gray-700 truncate">
+              <code className="flex-1 px-3 py-2.5 bg-surface border border-default rounded-lg text-xs font-mono text-secondary truncate">
                 {webhookUrl}
               </code>
               <button
                 type="button"
                 onClick={() => void copyWebhook()}
-                className="flex items-center gap-1.5 px-3 py-2.5 border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors flex-shrink-0"
+                className="flex items-center gap-1.5 px-3 py-2.5 border border-default rounded-lg text-xs font-medium text-secondary hover:bg-surface transition-colors flex-shrink-0"
               >
                 {webhookCopied ? (
                   <>
@@ -191,20 +202,20 @@ export default function SettingsPage() {
         )}
 
         {tab === "apiKeys" && (
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="bg-surface-elevated rounded-xl border border-default p-6">
             <div className="flex items-center gap-2 mb-4">
-              <Key className="w-4 h-4 text-gray-500" />
-              <h2 className="font-semibold text-gray-900 text-sm">{t("settings.secretsTitle")}</h2>
+              <Key className="w-4 h-4 text-secondary" />
+              <h2 className="font-semibold text-primary text-sm">{t("settings.secretsTitle")}</h2>
             </div>
 
-            <p className="text-sm text-gray-500 mb-4">{t("settings.secretsDescription")}</p>
+            <p className="text-sm text-secondary mb-4">{t("settings.secretsDescription")}</p>
 
             <div className="space-y-3">
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="flex items-center gap-3 p-3 bg-surface rounded-lg border border-default">
                 <div className="w-2 h-2 bg-green-400 rounded-full" />
                 <div className="flex-1">
-                  <p className="text-xs font-medium text-gray-700">{t("settings.whatsappToken")}</p>
-                  <p className="text-xs text-gray-400">{t("settings.whatsappTokenStored")}</p>
+                  <p className="text-xs font-medium text-secondary">{t("settings.whatsappToken")}</p>
+                  <p className="text-xs text-muted">{t("settings.whatsappTokenStored")}</p>
                 </div>
                 <Badge variant="success">{t("settings.configured")}</Badge>
               </div>
