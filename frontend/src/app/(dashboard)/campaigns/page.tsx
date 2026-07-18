@@ -6,6 +6,7 @@ import { useT } from "@/i18n/context";
 import { useCampaignList, useStartCampaign, usePauseCampaign, useResumeCampaign, useCancelCampaign } from "@/hooks/useCampaigns";
 import { CampaignStatusBadge } from "@/components/campaigns/CampaignStatusBadge";
 import { CampaignProgressBar } from "@/components/campaigns/CampaignProgressBar";
+import { useWhatsAppQualityGuard } from "@/hooks/useWhatsAppQualityGuard";
 import type { Campaign, CampaignStatus } from "@/types";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -26,16 +27,38 @@ function CampaignActions({ campaign }: { campaign: Campaign }) {
   const pause = usePauseCampaign();
   const resume = useResumeCampaign();
   const cancel = useCancelCampaign();
+  const { assessment, confirmStart } = useWhatsAppQualityGuard(campaign.botId);
 
   const isPending = start.isPending || pause.isPending || resume.isPending || cancel.isPending;
+  const startBlocked = assessment.risk === "block";
+
+  async function handleStart() {
+    if (startBlocked) {
+      window.alert(t("campaigns.qualityStartBlocked"));
+      return;
+    }
+    const confirmed = await confirmStart("start");
+    if (!confirmed) return;
+    start.mutate(campaign.campaignId);
+  }
+
+  async function handleResume() {
+    if (startBlocked) {
+      window.alert(t("campaigns.qualityStartBlocked"));
+      return;
+    }
+    const confirmed = await confirmStart("resume");
+    if (!confirmed) return;
+    resume.mutate(campaign.campaignId);
+  }
 
   return (
     <div className="flex items-center gap-1">
       {(campaign.status === "draft" || campaign.status === "scheduled") && (
         <button
-          onClick={() => start.mutate(campaign.campaignId)}
-          disabled={isPending}
-          title={t("campaigns.start")}
+          onClick={handleStart}
+          disabled={isPending || startBlocked}
+          title={startBlocked ? t("campaigns.qualityStartBlocked") : t("campaigns.start")}
           className="p-1.5 rounded-lg text-green-600 hover:bg-green-50 disabled:opacity-40 transition-colors"
         >
           <Play className="w-4 h-4" />
@@ -53,9 +76,9 @@ function CampaignActions({ campaign }: { campaign: Campaign }) {
       )}
       {campaign.status === "paused" && (
         <button
-          onClick={() => resume.mutate(campaign.campaignId)}
-          disabled={isPending}
-          title={t("campaigns.resume")}
+          onClick={handleResume}
+          disabled={isPending || startBlocked}
+          title={startBlocked ? t("campaigns.qualityStartBlocked") : t("campaigns.resume")}
           className="p-1.5 rounded-lg text-green-600 hover:bg-green-50 disabled:opacity-40 transition-colors"
         >
           <RotateCcw className="w-4 h-4" />

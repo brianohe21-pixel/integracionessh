@@ -8,6 +8,9 @@ import { useBots } from "@/hooks/useBots";
 import { useTemplates } from "@/hooks/useTemplates";
 import { useCreateCampaign, type CampaignRecipient } from "@/hooks/useCampaigns";
 import { SegmentInput } from "@/components/campaigns/SegmentInput";
+import { CampaignQualityAlert } from "@/components/campaigns/CampaignQualityAlert";
+import { TemplateMessagePreview } from "@/components/templates/TemplateMessagePreview";
+import { useWhatsAppQualityGuard } from "@/hooks/useWhatsAppQualityGuard";
 import { parseRecipientsCsv, decodeCsvBytes } from "@/lib/csv";
 import type { WhatsAppTemplate } from "@/types";
 import { DashboardPage } from "@/components/layout/DashboardPage";
@@ -79,6 +82,7 @@ export default function NewCampaignPage() {
   );
   const approvedTemplates = templates.filter((t) => t.status === "APPROVED");
   const bodyVars = selectedTemplate ? extractBodyVariables(selectedTemplate) : [];
+  const { assessment, phone, isLoading: qualityLoading } = useWhatsAppQualityGuard(config.botId);
 
   const stepIndex = STEPS.indexOf(step);
   const isFirstStep = stepIndex === 0;
@@ -243,6 +247,13 @@ export default function NewCampaignPage() {
                   <p className="text-xs text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg">
                     {t("bulkSend.varsRequired", { vars: bodyVars.join(", ") })}
                   </p>
+                )}
+                {selectedTemplate && (
+                  <TemplateMessagePreview
+                    template={selectedTemplate}
+                    label={t("bulkSend.preview")}
+                    className="pt-2"
+                  />
                 )}
               </div>
             )}
@@ -432,6 +443,24 @@ export default function NewCampaignPage() {
                 {requireOptIn ? t("campaigns.requireOptInStatusOn") : t("campaigns.requireOptInStatusOff")}
               </dd>
             </dl>
+
+            {config.botId && (
+              <CampaignQualityAlert
+                phone={phone}
+                assessment={assessment}
+                isLoading={qualityLoading}
+              />
+            )}
+
+            {selectedTemplate && (
+              <TemplateMessagePreview
+                template={selectedTemplate}
+                label={t("bulkSend.preview")}
+                variableValues={
+                  recipients[0]?.components?.[0]?.parameters?.map((p) => p.text ?? "") ?? undefined
+                }
+              />
+            )}
 
             {submitError && (
               <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{submitError}</p>
