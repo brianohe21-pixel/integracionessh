@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useCheckout, useBillingProviders, useBillingStatus } from "@/hooks/useBilling";
 import { formatCopPrice } from "@/lib/plan-config";
 import { useFormatters } from "@/hooks/useFormatters";
@@ -23,22 +23,25 @@ export function BillingPlanCards({ autoCheckoutPlan }: { autoCheckoutPlan?: Tena
     providers?.default ??
     (providers?.wompi ? "wompi" : providers?.stripe ? "stripe" : null);
 
-  async function startCheckout(plan: "pro" | "enterprise") {
-    setError("");
-    setPendingPlan(plan);
-    if (!defaultProvider) {
-      setError(t("billing.noProviderConfigured"));
-      setPendingPlan(null);
-      return;
-    }
-    try {
-      const result = await checkout.mutateAsync({ plan, provider: defaultProvider });
-      if (result.url) window.location.href = result.url;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("billing.checkoutError"));
-      setPendingPlan(null);
-    }
-  }
+  const startCheckout = useCallback(
+    async (plan: "pro" | "enterprise") => {
+      setError("");
+      setPendingPlan(plan);
+      if (!defaultProvider) {
+        setError(t("billing.noProviderConfigured"));
+        setPendingPlan(null);
+        return;
+      }
+      try {
+        const result = await checkout.mutateAsync({ plan, provider: defaultProvider });
+        if (result.url) window.location.href = result.url;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : t("billing.checkoutError"));
+        setPendingPlan(null);
+      }
+    },
+    [checkout, defaultProvider, t]
+  );
 
   useEffect(() => {
     if (autoStarted.current) return;
@@ -47,7 +50,7 @@ export function BillingPlanCards({ autoCheckoutPlan }: { autoCheckoutPlan?: Tena
     if (status.plan === autoCheckoutPlan && !status.isExpired) return;
     autoStarted.current = true;
     void startCheckout(autoCheckoutPlan);
-  }, [autoCheckoutPlan, status, providers]);
+  }, [autoCheckoutPlan, startCheckout, status, providers]);
 
   const currentPlan = status?.plan ?? "free";
 

@@ -73,7 +73,7 @@ function parseField(component: JsonRecord, index: number): VisualField | null {
     const dataSource = Array.isArray(component["data-source"])
       ? component["data-source"]
           .map((item) => asRecord(item))
-          .filter(Boolean)
+          .filter((item): item is JsonRecord => item !== null)
           .map((item) => ({
             id: String(item.id ?? ""),
             title: String(item.title ?? ""),

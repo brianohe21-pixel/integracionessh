@@ -30,7 +30,7 @@ export function MetaFlowEditorPanel({ value, onChange, readOnly }: MetaFlowEdito
     } catch {
       return null;
     }
-  }, [value, tab]);
+  }, [value]);
 
   function syncJsonFromVisual(nextVisual: VisualMetaFlow) {
     try {

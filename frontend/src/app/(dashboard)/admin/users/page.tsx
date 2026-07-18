@@ -115,8 +115,10 @@ export default function AdminUsersPage() {
     type: "success" | "error";
   } | null>(null);
 
-  const platformAdmins =
-    adminsQuery.data?.pages.flatMap((page) => page.users) ?? [];
+  const platformAdmins = useMemo(
+    () => adminsQuery.data?.pages.flatMap((page) => page.users) ?? [],
+    [adminsQuery.data?.pages]
+  );
 
   const cognitoUsers =
     cognitoQuery.data?.pages.flatMap((page) => page.users) ?? [];

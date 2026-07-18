@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Suspense } from "react";
 import { useT } from "@/i18n/context";
 import { useTenantBranding } from "@/hooks/useTenantBranding";
@@ -34,11 +35,17 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       <div className="relative w-full max-w-md px-4">
         <div className="mb-8 text-center">
           <div
-            className="mb-4 inline-flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl shadow-lg"
+            className="relative mb-4 inline-flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl shadow-lg"
             style={{ backgroundColor: primaryColor }}
           >
             {branding?.logoUrl ? (
-              <img src={branding.logoUrl} alt="" className="h-full w-full object-cover" />
+              <Image
+                src={branding.logoUrl}
+                alt=""
+                fill
+                unoptimized
+                className="object-cover"
+              />
             ) : (
               <svg className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path

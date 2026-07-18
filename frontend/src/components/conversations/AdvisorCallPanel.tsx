@@ -20,22 +20,22 @@ export function AdvisorCallPanel({ conversation, voiceEnabled = true }: Props) {
   const isHuman = conversation.handoffMode === "human";
   const canCall = isWebchat && isHuman && voiceEnabled;
 
-  const liveKit = useLiveKitCall({
+  const { callState, attachRemoteAudio, ...liveKit } = useLiveKitCall({
     conversationId: conversation.conversationId,
     botId: conversation.botId,
     enabled: canCall && Boolean(conversation.conversationId),
   });
 
   useEffect(() => {
-    if (liveKit.callState === "in_call") {
-      liveKit.attachRemoteAudio(audioRef.current);
+    if (callState === "in_call") {
+      attachRemoteAudio(audioRef.current);
     }
-  }, [liveKit.callState, liveKit.attachRemoteAudio]);
+  }, [callState, attachRemoteAudio]);
 
   if (!canCall) return null;
 
-  const inCall = liveKit.callState === "in_call" || liveKit.callState === "connecting";
-  const ringing = liveKit.callState === "ringing";
+  const inCall = callState === "in_call" || callState === "connecting";
+  const ringing = callState === "ringing";
 
   return (
     <div className="border-b border-default bg-slate-50 px-4 py-3">
@@ -44,11 +44,11 @@ export function AdvisorCallPanel({ conversation, voiceEnabled = true }: Props) {
         <div>
           <p className="text-sm font-medium text-primary">{t("livekit.panelTitle")}</p>
           <p className="text-xs text-secondary">
-            {liveKit.callState === "idle" && t("livekit.stateIdle")}
+            {callState === "idle" && t("livekit.stateIdle")}
             {ringing && t("livekit.stateRinging")}
-            {liveKit.callState === "connecting" && t("livekit.stateConnecting")}
+            {callState === "connecting" && t("livekit.stateConnecting")}
             {inCall && t("livekit.stateInCall")}
-            {liveKit.callState === "ended" && t("livekit.stateEnded")}
+            {callState === "ended" && t("livekit.stateEnded")}
           </p>
           {liveKit.error && <p className="text-xs text-red-600 mt-1">{liveKit.error}</p>}
         </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { useT } from "@/i18n/context";
@@ -203,9 +204,12 @@ export default function PublicBookPage() {
       <header className="border-b border-default bg-surface-elevated">
         <div className="mx-auto flex max-w-lg items-center gap-3 px-4 py-4">
           {info?.branding?.logoUrl ? (
-            <img
+            <Image
               src={info.branding.logoUrl}
               alt=""
+              width={40}
+              height={40}
+              unoptimized
               className="h-10 w-10 rounded-lg object-contain"
             />
           ) : null}

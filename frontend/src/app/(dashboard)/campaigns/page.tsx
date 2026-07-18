@@ -7,7 +7,7 @@ import { useCampaignList, useStartCampaign, usePauseCampaign, useResumeCampaign,
 import { CampaignStatusBadge } from "@/components/campaigns/CampaignStatusBadge";
 import { CampaignProgressBar } from "@/components/campaigns/CampaignProgressBar";
 import { useWhatsAppQualityGuard } from "@/hooks/useWhatsAppQualityGuard";
-import type { Campaign, CampaignStatus } from "@/types";
+import type { Campaign } from "@/types";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
 
@@ -101,16 +101,6 @@ function CampaignActions({ campaign }: { campaign: Campaign }) {
     </div>
   );
 }
-
-const STATUS_FILTERS: Array<{ value: CampaignStatus | "all"; label: string }> = [
-  { value: "all", label: "all" },
-  { value: "draft", label: "draft" },
-  { value: "scheduled", label: "scheduled" },
-  { value: "running", label: "running" },
-  { value: "paused", label: "paused" },
-  { value: "completed", label: "completed" },
-  { value: "cancelled", label: "cancelled" },
-];
 
 export default function CampaignsPage() {
   const t = useT();

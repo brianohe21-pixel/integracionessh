@@ -1,6 +1,7 @@
 "use client";
 
 import type React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOutUser } from "@/lib/auth-session";
@@ -197,11 +198,17 @@ export function Sidebar() {
   const brand = (
     <div className="flex shrink-0 items-center gap-3 border-b border-default px-5 py-4">
       <div
-        className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl"
+        className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl"
         style={{ backgroundColor: "var(--brand-primary, #25D366)" }}
       >
         {branding?.logoUrl ? (
-          <img src={branding.logoUrl} alt="" className="h-full w-full object-cover" />
+          <Image
+            src={branding.logoUrl}
+            alt=""
+            fill
+            unoptimized
+            className="object-cover"
+          />
         ) : (
           <BotMessageSquare className="h-5 w-5 text-white" />
         )}

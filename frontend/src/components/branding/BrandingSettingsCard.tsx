@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Palette, Upload, Trash2 } from "lucide-react";
@@ -96,7 +97,14 @@ export function BrandingSettingsCard() {
         style={{ backgroundColor: primaryColor }}
       >
         {data?.logoUrl ? (
-          <img src={data.logoUrl} alt="" className="h-8 w-8 rounded-lg object-cover bg-surface-elevated/20" />
+          <Image
+            src={data.logoUrl}
+            alt=""
+            width={32}
+            height={32}
+            unoptimized
+            className="h-8 w-8 rounded-lg object-cover bg-surface-elevated/20"
+          />
         ) : (
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-elevated/20 text-sm font-bold">
             {(brandName.trim().charAt(0) || "?").toUpperCase()}
