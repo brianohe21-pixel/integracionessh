@@ -53,12 +53,16 @@ export async function sendAdvisorInviteEmail(params: {
     <p style="color:#666;font-size:12px">Si no esperabas este correo, puedes ignorarlo.</p>
   `.trim();
 
-  await sendEmail({
-    to: [params.to],
-    subject,
-    text,
-    html,
-  });
-
-  return true;
+  try {
+    await sendEmail({
+      to: [params.to],
+      subject,
+      text,
+      html,
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to send advisor invite email:", error);
+    return false;
+  }
 }

@@ -62,4 +62,18 @@ describe("sendAdvisorInviteEmail", () => {
     expect(sent).toBe(false);
     expect(mockedSendEmail).not.toHaveBeenCalled();
   });
+
+  it("returns false when SES send fails", async () => {
+    process.env.SES_FROM_EMAIL = "noreply@example.com";
+    mockedSendEmail.mockRejectedValueOnce(new Error("MessageRejected"));
+
+    const sent = await sendAdvisorInviteEmail({
+      to: "advisor@example.com",
+      advisorName: "Ana",
+      tenantName: "Acme Corp",
+      temporaryPassword: "Aa1!temp-pass",
+    });
+
+    expect(sent).toBe(false);
+  });
 });

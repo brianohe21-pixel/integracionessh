@@ -14,7 +14,7 @@ import {
   assertTenantManagerRole,
 } from "../../lib/auth/cognito.js";
 import { inviteAdvisorUser } from "../../lib/cognito/invite-advisor.js";
-import { disableCognitoUserBySub } from "../../lib/cognito/admin-users.js";
+import { deleteCognitoUserBySub } from "../../lib/cognito/admin-users.js";
 import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
 import { resolveBranding } from "../../lib/branding/resolve.js";
 import { sendAdvisorInviteEmail } from "../../lib/email/advisor-invite.js";
@@ -87,12 +87,17 @@ export async function handler(
 
         const tenant = await getTenant(auth.tenantId);
         const tenantName = tenant ? resolveBranding(tenant).brandName : "la plataforma";
-        const emailSent = await sendAdvisorInviteEmail({
-          to: parsed.data.inviteEmail,
-          advisorName: parsed.data.name,
-          tenantName,
-          temporaryPassword: invited.temporaryPassword,
-        });
+        let emailSent = false;
+        try {
+          emailSent = await sendAdvisorInviteEmail({
+            to: parsed.data.inviteEmail,
+            advisorName: parsed.data.name,
+            tenantName,
+            temporaryPassword: invited.temporaryPassword,
+          });
+        } catch (error) {
+          console.error("Advisor invite email failed:", error);
+        }
 
         return created({
           advisor,
@@ -140,9 +145,9 @@ export async function handler(
 
       if (existing.cognitoUserId) {
         try {
-          await disableCognitoUserBySub(existing.cognitoUserId);
+          await deleteCognitoUserBySub(existing.cognitoUserId);
         } catch {
-          // Advisor record is still removed even if Cognito disable fails.
+          // Advisor record is still removed even if Cognito delete fails.
         }
       }
 
