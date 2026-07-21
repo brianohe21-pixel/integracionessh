@@ -6,10 +6,15 @@ import {
   QueryCommand,
   BatchWriteCommand,
 } from "@aws-sdk/lib-dynamodb";
+import { ConditionalCheckFailedException } from "@aws-sdk/client-dynamodb";
 import { docClient, TABLE_NAME } from "./client.js";
 import type { Campaign, CampaignStatus, CampaignRecipient } from "../../types/index.js";
 
 const RECIPIENT_TTL_SECONDS = 7 * 24 * 60 * 60;
+
+function normalizePhone(phone: string): string {
+  return phone.replace(/\D/g, "");
+}
 
 function campaignKeys(tenantId: string, campaignId: string) {
   return {
@@ -27,13 +32,21 @@ function recipientKeys(tenantId: string, campaignId: string, idx: number) {
   };
 }
 
+function phoneLookupKeys(tenantId: string, phone: string, campaignId: string) {
+  return {
+    PK: `TENANT#${tenantId}#PHONE#${normalizePhone(phone)}`,
+    SK: `CAMPLOOKUP#${campaignId}`,
+  };
+}
+
 export async function createCampaign(
-  input: Omit<Campaign, "sent" | "failed" | "deliveredCount" | "readCount" | "deliveryFailed"> & {
+  input: Omit<Campaign, "sent" | "failed" | "deliveredCount" | "readCount" | "deliveryFailed" | "replyCount"> & {
     sent?: number;
     failed?: number;
     deliveredCount?: number;
     readCount?: number;
     deliveryFailed?: number;
+    replyCount?: number;
   }
 ): Promise<Campaign> {
   const campaign: Campaign = {
@@ -42,6 +55,7 @@ export async function createCampaign(
     deliveredCount: 0,
     readCount: 0,
     deliveryFailed: 0,
+    replyCount: 0,
     ...input,
   };
 
@@ -68,7 +82,9 @@ export async function getCampaign(
 
   if (!result.Item) return null;
   const { PK, SK, GSI1PK, GSI1SK, ...rest } = result.Item;
-  return rest as Campaign;
+  const campaign = rest as Campaign;
+  if (campaign.replyCount === undefined) campaign.replyCount = 0;
+  return campaign;
 }
 
 export async function listCampaigns(
@@ -88,7 +104,11 @@ export async function listCampaigns(
     })
   );
 
-  return (result.Items ?? []).map(({ PK, SK, GSI1PK, GSI1SK, ...rest }) => rest as Campaign);
+  return (result.Items ?? []).map(({ PK, SK, GSI1PK, GSI1SK, ...rest }) => {
+    const campaign = rest as Campaign;
+    if (campaign.replyCount === undefined) campaign.replyCount = 0;
+    return campaign;
+  });
 }
 
 export async function updateCampaignStatus(
@@ -186,6 +206,7 @@ export async function incrementCampaignProgress(
     GSI1SK?: string;
   };
   const campaign = rest as Campaign;
+  if (campaign.replyCount === undefined) campaign.replyCount = 0;
 
   if (
     campaign.sent + campaign.failed >= campaign.total &&
@@ -209,6 +230,160 @@ export async function incrementCampaignProgress(
   }
 
   return campaign;
+}
+
+export async function incrementCampaignReplyCount(
+  tenantId: string,
+  campaignId: string
+): Promise<void> {
+  const now = new Date().toISOString();
+  await docClient.send(
+    new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: { PK: `TENANT#${tenantId}`, SK: `CAMPAIGN#${campaignId}` },
+      UpdateExpression: "ADD replyCount :one SET updatedAt = :now",
+      ExpressionAttributeValues: { ":one": 1, ":now": now },
+    })
+  );
+}
+
+export async function saveCampaignPhoneLookup(
+  tenantId: string,
+  phone: string,
+  campaignId: string,
+  recipientSk: string
+): Promise<void> {
+  const ttl = Math.floor(Date.now() / 1000) + RECIPIENT_TTL_SECONDS;
+  await docClient.send(
+    new PutCommand({
+      TableName: TABLE_NAME,
+      Item: {
+        ...phoneLookupKeys(tenantId, phone, campaignId),
+        tenantId,
+        campaignId,
+        recipientSk,
+        ttl,
+      },
+    })
+  );
+}
+
+export async function listCampaignLookupsForPhone(
+  tenantId: string,
+  phone: string
+): Promise<Array<{ campaignId: string; recipientSk: string }>> {
+  const result = await docClient.send(
+    new QueryCommand({
+      TableName: TABLE_NAME,
+      KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+      ExpressionAttributeValues: {
+        ":pk": `TENANT#${tenantId}#PHONE#${normalizePhone(phone)}`,
+        ":sk": "CAMPLOOKUP#",
+      },
+    })
+  );
+
+  return (result.Items ?? []).map((item) => ({
+    campaignId: item.campaignId as string,
+    recipientSk: item.recipientSk as string,
+  }));
+}
+
+export async function markRecipientReplied(
+  tenantId: string,
+  recipientSk: string,
+  conversationId: string
+): Promise<boolean> {
+  const now = new Date().toISOString();
+  try {
+    await docClient.send(
+      new UpdateCommand({
+        TableName: TABLE_NAME,
+        Key: { PK: `TENANT#${tenantId}`, SK: recipientSk },
+        UpdateExpression:
+          "SET #status = :replied, repliedAt = :now, conversationId = :conversationId",
+        ConditionExpression: "attribute_not_exists(repliedAt)",
+        ExpressionAttributeNames: { "#status": "status" },
+        ExpressionAttributeValues: {
+          ":replied": "replied",
+          ":now": now,
+          ":conversationId": conversationId,
+        },
+      })
+    );
+    return true;
+  } catch (error) {
+    if (error instanceof ConditionalCheckFailedException) return false;
+    throw error;
+  }
+}
+
+export async function recordCampaignReply(
+  tenantId: string,
+  phone: string,
+  conversationId: string
+): Promise<void> {
+  const lookups = await listCampaignLookupsForPhone(tenantId, phone);
+  await Promise.all(
+    lookups.map(async ({ campaignId, recipientSk }) => {
+      const recorded = await markRecipientReplied(tenantId, recipientSk, conversationId);
+      if (recorded) {
+        await incrementCampaignReplyCount(tenantId, campaignId);
+      }
+    })
+  );
+}
+
+export interface CampaignRecipientRecord {
+  recipientKey: string;
+  to: string;
+  status: string;
+  repliedAt?: string;
+  conversationId?: string;
+}
+
+export async function listCampaignRecipients(
+  tenantId: string,
+  campaignId: string,
+  status?: "replied"
+): Promise<CampaignRecipientRecord[]> {
+  const items: CampaignRecipientRecord[] = [];
+  let lastKey: Record<string, unknown> | undefined;
+
+  do {
+    const result = await docClient.send(
+      new QueryCommand({
+        TableName: TABLE_NAME,
+        KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+        ExpressionAttributeValues: {
+          ":pk": `TENANT#${tenantId}`,
+          ":sk": `CAMPREC#${campaignId}#`,
+          ...(status === "replied" ? { ":replied": "replied" } : {}),
+        },
+        ...(status === "replied"
+          ? {
+              FilterExpression: "#status = :replied",
+              ExpressionAttributeNames: { "#status": "status" },
+            }
+          : {}),
+        ExclusiveStartKey: lastKey,
+      })
+    );
+
+    for (const item of result.Items ?? []) {
+      items.push({
+        recipientKey: item.SK as string,
+        to: item.to as string,
+        status: item.status as string,
+        ...(item.repliedAt ? { repliedAt: item.repliedAt as string } : {}),
+        ...(item.conversationId ? { conversationId: item.conversationId as string } : {}),
+      });
+    }
+
+    lastKey = result.LastEvaluatedKey;
+  } while (lastKey);
+
+  return items;
 }
 
 export async function incrementCampaignAnalytics(
@@ -317,9 +492,10 @@ export async function saveCampaignMessageTracking(
   messageId: string,
   campaignId: string,
   tenantId: string,
-  to: string
+  to: string,
+  recipientKey?: string
 ): Promise<void> {
-  const ttl = Math.floor(Date.now() / 1000) + 72 * 60 * 60;
+  const ttl = Math.floor(Date.now() / 1000) + RECIPIENT_TTL_SECONDS;
   await docClient.send(
     new PutCommand({
       TableName: TABLE_NAME,
@@ -334,6 +510,10 @@ export async function saveCampaignMessageTracking(
       },
     })
   );
+
+  if (recipientKey) {
+    await saveCampaignPhoneLookup(tenantId, to, campaignId, recipientKey);
+  }
 }
 
 export async function getCampaignCount(tenantId: string): Promise<number> {

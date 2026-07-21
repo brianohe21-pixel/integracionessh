@@ -19,6 +19,7 @@ import {
   type PendingRecipient,
 } from "../../lib/dynamodb/campaign.repository.js";
 import { listBulkSendFailures } from "../../lib/dynamodb/bulk-job.repository.js";
+import { getCampaignMetrics } from "../../lib/dynamodb/campaign-metrics.repository.js";
 import { extractAuthContext, assertMemberRole } from "../../lib/auth/cognito.js";
 import { ensureTenant } from "../../lib/dynamodb/tenant.repository.js";
 import { assertBulkRecipients, assertCanStartCampaign } from "../../lib/billing/assert-plan.js";
@@ -119,6 +120,7 @@ async function enqueueRecipients(
             templateName,
             language,
             to: r.to.replace(/\D/g, ""),
+            recipientKey: r.recipientKey,
           };
           if (r.components?.length) {
             body.components = r.components as NonNullable<CampaignSQSBody["components"]>;
@@ -254,6 +256,12 @@ export async function handler(
     }
 
     if (method === "GET" && campaignId) {
+      if (rawPath.endsWith("/metrics")) {
+        const metrics = await getCampaignMetrics(auth.tenantId, campaignId);
+        if (!metrics) return notFound("Campaign not found");
+        return ok(metrics);
+      }
+
       if (rawPath.endsWith("/failures")) {
         const campaign = await getCampaign(auth.tenantId, campaignId);
         if (!campaign) return notFound("Campaign not found");

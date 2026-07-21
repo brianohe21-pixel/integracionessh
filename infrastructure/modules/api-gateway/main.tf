@@ -519,6 +519,12 @@ locals {
       function_arn = var.campaigns_function_arn
       protected    = true
     }
+    campaigns_metrics = {
+      route_key    = "GET /campaigns/{campaignId}/metrics"
+      invoke_arn   = var.campaigns_invoke_arn
+      function_arn = var.campaigns_function_arn
+      protected    = true
+    }
     support_tickets_list = {
       route_key    = "GET /support/tickets"
       invoke_arn   = var.support_tickets_invoke_arn

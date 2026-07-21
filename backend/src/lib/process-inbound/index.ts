@@ -50,6 +50,7 @@ import {
   handleInboundOrder,
   isOrderInbound,
 } from "../catalog/order-handler.js";
+import { recordCampaignReply } from "../dynamodb/campaign.repository.js";
 
 async function resolveAccessToken(
   tenantId: string,
@@ -205,6 +206,10 @@ export async function processInboundMessage(
     channel,
     participantId,
     displayName
+  );
+
+  await recordCampaignReply(tenantId, participantId, conversation.conversationId).catch((err) =>
+    console.warn("Failed to record campaign reply:", err)
   );
 
   await markChannelRead(outboundCtxBase(), externalId).catch(() => {});

@@ -628,11 +628,31 @@ export interface Campaign {
   deliveredCount: number;
   readCount: number;
   deliveryFailed: number;
+  replyCount: number;
   createdAt: string;
   updatedAt: string;
   startedAt?: string;
   completedAt?: string;
   requireOptIn?: boolean;
+}
+
+export type CampaignRecipientStatus = "pending" | "sent" | "replied";
+
+export interface CampaignMetrics {
+  campaignId: string;
+  updatedAt: string;
+  replyRate: number;
+  advisorResponseRate: number;
+  averageWaitTimeSeconds: number;
+  pendingWaitCount: number;
+  conversionsByChannel: Record<Channel, number>;
+  funnel: {
+    sent: number;
+    replied: number;
+    handoff: number;
+    advisorResponded: number;
+    converted: number;
+  };
 }
 
 export interface CampaignRecipient {
@@ -650,6 +670,7 @@ export interface CampaignSQSBody {
   templateName: string;
   language: string;
   to: string;
+  recipientKey?: string;
   components?: CampaignRecipient["components"];
 }
 

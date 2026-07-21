@@ -3,6 +3,7 @@ import { getBot } from "../../lib/dynamodb/bot.repository.js";
 import {
   getCampaign,
   incrementCampaignProgress,
+  markRecipientSent,
   saveCampaignMessageTracking,
 } from "../../lib/dynamodb/campaign.repository.js";
 import { parseSendFailureError, saveBulkSendFailure } from "../../lib/dynamodb/bulk-job.repository.js";
@@ -28,7 +29,7 @@ async function processRecord(record: SQSRecord): Promise<void> {
     return;
   }
 
-  const { campaignId, tenantId, botId, templateName, language, to, components } = body;
+  const { campaignId, tenantId, botId, templateName, language, to, components, recipientKey } = body;
 
   const campaign = await getCampaign(tenantId, campaignId);
   if (!campaign) {
@@ -97,8 +98,14 @@ async function processRecord(record: SQSRecord): Promise<void> {
 
     const messageId = result.messages?.[0]?.id;
     if (messageId) {
-      await saveCampaignMessageTracking(messageId, campaignId, tenantId, to).catch((err) =>
-        console.warn(`Failed to save campaign message tracking for ${messageId}:`, err)
+      await saveCampaignMessageTracking(messageId, campaignId, tenantId, to, recipientKey).catch(
+        (err) => console.warn(`Failed to save campaign message tracking for ${messageId}:`, err)
+      );
+    }
+
+    if (recipientKey) {
+      await markRecipientSent(tenantId, recipientKey).catch((err) =>
+        console.warn(`Failed to mark recipient sent ${recipientKey}:`, err)
       );
     }
 
