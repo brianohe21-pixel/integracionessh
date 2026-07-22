@@ -42,6 +42,8 @@ import Link from "next/link";
 import { AdvisorCallPanel } from "@/components/conversations/AdvisorCallPanel";
 import { WhatsAppSoftphone } from "@/components/conversations/WhatsAppSoftphone";
 import { ConversationContactPanel } from "@/components/conversations/ConversationContactPanel";
+import { MacroPicker } from "@/components/conversations/MacroPicker";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 function messageListKey(msg: Message, index: number): string {
   return `${msg.messageId}::${msg.timestamp}::${index}`;
@@ -74,6 +76,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
 
   const { data: bots } = useBots();
   const { data: advisors } = useAdvisors();
+  const { user: currentUser } = useCurrentUser();
   const {
     data: conversationsData,
     isLoading,
@@ -179,6 +182,14 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   }
   const isHuman = (selectedConversation?.handoffMode ?? "bot") === "human";
   const canCompose = isHuman && !!selectedConversation;
+  const assignedAdvisor = advisors?.find(
+    (a) => a.advisorId === selectedConversation?.assignedAdvisorId
+  );
+  const macroPlaceholderContext = {
+    contactName: selectedConversation?.contactName,
+    phoneNumber: selectedConversation?.phoneNumber,
+    advisorName: assignedAdvisor?.name ?? (advisorMode ? currentUser?.name : undefined),
+  };
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
@@ -654,12 +665,20 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                 onSubmit={handleSend}
                 className="relative z-10 flex gap-2 border-t border-default bg-surface-elevated p-4"
               >
+                {selectedConversation && (
+                  <MacroPicker
+                    botId={selectedConversation.botId}
+                    placeholderContext={macroPlaceholderContext}
+                    draft={draft}
+                    onInsert={setDraft}
+                  />
+                )}
                 <Textarea
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   rows={2}
                   placeholder={t("conversations.messagePlaceholderShort")}
-                  className="resize-none"
+                  className="resize-none flex-1"
                 />
                 <Button
                   type="submit"

@@ -8,6 +8,7 @@ import {
   Globe,
   Camera,
   MessageCircle,
+  MessageSquarePlus,
   Phone,
   Settings,
   Workflow,
@@ -21,6 +22,7 @@ import { BotCallingSettings } from "@/components/bots/BotCallingSettings";
 import { BotInstagramConnect } from "@/components/bots/BotInstagramConnect";
 import { BotWebchatSettings } from "@/components/bots/BotWebchatSettings";
 import { BotMetaFlowsPanel } from "@/components/bots/BotMetaFlowsPanel";
+import { BotMacrosPanel } from "@/components/bots/BotMacrosPanel";
 import { useT } from "@/i18n/context";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -31,6 +33,7 @@ const TAB_IDS = [
   "instagram",
   "webchat",
   "knowledge",
+  "macros",
   "metaFlows",
 ] as const;
 
@@ -58,6 +61,7 @@ export default function EditBotPage() {
         { id: "instagram" as const, label: t("bots.tabInstagram"), icon: <Camera className="w-4 h-4" /> },
         { id: "webchat" as const, label: t("bots.tabWebchat"), icon: <Globe className="w-4 h-4" /> },
         { id: "knowledge" as const, label: t("bots.tabKnowledge"), icon: <BookOpen className="w-4 h-4" /> },
+        { id: "macros" as const, label: t("bots.tabMacros"), icon: <MessageSquarePlus className="w-4 h-4" /> },
         { id: "metaFlows" as const, label: t("bots.tabMetaFlows"), icon: <Workflow className="w-4 h-4" /> },
       ] satisfies { id: BotEditTab; label: string; icon: ReactNode }[],
     [t]
@@ -142,6 +146,8 @@ export default function EditBotPage() {
       {bot && activeTab === "webchat" && <BotWebchatSettings bot={bot} />}
 
       {bot && activeTab === "knowledge" && <BotKnowledge bot={bot} />}
+
+      {bot && activeTab === "macros" && <BotMacrosPanel bot={bot} />}
 
       {bot && activeTab === "metaFlows" && <BotMetaFlowsPanel botId={bot.botId} />}
     </DashboardPage>

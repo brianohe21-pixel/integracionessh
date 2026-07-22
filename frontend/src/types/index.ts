@@ -313,6 +313,18 @@ export interface AdvisorInviteResponse {
   };
 }
 
+export interface Macro {
+  macroId: string;
+  tenantId: string;
+  botId: string;
+  title: string;
+  content: string;
+  shortcut?: string;
+  sortOrder?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface TemplateComponent {
   type: "HEADER" | "BODY" | "FOOTER" | "BUTTONS";
   format?: "TEXT" | "IMAGE" | "VIDEO" | "DOCUMENT";
@@ -368,11 +380,29 @@ export interface Campaign {
   deliveredCount: number;
   readCount: number;
   deliveryFailed: number;
+  replyCount: number;
   createdAt: string;
   updatedAt: string;
   startedAt?: string;
   completedAt?: string;
   requireOptIn?: boolean;
+}
+
+export interface CampaignMetrics {
+  campaignId: string;
+  updatedAt: string;
+  replyRate: number;
+  advisorResponseRate: number;
+  averageWaitTimeSeconds: number;
+  pendingWaitCount: number;
+  conversionsByChannel: Record<Channel, number>;
+  funnel: {
+    sent: number;
+    replied: number;
+    handoff: number;
+    advisorResponded: number;
+    converted: number;
+  };
 }
 
 export type BulkSendJobStatus = "queued" | "processing" | "completed" | "failed";
