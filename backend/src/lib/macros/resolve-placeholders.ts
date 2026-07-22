@@ -21,6 +21,11 @@ export function resolvePlaceholders(
     const field = PLACEHOLDER_MAP[key.toLowerCase()];
     if (!field) return match;
 
+    if (field === "contactName") {
+      const value = context.contactName?.trim() || context.phoneNumber?.trim();
+      return value || match;
+    }
+
     const value = context[field];
     if (!value) return match;
 
