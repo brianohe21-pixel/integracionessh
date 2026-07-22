@@ -123,7 +123,9 @@ export function MacroPicker({ botId, placeholderContext, draft, onInsert, onShor
                         <span className="text-xs text-muted">/{macro.shortcut}</span>
                       )}
                     </div>
-                    <p className="mt-0.5 line-clamp-2 text-xs text-secondary">{macro.content}</p>
+                    <p className="mt-0.5 line-clamp-2 text-xs text-secondary">
+                      {resolvePlaceholders(macro.content, placeholderContext)}
+                    </p>
                   </button>
                 </li>
               ))

@@ -186,7 +186,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     (a) => a.advisorId === selectedConversation?.assignedAdvisorId
   );
   const macroPlaceholderContext = {
-    contactName: selectedConversation?.contactName,
+    contactName: selectedConversation ? contactDisplay(selectedConversation) : undefined,
     phoneNumber: selectedConversation?.phoneNumber,
     advisorName: assignedAdvisor?.name ?? (advisorMode ? currentUser?.name : undefined),
   };
