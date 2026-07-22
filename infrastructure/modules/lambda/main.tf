@@ -507,6 +507,16 @@ locals {
         ENVIRONMENT             = var.environment
       }
     }
+    macros = {
+      handler     = "macros/index.handler"
+      description = "CRUD API for advisor quick-reply macros per bot"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME  = var.dynamodb_table_name
+        ENVIRONMENT = var.environment
+      }
+    }
     process_knowledge = {
       handler     = "process-knowledge/index.handler"
       description = "Indexes knowledge documents from SQS"

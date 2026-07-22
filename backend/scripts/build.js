@@ -36,6 +36,7 @@ const entryPoints = [
   "src/functions/automations/index.ts",
   "src/functions/process-automation/index.ts",
   "src/functions/knowledge/index.ts",
+  "src/functions/macros/index.ts",
   "src/functions/process-knowledge/index.ts",
   "src/functions/meta-flows/index.ts",
   "src/functions/flows/index.ts",

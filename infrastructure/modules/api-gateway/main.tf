@@ -1197,6 +1197,36 @@ locals {
       function_arn = var.knowledge_function_arn
       protected    = true
     }
+    macros_list = {
+      route_key    = "GET /bots/{botId}/macros"
+      invoke_arn   = var.macros_invoke_arn
+      function_arn = var.macros_function_arn
+      protected    = true
+    }
+    macros_create = {
+      route_key    = "POST /bots/{botId}/macros"
+      invoke_arn   = var.macros_invoke_arn
+      function_arn = var.macros_function_arn
+      protected    = true
+    }
+    macros_get = {
+      route_key    = "GET /bots/{botId}/macros/{macroId}"
+      invoke_arn   = var.macros_invoke_arn
+      function_arn = var.macros_function_arn
+      protected    = true
+    }
+    macros_update = {
+      route_key    = "PUT /bots/{botId}/macros/{macroId}"
+      invoke_arn   = var.macros_invoke_arn
+      function_arn = var.macros_function_arn
+      protected    = true
+    }
+    macros_delete = {
+      route_key    = "DELETE /bots/{botId}/macros/{macroId}"
+      invoke_arn   = var.macros_invoke_arn
+      function_arn = var.macros_function_arn
+      protected    = true
+    }
     meta_flows_responses = {
       route_key    = "GET /bots/{botId}/meta-flows/responses"
       invoke_arn   = var.meta_flows_invoke_arn
@@ -1340,6 +1370,7 @@ resource "aws_lambda_permission" "api_gw" {
     integrations      = var.integrations_function_arn
     automations       = var.automations_function_arn
     knowledge         = var.knowledge_function_arn
+    macros            = var.macros_function_arn
     meta_flows        = var.meta_flows_function_arn
     flows             = var.flows_function_arn
     calling           = var.calling_function_arn

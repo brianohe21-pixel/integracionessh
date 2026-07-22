@@ -177,6 +177,18 @@ export interface Advisor {
   updatedAt: string;
 }
 
+export interface Macro {
+  macroId: string;
+  tenantId: string;
+  botId: string;
+  title: string;
+  content: string;
+  shortcut?: string;
+  sortOrder?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type MarketingConsent = "unknown" | "opt_in" | "opt_out";
 
 export type ConsentSource = "manual" | "import" | "whatsapp_keyword" | "panel";

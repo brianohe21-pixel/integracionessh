@@ -248,6 +248,8 @@ module "api_gateway" {
   automations_function_arn       = module.lambda.automations_function_arn
   knowledge_invoke_arn           = module.lambda.knowledge_invoke_arn
   knowledge_function_arn         = module.lambda.knowledge_function_arn
+  macros_invoke_arn              = module.lambda.macros_invoke_arn
+  macros_function_arn            = module.lambda.macros_function_arn
   meta_flows_invoke_arn          = module.lambda.meta_flows_invoke_arn
   meta_flows_function_arn        = module.lambda.meta_flows_function_arn
   flows_invoke_arn               = module.lambda.flows_invoke_arn

@@ -170,6 +170,14 @@ output "knowledge_function_arn" {
   value = aws_lambda_function.functions["knowledge"].arn
 }
 
+output "macros_invoke_arn" {
+  value = aws_lambda_function.functions["macros"].invoke_arn
+}
+
+output "macros_function_arn" {
+  value = aws_lambda_function.functions["macros"].arn
+}
+
 output "meta_flows_invoke_arn" {
   value = aws_lambda_function.functions["meta_flows"].invoke_arn
 }

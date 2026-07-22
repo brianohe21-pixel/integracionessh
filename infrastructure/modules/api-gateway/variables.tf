@@ -190,6 +190,14 @@ variable "knowledge_function_arn" {
   type = string
 }
 
+variable "macros_invoke_arn" {
+  type = string
+}
+
+variable "macros_function_arn" {
+  type = string
+}
+
 variable "meta_flows_invoke_arn" {
   type = string
 }
