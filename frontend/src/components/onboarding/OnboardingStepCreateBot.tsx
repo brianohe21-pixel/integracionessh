@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { useCreateBot } from "@/hooks/useBots";
 import { useLocale, useT } from "@/i18n/context";
-import { getBotTemplate } from "@/lib/bot-templates";
-import type { BotIndustryTemplateId } from "@/lib/bot-templates";
+import { DEFAULT_MODEL_ID } from "@/lib/ai-models";
+import { getBotTemplate, type BotIndustryTemplateId } from "@/lib/bot-templates";
 import { BotTemplatePicker } from "@/components/bots/BotTemplatePicker";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -58,7 +58,7 @@ export function OnboardingStepCreateBot({
         name: name.trim(),
         responseMode: "openai",
         systemPrompt,
-        model: "gpt-4o-mini",
+        model: DEFAULT_MODEL_ID,
         temperature: 0.7,
         maxTokens: 1024,
         phoneNumberId,

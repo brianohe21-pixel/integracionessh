@@ -5,7 +5,8 @@ import { Plus, Zap, Trash2 } from "lucide-react";
 import { useAutomations, useCreateAutomation, useDeleteAutomation, useToggleAutomation } from "@/hooks/useAutomations";
 import { useBots } from "@/hooks/useBots";
 import { useT } from "@/i18n/context";
-import type { AutomationAction, AutomationRule, AutomationTrigger } from "@/types";
+import type { AutomationAction, AutomationRule, AutomationTrigger, LocalizedText } from "@/types";
+import { LocalizedTextField } from "@/components/ui/LocalizedTextField";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { TableContainer } from "@/components/ui/TableContainer";
@@ -22,7 +23,7 @@ export default function AutomationsPage() {
   const [trigger, setTrigger] = useState<AutomationTrigger>("keyword");
   const [action, setAction] = useState<AutomationAction>("send_text");
   const [keywords, setKeywords] = useState("");
-  const [messageText, setMessageText] = useState("");
+  const [messageText, setMessageText] = useState<LocalizedText>("");
   const [tags, setTags] = useState("");
   const [metaFlowId, setMetaFlowId] = useState("");
   const [error, setError] = useState("");
@@ -143,13 +144,7 @@ export default function AutomationsPage() {
             />
           )}
           {action === "send_text" && (
-            <textarea
-              value={messageText}
-              onChange={(e) => setMessageText(e.target.value)}
-              placeholder={t("automations.messagePlaceholder")}
-              className="w-full px-3 py-2 border border-default rounded-lg text-sm"
-              rows={3}
-            />
+            <LocalizedTextField value={messageText} onChange={setMessageText} rows={3} />
           )}
           {action === "tag_contact" && (
             <input

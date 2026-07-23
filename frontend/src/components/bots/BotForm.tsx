@@ -9,12 +9,19 @@ import { useCreateBot, useUpdateBot } from "@/hooks/useBots";
 import { useCreateFlow, useToggleFlow } from "@/hooks/useFlows";
 import { useWhatsAppConnect } from "@/hooks/useWhatsAppConnect";
 import { useLocale, useT } from "@/i18n/context";
-import { getAllowedModelsForPlan } from "@/lib/plan-config";
+import { getAllowedModelDefinitionsForPlan } from "@/lib/plan-config";
+import {
+  AI_MODEL_CATEGORIES,
+  AI_MODELS,
+  DEFAULT_MODEL_ID,
+  groupModelsByCategory,
+  type AiModelCategory,
+} from "@/lib/ai-models";
 import { getBotTemplate } from "@/lib/bot-templates";
 import type { BotIndustryTemplateId } from "@/lib/bot-templates";
 import { EmbeddedSignupLauncher } from "@/components/whatsapp/EmbeddedSignupLauncher";
 import { BotTemplatePicker } from "@/components/bots/BotTemplatePicker";
-import type { Bot, Tenant } from "@/types";
+import type { Bot, BotLocale, Tenant } from "@/types";
 
 const SYSTEM_PROMPT_MAX_LENGTH = 4096;
 
@@ -34,9 +41,10 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
 
   const [form, setForm] = useState({
     name: bot?.name ?? "",
+    defaultLocale: (bot?.defaultLocale ?? locale) as BotLocale,
     responseMode: bot?.responseMode ?? "openai",
     systemPrompt: bot?.systemPrompt ?? "",
-    model: bot?.model ?? "gpt-4o-mini",
+    model: bot?.model ?? DEFAULT_MODEL_ID,
     temperature: bot?.temperature ?? 0.7,
     maxTokens: bot?.maxTokens ?? 1024,
     webhookUrl: bot?.webhookUrl ?? "",
@@ -62,12 +70,17 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
     queryFn: () => api.get<Tenant>("/tenants/me"),
   });
 
-  const allowedModels = getAllowedModelsForPlan(tenant?.plan ?? "free");
-  const modelLabels: Record<string, string> = {
-    "gpt-4o-mini": "GPT-4o Mini",
-    "gpt-4o": "GPT-4o",
-    "gpt-4-turbo": "GPT-4 Turbo",
-  };
+  const allowedModels = getAllowedModelDefinitionsForPlan(tenant?.plan ?? "free");
+  const displayModels = [...allowedModels];
+  if (isEditing && form.model && !displayModels.some((model) => model.id === form.model)) {
+    const currentModel = AI_MODELS.find((model) => model.id === form.model);
+    if (currentModel) displayModels.push(currentModel);
+  }
+  const modelsByCategory = groupModelsByCategory(displayModels);
+
+  function getModelCategoryLabel(category: AiModelCategory): string {
+    return t(`bots.modelCategory.${category}`);
+  }
 
   const isPending =
     createBot.isPending ||
@@ -158,6 +171,7 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
 
       const payload: Record<string, unknown> = {
         name: form.name,
+        defaultLocale: form.defaultLocale,
         responseMode: form.responseMode,
         phoneNumberId: form.phoneNumberId,
         whatsappBusinessAccountId: form.whatsappBusinessAccountId,
@@ -224,6 +238,21 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
             className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
             placeholder={t("bots.botNamePlaceholder")}
           />
+        </div>
+
+        <div className="col-span-2">
+          <label className="block text-sm font-medium text-secondary mb-1">
+            {t("bots.defaultLocale")}
+          </label>
+          <select
+            name="defaultLocale"
+            value={form.defaultLocale}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent bg-surface-elevated"
+          >
+            <option value="es">{t("bots.defaultLocaleEs")}</option>
+            <option value="en">{t("bots.defaultLocaleEn")}</option>
+          </select>
         </div>
 
         <div className="col-span-2">
@@ -310,11 +339,19 @@ export function BotForm({ bot, wide = false }: BotFormProps) {
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent bg-surface-elevated"
               >
-                {allowedModels.map((model) => (
-                  <option key={model} value={model}>
-                    {modelLabels[model] ?? model}
-                  </option>
-                ))}
+                {AI_MODEL_CATEGORIES.map((category) => {
+                  const models = modelsByCategory[category];
+                  if (!models?.length) return null;
+                  return (
+                    <optgroup key={category} label={getModelCategoryLabel(category)}>
+                      {models.map((model) => (
+                        <option key={model.id} value={model.id}>
+                          {model.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                  );
+                })}
               </select>
               {tenant?.plan !== "enterprise" && (
                 <p className="mt-1 text-xs text-secondary">{t("bots.modelPlanHint")}</p>

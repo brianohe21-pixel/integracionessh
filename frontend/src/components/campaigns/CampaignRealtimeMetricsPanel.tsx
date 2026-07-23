@@ -6,12 +6,24 @@ import { useFormatters } from "@/hooks/useFormatters";
 import { formatWaitTime, useCampaignMetrics } from "@/hooks/useCampaignMetrics";
 import type { Campaign, Channel } from "@/types";
 
-const CHANNELS: Channel[] = ["whatsapp", "instagram", "webchat"];
+const CHANNELS: Channel[] = [
+  "whatsapp",
+  "instagram",
+  "webchat",
+  "telegram",
+  "messenger",
+  "sms",
+  "email",
+];
 
 const CHANNEL_COLORS: Record<Channel, { bar: string; text: string }> = {
   whatsapp: { bar: "bg-green-500", text: "text-green-700" },
   instagram: { bar: "bg-pink-500", text: "text-pink-700" },
   webchat: { bar: "bg-blue-500", text: "text-blue-700" },
+  telegram: { bar: "bg-sky-500", text: "text-sky-700" },
+  messenger: { bar: "bg-indigo-500", text: "text-indigo-700" },
+  sms: { bar: "bg-amber-500", text: "text-amber-700" },
+  email: { bar: "bg-violet-500", text: "text-violet-700" },
 };
 
 interface CampaignRealtimeMetricsPanelProps {

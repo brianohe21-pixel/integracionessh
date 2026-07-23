@@ -19,6 +19,75 @@ export interface ResolvedTenantBranding {
   logoUrl?: string;
 }
 
+export interface InboxSlaSettings {
+  enabled: boolean;
+  firstResponseMinutes: number;
+}
+
+export type ReportScheduleFrequency = "daily" | "weekly";
+
+export interface MetricsReportSchedule {
+  enabled: boolean;
+  frequency: ReportScheduleFrequency;
+  recipients: string[];
+  hour: number;
+  dayOfWeek?: number;
+  timezone: string;
+  lastSentAt?: string;
+}
+
+export type InboxSlaStatus = "disabled" | "ok" | "at_risk" | "breached" | "met" | "missed";
+
+export interface InboxSlaAdvisorMetric {
+  advisorId: string;
+  metCount: number;
+  missedCount: number;
+  complianceRate: number;
+}
+
+export interface InboxSlaMetrics {
+  enabled: boolean;
+  firstResponseMinutes?: number;
+  openBreached: number;
+  openAtRisk: number;
+  metCount: number;
+  missedCount: number;
+  complianceRate: number;
+  averageResponseSeconds: number;
+  byAdvisor: InboxSlaAdvisorMetric[];
+}
+
+export interface AdvisorWorkloadMetric {
+  advisorId: string;
+  name: string;
+  open: number;
+  new: number;
+  pending: number;
+  totalActive: number;
+  slaBreached: number;
+  slaAtRisk: number;
+}
+
+export interface AdvisorWorkloadUnassigned {
+  count: number;
+  open: number;
+  new: number;
+  pending: number;
+  totalActive: number;
+  slaBreached: number;
+  slaAtRisk: number;
+}
+
+export interface AdvisorWorkloadMetrics {
+  advisors: AdvisorWorkloadMetric[];
+  unassigned: AdvisorWorkloadUnassigned;
+}
+
+export interface BulkHandoffResult {
+  succeeded: string[];
+  failed: { conversationId: string; error: string }[];
+}
+
 export interface Tenant {
   tenantId: string;
   name: string;
@@ -26,6 +95,7 @@ export interface Tenant {
   plan: TenantPlan;
   status: "active" | "suspended" | "pending";
   branding?: TenantBranding;
+  inboxSla?: InboxSlaSettings;
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   subscriptionStatus?: SubscriptionStatus;
@@ -71,15 +141,30 @@ export interface WhatsAppPhoneInfo {
   messagingLimit?: string;
 }
 
-export type Channel = "whatsapp" | "instagram" | "webchat";
+export type Channel =
+  | "whatsapp"
+  | "instagram"
+  | "webchat"
+  | "telegram"
+  | "messenger"
+  | "sms"
+  | "email";
+
+export type BotLocale = "es" | "en";
+
+export type AiProvider = "openai" | "anthropic";
+
+export type LocalizedText = string | Record<BotLocale, string>;
 
 export interface Bot {
   botId: string;
   tenantId: string;
   name: string;
+  defaultLocale?: BotLocale;
   responseMode: "openai" | "webhook";
   systemPrompt?: string;
-  model?: "gpt-4o" | "gpt-4o-mini" | "gpt-4-turbo";
+  aiProvider?: AiProvider;
+  model?: string;
   temperature?: number;
   maxTokens?: number;
   webhookUrl?: string;
@@ -93,6 +178,13 @@ export interface Bot {
   webchatWidgetKey?: string;
   webchatVoiceEnabled?: boolean;
   webchatVideoEnabled?: boolean;
+  telegramEnabled?: boolean;
+  telegramBotUsername?: string;
+  messengerPageId?: string;
+  smsEnabled?: boolean;
+  smsOriginationNumber?: string;
+  emailEnabled?: boolean;
+  emailAddress?: string;
   status: "active" | "inactive";
   createdAt: string;
   updatedAt: string;
@@ -201,8 +293,12 @@ export interface Conversation {
   csatScore?: number;
   csatSubmittedAt?: string;
   internalNote?: string;
+  copilotSummary?: string;
+  detectedIntent?: string;
+  copilotGeneratedAt?: string;
   messageCount: number;
   lastMessageAt: string;
+  locale?: BotLocale;
   createdAt: string;
 }
 
@@ -607,16 +703,16 @@ export interface FlowNodeData {
   triggerType?: FlowTriggerType;
   keywords?: string[];
   matchMode?: "contains" | "exact";
-  messageText?: string;
+  messageText?: LocalizedText;
   templateName?: string;
   templateLanguage?: string;
   templateVariables?: Record<string, string>;
   conditionVariable?: string;
   conditionOperator?: "contains" | "equals" | "not_equals";
   conditionValue?: string;
-  buttons?: Array<{ id: string; title: string }>;
+  buttons?: Array<{ id: string; title: LocalizedText }>;
   metaFlowId?: string;
-  metaFlowCta?: string;
+  metaFlowCta?: LocalizedText;
   delaySeconds?: number;
   variableName?: string;
   variableValue?: string;
@@ -624,17 +720,17 @@ export interface FlowNodeData {
   httpMethod?: "GET" | "POST";
   httpBody?: string;
   haltPipeline?: boolean;
-  confirmationMessage?: string;
+  confirmationMessage?: LocalizedText;
   maxDaysToShow?: number;
   amountInCents?: number;
-  paymentDescription?: string;
-  paymentMessageTemplate?: string;
+  paymentDescription?: LocalizedText;
+  paymentMessageTemplate?: LocalizedText;
   waitForPayment?: boolean;
-  catalogMessageText?: string;
+  catalogMessageText?: LocalizedText;
   productRetailerIds?: string[];
-  multiProductHeader?: string;
-  multiProductBody?: string;
-  orderConfirmationMessage?: string;
+  multiProductHeader?: LocalizedText;
+  multiProductBody?: LocalizedText;
+  orderConfirmationMessage?: LocalizedText;
 }
 
 export interface FlowNode {
@@ -706,7 +802,7 @@ export interface AutomationRule {
   targetPhones?: string[];
   targetTags?: string[];
   action: AutomationAction;
-  messageText?: string;
+  messageText?: LocalizedText;
   templateName?: string;
   templateLanguage?: string;
   templateVariables?: Record<string, string>;
@@ -837,7 +933,45 @@ export interface AppCatalogItem {
 }
 
 export type PaymentRequestStatus = "pending" | "paid" | "declined" | "expired";
-export type PaymentRequestSource = "manual" | "flow" | "catalog_order" | "calendar_booking";
+export type PaymentRequestSource =
+  | "manual"
+  | "flow"
+  | "catalog_order"
+  | "calendar_booking"
+  | "quotation";
+
+export type QuotationStatus = "sent" | "paid" | "expired" | "cancelled";
+
+export interface QuotationLineItem {
+  description: string;
+  quantity: number;
+  unitPriceInCents: number;
+  totalInCents: number;
+}
+
+export interface Quotation {
+  quotationId: string;
+  tenantId: string;
+  botId: string;
+  conversationId: string;
+  contactPhone: string;
+  contactName?: string;
+  number: string;
+  items: QuotationLineItem[];
+  subtotalInCents: number;
+  totalInCents: number;
+  currency: "COP";
+  notes?: string;
+  validUntil?: string;
+  status: QuotationStatus;
+  paymentId?: string;
+  pdfS3Key?: string;
+  pdfDownloadUrl?: string;
+  createdByAdvisorId?: string;
+  sentAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export type CatalogSyncStatus = "linked" | "syncing" | "error" | "not_linked";
 export type ProductAvailability = "in_stock" | "out_of_stock";
@@ -944,6 +1078,7 @@ export interface PaymentRequest {
   conversationId?: string;
   flowRunId?: string;
   bookingId?: string;
+  quotationId?: string;
   amountInCents: number;
   currency: "COP";
   description: string;

@@ -2,6 +2,7 @@ import { Headphones } from "lucide-react";
 import type { BotIndustryTemplate, BotTemplateLocale } from "./types";
 import {
   branchX,
+  bilingual,
   buttonsNode,
   conditionNode,
   edge,
@@ -58,7 +59,8 @@ const copy = {
 } as const;
 
 function buildFlow(locale: BotTemplateLocale) {
-  const t = copy[locale];
+  const es = copy.es;
+  const en = copy.en;
   const btnOrderStatus = "btn-order-status";
   const btnTicket = "btn-ticket";
   const btnFaq = "btn-faq";
@@ -66,20 +68,20 @@ function buildFlow(locale: BotTemplateLocale) {
 
   const nodes = [
     triggerNode("trigger-1", "any_message", "Start", rowY(0)),
-    messageNode("message-welcome", t.welcome, "Welcome", 400, rowY(1)),
+    messageNode("message-welcome", bilingual(es.welcome, en.welcome), "Welcome", 400, rowY(1)),
     buttonsNode(
       "buttons-menu",
-      t.menuPrompt,
+      bilingual(es.menuPrompt, en.menuPrompt),
       [
-        { id: btnOrderStatus, title: t.btnOrderStatus },
-        { id: btnTicket, title: t.btnTicket },
-        { id: btnFaq, title: t.btnFaq },
-        { id: btnAgent, title: t.btnAgent },
+        { id: btnOrderStatus, title: bilingual(es.btnOrderStatus, en.btnOrderStatus) },
+        { id: btnTicket, title: bilingual(es.btnTicket, en.btnTicket) },
+        { id: btnFaq, title: bilingual(es.btnFaq, en.btnFaq) },
+        { id: btnAgent, title: bilingual(es.btnAgent, en.btnAgent) },
       ],
       "Menu",
       rowY(2)
     ),
-    messageNode("message-order-prompt", t.orderPrompt, "Order prompt", branchX(0, 4), rowY(3)),
+    messageNode("message-order-prompt", bilingual(es.orderPrompt, en.orderPrompt), "Order prompt", branchX(0, 4), rowY(3)),
     conditionNode(
       "condition-order",
       "last_input",
@@ -89,15 +91,15 @@ function buildFlow(locale: BotTemplateLocale) {
       branchX(0, 4),
       rowY(4)
     ),
-    messageNode("message-order-found", t.orderFound, "Order found", branchX(0, 4) - 80, rowY(5)),
+    messageNode("message-order-found", bilingual(es.orderFound, en.orderFound), "Order found", branchX(0, 4) - 80, rowY(5)),
     handoffNode("handoff-order", "Handoff", branchX(0, 4) - 80, rowY(6)),
     endNode("end-order-found", "End", branchX(0, 4) - 80, rowY(7)),
-    messageNode("message-order-notfound", t.orderNotFound, "Not found", branchX(0, 4) + 80, rowY(5)),
+    messageNode("message-order-notfound", bilingual(es.orderNotFound, en.orderNotFound), "Not found", branchX(0, 4) + 80, rowY(5)),
     endNode("end-order-notfound", "End", branchX(0, 4) + 80, rowY(6)),
-    messageNode("message-ticket", t.ticketMessage, "Ticket", branchX(1, 4), rowY(3)),
+    messageNode("message-ticket", bilingual(es.ticketMessage, en.ticketMessage), "Ticket", branchX(1, 4), rowY(3)),
     handoffNode("handoff-ticket", "Handoff", branchX(1, 4), rowY(4)),
     endNode("end-ticket", "End", branchX(1, 4), rowY(5)),
-    messageNode("message-faq", t.faqMessage, "FAQ", branchX(2, 4), rowY(3)),
+    messageNode("message-faq", bilingual(es.faqMessage, en.faqMessage), "FAQ", branchX(2, 4), rowY(3)),
     endNode("end-faq", "End", branchX(2, 4), rowY(4)),
     handoffNode("handoff-agent", "Handoff", branchX(3, 4), rowY(3)),
     endNode("end-agent", "End", branchX(3, 4), rowY(4)),
@@ -123,11 +125,11 @@ function buildFlow(locale: BotTemplateLocale) {
   ];
 
   return {
-    name: t.flowName,
+    name: copy[locale].flowName,
     nodes,
     edges,
     entryNodeId: "trigger-1",
-    welcomeMessage: t.welcome,
+    welcomeMessage: copy[locale].welcome,
   };
 }
 

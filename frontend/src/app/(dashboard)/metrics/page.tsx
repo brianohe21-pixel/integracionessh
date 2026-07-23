@@ -10,10 +10,12 @@ import {
   Activity,
   Phone,
   AlertTriangle,
+  Download,
 } from "lucide-react";
 import Link from "next/link";
 import { useMetrics } from "@/hooks/useMetrics";
 import { useMarketingMetrics } from "@/hooks/useMarketingMetrics";
+import { useInboxSlaMetrics } from "@/hooks/useInboxSlaMetrics";
 import { useCallingMetrics, formatCallDuration } from "@/hooks/useCallingMetrics";
 import {
   MetricsFiltersBar,
@@ -28,6 +30,8 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { TableContainer } from "@/components/ui/TableContainer";
 import { useT } from "@/i18n/context";
 import type { BulkSendJobStatus, CallingMetricsHealth } from "@/types";
+import { formatElapsedDuration } from "@/lib/inbox-sla";
+import { useMetricsExport } from "@/hooks/useMetricsExport";
 
 function KpiCard({
   label,
@@ -72,6 +76,7 @@ function bulkStatusVariant(status: BulkSendJobStatus): "success" | "warning" | "
 
 export default function MetricsPage() {
   const t = useT();
+  const { exportMetrics, isExporting } = useMetricsExport();
   const { formatDate, formatNumber, formatRelativeTime } = useFormatters();
   const { filters, setFilters } = useMetricsFilters();
   const { data: metrics, isLoading, error } = useMetrics();
@@ -81,6 +86,7 @@ export default function MetricsPage() {
   );
   const filteredUsage = useFilteredUsageMetrics(metrics, filters.botId, dateRange);
   const { data: marketing, isLoading: marketingLoading } = useMarketingMetrics();
+  const { data: inboxSlaMetrics, isLoading: inboxSlaLoading } = useInboxSlaMetrics();
   const { data: calling, isLoading: callingLoading } = useCallingMetrics(
     dateRange,
     filters.botId || undefined
@@ -129,7 +135,21 @@ export default function MetricsPage() {
 
   return (
     <DashboardPage>
-      <PageHeader title={t("metrics.title")} subtitle={t("metrics.subtitle")} />
+      <PageHeader
+        title={t("metrics.title")}
+        subtitle={t("metrics.subtitle")}
+        actions={
+          <button
+            type="button"
+            onClick={() => void exportMetrics()}
+            disabled={isExporting}
+            className="inline-flex items-center gap-2 rounded-lg border border-default bg-surface-elevated px-3 py-2 text-sm font-medium text-primary disabled:opacity-50"
+          >
+            <Download className="h-4 w-4" />
+            {isExporting ? t("metrics.exportingCsv") : t("metrics.exportCsv")}
+          </button>
+        }
+      />
 
       {!isLoading && metrics && (
         <div className="mb-6">
@@ -252,6 +272,43 @@ export default function MetricsPage() {
                   icon={<Activity className="w-5 h-5" />}
                 />
               </div>
+              {!inboxSlaLoading && inboxSlaMetrics?.enabled && (
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="font-semibold text-primary">{t("metrics.inboxSlaTitle")}</h3>
+                    <p className="text-sm text-secondary">
+                      {t("metrics.inboxSlaSubtitle", {
+                        minutes: inboxSlaMetrics.firstResponseMinutes ?? 5,
+                      })}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <KpiCard
+                      label={t("metrics.inboxSlaCompliance")}
+                      value={`${inboxSlaMetrics.complianceRate}%`}
+                      sub={`${formatNumber(inboxSlaMetrics.metCount)} / ${formatNumber(
+                        inboxSlaMetrics.metCount + inboxSlaMetrics.missedCount
+                      )}`}
+                      icon={<BarChart3 className="w-5 h-5" />}
+                    />
+                    <KpiCard
+                      label={t("metrics.inboxSlaAvgResponse")}
+                      value={formatElapsedDuration(inboxSlaMetrics.averageResponseSeconds)}
+                      icon={<Activity className="w-5 h-5" />}
+                    />
+                    <KpiCard
+                      label={t("metrics.inboxSlaOpenBreached")}
+                      value={formatNumber(inboxSlaMetrics.openBreached)}
+                      icon={<AlertTriangle className="w-5 h-5" />}
+                    />
+                    <KpiCard
+                      label={t("metrics.inboxSlaOpenAtRisk")}
+                      value={formatNumber(inboxSlaMetrics.openAtRisk)}
+                      icon={<MessageSquare className="w-5 h-5" />}
+                    />
+                  </div>
+                </div>
+              )}
               {(marketing.topCampaigns?.length ?? 0) > 0 && (
                 <div className="overflow-hidden rounded-xl border border-default bg-surface-elevated">
                   <div className="border-b border-subtle px-4 py-4 sm:px-6">

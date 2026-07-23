@@ -21,6 +21,7 @@ import "@xyflow/react/dist/style.css";
 import type { FlowDefinition, FlowEdge, FlowNode, FlowNodeType } from "@/types";
 import { FlowNodeCard } from "./FlowNodeCard";
 import { buildNodePreview } from "./nodeConfig";
+import { useLocale } from "@/i18n/context";
 
 const nodeTypes: NodeTypes = {
   flowNode: FlowNodeCard,
@@ -40,7 +41,8 @@ function toReactFlowNodes(
   nodes: FlowNode[],
   selectedNodeId: string | null,
   getTypeLabel: (type: FlowNodeType) => string,
-  getBranchLabel: (key: "true" | "false") => string
+  getBranchLabel: (key: "true" | "false") => string,
+  locale: "es" | "en"
 ): Node[] {
   return nodes.map((n) => ({
     id: n.id,
@@ -50,7 +52,7 @@ function toReactFlowNodes(
     data: {
       flowType: n.type,
       typeLabel: getTypeLabel(n.type),
-      preview: buildNodePreview(n.type, n.data),
+      preview: buildNodePreview(n.type, n.data, locale),
       buttons: n.data.buttons,
       trueLabel: getBranchLabel("true"),
       falseLabel: getBranchLabel("false"),
@@ -118,6 +120,7 @@ function FlowCanvasInner({
   getBranchLabel,
   onCannotDeleteTrigger,
 }: FlowCanvasProps) {
+  const locale = useLocale();
   const flowRef = useRef(flow);
   flowRef.current = flow;
   const onChangeRef = useRef(onChange);
@@ -134,8 +137,8 @@ function FlowCanvasInner({
   const lastExternalFingerprintRef = useRef("");
 
   const reactFlowNodes = useMemo(
-    () => toReactFlowNodes(flow.nodes, selectedNodeId, getTypeLabel, getBranchLabel),
-    [flow.nodes, selectedNodeId, getTypeLabel, getBranchLabel]
+    () => toReactFlowNodes(flow.nodes, selectedNodeId, getTypeLabel, getBranchLabel, locale),
+    [flow.nodes, selectedNodeId, getTypeLabel, getBranchLabel, locale]
   );
   const reactFlowEdges = useMemo(() => toReactFlowEdges(flow.edges, flow.nodes), [flow.edges, flow.nodes]);
 
@@ -152,11 +155,12 @@ function FlowCanvasInner({
         flow.nodes,
         selectedNodeId,
         getTypeLabelRef.current,
-        getBranchLabelRef.current
+        getBranchLabelRef.current,
+        locale
       )
     );
     setEdges(toReactFlowEdges(flow.edges, flow.nodes));
-  }, [flow.nodes, flow.edges, selectedNodeId, setNodes, setEdges]);
+  }, [flow.nodes, flow.edges, selectedNodeId, locale, setNodes, setEdges]);
 
   useEffect(() => {
     if (skipNextNotifyRef.current) {

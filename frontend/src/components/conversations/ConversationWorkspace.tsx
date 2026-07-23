@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import {
   useConversations,
   useConversationMessages,
   useHandoffConversation,
+  useBulkHandoffConversation,
+  useClaimConversation,
   useReleaseConversation,
   useSendConversationMessage,
   useUpdateConversationNote,
@@ -34,6 +37,7 @@ import {
   ExternalLink,
   ChevronLeft,
   Trash2,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Message, WorkflowStatus, Channel } from "@/types";
@@ -43,11 +47,23 @@ import { AdvisorCallPanel } from "@/components/conversations/AdvisorCallPanel";
 import { WhatsAppSoftphone } from "@/components/conversations/WhatsAppSoftphone";
 import { ConversationContactPanel } from "@/components/conversations/ConversationContactPanel";
 import { MacroPicker } from "@/components/conversations/MacroPicker";
+import { AdvisorCopilotPanel } from "@/components/conversations/AdvisorCopilotPanel";
+import { QuotationDrawer } from "@/components/conversations/QuotationDrawer";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useInboxSlaSettings } from "@/hooks/useInboxSla";
+import {
+  formatElapsedDuration,
+  getConversationSlaStatus,
+  getElapsedSecondsSinceHandoff,
+  resolveInboxSlaSettings,
+} from "@/lib/inbox-sla";
+import type { InboxSlaStatus } from "@/types";
 
 function messageListKey(msg: Message, index: number): string {
   return `${msg.messageId}::${msg.timestamp}::${index}`;
 }
+
+type ListTab = "all" | "unread" | "mine" | "sla_breached" | "queue";
 
 type Props = {
   advisorMode?: boolean;
@@ -55,15 +71,20 @@ type Props = {
 
 export function ConversationWorkspace({ advisorMode = false }: Props) {
   const t = useT();
+  const searchParams = useSearchParams();
   const { formatRelativeTime, formatDate } = useFormatters();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [botFilter, setBotFilter] = useState<string>("");
   const [handoffFilter, setHandoffFilter] = useState<"" | "human" | "bot">("");
   const [channelFilter, setChannelFilter] = useState<"" | Channel>("");
   const [workflowFilter, setWorkflowFilter] = useState<"" | WorkflowStatus>("");
+  const [advisorFilter, setAdvisorFilter] = useState("");
+  const [assignmentFilter, setAssignmentFilter] = useState<"" | "unassigned">("");
   const [draft, setDraft] = useState("");
   const [internalNote, setInternalNote] = useState("");
+  const [showQuotationDrawer, setShowQuotationDrawer] = useState(false);
   const [showHandoffModal, setShowHandoffModal] = useState(false);
+  const [showBulkReassignModal, setShowBulkReassignModal] = useState(false);
   const [showResolveModal, setShowResolveModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [csatScore, setCsatScore] = useState<number | "">("");
@@ -72,36 +93,123 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     message: string;
   } | null>(null);
   const [selectedAdvisorId, setSelectedAdvisorId] = useState("");
-  const [listTab, setListTab] = useState<"all" | "unread" | "mine">("all");
+  const [bulkReassignAdvisorId, setBulkReassignAdvisorId] = useState("");
+  const [selectedConversationIds, setSelectedConversationIds] = useState<Set<string>>(new Set());
+  const [listTab, setListTab] = useState<ListTab>("all");
 
   const { data: bots } = useBots();
   const { data: advisors } = useAdvisors();
+  const { data: inboxSlaSettings } = useInboxSlaSettings();
+  const resolvedSlaSettings = useMemo(
+    () => resolveInboxSlaSettings(inboxSlaSettings),
+    [inboxSlaSettings]
+  );
   const { user: currentUser } = useCurrentUser();
+
+  useEffect(() => {
+    const assignment = searchParams.get("assignment");
+    const assignedAdvisorId = searchParams.get("assignedAdvisorId");
+    const handoffMode = searchParams.get("handoffMode");
+    if (assignment === "unassigned") {
+      setAssignmentFilter("unassigned");
+      setHandoffFilter("human");
+    }
+    if (assignedAdvisorId) {
+      setAdvisorFilter(assignedAdvisorId);
+      setHandoffFilter("human");
+    }
+    if (handoffMode === "human" || handoffMode === "bot") {
+      setHandoffFilter(handoffMode);
+    }
+  }, [searchParams]);
+
+  const conversationQueryOptions = useMemo(() => {
+    const base = {
+      botId: botFilter || undefined,
+      channel: channelFilter || undefined,
+      workflowStatus: workflowFilter || undefined,
+    };
+
+    if (advisorMode && listTab === "queue") {
+      return {
+        ...base,
+        handoffMode: "human" as const,
+        assignment: "unassigned" as const,
+      };
+    }
+
+    if (!advisorMode && assignmentFilter === "unassigned") {
+      return {
+        ...base,
+        handoffMode: "human" as const,
+        assignment: "unassigned" as const,
+      };
+    }
+
+    return {
+      ...base,
+      handoffMode: handoffFilter || undefined,
+      assignedAdvisorId: advisorFilter || undefined,
+    };
+  }, [
+    advisorMode,
+    listTab,
+    assignmentFilter,
+    botFilter,
+    channelFilter,
+    workflowFilter,
+    handoffFilter,
+    advisorFilter,
+  ]);
+
   const {
     data: conversationsData,
     isLoading,
     isFetchingNextPage,
     hasNextPage,
     fetchNextPage,
-  } = useConversations({
-    botId: botFilter || undefined,
-    channel: channelFilter || undefined,
-    handoffMode: handoffFilter || undefined,
-    workflowStatus: workflowFilter || undefined,
-  });
+  } = useConversations(conversationQueryOptions);
   const conversations =
     conversationsData?.pages.flatMap((page) => page.items).filter((c) => c != null) ?? [];
 
+  const conversationSlaStatuses = useMemo(
+    () =>
+      new Map(
+        conversations.map((conv) => [
+          conv.conversationId,
+          getConversationSlaStatus(conv, resolvedSlaSettings),
+        ])
+      ),
+    [conversations, resolvedSlaSettings]
+  );
+
   const filteredConversations = conversations.filter((conv) => {
+    if (advisorMode && listTab === "queue") return true;
     if (listTab === "unread") return conv.workflowStatus === "new";
     if (listTab === "mine") return (conv.handoffMode ?? "bot") === "human";
+    if (listTab === "sla_breached") {
+      return conversationSlaStatuses.get(conv.conversationId) === "breached";
+    }
     return true;
   });
 
   const unreadCount = conversations.filter((c) => c.workflowStatus === "new").length;
+  const slaBreachedCount = conversations.filter(
+    (c) => conversationSlaStatuses.get(c.conversationId) === "breached"
+  ).length;
   const listScrollRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
-  const { data: messages, isLoading: loadingMessages } = useConversationMessages(selectedId ?? "");
+  const selectedConversationPreview = conversations.find((c) => c.conversationId === selectedId);
+  const messagesEnabled = !(
+    advisorMode &&
+    selectedConversationPreview &&
+    (selectedConversationPreview.handoffMode ?? "bot") === "human" &&
+    !selectedConversationPreview.assignedAdvisorId
+  );
+  const { data: messages, isLoading: loadingMessages } = useConversationMessages(
+    selectedId ?? "",
+    messagesEnabled
+  );
 
   useEffect(() => {
     const root = listScrollRef.current;
@@ -122,6 +230,8 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   }, [hasNextPage, isFetchingNextPage, fetchNextPage, conversations.length]);
 
   const handoff = useHandoffConversation();
+  const bulkHandoff = useBulkHandoffConversation();
+  const claim = useClaimConversation();
   const callPermission = useMutation({
     mutationFn: (params: { botId: string; to: string }) =>
       api.post(`/bots/${params.botId}/calling/calls/permission-request`, {
@@ -161,12 +271,18 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   function channelLabel(channel?: Channel): string {
     if (channel === "instagram") return t("conversations.channelInstagram");
     if (channel === "webchat") return t("conversations.channelWebchat");
+    if (channel === "telegram") return t("conversations.channelTelegram");
+    if (channel === "messenger") return t("conversations.channelMessenger");
+    if (channel === "sms") return t("conversations.channelSms");
+    if (channel === "email") return t("conversations.channelEmail");
     return t("conversations.channelWhatsapp");
   }
 
   function contactDisplay(conv: { contactName?: string; phoneNumber: string; participantId?: string; channel?: Channel }) {
     if (conv.contactName) return conv.contactName;
-    if ((conv.channel ?? "whatsapp") === "whatsapp") return conv.phoneNumber;
+    if ((conv.channel ?? "whatsapp") === "whatsapp" || conv.channel === "sms") {
+      return conv.phoneNumber || conv.participantId;
+    }
     return conv.participantId ?? conv.phoneNumber;
   }
 
@@ -181,7 +297,12 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     return map[key] ?? map.open;
   }
   const isHuman = (selectedConversation?.handoffMode ?? "bot") === "human";
-  const canCompose = isHuman && !!selectedConversation;
+  const needsClaim =
+    advisorMode &&
+    !!selectedConversation &&
+    isHuman &&
+    !selectedConversation.assignedAdvisorId;
+  const canCompose = isHuman && !!selectedConversation && !needsClaim;
   const assignedAdvisor = advisors?.find(
     (a) => a.advisorId === selectedConversation?.assignedAdvisorId
   );
@@ -211,6 +332,59 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     });
     setShowHandoffModal(false);
     setSelectedAdvisorId("");
+  }
+
+  async function handleBulkReassign() {
+    const items = filteredConversations
+      .filter((conv) => selectedConversationIds.has(conv.conversationId))
+      .map((conv) => ({ conversationId: conv.conversationId, botId: conv.botId }));
+    if (items.length === 0) return;
+
+    const result = await bulkHandoff.mutateAsync({
+      items,
+      ...(bulkReassignAdvisorId ? { advisorId: bulkReassignAdvisorId } : {}),
+    });
+
+    setShowBulkReassignModal(false);
+    setBulkReassignAdvisorId("");
+    setSelectedConversationIds(new Set());
+
+    if (result.failed.length === 0) {
+      window.alert(t("conversations.bulkReassignSuccess", { count: result.succeeded.length }));
+    } else {
+      window.alert(
+        t("conversations.bulkReassignPartial", {
+          succeeded: result.succeeded.length,
+          failed: result.failed.length,
+        })
+      );
+    }
+  }
+
+  async function handleClaim() {
+    if (!selectedConversation) return;
+    await claim.mutateAsync({
+      conversationId: selectedConversation.conversationId,
+      botId: selectedConversation.botId,
+    });
+    if (advisorMode) setListTab("mine");
+  }
+
+  function toggleConversationSelection(conversationId: string) {
+    setSelectedConversationIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(conversationId)) next.delete(conversationId);
+      else next.add(conversationId);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (selectedConversationIds.size === filteredConversations.length) {
+      setSelectedConversationIds(new Set());
+      return;
+    }
+    setSelectedConversationIds(new Set(filteredConversations.map((c) => c.conversationId)));
   }
 
   async function handleRelease() {
@@ -252,6 +426,25 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     setSelectedId(null);
   }
 
+  function slaLabel(status: InboxSlaStatus): string | null {
+    if (status === "breached") return t("conversations.slaBreached");
+    if (status === "at_risk") return t("conversations.slaAtRisk");
+    return null;
+  }
+
+  function slaBadgeVariant(status: InboxSlaStatus): "danger" | "warning" | "default" {
+    if (status === "breached") return "danger";
+    if (status === "at_risk") return "warning";
+    return "default";
+  }
+
+  const selectedSlaStatus = selectedConversation
+    ? conversationSlaStatuses.get(selectedConversation.conversationId) ?? "disabled"
+    : "disabled";
+  const selectedElapsedSeconds = selectedConversation?.handoffAt
+    ? getElapsedSecondsSinceHandoff(selectedConversation.handoffAt)
+    : null;
+
   const showListOnMobile = !selectedId;
   const showDetailOnMobile = Boolean(selectedId);
 
@@ -267,11 +460,23 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
           <h1 className="font-bold text-primary">
             {advisorMode ? t("inbox.title") : t("conversations.title")}
           </h1>
-          <Tabs
+          <Tabs<ListTab>
             items={[
               { id: "all", label: t("conversations.filterTabAll") },
               { id: "unread", label: t("conversations.filterTabUnread"), count: unreadCount },
               { id: "mine", label: t("conversations.filterTabMine") },
+              ...(advisorMode
+                ? ([{ id: "queue" as const, label: t("conversations.filterTabQueue") }] as const)
+                : []),
+              ...(resolvedSlaSettings.enabled
+                ? ([
+                    {
+                      id: "sla_breached" as const,
+                      label: t("conversations.filterTabSlaBreached"),
+                      count: slaBreachedCount,
+                    },
+                  ] as const)
+                : []),
             ]}
             value={listTab}
             onChange={setListTab}
@@ -294,6 +499,10 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
             <option value="whatsapp">{t("conversations.channelWhatsapp")}</option>
             <option value="instagram">{t("conversations.channelInstagram")}</option>
             <option value="webchat">{t("conversations.channelWebchat")}</option>
+            <option value="telegram">{t("conversations.channelTelegram")}</option>
+            <option value="messenger">{t("conversations.channelMessenger")}</option>
+            <option value="sms">{t("conversations.channelSms")}</option>
+            <option value="email">{t("conversations.channelEmail")}</option>
           </Select>
           <Select
             value={handoffFilter}
@@ -315,7 +524,53 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
               <option value="resolved">{t("conversations.filterWorkflowResolved")}</option>
             </Select>
           )}
+          {!advisorMode && (
+            <Select value={advisorFilter} onChange={(e) => setAdvisorFilter(e.target.value)}>
+              <option value="">{t("conversations.filterAdvisorAll")}</option>
+              {advisors
+                ?.filter((a) => a.status === "active")
+                .map((a) => (
+                  <option key={a.advisorId} value={a.advisorId}>
+                    {a.name}
+                  </option>
+                ))}
+            </Select>
+          )}
+          {!advisorMode && (
+            <Select
+              value={assignmentFilter}
+              onChange={(e) => setAssignmentFilter(e.target.value as "" | "unassigned")}
+            >
+              <option value="">{t("conversations.filterAll")}</option>
+              <option value="unassigned">{t("conversations.filterUnassigned")}</option>
+            </Select>
+          )}
+          {!advisorMode && filteredConversations.length > 0 && (
+            <label className="flex items-center gap-2 text-xs text-secondary">
+              <input
+                type="checkbox"
+                checked={
+                  filteredConversations.length > 0 &&
+                  selectedConversationIds.size === filteredConversations.length
+                }
+                onChange={toggleSelectAll}
+                className="rounded border-default"
+              />
+              {t("conversations.selectAll")}
+            </label>
+          )}
         </div>
+
+        {!advisorMode && selectedConversationIds.size > 0 && (
+          <div className="flex items-center justify-between gap-2 border-b border-default bg-accent-muted px-4 py-2">
+            <span className="text-xs font-medium text-primary">
+              {t("conversations.bulkSelected", { count: selectedConversationIds.size })}
+            </span>
+            <Button type="button" size="sm" onClick={() => setShowBulkReassignModal(true)}>
+              {t("conversations.bulkReassign")}
+            </Button>
+          </div>
+        )}
 
         <div ref={listScrollRef} className="flex-1 overflow-y-auto">
           {isLoading && <p className="p-4 text-sm text-muted">{t("common.loading")}</p>}
@@ -329,16 +584,40 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
             />
           )}
 
-          {filteredConversations.map((conv) => (
-            <button
+          {filteredConversations.map((conv) => {
+            const slaStatus = conversationSlaStatuses.get(conv.conversationId) ?? "disabled";
+            const slaText = slaLabel(slaStatus);
+            const elapsedSeconds =
+              (conv.handoffMode ?? "bot") === "human" && conv.handoffAt && !conv.firstHumanResponseAt
+                ? getElapsedSecondsSinceHandoff(conv.handoffAt)
+                : null;
+
+            return (
+            <div
               key={conv.conversationId}
+              className={cn(
+                "flex w-full border-b border-subtle transition-colors hover:bg-surface-muted",
+                selectedId === conv.conversationId &&
+                  "border-l-2 border-l-accent bg-accent-muted",
+                slaStatus === "breached" && "border-l-2 border-l-red-500",
+                slaStatus === "at_risk" && "border-l-2 border-l-amber-500"
+              )}
+            >
+              {!advisorMode && (
+                <div className="flex items-center px-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedConversationIds.has(conv.conversationId)}
+                    onChange={() => toggleConversationSelection(conv.conversationId)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="rounded border-default"
+                  />
+                </div>
+              )}
+              <button
               type="button"
               onClick={() => setSelectedId(conv.conversationId)}
-              className={cn(
-                "w-full border-b border-subtle px-4 py-3 text-left transition-colors hover:bg-surface-muted",
-                selectedId === conv.conversationId &&
-                  "border-l-2 border-l-accent bg-accent-muted"
-              )}
+              className="min-w-0 flex-1 px-4 py-3 text-left"
             >
               <div className="flex items-center gap-3">
                 <div className="relative flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-surface-muted">
@@ -360,6 +639,11 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                     <Badge variant="default" className="text-[10px]">
                       {channelLabel(conv.channel)}
                     </Badge>
+                    {conv.locale && (
+                      <Badge variant="default" className="text-[10px] uppercase">
+                        {conv.locale}
+                      </Badge>
+                    )}
                     <Badge
                       variant={(conv.handoffMode ?? "bot") === "human" ? "warning" : "default"}
                       className="text-[10px]"
@@ -373,11 +657,45 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                         {workflowLabel(conv.workflowStatus)}
                       </Badge>
                     )}
+                    {slaText && (
+                      <Badge variant={slaBadgeVariant(slaStatus)} className="text-[10px]">
+                        {slaText}
+                      </Badge>
+                    )}
+                    {elapsedSeconds !== null && (
+                      <span className="text-[10px] text-muted">
+                        {t("conversations.slaElapsed", {
+                          duration: formatElapsedDuration(elapsedSeconds),
+                        })}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
             </button>
-          ))}
+            {advisorMode && listTab === "queue" && (
+              <div className="flex items-center px-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    setSelectedId(conv.conversationId);
+                    await claim.mutateAsync({
+                      conversationId: conv.conversationId,
+                      botId: conv.botId,
+                    });
+                    setListTab("mine");
+                  }}
+                  disabled={claim.isPending}
+                >
+                  {t("conversations.takeConversation")}
+                </Button>
+              </div>
+            )}
+            </div>
+            );
+          })}
 
           <div ref={loadMoreRef} className="h-1" />
           {isFetchingNextPage && (
@@ -427,6 +745,11 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                     <Badge variant="accent" className="text-[10px]">
                       {channelLabel(selectedConversation.channel)}
                     </Badge>
+                    {selectedConversation.locale && (
+                      <Badge variant="default" className="text-[10px] uppercase">
+                        {t("conversations.detectedLocale", { locale: selectedConversation.locale.toUpperCase() })}
+                      </Badge>
+                    )}
                     {(selectedConversation.channel ?? "whatsapp") === "whatsapp" ? (
                       <>
                         <Phone className="h-3 w-3 flex-shrink-0" />
@@ -439,6 +762,11 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                 </div>
               </div>
               <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
+                {needsClaim && (
+                  <Button type="button" size="sm" onClick={handleClaim} disabled={claim.isPending}>
+                    {t("conversations.takeConversation")}
+                  </Button>
+                )}
                 {!advisorMode && selectedConversation.botId && (
                   <Button
                     type="button"
@@ -533,6 +861,28 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                 {t("conversations.personalChannelHint")}
               </p>
             )}
+            {resolvedSlaSettings.enabled &&
+              (selectedSlaStatus === "breached" || selectedSlaStatus === "at_risk") &&
+              selectedElapsedSeconds !== null && (
+                <p
+                  className={cn(
+                    "border-b px-6 py-2.5 text-xs font-medium",
+                    selectedSlaStatus === "breached"
+                      ? "border-red-200 bg-red-50 text-red-800"
+                      : "border-amber-200 bg-amber-50 text-amber-800"
+                  )}
+                >
+                  {selectedSlaStatus === "breached"
+                    ? t("conversations.slaBreachedBanner", {
+                        duration: formatElapsedDuration(selectedElapsedSeconds),
+                        minutes: resolvedSlaSettings.firstResponseMinutes,
+                      })
+                    : t("conversations.slaAtRiskBanner", {
+                        duration: formatElapsedDuration(selectedElapsedSeconds),
+                        minutes: resolvedSlaSettings.firstResponseMinutes,
+                      })}
+                </p>
+              )}
             {isHuman && (selectedConversation.channel ?? "whatsapp") !== "whatsapp" && (
               <p className="border-b border-default border-l-4 border-l-accent bg-surface-muted px-6 py-2.5 text-xs font-medium text-primary">
                 {t("conversations.replyViaChannel", {
@@ -597,6 +947,16 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
               </div>
             )}
 
+            {needsClaim ? (
+              <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-3 p-6">
+                <p className="max-w-sm text-center text-sm text-secondary">
+                  {t("conversations.takeConversationHint")}
+                </p>
+                <Button type="button" onClick={handleClaim} disabled={claim.isPending}>
+                  {t("conversations.takeConversation")}
+                </Button>
+              </div>
+            ) : (
             <div className="relative z-10 flex-1 space-y-3 overflow-y-auto p-4 sm:p-6">
               {loadingMessages && <p className="text-sm text-muted">{t("common.loading")}</p>}
 
@@ -659,6 +1019,14 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                 );
               })}
             </div>
+            )}
+
+            {canCompose && selectedConversation && (
+              <AdvisorCopilotPanel
+                conversation={selectedConversation}
+                onInsertSuggestion={setDraft}
+              />
+            )}
 
             {canCompose && (
               <form
@@ -673,6 +1041,16 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                     onInsert={setDraft}
                   />
                 )}
+                {selectedConversation && canCompose ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowQuotationDrawer(true)}
+                    title={t("quotations.drawerTitle")}
+                    className="flex h-10 w-10 flex-shrink-0 items-center justify-center self-end rounded-lg border border-default text-secondary hover:bg-surface-muted hover:text-primary"
+                  >
+                    <FileText className="h-4 w-4" />
+                  </button>
+                ) : null}
                 <Textarea
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
@@ -772,6 +1150,44 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
           </div>
         </div>
       )}
+
+      {showBulkReassignModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm space-y-4 rounded-xl border border-default bg-surface-elevated p-6 shadow-xl">
+            <h2 className="text-lg font-semibold text-primary">
+              {t("conversations.bulkReassignTitle")}
+            </h2>
+            <Select
+              value={bulkReassignAdvisorId}
+              onChange={(e) => setBulkReassignAdvisorId(e.target.value)}
+            >
+              <option value="">{t("conversations.autoAssign")}</option>
+              {advisors
+                ?.filter((a) => a.status === "active")
+                .map((a) => (
+                  <option key={a.advisorId} value={a.advisorId}>
+                    {a.name}
+                  </option>
+                ))}
+            </Select>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="ghost" onClick={() => setShowBulkReassignModal(false)}>
+                {t("common.cancel")}
+              </Button>
+              <Button type="button" onClick={handleBulkReassign} disabled={bulkHandoff.isPending}>
+                {t("conversations.bulkReassign")}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showQuotationDrawer && selectedConversation ? (
+        <QuotationDrawer
+          conversation={selectedConversation}
+          open={showQuotationDrawer}
+          onClose={() => setShowQuotationDrawer(false)}
+        />
+      ) : null}
     </div>
   );
 }

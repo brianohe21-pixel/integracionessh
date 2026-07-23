@@ -3,6 +3,7 @@ import type { BotIndustryTemplate, BotTemplateLocale } from "./types";
 import {
   awaitOrderNode,
   branchX,
+  bilingual,
   buttonsNode,
   edge,
   endNode,
@@ -51,7 +52,8 @@ const copy = {
 } as const;
 
 function buildFlow(locale: BotTemplateLocale) {
-  const t = copy[locale];
+  const es = copy.es;
+  const en = copy.en;
   const btnCatalog = "btn-catalog";
   const btnOrder = "btn-order";
   const btnDeals = "btn-deals";
@@ -59,31 +61,31 @@ function buildFlow(locale: BotTemplateLocale) {
 
   const nodes = [
     triggerNode("trigger-1", "first_message", "Start", rowY(0)),
-    messageNode("message-welcome", t.welcome, "Welcome", 400, rowY(1)),
+    messageNode("message-welcome", bilingual(es.welcome, en.welcome), "Welcome", 400, rowY(1)),
     buttonsNode(
       "buttons-menu",
-      t.menuPrompt,
+      bilingual(es.menuPrompt, en.menuPrompt),
       [
-        { id: btnCatalog, title: t.btnCatalog },
-        { id: btnOrder, title: t.btnOrder },
-        { id: btnDeals, title: t.btnDeals },
-        { id: btnAgent, title: t.btnAgent },
+        { id: btnCatalog, title: bilingual(es.btnCatalog, en.btnCatalog) },
+        { id: btnOrder, title: bilingual(es.btnOrder, en.btnOrder) },
+        { id: btnDeals, title: bilingual(es.btnDeals, en.btnDeals) },
+        { id: btnAgent, title: bilingual(es.btnAgent, en.btnAgent) },
       ],
       "Menu",
       rowY(2)
     ),
-    sendCatalogNode("send-catalog", t.catalogMessage, "Catalog", branchX(0, 4), rowY(3)),
+    sendCatalogNode("send-catalog", bilingual(es.catalogMessage, en.catalogMessage), "Catalog", branchX(0, 4), rowY(3)),
     endNode("end-catalog", "End", branchX(0, 4), rowY(4)),
     awaitOrderNode(
       "await-order",
-      t.orderPrompt,
-      t.orderConfirm,
+      bilingual(es.orderPrompt, en.orderPrompt),
+      bilingual(es.orderConfirm, en.orderConfirm),
       "Order",
       branchX(1, 4),
       rowY(3)
     ),
     endNode("end-order", "End", branchX(1, 4), rowY(4)),
-    messageNode("message-deals", t.dealsMessage, "Deals", branchX(2, 4), rowY(3)),
+    messageNode("message-deals", bilingual(es.dealsMessage, en.dealsMessage), "Deals", branchX(2, 4), rowY(3)),
     endNode("end-deals", "End", branchX(2, 4), rowY(4)),
     handoffNode("handoff-agent", "Handoff", branchX(3, 4), rowY(3)),
     endNode("end-agent", "End", branchX(3, 4), rowY(4)),
@@ -103,11 +105,11 @@ function buildFlow(locale: BotTemplateLocale) {
   ];
 
   return {
-    name: t.flowName,
+    name: copy[locale].flowName,
     nodes,
     edges,
     entryNodeId: "trigger-1",
-    welcomeMessage: t.welcome,
+    welcomeMessage: copy[locale].welcome,
   };
 }
 

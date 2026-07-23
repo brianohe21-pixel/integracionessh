@@ -4,6 +4,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tansta
 import { api } from "@/lib/api";
 import { useRealtimeConnection } from "@/components/realtime/RealtimeProvider";
 import type {
+  BulkHandoffResult,
   Channel,
   Conversation,
   ConversationsListResponse,
@@ -46,6 +47,8 @@ function conversationsListQueryKey(options?: {
   handoffMode?: HandoffMode;
   workflowStatus?: WorkflowStatus;
   status?: "active" | "closed";
+  assignedAdvisorId?: string;
+  assignment?: "assigned" | "unassigned";
 }) {
   return [
     "conversations",
@@ -55,6 +58,8 @@ function conversationsListQueryKey(options?: {
     options?.handoffMode ?? "all",
     options?.workflowStatus ?? "all",
     options?.status ?? "all",
+    options?.assignedAdvisorId ?? "all",
+    options?.assignment ?? "all",
   ] as const;
 }
 
@@ -66,6 +71,8 @@ function fetchConversationsPage(
     handoffMode?: HandoffMode;
     workflowStatus?: WorkflowStatus;
     status?: "active" | "closed";
+    assignedAdvisorId?: string;
+    assignment?: "assigned" | "unassigned";
   }
 ): Promise<ConversationsListResponse> {
   const params = new URLSearchParams({ limit: String(CONVERSATIONS_PAGE_SIZE) });
@@ -75,6 +82,8 @@ function fetchConversationsPage(
   if (options?.handoffMode) params.set("handoffMode", options.handoffMode);
   if (options?.workflowStatus) params.set("workflowStatus", options.workflowStatus);
   if (options?.status) params.set("status", options.status);
+  if (options?.assignedAdvisorId) params.set("assignedAdvisorId", options.assignedAdvisorId);
+  if (options?.assignment) params.set("assignment", options.assignment);
   return api.get<unknown>(`/conversations?${params.toString()}`).then(normalizeConversationsPage);
 }
 
@@ -84,7 +93,8 @@ export function useConversations(options?: {
   handoffMode?: HandoffMode;
   workflowStatus?: WorkflowStatus;
   status?: "active" | "closed";
-  assignedOnly?: boolean;
+  assignedAdvisorId?: string;
+  assignment?: "assigned" | "unassigned";
 }) {
   return useInfiniteQuery({
     queryKey: conversationsListQueryKey(options),
@@ -94,7 +104,7 @@ export function useConversations(options?: {
   });
 }
 
-export function useConversationMessages(conversationId: string) {
+export function useConversationMessages(conversationId: string, enabled = true) {
   const { connected } = useRealtimeConnection();
 
   return useQuery({
@@ -105,7 +115,7 @@ export function useConversationMessages(conversationId: string) {
       );
       return Array.isArray(raw) ? (raw as Message[]) : [];
     },
-    enabled: !!conversationId,
+    enabled: !!conversationId && enabled,
     refetchInterval: connected ? false : 30_000,
     refetchIntervalInBackground: false,
   });
@@ -122,6 +132,44 @@ export function useHandoffConversation() {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["conversations"] });
       qc.invalidateQueries({ queryKey: ["conversation-messages", vars.conversationId] });
+      qc.invalidateQueries({ queryKey: ["metrics", "advisor-workload"] });
+      qc.invalidateQueries({ queryKey: ["metrics", "marketing"] });
+    },
+  });
+}
+
+export function useBulkHandoffConversation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: {
+      items: { conversationId: string; botId: string }[];
+      advisorId?: string;
+    }) =>
+      api.post<BulkHandoffResult>("/conversations/bulk-handoff", {
+        items: body.items,
+        advisorId: body.advisorId,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["conversations"] });
+      qc.invalidateQueries({ queryKey: ["metrics", "advisor-workload"] });
+      qc.invalidateQueries({ queryKey: ["metrics", "marketing"] });
+    },
+  });
+}
+
+export function useClaimConversation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { conversationId: string; botId: string }) =>
+      api.post<Conversation>(
+        `/conversations/${encodeURIComponent(body.conversationId)}/claim`,
+        { botId: body.botId }
+      ),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["conversations"] });
+      qc.invalidateQueries({ queryKey: ["conversation-messages", vars.conversationId] });
+      qc.invalidateQueries({ queryKey: ["metrics", "advisor-workload"] });
+      qc.invalidateQueries({ queryKey: ["metrics", "marketing"] });
     },
   });
 }
