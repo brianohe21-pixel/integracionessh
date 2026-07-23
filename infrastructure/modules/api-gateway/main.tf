@@ -165,6 +165,18 @@ locals {
       function_arn = var.conversations_function_arn
       protected    = true
     }
+    conversations_quotations_list = {
+      route_key    = "GET /conversations/{conversationId}/quotations"
+      invoke_arn   = var.conversations_invoke_arn
+      function_arn = var.conversations_function_arn
+      protected    = true
+    }
+    conversations_quotations_create = {
+      route_key    = "POST /conversations/{conversationId}/quotations"
+      invoke_arn   = var.conversations_invoke_arn
+      function_arn = var.conversations_function_arn
+      protected    = true
+    }
     conversations_wa_link = {
       route_key    = "GET /conversations/{conversationId}/wa-link"
       invoke_arn   = var.conversations_invoke_arn

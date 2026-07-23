@@ -155,6 +155,84 @@ export interface SendTextMessageResponse {
   messages: Array<{ id: string }>;
 }
 
+export interface UploadWhatsAppMediaOptions {
+  phoneNumberId: string;
+  accessToken: string;
+  buffer: Uint8Array;
+  mimeType: string;
+  filename: string;
+}
+
+export interface UploadWhatsAppMediaResponse {
+  id: string;
+}
+
+export interface SendDocumentMessageOptions {
+  phoneNumberId: string;
+  to: string;
+  accessToken: string;
+  mediaId: string;
+  filename?: string;
+  caption?: string;
+}
+
+export async function uploadWhatsAppMedia(
+  options: UploadWhatsAppMediaOptions
+): Promise<UploadWhatsAppMediaResponse> {
+  const form = new FormData();
+  form.append("messaging_product", "whatsapp");
+  form.append("type", options.mimeType);
+  const blob = new Blob([options.buffer], { type: options.mimeType });
+  form.append("file", blob, options.filename);
+
+  const response = await fetch(`${GRAPH_API_URL}/${options.phoneNumberId}/media`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${options.accessToken}`,
+    },
+    body: form,
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throwGraphApiError(response.status, error);
+  }
+
+  return response.json() as Promise<UploadWhatsAppMediaResponse>;
+}
+
+export async function sendDocumentMessage(
+  options: SendDocumentMessageOptions
+): Promise<SendTextMessageResponse> {
+  const body: Record<string, unknown> = {
+    messaging_product: "whatsapp",
+    recipient_type: "individual",
+    to: options.to,
+    type: "document",
+    document: {
+      id: options.mediaId,
+      ...(options.filename ? { filename: options.filename } : {}),
+      ...(options.caption ? { caption: truncateWhatsAppText(options.caption) } : {}),
+    },
+  };
+
+  const response = await fetch(`${GRAPH_API_URL}/${options.phoneNumberId}/messages`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${options.accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throwGraphApiError(response.status, error);
+  }
+
+  return response.json() as Promise<SendTextMessageResponse>;
+}
+
 export async function sendTextMessage(
   options: SendTextMessageOptions
 ): Promise<SendTextMessageResponse> {

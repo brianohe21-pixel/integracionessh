@@ -1140,7 +1140,45 @@ export interface AvailableSlot {
 }
 
 export type PaymentRequestStatus = "pending" | "paid" | "declined" | "expired";
-export type PaymentRequestSource = "manual" | "flow" | "catalog_order" | "calendar_booking";
+export type PaymentRequestSource =
+  | "manual"
+  | "flow"
+  | "catalog_order"
+  | "calendar_booking"
+  | "quotation";
+
+export type QuotationStatus = "sent" | "paid" | "expired" | "cancelled";
+
+export interface QuotationLineItem {
+  description: string;
+  quantity: number;
+  unitPriceInCents: number;
+  totalInCents: number;
+}
+
+export interface Quotation {
+  quotationId: string;
+  tenantId: string;
+  botId: string;
+  conversationId: string;
+  contactPhone: string;
+  contactName?: string;
+  number: string;
+  items: QuotationLineItem[];
+  subtotalInCents: number;
+  totalInCents: number;
+  currency: "COP";
+  notes?: string;
+  validUntil?: string;
+  status: QuotationStatus;
+  paymentId?: string;
+  pdfS3Key?: string;
+  pdfDownloadUrl?: string;
+  createdByAdvisorId?: string;
+  sentAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export type CatalogSyncStatus = "linked" | "syncing" | "error" | "not_linked";
 export type ProductAvailability = "in_stock" | "out_of_stock";
@@ -1247,6 +1285,7 @@ export interface PaymentRequest {
   conversationId?: string;
   flowRunId?: string;
   bookingId?: string;
+  quotationId?: string;
   amountInCents: number;
   currency: "COP";
   description: string;

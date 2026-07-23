@@ -229,11 +229,13 @@ locals {
       handler     = "conversations/index.handler"
       description = "API for reading conversation history"
       timeout     = 30
-      memory      = 256
+      memory      = 512
       environment = {
         TABLE_NAME             = var.dynamodb_table_name
         ENVIRONMENT            = var.environment
         WEBSOCKET_API_ENDPOINT = local.websocket_management_endpoint
+        MEDIA_BUCKET           = var.media_bucket_name
+        FRONTEND_URL           = var.frontend_url
       }
     }
     advisors = {

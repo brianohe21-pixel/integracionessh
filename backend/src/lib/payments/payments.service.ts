@@ -103,6 +103,7 @@ export async function createPaymentRequest(params: {
   conversationId?: string;
   flowRunId?: string;
   bookingId?: string;
+  quotationId?: string;
   customerEmail?: string;
   environment: string;
   sendWhatsApp?: boolean;
@@ -156,6 +157,7 @@ export async function createPaymentRequest(params: {
     ...(conversationId ? { conversationId } : {}),
     ...(params.flowRunId ? { flowRunId: params.flowRunId } : {}),
     ...(params.bookingId ? { bookingId: params.bookingId } : {}),
+    ...(params.quotationId ? { quotationId: params.quotationId } : {}),
     amountInCents: params.amountInCents,
     currency: config.currency,
     description: params.description,

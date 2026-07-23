@@ -4,7 +4,7 @@ import { instagramAdapter } from "./instagram.adapter.js";
 import { messengerAdapter } from "./messenger.adapter.js";
 import { smsAdapter } from "./sms.adapter.js";
 import { telegramAdapter } from "./telegram.adapter.js";
-import type { ChannelAdapter, OutboundContext, OutboundResult } from "./types.js";
+import type { ChannelAdapter, OutboundContext, OutboundDocument, OutboundResult } from "./types.js";
 import { webchatAdapter } from "./webchat.adapter.js";
 import { whatsappAdapter } from "./whatsapp.adapter.js";
 
@@ -29,6 +29,17 @@ export async function sendChannelText(
   text: string
 ): Promise<OutboundResult> {
   return getChannelAdapter(ctx.channel).sendText(ctx, text);
+}
+
+export async function sendChannelDocument(
+  ctx: OutboundContext,
+  doc: OutboundDocument
+): Promise<OutboundResult> {
+  const adapter = getChannelAdapter(ctx.channel);
+  if (!adapter.sendDocument) {
+    throw new Error(`Channel ${ctx.channel} does not support document messages`);
+  }
+  return adapter.sendDocument(ctx, doc);
 }
 
 export async function markChannelRead(
