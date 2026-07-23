@@ -7,11 +7,11 @@ import type { Conversation } from "../../types/index.js";
 
 const NOTIFY_COOLDOWN_MS = 8 * 60 * 1000;
 
-const CLIENT_HANDOFF_MESSAGE =
-  "Un asesor te atenderá en breve. Puedes seguir escribiendo en este chat.";
+import type { BotLocale } from "../i18n/types.js";
+import { getSystemMessage } from "../i18n/messages.js";
 
-export function getClientHandoffMessage(): string {
-  return CLIENT_HANDOFF_MESSAGE;
+export function getClientHandoffMessage(locale: BotLocale = "es"): string {
+  return getSystemMessage("clientHandoff", locale);
 }
 
 export async function notifyAdvisorOfConversation(params: {

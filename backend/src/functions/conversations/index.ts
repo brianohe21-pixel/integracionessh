@@ -26,6 +26,7 @@ import {
   getClientHandoffMessage,
   notifyAdvisorOfConversation,
 } from "../../lib/advisor/notify.js";
+import { getBotLocale } from "../../lib/i18n/index.js";
 import { buildWaMeLink } from "../../lib/advisor/wa-link.js";
 import { getConversation } from "../../lib/dynamodb/conversation.repository.js";
 import {
@@ -366,7 +367,7 @@ export async function handler(
               accessToken,
               environment: ENVIRONMENT,
             }),
-            getClientHandoffMessage()
+            getClientHandoffMessage(getBotLocale(refreshed, bot))
           );
         }
         await notifyAdvisorOfConversation({

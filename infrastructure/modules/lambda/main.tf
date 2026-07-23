@@ -403,8 +403,10 @@ locals {
       timeout     = 30
       memory      = 256
       environment = {
-        TABLE_NAME  = var.dynamodb_table_name
-        ENVIRONMENT = var.environment
+        TABLE_NAME      = var.dynamodb_table_name
+        ENVIRONMENT     = var.environment
+        META_APP_ID     = var.meta_app_id
+        META_APP_SECRET = var.meta_app_secret
       }
     }
     sms_webhook = {

@@ -7,15 +7,18 @@ import {
   putMessengerPageLookup,
 } from "../../lib/dynamodb/bot-lookup.repository.js";
 import { saveMessengerSecret } from "../../lib/messenger/secrets.js";
+import { verifyMessengerPageToken } from "../../lib/messenger/verify-token.js";
 import { assertCanEnableChannel } from "../../lib/billing/assert-plan.js";
 import { ensureTenant } from "../../lib/dynamodb/tenant.repository.js";
 import { ok, badRequest, handleError } from "../../lib/http.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
+const META_APP_ID = process.env.META_APP_ID ?? "";
+const META_APP_SECRET = process.env.META_APP_SECRET ?? "";
 
 const ConnectSchema = z.object({
   botId: z.string().uuid(),
-  pageId: z.string().min(1),
+  pageId: z.string().min(1).optional(),
   pageAccessToken: z.string().min(1),
 });
 
@@ -39,24 +42,39 @@ export async function handler(
     const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
     await assertCanEnableChannel(tenant, bot, "messenger");
 
-    if (bot.messengerPageId && bot.messengerPageId !== parsed.data.pageId) {
+    let verifiedPage;
+    try {
+      verifiedPage = await verifyMessengerPageToken(parsed.data.pageAccessToken, {
+        ...(parsed.data.pageId ? { expectedPageId: parsed.data.pageId } : {}),
+        ...(META_APP_ID && META_APP_SECRET
+          ? { metaAppId: META_APP_ID, metaAppSecret: META_APP_SECRET }
+          : {}),
+      });
+    } catch (error) {
+      return badRequest((error as Error).message);
+    }
+
+    const pageId = verifiedPage.pageId;
+
+    if (bot.messengerPageId && bot.messengerPageId !== pageId) {
       await deleteMessengerPageLookup(bot.messengerPageId);
     }
 
     await saveMessengerSecret(auth.tenantId, parsed.data.botId, ENVIRONMENT, {
       pageAccessToken: parsed.data.pageAccessToken,
-      pageId: parsed.data.pageId,
+      pageId,
     });
 
-    await putMessengerPageLookup(parsed.data.pageId, auth.tenantId, parsed.data.botId);
+    await putMessengerPageLookup(pageId, auth.tenantId, parsed.data.botId);
 
     const updated = await updateBot(auth.tenantId, parsed.data.botId, {
-      messengerPageId: parsed.data.pageId,
+      messengerPageId: pageId,
     });
 
     return ok({
       connected: true,
       messengerPageId: updated.messengerPageId,
+      pageName: verifiedPage.pageName,
     });
   } catch (error) {
     return handleError(error);

@@ -2,12 +2,14 @@ import { buildOutboundContext, sendChannelText } from "../../channels/router.js"
 import type { FlowNode, FlowRun } from "../../../types/index.js";
 import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
 import { requireEnabledCatalog } from "../../catalog/catalog.service.js";
+import { getBotLocale, getSystemMessage, resolveLocalizedText } from "../../i18n/index.js";
 
 export async function executeAwaitOrderNode(
   node: FlowNode,
   ctx: FlowExecutionContext,
   _run: FlowRun
 ): Promise<NodeExecutionResult> {
+  const locale = getBotLocale(ctx.conversation, ctx.bot);
   try {
     await requireEnabledCatalog(ctx.tenantId, ctx.botId);
   } catch {
@@ -20,14 +22,14 @@ export async function executeAwaitOrderNode(
         accessToken: ctx.accessToken,
         environment: ctx.environment,
       }),
-      "El catálogo no está activo en este bot."
+      getSystemMessage("catalogInactive", locale)
     );
     return { nextNodeId: null, halt: true, wait: false };
   }
 
   const prompt =
-    node.data.messageText?.trim() ||
-    "Agrega productos al carrito en WhatsApp y envía tu pedido cuando estés listo.";
+    resolveLocalizedText(node.data.messageText, locale) ||
+    getSystemMessage("awaitOrderPrompt", locale);
 
   await sendChannelText(
     buildOutboundContext({

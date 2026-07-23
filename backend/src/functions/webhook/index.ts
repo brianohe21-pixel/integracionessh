@@ -148,19 +148,22 @@ async function handleMessengerWebhook(payload: InstagramWebhookEvent): Promise<v
   const sqsPromises: Promise<unknown>[] = [];
 
   for (const entry of payload.entry) {
+    const pageId = entry.id;
+
     for (const event of entry.messaging ?? []) {
       const message = event.message;
       if (!message) continue;
+      if (message.is_echo) continue;
+      if (event.sender.id === pageId) continue;
 
+      const senderId = event.sender.id;
       const messengerPayload = {
-        pageId: event.recipient.id,
-        senderId: event.sender.id,
+        pageId,
+        senderId,
         message,
       };
       if (!isProcessableMessengerMessage(messengerPayload)) continue;
 
-      const pageId = event.recipient.id;
-      const senderId = event.sender.id;
       const lookup = await getBotByMessengerPageId(pageId);
       if (!lookup) {
         console.log(`No bot for Messenger pageId: ${pageId}`);

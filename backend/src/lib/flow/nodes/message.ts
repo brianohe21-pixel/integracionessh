@@ -2,13 +2,15 @@ import { buildOutboundContext, sendChannelText } from "../../channels/router.js"
 import type { FlowNode, FlowRun } from "../../../types/index.js";
 import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
 import { getNextNodeId } from "../graph.js";
+import { getBotLocale, resolveLocalizedText } from "../../i18n/index.js";
 
 export async function executeMessageNode(
   node: FlowNode,
   ctx: FlowExecutionContext,
   _run: FlowRun
 ): Promise<NodeExecutionResult> {
-  const text = node.data.messageText ?? "";
+  const locale = getBotLocale(ctx.conversation, ctx.bot);
+  const text = resolveLocalizedText(node.data.messageText, locale);
   if (text) {
     await sendChannelText(
       buildOutboundContext({

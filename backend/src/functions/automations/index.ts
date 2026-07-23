@@ -32,6 +32,14 @@ const SCHEDULER_ROLE_ARN = process.env.SCHEDULER_ROLE_ARN ?? "";
 const AUTOMATIONS_FUNCTION_ARN = process.env.AUTOMATIONS_FUNCTION_ARN ?? "";
 const AUTOMATION_QUEUE_URL = process.env.AUTOMATION_SQS_QUEUE_URL ?? "";
 
+const LocalizedTextSchema = z.union([
+  z.string().max(4096),
+  z.object({
+    es: z.string().max(4096),
+    en: z.string().max(4096),
+  }),
+]);
+
 const RuleSchema = z.object({
   name: z.string().min(1).max(120),
   botId: z.string().uuid(),
@@ -45,7 +53,7 @@ const RuleSchema = z.object({
   targetPhones: z.array(z.string().min(10)).max(5000).optional(),
   targetTags: z.array(z.string().max(50)).max(20).optional(),
   action: z.enum(["send_text", "send_template", "tag_contact", "handoff"]),
-  messageText: z.string().max(4096).optional(),
+  messageText: LocalizedTextSchema.optional(),
   templateName: z.string().max(128).optional(),
   templateLanguage: z.string().max(10).optional(),
   templateVariables: z.record(z.string()).optional(),

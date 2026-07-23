@@ -4,6 +4,7 @@ import { setMetaFlowSession } from "../../dynamodb/conversation.repository.js";
 import type { FlowNode, FlowRun } from "../../../types/index.js";
 import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
 import { skipWhatsAppOnlyNode } from "./channel-guard.js";
+import { getBotLocale, getSystemMessage, resolveLocalizedText } from "../../i18n/index.js";
 
 export async function executeMetaFlowNode(
   node: FlowNode,
@@ -15,8 +16,11 @@ export async function executeMetaFlowNode(
   const metaFlowId = node.data.metaFlowId;
   if (!metaFlowId) throw new Error("metaFlowId required for meta_flow node");
 
+  const locale = getBotLocale(ctx.conversation, ctx.bot);
   const flowToken = randomUUID();
-  const flowCta = node.data.metaFlowCta ?? "Open form";
+  const flowCta =
+    resolveLocalizedText(node.data.metaFlowCta, locale) ||
+    getSystemMessage("metaFlowCtaDefault", locale);
 
   await sendFlowMessage({
     phoneNumberId: ctx.phoneNumberId,

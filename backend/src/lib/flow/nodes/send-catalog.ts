@@ -4,12 +4,14 @@ import { getNextNodeId } from "../graph.js";
 import { requireEnabledCatalog } from "../../catalog/catalog.service.js";
 import { listProductsForBot } from "../../dynamodb/product.repository.js";
 import { sendCatalogMessage } from "../../catalog/commerce-messages.js";
+import { getBotLocale, getSystemMessage, resolveLocalizedText } from "../../i18n/index.js";
 
 export async function executeSendCatalogNode(
   node: FlowNode,
   ctx: FlowExecutionContext,
   _run: FlowRun
 ): Promise<NodeExecutionResult> {
+  const locale = getBotLocale(ctx.conversation, ctx.bot);
   const config = await requireEnabledCatalog(ctx.tenantId, ctx.botId);
   if (!config.metaCatalogId) {
     return {
@@ -33,9 +35,9 @@ export async function executeSendCatalogNode(
   }
 
   const bodyText =
-    node.data.catalogMessageText?.trim() ||
+    resolveLocalizedText(node.data.catalogMessageText, locale) ||
     config.catalogMessageText ||
-    "Explora nuestro catálogo y arma tu pedido.";
+    getSystemMessage("catalogExploreDefault", locale);
 
   if (!ctx.accessToken) {
     return { nextNodeId: null, halt: true, wait: false };

@@ -3,6 +3,7 @@ import type { FlowNode, FlowRun } from "../../../types/index.js";
 import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
 import { getNextNodeId } from "../graph.js";
 import { skipWhatsAppOnlyNode } from "./channel-guard.js";
+import { getBotLocale, templateLanguageForLocale } from "../../i18n/index.js";
 
 export async function executeTemplateNode(
   node: FlowNode,
@@ -15,11 +16,12 @@ export async function executeTemplateNode(
   if (!templateName || !templateLanguage) {
     throw new Error("templateName and templateLanguage required");
   }
+  const locale = getBotLocale(ctx.conversation, ctx.bot);
   await sendTemplateMessage({
     phoneNumberId: ctx.phoneNumberId,
     to: ctx.customerPhone,
     templateName,
-    language: templateLanguage,
+    language: templateLanguage || templateLanguageForLocale(locale),
     accessToken: ctx.accessToken,
     ...(templateVariables
       ? {

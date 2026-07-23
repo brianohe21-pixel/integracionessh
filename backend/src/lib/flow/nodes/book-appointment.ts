@@ -10,6 +10,12 @@ import {
   getBookingSlotsForDate,
   requireEnabledCalendar,
 } from "../../calendar/calendar.service.js";
+import {
+  getBotLocale,
+  getSystemMessage,
+  intlLocaleForBot,
+  resolveLocalizedText,
+} from "../../i18n/index.js";
 
 const CONFIRM_YES = "booking_confirm_yes";
 const CONFIRM_NO = "booking_confirm_no";
@@ -81,6 +87,7 @@ export async function executeBookAppointmentNode(
   ctx: FlowExecutionContext,
   run: FlowRun
 ): Promise<NodeExecutionResult> {
+  const locale = getBotLocale(ctx.conversation, ctx.bot);
   let config;
   try {
     config = await requireEnabledCalendar(ctx.tenantId, ctx.botId);
@@ -94,7 +101,7 @@ export async function executeBookAppointmentNode(
         accessToken: ctx.accessToken,
         environment: ctx.environment,
       }),
-      "El calendario no está disponible en este momento."
+      getSystemMessage("calendarUnavailable", locale)
     );
     return { nextNodeId: null, halt: true, wait: false };
   }
@@ -129,11 +136,15 @@ export async function executeBookAppointmentNode(
           environment: ctx.environment,
         });
         const booking = result.booking;
+        const scheduledPrefix =
+          locale === "en"
+            ? getSystemMessage("bookingScheduledPrefixEn", locale)
+            : getSystemMessage("bookingScheduledPrefix", locale);
         const confirmationBase =
-          node.data.confirmationMessage?.trim() ||
-          `Tu cita fue agendada para ${formatBookingConfirmation(booking, config)}.`;
+          resolveLocalizedText(node.data.confirmationMessage, locale) ||
+          `${scheduledPrefix} ${formatBookingConfirmation(booking, config)}.`;
         const confirmation = result.payment
-          ? `${confirmationBase} Te enviamos un link de pago para confirmar la reserva.`
+          ? `${confirmationBase} ${getSystemMessage("bookingPaymentLink", locale)}`
           : confirmationBase;
         await sendChannelText(
           buildOutboundContext({
@@ -189,7 +200,7 @@ export async function executeBookAppointmentNode(
           accessToken: ctx.accessToken,
           environment: ctx.environment,
         }),
-        "Reserva cancelada. Puedes elegir otra fecha cuando quieras."
+        getSystemMessage("bookingCancelled", locale)
       );
       return {
         nextNodeId: null,
@@ -216,7 +227,7 @@ export async function executeBookAppointmentNode(
           accessToken: ctx.accessToken,
           environment: ctx.environment,
         }),
-        "No hay fechas disponibles por ahora."
+        getSystemMessage("bookingNoDates", locale)
       );
       return { nextNodeId: null, halt: true, wait: false };
     }
@@ -245,7 +256,7 @@ export async function executeBookAppointmentNode(
         );
       }
     }
-    await sendOptions(ctx, "Elige una fecha para tu cita:", options);
+    await sendOptions(ctx, getSystemMessage("bookingPickDate", locale), options);
     return {
       nextNodeId: null,
       halt: true,
@@ -277,7 +288,7 @@ export async function executeBookAppointmentNode(
           accessToken: ctx.accessToken,
           environment: ctx.environment,
         }),
-        "No hay horarios disponibles para esa fecha."
+        getSystemMessage("bookingNoSlots", locale)
       );
       return {
         nextNodeId: null,
@@ -309,7 +320,7 @@ export async function executeBookAppointmentNode(
         );
       }
     }
-    await sendOptions(ctx, "Elige un horario:", options);
+    await sendOptions(ctx, getSystemMessage("bookingPickSlot", locale), options);
     return {
       nextNodeId: null,
       halt: true,
@@ -320,7 +331,9 @@ export async function executeBookAppointmentNode(
 
   const startAt = run.variables[slotKey];
   const dateLabel = run.variables[dateKey] ?? "";
-  const confirmText = `Confirmar cita el ${dateLabel} a las ${startAt ? new Date(startAt).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", timeZone: config.timezone }) : ""}?`;
+  const confirmText = locale === "en"
+    ? `Confirm appointment on ${dateLabel} at ${startAt ? new Date(startAt).toLocaleTimeString(intlLocaleForBot(locale), { hour: "2-digit", minute: "2-digit", timeZone: config.timezone }) : ""}?`
+    : `Confirmar cita el ${dateLabel} a las ${startAt ? new Date(startAt).toLocaleTimeString(intlLocaleForBot(locale), { hour: "2-digit", minute: "2-digit", timeZone: config.timezone }) : ""}?`;
   if (ctx.channel === "whatsapp") {
     await sendInteractiveButtons({
       phoneNumberId: ctx.phoneNumberId,
@@ -328,15 +341,15 @@ export async function executeBookAppointmentNode(
       accessToken: ctx.accessToken,
       bodyText: confirmText,
       buttons: [
-        { id: CONFIRM_YES, title: "Confirmar" },
-        { id: CONFIRM_NO, title: "Cancelar" },
+        { id: CONFIRM_YES, title: getSystemMessage("bookingConfirmYes", locale) },
+        { id: CONFIRM_NO, title: getSystemMessage("bookingConfirmNo", locale) },
       ],
       ...(ctx.replyToMessageId ? { replyToMessageId: ctx.replyToMessageId } : {}),
     });
   } else {
     await sendOptions(ctx, confirmText, [
-      { id: CONFIRM_YES, label: "Confirmar" },
-      { id: CONFIRM_NO, label: "Cancelar" },
+      { id: CONFIRM_YES, label: getSystemMessage("bookingConfirmYes", locale) },
+      { id: CONFIRM_NO, label: getSystemMessage("bookingConfirmNo", locale) },
     ]);
   }
   return {

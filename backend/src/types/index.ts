@@ -118,10 +118,15 @@ export type Channel =
   | "sms"
   | "email";
 
+export type BotLocale = "es" | "en";
+
+export type LocalizedText = string | Record<BotLocale, string>;
+
 export interface Bot {
   botId: string;
   tenantId: string;
   name: string;
+  defaultLocale?: BotLocale;
   responseMode: "openai" | "webhook";
   systemPrompt?: string;
   model?: "gpt-4o" | "gpt-4o-mini" | "gpt-4-turbo";
@@ -187,6 +192,7 @@ export interface Conversation {
   metaFlowToken?: string;
   emailSubject?: string;
   emailThreadMessageId?: string;
+  locale?: BotLocale;
   createdAt: string;
 }
 
@@ -534,6 +540,7 @@ export interface InboundNormalized {
 export interface InstagramMessage {
   mid: string;
   text?: string;
+  is_echo?: boolean;
   attachments?: Array<{
     type: string;
     payload?: { url?: string };
@@ -1334,16 +1341,16 @@ export interface FlowNodeData {
   triggerType?: FlowTriggerType;
   keywords?: string[];
   matchMode?: AutomationMatchMode;
-  messageText?: string;
+  messageText?: LocalizedText;
   templateName?: string;
   templateLanguage?: string;
   templateVariables?: Record<string, string>;
   conditionVariable?: string;
   conditionOperator?: "contains" | "equals" | "not_equals";
   conditionValue?: string;
-  buttons?: Array<{ id: string; title: string }>;
+  buttons?: Array<{ id: string; title: LocalizedText }>;
   metaFlowId?: string;
-  metaFlowCta?: string;
+  metaFlowCta?: LocalizedText;
   delaySeconds?: number;
   variableName?: string;
   variableValue?: string;
@@ -1351,17 +1358,17 @@ export interface FlowNodeData {
   httpMethod?: "GET" | "POST";
   httpBody?: string;
   haltPipeline?: boolean;
-  confirmationMessage?: string;
+  confirmationMessage?: LocalizedText;
   maxDaysToShow?: number;
   amountInCents?: number;
-  paymentDescription?: string;
-  paymentMessageTemplate?: string;
+  paymentDescription?: LocalizedText;
+  paymentMessageTemplate?: LocalizedText;
   waitForPayment?: boolean;
-  catalogMessageText?: string;
+  catalogMessageText?: LocalizedText;
   productRetailerIds?: string[];
-  multiProductHeader?: string;
-  multiProductBody?: string;
-  orderConfirmationMessage?: string;
+  multiProductHeader?: LocalizedText;
+  multiProductBody?: LocalizedText;
+  orderConfirmationMessage?: LocalizedText;
 }
 
 export interface FlowNode {
@@ -1461,7 +1468,7 @@ export interface AutomationRule {
   targetPhones?: string[];
   targetTags?: string[];
   action: AutomationAction;
-  messageText?: string;
+  messageText?: LocalizedText;
   templateName?: string;
   templateLanguage?: string;
   templateVariables?: Record<string, string>;

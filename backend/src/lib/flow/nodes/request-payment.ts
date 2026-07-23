@@ -4,14 +4,19 @@ import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
 import { getNextNodeId } from "../graph.js";
 import { createPaymentRequest } from "../../payments/payments.service.js";
 import { formatPaymentMessage } from "../../payments/checkout.js";
+import { getBotLocale, getSystemMessage, resolveLocalizedText } from "../../i18n/index.js";
 
 export async function executeRequestPaymentNode(
   node: FlowNode,
   ctx: FlowExecutionContext,
   run: FlowRun
 ): Promise<NodeExecutionResult> {
+  const locale = getBotLocale(ctx.conversation, ctx.bot);
   const amountInCents = node.data.amountInCents;
-  const description = node.data.paymentDescription?.trim() || node.data.label?.trim() || "Pago";
+  const description =
+    resolveLocalizedText(node.data.paymentDescription, locale) ||
+    node.data.label?.trim() ||
+    getSystemMessage("paymentDefault", locale);
 
   if (!amountInCents || amountInCents < 1000) {
     await sendChannelText(
@@ -23,7 +28,7 @@ export async function executeRequestPaymentNode(
         accessToken: ctx.accessToken,
         environment: ctx.environment,
       }),
-      "El nodo de pago no tiene un monto válido configurado."
+      getSystemMessage("paymentInvalidAmount", locale)
     );
     return { nextNodeId: null, halt: true, wait: false };
   }
@@ -43,9 +48,9 @@ export async function executeRequestPaymentNode(
       sendWhatsApp: false,
     });
 
-    const messageTemplate = node.data.paymentMessageTemplate;
+    const messageTemplate = resolveLocalizedText(node.data.paymentMessageTemplate, locale);
     const text = formatPaymentMessage(
-      messageTemplate,
+      messageTemplate || undefined,
       request.checkoutUrl,
       amountInCents,
       description

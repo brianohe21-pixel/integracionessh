@@ -34,6 +34,7 @@ function maskBot(bot: Bot): Bot {
 const CreateBotSchema = z
   .object({
     name: z.string().min(1).max(128),
+    defaultLocale: z.enum(["es", "en"]).optional(),
     responseMode: z.enum(["openai", "webhook"]).default("openai"),
     systemPrompt: z.string().min(1).max(4096).optional(),
     model: z.enum(["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"]).default("gpt-4o-mini"),
@@ -63,6 +64,7 @@ const CreateBotSchema = z
 
 const UpdateBotSchema = z.object({
   name: z.string().min(1).max(128).optional(),
+  defaultLocale: z.enum(["es", "en"]).optional(),
   responseMode: z.enum(["openai", "webhook"]).optional(),
   systemPrompt: z.string().min(1).max(4096).optional(),
   model: z.enum(["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"]).optional(),

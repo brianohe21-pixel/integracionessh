@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import type { Bot, ChatCompletionResult, Message } from "../../types/index.js";
+import type { Bot, BotLocale, ChatCompletionResult, Message } from "../../types/index.js";
 import { messageRequestsHandoff } from "../advisor/keywords.js";
 import { getCalendarConfig } from "../dynamodb/calendar-config.repository.js";
 import {
@@ -11,6 +11,7 @@ import {
 import { getZonedParts } from "../calendar/slot-engine.js";
 import type { CalendarConfig } from "../../types/index.js";
 import { retrieveContext } from "../knowledge/retrieve.js";
+import { getSystemMessage, intlLocaleForBot } from "../i18n/index.js";
 
 export interface ChatCalendarContext {
   contactPhone: string;
@@ -60,10 +61,11 @@ function mapHistoryRole(msg: Message): "user" | "assistant" | null {
 
 const MAX_TOOL_ROUNDS = 4;
 
-function buildCalendarContextBlock(config: CalendarConfig): string {
+function buildCalendarContextBlock(config: CalendarConfig, locale: BotLocale): string {
   const now = new Date();
   const parts = getZonedParts(now, config.timezone);
-  const formattedNow = new Intl.DateTimeFormat("es-CO", {
+  const intlLocale = intlLocaleForBot(locale);
+  const formattedNow = new Intl.DateTimeFormat(intlLocale, {
     timeZone: config.timezone,
     weekday: "long",
     year: "numeric",
@@ -74,24 +76,36 @@ function buildCalendarContextBlock(config: CalendarConfig): string {
     hour12: false,
   }).format(now);
 
+  if (locale === "en") {
+    return `\n\nCalendar enabled. Current date and time (${config.timezone}): ${formattedNow} (today = ${parts.isoDate}).
+Convert "today", "tomorrow", and weekdays to YYYY-MM-DD before calling list_available_slots.
+You can book appointments with list_available_slots and create_booking. Use cancel_booking if the customer cancels.
+${getSystemMessage("calendarTimeHint", locale)}`;
+  }
+
   return `\n\nCalendario activo. Fecha y hora actual (${config.timezone}): ${formattedNow} (hoy = ${parts.isoDate}).
 Convierte "hoy", "mañana" y días de la semana a YYYY-MM-DD antes de llamar list_available_slots.
 Puedes agendar citas con list_available_slots y create_booking. Usa cancel_booking si el cliente cancela.
-Si el cliente indica una hora, usa el startAt del slot coincidente en create_booking.`;
+${getSystemMessage("calendarTimeHint", locale)}`;
 }
 
-function buildCalendarTools(): OpenAI.ChatCompletionTool[] {
+function buildCalendarTools(locale: BotLocale): OpenAI.ChatCompletionTool[] {
+  const isEn = locale === "en";
   return [
     {
       type: "function",
       function: {
         name: "list_available_slots",
-        description:
-          "Lista horarios disponibles para una fecha en YYYY-MM-DD (zona horaria del calendario). Convierte fechas relativas como mañana antes de llamar.",
+        description: isEn
+          ? "List available time slots for a date in YYYY-MM-DD (calendar timezone). Convert relative dates like tomorrow before calling."
+          : "Lista horarios disponibles para una fecha en YYYY-MM-DD (zona horaria del calendario). Convierte fechas relativas como mañana antes de llamar.",
         parameters: {
           type: "object",
           properties: {
-            date: { type: "string", description: "Fecha ISO YYYY-MM-DD" },
+            date: {
+              type: "string",
+              description: isEn ? "ISO date YYYY-MM-DD" : "Fecha ISO YYYY-MM-DD",
+            },
           },
           required: ["date"],
         },
@@ -101,12 +115,18 @@ function buildCalendarTools(): OpenAI.ChatCompletionTool[] {
       type: "function",
       function: {
         name: "create_booking",
-        description: "Crea una reserva en un horario disponible",
+        description: isEn ? "Create a booking at an available slot" : "Crea una reserva en un horario disponible",
         parameters: {
           type: "object",
           properties: {
-            startAt: { type: "string", description: "Inicio en ISO 8601 UTC del slot elegido" },
-            contactName: { type: "string", description: "Nombre del contacto" },
+            startAt: {
+              type: "string",
+              description: isEn ? "Slot start in ISO 8601 UTC" : "Inicio en ISO 8601 UTC del slot elegido",
+            },
+            contactName: {
+              type: "string",
+              description: isEn ? "Contact name" : "Nombre del contacto",
+            },
           },
           required: ["startAt"],
         },
@@ -116,11 +136,14 @@ function buildCalendarTools(): OpenAI.ChatCompletionTool[] {
       type: "function",
       function: {
         name: "cancel_booking",
-        description: "Cancela una reserva existente",
+        description: isEn ? "Cancel an existing booking" : "Cancela una reserva existente",
         parameters: {
           type: "object",
           properties: {
-            bookingId: { type: "string", description: "ID de la reserva" },
+            bookingId: {
+              type: "string",
+              description: isEn ? "Booking ID" : "ID de la reserva",
+            },
           },
           required: ["bookingId"],
         },
@@ -135,8 +158,9 @@ async function executeCalendarToolCall(params: {
   botId: string;
   calendarConfig: CalendarConfig;
   calendarContext: ChatCalendarContext;
+  locale: BotLocale;
 }): Promise<string> {
-  const { toolCall, tenantId, botId, calendarConfig, calendarContext } = params;
+  const { toolCall, tenantId, botId, calendarConfig, calendarContext, locale } = params;
   if (toolCall.type !== "function") {
     return JSON.stringify({ error: "Unsupported tool call" });
   }
@@ -158,7 +182,7 @@ async function executeCalendarToolCall(params: {
       count: slots.length,
       ...(slots.length === 0
         ? {
-            hint: "Si el cliente dijo mañana u otra fecha relativa, verifica que usaste la fecha correcta.",
+            hint: getSystemMessage("calendarDateHint", locale),
           }
         : {}),
     });
@@ -225,10 +249,15 @@ export async function generateChatResponse(
   userMessage: string,
   apiKey: string,
   tenantId?: string,
-  calendarContext?: ChatCalendarContext
+  calendarContext?: ChatCalendarContext,
+  locale: BotLocale = "es"
 ): Promise<ChatCompletionResult> {
   if (messageRequestsHandoff(userMessage)) {
-    return { reply: null, handoff: true, handoffReason: "El cliente solicitó un asesor" };
+    return {
+      reply: null,
+      handoff: true,
+      handoffReason: getSystemMessage("handoffRequestedReason", locale),
+    };
   }
 
   const client = getOpenAIClient(apiKey);
@@ -246,17 +275,23 @@ export async function generateChatResponse(
 
   const basePrompt = bot.systemPrompt ?? "";
   const contextBlock = knowledgeContext
-    ? `\n\nContexto del negocio:\n${knowledgeContext}`
+    ? locale === "en"
+      ? `\n\nBusiness context:\n${knowledgeContext}`
+      : `\n\nContexto del negocio:\n${knowledgeContext}`
     : "";
   const calendarBlock =
     calendarEnabled && calendarConfig
-      ? buildCalendarContextBlock(calendarConfig)
+      ? buildCalendarContextBlock(calendarConfig, locale)
       : "";
+  const languageInstruction =
+    locale === "en"
+      ? getSystemMessage("respondInEnglish", locale)
+      : getSystemMessage("respondInSpanish", locale);
   const systemPrompt =
     basePrompt +
     contextBlock +
     calendarBlock +
-    "\n\nSi el cliente necesita hablar con un asesor, usa la herramienta transfer_to_human.";
+    `\n\n${languageInstruction}\n\n${getSystemMessage("handoffToolInstruction", locale)}`;
   const model = bot.model ?? "gpt-4o-mini";
   const temperature = bot.temperature ?? 0.7;
   const maxTokens = bot.maxTokens ?? 1024;
@@ -279,11 +314,14 @@ export async function generateChatResponse(
       type: "function",
       function: {
         name: "transfer_to_human",
-        description: "Transfiere la conversación a un asesor",
+        description: getSystemMessage("transferToHumanDescription", locale),
         parameters: {
           type: "object",
           properties: {
-            reason: { type: "string", description: "Por qué el cliente necesita un asesor" },
+            reason: {
+              type: "string",
+              description: getSystemMessage("transferToHumanReason", locale),
+            },
           },
           required: ["reason"],
         },
@@ -292,7 +330,7 @@ export async function generateChatResponse(
   ];
 
   if (calendarEnabled) {
-    tools.push(...buildCalendarTools());
+    tools.push(...buildCalendarTools(locale));
   }
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
@@ -318,7 +356,7 @@ export async function generateChatResponse(
 
     for (const toolCall of toolCalls) {
       if (toolCall.type === "function" && toolCall.function.name === "transfer_to_human") {
-        let reason = "El cliente solicitó un asesor";
+        let reason = getSystemMessage("handoffRequestedReason", locale);
         try {
           const parsed = JSON.parse(toolCall.function.arguments) as { reason?: string };
           if (parsed.reason?.trim()) reason = parsed.reason.trim();
@@ -341,6 +379,7 @@ export async function generateChatResponse(
           botId: bot.botId,
           calendarConfig,
           calendarContext,
+          locale,
         });
         messages.push({
           role: "tool",

@@ -10,6 +10,7 @@ import {
   getConversationMessages,
   addMessage,
   clearMetaFlowSession,
+  updateConversation,
 } from "../dynamodb/conversation.repository.js";
 import { generateChatResponse, getOpenAIApiKey } from "../openai/client.js";
 import { callCustomWebhook } from "../webhook/client.js";
@@ -53,6 +54,11 @@ import {
   isOrderInbound,
 } from "../catalog/order-handler.js";
 import { recordCampaignReply } from "../dynamodb/campaign.repository.js";
+import {
+  getSystemMessage,
+  getBotLocale,
+  resolveConversationLocale,
+} from "../i18n/index.js";
 
 async function resolveAccessToken(
   tenantId: string,
@@ -122,6 +128,7 @@ async function sendHandoffCourtesy(
   accessToken: string | undefined,
   replyToExternalId?: string
 ): Promise<void> {
+  const locale = getBotLocale(conversation, bot);
   const outboundCtx = buildOutboundContext({
     tenantId: body.tenantId,
     botId: body.botId,
@@ -131,7 +138,7 @@ async function sendHandoffCourtesy(
     environment: process.env.ENVIRONMENT ?? "dev",
     replyToExternalId,
   });
-  await sendChannelText(outboundCtx, getClientHandoffMessage());
+  await sendChannelText(outboundCtx, getClientHandoffMessage(locale));
 }
 
 async function executeHandoff(params: {
@@ -239,6 +246,18 @@ export async function processInboundMessage(
     return;
   }
   const userMessageText = inbound.text;
+  const detectedLocale = resolveConversationLocale({
+    userMessage: userMessageText,
+    conversationLocale: conversation.locale,
+    botDefaultLocale: bot.defaultLocale,
+  });
+  if (detectedLocale !== conversation.locale) {
+    const localeUpdated = await updateConversation(tenantId, botId, conversation.conversationId, {
+      locale: detectedLocale,
+    });
+    if (localeUpdated) conversation = localeUpdated;
+  }
+  const conversationLocale = getBotLocale(conversation, bot);
   const now = new Date().toISOString();
   const source = inboundSourceForChannel(channel);
 
@@ -544,6 +563,7 @@ export async function processInboundMessage(
       botId,
       contact: { name: contactName ?? "" },
       channel,
+      locale: conversationLocale,
     });
     if (webhookResult.handoff) {
       shouldHandoff = true;
@@ -568,8 +588,7 @@ export async function processInboundMessage(
           message: userMessageText,
           contactName,
         });
-        const fallback =
-          "El asistente no está disponible en este momento. Configura tu API key de OpenAI en Ajustes.";
+        const fallback = getSystemMessage("assistantUnavailable", conversationLocale);
         await sendChannelText(
           buildOutboundContext({
             tenantId,
@@ -601,7 +620,8 @@ export async function processInboundMessage(
       userMessageText,
       openAIKey,
       tenantId,
-      { contactPhone: participantId, conversationId: conversation.conversationId }
+      { contactPhone: participantId, conversationId: conversation.conversationId },
+      conversationLocale
     );
     if (result.handoff) {
       shouldHandoff = true;
@@ -644,11 +664,11 @@ export async function processInboundMessage(
           userMessageText,
           openAIKey,
           tenantId,
-          { contactPhone: participantId, conversationId: conversation.conversationId }
+          { contactPhone: participantId, conversationId: conversation.conversationId },
+          conversationLocale
         );
         aiResponse =
-          fallback.reply ??
-          "En este momento no tenemos asesores disponibles. ¿Puedo ayudarte con algo más?";
+          fallback.reply ?? getSystemMessage("noAdvisorsAvailable", conversationLocale);
       } else {
         throw handoffErr;
       }

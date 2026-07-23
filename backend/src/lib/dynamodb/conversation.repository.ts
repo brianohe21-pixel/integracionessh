@@ -185,6 +185,7 @@ export async function updateConversation(
       | "metaFlowToken"
       | "emailSubject"
       | "emailThreadMessageId"
+      | "locale"
     >
   >
 ): Promise<Conversation | null> {
