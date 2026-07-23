@@ -10,7 +10,7 @@ import {
   listTenants,
 } from "../../lib/dynamodb/tenant.repository.js";
 import { applyAdminTenantPlan } from "../../lib/billing/activate-plan.js";
-import { extractAuthContext } from "../../lib/auth/cognito.js";
+import { extractAuthContext, assertMemberRole } from "../../lib/auth/cognito.js";
 import { recordLegalAcceptance, getLegalAcceptance } from "../../lib/dynamodb/legal.repository.js";
 import {
   saveOpenAIApiKey,
@@ -29,7 +29,15 @@ import {
   deleteObject,
   getPresignedUploadUrl,
 } from "../../lib/s3/client.js";
-import { ok, created, noContent, badRequest, notFound, handleError } from "../../lib/http.js";
+import {
+  ok,
+  created,
+  noContent,
+  badRequest,
+  notFound,
+  handleError,
+  parseJsonBody,
+} from "../../lib/http.js";
 import type { Tenant, TenantBranding, InboxSlaSettings } from "../../types/index.js";
 import { resolveInboxSlaSettings } from "../../lib/advisor/inbox-sla.js";
 
@@ -77,17 +85,32 @@ const UpdateOnboardingSchema = z
 
 const UpdateInboxSlaSchema = z.object({
   enabled: z.boolean(),
-  firstResponseMinutes: z.number().int().min(1).max(1440),
+  firstResponseMinutes: z.coerce.number().int().min(1).max(1440),
 });
+
+function formatZodError(error: z.ZodError): string {
+  return error.issues.map((issue) => issue.message).join("; ") || "Invalid input";
+}
 
 async function handleInboxSlaRoutes(
   event: APIGatewayProxyEventV2WithJWTAuthorizer,
-  method: string,
   auth: ReturnType<typeof extractAuthContext>
 ): Promise<APIGatewayProxyResultV2 | null> {
+  const routeKey = event.routeKey;
   const rawPath = event.rawPath ?? event.requestContext.http.path ?? "";
-  if (!rawPath.endsWith("/tenants/me/inbox-sla")) return null;
+  const isInboxSlaRoute =
+    routeKey === "GET /tenants/me/inbox-sla" ||
+    routeKey === "PUT /tenants/me/inbox-sla" ||
+    rawPath.includes("/tenants/me/inbox-sla");
+  if (!isInboxSlaRoute) return null;
 
+  const method = (
+    routeKey?.split(" ")[0] ??
+    event.requestContext.http.method ??
+    ""
+  ).toUpperCase();
+
+  assertMemberRole(auth);
   await ensureTenant(auth.tenantId, auth.email, auth.name);
 
   if (method === "GET") {
@@ -96,10 +119,10 @@ async function handleInboxSlaRoutes(
   }
 
   if (method === "PUT") {
-    const body = JSON.parse(event.body ?? "{}");
+    const body = parseJsonBody(event);
     const parsed = UpdateInboxSlaSchema.safeParse(body);
     if (!parsed.success) {
-      return badRequest(parsed.error.errors[0]?.message ?? "Invalid input");
+      return badRequest(formatZodError(parsed.error));
     }
 
     const inboxSla: InboxSlaSettings = parsed.data;
@@ -248,7 +271,7 @@ export async function handler(
     const brandingResponse = await handleBrandingRoutes(event, method, auth);
     if (brandingResponse) return brandingResponse;
 
-    const inboxSlaResponse = await handleInboxSlaRoutes(event, method, auth);
+    const inboxSlaResponse = await handleInboxSlaRoutes(event, auth);
     if (inboxSlaResponse) return inboxSlaResponse;
 
     if (event.rawPath?.endsWith("/openai-key")) {

@@ -19,7 +19,7 @@ import {
   assertAdvisorOrMember,
   assertTenantManagerRole,
 } from "../../lib/auth/cognito.js";
-import { performHandoff, releaseToBot } from "../../lib/advisor/handoff.js";
+import { performHandoff, releaseToBot, claimConversation, performBulkHandoff } from "../../lib/advisor/handoff.js";
 import { resolveConversation } from "../../lib/advisor/resolve.js";
 import { updateConversation } from "../../lib/dynamodb/conversation.repository.js";
 import {
@@ -63,6 +63,23 @@ async function resolveAccessTokenForChannel(
 
 const HandoffSchema = z.object({
   botId: z.string().uuid(),
+  advisorId: z.string().uuid().optional(),
+});
+
+const ClaimSchema = z.object({
+  botId: z.string().uuid(),
+});
+
+const BulkHandoffSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        conversationId: z.string().uuid(),
+        botId: z.string().uuid(),
+      })
+    )
+    .min(1)
+    .max(50),
   advisorId: z.string().uuid().optional(),
 });
 
@@ -129,6 +146,23 @@ export async function handler(
     const params = event.queryStringParameters ?? {};
     const rawPath = event.rawPath ?? event.requestContext.http.path;
 
+    if (method === "POST" && rawPath.endsWith("/conversations/bulk-handoff")) {
+      assertTenantManagerRole(auth);
+
+      const body = JSON.parse(event.body ?? "{}");
+      const parsed = BulkHandoffSchema.safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const result = await performBulkHandoff({
+        tenantId: auth.tenantId,
+        items: parsed.data.items,
+        reason: "manual",
+        ...(parsed.data.advisorId ? { advisorId: parsed.data.advisorId } : {}),
+      });
+
+      return ok(result);
+    }
+
     if (method === "GET" && !conversationId) {
       const botId = params.botId;
       const handoffMode =
@@ -158,12 +192,21 @@ export async function handler(
         return badRequest("Invalid limit parameter (1-100)");
       }
 
+      const assignment =
+        params.assignment === "assigned" || params.assignment === "unassigned"
+          ? params.assignment
+          : undefined;
+
       let assignedAdvisorId = params.assignedAdvisorId;
 
       if (auth.role === "advisor") {
         const advisor = await resolveAdvisorRecord(auth);
         if (!advisor) return ok([]);
-        assignedAdvisorId = advisor.advisorId;
+        if (assignment === "unassigned") {
+          assignedAdvisorId = undefined;
+        } else {
+          assignedAdvisorId = advisor.advisorId;
+        }
       }
 
       const listOptions: Parameters<typeof listConversations>[1] = { limit };
@@ -173,6 +216,7 @@ export async function handler(
       if (status) listOptions.status = status;
       if (channel) listOptions.channel = channel;
       if (assignedAdvisorId) listOptions.assignedAdvisorId = assignedAdvisorId;
+      if (assignment) listOptions.assignment = assignment;
       if (params.cursor) listOptions.cursor = params.cursor;
 
       const result = await listConversations(auth.tenantId, listOptions);
@@ -320,6 +364,33 @@ export async function handler(
       }
 
       return ok(refreshed);
+    }
+
+    if (method === "POST" && subPath === "claim") {
+      if (auth.role !== "advisor") {
+        return forbidden("Only advisors can claim conversations");
+      }
+
+      const advisor = await resolveAdvisorRecord(auth);
+      if (!advisor) return forbidden("Advisor record not found");
+
+      const body = JSON.parse(event.body ?? "{}");
+      const parsed = ClaimSchema.safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const conversation = await findConversationById(auth.tenantId, conversationId);
+      if (!conversation || conversation.botId !== parsed.data.botId) {
+        return notFound("Conversation not found");
+      }
+
+      const updated = await claimConversation({
+        tenantId: auth.tenantId,
+        botId: parsed.data.botId,
+        conversationId,
+        advisorId: advisor.advisorId,
+      });
+
+      return ok(updated);
     }
 
     if (method === "POST" && subPath === "release") {

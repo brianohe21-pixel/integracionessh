@@ -1,4 +1,4 @@
-import type { APIGatewayProxyResultV2 } from "aws-lambda";
+import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import { ZodError } from "zod";
 
 const CORS_HEADERS = {
@@ -30,6 +30,16 @@ export function noContent(): APIGatewayProxyResultV2 {
     headers: CORS_HEADERS,
     body: "",
   };
+}
+
+export function parseJsonBody(event: APIGatewayProxyEventV2): unknown {
+  if (!event.body) return {};
+  const raw = event.isBase64Encoded
+    ? Buffer.from(event.body, "base64").toString("utf8")
+    : event.body;
+  const trimmed = raw.trim();
+  if (!trimmed) return {};
+  return JSON.parse(trimmed);
 }
 
 export function badRequest(message: string): APIGatewayProxyResultV2 {
@@ -92,6 +102,14 @@ export function unprocessableEntity<T extends Record<string, unknown>>(
   };
 }
 
+export function conflict(message: string): APIGatewayProxyResultV2 {
+  return {
+    statusCode: 409,
+    headers: CORS_HEADERS,
+    body: JSON.stringify({ error: message }),
+  };
+}
+
 export function notFound(message = "Not found"): APIGatewayProxyResultV2 {
   return {
     statusCode: 404,
@@ -132,6 +150,7 @@ export function handleError(error: unknown): APIGatewayProxyResultV2 {
   }
   if (err.statusCode === 403) return forbidden(err.message);
   if (err.statusCode === 404) return notFound(err.message);
+  if (err.statusCode === 409) return conflict(err.message);
   if (err.statusCode === 422) {
     const payload = (err as Error & { details?: Record<string, unknown> }).details;
     return unprocessableEntity(err.message, payload);

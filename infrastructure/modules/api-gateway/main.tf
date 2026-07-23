@@ -123,6 +123,12 @@ locals {
       function_arn = var.conversations_function_arn
       protected    = true
     }
+    conversations_bulk_handoff = {
+      route_key    = "POST /conversations/bulk-handoff"
+      invoke_arn   = var.conversations_invoke_arn
+      function_arn = var.conversations_function_arn
+      protected    = true
+    }
     conversations_get = {
       route_key    = "GET /conversations/{conversationId}"
       invoke_arn   = var.conversations_invoke_arn
@@ -131,6 +137,12 @@ locals {
     }
     conversations_handoff = {
       route_key    = "POST /conversations/{conversationId}/handoff"
+      invoke_arn   = var.conversations_invoke_arn
+      function_arn = var.conversations_function_arn
+      protected    = true
+    }
+    conversations_claim = {
+      route_key    = "POST /conversations/{conversationId}/claim"
       invoke_arn   = var.conversations_invoke_arn
       function_arn = var.conversations_function_arn
       protected    = true
@@ -341,6 +353,12 @@ locals {
     }
     metrics_inbox_sla = {
       route_key    = "GET /metrics/inbox-sla"
+      invoke_arn   = var.metrics_invoke_arn
+      function_arn = var.metrics_function_arn
+      protected    = true
+    }
+    metrics_advisor_workload = {
+      route_key    = "GET /metrics/advisor-workload"
       invoke_arn   = var.metrics_invoke_arn
       function_arn = var.metrics_function_arn
       protected    = true

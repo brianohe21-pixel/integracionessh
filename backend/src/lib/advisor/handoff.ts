@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import {
   addMessage,
   clearConversationHandoff,
+  claimConversationAssignment,
   getConversation,
   getConversationMessages,
   updateConversation,
@@ -15,7 +16,7 @@ import { assertCanUseCopilot } from "../billing/assert-plan.js";
 import { emitIntegrationEvent } from "../integrations/emit.js";
 import { buildConversationHandoffPayload } from "../integrations/payloads.js";
 import { publishRealtimeEventSafe } from "../realtime/publish.js";
-import type { Conversation, HandoffReason, Message } from "../../types/index.js";
+import type { BulkHandoffResult, Conversation, HandoffReason, Message } from "../../types/index.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 
@@ -147,6 +148,110 @@ export async function performHandoff(params: {
   }
 
   return updated;
+}
+
+export async function claimConversation(params: {
+  tenantId: string;
+  botId: string;
+  conversationId: string;
+  advisorId: string;
+}): Promise<Conversation> {
+  const existing = await getConversation(
+    params.tenantId,
+    params.botId,
+    params.conversationId
+  );
+  if (!existing) {
+    const error = new Error("Conversation not found");
+    (error as Error & { statusCode: number }).statusCode = 404;
+    throw error;
+  }
+
+  if ((existing.handoffMode ?? "bot") !== "human") {
+    const error = new Error("Conversation is not in human handoff mode");
+    (error as Error & { statusCode: number }).statusCode = 400;
+    throw error;
+  }
+
+  if ((existing.workflowStatus ?? "open") === "resolved") {
+    const error = new Error("Conversation is already resolved");
+    (error as Error & { statusCode: number }).statusCode = 400;
+    throw error;
+  }
+
+  const advisor = await getAdvisor(params.tenantId, params.advisorId);
+  if (!advisor || advisor.status !== "active") {
+    const error = new Error("Advisor not found or inactive");
+    (error as Error & { statusCode: number }).statusCode = 400;
+    throw error;
+  }
+
+  if (existing.assignedAdvisorId === params.advisorId) {
+    return existing;
+  }
+
+  await touchAdvisorAssignment(params.tenantId, params.advisorId);
+
+  const updated = await claimConversationAssignment(
+    params.tenantId,
+    params.botId,
+    params.conversationId,
+    params.advisorId
+  );
+
+  const now = new Date().toISOString();
+  const systemMessage: Message = {
+    messageId: `sys-${randomUUID()}`,
+    conversationId: params.conversationId,
+    tenantId: params.tenantId,
+    role: "system",
+    content: "Conversation claimed by advisor",
+    timestamp: now,
+  };
+
+  await addMessage(systemMessage, params.botId);
+
+  scheduleCopilotInsights({
+    tenantId: params.tenantId,
+    botId: params.botId,
+    conversationId: params.conversationId,
+  });
+
+  return updated;
+}
+
+export async function performBulkHandoff(params: {
+  tenantId: string;
+  items: { conversationId: string; botId: string }[];
+  advisorId?: string;
+  reason: HandoffReason;
+}): Promise<BulkHandoffResult> {
+  const succeeded: string[] = [];
+  const failed: { conversationId: string; error: string }[] = [];
+
+  for (const item of params.items) {
+    try {
+      const result = await performHandoff({
+        tenantId: params.tenantId,
+        botId: item.botId,
+        conversationId: item.conversationId,
+        reason: params.reason,
+        ...(params.advisorId ? { advisorId: params.advisorId } : {}),
+      });
+      if (!result) {
+        failed.push({ conversationId: item.conversationId, error: "Conversation not found" });
+        continue;
+      }
+      succeeded.push(item.conversationId);
+    } catch (err) {
+      failed.push({
+        conversationId: item.conversationId,
+        error: err instanceof Error ? err.message : "Handoff failed",
+      });
+    }
+  }
+
+  return { succeeded, failed };
 }
 
 export async function releaseToBot(params: {

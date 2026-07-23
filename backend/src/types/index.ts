@@ -45,6 +45,42 @@ export interface InboxSlaMetrics {
   byAdvisor: InboxSlaAdvisorMetric[];
 }
 
+export interface AdvisorWorkloadMetric {
+  advisorId: string;
+  name: string;
+  open: number;
+  new: number;
+  pending: number;
+  totalActive: number;
+  slaBreached: number;
+  slaAtRisk: number;
+}
+
+export interface AdvisorWorkloadUnassigned {
+  count: number;
+  open: number;
+  new: number;
+  pending: number;
+  totalActive: number;
+  slaBreached: number;
+  slaAtRisk: number;
+}
+
+export interface AdvisorWorkloadMetrics {
+  advisors: AdvisorWorkloadMetric[];
+  unassigned: AdvisorWorkloadUnassigned;
+}
+
+export interface BulkHandoffItem {
+  conversationId: string;
+  botId: string;
+}
+
+export interface BulkHandoffResult {
+  succeeded: string[];
+  failed: { conversationId: string; error: string }[];
+}
+
 export interface Tenant {
   tenantId: string;
   name: string;

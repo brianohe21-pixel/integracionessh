@@ -39,6 +39,7 @@ export interface ListConversationsOptions {
   workflowStatus?: WorkflowStatus;
   status?: Conversation["status"];
   assignedAdvisorId?: string;
+  assignment?: "assigned" | "unassigned";
   limit?: number;
   cursor?: string;
 }
@@ -69,6 +70,17 @@ function isAfterCursor(conv: Conversation, cursor: ConversationCursor): boolean 
   if (conv.lastMessageAt < cursor.lastMessageAt) return true;
   if (conv.lastMessageAt > cursor.lastMessageAt) return false;
   return conv.conversationId < cursor.conversationId;
+}
+
+export function matchesConversationAssignment(
+  conversation: Conversation,
+  assignment?: "assigned" | "unassigned"
+): boolean {
+  if (!assignment) return true;
+  if ((conversation.handoffMode ?? "bot") !== "human") return false;
+  if ((conversation.workflowStatus ?? "open") === "resolved") return false;
+  if (assignment === "unassigned") return !conversation.assignedAdvisorId;
+  return !!conversation.assignedAdvisorId;
 }
 
 async function queryAllConversationsByBot(
@@ -211,6 +223,58 @@ export async function updateConversation(
       conversation: updated,
     });
   }
+
+  return updated;
+}
+
+export async function claimConversationAssignment(
+  tenantId: string,
+  botId: string,
+  conversationId: string,
+  advisorId: string
+): Promise<Conversation> {
+  const existing = await getConversation(tenantId, botId, conversationId);
+  if (!existing) {
+    const error = new Error("Conversation not found");
+    (error as Error & { statusCode: number }).statusCode = 404;
+    throw error;
+  }
+
+  if (existing.assignedAdvisorId === advisorId) {
+    return existing;
+  }
+
+  if (existing.assignedAdvisorId) {
+    const error = new Error("Conversation already assigned to another advisor");
+    (error as Error & { statusCode: number }).statusCode = 409;
+    throw error;
+  }
+
+  try {
+    await docClient.send(
+      new UpdateCommand({
+        TableName: TABLE_NAME,
+        Key: conversationKeys(tenantId, botId, conversationId),
+        UpdateExpression: "SET assignedAdvisorId = :aid",
+        ConditionExpression: "attribute_not_exists(assignedAdvisorId)",
+        ExpressionAttributeValues: { ":aid": advisorId },
+      })
+    );
+  } catch (err) {
+    if ((err as { name?: string }).name === "ConditionalCheckFailedException") {
+      const conflict = new Error("Conversation already assigned to another advisor");
+      (conflict as Error & { statusCode: number }).statusCode = 409;
+      throw conflict;
+    }
+    throw err;
+  }
+
+  const updated = normalizeConversation({ ...existing, assignedAdvisorId: advisorId });
+
+  publishRealtimeEventSafe(tenantId, {
+    type: "conversation.handoff",
+    conversation: updated,
+  });
 
   return updated;
 }
@@ -555,6 +619,10 @@ export async function listConversations(
 
   if (options.assignedAdvisorId) {
     merged = merged.filter((c) => c.assignedAdvisorId === options.assignedAdvisorId);
+  }
+
+  if (options.assignment) {
+    merged = merged.filter((c) => matchesConversationAssignment(c, options.assignment));
   }
 
   merged.sort(
