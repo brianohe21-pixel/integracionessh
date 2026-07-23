@@ -147,6 +147,12 @@ locals {
       function_arn = var.conversations_function_arn
       protected    = true
     }
+    conversations_copilot = {
+      route_key    = "POST /conversations/{conversationId}/copilot"
+      invoke_arn   = var.conversations_invoke_arn
+      function_arn = var.conversations_function_arn
+      protected    = true
+    }
     conversations_wa_link = {
       route_key    = "GET /conversations/{conversationId}/wa-link"
       invoke_arn   = var.conversations_invoke_arn

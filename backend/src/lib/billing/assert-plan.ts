@@ -28,6 +28,15 @@ import {
 } from "./plan-limits.js";
 import { assertCanEnableKnowledge } from "./plan-config.js";
 
+export function assertCanUseCopilot(tenant: Tenant): void {
+  if (tenant.plan === "free") {
+    throw new PlanLimitError(
+      "PLAN_COPILOT_NOT_AVAILABLE",
+      "AI copilot requires a Pro or Enterprise plan"
+    );
+  }
+}
+
 export async function assertCanCreateBot(tenant: Tenant): Promise<void> {
   const limits = getPlanLimits(tenant.plan);
   if (isUnlimited(limits.maxActiveBots)) return;

@@ -11,7 +11,7 @@ import {
 import { getAdvisorByCognitoUserId } from "../../lib/dynamodb/advisor.repository.js";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
 import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
-import { assertCanSendMessages } from "../../lib/billing/assert-plan.js";
+import { assertCanSendMessages, assertCanUseCopilot } from "../../lib/billing/assert-plan.js";
 import { incrementMessages } from "../../lib/dynamodb/usage.repository.js";
 import { PlanLimitError } from "../../lib/billing/plan-limits.js";
 import {
@@ -39,6 +39,12 @@ import {
 } from "../../lib/channels/router.js";
 import { ok, created, badRequest, notFound, forbidden, noContent, handleError } from "../../lib/http.js";
 import type { AuthContext, Conversation, Message, Channel } from "../../types/index.js";
+import {
+  generateCopilotInsights,
+  suggestAdvisorReply,
+  summarizeConversation,
+} from "../../lib/advisor/copilot.js";
+import { publishRealtimeEventSafe } from "../../lib/realtime/publish.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 
@@ -79,6 +85,11 @@ const ResolveSchema = z.object({
   botId: z.string().uuid(),
   csatScore: z.number().int().min(1).max(5).optional(),
   releaseToBot: z.boolean().optional(),
+});
+
+const CopilotSchema = z.object({
+  botId: z.string().uuid(),
+  action: z.enum(["suggest", "summarize", "analyze"]),
 });
 
 async function resolveAdvisorRecord(auth: AuthContext) {
@@ -332,6 +343,102 @@ export async function handler(
       });
 
       return ok(updated);
+    }
+
+    if (method === "POST" && subPath === "copilot") {
+      const body = JSON.parse(event.body ?? "{}");
+      const parsed = CopilotSchema.safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const conversation = await findConversationById(auth.tenantId, conversationId);
+      if (!conversation || conversation.botId !== parsed.data.botId) {
+        return notFound("Conversation not found");
+      }
+
+      await assertCanAccessConversation(auth, conversation);
+
+      const tenant = await getTenant(auth.tenantId);
+      if (!tenant) return notFound("Tenant not found");
+
+      try {
+        assertCanUseCopilot(tenant);
+      } catch (err) {
+        if (err instanceof PlanLimitError) {
+          return forbidden(err.message);
+        }
+        throw err;
+      }
+
+      const bot = await getBot(auth.tenantId, parsed.data.botId);
+      if (!bot) return notFound("Bot not found");
+
+      const messages = await getConversationMessages(auth.tenantId, conversationId, 50);
+      const copilotParams = {
+        bot,
+        messages,
+        tenantId: auth.tenantId,
+        environment: ENVIRONMENT,
+      };
+
+      if (parsed.data.action === "suggest") {
+        let advisorName: string | undefined;
+        if (auth.role === "advisor") {
+          const advisor = await resolveAdvisorRecord(auth);
+          advisorName = advisor?.name;
+        }
+
+        const suggestion = await suggestAdvisorReply({
+          ...copilotParams,
+          ...(advisorName ? { advisorName } : {}),
+        });
+
+        return ok(suggestion);
+      }
+
+      if (parsed.data.action === "summarize") {
+        const summary = await summarizeConversation(copilotParams);
+        const updated = await updateConversation(
+          auth.tenantId,
+          parsed.data.botId,
+          conversationId,
+          {
+            copilotSummary: summary.summary,
+            copilotGeneratedAt: new Date().toISOString(),
+          }
+        );
+
+        return ok({
+          ...summary,
+          conversation: updated,
+        });
+      }
+
+      const insights = await generateCopilotInsights(copilotParams);
+      const updated = await updateConversation(
+        auth.tenantId,
+        parsed.data.botId,
+        conversationId,
+        {
+          copilotSummary: insights.copilotSummary,
+          detectedIntent: insights.detectedIntent,
+          copilotGeneratedAt: new Date().toISOString(),
+        }
+      );
+
+      if (updated) {
+        publishRealtimeEventSafe(auth.tenantId, {
+          type: "conversation.updated",
+          conversation: updated,
+        });
+      }
+
+      return ok({
+        detectedIntent: insights.detectedIntent,
+        copilotSummary: insights.copilotSummary,
+        intentDetails: insights.intentDetails,
+        summaryDetails: insights.summaryDetails,
+        conversation: updated,
+      });
     }
 
     if (method === "POST" && subPath === "messages") {

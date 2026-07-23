@@ -99,6 +99,9 @@ export interface Conversation {
   csatScore?: number;
   csatSubmittedAt?: string;
   internalNote?: string;
+  copilotSummary?: string;
+  detectedIntent?: string;
+  copilotGeneratedAt?: string;
   messageCount: number;
   lastMessageAt: string;
   welcomeSentAt?: string;

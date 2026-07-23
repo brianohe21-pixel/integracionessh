@@ -3,14 +3,70 @@ import {
   addMessage,
   clearConversationHandoff,
   getConversation,
+  getConversationMessages,
   updateConversation,
 } from "../dynamodb/conversation.repository.js";
 import { getAdvisor, touchAdvisorAssignment } from "../dynamodb/advisor.repository.js";
+import { getBot } from "../dynamodb/bot.repository.js";
+import { getTenant } from "../dynamodb/tenant.repository.js";
 import { pickAdvisor } from "./pick.js";
+import { generateCopilotInsights } from "./copilot.js";
+import { assertCanUseCopilot } from "../billing/assert-plan.js";
 import { emitIntegrationEvent } from "../integrations/emit.js";
 import { buildConversationHandoffPayload } from "../integrations/payloads.js";
 import { publishRealtimeEventSafe } from "../realtime/publish.js";
 import type { Conversation, HandoffReason, Message } from "../../types/index.js";
+
+const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
+
+function scheduleCopilotInsights(params: {
+  tenantId: string;
+  botId: string;
+  conversationId: string;
+}): void {
+  void (async () => {
+    try {
+      const tenant = await getTenant(params.tenantId);
+      if (!tenant) return;
+      assertCanUseCopilot(tenant);
+
+      const bot = await getBot(params.tenantId, params.botId);
+      if (!bot) return;
+
+      const messages = await getConversationMessages(
+        params.tenantId,
+        params.conversationId,
+        50
+      );
+      const insights = await generateCopilotInsights({
+        bot,
+        messages,
+        tenantId: params.tenantId,
+        environment: ENVIRONMENT,
+      });
+
+      const updated = await updateConversation(
+        params.tenantId,
+        params.botId,
+        params.conversationId,
+        {
+          copilotSummary: insights.copilotSummary,
+          detectedIntent: insights.detectedIntent,
+          copilotGeneratedAt: new Date().toISOString(),
+        }
+      );
+
+      if (updated) {
+        publishRealtimeEventSafe(params.tenantId, {
+          type: "conversation.updated",
+          conversation: updated,
+        });
+      }
+    } catch (err) {
+      console.error("Copilot insights generation failed:", err);
+    }
+  })();
+}
 
 export async function performHandoff(params: {
   tenantId: string;
@@ -82,6 +138,12 @@ export async function performHandoff(params: {
         advisorId,
       })
     ).catch((err) => console.error("Failed to emit handoff integration event:", err));
+
+    scheduleCopilotInsights({
+      tenantId: params.tenantId,
+      botId: params.botId,
+      conversationId: params.conversationId,
+    });
   }
 
   return updated;
