@@ -212,7 +212,7 @@ module "lambda" {
   livekit_api_secret            = var.livekit_api_secret
   ses_from_email                = var.ses_from_email
   admin_notification_emails     = local.ops_alert_emails
-  api_public_url                  = local.api_public_url
+  api_public_url                = local.api_public_url
   tags                          = local.tags
 }
 

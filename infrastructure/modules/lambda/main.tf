@@ -381,9 +381,9 @@ locals {
       timeout     = 30
       memory      = 256
       environment = {
-        TABLE_NAME      = var.dynamodb_table_name
-        ENVIRONMENT     = var.environment
-        API_PUBLIC_URL  = var.api_public_url
+        TABLE_NAME     = var.dynamodb_table_name
+        ENVIRONMENT    = var.environment
+        API_PUBLIC_URL = var.api_public_url
       }
     }
     telegram_webhook = {
@@ -392,9 +392,9 @@ locals {
       timeout     = 30
       memory      = 256
       environment = {
-        TABLE_NAME      = var.dynamodb_table_name
-        ENVIRONMENT     = var.environment
-        SQS_QUEUE_URL   = var.sqs_queue_url
+        TABLE_NAME    = var.dynamodb_table_name
+        ENVIRONMENT   = var.environment
+        SQS_QUEUE_URL = var.sqs_queue_url
       }
     }
     messenger_connect = {
