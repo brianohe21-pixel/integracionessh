@@ -275,6 +275,16 @@ variable "tags" {
 
 variable "cloudwatch_log_group_import_exclude" {
   type        = set(string)
-  default     = ["catalog", "payments", "realtime_ws", "macros"]
+  default     = [
+    "catalog",
+    "payments",
+    "realtime_ws",
+    "macros",
+    "telegram_connect",
+    "telegram_webhook",
+    "messenger_connect",
+    "sms_webhook",
+    "email_inbound",
+  ]
   description = "Lambda keys whose log groups are created by Terraform instead of imported (new functions without pre-existing log groups in AWS)"
 }
