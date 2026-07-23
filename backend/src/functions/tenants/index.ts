@@ -30,7 +30,8 @@ import {
   getPresignedUploadUrl,
 } from "../../lib/s3/client.js";
 import { ok, created, noContent, badRequest, notFound, handleError } from "../../lib/http.js";
-import type { Tenant, TenantBranding } from "../../types/index.js";
+import type { Tenant, TenantBranding, InboxSlaSettings } from "../../types/index.js";
+import { resolveInboxSlaSettings } from "../../lib/advisor/inbox-sla.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 
@@ -73,6 +74,41 @@ const UpdateOnboardingSchema = z
   .refine((data) => data.skip || data.testConfirmed || data.complete, {
     message: "At least one action is required",
   });
+
+const UpdateInboxSlaSchema = z.object({
+  enabled: z.boolean(),
+  firstResponseMinutes: z.number().int().min(1).max(1440),
+});
+
+async function handleInboxSlaRoutes(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer,
+  method: string,
+  auth: ReturnType<typeof extractAuthContext>
+): Promise<APIGatewayProxyResultV2 | null> {
+  const rawPath = event.rawPath ?? event.requestContext.http.path ?? "";
+  if (!rawPath.endsWith("/tenants/me/inbox-sla")) return null;
+
+  await ensureTenant(auth.tenantId, auth.email, auth.name);
+
+  if (method === "GET") {
+    const tenant = await getTenant(auth.tenantId);
+    return ok(resolveInboxSlaSettings(tenant?.inboxSla));
+  }
+
+  if (method === "PUT") {
+    const body = JSON.parse(event.body ?? "{}");
+    const parsed = UpdateInboxSlaSchema.safeParse(body);
+    if (!parsed.success) {
+      return badRequest(parsed.error.errors[0]?.message ?? "Invalid input");
+    }
+
+    const inboxSla: InboxSlaSettings = parsed.data;
+    const updated = await updateTenant(auth.tenantId, { inboxSla });
+    return ok(resolveInboxSlaSettings(updated.inboxSla));
+  }
+
+  return badRequest("Route not found");
+}
 
 async function handleBrandingRoutes(
   event: APIGatewayProxyEventV2WithJWTAuthorizer,
@@ -211,6 +247,9 @@ export async function handler(
 
     const brandingResponse = await handleBrandingRoutes(event, method, auth);
     if (brandingResponse) return brandingResponse;
+
+    const inboxSlaResponse = await handleInboxSlaRoutes(event, method, auth);
+    if (inboxSlaResponse) return inboxSlaResponse;
 
     if (event.rawPath?.endsWith("/openai-key")) {
       if (method === "GET") {

@@ -339,6 +339,12 @@ locals {
       function_arn = var.metrics_function_arn
       protected    = true
     }
+    metrics_inbox_sla = {
+      route_key    = "GET /metrics/inbox-sla"
+      invoke_arn   = var.metrics_invoke_arn
+      function_arn = var.metrics_function_arn
+      protected    = true
+    }
     metrics_get = {
       route_key    = "GET /metrics"
       invoke_arn   = var.metrics_invoke_arn
@@ -683,6 +689,18 @@ locals {
     }
     tenants_branding_logo_delete = {
       route_key    = "DELETE /tenants/me/branding/logo"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_inbox_sla_get = {
+      route_key    = "GET /tenants/me/inbox-sla"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_inbox_sla_update = {
+      route_key    = "PUT /tenants/me/inbox-sla"
       invoke_arn   = var.tenants_invoke_arn
       function_arn = var.tenants_function_arn
       protected    = true

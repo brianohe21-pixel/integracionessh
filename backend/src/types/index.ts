@@ -19,6 +19,32 @@ export interface ResolvedTenantBranding {
   logoUrl?: string;
 }
 
+export interface InboxSlaSettings {
+  enabled: boolean;
+  firstResponseMinutes: number;
+}
+
+export type InboxSlaStatus = "disabled" | "ok" | "at_risk" | "breached" | "met" | "missed";
+
+export interface InboxSlaAdvisorMetric {
+  advisorId: string;
+  metCount: number;
+  missedCount: number;
+  complianceRate: number;
+}
+
+export interface InboxSlaMetrics {
+  enabled: boolean;
+  firstResponseMinutes?: number;
+  openBreached: number;
+  openAtRisk: number;
+  metCount: number;
+  missedCount: number;
+  complianceRate: number;
+  averageResponseSeconds: number;
+  byAdvisor: InboxSlaAdvisorMetric[];
+}
+
 export interface Tenant {
   tenantId: string;
   name: string;
@@ -26,6 +52,7 @@ export interface Tenant {
   plan: TenantPlan;
   status: "active" | "suspended" | "pending";
   branding?: TenantBranding;
+  inboxSla?: InboxSlaSettings;
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   subscriptionStatus?: SubscriptionStatus;

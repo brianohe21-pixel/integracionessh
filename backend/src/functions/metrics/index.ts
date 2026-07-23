@@ -4,6 +4,7 @@ import { getTenantUsageMetrics } from "../../lib/dynamodb/metrics.repository.js"
 import { getMarketingMetrics } from "../../lib/dynamodb/marketing-metrics.repository.js";
 import { getLeadMetrics } from "../../lib/dynamodb/lead-metrics.repository.js";
 import { getCallingMetrics } from "../../lib/dynamodb/call-metrics.repository.js";
+import { getInboxSlaMetrics } from "../../lib/dynamodb/inbox-sla-metrics.repository.js";
 import { ok, badRequest, handleError } from "../../lib/http.js";
 
 export async function handler(
@@ -23,6 +24,11 @@ export async function handler(
     if (method === "GET" && rawPath.endsWith("/metrics/marketing")) {
       const marketing = await getMarketingMetrics(auth.tenantId);
       return ok(marketing);
+    }
+
+    if (method === "GET" && rawPath.endsWith("/metrics/inbox-sla")) {
+      const inboxSla = await getInboxSlaMetrics(auth.tenantId);
+      return ok(inboxSla);
     }
 
     if (method === "GET" && rawPath.endsWith("/metrics/calling")) {
