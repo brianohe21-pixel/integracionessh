@@ -247,12 +247,37 @@ export async function assertCanUseWebChat(tenant: Tenant): Promise<void> {
   }
 }
 
+export function countEnabledChannels(bot: import("../../types/index.js").Bot): number {
+  let enabled = 1;
+  if (bot.instagramPageId) enabled += 1;
+  if (bot.webchatEnabled) enabled += 1;
+  if (bot.telegramEnabled) enabled += 1;
+  if (bot.messengerPageId) enabled += 1;
+  if (bot.smsEnabled) enabled += 1;
+  if (bot.emailEnabled) enabled += 1;
+  return enabled;
+}
+
+function isChannelAlreadyEnabled(
+  bot: import("../../types/index.js").Bot,
+  channel: Channel
+): boolean {
+  if (channel === "instagram") return Boolean(bot.instagramPageId);
+  if (channel === "webchat") return Boolean(bot.webchatEnabled);
+  if (channel === "telegram") return Boolean(bot.telegramEnabled);
+  if (channel === "messenger") return Boolean(bot.messengerPageId);
+  if (channel === "sms") return Boolean(bot.smsEnabled);
+  if (channel === "email") return Boolean(bot.emailEnabled);
+  return false;
+}
+
 export async function assertCanEnableChannel(
   tenant: Tenant,
   bot: import("../../types/index.js").Bot,
   channel: Channel
 ): Promise<void> {
   if (channel === "whatsapp") return;
+  if (isChannelAlreadyEnabled(bot, channel)) return;
 
   const limits = getPlanLimits(tenant.plan);
   if (tenant.plan === "free") {
@@ -262,11 +287,7 @@ export async function assertCanEnableChannel(
     );
   }
 
-  let enabled = 1;
-  if (bot.instagramPageId) enabled += 1;
-  if (bot.webchatEnabled) enabled += 1;
-  if (channel === "instagram" && !bot.instagramPageId) enabled += 1;
-  if (channel === "webchat" && !bot.webchatEnabled) enabled += 1;
+  const enabled = countEnabledChannels(bot) + 1;
 
   if (enabled > limits.maxChannelsPerBot) {
     throw new PlanLimitError(

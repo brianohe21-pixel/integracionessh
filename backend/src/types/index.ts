@@ -109,7 +109,14 @@ export interface MonthlyUsage {
   campaignsStarted: number;
 }
 
-export type Channel = "whatsapp" | "instagram" | "webchat";
+export type Channel =
+  | "whatsapp"
+  | "instagram"
+  | "webchat"
+  | "telegram"
+  | "messenger"
+  | "sms"
+  | "email";
 
 export interface Bot {
   botId: string;
@@ -131,6 +138,13 @@ export interface Bot {
   webchatWidgetKey?: string;
   webchatVoiceEnabled?: boolean;
   webchatVideoEnabled?: boolean;
+  telegramEnabled?: boolean;
+  telegramBotUsername?: string;
+  messengerPageId?: string;
+  smsEnabled?: boolean;
+  smsOriginationNumber?: string;
+  emailEnabled?: boolean;
+  emailAddress?: string;
   status: "active" | "inactive";
   createdAt: string;
   updatedAt: string;
@@ -171,6 +185,8 @@ export interface Conversation {
   activeFlowRunId?: string;
   pendingMetaFlowId?: string;
   metaFlowToken?: string;
+  emailSubject?: string;
+  emailThreadMessageId?: string;
   createdAt: string;
 }
 
@@ -180,7 +196,11 @@ export type MessageSource =
   | "panel"
   | "whatsapp_inbound"
   | "instagram_inbound"
-  | "webchat_inbound";
+  | "webchat_inbound"
+  | "telegram_inbound"
+  | "messenger_inbound"
+  | "sms_inbound"
+  | "email_inbound";
 
 export type MessageType =
   | "text"
@@ -551,6 +571,36 @@ export interface InstagramInboundPayload {
   message: InstagramMessage;
 }
 
+export interface TelegramInboundPayload {
+  updateId: number;
+  chatId: string;
+  messageId: number;
+  text: string;
+  fromUsername?: string;
+  fromFirstName?: string;
+}
+
+export interface MessengerInboundPayload {
+  pageId: string;
+  senderId: string;
+  message: InstagramMessage;
+}
+
+export interface SmsInboundPayload {
+  originationNumber: string;
+  destinationNumber: string;
+  messageBody: string;
+  inboundMessageId: string;
+}
+
+export interface EmailInboundPayload {
+  from: string;
+  to: string;
+  subject: string;
+  text: string;
+  messageId: string;
+}
+
 export interface InboundQueueMessage {
   channel: Channel;
   tenantId: string;
@@ -559,7 +609,14 @@ export interface InboundQueueMessage {
   conversationKey: string;
   displayName?: string | undefined;
   replyToExternalId?: string | undefined;
-  payload: WhatsAppInboundPayload | InstagramInboundPayload | WebChatInboundPayload;
+  payload:
+    | WhatsAppInboundPayload
+    | InstagramInboundPayload
+    | WebChatInboundPayload
+    | TelegramInboundPayload
+    | MessengerInboundPayload
+    | SmsInboundPayload
+    | EmailInboundPayload;
 }
 
 export interface WebChatSession {

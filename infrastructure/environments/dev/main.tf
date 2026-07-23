@@ -225,6 +225,16 @@ module "api_gateway" {
   whatsapp_connect_function_arn  = module.lambda.whatsapp_connect_function_arn
   instagram_connect_invoke_arn   = module.lambda.instagram_connect_invoke_arn
   instagram_connect_function_arn = module.lambda.instagram_connect_function_arn
+  telegram_connect_invoke_arn    = module.lambda.telegram_connect_invoke_arn
+  telegram_connect_function_arn  = module.lambda.telegram_connect_function_arn
+  telegram_webhook_invoke_arn    = module.lambda.telegram_webhook_invoke_arn
+  telegram_webhook_function_arn  = module.lambda.telegram_webhook_function_arn
+  messenger_connect_invoke_arn   = module.lambda.messenger_connect_invoke_arn
+  messenger_connect_function_arn = module.lambda.messenger_connect_function_arn
+  sms_webhook_invoke_arn         = module.lambda.sms_webhook_invoke_arn
+  sms_webhook_function_arn       = module.lambda.sms_webhook_function_arn
+  email_inbound_invoke_arn       = module.lambda.email_inbound_invoke_arn
+  email_inbound_function_arn     = module.lambda.email_inbound_function_arn
   webchat_invoke_arn             = module.lambda.webchat_invoke_arn
   webchat_function_arn           = module.lambda.webchat_function_arn
   campaigns_invoke_arn           = module.lambda.campaigns_invoke_arn

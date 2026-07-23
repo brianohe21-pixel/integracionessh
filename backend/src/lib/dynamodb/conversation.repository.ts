@@ -183,6 +183,8 @@ export async function updateConversation(
       | "activeFlowRunId"
       | "pendingMetaFlowId"
       | "metaFlowToken"
+      | "emailSubject"
+      | "emailThreadMessageId"
     >
   >
 ): Promise<Conversation | null> {
@@ -441,7 +443,7 @@ export async function getOrCreateConversation(
       ? `${participantId}-${Date.now()}`
       : `${channel}-${participantId}-${Date.now()}`;
 
-  const phoneNumber = channel === "whatsapp" ? participantId : "";
+  const phoneNumber = channel === "whatsapp" || channel === "sms" ? participantId : "";
 
   const conversation: Conversation = {
     conversationId,

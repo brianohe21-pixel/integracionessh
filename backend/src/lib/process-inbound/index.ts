@@ -40,6 +40,8 @@ import {
 import { inboundSourceForChannel } from "../channels/types.js";
 import { getWhatsAppAccessToken } from "../whatsapp/client.js";
 import { getInstagramAccessToken } from "../instagram/secrets.js";
+import { getTelegramBotToken } from "../telegram/secrets.js";
+import { getMessengerAccessToken } from "../messenger/secrets.js";
 import { truncateWhatsAppText } from "../whatsapp/client.js";
 import type { InboundQueueMessage, Message } from "../../types/index.js";
 import {
@@ -55,13 +57,20 @@ import { recordCampaignReply } from "../dynamodb/campaign.repository.js";
 async function resolveAccessToken(
   tenantId: string,
   environment: string,
-  channel: InboundQueueMessage["channel"]
+  channel: InboundQueueMessage["channel"],
+  botId?: string
 ): Promise<string | undefined> {
   if (channel === "whatsapp") {
     return getWhatsAppAccessToken(tenantId, environment);
   }
   if (channel === "instagram") {
     return getInstagramAccessToken(tenantId, environment);
+  }
+  if (channel === "telegram" && botId) {
+    return getTelegramBotToken(tenantId, botId, environment);
+  }
+  if (channel === "messenger" && botId) {
+    return getMessengerAccessToken(tenantId, botId, environment);
   }
   return undefined;
 }
@@ -141,7 +150,7 @@ async function executeHandoff(params: {
     reason: params.reason,
   });
 
-  if (params.accessToken || params.body.channel === "webchat") {
+  if (params.accessToken || ["webchat", "sms", "email"].includes(params.body.channel)) {
     await sendHandoffCourtesy(
       params.body,
       params.bot,
@@ -187,7 +196,25 @@ export async function processInboundMessage(
     return;
   }
 
-  const accessToken = await resolveAccessToken(tenantId, environment, channel);
+  const accessToken = await resolveAccessToken(tenantId, environment, channel, botId);
+
+  let conversation = await getOrCreateConversation(
+    tenantId,
+    botId,
+    channel,
+    participantId,
+    displayName
+  );
+
+  if (channel === "email") {
+    const emailPayload = body.payload as import("../../types/index.js").EmailInboundPayload;
+    const { updateConversation } = await import("../dynamodb/conversation.repository.js");
+    const updated = await updateConversation(tenantId, botId, conversation.conversationId, {
+      emailSubject: emailPayload.subject,
+      emailThreadMessageId: emailPayload.messageId,
+    });
+    if (updated) conversation = updated;
+  }
 
   const outboundCtxBase = () =>
     buildOutboundContext({
@@ -199,14 +226,6 @@ export async function processInboundMessage(
       environment,
       replyToExternalId: externalId,
     });
-
-  let conversation = await getOrCreateConversation(
-    tenantId,
-    botId,
-    channel,
-    participantId,
-    displayName
-  );
 
   await recordCampaignReply(tenantId, participantId, conversation.conversationId).catch((err) =>
     console.warn("Failed to record campaign reply:", err)

@@ -9,7 +9,7 @@ function rate(numerator: number, denominator: number): number {
 }
 
 function emptyConversionsByChannel(): Record<Channel, number> {
-  return { whatsapp: 0, instagram: 0, webchat: 0 };
+  return { whatsapp: 0, instagram: 0, webchat: 0, telegram: 0, messenger: 0, sms: 0, email: 0 };
 }
 
 export async function getCampaignMetrics(

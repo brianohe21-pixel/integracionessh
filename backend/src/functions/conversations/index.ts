@@ -33,6 +33,8 @@ import {
   truncateWhatsAppText,
 } from "../../lib/whatsapp/client.js";
 import { getInstagramAccessToken } from "../../lib/instagram/secrets.js";
+import { getTelegramBotToken } from "../../lib/telegram/secrets.js";
+import { getMessengerAccessToken } from "../../lib/messenger/secrets.js";
 import {
   buildOutboundContext,
   sendChannelText,
@@ -50,13 +52,20 @@ const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 
 async function resolveAccessTokenForChannel(
   tenantId: string,
-  channel: Channel
+  channel: Channel,
+  botId?: string
 ): Promise<string | undefined> {
   if (channel === "instagram") {
     return getInstagramAccessToken(tenantId, ENVIRONMENT);
   }
   if (channel === "whatsapp") {
     return getWhatsAppAccessToken(tenantId, ENVIRONMENT);
+  }
+  if (channel === "telegram" && botId) {
+    return getTelegramBotToken(tenantId, botId, ENVIRONMENT);
+  }
+  if (channel === "messenger" && botId) {
+    return getMessengerAccessToken(tenantId, botId, ENVIRONMENT);
   }
   return undefined;
 }
@@ -183,7 +192,11 @@ export async function handler(
       const channel =
         params.channel === "whatsapp" ||
         params.channel === "instagram" ||
-        params.channel === "webchat"
+        params.channel === "webchat" ||
+        params.channel === "telegram" ||
+        params.channel === "messenger" ||
+        params.channel === "sms" ||
+        params.channel === "email"
           ? params.channel
           : undefined;
       const limit = params.limit ? parseInt(params.limit, 10) : 20;
@@ -338,8 +351,12 @@ export async function handler(
 
       if (bot && refreshed) {
         const channel = refreshed.channel ?? "whatsapp";
-        const accessToken = await resolveAccessTokenForChannel(auth.tenantId, channel);
-        if (accessToken || channel === "webchat") {
+        const accessToken = await resolveAccessTokenForChannel(
+          auth.tenantId,
+          channel,
+          refreshed.botId
+        );
+        if (accessToken || channel === "webchat" || channel === "sms" || channel === "email") {
           await sendChannelText(
             buildOutboundContext({
               tenantId: auth.tenantId,
@@ -544,7 +561,11 @@ export async function handler(
         }
       }
 
-      const accessToken = await resolveAccessTokenForChannel(auth.tenantId, channel);
+      const accessToken = await resolveAccessTokenForChannel(
+        auth.tenantId,
+        channel,
+        parsed.data.botId
+      );
       const text =
         channel === "whatsapp" ? truncateWhatsAppText(parsed.data.content) : parsed.data.content;
 

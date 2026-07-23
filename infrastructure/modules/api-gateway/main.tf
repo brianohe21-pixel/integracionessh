@@ -447,6 +447,36 @@ locals {
       function_arn = var.instagram_connect_function_arn
       protected    = true
     }
+    telegram_connect = {
+      route_key    = "POST /telegram/connect"
+      invoke_arn   = var.telegram_connect_invoke_arn
+      function_arn = var.telegram_connect_function_arn
+      protected    = true
+    }
+    telegram_webhook = {
+      route_key    = "POST /telegram/webhook/{botId}"
+      invoke_arn   = var.telegram_webhook_invoke_arn
+      function_arn = var.telegram_webhook_function_arn
+      protected    = false
+    }
+    messenger_connect = {
+      route_key    = "POST /messenger/connect"
+      invoke_arn   = var.messenger_connect_invoke_arn
+      function_arn = var.messenger_connect_function_arn
+      protected    = true
+    }
+    sms_webhook = {
+      route_key    = "POST /sms/webhook"
+      invoke_arn   = var.sms_webhook_invoke_arn
+      function_arn = var.sms_webhook_function_arn
+      protected    = false
+    }
+    email_inbound = {
+      route_key    = "POST /email/inbound"
+      invoke_arn   = var.email_inbound_invoke_arn
+      function_arn = var.email_inbound_function_arn
+      protected    = false
+    }
     webchat_sessions_create = {
       route_key    = "POST /webchat/sessions"
       invoke_arn   = var.webchat_invoke_arn
@@ -491,6 +521,18 @@ locals {
     }
     bots_webchat_rotate_key = {
       route_key    = "POST /bots/{botId}/webchat/rotate-key"
+      invoke_arn   = var.bots_invoke_arn
+      function_arn = var.bots_function_arn
+      protected    = true
+    }
+    bots_sms_put = {
+      route_key    = "PUT /bots/{botId}/sms"
+      invoke_arn   = var.bots_invoke_arn
+      function_arn = var.bots_function_arn
+      protected    = true
+    }
+    bots_email_put = {
+      route_key    = "PUT /bots/{botId}/email"
       invoke_arn   = var.bots_invoke_arn
       function_arn = var.bots_function_arn
       protected    = true
@@ -1402,6 +1444,11 @@ resource "aws_lambda_permission" "api_gw" {
     metrics           = var.metrics_function_arn
     whatsapp_connect  = var.whatsapp_connect_function_arn
     instagram_connect = var.instagram_connect_function_arn
+    telegram_connect  = var.telegram_connect_function_arn
+    telegram_webhook  = var.telegram_webhook_function_arn
+    messenger_connect = var.messenger_connect_function_arn
+    sms_webhook       = var.sms_webhook_function_arn
+    email_inbound     = var.email_inbound_function_arn
     webchat           = var.webchat_function_arn
     campaigns         = var.campaigns_function_arn
     support_tickets   = var.support_tickets_function_arn

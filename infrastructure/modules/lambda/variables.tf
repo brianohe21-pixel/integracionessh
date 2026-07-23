@@ -199,6 +199,12 @@ variable "frontend_url" {
   description = "Frontend base URL for billing redirect URLs"
 }
 
+variable "api_public_url" {
+  type        = string
+  default     = ""
+  description = "Public API base URL for channel webhooks (e.g. Telegram registration)"
+}
+
 variable "ses_from_email" {
   type        = string
   default     = ""

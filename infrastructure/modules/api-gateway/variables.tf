@@ -110,6 +110,46 @@ variable "instagram_connect_function_arn" {
   type = string
 }
 
+variable "telegram_connect_invoke_arn" {
+  type = string
+}
+
+variable "telegram_connect_function_arn" {
+  type = string
+}
+
+variable "telegram_webhook_invoke_arn" {
+  type = string
+}
+
+variable "telegram_webhook_function_arn" {
+  type = string
+}
+
+variable "messenger_connect_invoke_arn" {
+  type = string
+}
+
+variable "messenger_connect_function_arn" {
+  type = string
+}
+
+variable "sms_webhook_invoke_arn" {
+  type = string
+}
+
+variable "sms_webhook_function_arn" {
+  type = string
+}
+
+variable "email_inbound_invoke_arn" {
+  type = string
+}
+
+variable "email_inbound_function_arn" {
+  type = string
+}
+
 variable "webchat_invoke_arn" {
   type = string
 }

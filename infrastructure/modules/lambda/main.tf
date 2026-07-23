@@ -150,6 +150,13 @@ resource "aws_iam_role_policy" "lambda_permissions" {
         ]
         Resource = "*"
       },
+      {
+        Effect = "Allow"
+        Action = [
+          "sns:Publish",
+        ]
+        Resource = "*"
+      },
     ]
   })
 }
@@ -366,6 +373,58 @@ locals {
       environment = {
         TABLE_NAME  = var.dynamodb_table_name
         ENVIRONMENT = var.environment
+      }
+    }
+    telegram_connect = {
+      handler     = "telegram-connect/index.handler"
+      description = "Connects Telegram bot credentials and registers webhook"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME      = var.dynamodb_table_name
+        ENVIRONMENT     = var.environment
+        API_PUBLIC_URL  = var.api_public_url
+      }
+    }
+    telegram_webhook = {
+      handler     = "telegram-webhook/index.handler"
+      description = "Receives Telegram bot webhook updates"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME      = var.dynamodb_table_name
+        ENVIRONMENT     = var.environment
+        SQS_QUEUE_URL   = var.sqs_queue_url
+      }
+    }
+    messenger_connect = {
+      handler     = "messenger-connect/index.handler"
+      description = "Connects Facebook Messenger page credentials for a bot"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME  = var.dynamodb_table_name
+        ENVIRONMENT = var.environment
+      }
+    }
+    sms_webhook = {
+      handler     = "sms-webhook/index.handler"
+      description = "Receives inbound SMS events from SNS"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME    = var.dynamodb_table_name
+        SQS_QUEUE_URL = var.sqs_queue_url
+      }
+    }
+    email_inbound = {
+      handler     = "email-inbound/index.handler"
+      description = "Receives inbound email events from SES via SNS"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME    = var.dynamodb_table_name
+        SQS_QUEUE_URL = var.sqs_queue_url
       }
     }
     webchat = {

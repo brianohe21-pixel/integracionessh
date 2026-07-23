@@ -90,6 +90,46 @@ output "instagram_connect_function_arn" {
   value = aws_lambda_function.functions["instagram_connect"].arn
 }
 
+output "telegram_connect_invoke_arn" {
+  value = aws_lambda_function.functions["telegram_connect"].invoke_arn
+}
+
+output "telegram_connect_function_arn" {
+  value = aws_lambda_function.functions["telegram_connect"].arn
+}
+
+output "telegram_webhook_invoke_arn" {
+  value = aws_lambda_function.functions["telegram_webhook"].invoke_arn
+}
+
+output "telegram_webhook_function_arn" {
+  value = aws_lambda_function.functions["telegram_webhook"].arn
+}
+
+output "messenger_connect_invoke_arn" {
+  value = aws_lambda_function.functions["messenger_connect"].invoke_arn
+}
+
+output "messenger_connect_function_arn" {
+  value = aws_lambda_function.functions["messenger_connect"].arn
+}
+
+output "sms_webhook_invoke_arn" {
+  value = aws_lambda_function.functions["sms_webhook"].invoke_arn
+}
+
+output "sms_webhook_function_arn" {
+  value = aws_lambda_function.functions["sms_webhook"].arn
+}
+
+output "email_inbound_invoke_arn" {
+  value = aws_lambda_function.functions["email_inbound"].invoke_arn
+}
+
+output "email_inbound_function_arn" {
+  value = aws_lambda_function.functions["email_inbound"].arn
+}
+
 output "webchat_invoke_arn" {
   value = aws_lambda_function.functions["webchat"].invoke_arn
 }

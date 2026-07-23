@@ -4,8 +4,9 @@ import { validateWebhookSignature } from "../../lib/whatsapp/client.js";
 import { isProcessableInboundMessage } from "../../lib/whatsapp/inbound.js";
 import { normalizeWhatsAppContact } from "../../lib/whatsapp/contact.js";
 import { isProcessableInstagramMessage } from "../../lib/instagram/inbound.js";
+import { isProcessableMessengerMessage } from "../../lib/messenger/inbound.js";
 import { getBotByPhoneNumberId } from "../../lib/dynamodb/bot.repository.js";
-import { getBotByInstagramPageId } from "../../lib/dynamodb/bot-lookup.repository.js";
+import { getBotByInstagramPageId, getBotByMessengerPageId } from "../../lib/dynamodb/bot-lookup.repository.js";
 import {
   getMessageTracking,
   deleteMessageTracking,
@@ -79,6 +80,11 @@ async function handleWebhook(
     return { statusCode: 200, body: "OK" };
   }
 
+  if (payload.object === "page") {
+    await handleMessengerWebhook(payload as InstagramWebhookEvent);
+    return { statusCode: 200, body: "OK" };
+  }
+
   if (payload.object !== "whatsapp_business_account") {
     return { statusCode: 200, body: "OK" };
   }
@@ -120,6 +126,60 @@ async function handleInstagramWebhook(payload: InstagramWebhookEvent): Promise<v
           senderId,
           message,
         },
+      };
+
+      sqsPromises.push(
+        sqs.send(
+          new SendMessageCommand({
+            QueueUrl: QUEUE_URL,
+            MessageBody: JSON.stringify(sqsBody),
+            MessageGroupId: conversationKey,
+            MessageDeduplicationId: message.mid,
+          })
+        )
+      );
+    }
+  }
+
+  await Promise.all(sqsPromises);
+}
+
+async function handleMessengerWebhook(payload: InstagramWebhookEvent): Promise<void> {
+  const sqsPromises: Promise<unknown>[] = [];
+
+  for (const entry of payload.entry) {
+    for (const event of entry.messaging ?? []) {
+      const message = event.message;
+      if (!message) continue;
+
+      const messengerPayload = {
+        pageId: event.recipient.id,
+        senderId: event.sender.id,
+        message,
+      };
+      if (!isProcessableMessengerMessage(messengerPayload)) continue;
+
+      const pageId = event.recipient.id;
+      const senderId = event.sender.id;
+      const lookup = await getBotByMessengerPageId(pageId);
+      if (!lookup) {
+        console.log(`No bot for Messenger pageId: ${pageId}`);
+        continue;
+      }
+
+      const { getBot } = await import("../../lib/dynamodb/bot.repository.js");
+      const botRecord = await getBot(lookup.tenantId, lookup.botId);
+      if (!botRecord || botRecord.status !== "active") continue;
+
+      const conversationKey = `${lookup.tenantId}-${lookup.botId}-msg-${senderId}`;
+      const sqsBody: InboundQueueMessage = {
+        channel: "messenger",
+        tenantId: lookup.tenantId,
+        botId: lookup.botId,
+        participantId: senderId,
+        conversationKey,
+        replyToExternalId: message.mid,
+        payload: messengerPayload,
       };
 
       sqsPromises.push(

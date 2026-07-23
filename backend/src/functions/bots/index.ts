@@ -11,7 +11,7 @@ import {
 import { extractAuthContext, assertTenantAccess, assertMemberRole } from "../../lib/auth/cognito.js";
 import { ensureTenant } from "../../lib/dynamodb/tenant.repository.js";
 import { assertCanCreateBot, assertCanUseWebChat, assertCanEnableChannel, assertCanStartLiveKitCall } from "../../lib/billing/assert-plan.js";
-import { putWidgetKeyLookup } from "../../lib/dynamodb/bot-lookup.repository.js";
+import { putWidgetKeyLookup, putSmsNumberLookup, deleteSmsNumberLookup, putEmailAddressLookup, deleteEmailAddressLookup } from "../../lib/dynamodb/bot-lookup.repository.js";
 import { generateWidgetKey } from "../../lib/webchat/session.repository.js";
 import { assertAllowedModel, assertCanEnableKnowledge } from "../../lib/billing/plan-config.js";
 import {
@@ -157,6 +157,96 @@ export async function handler(
         webchatWidgetKey: updated.webchatWidgetKey,
         webchatVoiceEnabled: updated.webchatVoiceEnabled,
         webchatVideoEnabled: updated.webchatVideoEnabled,
+      });
+    }
+
+    if (botId && method === "PUT" && rawPath.includes("/sms")) {
+      const existing = await getBot(auth.tenantId, botId);
+      if (!existing) return notFound("Bot not found");
+      assertTenantAccess(auth, existing.tenantId);
+
+      const body = JSON.parse(event.body ?? "{}");
+      const parsed = z
+        .object({
+          enabled: z.boolean().optional(),
+          smsOriginationNumber: z.string().min(8).max(20).optional(),
+        })
+        .safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
+      if (parsed.data.enabled === true) {
+        await assertCanEnableChannel(tenant, existing, "sms");
+      }
+
+      if (
+        existing.smsOriginationNumber &&
+        parsed.data.smsOriginationNumber &&
+        existing.smsOriginationNumber !== parsed.data.smsOriginationNumber
+      ) {
+        await deleteSmsNumberLookup(existing.smsOriginationNumber);
+      }
+
+      const number = parsed.data.smsOriginationNumber ?? existing.smsOriginationNumber;
+      if (parsed.data.enabled === true && number) {
+        await putSmsNumberLookup(number, auth.tenantId, botId);
+      }
+
+      const updates: Record<string, unknown> = {};
+      if (parsed.data.enabled !== undefined) updates.smsEnabled = parsed.data.enabled;
+      if (parsed.data.smsOriginationNumber) {
+        updates.smsOriginationNumber = parsed.data.smsOriginationNumber;
+      }
+
+      const updated = await updateBot(auth.tenantId, botId, updates);
+      return ok({
+        smsEnabled: updated.smsEnabled,
+        smsOriginationNumber: updated.smsOriginationNumber,
+      });
+    }
+
+    if (botId && method === "PUT" && rawPath.includes("/email")) {
+      const existing = await getBot(auth.tenantId, botId);
+      if (!existing) return notFound("Bot not found");
+      assertTenantAccess(auth, existing.tenantId);
+
+      const body = JSON.parse(event.body ?? "{}");
+      const parsed = z
+        .object({
+          enabled: z.boolean().optional(),
+          emailAddress: z.string().email().optional(),
+        })
+        .safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
+      if (parsed.data.enabled === true) {
+        await assertCanEnableChannel(tenant, existing, "email");
+      }
+
+      if (
+        existing.emailAddress &&
+        parsed.data.emailAddress &&
+        existing.emailAddress !== parsed.data.emailAddress
+      ) {
+        await deleteEmailAddressLookup(existing.emailAddress);
+      }
+
+      const address = parsed.data.emailAddress ?? existing.emailAddress;
+      if (parsed.data.enabled === true && address) {
+        await putEmailAddressLookup(address, auth.tenantId, botId);
+      }
+
+      const updates: Record<string, unknown> = {};
+      if (parsed.data.enabled !== undefined) updates.emailEnabled = parsed.data.enabled;
+      if (parsed.data.emailAddress) {
+        updates.emailAddress = parsed.data.emailAddress.toLowerCase();
+      }
+
+      const updated = await updateBot(auth.tenantId, botId, updates);
+      return ok({
+        emailEnabled: updated.emailEnabled,
+        emailAddress: updated.emailAddress,
       });
     }
 
