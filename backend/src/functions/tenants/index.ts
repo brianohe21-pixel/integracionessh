@@ -38,8 +38,11 @@ import {
   handleError,
   parseJsonBody,
 } from "../../lib/http.js";
-import type { Tenant, TenantBranding, InboxSlaSettings } from "../../types/index.js";
+import type { Tenant, TenantBranding, InboxSlaSettings, MetricsReportSchedule } from "../../types/index.js";
 import { resolveInboxSlaSettings } from "../../lib/advisor/inbox-sla.js";
+import { resolveMetricsReportSchedule } from "../../lib/reports/resolve-schedule.js";
+import { syncReportSchedule } from "../../lib/reports/report-schedule.js";
+import { sendScheduledReport } from "../../lib/reports/send-scheduled-report.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 
@@ -88,6 +91,32 @@ const UpdateInboxSlaSchema = z.object({
   firstResponseMinutes: z.coerce.number().int().min(1).max(1440),
 });
 
+const UpdateReportScheduleSchema = z
+  .object({
+    enabled: z.boolean(),
+    frequency: z.enum(["daily", "weekly"]),
+    recipients: z.array(z.string().email()).max(10),
+    hour: z.coerce.number().int().min(0).max(23),
+    dayOfWeek: z.coerce.number().int().min(1).max(7).optional(),
+    timezone: z.string().min(1).max(64),
+  })
+  .superRefine((data, ctx) => {
+    if (data.enabled && data.recipients.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "At least one recipient is required when enabled",
+        path: ["recipients"],
+      });
+    }
+    if (data.frequency === "weekly" && data.dayOfWeek === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "dayOfWeek is required for weekly schedules",
+        path: ["dayOfWeek"],
+      });
+    }
+  });
+
 function formatZodError(error: z.ZodError): string {
   return error.issues.map((issue) => issue.message).join("; ") || "Invalid input";
 }
@@ -128,6 +157,70 @@ async function handleInboxSlaRoutes(
     const inboxSla: InboxSlaSettings = parsed.data;
     const updated = await updateTenant(auth.tenantId, { inboxSla });
     return ok(resolveInboxSlaSettings(updated.inboxSla));
+  }
+
+  return badRequest("Route not found");
+}
+
+async function handleReportScheduleRoutes(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer,
+  auth: ReturnType<typeof extractAuthContext>
+): Promise<APIGatewayProxyResultV2 | null> {
+  const routeKey = event.routeKey;
+  const rawPath = event.rawPath ?? event.requestContext.http.path ?? "";
+  const isReportScheduleRoute = rawPath.includes("/tenants/me/report-schedule");
+  if (!isReportScheduleRoute) return null;
+
+  const method = (
+    routeKey?.split(" ")[0] ??
+    event.requestContext.http.method ??
+    ""
+  ).toUpperCase();
+
+  assertMemberRole(auth);
+  await ensureTenant(auth.tenantId, auth.email, auth.name);
+
+  if (method === "GET") {
+    const tenant = await getTenant(auth.tenantId);
+    return ok(resolveMetricsReportSchedule(tenant?.metricsReportSchedule));
+  }
+
+  if (method === "PUT") {
+    const body = parseJsonBody(event);
+    const parsed = UpdateReportScheduleSchema.safeParse(body);
+    if (!parsed.success) {
+      return badRequest(formatZodError(parsed.error));
+    }
+
+    const tenant = await getTenant(auth.tenantId);
+    const metricsReportSchedule: MetricsReportSchedule = {
+      enabled: parsed.data.enabled,
+      frequency: parsed.data.frequency,
+      hour: parsed.data.hour,
+      timezone: parsed.data.timezone,
+      recipients: [...new Set(parsed.data.recipients.map((email) => email.trim().toLowerCase()))],
+      ...(parsed.data.frequency === "weekly" && parsed.data.dayOfWeek !== undefined
+        ? { dayOfWeek: parsed.data.dayOfWeek }
+        : {}),
+      ...(tenant?.metricsReportSchedule?.lastSentAt
+        ? { lastSentAt: tenant.metricsReportSchedule.lastSentAt }
+        : {}),
+    };
+
+    const updated = await updateTenant(auth.tenantId, { metricsReportSchedule });
+    await syncReportSchedule(auth.tenantId, metricsReportSchedule);
+    return ok(resolveMetricsReportSchedule(updated.metricsReportSchedule));
+  }
+
+  if (method === "POST" && rawPath.endsWith("/send-now")) {
+    const tenant = await getTenant(auth.tenantId);
+    const schedule = resolveMetricsReportSchedule(tenant?.metricsReportSchedule);
+    if (schedule.recipients.length === 0) {
+      return badRequest("At least one recipient is required");
+    }
+    await sendScheduledReport(auth.tenantId, { force: true });
+    const refreshed = await getTenant(auth.tenantId);
+    return ok(resolveMetricsReportSchedule(refreshed?.metricsReportSchedule));
   }
 
   return badRequest("Route not found");
@@ -273,6 +366,9 @@ export async function handler(
 
     const inboxSlaResponse = await handleInboxSlaRoutes(event, auth);
     if (inboxSlaResponse) return inboxSlaResponse;
+
+    const reportScheduleResponse = await handleReportScheduleRoutes(event, auth);
+    if (reportScheduleResponse) return reportScheduleResponse;
 
     if (event.rawPath?.endsWith("/openai-key")) {
       if (method === "GET") {

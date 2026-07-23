@@ -6,6 +6,7 @@ import { getLeadMetrics } from "../../lib/dynamodb/lead-metrics.repository.js";
 import { getCallingMetrics } from "../../lib/dynamodb/call-metrics.repository.js";
 import { getInboxSlaMetrics } from "../../lib/dynamodb/inbox-sla-metrics.repository.js";
 import { getAdvisorWorkloadMetrics } from "../../lib/dynamodb/advisor-workload.repository.js";
+import { buildUsageMarketingCsv } from "../../lib/reports/metrics-csv.js";
 import { ok, badRequest, handleError } from "../../lib/http.js";
 
 export async function handler(
@@ -16,6 +17,19 @@ export async function handler(
     assertMemberRole(auth);
     const method = event.requestContext.http.method;
     const rawPath = event.rawPath ?? event.requestContext.http.path;
+
+    if (method === "GET" && rawPath.endsWith("/metrics/export")) {
+      const { filename, content } = await buildUsageMarketingCsv(auth.tenantId);
+      return {
+        statusCode: 200,
+        headers: {
+          "Content-Type": "text/csv; charset=utf-8",
+          "Content-Disposition": `attachment; filename="${filename}"`,
+          "Access-Control-Allow-Origin": "*",
+        },
+        body: content,
+      };
+    }
 
     if (method === "GET" && rawPath.endsWith("/metrics/leads")) {
       const leads = await getLeadMetrics(auth.tenantId);

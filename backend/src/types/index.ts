@@ -24,6 +24,18 @@ export interface InboxSlaSettings {
   firstResponseMinutes: number;
 }
 
+export type ReportScheduleFrequency = "daily" | "weekly";
+
+export interface MetricsReportSchedule {
+  enabled: boolean;
+  frequency: ReportScheduleFrequency;
+  recipients: string[];
+  hour: number;
+  dayOfWeek?: number;
+  timezone: string;
+  lastSentAt?: string;
+}
+
 export type InboxSlaStatus = "disabled" | "ok" | "at_risk" | "breached" | "met" | "missed";
 
 export interface InboxSlaAdvisorMetric {
@@ -89,6 +101,7 @@ export interface Tenant {
   status: "active" | "suspended" | "pending";
   branding?: TenantBranding;
   inboxSla?: InboxSlaSettings;
+  metricsReportSchedule?: MetricsReportSchedule;
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   subscriptionStatus?: SubscriptionStatus;

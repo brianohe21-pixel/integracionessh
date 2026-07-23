@@ -25,6 +25,7 @@ const entryPoints = [
   "src/functions/campaigns/index.ts",
   "src/functions/process-campaign/index.ts",
   "src/functions/metrics/index.ts",
+  "src/functions/reports/index.ts",
   "src/functions/support-tickets/index.ts",
   "src/functions/billing/index.ts",
   "src/functions/whatsapp-connect/index.ts",

@@ -381,6 +381,12 @@ locals {
       function_arn = var.metrics_function_arn
       protected    = true
     }
+    metrics_export = {
+      route_key    = "GET /metrics/export"
+      invoke_arn   = var.metrics_invoke_arn
+      function_arn = var.metrics_function_arn
+      protected    = true
+    }
     conversations_status = {
       route_key    = "PATCH /conversations/{conversationId}/status"
       invoke_arn   = var.conversations_invoke_arn
@@ -773,6 +779,24 @@ locals {
     }
     tenants_inbox_sla_update = {
       route_key    = "PUT /tenants/me/inbox-sla"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_report_schedule_get = {
+      route_key    = "GET /tenants/me/report-schedule"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_report_schedule_update = {
+      route_key    = "PUT /tenants/me/report-schedule"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_report_schedule_send_now = {
+      route_key    = "POST /tenants/me/report-schedule/send-now"
       invoke_arn   = var.tenants_invoke_arn
       function_arn = var.tenants_function_arn
       protected    = true

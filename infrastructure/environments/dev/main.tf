@@ -152,6 +152,7 @@ resource "aws_iam_role_policy" "scheduler_invoke" {
         module.lambda.automations_function_arn,
         module.lambda.flows_function_arn,
         module.lambda.calendar_function_arn,
+        module.lambda.reports_function_arn,
       ]
     }]
   })

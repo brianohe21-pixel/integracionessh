@@ -174,6 +174,8 @@ locals {
   flows_function_arn        = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.flows_function_name}"
   calendar_function_name    = "${var.project}-${var.environment}-calendar"
   calendar_function_arn     = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.calendar_function_name}"
+  reports_function_name     = "${var.project}-${var.environment}-reports"
+  reports_function_arn      = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.reports_function_name}"
 
   functions = {
     webhook = {
@@ -213,6 +215,8 @@ locals {
         FRONTEND_URL              = var.frontend_url
         SES_FROM_EMAIL            = var.ses_from_email
         ADMIN_NOTIFICATION_EMAILS = join(",", var.admin_notification_emails)
+        SCHEDULER_ROLE_ARN        = var.scheduler_role_arn
+        REPORTS_FUNCTION_ARN      = local.reports_function_arn
       }
     }
     bots = {
@@ -309,6 +313,17 @@ locals {
       environment = {
         TABLE_NAME  = var.dynamodb_table_name
         ENVIRONMENT = var.environment
+      }
+    }
+    reports = {
+      handler     = "reports/index.handler"
+      description = "Scheduled metrics report delivery"
+      timeout     = 60
+      memory      = 256
+      environment = {
+        TABLE_NAME     = var.dynamodb_table_name
+        ENVIRONMENT    = var.environment
+        SES_FROM_EMAIL = var.ses_from_email
       }
     }
     support_tickets = {

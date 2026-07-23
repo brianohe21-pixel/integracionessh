@@ -74,6 +74,14 @@ output "metrics_function_arn" {
   value = aws_lambda_function.functions["metrics"].arn
 }
 
+output "reports_invoke_arn" {
+  value = aws_lambda_function.functions["reports"].invoke_arn
+}
+
+output "reports_function_arn" {
+  value = aws_lambda_function.functions["reports"].arn
+}
+
 output "whatsapp_connect_invoke_arn" {
   value = aws_lambda_function.functions["whatsapp_connect"].invoke_arn
 }
