@@ -133,6 +133,8 @@ export type Channel =
 
 export type BotLocale = "es" | "en";
 
+export type AiProvider = "openai" | "anthropic";
+
 export type LocalizedText = string | Record<BotLocale, string>;
 
 export interface Bot {
@@ -142,7 +144,8 @@ export interface Bot {
   defaultLocale?: BotLocale;
   responseMode: "openai" | "webhook";
   systemPrompt?: string;
-  model?: "gpt-4o" | "gpt-4o-mini" | "gpt-4-turbo";
+  aiProvider?: AiProvider;
+  model?: string;
   temperature?: number;
   maxTokens?: number;
   webhookUrl?: string;

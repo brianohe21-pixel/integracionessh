@@ -1,6 +1,6 @@
-import OpenAI from "openai";
 import type { Bot, Message } from "../../types/index.js";
-import { getOpenAIApiKey } from "../openai/client.js";
+import { resolveApiKey, getChatProvider } from "../ai/providers/index.js";
+import { resolveModelId } from "../ai/models.js";
 import { retrieveContext } from "../knowledge/retrieve.js";
 
 export const COPILOT_INTENTS = [
@@ -93,36 +93,14 @@ async function getKnowledgeContext(
   return retrieveContext(tenantId, bot.botId, query, apiKey);
 }
 
-async function completeJson<T>(
-  apiKey: string,
-  model: string,
-  systemPrompt: string,
-  userPrompt: string
-): Promise<T> {
-  const client = new OpenAI({ apiKey });
-  const completion = await client.chat.completions.create({
-    model,
-    temperature: 0.3,
-    max_tokens: 1024,
-    response_format: { type: "json_object" },
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt },
-    ],
-  });
-  const content = completion.choices[0]?.message?.content;
-  if (!content) throw new Error("Empty response from OpenAI");
-  return JSON.parse(content) as T;
-}
-
 export async function analyzeConversationIntent(params: {
   bot: Bot;
   messages: Message[];
   tenantId: string;
   environment: string;
 }): Promise<IntentAnalysis> {
-  const apiKey = await getOpenAIApiKey(params.tenantId, params.environment);
-  const model = params.bot.model ?? "gpt-4o-mini";
+  const apiKey = await resolveApiKey(params.tenantId, "openai", params.environment);
+  const modelId = resolveModelId(params.bot.model);
   const history = formatConversationHistory(params.messages);
 
   const systemPrompt = `${buildAdvisorSystemBase(params.bot)}
@@ -130,11 +108,17 @@ export async function analyzeConversationIntent(params: {
 Clasifica la intencion principal del cliente en una de estas categorias: consulta, soporte, ventas, reclamo, agendamiento, seguimiento, otro.
 Responde en JSON con: intent (string), confidence (numero 0-1), topics (array de strings cortos).`;
 
-  const result = await completeJson<{
+  const result = await getChatProvider("openai").completeJson<{
     intent?: string;
     confidence?: number;
     topics?: string[];
-  }>(apiKey, model, systemPrompt, `Historial:\n${history}`);
+  }>({
+    apiKey,
+    modelId,
+    systemPrompt,
+    userPrompt: `Historial:\n${history}`,
+    temperature: 0.3,
+  });
 
   return {
     intent: normalizeIntent(result.intent),
@@ -154,8 +138,8 @@ export async function summarizeConversation(params: {
   tenantId: string;
   environment: string;
 }): Promise<ConversationSummary> {
-  const apiKey = await getOpenAIApiKey(params.tenantId, params.environment);
-  const model = params.bot.model ?? "gpt-4o-mini";
+  const apiKey = await resolveApiKey(params.tenantId, "openai", params.environment);
+  const modelId = resolveModelId(params.bot.model);
   const history = formatConversationHistory(params.messages);
   const knowledgeContext = await getKnowledgeContext(
     params.bot,
@@ -173,10 +157,16 @@ export async function summarizeConversation(params: {
 Resume la conversacion para que un asesor humano entienda rapidamente el contexto.
 Responde en JSON con: summary (string de 2-4 oraciones), keyPoints (array de 3-5 puntos clave).`;
 
-  const result = await completeJson<{
+  const result = await getChatProvider("openai").completeJson<{
     summary?: string;
     keyPoints?: string[];
-  }>(apiKey, model, systemPrompt, `Historial:\n${history}`);
+  }>({
+    apiKey,
+    modelId,
+    systemPrompt,
+    userPrompt: `Historial:\n${history}`,
+    temperature: 0.3,
+  });
 
   return {
     summary: result.summary?.trim() || "Sin resumen disponible.",
@@ -193,8 +183,8 @@ export async function suggestAdvisorReply(params: {
   environment: string;
   advisorName?: string;
 }): Promise<AdvisorReplySuggestion> {
-  const apiKey = await getOpenAIApiKey(params.tenantId, params.environment);
-  const model = params.bot.model ?? "gpt-4o-mini";
+  const apiKey = await resolveApiKey(params.tenantId, "openai", params.environment);
+  const modelId = resolveModelId(params.bot.model);
   const history = formatConversationHistory(params.messages);
   const knowledgeContext = await getKnowledgeContext(
     params.bot,
@@ -215,10 +205,16 @@ export async function suggestAdvisorReply(params: {
 Sugiere una respuesta que el asesor pueda enviar al cliente. La respuesta debe ser clara, empatica y alineada con las politicas del negocio.
 Responde en JSON con: suggestion (string con el texto sugerido), sources (array de strings describiendo que informacion usaste, ej. "historial", "knowledge base").`;
 
-  const result = await completeJson<{
+  const result = await getChatProvider("openai").completeJson<{
     suggestion?: string;
     sources?: string[];
-  }>(apiKey, model, systemPrompt, `Historial:\n${history}`);
+  }>({
+    apiKey,
+    modelId,
+    systemPrompt,
+    userPrompt: `Historial:\n${history}`,
+    temperature: 0.3,
+  });
 
   return {
     suggestion: result.suggestion?.trim() || "",

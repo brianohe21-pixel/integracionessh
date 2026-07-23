@@ -15,6 +15,11 @@ import { putWidgetKeyLookup, putSmsNumberLookup, deleteSmsNumberLookup, putEmail
 import { generateWidgetKey } from "../../lib/webchat/session.repository.js";
 import { assertAllowedModel, assertCanEnableKnowledge } from "../../lib/billing/plan-config.js";
 import {
+  DEFAULT_MODEL_ID,
+  getModelProviderMismatch,
+  isValidModelId,
+} from "../../lib/ai/models.js";
+import {
   getWhatsAppAccessToken,
   getPhoneNumberInfo,
   type WhatsAppPhoneInfo,
@@ -31,13 +36,18 @@ function maskBot(bot: Bot): Bot {
   return { ...bot, webhookSecret: "***" };
 }
 
+const AiProviderSchema = z.enum(["openai"]);
+
+const ModelSchema = z.string().refine(isValidModelId, { message: "Invalid model" });
+
 const CreateBotSchema = z
   .object({
     name: z.string().min(1).max(128),
     defaultLocale: z.enum(["es", "en"]).optional(),
     responseMode: z.enum(["openai", "webhook"]).default("openai"),
     systemPrompt: z.string().min(1).max(4096).optional(),
-    model: z.enum(["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"]).default("gpt-4o-mini"),
+    aiProvider: AiProviderSchema.optional(),
+    model: ModelSchema.default(DEFAULT_MODEL_ID),
     temperature: z.number().min(0).max(2).default(0.7),
     maxTokens: z.number().int().min(1).max(4096).default(1024),
     webhookUrl: z.string().url().startsWith("https://").max(2048).optional(),
@@ -67,7 +77,8 @@ const UpdateBotSchema = z.object({
   defaultLocale: z.enum(["es", "en"]).optional(),
   responseMode: z.enum(["openai", "webhook"]).optional(),
   systemPrompt: z.string().min(1).max(4096).optional(),
-  model: z.enum(["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"]).optional(),
+  aiProvider: AiProviderSchema.optional(),
+  model: ModelSchema.optional(),
   temperature: z.number().min(0).max(2).optional(),
   maxTokens: z.number().int().min(1).max(4096).optional(),
   webhookUrl: z.string().url().startsWith("https://").max(2048).optional(),
@@ -286,6 +297,8 @@ export async function handler(
 
       if (data.responseMode === "openai") {
         assertAllowedModel(tenant, data.model);
+        const providerMismatch = getModelProviderMismatch(data.model, data.aiProvider);
+        if (providerMismatch) return badRequest(providerMismatch);
       }
 
       const base = {
@@ -309,6 +322,7 @@ export async function handler(
           ...base,
           systemPrompt: data.systemPrompt,
           model: data.model,
+          ...(data.aiProvider ? { aiProvider: data.aiProvider } : {}),
           temperature: data.temperature,
           maxTokens: data.maxTokens,
         };
@@ -339,6 +353,11 @@ export async function handler(
       const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
       if (parsed.data.model) {
         assertAllowedModel(tenant, parsed.data.model);
+        const providerMismatch = getModelProviderMismatch(
+          parsed.data.model,
+          parsed.data.aiProvider
+        );
+        if (providerMismatch) return badRequest(providerMismatch);
       }
       if (parsed.data.knowledgeEnabled === true) {
         assertCanEnableKnowledge(tenant);
