@@ -45,6 +45,9 @@ build_plan_args() {
   if [ -n "${API_CUSTOM_DOMAIN:-}" ]; then
     PLAN_ARGS+=(-var="api_custom_domain=${API_CUSTOM_DOMAIN}")
   fi
+  if [ -n "${API_PUBLIC_URL:-}" ]; then
+    PLAN_ARGS+=(-var="api_public_url=${API_PUBLIC_URL}")
+  fi
   if [ -n "${WOMPI_PUBLIC_KEY:-}" ]; then
     PLAN_ARGS+=(-var="wompi_public_key=${WOMPI_PUBLIC_KEY}")
   fi

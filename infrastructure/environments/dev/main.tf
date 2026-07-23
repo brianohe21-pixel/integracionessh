@@ -36,6 +36,13 @@ provider "aws" {
 
 data "aws_caller_identity" "current" {}
 
+data "aws_apigatewayv2_apis" "existing" {}
+
+data "aws_apigatewayv2_api" "existing" {
+  for_each = toset(data.aws_apigatewayv2_apis.existing.ids)
+  api_id   = each.value
+}
+
 data "external" "amplify_browser_origin" {
   program = [
     "${path.module}/../../scripts/amplify-browser-origin.sh",
@@ -71,6 +78,16 @@ locals {
   )
 
   ops_alert_emails = length(var.ops_alert_emails) > 0 ? var.ops_alert_emails : compact([var.ops_alert_email])
+
+  api_custom_domain_trimmed = trimspace(var.api_custom_domain)
+  existing_api_gateway_id = try(
+    [
+      for api in values(data.aws_apigatewayv2_api.existing) : api.id
+      if api.name == "${local.project}-${local.environment}"
+    ][0],
+    ""
+  )
+  api_public_url = local.api_custom_domain_trimmed != "" ? "https://${local.api_custom_domain_trimmed}" : trimspace(var.api_public_url) != "" ? trimsuffix(trimspace(var.api_public_url), "/") : local.existing_api_gateway_id != "" ? "https://${local.existing_api_gateway_id}.execute-api.${var.aws_region}.amazonaws.com" : ""
 }
 
 module "dynamodb" {
@@ -192,6 +209,7 @@ module "lambda" {
   livekit_api_secret            = var.livekit_api_secret
   ses_from_email                = var.ses_from_email
   admin_notification_emails     = local.ops_alert_emails
+  api_public_url                  = local.api_public_url
   tags                          = local.tags
 }
 

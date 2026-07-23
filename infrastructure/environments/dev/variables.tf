@@ -69,6 +69,12 @@ variable "api_custom_domain" {
   description = "Custom API hostname (e.g. api.integracionessh.lat). Requires DNS CNAME in cPanel; see terraform outputs acm_dns_validation and api_gateway_domain_target."
 }
 
+variable "api_public_url" {
+  type        = string
+  default     = ""
+  description = "Public API base URL for channel webhooks (Telegram). When empty, Terraform uses api_custom_domain or the existing API Gateway execute-api URL."
+}
+
 variable "stripe_secret_key" {
   type      = string
   default   = ""
