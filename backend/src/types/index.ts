@@ -1175,6 +1175,15 @@ export interface SalesMetricsByBot {
   revenueInCents: number;
 }
 
+export interface SalesMetricsTopProduct {
+  productKey: string;
+  productId?: string;
+  name: string;
+  orderCount: number;
+  quantity: number;
+  revenueInCents: number;
+}
+
 export interface SalesMetrics {
   from: string;
   to: string;
@@ -1183,6 +1192,7 @@ export interface SalesMetrics {
   averageTicketInCents: number;
   bySource: Record<PaymentRequestSource, SalesMetricsBySource>;
   byBot: SalesMetricsByBot[];
+  topProducts: SalesMetricsTopProduct[];
 }
 
 export type QuotationStatus = "sent" | "paid" | "expired" | "cancelled";
