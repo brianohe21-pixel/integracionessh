@@ -216,6 +216,8 @@ export interface Contact {
   lastBotId?: string;
   leadId?: string;
   source: ContactSource;
+  csatAverage?: number;
+  csatRatingCount?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -939,6 +941,46 @@ export type PaymentRequestSource =
   | "catalog_order"
   | "calendar_booking"
   | "quotation";
+
+export interface SalesMetricsBySource {
+  count: number;
+  revenueInCents: number;
+}
+
+export interface SalesMetricsByBot {
+  botId: string;
+  botName: string;
+  count: number;
+  revenueInCents: number;
+}
+
+export interface SalesMetricsTopProduct {
+  productKey: string;
+  productId?: string;
+  name: string;
+  orderCount: number;
+  quantity: number;
+  revenueInCents: number;
+}
+
+export interface CustomerCsatMetrics {
+  contactPhone: string;
+  contactName?: string;
+  averageCsat: number;
+  ratingCount: number;
+}
+
+export interface SalesMetrics {
+  from: string;
+  to: string;
+  totalRevenueInCents: number;
+  paidCount: number;
+  averageTicketInCents: number;
+  bySource: Record<PaymentRequestSource, SalesMetricsBySource>;
+  byBot: SalesMetricsByBot[];
+  topProducts: SalesMetricsTopProduct[];
+  topCustomersByCsat: CustomerCsatMetrics[];
+}
 
 export type QuotationStatus = "sent" | "paid" | "expired" | "cancelled";
 

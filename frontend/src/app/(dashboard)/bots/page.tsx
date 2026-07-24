@@ -9,6 +9,7 @@ import { useT } from "@/i18n/context";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { OnboardingBanner } from "@/components/onboarding/OnboardingBanner";
+import { SalesSummaryCard } from "@/components/metrics/SalesSummaryCard";
 import { ContextualHint } from "@/components/help-center/ContextualHint";
 import { TourPageSuggestion } from "@/components/help-center/TourList";
 
@@ -42,6 +43,8 @@ export default function BotsPage() {
       <div data-tour="bots-onboarding">
         <OnboardingBanner />
       </div>
+
+      <SalesSummaryCard />
 
       {isLoading && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

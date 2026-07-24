@@ -44,6 +44,16 @@ export function useFormatters() {
     [intlLocale]
   );
 
+  const formatCurrency = useCallback(
+    (cents: number) =>
+      new Intl.NumberFormat(intlLocale, {
+        style: "currency",
+        currency: "COP",
+        maximumFractionDigits: 0,
+      }).format(cents / 100),
+    [intlLocale]
+  );
+
   const planLabel = useCallback(
     (plan: string) => {
       const labels: Record<string, string> = {
@@ -56,5 +66,5 @@ export function useFormatters() {
     [t]
   );
 
-  return { formatDate, formatRelativeTime, formatNumber, planLabel };
+  return { formatDate, formatRelativeTime, formatNumber, formatCurrency, planLabel };
 }
