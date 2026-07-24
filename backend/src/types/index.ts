@@ -319,6 +319,8 @@ export interface Contact {
   messageCount?: number;
   leadId?: string;
   source: ContactSource;
+  csatAverage?: number;
+  csatRatingCount?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -1184,6 +1186,13 @@ export interface SalesMetricsTopProduct {
   revenueInCents: number;
 }
 
+export interface CustomerCsatMetrics {
+  contactPhone: string;
+  contactName?: string;
+  averageCsat: number;
+  ratingCount: number;
+}
+
 export interface SalesMetrics {
   from: string;
   to: string;
@@ -1193,6 +1202,7 @@ export interface SalesMetrics {
   bySource: Record<PaymentRequestSource, SalesMetricsBySource>;
   byBot: SalesMetricsByBot[];
   topProducts: SalesMetricsTopProduct[];
+  topCustomersByCsat: CustomerCsatMetrics[];
 }
 
 export type QuotationStatus = "sent" | "paid" | "expired" | "cancelled";

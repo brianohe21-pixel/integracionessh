@@ -2,7 +2,9 @@ import { listBots } from "./bot.repository.js";
 import { listAllOrdersForTenant } from "./order.repository.js";
 import { listAllPaymentRequestsForTenant } from "./payment-request.repository.js";
 import { buildTopProductsMetrics } from "./catalog-product-metrics.js";
+import { buildCustomerCsatRollup } from "./customer-csat-metrics.js";
 import { resolveMetricsDateRange } from "./call-metrics.js";
+import { listAllConversationsForTenant } from "./metrics.repository.js";
 import { buildSalesMetrics } from "./sales-metrics.js";
 import type { SalesMetrics } from "../../types/index.js";
 
@@ -13,10 +15,11 @@ export async function getSalesMetrics(
   const range = resolveMetricsDateRange(options);
   const botId = options.botId?.trim();
 
-  const [payments, orders, bots] = await Promise.all([
+  const [payments, orders, bots, conversations] = await Promise.all([
     listAllPaymentRequestsForTenant(tenantId),
     listAllOrdersForTenant(tenantId),
     listBots(tenantId),
+    listAllConversationsForTenant(tenantId, botId),
   ]);
 
   const scopedPayments = botId ? payments.filter((payment) => payment.botId === botId) : payments;
@@ -27,5 +30,6 @@ export async function getSalesMetrics(
   return {
     ...buildSalesMetrics(scopedPayments, range, botNames),
     topProducts: buildTopProductsMetrics(scopedOrders, range),
+    topCustomersByCsat: buildCustomerCsatRollup(conversations, { range, limit: 5 }),
   };
 }

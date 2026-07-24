@@ -29,7 +29,7 @@ export function buildSalesMetrics(
   payments: PaymentRequest[],
   range: { from: string; to: string },
   botNames: Map<string, string>
-): Omit<SalesMetrics, "topProducts"> {
+): Omit<SalesMetrics, "topProducts" | "topCustomersByCsat"> {
   const paid = payments.filter(
     (payment) =>
       payment.status === "paid" &&
