@@ -363,6 +363,12 @@ locals {
       function_arn = var.metrics_function_arn
       protected    = true
     }
+    metrics_sales = {
+      route_key    = "GET /metrics/sales"
+      invoke_arn   = var.metrics_invoke_arn
+      function_arn = var.metrics_function_arn
+      protected    = true
+    }
     metrics_inbox_sla = {
       route_key    = "GET /metrics/inbox-sla"
       invoke_arn   = var.metrics_invoke_arn

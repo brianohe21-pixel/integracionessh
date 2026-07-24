@@ -4,6 +4,7 @@ import { getTenantUsageMetrics } from "../../lib/dynamodb/metrics.repository.js"
 import { getMarketingMetrics } from "../../lib/dynamodb/marketing-metrics.repository.js";
 import { getLeadMetrics } from "../../lib/dynamodb/lead-metrics.repository.js";
 import { getCallingMetrics } from "../../lib/dynamodb/call-metrics.repository.js";
+import { getSalesMetrics } from "../../lib/dynamodb/sales-metrics.repository.js";
 import { getInboxSlaMetrics } from "../../lib/dynamodb/inbox-sla-metrics.repository.js";
 import { getAdvisorWorkloadMetrics } from "../../lib/dynamodb/advisor-workload.repository.js";
 import { buildUsageMarketingCsv } from "../../lib/reports/metrics-csv.js";
@@ -67,6 +68,24 @@ export async function handler(
       if (botId) options.botId = botId;
       const calling = await getCallingMetrics(auth.tenantId, options);
       return ok(calling);
+    }
+
+    if (method === "GET" && rawPath.endsWith("/metrics/sales")) {
+      const qs = event.queryStringParameters ?? {};
+      const daysParam = qs.days ? parseInt(qs.days, 10) : undefined;
+      const options: {
+        from?: string;
+        to?: string;
+        days?: number;
+        botId?: string;
+      } = {};
+      if (qs.from) options.from = qs.from;
+      if (qs.to) options.to = qs.to;
+      if (daysParam !== undefined && Number.isFinite(daysParam)) options.days = daysParam;
+      const botId = qs.botId?.trim();
+      if (botId) options.botId = botId;
+      const sales = await getSalesMetrics(auth.tenantId, options);
+      return ok(sales);
     }
 
     if (method === "GET") {

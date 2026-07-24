@@ -1163,6 +1163,28 @@ export type PaymentRequestSource =
   | "calendar_booking"
   | "quotation";
 
+export interface SalesMetricsBySource {
+  count: number;
+  revenueInCents: number;
+}
+
+export interface SalesMetricsByBot {
+  botId: string;
+  botName: string;
+  count: number;
+  revenueInCents: number;
+}
+
+export interface SalesMetrics {
+  from: string;
+  to: string;
+  totalRevenueInCents: number;
+  paidCount: number;
+  averageTicketInCents: number;
+  bySource: Record<PaymentRequestSource, SalesMetricsBySource>;
+  byBot: SalesMetricsByBot[];
+}
+
 export type QuotationStatus = "sent" | "paid" | "expired" | "cancelled";
 
 export interface QuotationLineItem {
