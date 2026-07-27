@@ -21,6 +21,7 @@ import {
   storePendingBillingPlan,
 } from "@/lib/post-login-path";
 import { signOutUser } from "@/lib/auth-session";
+import { AuthDivider, GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 
 function isUserAlreadyAuthenticatedError(err: unknown): boolean {
   return (
@@ -510,6 +511,9 @@ export default function LoginPage() {
   return (
     <div className="bg-surface-elevated rounded-2xl shadow-xl p-8 border border-subtle">
       <h2 className="text-xl font-semibold text-primary mb-6">{t("auth.signIn")}</h2>
+
+      <GoogleSignInButton onError={setError} />
+      <AuthDivider />
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>

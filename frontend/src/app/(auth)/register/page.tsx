@@ -14,6 +14,7 @@ import {
   storePendingBillingPlan,
 } from "@/lib/post-login-path";
 import { useT } from "@/i18n/context";
+import { AuthDivider, GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -159,6 +160,19 @@ export default function RegisterPage() {
   return (
     <div className="bg-surface-elevated rounded-2xl shadow-xl p-8 border border-subtle">
       <h2 className="text-xl font-semibold text-primary mb-6">{t("auth.createAccount")}</h2>
+
+      <GoogleSignInButton
+        onError={setError}
+        onBeforeSignIn={() => {
+          if (!acceptedTerms) {
+            setError(t("legal.mustAccept"));
+            return false;
+          }
+          markPendingTermsAcceptance();
+          return true;
+        }}
+      />
+      <AuthDivider />
 
       <form onSubmit={handleRegister} className="space-y-4">
         <div>

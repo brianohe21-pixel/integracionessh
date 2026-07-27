@@ -124,6 +124,9 @@ export const en: Messages = {
     passwordMinLength: "Password must be at least 8 characters.",
     passwordLowercase: "Password must include at least one lowercase letter.",
     passwordUppercase: "Password must include at least one uppercase letter.",
+    continueWithGoogle: "Continue with Google",
+    orContinueWith: "or",
+    googleError: "Could not sign in with Google",
     passwordNumber: "Password must include at least one number.",
   },
   bots: {

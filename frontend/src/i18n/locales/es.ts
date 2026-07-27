@@ -122,6 +122,9 @@ export const es = {
     passwordMinLength: "La contraseña debe tener al menos 8 caracteres.",
     passwordLowercase: "La contraseña debe incluir al menos una letra minúscula.",
     passwordUppercase: "La contraseña debe incluir al menos una letra mayúscula.",
+    continueWithGoogle: "Continuar con Google",
+    orContinueWith: "o",
+    googleError: "No se pudo iniciar sesión con Google",
     passwordNumber: "La contraseña debe incluir al menos un número.",
   },
   bots: {
