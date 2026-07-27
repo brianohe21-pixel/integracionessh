@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { fetchAuthSession } from "aws-amplify/auth";
 import { Hub } from "aws-amplify/utils";
 import { getPostLoginPath } from "@/lib/post-login-path";
 import { useT } from "@/i18n/context";
 
-export default function CognitoOAuthCallbackPage() {
+function CognitoOAuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const t = useT();
@@ -62,5 +62,21 @@ export default function CognitoOAuthCallbackPage() {
     <div className="bg-surface-elevated rounded-2xl shadow-xl p-8 border border-subtle text-center">
       <p className="text-sm text-secondary">{t("auth.signingIn")}</p>
     </div>
+  );
+}
+
+export default function CognitoOAuthCallbackPage() {
+  const t = useT();
+
+  return (
+    <Suspense
+      fallback={
+        <div className="bg-surface-elevated rounded-2xl shadow-xl p-8 border border-subtle text-center">
+          <p className="text-sm text-secondary">{t("auth.signingIn")}</p>
+        </div>
+      }
+    >
+      <CognitoOAuthCallbackContent />
+    </Suspense>
   );
 }
