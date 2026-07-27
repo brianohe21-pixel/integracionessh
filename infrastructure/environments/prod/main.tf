@@ -74,6 +74,7 @@ locals {
     local.has_custom_domain ? ["https://${local.custom_domain_trimmed}"] : [],
     var.extra_logout_urls
   )
+  google_auth_enabled = trimspace(var.google_client_id) != "" && trimspace(var.google_client_secret) != ""
   browser_origins = concat(
     local.has_custom_domain ? ["https://${local.custom_domain_trimmed}"] : [],
     data.external.amplify_browser_origin.result.origin != "" ? [data.external.amplify_browser_origin.result.origin] : [],
@@ -338,6 +339,7 @@ module "amplify" {
   cognito_user_pool_id           = module.cognito.user_pool_id
   cognito_client_id              = module.cognito.client_id
   cognito_hosted_ui_domain       = module.cognito.hosted_ui_domain
+  google_auth_enabled            = local.google_auth_enabled
   meta_app_id                    = var.meta_app_id
   meta_embedded_signup_config_id = var.meta_embedded_signup_config_id
   custom_domain                  = var.custom_domain
