@@ -6,6 +6,7 @@ import { smsAdapter } from "./sms.adapter.js";
 import { telegramAdapter } from "./telegram.adapter.js";
 import type { ChannelAdapter, OutboundContext, OutboundDocument, OutboundResult } from "./types.js";
 import { webchatAdapter } from "./webchat.adapter.js";
+import { voicebotAdapter } from "./voicebot.adapter.js";
 import { whatsappAdapter } from "./whatsapp.adapter.js";
 
 const adapters: Record<Channel, ChannelAdapter> = {
@@ -16,6 +17,7 @@ const adapters: Record<Channel, ChannelAdapter> = {
   messenger: messengerAdapter,
   sms: smsAdapter,
   email: emailAdapter,
+  voicebot: voicebotAdapter,
 };
 
 export function getChannelAdapter(channel: Channel): ChannelAdapter {

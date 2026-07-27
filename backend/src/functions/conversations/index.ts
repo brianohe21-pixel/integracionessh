@@ -215,7 +215,8 @@ export async function handler(
         params.channel === "telegram" ||
         params.channel === "messenger" ||
         params.channel === "sms" ||
-        params.channel === "email"
+        params.channel === "email" ||
+        params.channel === "voicebot"
           ? params.channel
           : undefined;
       const limit = params.limit ? parseInt(params.limit, 10) : 20;
@@ -375,7 +376,7 @@ export async function handler(
           channel,
           refreshed.botId
         );
-        if (accessToken || channel === "webchat" || channel === "sms" || channel === "email") {
+        if (accessToken || channel === "webchat" || channel === "sms" || channel === "email" || channel === "voicebot") {
           await sendChannelText(
             buildOutboundContext({
               tenantId: auth.tenantId,

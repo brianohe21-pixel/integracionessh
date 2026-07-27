@@ -561,6 +561,30 @@ locals {
       function_arn = var.bots_function_arn
       protected    = true
     }
+    bots_voicebot_put = {
+      route_key    = "PUT /bots/{botId}/voicebot"
+      invoke_arn   = var.bots_invoke_arn
+      function_arn = var.bots_function_arn
+      protected    = true
+    }
+    bots_voicebot_rotate_key = {
+      route_key    = "POST /bots/{botId}/voicebot/rotate-key"
+      invoke_arn   = var.bots_invoke_arn
+      function_arn = var.bots_function_arn
+      protected    = true
+    }
+    voicebot_sessions_create = {
+      route_key    = "POST /voicebot/sessions"
+      invoke_arn   = var.voicebot_invoke_arn
+      function_arn = var.voicebot_function_arn
+      protected    = false
+    }
+    voicebot_sessions_end = {
+      route_key    = "POST /voicebot/sessions/{sessionId}/end"
+      invoke_arn   = var.voicebot_invoke_arn
+      function_arn = var.voicebot_function_arn
+      protected    = false
+    }
     campaigns_list = {
       route_key    = "GET /campaigns"
       invoke_arn   = var.campaigns_invoke_arn
@@ -1492,6 +1516,7 @@ resource "aws_lambda_permission" "api_gw" {
     sms_webhook       = var.sms_webhook_function_arn
     email_inbound     = var.email_inbound_function_arn
     webchat           = var.webchat_function_arn
+    voicebot          = var.voicebot_function_arn
     campaigns         = var.campaigns_function_arn
     support_tickets   = var.support_tickets_function_arn
     billing           = var.billing_function_arn

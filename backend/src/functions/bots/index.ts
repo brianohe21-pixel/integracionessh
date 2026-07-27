@@ -10,9 +10,10 @@ import {
 } from "../../lib/dynamodb/bot.repository.js";
 import { extractAuthContext, assertTenantAccess, assertMemberRole } from "../../lib/auth/cognito.js";
 import { ensureTenant } from "../../lib/dynamodb/tenant.repository.js";
-import { assertCanCreateBot, assertCanUseWebChat, assertCanEnableChannel, assertCanStartLiveKitCall } from "../../lib/billing/assert-plan.js";
-import { putWidgetKeyLookup, putSmsNumberLookup, deleteSmsNumberLookup, putEmailAddressLookup, deleteEmailAddressLookup } from "../../lib/dynamodb/bot-lookup.repository.js";
+import { assertCanCreateBot, assertCanUseWebChat, assertCanEnableChannel, assertCanStartLiveKitCall, assertCanUseVoicebot } from "../../lib/billing/assert-plan.js";
+import { putWidgetKeyLookup, putSmsNumberLookup, deleteSmsNumberLookup, putEmailAddressLookup, deleteEmailAddressLookup, putVoicebotWidgetKeyLookup, deleteVoicebotWidgetKeyLookup } from "../../lib/dynamodb/bot-lookup.repository.js";
 import { generateWidgetKey } from "../../lib/webchat/session.repository.js";
+import { generateVoicebotWidgetKey } from "../../lib/voicebot/session.repository.js";
 import { assertAllowedModel, assertCanEnableKnowledge } from "../../lib/billing/plan-config.js";
 import {
   DEFAULT_MODEL_ID,
@@ -260,6 +261,88 @@ export async function handler(
       return ok({
         emailEnabled: updated.emailEnabled,
         emailAddress: updated.emailAddress,
+      });
+    }
+
+    if (botId && method === "PUT" && rawPath.includes("/voicebot")) {
+      const existing = await getBot(auth.tenantId, botId);
+      if (!existing) return notFound("Bot not found");
+      assertTenantAccess(auth, existing.tenantId);
+
+      const body = JSON.parse(event.body ?? "{}");
+      const parsed = z
+        .object({
+          enabled: z.boolean().optional(),
+          voicebotVoice: z.string().min(2).max(32).optional(),
+          voicebotModel: z.string().min(3).max(64).optional(),
+          voicebotGreeting: z.string().max(500).optional(),
+          voicebotSystemPrompt: z.string().max(4096).optional(),
+        })
+        .safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
+      if (parsed.data.enabled === true) {
+        await assertCanUseVoicebot(tenant);
+        await assertCanEnableChannel(tenant, existing, "voicebot");
+      }
+
+      let widgetKey = existing.voicebotWidgetKey;
+      if (parsed.data.enabled === true && !widgetKey) {
+        widgetKey = generateVoicebotWidgetKey();
+        await putVoicebotWidgetKeyLookup(widgetKey, auth.tenantId, botId);
+      }
+
+      const updates: Record<string, unknown> = {};
+      if (parsed.data.enabled !== undefined) {
+        updates.voicebotEnabled = parsed.data.enabled;
+        if (widgetKey) updates.voicebotWidgetKey = widgetKey;
+      }
+      if (parsed.data.voicebotVoice !== undefined) {
+        updates.voicebotVoice = parsed.data.voicebotVoice;
+      }
+      if (parsed.data.voicebotModel !== undefined) {
+        updates.voicebotModel = parsed.data.voicebotModel;
+      }
+      if (parsed.data.voicebotGreeting !== undefined) {
+        updates.voicebotGreeting = parsed.data.voicebotGreeting;
+      }
+      if (parsed.data.voicebotSystemPrompt !== undefined) {
+        updates.voicebotSystemPrompt = parsed.data.voicebotSystemPrompt;
+      }
+
+      const updated = await updateBot(auth.tenantId, botId, updates);
+      return ok({
+        voicebotEnabled: updated.voicebotEnabled,
+        voicebotWidgetKey: updated.voicebotWidgetKey,
+        voicebotVoice: updated.voicebotVoice,
+        voicebotModel: updated.voicebotModel,
+        voicebotGreeting: updated.voicebotGreeting,
+        voicebotSystemPrompt: updated.voicebotSystemPrompt,
+      });
+    }
+
+    if (botId && method === "POST" && rawPath.includes("/voicebot/rotate-key")) {
+      const existing = await getBot(auth.tenantId, botId);
+      if (!existing) return notFound("Bot not found");
+      assertTenantAccess(auth, existing.tenantId);
+
+      const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
+      await assertCanUseVoicebot(tenant);
+      await assertCanEnableChannel(tenant, existing, "voicebot");
+
+      const newKey = generateVoicebotWidgetKey();
+      if (existing.voicebotWidgetKey) {
+        await deleteVoicebotWidgetKeyLookup(existing.voicebotWidgetKey);
+      }
+      await putVoicebotWidgetKeyLookup(newKey, auth.tenantId, botId);
+      const updated = await updateBot(auth.tenantId, botId, {
+        voicebotWidgetKey: newKey,
+        voicebotEnabled: true,
+      });
+      return ok({
+        voicebotEnabled: updated.voicebotEnabled,
+        voicebotWidgetKey: updated.voicebotWidgetKey,
       });
     }
 

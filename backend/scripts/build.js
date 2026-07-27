@@ -51,6 +51,8 @@ const entryPoints = [
   "src/functions/sms-webhook/index.ts",
   "src/functions/email-inbound/index.ts",
   "src/functions/webchat/index.ts",
+  "src/functions/voicebot/index.ts",
+  "src/functions/voicebot-session/index.ts",
   "src/functions/realtime/index.ts",
   "src/functions/realtime-ws/index.ts",
   "src/functions/calendar/index.ts",

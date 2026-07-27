@@ -120,6 +120,7 @@ export interface MonthlyUsage {
   messagesCount: number;
   bulkRecipientsCount: number;
   campaignsStarted: number;
+  voicebotMinutesCount?: number;
 }
 
 export type Channel =
@@ -129,7 +130,8 @@ export type Channel =
   | "telegram"
   | "messenger"
   | "sms"
-  | "email";
+  | "email"
+  | "voicebot";
 
 export type BotLocale = "es" | "en";
 
@@ -166,6 +168,12 @@ export interface Bot {
   smsOriginationNumber?: string;
   emailEnabled?: boolean;
   emailAddress?: string;
+  voicebotEnabled?: boolean;
+  voicebotWidgetKey?: string;
+  voicebotVoice?: string;
+  voicebotModel?: string;
+  voicebotGreeting?: string;
+  voicebotSystemPrompt?: string;
   status: "active" | "inactive";
   createdAt: string;
   updatedAt: string;
@@ -222,7 +230,8 @@ export type MessageSource =
   | "telegram_inbound"
   | "messenger_inbound"
   | "sms_inbound"
-  | "email_inbound";
+  | "email_inbound"
+  | "voicebot_inbound";
 
 export type MessageType =
   | "text"
@@ -652,6 +661,24 @@ export interface WebChatSession {
   visitorName?: string;
   createdAt: string;
   lastActivityAt: string;
+  ttl: number;
+}
+
+export type VoicebotSessionStatus = "active" | "ended";
+
+export interface VoicebotSession {
+  sessionId: string;
+  callId: string;
+  tenantId: string;
+  botId: string;
+  conversationId: string;
+  participantId: string;
+  status: VoicebotSessionStatus;
+  ephemeralKey?: string;
+  visitorName?: string;
+  startedAt: string;
+  endedAt?: string;
+  durationSeconds?: number;
   ttl: number;
 }
 

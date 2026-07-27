@@ -247,6 +247,29 @@ export async function assertCanUseWebChat(tenant: Tenant): Promise<void> {
   }
 }
 
+export async function assertCanUseVoicebot(tenant: Tenant): Promise<void> {
+  const limits = getPlanLimits(tenant.plan);
+  if (limits.maxVoicebotMinutesPerMonth <= 0) {
+    throw new PlanLimitError(
+      "PLAN_LIMIT_VOICEBOT",
+      "Voicebot requires Pro plan or higher"
+    );
+  }
+}
+
+export async function assertCanStartVoicebotSession(tenant: Tenant): Promise<void> {
+  await assertCanUseVoicebot(tenant);
+  const limits = getPlanLimits(tenant.plan);
+  const usage = await getMonthlyUsage(tenant.tenantId);
+  const usedMinutes = usage.voicebotMinutesCount ?? 0;
+  if (usedMinutes >= limits.maxVoicebotMinutesPerMonth) {
+    throw new PlanLimitError(
+      "PLAN_LIMIT_VOICEBOT_MINUTES",
+      `Plan limit: maximum ${limits.maxVoicebotMinutesPerMonth} voicebot minutes per month`
+    );
+  }
+}
+
 export function countEnabledChannels(bot: import("../../types/index.js").Bot): number {
   let enabled = 1;
   if (bot.instagramPageId) enabled += 1;
@@ -255,6 +278,7 @@ export function countEnabledChannels(bot: import("../../types/index.js").Bot): n
   if (bot.messengerPageId) enabled += 1;
   if (bot.smsEnabled) enabled += 1;
   if (bot.emailEnabled) enabled += 1;
+  if (bot.voicebotEnabled) enabled += 1;
   return enabled;
 }
 
@@ -268,6 +292,7 @@ function isChannelAlreadyEnabled(
   if (channel === "messenger") return Boolean(bot.messengerPageId);
   if (channel === "sms") return Boolean(bot.smsEnabled);
   if (channel === "email") return Boolean(bot.emailEnabled);
+  if (channel === "voicebot") return Boolean(bot.voicebotEnabled);
   return false;
 }
 

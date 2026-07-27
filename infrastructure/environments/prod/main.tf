@@ -265,6 +265,8 @@ module "api_gateway" {
   email_inbound_function_arn     = module.lambda.email_inbound_function_arn
   webchat_invoke_arn             = module.lambda.webchat_invoke_arn
   webchat_function_arn           = module.lambda.webchat_function_arn
+  voicebot_invoke_arn            = module.lambda.voicebot_invoke_arn
+  voicebot_function_arn          = module.lambda.voicebot_function_arn
   campaigns_invoke_arn           = module.lambda.campaigns_invoke_arn
   campaigns_function_arn         = module.lambda.campaigns_function_arn
   support_tickets_invoke_arn     = module.lambda.support_tickets_invoke_arn

@@ -146,6 +146,18 @@ output "webchat_function_arn" {
   value = aws_lambda_function.functions["webchat"].arn
 }
 
+output "voicebot_invoke_arn" {
+  value = aws_lambda_function.functions["voicebot"].invoke_arn
+}
+
+output "voicebot_function_arn" {
+  value = aws_lambda_function.functions["voicebot"].arn
+}
+
+output "voicebot_session_function_arn" {
+  value = aws_lambda_function.functions["voicebot_session"].arn
+}
+
 output "campaigns_invoke_arn" {
   value = aws_lambda_function.functions["campaigns"].invoke_arn
 }

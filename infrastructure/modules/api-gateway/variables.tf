@@ -158,6 +158,14 @@ variable "webchat_function_arn" {
   type = string
 }
 
+variable "voicebot_invoke_arn" {
+  type = string
+}
+
+variable "voicebot_function_arn" {
+  type = string
+}
+
 variable "campaigns_invoke_arn" {
   type = string
 }

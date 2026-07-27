@@ -29,6 +29,13 @@ function messengerPageKey(pageId: string) {
   };
 }
 
+function voicebotWidgetKeyKey(widgetKey: string) {
+  return {
+    PK: `LOOKUP#VOICEBOT#${widgetKey}`,
+    SK: "META",
+  };
+}
+
 function smsNumberKey(number: string) {
   return {
     PK: `LOOKUP#SMS#${number}`,
@@ -213,6 +220,49 @@ export async function getBotByMessengerPageId(
     new GetCommand({
       TableName: TABLE_NAME,
       Key: messengerPageKey(pageId),
+    })
+  );
+  if (!result.Item) return null;
+  return {
+    tenantId: result.Item.tenantId as string,
+    botId: result.Item.botId as string,
+  };
+}
+
+export async function putVoicebotWidgetKeyLookup(
+  widgetKey: string,
+  tenantId: string,
+  botId: string
+): Promise<void> {
+  await docClient.send(
+    new PutCommand({
+      TableName: TABLE_NAME,
+      Item: {
+        ...voicebotWidgetKeyKey(widgetKey),
+        tenantId,
+        botId,
+        updatedAt: new Date().toISOString(),
+      },
+    })
+  );
+}
+
+export async function deleteVoicebotWidgetKeyLookup(widgetKey: string): Promise<void> {
+  await docClient.send(
+    new DeleteCommand({
+      TableName: TABLE_NAME,
+      Key: voicebotWidgetKeyKey(widgetKey),
+    })
+  );
+}
+
+export async function getBotByVoicebotWidgetKey(
+  widgetKey: string
+): Promise<{ tenantId: string; botId: string } | null> {
+  const result = await docClient.send(
+    new GetCommand({
+      TableName: TABLE_NAME,
+      Key: voicebotWidgetKeyKey(widgetKey),
     })
   );
   if (!result.Item) return null;

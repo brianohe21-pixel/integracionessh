@@ -153,6 +153,13 @@ resource "aws_iam_role_policy" "lambda_permissions" {
       {
         Effect = "Allow"
         Action = [
+          "lambda:InvokeFunction",
+        ]
+        Resource = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${var.project}-${var.environment}-voicebot-session"
+      },
+      {
+        Effect = "Allow"
+        Action = [
           "sns:Publish",
         ]
         Resource = "*"
@@ -176,6 +183,8 @@ locals {
   calendar_function_arn     = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.calendar_function_name}"
   reports_function_name     = "${var.project}-${var.environment}-reports"
   reports_function_arn      = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.reports_function_name}"
+  voicebot_session_function_name = "${var.project}-${var.environment}-voicebot-session"
+  voicebot_session_function_arn  = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.voicebot_session_function_name}"
 
   functions = {
     webhook = {
@@ -459,6 +468,28 @@ locals {
         LIVEKIT_URL            = var.livekit_url
         LIVEKIT_API_KEY        = var.livekit_api_key
         LIVEKIT_API_SECRET     = var.livekit_api_secret
+      }
+    }
+    voicebot = {
+      handler     = "voicebot/index.handler"
+      description = "Public voicebot WebRTC sessions"
+      timeout     = 30
+      memory      = 512
+      environment = {
+        TABLE_NAME                      = var.dynamodb_table_name
+        ENVIRONMENT                     = var.environment
+        VOICEBOT_SESSION_FUNCTION_NAME  = local.voicebot_session_function_name
+      }
+    }
+    voicebot_session = {
+      handler     = "voicebot-session/index.handler"
+      description = "Voicebot OpenAI Realtime sideband session worker"
+      timeout     = 900
+      memory      = 512
+      environment = {
+        TABLE_NAME                = var.dynamodb_table_name
+        ENVIRONMENT               = var.environment
+        INTEGRATION_SQS_QUEUE_URL = var.integration_sqs_queue_url
       }
     }
     realtime = {
