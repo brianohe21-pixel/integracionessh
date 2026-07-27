@@ -98,12 +98,15 @@ module "dynamodb" {
 }
 
 module "cognito" {
-  source        = "../../modules/cognito"
-  project       = local.project
-  environment   = local.environment
-  callback_urls = local.cognito_callback_urls
-  logout_urls   = local.cognito_logout_urls
-  tags          = local.tags
+  source               = "../../modules/cognito"
+  project              = local.project
+  environment          = local.environment
+  callback_urls        = local.cognito_callback_urls
+  logout_urls          = local.cognito_logout_urls
+  google_client_id     = var.google_client_id
+  google_client_secret = var.google_client_secret
+  lambda_zip_path      = var.lambda_zip_path
+  tags                 = local.tags
 }
 
 module "sqs" {
@@ -329,6 +332,7 @@ module "amplify" {
   aws_region                     = var.aws_region
   cognito_user_pool_id           = module.cognito.user_pool_id
   cognito_client_id              = module.cognito.client_id
+  cognito_hosted_ui_domain       = module.cognito.hosted_ui_domain
   meta_app_id                    = var.meta_app_id
   meta_embedded_signup_config_id = var.meta_embedded_signup_config_id
   tags                           = local.tags

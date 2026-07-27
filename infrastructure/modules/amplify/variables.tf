@@ -40,6 +40,10 @@ variable "cognito_client_id" {
   type = string
 }
 
+variable "cognito_hosted_ui_domain" {
+  type = string
+}
+
 variable "meta_app_id" {
   type    = string
   default = ""
