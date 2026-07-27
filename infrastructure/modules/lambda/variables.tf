@@ -286,6 +286,8 @@ variable "cloudwatch_log_group_import_exclude" {
     "sms_webhook",
     "email_inbound",
     "reports",
+    "voicebot",
+    "voicebot_session",
   ]
   description = "Lambda keys whose log groups are created by Terraform instead of imported (new functions without pre-existing log groups in AWS)"
 }
