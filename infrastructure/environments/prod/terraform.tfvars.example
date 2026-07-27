@@ -6,6 +6,8 @@ meta_app_id           = "your-meta-app-id"
 meta_app_secret       = "your-meta-app-secret"
 meta_embedded_signup_config_id = "your-embedded-signup-config-id"
 lambda_zip_path       = "../../../backend/dist/functions.zip"
+google_client_id      = ""
+google_client_secret  = ""
 custom_domain         = "app.yourdomain.com"
 api_custom_domain     = "api.integracionessh.lat"
 

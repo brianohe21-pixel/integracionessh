@@ -69,6 +69,12 @@ build_plan_args() {
   if [ -n "${EXTRA_LOGOUT_URLS:-}" ]; then
     PLAN_ARGS+=(-var="extra_logout_urls=${EXTRA_LOGOUT_URLS}")
   fi
+  if [ -n "${GOOGLE_CLIENT_ID:-}" ]; then
+    PLAN_ARGS+=(-var="google_client_id=${GOOGLE_CLIENT_ID}")
+  fi
+  if [ -n "${GOOGLE_CLIENT_SECRET:-}" ]; then
+    PLAN_ARGS+=(-var="google_client_secret=${GOOGLE_CLIENT_SECRET}")
+  fi
 }
 
 run_with_lock_retry() {

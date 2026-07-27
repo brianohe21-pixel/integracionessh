@@ -88,6 +88,8 @@ locals {
     ""
   )
   api_public_url = local.api_custom_domain_trimmed != "" ? "https://${local.api_custom_domain_trimmed}" : trimspace(var.api_public_url) != "" ? trimsuffix(trimspace(var.api_public_url), "/") : local.existing_api_gateway_id != "" ? "https://${local.existing_api_gateway_id}.execute-api.${var.aws_region}.amazonaws.com" : ""
+
+  lambda_zip_path_absolute = var.lambda_zip_path != "" ? abspath("${path.module}/${var.lambda_zip_path}") : ""
 }
 
 module "dynamodb" {
@@ -105,7 +107,7 @@ module "cognito" {
   logout_urls          = local.cognito_logout_urls
   google_client_id     = var.google_client_id
   google_client_secret = var.google_client_secret
-  lambda_zip_path      = var.lambda_zip_path
+  lambda_zip_path      = local.lambda_zip_path_absolute
   tags                 = local.tags
 }
 
@@ -194,7 +196,7 @@ module "lambda" {
   meta_app_id                   = var.meta_app_id
   meta_app_secret               = var.meta_app_secret
   whatsapp_app_secret           = var.whatsapp_app_secret
-  lambda_zip_path               = var.lambda_zip_path != "" ? abspath("${path.module}/${var.lambda_zip_path}") : ""
+  lambda_zip_path               = local.lambda_zip_path_absolute
   stripe_secret_key             = var.stripe_secret_key
   stripe_webhook_secret         = var.stripe_webhook_secret
   stripe_price_pro              = var.stripe_price_pro
