@@ -26,6 +26,7 @@ import {
   isWompiConfigured,
   amountInCentsForPlan,
   buildCheckoutUrl,
+  buildWompiCheckoutParams,
   buildPaymentReference,
   parsePaymentReference,
   verifyWompiEvent,
@@ -138,6 +139,12 @@ async function handleWompiCheckout(
   const redirectUrl = `${WOMPI_FRONTEND_URL}/billing/success?reference=${encodeURIComponent(reference)}`;
   const creds = getPlatformWompiCredentials();
   if (!creds) throw new Error("Wompi is not configured");
+  const checkoutParams = buildWompiCheckoutParams(creds, {
+    reference,
+    amountInCents,
+    redirectUrl,
+    customerEmail: email,
+  });
   const url = buildCheckoutUrl(creds, {
     reference,
     amountInCents,
@@ -145,7 +152,7 @@ async function handleWompiCheckout(
     customerEmail: email,
   });
 
-  return ok({ url, reference, provider: "wompi" });
+  return ok({ url, reference, provider: "wompi", wompi: checkoutParams });
 }
 
 async function handleStripeCheckout(
