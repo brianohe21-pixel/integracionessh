@@ -15,6 +15,7 @@ import {
   Send,
   Mail,
   MessagesSquare,
+  Mic,
 } from "lucide-react";
 import Link from "next/link";
 import { useBot } from "@/hooks/useBots";
@@ -28,6 +29,7 @@ import { BotMessengerConnect } from "@/components/bots/BotMessengerConnect";
 import { BotSmsSettings } from "@/components/bots/BotSmsSettings";
 import { BotEmailSettings } from "@/components/bots/BotEmailSettings";
 import { BotWebchatSettings } from "@/components/bots/BotWebchatSettings";
+import { BotVoicebotSettings } from "@/components/bots/BotVoicebotSettings";
 import { BotMetaFlowsPanel } from "@/components/bots/BotMetaFlowsPanel";
 import { BotMacrosPanel } from "@/components/bots/BotMacrosPanel";
 import { useT } from "@/i18n/context";
@@ -43,6 +45,7 @@ const TAB_IDS = [
   "messenger",
   "sms",
   "email",
+  "voicebot",
   "knowledge",
   "macros",
   "metaFlows",
@@ -75,6 +78,7 @@ export default function EditBotPage() {
         { id: "messenger" as const, label: t("bots.tabMessenger"), icon: <MessagesSquare className="w-4 h-4" /> },
         { id: "sms" as const, label: t("bots.tabSms"), icon: <Phone className="w-4 h-4" /> },
         { id: "email" as const, label: t("bots.tabEmail"), icon: <Mail className="w-4 h-4" /> },
+        { id: "voicebot" as const, label: t("bots.tabVoicebot"), icon: <Mic className="w-4 h-4" /> },
         { id: "knowledge" as const, label: t("bots.tabKnowledge"), icon: <BookOpen className="w-4 h-4" /> },
         { id: "macros" as const, label: t("bots.tabMacros"), icon: <MessageSquarePlus className="w-4 h-4" /> },
         { id: "metaFlows" as const, label: t("bots.tabMetaFlows"), icon: <Workflow className="w-4 h-4" /> },
@@ -167,6 +171,8 @@ export default function EditBotPage() {
       {bot && activeTab === "sms" && <BotSmsSettings bot={bot} />}
 
       {bot && activeTab === "email" && <BotEmailSettings bot={bot} />}
+
+      {bot && activeTab === "voicebot" && <BotVoicebotSettings bot={bot} />}
 
       {bot && activeTab === "knowledge" && <BotKnowledge bot={bot} />}
 

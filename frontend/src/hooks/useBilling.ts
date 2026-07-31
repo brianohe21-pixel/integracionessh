@@ -12,6 +12,23 @@ export interface BillingPlanPrice {
   periodDays: number;
 }
 
+export interface WompiCheckoutParams {
+  publicKey: string;
+  currency: string;
+  amountInCents: number;
+  reference: string;
+  signatureIntegrity: string;
+  redirectUrl: string;
+  customerEmail: string;
+}
+
+export interface BillingCheckoutResponse {
+  url: string;
+  reference?: string;
+  provider: BillingProvider;
+  wompi?: WompiCheckoutParams;
+}
+
 export interface BillingProvidersResponse {
   wompi: boolean;
   stripe: boolean;
@@ -78,10 +95,7 @@ export function useBillingTransaction(reference: string | null) {
 export function useCheckout() {
   return useMutation({
     mutationFn: (input: { plan: "pro" | "enterprise"; provider?: BillingProvider }) =>
-      api.post<{ url: string; reference?: string; provider: BillingProvider }>(
-        "/billing/checkout",
-        input
-      ),
+      api.post<BillingCheckoutResponse>("/billing/checkout", input),
   });
 }
 

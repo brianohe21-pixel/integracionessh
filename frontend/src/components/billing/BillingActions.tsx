@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import {
-  useCheckout,
   useBillingPortal,
   useBillingProviders,
 } from "@/hooks/useBilling";
@@ -15,7 +15,7 @@ import type { Tenant } from "@/types";
 
 export function BillingActions() {
   const t = useT();
-  const checkout = useCheckout();
+  const router = useRouter();
   const portal = useBillingPortal();
   const { data: providers } = useBillingProviders();
   const [error, setError] = useState("");
@@ -30,21 +30,13 @@ export function BillingActions() {
     (providers?.wompi ? "wompi" : providers?.stripe ? "stripe" : null);
   const canCheckout = Boolean(defaultProvider);
 
-  async function goToCheckout(plan: "pro" | "enterprise") {
+  function goToCheckout(plan: "pro" | "enterprise") {
     setError("");
     if (!defaultProvider) {
       setError(t("billing.noProviderConfigured"));
       return;
     }
-    try {
-      const result = await checkout.mutateAsync({
-        plan,
-        provider: defaultProvider,
-      });
-      if (result.url) window.location.href = result.url;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("billing.checkoutError"));
-    }
+    router.push(`/billing/checkout?plan=${plan}`);
   }
 
   async function goToPortal() {
@@ -76,7 +68,7 @@ export function BillingActions() {
           <button
             type="button"
             onClick={() => goToCheckout("pro")}
-            disabled={!canCheckout || checkout.isPending}
+            disabled={!canCheckout}
             className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50"
           >
             {t("billing.upgradePro")}
@@ -87,7 +79,7 @@ export function BillingActions() {
           <button
             type="button"
             onClick={() => goToCheckout("enterprise")}
-            disabled={!canCheckout || checkout.isPending}
+            disabled={!canCheckout}
             className="rounded-lg border border-accent px-4 py-2 text-sm font-medium text-accent hover:bg-accent-muted disabled:opacity-50"
           >
             {t("billing.upgradeEnterprise")}

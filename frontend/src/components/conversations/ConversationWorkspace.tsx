@@ -275,6 +275,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     if (channel === "messenger") return t("conversations.channelMessenger");
     if (channel === "sms") return t("conversations.channelSms");
     if (channel === "email") return t("conversations.channelEmail");
+    if (channel === "voicebot") return t("conversations.channelVoicebot");
     return t("conversations.channelWhatsapp");
   }
 
@@ -503,6 +504,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
             <option value="messenger">{t("conversations.channelMessenger")}</option>
             <option value="sms">{t("conversations.channelSms")}</option>
             <option value="email">{t("conversations.channelEmail")}</option>
+            <option value="voicebot">{t("conversations.channelVoicebot")}</option>
           </Select>
           <Select
             value={handoffFilter}

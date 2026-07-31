@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useCheckout, useBillingProviders, useBillingStatus } from "@/hooks/useBilling";
+import { useRouter } from "next/navigation";
+import { useBillingProviders, useBillingStatus } from "@/hooks/useBilling";
 import { formatCopPrice } from "@/lib/plan-config";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useT } from "@/i18n/context";
@@ -11,12 +12,11 @@ const PAID_PLANS: Array<"pro" | "enterprise"> = ["pro", "enterprise"];
 
 export function BillingPlanCards({ autoCheckoutPlan }: { autoCheckoutPlan?: TenantPlan | null }) {
   const t = useT();
+  const router = useRouter();
   const { planLabel } = useFormatters();
-  const checkout = useCheckout();
   const { data: providers } = useBillingProviders();
   const { data: status } = useBillingStatus();
   const [error, setError] = useState("");
-  const [pendingPlan, setPendingPlan] = useState<TenantPlan | null>(null);
   const autoStarted = useRef(false);
 
   const defaultProvider =
@@ -24,23 +24,15 @@ export function BillingPlanCards({ autoCheckoutPlan }: { autoCheckoutPlan?: Tena
     (providers?.wompi ? "wompi" : providers?.stripe ? "stripe" : null);
 
   const startCheckout = useCallback(
-    async (plan: "pro" | "enterprise") => {
+    (plan: "pro" | "enterprise") => {
       setError("");
-      setPendingPlan(plan);
       if (!defaultProvider) {
         setError(t("billing.noProviderConfigured"));
-        setPendingPlan(null);
         return;
       }
-      try {
-        const result = await checkout.mutateAsync({ plan, provider: defaultProvider });
-        if (result.url) window.location.href = result.url;
-      } catch (err) {
-        setError(err instanceof Error ? err.message : t("billing.checkoutError"));
-        setPendingPlan(null);
-      }
+      router.push(`/billing/checkout?plan=${plan}`);
     },
-    [checkout, defaultProvider, t]
+    [defaultProvider, router, t]
   );
 
   useEffect(() => {
@@ -70,7 +62,6 @@ export function BillingPlanCards({ autoCheckoutPlan }: { autoCheckoutPlan?: Tena
       {PAID_PLANS.map((plan) => {
         const price = providers?.plans?.[plan];
         const isCurrent = currentPlan === plan && !status?.isExpired;
-        const isPending = pendingPlan === plan && checkout.isPending;
 
         return (
           <div
@@ -97,10 +88,10 @@ export function BillingPlanCards({ autoCheckoutPlan }: { autoCheckoutPlan?: Tena
               <button
                 type="button"
                 onClick={() => startCheckout(plan)}
-                disabled={!defaultProvider || isPending}
+                disabled={!defaultProvider}
                 className="mt-4 w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50"
               >
-                {isPending ? t("billing.redirecting") : t("billing.subscribe")}
+                {t("billing.subscribe")}
               </button>
             )}
           </div>

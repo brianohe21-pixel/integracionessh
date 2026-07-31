@@ -148,7 +148,8 @@ export type Channel =
   | "telegram"
   | "messenger"
   | "sms"
-  | "email";
+  | "email"
+  | "voicebot";
 
 export type BotLocale = "es" | "en";
 
@@ -185,6 +186,12 @@ export interface Bot {
   smsOriginationNumber?: string;
   emailEnabled?: boolean;
   emailAddress?: string;
+  voicebotEnabled?: boolean;
+  voicebotWidgetKey?: string;
+  voicebotVoice?: string;
+  voicebotModel?: string;
+  voicebotGreeting?: string;
+  voicebotSystemPrompt?: string;
   status: "active" | "inactive";
   createdAt: string;
   updatedAt: string;
@@ -462,6 +469,11 @@ export type CampaignStatus =
   | "failed"
   | "cancelled";
 
+export interface CampaignBatchConfig {
+  size: number;
+  delaySeconds: number;
+}
+
 export interface Campaign {
   campaignId: string;
   tenantId: string;
@@ -472,6 +484,11 @@ export interface Campaign {
   status: CampaignStatus;
   segments: string[];
   scheduledAt?: string;
+  batchConfig?: CampaignBatchConfig;
+  batchVersion?: number;
+  currentBatch?: number;
+  nextBatchAt?: string;
+  batchesDispatched?: number;
   total: number;
   sent: number;
   failed: number;

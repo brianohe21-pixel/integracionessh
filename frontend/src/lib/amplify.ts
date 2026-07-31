@@ -1,3 +1,4 @@
+import "aws-amplify/auth/enable-oauth-listener";
 import { Amplify } from "aws-amplify";
 import { isAuthConfigured } from "@/lib/auth-session";
 
@@ -13,7 +14,11 @@ function oauthRedirectUrls(): { signIn: string[]; signOut: string[] } {
 }
 
 export function isGoogleAuthConfigured(): boolean {
-  return isAuthConfigured() && Boolean(process.env.NEXT_PUBLIC_COGNITO_DOMAIN?.trim());
+  return (
+    isAuthConfigured() &&
+    Boolean(process.env.NEXT_PUBLIC_COGNITO_DOMAIN?.trim()) &&
+    process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED === "true"
+  );
 }
 
 export function configureAmplify() {

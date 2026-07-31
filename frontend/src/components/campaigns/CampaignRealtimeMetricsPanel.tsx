@@ -14,6 +14,7 @@ const CHANNELS: Channel[] = [
   "messenger",
   "sms",
   "email",
+  "voicebot",
 ];
 
 const CHANNEL_COLORS: Record<Channel, { bar: string; text: string }> = {
@@ -24,6 +25,7 @@ const CHANNEL_COLORS: Record<Channel, { bar: string; text: string }> = {
   messenger: { bar: "bg-indigo-500", text: "text-indigo-700" },
   sms: { bar: "bg-amber-500", text: "text-amber-700" },
   email: { bar: "bg-violet-500", text: "text-violet-700" },
+  voicebot: { bar: "bg-rose-500", text: "text-rose-700" },
 };
 
 interface CampaignRealtimeMetricsPanelProps {

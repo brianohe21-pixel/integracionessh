@@ -28,6 +28,7 @@ import { CampaignStatusBadge } from "@/components/campaigns/CampaignStatusBadge"
 import { CampaignProgressBar } from "@/components/campaigns/CampaignProgressBar";
 import { CampaignFunnelChart } from "@/components/campaigns/CampaignFunnelChart";
 import { CampaignRealtimeMetricsPanel } from "@/components/campaigns/CampaignRealtimeMetricsPanel";
+import { formatBatchDelay } from "@/components/campaigns/CampaignBatchSettings";
 import { BulkJobFailures } from "@/components/bulk-send/BulkJobFailures";
 import { TemplateMessagePreview } from "@/components/templates/TemplateMessagePreview";
 import { CampaignQualityAlert } from "@/components/campaigns/CampaignQualityAlert";
@@ -285,6 +286,34 @@ export default function CampaignDetailPage({
                 {t("campaigns.scheduledAtLabel")}
               </dt>
               <dd className="text-primary">{formatDate(campaign.scheduledAt)}</dd>
+            </>
+          )}
+          {campaign.batchConfig && (
+            <>
+              <dt className="text-secondary">{t("campaigns.batch.detailSize")}</dt>
+              <dd className="text-primary">{campaign.batchConfig.size}</dd>
+              <dt className="text-secondary">{t("campaigns.batch.detailDelay")}</dt>
+              <dd className="text-primary">
+                {formatBatchDelay(campaign.batchConfig.delaySeconds, t)}
+              </dd>
+              {campaign.batchesDispatched !== undefined && campaign.batchesDispatched > 0 && (
+                <>
+                  <dt className="text-secondary">{t("campaigns.batch.detailBatchesDispatched")}</dt>
+                  <dd className="text-primary">{campaign.batchesDispatched}</dd>
+                </>
+              )}
+              {campaign.currentBatch !== undefined && campaign.currentBatch > 0 && (
+                <>
+                  <dt className="text-secondary">{t("campaigns.batch.detailCurrentBatch")}</dt>
+                  <dd className="text-primary">{campaign.currentBatch}</dd>
+                </>
+              )}
+              {campaign.nextBatchAt && campaign.status === "running" && (
+                <>
+                  <dt className="text-secondary">{t("campaigns.batch.detailNextBatch")}</dt>
+                  <dd className="text-primary">{formatDate(campaign.nextBatchAt)}</dd>
+                </>
+              )}
             </>
           )}
           {campaign.segments.length > 0 && (

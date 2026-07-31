@@ -9,6 +9,15 @@ import { useTemplates } from "@/hooks/useTemplates";
 import { useCreateCampaign, type CampaignRecipient } from "@/hooks/useCampaigns";
 import { SegmentInput } from "@/components/campaigns/SegmentInput";
 import { CampaignQualityAlert } from "@/components/campaigns/CampaignQualityAlert";
+import {
+  CampaignBatchSettings,
+  DEFAULT_BATCH_FORM,
+  batchFormToConfig,
+  validateBatchForm,
+  formatBatchDelay,
+  estimateBatchCount,
+  type BatchFormState,
+} from "@/components/campaigns/CampaignBatchSettings";
 import { TemplateMessagePreview } from "@/components/templates/TemplateMessagePreview";
 import { useWhatsAppQualityGuard } from "@/hooks/useWhatsAppQualityGuard";
 import { parseRecipientsCsv, decodeCsvBytes } from "@/lib/csv";
@@ -69,6 +78,7 @@ export default function NewCampaignPage() {
   });
   const [recipients, setRecipients] = useState<CampaignRecipient[]>([]);
   const [audienceTags, setAudienceTags] = useState<string[]>([]);
+  const [batchForm, setBatchForm] = useState<BatchFormState>(DEFAULT_BATCH_FORM);
   const [requireOptIn, setRequireOptIn] = useState(false);
   const [parseError, setParseError] = useState("");
   const [submitError, setSubmitError] = useState("");
@@ -89,6 +99,7 @@ export default function NewCampaignPage() {
   const isLastStep = stepIndex === STEPS.length - 1;
 
   function canProceedConfig() {
+    if (validateBatchForm(batchForm)) return false;
     return (
       config.name.trim() &&
       config.botId &&
@@ -137,7 +148,9 @@ export default function NewCampaignPage() {
 
   async function handleSubmit() {
     if (!selectedTemplate) return;
+    if (validateBatchForm(batchForm)) return;
     setSubmitError("");
+    const batchConfig = batchFormToConfig(batchForm);
     try {
       const campaign = await createCampaign.mutateAsync({
         name: config.name.trim(),
@@ -146,6 +159,7 @@ export default function NewCampaignPage() {
         language: config.language,
         segments: config.segments,
         ...(config.scheduledAt ? { scheduledAt: new Date(config.scheduledAt).toISOString() } : {}),
+        ...(batchConfig ? { batchConfig } : {}),
         ...(recipients.length ? { recipients } : {}),
         ...(audienceTags.length ? { audienceTags } : {}),
         requireOptIn,
@@ -296,6 +310,12 @@ export default function NewCampaignPage() {
               <p className="text-xs text-muted">{t("campaigns.scheduledAtHint")}</p>
             </div>
 
+            <CampaignBatchSettings
+              value={batchForm}
+              onChange={setBatchForm}
+              totalRecipients={recipients.length || undefined}
+            />
+
             <label className="flex items-start gap-3 cursor-pointer">
               <input
                 type="checkbox"
@@ -435,6 +455,21 @@ export default function NewCampaignPage() {
                   <dt className="text-secondary">{t("campaigns.scheduledAtLabel")}</dt>
                   <dd className="font-medium text-primary">
                     {new Date(config.scheduledAt).toLocaleString()}
+                  </dd>
+                </>
+              )}
+              {batchForm.enabled && batchFormToConfig(batchForm) && (
+                <>
+                  <dt className="text-secondary">{t("campaigns.batch.summaryLabel")}</dt>
+                  <dd className="font-medium text-primary">
+                    {t("campaigns.batch.summaryValue", {
+                      size: batchForm.size,
+                      delay: formatBatchDelay(batchFormToConfig(batchForm)!.delaySeconds, t),
+                      batches: estimateBatchCount(
+                        Math.max(recipients.length, audienceTags.length ? 1 : 0),
+                        batchForm.size
+                      ),
+                    })}
                   </dd>
                 </>
               )}
