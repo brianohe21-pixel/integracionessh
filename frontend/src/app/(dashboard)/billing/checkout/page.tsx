@@ -4,7 +4,10 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AlertCircle, Loader2 } from "lucide-react";
-import { WompiCheckoutWidget } from "@/components/billing/WompiCheckoutWidget";
+import {
+  dismissWompiOverlay,
+  WompiCheckoutWidget,
+} from "@/components/billing/WompiCheckoutWidget";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { useCheckout, useBillingProviders } from "@/hooks/useBilling";
 import { formatCopPrice } from "@/lib/plan-config";
@@ -27,6 +30,7 @@ function BillingCheckoutPageContent() {
   const { data: providers } = useBillingProviders();
   const [error, setError] = useState("");
   const [wompiConfig, setWompiConfig] = useState<WompiCheckoutParams | null>(null);
+  const [paymentOpen, setPaymentOpen] = useState(false);
   const started = useRef(false);
 
   const defaultProvider =
@@ -86,7 +90,19 @@ function BillingCheckoutPageContent() {
 
   const handleWidgetError = useCallback((message: string) => {
     setError(message);
+    setPaymentOpen(false);
     setWompiConfig(null);
+  }, []);
+
+  const handleCancelCheckout = useCallback(() => {
+    dismissWompiOverlay();
+    setPaymentOpen(false);
+    setWompiConfig(null);
+    router.push("/billing");
+  }, [router]);
+
+  const handlePaymentDismiss = useCallback(() => {
+    setPaymentOpen(false);
   }, []);
 
   const price = plan ? providers?.plans?.[plan] : null;
@@ -129,17 +145,28 @@ function BillingCheckoutPageContent() {
         )}
 
         <div className="mt-6 flex flex-col gap-2">
-          <Link
-            href="/billing"
+          {wompiConfig && !paymentOpen ? (
+            <button
+              type="button"
+              onClick={() => setPaymentOpen(true)}
+              className="rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover"
+            >
+              {t("billing.checkoutOpenPayment")}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={handleCancelCheckout}
             className="rounded-lg border border-default px-4 py-2.5 text-sm font-medium text-secondary hover:bg-surface"
           >
             {t("billing.cancelCheckout")}
-          </Link>
+          </button>
           {error ? (
             <button
               type="button"
               onClick={() => {
                 started.current = false;
+                setPaymentOpen(false);
                 void startCheckout();
               }}
               className="rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover"
@@ -155,9 +182,23 @@ function BillingCheckoutPageContent() {
       {wompiConfig ? (
         <WompiCheckoutWidget
           config={wompiConfig}
+          open={paymentOpen}
           onApproved={handleApproved}
+          onDismiss={handlePaymentDismiss}
           onError={handleWidgetError}
         />
+      ) : null}
+
+      {paymentOpen ? (
+        <div className="fixed inset-x-0 bottom-0 z-[2147483647] border-t border-default bg-surface-elevated p-4 shadow-lg">
+          <button
+            type="button"
+            onClick={handleCancelCheckout}
+            className="w-full rounded-lg border border-default px-4 py-3 text-sm font-medium text-secondary hover:bg-surface"
+          >
+            {t("billing.cancelCheckout")}
+          </button>
+        </div>
       ) : null}
     </DashboardPage>
   );
