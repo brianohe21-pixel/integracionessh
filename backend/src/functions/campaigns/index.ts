@@ -117,6 +117,7 @@ async function startCampaign(
   actorUserId?: string
 ): Promise<void> {
   const now = new Date().toISOString();
+  await updateCampaignStatus(tenantId, campaignId, "running", { startedAt: now });
   await startCampaignDispatch(
     tenantId,
     campaignId,
@@ -126,7 +127,6 @@ async function startCampaign(
     requireOptIn,
     actorUserId
   );
-  await updateCampaignStatus(tenantId, campaignId, "running", { startedAt: now });
 }
 
 export async function handler(
