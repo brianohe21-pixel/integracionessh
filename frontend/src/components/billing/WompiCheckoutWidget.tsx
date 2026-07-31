@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { WompiCheckoutParams } from "@/hooks/useBilling";
 
 interface WompiWidgetTransaction {
@@ -56,22 +56,42 @@ function loadWompiWidgetScript(): Promise<void> {
   return scriptPromise;
 }
 
+export function dismissWompiOverlay(): void {
+  if (typeof document === "undefined") return;
+
+  document.querySelectorAll('iframe[src*="wompi"]').forEach((iframe) => {
+    let node: HTMLElement | null = iframe as HTMLElement;
+    while (node?.parentElement && node.parentElement !== document.body) {
+      node = node.parentElement;
+    }
+    node?.remove();
+  });
+
+  document.body.style.overflow = "";
+  document.body.style.position = "";
+}
+
 export function WompiCheckoutWidget({
   config,
+  open,
   onApproved,
+  onDismiss,
   onError,
 }: {
   config: WompiCheckoutParams;
+  open: boolean;
   onApproved: (transactionId: string) => void;
+  onDismiss: () => void;
   onError: (message: string) => void;
 }) {
-  const started = useRef(false);
+  const checkoutRef = useRef<WompiWidgetCheckout | null>(null);
+  const openingRef = useRef(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (started.current) return;
-    started.current = true;
-
     let cancelled = false;
+    setReady(false);
+    checkoutRef.current = null;
 
     void loadWompiWidgetScript()
       .then(() => {
@@ -82,7 +102,7 @@ export function WompiCheckoutWidget({
           return;
         }
 
-        const checkout = new WidgetCheckout({
+        checkoutRef.current = new WidgetCheckout({
           currency: config.currency,
           amountInCents: config.amountInCents,
           reference: config.reference,
@@ -91,14 +111,7 @@ export function WompiCheckoutWidget({
           signature: { integrity: config.signatureIntegrity },
           customerData: { email: config.customerEmail },
         });
-
-        checkout.open((result) => {
-          if (result.transaction.status === "APPROVED") {
-            onApproved(result.transaction.id);
-            return;
-          }
-          window.location.href = `/billing/failure?reference=${encodeURIComponent(config.reference)}`;
-        });
+        setReady(true);
       })
       .catch((error: unknown) => {
         if (cancelled) return;
@@ -107,8 +120,38 @@ export function WompiCheckoutWidget({
 
     return () => {
       cancelled = true;
+      checkoutRef.current = null;
+      setReady(false);
     };
-  }, [config, onApproved, onError]);
+  }, [config, onError]);
+
+  const launchCheckout = useCallback(() => {
+    if (!checkoutRef.current || openingRef.current) return;
+    openingRef.current = true;
+
+    checkoutRef.current.open((result) => {
+      openingRef.current = false;
+      dismissWompiOverlay();
+
+      if (result.transaction.status === "APPROVED") {
+        onApproved(result.transaction.id);
+        return;
+      }
+
+      onDismiss();
+    });
+  }, [onApproved, onDismiss]);
+
+  useEffect(() => {
+    if (!open) {
+      openingRef.current = false;
+      dismissWompiOverlay();
+      return;
+    }
+
+    if (!ready) return;
+    launchCheckout();
+  }, [open, ready, launchCheckout]);
 
   return null;
 }
