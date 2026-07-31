@@ -536,8 +536,10 @@ locals {
       timeout     = 60
       memory      = 256
       environment = {
-        TABLE_NAME  = var.dynamodb_table_name
-        ENVIRONMENT = var.environment
+        TABLE_NAME             = var.dynamodb_table_name
+        ENVIRONMENT            = var.environment
+        SCHEDULER_ROLE_ARN     = var.scheduler_role_arn
+        CAMPAIGNS_FUNCTION_ARN = local.campaigns_function_arn
       }
     }
     public_api = {

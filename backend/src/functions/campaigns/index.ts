@@ -1,10 +1,4 @@
 import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
-import { SQSClient, SendMessageBatchCommand } from "@aws-sdk/client-sqs";
-import {
-  SchedulerClient,
-  CreateScheduleCommand,
-  DeleteScheduleCommand,
-} from "@aws-sdk/client-scheduler";
 import { z } from "zod";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
 import {
@@ -14,9 +8,9 @@ import {
   updateCampaignStatus,
   updateCampaignDraft,
   saveRecipients,
-  listPendingRecipients,
   makeCampaignId,
-  type PendingRecipient,
+  incrementCampaignBatchVersion,
+  listPendingRecipients,
 } from "../../lib/dynamodb/campaign.repository.js";
 import { listBulkSendFailures } from "../../lib/dynamodb/bulk-job.repository.js";
 import { getCampaignMetrics } from "../../lib/dynamodb/campaign-metrics.repository.js";
@@ -29,14 +23,15 @@ import { checkMarketingRecipients } from "../../lib/compliance/recipient-policy.
 import { getWhatsAppAccessToken } from "../../lib/whatsapp/client.js";
 import { assertWhatsAppQualityForCampaign } from "../../lib/whatsapp/assert-campaign-quality.js";
 import { ok, created, badRequest, notFound, forbidden, unprocessableEntity, handleError } from "../../lib/http.js";
-import type { CampaignSQSBody, CampaignRecipient as CampaignRecipientType } from "../../types/index.js";
+import type { CampaignRecipient as CampaignRecipientType } from "../../types/index.js";
+import { validateBatchConfig } from "../../lib/campaign/batch.js";
+import {
+  createCampaignStartSchedule,
+  deleteCampaignStartSchedule,
+  deleteCampaignBatchSchedule,
+} from "../../lib/campaign/scheduler.js";
+import { dispatchCampaignBatch, startCampaignDispatch, enqueueRecipients } from "../../lib/campaign/dispatch.js";
 
-const sqs = new SQSClient({});
-const scheduler = new SchedulerClient({});
-
-const CAMPAIGN_QUEUE_URL = process.env.CAMPAIGN_SQS_QUEUE_URL ?? "";
-const SCHEDULER_ROLE_ARN = process.env.SCHEDULER_ROLE_ARN ?? "";
-const CAMPAIGNS_FUNCTION_ARN = process.env.CAMPAIGNS_FUNCTION_ARN ?? "";
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 
 async function assertBotReadyForCampaign(
@@ -67,6 +62,11 @@ const RecipientSchema = z.object({
     .optional(),
 });
 
+const BatchConfigSchema = z.object({
+  size: z.number().int().min(1).max(1000),
+  delaySeconds: z.number().int().min(60).max(86_400),
+});
+
 const CreateCampaignSchema = z
   .object({
     name: z.string().min(1).max(120),
@@ -75,6 +75,7 @@ const CreateCampaignSchema = z
     language: z.string().min(2).max(10),
     segments: z.array(z.string().max(50)).max(20).default([]),
     scheduledAt: z.string().datetime().optional(),
+    batchConfig: BatchConfigSchema.optional(),
     recipients: z.array(RecipientSchema).max(5000).optional(),
     audienceTags: z.array(z.string().max(50)).max(20).optional(),
     requireOptIn: z.boolean().optional().default(false),
@@ -88,115 +89,23 @@ const CreateCampaignSchema = z
         message: "Provide recipients or audienceTags",
       });
     }
+    if (data.batchConfig) {
+      const error = validateBatchConfig(data.batchConfig);
+      if (error) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: error,
+        });
+      }
+    }
   });
 
 const UpdateCampaignSchema = z.object({
   name: z.string().min(1).max(120).optional(),
   segments: z.array(z.string().max(50)).max(20).optional(),
   scheduledAt: z.string().datetime().nullable().optional(),
+  batchConfig: BatchConfigSchema.nullable().optional(),
 });
-
-async function enqueueRecipients(
-  campaignId: string,
-  tenantId: string,
-  botId: string,
-  templateName: string,
-  language: string,
-  recipients: PendingRecipient[]
-): Promise<void> {
-  const BATCH_SIZE = 10;
-  let entryIndex = 0;
-
-  for (let i = 0; i < recipients.length; i += BATCH_SIZE) {
-    const batch = recipients.slice(i, i + BATCH_SIZE);
-    await sqs.send(
-      new SendMessageBatchCommand({
-        QueueUrl: CAMPAIGN_QUEUE_URL,
-        Entries: batch.map((r) => {
-          const body: CampaignSQSBody = {
-            campaignId,
-            tenantId,
-            botId,
-            templateName,
-            language,
-            to: r.to.replace(/\D/g, ""),
-            recipientKey: r.recipientKey,
-          };
-          if (r.components?.length) {
-            body.components = r.components as NonNullable<CampaignSQSBody["components"]>;
-          }
-          const dedupId = `${campaignId}-${entryIndex}`;
-          entryIndex++;
-          return {
-            Id: dedupId.slice(0, 80),
-            MessageBody: JSON.stringify(body),
-            MessageGroupId: campaignId,
-            MessageDeduplicationId: dedupId.slice(0, 128),
-          };
-        }),
-      })
-    );
-  }
-}
-
-async function createSchedule(
-  campaignId: string,
-  tenantId: string,
-  scheduledAt: string
-): Promise<void> {
-  if (!SCHEDULER_ROLE_ARN || !CAMPAIGNS_FUNCTION_ARN) return;
-
-  const scheduleTime = new Date(scheduledAt);
-  const scheduleExpression = `at(${scheduleTime.toISOString().slice(0, 19)})`;
-
-  await scheduler.send(
-    new CreateScheduleCommand({
-      Name: `campaign-${campaignId}`,
-      GroupName: "default",
-      ScheduleExpression: scheduleExpression,
-      ScheduleExpressionTimezone: "UTC",
-      FlexibleTimeWindow: { Mode: "OFF" },
-      Target: {
-        Arn: CAMPAIGNS_FUNCTION_ARN,
-        RoleArn: SCHEDULER_ROLE_ARN,
-        Input: JSON.stringify({
-          action: "start-scheduled",
-          campaignId,
-          tenantId,
-        }),
-      },
-      ActionAfterCompletion: "DELETE",
-    })
-  );
-}
-
-async function deleteSchedule(campaignId: string): Promise<void> {
-  if (!SCHEDULER_ROLE_ARN) return;
-  try {
-    await scheduler.send(
-      new DeleteScheduleCommand({
-        Name: `campaign-${campaignId}`,
-        GroupName: "default",
-      })
-    );
-  } catch {
-    // Schedule may not exist
-  }
-}
-
-async function filterPendingForMarketing(
-  tenantId: string,
-  pending: PendingRecipient[],
-  requireOptIn: boolean,
-  actorUserId?: string
-): Promise<PendingRecipient[]> {
-  if (!requireOptIn) return pending;
-
-  const phones = pending.map((r) => r.to.replace(/\D/g, ""));
-  const { allowed } = await checkMarketingRecipients(tenantId, phones, actorUserId);
-  const allowedSet = new Set(allowed);
-  return pending.filter((r) => allowedSet.has(r.to.replace(/\D/g, "")));
-}
 
 async function startCampaign(
   tenantId: string,
@@ -208,9 +117,15 @@ async function startCampaign(
   actorUserId?: string
 ): Promise<void> {
   const now = new Date().toISOString();
-  const pending = await listPendingRecipients(tenantId, campaignId, 5000);
-  const eligible = await filterPendingForMarketing(tenantId, pending, requireOptIn, actorUserId);
-  await enqueueRecipients(campaignId, tenantId, botId, templateName, language, eligible);
+  await startCampaignDispatch(
+    tenantId,
+    campaignId,
+    botId,
+    templateName,
+    language,
+    requireOptIn,
+    actorUserId
+  );
   await updateCampaignStatus(tenantId, campaignId, "running", { startedAt: now });
 }
 
@@ -219,6 +134,7 @@ export async function handler(
     action?: string;
     campaignId?: string;
     tenantId?: string;
+    batchVersion?: number;
   }
 ): Promise<APIGatewayProxyResultV2> {
   try {
@@ -240,6 +156,21 @@ export async function handler(
         campaign.requireOptIn ?? false
       );
       return ok({ message: "Campaign started." });
+    }
+
+    if (event.action === "dispatch-batch") {
+      const { campaignId, tenantId, batchVersion } = event as {
+        action: string;
+        campaignId: string;
+        tenantId: string;
+        batchVersion: number;
+      };
+      const campaign = await getCampaign(tenantId, campaignId);
+      if (!campaign || campaign.status !== "running") {
+        return ok({ message: "Campaign not running, skipping batch dispatch." });
+      }
+      await dispatchCampaignBatch(tenantId, campaignId, batchVersion);
+      return ok({ message: "Batch dispatched." });
     }
 
     const auth = extractAuthContext(event);
@@ -283,8 +214,17 @@ export async function handler(
       const parsed = CreateCampaignSchema.safeParse(body);
       if (!parsed.success) return badRequest(parsed.error.message);
 
-      const { name, botId, templateName, language, segments, scheduledAt, audienceTags, requireOptIn } =
-        parsed.data;
+      const {
+        name,
+        botId,
+        templateName,
+        language,
+        segments,
+        scheduledAt,
+        audienceTags,
+        requireOptIn,
+        batchConfig,
+      } = parsed.data;
 
       let recipients = parsed.data.recipients ?? [];
       if (audienceTags?.length) {
@@ -336,6 +276,7 @@ export async function handler(
         segments: mergedSegments,
         requireOptIn,
         ...(scheduledAt ? { scheduledAt } : {}),
+        ...(batchConfig ? { batchConfig } : {}),
         total: uniqueRecipients.length,
         createdAt: now,
         updatedAt: now,
@@ -348,7 +289,7 @@ export async function handler(
       );
 
       if (scheduledAt) {
-        await createSchedule(newCampaignId, auth.tenantId, scheduledAt);
+        await createCampaignStartSchedule(newCampaignId, auth.tenantId, scheduledAt);
       }
 
       return created(campaign);
@@ -364,10 +305,16 @@ export async function handler(
       const parsed = UpdateCampaignSchema.safeParse(body);
       if (!parsed.success) return badRequest(parsed.error.message);
 
-      const patch: { name?: string; segments?: string[]; scheduledAt?: string | null } = {};
+      const patch: {
+        name?: string;
+        segments?: string[];
+        scheduledAt?: string | null;
+        batchConfig?: { size: number; delaySeconds: number } | null;
+      } = {};
       if (parsed.data.name !== undefined) patch.name = parsed.data.name;
       if (parsed.data.segments !== undefined) patch.segments = parsed.data.segments;
       if (parsed.data.scheduledAt !== undefined) patch.scheduledAt = parsed.data.scheduledAt;
+      if (parsed.data.batchConfig !== undefined) patch.batchConfig = parsed.data.batchConfig;
 
       await updateCampaignDraft(auth.tenantId, campaignId, patch);
       const updated = await getCampaign(auth.tenantId, campaignId);
@@ -387,7 +334,8 @@ export async function handler(
       await assertCanStartCampaign(tenant);
       await assertBotReadyForCampaign(auth.tenantId, bot.phoneNumberId);
 
-      await deleteSchedule(campaignId);
+      await deleteCampaignStartSchedule(campaignId);
+      await deleteCampaignBatchSchedule(campaignId);
 
       await startCampaign(
         auth.tenantId,
@@ -410,6 +358,8 @@ export async function handler(
       if (campaign.status !== "running") {
         return badRequest("Only running campaigns can be paused");
       }
+      await deleteCampaignBatchSchedule(campaignId);
+      await incrementCampaignBatchVersion(auth.tenantId, campaignId);
       await updateCampaignStatus(auth.tenantId, campaignId, "paused");
       const updated = await getCampaign(auth.tenantId, campaignId);
       return ok(updated);
@@ -425,25 +375,31 @@ export async function handler(
       if (!bot) return notFound("Bot not found");
 
       await assertBotReadyForCampaign(auth.tenantId, bot.phoneNumberId);
+      await deleteCampaignBatchSchedule(campaignId);
 
-      const pending = await listPendingRecipients(auth.tenantId, campaignId, 5000);
-      const eligible = await filterPendingForMarketing(
-        auth.tenantId,
-        pending,
-        campaign.requireOptIn ?? false,
-        auth.userId
-      );
-      if (eligible.length > 0) {
-        await enqueueRecipients(
-          campaignId,
+      if (campaign.batchConfig) {
+        await updateCampaignStatus(auth.tenantId, campaignId, "running");
+        await dispatchCampaignBatch(
           auth.tenantId,
-          campaign.botId,
-          campaign.templateName,
-          campaign.language,
-          eligible
+          campaignId,
+          campaign.batchVersion,
+          auth.userId
         );
+      } else {
+        const pending = await listPendingRecipients(auth.tenantId, campaignId, 5000);
+        const phones = pending.map((r) => r.to.replace(/\D/g, ""));
+        let eligible = pending;
+        if (campaign.requireOptIn) {
+          const { allowed } = await checkMarketingRecipients(auth.tenantId, phones, auth.userId);
+          const allowedSet = new Set(allowed);
+          eligible = pending.filter((r) => allowedSet.has(r.to.replace(/\D/g, "")));
+        }
+        if (eligible.length > 0) {
+          await enqueueRecipients(campaign, eligible);
+        }
+        await updateCampaignStatus(auth.tenantId, campaignId, "running");
       }
-      await updateCampaignStatus(auth.tenantId, campaignId, "running");
+
       const updated = await getCampaign(auth.tenantId, campaignId);
       return ok(updated);
     }
@@ -454,7 +410,9 @@ export async function handler(
       if (campaign.status === "completed") {
         return badRequest("Completed campaigns cannot be cancelled");
       }
-      await deleteSchedule(campaignId);
+      await deleteCampaignStartSchedule(campaignId);
+      await deleteCampaignBatchSchedule(campaignId);
+      await incrementCampaignBatchVersion(auth.tenantId, campaignId);
       await updateCampaignStatus(auth.tenantId, campaignId, "cancelled");
       return ok({ message: "Campaign cancelled" });
     }

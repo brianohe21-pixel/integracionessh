@@ -799,6 +799,11 @@ export type CampaignStatus =
   | "failed"
   | "cancelled";
 
+export interface CampaignBatchConfig {
+  size: number;
+  delaySeconds: number;
+}
+
 export interface Campaign {
   campaignId: string;
   tenantId: string;
@@ -809,6 +814,11 @@ export interface Campaign {
   status: CampaignStatus;
   segments: string[];
   scheduledAt?: string;
+  batchConfig?: CampaignBatchConfig;
+  batchVersion?: number;
+  currentBatch?: number;
+  nextBatchAt?: string;
+  batchesDispatched?: number;
   total: number;
   sent: number;
   failed: number;
@@ -850,15 +860,20 @@ export interface CampaignRecipient {
   }>;
 }
 
+export type CampaignSQSMessageKind = "recipient" | "batch-complete";
+
 export interface CampaignSQSBody {
+  kind?: CampaignSQSMessageKind;
   campaignId: string;
   tenantId: string;
   botId: string;
   templateName: string;
   language: string;
-  to: string;
+  to?: string;
   recipientKey?: string;
   components?: CampaignRecipient["components"];
+  batchVersion?: number;
+  batchIndex?: number;
 }
 
 export type BulkSendJobStatus = "queued" | "processing" | "completed" | "failed";
