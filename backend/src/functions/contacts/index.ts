@@ -11,6 +11,8 @@ import {
   normalizePhone,
   countContacts,
 } from "../../lib/dynamodb/contact.repository.js";
+import { buildCustomerCsatMap } from "../../lib/dynamodb/customer-csat-metrics.js";
+import { listAllConversationsForTenant } from "../../lib/dynamodb/metrics.repository.js";
 import { writeComplianceLog } from "../../lib/compliance/audit-log.js";
 import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
 import { assertCanAddContacts } from "../../lib/billing/assert-plan.js";
@@ -129,9 +131,24 @@ export async function handler(
       if (params.suppressed === "false") listOpts.suppressed = false;
       if (params.q) listOpts.q = params.q;
 
-      const result = await listContacts(auth.tenantId, listOpts);
+      const [result, conversations] = await Promise.all([
+        listContacts(auth.tenantId, listOpts),
+        listAllConversationsForTenant(auth.tenantId),
+      ]);
+      const csatMap = buildCustomerCsatMap(conversations);
 
-      return ok(result);
+      return ok({
+        ...result,
+        items: result.items.map((contact) => {
+          const csat = csatMap.get(contact.phoneNumber);
+          if (!csat) return contact;
+          return {
+            ...contact,
+            csatAverage: csat.averageCsat,
+            csatRatingCount: csat.ratingCount,
+          };
+        }),
+      });
     }
 
     if (method === "GET" && phoneParam) {

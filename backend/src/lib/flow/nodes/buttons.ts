@@ -2,6 +2,7 @@ import { sendInteractiveButtons } from "../../whatsapp/flows.js";
 import type { FlowNode, FlowRun } from "../../../types/index.js";
 import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
 import { skipWhatsAppOnlyNode } from "./channel-guard.js";
+import { getBotLocale, getSystemMessage, resolveLocalizedText } from "../../i18n/index.js";
 
 export async function executeButtonsNode(
   node: FlowNode,
@@ -10,8 +11,14 @@ export async function executeButtonsNode(
 ): Promise<NodeExecutionResult> {
   const skipped = skipWhatsAppOnlyNode(ctx, node.id, "buttons");
   if (skipped) return skipped;
-  const buttons = node.data.buttons ?? [];
-  const bodyText = node.data.messageText ?? "Choose an option:";
+  const locale = getBotLocale(ctx.conversation, ctx.bot);
+  const buttons = (node.data.buttons ?? []).map((button) => ({
+    id: button.id,
+    title: resolveLocalizedText(button.title, locale),
+  }));
+  const bodyText =
+    resolveLocalizedText(node.data.messageText, locale) ||
+    getSystemMessage("chooseOption", locale);
 
   if (ctx.buttonReplyId) {
     const { getNextNodeId } = await import("../graph.js");

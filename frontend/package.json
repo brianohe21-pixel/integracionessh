@@ -4,8 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/build-widget-call.js && next build",
+    "build": "node scripts/build-widget-call.js && node scripts/build-widget-voice.js && next build",
     "build:widget-call": "node scripts/build-widget-call.js",
+    "build:widget-voice": "node scripts/build-widget-voice.js",
     "start": "next start",
     "lint": "eslint"
   },

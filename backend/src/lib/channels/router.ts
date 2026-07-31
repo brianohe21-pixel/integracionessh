@@ -1,13 +1,23 @@
 import type { Channel } from "../../types/index.js";
+import { emailAdapter } from "./email.adapter.js";
 import { instagramAdapter } from "./instagram.adapter.js";
-import type { ChannelAdapter, OutboundContext, OutboundResult } from "./types.js";
+import { messengerAdapter } from "./messenger.adapter.js";
+import { smsAdapter } from "./sms.adapter.js";
+import { telegramAdapter } from "./telegram.adapter.js";
+import type { ChannelAdapter, OutboundContext, OutboundDocument, OutboundResult } from "./types.js";
 import { webchatAdapter } from "./webchat.adapter.js";
+import { voicebotAdapter } from "./voicebot.adapter.js";
 import { whatsappAdapter } from "./whatsapp.adapter.js";
 
 const adapters: Record<Channel, ChannelAdapter> = {
   whatsapp: whatsappAdapter,
   instagram: instagramAdapter,
   webchat: webchatAdapter,
+  telegram: telegramAdapter,
+  messenger: messengerAdapter,
+  sms: smsAdapter,
+  email: emailAdapter,
+  voicebot: voicebotAdapter,
 };
 
 export function getChannelAdapter(channel: Channel): ChannelAdapter {
@@ -21,6 +31,17 @@ export async function sendChannelText(
   text: string
 ): Promise<OutboundResult> {
   return getChannelAdapter(ctx.channel).sendText(ctx, text);
+}
+
+export async function sendChannelDocument(
+  ctx: OutboundContext,
+  doc: OutboundDocument
+): Promise<OutboundResult> {
+  const adapter = getChannelAdapter(ctx.channel);
+  if (!adapter.sendDocument) {
+    throw new Error(`Channel ${ctx.channel} does not support document messages`);
+  }
+  return adapter.sendDocument(ctx, doc);
 }
 
 export async function markChannelRead(
@@ -55,6 +76,18 @@ export function buildOutboundContext(params: {
     participantId,
     phoneNumberId: params.bot.phoneNumberId,
     ...(params.bot.instagramPageId ? { instagramPageId: params.bot.instagramPageId } : {}),
+    ...(params.bot.messengerPageId ? { messengerPageId: params.bot.messengerPageId } : {}),
+    ...(channel === "telegram" ? { telegramChatId: participantId } : {}),
+    ...(params.bot.smsOriginationNumber
+      ? { smsOriginationNumber: params.bot.smsOriginationNumber }
+      : {}),
+    ...(params.bot.emailAddress ? { emailAddress: params.bot.emailAddress } : {}),
+    ...(params.conversation.emailSubject
+      ? { emailSubject: params.conversation.emailSubject }
+      : {}),
+    ...(params.conversation.emailThreadMessageId
+      ? { emailThreadMessageId: params.conversation.emailThreadMessageId }
+      : {}),
     ...(params.accessToken ? { accessToken: params.accessToken } : {}),
     ...(params.replyToExternalId ? { replyToExternalId: params.replyToExternalId } : {}),
     environment: params.environment,

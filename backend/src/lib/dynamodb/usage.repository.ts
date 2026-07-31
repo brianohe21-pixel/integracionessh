@@ -25,6 +25,7 @@ function normalizeMonthlyUsage(
     messagesCount: Number(item?.messagesCount) || 0,
     bulkRecipientsCount: Number(item?.bulkRecipientsCount) || 0,
     campaignsStarted: Number(item?.campaignsStarted) || 0,
+    voicebotMinutesCount: Number(item?.voicebotMinutesCount) || 0,
   };
 }
 
@@ -49,7 +50,7 @@ export async function getMonthlyUsage(
 
 async function incrementField(
   tenantId: string,
-  field: "messagesCount" | "bulkRecipientsCount" | "campaignsStarted",
+  field: "messagesCount" | "bulkRecipientsCount" | "campaignsStarted" | "voicebotMinutesCount",
   amount: number
 ): Promise<void> {
   const period = currentUsagePeriod();
@@ -89,4 +90,11 @@ export async function incrementBulkRecipients(
 
 export async function incrementCampaignsStarted(tenantId: string): Promise<void> {
   await incrementField(tenantId, "campaignsStarted", 1);
+}
+
+export async function incrementVoicebotMinutes(
+  tenantId: string,
+  minutes: number
+): Promise<void> {
+  await incrementField(tenantId, "voicebotMinutesCount", minutes);
 }

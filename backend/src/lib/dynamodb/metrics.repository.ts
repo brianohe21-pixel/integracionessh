@@ -54,6 +54,24 @@ export async function listAllConversationsForBot(
   );
 }
 
+export async function listAllConversationsForTenant(
+  tenantId: string,
+  botId?: string
+): Promise<Conversation[]> {
+  const bots = await listBots(tenantId);
+  const scopedBots = botId ? bots.filter((bot) => bot.botId === botId) : bots;
+  const conversations: Conversation[] = [];
+
+  await Promise.all(
+    scopedBots.map(async (bot) => {
+      const botConversations = await listAllConversationsForBot(tenantId, bot.botId);
+      conversations.push(...botConversations);
+    })
+  );
+
+  return conversations;
+}
+
 export async function listAllBulkJobs(tenantId: string): Promise<BulkSendJob[]> {
   const jobs = await queryAll(`TENANT#${tenantId}`, "BULKJOB#", (item) => {
     const { PK, SK, ...rest } = item;

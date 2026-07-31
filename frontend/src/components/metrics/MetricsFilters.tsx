@@ -15,7 +15,7 @@ import type { BotUsageMetrics, BulkSendJob, UsageMetrics, UsageMetricsSummary } 
 
 export const METRICS_PERIOD_OPTIONS = [7, 14, 30] as const;
 export type MetricsPeriod = (typeof METRICS_PERIOD_OPTIONS)[number];
-export type MetricsSection = "all" | "usage" | "marketing" | "calling";
+export type MetricsSection = "all" | "usage" | "marketing" | "calling" | "sales";
 
 export interface MetricsFilterState extends MetricsDateRange {
   botId: string;
@@ -23,7 +23,9 @@ export interface MetricsFilterState extends MetricsDateRange {
 }
 
 function parseSection(value: string | null): MetricsSection {
-  if (value === "usage" || value === "marketing" || value === "calling") return value;
+  if (value === "usage" || value === "marketing" || value === "calling" || value === "sales") {
+    return value;
+  }
   return "all";
 }
 
@@ -216,6 +218,7 @@ export function MetricsFiltersBar({ filters, bots, onChange }: MetricsFiltersBar
               <option value="usage">{t("metrics.filterSectionUsage")}</option>
               <option value="marketing">{t("metrics.filterSectionMarketing")}</option>
               <option value="calling">{t("metrics.filterSectionCalling")}</option>
+              <option value="sales">{t("metrics.filterSectionSales")}</option>
             </select>
           </div>
         </div>

@@ -40,6 +40,16 @@ variable "cognito_client_id" {
   type = string
 }
 
+variable "cognito_hosted_ui_domain" {
+  type = string
+}
+
+variable "google_auth_enabled" {
+  type        = bool
+  default     = false
+  description = "When true, exposes NEXT_PUBLIC_GOOGLE_AUTH_ENABLED to the frontend."
+}
+
 variable "meta_app_id" {
   type    = string
   default = ""

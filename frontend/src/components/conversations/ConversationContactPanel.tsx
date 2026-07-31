@@ -6,8 +6,8 @@ import { useT } from "@/i18n/context";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { useAdvisors } from "@/hooks/useAdvisors";
-import type { Conversation, Lead } from "@/types";
-import type { Channel } from "@/types";
+import type { Conversation, Lead, Channel } from "@/types";
+import { ConversationQuotationsPanel } from "@/components/conversations/ConversationQuotationsPanel";
 
 type Props = {
   conversation: Conversation;
@@ -101,6 +101,11 @@ export function ConversationContactPanel({
             <p className="text-sm text-secondary">{assignedAdvisor.name}</p>
           </section>
         )}
+
+        <ConversationQuotationsPanel
+          conversationId={conversation.conversationId}
+          botId={conversation.botId}
+        />
       </div>
 
       <div className="space-y-2 border-t border-default p-4">

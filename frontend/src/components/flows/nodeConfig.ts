@@ -17,7 +17,8 @@ import {
   ShoppingCart,
   Square,
 } from "lucide-react";
-import type { FlowNodeData, FlowNodeType } from "@/types";
+import type { FlowNodeData, FlowNodeType, LocalizedText } from "@/types";
+import { resolveLocalizedText } from "@/lib/localized-text";
 
 export type FlowNodeCategory =
   | "entry"
@@ -138,9 +139,11 @@ export const CATEGORY_STYLES: Record<
   },
 };
 
-export function buildNodePreview(type: FlowNodeType, data: FlowNodeData): string {
+export function buildNodePreview(type: FlowNodeType, data: FlowNodeData, locale: "es" | "en" = "es"): string {
   const truncate = (s: string, max = 48) =>
     s.length > max ? `${s.slice(0, max)}…` : s;
+  const text = (value: LocalizedText | undefined) =>
+    truncate(resolveLocalizedText(value, locale));
 
   switch (type) {
     case "trigger": {
@@ -151,15 +154,15 @@ export function buildNodePreview(type: FlowNodeType, data: FlowNodeData): string
       return triggerType;
     }
     case "message":
-      return truncate(data.messageText ?? "");
+      return text(data.messageText);
     case "template":
       return data.templateName ? `${data.templateName} (${data.templateLanguage ?? "?"})` : "";
     case "condition":
       return `${data.conditionVariable ?? "last_input"} ${data.conditionOperator ?? "contains"} ${data.conditionValue ?? ""}`.trim();
     case "buttons":
-      return truncate(data.messageText ?? "");
+      return text(data.messageText);
     case "meta_flow":
-      return data.metaFlowCta ?? data.metaFlowId ?? "";
+      return text(data.metaFlowCta) || data.metaFlowId || "";
     case "delay":
       return `${data.delaySeconds ?? 5}s`;
     case "set_variable":
@@ -167,15 +170,15 @@ export function buildNodePreview(type: FlowNodeType, data: FlowNodeData): string
     case "http_request":
       return truncate(data.httpUrl ?? "");
     case "book_appointment":
-      return truncate(data.confirmationMessage ?? "");
+      return text(data.confirmationMessage);
     case "request_payment":
-      return data.paymentDescription ?? "";
+      return text(data.paymentDescription);
     case "send_catalog":
-      return truncate(data.catalogMessageText ?? "");
+      return text(data.catalogMessageText);
     case "send_products":
-      return truncate(data.messageText ?? "");
+      return text(data.messageText);
     case "await_order":
-      return truncate(data.messageText ?? data.orderConfirmationMessage ?? "");
+      return text(data.messageText) || text(data.orderConfirmationMessage);
   }
   return data.label ?? "";
 }

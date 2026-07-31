@@ -27,6 +27,8 @@ stripe_price_pro        = ""
 stripe_price_enterprise = ""
 frontend_url            = "https://develop.d5sepmwbbwly9.amplifyapp.com"
 api_custom_domain       = ""
+# Optional override when API Gateway does not exist yet. Otherwise Terraform resolves execute-api URL automatically.
+api_public_url          = ""
 
 enable_monitoring = false
 ops_alert_email   = "ops@example.com"

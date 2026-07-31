@@ -199,6 +199,12 @@ variable "frontend_url" {
   description = "Frontend base URL for billing redirect URLs"
 }
 
+variable "api_public_url" {
+  type        = string
+  default     = ""
+  description = "Public API base URL for channel webhooks (e.g. Telegram registration)"
+}
+
 variable "ses_from_email" {
   type        = string
   default     = ""
@@ -268,7 +274,20 @@ variable "tags" {
 }
 
 variable "cloudwatch_log_group_import_exclude" {
-  type        = set(string)
-  default     = ["catalog", "payments", "realtime_ws"]
+  type = set(string)
+  default = [
+    "catalog",
+    "payments",
+    "realtime_ws",
+    "macros",
+    "telegram_connect",
+    "telegram_webhook",
+    "messenger_connect",
+    "sms_webhook",
+    "email_inbound",
+    "reports",
+    "voicebot",
+    "voicebot_session",
+  ]
   description = "Lambda keys whose log groups are created by Terraform instead of imported (new functions without pre-existing log groups in AWS)"
 }

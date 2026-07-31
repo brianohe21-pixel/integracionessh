@@ -151,6 +151,33 @@ export async function listOrdersForBot(params: {
   return items;
 }
 
+export async function listAllOrdersForTenant(tenantId: string): Promise<CatalogOrder[]> {
+  const items: CatalogOrder[] = [];
+  let lastKey: Record<string, unknown> | undefined;
+
+  do {
+    const result = await docClient.send(
+      new QueryCommand({
+        TableName: TABLE_NAME,
+        KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+        ExpressionAttributeValues: {
+          ":pk": `TENANT#${tenantId}`,
+          ":sk": "ORDER#",
+        },
+        ExclusiveStartKey: lastKey,
+      })
+    );
+
+    for (const item of result.Items ?? []) {
+      items.push(stripItem(item));
+    }
+
+    lastKey = result.LastEvaluatedKey;
+  } while (lastKey);
+
+  return items;
+}
+
 export async function countOrdersForTenantInMonth(
   tenantId: string,
   yearMonth: string

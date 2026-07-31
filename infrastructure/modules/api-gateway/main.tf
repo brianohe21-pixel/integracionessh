@@ -123,6 +123,12 @@ locals {
       function_arn = var.conversations_function_arn
       protected    = true
     }
+    conversations_bulk_handoff = {
+      route_key    = "POST /conversations/bulk-handoff"
+      invoke_arn   = var.conversations_invoke_arn
+      function_arn = var.conversations_function_arn
+      protected    = true
+    }
     conversations_get = {
       route_key    = "GET /conversations/{conversationId}"
       invoke_arn   = var.conversations_invoke_arn
@@ -135,6 +141,12 @@ locals {
       function_arn = var.conversations_function_arn
       protected    = true
     }
+    conversations_claim = {
+      route_key    = "POST /conversations/{conversationId}/claim"
+      invoke_arn   = var.conversations_invoke_arn
+      function_arn = var.conversations_function_arn
+      protected    = true
+    }
     conversations_release = {
       route_key    = "POST /conversations/{conversationId}/release"
       invoke_arn   = var.conversations_invoke_arn
@@ -143,6 +155,24 @@ locals {
     }
     conversations_send_message = {
       route_key    = "POST /conversations/{conversationId}/messages"
+      invoke_arn   = var.conversations_invoke_arn
+      function_arn = var.conversations_function_arn
+      protected    = true
+    }
+    conversations_copilot = {
+      route_key    = "POST /conversations/{conversationId}/copilot"
+      invoke_arn   = var.conversations_invoke_arn
+      function_arn = var.conversations_function_arn
+      protected    = true
+    }
+    conversations_quotations_list = {
+      route_key    = "GET /conversations/{conversationId}/quotations"
+      invoke_arn   = var.conversations_invoke_arn
+      function_arn = var.conversations_function_arn
+      protected    = true
+    }
+    conversations_quotations_create = {
+      route_key    = "POST /conversations/{conversationId}/quotations"
       invoke_arn   = var.conversations_invoke_arn
       function_arn = var.conversations_function_arn
       protected    = true
@@ -333,8 +363,32 @@ locals {
       function_arn = var.metrics_function_arn
       protected    = true
     }
+    metrics_sales = {
+      route_key    = "GET /metrics/sales"
+      invoke_arn   = var.metrics_invoke_arn
+      function_arn = var.metrics_function_arn
+      protected    = true
+    }
+    metrics_inbox_sla = {
+      route_key    = "GET /metrics/inbox-sla"
+      invoke_arn   = var.metrics_invoke_arn
+      function_arn = var.metrics_function_arn
+      protected    = true
+    }
+    metrics_advisor_workload = {
+      route_key    = "GET /metrics/advisor-workload"
+      invoke_arn   = var.metrics_invoke_arn
+      function_arn = var.metrics_function_arn
+      protected    = true
+    }
     metrics_get = {
       route_key    = "GET /metrics"
+      invoke_arn   = var.metrics_invoke_arn
+      function_arn = var.metrics_function_arn
+      protected    = true
+    }
+    metrics_export = {
+      route_key    = "GET /metrics/export"
       invoke_arn   = var.metrics_invoke_arn
       function_arn = var.metrics_function_arn
       protected    = true
@@ -417,6 +471,36 @@ locals {
       function_arn = var.instagram_connect_function_arn
       protected    = true
     }
+    telegram_connect = {
+      route_key    = "POST /telegram/connect"
+      invoke_arn   = var.telegram_connect_invoke_arn
+      function_arn = var.telegram_connect_function_arn
+      protected    = true
+    }
+    telegram_webhook = {
+      route_key    = "POST /telegram/webhook/{botId}"
+      invoke_arn   = var.telegram_webhook_invoke_arn
+      function_arn = var.telegram_webhook_function_arn
+      protected    = false
+    }
+    messenger_connect = {
+      route_key    = "POST /messenger/connect"
+      invoke_arn   = var.messenger_connect_invoke_arn
+      function_arn = var.messenger_connect_function_arn
+      protected    = true
+    }
+    sms_webhook = {
+      route_key    = "POST /sms/webhook"
+      invoke_arn   = var.sms_webhook_invoke_arn
+      function_arn = var.sms_webhook_function_arn
+      protected    = false
+    }
+    email_inbound = {
+      route_key    = "POST /email/inbound"
+      invoke_arn   = var.email_inbound_invoke_arn
+      function_arn = var.email_inbound_function_arn
+      protected    = false
+    }
     webchat_sessions_create = {
       route_key    = "POST /webchat/sessions"
       invoke_arn   = var.webchat_invoke_arn
@@ -464,6 +548,42 @@ locals {
       invoke_arn   = var.bots_invoke_arn
       function_arn = var.bots_function_arn
       protected    = true
+    }
+    bots_sms_put = {
+      route_key    = "PUT /bots/{botId}/sms"
+      invoke_arn   = var.bots_invoke_arn
+      function_arn = var.bots_function_arn
+      protected    = true
+    }
+    bots_email_put = {
+      route_key    = "PUT /bots/{botId}/email"
+      invoke_arn   = var.bots_invoke_arn
+      function_arn = var.bots_function_arn
+      protected    = true
+    }
+    bots_voicebot_put = {
+      route_key    = "PUT /bots/{botId}/voicebot"
+      invoke_arn   = var.bots_invoke_arn
+      function_arn = var.bots_function_arn
+      protected    = true
+    }
+    bots_voicebot_rotate_key = {
+      route_key    = "POST /bots/{botId}/voicebot/rotate-key"
+      invoke_arn   = var.bots_invoke_arn
+      function_arn = var.bots_function_arn
+      protected    = true
+    }
+    voicebot_sessions_create = {
+      route_key    = "POST /voicebot/sessions"
+      invoke_arn   = var.voicebot_invoke_arn
+      function_arn = var.voicebot_function_arn
+      protected    = false
+    }
+    voicebot_sessions_end = {
+      route_key    = "POST /voicebot/sessions/{sessionId}/end"
+      invoke_arn   = var.voicebot_invoke_arn
+      function_arn = var.voicebot_function_arn
+      protected    = false
     }
     campaigns_list = {
       route_key    = "GET /campaigns"
@@ -515,6 +635,12 @@ locals {
     }
     campaigns_failures = {
       route_key    = "GET /campaigns/{campaignId}/failures"
+      invoke_arn   = var.campaigns_invoke_arn
+      function_arn = var.campaigns_function_arn
+      protected    = true
+    }
+    campaigns_metrics = {
+      route_key    = "GET /campaigns/{campaignId}/metrics"
       invoke_arn   = var.campaigns_invoke_arn
       function_arn = var.campaigns_function_arn
       protected    = true
@@ -671,6 +797,36 @@ locals {
     }
     tenants_branding_logo_delete = {
       route_key    = "DELETE /tenants/me/branding/logo"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_inbox_sla_get = {
+      route_key    = "GET /tenants/me/inbox-sla"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_inbox_sla_update = {
+      route_key    = "PUT /tenants/me/inbox-sla"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_report_schedule_get = {
+      route_key    = "GET /tenants/me/report-schedule"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_report_schedule_update = {
+      route_key    = "PUT /tenants/me/report-schedule"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_report_schedule_send_now = {
+      route_key    = "POST /tenants/me/report-schedule/send-now"
       invoke_arn   = var.tenants_invoke_arn
       function_arn = var.tenants_function_arn
       protected    = true
@@ -1191,6 +1347,36 @@ locals {
       function_arn = var.knowledge_function_arn
       protected    = true
     }
+    macros_list = {
+      route_key    = "GET /bots/{botId}/macros"
+      invoke_arn   = var.macros_invoke_arn
+      function_arn = var.macros_function_arn
+      protected    = true
+    }
+    macros_create = {
+      route_key    = "POST /bots/{botId}/macros"
+      invoke_arn   = var.macros_invoke_arn
+      function_arn = var.macros_function_arn
+      protected    = true
+    }
+    macros_get = {
+      route_key    = "GET /bots/{botId}/macros/{macroId}"
+      invoke_arn   = var.macros_invoke_arn
+      function_arn = var.macros_function_arn
+      protected    = true
+    }
+    macros_update = {
+      route_key    = "PUT /bots/{botId}/macros/{macroId}"
+      invoke_arn   = var.macros_invoke_arn
+      function_arn = var.macros_function_arn
+      protected    = true
+    }
+    macros_delete = {
+      route_key    = "DELETE /bots/{botId}/macros/{macroId}"
+      invoke_arn   = var.macros_invoke_arn
+      function_arn = var.macros_function_arn
+      protected    = true
+    }
     meta_flows_responses = {
       route_key    = "GET /bots/{botId}/meta-flows/responses"
       invoke_arn   = var.meta_flows_invoke_arn
@@ -1324,7 +1510,13 @@ resource "aws_lambda_permission" "api_gw" {
     metrics           = var.metrics_function_arn
     whatsapp_connect  = var.whatsapp_connect_function_arn
     instagram_connect = var.instagram_connect_function_arn
+    telegram_connect  = var.telegram_connect_function_arn
+    telegram_webhook  = var.telegram_webhook_function_arn
+    messenger_connect = var.messenger_connect_function_arn
+    sms_webhook       = var.sms_webhook_function_arn
+    email_inbound     = var.email_inbound_function_arn
     webchat           = var.webchat_function_arn
+    voicebot          = var.voicebot_function_arn
     campaigns         = var.campaigns_function_arn
     support_tickets   = var.support_tickets_function_arn
     billing           = var.billing_function_arn
@@ -1334,6 +1526,7 @@ resource "aws_lambda_permission" "api_gw" {
     integrations      = var.integrations_function_arn
     automations       = var.automations_function_arn
     knowledge         = var.knowledge_function_arn
+    macros            = var.macros_function_arn
     meta_flows        = var.meta_flows_function_arn
     flows             = var.flows_function_arn
     calling           = var.calling_function_arn

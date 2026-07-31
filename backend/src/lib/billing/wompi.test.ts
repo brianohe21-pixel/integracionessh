@@ -2,6 +2,7 @@ import { createHash } from "crypto";
 import {
   amountInCentsForPlan,
   buildIntegritySignature,
+  buildWompiCheckoutParams,
   parsePaymentReference,
   verifyWompiEvent,
   type WompiWebhookEvent,
@@ -29,6 +30,28 @@ describe("wompi billing", () => {
     expect(amountInCentsForPlan("pro")).toBe(WOMPI_AMOUNT_PRO_CENTS_DEFAULT);
     expect(amountInCentsForPlan("enterprise")).toBe(
       WOMPI_AMOUNT_ENTERPRISE_CENTS_DEFAULT
+    );
+  });
+
+  it("builds checkout params for widget and redirect", () => {
+    const creds = {
+      publicKey: "pub_test_key",
+      integritySecret: "test_secret",
+    };
+    const reference = "wompi|tenant-1|pro|abc123";
+    const amount = 17_990_000;
+
+    const params = buildWompiCheckoutParams(creds, {
+      reference,
+      amountInCents: amount,
+      redirectUrl: "https://app.example/billing/success",
+      customerEmail: "user@example.com",
+    });
+
+    expect(params.publicKey).toBe("pub_test_key");
+    expect(params.reference).toBe(reference);
+    expect(params.signatureIntegrity).toBe(
+      buildIntegritySignature(creds, reference, amount)
     );
   });
 

@@ -74,6 +74,14 @@ output "metrics_function_arn" {
   value = aws_lambda_function.functions["metrics"].arn
 }
 
+output "reports_invoke_arn" {
+  value = aws_lambda_function.functions["reports"].invoke_arn
+}
+
+output "reports_function_arn" {
+  value = aws_lambda_function.functions["reports"].arn
+}
+
 output "whatsapp_connect_invoke_arn" {
   value = aws_lambda_function.functions["whatsapp_connect"].invoke_arn
 }
@@ -90,12 +98,64 @@ output "instagram_connect_function_arn" {
   value = aws_lambda_function.functions["instagram_connect"].arn
 }
 
+output "telegram_connect_invoke_arn" {
+  value = aws_lambda_function.functions["telegram_connect"].invoke_arn
+}
+
+output "telegram_connect_function_arn" {
+  value = aws_lambda_function.functions["telegram_connect"].arn
+}
+
+output "telegram_webhook_invoke_arn" {
+  value = aws_lambda_function.functions["telegram_webhook"].invoke_arn
+}
+
+output "telegram_webhook_function_arn" {
+  value = aws_lambda_function.functions["telegram_webhook"].arn
+}
+
+output "messenger_connect_invoke_arn" {
+  value = aws_lambda_function.functions["messenger_connect"].invoke_arn
+}
+
+output "messenger_connect_function_arn" {
+  value = aws_lambda_function.functions["messenger_connect"].arn
+}
+
+output "sms_webhook_invoke_arn" {
+  value = aws_lambda_function.functions["sms_webhook"].invoke_arn
+}
+
+output "sms_webhook_function_arn" {
+  value = aws_lambda_function.functions["sms_webhook"].arn
+}
+
+output "email_inbound_invoke_arn" {
+  value = aws_lambda_function.functions["email_inbound"].invoke_arn
+}
+
+output "email_inbound_function_arn" {
+  value = aws_lambda_function.functions["email_inbound"].arn
+}
+
 output "webchat_invoke_arn" {
   value = aws_lambda_function.functions["webchat"].invoke_arn
 }
 
 output "webchat_function_arn" {
   value = aws_lambda_function.functions["webchat"].arn
+}
+
+output "voicebot_invoke_arn" {
+  value = aws_lambda_function.functions["voicebot"].invoke_arn
+}
+
+output "voicebot_function_arn" {
+  value = aws_lambda_function.functions["voicebot"].arn
+}
+
+output "voicebot_session_function_arn" {
+  value = aws_lambda_function.functions["voicebot_session"].arn
 }
 
 output "campaigns_invoke_arn" {
@@ -168,6 +228,14 @@ output "knowledge_invoke_arn" {
 
 output "knowledge_function_arn" {
   value = aws_lambda_function.functions["knowledge"].arn
+}
+
+output "macros_invoke_arn" {
+  value = aws_lambda_function.functions["macros"].invoke_arn
+}
+
+output "macros_function_arn" {
+  value = aws_lambda_function.functions["macros"].arn
 }
 
 output "meta_flows_invoke_arn" {

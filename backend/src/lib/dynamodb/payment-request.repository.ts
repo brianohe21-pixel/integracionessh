@@ -126,3 +126,32 @@ export async function listPaymentRequestsForBot(params: {
   }
   return items;
 }
+
+export async function listAllPaymentRequestsForTenant(
+  tenantId: string
+): Promise<PaymentRequest[]> {
+  const items: PaymentRequest[] = [];
+  let lastKey: Record<string, unknown> | undefined;
+
+  do {
+    const result = await docClient.send(
+      new QueryCommand({
+        TableName: TABLE_NAME,
+        KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+        ExpressionAttributeValues: {
+          ":pk": `TENANT#${tenantId}`,
+          ":sk": "PAYREQ#",
+        },
+        ExclusiveStartKey: lastKey,
+      })
+    );
+
+    for (const item of result.Items ?? []) {
+      items.push(stripItem(item));
+    }
+
+    lastKey = result.LastEvaluatedKey;
+  } while (lastKey);
+
+  return items;
+}

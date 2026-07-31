@@ -36,6 +36,13 @@ provider "aws" {
 
 data "aws_caller_identity" "current" {}
 
+data "aws_apigatewayv2_apis" "existing" {}
+
+data "aws_apigatewayv2_api" "existing" {
+  for_each = toset(data.aws_apigatewayv2_apis.existing.ids)
+  api_id   = each.value
+}
+
 data "external" "amplify_browser_origin" {
   program = [
     "${path.module}/../../scripts/amplify-browser-origin.sh",
@@ -67,6 +74,7 @@ locals {
     local.has_custom_domain ? ["https://${local.custom_domain_trimmed}"] : [],
     var.extra_logout_urls
   )
+  google_auth_enabled = trimspace(var.google_client_id) != "" && trimspace(var.google_client_secret) != ""
   browser_origins = concat(
     local.has_custom_domain ? ["https://${local.custom_domain_trimmed}"] : [],
     data.external.amplify_browser_origin.result.origin != "" ? [data.external.amplify_browser_origin.result.origin] : [],
@@ -74,6 +82,18 @@ locals {
   )
 
   ops_alert_emails = length(var.ops_alert_emails) > 0 ? var.ops_alert_emails : compact([var.ops_alert_email])
+
+  api_custom_domain_trimmed = trimspace(var.api_custom_domain)
+  existing_api_gateway_id = try(
+    [
+      for api in values(data.aws_apigatewayv2_api.existing) : api.id
+      if api.name == "${local.project}-${local.environment}"
+    ][0],
+    ""
+  )
+  api_public_url = local.api_custom_domain_trimmed != "" ? "https://${local.api_custom_domain_trimmed}" : trimspace(var.api_public_url) != "" ? trimsuffix(trimspace(var.api_public_url), "/") : local.existing_api_gateway_id != "" ? "https://${local.existing_api_gateway_id}.execute-api.${var.aws_region}.amazonaws.com" : ""
+
+  lambda_zip_path_absolute = var.lambda_zip_path != "" ? abspath("${path.module}/${var.lambda_zip_path}") : ""
 }
 
 module "dynamodb" {
@@ -84,12 +104,15 @@ module "dynamodb" {
 }
 
 module "cognito" {
-  source        = "../../modules/cognito"
-  project       = local.project
-  environment   = local.environment
-  callback_urls = local.cognito_callback_urls
-  logout_urls   = local.cognito_logout_urls
-  tags          = local.tags
+  source               = "../../modules/cognito"
+  project              = local.project
+  environment          = local.environment
+  callback_urls        = local.cognito_callback_urls
+  logout_urls          = local.cognito_logout_urls
+  google_client_id     = var.google_client_id
+  google_client_secret = var.google_client_secret
+  lambda_zip_path      = local.lambda_zip_path_absolute
+  tags                 = local.tags
 }
 
 module "sqs" {
@@ -138,6 +161,7 @@ resource "aws_iam_role_policy" "scheduler_invoke" {
         module.lambda.automations_function_arn,
         module.lambda.flows_function_arn,
         module.lambda.calendar_function_arn,
+        module.lambda.reports_function_arn,
       ]
     }]
   })
@@ -176,7 +200,7 @@ module "lambda" {
   meta_app_id                   = var.meta_app_id
   meta_app_secret               = var.meta_app_secret
   whatsapp_app_secret           = var.whatsapp_app_secret
-  lambda_zip_path               = var.lambda_zip_path != "" ? abspath("${path.module}/${var.lambda_zip_path}") : ""
+  lambda_zip_path               = local.lambda_zip_path_absolute
   stripe_secret_key             = var.stripe_secret_key
   stripe_webhook_secret         = var.stripe_webhook_secret
   stripe_price_pro              = var.stripe_price_pro
@@ -195,6 +219,7 @@ module "lambda" {
   livekit_api_secret            = var.livekit_api_secret
   ses_from_email                = var.ses_from_email
   admin_notification_emails     = local.ops_alert_emails
+  api_public_url                = local.api_public_url
   tags                          = local.tags
 }
 
@@ -228,8 +253,20 @@ module "api_gateway" {
   whatsapp_connect_function_arn  = module.lambda.whatsapp_connect_function_arn
   instagram_connect_invoke_arn   = module.lambda.instagram_connect_invoke_arn
   instagram_connect_function_arn = module.lambda.instagram_connect_function_arn
+  telegram_connect_invoke_arn    = module.lambda.telegram_connect_invoke_arn
+  telegram_connect_function_arn  = module.lambda.telegram_connect_function_arn
+  telegram_webhook_invoke_arn    = module.lambda.telegram_webhook_invoke_arn
+  telegram_webhook_function_arn  = module.lambda.telegram_webhook_function_arn
+  messenger_connect_invoke_arn   = module.lambda.messenger_connect_invoke_arn
+  messenger_connect_function_arn = module.lambda.messenger_connect_function_arn
+  sms_webhook_invoke_arn         = module.lambda.sms_webhook_invoke_arn
+  sms_webhook_function_arn       = module.lambda.sms_webhook_function_arn
+  email_inbound_invoke_arn       = module.lambda.email_inbound_invoke_arn
+  email_inbound_function_arn     = module.lambda.email_inbound_function_arn
   webchat_invoke_arn             = module.lambda.webchat_invoke_arn
   webchat_function_arn           = module.lambda.webchat_function_arn
+  voicebot_invoke_arn            = module.lambda.voicebot_invoke_arn
+  voicebot_function_arn          = module.lambda.voicebot_function_arn
   campaigns_invoke_arn           = module.lambda.campaigns_invoke_arn
   campaigns_function_arn         = module.lambda.campaigns_function_arn
   support_tickets_invoke_arn     = module.lambda.support_tickets_invoke_arn
@@ -248,6 +285,8 @@ module "api_gateway" {
   automations_function_arn       = module.lambda.automations_function_arn
   knowledge_invoke_arn           = module.lambda.knowledge_invoke_arn
   knowledge_function_arn         = module.lambda.knowledge_function_arn
+  macros_invoke_arn              = module.lambda.macros_invoke_arn
+  macros_function_arn            = module.lambda.macros_function_arn
   meta_flows_invoke_arn          = module.lambda.meta_flows_invoke_arn
   meta_flows_function_arn        = module.lambda.meta_flows_function_arn
   flows_invoke_arn               = module.lambda.flows_invoke_arn
@@ -301,6 +340,8 @@ module "amplify" {
   aws_region                     = var.aws_region
   cognito_user_pool_id           = module.cognito.user_pool_id
   cognito_client_id              = module.cognito.client_id
+  cognito_hosted_ui_domain       = module.cognito.hosted_ui_domain
+  google_auth_enabled            = local.google_auth_enabled
   meta_app_id                    = var.meta_app_id
   meta_embedded_signup_config_id = var.meta_embedded_signup_config_id
   custom_domain                  = var.custom_domain

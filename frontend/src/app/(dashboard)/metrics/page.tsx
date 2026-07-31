@@ -10,11 +10,15 @@ import {
   Activity,
   Phone,
   AlertTriangle,
+  Download,
+  Banknote,
 } from "lucide-react";
 import Link from "next/link";
 import { useMetrics } from "@/hooks/useMetrics";
 import { useMarketingMetrics } from "@/hooks/useMarketingMetrics";
+import { useInboxSlaMetrics } from "@/hooks/useInboxSlaMetrics";
 import { useCallingMetrics, formatCallDuration } from "@/hooks/useCallingMetrics";
+import { useSalesMetrics } from "@/hooks/useSalesMetrics";
 import {
   MetricsFiltersBar,
   useFilteredUsageMetrics,
@@ -27,7 +31,9 @@ import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { TableContainer } from "@/components/ui/TableContainer";
 import { useT } from "@/i18n/context";
-import type { BulkSendJobStatus, CallingMetricsHealth } from "@/types";
+import type { BulkSendJobStatus, CallingMetricsHealth, PaymentRequestSource } from "@/types";
+import { formatElapsedDuration } from "@/lib/inbox-sla";
+import { useMetricsExport } from "@/hooks/useMetricsExport";
 
 function KpiCard({
   label,
@@ -72,7 +78,8 @@ function bulkStatusVariant(status: BulkSendJobStatus): "success" | "warning" | "
 
 export default function MetricsPage() {
   const t = useT();
-  const { formatDate, formatNumber, formatRelativeTime } = useFormatters();
+  const { exportMetrics, isExporting } = useMetricsExport();
+  const { formatDate, formatNumber, formatRelativeTime, formatCurrency } = useFormatters();
   const { filters, setFilters } = useMetricsFilters();
   const { data: metrics, isLoading, error } = useMetrics();
   const dateRange = useMemo(
@@ -81,7 +88,12 @@ export default function MetricsPage() {
   );
   const filteredUsage = useFilteredUsageMetrics(metrics, filters.botId, dateRange);
   const { data: marketing, isLoading: marketingLoading } = useMarketingMetrics();
+  const { data: inboxSlaMetrics, isLoading: inboxSlaLoading } = useInboxSlaMetrics();
   const { data: calling, isLoading: callingLoading } = useCallingMetrics(
+    dateRange,
+    filters.botId || undefined
+  );
+  const { data: sales, isLoading: salesLoading } = useSalesMetrics(
     dateRange,
     filters.botId || undefined
   );
@@ -98,6 +110,19 @@ export default function MetricsPage() {
   const showUsage = filters.section === "all" || filters.section === "usage";
   const showMarketing = filters.section === "all" || filters.section === "marketing";
   const showCalling = filters.section === "all" || filters.section === "calling";
+  const showSales = filters.section === "all" || filters.section === "sales";
+
+  const salesSources: PaymentRequestSource[] = [
+    "manual",
+    "flow",
+    "catalog_order",
+    "calendar_booking",
+    "quotation",
+  ];
+
+  function salesSourceLabel(source: PaymentRequestSource): string {
+    return t(`metrics.salesSources.${source}`);
+  }
 
   function callingHealthVariant(
     health: CallingMetricsHealth
@@ -129,7 +154,21 @@ export default function MetricsPage() {
 
   return (
     <DashboardPage>
-      <PageHeader title={t("metrics.title")} subtitle={t("metrics.subtitle")} />
+      <PageHeader
+        title={t("metrics.title")}
+        subtitle={t("metrics.subtitle")}
+        actions={
+          <button
+            type="button"
+            onClick={() => void exportMetrics()}
+            disabled={isExporting}
+            className="inline-flex items-center gap-2 rounded-lg border border-default bg-surface-elevated px-3 py-2 text-sm font-medium text-primary disabled:opacity-50"
+          >
+            <Download className="h-4 w-4" />
+            {isExporting ? t("metrics.exportingCsv") : t("metrics.exportCsv")}
+          </button>
+        }
+      />
 
       {!isLoading && metrics && (
         <div className="mb-6">
@@ -252,6 +291,43 @@ export default function MetricsPage() {
                   icon={<Activity className="w-5 h-5" />}
                 />
               </div>
+              {!inboxSlaLoading && inboxSlaMetrics?.enabled && (
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="font-semibold text-primary">{t("metrics.inboxSlaTitle")}</h3>
+                    <p className="text-sm text-secondary">
+                      {t("metrics.inboxSlaSubtitle", {
+                        minutes: inboxSlaMetrics.firstResponseMinutes ?? 5,
+                      })}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <KpiCard
+                      label={t("metrics.inboxSlaCompliance")}
+                      value={`${inboxSlaMetrics.complianceRate}%`}
+                      sub={`${formatNumber(inboxSlaMetrics.metCount)} / ${formatNumber(
+                        inboxSlaMetrics.metCount + inboxSlaMetrics.missedCount
+                      )}`}
+                      icon={<BarChart3 className="w-5 h-5" />}
+                    />
+                    <KpiCard
+                      label={t("metrics.inboxSlaAvgResponse")}
+                      value={formatElapsedDuration(inboxSlaMetrics.averageResponseSeconds)}
+                      icon={<Activity className="w-5 h-5" />}
+                    />
+                    <KpiCard
+                      label={t("metrics.inboxSlaOpenBreached")}
+                      value={formatNumber(inboxSlaMetrics.openBreached)}
+                      icon={<AlertTriangle className="w-5 h-5" />}
+                    />
+                    <KpiCard
+                      label={t("metrics.inboxSlaOpenAtRisk")}
+                      value={formatNumber(inboxSlaMetrics.openAtRisk)}
+                      icon={<MessageSquare className="w-5 h-5" />}
+                    />
+                  </div>
+                </div>
+              )}
               {(marketing.topCampaigns?.length ?? 0) > 0 && (
                 <div className="overflow-hidden rounded-xl border border-default bg-surface-elevated">
                   <div className="border-b border-subtle px-4 py-4 sm:px-6">
@@ -287,6 +363,192 @@ export default function MetricsPage() {
                       ))}
                     </tbody>
                   </table>
+                  </TableContainer>
+                </div>
+              )}
+            </div>
+          )}
+
+          {showSales && !salesLoading && sales && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="font-semibold text-primary">{t("metrics.salesTitle")}</h2>
+                <p className="text-sm text-secondary">
+                  {t("metrics.salesSubtitle", {
+                    from: formatRangeDate(sales.from),
+                    to: formatRangeDate(sales.to),
+                  })}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <KpiCard
+                  label={t("metrics.salesRevenue")}
+                  value={formatCurrency(sales.totalRevenueInCents)}
+                  icon={<Banknote className="w-5 h-5" />}
+                />
+                <KpiCard
+                  label={t("metrics.salesPaidCount")}
+                  value={formatNumber(sales.paidCount)}
+                  icon={<Activity className="w-5 h-5" />}
+                />
+                <KpiCard
+                  label={t("metrics.salesAvgTicket")}
+                  value={formatCurrency(sales.averageTicketInCents)}
+                  icon={<BarChart3 className="w-5 h-5" />}
+                />
+              </div>
+
+              {sales.paidCount === 0 ? (
+                <div className="rounded-xl border border-default bg-surface-elevated p-6">
+                  <EmptyState
+                    icon={<Banknote className="w-6 h-6" />}
+                    title={t("metrics.salesEmptyTitle")}
+                    description={t("metrics.salesEmptyDescription")}
+                  />
+                </div>
+              ) : (
+                <>
+                  <div className="overflow-hidden rounded-xl border border-default bg-surface-elevated">
+                    <div className="border-b border-subtle px-4 py-4 sm:px-6">
+                      <h3 className="text-sm font-semibold text-primary">
+                        {t("metrics.salesBySource")}
+                      </h3>
+                    </div>
+                    <TableContainer>
+                      <table className="w-full min-w-[480px] text-sm">
+                        <thead>
+                          <tr className="bg-surface text-left text-xs text-secondary uppercase">
+                            <th className="px-6 py-3">{t("metrics.salesSourceColumn")}</th>
+                            <th className="px-6 py-3 text-right">{t("metrics.salesPaidCount")}</th>
+                            <th className="px-6 py-3 text-right">{t("metrics.salesRevenue")}</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {salesSources
+                            .filter((source) => sales.bySource[source].count > 0)
+                            .map((source) => (
+                              <tr key={source}>
+                                <td className="px-6 py-3 font-medium">
+                                  {salesSourceLabel(source)}
+                                </td>
+                                <td className="px-6 py-3 text-right">
+                                  {formatNumber(sales.bySource[source].count)}
+                                </td>
+                                <td className="px-6 py-3 text-right">
+                                  {formatCurrency(sales.bySource[source].revenueInCents)}
+                                </td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </TableContainer>
+                  </div>
+
+                  {sales.byBot.length > 0 && (
+                    <div className="overflow-hidden rounded-xl border border-default bg-surface-elevated">
+                      <div className="border-b border-subtle px-4 py-4 sm:px-6">
+                        <h3 className="text-sm font-semibold text-primary">
+                          {t("metrics.salesByBot")}
+                        </h3>
+                      </div>
+                      <TableContainer>
+                        <table className="w-full min-w-[480px] text-sm">
+                          <thead>
+                            <tr className="bg-surface text-left text-xs text-secondary uppercase">
+                              <th className="px-6 py-3">{t("metrics.colBot")}</th>
+                              <th className="px-6 py-3 text-right">{t("metrics.salesPaidCount")}</th>
+                              <th className="px-6 py-3 text-right">{t("metrics.salesRevenue")}</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100">
+                            {sales.byBot.map((bot) => (
+                              <tr key={bot.botId}>
+                                <td className="px-6 py-3 font-medium">{bot.botName}</td>
+                                <td className="px-6 py-3 text-right">{formatNumber(bot.count)}</td>
+                                <td className="px-6 py-3 text-right">
+                                  {formatCurrency(bot.revenueInCents)}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </TableContainer>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {sales.topProducts.length > 0 && (
+                <div className="overflow-hidden rounded-xl border border-default bg-surface-elevated">
+                  <div className="border-b border-subtle px-4 py-4 sm:px-6">
+                    <h3 className="text-sm font-semibold text-primary">
+                      {t("metrics.topProducts")}
+                    </h3>
+                  </div>
+                  <TableContainer>
+                    <table className="w-full min-w-[560px] text-sm">
+                      <thead>
+                        <tr className="bg-surface text-left text-xs text-secondary uppercase">
+                          <th className="px-6 py-3">{t("metrics.productName")}</th>
+                          <th className="px-6 py-3 text-right">{t("metrics.productOrders")}</th>
+                          <th className="px-6 py-3 text-right">{t("metrics.productQuantity")}</th>
+                          <th className="px-6 py-3 text-right">{t("metrics.productOrderValue")}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {sales.topProducts.map((product) => (
+                          <tr key={product.productKey}>
+                            <td className="px-6 py-3 font-medium">{product.name}</td>
+                            <td className="px-6 py-3 text-right">
+                              {formatNumber(product.orderCount)}
+                            </td>
+                            <td className="px-6 py-3 text-right">
+                              {formatNumber(product.quantity)}
+                            </td>
+                            <td className="px-6 py-3 text-right">
+                              {formatCurrency(product.revenueInCents)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </TableContainer>
+                </div>
+              )}
+
+              {sales.topCustomersByCsat.length > 0 && (
+                <div className="overflow-hidden rounded-xl border border-default bg-surface-elevated">
+                  <div className="border-b border-subtle px-4 py-4 sm:px-6">
+                    <h3 className="text-sm font-semibold text-primary">
+                      {t("metrics.topCustomersByCsat")}
+                    </h3>
+                  </div>
+                  <TableContainer>
+                    <table className="w-full min-w-[560px] text-sm">
+                      <thead>
+                        <tr className="bg-surface text-left text-xs text-secondary uppercase">
+                          <th className="px-6 py-3">{t("metrics.customerName")}</th>
+                          <th className="px-6 py-3 text-right">{t("metrics.customerCsat")}</th>
+                          <th className="px-6 py-3 text-right">{t("metrics.customerRatingCount")}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {sales.topCustomersByCsat.map((customer) => (
+                          <tr key={customer.contactPhone}>
+                            <td className="px-6 py-3 font-medium">
+                              {customer.contactName ?? customer.contactPhone}
+                            </td>
+                            <td className="px-6 py-3 text-right">
+                              {customer.averageCsat}/5
+                            </td>
+                            <td className="px-6 py-3 text-right">
+                              {formatNumber(customer.ratingCount)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </TableContainer>
                 </div>
               )}

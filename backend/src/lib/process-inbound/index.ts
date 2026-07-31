@@ -10,6 +10,7 @@ import {
   getConversationMessages,
   addMessage,
   clearMetaFlowSession,
+  updateConversation,
 } from "../dynamodb/conversation.repository.js";
 import { generateChatResponse, getOpenAIApiKey } from "../openai/client.js";
 import { callCustomWebhook } from "../webhook/client.js";
@@ -40,6 +41,8 @@ import {
 import { inboundSourceForChannel } from "../channels/types.js";
 import { getWhatsAppAccessToken } from "../whatsapp/client.js";
 import { getInstagramAccessToken } from "../instagram/secrets.js";
+import { getTelegramBotToken } from "../telegram/secrets.js";
+import { getMessengerAccessToken } from "../messenger/secrets.js";
 import { truncateWhatsAppText } from "../whatsapp/client.js";
 import type { InboundQueueMessage, Message } from "../../types/index.js";
 import {
@@ -50,17 +53,30 @@ import {
   handleInboundOrder,
   isOrderInbound,
 } from "../catalog/order-handler.js";
+import { recordCampaignReply } from "../dynamodb/campaign.repository.js";
+import {
+  getSystemMessage,
+  getBotLocale,
+  resolveConversationLocale,
+} from "../i18n/index.js";
 
 async function resolveAccessToken(
   tenantId: string,
   environment: string,
-  channel: InboundQueueMessage["channel"]
+  channel: InboundQueueMessage["channel"],
+  botId?: string
 ): Promise<string | undefined> {
   if (channel === "whatsapp") {
     return getWhatsAppAccessToken(tenantId, environment);
   }
   if (channel === "instagram") {
     return getInstagramAccessToken(tenantId, environment);
+  }
+  if (channel === "telegram" && botId) {
+    return getTelegramBotToken(tenantId, botId, environment);
+  }
+  if (channel === "messenger" && botId) {
+    return getMessengerAccessToken(tenantId, botId, environment);
   }
   return undefined;
 }
@@ -112,6 +128,7 @@ async function sendHandoffCourtesy(
   accessToken: string | undefined,
   replyToExternalId?: string
 ): Promise<void> {
+  const locale = getBotLocale(conversation, bot);
   const outboundCtx = buildOutboundContext({
     tenantId: body.tenantId,
     botId: body.botId,
@@ -121,7 +138,7 @@ async function sendHandoffCourtesy(
     environment: process.env.ENVIRONMENT ?? "dev",
     replyToExternalId,
   });
-  await sendChannelText(outboundCtx, getClientHandoffMessage());
+  await sendChannelText(outboundCtx, getClientHandoffMessage(locale));
 }
 
 async function executeHandoff(params: {
@@ -140,7 +157,7 @@ async function executeHandoff(params: {
     reason: params.reason,
   });
 
-  if (params.accessToken || params.body.channel === "webchat") {
+  if (params.accessToken || ["webchat", "sms", "email"].includes(params.body.channel)) {
     await sendHandoffCourtesy(
       params.body,
       params.bot,
@@ -186,7 +203,25 @@ export async function processInboundMessage(
     return;
   }
 
-  const accessToken = await resolveAccessToken(tenantId, environment, channel);
+  const accessToken = await resolveAccessToken(tenantId, environment, channel, botId);
+
+  let conversation = await getOrCreateConversation(
+    tenantId,
+    botId,
+    channel,
+    participantId,
+    displayName
+  );
+
+  if (channel === "email") {
+    const emailPayload = body.payload as import("../../types/index.js").EmailInboundPayload;
+    const { updateConversation } = await import("../dynamodb/conversation.repository.js");
+    const updated = await updateConversation(tenantId, botId, conversation.conversationId, {
+      emailSubject: emailPayload.subject,
+      emailThreadMessageId: emailPayload.messageId,
+    });
+    if (updated) conversation = updated;
+  }
 
   const outboundCtxBase = () =>
     buildOutboundContext({
@@ -199,12 +234,8 @@ export async function processInboundMessage(
       replyToExternalId: externalId,
     });
 
-  let conversation = await getOrCreateConversation(
-    tenantId,
-    botId,
-    channel,
-    participantId,
-    displayName
+  await recordCampaignReply(tenantId, participantId, conversation.conversationId).catch((err) =>
+    console.warn("Failed to record campaign reply:", err)
   );
 
   await markChannelRead(outboundCtxBase(), externalId).catch(() => {});
@@ -215,6 +246,18 @@ export async function processInboundMessage(
     return;
   }
   const userMessageText = inbound.text;
+  const detectedLocale = resolveConversationLocale({
+    userMessage: userMessageText,
+    conversationLocale: conversation.locale,
+    botDefaultLocale: bot.defaultLocale,
+  });
+  if (detectedLocale !== conversation.locale) {
+    const localeUpdated = await updateConversation(tenantId, botId, conversation.conversationId, {
+      locale: detectedLocale,
+    });
+    if (localeUpdated) conversation = localeUpdated;
+  }
+  const conversationLocale = getBotLocale(conversation, bot);
   const now = new Date().toISOString();
   const source = inboundSourceForChannel(channel);
 
@@ -520,6 +563,7 @@ export async function processInboundMessage(
       botId,
       contact: { name: contactName ?? "" },
       channel,
+      locale: conversationLocale,
     });
     if (webhookResult.handoff) {
       shouldHandoff = true;
@@ -544,8 +588,7 @@ export async function processInboundMessage(
           message: userMessageText,
           contactName,
         });
-        const fallback =
-          "El asistente no está disponible en este momento. Configura tu API key de OpenAI en Ajustes.";
+        const fallback = getSystemMessage("assistantUnavailable", conversationLocale);
         await sendChannelText(
           buildOutboundContext({
             tenantId,
@@ -577,7 +620,8 @@ export async function processInboundMessage(
       userMessageText,
       openAIKey,
       tenantId,
-      { contactPhone: participantId, conversationId: conversation.conversationId }
+      { contactPhone: participantId, conversationId: conversation.conversationId },
+      conversationLocale
     );
     if (result.handoff) {
       shouldHandoff = true;
@@ -620,11 +664,11 @@ export async function processInboundMessage(
           userMessageText,
           openAIKey,
           tenantId,
-          { contactPhone: participantId, conversationId: conversation.conversationId }
+          { contactPhone: participantId, conversationId: conversation.conversationId },
+          conversationLocale
         );
         aiResponse =
-          fallback.reply ??
-          "En este momento no tenemos asesores disponibles. ¿Puedo ayudarte con algo más?";
+          fallback.reply ?? getSystemMessage("noAdvisorsAvailable", conversationLocale);
       } else {
         throw handoffErr;
       }

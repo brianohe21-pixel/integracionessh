@@ -11,7 +11,7 @@ import {
 import { getAdvisorByCognitoUserId } from "../../lib/dynamodb/advisor.repository.js";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
 import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
-import { assertCanSendMessages } from "../../lib/billing/assert-plan.js";
+import { assertCanSendMessages, assertCanUseCopilot } from "../../lib/billing/assert-plan.js";
 import { incrementMessages } from "../../lib/dynamodb/usage.repository.js";
 import { PlanLimitError } from "../../lib/billing/plan-limits.js";
 import {
@@ -19,13 +19,14 @@ import {
   assertAdvisorOrMember,
   assertTenantManagerRole,
 } from "../../lib/auth/cognito.js";
-import { performHandoff, releaseToBot } from "../../lib/advisor/handoff.js";
+import { performHandoff, releaseToBot, claimConversation, performBulkHandoff } from "../../lib/advisor/handoff.js";
 import { resolveConversation } from "../../lib/advisor/resolve.js";
 import { updateConversation } from "../../lib/dynamodb/conversation.repository.js";
 import {
   getClientHandoffMessage,
   notifyAdvisorOfConversation,
 } from "../../lib/advisor/notify.js";
+import { getBotLocale } from "../../lib/i18n/index.js";
 import { buildWaMeLink } from "../../lib/advisor/wa-link.js";
 import { getConversation } from "../../lib/dynamodb/conversation.repository.js";
 import {
@@ -33,18 +34,31 @@ import {
   truncateWhatsAppText,
 } from "../../lib/whatsapp/client.js";
 import { getInstagramAccessToken } from "../../lib/instagram/secrets.js";
+import { getTelegramBotToken } from "../../lib/telegram/secrets.js";
+import { getMessengerAccessToken } from "../../lib/messenger/secrets.js";
 import {
   buildOutboundContext,
   sendChannelText,
 } from "../../lib/channels/router.js";
 import { ok, created, badRequest, notFound, forbidden, noContent, handleError } from "../../lib/http.js";
 import type { AuthContext, Conversation, Message, Channel } from "../../types/index.js";
+import {
+  generateCopilotInsights,
+  suggestAdvisorReply,
+  summarizeConversation,
+} from "../../lib/advisor/copilot.js";
+import {
+  createAndSendQuotation,
+  listConversationQuotations,
+} from "../../lib/quotations/quotations.service.js";
+import { publishRealtimeEventSafe } from "../../lib/realtime/publish.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 
 async function resolveAccessTokenForChannel(
   tenantId: string,
-  channel: Channel
+  channel: Channel,
+  botId?: string
 ): Promise<string | undefined> {
   if (channel === "instagram") {
     return getInstagramAccessToken(tenantId, ENVIRONMENT);
@@ -52,11 +66,34 @@ async function resolveAccessTokenForChannel(
   if (channel === "whatsapp") {
     return getWhatsAppAccessToken(tenantId, ENVIRONMENT);
   }
+  if (channel === "telegram" && botId) {
+    return getTelegramBotToken(tenantId, botId, ENVIRONMENT);
+  }
+  if (channel === "messenger" && botId) {
+    return getMessengerAccessToken(tenantId, botId, ENVIRONMENT);
+  }
   return undefined;
 }
 
 const HandoffSchema = z.object({
   botId: z.string().uuid(),
+  advisorId: z.string().uuid().optional(),
+});
+
+const ClaimSchema = z.object({
+  botId: z.string().uuid(),
+});
+
+const BulkHandoffSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        conversationId: z.string().uuid(),
+        botId: z.string().uuid(),
+      })
+    )
+    .min(1)
+    .max(50),
   advisorId: z.string().uuid().optional(),
 });
 
@@ -79,6 +116,25 @@ const ResolveSchema = z.object({
   botId: z.string().uuid(),
   csatScore: z.number().int().min(1).max(5).optional(),
   releaseToBot: z.boolean().optional(),
+});
+
+const CopilotSchema = z.object({
+  botId: z.string().uuid(),
+  action: z.enum(["suggest", "summarize", "analyze"]),
+});
+
+const QuotationLineItemSchema = z.object({
+  description: z.string().min(1).max(200),
+  quantity: z.number().int().min(1).max(9999),
+  unitPriceInCents: z.number().int().min(0),
+});
+
+const CreateQuotationSchema = z.object({
+  botId: z.string().uuid(),
+  items: z.array(QuotationLineItemSchema).min(1).max(50),
+  notes: z.string().max(1000).optional(),
+  validUntil: z.string().datetime().optional(),
+  paymentDescription: z.string().min(1).max(200).optional(),
 });
 
 async function resolveAdvisorRecord(auth: AuthContext) {
@@ -118,6 +174,23 @@ export async function handler(
     const params = event.queryStringParameters ?? {};
     const rawPath = event.rawPath ?? event.requestContext.http.path;
 
+    if (method === "POST" && rawPath.endsWith("/conversations/bulk-handoff")) {
+      assertTenantManagerRole(auth);
+
+      const body = JSON.parse(event.body ?? "{}");
+      const parsed = BulkHandoffSchema.safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const result = await performBulkHandoff({
+        tenantId: auth.tenantId,
+        items: parsed.data.items,
+        reason: "manual",
+        ...(parsed.data.advisorId ? { advisorId: parsed.data.advisorId } : {}),
+      });
+
+      return ok(result);
+    }
+
     if (method === "GET" && !conversationId) {
       const botId = params.botId;
       const handoffMode =
@@ -138,7 +211,12 @@ export async function handler(
       const channel =
         params.channel === "whatsapp" ||
         params.channel === "instagram" ||
-        params.channel === "webchat"
+        params.channel === "webchat" ||
+        params.channel === "telegram" ||
+        params.channel === "messenger" ||
+        params.channel === "sms" ||
+        params.channel === "email" ||
+        params.channel === "voicebot"
           ? params.channel
           : undefined;
       const limit = params.limit ? parseInt(params.limit, 10) : 20;
@@ -147,12 +225,21 @@ export async function handler(
         return badRequest("Invalid limit parameter (1-100)");
       }
 
+      const assignment =
+        params.assignment === "assigned" || params.assignment === "unassigned"
+          ? params.assignment
+          : undefined;
+
       let assignedAdvisorId = params.assignedAdvisorId;
 
       if (auth.role === "advisor") {
         const advisor = await resolveAdvisorRecord(auth);
         if (!advisor) return ok([]);
-        assignedAdvisorId = advisor.advisorId;
+        if (assignment === "unassigned") {
+          assignedAdvisorId = undefined;
+        } else {
+          assignedAdvisorId = advisor.advisorId;
+        }
       }
 
       const listOptions: Parameters<typeof listConversations>[1] = { limit };
@@ -162,6 +249,7 @@ export async function handler(
       if (status) listOptions.status = status;
       if (channel) listOptions.channel = channel;
       if (assignedAdvisorId) listOptions.assignedAdvisorId = assignedAdvisorId;
+      if (assignment) listOptions.assignment = assignment;
       if (params.cursor) listOptions.cursor = params.cursor;
 
       const result = await listConversations(auth.tenantId, listOptions);
@@ -283,8 +371,12 @@ export async function handler(
 
       if (bot && refreshed) {
         const channel = refreshed.channel ?? "whatsapp";
-        const accessToken = await resolveAccessTokenForChannel(auth.tenantId, channel);
-        if (accessToken || channel === "webchat") {
+        const accessToken = await resolveAccessTokenForChannel(
+          auth.tenantId,
+          channel,
+          refreshed.botId
+        );
+        if (accessToken || channel === "webchat" || channel === "sms" || channel === "email" || channel === "voicebot") {
           await sendChannelText(
             buildOutboundContext({
               tenantId: auth.tenantId,
@@ -294,7 +386,7 @@ export async function handler(
               accessToken,
               environment: ENVIRONMENT,
             }),
-            getClientHandoffMessage()
+            getClientHandoffMessage(getBotLocale(refreshed, bot))
           );
         }
         await notifyAdvisorOfConversation({
@@ -309,6 +401,33 @@ export async function handler(
       }
 
       return ok(refreshed);
+    }
+
+    if (method === "POST" && subPath === "claim") {
+      if (auth.role !== "advisor") {
+        return forbidden("Only advisors can claim conversations");
+      }
+
+      const advisor = await resolveAdvisorRecord(auth);
+      if (!advisor) return forbidden("Advisor record not found");
+
+      const body = JSON.parse(event.body ?? "{}");
+      const parsed = ClaimSchema.safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const conversation = await findConversationById(auth.tenantId, conversationId);
+      if (!conversation || conversation.botId !== parsed.data.botId) {
+        return notFound("Conversation not found");
+      }
+
+      const updated = await claimConversation({
+        tenantId: auth.tenantId,
+        botId: parsed.data.botId,
+        conversationId,
+        advisorId: advisor.advisorId,
+      });
+
+      return ok(updated);
     }
 
     if (method === "POST" && subPath === "release") {
@@ -332,6 +451,102 @@ export async function handler(
       });
 
       return ok(updated);
+    }
+
+    if (method === "POST" && subPath === "copilot") {
+      const body = JSON.parse(event.body ?? "{}");
+      const parsed = CopilotSchema.safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const conversation = await findConversationById(auth.tenantId, conversationId);
+      if (!conversation || conversation.botId !== parsed.data.botId) {
+        return notFound("Conversation not found");
+      }
+
+      await assertCanAccessConversation(auth, conversation);
+
+      const tenant = await getTenant(auth.tenantId);
+      if (!tenant) return notFound("Tenant not found");
+
+      try {
+        assertCanUseCopilot(tenant);
+      } catch (err) {
+        if (err instanceof PlanLimitError) {
+          return forbidden(err.message);
+        }
+        throw err;
+      }
+
+      const bot = await getBot(auth.tenantId, parsed.data.botId);
+      if (!bot) return notFound("Bot not found");
+
+      const messages = await getConversationMessages(auth.tenantId, conversationId, 50);
+      const copilotParams = {
+        bot,
+        messages,
+        tenantId: auth.tenantId,
+        environment: ENVIRONMENT,
+      };
+
+      if (parsed.data.action === "suggest") {
+        let advisorName: string | undefined;
+        if (auth.role === "advisor") {
+          const advisor = await resolveAdvisorRecord(auth);
+          advisorName = advisor?.name;
+        }
+
+        const suggestion = await suggestAdvisorReply({
+          ...copilotParams,
+          ...(advisorName ? { advisorName } : {}),
+        });
+
+        return ok(suggestion);
+      }
+
+      if (parsed.data.action === "summarize") {
+        const summary = await summarizeConversation(copilotParams);
+        const updated = await updateConversation(
+          auth.tenantId,
+          parsed.data.botId,
+          conversationId,
+          {
+            copilotSummary: summary.summary,
+            copilotGeneratedAt: new Date().toISOString(),
+          }
+        );
+
+        return ok({
+          ...summary,
+          conversation: updated,
+        });
+      }
+
+      const insights = await generateCopilotInsights(copilotParams);
+      const updated = await updateConversation(
+        auth.tenantId,
+        parsed.data.botId,
+        conversationId,
+        {
+          copilotSummary: insights.copilotSummary,
+          detectedIntent: insights.detectedIntent,
+          copilotGeneratedAt: new Date().toISOString(),
+        }
+      );
+
+      if (updated) {
+        publishRealtimeEventSafe(auth.tenantId, {
+          type: "conversation.updated",
+          conversation: updated,
+        });
+      }
+
+      return ok({
+        detectedIntent: insights.detectedIntent,
+        copilotSummary: insights.copilotSummary,
+        intentDetails: insights.intentDetails,
+        summaryDetails: insights.summaryDetails,
+        conversation: updated,
+      });
     }
 
     if (method === "POST" && subPath === "messages") {
@@ -366,7 +581,11 @@ export async function handler(
         }
       }
 
-      const accessToken = await resolveAccessTokenForChannel(auth.tenantId, channel);
+      const accessToken = await resolveAccessTokenForChannel(
+        auth.tenantId,
+        channel,
+        parsed.data.botId
+      );
       const text =
         channel === "whatsapp" ? truncateWhatsAppText(parsed.data.content) : parsed.data.content;
 
@@ -465,6 +684,98 @@ export async function handler(
       );
 
       return created(message);
+    }
+
+    if (method === "GET" && subPath === "quotations") {
+      const botId = params.botId;
+      if (!botId || !z.string().uuid().safeParse(botId).success) {
+        return badRequest("botId query parameter is required");
+      }
+
+      const conversation = await findConversationById(auth.tenantId, conversationId);
+      if (!conversation || conversation.botId !== botId) {
+        return notFound("Conversation not found");
+      }
+
+      await assertCanAccessConversation(auth, conversation);
+
+      const quotations = await listConversationQuotations({
+        tenantId: auth.tenantId,
+        botId,
+        conversationId,
+      });
+      return ok({ quotations });
+    }
+
+    if (method === "POST" && subPath === "quotations") {
+      const body = JSON.parse(event.body ?? "{}");
+      const parsed = CreateQuotationSchema.safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const conversation = await findConversationById(auth.tenantId, conversationId);
+      if (!conversation || conversation.botId !== parsed.data.botId) {
+        return notFound("Conversation not found");
+      }
+
+      await assertCanAccessConversation(auth, conversation);
+
+      if ((conversation.handoffMode ?? "bot") !== "human") {
+        return badRequest("Conversation is not in human handoff mode");
+      }
+
+      const bot = await getBot(auth.tenantId, parsed.data.botId);
+      if (!bot) return notFound("Bot not found");
+
+      const tenant = await getTenant(auth.tenantId);
+      if (tenant) {
+        try {
+          await assertCanSendMessages(tenant);
+        } catch (err) {
+          if (err instanceof PlanLimitError) {
+            return forbidden(err.message);
+          }
+          throw err;
+        }
+      }
+
+      let createdByAdvisorId: string | undefined;
+      if (auth.role === "advisor") {
+        const advisor = await resolveAdvisorRecord(auth);
+        createdByAdvisorId = advisor?.advisorId;
+      }
+
+      const result = await createAndSendQuotation({
+        tenantId: auth.tenantId,
+        botId: parsed.data.botId,
+        bot,
+        conversation,
+        environment: ENVIRONMENT,
+        items: parsed.data.items,
+        ...(parsed.data.notes ? { notes: parsed.data.notes } : {}),
+        ...(parsed.data.validUntil ? { validUntil: parsed.data.validUntil } : {}),
+        ...(parsed.data.paymentDescription
+          ? { paymentDescription: parsed.data.paymentDescription }
+          : {}),
+        ...(createdByAdvisorId ? { createdByAdvisorId } : {}),
+      });
+
+      await incrementMessages(auth.tenantId);
+
+      const now = new Date().toISOString();
+      const convPatch: Parameters<typeof updateConversation>[3] = {
+        workflowStatus: "open",
+      };
+      if (!conversation.firstHumanResponseAt) {
+        convPatch.firstHumanResponseAt = now;
+      }
+      await updateConversation(
+        auth.tenantId,
+        parsed.data.botId,
+        conversationId,
+        convPatch
+      );
+
+      return created(result);
     }
 
     if (method === "GET" && subPath === "wa-link") {

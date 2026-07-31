@@ -17,6 +17,7 @@ export interface PlanLimits {
   maxChannelsPerBot: number;
   maxActiveWebChatSessions: number;
   maxConcurrentLiveKitCalls: number;
+  maxVoicebotMinutesPerMonth: number;
   maxCalendarAppsPerTenant: number;
   maxPaymentsAppsPerTenant: number;
   maxCatalogAppsPerTenant: number;
@@ -45,6 +46,7 @@ const LIMITS: Record<TenantPlan, PlanLimits> = {
     maxChannelsPerBot: 1,
     maxActiveWebChatSessions: 0,
     maxConcurrentLiveKitCalls: 0,
+    maxVoicebotMinutesPerMonth: 0,
     maxCalendarAppsPerTenant: 1,
     maxPaymentsAppsPerTenant: 1,
     maxCatalogAppsPerTenant: 1,
@@ -68,9 +70,10 @@ const LIMITS: Record<TenantPlan, PlanLimits> = {
     maxVisualFlowsPerBot: 5,
     maxFlowNodes: 40,
     maxActiveFlowRuns: 50,
-    maxChannelsPerBot: 2,
+    maxChannelsPerBot: 4,
     maxActiveWebChatSessions: 50,
     maxConcurrentLiveKitCalls: 2,
+    maxVoicebotMinutesPerMonth: 100,
     maxCalendarAppsPerTenant: 5,
     maxPaymentsAppsPerTenant: 5,
     maxCatalogAppsPerTenant: 5,
@@ -94,9 +97,10 @@ const LIMITS: Record<TenantPlan, PlanLimits> = {
     maxVisualFlowsPerBot: Number.MAX_SAFE_INTEGER,
     maxFlowNodes: 100,
     maxActiveFlowRuns: Number.MAX_SAFE_INTEGER,
-    maxChannelsPerBot: 3,
+    maxChannelsPerBot: 8,
     maxActiveWebChatSessions: 500,
     maxConcurrentLiveKitCalls: 10,
+    maxVoicebotMinutesPerMonth: 1000,
     maxCalendarAppsPerTenant: Number.MAX_SAFE_INTEGER,
     maxPaymentsAppsPerTenant: Number.MAX_SAFE_INTEGER,
     maxCatalogAppsPerTenant: Number.MAX_SAFE_INTEGER,

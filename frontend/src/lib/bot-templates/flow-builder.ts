@@ -1,10 +1,14 @@
-import type { FlowEdge, FlowNode, FlowNodeData, FlowNodeType, FlowTriggerType } from "@/types";
+import type { FlowEdge, FlowNode, FlowNodeData, FlowNodeType, FlowTriggerType, LocalizedText } from "@/types";
 
 const CENTER_X = 400;
 const ROW_HEIGHT = 140;
 
 function pos(x: number, y: number) {
   return { x, y };
+}
+
+export function bilingual(es: string, en: string): LocalizedText {
+  return { es, en };
 }
 
 export function node(
@@ -37,7 +41,7 @@ export function triggerNode(
 
 export function messageNode(
   id: string,
-  messageText: string,
+  messageText: LocalizedText,
   label: string,
   x = CENTER_X,
   y: number
@@ -47,8 +51,8 @@ export function messageNode(
 
 export function buttonsNode(
   id: string,
-  messageText: string,
-  buttons: Array<{ id: string; title: string }>,
+  messageText: LocalizedText,
+  buttons: Array<{ id: string; title: LocalizedText }>,
   label: string,
   y: number
 ): FlowNode {
@@ -65,7 +69,7 @@ export function handoffNode(id: string, label: string, x: number, y: number): Fl
 
 export function bookAppointmentNode(
   id: string,
-  confirmationMessage: string,
+  confirmationMessage: LocalizedText,
   label: string,
   x: number,
   y: number
@@ -75,7 +79,7 @@ export function bookAppointmentNode(
 
 export function sendCatalogNode(
   id: string,
-  catalogMessageText: string,
+  catalogMessageText: LocalizedText,
   label: string,
   x: number,
   y: number
@@ -85,8 +89,8 @@ export function sendCatalogNode(
 
 export function awaitOrderNode(
   id: string,
-  messageText: string,
-  orderConfirmationMessage: string,
+  messageText: LocalizedText,
+  orderConfirmationMessage: LocalizedText,
   label: string,
   x: number,
   y: number

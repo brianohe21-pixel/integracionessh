@@ -6,7 +6,8 @@ import { useT } from "@/i18n/context";
 import { useMetaFlows } from "@/hooks/useMetaFlows";
 import { MetaFlowsModal } from "@/components/meta-flows/MetaFlowsModal";
 import { Button } from "@/components/ui/Button";
-import type { FlowNode, FlowNodeType } from "@/types";
+import { LocalizedTextField } from "@/components/ui/LocalizedTextField";
+import type { FlowNode, FlowNodeType, LocalizedText } from "@/types";
 
 interface NodePropertiesPanelProps {
   selected: FlowNode | undefined;
@@ -74,6 +75,12 @@ export function NodePropertiesPanel({
 
   const type = selected.type as FlowNodeType;
   const d = selected.data;
+
+  const localizedField = (
+    value: LocalizedText | undefined,
+    onChange: (v: LocalizedText) => void,
+    rows = 3
+  ) => <LocalizedTextField value={value} onChange={onChange} rows={rows} />;
 
   return (
     <div className="space-y-3">
@@ -144,7 +151,7 @@ export function NodePropertiesPanel({
       {type === "message" && (
         <div>
           <FieldLabel>{t("flows.fields.messageText")}</FieldLabel>
-          {textArea(d.messageText ?? "", (v) => onUpdate({ messageText: v }), 4)}
+          {localizedField(d.messageText, (v) => onUpdate({ messageText: v }), 4)}
         </div>
       )}
 
@@ -208,7 +215,7 @@ export function NodePropertiesPanel({
           <p className="text-xs text-blue-700 bg-blue-50 rounded-lg p-2">{t("flows.hints.buttonBranches")}</p>
           <div>
             <FieldLabel>{t("flows.fields.messageText")}</FieldLabel>
-            {textArea(d.messageText ?? "", (v) => onUpdate({ messageText: v }), 2)}
+            {localizedField(d.messageText, (v) => onUpdate({ messageText: v }), 2)}
           </div>
           {(d.buttons ?? [{ id: "btn-1", title: "" }]).map((btn, i) => (
             <div key={btn.id} className="space-y-1 border border-subtle rounded-lg p-2">
@@ -220,11 +227,11 @@ export function NodePropertiesPanel({
                 onUpdate({ buttons });
               })}
               <FieldLabel>{t("flows.fields.buttonTitle")}</FieldLabel>
-              {textInput(btn.title, (v) => {
+              {localizedField(btn.title, (v) => {
                 const buttons = [...(d.buttons ?? [])];
                 buttons[i] = { ...buttons[i], title: v };
                 onUpdate({ buttons });
-              })}
+              }, 2)}
             </div>
           ))}
           {(d.buttons?.length ?? 1) < 3 && (
@@ -275,9 +282,7 @@ export function NodePropertiesPanel({
           </div>
           <div>
             <FieldLabel>{t("flows.fields.metaFlowCta")}</FieldLabel>
-            {textInput(d.metaFlowCta ?? "", (v) => onUpdate({ metaFlowCta: v }), {
-              placeholder: t("metaFlows.ctaPlaceholder"),
-            })}
+            {localizedField(d.metaFlowCta, (v) => onUpdate({ metaFlowCta: v }), 1)}
           </div>
           {metaFlowsModalOpen && (
             <MetaFlowsModal
@@ -362,7 +367,7 @@ export function NodePropertiesPanel({
           </div>
           <div>
             <FieldLabel>{t("flows.fields.confirmationMessage")}</FieldLabel>
-            {textArea(d.confirmationMessage ?? "", (v) => onUpdate({ confirmationMessage: v }), 3)}
+            {localizedField(d.confirmationMessage, (v) => onUpdate({ confirmationMessage: v }), 3)}
           </div>
         </>
       )}
@@ -376,12 +381,11 @@ export function NodePropertiesPanel({
           </div>
           <div>
             <FieldLabel>{t("flows.fields.paymentDescription")}</FieldLabel>
-            {textInput(d.paymentDescription ?? "", (v) => onUpdate({ paymentDescription: v }))}
+            {localizedField(d.paymentDescription, (v) => onUpdate({ paymentDescription: v }), 1)}
           </div>
           <div>
             <FieldLabel>{t("flows.fields.paymentMessageTemplate")}</FieldLabel>
-            {textArea(d.paymentMessageTemplate ?? "", (v) =>
-              onUpdate({ paymentMessageTemplate: v }), 3)}
+            {localizedField(d.paymentMessageTemplate, (v) => onUpdate({ paymentMessageTemplate: v }), 3)}
           </div>
           <label className="flex items-center gap-2 text-sm text-secondary">
             <input
@@ -397,7 +401,7 @@ export function NodePropertiesPanel({
       {type === "send_catalog" && (
         <div>
           <FieldLabel>{t("flows.fields.catalogMessageText")}</FieldLabel>
-          {textArea(d.catalogMessageText ?? "", (v) => onUpdate({ catalogMessageText: v }), 3)}
+          {localizedField(d.catalogMessageText, (v) => onUpdate({ catalogMessageText: v }), 3)}
         </div>
       )}
 
@@ -405,7 +409,7 @@ export function NodePropertiesPanel({
         <>
           <div>
             <FieldLabel>{t("flows.fields.messageText")}</FieldLabel>
-            {textArea(d.messageText ?? "", (v) => onUpdate({ messageText: v }), 2)}
+            {localizedField(d.messageText, (v) => onUpdate({ messageText: v }), 2)}
           </div>
           <div>
             <FieldLabel>{t("flows.fields.productRetailerIds")}</FieldLabel>
@@ -424,7 +428,7 @@ export function NodePropertiesPanel({
       {type === "await_order" && (
         <div>
           <FieldLabel>{t("flows.fields.messageText")}</FieldLabel>
-          {textArea(d.messageText ?? "", (v) => onUpdate({ messageText: v }), 3)}
+          {localizedField(d.messageText, (v) => onUpdate({ messageText: v }), 3)}
         </div>
       )}
 

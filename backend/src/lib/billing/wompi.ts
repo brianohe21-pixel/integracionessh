@@ -59,6 +59,45 @@ export function buildIntegritySignature(
   return createHash("sha256").update(payload).digest("hex");
 }
 
+export interface WompiCheckoutParams {
+  publicKey: string;
+  currency: string;
+  amountInCents: number;
+  reference: string;
+  signatureIntegrity: string;
+  redirectUrl: string;
+  customerEmail: string;
+}
+
+export function buildWompiCheckoutParams(
+  creds: Pick<WompiCredentials, "publicKey" | "integritySecret">,
+  input: {
+    reference: string;
+    amountInCents: number;
+    redirectUrl: string;
+    customerEmail: string;
+    currency?: string;
+  }
+): WompiCheckoutParams {
+  const currency = input.currency ?? "COP";
+  const signatureIntegrity = buildIntegritySignature(
+    creds,
+    input.reference,
+    input.amountInCents,
+    currency
+  );
+
+  return {
+    publicKey: creds.publicKey,
+    currency,
+    amountInCents: input.amountInCents,
+    reference: input.reference,
+    signatureIntegrity,
+    redirectUrl: input.redirectUrl,
+    customerEmail: input.customerEmail,
+  };
+}
+
 export function buildCheckoutUrl(
   creds: Pick<WompiCredentials, "publicKey" | "integritySecret" | "checkoutUrl">,
   input: {
@@ -69,20 +108,19 @@ export function buildCheckoutUrl(
     currency?: string;
   }
 ): string {
-  const currency = input.currency ?? "COP";
-  const signature = buildIntegritySignature(creds, input.reference, input.amountInCents, currency);
+  const params = buildWompiCheckoutParams(creds, input);
   const checkoutUrl = creds.checkoutUrl ?? DEFAULT_CHECKOUT_URL;
-  const params = new URLSearchParams({
-    "public-key": creds.publicKey,
-    currency,
-    "amount-in-cents": String(input.amountInCents),
-    reference: input.reference,
-    "signature:integrity": signature,
-    "redirect-url": input.redirectUrl,
-    "customer-data:email": input.customerEmail,
+  const query = new URLSearchParams({
+    "public-key": params.publicKey,
+    currency: params.currency,
+    "amount-in-cents": String(params.amountInCents),
+    reference: params.reference,
+    "signature:integrity": params.signatureIntegrity,
+    "redirect-url": params.redirectUrl,
+    "customer-data:email": params.customerEmail,
   });
 
-  return `${checkoutUrl}?${params.toString()}`;
+  return `${checkoutUrl}?${query.toString()}`;
 }
 
 function getNestedValue(obj: Record<string, unknown>, path: string): string {

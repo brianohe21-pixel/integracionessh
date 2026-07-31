@@ -10,10 +10,16 @@ import {
 } from "../../lib/dynamodb/bot.repository.js";
 import { extractAuthContext, assertTenantAccess, assertMemberRole } from "../../lib/auth/cognito.js";
 import { ensureTenant } from "../../lib/dynamodb/tenant.repository.js";
-import { assertCanCreateBot, assertCanUseWebChat, assertCanEnableChannel, assertCanStartLiveKitCall } from "../../lib/billing/assert-plan.js";
-import { putWidgetKeyLookup } from "../../lib/dynamodb/bot-lookup.repository.js";
+import { assertCanCreateBot, assertCanUseWebChat, assertCanEnableChannel, assertCanStartLiveKitCall, assertCanUseVoicebot } from "../../lib/billing/assert-plan.js";
+import { putWidgetKeyLookup, putSmsNumberLookup, deleteSmsNumberLookup, putEmailAddressLookup, deleteEmailAddressLookup, putVoicebotWidgetKeyLookup, deleteVoicebotWidgetKeyLookup } from "../../lib/dynamodb/bot-lookup.repository.js";
 import { generateWidgetKey } from "../../lib/webchat/session.repository.js";
+import { generateVoicebotWidgetKey } from "../../lib/voicebot/session.repository.js";
 import { assertAllowedModel, assertCanEnableKnowledge } from "../../lib/billing/plan-config.js";
+import {
+  DEFAULT_MODEL_ID,
+  getModelProviderMismatch,
+  isValidModelId,
+} from "../../lib/ai/models.js";
 import {
   getWhatsAppAccessToken,
   getPhoneNumberInfo,
@@ -31,12 +37,18 @@ function maskBot(bot: Bot): Bot {
   return { ...bot, webhookSecret: "***" };
 }
 
+const AiProviderSchema = z.enum(["openai"]);
+
+const ModelSchema = z.string().refine(isValidModelId, { message: "Invalid model" });
+
 const CreateBotSchema = z
   .object({
     name: z.string().min(1).max(128),
+    defaultLocale: z.enum(["es", "en"]).optional(),
     responseMode: z.enum(["openai", "webhook"]).default("openai"),
     systemPrompt: z.string().min(1).max(4096).optional(),
-    model: z.enum(["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"]).default("gpt-4o-mini"),
+    aiProvider: AiProviderSchema.optional(),
+    model: ModelSchema.default(DEFAULT_MODEL_ID),
     temperature: z.number().min(0).max(2).default(0.7),
     maxTokens: z.number().int().min(1).max(4096).default(1024),
     webhookUrl: z.string().url().startsWith("https://").max(2048).optional(),
@@ -63,9 +75,11 @@ const CreateBotSchema = z
 
 const UpdateBotSchema = z.object({
   name: z.string().min(1).max(128).optional(),
+  defaultLocale: z.enum(["es", "en"]).optional(),
   responseMode: z.enum(["openai", "webhook"]).optional(),
   systemPrompt: z.string().min(1).max(4096).optional(),
-  model: z.enum(["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"]).optional(),
+  aiProvider: AiProviderSchema.optional(),
+  model: ModelSchema.optional(),
   temperature: z.number().min(0).max(2).optional(),
   maxTokens: z.number().int().min(1).max(4096).optional(),
   webhookUrl: z.string().url().startsWith("https://").max(2048).optional(),
@@ -160,6 +174,178 @@ export async function handler(
       });
     }
 
+    if (botId && method === "PUT" && rawPath.includes("/sms")) {
+      const existing = await getBot(auth.tenantId, botId);
+      if (!existing) return notFound("Bot not found");
+      assertTenantAccess(auth, existing.tenantId);
+
+      const body = JSON.parse(event.body ?? "{}");
+      const parsed = z
+        .object({
+          enabled: z.boolean().optional(),
+          smsOriginationNumber: z.string().min(8).max(20).optional(),
+        })
+        .safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
+      if (parsed.data.enabled === true) {
+        await assertCanEnableChannel(tenant, existing, "sms");
+      }
+
+      if (
+        existing.smsOriginationNumber &&
+        parsed.data.smsOriginationNumber &&
+        existing.smsOriginationNumber !== parsed.data.smsOriginationNumber
+      ) {
+        await deleteSmsNumberLookup(existing.smsOriginationNumber);
+      }
+
+      const number = parsed.data.smsOriginationNumber ?? existing.smsOriginationNumber;
+      if (parsed.data.enabled === true && number) {
+        await putSmsNumberLookup(number, auth.tenantId, botId);
+      }
+
+      const updates: Record<string, unknown> = {};
+      if (parsed.data.enabled !== undefined) updates.smsEnabled = parsed.data.enabled;
+      if (parsed.data.smsOriginationNumber) {
+        updates.smsOriginationNumber = parsed.data.smsOriginationNumber;
+      }
+
+      const updated = await updateBot(auth.tenantId, botId, updates);
+      return ok({
+        smsEnabled: updated.smsEnabled,
+        smsOriginationNumber: updated.smsOriginationNumber,
+      });
+    }
+
+    if (botId && method === "PUT" && rawPath.includes("/email")) {
+      const existing = await getBot(auth.tenantId, botId);
+      if (!existing) return notFound("Bot not found");
+      assertTenantAccess(auth, existing.tenantId);
+
+      const body = JSON.parse(event.body ?? "{}");
+      const parsed = z
+        .object({
+          enabled: z.boolean().optional(),
+          emailAddress: z.string().email().optional(),
+        })
+        .safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
+      if (parsed.data.enabled === true) {
+        await assertCanEnableChannel(tenant, existing, "email");
+      }
+
+      if (
+        existing.emailAddress &&
+        parsed.data.emailAddress &&
+        existing.emailAddress !== parsed.data.emailAddress
+      ) {
+        await deleteEmailAddressLookup(existing.emailAddress);
+      }
+
+      const address = parsed.data.emailAddress ?? existing.emailAddress;
+      if (parsed.data.enabled === true && address) {
+        await putEmailAddressLookup(address, auth.tenantId, botId);
+      }
+
+      const updates: Record<string, unknown> = {};
+      if (parsed.data.enabled !== undefined) updates.emailEnabled = parsed.data.enabled;
+      if (parsed.data.emailAddress) {
+        updates.emailAddress = parsed.data.emailAddress.toLowerCase();
+      }
+
+      const updated = await updateBot(auth.tenantId, botId, updates);
+      return ok({
+        emailEnabled: updated.emailEnabled,
+        emailAddress: updated.emailAddress,
+      });
+    }
+
+    if (botId && method === "PUT" && rawPath.includes("/voicebot")) {
+      const existing = await getBot(auth.tenantId, botId);
+      if (!existing) return notFound("Bot not found");
+      assertTenantAccess(auth, existing.tenantId);
+
+      const body = JSON.parse(event.body ?? "{}");
+      const parsed = z
+        .object({
+          enabled: z.boolean().optional(),
+          voicebotVoice: z.string().min(2).max(32).optional(),
+          voicebotModel: z.string().min(3).max(64).optional(),
+          voicebotGreeting: z.string().max(500).optional(),
+          voicebotSystemPrompt: z.string().max(4096).optional(),
+        })
+        .safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
+      if (parsed.data.enabled === true) {
+        await assertCanUseVoicebot(tenant);
+        await assertCanEnableChannel(tenant, existing, "voicebot");
+      }
+
+      let widgetKey = existing.voicebotWidgetKey;
+      if (parsed.data.enabled === true && !widgetKey) {
+        widgetKey = generateVoicebotWidgetKey();
+        await putVoicebotWidgetKeyLookup(widgetKey, auth.tenantId, botId);
+      }
+
+      const updates: Record<string, unknown> = {};
+      if (parsed.data.enabled !== undefined) {
+        updates.voicebotEnabled = parsed.data.enabled;
+        if (widgetKey) updates.voicebotWidgetKey = widgetKey;
+      }
+      if (parsed.data.voicebotVoice !== undefined) {
+        updates.voicebotVoice = parsed.data.voicebotVoice;
+      }
+      if (parsed.data.voicebotModel !== undefined) {
+        updates.voicebotModel = parsed.data.voicebotModel;
+      }
+      if (parsed.data.voicebotGreeting !== undefined) {
+        updates.voicebotGreeting = parsed.data.voicebotGreeting;
+      }
+      if (parsed.data.voicebotSystemPrompt !== undefined) {
+        updates.voicebotSystemPrompt = parsed.data.voicebotSystemPrompt;
+      }
+
+      const updated = await updateBot(auth.tenantId, botId, updates);
+      return ok({
+        voicebotEnabled: updated.voicebotEnabled,
+        voicebotWidgetKey: updated.voicebotWidgetKey,
+        voicebotVoice: updated.voicebotVoice,
+        voicebotModel: updated.voicebotModel,
+        voicebotGreeting: updated.voicebotGreeting,
+        voicebotSystemPrompt: updated.voicebotSystemPrompt,
+      });
+    }
+
+    if (botId && method === "POST" && rawPath.includes("/voicebot/rotate-key")) {
+      const existing = await getBot(auth.tenantId, botId);
+      if (!existing) return notFound("Bot not found");
+      assertTenantAccess(auth, existing.tenantId);
+
+      const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
+      await assertCanUseVoicebot(tenant);
+      await assertCanEnableChannel(tenant, existing, "voicebot");
+
+      const newKey = generateVoicebotWidgetKey();
+      if (existing.voicebotWidgetKey) {
+        await deleteVoicebotWidgetKeyLookup(existing.voicebotWidgetKey);
+      }
+      await putVoicebotWidgetKeyLookup(newKey, auth.tenantId, botId);
+      const updated = await updateBot(auth.tenantId, botId, {
+        voicebotWidgetKey: newKey,
+        voicebotEnabled: true,
+      });
+      return ok({
+        voicebotEnabled: updated.voicebotEnabled,
+        voicebotWidgetKey: updated.voicebotWidgetKey,
+      });
+    }
+
     if (method === "GET" && !botId) {
       const bots = await listBots(auth.tenantId);
       return ok(bots.map(maskBot));
@@ -194,6 +380,8 @@ export async function handler(
 
       if (data.responseMode === "openai") {
         assertAllowedModel(tenant, data.model);
+        const providerMismatch = getModelProviderMismatch(data.model, data.aiProvider);
+        if (providerMismatch) return badRequest(providerMismatch);
       }
 
       const base = {
@@ -217,6 +405,7 @@ export async function handler(
           ...base,
           systemPrompt: data.systemPrompt,
           model: data.model,
+          ...(data.aiProvider ? { aiProvider: data.aiProvider } : {}),
           temperature: data.temperature,
           maxTokens: data.maxTokens,
         };
@@ -247,6 +436,11 @@ export async function handler(
       const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
       if (parsed.data.model) {
         assertAllowedModel(tenant, parsed.data.model);
+        const providerMismatch = getModelProviderMismatch(
+          parsed.data.model,
+          parsed.data.aiProvider
+        );
+        if (providerMismatch) return badRequest(providerMismatch);
       }
       if (parsed.data.knowledgeEnabled === true) {
         assertCanEnableKnowledge(tenant);

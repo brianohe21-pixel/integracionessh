@@ -150,6 +150,20 @@ resource "aws_iam_role_policy" "lambda_permissions" {
         ]
         Resource = "*"
       },
+      {
+        Effect = "Allow"
+        Action = [
+          "lambda:InvokeFunction",
+        ]
+        Resource = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${var.project}-${var.environment}-voicebot-session"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "sns:Publish",
+        ]
+        Resource = "*"
+      },
     ]
   })
 }
@@ -167,6 +181,10 @@ locals {
   flows_function_arn        = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.flows_function_name}"
   calendar_function_name    = "${var.project}-${var.environment}-calendar"
   calendar_function_arn     = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.calendar_function_name}"
+  reports_function_name     = "${var.project}-${var.environment}-reports"
+  reports_function_arn      = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.reports_function_name}"
+  voicebot_session_function_name = "${var.project}-${var.environment}-voicebot-session"
+  voicebot_session_function_arn  = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.voicebot_session_function_name}"
 
   functions = {
     webhook = {
@@ -206,6 +224,8 @@ locals {
         FRONTEND_URL              = var.frontend_url
         SES_FROM_EMAIL            = var.ses_from_email
         ADMIN_NOTIFICATION_EMAILS = join(",", var.admin_notification_emails)
+        SCHEDULER_ROLE_ARN        = var.scheduler_role_arn
+        REPORTS_FUNCTION_ARN      = local.reports_function_arn
       }
     }
     bots = {
@@ -222,11 +242,13 @@ locals {
       handler     = "conversations/index.handler"
       description = "API for reading conversation history"
       timeout     = 30
-      memory      = 256
+      memory      = 512
       environment = {
         TABLE_NAME             = var.dynamodb_table_name
         ENVIRONMENT            = var.environment
         WEBSOCKET_API_ENDPOINT = local.websocket_management_endpoint
+        MEDIA_BUCKET           = var.media_bucket_name
+        FRONTEND_URL           = var.frontend_url
       }
     }
     advisors = {
@@ -302,6 +324,17 @@ locals {
         ENVIRONMENT = var.environment
       }
     }
+    reports = {
+      handler     = "reports/index.handler"
+      description = "Scheduled metrics report delivery"
+      timeout     = 60
+      memory      = 256
+      environment = {
+        TABLE_NAME     = var.dynamodb_table_name
+        ENVIRONMENT    = var.environment
+        SES_FROM_EMAIL = var.ses_from_email
+      }
+    }
     support_tickets = {
       handler     = "support-tickets/index.handler"
       description = "Support ticket creation and listing"
@@ -368,6 +401,60 @@ locals {
         ENVIRONMENT = var.environment
       }
     }
+    telegram_connect = {
+      handler     = "telegram-connect/index.handler"
+      description = "Connects Telegram bot credentials and registers webhook"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME     = var.dynamodb_table_name
+        ENVIRONMENT    = var.environment
+        API_PUBLIC_URL = var.api_public_url
+      }
+    }
+    telegram_webhook = {
+      handler     = "telegram-webhook/index.handler"
+      description = "Receives Telegram bot webhook updates"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME    = var.dynamodb_table_name
+        ENVIRONMENT   = var.environment
+        SQS_QUEUE_URL = var.sqs_queue_url
+      }
+    }
+    messenger_connect = {
+      handler     = "messenger-connect/index.handler"
+      description = "Connects Facebook Messenger page credentials for a bot"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME      = var.dynamodb_table_name
+        ENVIRONMENT     = var.environment
+        META_APP_ID     = var.meta_app_id
+        META_APP_SECRET = var.meta_app_secret
+      }
+    }
+    sms_webhook = {
+      handler     = "sms-webhook/index.handler"
+      description = "Receives inbound SMS events from SNS"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME    = var.dynamodb_table_name
+        SQS_QUEUE_URL = var.sqs_queue_url
+      }
+    }
+    email_inbound = {
+      handler     = "email-inbound/index.handler"
+      description = "Receives inbound email events from SES via SNS"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME    = var.dynamodb_table_name
+        SQS_QUEUE_URL = var.sqs_queue_url
+      }
+    }
     webchat = {
       handler     = "webchat/index.handler"
       description = "Public web chat sessions and message polling"
@@ -381,6 +468,28 @@ locals {
         LIVEKIT_URL            = var.livekit_url
         LIVEKIT_API_KEY        = var.livekit_api_key
         LIVEKIT_API_SECRET     = var.livekit_api_secret
+      }
+    }
+    voicebot = {
+      handler     = "voicebot/index.handler"
+      description = "Public voicebot WebRTC sessions"
+      timeout     = 30
+      memory      = 512
+      environment = {
+        TABLE_NAME                      = var.dynamodb_table_name
+        ENVIRONMENT                     = var.environment
+        VOICEBOT_SESSION_FUNCTION_NAME  = local.voicebot_session_function_name
+      }
+    }
+    voicebot_session = {
+      handler     = "voicebot-session/index.handler"
+      description = "Voicebot OpenAI Realtime sideband session worker"
+      timeout     = 900
+      memory      = 512
+      environment = {
+        TABLE_NAME                = var.dynamodb_table_name
+        ENVIRONMENT               = var.environment
+        INTEGRATION_SQS_QUEUE_URL = var.integration_sqs_queue_url
       }
     }
     realtime = {
@@ -427,8 +536,10 @@ locals {
       timeout     = 60
       memory      = 256
       environment = {
-        TABLE_NAME  = var.dynamodb_table_name
-        ENVIRONMENT = var.environment
+        TABLE_NAME             = var.dynamodb_table_name
+        ENVIRONMENT            = var.environment
+        SCHEDULER_ROLE_ARN     = var.scheduler_role_arn
+        CAMPAIGNS_FUNCTION_ARN = local.campaigns_function_arn
       }
     }
     public_api = {
@@ -505,6 +616,16 @@ locals {
         KNOWLEDGE_SQS_QUEUE_URL = var.knowledge_sqs_queue_url
         MEDIA_BUCKET            = var.media_bucket_name
         ENVIRONMENT             = var.environment
+      }
+    }
+    macros = {
+      handler     = "macros/index.handler"
+      description = "CRUD API for advisor quick-reply macros per bot"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME  = var.dynamodb_table_name
+        ENVIRONMENT = var.environment
       }
     }
     process_knowledge = {

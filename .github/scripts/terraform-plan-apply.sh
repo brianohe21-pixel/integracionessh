@@ -45,6 +45,9 @@ build_plan_args() {
   if [ -n "${API_CUSTOM_DOMAIN:-}" ]; then
     PLAN_ARGS+=(-var="api_custom_domain=${API_CUSTOM_DOMAIN}")
   fi
+  if [ -n "${API_PUBLIC_URL:-}" ]; then
+    PLAN_ARGS+=(-var="api_public_url=${API_PUBLIC_URL}")
+  fi
   if [ -n "${WOMPI_PUBLIC_KEY:-}" ]; then
     PLAN_ARGS+=(-var="wompi_public_key=${WOMPI_PUBLIC_KEY}")
   fi
@@ -65,6 +68,12 @@ build_plan_args() {
   fi
   if [ -n "${EXTRA_LOGOUT_URLS:-}" ]; then
     PLAN_ARGS+=(-var="extra_logout_urls=${EXTRA_LOGOUT_URLS}")
+  fi
+  if [ -n "${GOOGLE_CLIENT_ID:-}" ]; then
+    PLAN_ARGS+=(-var="google_client_id=${GOOGLE_CLIENT_ID}")
+  fi
+  if [ -n "${GOOGLE_CLIENT_SECRET:-}" ]; then
+    PLAN_ARGS+=(-var="google_client_secret=${GOOGLE_CLIENT_SECRET}")
   fi
 }
 

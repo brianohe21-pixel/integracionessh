@@ -4,6 +4,11 @@ import { updateConversation } from "../dynamodb/conversation.repository.js";
 import { sendTemplateMessage } from "../whatsapp/client.js";
 import { buildOutboundContext, sendChannelText } from "../channels/router.js";
 import type { AutomationRule, Bot, Channel, Conversation } from "../../types/index.js";
+import {
+  getBotLocale,
+  resolveLocalizedText,
+  templateLanguageForLocale,
+} from "../i18n/index.js";
 
 export interface ExecuteAutomationContext {
   tenantId: string;
@@ -21,6 +26,7 @@ export async function executeAutomation(
   rule: AutomationRule,
   ctx: ExecuteAutomationContext
 ): Promise<void> {
+  const locale = getBotLocale(ctx.conversation, ctx.bot);
   const channel = ctx.channel ?? ctx.conversation.channel ?? "whatsapp";
   const outboundCtx = buildOutboundContext({
     tenantId: ctx.tenantId,
@@ -35,6 +41,8 @@ export async function executeAutomation(
   switch (rule.action) {
     case "send_text": {
       if (!rule.messageText) throw new Error("messageText required for send_text");
+      const text = resolveLocalizedText(rule.messageText, locale);
+      if (!text) throw new Error("messageText required for send_text");
       if (rule.trigger === "first_message" && ctx.conversation.welcomeSentAt) {
         break;
       }
@@ -45,7 +53,7 @@ export async function executeAutomation(
       }
       await sendChannelText(
         { ...outboundCtx, channel, participantId: ctx.customerPhone },
-        rule.messageText
+        text
       );
       break;
     }
@@ -61,7 +69,7 @@ export async function executeAutomation(
         phoneNumberId: ctx.phoneNumberId,
         to: ctx.customerPhone,
         templateName: rule.templateName,
-        language: rule.templateLanguage,
+        language: rule.templateLanguage || templateLanguageForLocale(locale),
         accessToken: ctx.accessToken,
         ...(rule.templateVariables
           ? {

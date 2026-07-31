@@ -3,12 +3,20 @@ import { getBot } from "../../lib/dynamodb/bot.repository.js";
 import {
   getCampaign,
   incrementCampaignProgress,
+  markRecipientSent,
   saveCampaignMessageTracking,
+  listPendingRecipients,
+  setCampaignNextBatchAt,
 } from "../../lib/dynamodb/campaign.repository.js";
 import { parseSendFailureError, saveBulkSendFailure } from "../../lib/dynamodb/bulk-job.repository.js";
 import { getContactByPhone } from "../../lib/dynamodb/contact.repository.js";
 import { sendTemplateMessage, getWhatsAppAccessToken } from "../../lib/whatsapp/client.js";
 import type { CampaignSQSBody } from "../../types/index.js";
+import { computeNextBatchAt } from "../../lib/campaign/batch.js";
+import {
+  createCampaignBatchSchedule,
+  deleteCampaignBatchSchedule,
+} from "../../lib/campaign/scheduler.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 
@@ -28,7 +36,49 @@ async function processRecord(record: SQSRecord): Promise<void> {
     return;
   }
 
-  const { campaignId, tenantId, botId, templateName, language, to, components } = body;
+  if (body.kind === "batch-complete") {
+    await processBatchComplete(body);
+    return;
+  }
+
+  await processRecipient(body);
+}
+
+async function processBatchComplete(body: CampaignSQSBody): Promise<void> {
+  const { campaignId, tenantId, batchVersion, batchIndex } = body;
+  if (batchVersion === undefined || batchIndex === undefined) return;
+
+  const campaign = await getCampaign(tenantId, campaignId);
+  if (!campaign) return;
+  if (campaign.status !== "running") return;
+  if ((campaign.batchVersion ?? 1) !== batchVersion) {
+    console.log(`Stale batch-complete for campaign ${campaignId}, skipping`);
+    return;
+  }
+  if (!campaign.batchConfig) return;
+
+  const pending = await listPendingRecipients(tenantId, campaignId, 1);
+  if (pending.length === 0) return;
+
+  const nextRunAt = computeNextBatchAt(campaign.batchConfig.delaySeconds);
+  await deleteCampaignBatchSchedule(campaignId);
+  await setCampaignNextBatchAt(tenantId, campaignId, nextRunAt.toISOString());
+  await createCampaignBatchSchedule(
+    campaignId,
+    tenantId,
+    nextRunAt,
+    batchVersion
+  );
+}
+
+async function processRecipient(body: CampaignSQSBody): Promise<void> {
+  const { campaignId, tenantId, botId, templateName, language, to, components, recipientKey, batchVersion } =
+    body;
+
+  if (!to) {
+    console.warn("Campaign recipient message missing phone number");
+    return;
+  }
 
   const campaign = await getCampaign(tenantId, campaignId);
   if (!campaign) {
@@ -44,6 +94,13 @@ async function processRecord(record: SQSRecord): Promise<void> {
   if (campaign.status === "completed" || campaign.status === "failed") {
     console.log(`Campaign ${campaignId} already finished, skipping`);
     return;
+  }
+
+  if (campaign.batchConfig && batchVersion !== undefined) {
+    if ((campaign.batchVersion ?? 1) !== batchVersion) {
+      console.log(`Stale batch version for campaign ${campaignId}, skipping recipient ${to}`);
+      return;
+    }
   }
 
   const normalizedTo = to.replace(/\D/g, "");
@@ -97,8 +154,14 @@ async function processRecord(record: SQSRecord): Promise<void> {
 
     const messageId = result.messages?.[0]?.id;
     if (messageId) {
-      await saveCampaignMessageTracking(messageId, campaignId, tenantId, to).catch((err) =>
-        console.warn(`Failed to save campaign message tracking for ${messageId}:`, err)
+      await saveCampaignMessageTracking(messageId, campaignId, tenantId, to, recipientKey).catch(
+        (err) => console.warn(`Failed to save campaign message tracking for ${messageId}:`, err)
+      );
+    }
+
+    if (recipientKey) {
+      await markRecipientSent(tenantId, recipientKey).catch((err) =>
+        console.warn(`Failed to mark recipient sent ${recipientKey}:`, err)
       );
     }
 
@@ -114,5 +177,4 @@ async function processRecord(record: SQSRecord): Promise<void> {
     });
     await incrementCampaignProgress(tenantId, campaignId, "failed");
   }
-
 }

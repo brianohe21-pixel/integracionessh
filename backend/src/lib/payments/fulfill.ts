@@ -13,6 +13,7 @@ import {
   cancelBookingForFailedPayment,
   finalizeBookingAfterPayment,
 } from "../calendar/calendar.service.js";
+import { markQuotationPaid } from "../quotations/quotations.service.js";
 import type { PaymentRequest } from "../../types/index.js";
 
 export async function fulfillTenantPayment(params: {
@@ -92,6 +93,10 @@ export async function fulfillTenantPayment(params: {
       bookingId: updated.bookingId,
       environment: params.environment,
     });
+  }
+
+  if (updated.source === "quotation" && updated.quotationId) {
+    await markQuotationPaid(params.tenantId, updated.quotationId);
   }
 
   return updated;

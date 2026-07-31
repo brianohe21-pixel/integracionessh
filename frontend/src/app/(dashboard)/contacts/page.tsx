@@ -26,6 +26,12 @@ function consentVariant(c: MarketingConsent): "success" | "warning" | "danger" |
   return "default";
 }
 
+function csatVariant(score: number): "success" | "warning" | "danger" {
+  if (score >= 4) return "success";
+  if (score >= 3) return "warning";
+  return "danger";
+}
+
 export default function ContactsPage() {
   const t = useT();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -232,6 +238,7 @@ export default function ContactsPage() {
               <tr className="bg-surface text-left text-xs text-secondary uppercase">
                 <th className="px-4 py-3">{t("common.phone")}</th>
                 <th className="px-4 py-3">{t("contacts.colName")}</th>
+                <th className="px-4 py-3">{t("contacts.colCsat")}</th>
                 <th className="px-4 py-3">{t("contacts.colEmail")}</th>
                 <th className="px-4 py-3">{t("contacts.colConsent")}</th>
                 <th className="px-4 py-3">{t("contacts.colTags")}</th>
@@ -243,6 +250,15 @@ export default function ContactsPage() {
                 <tr key={c.phoneNumber} className="hover:bg-surface/50">
                   <td className="px-4 py-3 font-mono text-primary">{c.phoneNumber}</td>
                   <td className="px-4 py-3">{c.displayName ?? "—"}</td>
+                  <td className="px-4 py-3">
+                    {c.csatAverage !== undefined && c.csatRatingCount !== undefined ? (
+                      <Badge variant={csatVariant(c.csatAverage)}>
+                        {c.csatAverage}/5 ({c.csatRatingCount})
+                      </Badge>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-secondary">{c.email ?? "—"}</td>
                   <td className="px-4 py-3">
                     <Badge variant={consentVariant(c.marketingConsent)}>

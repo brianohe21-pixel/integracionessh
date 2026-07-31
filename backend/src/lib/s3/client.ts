@@ -29,6 +29,40 @@ export function buildCatalogImageS3Key(
   return `tenants/${tenantId}/bots/${botId}/catalog/${productId}/${safeName}`;
 }
 
+export function buildQuotationPdfS3Key(
+  tenantId: string,
+  botId: string,
+  quotationId: string
+): string {
+  return `tenants/${tenantId}/bots/${botId}/quotations/${quotationId}.pdf`;
+}
+
+export async function putObjectBuffer(
+  s3Key: string,
+  buffer: Uint8Array,
+  mimeType: string
+): Promise<void> {
+  if (!BUCKET) throw new Error("MEDIA_BUCKET not configured");
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: BUCKET,
+      Key: s3Key,
+      Body: buffer,
+      ContentType: mimeType,
+    })
+  );
+}
+
+export async function getObjectBuffer(s3Key: string): Promise<Uint8Array> {
+  if (!BUCKET) throw new Error("MEDIA_BUCKET not configured");
+  const result = await s3.send(
+    new GetObjectCommand({ Bucket: BUCKET, Key: s3Key })
+  );
+  const body = await result.Body?.transformToByteArray();
+  if (!body) throw new Error("Empty S3 object");
+  return body;
+}
+
 export async function getPresignedUploadUrl(
   s3Key: string,
   mimeType: string,

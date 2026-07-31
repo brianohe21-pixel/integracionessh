@@ -56,6 +56,7 @@ const memberNavCategories: NavCategory[] = [
     items: [
       { href: "/bots", labelKey: "nav.bots", icon: BotMessageSquare },
       { href: "/conversations", labelKey: "nav.conversations", icon: MessageSquare },
+      { href: "/supervisor", labelKey: "nav.supervisor", icon: LayoutGrid },
       { href: "/contacts", labelKey: "nav.contacts", icon: BookUser },
       { href: "/leads", labelKey: "nav.leads", icon: UserPlus },
       { href: "/advisors", labelKey: "nav.advisors", icon: Users },

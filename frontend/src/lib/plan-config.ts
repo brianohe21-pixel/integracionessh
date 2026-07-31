@@ -1,18 +1,19 @@
 import type { TenantPlan } from "@/types";
+import {
+  getModelsForPlan,
+  type AiModelDefinition,
+} from "@/lib/ai-models";
 
-export type AllowedModel = "gpt-4o" | "gpt-4o-mini" | "gpt-4-turbo";
-
-const ALLOWED_MODELS: Record<TenantPlan, AllowedModel[]> = {
-  free: ["gpt-4o-mini"],
-  pro: ["gpt-4o-mini"],
-  enterprise: ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo"],
-};
+export type AllowedModel = string;
 
 export function getAllowedModelsForPlan(plan: TenantPlan | string | undefined): AllowedModel[] {
-  if (plan === "pro" || plan === "enterprise" || plan === "free") {
-    return ALLOWED_MODELS[plan];
-  }
-  return ALLOWED_MODELS.free;
+  return getModelsForPlan(plan).map((model) => model.id);
+}
+
+export function getAllowedModelDefinitionsForPlan(
+  plan: TenantPlan | string | undefined
+): AiModelDefinition[] {
+  return getModelsForPlan(plan);
 }
 
 export function formatCopPrice(amountCents: number): string {

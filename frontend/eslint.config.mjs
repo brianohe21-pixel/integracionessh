@@ -17,6 +17,7 @@ const eslintConfig = [
       "build/**",
       "next-env.d.ts",
       "public/widget-call.bundle.js",
+      "public/widget-voice.bundle.js",
       "public/widget.js",
       "scripts/**",
     ],

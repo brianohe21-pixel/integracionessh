@@ -55,6 +55,12 @@ variable "api_custom_domain" {
   default = ""
 }
 
+variable "api_public_url" {
+  type        = string
+  default     = ""
+  description = "Public API base URL for channel webhooks (Telegram). When empty, Terraform uses api_custom_domain or the existing API Gateway execute-api URL."
+}
+
 variable "extra_callback_urls" {
   type        = list(string)
   default     = []
@@ -178,6 +184,17 @@ variable "livekit_api_key" {
 }
 
 variable "livekit_api_secret" {
+  type      = string
+  default   = ""
+  sensitive = true
+}
+
+variable "google_client_id" {
+  type    = string
+  default = ""
+}
+
+variable "google_client_secret" {
   type      = string
   default   = ""
   sensitive = true

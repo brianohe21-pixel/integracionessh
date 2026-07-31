@@ -8,9 +8,14 @@ import {
   Globe,
   Camera,
   MessageCircle,
+  MessageSquarePlus,
   Phone,
   Settings,
   Workflow,
+  Send,
+  Mail,
+  MessagesSquare,
+  Mic,
 } from "lucide-react";
 import Link from "next/link";
 import { useBot } from "@/hooks/useBots";
@@ -19,8 +24,14 @@ import { BotKnowledge } from "@/components/bots/BotKnowledge";
 import { BotWhatsAppQuality } from "@/components/bots/BotWhatsAppQuality";
 import { BotCallingSettings } from "@/components/bots/BotCallingSettings";
 import { BotInstagramConnect } from "@/components/bots/BotInstagramConnect";
+import { BotTelegramConnect } from "@/components/bots/BotTelegramConnect";
+import { BotMessengerConnect } from "@/components/bots/BotMessengerConnect";
+import { BotSmsSettings } from "@/components/bots/BotSmsSettings";
+import { BotEmailSettings } from "@/components/bots/BotEmailSettings";
 import { BotWebchatSettings } from "@/components/bots/BotWebchatSettings";
+import { BotVoicebotSettings } from "@/components/bots/BotVoicebotSettings";
 import { BotMetaFlowsPanel } from "@/components/bots/BotMetaFlowsPanel";
+import { BotMacrosPanel } from "@/components/bots/BotMacrosPanel";
 import { useT } from "@/i18n/context";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -30,7 +41,13 @@ const TAB_IDS = [
   "whatsapp",
   "instagram",
   "webchat",
+  "telegram",
+  "messenger",
+  "sms",
+  "email",
+  "voicebot",
   "knowledge",
+  "macros",
   "metaFlows",
 ] as const;
 
@@ -57,7 +74,13 @@ export default function EditBotPage() {
         { id: "whatsapp" as const, label: t("bots.tabWhatsapp"), icon: <Phone className="w-4 h-4" /> },
         { id: "instagram" as const, label: t("bots.tabInstagram"), icon: <Camera className="w-4 h-4" /> },
         { id: "webchat" as const, label: t("bots.tabWebchat"), icon: <Globe className="w-4 h-4" /> },
+        { id: "telegram" as const, label: t("bots.tabTelegram"), icon: <Send className="w-4 h-4" /> },
+        { id: "messenger" as const, label: t("bots.tabMessenger"), icon: <MessagesSquare className="w-4 h-4" /> },
+        { id: "sms" as const, label: t("bots.tabSms"), icon: <Phone className="w-4 h-4" /> },
+        { id: "email" as const, label: t("bots.tabEmail"), icon: <Mail className="w-4 h-4" /> },
+        { id: "voicebot" as const, label: t("bots.tabVoicebot"), icon: <Mic className="w-4 h-4" /> },
         { id: "knowledge" as const, label: t("bots.tabKnowledge"), icon: <BookOpen className="w-4 h-4" /> },
+        { id: "macros" as const, label: t("bots.tabMacros"), icon: <MessageSquarePlus className="w-4 h-4" /> },
         { id: "metaFlows" as const, label: t("bots.tabMetaFlows"), icon: <Workflow className="w-4 h-4" /> },
       ] satisfies { id: BotEditTab; label: string; icon: ReactNode }[],
     [t]
@@ -141,7 +164,19 @@ export default function EditBotPage() {
 
       {bot && activeTab === "webchat" && <BotWebchatSettings bot={bot} />}
 
+      {bot && activeTab === "telegram" && <BotTelegramConnect bot={bot} />}
+
+      {bot && activeTab === "messenger" && <BotMessengerConnect bot={bot} />}
+
+      {bot && activeTab === "sms" && <BotSmsSettings bot={bot} />}
+
+      {bot && activeTab === "email" && <BotEmailSettings bot={bot} />}
+
+      {bot && activeTab === "voicebot" && <BotVoicebotSettings bot={bot} />}
+
       {bot && activeTab === "knowledge" && <BotKnowledge bot={bot} />}
+
+      {bot && activeTab === "macros" && <BotMacrosPanel bot={bot} />}
 
       {bot && activeTab === "metaFlows" && <BotMetaFlowsPanel botId={bot.botId} />}
     </DashboardPage>

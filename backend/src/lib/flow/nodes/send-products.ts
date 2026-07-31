@@ -7,12 +7,14 @@ import {
   sendMultiProductMessage,
   sendSingleProductMessage,
 } from "../../catalog/commerce-messages.js";
+import { getBotLocale, getSystemMessage, resolveLocalizedText } from "../../i18n/index.js";
 
 export async function executeSendProductsNode(
   node: FlowNode,
   ctx: FlowExecutionContext,
   _run: FlowRun
 ): Promise<NodeExecutionResult> {
+  const locale = getBotLocale(ctx.conversation, ctx.bot);
   const config = await requireEnabledCatalog(ctx.tenantId, ctx.botId);
   if (!config.metaCatalogId) {
     return { nextNodeId: null, halt: true, wait: false, output: "catalog_not_linked" };
@@ -34,7 +36,8 @@ export async function executeSendProductsNode(
   }
 
   const bodyText =
-    node.data.messageText?.trim() || "Estos son nuestros productos disponibles:";
+    resolveLocalizedText(node.data.messageText, locale) ||
+    getSystemMessage("catalogDefault", locale);
 
   if (retailerIds.length === 1) {
     await sendSingleProductMessage({
@@ -50,10 +53,14 @@ export async function executeSendProductsNode(
       phoneNumberId: ctx.phoneNumberId,
       to: ctx.customerPhone,
       accessToken: ctx.accessToken,
-      headerText: node.data.multiProductHeader?.trim() || "Productos",
-      bodyText: node.data.multiProductBody?.trim() || bodyText,
+      headerText:
+        resolveLocalizedText(node.data.multiProductHeader, locale) ||
+        getSystemMessage("productsHeader", locale),
+      bodyText:
+        resolveLocalizedText(node.data.multiProductBody, locale) || bodyText,
       catalogId: config.metaCatalogId,
-      sectionTitle: node.data.label?.trim() || "Catálogo",
+      sectionTitle:
+        node.data.label?.trim() || getSystemMessage("catalogSection", locale),
       productRetailerIds: retailerIds.slice(0, 30),
     });
   }

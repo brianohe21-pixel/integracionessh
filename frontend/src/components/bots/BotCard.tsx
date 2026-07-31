@@ -5,6 +5,7 @@ import { BotMessageSquare, Phone, Trash2, Edit, Power, PowerOff, Webhook } from 
 import { Badge } from "@/components/ui/Badge";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useT } from "@/i18n/context";
+import { getModelLabel } from "@/lib/ai-models";
 import type { Bot } from "@/types";
 import { useDeleteBot, useUpdateBot } from "@/hooks/useBots";
 
@@ -43,7 +44,7 @@ export function BotCard({ bot }: BotCardProps) {
                 {t("bots.webhookOwn")}
               </p>
             ) : (
-              <p className="text-xs text-muted">{bot.model}</p>
+              <p className="text-xs text-muted">{getModelLabel(bot.model ?? "")}</p>
             )}
           </div>
         </div>

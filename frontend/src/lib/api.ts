@@ -52,11 +52,28 @@ export const api = {
     request<T>(path, { method: "POST", body: JSON.stringify(body) }),
 
   put: <T>(path: string, body: unknown) =>
-    request<T>(path, { method: "PUT", body: JSON.stringify(body) }),
+    request<T>(path, { method: "PUT", body: JSON.stringify(body ?? {}) }),
 
   patch: <T>(path: string, body: unknown) =>
     request<T>(path, { method: "PATCH", body: JSON.stringify(body) }),
 
   delete: <T = void>(path: string) =>
     request<T>(path, { method: "DELETE" }),
+
+  async download(path: string, filename: string): Promise<void> {
+    assertApiBaseUrl();
+    const authHeader = await getAuthHeader();
+    const response = await fetch(`${BASE_URL}${path}`, { headers: authHeader });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: "Unknown error" }));
+      throw new Error((error as { error: string }).error ?? `HTTP ${response.status}`);
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  },
 };

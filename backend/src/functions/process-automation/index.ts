@@ -7,6 +7,7 @@ import { assertCanSendMessages } from "../../lib/billing/assert-plan.js";
 import { incrementMessages } from "../../lib/dynamodb/usage.repository.js";
 import { checkMarketingRecipients } from "../../lib/compliance/recipient-policy.js";
 import { sendTextMessage, sendTemplateMessage, getWhatsAppAccessToken } from "../../lib/whatsapp/client.js";
+import { getBotLocale, resolveLocalizedText, templateLanguageForLocale } from "../../lib/i18n/index.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 
@@ -57,13 +58,17 @@ async function processRecord(record: SQSRecord): Promise<void> {
   const { allowed } = await checkMarketingRecipients(tenantId, phones);
   const recipients = allowed.length > 0 ? allowed : phones;
 
+  const locale = getBotLocale({}, bot);
+
   for (const to of recipients) {
     try {
       if (rule.action === "send_text" && rule.messageText) {
+        const text = resolveLocalizedText(rule.messageText, locale);
+        if (!text) continue;
         await sendTextMessage({
           phoneNumberId: bot.phoneNumberId,
           to,
-          text: rule.messageText,
+          text,
           accessToken,
         });
       } else if (rule.action === "send_template" && rule.templateName && rule.templateLanguage) {
@@ -71,7 +76,7 @@ async function processRecord(record: SQSRecord): Promise<void> {
           phoneNumberId: bot.phoneNumberId,
           to,
           templateName: rule.templateName,
-          language: rule.templateLanguage,
+          language: rule.templateLanguage || templateLanguageForLocale(locale),
           accessToken,
           ...(rule.templateVariables
             ? {

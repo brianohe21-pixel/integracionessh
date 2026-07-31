@@ -19,6 +19,7 @@ export interface CreateCampaignInput {
   language: string;
   segments?: string[];
   scheduledAt?: string;
+  batchConfig?: { size: number; delaySeconds: number };
   recipients?: CampaignRecipient[];
   audienceTags?: string[];
   requireOptIn?: boolean;
@@ -28,6 +29,7 @@ export interface UpdateCampaignInput {
   name?: string;
   segments?: string[];
   scheduledAt?: string | null;
+  batchConfig?: { size: number; delaySeconds: number } | null;
 }
 
 export function useCampaignList() {

@@ -3,6 +3,7 @@ import type { BotIndustryTemplate, BotTemplateLocale } from "./types";
 import {
   bookAppointmentNode,
   branchX,
+  bilingual,
   buttonsNode,
   edge,
   endNode,
@@ -45,34 +46,35 @@ const copy = {
 } as const;
 
 function buildFlow(locale: BotTemplateLocale) {
-  const t = copy[locale];
+  const es = copy.es;
+  const en = copy.en;
   const btnAppointment = "btn-appointment";
   const btnHours = "btn-hours";
   const btnUrgent = "btn-urgent";
 
   const nodes = [
     triggerNode("trigger-1", "first_message", "Start", rowY(0)),
-    messageNode("message-welcome", t.welcome, "Welcome", 400, rowY(1)),
+    messageNode("message-welcome", bilingual(es.welcome, en.welcome), "Welcome", 400, rowY(1)),
     buttonsNode(
       "buttons-menu",
-      t.menuPrompt,
+      bilingual(es.menuPrompt, en.menuPrompt),
       [
-        { id: btnAppointment, title: t.btnAppointment },
-        { id: btnHours, title: t.btnHours },
-        { id: btnUrgent, title: t.btnUrgent },
+        { id: btnAppointment, title: bilingual(es.btnAppointment, en.btnAppointment) },
+        { id: btnHours, title: bilingual(es.btnHours, en.btnHours) },
+        { id: btnUrgent, title: bilingual(es.btnUrgent, en.btnUrgent) },
       ],
       "Menu",
       rowY(2)
     ),
     bookAppointmentNode(
       "book-appointment",
-      t.appointmentConfirm,
+      bilingual(es.appointmentConfirm, en.appointmentConfirm),
       "Appointment",
       branchX(0, 3),
       rowY(3)
     ),
     endNode("end-appointment", "End", branchX(0, 3), rowY(4)),
-    messageNode("message-hours", t.hoursMessage, "Hours", branchX(1, 3), rowY(3)),
+    messageNode("message-hours", bilingual(es.hoursMessage, en.hoursMessage), "Hours", branchX(1, 3), rowY(3)),
     endNode("end-hours", "End", branchX(1, 3), rowY(4)),
     handoffNode("handoff-urgent", "Handoff", branchX(2, 3), rowY(3)),
     endNode("end-urgent", "End", branchX(2, 3), rowY(4)),
@@ -90,11 +92,11 @@ function buildFlow(locale: BotTemplateLocale) {
   ];
 
   return {
-    name: t.flowName,
+    name: copy[locale].flowName,
     nodes,
     edges,
     entryNodeId: "trigger-1",
-    welcomeMessage: t.welcome,
+    welcomeMessage: copy[locale].welcome,
   };
 }
 

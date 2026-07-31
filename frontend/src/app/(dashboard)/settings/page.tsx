@@ -10,6 +10,8 @@ import { useT } from "@/i18n/context";
 import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
 import { ThemeSwitcher } from "@/components/theme/ThemeSwitcher";
 import { OpenAIKeyCard } from "@/components/settings/OpenAIKeyCard";
+import { InboxSlaCard } from "@/components/settings/InboxSlaCard";
+import { ScheduledReportsCard } from "@/components/settings/ScheduledReportsCard";
 import { BrandingSettingsCard } from "@/components/branding/BrandingSettingsCard";
 import {
   Building2,
@@ -111,6 +113,10 @@ export default function SettingsPage() {
 
             <PlanUsageCard />
 
+            <InboxSlaCard />
+
+            <ScheduledReportsCard />
+
             <div className="bg-surface-elevated rounded-xl border border-default p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Building2 className="w-4 h-4 text-secondary" />
@@ -197,6 +203,19 @@ export default function SettingsPage() {
                 <li>{t("settings.step2")}</li>
                 <li>{t("settings.step3")}</li>
               </ol>
+            </div>
+
+            <div className="mt-6 border-t border-default pt-4 space-y-3">
+              <h3 className="text-sm font-semibold text-primary">{t("settings.channelWebhooksTitle")}</h3>
+              <p className="text-xs text-secondary">{t("settings.telegramWebhookPattern")}</p>
+              <code className="block px-3 py-2 bg-surface border border-default rounded-lg text-xs font-mono text-secondary">
+                {apiUrl}/sms/webhook
+              </code>
+              <p className="text-xs text-secondary">{t("settings.smsWebhookUrl")}</p>
+              <code className="block px-3 py-2 bg-surface border border-default rounded-lg text-xs font-mono text-secondary">
+                {apiUrl}/email/inbound
+              </code>
+              <p className="text-xs text-secondary">{t("settings.emailWebhookUrl")}</p>
             </div>
           </div>
         )}
