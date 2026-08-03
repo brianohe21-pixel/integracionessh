@@ -240,7 +240,7 @@ locals {
     tenants = {
       handler     = "tenants/index.handler"
       description = "CRUD API for tenants management"
-      timeout     = 30
+      timeout     = 60
       memory      = 256
       environment = {
         TABLE_NAME                = var.dynamodb_table_name
@@ -252,6 +252,7 @@ locals {
         REPORTS_FUNCTION_ARN      = local.reports_function_arn
         COGNITO_USER_POOL_ID      = var.cognito_user_pool_id
         COGNITO_CLIENT_ID         = var.cognito_client_id
+        MEDIA_BUCKET              = var.media_bucket_name
       }
     }
     reseller = {
