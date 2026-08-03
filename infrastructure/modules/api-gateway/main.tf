@@ -7,6 +7,7 @@ resource "aws_apigatewayv2_api" "main" {
       "Content-Type",
       "Authorization",
       "X-Tenant-Context",
+      "X-Portal-Host",
       "X-Api-Key",
       "X-Widget-Key",
     ]
@@ -758,6 +759,12 @@ locals {
       invoke_arn   = var.tenants_invoke_arn
       function_arn = var.tenants_function_arn
       protected    = false
+    }
+    auth_portal_access = {
+      route_key    = "GET /auth/portal-access"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
     }
     billing_checkout = {
       route_key    = "POST /billing/checkout"

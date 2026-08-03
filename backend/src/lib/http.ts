@@ -5,7 +5,7 @@ const CORS_HEADERS = {
   "Content-Type": "application/json",
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "Content-Type, Authorization, X-Tenant-Context, X-Api-Key, X-Widget-Key",
+    "Content-Type, Authorization, X-Tenant-Context, X-Portal-Host, X-Api-Key, X-Widget-Key",
   "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
 };
 

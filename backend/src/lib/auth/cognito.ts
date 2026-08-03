@@ -1,6 +1,7 @@
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 import type { AuthContext, Tenant } from "../../types/index.js";
 import { getTenant } from "../dynamodb/tenant.repository.js";
+import { assertPortalHostAccess } from "./host-portal.js";
 
 function readJwtClaims(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
@@ -97,6 +98,15 @@ export async function applyTenantContext(
 }
 
 export async function resolveRequestAuth(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer
+): Promise<AuthContext> {
+  const auth = extractAuthContext(event);
+  const withContext = await applyTenantContext(event, auth);
+  await assertPortalHostAccess(event, withContext);
+  return withContext;
+}
+
+export async function resolveRequestAuthWithoutPortalCheck(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): Promise<AuthContext> {
   const auth = extractAuthContext(event);

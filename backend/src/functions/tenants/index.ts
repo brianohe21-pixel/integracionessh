@@ -17,8 +17,10 @@ import {
 } from "../../lib/billing/activate-plan.js";
 import {
   resolveRequestAuth,
+  resolveRequestAuthWithoutPortalCheck,
   assertMemberRole,
 } from "../../lib/auth/cognito.js";
+import { isAuthAllowedOnPortal, getActivePortalTenantId } from "../../lib/auth/host-portal.js";
 import type {
   AuthContext,
   ResellerConfig,
@@ -52,6 +54,7 @@ import {
   created,
   noContent,
   badRequest,
+  forbidden,
   notFound,
   handleError,
   parseJsonBody,
@@ -377,7 +380,11 @@ export async function handler(
         return ok({ found: false });
       }
       const tenant = await getTenant(tenantId);
-      if (!tenant || tenant.status === "suspended") {
+      if (
+        !tenant ||
+        tenant.status === "suspended" ||
+        tenant.resellerConfig?.customDomainStatus !== "active"
+      ) {
         return ok({ found: false });
       }
       const branding = await getResolvedTenantBranding(tenant);
@@ -388,6 +395,23 @@ export async function handler(
         primaryColor: branding.primaryColor,
         ...(branding.logoUrl ? { logoUrl: branding.logoUrl } : {}),
       });
+    }
+
+    if (method === "GET" && rawPath.endsWith("/auth/portal-access")) {
+      const host = normalizeDomain(event.queryStringParameters?.host ?? "");
+      if (!host) return badRequest("host query parameter is required");
+
+      const portalTenantId = await getActivePortalTenantId(host);
+      if (!portalTenantId) {
+        return ok({ allowed: true, restricted: false });
+      }
+
+      const auth = await resolveRequestAuthWithoutPortalCheck(event);
+      const allowed = await isAuthAllowedOnPortal(auth, portalTenantId);
+      if (!allowed) {
+        return forbidden("This account cannot access this portal");
+      }
+      return ok({ allowed: true, restricted: true, portalTenantId });
     }
 
     const auth = await resolveRequestAuth(event);
