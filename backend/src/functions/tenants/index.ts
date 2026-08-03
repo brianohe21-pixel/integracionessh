@@ -41,6 +41,7 @@ import {
   buildLogoS3Key,
   extensionForContentType,
   isValidPrimaryColor,
+  normalizeLogoContentType,
 } from "../../lib/branding/resolve.js";
 import {
   deleteObject,
@@ -96,13 +97,7 @@ const UpdateBrandingSchema = z.object({
 });
 
 const LogoUploadSchema = z.object({
-  contentType: z.enum([
-    "image/png",
-    "image/jpeg",
-    "image/jpg",
-    "image/webp",
-    "image/svg+xml",
-  ]),
+  contentType: z.string().min(1),
   data: z.string().min(1).max(2_500_000),
 });
 
@@ -319,14 +314,19 @@ async function handleBrandingRoutes(
     if (bytes.byteLength === 0) return badRequest("Empty logo file");
     if (bytes.byteLength > 1_500_000) return badRequest("Logo must be 1.5MB or smaller");
 
-    const ext = extensionForContentType(parsed.data.contentType);
+    const contentType = normalizeLogoContentType(parsed.data.contentType);
+    if (!contentType) {
+      return badRequest("Unsupported logo format. Use PNG, JPEG, WebP, or SVG.");
+    }
+
+    const ext = extensionForContentType(contentType);
     const logoS3Key = buildLogoS3Key(auth.tenantId, ext);
 
     if (tenant.branding?.logoS3Key && tenant.branding.logoS3Key !== logoS3Key) {
       await deleteObject(tenant.branding.logoS3Key);
     }
 
-    await putObjectBuffer(logoS3Key, bytes, parsed.data.contentType);
+    await putObjectBuffer(logoS3Key, bytes, contentType);
 
     const updated = await updateTenant(auth.tenantId, {
       branding: { ...(tenant.branding ?? {}), logoS3Key },

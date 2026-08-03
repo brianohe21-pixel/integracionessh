@@ -1,6 +1,6 @@
 import type { ResolvedTenantBranding, Tenant } from "../../types/index.js";
 
-export const DEFAULT_PRIMARY_COLOR = "#4f46e5";
+export const DEFAULT_PRIMARY_COLOR = "#128C7E";
 
 const HEX_COLOR = /^#[0-9A-Fa-f]{6}$/;
 
@@ -18,6 +18,25 @@ export function normalizePrimaryColor(color: string | undefined): string {
 export function buildLogoS3Key(tenantId: string, extension: string): string {
   const safeExt = extension.replace(/[^a-z0-9]/gi, "").toLowerCase() || "png";
   return `branding/${tenantId}/logo.${safeExt}`;
+}
+
+export function normalizeLogoContentType(contentType: string): string | null {
+  const normalized = contentType.trim().toLowerCase().split(";")[0]?.trim() ?? "";
+  switch (normalized) {
+    case "image/png":
+    case "image/x-png":
+      return "image/png";
+    case "image/jpeg":
+    case "image/jpg":
+    case "image/pjpeg":
+      return "image/jpeg";
+    case "image/webp":
+      return "image/webp";
+    case "image/svg+xml":
+      return "image/svg+xml";
+    default:
+      return null;
+  }
 }
 
 export function extensionForContentType(contentType: string): string {
