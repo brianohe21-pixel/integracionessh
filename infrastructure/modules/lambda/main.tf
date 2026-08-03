@@ -117,6 +117,18 @@ resource "aws_iam_role_policy" "lambda_permissions" {
       {
         Effect = "Allow"
         Action = [
+          "amplify:ListApps",
+          "amplify:GetApp",
+          "amplify:CreateDomainAssociation",
+          "amplify:GetDomainAssociation",
+          "amplify:UpdateDomainAssociation",
+          "amplify:DeleteDomainAssociation",
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
           "secretsmanager:CreateSecret",
           "secretsmanager:PutSecretValue",
           "secretsmanager:UpdateSecret",
@@ -235,7 +247,7 @@ locals {
     reseller = {
       handler     = "reseller/index.handler"
       description = "Reseller subaccounts and white-label domain APIs"
-      timeout     = 30
+      timeout     = 60
       memory      = 256
       environment = {
         TABLE_NAME           = var.dynamodb_table_name
@@ -243,6 +255,9 @@ locals {
         FRONTEND_URL         = var.frontend_url
         SES_FROM_EMAIL       = var.ses_from_email
         COGNITO_USER_POOL_ID = var.cognito_user_pool_id
+        COGNITO_CLIENT_ID    = var.cognito_client_id
+        AMPLIFY_APP_NAME     = "${var.project}-${var.environment}"
+        AMPLIFY_BRANCH_NAME  = var.amplify_branch_name
       }
     }
     bots = {
@@ -365,12 +380,14 @@ locals {
     admin = {
       handler     = "admin/index.handler"
       description = "Platform admin APIs for Cognito users and payments"
-      timeout     = 30
+      timeout     = 60
       memory      = 256
       environment = {
         TABLE_NAME           = var.dynamodb_table_name
         COGNITO_USER_POOL_ID = var.cognito_user_pool_id
         COGNITO_CLIENT_ID    = var.cognito_client_id
+        AMPLIFY_APP_NAME     = "${var.project}-${var.environment}"
+        AMPLIFY_BRANCH_NAME  = var.amplify_branch_name
       }
     }
     billing = {

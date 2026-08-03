@@ -199,6 +199,12 @@ variable "frontend_url" {
   description = "Frontend base URL for billing redirect URLs"
 }
 
+variable "amplify_branch_name" {
+  type        = string
+  default     = "main"
+  description = "Amplify branch used for reseller custom domain associations"
+}
+
 variable "api_public_url" {
   type        = string
   default     = ""

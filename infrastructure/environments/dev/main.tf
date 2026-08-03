@@ -203,6 +203,7 @@ module "lambda" {
   stripe_price_pro              = var.stripe_price_pro
   stripe_price_enterprise       = var.stripe_price_enterprise
   frontend_url                  = var.frontend_url
+  amplify_branch_name           = "develop"
   wompi_public_key              = var.wompi_public_key
   wompi_private_key             = var.wompi_private_key
   wompi_integrity_secret        = var.wompi_integrity_secret

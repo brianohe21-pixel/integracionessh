@@ -10,6 +10,10 @@ import {
 import { getTenant, updateTenant, normalizeDomain } from "../../lib/dynamodb/tenant.repository.js";
 import { buildResellerConfigFromDefaults } from "../../lib/billing/activate-plan.js";
 import { addCustomDomainToCognitoClient } from "../../lib/cognito/custom-domain-callbacks.js";
+import {
+  ensureResellerDomainInAmplify,
+  getResellerDomainDnsInfo,
+} from "../../lib/amplify/custom-domain.js";
 import { ok, badRequest, notFound, handleError, parseJsonBody } from "../../lib/http.js";
 import type { ResellerConfig, ResellerPlanDefaults } from "../../types/index.js";
 
@@ -124,13 +128,34 @@ export async function handler(
       const domain = tenant.resellerConfig?.customDomain;
       if (!domain) return badRequest("Reseller has no custom domain configured");
 
+      const normalized = normalizeDomain(domain);
       const resellerConfig: ResellerConfig = {
         ...(await buildResellerConfigFromDefaults(tenant.resellerConfig)),
-        customDomain: normalizeDomain(domain),
+        customDomain: normalized,
         customDomainStatus: parsed.data.status,
       };
 
       if (parsed.data.status === "active") {
+        let dns = await getResellerDomainDnsInfo(normalized);
+        if (!dns) {
+          try {
+            dns = await ensureResellerDomainInAmplify(normalized);
+          } catch (error) {
+            console.error("Failed to provision Amplify domain on activate", error);
+            resellerConfig.customDomainStatus = "error";
+            await updateTenant(tenant.tenantId, { resellerConfig });
+            return badRequest("Failed to provision domain in Amplify");
+          }
+        }
+
+        if (!dns.ready) {
+          resellerConfig.customDomainStatus = "pending_dns";
+          await updateTenant(tenant.tenantId, { resellerConfig });
+          return badRequest(
+            `Amplify domain is not ready yet (status=${dns.domainStatus}, verified=${dns.subdomainVerified}). Add the DNS records and retry.`
+          );
+        }
+
         try {
           await addCustomDomainToCognitoClient(resellerConfig.customDomain!);
         } catch (error) {

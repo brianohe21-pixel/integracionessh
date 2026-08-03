@@ -18,6 +18,13 @@ import { inviteMemberUser } from "../../lib/cognito/invite-member.js";
 import { sendSubaccountInviteEmail } from "../../lib/email/subaccount-invite.js";
 import { PlanLimitError } from "../../lib/billing/plan-limits.js";
 import {
+  ensureResellerDomainInAmplify,
+  getResellerDomainDnsInfo,
+  removeResellerDomainFromAmplify,
+  type ResellerDomainDnsInfo,
+} from "../../lib/amplify/custom-domain.js";
+import { addCustomDomainToCognitoClient } from "../../lib/cognito/custom-domain-callbacks.js";
+import {
   ok,
   created,
   badRequest,
@@ -25,7 +32,7 @@ import {
   handleError,
   parseJsonBody,
 } from "../../lib/http.js";
-import type { ResellerConfig, Tenant } from "../../types/index.js";
+import type { CustomDomainStatus, ResellerConfig, Tenant } from "../../types/index.js";
 
 const CreateSubaccountSchema = z.object({
   name: z.string().min(1).max(128),
@@ -56,7 +63,7 @@ function homeTenantId(auth: { tenantId: string; homeTenantId?: string }): string
   return auth.homeTenantId ?? auth.tenantId;
 }
 
-function cnameTarget(): string {
+function fallbackCnameTarget(): string {
   return (process.env.FRONTEND_URL ?? "")
     .replace(/^https?:\/\//, "")
     .replace(/\/$/, "");
@@ -71,6 +78,55 @@ function defaultResellerConfig(existing?: ResellerConfig): ResellerConfig {
     customDomainStatus: existing?.customDomainStatus ?? "none",
     ...(existing?.limitsOverride ? { limitsOverride: existing.limitsOverride } : {}),
   };
+}
+
+function domainResponse(
+  customDomain: string | null,
+  customDomainStatus: string,
+  dns?: ResellerDomainDnsInfo | null
+) {
+  return {
+    customDomain,
+    customDomainStatus,
+    cnameTarget: dns?.cnameTarget || fallbackCnameTarget(),
+    amplifyStatus: dns?.domainStatus ?? null,
+    subdomainVerified: dns?.subdomainVerified ?? false,
+    dnsRecords: dns?.dnsRecords ?? [],
+  };
+}
+
+async function maybeAutoActivateDomain(
+  tenantId: string,
+  reseller: Tenant,
+  domain: string,
+  dns: ResellerDomainDnsInfo
+): Promise<{ status: CustomDomainStatus; dns: ResellerDomainDnsInfo }> {
+  if (!dns.ready || reseller.resellerConfig?.customDomainStatus === "active") {
+    return {
+      status: reseller.resellerConfig?.customDomainStatus ?? "pending_dns",
+      dns,
+    };
+  }
+
+  try {
+    await addCustomDomainToCognitoClient(domain);
+    const resellerConfig: ResellerConfig = {
+      ...defaultResellerConfig(reseller.resellerConfig),
+      customDomain: domain,
+      customDomainStatus: "active",
+    };
+    await updateTenant(tenantId, { resellerConfig });
+    return { status: "active", dns };
+  } catch (error) {
+    console.error("Auto-activate custom domain failed", error);
+    const resellerConfig: ResellerConfig = {
+      ...defaultResellerConfig(reseller.resellerConfig),
+      customDomain: domain,
+      customDomainStatus: "error",
+    };
+    await updateTenant(tenantId, { resellerConfig });
+    return { status: "error", dns };
+  }
 }
 
 export async function handler(
@@ -200,11 +256,29 @@ export async function handler(
     }
 
     if (method === "GET" && path.endsWith("/reseller/domain")) {
-      return ok({
-        customDomain: reseller.resellerConfig?.customDomain ?? null,
-        customDomainStatus: reseller.resellerConfig?.customDomainStatus ?? "none",
-        cnameTarget: cnameTarget(),
-      });
+      const domain = reseller.resellerConfig?.customDomain ?? null;
+      if (!domain) {
+        return ok(domainResponse(null, "none"));
+      }
+
+      let dns: ResellerDomainDnsInfo | null = null;
+      try {
+        dns = await getResellerDomainDnsInfo(domain);
+        if (!dns) {
+          dns = await ensureResellerDomainInAmplify(domain);
+        }
+      } catch (error) {
+        console.error("Failed to read/provision Amplify domain association", error);
+      }
+
+      let status = reseller.resellerConfig?.customDomainStatus ?? "pending_dns";
+      if (dns) {
+        const activated = await maybeAutoActivateDomain(parentId, reseller, domain, dns);
+        status = activated.status;
+        dns = activated.dns;
+      }
+
+      return ok(domainResponse(domain, status, dns));
     }
 
     if (method === "PUT" && path.endsWith("/reseller/domain")) {
@@ -220,18 +294,50 @@ export async function handler(
         return badRequest("Domain is already registered to another tenant");
       }
 
+      const previousDomain = reseller.resellerConfig?.customDomain
+        ? normalizeDomain(reseller.resellerConfig.customDomain)
+        : null;
+      if (previousDomain && previousDomain !== domain) {
+        try {
+          await removeResellerDomainFromAmplify(previousDomain);
+        } catch (error) {
+          console.error("Failed to remove previous Amplify domain", error);
+        }
+      }
+
+      let dns: ResellerDomainDnsInfo;
+      try {
+        dns = await ensureResellerDomainInAmplify(domain);
+      } catch (error) {
+        console.error("Failed to create Amplify domain association", error);
+        const message =
+          error instanceof Error ? error.message : "Failed to provision domain in Amplify";
+        return badRequest(message);
+      }
+
       const resellerConfig: ResellerConfig = {
         ...defaultResellerConfig(reseller.resellerConfig),
         customDomain: domain,
-        customDomainStatus: "pending_dns",
+        customDomainStatus: dns.ready ? "active" : "pending_dns",
       };
 
+      if (dns.ready) {
+        try {
+          await addCustomDomainToCognitoClient(domain);
+        } catch (error) {
+          console.error("Failed to update Cognito callbacks on register", error);
+          resellerConfig.customDomainStatus = "error";
+        }
+      }
+
       const updated = await updateTenant(parentId, { resellerConfig });
-      return ok({
-        customDomain: updated.resellerConfig?.customDomain,
-        customDomainStatus: updated.resellerConfig?.customDomainStatus,
-        cnameTarget: cnameTarget(),
-      });
+      return ok(
+        domainResponse(
+          updated.resellerConfig?.customDomain ?? domain,
+          updated.resellerConfig?.customDomainStatus ?? "pending_dns",
+          dns
+        )
+      );
     }
 
     return notFound("Route not found");
