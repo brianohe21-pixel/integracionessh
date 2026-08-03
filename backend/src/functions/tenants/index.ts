@@ -44,7 +44,7 @@ import {
 } from "../../lib/branding/resolve.js";
 import {
   deleteObject,
-  getPresignedUploadUrl,
+  putObjectBuffer,
 } from "../../lib/s3/client.js";
 import {
   ok,
@@ -103,6 +103,7 @@ const LogoUploadSchema = z.object({
     "image/webp",
     "image/svg+xml",
   ]),
+  data: z.string().min(1).max(2_500_000),
 });
 
 const UpdateOnboardingSchema = z
@@ -294,7 +295,11 @@ async function handleBrandingRoutes(
     }
 
     const updated = await updateTenant(auth.tenantId, { branding });
-    return ok(await getResolvedTenantBranding(updated));
+    const resolved = await getResolvedTenantBranding(updated);
+    return ok({
+      ...resolved,
+      canCustomize: getEffectivePlanLimits(updated).canCustomizeBranding,
+    });
   }
 
   if (method === "POST" && rawPath.endsWith("/tenants/me/branding/logo")) {
@@ -305,22 +310,31 @@ async function handleBrandingRoutes(
       return badRequest(parsed.error.errors[0]?.message ?? "Invalid input");
     }
 
+    let bytes: Buffer;
+    try {
+      bytes = Buffer.from(parsed.data.data, "base64");
+    } catch {
+      return badRequest("Invalid logo data");
+    }
+    if (bytes.byteLength === 0) return badRequest("Empty logo file");
+    if (bytes.byteLength > 1_500_000) return badRequest("Logo must be 1.5MB or smaller");
+
     const ext = extensionForContentType(parsed.data.contentType);
     const logoS3Key = buildLogoS3Key(auth.tenantId, ext);
-    const uploadUrl = await getPresignedUploadUrl(logoS3Key, parsed.data.contentType);
 
     if (tenant.branding?.logoS3Key && tenant.branding.logoS3Key !== logoS3Key) {
       await deleteObject(tenant.branding.logoS3Key);
     }
 
+    await putObjectBuffer(logoS3Key, bytes, parsed.data.contentType);
+
     const updated = await updateTenant(auth.tenantId, {
       branding: { ...(tenant.branding ?? {}), logoS3Key },
     });
-
+    const resolved = await getResolvedTenantBranding(updated);
     return ok({
-      uploadUrl,
-      logoS3Key,
-      branding: await getResolvedTenantBranding(updated),
+      ...resolved,
+      canCustomize: getEffectivePlanLimits(updated).canCustomizeBranding,
     });
   }
 
@@ -332,7 +346,11 @@ async function handleBrandingRoutes(
     const branding: TenantBranding = { ...(tenant.branding ?? {}) };
     delete branding.logoS3Key;
     const updated = await updateTenant(auth.tenantId, { branding });
-    return ok(await getResolvedTenantBranding(updated));
+    const resolved = await getResolvedTenantBranding(updated);
+    return ok({
+      ...resolved,
+      canCustomize: getEffectivePlanLimits(updated).canCustomizeBranding,
+    });
   }
 
   return badRequest("Route not found");
