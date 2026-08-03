@@ -496,7 +496,15 @@ export async function handler(
       const resolvedId = tenantId === "me" ? auth.tenantId : tenantId;
       if (resolvedId === auth.tenantId) {
         const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
-        return ok(tenant);
+        const resolvedBranding = await getResolvedBrandingWithInheritance(tenant);
+        const limits = getEffectivePlanLimits(tenant);
+        return ok({
+          ...tenant,
+          resolvedBranding: {
+            ...resolvedBranding,
+            canCustomize: limits.canCustomizeBranding,
+          },
+        });
       }
       if (auth.role !== "admin") {
         return handleError(Object.assign(new Error("Forbidden"), { statusCode: 403 }));
