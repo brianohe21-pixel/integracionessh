@@ -916,6 +916,30 @@ locals {
       function_arn = var.public_api_function_arn
       protected    = false
     }
+    public_api_templates_list = {
+      route_key    = "GET /v1/templates"
+      invoke_arn   = var.public_api_invoke_arn
+      function_arn = var.public_api_function_arn
+      protected    = false
+    }
+    public_api_templates_create = {
+      route_key    = "POST /v1/templates"
+      invoke_arn   = var.public_api_invoke_arn
+      function_arn = var.public_api_function_arn
+      protected    = false
+    }
+    public_api_templates_update = {
+      route_key    = "PUT /v1/templates/{name}"
+      invoke_arn   = var.public_api_invoke_arn
+      function_arn = var.public_api_function_arn
+      protected    = false
+    }
+    public_api_templates_delete = {
+      route_key    = "DELETE /v1/templates/{name}"
+      invoke_arn   = var.public_api_invoke_arn
+      function_arn = var.public_api_function_arn
+      protected    = false
+    }
     public_api_calls_create = {
       route_key    = "POST /v1/calls"
       invoke_arn   = var.public_api_invoke_arn

@@ -7,11 +7,22 @@ import { checkAndIncrement } from "../../lib/rate-limiter/index.js";
 import { getApiKeyByHash, updateApiKey } from "../../lib/dynamodb/api-key.repository.js";
 import { logApiKeyUsage } from "../../lib/dynamodb/api-key-usage.repository.js";
 import { getCallRecord, upsertCallRecord } from "../../lib/dynamodb/call.repository.js";
+import {
+  listCachedTemplates,
+  getCachedTemplate,
+  upsertCachedTemplate,
+  deleteCachedTemplate,
+  syncTemplates,
+} from "../../lib/dynamodb/template.repository.js";
 import { incrementMessages } from "../../lib/dynamodb/usage.repository.js";
 import {
   sendTextMessage,
   sendTemplateMessage,
   getWhatsAppAccessToken,
+  listMetaTemplates,
+  createMetaTemplate,
+  editMetaTemplate,
+  deleteMetaTemplate,
   type SendTemplateOptions,
 } from "../../lib/whatsapp/client.js";
 import {
@@ -24,7 +35,7 @@ import {
   type WhatsAppCallingSettings,
 } from "../../lib/whatsapp/calls.js";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
-import type { ApiKey } from "../../types/index.js";
+import type { ApiKey, TemplateComponent, WhatsAppTemplate } from "../../types/index.js";
 import {
   badRequest,
   unauthorized,
@@ -39,7 +50,7 @@ const CORS_HEADERS: Record<string, string> = {
   "Content-Type": "application/json",
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "Content-Type, X-API-Key, Authorization",
-  "Access-Control-Allow-Methods": "POST, GET, PUT, OPTIONS",
+  "Access-Control-Allow-Methods": "POST, GET, PUT, DELETE, OPTIONS",
 };
 
 function rateLimitHeaders(
@@ -117,6 +128,88 @@ const PermissionRequestSchema = z.object({
 });
 
 const UserWaIdParamSchema = z.string().min(7).max(20).regex(/^\d+$/);
+
+const TemplateComponentSchema = z
+  .object({
+    type: z.enum(["HEADER", "BODY", "FOOTER", "BUTTONS"]),
+    format: z.enum(["TEXT", "IMAGE", "VIDEO", "DOCUMENT"]).optional(),
+    text: z.string().optional(),
+    example: z
+      .object({
+        header_text: z.array(z.string()).optional(),
+        body_text: z.array(z.array(z.string())).optional(),
+      })
+      .optional(),
+    buttons: z
+      .array(
+        z.object({
+          type: z.enum(["QUICK_REPLY", "URL", "PHONE_NUMBER"]),
+          text: z.string(),
+          url: z.string().optional(),
+          phone_number: z.string().optional(),
+          example: z.array(z.string()).optional(),
+        })
+      )
+      .optional(),
+  })
+  .superRefine((comp, ctx) => {
+    if (comp.type === "BODY" && comp.text && /\{\{\d+\}\}/.test(comp.text)) {
+      const rows = comp.example?.body_text;
+      if (!rows?.length || !rows[0]?.length || rows[0].some((v) => !v.trim())) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            'BODY component has variables ({{N}}) but is missing "example.body_text" with non-empty sample values.',
+        });
+      }
+    }
+  });
+
+const CreateTemplateSchema = z.object({
+  name: z
+    .string()
+    .min(1)
+    .max(512)
+    .regex(/^[a-z0-9_]+$/, "Template name must be lowercase letters, numbers, and underscores"),
+  language: z.string().min(2).max(10),
+  category: z.enum(["MARKETING", "UTILITY", "AUTHENTICATION"]),
+  components: z.array(TemplateComponentSchema).min(1),
+});
+
+const UpdateTemplateSchema = z.object({
+  language: z.string().min(2).max(10).optional(),
+  components: z.array(TemplateComponentSchema).min(1),
+});
+
+function assertWabaId(wabaId: string, phoneNumberId: string): void {
+  if (!wabaId) {
+    throw Object.assign(
+      new Error("Bot misconfigured: whatsappBusinessAccountId is empty."),
+      { statusCode: 400 }
+    );
+  }
+  if (wabaId === phoneNumberId) {
+    throw Object.assign(
+      new Error(
+        "Bot misconfigured: whatsappBusinessAccountId must be the WABA ID, not the Phone Number ID."
+      ),
+      { statusCode: 400 }
+    );
+  }
+}
+
+function toPublicTemplate(template: WhatsAppTemplate) {
+  return {
+    name: template.name,
+    language: template.language,
+    category: template.category,
+    status: template.status,
+    components: template.components,
+    metaTemplateId: template.metaTemplateId ?? null,
+    syncedAt: template.syncedAt,
+    createdAt: template.createdAt,
+  };
+}
 
 function maskPhone(phone: string): string {
   if (phone.length <= 6) return phone;
@@ -628,6 +721,226 @@ async function handlePermissionRequest(
   };
 }
 
+async function handleListTemplates(
+  event: APIGatewayProxyEventV2
+): Promise<APIGatewayProxyResultV2> {
+  const startMs = Date.now();
+  const auth = await authenticateApiKey(event);
+  if (!isAuthResult(auth)) return auth;
+
+  const { apiKey, hashedKey, rateResult } = auth;
+  assertApiKeyScope(apiKey, API_KEY_SCOPES.templatesRead);
+
+  const { bot, accessToken } = await loadActiveBot(apiKey);
+  assertWabaId(bot.whatsappBusinessAccountId, bot.phoneNumberId);
+
+  const metaTemplates = await listMetaTemplates(bot.whatsappBusinessAccountId, accessToken);
+  const now = new Date().toISOString();
+  const templates: WhatsAppTemplate[] = metaTemplates
+    .filter((mt) => mt.id && mt.name)
+    .map((mt) => ({
+      templateId: mt.id,
+      tenantId: apiKey.tenantId,
+      botId: apiKey.botId,
+      name: mt.name,
+      language: mt.language,
+      category: mt.category,
+      status: mt.status,
+      components: mt.components ?? [],
+      metaTemplateId: mt.id,
+      syncedAt: now,
+      createdAt: now,
+    }));
+
+  try {
+    await syncTemplates(apiKey.tenantId, apiKey.botId, templates);
+  } catch (syncError) {
+    console.error("syncTemplates failed:", syncError);
+  }
+
+  await logUsage({
+    apiKey,
+    hashedKey,
+    endpoint: "GET /v1/templates",
+    method: "GET",
+    statusCode: 200,
+    durationMs: Date.now() - startMs,
+  });
+
+  return {
+    statusCode: 200,
+    headers: successHeaders(apiKey, rateResult),
+    body: JSON.stringify(templates.map(toPublicTemplate)),
+  };
+}
+
+async function handleCreateTemplate(
+  event: APIGatewayProxyEventV2
+): Promise<APIGatewayProxyResultV2> {
+  const startMs = Date.now();
+  const auth = await authenticateApiKey(event);
+  if (!isAuthResult(auth)) return auth;
+
+  const { apiKey, hashedKey, rateResult } = auth;
+  assertApiKeyScope(apiKey, API_KEY_SCOPES.templatesWrite);
+
+  const parsed = CreateTemplateSchema.safeParse(JSON.parse(event.body ?? "{}"));
+  if (!parsed.success) {
+    return badRequest(parsed.error.errors[0]?.message ?? "Invalid request body");
+  }
+
+  const { name, language, category } = parsed.data;
+  const comps = parsed.data.components as TemplateComponent[];
+  const { bot, accessToken } = await loadActiveBot(apiKey);
+  assertWabaId(bot.whatsappBusinessAccountId, bot.phoneNumberId);
+
+  const metaResult = await createMetaTemplate(bot.whatsappBusinessAccountId, accessToken, {
+    name,
+    language,
+    category,
+    components: comps,
+  });
+
+  const now = new Date().toISOString();
+  const template: WhatsAppTemplate = {
+    templateId: randomUUID(),
+    tenantId: apiKey.tenantId,
+    botId: apiKey.botId,
+    name,
+    language,
+    category,
+    status: "PENDING",
+    components: comps,
+    metaTemplateId: metaResult.id,
+    syncedAt: now,
+    createdAt: now,
+  };
+
+  await upsertCachedTemplate(apiKey.tenantId, apiKey.botId, template);
+
+  await logUsage({
+    apiKey,
+    hashedKey,
+    endpoint: "POST /v1/templates",
+    method: "POST",
+    statusCode: 201,
+    durationMs: Date.now() - startMs,
+  });
+
+  return {
+    statusCode: 201,
+    headers: successHeaders(apiKey, rateResult),
+    body: JSON.stringify(toPublicTemplate(template)),
+  };
+}
+
+async function handleUpdateTemplate(
+  event: APIGatewayProxyEventV2,
+  templateName: string
+): Promise<APIGatewayProxyResultV2> {
+  const startMs = Date.now();
+  const auth = await authenticateApiKey(event);
+  if (!isAuthResult(auth)) return auth;
+
+  const { apiKey, hashedKey, rateResult } = auth;
+  assertApiKeyScope(apiKey, API_KEY_SCOPES.templatesWrite);
+
+  const parsed = UpdateTemplateSchema.safeParse(JSON.parse(event.body ?? "{}"));
+  if (!parsed.success) {
+    return badRequest(parsed.error.errors[0]?.message ?? "Invalid request body");
+  }
+
+  const comps = parsed.data.components as TemplateComponent[];
+  const language =
+    parsed.data.language ?? event.queryStringParameters?.language ?? "es";
+  const { accessToken } = await loadActiveBot(apiKey);
+
+  const cached = await getCachedTemplate(
+    apiKey.tenantId,
+    apiKey.botId,
+    templateName,
+    language
+  );
+  if (!cached?.metaTemplateId) {
+    return notFound("Template not found. List templates first to sync cache.");
+  }
+
+  if (cached.status !== "REJECTED") {
+    return badRequest(
+      "Templates can only be edited when Meta has rejected them. Approved or pending templates cannot be modified."
+    );
+  }
+
+  await editMetaTemplate(cached.metaTemplateId, accessToken, { components: comps });
+
+  const updated: WhatsAppTemplate = {
+    ...cached,
+    components: comps,
+    status: "PENDING",
+    syncedAt: new Date().toISOString(),
+  };
+
+  await upsertCachedTemplate(apiKey.tenantId, apiKey.botId, updated);
+
+  await logUsage({
+    apiKey,
+    hashedKey,
+    endpoint: "PUT /v1/templates/{name}",
+    method: "PUT",
+    statusCode: 200,
+    durationMs: Date.now() - startMs,
+  });
+
+  return {
+    statusCode: 200,
+    headers: successHeaders(apiKey, rateResult),
+    body: JSON.stringify(toPublicTemplate(updated)),
+  };
+}
+
+async function handleDeleteTemplate(
+  event: APIGatewayProxyEventV2,
+  templateName: string
+): Promise<APIGatewayProxyResultV2> {
+  const startMs = Date.now();
+  const auth = await authenticateApiKey(event);
+  if (!isAuthResult(auth)) return auth;
+
+  const { apiKey, hashedKey, rateResult } = auth;
+  assertApiKeyScope(apiKey, API_KEY_SCOPES.templatesWrite);
+
+  const { bot, accessToken } = await loadActiveBot(apiKey);
+  assertWabaId(bot.whatsappBusinessAccountId, bot.phoneNumberId);
+
+  await deleteMetaTemplate(bot.whatsappBusinessAccountId, templateName, accessToken);
+
+  const cached = await listCachedTemplates(apiKey.tenantId, apiKey.botId);
+  const toDelete = cached.filter((t) => t.name === templateName);
+  for (const t of toDelete) {
+    await deleteCachedTemplate(apiKey.tenantId, apiKey.botId, t.name, t.language);
+  }
+
+  await logUsage({
+    apiKey,
+    hashedKey,
+    endpoint: "DELETE /v1/templates/{name}",
+    method: "DELETE",
+    statusCode: 204,
+    durationMs: Date.now() - startMs,
+  });
+
+  return {
+    statusCode: 204,
+    headers: successHeaders(apiKey, rateResult),
+    body: "",
+  };
+}
+
+function extractTemplateNameFromPath(path: string): string | null {
+  const match = path.match(/\/v1\/templates\/([^/]+)$/);
+  return match?.[1] ? decodeURIComponent(match[1]) : null;
+}
+
 function extractUserWaIdFromPermissionPath(path: string): string | null {
   const match = path.match(/\/v1\/calls\/permission\/([^/]+)$/);
   return match?.[1] ? decodeURIComponent(match[1]) : null;
@@ -655,6 +968,12 @@ export async function handler(
     if (path.endsWith("/v1/messages") && method === "POST") {
       return await handleSendMessage(event);
     }
+    if (path.endsWith("/v1/templates") && method === "GET") {
+      return await handleListTemplates(event);
+    }
+    if (path.endsWith("/v1/templates") && method === "POST") {
+      return await handleCreateTemplate(event);
+    }
     if (path.endsWith("/v1/calls") && method === "POST") {
       return await handleInitiateCall(event);
     }
@@ -666,6 +985,14 @@ export async function handler(
     }
     if (path.endsWith("/v1/calls/permission-request") && method === "POST") {
       return await handlePermissionRequest(event);
+    }
+
+    const templateName = extractTemplateNameFromPath(path);
+    if (templateName && method === "PUT") {
+      return await handleUpdateTemplate(event, templateName);
+    }
+    if (templateName && method === "DELETE") {
+      return await handleDeleteTemplate(event, templateName);
     }
 
     const userWaId = extractUserWaIdFromPermissionPath(path);

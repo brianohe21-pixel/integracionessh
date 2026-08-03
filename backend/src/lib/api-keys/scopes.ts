@@ -13,6 +13,8 @@ export const API_KEY_SCOPES = {
   callsInitiate: "calls:initiate",
   callsManage: "calls:manage",
   callsSettings: "calls:settings",
+  templatesRead: "templates:read",
+  templatesWrite: "templates:write",
 } as const;
 
 export const DEFAULT_API_KEY_SCOPES = [
@@ -20,4 +22,6 @@ export const DEFAULT_API_KEY_SCOPES = [
   API_KEY_SCOPES.callsInitiate,
   API_KEY_SCOPES.callsManage,
   API_KEY_SCOPES.callsSettings,
+  API_KEY_SCOPES.templatesRead,
+  API_KEY_SCOPES.templatesWrite,
 ];
