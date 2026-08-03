@@ -3,6 +3,7 @@ import { ResourceNotFoundException } from "@aws-sdk/client-secrets-manager";
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
+import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
 import {
   listCachedTemplates,
   getCachedTemplate,
@@ -20,6 +21,10 @@ import {
 } from "../../lib/whatsapp/client.js";
 import type { SendTemplateOptions } from "../../lib/whatsapp/client.js";
 import { resolveRequestAuth, assertMemberRole } from "../../lib/auth/cognito.js";
+import {
+  sendTemplateApprovedEmail,
+  sendTemplateCreatedEmail,
+} from "../../lib/email/template-status-notify.js";
 import { ok, created, noContent, badRequest, notFound, handleError } from "../../lib/http.js";
 import type { WhatsAppTemplate, TemplateComponent } from "../../types/index.js";
 
@@ -145,6 +150,30 @@ function assertWabaId(wabaId: string, phoneNumberId: string): void {
   }
 }
 
+async function notifyApprovedTemplates(
+  tenantId: string,
+  recipientEmail: string | undefined,
+  templates: WhatsAppTemplate[]
+): Promise<void> {
+  if (templates.length === 0) return;
+
+  const tenant = await getTenant(tenantId);
+  const to = recipientEmail?.trim() || tenant?.email?.trim();
+  if (!to || !tenant) return;
+
+  for (const template of templates) {
+    void sendTemplateApprovedEmail({
+      to,
+      tenantName: tenant.name,
+      templateName: template.name,
+      language: template.language,
+      category: template.category,
+    }).catch((error) => {
+      console.error("Failed to send template approved email:", error);
+    });
+  }
+}
+
 export async function handler(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): Promise<APIGatewayProxyResultV2> {
@@ -183,7 +212,8 @@ export async function handler(
         }));
 
       try {
-        await syncTemplates(auth.tenantId, botId, templates);
+        const newlyApproved = await syncTemplates(auth.tenantId, botId, templates);
+        await notifyApprovedTemplates(auth.tenantId, auth.email, newlyApproved);
       } catch (syncError) {
         console.error("syncTemplates failed:", syncError);
       }
@@ -244,6 +274,20 @@ export async function handler(
       };
 
       await upsertCachedTemplate(auth.tenantId, botId, template);
+
+      const tenant = await getTenant(auth.tenantId);
+      const recipient = auth.email?.trim() || tenant?.email?.trim();
+      if (recipient && tenant) {
+        void sendTemplateCreatedEmail({
+          to: recipient,
+          tenantName: tenant.name,
+          templateName: template.name,
+          language: template.language,
+          category: template.category,
+        }).catch((error) => {
+          console.error("Failed to send template created email:", error);
+        });
+      }
 
       return created(template);
     }

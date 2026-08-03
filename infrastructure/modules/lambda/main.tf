@@ -332,8 +332,10 @@ locals {
       timeout     = 30
       memory      = 256
       environment = {
-        TABLE_NAME  = var.dynamodb_table_name
-        ENVIRONMENT = var.environment
+        TABLE_NAME     = var.dynamodb_table_name
+        ENVIRONMENT    = var.environment
+        FRONTEND_URL   = var.frontend_url
+        SES_FROM_EMAIL = var.ses_from_email
       }
     }
     bulk_send = {
@@ -594,8 +596,10 @@ locals {
       timeout     = 30
       memory      = 256
       environment = {
-        TABLE_NAME  = var.dynamodb_table_name
-        ENVIRONMENT = var.environment
+        TABLE_NAME     = var.dynamodb_table_name
+        ENVIRONMENT    = var.environment
+        FRONTEND_URL   = var.frontend_url
+        SES_FROM_EMAIL = var.ses_from_email
       }
     }
     api_keys = {

@@ -35,6 +35,11 @@ import {
   type WhatsAppCallingSettings,
 } from "../../lib/whatsapp/calls.js";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
+import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
+import {
+  sendTemplateApprovedEmail,
+  sendTemplateCreatedEmail,
+} from "../../lib/email/template-status-notify.js";
 import type { ApiKey, TemplateComponent, WhatsAppTemplate } from "../../types/index.js";
 import {
   badRequest,
@@ -753,7 +758,24 @@ async function handleListTemplates(
     }));
 
   try {
-    await syncTemplates(apiKey.tenantId, apiKey.botId, templates);
+    const newlyApproved = await syncTemplates(apiKey.tenantId, apiKey.botId, templates);
+    if (newlyApproved.length > 0) {
+      const tenant = await getTenant(apiKey.tenantId);
+      const to = tenant?.email?.trim();
+      if (to && tenant) {
+        for (const template of newlyApproved) {
+          void sendTemplateApprovedEmail({
+            to,
+            tenantName: tenant.name,
+            templateName: template.name,
+            language: template.language,
+            category: template.category,
+          }).catch((error) => {
+            console.error("Failed to send template approved email:", error);
+          });
+        }
+      }
+    }
   } catch (syncError) {
     console.error("syncTemplates failed:", syncError);
   }
@@ -817,6 +839,20 @@ async function handleCreateTemplate(
   };
 
   await upsertCachedTemplate(apiKey.tenantId, apiKey.botId, template);
+
+  const tenant = await getTenant(apiKey.tenantId);
+  const to = tenant?.email?.trim();
+  if (to && tenant) {
+    void sendTemplateCreatedEmail({
+      to,
+      tenantName: tenant.name,
+      templateName: template.name,
+      language: template.language,
+      category: template.category,
+    }).catch((error) => {
+      console.error("Failed to send template created email:", error);
+    });
+  }
 
   await logUsage({
     apiKey,

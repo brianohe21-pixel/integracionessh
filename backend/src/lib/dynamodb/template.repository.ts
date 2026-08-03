@@ -102,10 +102,17 @@ export async function syncTemplates(
   tenantId: string,
   botId: string,
   templates: WhatsAppTemplate[]
-): Promise<void> {
+): Promise<WhatsAppTemplate[]> {
   const uniqueTemplates = dedupeTemplates(templates);
   const existing = await listCachedTemplates(tenantId, botId);
+  const existingByKey = new Map(existing.map((t) => [`${t.name}#${t.language}`, t]));
   const incomingKeys = new Set(uniqueTemplates.map((t) => `${t.name}#${t.language}`));
+
+  const newlyApproved = uniqueTemplates.filter((template) => {
+    if (template.status !== "APPROVED") return false;
+    const previous = existingByKey.get(`${template.name}#${template.language}`);
+    return previous != null && previous.status !== "APPROVED";
+  });
 
   const toDelete = existing.filter((t) => !incomingKeys.has(`${t.name}#${t.language}`));
 
@@ -113,12 +120,14 @@ export async function syncTemplates(
   const allOps: Array<Record<string, unknown>> = [];
 
   for (const template of uniqueTemplates) {
+    const previous = existingByKey.get(`${template.name}#${template.language}`);
     allOps.push({
       PutRequest: {
         Item: {
           ...templateKeys(tenantId, botId, template.name, template.language),
           ...gsi1Keys(tenantId, template.status, template.name),
           ...template,
+          createdAt: previous?.createdAt ?? template.createdAt,
         },
       },
     });
@@ -143,4 +152,6 @@ export async function syncTemplates(
       })
     );
   }
+
+  return newlyApproved;
 }
