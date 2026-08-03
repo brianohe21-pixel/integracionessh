@@ -20,7 +20,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Sidebar />
             <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
               <MobileTopBar />
-              <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto bg-white">
+              <main className="canvas-bg min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
                 <OnboardingGate>
                   <HelpCenterMount>
                     <DashboardRoleGuard>{children}</DashboardRoleGuard>

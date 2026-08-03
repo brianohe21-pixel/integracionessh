@@ -6,6 +6,7 @@ import { useT } from "@/i18n/context";
 import { useSidebar } from "@/components/layout/SidebarContext";
 
 const ROUTE_LABEL_KEYS: Record<string, string> = {
+  "/dashboard": "nav.dashboard",
   "/bots": "nav.bots",
   "/metrics": "nav.metrics",
   "/conversations": "nav.conversations",

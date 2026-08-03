@@ -1,4 +1,4 @@
-import { fetchAuthSession } from "aws-amplify/auth";
+import { getIdToken } from "@/lib/auth-session";
 
 const BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 const TENANT_CONTEXT_KEY = "x-tenant-context";
@@ -24,14 +24,9 @@ function assertApiBaseUrl(): void {
 }
 
 async function getAuthHeader(): Promise<Record<string, string>> {
-  try {
-    const session = await fetchAuthSession();
-    const token = session.tokens?.idToken?.toString();
-    if (!token) return {};
-    return { Authorization: `Bearer ${token}` };
-  } catch {
-    return {};
-  }
+  const token = await getIdToken();
+  if (!token) return {};
+  return { Authorization: `Bearer ${token}` };
 }
 
 function getTenantContextHeader(): Record<string, string> {

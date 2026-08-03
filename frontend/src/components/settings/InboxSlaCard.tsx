@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Clock } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { useInboxSlaSettings, useSaveInboxSlaSettings } from "@/hooks/useInboxSla";
-import { DEFAULT_INBOX_SLA } from "@/lib/inbox-sla";
+import { DEFAULT_INBOX_SLA, resolveInboxSlaSettings } from "@/lib/inbox-sla";
 import { useT } from "@/i18n/context";
 
 export function InboxSlaCard() {
@@ -18,8 +18,9 @@ export function InboxSlaCard() {
 
   useEffect(() => {
     if (!settings) return;
-    setEnabled(settings.enabled);
-    setMinutes(settings.firstResponseMinutes);
+    const resolved = resolveInboxSlaSettings(settings);
+    setEnabled(resolved.enabled);
+    setMinutes(resolved.firstResponseMinutes);
   }, [settings]);
 
   async function handleSave(e: React.FormEvent) {
@@ -80,7 +81,7 @@ export function InboxSlaCard() {
           <span className="text-sm text-secondary">{t("settings.inboxSlaEnableLabel")}</span>
           <input
             type="checkbox"
-            checked={enabled}
+            checked={Boolean(enabled)}
             onChange={(e) => setEnabled(e.target.checked)}
             className="h-4 w-4 rounded border-default text-accent focus:ring-accent"
           />
@@ -92,7 +93,7 @@ export function InboxSlaCard() {
             type="number"
             min={1}
             max={1440}
-            value={minutes}
+            value={minutes ?? DEFAULT_INBOX_SLA.firstResponseMinutes}
             onChange={(e) => {
               const next = parseInt(e.target.value, 10);
               setMinutes(Number.isFinite(next) ? next : DEFAULT_INBOX_SLA.firstResponseMinutes);

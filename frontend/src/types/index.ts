@@ -157,6 +157,7 @@ export interface Tenant {
   onboardingTestConfirmedAt?: string;
   createdAt: string;
   updatedAt: string;
+  resolvedBranding?: ResolvedTenantBranding & { canCustomize?: boolean };
 }
 
 export interface MonthlyUsage {

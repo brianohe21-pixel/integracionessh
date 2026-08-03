@@ -1,14 +1,14 @@
 import { forwardRef, type InputHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
+const inputBase =
+  "w-full rounded-lg border border-default bg-surface-elevated px-3 py-2 text-sm text-primary shadow-sm transition-shadow placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:shadow-md";
+
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
   ({ className, ...props }, ref) => (
     <input
       ref={ref}
-      className={cn(
-        "w-full rounded-lg border border-default bg-surface-elevated px-3 py-2 text-sm text-primary placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent",
-        className
-      )}
+      className={cn(inputBase, className)}
       {...props}
     />
   )
@@ -20,10 +20,7 @@ export const Select = forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<H
   ({ className, ...props }, ref) => (
     <select
       ref={ref}
-      className={cn(
-        "w-full rounded-lg border border-default bg-surface-elevated px-3 py-2 text-sm text-primary focus:outline-none focus:ring-2 focus:ring-accent",
-        className
-      )}
+      className={cn(inputBase, className)}
       {...props}
     />
   )
@@ -37,10 +34,7 @@ export const Textarea = forwardRef<
 >(({ className, ...props }, ref) => (
   <textarea
     ref={ref}
-    className={cn(
-      "w-full rounded-lg border border-default bg-surface-elevated px-3 py-2 text-sm text-primary placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent",
-      className
-    )}
+    className={cn(inputBase, "resize-y", className)}
     {...props}
   />
 ));

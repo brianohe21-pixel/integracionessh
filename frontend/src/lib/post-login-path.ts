@@ -1,7 +1,7 @@
 import { fetchAuthSession } from "aws-amplify/auth";
 
 export const ADMIN_HOME = "/admin/users";
-export const MEMBER_HOME = "/bots";
+export const MEMBER_HOME = "/dashboard";
 export const ADVISOR_HOME = "/inbox";
 
 const PENDING_BILLING_PLAN_KEY = "pendingBillingPlan";

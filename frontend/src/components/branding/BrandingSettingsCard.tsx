@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { Palette, Upload, Trash2 } from "lucide-react";
 import { useT } from "@/i18n/context";
+import { useAuthSession } from "@/hooks/useAuthSession";
 import { api } from "@/lib/api";
 import {
   useTenantBranding,
@@ -21,11 +22,14 @@ function planAllowsBranding(plan: string | undefined): boolean {
 
 export function BrandingSettingsCard() {
   const t = useT();
+  const { isAuthenticated, loading: authLoading } = useAuthSession();
+  const brandingEnabled = isAuthenticated && !authLoading;
   const { data: tenant } = useQuery({
     queryKey: ["tenants", "me"],
     queryFn: () => api.get<Tenant>("/tenants/me"),
+    enabled: brandingEnabled,
   });
-  const { data, isLoading, isError, error: queryError } = useTenantBranding();
+  const { data, isLoading, isError, error: queryError } = useTenantBranding(brandingEnabled);
   const updateBranding = useUpdateTenantBranding();
   const uploadLogo = useUploadTenantLogo();
   const deleteLogo = useDeleteTenantLogo();

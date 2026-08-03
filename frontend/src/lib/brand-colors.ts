@@ -29,10 +29,16 @@ export function hexToRgba(hex: string, alpha: number): string {
 export function applyBrandCssVariables(primaryColor: string): void {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
+  const hover = adjustHexBrightness(primaryColor, -12);
+  const light = hexToRgba(primaryColor, 0.07);
   root.style.setProperty("--brand-primary", primaryColor);
-  root.style.setProperty("--brand-primary-hover", adjustHexBrightness(primaryColor, -12));
-  root.style.setProperty("--brand-primary-light", hexToRgba(primaryColor, 0.07));
+  root.style.setProperty("--brand-primary-hover", hover);
+  root.style.setProperty("--brand-primary-light", light);
+  root.style.setProperty("--color-brand-primary", primaryColor);
   root.style.setProperty("--accent", primaryColor);
-  root.style.setProperty("--accent-hover", adjustHexBrightness(primaryColor, -12));
-  root.style.setProperty("--accent-muted", hexToRgba(primaryColor, 0.07));
+  root.style.setProperty("--accent-hover", hover);
+  root.style.setProperty("--accent-muted", light);
+  root.style.setProperty("--color-accent", primaryColor);
+  root.style.setProperty("--color-accent-hover", hover);
+  root.style.setProperty("--color-accent-muted", light);
 }

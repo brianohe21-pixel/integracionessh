@@ -8,6 +8,8 @@ export interface TenantBrandingResponse extends ResolvedTenantBranding {
   canCustomize: boolean;
 }
 
+export const TENANT_BRANDING_QUERY_KEY = ["tenant-branding"] as const;
+
 const MAX_LOGO_BYTES = 1_500_000;
 
 function normalizeLogoContentType(contentType: string): string {
@@ -44,7 +46,8 @@ function fileToBase64(file: File): Promise<string> {
 
 function mergeBrandingCache(
   previous: TenantBrandingResponse | undefined,
-  data: TenantBrandingResponse
+  data: TenantBrandingResponse,
+  options?: { clearLogo?: boolean }
 ): TenantBrandingResponse {
   return {
     ...previous,
@@ -52,16 +55,29 @@ function mergeBrandingCache(
     canCustomize: data.canCustomize ?? previous?.canCustomize ?? true,
     brandName: data.brandName ?? previous?.brandName,
     primaryColor: data.primaryColor ?? previous?.primaryColor,
-    logoUrl: data.logoUrl ?? previous?.logoUrl,
+    logoUrl: options?.clearLogo ? undefined : data.logoUrl ?? previous?.logoUrl,
   };
+}
+
+export function seedTenantBrandingCache(
+  queryClient: ReturnType<typeof useQueryClient>,
+  data: TenantBrandingResponse
+): void {
+  queryClient.setQueryData<TenantBrandingResponse>(TENANT_BRANDING_QUERY_KEY, (previous) =>
+    mergeBrandingCache(previous, data)
+  );
 }
 
 export function useTenantBranding(enabled = true) {
   return useQuery({
-    queryKey: ["tenant-branding"],
+    queryKey: TENANT_BRANDING_QUERY_KEY,
     queryFn: () => api.get<TenantBrandingResponse>("/tenants/me/branding"),
     staleTime: 0,
+    gcTime: 0,
     refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    retry: 3,
+    retryDelay: (attempt) => Math.min(1000, 200 * (attempt + 1)),
     enabled,
   });
 }
@@ -72,7 +88,7 @@ export function useUpdateTenantBranding() {
     mutationFn: (body: { brandName?: string; primaryColor?: string }) =>
       api.put<TenantBrandingResponse>("/tenants/me/branding", body),
     onSuccess: (data) => {
-      queryClient.setQueryData<TenantBrandingResponse>(["tenant-branding"], (previous) =>
+      queryClient.setQueryData<TenantBrandingResponse>(TENANT_BRANDING_QUERY_KEY, (previous) =>
         mergeBrandingCache(previous, data)
       );
     },
@@ -94,7 +110,7 @@ export function useUploadTenantLogo() {
       });
     },
     onSuccess: (data) => {
-      queryClient.setQueryData<TenantBrandingResponse>(["tenant-branding"], (previous) =>
+      queryClient.setQueryData<TenantBrandingResponse>(TENANT_BRANDING_QUERY_KEY, (previous) =>
         mergeBrandingCache(previous, data)
       );
     },
@@ -106,8 +122,8 @@ export function useDeleteTenantLogo() {
   return useMutation({
     mutationFn: () => api.delete<TenantBrandingResponse>("/tenants/me/branding/logo"),
     onSuccess: (data) => {
-      queryClient.setQueryData<TenantBrandingResponse>(["tenant-branding"], (previous) =>
-        mergeBrandingCache(previous, { ...data, logoUrl: undefined })
+      queryClient.setQueryData<TenantBrandingResponse>(TENANT_BRANDING_QUERY_KEY, (previous) =>
+        mergeBrandingCache(previous, data, { clearLogo: true })
       );
     },
   });

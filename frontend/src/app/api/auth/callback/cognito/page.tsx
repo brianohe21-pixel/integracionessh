@@ -6,7 +6,7 @@ import { fetchAuthSession } from "aws-amplify/auth";
 import { Hub } from "aws-amplify/utils";
 import { getPostLoginPath } from "@/lib/post-login-path";
 import { useT } from "@/i18n/context";
-import { signOutUser } from "@/lib/auth-session";
+import { signOutUser, ensureAuthSession } from "@/lib/auth-session";
 import { validatePortalSession } from "@/lib/host-portal";
 
 function CognitoOAuthCallbackContent() {
@@ -30,6 +30,7 @@ function CognitoOAuthCallbackContent() {
             if (!cancelled) setError(t(portalCheck.messageKey));
             return;
           }
+          await ensureAuthSession();
           router.replace(await getPostLoginPath(redirectTo));
         }
       } catch {

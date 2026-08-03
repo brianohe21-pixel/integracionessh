@@ -6,24 +6,24 @@ import {
   BotMessageSquare,
   MessageSquare,
   SendHorizonal,
-  LayoutTemplate,
   Activity,
   Phone,
   AlertTriangle,
   Download,
   Banknote,
 } from "lucide-react";
-import Link from "next/link";
-import { useMetrics } from "@/hooks/useMetrics";
+import { useCallingMetrics } from "@/hooks/useCallingMetrics";
 import { useMarketingMetrics } from "@/hooks/useMarketingMetrics";
 import { useInboxSlaMetrics } from "@/hooks/useInboxSlaMetrics";
-import { useCallingMetrics, formatCallDuration } from "@/hooks/useCallingMetrics";
+import { useMetrics } from "@/hooks/useMetrics";
 import { useSalesMetrics } from "@/hooks/useSalesMetrics";
 import {
   MetricsFiltersBar,
   useFilteredUsageMetrics,
   useMetricsFilters,
 } from "@/components/metrics/MetricsFilters";
+import { StatCard } from "@/components/ui/StatCard";
+import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useFormatters } from "@/hooks/useFormatters";
@@ -31,9 +31,19 @@ import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { TableContainer } from "@/components/ui/TableContainer";
 import { useT } from "@/i18n/context";
-import type { BulkSendJobStatus, CallingMetricsHealth, PaymentRequestSource } from "@/types";
+import type { BulkSendJobStatus, CallingMetricsHealth } from "@/types";
 import { formatElapsedDuration } from "@/lib/inbox-sla";
 import { useMetricsExport } from "@/hooks/useMetricsExport";
+import { MetricsUsageByBotChart } from "@/components/metrics/MetricsUsageByBotChart";
+import { MetricsCampaignFunnelChart } from "@/components/metrics/MetricsCampaignFunnelChart";
+import { MetricsTopCampaignsChart } from "@/components/metrics/MetricsTopCampaignsChart";
+import { MetricsInboxStatusChart } from "@/components/metrics/MetricsInboxStatusChart";
+import { MetricsSlaByAdvisorChart } from "@/components/metrics/MetricsSlaByAdvisorChart";
+import { MetricsSalesBySourceChart } from "@/components/metrics/MetricsSalesBySourceChart";
+import { MetricsSalesByBotChart } from "@/components/metrics/MetricsSalesByBotChart";
+import { MetricsTopProductsChart } from "@/components/metrics/MetricsTopProductsChart";
+import { MetricsCallingByBotChart } from "@/components/metrics/MetricsCallingByBotChart";
+import { MetricsCallingSummaryChart } from "@/components/metrics/MetricsCallingSummaryChart";
 
 function KpiCard({
   label,
@@ -46,20 +56,7 @@ function KpiCard({
   sub?: string;
   icon: React.ReactNode;
 }) {
-  return (
-    <div className="bg-surface-elevated rounded-xl border border-default p-5">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs font-medium text-secondary uppercase tracking-wide">{label}</p>
-          <p className="text-2xl font-bold text-primary mt-1">{value}</p>
-          {sub && <p className="text-xs text-muted mt-1">{sub}</p>}
-        </div>
-        <div className="flex items-center justify-center w-10 h-10 bg-accent-muted rounded-xl text-accent">
-          {icon}
-        </div>
-      </div>
-    </div>
-  );
+  return <StatCard label={label} value={value} sub={sub} icon={icon} />;
 }
 
 function bulkStatusVariant(status: BulkSendJobStatus): "success" | "warning" | "danger" | "default" | "info" {
@@ -111,18 +108,6 @@ export default function MetricsPage() {
   const showMarketing = filters.section === "all" || filters.section === "marketing";
   const showCalling = filters.section === "all" || filters.section === "calling";
   const showSales = filters.section === "all" || filters.section === "sales";
-
-  const salesSources: PaymentRequestSource[] = [
-    "manual",
-    "flow",
-    "catalog_order",
-    "calendar_booking",
-    "quotation",
-  ];
-
-  function salesSourceLabel(source: PaymentRequestSource): string {
-    return t(`metrics.salesSources.${source}`);
-  }
 
   function callingHealthVariant(
     health: CallingMetricsHealth
@@ -188,10 +173,9 @@ export default function MetricsPage() {
       )}
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-          <p className="text-sm text-red-600 font-medium">{t("metrics.loadError")}</p>
-          <p className="text-xs text-red-500 mt-1 break-words">{error.message}</p>
-        </div>
+        <Alert variant="danger" title={t("metrics.loadError")}>
+          <p className="break-words text-xs opacity-80">{error.message}</p>
+        </Alert>
       )}
 
       {!isLoading && !error && metrics && filteredUsage && (
@@ -228,32 +212,7 @@ export default function MetricsPage() {
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <KpiCard
-              label={t("metrics.templates")}
-              value={formatNumber(filteredUsage.summary.totalTemplates)}
-              icon={<LayoutTemplate className="w-5 h-5" />}
-            />
-            <KpiCard
-              label={t("metrics.bulkCampaignsLabel")}
-              value={formatNumber(filteredUsage.summary.bulkJobsCount)}
-              icon={<SendHorizonal className="w-5 h-5" />}
-            />
-            <KpiCard
-              label={t("metrics.lastActivity")}
-              value={
-                filteredUsage.summary.lastActivityAt
-                  ? formatRelativeTime(filteredUsage.summary.lastActivityAt)
-                  : t("common.noActivity")
-              }
-              sub={
-                filteredUsage.summary.lastActivityAt
-                  ? formatDate(filteredUsage.summary.lastActivityAt)
-                  : undefined
-              }
-              icon={<Activity className="w-5 h-5" />}
-            />
-          </div>
+          <MetricsUsageByBotChart usage={filteredUsage} />
             </>
           )}
 
@@ -266,7 +225,7 @@ export default function MetricsPage() {
                   <p className="text-xs text-amber-700 mt-1">{t("metrics.marketingTenantScope")}</p>
                 )}
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <KpiCard
                   label={t("metrics.deliveryRate")}
                   value={`${marketing.campaigns.rates.deliveryRate}%`}
@@ -279,18 +238,14 @@ export default function MetricsPage() {
                   sub={`${formatNumber(marketing.campaigns.aggregates.read)}`}
                   icon={<BarChart3 className="w-5 h-5" />}
                 />
-                <KpiCard
-                  label={t("metrics.inboxOpen")}
-                  value={formatNumber(marketing.inbox.open)}
-                  sub={`${t("metrics.inboxPending")}: ${marketing.inbox.pending}`}
-                  icon={<MessageSquare className="w-5 h-5" />}
-                />
-                <KpiCard
-                  label={t("metrics.resolvedToday")}
-                  value={formatNumber(marketing.inbox.resolvedToday)}
-                  icon={<Activity className="w-5 h-5" />}
-                />
               </div>
+
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <MetricsCampaignFunnelChart marketing={marketing} />
+                <MetricsInboxStatusChart marketing={marketing} />
+                <MetricsTopCampaignsChart marketing={marketing} />
+              </div>
+
               {!inboxSlaLoading && inboxSlaMetrics?.enabled && (
                 <div className="space-y-4">
                   <div>
@@ -301,7 +256,7 @@ export default function MetricsPage() {
                       })}
                     </p>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     <KpiCard
                       label={t("metrics.inboxSlaCompliance")}
                       value={`${inboxSlaMetrics.complianceRate}%`}
@@ -318,52 +273,11 @@ export default function MetricsPage() {
                     <KpiCard
                       label={t("metrics.inboxSlaOpenBreached")}
                       value={formatNumber(inboxSlaMetrics.openBreached)}
+                      sub={t("dashboard.opsAtRisk", { count: inboxSlaMetrics.openAtRisk })}
                       icon={<AlertTriangle className="w-5 h-5" />}
                     />
-                    <KpiCard
-                      label={t("metrics.inboxSlaOpenAtRisk")}
-                      value={formatNumber(inboxSlaMetrics.openAtRisk)}
-                      icon={<MessageSquare className="w-5 h-5" />}
-                    />
                   </div>
-                </div>
-              )}
-              {(marketing.topCampaigns?.length ?? 0) > 0 && (
-                <div className="overflow-hidden rounded-xl border border-default bg-surface-elevated">
-                  <div className="border-b border-subtle px-4 py-4 sm:px-6">
-                    <h3 className="text-sm font-semibold text-primary">{t("metrics.topCampaigns")}</h3>
-                  </div>
-                  <TableContainer>
-                  <table className="w-full min-w-[560px] text-sm">
-                    <thead>
-                      <tr className="bg-surface text-left text-xs text-secondary uppercase">
-                        <th className="px-6 py-3">{t("campaigns.nameLabel")}</th>
-                        <th className="px-6 py-3 text-right">{t("metrics.colSent")}</th>
-                        <th className="px-6 py-3 text-right">{t("metrics.deliveryRate")}</th>
-                        <th className="px-6 py-3 text-right">{t("metrics.readRate")}</th>
-                        <th className="px-6 py-3" />
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {marketing.topCampaigns.map((c) => (
-                        <tr key={c.campaignId}>
-                          <td className="px-6 py-3 font-medium">{c.name}</td>
-                          <td className="px-6 py-3 text-right">{formatNumber(c.sent)}</td>
-                          <td className="px-6 py-3 text-right">{c.deliveryRate}%</td>
-                          <td className="px-6 py-3 text-right">{c.readRate}%</td>
-                          <td className="px-6 py-3 text-right">
-                            <Link
-                              href={`/campaigns/${c.campaignId}`}
-                              className="text-accent text-xs hover:underline"
-                            >
-                              {t("metrics.viewCampaign")}
-                            </Link>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  </TableContainer>
+                  <MetricsSlaByAdvisorChart inboxSla={inboxSlaMetrics} />
                 </div>
               )}
             </div>
@@ -408,112 +322,10 @@ export default function MetricsPage() {
                   />
                 </div>
               ) : (
-                <>
-                  <div className="overflow-hidden rounded-xl border border-default bg-surface-elevated">
-                    <div className="border-b border-subtle px-4 py-4 sm:px-6">
-                      <h3 className="text-sm font-semibold text-primary">
-                        {t("metrics.salesBySource")}
-                      </h3>
-                    </div>
-                    <TableContainer>
-                      <table className="w-full min-w-[480px] text-sm">
-                        <thead>
-                          <tr className="bg-surface text-left text-xs text-secondary uppercase">
-                            <th className="px-6 py-3">{t("metrics.salesSourceColumn")}</th>
-                            <th className="px-6 py-3 text-right">{t("metrics.salesPaidCount")}</th>
-                            <th className="px-6 py-3 text-right">{t("metrics.salesRevenue")}</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                          {salesSources
-                            .filter((source) => sales.bySource[source].count > 0)
-                            .map((source) => (
-                              <tr key={source}>
-                                <td className="px-6 py-3 font-medium">
-                                  {salesSourceLabel(source)}
-                                </td>
-                                <td className="px-6 py-3 text-right">
-                                  {formatNumber(sales.bySource[source].count)}
-                                </td>
-                                <td className="px-6 py-3 text-right">
-                                  {formatCurrency(sales.bySource[source].revenueInCents)}
-                                </td>
-                              </tr>
-                            ))}
-                        </tbody>
-                      </table>
-                    </TableContainer>
-                  </div>
-
-                  {sales.byBot.length > 0 && (
-                    <div className="overflow-hidden rounded-xl border border-default bg-surface-elevated">
-                      <div className="border-b border-subtle px-4 py-4 sm:px-6">
-                        <h3 className="text-sm font-semibold text-primary">
-                          {t("metrics.salesByBot")}
-                        </h3>
-                      </div>
-                      <TableContainer>
-                        <table className="w-full min-w-[480px] text-sm">
-                          <thead>
-                            <tr className="bg-surface text-left text-xs text-secondary uppercase">
-                              <th className="px-6 py-3">{t("metrics.colBot")}</th>
-                              <th className="px-6 py-3 text-right">{t("metrics.salesPaidCount")}</th>
-                              <th className="px-6 py-3 text-right">{t("metrics.salesRevenue")}</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-100">
-                            {sales.byBot.map((bot) => (
-                              <tr key={bot.botId}>
-                                <td className="px-6 py-3 font-medium">{bot.botName}</td>
-                                <td className="px-6 py-3 text-right">{formatNumber(bot.count)}</td>
-                                <td className="px-6 py-3 text-right">
-                                  {formatCurrency(bot.revenueInCents)}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </TableContainer>
-                    </div>
-                  )}
-                </>
-              )}
-
-              {sales.topProducts.length > 0 && (
-                <div className="overflow-hidden rounded-xl border border-default bg-surface-elevated">
-                  <div className="border-b border-subtle px-4 py-4 sm:px-6">
-                    <h3 className="text-sm font-semibold text-primary">
-                      {t("metrics.topProducts")}
-                    </h3>
-                  </div>
-                  <TableContainer>
-                    <table className="w-full min-w-[560px] text-sm">
-                      <thead>
-                        <tr className="bg-surface text-left text-xs text-secondary uppercase">
-                          <th className="px-6 py-3">{t("metrics.productName")}</th>
-                          <th className="px-6 py-3 text-right">{t("metrics.productOrders")}</th>
-                          <th className="px-6 py-3 text-right">{t("metrics.productQuantity")}</th>
-                          <th className="px-6 py-3 text-right">{t("metrics.productOrderValue")}</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {sales.topProducts.map((product) => (
-                          <tr key={product.productKey}>
-                            <td className="px-6 py-3 font-medium">{product.name}</td>
-                            <td className="px-6 py-3 text-right">
-                              {formatNumber(product.orderCount)}
-                            </td>
-                            <td className="px-6 py-3 text-right">
-                              {formatNumber(product.quantity)}
-                            </td>
-                            <td className="px-6 py-3 text-right">
-                              {formatCurrency(product.revenueInCents)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </TableContainer>
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                  <MetricsSalesBySourceChart sales={sales} />
+                  <MetricsSalesByBotChart sales={sales} />
+                  <MetricsTopProductsChart sales={sales} />
                 </div>
               )}
 
@@ -584,7 +396,7 @@ export default function MetricsPage() {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <KpiCard
                   label={t("metrics.pickupRate")}
                   value={`${calling.summary.pickupRate}%`}
@@ -593,21 +405,6 @@ export default function MetricsPage() {
                     total: formatNumber(calling.summary.outboundAttempts),
                   })}
                   icon={<Phone className="w-5 h-5" />}
-                />
-                <KpiCard
-                  label={t("metrics.avgCallDuration")}
-                  value={formatCallDuration(calling.summary.averageDurationSeconds)}
-                  sub={t("metrics.avgCallDurationSub")}
-                  icon={<Activity className="w-5 h-5" />}
-                />
-                <KpiCard
-                  label={t("metrics.outboundMissed")}
-                  value={formatNumber(calling.summary.outboundMissed)}
-                  sub={t("metrics.outboundMissedSub", {
-                    from: formatRangeDate(calling.from),
-                    to: formatRangeDate(calling.to),
-                  })}
-                  icon={<BarChart3 className="w-5 h-5" />}
                 />
                 <KpiCard
                   label={t("metrics.inboundAnswerRate")}
@@ -620,49 +417,10 @@ export default function MetricsPage() {
                 />
               </div>
 
-              {calling.byBot.length > 0 && (
-                <div className="overflow-hidden rounded-xl border border-default bg-surface-elevated">
-                  <div className="border-b border-subtle px-4 py-4 sm:px-6">
-                    <h3 className="text-sm font-semibold text-primary">
-                      {t("metrics.callingByBot")}
-                    </h3>
-                  </div>
-                  <TableContainer>
-                    <table className="w-full min-w-[720px] text-sm">
-                      <thead>
-                        <tr className="bg-surface text-left text-xs text-secondary uppercase">
-                          <th className="px-6 py-3">{t("metrics.colBot")}</th>
-                          <th className="px-6 py-3 text-right">{t("metrics.pickupRate")}</th>
-                          <th className="px-6 py-3 text-right">{t("metrics.colOutbound")}</th>
-                          <th className="px-6 py-3 text-right">{t("metrics.colPickedUp")}</th>
-                          <th className="px-6 py-3 text-right">{t("metrics.avgCallDuration")}</th>
-                          <th className="px-6 py-3">{t("common.status")}</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {calling.byBot.map((bot) => (
-                          <tr key={bot.botId}>
-                            <td className="px-6 py-3 font-medium">{bot.botName}</td>
-                            <td className="px-6 py-3 text-right">{bot.pickupRate}%</td>
-                            <td className="px-6 py-3 text-right">
-                              {formatNumber(bot.outboundAttempts)}
-                            </td>
-                            <td className="px-6 py-3 text-right">
-                              {formatNumber(bot.outboundPickedUp)}
-                            </td>
-                            <td className="px-6 py-3 text-right">
-                              {formatCallDuration(bot.averageDurationSeconds)}
-                            </td>
-                            <td className="px-6 py-3">
-                              <Badge variant={callingHealthVariant(bot.health)}>
-                                {callingHealthLabel(bot.health)}
-                              </Badge>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </TableContainer>
+              {calling.summary.totalCalls > 0 && (
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                  <MetricsCallingSummaryChart calling={calling} />
+                  {calling.byBot.length > 0 && <MetricsCallingByBotChart calling={calling} />}
                 </div>
               )}
 

@@ -1,20 +1,37 @@
 import { cn } from "@/lib/utils";
 import type { HTMLAttributes } from "react";
 
-type CardVariant = "default" | "elevated" | "glass";
+type CardVariant = "default" | "elevated" | "glass" | "interactive";
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
   variant?: CardVariant;
+  padding?: "none" | "sm" | "md" | "lg";
 }
 
 const variants: Record<CardVariant, string> = {
-  default: "bg-surface-elevated border border-default",
-  elevated: "bg-surface-elevated border border-default shadow-lg shadow-black/5",
-  glass: "bg-surface-elevated/80 border border-default backdrop-blur-md",
+  default: "content-card",
+  elevated: "content-card shadow-[var(--shadow-md)]",
+  glass: "bg-surface-elevated/80 border border-default backdrop-blur-md rounded-xl shadow-[var(--shadow-card)]",
+  interactive: "content-card content-card-interactive",
 };
 
-export function Card({ className, variant = "default", ...props }: CardProps) {
+const paddings = {
+  none: "",
+  sm: "p-4",
+  md: "p-5",
+  lg: "p-6",
+};
+
+export function Card({
+  className,
+  variant = "default",
+  padding = "none",
+  ...props
+}: CardProps) {
   return (
-    <div className={cn("rounded-xl", variants[variant], className)} {...props} />
+    <div
+      className={cn(variants[variant], paddings[padding], className)}
+      {...props}
+    />
   );
 }

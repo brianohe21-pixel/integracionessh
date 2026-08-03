@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOutUser } from "@/lib/auth-session";
@@ -15,6 +15,7 @@ import {
   LayoutTemplate,
   SendHorizonal,
   LayoutGrid,
+  LayoutDashboard,
   BarChart3,
   Settings,
   LogOut,
@@ -30,16 +31,19 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  Check,
+  Building2,
 } from "lucide-react";
 import { useAdminRole } from "@/hooks/useAdminRole";
 import { useTenantRole } from "@/hooks/useTenantRole";
 import { useTenantBranding } from "@/hooks/useTenantBranding";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useSidebar } from "@/components/layout/SidebarContext";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, getTenantContext } from "@/lib/api";
 import type { Tenant } from "@/types";
-import { useClearTenantContext } from "@/hooks/useReseller";
+import { useClearTenantContext, useAssumeSubaccount, useResellerSubaccounts } from "@/hooks/useReseller";
+import { useAuthSession } from "@/hooks/useAuthSession";
 
 type NavItem = {
   href: string;
@@ -54,6 +58,11 @@ type NavCategory = {
 };
 
 const memberNavCategories: NavCategory[] = [
+  {
+    id: "home",
+    labelKey: "nav.categoryHome",
+    items: [{ href: "/dashboard", labelKey: "nav.dashboard", icon: LayoutDashboard }],
+  },
   {
     id: "messaging",
     labelKey: "nav.categoryMessaging",
@@ -404,24 +413,215 @@ function SidebarUserProfile({ collapsed }: { collapsed: boolean }) {
   );
 }
 
+function accountInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
+  return `${parts[0]![0] ?? ""}${parts[1]![0] ?? ""}`.toUpperCase();
+}
+
+function SubaccountSwitcher({
+  assumedId,
+  subaccounts,
+  switching,
+  onSelectSubaccount,
+}: {
+  assumedId: string | null;
+  subaccounts: Tenant[];
+  switching: boolean;
+  onSelectSubaccount: (subaccountId: string | null) => void;
+}) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  const selected = assumedId
+    ? subaccounts.find((item) => item.tenantId === assumedId)
+    : undefined;
+  const label = selected?.name ?? t("nav.mainAccount");
+
+  useEffect(() => {
+    if (!open) return;
+    function onPointerDown(event: MouseEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  function choose(id: string | null) {
+    setOpen(false);
+    if (id === assumedId) return;
+    onSelectSubaccount(id);
+  }
+
+  return (
+    <div ref={rootRef} className="relative mt-3">
+      <button
+        type="button"
+        disabled={switching}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={t("nav.switchSubaccount")}
+        onClick={() => setOpen((value) => !value)}
+        className={cn(
+          "group flex w-full items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left transition-all",
+          "border-white/8 bg-white/[0.03] hover:border-white/15 hover:bg-white/[0.06]",
+          open && "border-brand-primary/35 bg-brand-primary/10",
+          switching && "opacity-60"
+        )}
+      >
+        <span
+          className={cn(
+            "flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[10px] font-bold",
+            assumedId
+              ? "bg-brand-primary/20 text-brand-primary"
+              : "bg-white/10 text-[var(--sidebar-text-secondary)]"
+          )}
+        >
+          {assumedId ? (
+            accountInitials(label)
+          ) : (
+            <Building2 className="h-3.5 w-3.5" />
+          )}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-xs font-medium leading-tight text-[var(--sidebar-text)]">
+            {label}
+          </span>
+          {assumedId ? (
+            <span className="block truncate text-[10px] leading-tight text-brand-primary/90">
+              {t("reseller.assumedBanner")}
+            </span>
+          ) : (
+            <span className="block truncate text-[10px] leading-tight text-[var(--sidebar-text-muted)]">
+              {t("nav.switchSubaccount")}
+            </span>
+          )}
+        </span>
+        <ChevronDown
+          className={cn(
+            "h-4 w-4 shrink-0 text-[var(--sidebar-text-muted)] transition-transform duration-200",
+            open && "rotate-180 text-[var(--sidebar-text)]"
+          )}
+        />
+      </button>
+
+      {open ? (
+        <div
+          role="listbox"
+          aria-label={t("nav.switchSubaccount")}
+          className="absolute left-0 right-0 z-50 mt-1.5 min-w-full overflow-hidden rounded-xl border border-[var(--sidebar-border)] bg-[#0f1728] shadow-[0_12px_40px_rgba(0,0,0,0.45)] ring-1 ring-white/10"
+        >
+          <div className="border-b border-white/5 px-2.5 py-2">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--sidebar-text-muted)]">
+              {t("nav.subaccounts")}
+            </p>
+          </div>
+          <div className="sidebar-scroll max-h-52 overflow-y-auto p-1">
+            <button
+              type="button"
+              role="option"
+              aria-selected={!assumedId}
+              onClick={() => choose(null)}
+              className={cn(
+                "flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left transition-colors",
+                !assumedId
+                  ? "bg-brand-primary/15 text-[var(--sidebar-text)]"
+                  : "text-[var(--sidebar-text-secondary)] hover:bg-white/5 hover:text-[var(--sidebar-text)]"
+              )}
+            >
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white/10">
+                <Building2 className="h-3.5 w-3.5" />
+              </span>
+              <span className="min-w-0 flex-1 truncate text-xs font-medium">
+                {t("nav.mainAccount")}
+              </span>
+              {!assumedId ? <Check className="h-3.5 w-3.5 shrink-0 text-brand-primary" /> : null}
+            </button>
+
+            {subaccounts.length > 0 ? (
+              <div className="my-1 border-t border-white/5" />
+            ) : null}
+
+            {subaccounts.map((item) => {
+              const active = item.tenantId === assumedId;
+              const suspended = item.status === "suspended";
+              return (
+                <button
+                  key={item.tenantId}
+                  type="button"
+                  role="option"
+                  aria-selected={active}
+                  disabled={suspended || switching}
+                  onClick={() => choose(item.tenantId)}
+                  className={cn(
+                    "flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left transition-colors",
+                    active
+                      ? "bg-brand-primary/15 text-[var(--sidebar-text)]"
+                      : "text-[var(--sidebar-text-secondary)] hover:bg-white/5 hover:text-[var(--sidebar-text)]",
+                    suspended && "cursor-not-allowed opacity-45"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[10px] font-bold",
+                      active ? "bg-brand-primary/25 text-brand-primary" : "bg-white/10"
+                    )}
+                  >
+                    {accountInitials(item.name)}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-xs font-medium">{item.name}</span>
+                    {suspended ? (
+                      <span className="block text-[10px] text-[var(--sidebar-text-muted)]">
+                        {t("common.suspended")}
+                      </span>
+                    ) : null}
+                  </span>
+                  {active ? <Check className="h-3.5 w-3.5 shrink-0 text-brand-primary" /> : null}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function SidebarBrand({
   displayName,
   logoUrl,
-  assumed,
+  assumedId,
+  subaccounts,
+  switching,
   collapsed,
-  onExitAssumed,
+  onSelectSubaccount,
   onClose,
   onToggleCollapsed,
 }: {
   displayName: string;
   logoUrl?: string;
-  assumed: boolean;
+  assumedId: string | null;
+  subaccounts: Tenant[];
+  switching: boolean;
   collapsed: boolean;
-  onExitAssumed: () => void;
+  onSelectSubaccount: (subaccountId: string | null) => void;
   onClose: () => void;
   onToggleCollapsed?: () => void;
 }) {
   const t = useT();
+  const showSwitcher = subaccounts.length > 0 || Boolean(assumedId);
 
   if (collapsed) {
     return (
@@ -435,7 +635,7 @@ function SidebarBrand({
             title={displayName}
           >
             {logoUrl ? (
-              <img src={logoUrl} alt="" className="max-h-full max-w-full object-contain" />
+              <img src={logoUrl} alt="" className="max-h-full max-w-full object-contain" key={logoUrl} />
             ) : (
               <BotMessageSquare className="h-4 w-4 text-[var(--sidebar-icon-active)]" />
             )}
@@ -444,7 +644,7 @@ function SidebarBrand({
             <button
               type="button"
               onClick={onToggleCollapsed}
-              className="hidden rounded-lg p-1.5 text-[var(--sidebar-text-muted)] transition-colors hover:bg-white/5 hover:text-[var(--sidebar-text)] lg:inline-flex"
+              className="inline-flex rounded-lg p-1.5 text-[var(--sidebar-text-muted)] transition-colors hover:bg-white/5 hover:text-[var(--sidebar-text)]"
               aria-label={t("nav.expandSidebar")}
             >
               <ChevronRight className="h-4 w-4" />
@@ -464,8 +664,8 @@ function SidebarBrand({
   }
 
   return (
-    <div className="shrink-0 px-3 pt-3">
-      <div className="relative overflow-hidden rounded-xl border border-[var(--sidebar-border)] bg-sidebar-elevated/70 px-3 py-3 ring-1 ring-white/5">
+    <div className="relative z-20 shrink-0 px-3 pt-3">
+      <div className="relative rounded-xl border border-[var(--sidebar-border)] bg-sidebar-elevated/70 px-3 py-3 ring-1 ring-white/5">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand-primary/60 to-transparent" />
         <div className="flex items-center gap-3">
           <div
@@ -475,31 +675,22 @@ function SidebarBrand({
             )}
           >
             {logoUrl ? (
-              <img src={logoUrl} alt="" className="max-h-full max-w-full object-contain" />
+              <img src={logoUrl} alt="" className="max-h-full max-w-full object-contain" key={logoUrl} />
             ) : (
               <BotMessageSquare className="h-4 w-4 text-[var(--sidebar-icon-active)]" />
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-[var(--sidebar-text)]">
+            <p className="text-sm font-semibold leading-snug text-[var(--sidebar-text)] break-words">
               {displayName}
             </p>
-            {assumed ? (
-              <button
-                type="button"
-                onClick={onExitAssumed}
-                className="mt-1.5 inline-flex items-center rounded-md bg-sidebar-muted px-2 py-0.5 text-[10px] font-medium text-[var(--sidebar-text-secondary)] transition-colors hover:text-[var(--sidebar-text)]"
-              >
-                {t("nav.exitSubaccount")}
-              </button>
-            ) : null}
           </div>
           <div className="flex shrink-0 items-center gap-0.5">
             {onToggleCollapsed ? (
               <button
                 type="button"
                 onClick={onToggleCollapsed}
-                className="hidden rounded-lg p-1.5 text-[var(--sidebar-text-muted)] transition-colors hover:bg-white/5 hover:text-[var(--sidebar-text)] lg:inline-flex"
+                className="inline-flex rounded-lg p-1.5 text-[var(--sidebar-text-muted)] transition-colors hover:bg-white/5 hover:text-[var(--sidebar-text)]"
                 aria-label={t("nav.collapseSidebar")}
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -515,6 +706,14 @@ function SidebarBrand({
             </button>
           </div>
         </div>
+        {showSwitcher ? (
+          <SubaccountSwitcher
+            assumedId={assumedId}
+            subaccounts={subaccounts}
+            switching={switching}
+            onSelectSubaccount={onSelectSubaccount}
+          />
+        ) : null}
       </div>
     </div>
   );
@@ -522,19 +721,61 @@ function SidebarBrand({
 
 export function Sidebar() {
   const t = useT();
+  const queryClient = useQueryClient();
+  const { isAuthenticated, loading: authLoading } = useAuthSession();
   const { isOpen, close, isCollapsed, toggleCollapsed } = useSidebar();
   const { isAdmin, loading: adminLoading } = useAdminRole();
   const { isAdvisor, loading: roleLoading } = useTenantRole();
-  const { data: branding } = useTenantBranding(!isAdmin);
+  const brandingEnabled =
+    isAuthenticated && !authLoading && !adminLoading && !isAdmin;
+  const { data: branding } = useTenantBranding(brandingEnabled);
   const clearContext = useClearTenantContext();
+  const assume = useAssumeSubaccount();
   const { data: me } = useQuery({
     queryKey: ["tenants", "me"],
     queryFn: () => api.get<Tenant>("/tenants/me"),
-    enabled: !isAdmin,
+    enabled: isAuthenticated && !authLoading && !isAdmin,
   });
-  const assumed = typeof window !== "undefined" ? getTenantContext() : null;
-  const isReseller =
-    !assumed && (me?.plan === "reseller" || me?.tenantKind === "reseller");
+  const [assumedId, setAssumedId] = useState<string | null>(null);
+
+  const isResellerTenant =
+    me?.plan === "reseller" || me?.tenantKind === "reseller";
+  const isSubaccountTenant =
+    me?.tenantKind === "subaccount" || Boolean(me?.parentTenantId);
+  const canManageSubaccounts =
+    !isAdmin && !isAdvisor && (isResellerTenant || isSubaccountTenant);
+
+  useEffect(() => {
+    const stored = getTenantContext();
+
+    if (!me) {
+      setAssumedId(stored);
+      return;
+    }
+
+    if (!isResellerTenant && !isSubaccountTenant) {
+      if (stored) clearContext();
+      queryClient.removeQueries({ queryKey: ["reseller-subaccounts"] });
+      setAssumedId(null);
+      return;
+    }
+
+    if (stored && isResellerTenant && !isSubaccountTenant) {
+      clearContext();
+      setAssumedId(null);
+      return;
+    }
+
+    setAssumedId(stored && isSubaccountTenant ? stored : null);
+  }, [me, isResellerTenant, isSubaccountTenant, clearContext, queryClient]);
+
+  const isResellerHome = canManageSubaccounts && !assumedId && isResellerTenant;
+  const { data: subaccountsData } = useResellerSubaccounts(canManageSubaccounts);
+  const subaccounts = canManageSubaccounts
+    ? (subaccountsData?.items ?? []).filter(
+        (item) => item.status !== "suspended" || item.tenantId === assumedId
+      )
+    : [];
 
   const loading = adminLoading || roleLoading;
   const baseCategories = loading
@@ -545,7 +786,7 @@ export function Sidebar() {
         ? advisorNavCategories
         : memberNavCategories;
 
-  const navCategories = isReseller
+  const navCategories = isResellerHome
     ? baseCategories.map((category) =>
         category.id === "account"
           ? {
@@ -560,21 +801,44 @@ export function Sidebar() {
       )
     : baseCategories;
 
-  const tenantName = (branding?.brandName || me?.name || "").trim();
-  const displayName = tenantName || t("common.appName");
+  const assumedSubaccount = assumedId
+    ? subaccounts.find((item) => item.tenantId === assumedId)
+    : undefined;
+  const tenantName = (
+    assumedSubaccount?.name ||
+    branding?.brandName ||
+    me?.resolvedBranding?.brandName ||
+    me?.branding?.brandName ||
+    ""
+  ).trim();
+  const displayName = tenantName || me?.name?.trim() || t("common.appName");
+  const logoUrl = branding?.logoUrl ?? me?.resolvedBranding?.logoUrl;
+
+  async function handleSelectSubaccount(subaccountId: string | null) {
+    if (subaccountId === assumedId) return;
+    if (!subaccountId) {
+      clearContext();
+      setAssumedId(null);
+      return;
+    }
+    await assume.mutateAsync(subaccountId);
+    setAssumedId(subaccountId);
+  }
 
   const shellClass =
     "sidebar-shell flex flex-col overflow-hidden border-r border-[var(--sidebar-border)] text-[var(--sidebar-text)] transition-[width] duration-200 ease-out";
 
-  const desktopWidth = isCollapsed ? "w-[4.5rem]" : "w-60";
+  const desktopWidth = isCollapsed ? "w-[4.5rem]" : "w-72";
 
   const brand = (collapsed: boolean, showCollapseToggle: boolean) => (
     <SidebarBrand
       displayName={displayName}
-      logoUrl={branding?.logoUrl}
-      assumed={Boolean(assumed)}
+      logoUrl={logoUrl}
+      assumedId={canManageSubaccounts ? assumedId : null}
+      subaccounts={subaccounts}
+      switching={assume.isPending}
       collapsed={collapsed}
-      onExitAssumed={() => clearContext()}
+      onSelectSubaccount={(id) => void handleSelectSubaccount(id)}
       onClose={close}
       onToggleCollapsed={showCollapseToggle ? toggleCollapsed : undefined}
     />
@@ -599,14 +863,15 @@ export function Sidebar() {
 
       <aside
         className={cn(
-          "sidebar-shell fixed inset-y-0 left-0 z-50 h-[100dvh] w-[17.5rem] min-h-0 transition-transform duration-200 lg:hidden",
+          "sidebar-shell fixed inset-y-0 left-0 z-50 h-[100dvh] min-h-0 transition-[width,transform] duration-200 lg:hidden",
+          isCollapsed ? "w-[4.5rem]" : "w-72",
           shellClass,
           isOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"
         )}
       >
-        {brand(false, false)}
-        <SidebarNav navCategories={navCategories} collapsed={false} onNavigate={close} />
-        <SidebarUserProfile collapsed={false} />
+        {brand(isCollapsed, true)}
+        <SidebarNav navCategories={navCategories} collapsed={isCollapsed} onNavigate={close} />
+        <SidebarUserProfile collapsed={isCollapsed} />
       </aside>
     </>
   );

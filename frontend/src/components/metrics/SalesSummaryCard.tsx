@@ -26,16 +26,16 @@ export function SalesSummaryCard() {
   }
 
   if (isLoading) {
-    return <div className="h-28 animate-pulse rounded-xl border border-default bg-surface-elevated" />;
+    return <div className="content-card h-28 animate-pulse" />;
   }
 
   if (!sales) return null;
 
   return (
-    <div className="rounded-xl border border-default bg-surface-elevated p-5">
+    <div className="content-card mb-6 p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-muted text-accent">
+          <div className="icon-badge h-11 w-11">
             <Banknote className="h-5 w-5" />
           </div>
           <div>

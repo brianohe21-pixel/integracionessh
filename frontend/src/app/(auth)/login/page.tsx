@@ -20,7 +20,7 @@ import {
   isPaidBillingPlan,
   storePendingBillingPlan,
 } from "@/lib/post-login-path";
-import { signOutUser } from "@/lib/auth-session";
+import { signOutUser, ensureAuthSession } from "@/lib/auth-session";
 import { AuthDivider, GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 import { validatePortalSession, getBrowserPortalHost, isRestrictedPortalHost } from "@/lib/host-portal";
 
@@ -119,6 +119,7 @@ export default function LoginPage() {
     if (out.isSignedIn) {
       void (async () => {
         if (!(await finishLogin())) return;
+        await ensureAuthSession();
         router.push(await getPostLoginPath(redirectTo));
       })();
       return "done";
@@ -199,6 +200,7 @@ export default function LoginPage() {
       });
       if (out.isSignedIn) {
         if (!(await finishLogin())) return;
+        await ensureAuthSession();
         router.push(await getPostLoginPath(redirectTo));
         return;
       }

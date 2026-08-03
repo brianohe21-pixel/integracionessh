@@ -1,9 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { Suspense, useEffect, useState } from "react";
 import { useT } from "@/i18n/context";
-import { useTenantBranding } from "@/hooks/useTenantBranding";
 import { DEFAULT_PRIMARY_COLOR, hexToRgba } from "@/lib/brand-colors";
 import { api } from "@/lib/api";
 
@@ -36,7 +34,6 @@ function readCookie(name: string): string | undefined {
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   const t = useT();
-  const { data: branding } = useTenantBranding();
   const [hostBranding, setHostBranding] = useState<HostBranding | null>(null);
 
   useEffect(() => {
@@ -47,7 +44,6 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     };
     if (fromCookie.brandName || fromCookie.primaryColor || fromCookie.logoUrl) {
       setHostBranding(fromCookie);
-      return;
     }
 
     const host = window.location.host.split(":")[0];
@@ -70,11 +66,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       .catch(() => undefined);
   }, []);
 
-  const displayName =
-    branding?.brandName ?? hostBranding?.brandName ?? t("common.appName");
-  const primaryColor =
-    branding?.primaryColor ?? hostBranding?.primaryColor ?? DEFAULT_PRIMARY_COLOR;
-  const logoUrl = branding?.logoUrl ?? hostBranding?.logoUrl;
+  const displayName = hostBranding?.brandName ?? t("common.appName");
+  const primaryColor = hostBranding?.primaryColor ?? DEFAULT_PRIMARY_COLOR;
+  const logoUrl = hostBranding?.logoUrl;
 
   return (
     <div
@@ -90,12 +84,11 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             style={{ backgroundColor: primaryColor }}
           >
             {logoUrl ? (
-              <Image
+              <img
+                key={logoUrl}
                 src={logoUrl}
                 alt=""
-                fill
-                unoptimized
-                className="object-cover"
+                className="absolute inset-0 h-full w-full object-cover"
               />
             ) : (
               <svg className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">

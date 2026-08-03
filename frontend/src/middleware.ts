@@ -26,6 +26,8 @@ async function fetchPortalBranding(host: string): Promise<PortalBranding | null>
   }
 }
 
+const MAX_COOKIE_VALUE_LENGTH = 3000;
+
 function applyPortalCookies(response: NextResponse, portal: PortalBranding): void {
   if (portal.brandName) {
     response.cookies.set("wl-brand-name", portal.brandName, { path: "/" });
@@ -33,7 +35,7 @@ function applyPortalCookies(response: NextResponse, portal: PortalBranding): voi
   if (portal.primaryColor) {
     response.cookies.set("wl-primary-color", portal.primaryColor, { path: "/" });
   }
-  if (portal.logoUrl) {
+  if (portal.logoUrl && portal.logoUrl.length <= MAX_COOKIE_VALUE_LENGTH) {
     response.cookies.set("wl-logo-url", portal.logoUrl, { path: "/" });
   }
   if (portal.tenantId) {

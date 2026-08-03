@@ -6,7 +6,8 @@ import type { Conversation, InboxSlaSettings } from "@/types";
 import { getConversationSlaStatus, resolveInboxSlaSettings } from "@/lib/inbox-sla";
 
 async function fetchInboxSlaSettings(): Promise<InboxSlaSettings> {
-  return api.get<InboxSlaSettings>("/tenants/me/inbox-sla");
+  const data = await api.get<InboxSlaSettings>("/tenants/me/inbox-sla");
+  return resolveInboxSlaSettings(data);
 }
 
 export function useInboxSlaSettings() {
@@ -22,7 +23,7 @@ export function useSaveInboxSlaSettings() {
     mutationFn: (settings: InboxSlaSettings) =>
       api.put<InboxSlaSettings>("/tenants/me/inbox-sla", settings),
     onSuccess: (data) => {
-      queryClient.setQueryData(["inbox-sla-settings"], data);
+      queryClient.setQueryData(["inbox-sla-settings"], resolveInboxSlaSettings(data));
       queryClient.invalidateQueries({ queryKey: ["metrics", "inbox-sla"] });
     },
   });

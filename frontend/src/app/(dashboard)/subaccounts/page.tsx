@@ -20,6 +20,13 @@ import {
 } from "@/hooks/useReseller";
 import type { Tenant } from "@/types";
 import { useRouter } from "next/navigation";
+import { MEMBER_HOME } from "@/lib/post-login-path";
+import { ExternalLink } from "lucide-react";
+
+function portalUrl(customDomain: string): string {
+  const host = customDomain.trim().replace(/^https?:\/\//, "").replace(/\/$/, "");
+  return `https://${host}`;
+}
 
 function cleanDnsToken(value: string): string {
   return value.trim().replace(/\.$/, "");
@@ -258,7 +265,7 @@ export default function SubaccountsPage() {
   async function handleAssume(id: string) {
     await assume.mutateAsync(id);
     setAssumed(id);
-    router.push("/bots");
+    router.push(MEMBER_HOME);
   }
 
   return (
@@ -433,10 +440,17 @@ export default function SubaccountsPage() {
           >
             {statusLabel}
           </Badge>
-          {domainQuery.data?.amplifyStatus ? (
-            <span className="text-secondary">
-              · {t("reseller.amplifyStatus")}: {domainQuery.data.amplifyStatus}
-            </span>
+          {domainQuery.data?.customDomain ? (
+            <a
+              href={portalUrl(domainQuery.data.customDomain)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-accent hover:underline"
+            >
+              {portalUrl(domainQuery.data.customDomain)}
+              <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              <span className="sr-only">{t("reseller.openDomain")}</span>
+            </a>
           ) : null}
         </div>
         {domainQuery.data?.amplifyStatusReason && (
