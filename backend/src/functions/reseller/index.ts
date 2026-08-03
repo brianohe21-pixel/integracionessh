@@ -90,6 +90,7 @@ function domainResponse(
     customDomainStatus,
     cnameTarget: dns?.cnameTarget || fallbackCnameTarget(),
     amplifyStatus: dns?.domainStatus ?? null,
+    amplifyStatusReason: dns?.statusReason ?? null,
     subdomainVerified: dns?.subdomainVerified ?? false,
     dnsRecords: dns?.dnsRecords ?? [],
   };
