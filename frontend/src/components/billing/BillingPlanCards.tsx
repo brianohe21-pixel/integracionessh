@@ -37,7 +37,9 @@ export function BillingPlanCards({ autoCheckoutPlan }: { autoCheckoutPlan?: Tena
 
   useEffect(() => {
     if (autoStarted.current) return;
-    if (!autoCheckoutPlan || autoCheckoutPlan === "free") return;
+    if (!autoCheckoutPlan || autoCheckoutPlan === "free" || autoCheckoutPlan === "reseller") {
+      return;
+    }
     if (!status || !providers) return;
     if (status.plan === autoCheckoutPlan && !status.isExpired) return;
     autoStarted.current = true;

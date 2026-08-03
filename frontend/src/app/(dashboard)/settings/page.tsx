@@ -77,10 +77,10 @@ export default function SettingsPage() {
                 className={cn(
                   "flex shrink-0 items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors",
                   active
-                    ? "text-[var(--brand-primary,#25D366)]"
+                    ? "text-[var(--brand-primary,#128C7E)]"
                     : "border-transparent text-secondary hover:text-secondary hover:border-default"
                 )}
-                style={active ? { borderBottomColor: "var(--brand-primary, #25D366)" } : undefined}
+                style={active ? { borderBottomColor: "var(--brand-primary, #128C7E)" } : undefined}
               >
                 {tabItem.icon}
                 {tabItem.label}

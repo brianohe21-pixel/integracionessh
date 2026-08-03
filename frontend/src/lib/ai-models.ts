@@ -18,6 +18,7 @@ const PLAN_RANK: Record<TenantPlan, number> = {
   free: 0,
   pro: 1,
   enterprise: 2,
+  reseller: 2,
 };
 
 export const AI_MODELS: AiModelDefinition[] = [
@@ -78,7 +79,9 @@ function planMeetsRequirement(plan: TenantPlan, minPlan: TenantPlan): boolean {
 
 export function getModelsForPlan(plan: TenantPlan | string | undefined): AiModelDefinition[] {
   const resolvedPlan: TenantPlan =
-    plan === "pro" || plan === "enterprise" || plan === "free" ? plan : "free";
+    plan === "pro" || plan === "enterprise" || plan === "free" || plan === "reseller"
+      ? plan
+      : "free";
   return AI_MODELS.filter((model) => planMeetsRequirement(resolvedPlan, model.minPlan));
 }
 

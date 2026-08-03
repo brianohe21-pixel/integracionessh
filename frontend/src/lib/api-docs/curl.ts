@@ -1,7 +1,7 @@
 import { API_KEY_PLACEHOLDER, getApiBaseUrl } from "./constants";
 
 export function buildCurlExample(params: {
-  method: "GET" | "POST" | "PUT";
+  method: "GET" | "POST" | "PUT" | "DELETE";
   path: string;
   apiKey?: string;
   body?: string;
@@ -14,7 +14,7 @@ export function buildCurlExample(params: {
     `  -H "X-API-Key: ${key}"`,
   ];
 
-  if (params.method !== "GET") {
+  if (params.method !== "GET" && params.method !== "DELETE") {
     lines.push(`  -H "Content-Type: application/json"`);
   }
 

@@ -1,4 +1,4 @@
-export const DEFAULT_PRIMARY_COLOR = "#25D366";
+export const DEFAULT_PRIMARY_COLOR = "#128C7E";
 
 export function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
   const match = /^#?([0-9A-Fa-f]{6})$/.exec(hex.trim());
@@ -22,7 +22,7 @@ export function adjustHexBrightness(hex: string, percent: number): string {
 
 export function hexToRgba(hex: string, alpha: number): string {
   const rgb = hexToRgb(hex);
-  if (!rgb) return `rgba(37, 211, 102, ${alpha})`;
+  if (!rgb) return `rgba(18, 140, 126, ${alpha})`;
   return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
 }
 
@@ -30,6 +30,9 @@ export function applyBrandCssVariables(primaryColor: string): void {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
   root.style.setProperty("--brand-primary", primaryColor);
-  root.style.setProperty("--brand-primary-hover", adjustHexBrightness(primaryColor, -10));
-  root.style.setProperty("--brand-primary-light", hexToRgba(primaryColor, 0.08));
+  root.style.setProperty("--brand-primary-hover", adjustHexBrightness(primaryColor, -12));
+  root.style.setProperty("--brand-primary-light", hexToRgba(primaryColor, 0.07));
+  root.style.setProperty("--accent", primaryColor);
+  root.style.setProperty("--accent-hover", adjustHexBrightness(primaryColor, -12));
+  root.style.setProperty("--accent-muted", hexToRgba(primaryColor, 0.07));
 }

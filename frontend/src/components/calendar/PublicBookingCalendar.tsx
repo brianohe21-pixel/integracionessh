@@ -70,7 +70,7 @@ function buildMonthCells(year: number, month: number, weekStartsOn: 0 | 1) {
 export function PublicBookingCalendar({
   dates,
   selectedIsoDate,
-  accent = "#25D366",
+  accent = "#128C7E",
   disabled = false,
   waitlistIsoDates,
   onSelectDate,

@@ -22,6 +22,7 @@ import {
 } from "@/lib/post-login-path";
 import { signOutUser } from "@/lib/auth-session";
 import { AuthDivider, GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+import { validatePortalSession, getBrowserPortalHost, isRestrictedPortalHost } from "@/lib/host-portal";
 
 function isUserAlreadyAuthenticatedError(err: unknown): boolean {
   return (
@@ -36,6 +37,7 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect");
+  const portalError = searchParams.get("error") === "portal";
   const planParam = searchParams.get("plan");
   const t = useT();
 
@@ -61,31 +63,64 @@ export default function LoginPage() {
   const [successMessage, setSuccessMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [registerAllowed, setRegisterAllowed] = useState(true);
 
   useEffect(() => {
     if (pendingPlan) storePendingBillingPlan(pendingPlan);
   }, [pendingPlan]);
 
   useEffect(() => {
+    if (portalError) {
+      setError(t("auth.portalAccessDenied"));
+    }
+  }, [portalError, t]);
+
+  useEffect(() => {
+    const host = getBrowserPortalHost();
+    if (!host) return;
+    isRestrictedPortalHost(host)
+      .then((restricted) => setRegisterAllowed(!restricted))
+      .catch(() => setRegisterAllowed(true));
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
     getCurrentUser()
       .then(async () => {
-        if (!cancelled) {
-          const target = redirectTo ?? (pendingPlan ? billingRedirectForPlan(pendingPlan) : null);
-          router.replace(await getPostLoginPath(target));
+        if (cancelled) return;
+        const portalCheck = await validatePortalSession();
+        if (!portalCheck.ok) {
+          await signOutUser();
+          if (!cancelled) setError(t(portalCheck.messageKey));
+          return;
         }
+        const target = redirectTo ?? (pendingPlan ? billingRedirectForPlan(pendingPlan) : null);
+        router.replace(await getPostLoginPath(target));
       })
       .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [router, redirectTo, pendingPlan]);
+  }, [router, redirectTo, pendingPlan, t]);
+
+  async function finishLogin() {
+    const portalCheck = await validatePortalSession();
+    if (!portalCheck.ok) {
+      await signOutUser();
+      setError(t(portalCheck.messageKey));
+      return false;
+    }
+    return true;
+  }
 
   function applySignInResult(
     out: Awaited<ReturnType<typeof signIn>>
   ): "done" | "newPassword" | "unsupported" {
     if (out.isSignedIn) {
-      void getPostLoginPath(redirectTo).then((path) => router.push(path));
+      void (async () => {
+        if (!(await finishLogin())) return;
+        router.push(await getPostLoginPath(redirectTo));
+      })();
       return "done";
     }
     const step = out.nextStep?.signInStep;
@@ -163,6 +198,7 @@ export default function LoginPage() {
           : {}),
       });
       if (out.isSignedIn) {
+        if (!(await finishLogin())) return;
         router.push(await getPostLoginPath(redirectTo));
         return;
       }
@@ -586,10 +622,16 @@ export default function LoginPage() {
       </form>
 
       <p className="text-center text-sm text-secondary mt-6">
-        {t("auth.noAccount")}{" "}
-        <Link href={registerHref} className="text-accent hover:underline font-medium">
-          {t("auth.signUp")}
-        </Link>
+        {registerAllowed ? (
+          <>
+            {t("auth.noAccount")}{" "}
+            <Link href={registerHref} className="text-accent hover:underline font-medium">
+              {t("auth.signUp")}
+            </Link>
+          </>
+        ) : (
+          t("auth.registerDisabledOnPortal")
+        )}
       </p>
     </div>
   );
