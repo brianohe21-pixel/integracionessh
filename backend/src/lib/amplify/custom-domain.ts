@@ -68,17 +68,44 @@ export function splitFqdn(domain: string): { rootDomain: string; prefix: string 
 
 function parseDnsLine(line: string | undefined, purpose: DomainDnsRecord["purpose"]): DomainDnsRecord | null {
   if (!line?.trim()) return null;
-  const parts = line.trim().split(/\s+/);
+  const parts = line.trim().split(/\s+/).filter(Boolean);
+  const types = new Set(["CNAME", "A", "AAAA", "TXT", "ALIAS"]);
+
   if (parts.length >= 3) {
-    const type = parts[0]!.toUpperCase();
-    if (["CNAME", "A", "AAAA", "TXT", "ALIAS"].includes(type)) {
-      return { type, name: parts[1]!, value: parts.slice(2).join(" "), purpose };
+    const first = parts[0]!.toUpperCase();
+    const second = parts[1]!.toUpperCase();
+
+    // Amplify format: "omnichannel CNAME dxxx.cloudfront.net"
+    if (types.has(second)) {
+      return {
+        type: second,
+        name: parts[0]!.replace(/\.$/, ""),
+        value: parts.slice(2).join(" ").replace(/\.$/, ""),
+        purpose,
+      };
+    }
+
+    // Alternate format: "CNAME omnichannel dxxx.cloudfront.net"
+    if (types.has(first)) {
+      return {
+        type: first,
+        name: parts[1]!.replace(/\.$/, ""),
+        value: parts.slice(2).join(" ").replace(/\.$/, ""),
+        purpose,
+      };
     }
   }
+
   if (parts.length === 2) {
-    return { type: "CNAME", name: parts[0]!, value: parts[1]!, purpose };
+    return {
+      type: "CNAME",
+      name: parts[0]!.replace(/\.$/, ""),
+      value: parts[1]!.replace(/\.$/, ""),
+      purpose,
+    };
   }
-  return { type: "CNAME", name: line.trim(), value: "", purpose };
+
+  return null;
 }
 
 function extractCnameTarget(dnsRecord: string | undefined, fqdn: string): string {
