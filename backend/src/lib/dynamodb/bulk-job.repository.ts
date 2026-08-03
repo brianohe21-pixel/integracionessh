@@ -55,6 +55,14 @@ function buildFailureSummary(items: BulkSendFailure[]): BulkSendFailureSummary[]
 
 export function parseSendFailureError(error: unknown): Pick<BulkSendFailure, "errorCode" | "errorTitle" | "errorMessage"> {
   const fallback = error instanceof Error ? error.message : String(error);
+  const telcoredPrefix = fallback.match(/^Telcored API error (\d+): (.+)$/s);
+  if (telcoredPrefix) {
+    return {
+      errorCode: Number(telcoredPrefix[1]),
+      errorTitle: "Telcored SMS error",
+      errorMessage: telcoredPrefix[2],
+    };
+  }
   const apiPrefix = fallback.match(/^WhatsApp API error \d+: (.+)$/s);
   if (!apiPrefix) {
     return { errorMessage: fallback };

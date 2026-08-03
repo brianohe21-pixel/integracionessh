@@ -11,6 +11,7 @@ import {
 import { parseSendFailureError, saveBulkSendFailure } from "../../lib/dynamodb/bulk-job.repository.js";
 import { getContactByPhone } from "../../lib/dynamodb/contact.repository.js";
 import { sendTemplateMessage, getWhatsAppAccessToken } from "../../lib/whatsapp/client.js";
+import { sendSmsFromTemplate } from "../../lib/sms/send-outbound.js";
 import type { CampaignSQSBody } from "../../types/index.js";
 import { computeNextBatchAt } from "../../lib/campaign/batch.js";
 import {
@@ -72,8 +73,18 @@ async function processBatchComplete(body: CampaignSQSBody): Promise<void> {
 }
 
 async function processRecipient(body: CampaignSQSBody): Promise<void> {
-  const { campaignId, tenantId, botId, templateName, language, to, components, recipientKey, batchVersion } =
-    body;
+  const {
+    campaignId,
+    tenantId,
+    botId,
+    templateName,
+    language,
+    to,
+    components,
+    recipientKey,
+    batchVersion,
+    channel = "whatsapp",
+  } = body;
 
   if (!to) {
     console.warn("Campaign recipient message missing phone number");
@@ -125,10 +136,7 @@ async function processRecipient(body: CampaignSQSBody): Promise<void> {
   }
 
   try {
-    const [bot, accessToken] = await Promise.all([
-      getBot(tenantId, botId),
-      getWhatsAppAccessToken(tenantId, ENVIRONMENT),
-    ]);
+    const bot = await getBot(tenantId, botId);
 
     if (!bot) {
       console.error(`Bot not found: ${botId}`);
@@ -143,20 +151,38 @@ async function processRecipient(body: CampaignSQSBody): Promise<void> {
       return;
     }
 
-    const result = await sendTemplateMessage({
-      phoneNumberId: bot.phoneNumberId,
-      to,
-      templateName,
-      language,
-      ...(components ? { components } : {}),
-      accessToken,
-    });
+    if (channel === "sms") {
+      const result = await sendSmsFromTemplate({
+        tenantId,
+        bot,
+        botId,
+        templateName,
+        language,
+        to,
+        ...(components ? { components } : {}),
+        environment: ENVIRONMENT,
+      });
 
-    const messageId = result.messages?.[0]?.id;
-    if (messageId) {
-      await saveCampaignMessageTracking(messageId, campaignId, tenantId, to, recipientKey).catch(
-        (err) => console.warn(`Failed to save campaign message tracking for ${messageId}:`, err)
+      await saveCampaignMessageTracking(result.messageId, campaignId, tenantId, to, recipientKey).catch(
+        (err) => console.warn(`Failed to save campaign message tracking for ${result.messageId}:`, err)
       );
+    } else {
+      const accessToken = await getWhatsAppAccessToken(tenantId, ENVIRONMENT);
+      const result = await sendTemplateMessage({
+        phoneNumberId: bot.phoneNumberId,
+        to,
+        templateName,
+        language,
+        ...(components ? { components } : {}),
+        accessToken,
+      });
+
+      const messageId = result.messages?.[0]?.id;
+      if (messageId) {
+        await saveCampaignMessageTracking(messageId, campaignId, tenantId, to, recipientKey).catch(
+          (err) => console.warn(`Failed to save campaign message tracking for ${messageId}:`, err)
+        );
+      }
     }
 
     if (recipientKey) {

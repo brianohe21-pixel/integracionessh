@@ -31,6 +31,8 @@ import {
   deleteCampaignBatchSchedule,
 } from "../../lib/campaign/scheduler.js";
 import { dispatchCampaignBatch, startCampaignDispatch, enqueueRecipients } from "../../lib/campaign/dispatch.js";
+import { assertSmsBotReady } from "../../lib/sms/send-outbound.js";
+import type { Bot, OutreachChannel } from "../../types/index.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 
@@ -40,6 +42,18 @@ async function assertBotReadyForCampaign(
 ): Promise<void> {
   const accessToken = await getWhatsAppAccessToken(tenantId, ENVIRONMENT);
   await assertWhatsAppQualityForCampaign(phoneNumberId, accessToken);
+}
+
+async function assertCampaignChannelReady(
+  tenantId: string,
+  bot: Bot,
+  channel: OutreachChannel
+): Promise<void> {
+  if (channel === "sms") {
+    await assertSmsBotReady(bot);
+    return;
+  }
+  await assertBotReadyForCampaign(tenantId, bot.phoneNumberId);
 }
 
 const RecipientSchema = z.object({
@@ -71,6 +85,7 @@ const CreateCampaignSchema = z
   .object({
     name: z.string().min(1).max(120),
     botId: z.string().min(1),
+    channel: z.enum(["whatsapp", "sms"]).optional().default("whatsapp"),
     templateName: z.string().min(1),
     language: z.string().min(2).max(10),
     segments: z.array(z.string().max(50)).max(20).default([]),
@@ -146,7 +161,7 @@ export async function handler(
       }
       const bot = await getBot(tenantId, campaign.botId);
       if (!bot) return ok({ message: "Bot not found, skipping." });
-      await assertBotReadyForCampaign(tenantId, bot.phoneNumberId);
+      await assertCampaignChannelReady(tenantId, bot, campaign.channel ?? "whatsapp");
       await startCampaign(
         tenantId,
         campaignId,
@@ -217,6 +232,7 @@ export async function handler(
       const {
         name,
         botId,
+        channel,
         templateName,
         language,
         segments,
@@ -270,6 +286,7 @@ export async function handler(
         tenantId: auth.tenantId,
         botId,
         name,
+        channel,
         templateName,
         language,
         status,
@@ -332,7 +349,7 @@ export async function handler(
 
       const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
       await assertCanStartCampaign(tenant);
-      await assertBotReadyForCampaign(auth.tenantId, bot.phoneNumberId);
+      await assertCampaignChannelReady(auth.tenantId, bot, campaign.channel ?? "whatsapp");
 
       await deleteCampaignStartSchedule(campaignId);
       await deleteCampaignBatchSchedule(campaignId);
@@ -374,7 +391,7 @@ export async function handler(
       const bot = await getBot(auth.tenantId, campaign.botId);
       if (!bot) return notFound("Bot not found");
 
-      await assertBotReadyForCampaign(auth.tenantId, bot.phoneNumberId);
+      await assertCampaignChannelReady(auth.tenantId, bot, campaign.channel ?? "whatsapp");
       await deleteCampaignBatchSchedule(campaignId);
 
       if (campaign.batchConfig) {

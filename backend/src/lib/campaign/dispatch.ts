@@ -35,11 +35,14 @@ async function filterPendingForMarketing(
 }
 
 export async function enqueueRecipients(
-  campaign: Pick<Campaign, "campaignId" | "tenantId" | "botId" | "templateName" | "language">,
+  campaign: Pick<
+    Campaign,
+    "campaignId" | "tenantId" | "botId" | "templateName" | "language" | "channel"
+  >,
   recipients: RepoPendingRecipient[],
   options?: EnqueueBatchOptions
 ): Promise<void> {
-  const { campaignId, tenantId, botId, templateName, language } = campaign;
+  const { campaignId, tenantId, botId, templateName, language, channel = "whatsapp" } = campaign;
   const BATCH_SIZE = SQS_BATCH_SIZE;
   let entryIndex = 0;
 
@@ -56,6 +59,7 @@ export async function enqueueRecipients(
       campaignId,
       tenantId,
       botId,
+      channel,
       templateName,
       language,
       to: recipient.to.replace(/\D/g, ""),
@@ -82,6 +86,7 @@ export async function enqueueRecipients(
       campaignId,
       tenantId,
       botId,
+      channel,
       templateName,
       language,
       batchVersion: options.batchVersion,
@@ -189,7 +194,7 @@ export async function startCampaignDispatch(
   const pending = await listPendingRecipients(tenantId, campaignId, 5000);
   const eligible = await filterPendingForMarketing(tenantId, pending, requireOptIn, actorUserId);
   await enqueueRecipients(
-    { campaignId, tenantId, botId, templateName, language },
+    { campaignId, tenantId, botId, templateName, language, channel: campaign.channel ?? "whatsapp" },
     eligible
   );
 }

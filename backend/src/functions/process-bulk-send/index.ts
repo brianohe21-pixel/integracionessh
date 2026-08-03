@@ -7,6 +7,7 @@ import {
   saveMessageTracking,
 } from "../../lib/dynamodb/bulk-job.repository.js";
 import { sendTemplateMessage, getWhatsAppAccessToken } from "../../lib/whatsapp/client.js";
+import { sendSmsFromTemplate } from "../../lib/sms/send-outbound.js";
 import type { BulkSendSQSBody } from "../../types/index.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
@@ -27,13 +28,10 @@ async function processRecord(record: SQSRecord): Promise<void> {
     return;
   }
 
-  const { jobId, tenantId, botId, templateName, language, to, components } = body;
+  const { jobId, tenantId, botId, templateName, language, to, components, channel = "whatsapp" } = body;
 
   try {
-    const [bot, accessToken] = await Promise.all([
-      getBot(tenantId, botId),
-      getWhatsAppAccessToken(tenantId, ENVIRONMENT),
-    ]);
+    const bot = await getBot(tenantId, botId);
 
     if (!bot) {
       console.error(`Bot not found: ${botId}`);
@@ -45,6 +43,26 @@ async function processRecord(record: SQSRecord): Promise<void> {
       return;
     }
 
+    if (channel === "sms") {
+      const result = await sendSmsFromTemplate({
+        tenantId,
+        bot,
+        botId,
+        templateName,
+        language,
+        to,
+        ...(components ? { components } : {}),
+        environment: ENVIRONMENT,
+      });
+
+      await saveMessageTracking(result.messageId, jobId, tenantId, to).catch((err) =>
+        console.warn(`Failed to save message tracking for ${result.messageId}:`, err)
+      );
+      await incrementBulkJobProgress(tenantId, jobId, "sent");
+      return;
+    }
+
+    const accessToken = await getWhatsAppAccessToken(tenantId, ENVIRONMENT);
     const result = await sendTemplateMessage({
       phoneNumberId: bot.phoneNumberId,
       to,
