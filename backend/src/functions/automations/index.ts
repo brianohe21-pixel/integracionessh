@@ -7,7 +7,7 @@ import {
 import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
 import { randomUUID } from "crypto";
 import { z } from "zod";
-import { extractAuthContext, assertMemberRole } from "../../lib/auth/cognito.js";
+import { resolveRequestAuth, assertMemberRole } from "../../lib/auth/cognito.js";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
 import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
 import {
@@ -115,7 +115,7 @@ export async function handler(
     }
 
     const apiEvent = event as APIGatewayProxyEventV2WithJWTAuthorizer;
-    const auth = extractAuthContext(apiEvent);
+    const auth = await resolveRequestAuth(apiEvent);
     assertMemberRole(auth);
 
     const method = apiEvent.requestContext.http.method;

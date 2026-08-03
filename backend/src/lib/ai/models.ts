@@ -22,6 +22,7 @@ const PLAN_RANK: Record<TenantPlan, number> = {
   free: 0,
   pro: 1,
   enterprise: 2,
+  reseller: 2,
 };
 
 export const AI_MODELS: AiModelDefinition[] = [
@@ -116,9 +117,15 @@ function planMeetsRequirement(plan: TenantPlan, minPlan: TenantPlan): boolean {
   return PLAN_RANK[plan] >= PLAN_RANK[minPlan];
 }
 
+function resolvePlan(plan: TenantPlan | string | undefined): TenantPlan {
+  if (plan === "pro" || plan === "enterprise" || plan === "free" || plan === "reseller") {
+    return plan;
+  }
+  return "free";
+}
+
 export function getModelsForPlan(plan: TenantPlan | string | undefined): AiModelDefinition[] {
-  const resolvedPlan: TenantPlan =
-    plan === "pro" || plan === "enterprise" || plan === "free" ? plan : "free";
+  const resolvedPlan = resolvePlan(plan);
   return AI_MODELS.filter((model) => planMeetsRequirement(resolvedPlan, model.minPlan));
 }
 
@@ -128,9 +135,7 @@ export function isModelAllowedForPlan(
 ): boolean {
   const definition = getModelDefinition(modelId);
   if (!definition) return false;
-  const resolvedPlan: TenantPlan =
-    plan === "pro" || plan === "enterprise" || plan === "free" ? plan : "free";
-  return planMeetsRequirement(resolvedPlan, definition.minPlan);
+  return planMeetsRequirement(resolvePlan(plan), definition.minPlan);
 }
 
 export function resolveModelId(modelId: string | undefined): string {

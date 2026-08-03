@@ -687,6 +687,72 @@ locals {
       function_arn = var.admin_function_arn
       protected    = true
     }
+    admin_reseller_plan_defaults_get = {
+      route_key    = "GET /admin/reseller-plan-defaults"
+      invoke_arn   = var.admin_invoke_arn
+      function_arn = var.admin_function_arn
+      protected    = true
+    }
+    admin_reseller_plan_defaults_put = {
+      route_key    = "PUT /admin/reseller-plan-defaults"
+      invoke_arn   = var.admin_invoke_arn
+      function_arn = var.admin_function_arn
+      protected    = true
+    }
+    admin_reseller_domain_activate = {
+      route_key    = "POST /admin/reseller-domain/activate"
+      invoke_arn   = var.admin_invoke_arn
+      function_arn = var.admin_function_arn
+      protected    = true
+    }
+    reseller_subaccounts_list = {
+      route_key    = "GET /reseller/subaccounts"
+      invoke_arn   = var.reseller_invoke_arn
+      function_arn = var.reseller_function_arn
+      protected    = true
+    }
+    reseller_subaccounts_create = {
+      route_key    = "POST /reseller/subaccounts"
+      invoke_arn   = var.reseller_invoke_arn
+      function_arn = var.reseller_function_arn
+      protected    = true
+    }
+    reseller_subaccounts_get = {
+      route_key    = "GET /reseller/subaccounts/{subaccountId}"
+      invoke_arn   = var.reseller_invoke_arn
+      function_arn = var.reseller_function_arn
+      protected    = true
+    }
+    reseller_subaccounts_update = {
+      route_key    = "PUT /reseller/subaccounts/{subaccountId}"
+      invoke_arn   = var.reseller_invoke_arn
+      function_arn = var.reseller_function_arn
+      protected    = true
+    }
+    reseller_subaccounts_assume = {
+      route_key    = "POST /reseller/subaccounts/{subaccountId}/assume"
+      invoke_arn   = var.reseller_invoke_arn
+      function_arn = var.reseller_function_arn
+      protected    = true
+    }
+    reseller_domain_get = {
+      route_key    = "GET /reseller/domain"
+      invoke_arn   = var.reseller_invoke_arn
+      function_arn = var.reseller_function_arn
+      protected    = true
+    }
+    reseller_domain_put = {
+      route_key    = "PUT /reseller/domain"
+      invoke_arn   = var.reseller_invoke_arn
+      function_arn = var.reseller_function_arn
+      protected    = true
+    }
+    public_branding_by_host = {
+      route_key    = "GET /public/branding-by-host"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = false
+    }
     billing_checkout = {
       route_key    = "POST /billing/checkout"
       invoke_arn   = var.billing_invoke_arn
@@ -1500,6 +1566,7 @@ resource "aws_lambda_permission" "api_gw" {
   for_each = {
     webhook           = var.webhook_function_arn
     tenants           = var.tenants_function_arn
+    reseller          = var.reseller_function_arn
     bots              = var.bots_function_arn
     conversations     = var.conversations_function_arn
     advisors          = var.advisors_function_arn

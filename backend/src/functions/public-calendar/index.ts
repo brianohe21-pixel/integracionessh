@@ -1,7 +1,7 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import { z } from "zod";
 import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
-import { getResolvedTenantBranding } from "../../lib/branding/service.js";
+import { getResolvedBrandingWithInheritance } from "../../lib/branding/inherit.js";
 import {
   createBookingForBot,
   formatBookingConfirmation,
@@ -69,7 +69,9 @@ export async function handler(
     if (method === "GET" && sub.length === 0) {
       const ctx = await resolvePublicCalendarContext(publicKey);
       const tenant = await getTenant(ctx.tenantId);
-      const branding = tenant ? await getResolvedTenantBranding(tenant) : undefined;
+      const branding = tenant
+        ? await getResolvedBrandingWithInheritance(tenant)
+        : undefined;
       const payment = await getCalendarPaymentInfo({
         tenantId: ctx.tenantId,
         botId: ctx.botId,

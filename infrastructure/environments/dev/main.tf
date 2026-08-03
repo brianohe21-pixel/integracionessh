@@ -230,6 +230,8 @@ module "api_gateway" {
   webhook_function_arn           = module.lambda.function_arns["webhook"]
   tenants_invoke_arn             = module.lambda.tenants_invoke_arn
   tenants_function_arn           = module.lambda.function_arns["tenants"]
+  reseller_invoke_arn            = module.lambda.reseller_invoke_arn
+  reseller_function_arn          = module.lambda.reseller_function_arn
   bots_invoke_arn                = module.lambda.bots_invoke_arn
   bots_function_arn              = module.lambda.function_arns["bots"]
   conversations_invoke_arn       = module.lambda.conversations_invoke_arn

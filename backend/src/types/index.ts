@@ -1,4 +1,8 @@
-export type TenantPlan = "free" | "pro" | "enterprise";
+export type TenantPlan = "free" | "pro" | "enterprise" | "reseller";
+
+export type TenantKind = "standard" | "reseller" | "subaccount";
+
+export type CustomDomainStatus = "none" | "pending_dns" | "active" | "error";
 
 export type SubscriptionStatus =
   | "none"
@@ -17,6 +21,50 @@ export interface ResolvedTenantBranding {
   brandName: string;
   primaryColor: string;
   logoUrl?: string;
+}
+
+export interface ResellerLimitsOverride {
+  maxActiveBots?: number;
+  maxMessagesPerMonth?: number;
+  maxBulkRecipientsPerJob?: number;
+  maxActiveCampaigns?: number;
+  maxContacts?: number;
+  maxAutomationsPerBot?: number;
+  maxScheduledAutomations?: number;
+  maxDocumentsPerBot?: number;
+  maxKnowledgeStorageMb?: number;
+  maxMetaFlowsPerBot?: number;
+  maxVisualFlowsPerBot?: number;
+  maxFlowNodes?: number;
+  maxActiveFlowRuns?: number;
+  maxChannelsPerBot?: number;
+  maxActiveWebChatSessions?: number;
+  maxConcurrentLiveKitCalls?: number;
+  maxVoicebotMinutesPerMonth?: number;
+  maxCalendarAppsPerTenant?: number;
+  maxPaymentsAppsPerTenant?: number;
+  maxCatalogAppsPerTenant?: number;
+  maxProductsPerBot?: number;
+  maxOrdersPerMonth?: number;
+  canCustomizeBranding?: boolean;
+  apiRateLimitPerMinute?: number;
+  apiRateLimitPerDay?: number;
+}
+
+export interface ResellerConfig {
+  maxSubaccounts: number;
+  defaultSubaccountPlan: "free" | "pro" | "enterprise";
+  customDomain?: string;
+  customDomainStatus?: CustomDomainStatus;
+  allowSubaccountBranding: boolean;
+  limitsOverride?: ResellerLimitsOverride;
+}
+
+export interface ResellerPlanDefaults {
+  maxSubaccounts: number;
+  defaultSubaccountPlan: "free" | "pro" | "enterprise";
+  allowSubaccountBranding: boolean;
+  limitsOverride?: ResellerLimitsOverride;
 }
 
 export interface InboxSlaSettings {
@@ -99,6 +147,9 @@ export interface Tenant {
   email: string;
   plan: TenantPlan;
   status: "active" | "suspended" | "pending";
+  tenantKind?: TenantKind;
+  parentTenantId?: string;
+  resellerConfig?: ResellerConfig;
   branding?: TenantBranding;
   inboxSla?: InboxSlaSettings;
   metricsReportSchedule?: MetricsReportSchedule;
@@ -746,6 +797,7 @@ export interface AuthContext {
   email: string;
   name?: string;
   role: "admin" | "member" | "advisor";
+  homeTenantId?: string;
 }
 
 export interface ChatCompletionResult {

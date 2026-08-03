@@ -11,7 +11,7 @@ import {
   markLeadAsLost,
 } from "../../lib/leads/convert.js";
 import {
-  extractAuthContext,
+  resolveRequestAuth,
   assertMemberRole,
   assertTenantManagerRole,
 } from "../../lib/auth/cognito.js";
@@ -49,7 +49,7 @@ export async function handler(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): Promise<APIGatewayProxyResultV2> {
   try {
-    const auth = extractAuthContext(event);
+    const auth = await resolveRequestAuth(event);
     assertMemberRole(auth);
 
     const method = event.requestContext.http.method;

@@ -4,7 +4,7 @@ import type {
   APIGatewayProxyResultV2,
 } from "aws-lambda";
 import { z } from "zod";
-import { extractAuthContext, assertMemberRole } from "../../lib/auth/cognito.js";
+import { resolveRequestAuth, assertMemberRole } from "../../lib/auth/cognito.js";
 import { assertCanEnablePayments } from "../../lib/billing/assert-plan.js";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
 import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
@@ -84,7 +84,7 @@ export async function handler(
       return handleWompiWebhook(event as APIGatewayProxyEventV2, tenantIdParam);
     }
 
-    const auth = extractAuthContext(event as APIGatewayProxyEventV2WithJWTAuthorizer);
+    const auth = await resolveRequestAuth(event as APIGatewayProxyEventV2WithJWTAuthorizer);
     assertMemberRole(auth);
 
     if (method === "GET" && rawPath === "/payments/wompi/credentials") {

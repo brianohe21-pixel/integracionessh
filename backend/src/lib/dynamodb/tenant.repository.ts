@@ -14,6 +14,21 @@ const keys = (tenantId: string) => ({
   SK: "METADATA",
 });
 
+function stripKeys(item: Record<string, unknown>): Tenant {
+  const {
+    PK: _pk,
+    SK: _sk,
+    GSI1PK: _g1pk,
+    GSI1SK: _g1sk,
+    ...rest
+  } = item;
+  return rest as unknown as Tenant;
+}
+
+function normalizeDomain(domain: string): string {
+  return domain.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/$/, "");
+}
+
 export async function getTenant(tenantId: string): Promise<Tenant | null> {
   const result = await docClient.send(
     new GetCommand({
@@ -23,30 +38,51 @@ export async function getTenant(tenantId: string): Promise<Tenant | null> {
   );
 
   if (!result.Item) return null;
-
-  const { PK, SK, GSI1PK, GSI1SK, ...rest } = result.Item;
-  return rest as Tenant;
+  return stripKeys(result.Item);
 }
 
 export async function createTenant(tenant: Tenant): Promise<void> {
+  const item: Record<string, unknown> = {
+    ...keys(tenant.tenantId),
+    GSI1PK: "TENANT",
+    GSI1SK: `STATUS#${tenant.status}#${tenant.tenantId}`,
+    ...tenant,
+  };
+
   await docClient.send(
     new PutCommand({
       TableName: TABLE_NAME,
-      Item: {
-        ...keys(tenant.tenantId),
-        GSI1PK: "TENANT",
-        GSI1SK: `STATUS#${tenant.status}#${tenant.tenantId}`,
-        ...tenant,
-      },
+      Item: item,
       ConditionExpression: "attribute_not_exists(PK)",
     })
   );
+
+  if (tenant.parentTenantId) {
+    await docClient.send(
+      new PutCommand({
+        TableName: TABLE_NAME,
+        Item: {
+          PK: `PARENT#${tenant.parentTenantId}`,
+          SK: `SUBACCOUNT#${tenant.tenantId}`,
+          tenantId: tenant.tenantId,
+          parentTenantId: tenant.parentTenantId,
+          createdAt: tenant.createdAt,
+        },
+      })
+    );
+  }
+
+  const domain = tenant.resellerConfig?.customDomain;
+  if (domain) {
+    await putDomainMapping(normalizeDomain(domain), tenant.tenantId);
+  }
 }
 
 export async function updateTenant(
   tenantId: string,
   updates: Partial<Omit<Tenant, "tenantId" | "createdAt">>
 ): Promise<Tenant> {
+  const existing = await getTenant(tenantId);
   const updateExpression: string[] = [];
   const expressionAttributeNames: Record<string, string> = {};
   const expressionAttributeValues: Record<string, unknown> = {};
@@ -59,6 +95,12 @@ export async function updateTenant(
     }
   );
 
+  if (updates.status !== undefined) {
+    updateExpression.push("#GSI1SK = :GSI1SK");
+    expressionAttributeNames["#GSI1SK"] = "GSI1SK";
+    expressionAttributeValues[":GSI1SK"] = `STATUS#${updates.status}#${tenantId}`;
+  }
+
   const result = await docClient.send(
     new UpdateCommand({
       TableName: TABLE_NAME,
@@ -70,11 +112,41 @@ export async function updateTenant(
     })
   );
 
-  const { PK, SK, GSI1PK, GSI1SK, ...rest } = result.Attributes ?? {};
-  return rest as Tenant;
+  const updated = stripKeys(result.Attributes ?? {});
+
+  const oldDomain = existing?.resellerConfig?.customDomain
+    ? normalizeDomain(existing.resellerConfig.customDomain)
+    : undefined;
+  const newDomain = updated.resellerConfig?.customDomain
+    ? normalizeDomain(updated.resellerConfig.customDomain)
+    : undefined;
+
+  if (oldDomain && oldDomain !== newDomain) {
+    await deleteDomainMapping(oldDomain);
+  }
+  if (newDomain) {
+    await putDomainMapping(newDomain, tenantId);
+  }
+
+  return updated;
 }
 
 export async function deleteTenant(tenantId: string): Promise<void> {
+  const existing = await getTenant(tenantId);
+  if (existing?.parentTenantId) {
+    await docClient.send(
+      new DeleteCommand({
+        TableName: TABLE_NAME,
+        Key: {
+          PK: `PARENT#${existing.parentTenantId}`,
+          SK: `SUBACCOUNT#${tenantId}`,
+        },
+      })
+    );
+  }
+  if (existing?.resellerConfig?.customDomain) {
+    await deleteDomainMapping(normalizeDomain(existing.resellerConfig.customDomain));
+  }
   await docClient.send(
     new DeleteCommand({
       TableName: TABLE_NAME,
@@ -97,6 +169,7 @@ export async function ensureTenant(
     name: name?.trim() || email.split("@")[0] || "Tenant",
     email,
     plan: "free",
+    tenantKind: "standard",
     status: "active",
     subscriptionStatus: "none",
     createdAt: now,
@@ -123,5 +196,89 @@ export async function listTenants(): Promise<Tenant[]> {
     })
   );
 
-  return (result.Items ?? []).map(({ PK, SK, GSI1PK, GSI1SK, ...rest }) => rest as Tenant);
+  return (result.Items ?? []).map((item) => stripKeys(item));
 }
+
+export async function listSubaccounts(parentTenantId: string): Promise<Tenant[]> {
+  const result = await docClient.send(
+    new QueryCommand({
+      TableName: TABLE_NAME,
+      KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+      ExpressionAttributeValues: {
+        ":pk": `PARENT#${parentTenantId}`,
+        ":sk": "SUBACCOUNT#",
+      },
+    })
+  );
+
+  const ids = (result.Items ?? [])
+    .map((item) => String(item.tenantId ?? "").trim())
+    .filter(Boolean);
+
+  const tenants: Tenant[] = [];
+  for (const id of ids) {
+    const tenant = await getTenant(id);
+    if (tenant) tenants.push(tenant);
+  }
+  return tenants;
+}
+
+export async function countSubaccounts(parentTenantId: string): Promise<number> {
+  const result = await docClient.send(
+    new QueryCommand({
+      TableName: TABLE_NAME,
+      KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+      ExpressionAttributeValues: {
+        ":pk": `PARENT#${parentTenantId}`,
+        ":sk": "SUBACCOUNT#",
+      },
+      Select: "COUNT",
+    })
+  );
+  return result.Count ?? 0;
+}
+
+export async function putDomainMapping(domain: string, tenantId: string): Promise<void> {
+  const normalized = normalizeDomain(domain);
+  await docClient.send(
+    new PutCommand({
+      TableName: TABLE_NAME,
+      Item: {
+        PK: `DOMAIN#${normalized}`,
+        SK: "METADATA",
+        domain: normalized,
+        tenantId,
+        updatedAt: new Date().toISOString(),
+      },
+    })
+  );
+}
+
+export async function deleteDomainMapping(domain: string): Promise<void> {
+  await docClient.send(
+    new DeleteCommand({
+      TableName: TABLE_NAME,
+      Key: {
+        PK: `DOMAIN#${normalizeDomain(domain)}`,
+        SK: "METADATA",
+      },
+    })
+  );
+}
+
+export async function getTenantIdByDomain(domain: string): Promise<string | null> {
+  const result = await docClient.send(
+    new GetCommand({
+      TableName: TABLE_NAME,
+      Key: {
+        PK: `DOMAIN#${normalizeDomain(domain)}`,
+        SK: "METADATA",
+      },
+    })
+  );
+  if (!result.Item) return null;
+  const tenantId = String(result.Item.tenantId ?? "").trim();
+  return tenantId || null;
+}
+
+export { normalizeDomain };

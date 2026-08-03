@@ -5,7 +5,7 @@ import type {
 } from "aws-lambda";
 import { z } from "zod";
 import Stripe from "stripe";
-import { extractAuthContext, assertMemberRole } from "../../lib/auth/cognito.js";
+import { resolveRequestAuth, assertMemberRole } from "../../lib/auth/cognito.js";
 import { ensureTenant, updateTenant } from "../../lib/dynamodb/tenant.repository.js";
 import {
   createPaymentIntent,
@@ -236,7 +236,7 @@ export async function handler(
       return handleStripeWebhook(event as APIGatewayProxyEventV2);
     }
 
-    const auth = extractAuthContext(
+    const auth = await resolveRequestAuth(
       event as APIGatewayProxyEventV2WithJWTAuthorizer
     );
     assertMemberRole(auth);

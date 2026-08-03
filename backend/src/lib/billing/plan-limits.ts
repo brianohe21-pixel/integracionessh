@@ -1,4 +1,8 @@
-import type { Tenant, TenantPlan } from "../../types/index.js";
+import type {
+  ResellerLimitsOverride,
+  Tenant,
+  TenantPlan,
+} from "../../types/index.js";
 
 export interface PlanLimits {
   maxActiveBots: number;
@@ -110,13 +114,66 @@ const LIMITS: Record<TenantPlan, PlanLimits> = {
     apiRateLimitPerMinute: 120,
     apiRateLimitPerDay: 50_000,
   },
+  reseller: {
+    maxActiveBots: Number.MAX_SAFE_INTEGER,
+    maxMessagesPerMonth: 50_000,
+    maxBulkRecipientsPerJob: 10_000,
+    maxActiveCampaigns: Number.MAX_SAFE_INTEGER,
+    maxContacts: Number.MAX_SAFE_INTEGER,
+    maxAutomationsPerBot: Number.MAX_SAFE_INTEGER,
+    maxScheduledAutomations: Number.MAX_SAFE_INTEGER,
+    maxDocumentsPerBot: 100,
+    maxKnowledgeStorageMb: 200,
+    maxMetaFlowsPerBot: Number.MAX_SAFE_INTEGER,
+    maxVisualFlowsPerBot: Number.MAX_SAFE_INTEGER,
+    maxFlowNodes: 100,
+    maxActiveFlowRuns: Number.MAX_SAFE_INTEGER,
+    maxChannelsPerBot: 8,
+    maxActiveWebChatSessions: 500,
+    maxConcurrentLiveKitCalls: 10,
+    maxVoicebotMinutesPerMonth: 2000,
+    maxCalendarAppsPerTenant: Number.MAX_SAFE_INTEGER,
+    maxPaymentsAppsPerTenant: Number.MAX_SAFE_INTEGER,
+    maxCatalogAppsPerTenant: Number.MAX_SAFE_INTEGER,
+    maxProductsPerBot: Number.MAX_SAFE_INTEGER,
+    maxOrdersPerMonth: Number.MAX_SAFE_INTEGER,
+    canCustomizeBranding: true,
+    apiRateLimitPerMinute: 200,
+    apiRateLimitPerDay: 100_000,
+  },
 };
 
+function applyLimitsOverride(
+  base: PlanLimits,
+  override?: ResellerLimitsOverride
+): PlanLimits {
+  if (!override) return base;
+  return {
+    ...base,
+    ...Object.fromEntries(
+      Object.entries(override).filter(([, value]) => value !== undefined)
+    ),
+  } as PlanLimits;
+}
+
 export function getPlanLimits(plan: TenantPlan | string | undefined): PlanLimits {
-  if (plan === "pro" || plan === "enterprise" || plan === "free") {
+  if (
+    plan === "pro" ||
+    plan === "enterprise" ||
+    plan === "free" ||
+    plan === "reseller"
+  ) {
     return LIMITS[plan];
   }
   return LIMITS.free;
+}
+
+export function getEffectivePlanLimits(tenant: Tenant): PlanLimits {
+  const base = getPlanLimits(tenant.plan);
+  if (tenant.plan === "reseller" && tenant.resellerConfig?.limitsOverride) {
+    return applyLimitsOverride(base, tenant.resellerConfig.limitsOverride);
+  }
+  return base;
 }
 
 export function isUnlimited(value: number): boolean {
@@ -136,6 +193,10 @@ export class PlanLimitError extends Error {
 export function assertSubscriptionAllowsSending(tenant: Tenant): void {
   const status = tenant.subscriptionStatus ?? "none";
   if (tenant.plan === "free" && status === "none") return;
+  if (tenant.plan === "reseller" && (status === "active" || status === "trialing" || status === "none")) {
+    if (status === "active" || status === "trialing") return;
+    if (status === "none") return;
+  }
 
   if (status === "active" || status === "trialing") return;
 

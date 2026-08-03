@@ -15,7 +15,7 @@ import { assertCanSendMessages, assertCanUseCopilot } from "../../lib/billing/as
 import { incrementMessages } from "../../lib/dynamodb/usage.repository.js";
 import { PlanLimitError } from "../../lib/billing/plan-limits.js";
 import {
-  extractAuthContext,
+  resolveRequestAuth,
   assertAdvisorOrMember,
   assertTenantManagerRole,
 } from "../../lib/auth/cognito.js";
@@ -166,7 +166,7 @@ export async function handler(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): Promise<APIGatewayProxyResultV2> {
   try {
-    const auth = extractAuthContext(event);
+    const auth = await resolveRequestAuth(event);
     assertAdvisorOrMember(auth);
 
     const method = event.requestContext.http.method;

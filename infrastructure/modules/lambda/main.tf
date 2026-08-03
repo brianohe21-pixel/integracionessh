@@ -109,6 +109,8 @@ resource "aws_iam_role_policy" "lambda_permissions" {
           "cognito-idp:AdminUpdateUserAttributes",
           "cognito-idp:AdminCreateUser",
           "cognito-idp:AdminDeleteUser",
+          "cognito-idp:DescribeUserPoolClient",
+          "cognito-idp:UpdateUserPoolClient",
         ]
         Resource = var.cognito_user_pool_arn
       },
@@ -226,6 +228,21 @@ locals {
         ADMIN_NOTIFICATION_EMAILS = join(",", var.admin_notification_emails)
         SCHEDULER_ROLE_ARN        = var.scheduler_role_arn
         REPORTS_FUNCTION_ARN      = local.reports_function_arn
+        COGNITO_USER_POOL_ID      = var.cognito_user_pool_id
+        COGNITO_CLIENT_ID         = var.cognito_client_id
+      }
+    }
+    reseller = {
+      handler     = "reseller/index.handler"
+      description = "Reseller subaccounts and white-label domain APIs"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME           = var.dynamodb_table_name
+        ENVIRONMENT          = var.environment
+        FRONTEND_URL         = var.frontend_url
+        SES_FROM_EMAIL       = var.ses_from_email
+        COGNITO_USER_POOL_ID = var.cognito_user_pool_id
       }
     }
     bots = {
@@ -353,6 +370,7 @@ locals {
       environment = {
         TABLE_NAME           = var.dynamodb_table_name
         COGNITO_USER_POOL_ID = var.cognito_user_pool_id
+        COGNITO_CLIENT_ID    = var.cognito_client_id
       }
     }
     billing = {

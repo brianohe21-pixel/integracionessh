@@ -30,6 +30,14 @@ variable "tenants_function_arn" {
   type = string
 }
 
+variable "reseller_invoke_arn" {
+  type = string
+}
+
+variable "reseller_function_arn" {
+  type = string
+}
+
 variable "bots_invoke_arn" {
   type = string
 }

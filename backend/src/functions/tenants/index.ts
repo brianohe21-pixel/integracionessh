@@ -8,18 +8,35 @@ import {
   updateTenant,
   deleteTenant,
   listTenants,
+  getTenantIdByDomain,
+  normalizeDomain,
 } from "../../lib/dynamodb/tenant.repository.js";
-import { applyAdminTenantPlan } from "../../lib/billing/activate-plan.js";
-import { extractAuthContext, assertMemberRole } from "../../lib/auth/cognito.js";
+import {
+  applyAdminTenantPlan,
+  buildResellerConfigFromDefaults,
+} from "../../lib/billing/activate-plan.js";
+import {
+  resolveRequestAuth,
+  assertMemberRole,
+} from "../../lib/auth/cognito.js";
+import type {
+  AuthContext,
+  ResellerConfig,
+  Tenant,
+  TenantBranding,
+  InboxSlaSettings,
+  MetricsReportSchedule,
+} from "../../types/index.js";
 import { recordLegalAcceptance, getLegalAcceptance } from "../../lib/dynamodb/legal.repository.js";
 import {
   saveOpenAIApiKey,
   deleteOpenAIApiKey,
   hasOpenAIApiKey,
 } from "../../lib/openai/secrets.js";
-import { assertCanCustomizeBranding } from "../../lib/billing/assert-plan.js";
-import { getPlanLimits } from "../../lib/billing/plan-limits.js";
+import { assertCanCustomizeBrandingAsync } from "../../lib/billing/assert-plan.js";
+import { getEffectivePlanLimits } from "../../lib/billing/plan-limits.js";
 import { getResolvedTenantBranding } from "../../lib/branding/service.js";
+import { getResolvedBrandingWithInheritance } from "../../lib/branding/inherit.js";
 import {
   buildLogoS3Key,
   extensionForContentType,
@@ -38,24 +55,36 @@ import {
   handleError,
   parseJsonBody,
 } from "../../lib/http.js";
-import type { Tenant, TenantBranding, InboxSlaSettings, MetricsReportSchedule } from "../../types/index.js";
 import { resolveInboxSlaSettings } from "../../lib/advisor/inbox-sla.js";
 import { resolveMetricsReportSchedule } from "../../lib/reports/resolve-schedule.js";
 import { syncReportSchedule } from "../../lib/reports/report-schedule.js";
 import { sendScheduledReport } from "../../lib/reports/send-scheduled-report.js";
+import { addCustomDomainToCognitoClient } from "../../lib/cognito/custom-domain-callbacks.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 
 const CreateTenantSchema = z.object({
   name: z.string().min(1).max(128),
   email: z.string().email(),
-  plan: z.enum(["free", "pro", "enterprise"]).default("free"),
+  plan: z.enum(["free", "pro", "enterprise", "reseller"]).default("free"),
 });
 
 const UpdateTenantSchema = z.object({
   name: z.string().min(1).max(128).optional(),
-  plan: z.enum(["free", "pro", "enterprise"]).optional(),
+  plan: z.enum(["free", "pro", "enterprise", "reseller"]).optional(),
   status: z.enum(["active", "suspended"]).optional(),
+  resellerConfig: z
+    .object({
+      maxSubaccounts: z.number().int().min(1).max(10_000).optional(),
+      defaultSubaccountPlan: z.enum(["free", "pro", "enterprise"]).optional(),
+      customDomain: z.string().min(3).max(253).optional(),
+      customDomainStatus: z
+        .enum(["none", "pending_dns", "active", "error"])
+        .optional(),
+      allowSubaccountBranding: z.boolean().optional(),
+      limitsOverride: z.record(z.union([z.number(), z.boolean()])).optional(),
+    })
+    .optional(),
 });
 
 const UpdateBrandingSchema = z.object({
@@ -123,7 +152,7 @@ function formatZodError(error: z.ZodError): string {
 
 async function handleInboxSlaRoutes(
   event: APIGatewayProxyEventV2WithJWTAuthorizer,
-  auth: ReturnType<typeof extractAuthContext>
+  auth: AuthContext
 ): Promise<APIGatewayProxyResultV2 | null> {
   const routeKey = event.routeKey;
   const rawPath = event.rawPath ?? event.requestContext.http.path ?? "";
@@ -164,7 +193,7 @@ async function handleInboxSlaRoutes(
 
 async function handleReportScheduleRoutes(
   event: APIGatewayProxyEventV2WithJWTAuthorizer,
-  auth: ReturnType<typeof extractAuthContext>
+  auth: AuthContext
 ): Promise<APIGatewayProxyResultV2 | null> {
   const routeKey = event.routeKey;
   const rawPath = event.rawPath ?? event.requestContext.http.path ?? "";
@@ -229,7 +258,7 @@ async function handleReportScheduleRoutes(
 async function handleBrandingRoutes(
   event: APIGatewayProxyEventV2WithJWTAuthorizer,
   method: string,
-  auth: ReturnType<typeof extractAuthContext>
+  auth: AuthContext
 ): Promise<APIGatewayProxyResultV2 | null> {
   const rawPath = event.rawPath ?? event.requestContext.http.path ?? "";
   if (!rawPath.includes("/tenants/me/branding")) return null;
@@ -237,8 +266,8 @@ async function handleBrandingRoutes(
   const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
 
   if (method === "GET" && rawPath.endsWith("/tenants/me/branding")) {
-    const branding = await getResolvedTenantBranding(tenant);
-    const limits = getPlanLimits(tenant.plan);
+    const branding = await getResolvedBrandingWithInheritance(tenant);
+    const limits = getEffectivePlanLimits(tenant);
     return ok({
       ...branding,
       canCustomize: limits.canCustomizeBranding,
@@ -246,7 +275,7 @@ async function handleBrandingRoutes(
   }
 
   if (method === "PUT" && rawPath.endsWith("/tenants/me/branding")) {
-    await assertCanCustomizeBranding(tenant);
+    await assertCanCustomizeBrandingAsync(tenant);
     const body = JSON.parse(event.body ?? "{}");
     const parsed = UpdateBrandingSchema.safeParse(body);
     if (!parsed.success) {
@@ -269,7 +298,7 @@ async function handleBrandingRoutes(
   }
 
   if (method === "POST" && rawPath.endsWith("/tenants/me/branding/logo")) {
-    await assertCanCustomizeBranding(tenant);
+    await assertCanCustomizeBrandingAsync(tenant);
     const body = JSON.parse(event.body ?? "{}");
     const parsed = LogoUploadSchema.safeParse(body);
     if (!parsed.success) {
@@ -296,7 +325,7 @@ async function handleBrandingRoutes(
   }
 
   if (method === "DELETE" && rawPath.endsWith("/tenants/me/branding/logo")) {
-    await assertCanCustomizeBranding(tenant);
+    await assertCanCustomizeBrandingAsync(tenant);
     if (tenant.branding?.logoS3Key) {
       await deleteObject(tenant.branding.logoS3Key);
     }
@@ -313,8 +342,37 @@ export async function handler(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): Promise<APIGatewayProxyResultV2> {
   try {
-    const auth = extractAuthContext(event);
     const method = event.requestContext.http.method;
+    const rawPath = event.rawPath ?? event.requestContext.http.path ?? "";
+
+    if (method === "GET" && rawPath.includes("/public/branding-by-host")) {
+      const host = normalizeDomain(
+        event.queryStringParameters?.host ??
+          event.headers?.host ??
+          event.headers?.Host ??
+          ""
+      );
+      if (!host) return badRequest("host query parameter is required");
+
+      const tenantId = await getTenantIdByDomain(host);
+      if (!tenantId) {
+        return ok({ found: false });
+      }
+      const tenant = await getTenant(tenantId);
+      if (!tenant || tenant.status === "suspended") {
+        return ok({ found: false });
+      }
+      const branding = await getResolvedTenantBranding(tenant);
+      return ok({
+        found: true,
+        tenantId: tenant.tenantId,
+        brandName: branding.brandName,
+        primaryColor: branding.primaryColor,
+        ...(branding.logoUrl ? { logoUrl: branding.logoUrl } : {}),
+      });
+    }
+
+    const auth = await resolveRequestAuth(event);
     const tenantId = event.pathParameters?.tenantId;
 
     if (method === "GET" && !tenantId) {
@@ -416,11 +474,19 @@ export async function handler(
       const now = new Date().toISOString();
       const newTenant: Tenant = {
         tenantId: randomUUID(),
-        ...parsed.data,
+        name: parsed.data.name,
+        email: parsed.data.email,
+        plan: parsed.data.plan,
         status: "active",
+        tenantKind: parsed.data.plan === "reseller" ? "reseller" : "standard",
         createdAt: now,
         updatedAt: now,
       };
+
+      if (parsed.data.plan === "reseller") {
+        newTenant.resellerConfig = await buildResellerConfigFromDefaults();
+        newTenant.subscriptionStatus = "active";
+      }
 
       await createTenant(newTenant);
       return created(newTenant);
@@ -440,6 +506,47 @@ export async function handler(
       if (auth.role !== "admin") {
         delete updates.plan;
         delete updates.status;
+        delete updates.resellerConfig;
+      }
+
+      if (auth.role === "admin" && updates.resellerConfig !== undefined) {
+        const existing = await getTenant(resolvedId);
+        if (!existing) return notFound("Tenant not found");
+        const base = await buildResellerConfigFromDefaults(existing.resellerConfig);
+        const patch = updates.resellerConfig;
+        const merged: ResellerConfig = {
+          maxSubaccounts: patch.maxSubaccounts ?? base.maxSubaccounts,
+          defaultSubaccountPlan:
+            patch.defaultSubaccountPlan ?? base.defaultSubaccountPlan,
+          allowSubaccountBranding:
+            patch.allowSubaccountBranding ?? base.allowSubaccountBranding,
+          customDomainStatus: patch.customDomainStatus ?? base.customDomainStatus ?? "none",
+        };
+        if (patch.customDomain !== undefined) {
+          merged.customDomain = normalizeDomain(patch.customDomain);
+        } else if (base.customDomain) {
+          merged.customDomain = base.customDomain;
+        }
+        const limitsOverride = {
+          ...(base.limitsOverride ?? {}),
+          ...(patch.limitsOverride ?? {}),
+        };
+        if (Object.keys(limitsOverride).length > 0) {
+          merged.limitsOverride = limitsOverride;
+        }
+        if (
+          patch.customDomainStatus === "active" &&
+          merged.customDomain &&
+          existing.resellerConfig?.customDomainStatus !== "active"
+        ) {
+          try {
+            await addCustomDomainToCognitoClient(merged.customDomain);
+          } catch (error) {
+            console.error("Failed to update Cognito callbacks for domain", error);
+            merged.customDomainStatus = "error";
+          }
+        }
+        (updates as { resellerConfig?: ResellerConfig }).resellerConfig = merged;
       }
 
       if (auth.role === "admin" && updates.plan !== undefined) {
