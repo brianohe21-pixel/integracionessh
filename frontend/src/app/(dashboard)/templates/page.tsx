@@ -108,6 +108,7 @@ export default function TemplatesPage() {
 
   const [sendTo, setSendTo] = useState("");
   const [sendParams, setSendParams] = useState<Record<string, string>>({});
+  const [sendRequestDlr, setSendRequestDlr] = useState(false);
   const [formError, setFormError] = useState("");
   const [sendError, setSendError] = useState("");
 
@@ -160,6 +161,7 @@ export default function TemplatesPage() {
 
   function openSend(template: MessageTemplate) {
     setSendTo("");
+    setSendRequestDlr(false);
     const bodyText = isSmsTemplate(template)
       ? template.body
       : template.components.find((c) => c.type === "BODY")?.text ?? "";
@@ -268,9 +270,11 @@ export default function TemplatesPage() {
         botId: botFilter,
         to: sendTo,
         language: sendTarget.language,
+        ...(channelFilter === "sms" && sendRequestDlr ? { requestDlr: true } : {}),
         components: bodyParams,
       });
       setSendTarget(null);
+      setSendRequestDlr(false);
     } catch (error) {
       setSendError(error instanceof Error ? error.message : "Send failed");
     }
@@ -729,6 +733,21 @@ export default function TemplatesPage() {
                 />
                 <p className="text-xs text-muted mt-1">{t("templates.sendToHint")}</p>
               </div>
+
+              {channelFilter === "sms" && isSmsTemplate(sendTarget) && (
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={sendRequestDlr}
+                    onChange={(e) => setSendRequestDlr(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-default text-accent focus:ring-accent"
+                  />
+                  <span className="text-sm text-secondary">
+                    <span className="font-medium">{t("campaigns.requestDlr")}</span>
+                    <span className="block text-xs text-secondary mt-0.5">{t("campaigns.requestDlrHint")}</span>
+                  </span>
+                </label>
+              )}
 
               {Object.keys(sendParams).length > 0 && (
                 <div className="space-y-3">

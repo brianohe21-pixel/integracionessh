@@ -80,6 +80,7 @@ export function useSendTemplate(channel: OutreachChannel = "whatsapp") {
       botId: string;
       to: string;
       language: string;
+      requestDlr?: boolean;
       components?: Array<{
         type: string;
         parameters?: Array<{ type: string; text?: string; image?: { link: string } }>;
@@ -90,6 +91,7 @@ export function useSendTemplate(channel: OutreachChannel = "whatsapp") {
         to: data.to,
         language: data.language,
         channel,
+        ...(data.requestDlr ? { requestDlr: true } : {}),
         components: data.components,
       }),
   });

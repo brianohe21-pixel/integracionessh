@@ -34,6 +34,7 @@ import { TemplateMessagePreview } from "@/components/templates/TemplateMessagePr
 import { SmsTemplatePreview } from "@/components/templates/SmsTemplatePreview";
 import { isSmsTemplate } from "@/types";
 import { CampaignQualityAlert } from "@/components/campaigns/CampaignQualityAlert";
+import { CampaignQualityConfirmModal } from "@/components/campaigns/CampaignQualityConfirmModal";
 import { useTemplates } from "@/hooks/useTemplates";
 import { useWhatsAppQualityGuard } from "@/hooks/useWhatsAppQualityGuard";
 import { DashboardPage } from "@/components/layout/DashboardPage";
@@ -75,6 +76,7 @@ export default function CampaignDetailPage({
 
   const { data: campaign, isLoading, error } = useCampaign(campaignId);
   const campaignChannel = campaign?.channel ?? "whatsapp";
+  const showSmsDeliveryMetrics = campaignChannel === "sms" && Boolean(campaign?.requestDlr);
   const { data: templates = [] } = useTemplates(campaign?.botId, campaignChannel);
   const campaignTemplate = templates.find(
     (tmpl) => tmpl.name === campaign?.templateName && tmpl.language === campaign?.language
@@ -83,9 +85,8 @@ export default function CampaignDetailPage({
   const pause = usePauseCampaign();
   const resume = useResumeCampaign();
   const cancel = useCancelCampaign();
-  const { assessment, phone, isLoading: qualityLoading, confirmStart } = useWhatsAppQualityGuard(
-    campaignChannel === "whatsapp" ? campaign?.botId : ""
-  );
+  const { assessment, phone, isLoading: qualityLoading, confirmStart, qualityConfirm, resolveQualityConfirm } =
+    useWhatsAppQualityGuard(campaign?.botId, campaignChannel === "whatsapp");
 
   const isActionPending =
     start.isPending || pause.isPending || resume.isPending || cancel.isPending;
@@ -97,8 +98,10 @@ export default function CampaignDetailPage({
       window.alert(t("campaigns.qualityStartBlocked"));
       return;
     }
-    const confirmed = await confirmStart("start");
-    if (!confirmed) return;
+    if (campaignChannel === "whatsapp") {
+      const confirmed = await confirmStart("start");
+      if (!confirmed) return;
+    }
     start.mutate(campaignId);
   }
 
@@ -107,8 +110,10 @@ export default function CampaignDetailPage({
       window.alert(t("campaigns.qualityStartBlocked"));
       return;
     }
-    const confirmed = await confirmStart("resume");
-    if (!confirmed) return;
+    if (campaignChannel === "whatsapp") {
+      const confirmed = await confirmStart("resume");
+      if (!confirmed) return;
+    }
     resume.mutate(campaignId);
   }
 
@@ -137,6 +142,7 @@ export default function CampaignDetailPage({
     campaign.status !== "completed" && campaign.status !== "cancelled";
 
   return (
+    <>
     <DashboardPage maxWidth="4xl" className="space-y-6">
       <div className="flex items-center gap-3">
         <Link
@@ -220,7 +226,7 @@ export default function CampaignDetailPage({
         />
       )}
 
-      <div className={`grid grid-cols-2 md:grid-cols-3 ${campaignChannel === "sms" ? "lg:grid-cols-3" : "lg:grid-cols-5"} gap-3`}>
+      <div className={`grid grid-cols-2 md:grid-cols-3 ${campaignChannel === "sms" && !showSmsDeliveryMetrics ? "lg:grid-cols-3" : campaignChannel === "sms" ? "lg:grid-cols-4" : "lg:grid-cols-5"} gap-3`}>
         <MetricCard
           icon={<Users className="w-5 h-5 text-secondary" />}
           label={t("campaigns.analytics.total")}
@@ -233,7 +239,7 @@ export default function CampaignDetailPage({
           value={campaign.sent}
           colorClass="bg-blue-50"
         />
-        {campaignChannel !== "sms" && (
+        {(campaignChannel !== "sms" || showSmsDeliveryMetrics) && (
           <>
             <MetricCard
               icon={<Truck className="w-5 h-5 text-green-600" />}
@@ -241,12 +247,14 @@ export default function CampaignDetailPage({
               value={campaign.deliveredCount}
               colorClass="bg-green-50"
             />
-            <MetricCard
-              icon={<Eye className="w-5 h-5 text-accent" />}
-              label={t("campaigns.analytics.read")}
-              value={campaign.readCount}
-              colorClass="bg-accent-muted"
-            />
+            {campaignChannel !== "sms" && (
+              <MetricCard
+                icon={<Eye className="w-5 h-5 text-accent" />}
+                label={t("campaigns.analytics.read")}
+                value={campaign.readCount}
+                colorClass="bg-accent-muted"
+              />
+            )}
           </>
         )}
         <MetricCard
@@ -268,7 +276,11 @@ export default function CampaignDetailPage({
 
         <div className="bg-surface-elevated rounded-xl border border-default p-5 space-y-4">
           <h2 className="font-semibold text-primary">{t("campaigns.funnelTitle")}</h2>
-          <CampaignFunnelChart campaign={campaign} />
+          <CampaignFunnelChart
+            campaign={campaign}
+            showDeliveryMetrics={campaignChannel !== "sms" || showSmsDeliveryMetrics}
+            showReadMetrics={campaignChannel !== "sms"}
+          />
         </div>
       </div>
 
@@ -378,5 +390,13 @@ export default function CampaignDetailPage({
         </div>
       )}
     </DashboardPage>
+
+    <CampaignQualityConfirmModal
+      open={Boolean(qualityConfirm)}
+      action={qualityConfirm?.action ?? "start"}
+      onCancel={() => resolveQualityConfirm(false)}
+      onConfirm={() => resolveQualityConfirm(true)}
+    />
+    </>
   );
 }

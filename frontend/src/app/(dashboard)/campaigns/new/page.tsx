@@ -87,6 +87,7 @@ export default function NewCampaignPage() {
   const [audienceTags, setAudienceTags] = useState<string[]>([]);
   const [batchForm, setBatchForm] = useState<BatchFormState>(DEFAULT_BATCH_FORM);
   const [requireOptIn, setRequireOptIn] = useState(false);
+  const [requestDlr, setRequestDlr] = useState(false);
   const [parseError, setParseError] = useState("");
   const [submitError, setSubmitError] = useState("");
 
@@ -102,7 +103,8 @@ export default function NewCampaignPage() {
   const approvedTemplates = templates.filter((t) => t.status === "APPROVED");
   const bodyVars = selectedTemplate ? extractBodyVariables(selectedTemplate) : [];
   const { assessment, phone, isLoading: qualityLoading } = useWhatsAppQualityGuard(
-    config.channel === "whatsapp" ? config.botId : ""
+    config.botId,
+    config.channel === "whatsapp"
   );
 
   const stepIndex = STEPS.indexOf(step);
@@ -175,6 +177,7 @@ export default function NewCampaignPage() {
         ...(recipients.length ? { recipients } : {}),
         ...(audienceTags.length ? { audienceTags } : {}),
         requireOptIn,
+        ...(config.channel === "sms" && requestDlr ? { requestDlr: true } : {}),
       });
       router.push(`/campaigns/${campaign.campaignId}`);
     } catch (err) {
@@ -363,6 +366,21 @@ export default function NewCampaignPage() {
                 <span className="block text-xs text-secondary mt-0.5">{t("bulkSend.requireOptInHint")}</span>
               </span>
             </label>
+
+            {config.channel === "sms" && (
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={requestDlr}
+                  onChange={(e) => setRequestDlr(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-default text-accent focus:ring-accent"
+                />
+                <span className="text-sm text-secondary">
+                  <span className="font-medium">{t("campaigns.requestDlr")}</span>
+                  <span className="block text-xs text-secondary mt-0.5">{t("campaigns.requestDlrHint")}</span>
+                </span>
+              </label>
+            )}
           </>
         )}
 
@@ -516,6 +534,14 @@ export default function NewCampaignPage() {
               <dd className="font-medium text-primary">
                 {requireOptIn ? t("campaigns.requireOptInStatusOn") : t("campaigns.requireOptInStatusOff")}
               </dd>
+              {config.channel === "sms" && (
+                <>
+                  <dt className="text-secondary">{t("campaigns.requestDlr")}</dt>
+                  <dd className="font-medium text-primary">
+                    {requestDlr ? t("campaigns.requestDlrStatusOn") : t("campaigns.requestDlrStatusOff")}
+                  </dd>
+                </>
+              )}
             </dl>
 
             {config.channel === "whatsapp" && config.botId && (

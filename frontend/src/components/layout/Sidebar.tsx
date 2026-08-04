@@ -57,12 +57,11 @@ type NavCategory = {
   items: NavItem[];
 };
 
+const memberStandaloneNavItems: NavItem[] = [
+  { href: "/dashboard", labelKey: "nav.dashboard", icon: LayoutDashboard },
+];
+
 const memberNavCategories: NavCategory[] = [
-  {
-    id: "home",
-    labelKey: "nav.categoryHome",
-    items: [{ href: "/dashboard", labelKey: "nav.dashboard", icon: LayoutDashboard }],
-  },
   {
     id: "messaging",
     labelKey: "nav.categoryMessaging",
@@ -202,10 +201,12 @@ function NavLink({
 }
 
 function SidebarNav({
+  standaloneItems,
   navCategories,
   collapsed,
   onNavigate,
 }: {
+  standaloneItems?: NavItem[];
   navCategories: NavCategory[];
   collapsed: boolean;
   onNavigate?: () => void;
@@ -256,6 +257,19 @@ function SidebarNav({
           collapsed ? "space-y-3 px-2" : "space-y-1 px-3"
         )}
       >
+        {standaloneItems?.length ? (
+          <div className={cn("space-y-0.5", navCategories.length > 0 && "mb-3")}>
+            {standaloneItems.map((item) => (
+              <NavLink
+                key={item.href}
+                item={item}
+                active={pathname.startsWith(item.href)}
+                collapsed={collapsed}
+                onNavigate={onNavigate}
+              />
+            ))}
+          </div>
+        ) : null}
         {navCategories.map((category, index) => {
           const isOpen = openCategories.has(category.id);
           const hasActiveItem = category.items.some((item) =>
@@ -267,7 +281,8 @@ function SidebarNav({
               <div
                 key={category.id}
                 className={cn(
-                  index > 0 && "border-t border-[var(--sidebar-border)] pt-3"
+                  (index > 0 || (standaloneItems?.length ?? 0) > 0) &&
+                    "border-t border-[var(--sidebar-border)] pt-3"
                 )}
               >
                 <div className="space-y-0.5">
@@ -801,6 +816,9 @@ export function Sidebar() {
       )
     : baseCategories;
 
+  const standaloneItems =
+    loading || isAdmin || isAdvisor ? [] : memberStandaloneNavItems;
+
   const assumedSubaccount = assumedId
     ? subaccounts.find((item) => item.tenantId === assumedId)
     : undefined;
@@ -848,7 +866,11 @@ export function Sidebar() {
     <>
       <aside className={cn("sticky top-0 hidden h-screen shrink-0 lg:flex", desktopWidth, shellClass)}>
         {brand(isCollapsed, true)}
-        <SidebarNav navCategories={navCategories} collapsed={isCollapsed} />
+        <SidebarNav
+          standaloneItems={standaloneItems}
+          navCategories={navCategories}
+          collapsed={isCollapsed}
+        />
         <SidebarUserProfile collapsed={isCollapsed} />
       </aside>
 
@@ -870,7 +892,12 @@ export function Sidebar() {
         )}
       >
         {brand(isCollapsed, true)}
-        <SidebarNav navCategories={navCategories} collapsed={isCollapsed} onNavigate={close} />
+        <SidebarNav
+          standaloneItems={standaloneItems}
+          navCategories={navCategories}
+          collapsed={isCollapsed}
+          onNavigate={close}
+        />
         <SidebarUserProfile collapsed={isCollapsed} />
       </aside>
     </>

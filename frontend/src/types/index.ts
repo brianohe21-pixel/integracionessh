@@ -581,6 +581,7 @@ export interface Campaign {
   startedAt?: string;
   completedAt?: string;
   requireOptIn?: boolean;
+  requestDlr?: boolean;
 }
 
 export interface CampaignMetrics {

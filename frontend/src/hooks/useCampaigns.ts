@@ -24,6 +24,7 @@ export interface CreateCampaignInput {
   recipients?: CampaignRecipient[];
   audienceTags?: string[];
   requireOptIn?: boolean;
+  requestDlr?: boolean;
 }
 
 export interface UpdateCampaignInput {
