@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import type { OutreachChannel } from "@/types";
 
 export interface BulkRecipient {
   to: string;
@@ -43,6 +44,7 @@ export interface BulkSendJob {
   jobId: string;
   tenantId: string;
   botId: string;
+  channel?: OutreachChannel;
   templateName: string;
   language: string;
   status: "queued" | "processing" | "completed" | "failed";
@@ -56,6 +58,7 @@ export interface BulkSendJob {
 
 export interface BulkSendInput {
   botId: string;
+  channel: OutreachChannel;
   templateName: string;
   language: string;
   recipients: BulkRecipient[];
@@ -113,6 +116,7 @@ export function useBulkSend() {
     mutationFn: async (data: BulkSendInput): Promise<BulkSendResult> => {
       const job = await api.post<BulkSendJob>("/bulk-send", {
         botId: data.botId,
+        channel: data.channel,
         templateName: data.templateName,
         language: data.language,
         recipients: data.recipients,

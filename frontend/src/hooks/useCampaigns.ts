@@ -15,6 +15,7 @@ export interface CampaignRecipient {
 export interface CreateCampaignInput {
   name: string;
   botId: string;
+  channel?: "whatsapp" | "sms";
   templateName: string;
   language: string;
   segments?: string[];

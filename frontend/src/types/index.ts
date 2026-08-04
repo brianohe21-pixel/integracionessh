@@ -498,10 +498,13 @@ export interface TemplateButton {
   example?: string[];
 }
 
+export type OutreachChannel = "whatsapp" | "sms";
+
 export interface WhatsAppTemplate {
   templateId: string;
   tenantId: string;
   botId: string;
+  channel?: "whatsapp";
   name: string;
   language: string;
   category: "MARKETING" | "UTILITY" | "AUTHENTICATION";
@@ -510,6 +513,30 @@ export interface WhatsAppTemplate {
   metaTemplateId?: string;
   syncedAt: string;
   createdAt: string;
+}
+
+export interface SmsTemplate {
+  templateId: string;
+  tenantId: string;
+  botId: string;
+  channel: "sms";
+  name: string;
+  language: string;
+  category: "MARKETING" | "UTILITY" | "AUTHENTICATION";
+  status: "APPROVED";
+  body: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type MessageTemplate = WhatsAppTemplate | SmsTemplate;
+
+export function isSmsTemplate(template: MessageTemplate): template is SmsTemplate {
+  return template.channel === "sms";
+}
+
+export function isWhatsAppTemplate(template: MessageTemplate): template is WhatsAppTemplate {
+  return template.channel !== "sms";
 }
 
 export type CampaignStatus =
@@ -531,6 +558,7 @@ export interface Campaign {
   tenantId: string;
   botId: string;
   name: string;
+  channel?: OutreachChannel;
   templateName: string;
   language: string;
   status: CampaignStatus;
@@ -578,6 +606,7 @@ export interface BulkSendJob {
   jobId: string;
   tenantId: string;
   botId: string;
+  channel?: OutreachChannel;
   templateName: string;
   language: string;
   status: BulkSendJobStatus;

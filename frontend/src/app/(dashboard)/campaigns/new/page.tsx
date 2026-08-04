@@ -21,7 +21,10 @@ import {
 import { TemplateMessagePreview } from "@/components/templates/TemplateMessagePreview";
 import { useWhatsAppQualityGuard } from "@/hooks/useWhatsAppQualityGuard";
 import { parseRecipientsCsv, decodeCsvBytes } from "@/lib/csv";
-import type { WhatsAppTemplate } from "@/types";
+import type { MessageTemplate, OutreachChannel } from "@/types";
+import { isSmsTemplate } from "@/types";
+import { OutreachChannelSelect } from "@/components/outreach/OutreachChannelSelect";
+import { SmsTemplatePreview } from "@/components/templates/SmsTemplatePreview";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { TableContainer } from "@/components/ui/TableContainer";
@@ -30,15 +33,17 @@ type Step = "config" | "recipients" | "review";
 
 const STEPS: Step[] = ["config", "recipients", "review"];
 
-function extractBodyVariables(template: WhatsAppTemplate): string[] {
-  const body = template.components.find((c) => c.type === "BODY");
-  if (!body?.text) return [];
-  const matches = body.text.match(/\{\{(\d+)\}\}/g) ?? [];
+function extractBodyVariables(template: MessageTemplate): string[] {
+  const body = isSmsTemplate(template)
+    ? template.body
+    : template.components.find((c) => c.type === "BODY")?.text;
+  if (!body) return [];
+  const matches = body.match(/\{\{(\d+)\}\}/g) ?? [];
   return [...new Set(matches)].sort();
 }
 
 function buildComponents(
-  template: WhatsAppTemplate,
+  template: MessageTemplate,
   variableValues: string[]
 ): CampaignRecipient["components"] {
   const vars = extractBodyVariables(template);
@@ -54,6 +59,7 @@ function buildComponents(
 
 interface ConfigForm {
   name: string;
+  channel: OutreachChannel;
   botId: string;
   templateName: string;
   language: string;
@@ -70,6 +76,7 @@ export default function NewCampaignPage() {
   const [step, setStep] = useState<Step>("config");
   const [config, setConfig] = useState<ConfigForm>({
     name: "",
+    channel: "whatsapp",
     botId: "",
     templateName: "",
     language: "",
@@ -84,15 +91,19 @@ export default function NewCampaignPage() {
   const [submitError, setSubmitError] = useState("");
 
   const { data: bots = [] } = useBots();
-  const { data: templates = [] } = useTemplates(config.botId || undefined);
+  const { data: templates = [] } = useTemplates(config.botId || undefined, config.channel);
 
-  const selectedBot = bots.find((b) => b.botId === config.botId);
+  const availableBots =
+    config.channel === "sms" ? bots.filter((bot) => bot.smsEnabled) : bots;
+  const selectedBot = availableBots.find((b) => b.botId === config.botId);
   const selectedTemplate = templates.find(
     (t) => t.name === config.templateName && t.language === config.language
   );
   const approvedTemplates = templates.filter((t) => t.status === "APPROVED");
   const bodyVars = selectedTemplate ? extractBodyVariables(selectedTemplate) : [];
-  const { assessment, phone, isLoading: qualityLoading } = useWhatsAppQualityGuard(config.botId);
+  const { assessment, phone, isLoading: qualityLoading } = useWhatsAppQualityGuard(
+    config.channel === "whatsapp" ? config.botId : ""
+  );
 
   const stepIndex = STEPS.indexOf(step);
   const isFirstStep = stepIndex === 0;
@@ -155,6 +166,7 @@ export default function NewCampaignPage() {
       const campaign = await createCampaign.mutateAsync({
         name: config.name.trim(),
         botId: config.botId,
+        channel: config.channel,
         templateName: config.templateName,
         language: config.language,
         segments: config.segments,
@@ -222,6 +234,22 @@ export default function NewCampaignPage() {
             </div>
 
             <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-secondary">{t("outreach.channel")}</label>
+              <OutreachChannelSelect
+                value={config.channel}
+                onChange={(channel) =>
+                  setConfig({
+                    ...config,
+                    channel,
+                    botId: "",
+                    templateName: "",
+                    language: "",
+                  })
+                }
+              />
+            </div>
+
+            <div className="space-y-1.5">
               <label className="block text-sm font-medium text-secondary">{t("bulkSend.bot")}</label>
               <select
                 value={config.botId}
@@ -231,7 +259,7 @@ export default function NewCampaignPage() {
                 className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent/30 bg-surface-elevated"
               >
                 <option value="">{t("bulkSend.selectBot")}</option>
-                {bots.map((b) => (
+                {availableBots.map((b) => (
                   <option key={b.botId} value={b.botId}>
                     {b.name}
                   </option>
@@ -262,7 +290,14 @@ export default function NewCampaignPage() {
                     {t("bulkSend.varsRequired", { vars: bodyVars.join(", ") })}
                   </p>
                 )}
-                {selectedTemplate && (
+                {selectedTemplate && isSmsTemplate(selectedTemplate) && (
+                  <SmsTemplatePreview
+                    template={selectedTemplate}
+                    label={t("bulkSend.preview")}
+                    className="pt-2"
+                  />
+                )}
+                {selectedTemplate && !isSmsTemplate(selectedTemplate) && (
                   <TemplateMessagePreview
                     template={selectedTemplate}
                     label={t("bulkSend.preview")}
@@ -436,6 +471,10 @@ export default function NewCampaignPage() {
             <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
               <dt className="text-secondary">{t("campaigns.nameLabel")}</dt>
               <dd className="font-medium text-primary">{config.name}</dd>
+              <dt className="text-secondary">{t("outreach.channel")}</dt>
+              <dd className="font-medium text-primary">
+                {config.channel === "sms" ? t("outreach.channelSms") : t("outreach.channelWhatsapp")}
+              </dd>
               <dt className="text-secondary">{t("bulkSend.bot")}</dt>
               <dd className="font-medium text-primary">{selectedBot?.name}</dd>
               <dt className="text-secondary">{t("bulkSend.template")}</dt>
@@ -479,7 +518,7 @@ export default function NewCampaignPage() {
               </dd>
             </dl>
 
-            {config.botId && (
+            {config.channel === "whatsapp" && config.botId && (
               <CampaignQualityAlert
                 phone={phone}
                 assessment={assessment}
@@ -487,7 +526,17 @@ export default function NewCampaignPage() {
               />
             )}
 
-            {selectedTemplate && (
+            {selectedTemplate && isSmsTemplate(selectedTemplate) && (
+              <SmsTemplatePreview
+                template={selectedTemplate}
+                label={t("bulkSend.preview")}
+                variableValues={
+                  recipients[0]?.components?.[0]?.parameters?.map((p) => p.text ?? "") ?? undefined
+                }
+              />
+            )}
+
+            {selectedTemplate && !isSmsTemplate(selectedTemplate) && (
               <TemplateMessagePreview
                 template={selectedTemplate}
                 label={t("bulkSend.preview")}

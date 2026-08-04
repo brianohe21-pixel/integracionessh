@@ -13,7 +13,10 @@ import {
 import { useBots } from "@/hooks/useBots";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
-import type { WhatsAppTemplate, TemplateComponent } from "@/types";
+import type { MessageTemplate, TemplateComponent, OutreachChannel } from "@/types";
+import { isSmsTemplate } from "@/types";
+import { OutreachChannelSelect } from "@/components/outreach/OutreachChannelSelect";
+import { SmsTemplatePreview } from "@/components/templates/SmsTemplatePreview";
 import {
   LayoutTemplate,
   Plus,
@@ -76,29 +79,37 @@ export default function TemplatesPage() {
   );
 
   const [botFilter, setBotFilter] = useState<string>("");
+  const [channelFilter, setChannelFilter] = useState<OutreachChannel>("whatsapp");
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
-  const [editingTemplate, setEditingTemplate] = useState<WhatsAppTemplate | null>(null);
-  const [sendTarget, setSendTarget] = useState<WhatsAppTemplate | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<WhatsAppTemplate | null>(null);
+  const [editingTemplate, setEditingTemplate] = useState<MessageTemplate | null>(null);
+  const [sendTarget, setSendTarget] = useState<MessageTemplate | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<MessageTemplate | null>(null);
 
   const { data: bots } = useBots();
-  const { data: templates, isLoading, error, refetch } = useTemplates(botFilter || undefined);
-  const createMutation = useCreateTemplate();
-  const updateMutation = useUpdateTemplate();
-  const deleteMutation = useDeleteTemplate();
-  const sendMutation = useSendTemplate();
+  const availableBots =
+    channelFilter === "sms" ? bots?.filter((bot) => bot.smsEnabled) ?? [] : bots ?? [];
+  const { data: templates, isLoading, error, refetch } = useTemplates(
+    botFilter || undefined,
+    channelFilter
+  );
+  const createMutation = useCreateTemplate(channelFilter);
+  const updateMutation = useUpdateTemplate(channelFilter);
+  const deleteMutation = useDeleteTemplate(channelFilter);
+  const sendMutation = useSendTemplate(channelFilter);
 
   const [formName, setFormName] = useState("");
   const [formLanguage, setFormLanguage] = useState("es");
   const [formCategory, setFormCategory] = useState<"MARKETING" | "UTILITY" | "AUTHENTICATION">("UTILITY");
   const [formHeaderText, setFormHeaderText] = useState("");
   const [formBodyText, setFormBodyText] = useState("");
+  const [formSmsBodyText, setFormSmsBodyText] = useState("");
   const [formFooterText, setFormFooterText] = useState("");
   const [formBodyExamples, setFormBodyExamples] = useState<Record<string, string>>({});
 
   const [sendTo, setSendTo] = useState("");
   const [sendParams, setSendParams] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState("");
+  const [sendError, setSendError] = useState("");
 
   function openCreate() {
     setFormError("");
@@ -107,23 +118,34 @@ export default function TemplatesPage() {
     setFormCategory("UTILITY");
     setFormHeaderText("");
     setFormBodyText("");
+    setFormSmsBodyText("");
     setFormFooterText("");
     setFormBodyExamples({});
     setEditingTemplate(null);
     setDialogMode("create");
   }
 
-  function openEdit(t: WhatsAppTemplate) {
-    if (t.status !== "REJECTED") return;
+  function openEdit(template: MessageTemplate) {
+    if (isSmsTemplate(template)) {
+      setFormError("");
+      setFormName(template.name);
+      setFormLanguage(template.language);
+      setFormCategory(template.category);
+      setFormSmsBodyText(template.body);
+      setEditingTemplate(template);
+      setDialogMode("edit");
+      return;
+    }
+    if (template.status !== "REJECTED") return;
     setFormError("");
-    setFormName(t.name);
-    setFormLanguage(t.language);
-    setFormCategory(t.category);
-    setFormHeaderText(t.components.find((c) => c.type === "HEADER")?.text ?? "");
-    const bodyComp = t.components.find((c) => c.type === "BODY");
+    setFormName(template.name);
+    setFormLanguage(template.language);
+    setFormCategory(template.category);
+    setFormHeaderText(template.components.find((c) => c.type === "HEADER")?.text ?? "");
+    const bodyComp = template.components.find((c) => c.type === "BODY");
     const bodyText = bodyComp?.text ?? "";
     setFormBodyText(bodyText);
-    setFormFooterText(t.components.find((c) => c.type === "FOOTER")?.text ?? "");
+    setFormFooterText(template.components.find((c) => c.type === "FOOTER")?.text ?? "");
     const vars = extractBodyVariables(bodyText).sort(
       (a, b) => parseInt(a.replace(/\D/g, "")) - parseInt(b.replace(/\D/g, ""))
     );
@@ -132,18 +154,20 @@ export default function TemplatesPage() {
       vars.forEach((v, i) => { examples[v] = bodyComp.example!.body_text![0][i] ?? ""; });
     }
     setFormBodyExamples(examples);
-    setEditingTemplate(t);
+    setEditingTemplate(template);
     setDialogMode("edit");
   }
 
-  function openSend(t: WhatsAppTemplate) {
+  function openSend(template: MessageTemplate) {
     setSendTo("");
-    const bodyText = t.components.find((c) => c.type === "BODY")?.text ?? "";
+    const bodyText = isSmsTemplate(template)
+      ? template.body
+      : template.components.find((c) => c.type === "BODY")?.text ?? "";
     const vars = extractBodyVariables(bodyText);
     const initial: Record<string, string> = {};
     vars.forEach((v) => { initial[v] = ""; });
     setSendParams(initial);
-    setSendTarget(t);
+    setSendTarget(template);
   }
 
   function buildComponents(): TemplateComponent[] {
@@ -168,11 +192,30 @@ export default function TemplatesPage() {
   }
 
   async function handleCreateOrUpdate() {
-    if (!botFilter || !formBodyText.trim()) return;
+    if (!botFilter) return;
+    if (channelFilter === "sms" && !formSmsBodyText.trim()) return;
+    if (channelFilter === "whatsapp" && !formBodyText.trim()) return;
 
     setFormError("");
     try {
-      if (dialogMode === "create") {
+      if (channelFilter === "sms") {
+        if (dialogMode === "create") {
+          await createMutation.mutateAsync({
+            botId: botFilter,
+            name: formName,
+            language: formLanguage,
+            category: formCategory,
+            body: formSmsBodyText.trim(),
+          });
+        } else if (dialogMode === "edit" && editingTemplate) {
+          await updateMutation.mutateAsync({
+            name: editingTemplate.name,
+            botId: botFilter,
+            language: editingTemplate.language,
+            body: formSmsBodyText.trim(),
+          });
+        }
+      } else if (dialogMode === "create") {
         await createMutation.mutateAsync({
           botId: botFilter,
           name: formName,
@@ -198,7 +241,11 @@ export default function TemplatesPage() {
 
   async function handleDelete() {
     if (!deleteConfirm || !botFilter) return;
-    await deleteMutation.mutateAsync({ name: deleteConfirm.name, botId: botFilter });
+    await deleteMutation.mutateAsync({
+      name: deleteConfirm.name,
+      botId: botFilter,
+      language: deleteConfirm.language,
+    });
     setDeleteConfirm(null);
     refetch();
   }
@@ -214,15 +261,19 @@ export default function TemplatesPage() {
         }]
       : undefined;
 
-    await sendMutation.mutateAsync({
-      name: sendTarget.name,
-      botId: botFilter,
-      to: sendTo,
-      language: sendTarget.language,
-      components: bodyParams,
-    });
-
-    setSendTarget(null);
+    setSendError("");
+    try {
+      await sendMutation.mutateAsync({
+        name: sendTarget.name,
+        botId: botFilter,
+        to: sendTo,
+        language: sendTarget.language,
+        components: bodyParams,
+      });
+      setSendTarget(null);
+    } catch (error) {
+      setSendError(error instanceof Error ? error.message : "Send failed");
+    }
   }
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
@@ -250,7 +301,7 @@ export default function TemplatesPage() {
 
       <TourPageSuggestion tourId="templates" />
 
-      <div className="mb-6">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
         <ContextualHint hintId="templates-filter" content={t("helpCenter.hints.templatesFilter")}>
           <select
             data-tour="templates-filter"
@@ -259,15 +310,25 @@ export default function TemplatesPage() {
             className="w-full rounded-lg border border-default bg-surface-elevated px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent sm:w-72"
           >
           <option value="">{t("templates.selectBotTitle")}</option>
-          {bots?.map((bot) => (
+          {availableBots.map((bot) => (
             <option key={bot.botId} value={bot.botId}>
               {bot.name}
             </option>
           ))}
         </select>
         </ContextualHint>
+        <OutreachChannelSelect
+          value={channelFilter}
+          onChange={(value) => {
+            setChannelFilter(value);
+            setBotFilter("");
+            setDialogMode(null);
+          }}
+          className="w-full rounded-lg border border-default bg-surface-elevated px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent sm:w-56"
+        />
       </div>
 
+      {channelFilter === "whatsapp" && (
       <div className="mb-6 bg-blue-50 border border-blue-200 rounded-xl p-4">
         <div className="flex items-start gap-3">
           <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
@@ -296,6 +357,13 @@ export default function TemplatesPage() {
           </div>
         </div>
       </div>
+      )}
+
+      {channelFilter === "sms" && botFilter && (
+        <div className="mb-6 bg-surface border border-default rounded-xl p-4">
+          <p className="text-sm text-secondary">{t("templates.smsLifecycleNote")}</p>
+        </div>
+      )}
 
       {!botFilter && (
         <EmptyState
@@ -372,7 +440,10 @@ export default function TemplatesPage() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {templates.map((tpl) => {
+                const sms = isSmsTemplate(tpl);
                 const statusInfo = STATUS_BADGE[tpl.status as keyof typeof STATUS_BADGE] ?? STATUS_BADGE.PENDING;
+                const canSend = tpl.status === "APPROVED";
+                const canEdit = sms || tpl.status === "REJECTED";
                 return (
                   <tr key={`${tpl.name}-${tpl.language}`} className="hover:bg-surface transition-colors">
                     <td className="px-5 py-4">
@@ -409,11 +480,11 @@ export default function TemplatesPage() {
                       </div>
                     </td>
                     <td className="px-5 py-4 text-sm text-secondary">
-                      {formatDate(tpl.syncedAt)}
+                      {formatDate(sms ? tpl.updatedAt : tpl.syncedAt)}
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex items-center justify-end gap-1">
-                        {tpl.status === "APPROVED" && (
+                        {canSend && (
                           <button
                             onClick={() => openSend(tpl)}
                             className="p-1.5 rounded-md text-muted hover:text-accent hover:bg-accent-muted transition-colors"
@@ -422,11 +493,11 @@ export default function TemplatesPage() {
                             <Send className="w-4 h-4" />
                           </button>
                         )}
-                        {tpl.status === "REJECTED" ? (
+                        {canEdit ? (
                           <button
                             onClick={() => openEdit(tpl)}
                             className="p-1.5 rounded-md text-muted hover:text-secondary hover:bg-surface-muted transition-colors"
-                            title={t("templates.editResubmit")}
+                            title={sms ? t("common.edit") : t("templates.editResubmit")}
                           >
                             <Pencil className="w-4 h-4" />
                           </button>
@@ -520,6 +591,20 @@ export default function TemplatesPage() {
                   </select>
                 </div>
               </div>
+              {channelFilter === "sms" ? (
+                <div>
+                  <label className="block text-sm font-medium text-secondary mb-1">{t("templates.body")}</label>
+                  <textarea
+                    value={formSmsBodyText}
+                    onChange={(e) => setFormSmsBodyText(e.target.value)}
+                    rows={6}
+                    placeholder={t("templates.smsBodyPlaceholder")}
+                    className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent resize-none"
+                  />
+                  <p className="text-xs text-muted mt-1">{t("templates.bodyVarsHint")}</p>
+                </div>
+              ) : (
+              <>
               <div>
                 <label className="block text-sm font-medium text-secondary mb-1">
                   {t("templates.header")} <span className="text-muted font-normal">{t("templates.optional")}</span>
@@ -587,6 +672,8 @@ export default function TemplatesPage() {
                   className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
                 />
               </div>
+              </>
+              )}
             </div>
             <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-default">
               <button
@@ -599,9 +686,11 @@ export default function TemplatesPage() {
                 onClick={handleCreateOrUpdate}
                 disabled={
                   isSubmitting ||
-                  !formBodyText.trim() ||
-                  (dialogMode === "create" && !formName.trim()) ||
-                  extractBodyVariables(formBodyText).some((v) => !formBodyExamples[v]?.trim())
+                  (channelFilter === "sms"
+                    ? !formSmsBodyText.trim()
+                    : !formBodyText.trim() ||
+                      extractBodyVariables(formBodyText).some((v) => !formBodyExamples[v]?.trim())) ||
+                  (dialogMode === "create" && !formName.trim())
                 }
                 className="px-4 py-2 text-sm font-medium text-white bg-accent rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -661,6 +750,12 @@ export default function TemplatesPage() {
                 </div>
               )}
 
+              {isSmsTemplate(sendTarget) ? (
+                <SmsTemplatePreview
+                  template={sendTarget}
+                  label={t("templates.previewLabel")}
+                />
+              ) : (
               <div className="bg-surface rounded-xl p-4">
                 <p className="text-xs font-medium text-secondary mb-2">{t("templates.previewLabel")}</p>
                 <div className="bg-surface-elevated rounded-lg p-3 border border-default">
@@ -685,7 +780,11 @@ export default function TemplatesPage() {
                   )}
                 </div>
               </div>
+              )}
             </div>
+            {sendError && (
+              <p className="px-6 pb-2 text-sm text-red-600">{sendError}</p>
+            )}
             <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-default">
               <button
                 onClick={() => setSendTarget(null)}

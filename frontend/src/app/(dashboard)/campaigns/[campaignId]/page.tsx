@@ -31,6 +31,8 @@ import { CampaignRealtimeMetricsPanel } from "@/components/campaigns/CampaignRea
 import { formatBatchDelay } from "@/components/campaigns/CampaignBatchSettings";
 import { BulkJobFailures } from "@/components/bulk-send/BulkJobFailures";
 import { TemplateMessagePreview } from "@/components/templates/TemplateMessagePreview";
+import { SmsTemplatePreview } from "@/components/templates/SmsTemplatePreview";
+import { isSmsTemplate } from "@/types";
 import { CampaignQualityAlert } from "@/components/campaigns/CampaignQualityAlert";
 import { useTemplates } from "@/hooks/useTemplates";
 import { useWhatsAppQualityGuard } from "@/hooks/useWhatsAppQualityGuard";
@@ -72,7 +74,8 @@ export default function CampaignDetailPage({
   const t = useT();
 
   const { data: campaign, isLoading, error } = useCampaign(campaignId);
-  const { data: templates = [] } = useTemplates(campaign?.botId);
+  const campaignChannel = campaign?.channel ?? "whatsapp";
+  const { data: templates = [] } = useTemplates(campaign?.botId, campaignChannel);
   const campaignTemplate = templates.find(
     (tmpl) => tmpl.name === campaign?.templateName && tmpl.language === campaign?.language
   );
@@ -81,13 +84,13 @@ export default function CampaignDetailPage({
   const resume = useResumeCampaign();
   const cancel = useCancelCampaign();
   const { assessment, phone, isLoading: qualityLoading, confirmStart } = useWhatsAppQualityGuard(
-    campaign?.botId
+    campaignChannel === "whatsapp" ? campaign?.botId : ""
   );
 
   const isActionPending =
     start.isPending || pause.isPending || resume.isPending || cancel.isPending;
 
-  const startBlocked = assessment.risk === "block";
+  const startBlocked = campaignChannel === "whatsapp" && assessment.risk === "block";
 
   async function handleStart() {
     if (startBlocked) {
@@ -148,6 +151,11 @@ export default function CampaignDetailPage({
             <CampaignStatusBadge status={campaign.status} />
           </div>
           <p className="text-sm text-secondary">
+            {t("outreach.channel")}:{" "}
+            <span className="font-medium">
+              {campaignChannel === "sms" ? t("outreach.channelSms") : t("outreach.channelWhatsapp")}
+            </span>
+            {" · "}
             {t("campaigns.templateLabel")}: <span className="font-medium">{campaign.templateName}</span>
             {" · "}
             {t("campaigns.languageLabel")}: {campaign.language}
@@ -204,7 +212,7 @@ export default function CampaignDetailPage({
         </div>
       </div>
 
-      {(canStart || canResume) && (
+      {campaignChannel === "whatsapp" && (canStart || canResume) && (
         <CampaignQualityAlert
           phone={phone}
           assessment={assessment}
@@ -212,7 +220,7 @@ export default function CampaignDetailPage({
         />
       )}
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className={`grid grid-cols-2 md:grid-cols-3 ${campaignChannel === "sms" ? "lg:grid-cols-3" : "lg:grid-cols-5"} gap-3`}>
         <MetricCard
           icon={<Users className="w-5 h-5 text-secondary" />}
           label={t("campaigns.analytics.total")}
@@ -225,18 +233,22 @@ export default function CampaignDetailPage({
           value={campaign.sent}
           colorClass="bg-blue-50"
         />
-        <MetricCard
-          icon={<Truck className="w-5 h-5 text-green-600" />}
-          label={t("campaigns.analytics.delivered")}
-          value={campaign.deliveredCount}
-          colorClass="bg-green-50"
-        />
-        <MetricCard
-          icon={<Eye className="w-5 h-5 text-accent" />}
-          label={t("campaigns.analytics.read")}
-          value={campaign.readCount}
-          colorClass="bg-accent-muted"
-        />
+        {campaignChannel !== "sms" && (
+          <>
+            <MetricCard
+              icon={<Truck className="w-5 h-5 text-green-600" />}
+              label={t("campaigns.analytics.delivered")}
+              value={campaign.deliveredCount}
+              colorClass="bg-green-50"
+            />
+            <MetricCard
+              icon={<Eye className="w-5 h-5 text-accent" />}
+              label={t("campaigns.analytics.read")}
+              value={campaign.readCount}
+              colorClass="bg-accent-muted"
+            />
+          </>
+        )}
         <MetricCard
           icon={<XCircle className="w-5 h-5 text-red-600" />}
           label={t("campaigns.analytics.failed")}
@@ -337,7 +349,14 @@ export default function CampaignDetailPage({
         </dl>
       </div>
 
-      {campaignTemplate && (
+      {campaignTemplate && isSmsTemplate(campaignTemplate) && (
+        <div className="bg-surface-elevated rounded-xl border border-default p-5">
+          <h2 className="font-semibold text-primary mb-4">{t("bulkSend.preview")}</h2>
+          <SmsTemplatePreview template={campaignTemplate} />
+        </div>
+      )}
+
+      {campaignTemplate && !isSmsTemplate(campaignTemplate) && (
         <div className="bg-surface-elevated rounded-xl border border-default p-5">
           <h2 className="font-semibold text-primary mb-4">{t("bulkSend.preview")}</h2>
           <TemplateMessagePreview template={campaignTemplate} />

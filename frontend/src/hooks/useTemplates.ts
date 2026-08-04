@@ -2,18 +2,26 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { WhatsAppTemplate, TemplateComponent } from "@/types";
+import type {
+  WhatsAppTemplate,
+  SmsTemplate,
+  MessageTemplate,
+  TemplateComponent,
+  OutreachChannel,
+} from "@/types";
 
-export function useTemplates(botId?: string) {
+export function useTemplates(botId?: string, channel: OutreachChannel = "whatsapp") {
   return useQuery({
-    queryKey: ["templates", { botId }],
+    queryKey: ["templates", { botId, channel }],
     queryFn: () =>
-      api.get<WhatsAppTemplate[]>(`/templates${botId ? `?botId=${botId}` : ""}`),
+      api.get<MessageTemplate[]>(
+        `/templates?botId=${encodeURIComponent(botId ?? "")}&channel=${channel}`
+      ),
     enabled: !!botId,
   });
 }
 
-export function useCreateTemplate() {
+export function useCreateTemplate(channel: OutreachChannel = "whatsapp") {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: {
@@ -21,39 +29,51 @@ export function useCreateTemplate() {
       name: string;
       language: string;
       category: "MARKETING" | "UTILITY" | "AUTHENTICATION";
-      components: TemplateComponent[];
-    }) => api.post<WhatsAppTemplate>("/templates", data),
+      components?: TemplateComponent[];
+      body?: string;
+    }) =>
+      api.post<MessageTemplate>("/templates", {
+        ...data,
+        channel,
+      }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["templates"] }),
   });
 }
 
-export function useUpdateTemplate() {
+export function useUpdateTemplate(channel: OutreachChannel = "whatsapp") {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: {
       name: string;
       botId: string;
       language: string;
-      components: TemplateComponent[];
+      components?: TemplateComponent[];
+      body?: string;
     }) =>
-      api.put<WhatsAppTemplate>(
-        `/templates/${data.name}?language=${data.language}`,
-        { botId: data.botId, components: data.components }
+      api.put<MessageTemplate>(
+        `/templates/${data.name}?language=${data.language}&channel=${channel}`,
+        channel === "sms"
+          ? { channel: "sms", botId: data.botId, body: data.body ?? "" }
+          : { botId: data.botId, components: data.components ?? [] }
       ),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["templates"] }),
   });
 }
 
-export function useDeleteTemplate() {
+export function useDeleteTemplate(channel: OutreachChannel = "whatsapp") {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { name: string; botId: string }) =>
-      api.delete(`/templates/${data.name}?botId=${data.botId}`),
+    mutationFn: (data: { name: string; botId: string; language?: string }) =>
+      api.delete(
+        `/templates/${data.name}?botId=${data.botId}${
+          data.language ? `&language=${data.language}` : ""
+        }&channel=${channel}`
+      ),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["templates"] }),
   });
 }
 
-export function useSendTemplate() {
+export function useSendTemplate(channel: OutreachChannel = "whatsapp") {
   return useMutation({
     mutationFn: (data: {
       name: string;
@@ -69,7 +89,10 @@ export function useSendTemplate() {
         botId: data.botId,
         to: data.to,
         language: data.language,
+        channel,
         components: data.components,
       }),
   });
 }
+
+export type { WhatsAppTemplate, SmsTemplate, MessageTemplate };
