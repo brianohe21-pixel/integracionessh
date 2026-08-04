@@ -1,5 +1,5 @@
 export const TELCORED_DLR_QUERY_TEMPLATE =
-  "receiptId={receiptId}&messageId=%i&deliveryCode=%d&sender=%p&recipient=%P&sentAt=%t&cost=%c&status=%s&dlrAt=%y&part=%n&errorCode=%j";
+  "receiptId={receiptId}&messageId=%i&deliveryCode=%d&sender=%P&recipient=%p&sentAt=%t&cost=%c&status=%s&dlrAt=%y&part=%n&errorCode=%j";
 
 export type TelcoredDeliveryCode = 1 | 2 | 4 | 16;
 

@@ -11,7 +11,7 @@ describe("sms dlr helpers", () => {
     const url = buildTelcoredDlrUrl("receipt-123", "https://api.example.com");
 
     expect(url).toBe(
-      "https://api.example.com/sms/dlr?receiptId=receipt-123&messageId=%i&deliveryCode=%d&sender=%p&recipient=%P&sentAt=%t&cost=%c&status=%s&dlrAt=%y&part=%n&errorCode=%j"
+      "https://api.example.com/sms/dlr?receiptId=receipt-123&messageId=%i&deliveryCode=%d&sender=%P&recipient=%p&sentAt=%t&cost=%c&status=%s&dlrAt=%y&part=%n&errorCode=%j"
     );
     expect(url).toContain("%i");
     expect(url).toContain("%d");
