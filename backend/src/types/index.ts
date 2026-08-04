@@ -903,6 +903,35 @@ export interface Campaign {
   startedAt?: string;
   completedAt?: string;
   requireOptIn?: boolean;
+  requestDlr?: boolean;
+}
+
+export type SmsDlrSource = "campaign" | "template";
+
+export interface SmsDlrReceipt {
+  receiptId: string;
+  tenantId: string;
+  botId: string;
+  source: SmsDlrSource;
+  to: string;
+  campaignId?: string;
+  templateName?: string;
+  language?: string;
+  telcoredMessageId?: string;
+  finalDeliveryCode?: number;
+  lastDeliveryCode?: number;
+  lastIntermediateCode?: number;
+  deliveryStatus?: string;
+  sentAt?: string;
+  dlrAt?: string;
+  cost?: string;
+  part?: string;
+  errorCode?: string;
+  sender?: string;
+  sendError?: string;
+  metricsApplied?: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export type CampaignRecipientStatus = "pending" | "sent" | "replied";
@@ -947,6 +976,7 @@ export interface CampaignSQSBody {
   components?: CampaignRecipient["components"];
   batchVersion?: number;
   batchIndex?: number;
+  requestDlr?: boolean;
 }
 
 export type BulkSendJobStatus = "queued" | "processing" | "completed" | "failed";

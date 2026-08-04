@@ -71,6 +71,37 @@ describe("sms client", () => {
     expect(result.messageId).toBe("telcored-123");
   });
 
+  it("includes dlr-url when provided", async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ messageId: "telcored-456" }),
+    });
+    global.fetch = fetchMock as typeof fetch;
+
+    const dlrUrl =
+      "https://api.example.com/sms/dlr?receiptId=abc&messageId=%i&deliveryCode=%d";
+
+    await sendSmsTextMessage({
+      phoneNumber: "573001234567",
+      text: "Hola",
+      from: "msg",
+      dlrUrl,
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://omnicanal.telcoredsas.com/Api/rest/message",
+      expect.objectContaining({
+        body: JSON.stringify({
+          to: ["573001234567"],
+          text: "Hola",
+          from: "msg",
+          "dlr-url": dlrUrl,
+        }),
+      })
+    );
+  });
+
   it("surfaces Telcored API errors", async () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: false,

@@ -84,6 +84,7 @@ async function processRecipient(body: CampaignSQSBody): Promise<void> {
     recipientKey,
     batchVersion,
     channel = "whatsapp",
+    requestDlr,
   } = body;
 
   if (!to) {
@@ -152,6 +153,7 @@ async function processRecipient(body: CampaignSQSBody): Promise<void> {
     }
 
     if (channel === "sms") {
+      const shouldRequestDlr = requestDlr ?? campaign.requestDlr ?? false;
       const result = await sendSmsFromTemplate({
         tenantId,
         bot,
@@ -161,6 +163,7 @@ async function processRecipient(body: CampaignSQSBody): Promise<void> {
         to,
         ...(components ? { components } : {}),
         environment: ENVIRONMENT,
+        ...(shouldRequestDlr ? { requestDlr: true, source: "campaign", campaignId } : {}),
       });
 
       await saveCampaignMessageTracking(result.messageId, campaignId, tenantId, to, recipientKey).catch(

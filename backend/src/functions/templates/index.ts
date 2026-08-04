@@ -129,6 +129,7 @@ const SendTemplateSchema = z.object({
       })
     )
     .optional(),
+  requestDlr: z.boolean().optional().default(false),
 });
 
 function parseChannel(
@@ -268,7 +269,7 @@ export async function handler(
       const parsed = SendTemplateSchema.safeParse(body);
       if (!parsed.success) return badRequest(parsed.error.message);
 
-      const { botId, to, language, components } = parsed.data;
+      const { botId, to, language, components, requestDlr } = parsed.data;
       const channel = parseChannel(params, body);
 
       if (channel === "sms") {
@@ -283,6 +284,7 @@ export async function handler(
           to,
           environment: ENVIRONMENT,
           ...(components ? { components } : {}),
+          ...(requestDlr ? { requestDlr: true, source: "template" } : {}),
         } as Parameters<typeof sendSmsFromTemplate>[0]);
         return ok(result);
       }

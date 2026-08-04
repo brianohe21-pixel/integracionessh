@@ -94,6 +94,7 @@ const CreateCampaignSchema = z
     recipients: z.array(RecipientSchema).max(5000).optional(),
     audienceTags: z.array(z.string().max(50)).max(20).optional(),
     requireOptIn: z.boolean().optional().default(false),
+    requestDlr: z.boolean().optional().default(false),
   })
   .superRefine((data, ctx) => {
     const hasRecipients = (data.recipients?.length ?? 0) > 0;
@@ -239,6 +240,7 @@ export async function handler(
         scheduledAt,
         audienceTags,
         requireOptIn,
+        requestDlr,
         batchConfig,
       } = parsed.data;
 
@@ -292,6 +294,7 @@ export async function handler(
         status,
         segments: mergedSegments,
         requireOptIn,
+        ...(channel === "sms" && requestDlr ? { requestDlr: true } : {}),
         ...(scheduledAt ? { scheduledAt } : {}),
         ...(batchConfig ? { batchConfig } : {}),
         total: uniqueRecipients.length,

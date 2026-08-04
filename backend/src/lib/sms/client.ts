@@ -29,6 +29,7 @@ export async function sendSmsTextMessage(params: {
   text: string;
   from: string;
   environment?: string;
+  dlrUrl?: string;
 }): Promise<{ messageId: string }> {
   const environment = params.environment ?? process.env.ENVIRONMENT ?? "dev";
   const authorization = await getTelcoredAuthorizationHeader(environment);
@@ -56,6 +57,7 @@ export async function sendSmsTextMessage(params: {
       to: [to],
       text: params.text,
       from,
+      ...(params.dlrUrl ? { "dlr-url": params.dlrUrl } : {}),
     }),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });

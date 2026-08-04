@@ -502,6 +502,12 @@ locals {
       function_arn = var.sms_webhook_function_arn
       protected    = false
     }
+    sms_dlr = {
+      route_key    = "GET /sms/dlr"
+      invoke_arn   = var.sms_webhook_invoke_arn
+      function_arn = var.sms_webhook_function_arn
+      protected    = false
+    }
     email_inbound = {
       route_key    = "POST /email/inbound"
       invoke_arn   = var.email_inbound_invoke_arn
