@@ -62,7 +62,10 @@ export async function sendSmsTextMessage(params: {
 
   const rawBody = await response.text();
   if (!response.ok) {
-    throw new Error(`Telcored API error ${response.status}: ${rawBody}`);
+    throw Object.assign(
+      new Error(`Telcored API error ${response.status}: ${rawBody}`),
+      { statusCode: 502 }
+    );
   }
 
   let messageId = `sms-${Date.now()}`;

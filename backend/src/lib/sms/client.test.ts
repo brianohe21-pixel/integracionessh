@@ -84,6 +84,9 @@ describe("sms client", () => {
         text: "Test",
         from: "msg",
       })
-    ).rejects.toThrow("Telcored API error 401: Unauthorized");
+    ).rejects.toMatchObject({
+      statusCode: 502,
+      message: "Telcored API error 401: Unauthorized",
+    });
   });
 });

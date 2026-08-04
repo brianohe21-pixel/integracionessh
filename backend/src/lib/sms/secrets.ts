@@ -14,15 +14,31 @@ function secretId(environment: string): string {
 
 export async function getTelcoredSecrets(environment: string): Promise<TelcoredSecretPayload> {
   const client = new SecretsManagerClient({});
-  const response = await client.send(
-    new GetSecretValueCommand({ SecretId: secretId(environment) })
-  );
-  const parsed = JSON.parse(response.SecretString ?? "{}") as Partial<TelcoredSecretPayload>;
-  const authorization = parsed.authorization?.trim() ?? "";
-  if (!authorization) {
-    throw Object.assign(new Error("Telcored SMS credentials are not configured"), { statusCode: 500 });
+  const id = secretId(environment);
+  try {
+    const response = await client.send(new GetSecretValueCommand({ SecretId: id }));
+    const parsed = JSON.parse(response.SecretString ?? "{}") as Partial<TelcoredSecretPayload>;
+    const authorization = parsed.authorization?.trim() ?? "";
+    if (!authorization) {
+      throw Object.assign(
+        new Error(
+          `Telcored SMS credentials are incomplete. Set a non-empty authorization field in secret ${id}.`
+        ),
+        { statusCode: 400 }
+      );
+    }
+    return { authorization };
+  } catch (error) {
+    if (error instanceof ResourceNotFoundException) {
+      throw Object.assign(
+        new Error(
+          `Telcored SMS is not configured. Create secret ${id} in AWS Secrets Manager with {"authorization":"Basic ..."}.`
+        ),
+        { statusCode: 400 }
+      );
+    }
+    throw error;
   }
-  return { authorization };
 }
 
 export async function getTelcoredAuthorizationHeader(environment: string): Promise<string> {
@@ -38,8 +54,7 @@ export async function hasTelcoredCredentials(environment: string): Promise<boole
     await getTelcoredSecrets(environment);
     return true;
   } catch (error) {
-    if (error instanceof ResourceNotFoundException) return false;
-    if ((error as { statusCode?: number }).statusCode === 500) return false;
+    if ((error as { statusCode?: number }).statusCode === 400) return false;
     throw error;
   }
 }

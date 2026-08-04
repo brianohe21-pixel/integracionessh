@@ -157,7 +157,8 @@ export function handleError(error: unknown): APIGatewayProxyResultV2 {
     return unprocessableEntity(err.message, payload);
   }
   if (err.statusCode === 429) return tooManyRequests(err.message);
+  if (err.statusCode === 500) return internalError(err.message);
   if (err.statusCode === 502) return badGateway(err.message);
 
-  return internalError();
+  return internalError(err.message || undefined);
 }
