@@ -179,6 +179,7 @@ export async function applySmsDlrCallback(
   const now = new Date().toISOString();
   const sets: string[] = ["updatedAt = :now"];
   const exprValues: Record<string, unknown> = { ":now": now };
+  const exprNames: Record<string, string> = {};
 
   if (callback.messageId) {
     sets.push("telcoredMessageId = :messageId");
@@ -189,8 +190,9 @@ export async function applySmsDlrCallback(
     exprValues[":sender"] = callback.sender;
   }
   if (callback.recipient) {
-    sets.push("to = :to");
-    exprValues[":to"] = callback.recipient;
+    sets.push("#recipient = :recipient");
+    exprNames["#recipient"] = "to";
+    exprValues[":recipient"] = callback.recipient;
   }
   if (callback.sentAt) {
     sets.push("sentAt = :sentAt");
@@ -235,6 +237,7 @@ export async function applySmsDlrCallback(
       Key: receiptKeys(receipt.receiptId),
       UpdateExpression: `SET ${sets.join(", ")}`,
       ExpressionAttributeValues: exprValues,
+      ...(Object.keys(exprNames).length > 0 ? { ExpressionAttributeNames: exprNames } : {}),
     })
   );
 
