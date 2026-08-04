@@ -18,6 +18,14 @@ output "tenants_invoke_arn" {
   value = aws_lambda_function.functions["tenants"].invoke_arn
 }
 
+output "reseller_invoke_arn" {
+  value = aws_lambda_function.functions["reseller"].invoke_arn
+}
+
+output "reseller_function_arn" {
+  value = aws_lambda_function.functions["reseller"].arn
+}
+
 output "bots_invoke_arn" {
   value = aws_lambda_function.functions["bots"].invoke_arn
 }

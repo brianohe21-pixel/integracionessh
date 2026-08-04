@@ -1,6 +1,21 @@
-import { fetchAuthSession } from "aws-amplify/auth";
+import { getIdToken } from "@/lib/auth-session";
 
 const BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
+const TENANT_CONTEXT_KEY = "x-tenant-context";
+
+export function getTenantContext(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(TENANT_CONTEXT_KEY);
+}
+
+export function setTenantContext(tenantId: string | null): void {
+  if (typeof window === "undefined") return;
+  if (!tenantId) {
+    localStorage.removeItem(TENANT_CONTEXT_KEY);
+    return;
+  }
+  localStorage.setItem(TENANT_CONTEXT_KEY, tenantId);
+}
 
 function assertApiBaseUrl(): void {
   if (!BASE_URL) {
@@ -9,14 +24,22 @@ function assertApiBaseUrl(): void {
 }
 
 async function getAuthHeader(): Promise<Record<string, string>> {
-  try {
-    const session = await fetchAuthSession();
-    const token = session.tokens?.idToken?.toString();
-    if (!token) return {};
-    return { Authorization: `Bearer ${token}` };
-  } catch {
-    return {};
-  }
+  const token = await getIdToken();
+  if (!token) return {};
+  return { Authorization: `Bearer ${token}` };
+}
+
+function getTenantContextHeader(): Record<string, string> {
+  const tenantId = getTenantContext();
+  if (!tenantId) return {};
+  return { "X-Tenant-Context": tenantId };
+}
+
+function getPortalHostHeader(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const host = window.location.hostname.trim().toLowerCase();
+  if (!host || host === "localhost" || host === "127.0.0.1") return {};
+  return { "X-Portal-Host": host };
 }
 
 async function request<T>(
@@ -31,6 +54,8 @@ async function request<T>(
     headers: {
       "Content-Type": "application/json",
       ...authHeader,
+      ...getTenantContextHeader(),
+      ...getPortalHostHeader(),
       ...options.headers,
     },
   });
@@ -63,7 +88,9 @@ export const api = {
   async download(path: string, filename: string): Promise<void> {
     assertApiBaseUrl();
     const authHeader = await getAuthHeader();
-    const response = await fetch(`${BASE_URL}${path}`, { headers: authHeader });
+    const response = await fetch(`${BASE_URL}${path}`, {
+      headers: { ...authHeader, ...getTenantContextHeader(), ...getPortalHostHeader() },
+    });
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: "Unknown error" }));
       throw new Error((error as { error: string }).error ?? `HTTP ${response.status}`);
@@ -75,5 +102,17 @@ export const api = {
     anchor.download = filename;
     anchor.click();
     URL.revokeObjectURL(url);
+  },
+
+  async getPublic<T>(path: string): Promise<T> {
+    assertApiBaseUrl();
+    const response = await fetch(`${BASE_URL}${path}`, {
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: "Unknown error" }));
+      throw new Error((error as { error: string }).error ?? `HTTP ${response.status}`);
+    }
+    return response.json() as Promise<T>;
   },
 };

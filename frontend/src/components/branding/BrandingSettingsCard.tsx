@@ -1,10 +1,12 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import { Palette, Upload, Trash2 } from "lucide-react";
 import { useT } from "@/i18n/context";
+import { useAuthSession } from "@/hooks/useAuthSession";
+import { api } from "@/lib/api";
 import {
   useTenantBranding,
   useUpdateTenantBranding,
@@ -12,10 +14,22 @@ import {
   useDeleteTenantLogo,
 } from "@/hooks/useTenantBranding";
 import { DEFAULT_PRIMARY_COLOR } from "@/lib/brand-colors";
+import type { Tenant } from "@/types";
+
+function planAllowsBranding(plan: string | undefined): boolean {
+  return plan === "enterprise" || plan === "reseller";
+}
 
 export function BrandingSettingsCard() {
   const t = useT();
-  const { data, isLoading } = useTenantBranding();
+  const { isAuthenticated, loading: authLoading } = useAuthSession();
+  const brandingEnabled = isAuthenticated && !authLoading;
+  const { data: tenant } = useQuery({
+    queryKey: ["tenants", "me"],
+    queryFn: () => api.get<Tenant>("/tenants/me"),
+    enabled: brandingEnabled,
+  });
+  const { data, isLoading, isError, error: queryError } = useTenantBranding(brandingEnabled);
   const updateBranding = useUpdateTenantBranding();
   const uploadLogo = useUploadTenantLogo();
   const deleteLogo = useDeleteTenantLogo();
@@ -24,6 +38,7 @@ export function BrandingSettingsCard() {
   const [primaryColor, setPrimaryColor] = useState(DEFAULT_PRIMARY_COLOR);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [logoSaved, setLogoSaved] = useState(false);
 
   useEffect(() => {
     if (!data) return;
@@ -39,7 +54,8 @@ export function BrandingSettingsCard() {
     );
   }
 
-  const canCustomize = data?.canCustomize ?? false;
+  const canCustomize =
+    data?.canCustomize === true || planAllowsBranding(tenant?.plan);
 
   async function handleSave() {
     setError(null);
@@ -59,8 +75,11 @@ export function BrandingSettingsCard() {
   async function handleLogoChange(file: File | null) {
     if (!file) return;
     setError(null);
+    setLogoSaved(false);
     try {
       await uploadLogo.mutateAsync(file);
+      setLogoSaved(true);
+      setTimeout(() => setLogoSaved(false), 2500);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("settings.brandingLogoError"));
     }
@@ -68,8 +87,11 @@ export function BrandingSettingsCard() {
 
   async function handleRemoveLogo() {
     setError(null);
+    setLogoSaved(false);
     try {
       await deleteLogo.mutateAsync();
+      setLogoSaved(true);
+      setTimeout(() => setLogoSaved(false), 2500);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("settings.brandingLogoError"));
     }
@@ -83,7 +105,13 @@ export function BrandingSettingsCard() {
       </div>
       <p className="text-sm text-secondary mb-4">{t("settings.brandingDescription")}</p>
 
-      {!canCustomize && (
+      {isError && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          {queryError instanceof Error ? queryError.message : t("settings.brandingSaveError")}
+        </div>
+      )}
+
+      {!canCustomize && !isError && (
         <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           {t("settings.brandingUpgrade")}{" "}
           <Link href="/billing" className="font-medium underline">
@@ -97,12 +125,12 @@ export function BrandingSettingsCard() {
         style={{ backgroundColor: primaryColor }}
       >
         {data?.logoUrl ? (
-          <Image
+          <img
+            key={data.logoUrl}
             src={data.logoUrl}
             alt=""
             width={32}
             height={32}
-            unoptimized
             className="h-8 w-8 rounded-lg object-cover bg-surface-elevated/20"
           />
         ) : (
@@ -158,17 +186,26 @@ export function BrandingSettingsCard() {
           <div className="flex flex-wrap items-center gap-2">
             <label
               className={`inline-flex items-center gap-1.5 rounded-lg border border-default px-3 py-2 text-sm font-medium ${
-                canCustomize ? "cursor-pointer hover:bg-surface" : "cursor-not-allowed opacity-50"
+                canCustomize && !uploadLogo.isPending
+                  ? "cursor-pointer hover:bg-surface"
+                  : "cursor-not-allowed opacity-50"
               }`}
             >
               <Upload className="w-4 h-4" />
-              {t("settings.brandingLogoUpload")}
+              {uploadLogo.isPending
+                ? t("auth.saving")
+                : t("settings.brandingLogoUpload")}
               <input
                 type="file"
                 accept="image/png,image/jpeg,image/webp,image/svg+xml"
                 className="hidden"
                 disabled={!canCustomize || uploadLogo.isPending}
-                onChange={(e) => void handleLogoChange(e.target.files?.[0] ?? null)}
+                onChange={(e) => {
+                  const input = e.currentTarget;
+                  const file = input.files?.[0] ?? null;
+                  input.value = "";
+                  void handleLogoChange(file);
+                }}
               />
             </label>
             {data?.logoUrl && canCustomize && (
@@ -186,6 +223,7 @@ export function BrandingSettingsCard() {
         </div>
 
         {error && <p className="text-sm text-red-600">{error}</p>}
+        {logoSaved && <p className="text-sm text-green-600">{t("settings.brandingLogoSaved")}</p>}
         {saved && <p className="text-sm text-green-600">{t("settings.brandingSaved")}</p>}
 
         {canCustomize && (
@@ -194,7 +232,8 @@ export function BrandingSettingsCard() {
             onClick={() => void handleSave()}
             disabled={updateBranding.isPending}
             className="rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-            style={{ backgroundColor: "var(--brand-primary, #25D366)" }}
+            style={{ backgroundColor: "var(--brand-primary, #128C7E)" }}
+
           >
             {updateBranding.isPending ? t("auth.saving") : t("settings.brandingSave")}
           </button>

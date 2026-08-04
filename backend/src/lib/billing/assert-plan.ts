@@ -19,9 +19,11 @@ import {
   countProducts,
 } from "../catalog/catalog.service.js";
 import { countActiveLiveKitCallsForTenant } from "../dynamodb/livekit-call.repository.js";
+import { getTenant } from "../dynamodb/tenant.repository.js";
 import type { Tenant, Channel } from "../../types/index.js";
 import {
   getPlanLimits,
+  getEffectivePlanLimits,
   isUnlimited,
   PlanLimitError,
   assertSubscriptionAllowsSending,
@@ -228,13 +230,29 @@ export async function assertCanStartLiveKitCall(tenant: Tenant): Promise<void> {
 }
 
 export function assertCanCustomizeBranding(tenant: Tenant): void {
-  const limits = getPlanLimits(tenant.plan);
+  if (tenant.tenantKind === "subaccount" && tenant.parentTenantId) {
+    // Parent gate applied by caller when needed; local check uses own plan first.
+  }
+  const limits = getEffectivePlanLimits(tenant);
   if (!limits.canCustomizeBranding) {
     throw new PlanLimitError(
       "PLAN_LIMIT_BRANDING",
-      "Custom branding requires Enterprise plan"
+      "Custom branding requires Enterprise or Reseller plan"
     );
   }
+}
+
+export async function assertCanCustomizeBrandingAsync(tenant: Tenant): Promise<void> {
+  if (tenant.parentTenantId) {
+    const parent = await getTenant(tenant.parentTenantId);
+    if (parent && parent.resellerConfig?.allowSubaccountBranding === false) {
+      throw new PlanLimitError(
+        "PLAN_LIMIT_BRANDING",
+        "Subaccount branding is disabled by the reseller"
+      );
+    }
+  }
+  assertCanCustomizeBranding(tenant);
 }
 
 export async function assertCanUseWebChat(tenant: Tenant): Promise<void> {

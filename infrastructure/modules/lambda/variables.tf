@@ -199,6 +199,12 @@ variable "frontend_url" {
   description = "Frontend base URL for billing redirect URLs"
 }
 
+variable "amplify_branch_name" {
+  type        = string
+  default     = "main"
+  description = "Amplify branch used for reseller custom domain associations"
+}
+
 variable "api_public_url" {
   type        = string
   default     = ""
@@ -288,6 +294,7 @@ variable "cloudwatch_log_group_import_exclude" {
     "reports",
     "voicebot",
     "voicebot_session",
+    "reseller",
   ]
   description = "Lambda keys whose log groups are created by Terraform instead of imported (new functions without pre-existing log groups in AWS)"
 }

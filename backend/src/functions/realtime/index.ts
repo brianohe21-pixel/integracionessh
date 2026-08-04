@@ -1,7 +1,7 @@
 import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
 import { randomUUID } from "crypto";
 import {
-  extractAuthContext,
+  resolveRequestAuth,
   assertAdvisorOrMember,
 } from "../../lib/auth/cognito.js";
 import { getAdvisorByCognitoUserId } from "../../lib/dynamodb/advisor.repository.js";
@@ -90,7 +90,7 @@ export async function handler(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): Promise<APIGatewayProxyResultV2> {
   try {
-    const auth = extractAuthContext(event);
+    const auth = await resolveRequestAuth(event);
     assertAdvisorOrMember(auth);
 
     const method = event.requestContext.http.method;

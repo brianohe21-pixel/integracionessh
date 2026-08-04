@@ -11,6 +11,7 @@ import {
   type OnboardingStep,
 } from "@/hooks/useOnboarding";
 import { ONBOARDING_STEPS } from "@/lib/onboarding";
+import { MEMBER_HOME } from "@/lib/post-login-path";
 import type { BotIndustryTemplateId } from "@/lib/bot-templates";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -166,7 +167,7 @@ export function OnboardingWizard() {
     await updateOnboarding.mutateAsync("skip");
     clearStoredWhatsAppCredentials();
     clearStoredTemplateId();
-    router.push("/bots");
+    router.push(MEMBER_HOME);
   }
 
   async function handleTestConfirm() {
@@ -202,7 +203,7 @@ export function OnboardingWizard() {
             <Link href="/conversations">
               <Button>{t("onboarding.done.goToConversations")}</Button>
             </Link>
-            <Link href="/bots">
+            <Link href={MEMBER_HOME}>
               <Button variant="secondary">{t("onboarding.done.goToBots")}</Button>
             </Link>
           </div>

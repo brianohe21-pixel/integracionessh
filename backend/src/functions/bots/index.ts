@@ -8,7 +8,7 @@ import {
   deleteBot,
   listBots,
 } from "../../lib/dynamodb/bot.repository.js";
-import { extractAuthContext, assertTenantAccess, assertMemberRole } from "../../lib/auth/cognito.js";
+import { resolveRequestAuth, assertTenantAccess, assertMemberRole } from "../../lib/auth/cognito.js";
 import { ensureTenant } from "../../lib/dynamodb/tenant.repository.js";
 import { assertCanCreateBot, assertCanUseWebChat, assertCanEnableChannel, assertCanStartLiveKitCall, assertCanUseVoicebot } from "../../lib/billing/assert-plan.js";
 import { putWidgetKeyLookup, putSmsNumberLookup, deleteSmsNumberLookup, putEmailAddressLookup, deleteEmailAddressLookup, putVoicebotWidgetKeyLookup, deleteVoicebotWidgetKeyLookup } from "../../lib/dynamodb/bot-lookup.repository.js";
@@ -26,6 +26,7 @@ import {
   type WhatsAppPhoneInfo,
 } from "../../lib/whatsapp/client.js";
 import { ok, created, noContent, badRequest, notFound, handleError } from "../../lib/http.js";
+import { shouldRegisterSmsInboundLookup } from "../../lib/sms/client.js";
 import type { Bot } from "../../types/index.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
@@ -94,7 +95,7 @@ export async function handler(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): Promise<APIGatewayProxyResultV2> {
   try {
-    const auth = extractAuthContext(event);
+    const auth = await resolveRequestAuth(event);
     assertMemberRole(auth);
     const method = event.requestContext.http.method;
     const botId = event.pathParameters?.botId;
@@ -183,7 +184,12 @@ export async function handler(
       const parsed = z
         .object({
           enabled: z.boolean().optional(),
-          smsOriginationNumber: z.string().min(8).max(20).optional(),
+          smsOriginationNumber: z
+            .string()
+            .min(1)
+            .max(15)
+            .regex(/^(?:\d{1,15}|[a-zA-Z0-9]{1,11})$/, "Invalid Telcored sender label")
+            .optional(),
         })
         .safeParse(body);
       if (!parsed.success) return badRequest(parsed.error.message);
@@ -202,7 +208,7 @@ export async function handler(
       }
 
       const number = parsed.data.smsOriginationNumber ?? existing.smsOriginationNumber;
-      if (parsed.data.enabled === true && number) {
+      if (parsed.data.enabled === true && number && shouldRegisterSmsInboundLookup(number)) {
         await putSmsNumberLookup(number, auth.tenantId, botId);
       }
 

@@ -11,7 +11,7 @@ import {
   listBulkSendFailures,
   updateBulkJobStatus,
 } from "../../lib/dynamodb/bulk-job.repository.js";
-import { extractAuthContext, assertMemberRole } from "../../lib/auth/cognito.js";
+import { resolveRequestAuth, assertMemberRole } from "../../lib/auth/cognito.js";
 import { ensureTenant } from "../../lib/dynamodb/tenant.repository.js";
 import { assertBulkRecipients } from "../../lib/billing/assert-plan.js";
 import { incrementBulkRecipients } from "../../lib/dynamodb/usage.repository.js";
@@ -47,6 +47,7 @@ const RecipientSchema = z.object({
 
 const CreateBulkSendSchema = z.object({
   botId: z.string().min(1),
+  channel: z.enum(["whatsapp", "sms"]).optional().default("whatsapp"),
   templateName: z.string().min(1),
   language: z.string().min(2).max(10),
   recipients: z.array(RecipientSchema).min(1).max(MAX_RECIPIENTS),
@@ -57,6 +58,7 @@ async function enqueueRecipients(
   jobId: string,
   tenantId: string,
   botId: string,
+  channel: "whatsapp" | "sms",
   templateName: string,
   language: string,
   recipients: z.infer<typeof CreateBulkSendSchema>["recipients"]
@@ -76,6 +78,7 @@ async function enqueueRecipients(
             jobId,
             tenantId,
             botId,
+            channel,
             templateName,
             language,
             to: normalizePhoneWithCountryCode(recipient.to),
@@ -101,7 +104,7 @@ export async function handler(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): Promise<APIGatewayProxyResultV2> {
   try {
-    const auth = extractAuthContext(event);
+    const auth = await resolveRequestAuth(event);
     assertMemberRole(auth);
     const method = event.requestContext.http.method;
     const jobId = event.pathParameters?.jobId;
@@ -137,10 +140,13 @@ export async function handler(
       const parsed = CreateBulkSendSchema.safeParse(body);
       if (!parsed.success) return badRequest(parsed.error.message);
 
-      const { botId, templateName, language, recipients, requireOptIn } = parsed.data;
+      const { botId, channel, templateName, language, recipients, requireOptIn } = parsed.data;
 
       const bot = await getBot(auth.tenantId, botId);
       if (!bot) return notFound("Bot not found");
+      if (channel === "sms" && !bot.smsEnabled) {
+        return badRequest("SMS is not enabled for this bot");
+      }
 
       const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
       await assertBulkRecipients(tenant, recipients.length);
@@ -174,6 +180,7 @@ export async function handler(
         jobId: newJobId,
         tenantId: auth.tenantId,
         botId,
+        channel,
         templateName,
         language,
         status: "queued",
@@ -186,6 +193,7 @@ export async function handler(
         newJobId,
         auth.tenantId,
         botId,
+        channel,
         templateName,
         language,
         filteredRecipients

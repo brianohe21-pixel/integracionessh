@@ -10,6 +10,14 @@ export const API_SCOPES = [
     endpoints: ["POST /v1/messages"],
   },
   {
+    scope: "templates:read",
+    endpoints: ["GET /v1/templates"],
+  },
+  {
+    scope: "templates:write",
+    endpoints: ["POST /v1/templates", "PUT /v1/templates/{name}", "DELETE /v1/templates/{name}"],
+  },
+  {
     scope: "calls:initiate",
     endpoints: [
       "POST /v1/calls",

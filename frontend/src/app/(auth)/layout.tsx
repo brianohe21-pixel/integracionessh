@@ -1,10 +1,15 @@
 "use client";
 
-import Image from "next/image";
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useT } from "@/i18n/context";
-import { useTenantBranding } from "@/hooks/useTenantBranding";
 import { DEFAULT_PRIMARY_COLOR, hexToRgba } from "@/lib/brand-colors";
+import { api } from "@/lib/api";
+
+type HostBranding = {
+  brandName?: string;
+  primaryColor?: string;
+  logoUrl?: string;
+};
 
 function AuthPageFallback() {
   return (
@@ -19,11 +24,51 @@ function AuthPageFallback() {
   );
 }
 
+function readCookie(name: string): string | undefined {
+  if (typeof document === "undefined") return undefined;
+  const match = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith(`${name}=`));
+  return match ? decodeURIComponent(match.split("=").slice(1).join("=")) : undefined;
+}
+
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   const t = useT();
-  const { data: branding } = useTenantBranding();
-  const displayName = branding?.brandName ?? t("common.appName");
-  const primaryColor = branding?.primaryColor ?? DEFAULT_PRIMARY_COLOR;
+  const [hostBranding, setHostBranding] = useState<HostBranding | null>(null);
+
+  useEffect(() => {
+    const fromCookie: HostBranding = {
+      brandName: readCookie("wl-brand-name"),
+      primaryColor: readCookie("wl-primary-color"),
+      logoUrl: readCookie("wl-logo-url"),
+    };
+    if (fromCookie.brandName || fromCookie.primaryColor || fromCookie.logoUrl) {
+      setHostBranding(fromCookie);
+    }
+
+    const host = window.location.host.split(":")[0];
+    void api
+      .getPublic<{
+        found?: boolean;
+        brandName?: string;
+        primaryColor?: string;
+        logoUrl?: string;
+      }>(`/public/branding-by-host?host=${encodeURIComponent(host)}`)
+      .then((data) => {
+        if (data.found) {
+          setHostBranding({
+            brandName: data.brandName,
+            primaryColor: data.primaryColor,
+            logoUrl: data.logoUrl,
+          });
+        }
+      })
+      .catch(() => undefined);
+  }, []);
+
+  const displayName = hostBranding?.brandName ?? t("common.appName");
+  const primaryColor = hostBranding?.primaryColor ?? DEFAULT_PRIMARY_COLOR;
+  const logoUrl = hostBranding?.logoUrl;
 
   return (
     <div
@@ -38,13 +83,12 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             className="relative mb-4 inline-flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl shadow-lg"
             style={{ backgroundColor: primaryColor }}
           >
-            {branding?.logoUrl ? (
-              <Image
-                src={branding.logoUrl}
+            {logoUrl ? (
+              <img
+                key={logoUrl}
+                src={logoUrl}
                 alt=""
-                fill
-                unoptimized
-                className="object-cover"
+                className="absolute inset-0 h-full w-full object-cover"
               />
             ) : (
               <svg className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">

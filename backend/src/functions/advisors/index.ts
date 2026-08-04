@@ -10,7 +10,7 @@ import {
   updateAdvisor,
 } from "../../lib/dynamodb/advisor.repository.js";
 import {
-  extractAuthContext,
+  resolveRequestAuth,
   assertTenantManagerRole,
 } from "../../lib/auth/cognito.js";
 import { inviteAdvisorUser } from "../../lib/cognito/invite-advisor.js";
@@ -39,7 +39,7 @@ export async function handler(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): Promise<APIGatewayProxyResultV2> {
   try {
-    const auth = extractAuthContext(event);
+    const auth = await resolveRequestAuth(event);
     assertTenantManagerRole(auth);
 
     const method = event.requestContext.http.method;

@@ -109,8 +109,32 @@ resource "aws_iam_role_policy" "lambda_permissions" {
           "cognito-idp:AdminUpdateUserAttributes",
           "cognito-idp:AdminCreateUser",
           "cognito-idp:AdminDeleteUser",
+          "cognito-idp:DescribeUserPoolClient",
+          "cognito-idp:UpdateUserPoolClient",
         ]
         Resource = var.cognito_user_pool_arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "amplify:ListApps",
+          "amplify:GetApp",
+          "amplify:CreateDomainAssociation",
+          "amplify:GetDomainAssociation",
+          "amplify:UpdateDomainAssociation",
+          "amplify:DeleteDomainAssociation",
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "route53:ListHostedZones",
+          "route53:ListHostedZonesByName",
+          "route53:GetHostedZone",
+          "route53:ListResourceRecordSets",
+        ]
+        Resource = "*"
       },
       {
         Effect = "Allow"
@@ -173,16 +197,16 @@ locals {
     var.lambda_zip_path != "" && fileexists(var.lambda_zip_path)
   ) ? var.lambda_zip_path : "${path.module}/bootstrap/functions.zip"
 
-  campaigns_function_name   = "${var.project}-${var.environment}-campaigns"
-  campaigns_function_arn    = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.campaigns_function_name}"
-  automations_function_name = "${var.project}-${var.environment}-automations"
-  automations_function_arn  = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.automations_function_name}"
-  flows_function_name       = "${var.project}-${var.environment}-flows"
-  flows_function_arn        = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.flows_function_name}"
-  calendar_function_name    = "${var.project}-${var.environment}-calendar"
-  calendar_function_arn     = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.calendar_function_name}"
-  reports_function_name     = "${var.project}-${var.environment}-reports"
-  reports_function_arn      = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.reports_function_name}"
+  campaigns_function_name        = "${var.project}-${var.environment}-campaigns"
+  campaigns_function_arn         = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.campaigns_function_name}"
+  automations_function_name      = "${var.project}-${var.environment}-automations"
+  automations_function_arn       = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.automations_function_name}"
+  flows_function_name            = "${var.project}-${var.environment}-flows"
+  flows_function_arn             = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.flows_function_name}"
+  calendar_function_name         = "${var.project}-${var.environment}-calendar"
+  calendar_function_arn          = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.calendar_function_name}"
+  reports_function_name          = "${var.project}-${var.environment}-reports"
+  reports_function_arn           = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.reports_function_name}"
   voicebot_session_function_name = "${var.project}-${var.environment}-voicebot-session"
   voicebot_session_function_arn  = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.voicebot_session_function_name}"
 
@@ -216,7 +240,7 @@ locals {
     tenants = {
       handler     = "tenants/index.handler"
       description = "CRUD API for tenants management"
-      timeout     = 30
+      timeout     = 60
       memory      = 256
       environment = {
         TABLE_NAME                = var.dynamodb_table_name
@@ -226,6 +250,25 @@ locals {
         ADMIN_NOTIFICATION_EMAILS = join(",", var.admin_notification_emails)
         SCHEDULER_ROLE_ARN        = var.scheduler_role_arn
         REPORTS_FUNCTION_ARN      = local.reports_function_arn
+        COGNITO_USER_POOL_ID      = var.cognito_user_pool_id
+        COGNITO_CLIENT_ID         = var.cognito_client_id
+        MEDIA_BUCKET              = var.media_bucket_name
+      }
+    }
+    reseller = {
+      handler     = "reseller/index.handler"
+      description = "Reseller subaccounts and white-label domain APIs"
+      timeout     = 60
+      memory      = 256
+      environment = {
+        TABLE_NAME           = var.dynamodb_table_name
+        ENVIRONMENT          = var.environment
+        FRONTEND_URL         = var.frontend_url
+        SES_FROM_EMAIL       = var.ses_from_email
+        COGNITO_USER_POOL_ID = var.cognito_user_pool_id
+        COGNITO_CLIENT_ID    = var.cognito_client_id
+        AMPLIFY_APP_NAME     = "${var.project}-${var.environment}"
+        AMPLIFY_BRANCH_NAME  = var.amplify_branch_name
       }
     }
     bots = {
@@ -289,8 +332,11 @@ locals {
       timeout     = 30
       memory      = 256
       environment = {
-        TABLE_NAME  = var.dynamodb_table_name
-        ENVIRONMENT = var.environment
+        TABLE_NAME     = var.dynamodb_table_name
+        ENVIRONMENT    = var.environment
+        FRONTEND_URL   = var.frontend_url
+        SES_FROM_EMAIL = var.ses_from_email
+        API_PUBLIC_URL = var.api_public_url
       }
     }
     bulk_send = {
@@ -348,11 +394,14 @@ locals {
     admin = {
       handler     = "admin/index.handler"
       description = "Platform admin APIs for Cognito users and payments"
-      timeout     = 30
+      timeout     = 60
       memory      = 256
       environment = {
         TABLE_NAME           = var.dynamodb_table_name
         COGNITO_USER_POOL_ID = var.cognito_user_pool_id
+        COGNITO_CLIENT_ID    = var.cognito_client_id
+        AMPLIFY_APP_NAME     = "${var.project}-${var.environment}"
+        AMPLIFY_BRANCH_NAME  = var.amplify_branch_name
       }
     }
     billing = {
@@ -437,7 +486,7 @@ locals {
     }
     sms_webhook = {
       handler     = "sms-webhook/index.handler"
-      description = "Receives inbound SMS events from SNS"
+      description = "Receives inbound SMS events from SNS and Telcored DLR callbacks"
       timeout     = 30
       memory      = 256
       environment = {
@@ -476,9 +525,9 @@ locals {
       timeout     = 30
       memory      = 512
       environment = {
-        TABLE_NAME                      = var.dynamodb_table_name
-        ENVIRONMENT                     = var.environment
-        VOICEBOT_SESSION_FUNCTION_NAME  = local.voicebot_session_function_name
+        TABLE_NAME                     = var.dynamodb_table_name
+        ENVIRONMENT                    = var.environment
+        VOICEBOT_SESSION_FUNCTION_NAME = local.voicebot_session_function_name
       }
     }
     voicebot_session = {
@@ -540,6 +589,7 @@ locals {
         ENVIRONMENT            = var.environment
         SCHEDULER_ROLE_ARN     = var.scheduler_role_arn
         CAMPAIGNS_FUNCTION_ARN = local.campaigns_function_arn
+        API_PUBLIC_URL         = var.api_public_url
       }
     }
     public_api = {
@@ -548,8 +598,10 @@ locals {
       timeout     = 30
       memory      = 256
       environment = {
-        TABLE_NAME  = var.dynamodb_table_name
-        ENVIRONMENT = var.environment
+        TABLE_NAME     = var.dynamodb_table_name
+        ENVIRONMENT    = var.environment
+        FRONTEND_URL   = var.frontend_url
+        SES_FROM_EMAIL = var.ses_from_email
       }
     }
     api_keys = {

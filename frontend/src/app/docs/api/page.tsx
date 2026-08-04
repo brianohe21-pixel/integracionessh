@@ -4,7 +4,7 @@ import { ApiDocsPage } from "@/components/docs/ApiDocsPage";
 export const metadata: Metadata = {
   title: "API Reference",
   description:
-    "REST API documentation for sending WhatsApp messages and managing calls with API keys.",
+    "REST API documentation for WhatsApp messages, templates, and calls with API keys.",
 };
 
 export default function ApiDocsRoutePage() {

@@ -1,14 +1,42 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAuthSession } from "@/hooks/useAuthSession";
+import { signOutUser } from "@/lib/auth-session";
+import { validatePortalSession } from "@/lib/host-portal";
 
 export function DashboardAuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { isAuthenticated, loading } = useAuthSession();
+  const [portalChecked, setPortalChecked] = useState(false);
+
+  useEffect(() => {
+    if (loading || !isAuthenticated) return;
+
+    let cancelled = false;
+    validatePortalSession()
+      .then(async (result) => {
+        if (cancelled) return;
+        if (!result.ok) {
+          await signOutUser();
+          router.replace("/login?error=portal");
+          return;
+        }
+        setPortalChecked(true);
+      })
+      .catch(async () => {
+        if (cancelled) return;
+        await signOutUser();
+        router.replace("/login?error=portal");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, loading, router]);
 
   useEffect(() => {
     if (loading || isAuthenticated) return;
@@ -18,7 +46,7 @@ export function DashboardAuthGuard({ children }: { children: React.ReactNode }) 
     router.replace(`/login?redirect=${encodeURIComponent(returnPath)}`);
   }, [isAuthenticated, loading, pathname, router, searchParams]);
 
-  if (loading || !isAuthenticated) return null;
+  if (loading || !isAuthenticated || !portalChecked) return null;
 
   return <>{children}</>;
 }

@@ -1,6 +1,6 @@
 import { buildCurlExample } from "./curl";
 
-export type HttpMethod = "GET" | "POST" | "PUT";
+export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
 
 export type ApiDocEndpoint = {
   id: string;
@@ -25,6 +25,86 @@ const SEND_MESSAGE_TEMPLATE_BODY = JSON.stringify(
       language: "en_US",
     },
   },
+  null,
+  2
+);
+
+const CREATE_TEMPLATE_BODY = JSON.stringify(
+  {
+    name: "order_update",
+    language: "es",
+    category: "UTILITY",
+    components: [
+      {
+        type: "BODY",
+        text: "Hola {{1}}, tu pedido {{2}} está listo.",
+        example: {
+          body_text: [["Juan", "12345"]],
+        },
+      },
+      {
+        type: "FOOTER",
+        text: "Gracias por tu compra",
+      },
+    ],
+  },
+  null,
+  2
+);
+
+const UPDATE_TEMPLATE_BODY = JSON.stringify(
+  {
+    language: "es",
+    components: [
+      {
+        type: "BODY",
+        text: "Hola {{1}}, tu pedido {{2}} fue actualizado.",
+        example: {
+          body_text: [["Juan", "12345"]],
+        },
+      },
+    ],
+  },
+  null,
+  2
+);
+
+const TEMPLATE_RESPONSE = JSON.stringify(
+  {
+    name: "order_update",
+    language: "es",
+    category: "UTILITY",
+    status: "PENDING",
+    components: [
+      {
+        type: "BODY",
+        text: "Hola {{1}}, tu pedido {{2}} está listo.",
+        example: {
+          body_text: [["Juan", "12345"]],
+        },
+      },
+    ],
+    metaTemplateId: "1234567890",
+    syncedAt: "2026-06-17T12:00:00.000Z",
+    createdAt: "2026-06-17T12:00:00.000Z",
+  },
+  null,
+  2
+);
+
+const TEMPLATES_LIST_RESPONSE = JSON.stringify(
+  [
+    {
+      name: "hello_world",
+      language: "en_US",
+      category: "UTILITY",
+      status: "APPROVED",
+      components: [{ type: "BODY", text: "Hello World" }],
+      metaTemplateId: "111",
+      syncedAt: "2026-06-17T12:00:00.000Z",
+      createdAt: "2026-06-17T12:00:00.000Z",
+    },
+  ],
   null,
   2
 );
@@ -102,6 +182,56 @@ export const API_DOC_ENDPOINTS: ApiDocEndpoint[] = [
       path: "/v1/messages",
       body: SEND_MESSAGE_TEMPLATE_BODY.replace(/\n/g, "").replace(/  +/g, ""),
     }),
+  },
+  {
+    id: "list-templates",
+    method: "GET",
+    path: "/v1/templates",
+    scope: "templates:read",
+    descriptionKey: "apiDocs.endpoints.listTemplates",
+    responseExample: TEMPLATES_LIST_RESPONSE,
+    curlExample: buildCurlExample({ method: "GET", path: "/v1/templates" }),
+    notesKey: "apiDocs.endpoints.listTemplatesNotes",
+  },
+  {
+    id: "create-template",
+    method: "POST",
+    path: "/v1/templates",
+    scope: "templates:write",
+    descriptionKey: "apiDocs.endpoints.createTemplate",
+    requestExample: CREATE_TEMPLATE_BODY,
+    responseExample: TEMPLATE_RESPONSE,
+    curlExample: buildCurlExample({
+      method: "POST",
+      path: "/v1/templates",
+      body: CREATE_TEMPLATE_BODY.replace(/\n/g, "").replace(/  +/g, ""),
+    }),
+    notesKey: "apiDocs.endpoints.createTemplateNotes",
+  },
+  {
+    id: "update-template",
+    method: "PUT",
+    path: "/v1/templates/{name}",
+    scope: "templates:write",
+    descriptionKey: "apiDocs.endpoints.updateTemplate",
+    requestExample: UPDATE_TEMPLATE_BODY,
+    responseExample: TEMPLATE_RESPONSE,
+    curlExample: buildCurlExample({
+      method: "PUT",
+      path: "/v1/templates/order_update",
+      body: UPDATE_TEMPLATE_BODY.replace(/\n/g, "").replace(/  +/g, ""),
+    }),
+    notesKey: "apiDocs.endpoints.updateTemplateNotes",
+  },
+  {
+    id: "delete-template",
+    method: "DELETE",
+    path: "/v1/templates/{name}",
+    scope: "templates:write",
+    descriptionKey: "apiDocs.endpoints.deleteTemplate",
+    responseExample: "",
+    curlExample: buildCurlExample({ method: "DELETE", path: "/v1/templates/order_update" }),
+    notesKey: "apiDocs.endpoints.deleteTemplateNotes",
   },
   {
     id: "initiate-call",

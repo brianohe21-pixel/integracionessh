@@ -93,6 +93,7 @@ describe("applyAdminTenantPlan", () => {
     expect(getTenant).not.toHaveBeenCalled();
     expect(updateTenant).toHaveBeenCalledWith("tenant-1", {
       plan: "free",
+      tenantKind: "standard",
       subscriptionStatus: "none",
       currentPeriodEnd: "",
     });

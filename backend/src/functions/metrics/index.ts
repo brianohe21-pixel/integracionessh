@@ -1,5 +1,5 @@
 import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
-import { extractAuthContext, assertMemberRole } from "../../lib/auth/cognito.js";
+import { resolveRequestAuth, assertMemberRole } from "../../lib/auth/cognito.js";
 import { getTenantUsageMetrics } from "../../lib/dynamodb/metrics.repository.js";
 import { getMarketingMetrics } from "../../lib/dynamodb/marketing-metrics.repository.js";
 import { getLeadMetrics } from "../../lib/dynamodb/lead-metrics.repository.js";
@@ -14,7 +14,7 @@ export async function handler(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): Promise<APIGatewayProxyResultV2> {
   try {
-    const auth = extractAuthContext(event);
+    const auth = await resolveRequestAuth(event);
     assertMemberRole(auth);
     const method = event.requestContext.http.method;
     const rawPath = event.rawPath ?? event.requestContext.http.path;

@@ -6,6 +6,7 @@ import { useT } from "@/i18n/context";
 import { useCampaignList, useStartCampaign, usePauseCampaign, useResumeCampaign, useCancelCampaign } from "@/hooks/useCampaigns";
 import { CampaignStatusBadge } from "@/components/campaigns/CampaignStatusBadge";
 import { CampaignProgressBar } from "@/components/campaigns/CampaignProgressBar";
+import { CampaignQualityConfirmModal } from "@/components/campaigns/CampaignQualityConfirmModal";
 import { useWhatsAppQualityGuard } from "@/hooks/useWhatsAppQualityGuard";
 import type { Campaign } from "@/types";
 import { DashboardPage } from "@/components/layout/DashboardPage";
@@ -27,18 +28,24 @@ function CampaignActions({ campaign }: { campaign: Campaign }) {
   const pause = usePauseCampaign();
   const resume = useResumeCampaign();
   const cancel = useCancelCampaign();
-  const { assessment, confirmStart } = useWhatsAppQualityGuard(campaign.botId);
+  const isWhatsApp = (campaign.channel ?? "whatsapp") === "whatsapp";
+  const { assessment, confirmStart, qualityConfirm, resolveQualityConfirm } = useWhatsAppQualityGuard(
+    campaign.botId,
+    isWhatsApp
+  );
 
   const isPending = start.isPending || pause.isPending || resume.isPending || cancel.isPending;
-  const startBlocked = assessment.risk === "block";
+  const startBlocked = isWhatsApp && assessment.risk === "block";
 
   async function handleStart() {
     if (startBlocked) {
       window.alert(t("campaigns.qualityStartBlocked"));
       return;
     }
-    const confirmed = await confirmStart("start");
-    if (!confirmed) return;
+    if (isWhatsApp) {
+      const confirmed = await confirmStart("start");
+      if (!confirmed) return;
+    }
     start.mutate(campaign.campaignId);
   }
 
@@ -47,12 +54,15 @@ function CampaignActions({ campaign }: { campaign: Campaign }) {
       window.alert(t("campaigns.qualityStartBlocked"));
       return;
     }
-    const confirmed = await confirmStart("resume");
-    if (!confirmed) return;
+    if (isWhatsApp) {
+      const confirmed = await confirmStart("resume");
+      if (!confirmed) return;
+    }
     resume.mutate(campaign.campaignId);
   }
 
   return (
+    <>
     <div className="flex items-center gap-1">
       {(campaign.status === "draft" || campaign.status === "scheduled") && (
         <button
@@ -99,6 +109,13 @@ function CampaignActions({ campaign }: { campaign: Campaign }) {
         </button>
       )}
     </div>
+    <CampaignQualityConfirmModal
+      open={Boolean(qualityConfirm)}
+      action={qualityConfirm?.action ?? "start"}
+      onCancel={() => resolveQualityConfirm(false)}
+      onConfirm={() => resolveQualityConfirm(true)}
+    />
+    </>
   );
 }
 

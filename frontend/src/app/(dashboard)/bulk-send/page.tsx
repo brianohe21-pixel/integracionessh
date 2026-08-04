@@ -15,7 +15,10 @@ import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { TableContainer } from "@/components/ui/TableContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
-import type { WhatsAppTemplate } from "@/types";
+import type { MessageTemplate, OutreachChannel } from "@/types";
+import { isSmsTemplate } from "@/types";
+import { OutreachChannelSelect } from "@/components/outreach/OutreachChannelSelect";
+import { SmsTemplatePreview } from "@/components/templates/SmsTemplatePreview";
 import {
   SendHorizonal,
   Upload,
@@ -30,6 +33,11 @@ import {
 function extractBodyVariables(text: string): string[] {
   const matches = text.match(/\{\{\d+\}\}/g);
   return matches ? [...new Set(matches)] : [];
+}
+
+function getTemplateBodyText(template: MessageTemplate): string {
+  if (isSmsTemplate(template)) return template.body;
+  return template.components.find((component) => component.type === "BODY")?.text ?? "";
 }
 
 function buildComponents(
@@ -56,6 +64,7 @@ export default function BulkSendPage() {
   const { formatDate } = useFormatters();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [tab, setTab] = useState<Tab>("send");
+  const [channel, setChannel] = useState<OutreachChannel>("whatsapp");
   const [botId, setBotId] = useState("");
   const [templateName, setTemplateName] = useState("");
   const [csvRows, setCsvRows] = useState<ReturnType<typeof parseRecipientsCsv>>([]);
@@ -71,19 +80,21 @@ export default function BulkSendPage() {
   const [downloadingJobId, setDownloadingJobId] = useState<string | null>(null);
 
   const { data: bots } = useBots();
-  const { data: templates, isLoading: loadingTemplates } = useTemplates(botId || undefined);
+  const { data: templates, isLoading: loadingTemplates } = useTemplates(botId || undefined, channel);
   const bulkMutation = useBulkSend();
   const { data: history, isLoading: loadingHistory, refetch: refetchHistory } = useBulkHistory();
 
-  const approvedTemplates = templates?.filter((t) => t.status === "APPROVED") ?? [];
-  const selectedTemplate: WhatsAppTemplate | undefined = approvedTemplates.find(
-    (t) => t.name === templateName
+  const approvedTemplates = templates?.filter((template) =>
+    isSmsTemplate(template) ? template.status === "APPROVED" : template.status === "APPROVED"
+  ) ?? [];
+  const selectedTemplate: MessageTemplate | undefined = approvedTemplates.find(
+    (template) => template.name === templateName
   );
   const bodyVars = selectedTemplate
-    ? extractBodyVariables(
-        selectedTemplate.components.find((c) => c.type === "BODY")?.text ?? ""
-      )
+    ? extractBodyVariables(getTemplateBodyText(selectedTemplate))
     : [];
+  const availableBots =
+    channel === "sms" ? bots?.filter((bot) => bot.smsEnabled) ?? [] : bots ?? [];
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -138,6 +149,7 @@ export default function BulkSendPage() {
     try {
       const res = await bulkMutation.mutateAsync({
         botId,
+        channel,
         templateName: selectedTemplate.name,
         language: selectedTemplate.language,
         recipients,
@@ -224,6 +236,20 @@ export default function BulkSendPage() {
               <h2 className="text-sm font-semibold text-primary">{t("bulkSend.config")}</h2>
 
               <div>
+                <label className="block text-sm font-medium text-secondary mb-1">{t("outreach.channel")}</label>
+                <OutreachChannelSelect
+                  value={channel}
+                  onChange={(value) => {
+                    setChannel(value);
+                    setBotId("");
+                    setTemplateName("");
+                    setCsvRows([]);
+                    setFileName("");
+                  }}
+                />
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium text-secondary mb-1">{t("bulkSend.bot")}</label>
                 <select
                   value={botId}
@@ -236,7 +262,7 @@ export default function BulkSendPage() {
                   className="w-full px-3 py-2 border border-default rounded-lg text-sm bg-surface-elevated focus:outline-none focus:ring-2 focus:ring-accent"
                 >
                   <option value="">{t("bulkSend.selectBot")}</option>
-                  {bots?.map((bot) => (
+                  {availableBots.map((bot) => (
                     <option key={bot.botId} value={bot.botId}>
                       {bot.name}
                     </option>
@@ -280,7 +306,11 @@ export default function BulkSendPage() {
                 </span>
               </label>
 
-              {selectedTemplate && (
+              {selectedTemplate && isSmsTemplate(selectedTemplate) && (
+                <SmsTemplatePreview template={selectedTemplate} label={t("bulkSend.preview")} />
+              )}
+
+              {selectedTemplate && !isSmsTemplate(selectedTemplate) && (
                 <div className="space-y-2">
                   <p className="text-xs font-medium text-secondary uppercase tracking-wider">{t("bulkSend.preview")}</p>
                   <div className="bg-[#e5ddd5] rounded-xl p-4">
@@ -568,6 +598,9 @@ export default function BulkSendPage() {
                         <td className="px-5 py-3 text-sm font-medium text-primary">
                           {job.templateName}
                           <span className="ml-1.5 text-xs text-muted font-normal">({job.language})</span>
+                          <span className="ml-1.5 text-xs text-muted font-normal">
+                            [{job.channel ?? "whatsapp"}]
+                          </span>
                         </td>
                         <td className="px-5 py-3">
                           <Badge variant={statusVariant}>{statusLabel}</Badge>

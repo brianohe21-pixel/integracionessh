@@ -10,19 +10,27 @@ export function BotSmsSettings({ bot }: { bot: Bot }) {
   const t = useT();
   const qc = useQueryClient();
   const [enabled, setEnabled] = useState(Boolean(bot.smsEnabled));
-  const [number, setNumber] = useState(bot.smsOriginationNumber ?? "");
+  const [sender, setSender] = useState(bot.smsOriginationNumber ?? "msg");
+
+  const [saveError, setSaveError] = useState("");
 
   const save = useMutation({
     mutationFn: () =>
       api.put(`/bots/${bot.botId}/sms`, {
         enabled,
-        smsOriginationNumber: number,
+        smsOriginationNumber: sender,
       }),
     onSuccess: () => {
+      setSaveError("");
       void qc.invalidateQueries({ queryKey: ["bots", "detail", bot.botId] });
       void qc.invalidateQueries({ queryKey: ["bots", "list"] });
     },
+    onError: (error) => {
+      setSaveError(error instanceof Error ? error.message : "Save failed");
+    },
   });
+
+  const senderValid = /^(\d{1,15}|[a-zA-Z0-9]{1,11})$/.test(sender.trim());
 
   return (
     <div className="bg-surface-elevated rounded-xl border border-default p-6 space-y-4">
@@ -35,16 +43,20 @@ export function BotSmsSettings({ bot }: { bot: Bot }) {
         {t("sms.enabled")}
       </label>
       <input
-        value={number}
-        onChange={(e) => setNumber(e.target.value)}
-        placeholder={t("sms.originationNumber")}
+        value={sender}
+        onChange={(e) => setSender(e.target.value)}
+        placeholder={t("sms.senderLabel")}
         className="w-full px-3 py-2 border border-default rounded-lg text-sm"
       />
-      <p className="text-xs text-secondary">{t("sms.webhookHint")}</p>
+      <p className="text-xs text-secondary">{t("sms.senderHint")}</p>
+      {!senderValid && sender.trim() && (
+        <p className="text-xs text-red-600">{t("sms.senderInvalid")}</p>
+      )}
+      {saveError && <p className="text-sm text-red-600">{saveError}</p>}
       <button
         type="button"
         onClick={() => save.mutate()}
-        disabled={save.isPending || (enabled && !number)}
+        disabled={save.isPending || (enabled && (!sender.trim() || !senderValid))}
         className="px-4 py-2 bg-accent text-white text-sm rounded-lg disabled:opacity-50"
       >
         {save.isPending ? t("common.saving") : t("common.save")}

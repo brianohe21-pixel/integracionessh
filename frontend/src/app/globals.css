@@ -3,33 +3,57 @@
 @import "driver.js/dist/driver.css";
 
 :root {
-  --brand-primary: #25d366;
-  --brand-primary-hover: #1fb855;
-  --brand-primary-light: rgba(37, 211, 102, 0.08);
+  --brand-primary: #2dd4bf;
+  --brand-primary-hover: #14b8a6;
+  --brand-primary-light: rgba(45, 212, 191, 0.14);
 
-  --surface: #f4f6f8;
+  --surface: #ffffff;
   --surface-elevated: #ffffff;
-  --surface-muted: #e8ecf0;
-  --canvas: #eef1f5;
+  --surface-muted: #f4f6f5;
+  --canvas: #f6f9f8;
+  --sidebar: #0c1220;
+  --sidebar-elevated: #151d2e;
+  --sidebar-muted: #1a2438;
+  --sidebar-text: #f8fafc;
+  --sidebar-text-secondary: #cbd5e1;
+  --sidebar-text-muted: #94a3b8;
+  --sidebar-icon: #94a3b8;
+  --sidebar-icon-active: #0c1220;
+  --sidebar-border: #1e293b;
 
-  --text-primary: #0f1419;
-  --text-secondary: #5c6670;
-  --text-muted: #8b95a1;
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #9ca3af;
 
-  --border: #dde3ea;
-  --border-subtle: #e8ecf0;
+  --border: #e5e7eb;
+  --border-subtle: #f3f4f6;
 
-  --accent: var(--brand-primary);
-  --accent-hover: var(--brand-primary-hover);
-  --accent-muted: var(--brand-primary-light);
+  --accent: #128c7e;
+  --accent-hover: #0f766e;
+  --accent-muted: rgba(18, 140, 126, 0.12);
 
-  --success: #16a34a;
-  --warning: #d97706;
-  --danger: #dc2626;
-  --info: #2563eb;
-  --human: #a855f7;
+  --success: #15803d;
+  --warning: #b45309;
+  --danger: #b91c1c;
+  --info: #1d4ed8;
+  --human: #7c3aed;
 
-  --glow-accent: rgba(37, 211, 102, 0.15);
+  --glow-accent: rgba(18, 140, 126, 0.14);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
+
+  --alert-success-bg: rgba(21, 128, 61, 0.08);
+  --alert-success-border: rgba(21, 128, 61, 0.2);
+  --alert-warning-bg: rgba(180, 83, 9, 0.08);
+  --alert-warning-border: rgba(180, 83, 9, 0.2);
+  --alert-danger-bg: rgba(185, 28, 28, 0.08);
+  --alert-danger-border: rgba(185, 28, 28, 0.2);
+  --alert-info-bg: rgba(29, 78, 216, 0.08);
+  --alert-info-border: rgba(29, 78, 216, 0.2);
 
   --background: var(--surface);
   --foreground: var(--text-primary);
@@ -38,20 +62,46 @@
 [data-theme="dark"] {
   color-scheme: dark;
 
-  --surface: #0f1115;
-  --surface-elevated: #1a1d24;
-  --surface-muted: #252932;
-  --canvas: #141820;
+  --surface: #0a100e;
+  --surface-elevated: #111a17;
+  --surface-muted: #182420;
+  --canvas: #0d1512;
+  --sidebar: #081412;
+  --sidebar-elevated: #10221d;
+  --sidebar-muted: #152c26;
+  --sidebar-text: #f0faf7;
+  --sidebar-text-secondary: #bdd4cc;
+  --sidebar-text-muted: #8fada4;
+  --sidebar-icon: #a8c9bf;
+  --sidebar-icon-active: #5eead4;
+  --sidebar-border: #1a332c;
 
-  --text-primary: #f3f4f6;
-  --text-secondary: #c5cdd8;
-  --text-muted: #9aa3b0;
+  --text-primary: #eef7f4;
+  --text-secondary: #a7c4bc;
+  --text-muted: #73948b;
 
-  --border: #3a414c;
-  --border-subtle: #2d3239;
+  --border: #243832;
+  --border-subtle: #1a2b26;
 
-  --accent-muted: rgba(37, 211, 102, 0.22);
-  --glow-accent: rgba(37, 211, 102, 0.14);
+  --accent: var(--brand-primary);
+  --accent-hover: var(--brand-primary-hover);
+  --accent-muted: var(--brand-primary-light);
+  --glow-accent: var(--brand-primary-light);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.2);
+
+  --alert-success-bg: rgba(34, 197, 94, 0.1);
+  --alert-success-border: rgba(34, 197, 94, 0.25);
+  --alert-warning-bg: rgba(251, 191, 36, 0.1);
+  --alert-warning-border: rgba(251, 191, 36, 0.25);
+  --alert-danger-bg: rgba(239, 68, 68, 0.1);
+  --alert-danger-border: rgba(239, 68, 68, 0.25);
+  --alert-info-bg: rgba(59, 130, 246, 0.1);
+  --alert-info-border: rgba(59, 130, 246, 0.25);
 
   --background: var(--surface);
   --foreground: var(--text-primary);
@@ -69,6 +119,9 @@
   --color-surface-elevated: var(--surface-elevated);
   --color-surface-muted: var(--surface-muted);
   --color-canvas: var(--canvas);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-elevated: var(--sidebar-elevated);
+  --color-sidebar-muted: var(--sidebar-muted);
 
   --color-primary: var(--text-primary);
   --color-secondary: var(--text-secondary);
@@ -77,6 +130,7 @@
   --color-default: var(--border);
   --color-subtle: var(--border-subtle);
 
+  --color-brand-primary: var(--brand-primary);
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
   --color-accent-muted: var(--accent-muted);
@@ -170,4 +224,104 @@ body {
 
 .driver-popover-progress-text {
   color: var(--text-muted) !important;
+}
+
+.sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+.sidebar-shell {
+  background:
+    linear-gradient(180deg, rgba(45, 212, 191, 0.08) 0%, transparent 120px),
+    var(--sidebar);
+}
+
+.canvas-bg {
+  background-color: var(--canvas);
+  background-image:
+    radial-gradient(circle at 1px 1px, var(--border-subtle) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-enter {
+  animation: page-enter 0.35s ease-out both;
+}
+
+.content-card {
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.content-card:hover {
+  box-shadow: var(--shadow-card-hover);
+}
+
+.content-card-interactive {
+  cursor: pointer;
+}
+
+.content-card-interactive:hover {
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+}
+
+.data-table thead {
+  background: var(--surface-muted);
+}
+
+.data-table thead th {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.data-table tbody tr {
+  border-top: 1px solid var(--border-subtle);
+  transition: background-color 0.15s ease;
+}
+
+.data-table tbody tr:hover {
+  background: var(--surface-muted);
+}
+
+.icon-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  background: var(--accent-muted);
+  color: var(--accent);
 }

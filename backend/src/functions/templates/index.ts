@@ -3,12 +3,17 @@ import { ResourceNotFoundException } from "@aws-sdk/client-secrets-manager";
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
+import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
 import {
   listCachedTemplates,
   getCachedTemplate,
   upsertCachedTemplate,
   deleteCachedTemplate,
   syncTemplates,
+  listSmsTemplates,
+  getSmsTemplate,
+  upsertSmsTemplate,
+  deleteSmsTemplate,
 } from "../../lib/dynamodb/template.repository.js";
 import {
   listMetaTemplates,
@@ -19,9 +24,14 @@ import {
   getWhatsAppAccessToken,
 } from "../../lib/whatsapp/client.js";
 import type { SendTemplateOptions } from "../../lib/whatsapp/client.js";
-import { extractAuthContext, assertMemberRole } from "../../lib/auth/cognito.js";
+import { resolveRequestAuth, assertMemberRole } from "../../lib/auth/cognito.js";
+import {
+  sendTemplateApprovedEmail,
+  sendTemplateCreatedEmail,
+} from "../../lib/email/template-status-notify.js";
+import { sendSmsFromTemplate } from "../../lib/sms/send-outbound.js";
 import { ok, created, noContent, badRequest, notFound, handleError } from "../../lib/http.js";
-import type { WhatsAppTemplate, TemplateComponent } from "../../types/index.js";
+import type { OutreachChannel, WhatsAppTemplate, TemplateComponent, SmsTemplate } from "../../types/index.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 
@@ -62,6 +72,7 @@ const ComponentSchema = z
   });
 
 const CreateTemplateSchema = z.object({
+  channel: z.enum(["whatsapp"]).optional(),
   botId: z.string().min(1),
   name: z
     .string()
@@ -73,15 +84,35 @@ const CreateTemplateSchema = z.object({
   components: z.array(ComponentSchema).min(1),
 });
 
+const CreateSmsTemplateSchema = z.object({
+  channel: z.literal("sms"),
+  botId: z.string().min(1),
+  name: z
+    .string()
+    .min(1)
+    .max(512)
+    .regex(/^[a-z0-9_]+$/),
+  language: z.string().min(2).max(10),
+  category: z.enum(["MARKETING", "UTILITY", "AUTHENTICATION"]),
+  body: z.string().min(1).max(1600),
+});
+
 const UpdateTemplateSchema = z.object({
   botId: z.string().min(1),
   components: z.array(ComponentSchema).min(1),
+});
+
+const UpdateSmsTemplateSchema = z.object({
+  channel: z.literal("sms"),
+  botId: z.string().min(1),
+  body: z.string().min(1).max(1600),
 });
 
 const SendTemplateSchema = z.object({
   botId: z.string().min(1),
   to: z.string().min(10),
   language: z.string().min(2).max(10),
+  channel: z.enum(["whatsapp", "sms"]).optional(),
   components: z
     .array(
       z.object({
@@ -98,7 +129,16 @@ const SendTemplateSchema = z.object({
       })
     )
     .optional(),
+  requestDlr: z.boolean().optional().default(false),
 });
+
+function parseChannel(
+  params: Record<string, string | undefined>,
+  body?: Record<string, unknown>
+): OutreachChannel {
+  const raw = body?.channel ?? params.channel;
+  return raw === "sms" ? "sms" : "whatsapp";
+}
 
 async function loadBotAndToken(tenantId: string, botId: string) {
   const bot = await getBot(tenantId, botId);
@@ -145,11 +185,35 @@ function assertWabaId(wabaId: string, phoneNumberId: string): void {
   }
 }
 
+async function notifyApprovedTemplates(
+  tenantId: string,
+  recipientEmail: string | undefined,
+  templates: WhatsAppTemplate[]
+): Promise<void> {
+  if (templates.length === 0) return;
+
+  const tenant = await getTenant(tenantId);
+  const to = recipientEmail?.trim() || tenant?.email?.trim();
+  if (!to || !tenant) return;
+
+  for (const template of templates) {
+    void sendTemplateApprovedEmail({
+      to,
+      tenantName: tenant.name,
+      templateName: template.name,
+      language: template.language,
+      category: template.category,
+    }).catch((error) => {
+      console.error("Failed to send template approved email:", error);
+    });
+  }
+}
+
 export async function handler(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): Promise<APIGatewayProxyResultV2> {
   try {
-    const auth = extractAuthContext(event);
+    const auth = await resolveRequestAuth(event);
     assertMemberRole(auth);
     const method = event.requestContext.http.method;
     const templateName = event.pathParameters?.name;
@@ -160,6 +224,13 @@ export async function handler(
     if (method === "GET" && !templateName) {
       const botId = params.botId;
       if (!botId) return badRequest("botId query parameter is required");
+
+      if (parseChannel(params) === "sms") {
+        const bot = await getBot(auth.tenantId, botId);
+        if (!bot) return notFound("Bot not found");
+        const templates = await listSmsTemplates(auth.tenantId, botId);
+        return ok(templates);
+      }
 
       const { bot, accessToken } = await loadBotAndToken(auth.tenantId, botId);
       assertWabaId(bot.whatsappBusinessAccountId, bot.phoneNumberId);
@@ -172,6 +243,7 @@ export async function handler(
           templateId: mt.id,
           tenantId: auth.tenantId,
           botId,
+          channel: "whatsapp",
           name: mt.name,
           language: mt.language,
           category: mt.category,
@@ -183,7 +255,8 @@ export async function handler(
         }));
 
       try {
-        await syncTemplates(auth.tenantId, botId, templates);
+        const newlyApproved = await syncTemplates(auth.tenantId, botId, templates);
+        await notifyApprovedTemplates(auth.tenantId, auth.email, newlyApproved);
       } catch (syncError) {
         console.error("syncTemplates failed:", syncError);
       }
@@ -192,11 +265,30 @@ export async function handler(
     }
 
     if (method === "POST" && isSendRoute && templateName) {
-      const body = JSON.parse(event.body ?? "{}");
+      const body = JSON.parse(event.body ?? "{}") as Record<string, unknown>;
       const parsed = SendTemplateSchema.safeParse(body);
       if (!parsed.success) return badRequest(parsed.error.message);
 
-      const { botId, to, language, components } = parsed.data;
+      const { botId, to, language, components, requestDlr } = parsed.data;
+      const channel = parseChannel(params, body);
+
+      if (channel === "sms") {
+        const bot = await getBot(auth.tenantId, botId);
+        if (!bot) return notFound("Bot not found");
+        const result = await sendSmsFromTemplate({
+          tenantId: auth.tenantId,
+          bot,
+          botId,
+          templateName,
+          language,
+          to,
+          environment: ENVIRONMENT,
+          ...(components ? { components } : {}),
+          ...(requestDlr ? { requestDlr: true, source: "template" } : {}),
+        } as Parameters<typeof sendSmsFromTemplate>[0]);
+        return ok(result);
+      }
+
       const { bot, accessToken } = await loadBotAndToken(auth.tenantId, botId);
 
       const result = await sendTemplateMessage({
@@ -212,7 +304,38 @@ export async function handler(
     }
 
     if (method === "POST" && !templateName) {
-      const body = JSON.parse(event.body ?? "{}");
+      const body = JSON.parse(event.body ?? "{}") as Record<string, unknown>;
+
+      if (body.channel === "sms") {
+        const parsed = CreateSmsTemplateSchema.safeParse(body);
+        if (!parsed.success) return badRequest(parsed.error.message);
+
+        const { botId, name, language, category, body: smsBody } = parsed.data;
+        const bot = await getBot(auth.tenantId, botId);
+        if (!bot) return notFound("Bot not found");
+
+        const existing = await getSmsTemplate(auth.tenantId, botId, name, language);
+        if (existing) return badRequest("SMS template already exists for this name and language");
+
+        const now = new Date().toISOString();
+        const template: SmsTemplate = {
+          templateId: randomUUID(),
+          tenantId: auth.tenantId,
+          botId,
+          channel: "sms",
+          name,
+          language,
+          category,
+          status: "APPROVED",
+          body: smsBody,
+          createdAt: now,
+          updatedAt: now,
+        };
+
+        await upsertSmsTemplate(auth.tenantId, botId, template);
+        return created(template);
+      }
+
       const parsed = CreateTemplateSchema.safeParse(body);
       if (!parsed.success) return badRequest(parsed.error.message);
 
@@ -233,6 +356,7 @@ export async function handler(
         templateId: randomUUID(),
         tenantId: auth.tenantId,
         botId,
+        channel: "whatsapp",
         name,
         language,
         category,
@@ -245,11 +369,48 @@ export async function handler(
 
       await upsertCachedTemplate(auth.tenantId, botId, template);
 
+      const tenant = await getTenant(auth.tenantId);
+      const recipient = auth.email?.trim() || tenant?.email?.trim();
+      if (recipient && tenant) {
+        void sendTemplateCreatedEmail({
+          to: recipient,
+          tenantName: tenant.name,
+          templateName: template.name,
+          language: template.language,
+          category: template.category,
+        }).catch((error) => {
+          console.error("Failed to send template created email:", error);
+        });
+      }
+
       return created(template);
     }
 
     if (method === "PUT" && templateName) {
-      const body = JSON.parse(event.body ?? "{}");
+      const body = JSON.parse(event.body ?? "{}") as Record<string, unknown>;
+
+      if (parseChannel(params, body) === "sms") {
+        const parsed = UpdateSmsTemplateSchema.safeParse(body);
+        if (!parsed.success) return badRequest(parsed.error.message);
+
+        const language = params.language ?? "es";
+        const existing = await getSmsTemplate(
+          auth.tenantId,
+          parsed.data.botId,
+          templateName,
+          language
+        );
+        if (!existing) return notFound("SMS template not found");
+
+        const updated: SmsTemplate = {
+          ...existing,
+          body: parsed.data.body,
+          updatedAt: new Date().toISOString(),
+        };
+        await upsertSmsTemplate(auth.tenantId, parsed.data.botId, updated);
+        return ok(updated);
+      }
+
       const parsed = UpdateTemplateSchema.safeParse(body);
       if (!parsed.success) return badRequest(parsed.error.message);
 
@@ -284,6 +445,14 @@ export async function handler(
     if (method === "DELETE" && templateName) {
       const botId = params.botId;
       if (!botId) return badRequest("botId query parameter is required");
+
+      if (parseChannel(params) === "sms") {
+        const language = params.language ?? "es";
+        const existing = await getSmsTemplate(auth.tenantId, botId, templateName, language);
+        if (!existing) return notFound("SMS template not found");
+        await deleteSmsTemplate(auth.tenantId, botId, templateName, language);
+        return noContent();
+      }
 
       const { bot: deleteBot, accessToken } = await loadBotAndToken(auth.tenantId, botId);
       assertWabaId(deleteBot.whatsappBusinessAccountId, deleteBot.phoneNumberId);

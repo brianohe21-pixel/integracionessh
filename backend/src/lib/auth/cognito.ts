@@ -1,5 +1,7 @@
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
-import type { AuthContext } from "../../types/index.js";
+import type { AuthContext, Tenant } from "../../types/index.js";
+import { getTenant } from "../dynamodb/tenant.repository.js";
+import { assertPortalHostAccess } from "./host-portal.js";
 
 function readJwtClaims(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
@@ -14,6 +16,18 @@ function readJwtClaims(
     throw error;
   }
   return claims;
+}
+
+function readHeader(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer,
+  name: string
+): string {
+  const headers = event.headers ?? {};
+  const lower = name.toLowerCase();
+  for (const [key, value] of Object.entries(headers)) {
+    if (key.toLowerCase() === lower && value) return String(value).trim();
+  }
+  return "";
 }
 
 export function extractAuthContext(
@@ -46,6 +60,57 @@ export function extractAuthContext(
     ...(name !== undefined ? { name } : {}),
     role: role as AuthContext["role"],
   };
+}
+
+export async function applyTenantContext(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer,
+  auth: AuthContext
+): Promise<AuthContext> {
+  const contextTenantId = readHeader(event, "x-tenant-context");
+  if (!contextTenantId || contextTenantId === auth.tenantId) {
+    return auth;
+  }
+
+  if (auth.role !== "member") {
+    const error = new Error("Only reseller members can assume a subaccount");
+    (error as Error & { statusCode: number }).statusCode = 403;
+    throw error;
+  }
+
+  const child = await getTenant(contextTenantId);
+  if (!child || child.parentTenantId !== auth.tenantId) {
+    const error = new Error("Access denied: invalid tenant context");
+    (error as Error & { statusCode: number }).statusCode = 403;
+    throw error;
+  }
+
+  if (child.status === "suspended") {
+    const error = new Error("Subaccount is suspended");
+    (error as Error & { statusCode: number }).statusCode = 403;
+    throw error;
+  }
+
+  return {
+    ...auth,
+    tenantId: contextTenantId,
+    homeTenantId: auth.tenantId,
+  };
+}
+
+export async function resolveRequestAuth(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer
+): Promise<AuthContext> {
+  const auth = extractAuthContext(event);
+  const withContext = await applyTenantContext(event, auth);
+  await assertPortalHostAccess(event, withContext);
+  return withContext;
+}
+
+export async function resolveRequestAuthWithoutPortalCheck(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer
+): Promise<AuthContext> {
+  const auth = extractAuthContext(event);
+  return applyTenantContext(event, auth);
 }
 
 export function assertTenantAccess(
@@ -95,4 +160,36 @@ export function assertAdminRole(authContext: AuthContext): void {
     (error as Error & { statusCode: number }).statusCode = 403;
     throw error;
   }
+}
+
+export function isResellerTenant(tenant: Tenant | null | undefined): boolean {
+  return Boolean(
+    tenant &&
+      (tenant.plan === "reseller" || tenant.tenantKind === "reseller")
+  );
+}
+
+export async function assertResellerTenant(authContext: AuthContext): Promise<Tenant> {
+  assertMemberRole(authContext);
+  const homeTenantId = authContext.homeTenantId ?? authContext.tenantId;
+  const tenant = await getTenant(homeTenantId);
+  if (!isResellerTenant(tenant)) {
+    const error = new Error("Reseller plan required");
+    (error as Error & { statusCode: number }).statusCode = 403;
+    throw error;
+  }
+  return tenant!;
+}
+
+export async function assertResellerOwnsSubaccount(
+  parentTenantId: string,
+  childTenantId: string
+): Promise<Tenant> {
+  const child = await getTenant(childTenantId);
+  if (!child || child.parentTenantId !== parentTenantId) {
+    const error = new Error("Subaccount not found");
+    (error as Error & { statusCode: number }).statusCode = 404;
+    throw error;
+  }
+  return child;
 }

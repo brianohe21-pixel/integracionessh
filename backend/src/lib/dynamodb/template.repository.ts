@@ -5,11 +5,16 @@ import {
   BatchWriteCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { docClient, TABLE_NAME } from "./client.js";
-import type { WhatsAppTemplate } from "../../types/index.js";
+import type { WhatsAppTemplate, SmsTemplate } from "../../types/index.js";
 
 const templateKeys = (tenantId: string, botId: string, name: string, language: string) => ({
   PK: `TENANT#${tenantId}#BOT#${botId}`,
   SK: `TMPL#${name}#${language}`,
+});
+
+const smsTemplateKeys = (tenantId: string, botId: string, name: string, language: string) => ({
+  PK: `TENANT#${tenantId}#BOT#${botId}`,
+  SK: `SMSTMPL#${name}#${language}`,
 });
 
 const gsi1Keys = (tenantId: string, status: string, name: string) => ({
@@ -102,10 +107,17 @@ export async function syncTemplates(
   tenantId: string,
   botId: string,
   templates: WhatsAppTemplate[]
-): Promise<void> {
+): Promise<WhatsAppTemplate[]> {
   const uniqueTemplates = dedupeTemplates(templates);
   const existing = await listCachedTemplates(tenantId, botId);
+  const existingByKey = new Map(existing.map((t) => [`${t.name}#${t.language}`, t]));
   const incomingKeys = new Set(uniqueTemplates.map((t) => `${t.name}#${t.language}`));
+
+  const newlyApproved = uniqueTemplates.filter((template) => {
+    if (template.status !== "APPROVED") return false;
+    const previous = existingByKey.get(`${template.name}#${template.language}`);
+    return previous != null && previous.status !== "APPROVED";
+  });
 
   const toDelete = existing.filter((t) => !incomingKeys.has(`${t.name}#${t.language}`));
 
@@ -113,12 +125,14 @@ export async function syncTemplates(
   const allOps: Array<Record<string, unknown>> = [];
 
   for (const template of uniqueTemplates) {
+    const previous = existingByKey.get(`${template.name}#${template.language}`);
     allOps.push({
       PutRequest: {
         Item: {
           ...templateKeys(tenantId, botId, template.name, template.language),
           ...gsi1Keys(tenantId, template.status, template.name),
           ...template,
+          createdAt: previous?.createdAt ?? template.createdAt,
         },
       },
     });
@@ -143,4 +157,79 @@ export async function syncTemplates(
       })
     );
   }
+
+  return newlyApproved;
+}
+
+export async function listSmsTemplates(
+  tenantId: string,
+  botId: string
+): Promise<SmsTemplate[]> {
+  const result = await docClient.send(
+    new QueryCommand({
+      TableName: TABLE_NAME,
+      KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+      ExpressionAttributeValues: {
+        ":pk": `TENANT#${tenantId}#BOT#${botId}`,
+        ":sk": "SMSTMPL#",
+      },
+    })
+  );
+
+  return (result.Items ?? []).map(({ PK, SK, GSI1PK, GSI1SK, ...rest }) => rest as SmsTemplate);
+}
+
+export async function getSmsTemplate(
+  tenantId: string,
+  botId: string,
+  name: string,
+  language: string
+): Promise<SmsTemplate | null> {
+  const result = await docClient.send(
+    new QueryCommand({
+      TableName: TABLE_NAME,
+      KeyConditionExpression: "PK = :pk AND SK = :sk",
+      ExpressionAttributeValues: {
+        ":pk": `TENANT#${tenantId}#BOT#${botId}`,
+        ":sk": `SMSTMPL#${name}#${language}`,
+      },
+      Limit: 1,
+    })
+  );
+
+  if (!result.Items?.length) return null;
+
+  const { PK, SK, GSI1PK, GSI1SK, ...rest } = result.Items[0];
+  return rest as SmsTemplate;
+}
+
+export async function upsertSmsTemplate(
+  tenantId: string,
+  botId: string,
+  template: SmsTemplate
+): Promise<void> {
+  await docClient.send(
+    new PutCommand({
+      TableName: TABLE_NAME,
+      Item: {
+        ...smsTemplateKeys(tenantId, botId, template.name, template.language),
+        ...gsi1Keys(tenantId, "APPROVED", template.name),
+        ...template,
+      },
+    })
+  );
+}
+
+export async function deleteSmsTemplate(
+  tenantId: string,
+  botId: string,
+  name: string,
+  language: string
+): Promise<void> {
+  await docClient.send(
+    new DeleteCommand({
+      TableName: TABLE_NAME,
+      Key: smsTemplateKeys(tenantId, botId, name, language),
+    })
+  );
 }

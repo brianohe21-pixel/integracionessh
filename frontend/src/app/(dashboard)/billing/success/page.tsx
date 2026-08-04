@@ -10,6 +10,7 @@ import {
 } from "@/hooks/useBilling";
 import { useT } from "@/i18n/context";
 import { DashboardPage } from "@/components/layout/DashboardPage";
+import { MEMBER_HOME } from "@/lib/post-login-path";
 
 function BillingSuccessPageContent() {
   const t = useT();
@@ -71,7 +72,7 @@ function BillingSuccessPageContent() {
           >
             {t("billing.backToBilling")}
           </Link>
-          <Link href="/bots" className="text-sm text-secondary hover:text-secondary">
+          <Link href={MEMBER_HOME} className="text-sm text-secondary hover:text-secondary">
             {t("billing.goToDashboard")}
           </Link>
         </div>

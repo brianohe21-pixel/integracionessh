@@ -5,6 +5,8 @@ import type { Campaign } from "@/types";
 
 interface CampaignFunnelChartProps {
   campaign: Campaign;
+  showDeliveryMetrics?: boolean;
+  showReadMetrics?: boolean;
 }
 
 interface FunnelStep {
@@ -14,7 +16,11 @@ interface FunnelStep {
   bg: string;
 }
 
-export function CampaignFunnelChart({ campaign }: CampaignFunnelChartProps) {
+export function CampaignFunnelChart({
+  campaign,
+  showDeliveryMetrics = true,
+  showReadMetrics = showDeliveryMetrics,
+}: CampaignFunnelChartProps) {
   const t = useT();
   const { total, sent, deliveredCount, readCount } = campaign;
 
@@ -31,19 +37,25 @@ export function CampaignFunnelChart({ campaign }: CampaignFunnelChartProps) {
       color: "text-blue-700",
       bg: "bg-blue-100",
     },
-    {
+  ];
+
+  if (showDeliveryMetrics) {
+    steps.push({
       labelKey: "campaigns.analytics.delivered",
       value: deliveredCount,
       color: "text-green-700",
       bg: "bg-green-100",
-    },
-    {
+    });
+  }
+
+  if (showReadMetrics) {
+    steps.push({
       labelKey: "campaigns.analytics.read",
       value: readCount,
       color: "text-accent",
       bg: "bg-accent-muted",
-    },
-  ];
+    });
+  }
 
   const maxValue = total || 1;
 

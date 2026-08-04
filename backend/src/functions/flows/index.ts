@@ -1,6 +1,6 @@
 import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
 import { z } from "zod";
-import { extractAuthContext, assertMemberRole } from "../../lib/auth/cognito.js";
+import { resolveRequestAuth, assertMemberRole } from "../../lib/auth/cognito.js";
 import {
   assertCanCreateVisualFlow,
   assertCanEnableVisualFlow,
@@ -76,7 +76,7 @@ export async function handler(
 
   try {
     const apiEvent = event as APIGatewayProxyEventV2WithJWTAuthorizer;
-    const auth = extractAuthContext(apiEvent);
+    const auth = await resolveRequestAuth(apiEvent);
     assertMemberRole(auth);
     const method = apiEvent.requestContext.http.method;
     const flowId = apiEvent.pathParameters?.flowId;

@@ -4,6 +4,7 @@ import type { BulkSendFailure, BulkSendJob, BulkSendFailuresResponse } from "@/h
 
 const HISTORY_HEADERS = [
   "job_id",
+  "channel",
   "template",
   "language",
   "status",
@@ -31,6 +32,7 @@ function statusLabel(status: BulkSendJob["status"]): string {
 export function downloadBulkHistoryCsv(jobs: BulkSendJob[]): void {
   const rows = jobs.map((job) => [
     job.jobId,
+    job.channel ?? "whatsapp",
     job.templateName,
     job.language,
     statusLabel(job.status),

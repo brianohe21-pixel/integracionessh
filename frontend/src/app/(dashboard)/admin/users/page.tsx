@@ -1,8 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
-import { useAdminTenants, useAdminUpdateTenant } from "@/hooks/useAdminTenants";
+import {
+  useAdminTenants,
+  useAdminUpdateTenant,
+  useResellerPlanDefaults,
+  useUpdateResellerPlanDefaults,
+  useActivateResellerDomain,
+} from "@/hooks/useAdminTenants";
 import {
   useAdminCognitoUsers,
   useAdminPlatformAdmins,
@@ -10,12 +16,12 @@ import {
 } from "@/hooks/useAdminCognitoUsers";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useT } from "@/i18n/context";
-import type { CognitoUserSummary, Tenant, TenantPlan } from "@/types";
+import type { CognitoUserSummary, ResellerPlanDefaults, Tenant, TenantPlan } from "@/types";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { TableContainer } from "@/components/ui/TableContainer";
 
-type Tab = "tenants" | "cognito";
+type Tab = "tenants" | "cognito" | "reseller";
 
 function CognitoUserActions({
   user,
@@ -104,6 +110,9 @@ export default function AdminUsersPage() {
   const [tab, setTab] = useState<Tab>("tenants");
   const { data: tenants, isLoading: tenantsLoading } = useAdminTenants();
   const updateTenant = useAdminUpdateTenant();
+  const defaultsQuery = useResellerPlanDefaults();
+  const updateDefaults = useUpdateResellerPlanDefaults();
+  const activateDomain = useActivateResellerDomain();
   const adminsQuery = useAdminPlatformAdmins();
   const cognitoQuery = useAdminCognitoUsers();
   const updateCognito = useAdminUpdateCognitoUser();
@@ -114,23 +123,23 @@ export default function AdminUsersPage() {
     tenantId: string;
     type: "success" | "error";
   } | null>(null);
+  const [defaultsForm, setDefaultsForm] = useState<ResellerPlanDefaults | null>(null);
+  const [defaultsSaved, setDefaultsSaved] = useState(false);
 
-  const platformAdmins = useMemo(
-    () => adminsQuery.data?.pages.flatMap((page) => page.users) ?? [],
-    [adminsQuery.data?.pages]
-  );
+  useEffect(() => {
+    if (defaultsQuery.data) setDefaultsForm(defaultsQuery.data);
+  }, [defaultsQuery.data]);
 
+  const platformAdmins =
+    adminsQuery.data?.pages.flatMap((page) => page.users) ?? [];
   const cognitoUsers =
     cognitoQuery.data?.pages.flatMap((page) => page.users) ?? [];
 
-  const adminEmails = useMemo(
-    () => new Set(platformAdmins.map((u) => u.email.toLowerCase()).filter(Boolean)),
-    [platformAdmins]
+  const adminEmails = new Set(
+    platformAdmins.map((u) => u.email.toLowerCase()).filter(Boolean)
   );
-
-  const adminTenantIds = useMemo(
-    () => new Set(platformAdmins.map((u) => u.tenantId).filter(Boolean)),
-    [platformAdmins]
+  const adminTenantIds = new Set(
+    platformAdmins.map((u) => u.tenantId).filter(Boolean)
   );
 
   function getCognitoEdits(user: CognitoUserSummary) {
@@ -145,6 +154,7 @@ export default function AdminUsersPage() {
   function tenantPlanLabel(plan: TenantPlan) {
     if (plan === "pro") return t("common.planPro");
     if (plan === "enterprise") return t("common.planEnterprise");
+    if (plan === "reseller") return t("common.planReseller");
     return t("common.planFree");
   }
 
@@ -157,7 +167,11 @@ export default function AdminUsersPage() {
 
   async function handleTenantUpdate(
     tenant: Tenant,
-    updates: { plan?: TenantPlan; status?: "active" | "suspended" }
+    updates: {
+      plan?: TenantPlan;
+      status?: "active" | "suspended";
+      resellerConfig?: Partial<Tenant["resellerConfig"]>;
+    }
   ) {
     try {
       await updateTenant.mutateAsync({ tenantId: tenant.tenantId, ...updates });
@@ -188,6 +202,13 @@ export default function AdminUsersPage() {
     });
   }
 
+  async function handleSaveDefaults() {
+    if (!defaultsForm) return;
+    await updateDefaults.mutateAsync(defaultsForm);
+    setDefaultsSaved(true);
+    setTimeout(() => setDefaultsSaved(false), 2500);
+  }
+
   const cognitoTableHeader = (
     <thead className="bg-surface text-left text-secondary">
       <tr>
@@ -200,6 +221,8 @@ export default function AdminUsersPage() {
       </tr>
     </thead>
   );
+
+  const resellerTenants = (tenants ?? []).filter((tenant) => tenant.plan === "reseller");
 
   return (
     <DashboardPage maxWidth="6xl" className="space-y-8">
@@ -240,146 +263,277 @@ export default function AdminUsersPage() {
                 </tbody>
               </table>
             </TableContainer>
-            {adminsQuery.hasNextPage && (
-              <button
-                type="button"
-                onClick={() => void adminsQuery.fetchNextPage()}
-                disabled={adminsQuery.isFetchingNextPage}
-                className="text-sm px-4 py-2 rounded-lg border border-default text-secondary hover:bg-surface disabled:opacity-50"
-              >
-                {t("admin.users.loadMore")}
-              </button>
-            )}
           </div>
         )}
       </section>
 
       <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={() => setTab("tenants")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium ${
-            tab === "tenants"
-              ? "bg-accent text-white"
-              : "bg-surface-elevated border border-default text-secondary"
-          }`}
-        >
-          {t("admin.users.tabTenants")}
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab("cognito")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium ${
-            tab === "cognito"
-              ? "bg-accent text-white"
-              : "bg-surface-elevated border border-default text-secondary"
-          }`}
-        >
-          {t("admin.users.tabCognito")}
-        </button>
+        {(["tenants", "cognito", "reseller"] as Tab[]).map((id) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setTab(id)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium ${
+              tab === id
+                ? "bg-accent text-white"
+                : "bg-surface-elevated border border-default text-secondary"
+            }`}
+          >
+            {id === "tenants"
+              ? t("admin.users.tabTenants")
+              : id === "cognito"
+                ? t("admin.users.tabCognito")
+                : t("admin.users.tabReseller")}
+          </button>
+        ))}
       </div>
 
       {tab === "tenants" ? (
         <>
-        <p className="text-sm text-secondary">{t("admin.users.planManualHint")}</p>
-        {tenantsLoading ? (
-          <div className="h-40 bg-surface-muted rounded-xl animate-pulse" />
-        ) : !tenants?.length ? (
-          <p className="text-sm text-secondary">{t("admin.users.emptyTenants")}</p>
-        ) : (
-          <TableContainer className="rounded-xl border border-default bg-surface-elevated">
-            <table className="min-w-full text-sm">
-              <thead className="bg-surface text-left text-secondary">
-                <tr>
-                  <th className="px-4 py-3 font-medium">{t("auth.companyName")}</th>
-                  <th className="px-4 py-3 font-medium">{t("common.email")}</th>
-                  <th className="px-4 py-3 font-medium">{t("admin.users.role")}</th>
-                  <th className="px-4 py-3 font-medium">{t("admin.users.plan")}</th>
-                  <th className="px-4 py-3 font-medium">{t("admin.users.tenantStatus")}</th>
-                  <th className="px-4 py-3 font-medium">{t("admin.users.subscription")}</th>
-                  <th className="px-4 py-3 font-medium">{t("admin.users.periodEnd")}</th>
-                  <th className="px-4 py-3 font-medium">{t("common.date")}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {tenants.map((tenant) => (
-                  <tr key={tenant.tenantId}>
-                    <td className="px-4 py-3 text-primary">{tenant.name}</td>
-                    <td className="px-4 py-3 text-secondary">{tenant.email}</td>
-                    <td className="px-4 py-3">
-                      {isTenantAlsoAdmin(tenant) ? (
-                        <Badge variant="info">{t("admin.users.roleAdmin")}</Badge>
-                      ) : (
-                        <Badge variant="default">{t("admin.users.roleMember")}</Badge>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="space-y-1">
+          <p className="text-sm text-secondary">{t("admin.users.planManualHint")}</p>
+          {tenantsLoading ? (
+            <div className="h-40 bg-surface-muted rounded-xl animate-pulse" />
+          ) : !tenants?.length ? (
+            <p className="text-sm text-secondary">{t("admin.users.emptyTenants")}</p>
+          ) : (
+            <TableContainer className="rounded-xl border border-default bg-surface-elevated">
+              <table className="min-w-full text-sm">
+                <thead className="bg-surface text-left text-secondary">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">{t("auth.companyName")}</th>
+                    <th className="px-4 py-3 font-medium">{t("common.email")}</th>
+                    <th className="px-4 py-3 font-medium">{t("admin.users.role")}</th>
+                    <th className="px-4 py-3 font-medium">{t("admin.users.plan")}</th>
+                    <th className="px-4 py-3 font-medium">{t("admin.users.tenantStatus")}</th>
+                    <th className="px-4 py-3 font-medium">{t("admin.users.subscription")}</th>
+                    <th className="px-4 py-3 font-medium">{t("admin.users.periodEnd")}</th>
+                    <th className="px-4 py-3 font-medium">{t("common.date")}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {tenants.map((tenant) => (
+                    <tr key={tenant.tenantId}>
+                      <td className="px-4 py-3 text-primary">{tenant.name}</td>
+                      <td className="px-4 py-3 text-secondary">{tenant.email}</td>
+                      <td className="px-4 py-3">
+                        {isTenantAlsoAdmin(tenant) ? (
+                          <Badge variant="info">{t("admin.users.roleAdmin")}</Badge>
+                        ) : (
+                          <Badge variant="default">{t("admin.users.roleMember")}</Badge>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="space-y-1">
+                          <select
+                            value={tenant.plan}
+                            disabled={updateTenant.isPending}
+                            onChange={(e) =>
+                              void handleTenantUpdate(tenant, {
+                                plan: e.target.value as TenantPlan,
+                              })
+                            }
+                            className="rounded-lg border border-default px-2 py-1 text-sm"
+                          >
+                            <option value="free">{t("common.planFree")}</option>
+                            <option value="pro">{t("common.planPro")}</option>
+                            <option value="enterprise">{t("common.planEnterprise")}</option>
+                            <option value="reseller">{t("common.planReseller")}</option>
+                          </select>
+                          {tenantFeedback?.tenantId === tenant.tenantId && (
+                            <p
+                              className={`text-xs ${
+                                tenantFeedback.type === "success"
+                                  ? "text-green-600"
+                                  : "text-red-600"
+                              }`}
+                            >
+                              {tenantFeedback.type === "success"
+                                ? t("admin.users.planUpdated")
+                                : t("admin.users.planUpdateError")}
+                            </p>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
                         <select
-                          value={tenant.plan}
+                          value={tenant.status}
                           disabled={updateTenant.isPending}
                           onChange={(e) =>
                             void handleTenantUpdate(tenant, {
-                              plan: e.target.value as TenantPlan,
+                              status: e.target.value as "active" | "suspended",
                             })
                           }
                           className="rounded-lg border border-default px-2 py-1 text-sm"
                         >
-                          <option value="free">{t("common.planFree")}</option>
-                          <option value="pro">{t("common.planPro")}</option>
-                          <option value="enterprise">{t("common.planEnterprise")}</option>
+                          <option value="active">{t("common.active")}</option>
+                          <option value="suspended">{t("common.suspended")}</option>
                         </select>
-                        {tenantFeedback?.tenantId === tenant.tenantId && (
-                          <p
-                            className={`text-xs ${
-                              tenantFeedback.type === "success"
-                                ? "text-green-600"
-                                : "text-red-600"
-                            }`}
-                          >
-                            {tenantFeedback.type === "success"
-                              ? t("admin.users.planUpdated")
-                              : t("admin.users.planUpdateError")}
-                          </p>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <select
-                        value={tenant.status}
-                        disabled={updateTenant.isPending}
-                        onChange={(e) =>
-                          void handleTenantUpdate(tenant, {
-                            status: e.target.value as "active" | "suspended",
-                          })
-                        }
-                        className="rounded-lg border border-default px-2 py-1 text-sm"
-                      >
-                        <option value="active">{t("common.active")}</option>
-                        <option value="suspended">{t("common.suspended")}</option>
-                      </select>
-                    </td>
-                    <td className="px-4 py-3 text-secondary">
-                      {tenant.subscriptionStatus
-                        ? t(`billing.subscriptionStatus.${tenant.subscriptionStatus}`)
-                        : "—"}
-                      <span className="block text-xs text-muted">
-                        {tenantPlanLabel(tenant.plan)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-secondary">
-                      {tenant.currentPeriodEnd
-                        ? formatDate(tenant.currentPeriodEnd)
-                        : "—"}
-                    </td>
-                    <td className="px-4 py-3 text-secondary">{formatDate(tenant.createdAt)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </TableContainer>
-        )}
+                      </td>
+                      <td className="px-4 py-3 text-secondary">
+                        {tenant.subscriptionStatus
+                          ? t(`billing.subscriptionStatus.${tenant.subscriptionStatus}`)
+                          : "—"}
+                        <span className="block text-xs text-muted">
+                          {tenantPlanLabel(tenant.plan)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-secondary">
+                        {tenant.currentPeriodEnd
+                          ? formatDate(tenant.currentPeriodEnd)
+                          : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-secondary">
+                        {formatDate(tenant.createdAt)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </TableContainer>
+          )}
         </>
+      ) : tab === "reseller" ? (
+        <div className="space-y-8">
+          <section className="rounded-xl border border-default bg-surface-elevated p-6 space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold text-primary">
+                {t("admin.users.resellerDefaultsTitle")}
+              </h2>
+              <p className="text-sm text-secondary">{t("admin.users.resellerDefaultsHint")}</p>
+            </div>
+            {defaultsForm ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="text-sm space-y-1">
+                  <span className="text-secondary">{t("admin.users.maxSubaccounts")}</span>
+                  <input
+                    type="number"
+                    min={1}
+                    value={defaultsForm.maxSubaccounts}
+                    onChange={(e) =>
+                      setDefaultsForm({
+                        ...defaultsForm,
+                        maxSubaccounts: Number(e.target.value),
+                      })
+                    }
+                    className="w-full rounded-lg border border-default px-3 py-2"
+                  />
+                </label>
+                <label className="text-sm space-y-1">
+                  <span className="text-secondary">{t("admin.users.defaultSubaccountPlan")}</span>
+                  <select
+                    value={defaultsForm.defaultSubaccountPlan}
+                    onChange={(e) =>
+                      setDefaultsForm({
+                        ...defaultsForm,
+                        defaultSubaccountPlan: e.target.value as "free" | "pro" | "enterprise",
+                      })
+                    }
+                    className="w-full rounded-lg border border-default px-3 py-2"
+                  >
+                    <option value="free">{t("common.planFree")}</option>
+                    <option value="pro">{t("common.planPro")}</option>
+                    <option value="enterprise">{t("common.planEnterprise")}</option>
+                  </select>
+                </label>
+                <label className="flex items-center gap-2 text-sm text-secondary sm:col-span-2">
+                  <input
+                    type="checkbox"
+                    checked={defaultsForm.allowSubaccountBranding}
+                    onChange={(e) =>
+                      setDefaultsForm({
+                        ...defaultsForm,
+                        allowSubaccountBranding: e.target.checked,
+                      })
+                    }
+                  />
+                  {t("admin.users.allowSubaccountBranding")}
+                </label>
+                <div className="sm:col-span-2 flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => void handleSaveDefaults()}
+                    disabled={updateDefaults.isPending}
+                    className="rounded-lg bg-accent px-4 py-2 text-sm text-white hover:bg-accent-hover disabled:opacity-50"
+                  >
+                    {t("admin.users.saveDefaults")}
+                  </button>
+                  {defaultsSaved && (
+                    <span className="text-sm text-green-600">{t("admin.users.defaultsSaved")}</span>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="h-24 animate-pulse rounded bg-surface-muted" />
+            )}
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="text-lg font-semibold text-primary">{t("admin.users.resellerConfig")}</h2>
+            {!resellerTenants.length ? (
+              <p className="text-sm text-secondary">{t("admin.users.emptyTenants")}</p>
+            ) : (
+              <TableContainer className="rounded-xl border border-default bg-surface-elevated">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-surface text-left text-secondary">
+                    <tr>
+                      <th className="px-4 py-3 font-medium">{t("auth.companyName")}</th>
+                      <th className="px-4 py-3 font-medium">{t("admin.users.maxSubaccounts")}</th>
+                      <th className="px-4 py-3 font-medium">{t("admin.users.customDomain")}</th>
+                      <th className="px-4 py-3 font-medium">{t("common.status")}</th>
+                      <th className="px-4 py-3 font-medium" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {resellerTenants.map((tenant) => (
+                      <tr key={tenant.tenantId}>
+                        <td className="px-4 py-3 text-primary">{tenant.name}</td>
+                        <td className="px-4 py-3">
+                          <input
+                            type="number"
+                            min={1}
+                            defaultValue={tenant.resellerConfig?.maxSubaccounts ?? 25}
+                            onBlur={(e) =>
+                              void handleTenantUpdate(tenant, {
+                                resellerConfig: {
+                                  maxSubaccounts: Number(e.target.value),
+                                },
+                              })
+                            }
+                            className="w-24 rounded-lg border border-default px-2 py-1"
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-secondary">
+                          {tenant.resellerConfig?.customDomain ?? "—"}
+                        </td>
+                        <td className="px-4 py-3 text-secondary">
+                          {tenant.resellerConfig?.customDomainStatus ?? "none"}
+                        </td>
+                        <td className="px-4 py-3">
+                          {tenant.resellerConfig?.customDomain &&
+                            tenant.resellerConfig.customDomainStatus !== "active" && (
+                              <button
+                                type="button"
+                                disabled={activateDomain.isPending}
+                                onClick={() =>
+                                  void activateDomain.mutateAsync({
+                                    tenantId: tenant.tenantId,
+                                    status: "active",
+                                  })
+                                }
+                                className="text-xs px-2 py-1 rounded bg-accent text-white disabled:opacity-50"
+                              >
+                                {t("admin.users.activateDomain")}
+                              </button>
+                            )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </TableContainer>
+            )}
+          </section>
+        </div>
       ) : cognitoQuery.isLoading ? (
         <div className="h-40 bg-surface-muted rounded-xl animate-pulse" />
       ) : !cognitoUsers.length ? (
@@ -406,18 +560,8 @@ export default function AdminUsersPage() {
                   />
                 ))}
               </tbody>
-              </table>
-            </TableContainer>
-          {cognitoQuery.hasNextPage && (
-            <button
-              type="button"
-              onClick={() => void cognitoQuery.fetchNextPage()}
-              disabled={cognitoQuery.isFetchingNextPage}
-              className="text-sm px-4 py-2 rounded-lg border border-default text-secondary hover:bg-surface disabled:opacity-50"
-            >
-              {t("admin.users.loadMore")}
-            </button>
-          )}
+            </table>
+          </TableContainer>
         </div>
       )}
     </DashboardPage>

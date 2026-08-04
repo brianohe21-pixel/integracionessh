@@ -35,11 +35,22 @@ async function filterPendingForMarketing(
 }
 
 export async function enqueueRecipients(
-  campaign: Pick<Campaign, "campaignId" | "tenantId" | "botId" | "templateName" | "language">,
+  campaign: Pick<
+    Campaign,
+    "campaignId" | "tenantId" | "botId" | "templateName" | "language" | "channel" | "requestDlr"
+  >,
   recipients: RepoPendingRecipient[],
   options?: EnqueueBatchOptions
 ): Promise<void> {
-  const { campaignId, tenantId, botId, templateName, language } = campaign;
+  const {
+    campaignId,
+    tenantId,
+    botId,
+    templateName,
+    language,
+    channel = "whatsapp",
+    requestDlr,
+  } = campaign;
   const BATCH_SIZE = SQS_BATCH_SIZE;
   let entryIndex = 0;
 
@@ -56,12 +67,14 @@ export async function enqueueRecipients(
       campaignId,
       tenantId,
       botId,
+      channel,
       templateName,
       language,
       to: recipient.to.replace(/\D/g, ""),
       recipientKey: recipient.recipientKey,
       ...(options?.batchVersion !== undefined ? { batchVersion: options.batchVersion } : {}),
       ...(options?.batchIndex !== undefined ? { batchIndex: options.batchIndex } : {}),
+      ...(requestDlr ? { requestDlr: true } : {}),
     };
     if (recipient.components?.length) {
       body.components = recipient.components as NonNullable<CampaignSQSBody["components"]>;
@@ -82,10 +95,12 @@ export async function enqueueRecipients(
       campaignId,
       tenantId,
       botId,
+      channel,
       templateName,
       language,
       batchVersion: options.batchVersion,
       batchIndex: options.batchIndex,
+      ...(requestDlr ? { requestDlr: true } : {}),
     };
     const dedupId = `${campaignId}-batch-complete-${options.batchIndex}`;
     entries.push({
@@ -189,7 +204,15 @@ export async function startCampaignDispatch(
   const pending = await listPendingRecipients(tenantId, campaignId, 5000);
   const eligible = await filterPendingForMarketing(tenantId, pending, requireOptIn, actorUserId);
   await enqueueRecipients(
-    { campaignId, tenantId, botId, templateName, language },
+    {
+      campaignId,
+      tenantId,
+      botId,
+      templateName,
+      language,
+      channel: campaign.channel ?? "whatsapp",
+      ...(campaign.requestDlr ? { requestDlr: true } : {}),
+    },
     eligible
   );
 }

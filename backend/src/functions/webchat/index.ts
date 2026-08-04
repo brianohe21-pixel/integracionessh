@@ -15,7 +15,7 @@ import {
 } from "../../lib/webchat/session.repository.js";
 import { assertCanUseWebChat } from "../../lib/billing/assert-plan.js";
 import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
-import { getResolvedTenantBranding } from "../../lib/branding/service.js";
+import { getResolvedBrandingWithInheritance } from "../../lib/branding/inherit.js";
 import { ok, created, badRequest, unauthorized, notFound, handleError } from "../../lib/http.js";
 import type { InboundQueueMessage } from "../../types/index.js";
 import { getLiveKitCall, updateLiveKitCallStatus } from "../../lib/dynamodb/livekit-call.repository.js";
@@ -134,7 +134,9 @@ async function handleCreateSession(
 
   const sessionToken = createSessionToken(sessionId, SESSION_SECRET);
 
-  const branding = tenant ? await getResolvedTenantBranding(tenant) : undefined;
+  const branding = tenant
+    ? await getResolvedBrandingWithInheritance(tenant)
+    : undefined;
 
   return created({
     sessionId,

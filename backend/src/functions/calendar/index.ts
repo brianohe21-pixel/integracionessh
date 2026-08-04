@@ -1,6 +1,6 @@
 import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
 import { z } from "zod";
-import { extractAuthContext, assertMemberRole } from "../../lib/auth/cognito.js";
+import { resolveRequestAuth, assertMemberRole } from "../../lib/auth/cognito.js";
 import { assertCanEnableCalendar } from "../../lib/billing/assert-plan.js";
 import { listAppsCatalog } from "../../lib/apps/catalog.js";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
@@ -135,7 +135,7 @@ export async function handler(
       return ok(result);
     }
 
-    const auth = extractAuthContext(event);
+    const auth = await resolveRequestAuth(event);
     assertMemberRole(auth);
     const method = event.requestContext.http.method;
     const rawPath = event.rawPath;

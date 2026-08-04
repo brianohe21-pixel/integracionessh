@@ -65,8 +65,8 @@ export default function SettingsPage() {
     <DashboardPage maxWidth="5xl">
       <PageHeader title={t("settings.title")} subtitle={t("settings.subtitle")} />
 
-      <nav className="mb-6 border-b border-default" aria-label={t("settings.title")}>
-        <div className="flex flex-wrap gap-1 -mb-px">
+      <nav className="content-card mb-6 overflow-hidden" aria-label={t("settings.title")}>
+        <div className="flex flex-wrap gap-1 p-1.5">
           {tabs.map((tabItem) => {
             const active = tab === tabItem.id;
             return (
@@ -75,12 +75,11 @@ export default function SettingsPage() {
                 type="button"
                 onClick={() => setTab(tabItem.id)}
                 className={cn(
-                  "flex shrink-0 items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors",
+                  "flex shrink-0 items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-150",
                   active
-                    ? "text-[var(--brand-primary,#25D366)]"
-                    : "border-transparent text-secondary hover:text-secondary hover:border-default"
+                    ? "bg-accent-muted text-accent shadow-sm ring-1 ring-accent/20"
+                    : "text-secondary hover:bg-surface-muted hover:text-primary"
                 )}
-                style={active ? { borderBottomColor: "var(--brand-primary, #25D366)" } : undefined}
               >
                 {tabItem.icon}
                 {tabItem.label}

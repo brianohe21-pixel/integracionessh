@@ -15,6 +15,7 @@ import {
 } from "@/lib/post-login-path";
 import { useT } from "@/i18n/context";
 import { AuthDivider, GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+import { getBrowserPortalHost, isRestrictedPortalHost } from "@/lib/host-portal";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -35,6 +36,22 @@ export default function RegisterPage() {
       storePendingBillingPlan(planParam);
     }
   }, [planParam]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const host = getBrowserPortalHost();
+    if (!host) return;
+    isRestrictedPortalHost(host)
+      .then((restricted) => {
+        if (!cancelled && restricted) {
+          router.replace("/login");
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
 
   useEffect(() => {
     let cancelled = false;

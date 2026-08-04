@@ -1,6 +1,6 @@
 import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
 import { z } from "zod";
-import { extractAuthContext, assertMemberRole } from "../../lib/auth/cognito.js";
+import { resolveRequestAuth, assertMemberRole } from "../../lib/auth/cognito.js";
 import { listBots } from "../../lib/dynamodb/bot.repository.js";
 import { completeEmbeddedSignup, completeManualConnect } from "../../lib/whatsapp/embedded-signup.js";
 import { registerPhoneNumber } from "../../lib/whatsapp/client.js";
@@ -40,7 +40,7 @@ async function handleConnect(
     return badRequest("WhatsApp embedded signup is not configured on the server");
   }
 
-  const auth = extractAuthContext(event);
+  const auth = await resolveRequestAuth(event);
   assertMemberRole(auth);
   const body = JSON.parse(event.body ?? "{}");
   const parsed = ConnectSchema.safeParse(body);
@@ -71,7 +71,7 @@ async function handleConnect(
 async function handleConnectManual(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): Promise<APIGatewayProxyResultV2> {
-  const auth = extractAuthContext(event);
+  const auth = await resolveRequestAuth(event);
   assertMemberRole(auth);
   const body = JSON.parse(event.body ?? "{}");
   const parsed = ConnectManualSchema.safeParse(body);
@@ -100,7 +100,7 @@ async function handleConnectManual(
 async function handleRegister(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): Promise<APIGatewayProxyResultV2> {
-  const auth = extractAuthContext(event);
+  const auth = await resolveRequestAuth(event);
   assertMemberRole(auth);
   const body = JSON.parse(event.body ?? "{}");
   const parsed = RegisterSchema.safeParse(body);
@@ -131,7 +131,7 @@ async function handleRegister(
 async function handleStatus(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): Promise<APIGatewayProxyResultV2> {
-  const auth = extractAuthContext(event);
+  const auth = await resolveRequestAuth(event);
   assertMemberRole(auth);
 
   let connected = false;

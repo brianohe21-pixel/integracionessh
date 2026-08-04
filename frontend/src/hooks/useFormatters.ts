@@ -60,6 +60,7 @@ export function useFormatters() {
         free: t("common.planFree"),
         pro: t("common.planPro"),
         enterprise: t("common.planEnterprise"),
+        reseller: t("common.planReseller"),
       };
       return labels[plan] ?? plan;
     },

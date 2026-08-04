@@ -4,7 +4,8 @@ import { ZodError } from "zod";
 const CORS_HEADERS = {
   "Content-Type": "application/json",
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Allow-Headers":
+    "Content-Type, Authorization, X-Tenant-Context, X-Portal-Host, X-Api-Key, X-Widget-Key",
   "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
 };
 
@@ -156,7 +157,8 @@ export function handleError(error: unknown): APIGatewayProxyResultV2 {
     return unprocessableEntity(err.message, payload);
   }
   if (err.statusCode === 429) return tooManyRequests(err.message);
+  if (err.statusCode === 500) return internalError(err.message);
   if (err.statusCode === 502) return badGateway(err.message);
 
-  return internalError();
+  return internalError(err.message || undefined);
 }

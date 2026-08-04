@@ -39,7 +39,7 @@ export default function PublicBookPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const accent = info?.branding?.primaryColor ?? "#25D366";
+  const accent = info?.branding?.primaryColor ?? "#128C7E";
   const waitlistEnabled = Boolean(info?.waitlistEnabled);
 
   const availableIsoDates = useMemo(() => new Set(dates.map((d) => d.isoDate)), [dates]);

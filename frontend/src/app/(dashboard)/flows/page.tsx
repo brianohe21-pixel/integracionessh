@@ -1,13 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, GitBranch } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { useFlows, useToggleFlow, useDeleteFlow } from "@/hooks/useFlows";
 import { useBots } from "@/hooks/useBots";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { TableContainer } from "@/components/ui/TableContainer";
+import { DataTable, DataTableHead, DataTableBody, DataTableRow, DataTableCell } from "@/components/ui/DataTable";
+import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { SkeletonTable } from "@/components/ui/Skeleton";
 import { ContextualHint } from "@/components/help-center/ContextualHint";
 import { TourPageSuggestion } from "@/components/help-center/TourList";
 
@@ -28,13 +32,11 @@ export default function FlowsPage() {
           subtitle={t("flows.subtitle")}
           actions={
             <ContextualHint hintId="flows-create" content={t("helpCenter.hints.flowsCreate")}>
-              <Link
-                data-tour="flows-create"
-                href="/flows/new"
-                className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover"
-              >
-                <Plus className="h-4 w-4" />
-                {t("flows.new")}
+              <Link data-tour="flows-create" href="/flows/new">
+                <Button>
+                  <Plus className="h-4 w-4" />
+                  {t("flows.new")}
+                </Button>
               </Link>
             </ContextualHint>
           }
@@ -44,62 +46,70 @@ export default function FlowsPage() {
       <TourPageSuggestion tourId="flows" />
 
       {isLoading ? (
-        <div className="h-32 animate-pulse rounded-xl border bg-surface-elevated" />
+        <SkeletonTable rows={4} cols={4} />
       ) : !flows?.length ? (
-        <p className="text-sm text-secondary">{t("flows.empty")}</p>
+        <EmptyState
+          icon={<GitBranch className="h-6 w-6" />}
+          title={t("flows.empty")}
+          action={
+            <Link href="/flows/new">
+              <Button>
+                <Plus className="h-4 w-4" />
+                {t("flows.new")}
+              </Button>
+            </Link>
+          }
+        />
       ) : (
-        <TableContainer
-          data-tour="flows-table"
-          className="overflow-hidden rounded-xl border border-default bg-surface-elevated"
-        >
-          <table className="w-full min-w-[560px] text-sm">
-            <thead className="bg-surface text-left text-secondary">
-              <tr>
-                <th className="px-4 py-3">{t("flows.colName")}</th>
-                <th className="px-4 py-3">{t("flows.colBot")}</th>
-                <th className="px-4 py-3">{t("flows.colStatus")}</th>
-                <th className="px-4 py-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {flows.map((flow, index) => (
-                <tr key={flow.flowId} className="border-t border-subtle">
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/flows/${flow.flowId}/edit`}
-                      className="font-medium text-accent hover:underline"
-                    >
-                      {flow.name}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 text-secondary">{botName(flow.botId)}</td>
-                  <td className="px-4 py-3">
+        <DataTable data-tour="flows-table">
+          <DataTableHead>
+            <DataTableRow>
+              <DataTableCell header>{t("flows.colName")}</DataTableCell>
+              <DataTableCell header>{t("flows.colBot")}</DataTableCell>
+              <DataTableCell header>{t("flows.colStatus")}</DataTableCell>
+              <DataTableCell header className="text-right">Actions</DataTableCell>
+            </DataTableRow>
+          </DataTableHead>
+          <DataTableBody>
+            {flows.map((flow, index) => (
+              <DataTableRow key={flow.flowId}>
+                <DataTableCell>
+                  <Link
+                    href={`/flows/${flow.flowId}/edit`}
+                    className="font-medium text-accent hover:underline"
+                  >
+                    {flow.name}
+                  </Link>
+                </DataTableCell>
+                <DataTableCell className="text-secondary">{botName(flow.botId)}</DataTableCell>
+                <DataTableCell>
+                  <Badge variant={flow.enabled ? "success" : "default"} dot>
                     {flow.enabled ? t("flows.enabled") : t("flows.disabled")}
-                  </td>
-                  <td className="space-x-2 px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      data-tour={index === 0 ? "flows-toggle" : undefined}
-                      onClick={() =>
-                        toggle.mutate({ flowId: flow.flowId, enabled: !flow.enabled })
-                      }
-                      className="text-accent hover:underline"
-                    >
-                      {flow.enabled ? t("flows.disable") : t("flows.enable")}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => remove.mutate(flow.flowId)}
-                      className="text-red-600 hover:underline"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </TableContainer>
+                  </Badge>
+                </DataTableCell>
+                <DataTableCell className="space-x-2 text-right">
+                  <button
+                    type="button"
+                    data-tour={index === 0 ? "flows-toggle" : undefined}
+                    onClick={() =>
+                      toggle.mutate({ flowId: flow.flowId, enabled: !flow.enabled })
+                    }
+                    className="text-xs font-medium text-accent hover:underline"
+                  >
+                    {flow.enabled ? t("flows.disable") : t("flows.enable")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => remove.mutate(flow.flowId)}
+                    className="text-xs font-medium text-danger hover:underline"
+                  >
+                    Delete
+                  </button>
+                </DataTableCell>
+              </DataTableRow>
+            ))}
+          </DataTableBody>
+        </DataTable>
       )}
     </DashboardPage>
   );

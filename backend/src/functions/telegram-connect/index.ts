@@ -1,6 +1,6 @@
 import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
 import { z } from "zod";
-import { extractAuthContext, assertMemberRole } from "../../lib/auth/cognito.js";
+import { resolveRequestAuth, assertMemberRole } from "../../lib/auth/cognito.js";
 import { getBot, updateBot } from "../../lib/dynamodb/bot.repository.js";
 import { putTelegramBotLookup } from "../../lib/dynamodb/bot-lookup.repository.js";
 import { saveTelegramSecret } from "../../lib/telegram/secrets.js";
@@ -25,7 +25,7 @@ export async function handler(
       return badRequest("Method not allowed");
     }
 
-    const auth = extractAuthContext(event);
+    const auth = await resolveRequestAuth(event);
     assertMemberRole(auth);
     const body = JSON.parse(event.body ?? "{}");
     const parsed = ConnectSchema.safeParse(body);

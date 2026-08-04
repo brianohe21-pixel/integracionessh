@@ -14,7 +14,8 @@ export const smsAdapter: ChannelAdapter = {
     const result = await sendSmsTextMessage({
       phoneNumber: ctx.participantId,
       text,
-      ...(ctx.smsOriginationNumber ? { originationNumber: ctx.smsOriginationNumber } : {}),
+      from: ctx.smsOriginationNumber ?? "msg",
+      environment: ctx.environment,
     });
     return { externalMessageId: result.messageId };
   },

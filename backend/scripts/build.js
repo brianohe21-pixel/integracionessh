@@ -30,6 +30,7 @@ const entryPoints = [
   "src/functions/billing/index.ts",
   "src/functions/whatsapp-connect/index.ts",
   "src/functions/admin/index.ts",
+  "src/functions/reseller/index.ts",
   "src/functions/public-api/index.ts",
   "src/functions/api-keys/index.ts",
   "src/functions/integrations/index.ts",

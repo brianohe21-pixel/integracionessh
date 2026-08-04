@@ -2,7 +2,7 @@ import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 }
 import { randomUUID } from "crypto";
 import { z } from "zod";
 import {
-  extractAuthContext,
+  resolveRequestAuth,
   assertMemberRole,
   assertAdvisorOrMember,
 } from "../../lib/auth/cognito.js";
@@ -82,7 +82,7 @@ export async function handler(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): Promise<APIGatewayProxyResultV2> {
   try {
-    const auth = extractAuthContext(event);
+    const auth = await resolveRequestAuth(event);
     const method = event.requestContext.http.method;
     const botId = event.pathParameters?.botId;
     const macroId = event.pathParameters?.macroId;

@@ -1,4 +1,8 @@
-export type TenantPlan = "free" | "pro" | "enterprise";
+export type TenantPlan = "free" | "pro" | "enterprise" | "reseller";
+
+export type TenantKind = "standard" | "reseller" | "subaccount";
+
+export type CustomDomainStatus = "none" | "pending_dns" | "active" | "error";
 
 export type SubscriptionStatus =
   | "none"
@@ -17,6 +21,50 @@ export interface ResolvedTenantBranding {
   brandName: string;
   primaryColor: string;
   logoUrl?: string;
+}
+
+export interface ResellerLimitsOverride {
+  maxActiveBots?: number;
+  maxMessagesPerMonth?: number;
+  maxBulkRecipientsPerJob?: number;
+  maxActiveCampaigns?: number;
+  maxContacts?: number;
+  maxAutomationsPerBot?: number;
+  maxScheduledAutomations?: number;
+  maxDocumentsPerBot?: number;
+  maxKnowledgeStorageMb?: number;
+  maxMetaFlowsPerBot?: number;
+  maxVisualFlowsPerBot?: number;
+  maxFlowNodes?: number;
+  maxActiveFlowRuns?: number;
+  maxChannelsPerBot?: number;
+  maxActiveWebChatSessions?: number;
+  maxConcurrentLiveKitCalls?: number;
+  maxVoicebotMinutesPerMonth?: number;
+  maxCalendarAppsPerTenant?: number;
+  maxPaymentsAppsPerTenant?: number;
+  maxCatalogAppsPerTenant?: number;
+  maxProductsPerBot?: number;
+  maxOrdersPerMonth?: number;
+  canCustomizeBranding?: boolean;
+  apiRateLimitPerMinute?: number;
+  apiRateLimitPerDay?: number;
+}
+
+export interface ResellerConfig {
+  maxSubaccounts: number;
+  defaultSubaccountPlan: "free" | "pro" | "enterprise";
+  customDomain?: string;
+  customDomainStatus?: CustomDomainStatus;
+  allowSubaccountBranding: boolean;
+  limitsOverride?: ResellerLimitsOverride;
+}
+
+export interface ResellerPlanDefaults {
+  maxSubaccounts: number;
+  defaultSubaccountPlan: "free" | "pro" | "enterprise";
+  allowSubaccountBranding: boolean;
+  limitsOverride?: ResellerLimitsOverride;
 }
 
 export interface InboxSlaSettings {
@@ -99,6 +147,9 @@ export interface Tenant {
   email: string;
   plan: TenantPlan;
   status: "active" | "suspended" | "pending";
+  tenantKind?: TenantKind;
+  parentTenantId?: string;
+  resellerConfig?: ResellerConfig;
   branding?: TenantBranding;
   inboxSla?: InboxSlaSettings;
   metricsReportSchedule?: MetricsReportSchedule;
@@ -746,6 +797,7 @@ export interface AuthContext {
   email: string;
   name?: string;
   role: "admin" | "member" | "advisor";
+  homeTenantId?: string;
 }
 
 export interface ChatCompletionResult {
@@ -776,10 +828,13 @@ export interface TemplateButton {
   example?: string[];
 }
 
+export type OutreachChannel = "whatsapp" | "sms";
+
 export interface WhatsAppTemplate {
   templateId: string;
   tenantId: string;
   botId: string;
+  channel?: "whatsapp";
   name: string;
   language: string;
   category: "MARKETING" | "UTILITY" | "AUTHENTICATION";
@@ -789,6 +844,22 @@ export interface WhatsAppTemplate {
   syncedAt: string;
   createdAt: string;
 }
+
+export interface SmsTemplate {
+  templateId: string;
+  tenantId: string;
+  botId: string;
+  channel: "sms";
+  name: string;
+  language: string;
+  category: "MARKETING" | "UTILITY" | "AUTHENTICATION";
+  status: "APPROVED";
+  body: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type MessageTemplate = WhatsAppTemplate | SmsTemplate;
 
 export type CampaignStatus =
   | "draft"
@@ -809,6 +880,7 @@ export interface Campaign {
   tenantId: string;
   botId: string;
   name: string;
+  channel?: OutreachChannel;
   templateName: string;
   language: string;
   status: CampaignStatus;
@@ -831,6 +903,35 @@ export interface Campaign {
   startedAt?: string;
   completedAt?: string;
   requireOptIn?: boolean;
+  requestDlr?: boolean;
+}
+
+export type SmsDlrSource = "campaign" | "template";
+
+export interface SmsDlrReceipt {
+  receiptId: string;
+  tenantId: string;
+  botId: string;
+  source: SmsDlrSource;
+  to: string;
+  campaignId?: string;
+  templateName?: string;
+  language?: string;
+  telcoredMessageId?: string;
+  finalDeliveryCode?: number;
+  lastDeliveryCode?: number;
+  lastIntermediateCode?: number;
+  deliveryStatus?: string;
+  sentAt?: string;
+  dlrAt?: string;
+  cost?: string;
+  part?: string;
+  errorCode?: string;
+  sender?: string;
+  sendError?: string;
+  metricsApplied?: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export type CampaignRecipientStatus = "pending" | "sent" | "replied";
@@ -867,6 +968,7 @@ export interface CampaignSQSBody {
   campaignId: string;
   tenantId: string;
   botId: string;
+  channel?: OutreachChannel;
   templateName: string;
   language: string;
   to?: string;
@@ -874,6 +976,7 @@ export interface CampaignSQSBody {
   components?: CampaignRecipient["components"];
   batchVersion?: number;
   batchIndex?: number;
+  requestDlr?: boolean;
 }
 
 export type BulkSendJobStatus = "queued" | "processing" | "completed" | "failed";
@@ -882,6 +985,7 @@ export interface BulkSendJob {
   jobId: string;
   tenantId: string;
   botId: string;
+  channel?: OutreachChannel;
   templateName: string;
   language: string;
   status: BulkSendJobStatus;
@@ -897,6 +1001,7 @@ export interface BulkSendSQSBody {
   jobId: string;
   tenantId: string;
   botId: string;
+  channel?: OutreachChannel;
   templateName: string;
   language: string;
   to: string;
