@@ -62,7 +62,12 @@ export async function createApiKey(key: ApiKey): Promise<void> {
 
 export async function updateApiKey(
   hashedKey: string,
-  fields: Partial<Pick<ApiKey, "name" | "enabled" | "rateLimitPerMinute" | "rateLimitPerDay" | "lastUsedAt" | "updatedAt">>
+  fields: Partial<
+    Pick<
+      ApiKey,
+      "name" | "enabled" | "scopes" | "rateLimitPerMinute" | "rateLimitPerDay" | "lastUsedAt" | "updatedAt"
+    >
+  >
 ): Promise<ApiKey | null> {
   const sets: string[] = [];
   const names: Record<string, string> = {};
