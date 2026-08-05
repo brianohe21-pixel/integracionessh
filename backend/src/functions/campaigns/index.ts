@@ -21,6 +21,7 @@ import {
 } from "../../lib/dynamodb/campaign.repository.js";
 import { listBulkSendFailures } from "../../lib/dynamodb/bulk-job.repository.js";
 import { getCampaignMetrics } from "../../lib/dynamodb/campaign-metrics.repository.js";
+import { buildCampaignExportCsv } from "../../lib/reports/campaign-export-csv.js";
 import { resolveRequestAuth, assertMemberRole } from "../../lib/auth/cognito.js";
 import { ensureTenant } from "../../lib/dynamodb/tenant.repository.js";
 import { assertBulkRecipients, assertCanStartCampaign } from "../../lib/billing/assert-plan.js";
@@ -293,6 +294,20 @@ export async function handler(
         if (!campaign) return notFound("Campaign not found");
         const recipients = await listCampaignRecipientDetails(auth.tenantId, campaignId);
         return ok(recipients);
+      }
+
+      if (rawPath.endsWith("/export")) {
+        const exportResult = await buildCampaignExportCsv(auth.tenantId, campaignId);
+        if (!exportResult) return notFound("Campaign not found");
+        return {
+          statusCode: 200,
+          headers: {
+            "Content-Type": "text/csv; charset=utf-8",
+            "Content-Disposition": `attachment; filename="${exportResult.filename}"`,
+            "Access-Control-Allow-Origin": "*",
+          },
+          body: exportResult.content,
+        };
       }
 
       const campaign = await getCampaign(auth.tenantId, campaignId);

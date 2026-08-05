@@ -9,6 +9,7 @@ import {
 } from "../sms/dlr.js";
 import { incrementCampaignAnalytics } from "./campaign.repository.js";
 import { recordBulkSendFailure } from "./bulk-job.repository.js";
+import { applySmsDlrToAttempt } from "./campaign-send-attempt.repository.js";
 import type { SmsDlrReceipt, SmsDlrSource } from "../../types/index.js";
 
 const RECEIPT_TTL_SECONDS = 30 * 24 * 60 * 60;
@@ -40,6 +41,8 @@ export async function createSmsDlrReceipt(
     createdAt: now,
     updatedAt: now,
     ...(input.campaignId ? { campaignId: input.campaignId } : {}),
+    ...(input.attemptId ? { attemptId: input.attemptId } : {}),
+    ...(input.recipientKey ? { recipientKey: input.recipientKey } : {}),
     ...(input.templateName ? { templateName: input.templateName } : {}),
     ...(input.language ? { language: input.language } : {}),
     ...(input.telcoredMessageId ? { telcoredMessageId: input.telcoredMessageId } : {}),
@@ -233,6 +236,21 @@ export async function applySmsDlrCallback(
       ExpressionAttributeValues: exprValues,
     })
   );
+
+  if (receipt.attemptId && receipt.campaignId) {
+    const updatedReceipt = await getSmsDlrReceipt(callback.receiptId);
+    if (updatedReceipt) {
+      await applySmsDlrToAttempt(
+        receipt.tenantId,
+        receipt.campaignId,
+        receipt.attemptId,
+        callback,
+        updatedReceipt
+      ).catch((err) =>
+        console.warn(`Failed to update campaign attempt ${receipt.attemptId}:`, err)
+      );
+    }
+  }
 
   if (isFinalTelcoredDeliveryCode(deliveryCode)) {
     await applyCampaignDlrMetrics(receipt, callback);

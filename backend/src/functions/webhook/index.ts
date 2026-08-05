@@ -12,8 +12,10 @@ import {
   deleteMessageTracking,
   parseDeliveryFailureError,
   recordBulkDeliveryFailure,
+  recordBulkSendFailure,
 } from "../../lib/dynamodb/bulk-job.repository.js";
 import { incrementCampaignAnalytics } from "../../lib/dynamodb/campaign.repository.js";
+import { applyWhatsAppStatusToAttempt } from "../../lib/dynamodb/campaign-send-attempt.repository.js";
 import {
   isCallStatusItem,
   normalizeCallConnectEvent,
@@ -284,6 +286,14 @@ async function handleWhatsAppWebhook(payload: WhatsAppWebhookEvent): Promise<voi
               if (status.status === "delivered") {
                 if (isCampaign && campaignId) {
                   await incrementCampaignAnalytics(tracking.tenantId, campaignId, "deliveredCount");
+                  if (tracking.attemptId) {
+                    await applyWhatsAppStatusToAttempt(
+                      tracking.tenantId,
+                      campaignId,
+                      tracking.attemptId,
+                      status
+                    );
+                  }
                 }
                 return;
               }
@@ -291,6 +301,14 @@ async function handleWhatsAppWebhook(payload: WhatsAppWebhookEvent): Promise<voi
               if (status.status === "read") {
                 if (isCampaign && campaignId) {
                   await incrementCampaignAnalytics(tracking.tenantId, campaignId, "readCount");
+                  if (tracking.attemptId) {
+                    await applyWhatsAppStatusToAttempt(
+                      tracking.tenantId,
+                      campaignId,
+                      tracking.attemptId,
+                      status
+                    );
+                  }
                 }
                 return;
               }
@@ -300,6 +318,20 @@ async function handleWhatsAppWebhook(payload: WhatsAppWebhookEvent): Promise<voi
                 if (isCampaign && campaignId) {
                   await Promise.all([
                     incrementCampaignAnalytics(tracking.tenantId, campaignId, "deliveryFailed"),
+                    tracking.attemptId
+                      ? applyWhatsAppStatusToAttempt(
+                          tracking.tenantId,
+                          campaignId,
+                          tracking.attemptId,
+                          status
+                        )
+                      : Promise.resolve(),
+                    recordBulkSendFailure(tracking.tenantId, campaignId, "delivery", {
+                      to: tracking.to ?? status.recipient_id,
+                      messageId: status.id,
+                      ...(tracking.attemptId ? { attemptId: tracking.attemptId } : {}),
+                      ...parsedError,
+                    }),
                     deleteMessageTracking(status.id),
                   ]);
                 } else if (tracking.jobId) {

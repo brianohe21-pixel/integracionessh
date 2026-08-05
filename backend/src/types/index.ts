@@ -756,6 +756,7 @@ export interface BulkSendFailure {
   kind: BulkSendFailureKind;
   to: string;
   messageId?: string;
+  attemptId?: string;
   errorCode?: number;
   errorTitle?: string;
   errorMessage: string;
@@ -916,6 +917,8 @@ export interface SmsDlrReceipt {
   source: SmsDlrSource;
   to: string;
   campaignId?: string;
+  attemptId?: string;
+  recipientKey?: string;
   templateName?: string;
   language?: string;
   telcoredMessageId?: string;
@@ -936,6 +939,61 @@ export interface SmsDlrReceipt {
 }
 
 export type CampaignRecipientStatus = "pending" | "sent" | "replied" | "failed";
+
+export type CampaignSendAttemptStatus =
+  | "queued"
+  | "compliance_blocked"
+  | "send_failed"
+  | "sent"
+  | "delivered"
+  | "read"
+  | "delivery_failed";
+
+export type CampaignSendFailureKind = "send" | "delivery" | "compliance";
+
+export interface CampaignSendAttempt {
+  attemptId: string;
+  tenantId: string;
+  campaignId: string;
+  recipientKey?: string;
+  to: string;
+  channel: OutreachChannel;
+  status: CampaignSendAttemptStatus;
+  failureKind?: CampaignSendFailureKind;
+  templateName: string;
+  language: string;
+  batchVersion?: number;
+  batchIndex?: number;
+  queuedAt: string;
+  sentAt?: string;
+  deliveredAt?: string;
+  readAt?: string;
+  failedAt?: string;
+  externalMessageId?: string;
+  sendErrorCode?: number;
+  sendErrorTitle?: string;
+  sendErrorMessage?: string;
+  deliveryErrorCode?: number;
+  deliveryErrorTitle?: string;
+  deliveryErrorMessage?: string;
+  waMessageId?: string;
+  waRecipientId?: string;
+  smsReceiptId?: string;
+  telcoredMessageId?: string;
+  finalDeliveryCode?: number;
+  lastDeliveryCode?: number;
+  lastIntermediateCode?: number;
+  deliveryStatus?: string;
+  cost?: string;
+  dlrAt?: string;
+  part?: string;
+  smsErrorCode?: string;
+  sender?: string;
+  repliedAt?: string;
+  conversationId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface CampaignMetrics {
   campaignId: string;

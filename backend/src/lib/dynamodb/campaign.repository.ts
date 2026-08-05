@@ -959,7 +959,8 @@ export async function saveCampaignMessageTracking(
   campaignId: string,
   tenantId: string,
   to: string,
-  recipientKey?: string
+  recipientKey?: string,
+  attemptId?: string
 ): Promise<void> {
   const ttl = Math.floor(Date.now() / 1000) + RECIPIENT_TTL_SECONDS;
   await docClient.send(
@@ -973,6 +974,8 @@ export async function saveCampaignMessageTracking(
         to,
         kind: "campaign",
         ttl,
+        ...(recipientKey ? { recipientKey } : {}),
+        ...(attemptId ? { attemptId } : {}),
       },
     })
   );

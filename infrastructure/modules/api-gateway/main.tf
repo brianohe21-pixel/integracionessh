@@ -664,6 +664,12 @@ locals {
       function_arn = var.campaigns_function_arn
       protected    = true
     }
+    campaigns_export = {
+      route_key    = "GET /campaigns/{campaignId}/export"
+      invoke_arn   = var.campaigns_invoke_arn
+      function_arn = var.campaigns_function_arn
+      protected    = true
+    }
     campaigns_archive = {
       route_key    = "POST /campaigns/{campaignId}/archive"
       invoke_arn   = var.campaigns_invoke_arn
