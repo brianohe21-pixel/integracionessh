@@ -1713,6 +1713,7 @@ resource "aws_lambda_permission" "api_gw" {
     macros            = var.macros_function_arn
     meta_flows        = var.meta_flows_function_arn
     flows             = var.flows_function_arn
+    flow_hooks        = var.flow_hooks_function_arn
     calling           = var.calling_function_arn
     realtime          = var.realtime_function_arn
     calendar          = var.calendar_function_arn
