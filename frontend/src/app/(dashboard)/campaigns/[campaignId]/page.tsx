@@ -2,12 +2,9 @@
 
 import { use } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
-  Play,
-  Pause,
-  RotateCcw,
-  X,
   Users,
   CheckCircle2,
   XCircle,
@@ -15,26 +12,22 @@ import {
   Truck,
   Calendar,
   Tag,
+  Download,
 } from "lucide-react";
 import { useT } from "@/i18n/context";
-import {
-  useCampaign,
-  useStartCampaign,
-  usePauseCampaign,
-  useResumeCampaign,
-  useCancelCampaign,
-} from "@/hooks/useCampaigns";
+import { useCampaign } from "@/hooks/useCampaigns";
+import { useCampaignExport } from "@/hooks/useCampaignExport";
 import { CampaignStatusBadge } from "@/components/campaigns/CampaignStatusBadge";
 import { CampaignProgressBar } from "@/components/campaigns/CampaignProgressBar";
 import { CampaignFunnelChart } from "@/components/campaigns/CampaignFunnelChart";
 import { CampaignRealtimeMetricsPanel } from "@/components/campaigns/CampaignRealtimeMetricsPanel";
+import { CampaignManagementActions } from "@/components/campaigns/CampaignManagementActions";
 import { formatBatchDelay } from "@/components/campaigns/CampaignBatchSettings";
 import { BulkJobFailures } from "@/components/bulk-send/BulkJobFailures";
 import { TemplateMessagePreview } from "@/components/templates/TemplateMessagePreview";
 import { SmsTemplatePreview } from "@/components/templates/SmsTemplatePreview";
 import { isSmsTemplate } from "@/types";
 import { CampaignQualityAlert } from "@/components/campaigns/CampaignQualityAlert";
-import { CampaignQualityConfirmModal } from "@/components/campaigns/CampaignQualityConfirmModal";
 import { useTemplates } from "@/hooks/useTemplates";
 import { useWhatsAppQualityGuard } from "@/hooks/useWhatsAppQualityGuard";
 import { DashboardPage } from "@/components/layout/DashboardPage";
@@ -73,49 +66,18 @@ export default function CampaignDetailPage({
 }) {
   const { campaignId } = use(params);
   const t = useT();
+  const router = useRouter();
 
   const { data: campaign, isLoading, error } = useCampaign(campaignId);
+  const { exportSendRecords, isExporting, exportError, canExport } = useCampaignExport(campaign);
   const campaignChannel = campaign?.channel ?? "whatsapp";
   const showSmsDeliveryMetrics = campaignChannel === "sms" && Boolean(campaign?.requestDlr);
   const { data: templates = [] } = useTemplates(campaign?.botId, campaignChannel);
   const campaignTemplate = templates.find(
     (tmpl) => tmpl.name === campaign?.templateName && tmpl.language === campaign?.language
   );
-  const start = useStartCampaign();
-  const pause = usePauseCampaign();
-  const resume = useResumeCampaign();
-  const cancel = useCancelCampaign();
-  const { assessment, phone, isLoading: qualityLoading, confirmStart, qualityConfirm, resolveQualityConfirm } =
+  const { assessment, phone, isLoading: qualityLoading } =
     useWhatsAppQualityGuard(campaign?.botId, campaignChannel === "whatsapp");
-
-  const isActionPending =
-    start.isPending || pause.isPending || resume.isPending || cancel.isPending;
-
-  const startBlocked = campaignChannel === "whatsapp" && assessment.risk === "block";
-
-  async function handleStart() {
-    if (startBlocked) {
-      window.alert(t("campaigns.qualityStartBlocked"));
-      return;
-    }
-    if (campaignChannel === "whatsapp") {
-      const confirmed = await confirmStart("start");
-      if (!confirmed) return;
-    }
-    start.mutate(campaignId);
-  }
-
-  async function handleResume() {
-    if (startBlocked) {
-      window.alert(t("campaigns.qualityStartBlocked"));
-      return;
-    }
-    if (campaignChannel === "whatsapp") {
-      const confirmed = await confirmStart("resume");
-      if (!confirmed) return;
-    }
-    resume.mutate(campaignId);
-  }
 
   if (isLoading) {
     return (
@@ -136,10 +98,7 @@ export default function CampaignDetailPage({
   }
 
   const canStart = campaign.status === "draft" || campaign.status === "scheduled";
-  const canPause = campaign.status === "running";
   const canResume = campaign.status === "paused";
-  const canCancel =
-    campaign.status !== "completed" && campaign.status !== "cancelled";
 
   return (
     <>
@@ -168,54 +127,12 @@ export default function CampaignDetailPage({
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {canStart && (
-            <button
-              onClick={handleStart}
-              disabled={isActionPending || startBlocked || qualityLoading}
-              title={startBlocked ? t("campaigns.qualityStartBlocked") : undefined}
-              className="inline-flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 text-sm font-medium transition-colors"
-            >
-              <Play className="w-4 h-4" />
-              {t("campaigns.start")}
-            </button>
-          )}
-          {canPause && (
-            <button
-              onClick={() => pause.mutate(campaign.campaignId)}
-              disabled={isActionPending}
-              className="inline-flex items-center gap-2 px-3 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 disabled:opacity-50 text-sm font-medium transition-colors"
-            >
-              <Pause className="w-4 h-4" />
-              {t("campaigns.pause")}
-            </button>
-          )}
-          {canResume && (
-            <button
-              onClick={handleResume}
-              disabled={isActionPending || startBlocked || qualityLoading}
-              title={startBlocked ? t("campaigns.qualityStartBlocked") : undefined}
-              className="inline-flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 text-sm font-medium transition-colors"
-            >
-              <RotateCcw className="w-4 h-4" />
-              {t("campaigns.resume")}
-            </button>
-          )}
-          {canCancel && (
-            <button
-              onClick={() => {
-                if (confirm(t("campaigns.confirmCancel", { name: campaign.name }))) {
-                  cancel.mutate(campaign.campaignId);
-                }
-              }}
-              disabled={isActionPending}
-              className="inline-flex items-center gap-2 px-3 py-2 border border-default text-secondary rounded-lg hover:bg-surface disabled:opacity-50 text-sm font-medium transition-colors"
-            >
-              <X className="w-4 h-4" />
-              {t("campaigns.cancel")}
-            </button>
-          )}
-        </div>
+        <CampaignManagementActions
+          campaign={campaign}
+          variant="detail"
+          onArchived={() => router.push("/campaigns")}
+          onCloned={(clonedId) => router.push(`/campaigns/${clonedId}/edit`)}
+        />
       </div>
 
       {campaignChannel === "whatsapp" && (canStart || canResume) && (
@@ -375,6 +292,25 @@ export default function CampaignDetailPage({
         </div>
       )}
 
+      <div className="bg-surface-elevated rounded-xl border border-default p-5">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="font-semibold text-primary">{t("campaigns.sendRecordsTitle")}</h2>
+          <button
+            type="button"
+            onClick={() => void exportSendRecords()}
+            disabled={!canExport || isExporting}
+            title={!canExport ? t("campaigns.exportSendRecordsDisabledDraft") : undefined}
+            className="inline-flex items-center gap-2 rounded-lg border border-default bg-surface-elevated px-3 py-2 text-sm font-medium text-primary disabled:opacity-50"
+          >
+            <Download className="h-4 w-4" />
+            {isExporting ? t("campaigns.exportingSendRecords") : t("campaigns.exportSendRecords")}
+          </button>
+        </div>
+        {exportError && (
+          <p className="mt-3 text-sm text-red-600">{exportError}</p>
+        )}
+      </div>
+
       {(campaign.status === "completed" ||
         campaign.status === "failed" ||
         campaign.status === "running" ||
@@ -390,13 +326,6 @@ export default function CampaignDetailPage({
         </div>
       )}
     </DashboardPage>
-
-    <CampaignQualityConfirmModal
-      open={Boolean(qualityConfirm)}
-      action={qualityConfirm?.action ?? "start"}
-      onCancel={() => resolveQualityConfirm(false)}
-      onConfirm={() => resolveQualityConfirm(true)}
-    />
     </>
   );
 }

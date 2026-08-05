@@ -16,6 +16,9 @@ import {
   Package,
   ShoppingCart,
   Square,
+  Contact,
+  UserPlus,
+  Bell,
 } from "lucide-react";
 import type { FlowNodeData, FlowNodeType, LocalizedText } from "@/types";
 import { resolveLocalizedText } from "@/lib/localized-text";
@@ -25,6 +28,7 @@ export type FlowNodeCategory =
   | "messaging"
   | "logic"
   | "integrations"
+  | "crm"
   | "apps"
   | "end";
 
@@ -64,12 +68,16 @@ export const FLOW_NODE_META: Record<FlowNodeType, FlowNodeMeta> = {
   send_catalog: { category: "apps", icon: ShoppingBag, hasInput: true, hasOutput: true },
   send_products: { category: "apps", icon: Package, hasInput: true, hasOutput: true },
   await_order: { category: "apps", icon: ShoppingCart, hasInput: true, hasOutput: true },
+  save_contact: { category: "crm", icon: Contact, hasInput: true, hasOutput: true },
+  create_lead: { category: "crm", icon: UserPlus, hasInput: true, hasOutput: true },
+  send_notification: { category: "crm", icon: Bell, hasInput: true, hasOutput: true },
   end: { category: "end", icon: Square, hasInput: true, hasOutput: false },
 };
 
 export type FlowPaletteCategory = Exclude<FlowNodeCategory, "entry">;
 
 export const FLOW_NODE_CATEGORIES: FlowPaletteCategory[] = [
+  "crm",
   "messaging",
   "logic",
   "integrations",
@@ -78,6 +86,7 @@ export const FLOW_NODE_CATEGORIES: FlowPaletteCategory[] = [
 ];
 
 export const FLOW_PALETTE_NODES: Record<FlowPaletteCategory, FlowNodeType[]> = {
+  crm: ["save_contact", "create_lead", "send_notification"],
   messaging: ["message", "template", "buttons"],
   logic: ["condition", "delay", "set_variable"],
   integrations: ["meta_flow", "http_request", "handoff"],
@@ -123,6 +132,13 @@ export const CATEGORY_STYLES: Record<
     badge: "bg-human/15 text-human",
     handle: "!bg-human",
   },
+  crm: {
+    border: "border-success/40",
+    bg: "bg-surface-elevated/80 backdrop-blur-md",
+    icon: "text-success",
+    badge: "bg-success/15 text-success",
+    handle: "!bg-success",
+  },
   apps: {
     border: "border-accent/40",
     bg: "bg-surface-elevated/80 backdrop-blur-md",
@@ -148,6 +164,7 @@ export function buildNodePreview(type: FlowNodeType, data: FlowNodeData, locale:
   switch (type) {
     case "trigger": {
       const triggerType = data.triggerType ?? "any_message";
+      if (triggerType === "web_form_submitted") return "webhook";
       if (triggerType === "keyword" && data.keywords?.length) {
         return truncate(data.keywords.join(", "));
       }
@@ -179,6 +196,12 @@ export function buildNodePreview(type: FlowNodeType, data: FlowNodeData, locale:
       return text(data.messageText);
     case "await_order":
       return text(data.messageText) || text(data.orderConfirmationMessage);
+    case "save_contact":
+      return data.contactPhoneBinding ?? "";
+    case "create_lead":
+      return data.leadPhoneBinding ?? "";
+    case "send_notification":
+      return data.notificationRecipientBinding ?? data.notificationChannel ?? "";
   }
   return data.label ?? "";
 }

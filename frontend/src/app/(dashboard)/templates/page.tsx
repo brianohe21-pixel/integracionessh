@@ -36,6 +36,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { TableContainer } from "@/components/ui/TableContainer";
 import { ContextualHint } from "@/components/help-center/ContextualHint";
 import { TourPageSuggestion } from "@/components/help-center/TourList";
+import { Modal } from "@/components/ui/Modal";
 
 type DialogMode = "create" | "edit" | null;
 
@@ -536,7 +537,7 @@ export default function TemplatesPage() {
       )}
 
       {dialogMode && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <Modal>
           <div className="bg-surface-elevated rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between px-6 py-4 border-b border-default">
               <h2 className="text-lg font-semibold text-primary">
@@ -702,11 +703,11 @@ export default function TemplatesPage() {
               </button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
 
       {sendTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <Modal>
           <div className="bg-surface-elevated rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between px-6 py-4 border-b border-default">
               <h2 className="text-lg font-semibold text-primary">
@@ -821,11 +822,11 @@ export default function TemplatesPage() {
               </button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
 
       {deleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <Modal>
           <div className="bg-surface-elevated rounded-2xl shadow-xl w-full max-w-sm mx-4">
             <div className="px-6 py-5">
               <h2 className="text-lg font-semibold text-primary mb-2">{t("templates.confirmDeleteTitle")}</h2>
@@ -849,7 +850,7 @@ export default function TemplatesPage() {
               </button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
     </DashboardPage>
   );

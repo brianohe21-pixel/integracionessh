@@ -19,7 +19,7 @@ export interface CreateCampaignInput {
   templateName: string;
   language: string;
   segments?: string[];
-  scheduledAt?: string;
+  scheduledAt?: string | null;
   batchConfig?: { size: number; delaySeconds: number };
   recipients?: CampaignRecipient[];
   audienceTags?: string[];
@@ -27,11 +27,32 @@ export interface CreateCampaignInput {
   requestDlr?: boolean;
 }
 
-export interface UpdateCampaignInput {
-  name?: string;
-  segments?: string[];
-  scheduledAt?: string | null;
-  batchConfig?: { size: number; delaySeconds: number } | null;
+export type UpdateCampaignInput = CreateCampaignInput;
+
+const DLR_GRACE_MS = 15 * 60 * 1000;
+
+function isAwaitingSmsDlr(campaign: Campaign): boolean {
+  return (
+    campaign.channel === "sms" &&
+    Boolean(campaign.requestDlr) &&
+    campaign.sent > 0 &&
+    campaign.deliveredCount + campaign.deliveryFailed < campaign.sent
+  );
+}
+
+function refetchIntervalForCampaign(campaign: Campaign | undefined): number | false {
+  if (!campaign) return 5_000;
+  if (campaign.status === "running") return 3_000;
+  if (campaign.status === "paused") return 15_000;
+  if (campaign.status === "scheduled") return 10_000;
+
+  if (isAwaitingSmsDlr(campaign)) {
+    const anchor = campaign.completedAt ?? campaign.startedAt ?? campaign.updatedAt;
+    const elapsed = Date.now() - new Date(anchor).getTime();
+    if (elapsed < DLR_GRACE_MS) return 5_000;
+  }
+
+  return false;
 }
 
 export function useCampaignList() {
@@ -46,13 +67,16 @@ export function useCampaign(campaignId: string) {
   return useQuery({
     queryKey: ["campaigns", campaignId],
     queryFn: () => api.get<Campaign>(`/campaigns/${campaignId}`),
-    refetchInterval: (query) => {
-      const data = query.state.data;
-      if (!data) return 5_000;
-      if (data.status === "running") return 3_000;
-      if (data.status === "scheduled") return 10_000;
-      return false;
-    },
+    refetchInterval: (query) => refetchIntervalForCampaign(query.state.data),
+    refetchOnWindowFocus: true,
+    enabled: Boolean(campaignId),
+  });
+}
+
+export function useCampaignRecipients(campaignId: string) {
+  return useQuery({
+    queryKey: ["campaigns", campaignId, "recipients"],
+    queryFn: () => api.get<CampaignRecipient[]>(`/campaigns/${campaignId}/recipients`),
     enabled: Boolean(campaignId),
   });
 }
@@ -76,6 +100,7 @@ export function useUpdateCampaign(campaignId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["campaigns"] });
       queryClient.invalidateQueries({ queryKey: ["campaigns", campaignId] });
+      queryClient.invalidateQueries({ queryKey: ["campaigns", campaignId, "recipients"] });
     },
   });
 }
@@ -120,6 +145,44 @@ export function useCancelCampaign() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (campaignId: string) => api.delete(`/campaigns/${campaignId}`),
+    onSuccess: (_data, campaignId) => {
+      queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+      queryClient.invalidateQueries({ queryKey: ["campaigns", campaignId] });
+    },
+  });
+}
+
+export function useArchiveCampaign() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (campaignId: string) =>
+      api.post(`/campaigns/${campaignId}/archive`, {}),
+    onSuccess: (_data, campaignId) => {
+      queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+      queryClient.invalidateQueries({ queryKey: ["campaigns", campaignId] });
+    },
+  });
+}
+
+export function useRetryCampaign() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (campaignId: string) =>
+      api.post<Campaign>(`/campaigns/${campaignId}/retry`, {}),
+    onSuccess: (_data, campaignId) => {
+      queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+      queryClient.invalidateQueries({ queryKey: ["campaigns", campaignId] });
+      queryClient.invalidateQueries({ queryKey: ["campaigns", campaignId, "metrics"] });
+      queryClient.invalidateQueries({ queryKey: ["bulk-failures", "campaign", campaignId] });
+    },
+  });
+}
+
+export function useCloneCampaign() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (campaignId: string) =>
+      api.post<Campaign>(`/campaigns/${campaignId}/clone`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["campaigns"] });
     },
