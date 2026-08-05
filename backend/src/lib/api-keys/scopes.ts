@@ -25,3 +25,12 @@ export const DEFAULT_API_KEY_SCOPES = [
   API_KEY_SCOPES.templatesRead,
   API_KEY_SCOPES.templatesWrite,
 ];
+
+export function mergeDefaultScopes(scopes: string[]): string[] {
+  const merged = new Set([...scopes, ...DEFAULT_API_KEY_SCOPES]);
+  return [...merged];
+}
+
+export function hasAllDefaultScopes(scopes: string[]): boolean {
+  return DEFAULT_API_KEY_SCOPES.every((scope) => scopes.includes(scope));
+}

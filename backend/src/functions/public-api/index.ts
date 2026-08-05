@@ -2,7 +2,11 @@ import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda
 import { randomUUID } from "crypto";
 import { z } from "zod";
 import { hashApiKey } from "../../lib/api-keys/manager.js";
-import { assertApiKeyScope, API_KEY_SCOPES } from "../../lib/api-keys/scopes.js";
+import {
+  assertApiKeyScope,
+  API_KEY_SCOPES,
+  mergeDefaultScopes,
+} from "../../lib/api-keys/scopes.js";
 import { checkAndIncrement } from "../../lib/rate-limiter/index.js";
 import { getApiKeyByHash, updateApiKey } from "../../lib/dynamodb/api-key.repository.js";
 import { logApiKeyUsage } from "../../lib/dynamodb/api-key-usage.repository.js";
@@ -262,8 +266,10 @@ async function authenticateApiKey(
   }
 
   const hashedKey = hashApiKey(rawKey);
-  const apiKey = await getApiKeyByHash(hashedKey);
-  if (!apiKey) return unauthorized("Invalid API key.");
+  const storedKey = await getApiKeyByHash(hashedKey);
+  if (!storedKey) return unauthorized("Invalid API key.");
+  const scopes = mergeDefaultScopes(storedKey.scopes);
+  const apiKey = scopes.length === storedKey.scopes.length ? storedKey : { ...storedKey, scopes };
   if (!apiKey.enabled) return forbidden("API key is disabled.");
   if (apiKey.expiresAt && new Date(apiKey.expiresAt) < new Date()) {
     return forbidden("API key has expired.");

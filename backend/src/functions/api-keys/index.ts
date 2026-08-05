@@ -25,7 +25,7 @@ import {
   forbidden,
   handleError,
 } from "../../lib/http.js";
-import { DEFAULT_API_KEY_SCOPES } from "../../lib/api-keys/scopes.js";
+import { DEFAULT_API_KEY_SCOPES, mergeDefaultScopes } from "../../lib/api-keys/scopes.js";
 import type { ApiKey } from "../../types/index.js";
 
 const CreateApiKeySchema = z.object({
@@ -70,7 +70,7 @@ function safeApiKey(key: ApiKey): ApiKeyPublic {
   void hashedKey;
   void rateLimitPerMinute;
   void rateLimitPerDay;
-  return safe;
+  return { ...safe, scopes: mergeDefaultScopes(safe.scopes) };
 }
 
 export async function handler(
