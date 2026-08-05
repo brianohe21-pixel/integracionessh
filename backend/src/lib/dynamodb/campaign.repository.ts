@@ -186,8 +186,9 @@ export async function updateCampaignDraft(
     exprValues[":templateName"] = patch.templateName;
   }
   if (patch.language !== undefined) {
-    sets.push("language = :language");
+    sets.push("#language = :language");
     exprValues[":language"] = patch.language;
+    exprNames["#language"] = "language";
   }
   if (patch.segments !== undefined) {
     sets.push("segments = :segments");
