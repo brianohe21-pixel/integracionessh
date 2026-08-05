@@ -902,6 +902,7 @@ export interface Campaign {
   updatedAt: string;
   startedAt?: string;
   completedAt?: string;
+  archivedAt?: string;
   requireOptIn?: boolean;
   requestDlr?: boolean;
 }
@@ -934,7 +935,7 @@ export interface SmsDlrReceipt {
   updatedAt: string;
 }
 
-export type CampaignRecipientStatus = "pending" | "sent" | "replied";
+export type CampaignRecipientStatus = "pending" | "sent" | "replied" | "failed";
 
 export interface CampaignMetrics {
   campaignId: string;

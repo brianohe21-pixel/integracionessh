@@ -4,6 +4,7 @@ import {
   getCampaign,
   incrementCampaignProgress,
   markRecipientSent,
+  markRecipientFailed,
   saveCampaignMessageTracking,
   listPendingRecipients,
   setCampaignNextBatchAt,
@@ -131,6 +132,11 @@ async function processRecipient(body: CampaignSQSBody): Promise<void> {
         to: normalizedTo,
         errorMessage: "Recipient not eligible for marketing",
       });
+      if (recipientKey) {
+        await markRecipientFailed(tenantId, recipientKey).catch((err) =>
+          console.warn(`Failed to mark recipient failed ${recipientKey}:`, err)
+        );
+      }
       await incrementCampaignProgress(tenantId, campaignId, "failed");
       return;
     }
@@ -148,6 +154,11 @@ async function processRecipient(body: CampaignSQSBody): Promise<void> {
         to,
         errorMessage: "Bot not found",
       });
+      if (recipientKey) {
+        await markRecipientFailed(tenantId, recipientKey).catch((err) =>
+          console.warn(`Failed to mark recipient failed ${recipientKey}:`, err)
+        );
+      }
       await incrementCampaignProgress(tenantId, campaignId, "failed");
       return;
     }
@@ -204,6 +215,11 @@ async function processRecipient(body: CampaignSQSBody): Promise<void> {
       to,
       ...parseSendFailureError(error),
     });
+    if (recipientKey) {
+      await markRecipientFailed(tenantId, recipientKey).catch((err) =>
+        console.warn(`Failed to mark recipient failed ${recipientKey}:`, err)
+      );
+    }
     await incrementCampaignProgress(tenantId, campaignId, "failed");
   }
 }

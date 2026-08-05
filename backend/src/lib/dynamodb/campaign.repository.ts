@@ -104,11 +104,13 @@ export async function listCampaigns(
     })
   );
 
-  return (result.Items ?? []).map(({ PK, SK, GSI1PK, GSI1SK, ...rest }) => {
-    const campaign = rest as Campaign;
-    if (campaign.replyCount === undefined) campaign.replyCount = 0;
-    return campaign;
-  });
+  return (result.Items ?? [])
+    .map(({ PK, SK, GSI1PK, GSI1SK, ...rest }) => {
+      const campaign = rest as Campaign;
+      if (campaign.replyCount === undefined) campaign.replyCount = 0;
+      return campaign;
+    })
+    .filter((campaign) => !campaign.archivedAt);
 }
 
 export async function updateCampaignStatus(
@@ -147,9 +149,17 @@ export async function updateCampaignDraft(
   campaignId: string,
   patch: {
     name?: string;
+    botId?: string;
+    channel?: Campaign["channel"];
+    templateName?: string;
+    language?: string;
     segments?: string[];
     scheduledAt?: string | null;
     batchConfig?: Campaign["batchConfig"] | null;
+    requireOptIn?: boolean;
+    requestDlr?: boolean;
+    total?: number;
+    status?: Extract<CampaignStatus, "draft" | "scheduled">;
   }
 ): Promise<void> {
   const now = new Date().toISOString();
@@ -162,6 +172,22 @@ export async function updateCampaignDraft(
     sets.push("#name = :name");
     exprValues[":name"] = patch.name;
     exprNames["#name"] = "name";
+  }
+  if (patch.botId !== undefined) {
+    sets.push("botId = :botId");
+    exprValues[":botId"] = patch.botId;
+  }
+  if (patch.channel !== undefined) {
+    sets.push("channel = :channel");
+    exprValues[":channel"] = patch.channel;
+  }
+  if (patch.templateName !== undefined) {
+    sets.push("templateName = :templateName");
+    exprValues[":templateName"] = patch.templateName;
+  }
+  if (patch.language !== undefined) {
+    sets.push("language = :language");
+    exprValues[":language"] = patch.language;
   }
   if (patch.segments !== undefined) {
     sets.push("segments = :segments");
@@ -182,6 +208,27 @@ export async function updateCampaignDraft(
       sets.push("batchConfig = :batchConfig");
       exprValues[":batchConfig"] = patch.batchConfig;
     }
+  }
+  if (patch.requireOptIn !== undefined) {
+    sets.push("requireOptIn = :requireOptIn");
+    exprValues[":requireOptIn"] = patch.requireOptIn;
+  }
+  if (patch.requestDlr !== undefined) {
+    if (patch.requestDlr) {
+      sets.push("requestDlr = :requestDlr");
+      exprValues[":requestDlr"] = true;
+    } else {
+      removes.push("requestDlr");
+    }
+  }
+  if (patch.total !== undefined) {
+    sets.push("total = :total");
+    exprValues[":total"] = patch.total;
+  }
+  if (patch.status !== undefined) {
+    sets.push("#status = :status");
+    exprValues[":status"] = patch.status;
+    exprNames["#status"] = "status";
   }
 
   const updateExpression = [
@@ -633,10 +680,36 @@ export async function markRecipientSent(
         TableName: TABLE_NAME,
         Key: { PK: `TENANT#${tenantId}`, SK: sk },
         UpdateExpression: "SET #status = :sent",
-        ConditionExpression: "#status = :pending",
+        ConditionExpression: "#status IN (:pending, :failed)",
         ExpressionAttributeNames: { "#status": "status" },
         ExpressionAttributeValues: {
           ":sent": "sent",
+          ":pending": "pending",
+          ":failed": "failed",
+        },
+      })
+    );
+    return true;
+  } catch (error) {
+    if (error instanceof ConditionalCheckFailedException) return false;
+    throw error;
+  }
+}
+
+export async function markRecipientFailed(
+  tenantId: string,
+  sk: string
+): Promise<boolean> {
+  try {
+    await docClient.send(
+      new UpdateCommand({
+        TableName: TABLE_NAME,
+        Key: { PK: `TENANT#${tenantId}`, SK: sk },
+        UpdateExpression: "SET #status = :failed",
+        ConditionExpression: "#status = :pending",
+        ExpressionAttributeNames: { "#status": "status" },
+        ExpressionAttributeValues: {
+          ":failed": "failed",
           ":pending": "pending",
         },
       })
@@ -646,6 +719,246 @@ export async function markRecipientSent(
     if (error instanceof ConditionalCheckFailedException) return false;
     throw error;
   }
+}
+
+export interface CampaignRecipientDetail {
+  to: string;
+  components?: CampaignRecipient["components"];
+}
+
+export async function listCampaignRecipientDetails(
+  tenantId: string,
+  campaignId: string
+): Promise<CampaignRecipientDetail[]> {
+  const recipients: CampaignRecipientDetail[] = [];
+  let lastKey: Record<string, unknown> | undefined;
+
+  do {
+    const result = await docClient.send(
+      new QueryCommand({
+        TableName: TABLE_NAME,
+        KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+        ExpressionAttributeValues: {
+          ":pk": `TENANT#${tenantId}`,
+          ":sk": `CAMPREC#${campaignId}#`,
+        },
+        ExclusiveStartKey: lastKey,
+      })
+    );
+
+    for (const item of result.Items ?? []) {
+      recipients.push({
+        to: item.to as string,
+        ...(item.components
+          ? { components: item.components as CampaignRecipient["components"] }
+          : {}),
+      });
+    }
+
+    lastKey = result.LastEvaluatedKey;
+  } while (lastKey);
+
+  return recipients;
+}
+
+async function listRecipientKeys(
+  tenantId: string,
+  campaignId: string
+): Promise<string[]> {
+  const keys: string[] = [];
+  let lastKey: Record<string, unknown> | undefined;
+
+  do {
+    const result = await docClient.send(
+      new QueryCommand({
+        TableName: TABLE_NAME,
+        KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+        ExpressionAttributeValues: {
+          ":pk": `TENANT#${tenantId}`,
+          ":sk": `CAMPREC#${campaignId}#`,
+        },
+        ProjectionExpression: "PK, SK",
+        ExclusiveStartKey: lastKey,
+      })
+    );
+
+    for (const item of result.Items ?? []) {
+      keys.push(item.SK as string);
+    }
+
+    lastKey = result.LastEvaluatedKey;
+  } while (lastKey);
+
+  return keys;
+}
+
+export async function deleteCampaignRecipients(
+  tenantId: string,
+  campaignId: string
+): Promise<void> {
+  const keys = await listRecipientKeys(tenantId, campaignId);
+  const BATCH_SIZE = 25;
+
+  for (let start = 0; start < keys.length; start += BATCH_SIZE) {
+    const batch = keys.slice(start, start + BATCH_SIZE);
+    if (batch.length === 0) continue;
+
+    await docClient.send(
+      new BatchWriteCommand({
+        RequestItems: {
+          [TABLE_NAME]: batch.map((sk) => ({
+            DeleteRequest: {
+              Key: {
+                PK: `TENANT#${tenantId}`,
+                SK: sk,
+              },
+            },
+          })),
+        },
+      })
+    );
+  }
+}
+
+export async function replaceCampaignRecipients(
+  tenantId: string,
+  campaignId: string,
+  recipients: CampaignRecipient[]
+): Promise<void> {
+  await deleteCampaignRecipients(tenantId, campaignId);
+  if (recipients.length > 0) {
+    await saveRecipients(tenantId, campaignId, recipients);
+  }
+}
+
+export async function listFailedRecipients(
+  tenantId: string,
+  campaignId: string,
+  limit = 5000
+): Promise<PendingRecipient[]> {
+  const failed: PendingRecipient[] = [];
+  let lastKey: Record<string, unknown> | undefined;
+
+  while (failed.length < limit) {
+    const result = await docClient.send(
+      new QueryCommand({
+        TableName: TABLE_NAME,
+        KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+        FilterExpression: "#status = :failed",
+        ExpressionAttributeValues: {
+          ":pk": `TENANT#${tenantId}`,
+          ":sk": `CAMPREC#${campaignId}#`,
+          ":failed": "failed",
+        },
+        ExpressionAttributeNames: { "#status": "status" },
+        ScanIndexForward: true,
+        Limit: Math.max(limit - failed.length, 25),
+        ExclusiveStartKey: lastKey,
+      })
+    );
+
+    for (const item of result.Items ?? []) {
+      const recipient: PendingRecipient = {
+        to: item.to as string,
+        recipientKey: item.SK as string,
+      };
+      if (item.components) {
+        recipient.components = item.components as CampaignRecipient["components"];
+      }
+      failed.push(recipient);
+      if (failed.length >= limit) break;
+    }
+
+    lastKey = result.LastEvaluatedKey;
+    if (!lastKey) break;
+  }
+
+  return failed.slice(0, limit);
+}
+
+export async function resetRecipientsForRetry(
+  tenantId: string,
+  recipientKeys: string[]
+): Promise<number> {
+  let resetCount = 0;
+
+  for (const sk of recipientKeys) {
+    try {
+      await docClient.send(
+        new UpdateCommand({
+          TableName: TABLE_NAME,
+          Key: { PK: `TENANT#${tenantId}`, SK: sk },
+          UpdateExpression: "SET #status = :pending",
+          ConditionExpression: "#status = :failed",
+          ExpressionAttributeNames: { "#status": "status" },
+          ExpressionAttributeValues: {
+            ":pending": "pending",
+            ":failed": "failed",
+          },
+        })
+      );
+      resetCount += 1;
+    } catch (error) {
+      if (error instanceof ConditionalCheckFailedException) continue;
+      throw error;
+    }
+  }
+
+  return resetCount;
+}
+
+export async function adjustCampaignFailedCount(
+  tenantId: string,
+  campaignId: string,
+  delta: number
+): Promise<void> {
+  if (delta === 0) return;
+  const now = new Date().toISOString();
+  await docClient.send(
+    new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: { PK: `TENANT#${tenantId}`, SK: `CAMPAIGN#${campaignId}` },
+      UpdateExpression: "ADD failed :delta SET updatedAt = :now",
+      ExpressionAttributeValues: { ":delta": delta, ":now": now },
+    })
+  );
+}
+
+export async function reopenCampaignForRetry(
+  tenantId: string,
+  campaignId: string
+): Promise<void> {
+  const now = new Date().toISOString();
+  await docClient.send(
+    new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: { PK: `TENANT#${tenantId}`, SK: `CAMPAIGN#${campaignId}` },
+      UpdateExpression: "SET #status = :running, updatedAt = :now REMOVE completedAt",
+      ExpressionAttributeNames: { "#status": "status" },
+      ExpressionAttributeValues: {
+        ":running": "running",
+        ":now": now,
+      },
+    })
+  );
+}
+
+export async function archiveCampaign(
+  tenantId: string,
+  campaignId: string
+): Promise<void> {
+  const now = new Date().toISOString();
+  await docClient.send(
+    new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: { PK: `TENANT#${tenantId}`, SK: `CAMPAIGN#${campaignId}` },
+      UpdateExpression: "SET archivedAt = :archivedAt, updatedAt = :now",
+      ExpressionAttributeValues: {
+        ":archivedAt": now,
+        ":now": now,
+      },
+    })
+  );
 }
 
 export async function saveCampaignMessageTracking(

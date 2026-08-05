@@ -658,6 +658,30 @@ locals {
       function_arn = var.campaigns_function_arn
       protected    = true
     }
+    campaigns_recipients = {
+      route_key    = "GET /campaigns/{campaignId}/recipients"
+      invoke_arn   = var.campaigns_invoke_arn
+      function_arn = var.campaigns_function_arn
+      protected    = true
+    }
+    campaigns_archive = {
+      route_key    = "POST /campaigns/{campaignId}/archive"
+      invoke_arn   = var.campaigns_invoke_arn
+      function_arn = var.campaigns_function_arn
+      protected    = true
+    }
+    campaigns_retry = {
+      route_key    = "POST /campaigns/{campaignId}/retry"
+      invoke_arn   = var.campaigns_invoke_arn
+      function_arn = var.campaigns_function_arn
+      protected    = true
+    }
+    campaigns_clone = {
+      route_key    = "POST /campaigns/{campaignId}/clone"
+      invoke_arn   = var.campaigns_invoke_arn
+      function_arn = var.campaigns_function_arn
+      protected    = true
+    }
     support_tickets_list = {
       route_key    = "GET /support/tickets"
       invoke_arn   = var.support_tickets_invoke_arn

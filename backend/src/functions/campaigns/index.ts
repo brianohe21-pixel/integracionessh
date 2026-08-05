@@ -11,6 +11,13 @@ import {
   makeCampaignId,
   incrementCampaignBatchVersion,
   listPendingRecipients,
+  listCampaignRecipientDetails,
+  replaceCampaignRecipients,
+  archiveCampaign,
+  listFailedRecipients,
+  resetRecipientsForRetry,
+  adjustCampaignFailedCount,
+  reopenCampaignForRetry,
 } from "../../lib/dynamodb/campaign.repository.js";
 import { listBulkSendFailures } from "../../lib/dynamodb/bulk-job.repository.js";
 import { getCampaignMetrics } from "../../lib/dynamodb/campaign-metrics.repository.js";
@@ -32,6 +39,13 @@ import {
 } from "../../lib/campaign/scheduler.js";
 import { dispatchCampaignBatch, startCampaignDispatch, enqueueRecipients } from "../../lib/campaign/dispatch.js";
 import { assertSmsBotReady } from "../../lib/sms/send-outbound.js";
+import {
+  canArchiveCampaign,
+  canCloneCampaign,
+  canEditCampaign,
+  canRetryFailedRecipients,
+  resolvePreStartCampaignStatus,
+} from "../../lib/campaign/management.js";
 import type { Bot, OutreachChannel } from "../../types/index.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
@@ -81,47 +95,101 @@ const BatchConfigSchema = z.object({
   delaySeconds: z.number().int().min(60).max(86_400),
 });
 
-const CreateCampaignSchema = z
-  .object({
-    name: z.string().min(1).max(120),
-    botId: z.string().min(1),
-    channel: z.enum(["whatsapp", "sms"]).optional().default("whatsapp"),
-    templateName: z.string().min(1),
-    language: z.string().min(2).max(10),
-    segments: z.array(z.string().max(50)).max(20).default([]),
-    scheduledAt: z.string().datetime().optional(),
-    batchConfig: BatchConfigSchema.optional(),
-    recipients: z.array(RecipientSchema).max(5000).optional(),
-    audienceTags: z.array(z.string().max(50)).max(20).optional(),
-    requireOptIn: z.boolean().optional().default(false),
-    requestDlr: z.boolean().optional().default(false),
-  })
-  .superRefine((data, ctx) => {
-    const hasRecipients = (data.recipients?.length ?? 0) > 0;
-    const hasTags = (data.audienceTags?.length ?? 0) > 0;
-    if (!hasRecipients && !hasTags) {
+const CampaignPayloadSchema = z.object({
+  name: z.string().min(1).max(120),
+  botId: z.string().min(1),
+  channel: z.enum(["whatsapp", "sms"]).optional().default("whatsapp"),
+  templateName: z.string().min(1),
+  language: z.string().min(2).max(10),
+  segments: z.array(z.string().max(50)).max(20).default([]),
+  scheduledAt: z.string().datetime().optional(),
+  batchConfig: BatchConfigSchema.optional(),
+  recipients: z.array(RecipientSchema).max(5000).optional(),
+  audienceTags: z.array(z.string().max(50)).max(20).optional(),
+  requireOptIn: z.boolean().optional().default(false),
+  requestDlr: z.boolean().optional().default(false),
+});
+
+const CreateCampaignSchema = CampaignPayloadSchema.superRefine((data, ctx) => {
+  const hasRecipients = (data.recipients?.length ?? 0) > 0;
+  const hasTags = (data.audienceTags?.length ?? 0) > 0;
+  if (!hasRecipients && !hasTags) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Provide recipients or audienceTags",
+    });
+  }
+  if (data.batchConfig) {
+    const error = validateBatchConfig(data.batchConfig);
+    if (error) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Provide recipients or audienceTags",
+        message: error,
       });
     }
-    if (data.batchConfig) {
-      const error = validateBatchConfig(data.batchConfig);
-      if (error) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: error,
-        });
-      }
-    }
-  });
-
-const UpdateCampaignSchema = z.object({
-  name: z.string().min(1).max(120).optional(),
-  segments: z.array(z.string().max(50)).max(20).optional(),
-  scheduledAt: z.string().datetime().nullable().optional(),
-  batchConfig: BatchConfigSchema.nullable().optional(),
+  }
 });
+
+const UpdateCampaignSchema = CampaignPayloadSchema.extend({
+  scheduledAt: z.string().datetime().nullable().optional(),
+}).superRefine((data, ctx) => {
+  const hasRecipients = (data.recipients?.length ?? 0) > 0;
+  const hasTags = (data.audienceTags?.length ?? 0) > 0;
+  if (!hasRecipients && !hasTags) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Provide recipients or audienceTags",
+    });
+  }
+  if (data.batchConfig) {
+    const error = validateBatchConfig(data.batchConfig);
+    if (error) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: error,
+      });
+    }
+  }
+});
+
+async function resolveUniqueRecipients(
+  tenantId: string,
+  data: {
+    recipients?: z.infer<typeof RecipientSchema>[];
+    audienceTags?: string[];
+    requireOptIn?: boolean;
+  }
+): Promise<CampaignRecipientType[]> {
+  let recipients = data.recipients ?? [];
+  if (data.audienceTags?.length) {
+    const contacts = await listContactsByTags(
+      tenantId,
+      data.audienceTags,
+      data.requireOptIn ? { requireOptIn: true } : {}
+    );
+    const fromTags = contacts.map((c) => ({ to: c.phoneNumber }));
+    recipients = [...recipients, ...fromTags];
+  }
+
+  return [
+    ...new Map(recipients.map((r) => [r.to.replace(/\D/g, ""), r])).values(),
+  ] as CampaignRecipientType[];
+}
+
+async function syncCampaignSchedule(
+  campaignId: string,
+  tenantId: string,
+  previousScheduledAt: string | undefined,
+  nextScheduledAt: string | null | undefined
+): Promise<void> {
+  if (previousScheduledAt) {
+    await deleteCampaignStartSchedule(campaignId);
+  }
+
+  if (nextScheduledAt) {
+    await createCampaignStartSchedule(campaignId, tenantId, nextScheduledAt);
+  }
+}
 
 async function startCampaign(
   tenantId: string,
@@ -218,6 +286,13 @@ export async function handler(
         );
         const failures = await listBulkSendFailures(auth.tenantId, campaignId, limit);
         return ok(failures);
+      }
+
+      if (rawPath.endsWith("/recipients")) {
+        const campaign = await getCampaign(auth.tenantId, campaignId);
+        if (!campaign) return notFound("Campaign not found");
+        const recipients = await listCampaignRecipientDetails(auth.tenantId, campaignId);
+        return ok(recipients);
       }
 
       const campaign = await getCampaign(auth.tenantId, campaignId);
@@ -318,25 +393,85 @@ export async function handler(
     if (method === "PUT" && campaignId) {
       const campaign = await getCampaign(auth.tenantId, campaignId);
       if (!campaign) return notFound("Campaign not found");
-      if (campaign.status !== "draft") {
-        return forbidden("Only draft campaigns can be edited");
+      if (!canEditCampaign(campaign.status)) {
+        return forbidden("Only draft or scheduled campaigns can be edited");
       }
       const body = JSON.parse(event.body ?? "{}");
       const parsed = UpdateCampaignSchema.safeParse(body);
       if (!parsed.success) return badRequest(parsed.error.message);
 
-      const patch: {
-        name?: string;
-        segments?: string[];
-        scheduledAt?: string | null;
-        batchConfig?: { size: number; delaySeconds: number } | null;
-      } = {};
-      if (parsed.data.name !== undefined) patch.name = parsed.data.name;
-      if (parsed.data.segments !== undefined) patch.segments = parsed.data.segments;
-      if (parsed.data.scheduledAt !== undefined) patch.scheduledAt = parsed.data.scheduledAt;
-      if (parsed.data.batchConfig !== undefined) patch.batchConfig = parsed.data.batchConfig;
+      const {
+        name,
+        botId,
+        channel,
+        templateName,
+        language,
+        segments,
+        scheduledAt,
+        audienceTags,
+        requireOptIn,
+        requestDlr,
+        batchConfig,
+      } = parsed.data;
 
-      await updateCampaignDraft(auth.tenantId, campaignId, patch);
+      const uniqueRecipients = await resolveUniqueRecipients(auth.tenantId, {
+        ...(parsed.data.recipients ? { recipients: parsed.data.recipients } : {}),
+        ...(audienceTags ? { audienceTags } : {}),
+        ...(requireOptIn ? { requireOptIn: true } : {}),
+      });
+
+      if (uniqueRecipients.length === 0) {
+        return badRequest("No eligible contacts found for this audience");
+      }
+
+      if (requireOptIn) {
+        const phones = uniqueRecipients.map((r) => r.to.replace(/\D/g, ""));
+        const { blocked } = await checkMarketingRecipients(auth.tenantId, phones, auth.userId);
+        if (blocked.length > 0) {
+          return unprocessableEntity("Some recipients cannot receive marketing messages", {
+            blocked,
+          });
+        }
+      }
+
+      const bot = await getBot(auth.tenantId, botId);
+      if (!bot) return notFound("Bot not found");
+
+      const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
+      await assertBulkRecipients(tenant, uniqueRecipients.length);
+
+      const mergedSegments = [...new Set([...segments, ...(audienceTags ?? [])])];
+      const nextStatus = resolvePreStartCampaignStatus(scheduledAt);
+      const previousScheduledAt = campaign.scheduledAt;
+
+      await updateCampaignDraft(auth.tenantId, campaignId, {
+        name,
+        botId,
+        channel,
+        templateName,
+        language,
+        segments: mergedSegments,
+        scheduledAt: scheduledAt ?? null,
+        batchConfig: batchConfig ?? null,
+        requireOptIn,
+        requestDlr: channel === "sms" && requestDlr,
+        total: uniqueRecipients.length,
+        status: nextStatus,
+      });
+
+      await replaceCampaignRecipients(
+        auth.tenantId,
+        campaignId,
+        uniqueRecipients as CampaignRecipientType[]
+      );
+
+      await syncCampaignSchedule(
+        campaignId,
+        auth.tenantId,
+        previousScheduledAt,
+        scheduledAt
+      );
+
       const updated = await getCampaign(auth.tenantId, campaignId);
       return ok(updated);
     }
@@ -422,6 +557,110 @@ export async function handler(
 
       const updated = await getCampaign(auth.tenantId, campaignId);
       return ok(updated);
+    }
+
+    if (method === "POST" && campaignId && action === "archive") {
+      const campaign = await getCampaign(auth.tenantId, campaignId);
+      if (!campaign) return notFound("Campaign not found");
+      if (campaign.archivedAt) {
+        return badRequest("Campaign is already archived");
+      }
+      if (!canArchiveCampaign(campaign.status)) {
+        return badRequest("Running campaigns must be paused or cancelled before archiving");
+      }
+      if (campaign.status === "scheduled") {
+        await deleteCampaignStartSchedule(campaignId);
+        await updateCampaignStatus(auth.tenantId, campaignId, "cancelled");
+      } else if (campaign.status === "paused") {
+        await deleteCampaignBatchSchedule(campaignId);
+        await incrementCampaignBatchVersion(auth.tenantId, campaignId);
+        await updateCampaignStatus(auth.tenantId, campaignId, "cancelled");
+      }
+      await archiveCampaign(auth.tenantId, campaignId);
+      return ok({ message: "Campaign archived" });
+    }
+
+    if (method === "POST" && campaignId && action === "retry") {
+      const campaign = await getCampaign(auth.tenantId, campaignId);
+      if (!campaign) return notFound("Campaign not found");
+      if (!canRetryFailedRecipients(campaign)) {
+        return badRequest("No failed recipients available to retry");
+      }
+
+      const bot = await getBot(auth.tenantId, campaign.botId);
+      if (!bot) return notFound("Bot not found");
+      await assertCampaignChannelReady(auth.tenantId, bot, campaign.channel ?? "whatsapp");
+
+      const failedRecipients = await listFailedRecipients(auth.tenantId, campaignId, 5000);
+      if (failedRecipients.length === 0) {
+        return badRequest("No failed recipients available to retry");
+      }
+
+      const resetCount = await resetRecipientsForRetry(
+        auth.tenantId,
+        failedRecipients.map((recipient) => recipient.recipientKey)
+      );
+      if (resetCount === 0) {
+        return badRequest("No failed recipients available to retry");
+      }
+
+      await adjustCampaignFailedCount(auth.tenantId, campaignId, -resetCount);
+
+      if (campaign.status === "completed" || campaign.status === "cancelled" || campaign.status === "failed") {
+        await reopenCampaignForRetry(auth.tenantId, campaignId);
+      } else if (campaign.status === "paused") {
+        await updateCampaignStatus(auth.tenantId, campaignId, "running");
+      }
+
+      const refreshed = await getCampaign(auth.tenantId, campaignId);
+      if (!refreshed) return notFound("Campaign not found");
+
+      const pendingForRetry = await listPendingRecipients(auth.tenantId, campaignId, resetCount);
+      if (pendingForRetry.length > 0) {
+        await enqueueRecipients(refreshed, pendingForRetry);
+      }
+
+      const updated = await getCampaign(auth.tenantId, campaignId);
+      return ok(updated);
+    }
+
+    if (method === "POST" && campaignId && action === "clone") {
+      const campaign = await getCampaign(auth.tenantId, campaignId);
+      if (!campaign) return notFound("Campaign not found");
+      if (!canCloneCampaign(campaign.status)) {
+        return badRequest("Running or paused campaigns cannot be cloned");
+      }
+
+      const recipients = await listCampaignRecipientDetails(auth.tenantId, campaignId);
+      if (recipients.length === 0) {
+        return badRequest("Campaign has no recipients to clone");
+      }
+
+      const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
+      await assertBulkRecipients(tenant, recipients.length);
+
+      const newCampaignId = makeCampaignId();
+      const now = new Date().toISOString();
+      const cloned = await createCampaign({
+        campaignId: newCampaignId,
+        tenantId: auth.tenantId,
+        botId: campaign.botId,
+        name: `${campaign.name} (copy)`,
+        channel: campaign.channel ?? "whatsapp",
+        templateName: campaign.templateName,
+        language: campaign.language,
+        status: "draft",
+        segments: [...campaign.segments],
+        requireOptIn: campaign.requireOptIn ?? false,
+        ...(campaign.channel === "sms" && campaign.requestDlr ? { requestDlr: true } : {}),
+        ...(campaign.batchConfig ? { batchConfig: campaign.batchConfig } : {}),
+        total: recipients.length,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await saveRecipients(auth.tenantId, newCampaignId, recipients as CampaignRecipientType[]);
+      return created(cloned);
     }
 
     if (method === "DELETE" && campaignId) {
