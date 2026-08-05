@@ -223,8 +223,9 @@ export async function updateCampaignDraft(
     }
   }
   if (patch.total !== undefined) {
-    sets.push("total = :total");
+    sets.push("#total = :total");
     exprValues[":total"] = patch.total;
+    exprNames["#total"] = "total";
   }
   if (patch.status !== undefined) {
     sets.push("#status = :status");
