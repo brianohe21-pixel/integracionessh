@@ -163,74 +163,65 @@ export async function updateCampaignDraft(
   }
 ): Promise<void> {
   const now = new Date().toISOString();
-  const sets: string[] = ["updatedAt = :now"];
+  const sets: string[] = ["#updatedAt = :now"];
   const removes: string[] = [];
   const exprValues: Record<string, unknown> = { ":now": now };
-  const exprNames: Record<string, string> = {};
+  const exprNames: Record<string, string> = { "#updatedAt": "updatedAt" };
+
+  const setField = (attr: string, valueKey: string, value: unknown) => {
+    const nameKey = `#${attr}`;
+    sets.push(`${nameKey} = ${valueKey}`);
+    exprNames[nameKey] = attr;
+    exprValues[valueKey] = value;
+  };
 
   if (patch.name !== undefined) {
-    sets.push("#name = :name");
-    exprValues[":name"] = patch.name;
-    exprNames["#name"] = "name";
+    setField("name", ":name", patch.name);
   }
   if (patch.botId !== undefined) {
-    sets.push("botId = :botId");
-    exprValues[":botId"] = patch.botId;
+    setField("botId", ":botId", patch.botId);
   }
   if (patch.channel !== undefined) {
-    sets.push("channel = :channel");
-    exprValues[":channel"] = patch.channel;
+    setField("channel", ":channel", patch.channel);
   }
   if (patch.templateName !== undefined) {
-    sets.push("templateName = :templateName");
-    exprValues[":templateName"] = patch.templateName;
+    setField("templateName", ":templateName", patch.templateName);
   }
   if (patch.language !== undefined) {
-    sets.push("#language = :language");
-    exprValues[":language"] = patch.language;
-    exprNames["#language"] = "language";
+    setField("language", ":language", patch.language);
   }
   if (patch.segments !== undefined) {
-    sets.push("segments = :segments");
-    exprValues[":segments"] = patch.segments;
+    setField("segments", ":segments", patch.segments);
   }
   if (patch.scheduledAt !== undefined) {
     if (patch.scheduledAt === null) {
       removes.push("scheduledAt");
     } else {
-      sets.push("scheduledAt = :scheduledAt");
-      exprValues[":scheduledAt"] = patch.scheduledAt;
+      setField("scheduledAt", ":scheduledAt", patch.scheduledAt);
     }
   }
   if (patch.batchConfig !== undefined) {
     if (patch.batchConfig === null) {
       removes.push("batchConfig");
     } else {
-      sets.push("batchConfig = :batchConfig");
-      exprValues[":batchConfig"] = patch.batchConfig;
+      setField("batchConfig", ":batchConfig", patch.batchConfig);
     }
   }
   if (patch.requireOptIn !== undefined) {
-    sets.push("requireOptIn = :requireOptIn");
-    exprValues[":requireOptIn"] = patch.requireOptIn;
+    setField("requireOptIn", ":requireOptIn", patch.requireOptIn);
   }
   if (patch.requestDlr !== undefined) {
     if (patch.requestDlr) {
-      sets.push("requestDlr = :requestDlr");
-      exprValues[":requestDlr"] = true;
+      setField("requestDlr", ":requestDlr", true);
     } else {
       removes.push("requestDlr");
     }
   }
   if (patch.total !== undefined) {
-    sets.push("#total = :total");
-    exprValues[":total"] = patch.total;
-    exprNames["#total"] = "total";
+    setField("total", ":total", patch.total);
   }
   if (patch.status !== undefined) {
-    sets.push("#status = :status");
-    exprValues[":status"] = patch.status;
-    exprNames["#status"] = "status";
+    setField("status", ":status", patch.status);
   }
 
   const updateExpression = [
@@ -243,8 +234,8 @@ export async function updateCampaignDraft(
       TableName: TABLE_NAME,
       Key: { PK: `TENANT#${tenantId}`, SK: `CAMPAIGN#${campaignId}` },
       UpdateExpression: updateExpression,
+      ExpressionAttributeNames: exprNames,
       ExpressionAttributeValues: exprValues,
-      ...(Object.keys(exprNames).length > 0 ? { ExpressionAttributeNames: exprNames } : {}),
     })
   );
 }
