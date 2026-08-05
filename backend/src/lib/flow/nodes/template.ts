@@ -1,6 +1,7 @@
 import { sendTemplateMessage } from "../../whatsapp/client.js";
 import type { FlowNode, FlowRun } from "../../../types/index.js";
 import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
+import { requireMessagingContext } from "../types.js";
 import { getNextNodeId } from "../graph.js";
 import { skipWhatsAppOnlyNode } from "./channel-guard.js";
 import { getBotLocale, templateLanguageForLocale } from "../../i18n/index.js";
@@ -16,13 +17,14 @@ export async function executeTemplateNode(
   if (!templateName || !templateLanguage) {
     throw new Error("templateName and templateLanguage required");
   }
-  const locale = getBotLocale(ctx.conversation, ctx.bot);
+  const { conversation, phoneNumberId, accessToken, customerPhone } = requireMessagingContext(ctx);
+  const locale = getBotLocale(conversation, ctx.bot);
   await sendTemplateMessage({
-    phoneNumberId: ctx.phoneNumberId,
-    to: ctx.customerPhone,
+    phoneNumberId,
+    to: customerPhone,
     templateName,
     language: templateLanguage || templateLanguageForLocale(locale),
-    accessToken: ctx.accessToken,
+    accessToken,
     ...(templateVariables
       ? {
           components: [

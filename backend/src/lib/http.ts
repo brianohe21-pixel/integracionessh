@@ -25,6 +25,14 @@ export function created<T>(data: T): APIGatewayProxyResultV2 {
   };
 }
 
+export function accepted<T>(data: T): APIGatewayProxyResultV2 {
+  return {
+    statusCode: 202,
+    headers: CORS_HEADERS,
+    body: JSON.stringify(data),
+  };
+}
+
 export function noContent(): APIGatewayProxyResultV2 {
   return {
     statusCode: 204,

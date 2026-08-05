@@ -270,6 +270,14 @@ variable "flows_function_arn" {
   type = string
 }
 
+variable "flow_hooks_invoke_arn" {
+  type = string
+}
+
+variable "flow_hooks_function_arn" {
+  type = string
+}
+
 variable "calling_invoke_arn" {
   type = string
 }

@@ -1,6 +1,7 @@
 import { buildOutboundContext, sendChannelText } from "../../channels/router.js";
 import type { FlowNode, FlowRun } from "../../../types/index.js";
 import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
+import { requireMessagingContext } from "../types.js";
 import { getNextNodeId } from "../graph.js";
 import { createPaymentRequest } from "../../payments/payments.service.js";
 import { formatPaymentMessage } from "../../payments/checkout.js";
@@ -11,7 +12,9 @@ export async function executeRequestPaymentNode(
   ctx: FlowExecutionContext,
   run: FlowRun
 ): Promise<NodeExecutionResult> {
-  const locale = getBotLocale(ctx.conversation, ctx.bot);
+  const { conversation, phoneNumberId: _phoneNumberId, accessToken, customerPhone } =
+    requireMessagingContext(ctx);
+  const locale = getBotLocale(conversation, ctx.bot);
   const amountInCents = node.data.amountInCents;
   const description =
     resolveLocalizedText(node.data.paymentDescription, locale) ||
@@ -24,8 +27,8 @@ export async function executeRequestPaymentNode(
         tenantId: ctx.tenantId,
         botId: ctx.botId,
         bot: ctx.bot,
-        conversation: ctx.conversation,
-        accessToken: ctx.accessToken,
+        conversation,
+        accessToken,
         environment: ctx.environment,
       }),
       getSystemMessage("paymentInvalidAmount", locale)
@@ -40,9 +43,9 @@ export async function executeRequestPaymentNode(
       botId: ctx.botId,
       amountInCents,
       description,
-      contactPhone: ctx.customerPhone,
+      contactPhone: customerPhone,
       source: "flow",
-      conversationId: ctx.conversation.conversationId,
+      conversationId: conversation.conversationId,
       ...(waitForPayment ? { flowRunId: run.runId } : {}),
       environment: ctx.environment,
       sendWhatsApp: false,
@@ -61,8 +64,8 @@ export async function executeRequestPaymentNode(
         tenantId: ctx.tenantId,
         botId: ctx.botId,
         bot: ctx.bot,
-        conversation: ctx.conversation,
-        accessToken: ctx.accessToken,
+        conversation,
+        accessToken,
         environment: ctx.environment,
         replyToExternalId: ctx.replyToMessageId,
       }),
@@ -98,8 +101,8 @@ export async function executeRequestPaymentNode(
         tenantId: ctx.tenantId,
         botId: ctx.botId,
         bot: ctx.bot,
-        conversation: ctx.conversation,
-        accessToken: ctx.accessToken,
+        conversation,
+        accessToken,
         environment: ctx.environment,
       }),
       message

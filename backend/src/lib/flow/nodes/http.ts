@@ -1,5 +1,6 @@
 import type { FlowNode, FlowRun } from "../../../types/index.js";
 import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
+import { buildBindingContext, resolveBindingValue } from "../binding.js";
 import { getNextNodeId } from "../graph.js";
 
 export async function executeHttpRequestNode(
@@ -10,14 +11,20 @@ export async function executeHttpRequestNode(
   const url = node.data.httpUrl;
   if (!url) throw new Error("httpUrl required");
 
+  const bindingContext = buildBindingContext({
+    formPayload: ctx.formPayload,
+    variables: run.variables,
+  });
+
   let body = node.data.httpBody ?? "";
   for (const [key, val] of Object.entries(run.variables)) {
     body = body.replaceAll(`{{${key}}}`, val);
   }
-  body = body.replaceAll("{{last_input}}", ctx.inbound.text);
+  body = resolveBindingValue(body, bindingContext);
+  const resolvedUrl = resolveBindingValue(url, bindingContext);
 
   const method = node.data.httpMethod ?? "GET";
-  const response = await fetch(url, {
+  const response = await fetch(resolvedUrl, {
     method,
     ...(method === "POST" ? { headers: { "Content-Type": "application/json" }, body } : {}),
   });

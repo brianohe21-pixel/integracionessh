@@ -19,6 +19,7 @@ output "dlq_arns" {
     automation  = aws_sqs_queue.automation_dlq.arn
     knowledge   = aws_sqs_queue.knowledge_dlq.arn
     flow_run    = aws_sqs_queue.flow_run_dlq.arn
+    flow_event  = aws_sqs_queue.flow_event_dlq.arn
     call_events = aws_sqs_queue.call_events_dlq.arn
   }
 }
@@ -32,6 +33,7 @@ output "queue_arns" {
     automation  = aws_sqs_queue.automation_run.arn
     knowledge   = aws_sqs_queue.knowledge_index.arn
     flow_run    = aws_sqs_queue.flow_run.arn
+    flow_event  = aws_sqs_queue.flow_event.arn
     call_events = aws_sqs_queue.call_events.arn
   }
 }
@@ -82,6 +84,14 @@ output "flow_run_queue_url" {
 
 output "flow_run_queue_arn" {
   value = aws_sqs_queue.flow_run.arn
+}
+
+output "flow_event_queue_url" {
+  value = aws_sqs_queue.flow_event.url
+}
+
+output "flow_event_queue_arn" {
+  value = aws_sqs_queue.flow_event.arn
 }
 
 output "call_events_queue_url" {

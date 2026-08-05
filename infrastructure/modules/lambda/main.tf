@@ -65,6 +65,7 @@ resource "aws_iam_role_policy" "lambda_permissions" {
           var.automation_sqs_queue_arn,
           var.knowledge_sqs_queue_arn,
           var.flow_run_sqs_queue_arn,
+          var.flow_event_sqs_queue_arn,
           var.call_events_sqs_queue_arn,
         ]
       },
@@ -707,11 +708,26 @@ locals {
       timeout     = 60
       memory      = 256
       environment = {
-        TABLE_NAME             = var.dynamodb_table_name
-        FLOW_RUN_SQS_QUEUE_URL = var.flow_run_sqs_queue_url
-        SCHEDULER_ROLE_ARN     = var.scheduler_role_arn
-        FLOWS_FUNCTION_ARN     = local.flows_function_arn
-        ENVIRONMENT            = var.environment
+        TABLE_NAME                = var.dynamodb_table_name
+        FLOW_RUN_SQS_QUEUE_URL    = var.flow_run_sqs_queue_url
+        FLOW_EVENT_SQS_QUEUE_URL  = var.flow_event_sqs_queue_url
+        SCHEDULER_ROLE_ARN        = var.scheduler_role_arn
+        FLOWS_FUNCTION_ARN        = local.flows_function_arn
+        API_PUBLIC_URL            = var.api_public_url
+        ENVIRONMENT               = var.environment
+      }
+    }
+    flow_hooks = {
+      handler     = "flow-hooks/index.handler"
+      description = "Public webhook endpoint for form-triggered flows"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME               = var.dynamodb_table_name
+        FLOW_EVENT_SQS_QUEUE_URL = var.flow_event_sqs_queue_url
+        INTEGRATION_SQS_QUEUE_URL = var.integration_sqs_queue_url
+        API_PUBLIC_URL           = var.api_public_url
+        ENVIRONMENT              = var.environment
       }
     }
     process_flow = {
@@ -722,6 +738,20 @@ locals {
       environment = {
         TABLE_NAME  = var.dynamodb_table_name
         ENVIRONMENT = var.environment
+      }
+    }
+    process_flow_event = {
+      handler     = "process-flow-event/index.handler"
+      description = "Processes form-triggered flow events from SQS"
+      timeout     = 300
+      memory      = 512
+      environment = {
+        TABLE_NAME               = var.dynamodb_table_name
+        FLOW_RUN_SQS_QUEUE_URL   = var.flow_run_sqs_queue_url
+        FLOW_EVENT_SQS_QUEUE_URL = var.flow_event_sqs_queue_url
+        SCHEDULER_ROLE_ARN       = var.scheduler_role_arn
+        FLOWS_FUNCTION_ARN       = local.flows_function_arn
+        ENVIRONMENT              = var.environment
       }
     }
     process_call = {
@@ -880,6 +910,14 @@ resource "aws_lambda_event_source_mapping" "knowledge_sqs_trigger" {
 resource "aws_lambda_event_source_mapping" "flow_run_sqs_trigger" {
   event_source_arn                   = var.flow_run_sqs_queue_arn
   function_name                      = aws_lambda_function.functions["process_flow"].arn
+  batch_size                         = 1
+  enabled                            = true
+  maximum_batching_window_in_seconds = 0
+}
+
+resource "aws_lambda_event_source_mapping" "flow_event_sqs_trigger" {
+  event_source_arn                   = var.flow_event_sqs_queue_arn
+  function_name                      = aws_lambda_function.functions["process_flow_event"].arn
   batch_size                         = 1
   enabled                            = true
   maximum_batching_window_in_seconds = 0

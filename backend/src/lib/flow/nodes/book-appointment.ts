@@ -2,6 +2,7 @@ import { buildOutboundContext, sendChannelText } from "../../channels/router.js"
 import { sendInteractiveButtons } from "../../whatsapp/flows.js";
 import type { FlowNode, FlowRun } from "../../../types/index.js";
 import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
+import { requireMessagingContext } from "../types.js";
 import { getNextNodeId } from "../graph.js";
 import {
   createBookingForBot,
@@ -56,21 +57,22 @@ async function sendOptions(
   bodyText: string,
   options: Array<{ id: string; label: string }>
 ): Promise<void> {
+  const { conversation, phoneNumberId, accessToken, customerPhone } = requireMessagingContext(ctx);
   const outbound = buildOutboundContext({
     tenantId: ctx.tenantId,
     botId: ctx.botId,
     bot: ctx.bot,
-    conversation: ctx.conversation,
-    accessToken: ctx.accessToken,
+    conversation,
+    accessToken,
     environment: ctx.environment,
     replyToExternalId: ctx.replyToMessageId,
   });
 
   if (ctx.channel === "whatsapp" && options.length <= 3) {
     await sendInteractiveButtons({
-      phoneNumberId: ctx.phoneNumberId,
-      to: ctx.customerPhone,
-      accessToken: ctx.accessToken,
+      phoneNumberId,
+      to: customerPhone,
+      accessToken,
       bodyText,
       buttons: options.map((o) => ({ id: o.id, title: o.label.slice(0, 20) })),
       ...(ctx.replyToMessageId ? { replyToMessageId: ctx.replyToMessageId } : {}),
@@ -87,7 +89,8 @@ export async function executeBookAppointmentNode(
   ctx: FlowExecutionContext,
   run: FlowRun
 ): Promise<NodeExecutionResult> {
-  const locale = getBotLocale(ctx.conversation, ctx.bot);
+  const { conversation, phoneNumberId, accessToken, customerPhone } = requireMessagingContext(ctx);
+  const locale = getBotLocale(conversation, ctx.bot);
   let config;
   try {
     config = await requireEnabledCalendar(ctx.tenantId, ctx.botId);
@@ -97,8 +100,8 @@ export async function executeBookAppointmentNode(
         tenantId: ctx.tenantId,
         botId: ctx.botId,
         bot: ctx.bot,
-        conversation: ctx.conversation,
-        accessToken: ctx.accessToken,
+        conversation,
+        accessToken,
         environment: ctx.environment,
       }),
       getSystemMessage("calendarUnavailable", locale)
@@ -111,7 +114,7 @@ export async function executeBookAppointmentNode(
   const slotKey = nodeSlotKey(node.id);
   const maxDays = node.data.maxDaysToShow ?? 7;
   const selection =
-    ctx.buttonReplyId ?? parseSelection(run.variables.last_input) ?? parseSelection(ctx.inbound.text);
+    ctx.buttonReplyId ?? parseSelection(run.variables.last_input) ?? parseSelection(ctx.inbound?.text);
 
   let step = run.variables[stepKey] ?? "pick_date";
 
@@ -130,8 +133,8 @@ export async function executeBookAppointmentNode(
           tenantId: ctx.tenantId,
           botId: ctx.botId,
           startAt,
-          contactPhone: ctx.customerPhone,
-          conversationId: ctx.conversation.conversationId,
+          contactPhone: customerPhone,
+          conversationId: conversation.conversationId,
           source: "flow",
           environment: ctx.environment,
         });
@@ -151,8 +154,8 @@ export async function executeBookAppointmentNode(
             tenantId: ctx.tenantId,
             botId: ctx.botId,
             bot: ctx.bot,
-            conversation: ctx.conversation,
-            accessToken: ctx.accessToken,
+            conversation,
+            accessToken,
             environment: ctx.environment,
           }),
           confirmation
@@ -176,8 +179,8 @@ export async function executeBookAppointmentNode(
             tenantId: ctx.tenantId,
             botId: ctx.botId,
             bot: ctx.bot,
-            conversation: ctx.conversation,
-            accessToken: ctx.accessToken,
+            conversation,
+            accessToken,
             environment: ctx.environment,
           }),
           message
@@ -196,8 +199,8 @@ export async function executeBookAppointmentNode(
           tenantId: ctx.tenantId,
           botId: ctx.botId,
           bot: ctx.bot,
-          conversation: ctx.conversation,
-          accessToken: ctx.accessToken,
+          conversation,
+          accessToken,
           environment: ctx.environment,
         }),
         getSystemMessage("bookingCancelled", locale)
@@ -223,8 +226,8 @@ export async function executeBookAppointmentNode(
           tenantId: ctx.tenantId,
           botId: ctx.botId,
           bot: ctx.bot,
-          conversation: ctx.conversation,
-          accessToken: ctx.accessToken,
+          conversation,
+          accessToken,
           environment: ctx.environment,
         }),
         getSystemMessage("bookingNoDates", locale)
@@ -284,8 +287,8 @@ export async function executeBookAppointmentNode(
           tenantId: ctx.tenantId,
           botId: ctx.botId,
           bot: ctx.bot,
-          conversation: ctx.conversation,
-          accessToken: ctx.accessToken,
+          conversation,
+          accessToken,
           environment: ctx.environment,
         }),
         getSystemMessage("bookingNoSlots", locale)
@@ -336,9 +339,9 @@ export async function executeBookAppointmentNode(
     : `Confirmar cita el ${dateLabel} a las ${startAt ? new Date(startAt).toLocaleTimeString(intlLocaleForBot(locale), { hour: "2-digit", minute: "2-digit", timeZone: config.timezone }) : ""}?`;
   if (ctx.channel === "whatsapp") {
     await sendInteractiveButtons({
-      phoneNumberId: ctx.phoneNumberId,
-      to: ctx.customerPhone,
-      accessToken: ctx.accessToken,
+      phoneNumberId,
+      to: customerPhone,
+      accessToken,
       bodyText: confirmText,
       buttons: [
         { id: CONFIRM_YES, title: getSystemMessage("bookingConfirmYes", locale) },

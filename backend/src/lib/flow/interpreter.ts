@@ -20,7 +20,7 @@ import type {
 } from "../../types/index.js";
 import { executeNode } from "./nodes/index.js";
 import { scheduleFlowResume } from "./schedule.js";
-import type { FlowExecutionContext } from "./types.js";
+import { requireConversation, type FlowExecutionContext } from "./types.js";
 
 const MAX_STEPS_PER_RUN = 50;
 
@@ -44,6 +44,7 @@ function buildContext(params: {
   channel?: Channel;
 }): FlowExecutionContext {
   return {
+    mode: "conversation",
     ...params,
     channel: params.channel ?? params.conversation.channel ?? "whatsapp",
     environment: process.env.ENVIRONMENT ?? "dev",
@@ -55,6 +56,7 @@ async function runFromNode(
   flow: FlowDefinition,
   ctx: FlowExecutionContext
 ): Promise<FlowPipelineResult> {
+  const conversation = requireConversation(ctx);
   let currentNodeId: string | null = run.currentNodeId;
   let stepCount = run.stepCount;
   let variables = { ...run.variables };
@@ -66,7 +68,7 @@ async function runFromNode(
         stepCount,
         variables,
       });
-      await clearActiveFlowRun(ctx.tenantId, ctx.botId, ctx.conversation.conversationId);
+      await clearActiveFlowRun(ctx.tenantId, ctx.botId, conversation.conversationId);
       return { handled: true, halt: true };
     }
 
@@ -110,7 +112,7 @@ async function runFromNode(
         stepCount,
       });
       if (completed) {
-        await clearActiveFlowRun(ctx.tenantId, ctx.botId, ctx.conversation.conversationId);
+        await clearActiveFlowRun(ctx.tenantId, ctx.botId, conversation.conversationId);
       }
       return { handled: true, halt: result.halt };
     }
@@ -126,7 +128,7 @@ async function runFromNode(
     stepCount,
     variables,
   });
-  await clearActiveFlowRun(ctx.tenantId, ctx.botId, ctx.conversation.conversationId);
+  await clearActiveFlowRun(ctx.tenantId, ctx.botId, conversation.conversationId);
   return { handled: true, halt: true };
 }
 
@@ -158,6 +160,7 @@ export async function startFlowRun(params: {
     flowId: params.flow.flowId,
     tenantId: params.tenantId,
     botId: params.botId,
+    source: "conversation",
     conversationId: params.conversation.conversationId,
     customerPhone: params.customerPhone,
     status: "active",
@@ -356,6 +359,7 @@ export async function resumeFlowRunById(
 
   const bot = await getBot(tenantId, run.botId);
   if (!bot) return;
+  if (!run.conversationId) return;
   const conversation = await getConversation(tenantId, run.botId, run.conversationId);
   if (!conversation) return;
   const accessToken = await getWhatsAppAccessToken(tenantId, process.env.ENVIRONMENT ?? "dev");
@@ -367,7 +371,7 @@ export async function resumeFlowRunById(
     conversation,
     phoneNumberId: bot.phoneNumberId,
     accessToken,
-    customerPhone: run.customerPhone,
+    customerPhone: run.customerPhone ?? conversation.phoneNumber,
     inbound: { text: "", messageType: "text", raw: { from: run.customerPhone, id: "", timestamp: "", type: "text" } },
     flow,
   });
@@ -434,8 +438,8 @@ export async function resumeFlowRunOnOrder(params: {
     conversation,
     phoneNumberId: bot.phoneNumberId,
     accessToken,
-    customerPhone: run.customerPhone,
-    inbound: { text: "", messageType: "order", raw: { from: run.customerPhone, id: "", timestamp: "", type: "order" } },
+    customerPhone: run.customerPhone ?? conversation.phoneNumber,
+    inbound: { text: "", messageType: "order", raw: { from: run.customerPhone ?? conversation.phoneNumber, id: "", timestamp: "", type: "order" } },
     flow,
   });
 

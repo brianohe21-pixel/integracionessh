@@ -28,6 +28,11 @@ const runGsi1 = (tenantId: string, conversationId: string) => ({
   GSI1SK: `FLOWRUN#ACTIVE`,
 });
 
+const runGsi1ByFlow = (tenantId: string, flowId: string, createdAt: string, runId: string) => ({
+  GSI1PK: `TENANT#${tenantId}#FLOW#${flowId}#RUNS`,
+  GSI1SK: `CREATED#${createdAt}#${runId}`,
+});
+
 export function makeFlowId(): string {
   return randomUUID();
 }
@@ -152,12 +157,19 @@ export async function listEnabledFlowsForBot(
 }
 
 export async function createFlowRun(run: FlowRun): Promise<FlowRun> {
+  const gsi1 =
+    run.source === "event"
+      ? runGsi1ByFlow(run.tenantId, run.flowId, run.createdAt, run.runId)
+      : run.conversationId
+        ? runGsi1(run.tenantId, run.conversationId)
+        : runGsi1ByFlow(run.tenantId, run.flowId, run.createdAt, run.runId);
+
   await docClient.send(
     new PutCommand({
       TableName: TABLE_NAME,
       Item: {
         ...runKeys(run.tenantId, run.runId),
-        ...runGsi1(run.tenantId, run.conversationId),
+        ...gsi1,
         ...run,
       },
     })
@@ -178,7 +190,11 @@ export async function updateFlowRun(
   }
   const gsi1 =
     merged.status === "active" || merged.status === "waiting"
-      ? runGsi1(merged.tenantId, merged.conversationId)
+      ? merged.source === "event"
+        ? runGsi1ByFlow(merged.tenantId, merged.flowId, merged.createdAt, runId)
+        : merged.conversationId
+          ? runGsi1(merged.tenantId, merged.conversationId)
+          : runGsi1ByFlow(merged.tenantId, merged.flowId, merged.createdAt, runId)
       : { GSI1PK: `TENANT#${merged.tenantId}#FLOWRUN#DONE`, GSI1SK: merged.runId };
 
   await docClient.send(
@@ -256,4 +272,26 @@ export async function setFlowRunStatus(
   status: FlowRunStatus
 ): Promise<void> {
   await updateFlowRun(tenantId, runId, { status });
+}
+
+export async function listFlowRunsByFlow(
+  tenantId: string,
+  flowId: string,
+  limit = 50
+): Promise<FlowRun[]> {
+  const result = await docClient.send(
+    new QueryCommand({
+      TableName: TABLE_NAME,
+      IndexName: "GSI1",
+      KeyConditionExpression: "GSI1PK = :pk",
+      ExpressionAttributeValues: {
+        ":pk": `TENANT#${tenantId}#FLOW#${flowId}#RUNS`,
+      },
+      ScanIndexForward: false,
+      Limit: limit,
+    })
+  );
+  return (result.Items ?? []).map(
+    ({ PK, SK, GSI1PK, GSI1SK, ...rest }) => rest as FlowRun
+  );
 }

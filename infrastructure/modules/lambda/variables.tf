@@ -70,6 +70,14 @@ variable "flow_run_sqs_queue_arn" {
   type = string
 }
 
+variable "flow_event_sqs_queue_url" {
+  type = string
+}
+
+variable "flow_event_sqs_queue_arn" {
+  type = string
+}
+
 variable "call_events_sqs_queue_url" {
   type = string
 }

@@ -3,6 +3,7 @@ import { sendFlowMessage } from "../../whatsapp/flows.js";
 import { setMetaFlowSession } from "../../dynamodb/conversation.repository.js";
 import type { FlowNode, FlowRun } from "../../../types/index.js";
 import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
+import { requireMessagingContext } from "../types.js";
 import { skipWhatsAppOnlyNode } from "./channel-guard.js";
 import { getBotLocale, getSystemMessage, resolveLocalizedText } from "../../i18n/index.js";
 
@@ -16,16 +17,17 @@ export async function executeMetaFlowNode(
   const metaFlowId = node.data.metaFlowId;
   if (!metaFlowId) throw new Error("metaFlowId required for meta_flow node");
 
-  const locale = getBotLocale(ctx.conversation, ctx.bot);
+  const { conversation, phoneNumberId, accessToken, customerPhone } = requireMessagingContext(ctx);
+  const locale = getBotLocale(conversation, ctx.bot);
   const flowToken = randomUUID();
   const flowCta =
     resolveLocalizedText(node.data.metaFlowCta, locale) ||
     getSystemMessage("metaFlowCtaDefault", locale);
 
   await sendFlowMessage({
-    phoneNumberId: ctx.phoneNumberId,
-    to: ctx.customerPhone,
-    accessToken: ctx.accessToken,
+    phoneNumberId,
+    to: customerPhone,
+    accessToken,
     flowId: metaFlowId,
     flowCta,
     flowToken,
@@ -35,7 +37,7 @@ export async function executeMetaFlowNode(
   await setMetaFlowSession(
     ctx.tenantId,
     ctx.botId,
-    ctx.conversation.conversationId,
+    conversation.conversationId,
     metaFlowId,
     flowToken
   );

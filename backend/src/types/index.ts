@@ -1251,6 +1251,7 @@ export type IntegrationEvent =
   | "conversation.handoff"
   | "message.sent"
   | "flow.completed"
+  | "form.submitted"
   | "lead.created"
   | "lead.converted"
   | "call.connect"
@@ -1635,9 +1636,16 @@ export type FlowNodeType =
   | "send_catalog"
   | "send_products"
   | "await_order"
+  | "save_contact"
+  | "create_lead"
+  | "send_notification"
   | "end";
 
-export type FlowTriggerType = "keyword" | "first_message" | "any_message";
+export type FlowTriggerType =
+  | "keyword"
+  | "first_message"
+  | "any_message"
+  | "web_form_submitted";
 
 export interface FlowNodeData {
   label?: string;
@@ -1672,6 +1680,21 @@ export interface FlowNodeData {
   multiProductHeader?: LocalizedText;
   multiProductBody?: LocalizedText;
   orderConfirmationMessage?: LocalizedText;
+  formSamplePayload?: Record<string, unknown>;
+  contactPhoneBinding?: string;
+  contactNameBinding?: string;
+  contactEmailBinding?: string;
+  contactTags?: string[];
+  leadPhoneBinding?: string;
+  leadNameBinding?: string;
+  leadEmailBinding?: string;
+  leadTags?: string[];
+  notificationChannel?: Channel;
+  notificationRecipientBinding?: string;
+  notificationMessageBinding?: string;
+  notificationMessageText?: LocalizedText;
+  notificationTemplateName?: string;
+  notificationTemplateLanguage?: string;
 }
 
 export interface FlowNode {
@@ -1704,11 +1727,14 @@ export interface FlowDefinition {
 }
 
 export type FlowRunStatus = "active" | "waiting" | "completed" | "failed";
+export type FlowRunSource = "conversation" | "event";
+export type FlowEventStatus = "accepted" | "processing" | "completed" | "failed";
 
 export interface FlowRunStep {
   nodeId: string;
   at: string;
   output?: string;
+  error?: string;
 }
 
 export interface FlowRun {
@@ -1716,14 +1742,50 @@ export interface FlowRun {
   flowId: string;
   tenantId: string;
   botId: string;
-  conversationId: string;
-  customerPhone: string;
+  source?: FlowRunSource;
+  conversationId?: string;
+  customerPhone?: string;
+  eventSubmissionId?: string;
+  flowVersion?: number;
+  formPayload?: Record<string, unknown>;
+  errorMessage?: string;
   status: FlowRunStatus;
   currentNodeId: string;
   variables: Record<string, string>;
   stepHistory: FlowRunStep[];
   waitingUntil?: string;
   stepCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FlowHookConfig {
+  hookKey: string;
+  tenantId: string;
+  flowId: string;
+  botId: string;
+  secretHash: string;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FlowHookCredentials {
+  hookKey: string;
+  secret: string;
+  webhookUrl: string;
+}
+
+export interface FlowEventSubmission {
+  submissionId: string;
+  tenantId: string;
+  flowId: string;
+  hookKey: string;
+  idempotencyKey?: string;
+  payload: Record<string, unknown>;
+  status: FlowEventStatus;
+  runId?: string;
+  errorMessage?: string;
   createdAt: string;
   updatedAt: string;
 }

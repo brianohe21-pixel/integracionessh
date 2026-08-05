@@ -1,5 +1,6 @@
 import type { FlowNode, FlowRun } from "../../../types/index.js";
 import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
+import { requireMessagingContext } from "../types.js";
 import { getNextNodeId } from "../graph.js";
 import { requireEnabledCatalog } from "../../catalog/catalog.service.js";
 import { listProductsForBot } from "../../dynamodb/product.repository.js";
@@ -11,7 +12,8 @@ export async function executeSendCatalogNode(
   ctx: FlowExecutionContext,
   _run: FlowRun
 ): Promise<NodeExecutionResult> {
-  const locale = getBotLocale(ctx.conversation, ctx.bot);
+  const { conversation, phoneNumberId, accessToken, customerPhone } = requireMessagingContext(ctx);
+  const locale = getBotLocale(conversation, ctx.bot);
   const config = await requireEnabledCatalog(ctx.tenantId, ctx.botId);
   if (!config.metaCatalogId) {
     return {
@@ -39,14 +41,14 @@ export async function executeSendCatalogNode(
     config.catalogMessageText ||
     getSystemMessage("catalogExploreDefault", locale);
 
-  if (!ctx.accessToken) {
+  if (!accessToken) {
     return { nextNodeId: null, halt: true, wait: false };
   }
 
   await sendCatalogMessage({
-    phoneNumberId: ctx.phoneNumberId,
-    to: ctx.customerPhone,
-    accessToken: ctx.accessToken,
+    phoneNumberId,
+    to: customerPhone,
+    accessToken,
     bodyText,
     catalogId: config.metaCatalogId,
     thumbnailProductRetailerId: thumbnail.retailerId,

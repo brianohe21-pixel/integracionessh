@@ -15,6 +15,9 @@ import { executeMessageNode } from "./message.js";
 import { executeMetaFlowNode } from "./meta-flow.js";
 import { executeSetVariableNode } from "./set-variable.js";
 import { executeTemplateNode } from "./template.js";
+import { executeSaveContactNode } from "./save-contact.js";
+import { executeCreateLeadNode } from "./create-lead.js";
+import { executeSendNotificationNode } from "./send-notification.js";
 import { executeTriggerNode } from "./trigger.js";
 
 export async function executeNode(
@@ -53,6 +56,12 @@ export async function executeNode(
       return executeSendProductsNode(node, ctx, run);
     case "await_order":
       return executeAwaitOrderNode(node, ctx, run);
+    case "save_contact":
+      return executeSaveContactNode(node, ctx, run);
+    case "create_lead":
+      return executeCreateLeadNode(node, ctx, run);
+    case "send_notification":
+      return executeSendNotificationNode(node, ctx, run);
     case "end":
       return executeEndNode(node, ctx, run);
     default:

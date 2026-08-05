@@ -1,6 +1,7 @@
 import { sendInteractiveButtons } from "../../whatsapp/flows.js";
 import type { FlowNode, FlowRun } from "../../../types/index.js";
 import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
+import { requireMessagingContext } from "../types.js";
 import { skipWhatsAppOnlyNode } from "./channel-guard.js";
 import { getBotLocale, getSystemMessage, resolveLocalizedText } from "../../i18n/index.js";
 
@@ -11,7 +12,8 @@ export async function executeButtonsNode(
 ): Promise<NodeExecutionResult> {
   const skipped = skipWhatsAppOnlyNode(ctx, node.id, "buttons");
   if (skipped) return skipped;
-  const locale = getBotLocale(ctx.conversation, ctx.bot);
+  const { conversation, phoneNumberId, accessToken, customerPhone } = requireMessagingContext(ctx);
+  const locale = getBotLocale(conversation, ctx.bot);
   const buttons = (node.data.buttons ?? []).map((button) => ({
     id: button.id,
     title: resolveLocalizedText(button.title, locale),
@@ -31,9 +33,9 @@ export async function executeButtonsNode(
   }
 
   await sendInteractiveButtons({
-    phoneNumberId: ctx.phoneNumberId,
-    to: ctx.customerPhone,
-    accessToken: ctx.accessToken,
+    phoneNumberId,
+    to: customerPhone,
+    accessToken,
     bodyText,
     buttons,
     ...(ctx.replyToMessageId ? { replyToMessageId: ctx.replyToMessageId } : {}),

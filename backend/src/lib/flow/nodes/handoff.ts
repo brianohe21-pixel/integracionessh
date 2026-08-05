@@ -1,6 +1,7 @@
 import { performHandoff } from "../../advisor/handoff.js";
 import type { FlowNode, FlowRun } from "../../../types/index.js";
 import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
+import { requireConversation } from "../types.js";
 
 export async function executeHandoffNode(
   node: FlowNode,
@@ -10,7 +11,7 @@ export async function executeHandoffNode(
   await performHandoff({
     tenantId: ctx.tenantId,
     botId: ctx.botId,
-    conversationId: ctx.conversation.conversationId,
+    conversationId: requireConversation(ctx).conversationId,
     reason: "ai",
   });
   return {
