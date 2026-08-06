@@ -9,6 +9,8 @@ import type { FlowEdge, FlowNode, FlowNodeType } from "@/types";
 import { NodePalette } from "@/components/flows/NodePalette";
 import { NodePropertiesPanel } from "@/components/flows/NodePropertiesPanel";
 import { FlowEditorToolbar } from "@/components/flows/FlowEditorToolbar";
+import { FlowWebhookPanel } from "@/components/flows/FlowWebhookPanel";
+import { FlowRunsPanel } from "@/components/flows/FlowRunsPanel";
 
 const FlowCanvas = dynamic(
   () => import("@/components/flows/FlowCanvas").then((m) => m.FlowCanvas),
@@ -33,6 +35,9 @@ export default function EditFlowPage() {
   }, [flow]);
 
   const selected = localNodes.find((n) => n.id === selectedNodeId);
+  const triggerNode = localNodes.find((n) => n.type === "trigger");
+  const isFormFlow = triggerNode?.data.triggerType === "web_form_submitted";
+  const samplePayload = triggerNode?.data.formSamplePayload;
   const triggerCount = localNodes.filter((n) => n.type === "trigger").length;
   const canDeleteSelected =
     !!selected && !(selected.type === "trigger" && triggerCount <= 1);
@@ -71,8 +76,20 @@ export default function EditFlowPage() {
     }
     if (type === "delay") defaultData.delaySeconds = 5;
     if (type === "condition") {
-      defaultData.conditionVariable = "last_input";
+      defaultData.conditionVariable = "form.phone";
       defaultData.conditionOperator = "contains";
+    }
+    if (type === "save_contact") {
+      defaultData.contactPhoneBinding = "{{form.phone}}";
+    }
+    if (type === "create_lead") {
+      defaultData.leadPhoneBinding = "{{form.phone}}";
+      defaultData.leadNameBinding = "{{form.name}}";
+    }
+    if (type === "send_notification") {
+      defaultData.notificationChannel = "whatsapp";
+      defaultData.notificationRecipientBinding = "{{form.phone}}";
+      defaultData.notificationMessageBinding = "{{form.message}}";
     }
     setLocalNodes((nodes) => [
       ...nodes,
@@ -152,14 +169,17 @@ export default function EditFlowPage() {
           />
         </div>
 
-        <aside className="hidden w-60 flex-shrink-0 overflow-y-auto border-l border-default bg-surface-elevated p-3 lg:block xl:w-64">
+        <aside className="hidden w-60 flex-shrink-0 overflow-y-auto border-l border-default bg-surface-elevated p-3 lg:block xl:w-64 space-y-4">
+          <FlowWebhookPanel flowId={flow.flowId} isFormFlow={isFormFlow} />
           <NodePropertiesPanel
             selected={selected}
             botId={flow.botId}
+            samplePayload={samplePayload}
             onUpdate={updateSelectedData}
             onDelete={deleteSelectedNode}
             canDelete={canDeleteSelected}
           />
+          <FlowRunsPanel flowId={flow.flowId} isFormFlow={isFormFlow} />
         </aside>
       </div>
     </div>

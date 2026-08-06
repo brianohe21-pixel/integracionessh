@@ -8,10 +8,12 @@ import { MetaFlowsModal } from "@/components/meta-flows/MetaFlowsModal";
 import { Button } from "@/components/ui/Button";
 import { LocalizedTextField } from "@/components/ui/LocalizedTextField";
 import type { FlowNode, FlowNodeType, LocalizedText } from "@/types";
+import { extractSampleFields, FormBindingField } from "./FormBindingField";
 
 interface NodePropertiesPanelProps {
   selected: FlowNode | undefined;
   botId: string;
+  samplePayload?: Record<string, unknown>;
   onUpdate: (patch: Record<string, unknown>) => void;
   onDelete: () => void;
   canDelete: boolean;
@@ -56,6 +58,7 @@ function textArea(
 export function NodePropertiesPanel({
   selected,
   botId,
+  samplePayload,
   onUpdate,
   onDelete,
   canDelete,
@@ -75,6 +78,7 @@ export function NodePropertiesPanel({
 
   const type = selected.type as FlowNodeType;
   const d = selected.data;
+  const sampleFields = extractSampleFields(samplePayload);
 
   const localizedField = (
     value: LocalizedText | undefined,
@@ -117,8 +121,25 @@ export function NodePropertiesPanel({
               <option value="any_message">{t("flows.fields.triggerAnyMessage")}</option>
               <option value="first_message">{t("flows.fields.triggerFirstMessage")}</option>
               <option value="keyword">{t("flows.fields.triggerKeyword")}</option>
+              <option value="web_form_submitted">{t("flows.fields.triggerWebForm")}</option>
             </select>
           </div>
+          {(d.triggerType ?? "any_message") === "web_form_submitted" && (
+            <div>
+              <FieldLabel>{t("flows.fields.samplePayload")}</FieldLabel>
+              {textArea(
+                d.formSamplePayload ? JSON.stringify(d.formSamplePayload, null, 2) : "{\n  \"phone\": \"\",\n  \"name\": \"\",\n  \"email\": \"\"\n}",
+                (v) => {
+                  try {
+                    onUpdate({ formSamplePayload: JSON.parse(v || "{}") });
+                  } catch {
+                    /* ignore invalid json while typing */
+                  }
+                },
+                6
+              )}
+            </div>
+          )}
           {(d.triggerType ?? "any_message") === "keyword" && (
             <>
               <div>
@@ -430,6 +451,107 @@ export function NodePropertiesPanel({
           <FieldLabel>{t("flows.fields.messageText")}</FieldLabel>
           {localizedField(d.messageText, (v) => onUpdate({ messageText: v }), 3)}
         </div>
+      )}
+
+      {type === "save_contact" && (
+        <>
+          <FormBindingField
+            label={t("flows.fields.contactPhoneBinding")}
+            value={d.contactPhoneBinding ?? ""}
+            onChange={(v) => onUpdate({ contactPhoneBinding: v })}
+            sampleFields={sampleFields}
+          />
+          <FormBindingField
+            label={t("flows.fields.contactNameBinding")}
+            value={d.contactNameBinding ?? ""}
+            onChange={(v) => onUpdate({ contactNameBinding: v })}
+            sampleFields={sampleFields}
+          />
+          <FormBindingField
+            label={t("flows.fields.contactEmailBinding")}
+            value={d.contactEmailBinding ?? ""}
+            onChange={(v) => onUpdate({ contactEmailBinding: v })}
+            sampleFields={sampleFields}
+          />
+          <div>
+            <FieldLabel>{t("flows.fields.contactTags")}</FieldLabel>
+            {textInput((d.contactTags ?? []).join(", "), (v) =>
+              onUpdate({
+                contactTags: v
+                  .split(",")
+                  .map((s) => s.trim())
+                  .filter(Boolean),
+              })
+            )}
+          </div>
+        </>
+      )}
+
+      {type === "create_lead" && (
+        <>
+          <FormBindingField
+            label={t("flows.fields.leadPhoneBinding")}
+            value={d.leadPhoneBinding ?? ""}
+            onChange={(v) => onUpdate({ leadPhoneBinding: v })}
+            sampleFields={sampleFields}
+          />
+          <FormBindingField
+            label={t("flows.fields.leadNameBinding")}
+            value={d.leadNameBinding ?? ""}
+            onChange={(v) => onUpdate({ leadNameBinding: v })}
+            sampleFields={sampleFields}
+          />
+          <FormBindingField
+            label={t("flows.fields.leadEmailBinding")}
+            value={d.leadEmailBinding ?? ""}
+            onChange={(v) => onUpdate({ leadEmailBinding: v })}
+            sampleFields={sampleFields}
+          />
+          <div>
+            <FieldLabel>{t("flows.fields.leadTags")}</FieldLabel>
+            {textInput((d.leadTags ?? []).join(", "), (v) =>
+              onUpdate({
+                leadTags: v
+                  .split(",")
+                  .map((s) => s.trim())
+                  .filter(Boolean),
+              })
+            )}
+          </div>
+        </>
+      )}
+
+      {type === "send_notification" && (
+        <>
+          <div>
+            <FieldLabel>{t("flows.fields.notificationChannel")}</FieldLabel>
+            <select
+              value={d.notificationChannel ?? "whatsapp"}
+              onChange={(e) => onUpdate({ notificationChannel: e.target.value })}
+              className="w-full text-sm border border-default rounded-lg p-2 bg-surface-elevated"
+            >
+              <option value="whatsapp">WhatsApp</option>
+              <option value="sms">SMS</option>
+              <option value="email">Email</option>
+            </select>
+          </div>
+          <FormBindingField
+            label={t("flows.fields.notificationRecipientBinding")}
+            value={d.notificationRecipientBinding ?? ""}
+            onChange={(v) => onUpdate({ notificationRecipientBinding: v })}
+            sampleFields={sampleFields}
+          />
+          <FormBindingField
+            label={t("flows.fields.notificationMessageBinding")}
+            value={d.notificationMessageBinding ?? ""}
+            onChange={(v) => onUpdate({ notificationMessageBinding: v })}
+            sampleFields={sampleFields}
+          />
+          <div>
+            <FieldLabel>{t("flows.fields.notificationMessageText")}</FieldLabel>
+            {localizedField(d.notificationMessageText, (v) => onUpdate({ notificationMessageText: v }), 3)}
+          </div>
+        </>
       )}
 
       {type === "end" && (

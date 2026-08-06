@@ -1,14 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { Plus, Megaphone, Play, Pause, RotateCcw, X, Calendar, Tag } from "lucide-react";
+import { Plus, Megaphone, Calendar, Tag } from "lucide-react";
 import { useT } from "@/i18n/context";
-import { useCampaignList, useStartCampaign, usePauseCampaign, useResumeCampaign, useCancelCampaign } from "@/hooks/useCampaigns";
+import { useCampaignList } from "@/hooks/useCampaigns";
 import { CampaignStatusBadge } from "@/components/campaigns/CampaignStatusBadge";
 import { CampaignProgressBar } from "@/components/campaigns/CampaignProgressBar";
-import { CampaignQualityConfirmModal } from "@/components/campaigns/CampaignQualityConfirmModal";
-import { useWhatsAppQualityGuard } from "@/hooks/useWhatsAppQualityGuard";
-import type { Campaign } from "@/types";
+import { CampaignManagementActions } from "@/components/campaigns/CampaignManagementActions";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
 
@@ -20,103 +18,6 @@ function formatDate(iso: string) {
     hour: "2-digit",
     minute: "2-digit",
   });
-}
-
-function CampaignActions({ campaign }: { campaign: Campaign }) {
-  const t = useT();
-  const start = useStartCampaign();
-  const pause = usePauseCampaign();
-  const resume = useResumeCampaign();
-  const cancel = useCancelCampaign();
-  const isWhatsApp = (campaign.channel ?? "whatsapp") === "whatsapp";
-  const { assessment, confirmStart, qualityConfirm, resolveQualityConfirm } = useWhatsAppQualityGuard(
-    campaign.botId,
-    isWhatsApp
-  );
-
-  const isPending = start.isPending || pause.isPending || resume.isPending || cancel.isPending;
-  const startBlocked = isWhatsApp && assessment.risk === "block";
-
-  async function handleStart() {
-    if (startBlocked) {
-      window.alert(t("campaigns.qualityStartBlocked"));
-      return;
-    }
-    if (isWhatsApp) {
-      const confirmed = await confirmStart("start");
-      if (!confirmed) return;
-    }
-    start.mutate(campaign.campaignId);
-  }
-
-  async function handleResume() {
-    if (startBlocked) {
-      window.alert(t("campaigns.qualityStartBlocked"));
-      return;
-    }
-    if (isWhatsApp) {
-      const confirmed = await confirmStart("resume");
-      if (!confirmed) return;
-    }
-    resume.mutate(campaign.campaignId);
-  }
-
-  return (
-    <>
-    <div className="flex items-center gap-1">
-      {(campaign.status === "draft" || campaign.status === "scheduled") && (
-        <button
-          onClick={handleStart}
-          disabled={isPending || startBlocked}
-          title={startBlocked ? t("campaigns.qualityStartBlocked") : t("campaigns.start")}
-          className="p-1.5 rounded-lg text-green-600 hover:bg-green-50 disabled:opacity-40 transition-colors"
-        >
-          <Play className="w-4 h-4" />
-        </button>
-      )}
-      {campaign.status === "running" && (
-        <button
-          onClick={() => pause.mutate(campaign.campaignId)}
-          disabled={isPending}
-          title={t("campaigns.pause")}
-          className="p-1.5 rounded-lg text-yellow-600 hover:bg-yellow-50 disabled:opacity-40 transition-colors"
-        >
-          <Pause className="w-4 h-4" />
-        </button>
-      )}
-      {campaign.status === "paused" && (
-        <button
-          onClick={handleResume}
-          disabled={isPending || startBlocked}
-          title={startBlocked ? t("campaigns.qualityStartBlocked") : t("campaigns.resume")}
-          className="p-1.5 rounded-lg text-green-600 hover:bg-green-50 disabled:opacity-40 transition-colors"
-        >
-          <RotateCcw className="w-4 h-4" />
-        </button>
-      )}
-      {campaign.status !== "completed" && campaign.status !== "cancelled" && (
-        <button
-          onClick={() => {
-            if (confirm(t("campaigns.confirmCancel", { name: campaign.name }))) {
-              cancel.mutate(campaign.campaignId);
-            }
-          }}
-          disabled={isPending}
-          title={t("campaigns.cancel")}
-          className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 disabled:opacity-40 transition-colors"
-        >
-          <X className="w-4 h-4" />
-        </button>
-      )}
-    </div>
-    <CampaignQualityConfirmModal
-      open={Boolean(qualityConfirm)}
-      action={qualityConfirm?.action ?? "start"}
-      onCancel={() => resolveQualityConfirm(false)}
-      onConfirm={() => resolveQualityConfirm(true)}
-    />
-    </>
-  );
 }
 
 export default function CampaignsPage() {
@@ -230,7 +131,7 @@ export default function CampaignsPage() {
                 </div>
 
                 <div className="flex-shrink-0">
-                  <CampaignActions campaign={campaign} />
+                  <CampaignManagementActions campaign={campaign} />
                 </div>
               </div>
             </div>

@@ -116,6 +116,7 @@ export async function saveBulkSendFailure(
     ttl,
   };
   if (failure.messageId) item.messageId = failure.messageId;
+  if (failure.attemptId) item.attemptId = failure.attemptId;
   if (failure.errorCode != null) item.errorCode = failure.errorCode;
   if (failure.errorTitle) item.errorTitle = failure.errorTitle;
 
@@ -134,6 +135,7 @@ export async function recordBulkSendFailure(
   input: {
     to: string;
     messageId?: string;
+    attemptId?: string;
     errorCode?: number;
     errorTitle?: string;
     errorMessage: string;
@@ -147,6 +149,7 @@ export async function recordBulkSendFailure(
     errorMessage: input.errorMessage,
   };
   if (input.messageId) failure.messageId = input.messageId;
+  if (input.attemptId) failure.attemptId = input.attemptId;
   if (input.errorCode != null) failure.errorCode = input.errorCode;
   if (input.errorTitle) failure.errorTitle = input.errorTitle;
   await saveBulkSendFailure(failure);
@@ -180,6 +183,37 @@ export async function listBulkSendFailures(
   };
 }
 
+export async function listAllBulkSendFailures(
+  tenantId: string,
+  jobId: string
+): Promise<BulkSendFailure[]> {
+  const items: BulkSendFailure[] = [];
+  let lastKey: Record<string, unknown> | undefined;
+
+  do {
+    const result = await docClient.send(
+      new QueryCommand({
+        TableName: TABLE_NAME,
+        KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+        ExpressionAttributeValues: {
+          ":pk": `TENANT#${tenantId}`,
+          ":sk": `BULKFAIL#${jobId}#`,
+        },
+        ExclusiveStartKey: lastKey,
+      })
+    );
+
+    for (const item of result.Items ?? []) {
+      const { PK, SK, ttl: _ttl, ...rest } = item;
+      items.push(rest as BulkSendFailure);
+    }
+
+    lastKey = result.LastEvaluatedKey;
+  } while (lastKey);
+
+  return items;
+}
+
 export async function saveMessageTracking(
   messageId: string,
   jobId: string,
@@ -201,6 +235,8 @@ export type MessageTracking = {
   kind?: string;
   campaignId?: string;
   jobId?: string;
+  attemptId?: string;
+  recipientKey?: string;
 };
 
 export async function getMessageTracking(
@@ -219,6 +255,8 @@ export async function getMessageTracking(
   if (result.Item.kind) tracking.kind = result.Item.kind as string;
   if (result.Item.campaignId) tracking.campaignId = result.Item.campaignId as string;
   if (result.Item.jobId) tracking.jobId = result.Item.jobId as string;
+  if (result.Item.attemptId) tracking.attemptId = result.Item.attemptId as string;
+  if (result.Item.recipientKey) tracking.recipientKey = result.Item.recipientKey as string;
 
   return tracking;
 }

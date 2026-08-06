@@ -70,6 +70,14 @@ variable "flow_run_sqs_queue_arn" {
   type = string
 }
 
+variable "flow_event_sqs_queue_url" {
+  type = string
+}
+
+variable "flow_event_sqs_queue_arn" {
+  type = string
+}
+
 variable "call_events_sqs_queue_url" {
   type = string
 }
@@ -295,6 +303,8 @@ variable "cloudwatch_log_group_import_exclude" {
     "voicebot",
     "voicebot_session",
     "reseller",
+    "flow_hooks",
+    "process_flow_event",
   ]
   description = "Lambda keys whose log groups are created by Terraform instead of imported (new functions without pre-existing log groups in AWS)"
 }

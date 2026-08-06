@@ -274,6 +274,45 @@ resource "aws_sqs_queue_policy" "flow_run" {
   })
 }
 
+resource "aws_sqs_queue" "flow_event_dlq" {
+  name                        = "${var.project}-${var.environment}-flow-event-dlq.fifo"
+  fifo_queue                  = true
+  content_based_deduplication = true
+  message_retention_seconds   = 1209600
+  tags                        = var.tags
+}
+
+resource "aws_sqs_queue" "flow_event" {
+  name                        = "${var.project}-${var.environment}-flow-event.fifo"
+  fifo_queue                  = true
+  content_based_deduplication = true
+  visibility_timeout_seconds  = 300
+  message_retention_seconds   = 86400
+
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.flow_event_dlq.arn
+    maxReceiveCount     = 3
+  })
+
+  tags = var.tags
+}
+
+resource "aws_sqs_queue_policy" "flow_event" {
+  queue_url = aws_sqs_queue.flow_event.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect    = "Allow"
+        Principal = { AWS = var.lambda_role_arns }
+        Action    = ["sqs:SendMessage", "sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes"]
+        Resource  = aws_sqs_queue.flow_event.arn
+      }
+    ]
+  })
+}
+
 resource "aws_sqs_queue" "call_events_dlq" {
   name                        = "${var.project}-${var.environment}-call-events-dlq.fifo"
   fifo_queue                  = true

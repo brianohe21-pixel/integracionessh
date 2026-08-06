@@ -262,6 +262,14 @@ output "flows_function_arn" {
   value = aws_lambda_function.functions["flows"].arn
 }
 
+output "flow_hooks_invoke_arn" {
+  value = aws_lambda_function.functions["flow_hooks"].invoke_arn
+}
+
+output "flow_hooks_function_arn" {
+  value = aws_lambda_function.functions["flow_hooks"].arn
+}
+
 output "calling_invoke_arn" {
   value = aws_lambda_function.functions["calling"].invoke_arn
 }

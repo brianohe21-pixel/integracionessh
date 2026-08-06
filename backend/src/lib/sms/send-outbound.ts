@@ -37,6 +37,8 @@ export async function sendSmsFromTemplate(params: {
   requestDlr?: boolean;
   source?: "campaign" | "template";
   campaignId?: string;
+  attemptId?: string;
+  recipientKey?: string;
 }): Promise<{ messageId: string; text: string; receiptId?: string }> {
   await assertSmsBotReady(params.bot);
 
@@ -68,6 +70,8 @@ export async function sendSmsFromTemplate(params: {
       templateName: params.templateName,
       language: params.language,
       ...(params.campaignId ? { campaignId: params.campaignId } : {}),
+      ...(params.attemptId ? { attemptId: params.attemptId } : {}),
+      ...(params.recipientKey ? { recipientKey: params.recipientKey } : {}),
     });
     receiptId = receipt.receiptId;
     dlrUrl = buildTelcoredDlrUrl(receipt.receiptId, apiPublicUrl);

@@ -1,6 +1,7 @@
 import { buildOutboundContext, sendChannelText } from "../../channels/router.js";
 import type { FlowNode, FlowRun } from "../../../types/index.js";
 import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
+import { requireConversation } from "../types.js";
 import { requireEnabledCatalog } from "../../catalog/catalog.service.js";
 import { getBotLocale, getSystemMessage, resolveLocalizedText } from "../../i18n/index.js";
 
@@ -9,7 +10,9 @@ export async function executeAwaitOrderNode(
   ctx: FlowExecutionContext,
   _run: FlowRun
 ): Promise<NodeExecutionResult> {
-  const locale = getBotLocale(ctx.conversation, ctx.bot);
+  const conversation = requireConversation(ctx);
+  if (!ctx.accessToken) throw new Error("Access token is required");
+  const locale = getBotLocale(conversation, ctx.bot);
   try {
     await requireEnabledCatalog(ctx.tenantId, ctx.botId);
   } catch {
@@ -18,7 +21,7 @@ export async function executeAwaitOrderNode(
         tenantId: ctx.tenantId,
         botId: ctx.botId,
         bot: ctx.bot,
-        conversation: ctx.conversation,
+        conversation,
         accessToken: ctx.accessToken,
         environment: ctx.environment,
       }),
@@ -36,7 +39,7 @@ export async function executeAwaitOrderNode(
       tenantId: ctx.tenantId,
       botId: ctx.botId,
       bot: ctx.bot,
-      conversation: ctx.conversation,
+      conversation,
       accessToken: ctx.accessToken,
       environment: ctx.environment,
       replyToExternalId: ctx.replyToMessageId,

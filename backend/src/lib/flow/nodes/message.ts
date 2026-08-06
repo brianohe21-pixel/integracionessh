@@ -9,7 +9,7 @@ export async function executeMessageNode(
   ctx: FlowExecutionContext,
   _run: FlowRun
 ): Promise<NodeExecutionResult> {
-  const locale = getBotLocale(ctx.conversation, ctx.bot);
+  const locale = getBotLocale(ctx.conversation!, ctx.bot);
   const text = resolveLocalizedText(node.data.messageText, locale);
   if (text) {
     await sendChannelText(
@@ -17,7 +17,7 @@ export async function executeMessageNode(
         tenantId: ctx.tenantId,
         botId: ctx.botId,
         bot: ctx.bot,
-        conversation: ctx.conversation,
+        conversation: ctx.conversation!,
         accessToken: ctx.accessToken,
         environment: ctx.environment,
         replyToExternalId: ctx.replyToMessageId,

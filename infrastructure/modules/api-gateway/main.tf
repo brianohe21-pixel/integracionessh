@@ -10,6 +10,8 @@ resource "aws_apigatewayv2_api" "main" {
       "X-Portal-Host",
       "X-Api-Key",
       "X-Widget-Key",
+      "X-Flow-Secret",
+      "Idempotency-Key",
     ]
     allow_methods = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
     allow_origins = var.allowed_origins
@@ -654,6 +656,36 @@ locals {
     }
     campaigns_metrics = {
       route_key    = "GET /campaigns/{campaignId}/metrics"
+      invoke_arn   = var.campaigns_invoke_arn
+      function_arn = var.campaigns_function_arn
+      protected    = true
+    }
+    campaigns_recipients = {
+      route_key    = "GET /campaigns/{campaignId}/recipients"
+      invoke_arn   = var.campaigns_invoke_arn
+      function_arn = var.campaigns_function_arn
+      protected    = true
+    }
+    campaigns_export = {
+      route_key    = "GET /campaigns/{campaignId}/export"
+      invoke_arn   = var.campaigns_invoke_arn
+      function_arn = var.campaigns_function_arn
+      protected    = true
+    }
+    campaigns_archive = {
+      route_key    = "POST /campaigns/{campaignId}/archive"
+      invoke_arn   = var.campaigns_invoke_arn
+      function_arn = var.campaigns_function_arn
+      protected    = true
+    }
+    campaigns_retry = {
+      route_key    = "POST /campaigns/{campaignId}/retry"
+      invoke_arn   = var.campaigns_invoke_arn
+      function_arn = var.campaigns_function_arn
+      protected    = true
+    }
+    campaigns_clone = {
+      route_key    = "POST /campaigns/{campaignId}/clone"
       invoke_arn   = var.campaigns_invoke_arn
       function_arn = var.campaigns_function_arn
       protected    = true
@@ -1582,6 +1614,48 @@ locals {
       function_arn = var.flows_function_arn
       protected    = true
     }
+    flows_validate = {
+      route_key    = "POST /flows/{flowId}/validate"
+      invoke_arn   = var.flows_invoke_arn
+      function_arn = var.flows_function_arn
+      protected    = true
+    }
+    flows_hook_get = {
+      route_key    = "GET /flows/{flowId}/hook"
+      invoke_arn   = var.flows_invoke_arn
+      function_arn = var.flows_function_arn
+      protected    = true
+    }
+    flows_hook_rotate = {
+      route_key    = "POST /flows/{flowId}/hook/rotate"
+      invoke_arn   = var.flows_invoke_arn
+      function_arn = var.flows_function_arn
+      protected    = true
+    }
+    flows_runs = {
+      route_key    = "GET /flows/{flowId}/runs"
+      invoke_arn   = var.flows_invoke_arn
+      function_arn = var.flows_function_arn
+      protected    = true
+    }
+    flows_events = {
+      route_key    = "GET /flows/{flowId}/events"
+      invoke_arn   = var.flows_invoke_arn
+      function_arn = var.flows_function_arn
+      protected    = true
+    }
+    flow_runs_get = {
+      route_key    = "GET /flow-runs/{runId}"
+      invoke_arn   = var.flows_invoke_arn
+      function_arn = var.flows_function_arn
+      protected    = true
+    }
+    flow_hooks_submit = {
+      route_key    = "POST /public/flow-hooks/{hookKey}"
+      invoke_arn   = var.flow_hooks_invoke_arn
+      function_arn = var.flow_hooks_function_arn
+      protected    = false
+    }
   }
 }
 
@@ -1639,6 +1713,7 @@ resource "aws_lambda_permission" "api_gw" {
     macros            = var.macros_function_arn
     meta_flows        = var.meta_flows_function_arn
     flows             = var.flows_function_arn
+    flow_hooks        = var.flow_hooks_function_arn
     calling           = var.calling_function_arn
     realtime          = var.realtime_function_arn
     calendar          = var.calendar_function_arn

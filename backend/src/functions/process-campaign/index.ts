@@ -4,11 +4,21 @@ import {
   getCampaign,
   incrementCampaignProgress,
   markRecipientSent,
+  markRecipientFailed,
   saveCampaignMessageTracking,
   listPendingRecipients,
   setCampaignNextBatchAt,
 } from "../../lib/dynamodb/campaign.repository.js";
-import { parseSendFailureError, saveBulkSendFailure } from "../../lib/dynamodb/bulk-job.repository.js";
+import {
+  parseSendFailureError,
+  saveBulkSendFailure,
+} from "../../lib/dynamodb/bulk-job.repository.js";
+import {
+  ensureCampaignSendAttempt,
+  isCampaignSendAttemptTerminal,
+  markCampaignSendAttemptFailed,
+  markCampaignSendAttemptSent,
+} from "../../lib/dynamodb/campaign-send-attempt.repository.js";
 import { getContactByPhone } from "../../lib/dynamodb/contact.repository.js";
 import { sendTemplateMessage, getWhatsAppAccessToken } from "../../lib/whatsapp/client.js";
 import { sendSmsFromTemplate } from "../../lib/sms/send-outbound.js";
@@ -42,7 +52,7 @@ async function processRecord(record: SQSRecord): Promise<void> {
     return;
   }
 
-  await processRecipient(body);
+  await processRecipient(body, record.messageId);
 }
 
 async function processBatchComplete(body: CampaignSQSBody): Promise<void> {
@@ -72,7 +82,7 @@ async function processBatchComplete(body: CampaignSQSBody): Promise<void> {
   );
 }
 
-async function processRecipient(body: CampaignSQSBody): Promise<void> {
+async function processRecipient(body: CampaignSQSBody, sqsMessageId: string): Promise<void> {
   const {
     campaignId,
     tenantId,
@@ -116,6 +126,25 @@ async function processRecipient(body: CampaignSQSBody): Promise<void> {
   }
 
   const normalizedTo = to.replace(/\D/g, "");
+  const attemptId = sqsMessageId;
+
+  const { attempt, isNew } = await ensureCampaignSendAttempt({
+    attemptId,
+    tenantId,
+    campaignId,
+    to: normalizedTo,
+    channel,
+    templateName,
+    language,
+    ...(recipientKey ? { recipientKey } : {}),
+    ...(batchVersion !== undefined ? { batchVersion } : {}),
+    ...(body.batchIndex !== undefined ? { batchIndex: body.batchIndex } : {}),
+  });
+
+  if (!isNew && isCampaignSendAttemptTerminal(attempt.status)) {
+    console.log(`Campaign attempt ${attemptId} already processed (${attempt.status}), skipping`);
+    return;
+  }
 
   if (campaign.requireOptIn) {
     const contact = await getContactByPhone(tenantId, normalizedTo);
@@ -124,13 +153,24 @@ async function processRecipient(body: CampaignSQSBody): Promise<void> {
       contact.suppressed ||
       contact.marketingConsent !== "opt_in"
     ) {
+      await markCampaignSendAttemptFailed(tenantId, campaignId, attemptId, {
+        status: "compliance_blocked",
+        failureKind: "compliance",
+        sendErrorMessage: "Recipient not eligible for marketing",
+      });
       await saveBulkSendFailure({
         jobId: campaignId,
         tenantId,
         kind: "compliance",
         to: normalizedTo,
         errorMessage: "Recipient not eligible for marketing",
+        attemptId,
       });
+      if (recipientKey) {
+        await markRecipientFailed(tenantId, recipientKey).catch((err) =>
+          console.warn(`Failed to mark recipient failed ${recipientKey}:`, err)
+        );
+      }
       await incrementCampaignProgress(tenantId, campaignId, "failed");
       return;
     }
@@ -141,13 +181,24 @@ async function processRecipient(body: CampaignSQSBody): Promise<void> {
 
     if (!bot) {
       console.error(`Bot not found: ${botId}`);
+      await markCampaignSendAttemptFailed(tenantId, campaignId, attemptId, {
+        status: "send_failed",
+        failureKind: "send",
+        sendErrorMessage: "Bot not found",
+      });
       await saveBulkSendFailure({
         jobId: campaignId,
         tenantId,
         kind: "send",
         to,
         errorMessage: "Bot not found",
+        attemptId,
       });
+      if (recipientKey) {
+        await markRecipientFailed(tenantId, recipientKey).catch((err) =>
+          console.warn(`Failed to mark recipient failed ${recipientKey}:`, err)
+        );
+      }
       await incrementCampaignProgress(tenantId, campaignId, "failed");
       return;
     }
@@ -163,11 +214,28 @@ async function processRecipient(body: CampaignSQSBody): Promise<void> {
         to,
         ...(components ? { components } : {}),
         environment: ENVIRONMENT,
-        ...(shouldRequestDlr ? { requestDlr: true, source: "campaign", campaignId } : {}),
+        ...(shouldRequestDlr
+          ? { requestDlr: true, source: "campaign", campaignId }
+          : {}),
+        attemptId,
+        ...(recipientKey ? { recipientKey } : {}),
       });
 
-      await saveCampaignMessageTracking(result.messageId, campaignId, tenantId, to, recipientKey).catch(
-        (err) => console.warn(`Failed to save campaign message tracking for ${result.messageId}:`, err)
+      await markCampaignSendAttemptSent(tenantId, campaignId, attemptId, {
+        externalMessageId: result.messageId,
+        telcoredMessageId: result.messageId,
+        ...(result.receiptId ? { smsReceiptId: result.receiptId } : {}),
+      });
+
+      await saveCampaignMessageTracking(
+        result.messageId,
+        campaignId,
+        tenantId,
+        to,
+        recipientKey,
+        attemptId
+      ).catch((err) =>
+        console.warn(`Failed to save campaign message tracking for ${result.messageId}:`, err)
       );
     } else {
       const accessToken = await getWhatsAppAccessToken(tenantId, ENVIRONMENT);
@@ -182,9 +250,22 @@ async function processRecipient(body: CampaignSQSBody): Promise<void> {
 
       const messageId = result.messages?.[0]?.id;
       if (messageId) {
-        await saveCampaignMessageTracking(messageId, campaignId, tenantId, to, recipientKey).catch(
-          (err) => console.warn(`Failed to save campaign message tracking for ${messageId}:`, err)
+        await markCampaignSendAttemptSent(tenantId, campaignId, attemptId, {
+          externalMessageId: messageId,
+          waMessageId: messageId,
+        });
+        await saveCampaignMessageTracking(
+          messageId,
+          campaignId,
+          tenantId,
+          to,
+          recipientKey,
+          attemptId
+        ).catch((err) =>
+          console.warn(`Failed to save campaign message tracking for ${messageId}:`, err)
         );
+      } else {
+        await markCampaignSendAttemptSent(tenantId, campaignId, attemptId, {});
       }
     }
 
@@ -197,13 +278,27 @@ async function processRecipient(body: CampaignSQSBody): Promise<void> {
     await incrementCampaignProgress(tenantId, campaignId, "sent");
   } catch (error) {
     console.error(`Campaign send failed for campaign=${campaignId} to=${to}:`, error);
+    const parsed = parseSendFailureError(error);
+    await markCampaignSendAttemptFailed(tenantId, campaignId, attemptId, {
+      status: "send_failed",
+      failureKind: "send",
+      sendErrorMessage: parsed.errorMessage,
+      ...(parsed.errorCode != null ? { sendErrorCode: parsed.errorCode } : {}),
+      ...(parsed.errorTitle ? { sendErrorTitle: parsed.errorTitle } : {}),
+    });
     await saveBulkSendFailure({
       jobId: campaignId,
       tenantId,
       kind: "send",
       to,
-      ...parseSendFailureError(error),
+      attemptId,
+      ...parsed,
     });
+    if (recipientKey) {
+      await markRecipientFailed(tenantId, recipientKey).catch((err) =>
+        console.warn(`Failed to mark recipient failed ${recipientKey}:`, err)
+      );
+    }
     await incrementCampaignProgress(tenantId, campaignId, "failed");
   }
 }
