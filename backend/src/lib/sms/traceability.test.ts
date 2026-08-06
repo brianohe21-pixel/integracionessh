@@ -2,6 +2,7 @@ import type { SmsDlrReceipt } from "../../types/index.js";
 import {
   deriveSmsTraceStatus,
   mapSmsDlrReceiptToTraceability,
+  type SmsTraceability,
 } from "./traceability.js";
 
 const baseReceipt: SmsDlrReceipt = {
@@ -14,6 +15,25 @@ const baseReceipt: SmsDlrReceipt = {
   createdAt: "2026-06-17T12:00:00.000Z",
   updatedAt: "2026-06-17T12:00:00.000Z",
 };
+
+const emptyTraceFields = {
+  failureKind: null,
+  externalMessageId: null,
+  telcoredMessageId: null,
+  sendErrorMessage: null,
+  deliveryErrorCode: null,
+  deliveryErrorMessage: null,
+  deliveryStatus: null,
+  finalDeliveryCode: null,
+  lastIntermediateCode: null,
+  sentAt: null,
+  deliveredAt: null,
+  failedAt: null,
+  dlrAt: null,
+  cost: null,
+  part: null,
+  sender: null,
+} satisfies Partial<SmsTraceability>;
 
 describe("sms traceability", () => {
   it("returns pending before provider acknowledgement", () => {
@@ -65,6 +85,33 @@ describe("sms traceability", () => {
     ).toBe("send_failed");
   });
 
+  it("always returns the same response structure", () => {
+    const pending = mapSmsDlrReceiptToTraceability(baseReceipt);
+    const delivered = mapSmsDlrReceiptToTraceability({
+      ...baseReceipt,
+      telcoredMessageId: "telcored-123",
+      finalDeliveryCode: 1,
+      deliveryStatus: "DELIVRD",
+      sentAt: "2026-06-17T12:00:01.000Z",
+      dlrAt: "2026-06-17T12:00:05.000Z",
+      sender: "msg",
+      cost: "0.02",
+      part: "1",
+    });
+
+    expect(Object.keys(pending).sort()).toEqual(Object.keys(delivered).sort());
+    expect(pending).toEqual({
+      traceId: baseReceipt.receiptId,
+      phone: "573001234567",
+      channel: "sms",
+      status: "pending",
+      requestDlr: true,
+      createdAt: baseReceipt.createdAt,
+      updatedAt: baseReceipt.updatedAt,
+      ...emptyTraceFields,
+    });
+  });
+
   it("maps receipt fields to API traceability shape", () => {
     const trace = mapSmsDlrReceiptToTraceability({
       ...baseReceipt,
@@ -83,12 +130,18 @@ describe("sms traceability", () => {
       phone: "573001234567",
       channel: "sms",
       status: "delivered",
+      failureKind: null,
       externalMessageId: "telcored-123",
       telcoredMessageId: "telcored-123",
+      sendErrorMessage: null,
+      deliveryErrorCode: null,
+      deliveryErrorMessage: null,
       deliveryStatus: "DELIVRD",
       finalDeliveryCode: 1,
+      lastIntermediateCode: null,
       sentAt: "2026-06-17T12:00:01.000Z",
       deliveredAt: "2026-06-17T12:00:05.000Z",
+      failedAt: null,
       dlrAt: "2026-06-17T12:00:05.000Z",
       cost: "0.02",
       part: "1",
@@ -110,5 +163,7 @@ describe("sms traceability", () => {
     expect(trace.failureKind).toBe("send");
     expect(trace.sendErrorMessage).toBe("Telcored API error 401");
     expect(trace.failedAt).toBe("2026-06-17T12:00:02.000Z");
+    expect(trace.externalMessageId).toBeNull();
+    expect(trace.deliveryStatus).toBeNull();
   });
 });

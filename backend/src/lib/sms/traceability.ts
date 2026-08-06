@@ -14,22 +14,22 @@ export interface SmsTraceability {
   phone: string;
   channel: "sms";
   status: SmsTraceStatus;
-  failureKind?: SmsTraceFailureKind;
-  externalMessageId?: string;
-  telcoredMessageId?: string;
-  sendErrorMessage?: string;
-  deliveryErrorCode?: string;
-  deliveryErrorMessage?: string;
-  deliveryStatus?: string;
-  finalDeliveryCode?: number;
-  lastIntermediateCode?: number;
-  sentAt?: string;
-  deliveredAt?: string;
-  failedAt?: string;
-  dlrAt?: string;
-  cost?: string;
-  part?: string;
-  sender?: string;
+  failureKind: SmsTraceFailureKind | null;
+  externalMessageId: string | null;
+  telcoredMessageId: string | null;
+  sendErrorMessage: string | null;
+  deliveryErrorCode: string | null;
+  deliveryErrorMessage: string | null;
+  deliveryStatus: string | null;
+  finalDeliveryCode: number | null;
+  lastIntermediateCode: number | null;
+  sentAt: string | null;
+  deliveredAt: string | null;
+  failedAt: string | null;
+  dlrAt: string | null;
+  cost: string | null;
+  part: string | null;
+  sender: string | null;
   requestDlr: boolean;
   createdAt: string;
   updatedAt: string;
@@ -47,10 +47,10 @@ export function deriveSmsTraceStatus(receipt: SmsDlrReceipt): SmsTraceStatus {
 
 export function deriveSmsTraceFailureKind(
   status: SmsTraceStatus
-): SmsTraceFailureKind | undefined {
+): SmsTraceFailureKind | null {
   if (status === "send_failed") return "send";
   if (status === "delivery_failed") return "delivery";
-  return undefined;
+  return null;
 }
 
 export function mapSmsDlrReceiptToTraceability(receipt: SmsDlrReceipt): SmsTraceability {
@@ -61,39 +61,30 @@ export function mapSmsDlrReceiptToTraceability(receipt: SmsDlrReceipt): SmsTrace
       ? receipt.updatedAt
       : status === "delivery_failed"
         ? receipt.dlrAt ?? receipt.updatedAt
-        : undefined;
+        : null;
 
   return {
     traceId: receipt.receiptId,
     phone: receipt.to,
     channel: "sms",
     status,
-    ...(failureKind ? { failureKind } : {}),
-    ...(receipt.telcoredMessageId
-      ? {
-          externalMessageId: receipt.telcoredMessageId,
-          telcoredMessageId: receipt.telcoredMessageId,
-        }
-      : {}),
-    ...(receipt.sendError ? { sendErrorMessage: receipt.sendError } : {}),
-    ...(receipt.errorCode ? { deliveryErrorCode: receipt.errorCode } : {}),
-    ...(status === "delivery_failed" && receipt.deliveryStatus
-      ? { deliveryErrorMessage: receipt.deliveryStatus }
-      : {}),
-    ...(receipt.deliveryStatus ? { deliveryStatus: receipt.deliveryStatus } : {}),
-    ...(receipt.finalDeliveryCode !== undefined
-      ? { finalDeliveryCode: receipt.finalDeliveryCode }
-      : {}),
-    ...(receipt.lastIntermediateCode !== undefined
-      ? { lastIntermediateCode: receipt.lastIntermediateCode }
-      : {}),
-    ...(receipt.sentAt ? { sentAt: receipt.sentAt } : {}),
-    ...(status === "delivered" && receipt.dlrAt ? { deliveredAt: receipt.dlrAt } : {}),
-    ...(failedAt ? { failedAt } : {}),
-    ...(receipt.dlrAt ? { dlrAt: receipt.dlrAt } : {}),
-    ...(receipt.cost ? { cost: receipt.cost } : {}),
-    ...(receipt.part ? { part: receipt.part } : {}),
-    ...(receipt.sender ? { sender: receipt.sender } : {}),
+    failureKind,
+    externalMessageId: receipt.telcoredMessageId ?? null,
+    telcoredMessageId: receipt.telcoredMessageId ?? null,
+    sendErrorMessage: receipt.sendError ?? null,
+    deliveryErrorCode: receipt.errorCode ?? null,
+    deliveryErrorMessage:
+      status === "delivery_failed" ? receipt.deliveryStatus ?? null : null,
+    deliveryStatus: receipt.deliveryStatus ?? null,
+    finalDeliveryCode: receipt.finalDeliveryCode ?? null,
+    lastIntermediateCode: receipt.lastIntermediateCode ?? null,
+    sentAt: receipt.sentAt ?? null,
+    deliveredAt: status === "delivered" ? receipt.dlrAt ?? null : null,
+    failedAt,
+    dlrAt: receipt.dlrAt ?? null,
+    cost: receipt.cost ?? null,
+    part: receipt.part ?? null,
+    sender: receipt.sender ?? null,
     requestDlr: true,
     createdAt: receipt.createdAt,
     updatedAt: receipt.updatedAt,
