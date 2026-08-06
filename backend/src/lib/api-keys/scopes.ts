@@ -10,6 +10,8 @@ export function assertApiKeyScope(apiKey: ApiKey, scope: string): void {
 
 export const API_KEY_SCOPES = {
   messagesSend: "messages:send",
+  smsSend: "sms:send",
+  smsRead: "sms:read",
   callsInitiate: "calls:initiate",
   callsManage: "calls:manage",
   callsSettings: "calls:settings",
@@ -19,6 +21,8 @@ export const API_KEY_SCOPES = {
 
 export const DEFAULT_API_KEY_SCOPES = [
   API_KEY_SCOPES.messagesSend,
+  API_KEY_SCOPES.smsSend,
+  API_KEY_SCOPES.smsRead,
   API_KEY_SCOPES.callsInitiate,
   API_KEY_SCOPES.callsManage,
   API_KEY_SCOPES.callsSettings,

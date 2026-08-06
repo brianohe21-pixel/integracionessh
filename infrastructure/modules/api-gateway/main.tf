@@ -954,6 +954,18 @@ locals {
       function_arn = var.public_api_function_arn
       protected    = false
     }
+    public_api_sms_send = {
+      route_key    = "POST /v1/sms"
+      invoke_arn   = var.public_api_invoke_arn
+      function_arn = var.public_api_function_arn
+      protected    = false
+    }
+    public_api_sms_get = {
+      route_key    = "GET /v1/sms/{traceId}"
+      invoke_arn   = var.public_api_invoke_arn
+      function_arn = var.public_api_function_arn
+      protected    = false
+    }
     public_api_templates_list = {
       route_key    = "GET /v1/templates"
       invoke_arn   = var.public_api_invoke_arn

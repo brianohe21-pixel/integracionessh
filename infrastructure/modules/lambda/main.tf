@@ -603,6 +603,7 @@ locals {
         ENVIRONMENT    = var.environment
         FRONTEND_URL   = var.frontend_url
         SES_FROM_EMAIL = var.ses_from_email
+        API_PUBLIC_URL = var.api_public_url
       }
     }
     api_keys = {

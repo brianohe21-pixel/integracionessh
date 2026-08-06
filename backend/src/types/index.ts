@@ -908,7 +908,7 @@ export interface Campaign {
   requestDlr?: boolean;
 }
 
-export type SmsDlrSource = "campaign" | "template";
+export type SmsDlrSource = "campaign" | "template" | "api";
 
 export interface SmsDlrReceipt {
   receiptId: string;

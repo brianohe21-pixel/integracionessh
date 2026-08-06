@@ -18,6 +18,12 @@ describe("mergeDefaultScopes", () => {
     expect(merged).toHaveLength(DEFAULT_API_KEY_SCOPES.length);
   });
 
+  it("includes sms scopes in default scopes", () => {
+    expect(DEFAULT_API_KEY_SCOPES).toEqual(
+      expect.arrayContaining([API_KEY_SCOPES.smsSend, API_KEY_SCOPES.smsRead])
+    );
+  });
+
   it("keeps keys that already have all default scopes unchanged", () => {
     const scopes = [...DEFAULT_API_KEY_SCOPES];
     expect(mergeDefaultScopes(scopes)).toEqual(scopes);
