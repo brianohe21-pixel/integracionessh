@@ -10,6 +10,14 @@ export const API_SCOPES = [
     endpoints: ["POST /v1/messages"],
   },
   {
+    scope: "sms:send",
+    endpoints: ["POST /v1/sms"],
+  },
+  {
+    scope: "sms:read",
+    endpoints: ["GET /v1/sms/{traceId}"],
+  },
+  {
     scope: "templates:read",
     endpoints: ["GET /v1/templates"],
   },

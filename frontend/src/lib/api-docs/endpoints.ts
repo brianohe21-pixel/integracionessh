@@ -145,6 +145,38 @@ const UPDATE_CALL_SETTINGS_BODY = JSON.stringify(
 
 const PERMISSION_REQUEST_BODY = '{"to":"521234567890","bodyText":"Can we call you?"}';
 
+const SEND_SMS_BODY = '{"to":"573001234567","text":"Hello from SMS API"}';
+
+const SMS_TRACE_RESPONSE = JSON.stringify(
+  {
+    traceId: "550e8400-e29b-41d4-a716-446655440000",
+    phone: "573001234567",
+    channel: "sms",
+    status: "delivered",
+    failureKind: null,
+    externalMessageId: "telcored-123",
+    telcoredMessageId: "telcored-123",
+    sendErrorMessage: null,
+    deliveryErrorCode: null,
+    deliveryErrorMessage: null,
+    deliveryStatus: "DELIVRD",
+    finalDeliveryCode: 1,
+    lastIntermediateCode: null,
+    sentAt: "2026-06-17T12:00:01.000Z",
+    deliveredAt: "2026-06-17T12:00:05.000Z",
+    failedAt: null,
+    dlrAt: "2026-06-17T12:00:05.000Z",
+    cost: "0.02",
+    part: "1",
+    sender: "msg",
+    requestDlr: true,
+    createdAt: "2026-06-17T12:00:00.000Z",
+    updatedAt: "2026-06-17T12:00:05.000Z",
+  },
+  null,
+  2
+);
+
 export const API_DOC_ENDPOINTS: ApiDocEndpoint[] = [
   {
     id: "send-message-text",
@@ -164,6 +196,43 @@ export const API_DOC_ENDPOINTS: ApiDocEndpoint[] = [
       body: SEND_MESSAGE_TEXT_BODY,
     }),
     notesKey: "apiDocs.endpoints.sendMessageNotes",
+  },
+  {
+    id: "send-sms",
+    method: "POST",
+    path: "/v1/sms",
+    scope: "sms:send",
+    descriptionKey: "apiDocs.endpoints.sendSms",
+    requestExample: SEND_SMS_BODY,
+    responseExample: JSON.stringify(
+      {
+        traceId: "550e8400-e29b-41d4-a716-446655440000",
+        messageId: "telcored-123",
+        status: "sent",
+        timestamp: "2026-06-17T12:00:00.000Z",
+      },
+      null,
+      2
+    ),
+    curlExample: buildCurlExample({
+      method: "POST",
+      path: "/v1/sms",
+      body: SEND_SMS_BODY,
+    }),
+    notesKey: "apiDocs.endpoints.sendSmsNotes",
+  },
+  {
+    id: "get-sms-trace",
+    method: "GET",
+    path: "/v1/sms/{traceId}",
+    scope: "sms:read",
+    descriptionKey: "apiDocs.endpoints.getSmsTrace",
+    responseExample: SMS_TRACE_RESPONSE,
+    curlExample: buildCurlExample({
+      method: "GET",
+      path: "/v1/sms/550e8400-e29b-41d4-a716-446655440000",
+    }),
+    notesKey: "apiDocs.endpoints.getSmsTraceNotes",
   },
   {
     id: "send-message-template",

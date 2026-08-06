@@ -507,11 +507,10 @@ export const es = {
   },
   sms: {
     title: "SMS",
-    subtitle: "Envío SMS vía Telcored. Configura el remitente usado en la API (por ejemplo, msg).",
+    subtitle: "Envío SMS. Configura el remitente usado en la API (por ejemplo, msg).",
     enabled: "Activar canal SMS",
-    senderLabel: "Remitente Telcored (ej. msg)",
-    senderHint: "Hasta 11 caracteres alfanuméricos o hasta 15 dígitos. Se envía como from en Telcored.",
-    senderInvalid: "Remitente inválido para Telcored",
+    senderLabel: "Remitente (ej. msg)",
+    senderInvalid: "Remitente inválido",
   },
   outreach: {
     channel: "Canal",
@@ -1507,7 +1506,7 @@ export const es = {
   },
   apiDocs: {
     title: "Referencia de la API REST",
-    subtitle: "Envía mensajes de WhatsApp, gestiona templates y llamadas con claves API.",
+    subtitle: "Envía mensajes de WhatsApp y SMS, gestiona templates y llamadas con claves API.",
     navLink: "API",
     viewDocs: "Ver documentación",
     baseUrl: "URL base",
@@ -1520,6 +1519,7 @@ export const es = {
     noContentResponse: "204 No Content — cuerpo de respuesta vacío",
     groups: {
       messages: "Mensajes",
+      sms: "SMS",
       templates: "Templates",
       calls: "Llamadas",
     },
@@ -1565,7 +1565,7 @@ export const es = {
         "403": "Clave deshabilitada, expirada o sin scope",
         "404": "Recurso no encontrado",
         "429": "Límite de tasa excedido",
-        "502": "Error al comunicarse con WhatsApp",
+        "502": "Error al comunicarse con WhatsApp o el proveedor SMS",
       },
     },
     endpoints: {
@@ -1574,6 +1574,10 @@ export const es = {
       sendMessageText: "Envía un mensaje de texto de WhatsApp al número indicado.",
       sendMessageTemplate: "Envía un template de WhatsApp aprobado por Meta.",
       sendMessageNotes: "Usa type text o type template. Para templates, name y language deben coincidir con un template aprobado.",
+      sendSms: "Envía un SMS de texto libre y devuelve un traceId para consultar la trazabilidad.",
+      sendSmsNotes: "Requiere que el bot tenga SMS habilitado y un remitente configurado. Si el envío falla, la respuesta incluye traceId para consultar el estado.",
+      getSmsTrace: "Consulta la trazabilidad de un SMS enviado por traceId.",
+      getSmsTraceNotes: "Devuelve estado de entrega, IDs del proveedor, errores y timestamps. Solo accesible para el tenant y bot de la API key.",
       listTemplates: "Lista los templates de WhatsApp del bot asociado a la clave API.",
       listTemplatesNotes: "Sincroniza templates desde Meta y devuelve name, language, category, status y components.",
       createTemplate: "Crea un template de WhatsApp. Meta lo revisa antes de poder enviarlo.",

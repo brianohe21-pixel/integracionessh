@@ -48,7 +48,6 @@ export function BotSmsSettings({ bot }: { bot: Bot }) {
         placeholder={t("sms.senderLabel")}
         className="w-full px-3 py-2 border border-default rounded-lg text-sm"
       />
-      <p className="text-xs text-secondary">{t("sms.senderHint")}</p>
       {!senderValid && sender.trim() && (
         <p className="text-xs text-red-600">{t("sms.senderInvalid")}</p>
       )}

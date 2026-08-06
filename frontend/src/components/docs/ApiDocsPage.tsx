@@ -12,6 +12,7 @@ import {
   Shield,
   TriangleAlert,
   LayoutTemplate,
+  Smartphone,
 } from "lucide-react";
 import { API_DOC_ENDPOINTS, type ApiDocEndpoint } from "@/lib/api-docs/endpoints";
 import { getApiBaseUrl } from "@/lib/api-docs/constants";
@@ -55,6 +56,12 @@ const ENDPOINT_GROUPS: EndpointGroup[] = [
     titleKey: "apiDocs.groups.messages",
     icon: MessageSquare,
     match: (e) => e.path.startsWith("/v1/messages"),
+  },
+  {
+    id: "sms",
+    titleKey: "apiDocs.groups.sms",
+    icon: Smartphone,
+    match: (e) => e.path.startsWith("/v1/sms"),
   },
   {
     id: "templates",
