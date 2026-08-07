@@ -1,8 +1,7 @@
-import { createPrivateKey, sign } from "crypto";
+import { createPrivateKey, generateKeyPairSync, sign } from "crypto";
 import { parseTelnyxWebhookBody, verifyTelnyxWebhookSignature } from "./webhook.js";
 
 function generateTestKeyPair(): { publicKey: string; privateKey: ReturnType<typeof createPrivateKey> } {
-  const { generateKeyPairSync } = require("crypto") as typeof import("crypto");
   const pair = generateKeyPairSync("ed25519");
   const publicKey = pair.publicKey.export({ type: "spki", format: "der" }).toString("base64");
   return { publicKey, privateKey: pair.privateKey };
