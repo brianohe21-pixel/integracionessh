@@ -14,6 +14,7 @@ import {
   makeDocId,
 } from "../../lib/dynamodb/knowledge.repository.js";
 import { buildKnowledgeS3Key, getPresignedUploadUrl, deleteObject } from "../../lib/s3/client.js";
+import { assertAiAssistantActive } from "../../lib/ai-assistant/config.js";
 import { ok, created, badRequest, notFound, noContent, handleError } from "../../lib/http.js";
 
 const sqs = new SQSClient({});
@@ -41,6 +42,10 @@ export async function handler(
 
     const bot = await getBot(auth.tenantId, botId);
     if (!bot) return notFound("Bot not found");
+
+    if (method !== "GET") {
+      assertAiAssistantActive(bot);
+    }
 
     if (method === "GET" && rawPath.endsWith("/knowledge") && !docId) {
       const documents = await listDocuments(auth.tenantId, botId);

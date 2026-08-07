@@ -31,6 +31,7 @@ api_custom_domain       = ""
 api_public_url          = ""
 
 telephony_gateway_vpc_id             = "vpc-xxxxxxxx"
+# HCL list for CI: TELEPHONY_GATEWAY_PUBLIC_SUBNET_IDS='["subnet-aaa","subnet-bbb"]'
 telephony_gateway_public_subnet_ids  = ["subnet-xxxxxxxx", "subnet-yyyyyyyy"]
 telephony_gateway_domain             = ""
 telephony_gateway_certificate_arn    = ""

@@ -200,7 +200,7 @@ export interface Bot {
   tenantId: string;
   name: string;
   defaultLocale?: BotLocale;
-  responseMode: "openai" | "webhook";
+  responseMode: "none" | "openai" | "webhook";
   systemPrompt?: string;
   aiProvider?: AiProvider;
   model?: string;
@@ -243,7 +243,17 @@ export interface Bot {
 
 export type HandoffMode = "bot" | "human";
 
-export type HandoffReason = "manual" | "ai" | "webhook";
+export type HandoffReason = "manual" | "ai" | "webhook" | "no_ai";
+
+export interface AiAssistantConfig {
+  enabled: boolean;
+  systemPrompt?: string;
+  aiProvider?: AiProvider;
+  model?: string;
+  temperature?: number;
+  maxTokens?: number;
+  knowledgeEnabled?: boolean;
+}
 
 export type WorkflowStatus = "new" | "open" | "pending" | "resolved";
 

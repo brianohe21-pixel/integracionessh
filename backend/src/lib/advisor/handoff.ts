@@ -69,6 +69,82 @@ function scheduleCopilotInsights(params: {
   })();
 }
 
+export async function performInboxHandoff(params: {
+  tenantId: string;
+  botId: string;
+  conversationId: string;
+  reason: HandoffReason;
+}): Promise<Conversation | null> {
+  const existing = await getConversation(params.tenantId, params.botId, params.conversationId);
+  if (!existing) return null;
+
+  const picked = await pickAdvisor(params.tenantId, params.botId);
+  const now = new Date().toISOString();
+
+  const updates: Parameters<typeof updateConversation>[3] = {
+    handoffMode: "human",
+    handoffAt: now,
+    handoffReason: params.reason,
+    workflowStatus: "new",
+    status: "active",
+  };
+  if (picked?.advisorId) {
+    updates.assignedAdvisorId = picked.advisorId;
+  }
+
+  const updated = await updateConversation(
+    params.tenantId,
+    params.botId,
+    params.conversationId,
+    updates
+  );
+
+  if (picked) {
+    await touchAdvisorAssignment(params.tenantId, picked.advisorId);
+  }
+
+  const systemMessage: Message = {
+    messageId: `sys-${randomUUID()}`,
+    conversationId: params.conversationId,
+    tenantId: params.tenantId,
+    role: "system",
+    content: `Conversation transferred to human inbox (${params.reason})`,
+    timestamp: now,
+  };
+
+  await addMessage(systemMessage, params.botId);
+
+  if (updated) {
+    publishRealtimeEventSafe(params.tenantId, {
+      type: "conversation.handoff",
+      conversation: updated,
+    });
+
+    await emitIntegrationEvent(
+      params.tenantId,
+      "conversation.handoff",
+      buildConversationHandoffPayload({
+        tenantId: params.tenantId,
+        botId: params.botId,
+        conversationId: params.conversationId,
+        phoneNumber: updated.phoneNumber,
+        reason: params.reason,
+        ...(picked?.advisorId ? { advisorId: picked.advisorId } : {}),
+      })
+    ).catch((err) => console.error("Failed to emit handoff integration event:", err));
+
+    if (picked) {
+      scheduleCopilotInsights({
+        tenantId: params.tenantId,
+        botId: params.botId,
+        conversationId: params.conversationId,
+      });
+    }
+  }
+
+  return updated;
+}
+
 export async function performHandoff(params: {
   tenantId: string;
   botId: string;

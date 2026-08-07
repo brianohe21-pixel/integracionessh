@@ -216,10 +216,12 @@ export async function handler(
       const { assertCanUseVoicebot, assertCanEnableChannel } = await import(
         "../../lib/billing/assert-plan.js"
       );
+      const { assertAiAssistantActive } = await import("../../lib/ai-assistant/config.js");
       const { normalizeE164 } = await import("../../lib/telnyx/phone.js");
 
       const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
       if (parsed.data.enabled === true) {
+        assertAiAssistantActive(bot);
         await assertCanUseVoicebot(tenant);
         await assertCanEnableChannel(tenant, bot, "phone");
       }

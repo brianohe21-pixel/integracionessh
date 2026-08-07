@@ -16,6 +16,11 @@ import { generateWidgetKey } from "../../lib/webchat/session.repository.js";
 import { generateVoicebotWidgetKey } from "../../lib/voicebot/session.repository.js";
 import { assertAllowedModel, assertCanEnableKnowledge } from "../../lib/billing/plan-config.js";
 import {
+  assertAiAssistantActive,
+  assertCanDisableAiAssistant,
+  toAiAssistantConfig,
+} from "../../lib/ai-assistant/config.js";
+import {
   DEFAULT_MODEL_ID,
   getModelProviderMismatch,
   isValidModelId,
@@ -46,7 +51,7 @@ const CreateBotSchema = z
   .object({
     name: z.string().min(1).max(128),
     defaultLocale: z.enum(["es", "en"]).optional(),
-    responseMode: z.enum(["openai", "webhook"]).default("openai"),
+    responseMode: z.enum(["none", "openai", "webhook"]).default("none"),
     systemPrompt: z.string().min(1).max(4096).optional(),
     aiProvider: AiProviderSchema.optional(),
     model: ModelSchema.default(DEFAULT_MODEL_ID),
@@ -77,17 +82,29 @@ const CreateBotSchema = z
 const UpdateBotSchema = z.object({
   name: z.string().min(1).max(128).optional(),
   defaultLocale: z.enum(["es", "en"]).optional(),
-  responseMode: z.enum(["openai", "webhook"]).optional(),
-  systemPrompt: z.string().min(1).max(4096).optional(),
-  aiProvider: AiProviderSchema.optional(),
-  model: ModelSchema.optional(),
-  temperature: z.number().min(0).max(2).optional(),
-  maxTokens: z.number().int().min(1).max(4096).optional(),
+  responseMode: z.enum(["none", "webhook"]).optional(),
   webhookUrl: z.string().url().startsWith("https://").max(2048).optional(),
   webhookSecret: z.string().min(8).max(256).optional(),
   phoneNumberId: z.string().min(1).optional(),
   whatsappBusinessAccountId: z.string().min(1).optional(),
   status: z.enum(["active", "inactive"]).optional(),
+});
+
+const AiAssistantUpdateSchema = z.object({
+  systemPrompt: z.string().min(1).max(4096).optional(),
+  aiProvider: AiProviderSchema.optional(),
+  model: ModelSchema.optional(),
+  temperature: z.number().min(0).max(2).optional(),
+  maxTokens: z.number().int().min(1).max(4096).optional(),
+  knowledgeEnabled: z.boolean().optional(),
+});
+
+const AiAssistantEnableSchema = z.object({
+  systemPrompt: z.string().min(1).max(4096),
+  aiProvider: AiProviderSchema.optional(),
+  model: ModelSchema.default(DEFAULT_MODEL_ID),
+  temperature: z.number().min(0).max(2).default(0.7),
+  maxTokens: z.number().int().min(1).max(4096).default(1024),
   knowledgeEnabled: z.boolean().optional(),
 });
 
@@ -289,6 +306,7 @@ export async function handler(
 
       const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
       if (parsed.data.enabled === true) {
+        assertAiAssistantActive(existing);
         await assertCanUseVoicebot(tenant);
         await assertCanEnableChannel(tenant, existing, "voicebot");
       }
@@ -350,6 +368,91 @@ export async function handler(
         voicebotEnabled: updated.voicebotEnabled,
         voicebotWidgetKey: updated.voicebotWidgetKey,
       });
+    }
+
+    if (botId && method === "GET" && rawPath.includes("/ai-assistant")) {
+      const existing = await getBot(auth.tenantId, botId);
+      if (!existing) return notFound("Bot not found");
+      assertTenantAccess(auth, existing.tenantId);
+      return ok(toAiAssistantConfig(existing));
+    }
+
+    if (botId && method === "PUT" && rawPath.includes("/ai-assistant")) {
+      const existing = await getBot(auth.tenantId, botId);
+      if (!existing) return notFound("Bot not found");
+      assertTenantAccess(auth, existing.tenantId);
+      assertAiAssistantActive(existing);
+
+      const body = JSON.parse(event.body ?? "{}");
+      const parsed = AiAssistantUpdateSchema.safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
+      if (parsed.data.model) {
+        assertAllowedModel(tenant, parsed.data.model);
+        const providerMismatch = getModelProviderMismatch(
+          parsed.data.model,
+          parsed.data.aiProvider
+        );
+        if (providerMismatch) return badRequest(providerMismatch);
+      }
+      if (parsed.data.knowledgeEnabled === true) {
+        assertCanEnableKnowledge(tenant);
+      }
+
+      const updates: Partial<Omit<Bot, "tenantId" | "botId" | "createdAt">> = {};
+      if (parsed.data.systemPrompt !== undefined) updates.systemPrompt = parsed.data.systemPrompt;
+      if (parsed.data.model !== undefined) updates.model = parsed.data.model;
+      if (parsed.data.temperature !== undefined) updates.temperature = parsed.data.temperature;
+      if (parsed.data.maxTokens !== undefined) updates.maxTokens = parsed.data.maxTokens;
+      if (parsed.data.aiProvider !== undefined) updates.aiProvider = parsed.data.aiProvider;
+      if (parsed.data.knowledgeEnabled !== undefined) {
+        updates.knowledgeEnabled = parsed.data.knowledgeEnabled;
+      }
+
+      const updated = await updateBot(auth.tenantId, botId, updates);
+      return ok(toAiAssistantConfig(updated));
+    }
+
+    if (botId && method === "POST" && rawPath.endsWith("/ai-assistant/enable")) {
+      const existing = await getBot(auth.tenantId, botId);
+      if (!existing) return notFound("Bot not found");
+      assertTenantAccess(auth, existing.tenantId);
+
+      const body = JSON.parse(event.body ?? "{}");
+      const parsed = AiAssistantEnableSchema.safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
+      assertAllowedModel(tenant, parsed.data.model);
+      const providerMismatch = getModelProviderMismatch(parsed.data.model, parsed.data.aiProvider);
+      if (providerMismatch) return badRequest(providerMismatch);
+      if (parsed.data.knowledgeEnabled === true) {
+        assertCanEnableKnowledge(tenant);
+      }
+
+      const updated = await updateBot(auth.tenantId, botId, {
+        responseMode: "openai",
+        systemPrompt: parsed.data.systemPrompt,
+        model: parsed.data.model,
+        temperature: parsed.data.temperature,
+        maxTokens: parsed.data.maxTokens,
+        ...(parsed.data.aiProvider ? { aiProvider: parsed.data.aiProvider } : {}),
+        ...(parsed.data.knowledgeEnabled !== undefined
+          ? { knowledgeEnabled: parsed.data.knowledgeEnabled }
+          : {}),
+      });
+      return ok(toAiAssistantConfig(updated));
+    }
+
+    if (botId && method === "POST" && rawPath.endsWith("/ai-assistant/disable")) {
+      const existing = await getBot(auth.tenantId, botId);
+      if (!existing) return notFound("Bot not found");
+      assertTenantAccess(auth, existing.tenantId);
+      assertCanDisableAiAssistant(existing);
+
+      const updated = await updateBot(auth.tenantId, botId, { responseMode: "none" });
+      return ok(toAiAssistantConfig(updated));
     }
 
     if (method === "GET" && !botId) {
@@ -415,7 +518,7 @@ export async function handler(
           temperature: data.temperature,
           maxTokens: data.maxTokens,
         };
-      } else {
+      } else if (data.responseMode === "webhook") {
         if (!data.webhookUrl) {
           return badRequest("webhookUrl is required when responseMode is webhook");
         }
@@ -424,6 +527,8 @@ export async function handler(
           webhookUrl: data.webhookUrl,
           ...(data.webhookSecret !== undefined ? { webhookSecret: data.webhookSecret } : {}),
         };
+      } else {
+        newBot = base;
       }
 
       await createBot(newBot);
@@ -439,17 +544,11 @@ export async function handler(
       const parsed = UpdateBotSchema.safeParse(body);
       if (!parsed.success) return badRequest(parsed.error.message);
 
-      const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
-      if (parsed.data.model) {
-        assertAllowedModel(tenant, parsed.data.model);
-        const providerMismatch = getModelProviderMismatch(
-          parsed.data.model,
-          parsed.data.aiProvider
-        );
-        if (providerMismatch) return badRequest(providerMismatch);
+      if (parsed.data.responseMode === "webhook" && !parsed.data.webhookUrl && !existing.webhookUrl) {
+        return badRequest("webhookUrl is required when responseMode is webhook");
       }
-      if (parsed.data.knowledgeEnabled === true) {
-        assertCanEnableKnowledge(tenant);
+      if (parsed.data.responseMode === "webhook" && existing.responseMode === "openai") {
+        assertCanDisableAiAssistant(existing);
       }
 
       const updated = await updateBot(

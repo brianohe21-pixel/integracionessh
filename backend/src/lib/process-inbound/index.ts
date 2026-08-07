@@ -14,7 +14,7 @@ import {
 } from "../dynamodb/conversation.repository.js";
 import { generateChatResponse, getOpenAIApiKey } from "../openai/client.js";
 import { callCustomWebhook } from "../webhook/client.js";
-import { performHandoff } from "../advisor/handoff.js";
+import { performHandoff, performInboxHandoff } from "../advisor/handoff.js";
 import {
   getClientHandoffMessage,
   notifyAdvisorOfConversation,
@@ -147,7 +147,7 @@ async function executeHandoff(params: {
   conversation: Awaited<ReturnType<typeof getOrCreateConversation>>;
   accessToken?: string | undefined;
   replyToExternalId?: string | undefined;
-  reason: "ai" | "webhook";
+  reason: "ai" | "webhook" | "no_ai";
   lastMessagePreview: string;
 }): Promise<void> {
   await performHandoff({
@@ -553,7 +553,42 @@ export async function processInboundMessage(
 
   let aiResponse: string | null = null;
   let shouldHandoff = false;
-  let handoffReason: "ai" | "webhook" = "ai";
+  let handoffReason: "ai" | "webhook" | "no_ai" = "ai";
+
+  if (bot.responseMode === "none") {
+    await addMessage(userMessage, botId);
+    await emitMessageReceived({
+      tenantId,
+      botId,
+      conversationId: conversation.conversationId,
+      channel,
+      from: participantId,
+      message: userMessageText,
+      contactName,
+    });
+
+    const handedOff = await performInboxHandoff({
+      tenantId,
+      botId,
+      conversationId: conversation.conversationId,
+      reason: "no_ai",
+    });
+
+    if (handedOff) {
+      await notifyAdvisorOfConversation({
+        tenantId,
+        botId,
+        conversation: handedOff,
+        phoneNumberId,
+        accessToken: accessToken ?? "",
+        lastMessagePreview: userMessageText,
+        force: true,
+      });
+    }
+
+    await incrementMessages(tenantId);
+    return;
+  }
 
   if (bot.responseMode === "webhook" && bot.webhookUrl) {
     const webhookResult = await callCustomWebhook(bot.webhookUrl, bot.webhookSecret, {

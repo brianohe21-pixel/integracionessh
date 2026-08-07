@@ -588,6 +588,30 @@ locals {
       function_arn = var.bots_function_arn
       protected    = true
     }
+    bots_ai_assistant_get = {
+      route_key    = "GET /bots/{botId}/ai-assistant"
+      invoke_arn   = var.bots_invoke_arn
+      function_arn = var.bots_function_arn
+      protected    = true
+    }
+    bots_ai_assistant_put = {
+      route_key    = "PUT /bots/{botId}/ai-assistant"
+      invoke_arn   = var.bots_invoke_arn
+      function_arn = var.bots_function_arn
+      protected    = true
+    }
+    bots_ai_assistant_enable = {
+      route_key    = "POST /bots/{botId}/ai-assistant/enable"
+      invoke_arn   = var.bots_invoke_arn
+      function_arn = var.bots_function_arn
+      protected    = true
+    }
+    bots_ai_assistant_disable = {
+      route_key    = "POST /bots/{botId}/ai-assistant/disable"
+      invoke_arn   = var.bots_invoke_arn
+      function_arn = var.bots_function_arn
+      protected    = true
+    }
     voicebot_sessions_create = {
       route_key    = "POST /voicebot/sessions"
       invoke_arn   = var.voicebot_invoke_arn

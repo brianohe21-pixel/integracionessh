@@ -20,6 +20,15 @@ export async function listAppsCatalog(tenantId: string) {
   return {
     apps: [
       {
+        id: "ai-assistant",
+        name: "AI Assistant",
+        description: "Automatic AI responses and knowledge base per agent",
+        installedBots: installedBots.map((bot) => ({
+          ...bot,
+          enabled: bots.find((b) => b.botId === bot.botId)?.responseMode === "openai",
+        })),
+      },
+      {
         id: "calendar",
         name: "Calendar",
         description: "Schedule appointments and manage bookings per bot",
