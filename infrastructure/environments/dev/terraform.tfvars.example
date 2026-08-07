@@ -30,6 +30,11 @@ api_custom_domain       = ""
 # Optional override when API Gateway does not exist yet. Otherwise Terraform resolves execute-api URL automatically.
 api_public_url          = ""
 
+telephony_gateway_vpc_id             = "vpc-xxxxxxxx"
+telephony_gateway_public_subnet_ids  = ["subnet-xxxxxxxx", "subnet-yyyyyyyy"]
+telephony_gateway_domain             = ""
+telephony_gateway_certificate_arn    = ""
+
 enable_monitoring = false
 ops_alert_email   = "ops@example.com"
 # ops_alert_emails = ["ops@example.com", "oncall@example.com"]

@@ -11,13 +11,14 @@ variable "aws_region" {
 }
 
 variable "vpc_id" {
-  type    = string
-  default = ""
+  type        = string
+  description = "VPC ID for the telephony gateway ALB and ECS tasks"
 }
 
 variable "public_subnet_ids" {
-  type    = list(string)
-  default = []
+  type        = list(string)
+  default     = []
+  description = "Public subnet IDs for the ALB and ECS tasks. If empty, subnets are discovered in the VPC."
 }
 
 variable "dynamodb_table_arn" {

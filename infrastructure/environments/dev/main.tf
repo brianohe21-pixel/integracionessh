@@ -171,6 +171,8 @@ module "telephony_gateway" {
   aws_region            = var.aws_region
   dynamodb_table_arn    = module.dynamodb.table_arn
   dynamodb_table_name   = module.dynamodb.table_name
+  vpc_id                = var.telephony_gateway_vpc_id
+  public_subnet_ids     = var.telephony_gateway_public_subnet_ids
   certificate_arn       = var.telephony_gateway_certificate_arn
   domain_name           = var.telephony_gateway_domain
   telephony_lambda_name = "${local.project}-${local.environment}-telephony"

@@ -1,24 +1,21 @@
 data "aws_caller_identity" "current" {}
 
-data "aws_vpc" "selected" {
-  count   = var.vpc_id != "" ? 0 : 1
-  default = true
-}
-
 data "aws_subnets" "public" {
+  count = length(var.public_subnet_ids) > 0 ? 0 : 1
+
   filter {
     name   = "vpc-id"
-    values = [local.vpc_id]
+    values = [var.vpc_id]
   }
   filter {
-    name   = "default-for-az"
+    name   = "map-public-ip-on-launch"
     values = ["true"]
   }
 }
 
 locals {
-  vpc_id            = var.vpc_id != "" ? var.vpc_id : data.aws_vpc.selected[0].id
-  public_subnet_ids = length(var.public_subnet_ids) > 0 ? var.public_subnet_ids : data.aws_subnets.public.ids
+  vpc_id            = var.vpc_id
+  public_subnet_ids = length(var.public_subnet_ids) > 0 ? var.public_subnet_ids : data.aws_subnets.public[0].ids
 }
 
 resource "aws_ecr_repository" "gateway" {

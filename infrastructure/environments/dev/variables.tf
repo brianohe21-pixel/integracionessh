@@ -196,6 +196,17 @@ variable "telephony_gateway_certificate_arn" {
   default = ""
 }
 
+variable "telephony_gateway_vpc_id" {
+  type        = string
+  description = "VPC ID for the telephony gateway (required for ECS Fargate + ALB)"
+}
+
+variable "telephony_gateway_public_subnet_ids" {
+  type        = list(string)
+  default     = []
+  description = "Public subnet IDs for telephony gateway. Pass explicitly if IAM lacks ec2:DescribeSubnets."
+}
+
 variable "google_client_id" {
   type    = string
   default = ""
