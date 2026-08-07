@@ -57,6 +57,7 @@ const entryPoints = [
   "src/functions/voicebot/index.ts",
   "src/functions/voicebot-session/index.ts",
   "src/functions/telephony/index.ts",
+  "src/functions/process-telephony-cdr/index.ts",
   "src/functions/realtime/index.ts",
   "src/functions/realtime-ws/index.ts",
   "src/functions/calendar/index.ts",
