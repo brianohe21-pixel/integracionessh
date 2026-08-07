@@ -2,6 +2,7 @@ import type { Channel } from "../../types/index.js";
 import { emailAdapter } from "./email.adapter.js";
 import { instagramAdapter } from "./instagram.adapter.js";
 import { messengerAdapter } from "./messenger.adapter.js";
+import { phoneAdapter } from "./phone.adapter.js";
 import { smsAdapter } from "./sms.adapter.js";
 import { telegramAdapter } from "./telegram.adapter.js";
 import type { ChannelAdapter, OutboundContext, OutboundDocument, OutboundResult } from "./types.js";
@@ -18,6 +19,7 @@ const adapters: Record<Channel, ChannelAdapter> = {
   sms: smsAdapter,
   email: emailAdapter,
   voicebot: voicebotAdapter,
+  phone: phoneAdapter,
 };
 
 export function getChannelAdapter(channel: Channel): ChannelAdapter {

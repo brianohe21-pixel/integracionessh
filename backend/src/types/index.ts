@@ -182,7 +182,12 @@ export type Channel =
   | "messenger"
   | "sms"
   | "email"
-  | "voicebot";
+  | "voicebot"
+  | "phone";
+
+export type TelephonyProvider = "telnyx";
+
+export type TelephonyCallDirection = "inbound" | "outbound";
 
 export type BotLocale = "es" | "en";
 
@@ -225,6 +230,12 @@ export interface Bot {
   voicebotModel?: string;
   voicebotGreeting?: string;
   voicebotSystemPrompt?: string;
+  telephonyEnabled?: boolean;
+  telephonyPhoneNumber?: string;
+  telephonyVoiceId?: string;
+  telephonyModel?: string;
+  telephonyGreeting?: string;
+  telephonySystemPrompt?: string;
   status: "active" | "inactive";
   createdAt: string;
   updatedAt: string;
@@ -282,7 +293,8 @@ export type MessageSource =
   | "messenger_inbound"
   | "sms_inbound"
   | "email_inbound"
-  | "voicebot_inbound";
+  | "voicebot_inbound"
+  | "phone_inbound";
 
 export type MessageType =
   | "text"
@@ -529,10 +541,37 @@ export interface CallRecord {
   status: CallRecordStatus;
   duration?: number;
   bizOpaqueCallbackData?: string;
+  provider?: TelephonyProvider | "meta";
+  channel?: "phone" | "whatsapp";
+  callControlId?: string;
+  conversationId?: string;
   startedAt?: string;
   endedAt?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export type TelephonySessionStatus = "pending" | "ringing" | "active" | "ended" | "failed";
+
+export interface TelephonySession {
+  sessionId: string;
+  callControlId: string;
+  callId: string;
+  tenantId: string;
+  botId: string;
+  conversationId: string;
+  participantId: string;
+  direction: TelephonyCallDirection;
+  fromNumber: string;
+  toNumber: string;
+  status: TelephonySessionStatus;
+  streamToken: string;
+  locale: BotLocale;
+  contactName?: string;
+  startedAt: string;
+  endedAt?: string;
+  durationSeconds?: number;
+  ttl: number;
 }
 
 export type CallQueueEventType = "connect" | "status" | "terminate";

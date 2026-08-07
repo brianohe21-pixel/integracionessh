@@ -186,6 +186,16 @@ variable "livekit_api_secret" {
   sensitive = true
 }
 
+variable "telephony_gateway_domain" {
+  type    = string
+  default = ""
+}
+
+variable "telephony_gateway_certificate_arn" {
+  type    = string
+  default = ""
+}
+
 variable "google_client_id" {
   type    = string
   default = ""

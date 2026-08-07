@@ -286,6 +286,14 @@ variable "calling_function_arn" {
   type = string
 }
 
+variable "telephony_invoke_arn" {
+  type = string
+}
+
+variable "telephony_function_arn" {
+  type = string
+}
+
 variable "realtime_invoke_arn" {
   type = string
 }

@@ -278,6 +278,14 @@ output "calling_function_arn" {
   value = aws_lambda_function.functions["calling"].arn
 }
 
+output "telephony_invoke_arn" {
+  value = aws_lambda_function.functions["telephony"].invoke_arn
+}
+
+output "telephony_function_arn" {
+  value = aws_lambda_function.functions["telephony"].arn
+}
+
 output "realtime_invoke_arn" {
   value = aws_lambda_function.functions["realtime"].invoke_arn
 }

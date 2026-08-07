@@ -776,6 +776,18 @@ locals {
         ENVIRONMENT = var.environment
       }
     }
+    telephony = {
+      handler     = "telephony/index.handler"
+      description = "Telnyx PSTN telephony webhooks and call control API"
+      timeout     = 30
+      memory      = 512
+      environment = {
+        TABLE_NAME                = var.dynamodb_table_name
+        ENVIRONMENT               = var.environment
+        TELEPHONY_GATEWAY_WS_URL  = var.telephony_gateway_ws_url
+        INTEGRATION_SQS_QUEUE_URL = var.integration_sqs_queue_url
+      }
+    }
     calendar = {
       handler     = "calendar/index.handler"
       description = "Calendar app config and bookings per bot"

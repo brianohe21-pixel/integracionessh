@@ -169,6 +169,12 @@ variable "livekit_api_secret" {
   description = "LiveKit API secret"
 }
 
+variable "telephony_gateway_ws_url" {
+  type        = string
+  default     = ""
+  description = "Public WSS URL for Telnyx media streaming gateway"
+}
+
 variable "lambda_zip_path" {
   type        = string
   default     = ""
@@ -302,6 +308,7 @@ variable "cloudwatch_log_group_import_exclude" {
     "reports",
     "voicebot",
     "voicebot_session",
+    "telephony",
     "reseller",
     "flow_hooks",
     "process_flow_event",

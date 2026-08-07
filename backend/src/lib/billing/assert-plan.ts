@@ -297,6 +297,7 @@ export function countEnabledChannels(bot: import("../../types/index.js").Bot): n
   if (bot.smsEnabled) enabled += 1;
   if (bot.emailEnabled) enabled += 1;
   if (bot.voicebotEnabled) enabled += 1;
+  if (bot.telephonyEnabled) enabled += 1;
   return enabled;
 }
 
@@ -311,6 +312,7 @@ function isChannelAlreadyEnabled(
   if (channel === "sms") return Boolean(bot.smsEnabled);
   if (channel === "email") return Boolean(bot.emailEnabled);
   if (channel === "voicebot") return Boolean(bot.voicebotEnabled);
+  if (channel === "phone") return Boolean(bot.telephonyEnabled);
   return false;
 }
 

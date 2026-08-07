@@ -164,6 +164,19 @@ resource "aws_iam_role_policy" "scheduler_invoke" {
   })
 }
 
+module "telephony_gateway" {
+  source                = "../../modules/telephony-gateway"
+  project               = local.project
+  environment           = local.environment
+  aws_region            = var.aws_region
+  dynamodb_table_arn    = module.dynamodb.table_arn
+  dynamodb_table_name   = module.dynamodb.table_name
+  certificate_arn       = var.telephony_gateway_certificate_arn
+  domain_name           = var.telephony_gateway_domain
+  telephony_lambda_name = "${local.project}-${local.environment}-telephony"
+  tags                  = local.tags
+}
+
 module "lambda" {
   source                        = "../../modules/lambda"
   project                       = local.project
@@ -217,6 +230,7 @@ module "lambda" {
   livekit_url                   = var.livekit_url
   livekit_api_key               = var.livekit_api_key
   livekit_api_secret            = var.livekit_api_secret
+  telephony_gateway_ws_url      = module.telephony_gateway.ws_url
   ses_from_email                = var.ses_from_email
   admin_notification_emails     = local.ops_alert_emails
   api_public_url                = local.api_public_url
@@ -297,6 +311,8 @@ module "api_gateway" {
   flow_hooks_function_arn        = module.lambda.flow_hooks_function_arn
   calling_invoke_arn             = module.lambda.calling_invoke_arn
   calling_function_arn           = module.lambda.calling_function_arn
+  telephony_invoke_arn           = module.lambda.telephony_invoke_arn
+  telephony_function_arn         = module.lambda.telephony_function_arn
   realtime_invoke_arn            = module.lambda.realtime_invoke_arn
   realtime_function_arn          = module.lambda.realtime_function_arn
   calendar_invoke_arn            = module.lambda.calendar_invoke_arn

@@ -1080,6 +1080,60 @@ locals {
       function_arn = var.calling_function_arn
       protected    = true
     }
+    telephony_webhook = {
+      route_key    = "POST /telephony/webhook"
+      invoke_arn   = var.telephony_invoke_arn
+      function_arn = var.telephony_function_arn
+      protected    = false
+    }
+    telephony_numbers = {
+      route_key    = "GET /telephony/numbers"
+      invoke_arn   = var.telephony_invoke_arn
+      function_arn = var.telephony_function_arn
+      protected    = true
+    }
+    telephony_voices = {
+      route_key    = "GET /telephony/voices"
+      invoke_arn   = var.telephony_invoke_arn
+      function_arn = var.telephony_function_arn
+      protected    = true
+    }
+    bots_telephony_settings_get = {
+      route_key    = "GET /bots/{botId}/telephony/settings"
+      invoke_arn   = var.telephony_invoke_arn
+      function_arn = var.telephony_function_arn
+      protected    = true
+    }
+    bots_telephony_settings_put = {
+      route_key    = "PUT /bots/{botId}/telephony/settings"
+      invoke_arn   = var.telephony_invoke_arn
+      function_arn = var.telephony_function_arn
+      protected    = true
+    }
+    bots_telephony_calls_list = {
+      route_key    = "GET /bots/{botId}/telephony/calls"
+      invoke_arn   = var.telephony_invoke_arn
+      function_arn = var.telephony_function_arn
+      protected    = true
+    }
+    bots_telephony_calls_get = {
+      route_key    = "GET /bots/{botId}/telephony/calls/{callId}"
+      invoke_arn   = var.telephony_invoke_arn
+      function_arn = var.telephony_function_arn
+      protected    = true
+    }
+    bots_telephony_calls_create = {
+      route_key    = "POST /bots/{botId}/telephony/calls"
+      invoke_arn   = var.telephony_invoke_arn
+      function_arn = var.telephony_function_arn
+      protected    = true
+    }
+    bots_telephony_calls_end = {
+      route_key    = "POST /bots/{botId}/telephony/calls/{callId}/end"
+      invoke_arn   = var.telephony_invoke_arn
+      function_arn = var.telephony_function_arn
+      protected    = true
+    }
     api_keys_list = {
       route_key    = "GET /api-keys"
       invoke_arn   = var.api_keys_invoke_arn
@@ -1727,6 +1781,7 @@ resource "aws_lambda_permission" "api_gw" {
     flows             = var.flows_function_arn
     flow_hooks        = var.flow_hooks_function_arn
     calling           = var.calling_function_arn
+    telephony         = var.telephony_function_arn
     realtime          = var.realtime_function_arn
     calendar          = var.calendar_function_arn
     public_calendar   = var.public_calendar_function_arn
