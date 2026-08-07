@@ -11,7 +11,7 @@ const geistSans = Geist({
 
 export const metadata: Metadata = {
   title: "ChatBot Platform",
-  description: "Plataforma SaaS multitenant para chatbots con WhatsApp y OpenAI",
+  description: "Plataforma SaaS multitenant para agentes con WhatsApp y automatización",
 };
 
 export const viewport = {

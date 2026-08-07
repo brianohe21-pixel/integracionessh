@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useCreateBot } from "@/hooks/useBots";
 import { useLocale, useT } from "@/i18n/context";
-import { DEFAULT_MODEL_ID } from "@/lib/ai-models";
 import { getBotTemplate, type BotIndustryTemplateId } from "@/lib/bot-templates";
 import { BotTemplatePicker } from "@/components/bots/BotTemplatePicker";
 import { Button } from "@/components/ui/Button";
@@ -49,18 +48,10 @@ export function OnboardingStepCreateBot({
     e.preventDefault();
     setError("");
 
-    const systemPrompt = templateId
-      ? getBotTemplate(templateId).getSystemPrompt(locale)
-      : "You are a helpful customer support assistant.";
-
     try {
       const bot = await createBot.mutateAsync({
         name: name.trim(),
-        responseMode: "openai",
-        systemPrompt,
-        model: DEFAULT_MODEL_ID,
-        temperature: 0.7,
-        maxTokens: 1024,
+        responseMode: "none",
         phoneNumberId,
         whatsappBusinessAccountId,
       });

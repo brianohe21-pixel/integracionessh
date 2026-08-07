@@ -12,6 +12,7 @@ import { dateRangeFromDays } from "@/lib/metrics-date-range";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { OnboardingBanner } from "@/components/onboarding/OnboardingBanner";
+import { DashboardControlSummary } from "@/components/dashboard/DashboardControlSummary";
 import { DashboardKpiGrid } from "@/components/dashboard/DashboardKpiGrid";
 import { DashboardActivityChart } from "@/components/dashboard/DashboardActivityChart";
 import { DashboardCampaignFunnelChart } from "@/components/dashboard/DashboardCampaignFunnelChart";
@@ -48,6 +49,7 @@ export default function DashboardPageRoute() {
 
   const kpiLoading =
     usageLoading || marketingLoading || salesLoading || leadsLoading;
+  const controlLoading = usageLoading || marketingLoading || slaLoading;
 
   return (
     <DashboardPage maxWidth="6xl" className="space-y-6">
@@ -57,15 +59,22 @@ export default function DashboardPageRoute() {
         actions={
           <Link
             href="/metrics"
-            className="inline-flex items-center gap-2 rounded-lg border border-default bg-surface-elevated px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-surface-muted"
+            className="inline-flex items-center gap-2 rounded-xl border border-default bg-surface-elevated px-3.5 py-2.5 text-sm font-medium text-primary transition-colors hover:bg-surface-muted"
           >
-            <BarChart3 className="h-4 w-4" />
+            <BarChart3 className="h-4 w-4 text-accent" />
             {t("dashboard.viewMetrics")}
           </Link>
         }
       />
 
       <OnboardingBanner />
+
+      <DashboardControlSummary
+        usage={usage}
+        marketing={marketing}
+        inboxSla={inboxSla}
+        isLoading={controlLoading}
+      />
 
       <DashboardKpiGrid
         usage={usage}
@@ -75,8 +84,8 @@ export default function DashboardPageRoute() {
         isLoading={kpiLoading}
       />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <div className="space-y-6 xl:col-span-2">
           <DashboardActivityChart
             usage={usage}
             isLoading={usageLoading}

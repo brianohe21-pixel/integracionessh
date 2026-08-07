@@ -5,11 +5,19 @@ import { useQuery } from "@tanstack/react-query";
 import { FileText, Trash2, Upload } from "lucide-react";
 import { api } from "@/lib/api";
 import { useKnowledgeDocuments, useUploadKnowledgeDocument, useDeleteKnowledgeDocument } from "@/hooks/useKnowledge";
-import { useUpdateBot } from "@/hooks/useBots";
+import { useSaveAiAssistant } from "@/hooks/useAiAssistant";
 import { useT } from "@/i18n/context";
 import type { Bot, Tenant } from "@/types";
 
-export function BotKnowledge({ bot }: { bot: Bot }) {
+export function BotKnowledge({
+  bot,
+  knowledgeEnabled,
+  showToggle = true,
+}: {
+  bot: Bot;
+  knowledgeEnabled?: boolean;
+  showToggle?: boolean;
+}) {
   const t = useT();
   const fileRef = useRef<HTMLInputElement>(null);
   const { data: tenant } = useQuery({
@@ -19,9 +27,10 @@ export function BotKnowledge({ bot }: { bot: Bot }) {
   const { data, isLoading } = useKnowledgeDocuments(bot.botId);
   const upload = useUploadKnowledgeDocument(bot.botId);
   const remove = useDeleteKnowledgeDocument(bot.botId);
-  const updateBot = useUpdateBot(bot.botId);
+  const saveAiAssistant = useSaveAiAssistant(bot.botId);
 
   const documents = data?.documents ?? [];
+  const enabled = knowledgeEnabled ?? bot.knowledgeEnabled ?? false;
 
   if (tenant?.plan === "free") {
     return (
@@ -43,15 +52,19 @@ export function BotKnowledge({ bot }: { bot: Bot }) {
           <h2 className="text-lg font-semibold text-primary">{t("knowledge.title")}</h2>
           <p className="text-sm text-secondary">{t("knowledge.subtitle")}</p>
         </div>
-        <label className="flex items-center gap-2 text-sm text-secondary">
-          <input
-            type="checkbox"
-            checked={bot.knowledgeEnabled ?? false}
-            onChange={(e) => updateBot.mutate({ knowledgeEnabled: e.target.checked })}
-            className="rounded border-default"
-          />
-          {t("knowledge.enabled")}
-        </label>
+        {showToggle && (
+          <label className="flex items-center gap-2 text-sm text-secondary">
+            <input
+              type="checkbox"
+              checked={enabled}
+              onChange={(e) =>
+                saveAiAssistant.mutate({ knowledgeEnabled: e.target.checked })
+              }
+              className="rounded border-default"
+            />
+            {t("knowledge.enabled")}
+          </label>
+        )}
       </div>
 
       <input

@@ -32,6 +32,7 @@ import {
   ChevronRight,
   ChevronDown,
   Check,
+  PhoneCall,
   Building2,
 } from "lucide-react";
 import { useAdminRole } from "@/hooks/useAdminRole";
@@ -63,10 +64,11 @@ const memberStandaloneNavItems: NavItem[] = [
 
 const memberNavCategories: NavCategory[] = [
   {
-    id: "messaging",
-    labelKey: "nav.categoryMessaging",
+    id: "operations",
+    labelKey: "nav.categoryOperations",
     items: [
       { href: "/bots", labelKey: "nav.bots", icon: BotMessageSquare },
+      { href: "/voice-agents", labelKey: "nav.voiceAgents", icon: PhoneCall },
       { href: "/conversations", labelKey: "nav.conversations", icon: MessageSquare },
       { href: "/supervisor", labelKey: "nav.supervisor", icon: LayoutGrid },
       { href: "/contacts", labelKey: "nav.contacts", icon: BookUser },
@@ -75,20 +77,20 @@ const memberNavCategories: NavCategory[] = [
     ],
   },
   {
-    id: "outreach",
-    labelKey: "nav.categoryOutreach",
-    items: [
-      { href: "/templates", labelKey: "nav.templates", icon: LayoutTemplate },
-      { href: "/bulk-send", labelKey: "nav.bulkSend", icon: SendHorizonal },
-      { href: "/campaigns", labelKey: "nav.campaigns", icon: Megaphone },
-    ],
-  },
-  {
     id: "automation",
     labelKey: "nav.categoryAutomation",
     items: [
       { href: "/automations", labelKey: "nav.automations", icon: Zap },
       { href: "/flows", labelKey: "nav.flows", icon: GitBranch },
+    ],
+  },
+  {
+    id: "growth",
+    labelKey: "nav.categoryGrowth",
+    items: [
+      { href: "/templates", labelKey: "nav.templates", icon: LayoutTemplate },
+      { href: "/bulk-send", labelKey: "nav.bulkSend", icon: SendHorizonal },
+      { href: "/campaigns", labelKey: "nav.campaigns", icon: Megaphone },
     ],
   },
   {
@@ -185,14 +187,14 @@ function NavLink({
         "flex items-center rounded-lg py-2 text-[13px] transition-all duration-150",
         collapsed ? "justify-center px-2" : "gap-2.5 px-2.5",
         active
-          ? "bg-brand-primary font-semibold text-[var(--sidebar-icon-active)] shadow-[0_1px_0_rgba(255,255,255,0.08)_inset]"
-          : "font-medium text-[var(--sidebar-text-secondary)] hover:bg-white/5 hover:text-[var(--sidebar-text)]"
+          ? "nav-item-active shadow-[0_1px_0_rgba(255,255,255,0.08)_inset]"
+          : "nav-item-idle"
       )}
     >
       <Icon
         className={cn(
           "h-4 w-4 shrink-0 stroke-[2]",
-          active ? "text-[var(--sidebar-icon-active)]" : "text-[var(--sidebar-icon)]"
+          active ? "text-brand-primary" : "text-[var(--sidebar-icon)]"
         )}
       />
       {!collapsed ? <span className="truncate">{label}</span> : null}

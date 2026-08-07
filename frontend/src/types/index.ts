@@ -201,7 +201,8 @@ export type Channel =
   | "messenger"
   | "sms"
   | "email"
-  | "voicebot";
+  | "voicebot"
+  | "phone";
 
 export type BotLocale = "es" | "en";
 
@@ -214,7 +215,7 @@ export interface Bot {
   tenantId: string;
   name: string;
   defaultLocale?: BotLocale;
-  responseMode: "openai" | "webhook";
+  responseMode: "none" | "openai" | "webhook";
   systemPrompt?: string;
   aiProvider?: AiProvider;
   model?: string;
@@ -244,6 +245,18 @@ export interface Bot {
   voicebotModel?: string;
   voicebotGreeting?: string;
   voicebotSystemPrompt?: string;
+  telephonyEnabled?: boolean;
+  telephonyPhoneNumber?: string;
+  telephonyVoiceId?: string;
+  telephonyModel?: string;
+  telephonyGreeting?: string;
+  telephonySystemPrompt?: string;
+  telephonyRecordingEnabled?: boolean;
+  telephonyRecordingNotice?: string;
+  telephonyWebhookUrl?: string;
+  telephonyWebhookSecret?: string;
+  telephonyWebhookEnabled?: boolean;
+  telephonyWebhookEvents?: IntegrationEvent[];
   status: "active" | "inactive";
   createdAt: string;
   updatedAt: string;
@@ -252,7 +265,17 @@ export interface Bot {
 
 export type HandoffMode = "bot" | "human";
 
-export type HandoffReason = "manual" | "ai" | "webhook";
+export type HandoffReason = "manual" | "ai" | "webhook" | "no_ai";
+
+export interface AiAssistantConfig {
+  enabled: boolean;
+  systemPrompt?: string;
+  aiProvider?: AiProvider;
+  model?: string;
+  temperature?: number;
+  maxTokens?: number;
+  knowledgeEnabled?: boolean;
+}
 
 export type WorkflowStatus = "new" | "open" | "pending" | "resolved";
 
@@ -750,7 +773,97 @@ export type IntegrationEvent =
   | "lead.converted"
   | "call.connect"
   | "call.status"
-  | "call.terminated";
+  | "call.terminated"
+  | "call.recording.ready"
+  | "call.cost.finalized";
+
+export type CallRecordStatus =
+  | "initiated"
+  | "ringing"
+  | "accepted"
+  | "rejected"
+  | "completed"
+  | "failed"
+  | "terminated";
+
+export type CallRecordingStatus = "disabled" | "pending" | "processing" | "ready" | "failed";
+
+export type CallCostStatus = "pending" | "partial" | "final";
+
+export interface CallCostBreakdown {
+  telnyxUsd?: number;
+  openaiUsd?: number;
+  elevenlabsUsd?: number;
+  recordingUsd?: number;
+  totalUsd: number;
+  currency: "USD";
+  pricingVersion: string;
+}
+
+export interface CallUsageMetrics {
+  openaiInputTokens?: number;
+  openaiOutputTokens?: number;
+  elevenlabsCharacters?: number;
+}
+
+export interface CallRecord {
+  callId: string;
+  tenantId: string;
+  botId: string;
+  phoneNumber: string;
+  businessPhoneNumber?: string;
+  direction: "USER_INITIATED" | "BUSINESS_INITIATED";
+  status: CallRecordStatus;
+  duration?: number;
+  provider?: "telnyx" | "meta";
+  channel?: "phone" | "whatsapp";
+  conversationId?: string;
+  startedAt?: string;
+  endedAt?: string;
+  recordingStatus?: CallRecordingStatus;
+  recordingS3Key?: string;
+  recordingDurationSeconds?: number;
+  costStatus?: CallCostStatus;
+  costBreakdown?: CallCostBreakdown;
+  usageMetrics?: CallUsageMetrics;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CallEventType =
+  | "initiated"
+  | "ringing"
+  | "answered"
+  | "recording_started"
+  | "recording_saved"
+  | "recording_failed"
+  | "hangup"
+  | "cost_pending"
+  | "cost_partial"
+  | "cost_finalized"
+  | "error";
+
+export interface CallEvent {
+  eventId: string;
+  tenantId: string;
+  botId: string;
+  callId: string;
+  type: CallEventType;
+  message?: string;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface VoiceAgentWebhookDelivery {
+  deliveryId: string;
+  tenantId: string;
+  botId: string;
+  event: IntegrationEvent;
+  status: "pending" | "delivered" | "failed";
+  attempts: number;
+  lastError?: string;
+  createdAt: string;
+}
 
 export type MetaFlowStatus = "DRAFT" | "PUBLISHED" | "DEPRECATED";
 

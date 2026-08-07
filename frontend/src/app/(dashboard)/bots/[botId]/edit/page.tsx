@@ -1,26 +1,12 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
-import {
-  BookOpen,
-  ChevronLeft,
-  Globe,
-  Camera,
-  MessageCircle,
-  MessageSquarePlus,
-  Phone,
-  Settings,
-  Workflow,
-  Send,
-  Mail,
-  MessagesSquare,
-  Mic,
-} from "lucide-react";
 import Link from "next/link";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { ChevronLeft, MessageCircle, Sparkles } from "lucide-react";
 import { useBot } from "@/hooks/useBots";
+import { useAiAssistant } from "@/hooks/useAiAssistant";
 import { BotForm } from "@/components/bots/BotForm";
-import { BotKnowledge } from "@/components/bots/BotKnowledge";
+import { BotWhatsAppConnect } from "@/components/bots/BotWhatsAppConnect";
 import { BotWhatsAppQuality } from "@/components/bots/BotWhatsAppQuality";
 import { BotCallingSettings } from "@/components/bots/BotCallingSettings";
 import { BotInstagramConnect } from "@/components/bots/BotInstagramConnect";
@@ -30,32 +16,13 @@ import { BotSmsSettings } from "@/components/bots/BotSmsSettings";
 import { BotEmailSettings } from "@/components/bots/BotEmailSettings";
 import { BotWebchatSettings } from "@/components/bots/BotWebchatSettings";
 import { BotVoicebotSettings } from "@/components/bots/BotVoicebotSettings";
+import { BotTelephonySettings } from "@/components/bots/BotTelephonySettings";
 import { BotMetaFlowsPanel } from "@/components/bots/BotMetaFlowsPanel";
 import { BotMacrosPanel } from "@/components/bots/BotMacrosPanel";
+import { BotEditNav, isBotEditTab, type BotEditTab } from "@/components/bots/BotEditNav";
 import { useT } from "@/i18n/context";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
-
-const TAB_IDS = [
-  "general",
-  "whatsapp",
-  "instagram",
-  "webchat",
-  "telegram",
-  "messenger",
-  "sms",
-  "email",
-  "voicebot",
-  "knowledge",
-  "macros",
-  "metaFlows",
-] as const;
-
-type BotEditTab = (typeof TAB_IDS)[number];
-
-function isBotEditTab(value: string | null): value is BotEditTab {
-  return TAB_IDS.includes(value as BotEditTab);
-}
 
 export default function EditBotPage() {
   const t = useT();
@@ -63,28 +30,11 @@ export default function EditBotPage() {
   const searchParams = useSearchParams();
   const { botId } = useParams<{ botId: string }>();
   const { data: bot, isLoading } = useBot(botId);
+  const { data: aiAssistant } = useAiAssistant(botId);
 
   const tabParam = searchParams.get("tab");
   const activeTab: BotEditTab = isBotEditTab(tabParam) ? tabParam : "general";
-
-  const tabs = useMemo(
-    () =>
-      [
-        { id: "general" as const, label: t("bots.tabGeneral"), icon: <Settings className="w-4 h-4" /> },
-        { id: "whatsapp" as const, label: t("bots.tabWhatsapp"), icon: <Phone className="w-4 h-4" /> },
-        { id: "instagram" as const, label: t("bots.tabInstagram"), icon: <Camera className="w-4 h-4" /> },
-        { id: "webchat" as const, label: t("bots.tabWebchat"), icon: <Globe className="w-4 h-4" /> },
-        { id: "telegram" as const, label: t("bots.tabTelegram"), icon: <Send className="w-4 h-4" /> },
-        { id: "messenger" as const, label: t("bots.tabMessenger"), icon: <MessagesSquare className="w-4 h-4" /> },
-        { id: "sms" as const, label: t("bots.tabSms"), icon: <Phone className="w-4 h-4" /> },
-        { id: "email" as const, label: t("bots.tabEmail"), icon: <Mail className="w-4 h-4" /> },
-        { id: "voicebot" as const, label: t("bots.tabVoicebot"), icon: <Mic className="w-4 h-4" /> },
-        { id: "knowledge" as const, label: t("bots.tabKnowledge"), icon: <BookOpen className="w-4 h-4" /> },
-        { id: "macros" as const, label: t("bots.tabMacros"), icon: <MessageSquarePlus className="w-4 h-4" /> },
-        { id: "metaFlows" as const, label: t("bots.tabMetaFlows"), icon: <Workflow className="w-4 h-4" /> },
-      ] satisfies { id: BotEditTab; label: string; icon: ReactNode }[],
-    [t]
-  );
+  const aiActive = Boolean(aiAssistant?.enabled || bot?.responseMode === "openai");
 
   function setTab(nextTab: BotEditTab) {
     router.replace(`/bots/${botId}/edit?tab=${nextTab}`, { scroll: false });
@@ -94,13 +44,15 @@ export default function EditBotPage() {
     return (
       <DashboardPage className="lg:px-6">
         <div className="animate-pulse space-y-4">
-          <div className="h-6 w-48 bg-gray-200 rounded" />
-          <div className="h-4 w-64 bg-gray-200 rounded" />
-          <div className="h-10 bg-gray-200 rounded" />
-          <div className="bg-surface-elevated rounded-xl border border-default p-6 space-y-4">
-            <div className="h-10 bg-gray-200 rounded" />
-            <div className="h-32 bg-gray-200 rounded" />
-            <div className="h-10 bg-gray-200 rounded" />
+          <div className="h-6 w-48 rounded bg-surface-muted" />
+          <div className="h-4 w-64 rounded bg-surface-muted" />
+          <div className="grid gap-6 lg:grid-cols-[16rem_1fr]">
+            <div className="h-80 rounded-xl bg-surface-muted" />
+            <div className="space-y-4 rounded-xl border border-default bg-surface-elevated p-6">
+              <div className="h-10 rounded bg-surface-muted" />
+              <div className="h-32 rounded bg-surface-muted" />
+              <div className="h-10 rounded bg-surface-muted" />
+            </div>
           </div>
         </div>
       </DashboardPage>
@@ -111,9 +63,9 @@ export default function EditBotPage() {
     <DashboardPage className="lg:px-6">
       <Link
         href="/bots"
-        className="flex items-center gap-1 text-sm text-secondary hover:text-secondary mb-4"
+        className="mb-4 flex items-center gap-1 text-sm text-secondary transition-colors hover:text-primary"
       >
-        <ChevronLeft className="w-4 h-4" />
+        <ChevronLeft className="h-4 w-4" />
         {t("bots.backToBots")}
       </Link>
       <PageHeader
@@ -121,64 +73,70 @@ export default function EditBotPage() {
         subtitle={t("bots.editSubtitle")}
       />
 
-      <div className="mb-6 flex flex-wrap gap-x-1 gap-y-0 border-b border-default">
-        {tabs.map((tabItem) => (
-          <button
-            key={tabItem.id}
-            type="button"
-            onClick={() => setTab(tabItem.id)}
-            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-              activeTab === tabItem.id
-                ? "border-accent text-accent"
-                : "border-transparent text-secondary hover:text-secondary hover:border-default"
-            }`}
-          >
-            {tabItem.icon}
-            {tabItem.label}
-          </button>
-        ))}
+      <div className="grid gap-6 lg:grid-cols-[16rem_minmax(0,1fr)]">
+        <BotEditNav activeTab={activeTab} onSelect={setTab} aiActive={aiActive} />
+
+        <div className="min-w-0">
+          {bot && activeTab === "general" && (
+            <div className="space-y-4">
+              <div className="content-card p-4 sm:p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-accent" />
+                    <div>
+                      <p className="text-sm font-medium text-primary">{t("aiAssistant.title")}</p>
+                      <p className="text-xs text-secondary">
+                        {aiActive ? t("aiAssistant.statusActive") : t("aiAssistant.statusInactive")}
+                      </p>
+                    </div>
+                  </div>
+                  <Link
+                    href={`/apps/ai-assistant/${bot.botId}`}
+                    className="text-sm font-medium text-accent hover:underline"
+                  >
+                    {t("aiAssistant.configure")}
+                  </Link>
+                </div>
+              </div>
+
+              <div className="content-card p-5 sm:p-6">
+                <div className="mb-6 flex items-center gap-2">
+                  <MessageCircle className="h-5 w-5 text-accent" />
+                  <h2 className="text-lg font-semibold text-primary">{t("bots.tabGeneral")}</h2>
+                </div>
+                <BotForm bot={bot} wide />
+              </div>
+            </div>
+          )}
+
+          {bot && activeTab === "whatsapp" && (
+            <div className="space-y-4">
+              <BotWhatsAppConnect bot={bot} />
+              {bot.phoneNumberId?.trim() ? (
+                <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-2">
+                  <BotWhatsAppQuality
+                    botId={bot.botId}
+                    phoneNumberId={bot.phoneNumberId}
+                    whatsappPhone={bot.whatsappPhone}
+                  />
+                  <BotCallingSettings botId={bot.botId} />
+                </div>
+              ) : null}
+            </div>
+          )}
+
+          {bot && activeTab === "instagram" && <BotInstagramConnect bot={bot} />}
+          {bot && activeTab === "webchat" && <BotWebchatSettings bot={bot} />}
+          {bot && activeTab === "telegram" && <BotTelegramConnect bot={bot} />}
+          {bot && activeTab === "messenger" && <BotMessengerConnect bot={bot} />}
+          {bot && activeTab === "sms" && <BotSmsSettings bot={bot} />}
+          {bot && activeTab === "email" && <BotEmailSettings bot={bot} />}
+          {bot && activeTab === "voicebot" && <BotVoicebotSettings bot={bot} />}
+          {bot && activeTab === "telephony" && <BotTelephonySettings botId={bot.botId} />}
+          {bot && activeTab === "macros" && <BotMacrosPanel bot={bot} />}
+          {bot && activeTab === "metaFlows" && <BotMetaFlowsPanel botId={bot.botId} />}
+        </div>
       </div>
-
-      {bot && activeTab === "general" && (
-        <div className="bg-surface-elevated rounded-xl border border-default p-6">
-          <div className="flex items-center gap-2 mb-6">
-            <MessageCircle className="w-5 h-5 text-accent" />
-            <h2 className="text-lg font-semibold text-primary">{t("bots.tabGeneral")}</h2>
-          </div>
-          <BotForm bot={bot} wide />
-        </div>
-      )}
-
-      {bot && activeTab === "whatsapp" && (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
-          <BotWhatsAppQuality
-            botId={bot.botId}
-            phoneNumberId={bot.phoneNumberId}
-            whatsappPhone={bot.whatsappPhone}
-          />
-          <BotCallingSettings botId={bot.botId} />
-        </div>
-      )}
-
-      {bot && activeTab === "instagram" && <BotInstagramConnect bot={bot} />}
-
-      {bot && activeTab === "webchat" && <BotWebchatSettings bot={bot} />}
-
-      {bot && activeTab === "telegram" && <BotTelegramConnect bot={bot} />}
-
-      {bot && activeTab === "messenger" && <BotMessengerConnect bot={bot} />}
-
-      {bot && activeTab === "sms" && <BotSmsSettings bot={bot} />}
-
-      {bot && activeTab === "email" && <BotEmailSettings bot={bot} />}
-
-      {bot && activeTab === "voicebot" && <BotVoicebotSettings bot={bot} />}
-
-      {bot && activeTab === "knowledge" && <BotKnowledge bot={bot} />}
-
-      {bot && activeTab === "macros" && <BotMacrosPanel bot={bot} />}
-
-      {bot && activeTab === "metaFlows" && <BotMetaFlowsPanel botId={bot.botId} />}
     </DashboardPage>
   );
 }
