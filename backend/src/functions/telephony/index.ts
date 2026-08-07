@@ -195,11 +195,17 @@ export async function handler(
 
     if (method === "PUT" && rawPath.endsWith("/telephony/settings")) {
       const body = parseJsonBody(event);
+      const optionalNonEmptyString = (max: number) =>
+        z.preprocess(
+          (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+          z.string().min(1).max(max).optional()
+        );
+
       const parsed = z
         .object({
           enabled: z.boolean().optional(),
           telephonyPhoneNumber: z.string().min(7).max(20).optional(),
-          telephonyVoiceId: z.string().min(1).max(64).optional(),
+          telephonyVoiceId: optionalNonEmptyString(64),
           telephonyModel: z.string().min(3).max(64).optional(),
           telephonyGreeting: z.string().max(500).optional(),
           telephonySystemPrompt: z.string().max(4096).optional(),
