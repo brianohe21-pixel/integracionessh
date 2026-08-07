@@ -59,8 +59,8 @@ const CreateBotSchema = z
     maxTokens: z.number().int().min(1).max(4096).default(1024),
     webhookUrl: z.string().url().startsWith("https://").max(2048).optional(),
     webhookSecret: z.string().min(8).max(256).optional(),
-    phoneNumberId: z.string().min(1),
-    whatsappBusinessAccountId: z.string().min(1),
+    phoneNumberId: z.string().optional().default(""),
+    whatsappBusinessAccountId: z.string().optional().default(""),
   })
   .superRefine((data, ctx) => {
     if (data.responseMode === "openai" && !data.systemPrompt) {

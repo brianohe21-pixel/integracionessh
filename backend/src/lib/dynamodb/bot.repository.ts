@@ -45,15 +45,20 @@ export async function getBotByPhoneNumberId(phoneNumberId: string): Promise<Bot 
 }
 
 export async function createBot(bot: Bot): Promise<void> {
+  const item: Record<string, unknown> = {
+    ...keys(bot.tenantId, bot.botId),
+    ...bot,
+  };
+
+  if (bot.phoneNumberId.trim()) {
+    item.GSI1PK = `PHONE#${bot.phoneNumberId}`;
+    item.GSI1SK = `BOT#${bot.botId}`;
+  }
+
   await docClient.send(
     new PutCommand({
       TableName: TABLE_NAME,
-      Item: {
-        ...keys(bot.tenantId, bot.botId),
-        GSI1PK: `PHONE#${bot.phoneNumberId}`,
-        GSI1SK: `BOT#${bot.botId}`,
-        ...bot,
-      },
+      Item: item,
       ConditionExpression: "attribute_not_exists(SK)",
     })
   );
