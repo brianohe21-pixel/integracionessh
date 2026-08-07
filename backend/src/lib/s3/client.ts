@@ -37,6 +37,14 @@ export function buildQuotationPdfS3Key(
   return `tenants/${tenantId}/bots/${botId}/quotations/${quotationId}.pdf`;
 }
 
+export function buildVoiceRecordingS3Key(
+  tenantId: string,
+  botId: string,
+  callId: string
+): string {
+  return `tenants/${tenantId}/voice-recordings/${botId}/${callId}.mp3`;
+}
+
 export async function putObjectBuffer(
   s3Key: string,
   buffer: Uint8Array,

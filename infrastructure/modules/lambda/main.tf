@@ -782,10 +782,24 @@ locals {
       timeout     = 30
       memory      = 512
       environment = {
-        TABLE_NAME                = var.dynamodb_table_name
-        ENVIRONMENT               = var.environment
-        TELEPHONY_GATEWAY_WS_URL  = var.telephony_gateway_ws_url
-        INTEGRATION_SQS_QUEUE_URL = var.integration_sqs_queue_url
+        TABLE_NAME                  = var.dynamodb_table_name
+        ENVIRONMENT                 = var.environment
+        TELEPHONY_GATEWAY_WS_URL    = var.telephony_gateway_ws_url
+        INTEGRATION_SQS_QUEUE_URL   = var.integration_sqs_queue_url
+        TELEPHONY_CDR_SQS_QUEUE_URL = var.telephony_cdr_sqs_queue_url
+        MEDIA_BUCKET                = var.media_bucket_name
+      }
+    }
+    process_telephony_cdr = {
+      handler     = "process-telephony-cdr/index.handler"
+      description = "Reconciles Telnyx CDR costs for telephony calls"
+      timeout     = 60
+      memory      = 256
+      environment = {
+        TABLE_NAME                  = var.dynamodb_table_name
+        ENVIRONMENT                 = var.environment
+        INTEGRATION_SQS_QUEUE_URL   = var.integration_sqs_queue_url
+        TELEPHONY_CDR_SQS_QUEUE_URL = var.telephony_cdr_sqs_queue_url
       }
     }
     calendar = {
@@ -939,6 +953,14 @@ resource "aws_lambda_event_source_mapping" "flow_event_sqs_trigger" {
 resource "aws_lambda_event_source_mapping" "call_events_sqs_trigger" {
   event_source_arn                   = var.call_events_sqs_queue_arn
   function_name                      = aws_lambda_function.functions["process_call"].arn
+  batch_size                         = 1
+  enabled                            = true
+  maximum_batching_window_in_seconds = 0
+}
+
+resource "aws_lambda_event_source_mapping" "telephony_cdr_sqs_trigger" {
+  event_source_arn                   = var.telephony_cdr_sqs_queue_arn
+  function_name                      = aws_lambda_function.functions["process_telephony_cdr"].arn
   batch_size                         = 1
   enabled                            = true
   maximum_batching_window_in_seconds = 0

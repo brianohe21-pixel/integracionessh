@@ -7,6 +7,8 @@ import { z } from "zod";
 import { resolveRequestAuth, assertTenantAccess, assertMemberRole } from "../../lib/auth/cognito.js";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
 import { listCallsByBot, getCallRecord } from "../../lib/dynamodb/call.repository.js";
+import { listCallEvents } from "../../lib/dynamodb/call-event.repository.js";
+import { listVoiceAgentWebhookDeliveries } from "../../lib/dynamodb/voice-agent-webhook.repository.js";
 import { hasTelnyxCredentials } from "../../lib/telnyx/secrets.js";
 import { listOwnedPhoneNumbers } from "../../lib/telnyx/client.js";
 import { listElevenLabsVoices } from "../../lib/telnyx/elevenlabs.js";
@@ -16,13 +18,19 @@ import { getTelnyxSecrets } from "../../lib/telnyx/secrets.js";
 import {
   handleCallAnswered,
   handleCallHangup,
+  handleCallRecordingSaved,
   handleInboundCallInitiated,
+  reportCallUsage,
   startOutboundTelephonyCall,
   terminateTelephonyCall,
 } from "../../lib/telephony/service.js";
+import { deliverVoiceAgentWebhook } from "../../lib/telephony/webhook-delivery.js";
 import { executeVoicebotTool } from "../../lib/voicebot/tools.js";
 import { getOpenAIApiKey } from "../../lib/ai/providers/openai.js";
-import type { BotLocale } from "../../types/index.js";
+import { getPresignedReadUrl } from "../../lib/s3/client.js";
+import { assertSafeUrl } from "../../lib/webhook/client.js";
+import { buildIntegrationPayload } from "../../lib/integrations/payloads.js";
+import type { BotLocale, IntegrationEvent } from "../../types/index.js";
 import {
   accepted,
   badRequest,
@@ -36,6 +44,14 @@ import {
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 
+const VOICE_AGENT_WEBHOOK_EVENTS: IntegrationEvent[] = [
+  "call.connect",
+  "call.status",
+  "call.terminated",
+  "call.recording.ready",
+  "call.cost.finalized",
+];
+
 const OutboundCallSchema = z.object({
   to: z.string().min(7).max(20),
   contactName: z.string().max(120).optional(),
@@ -43,28 +59,46 @@ const OutboundCallSchema = z.object({
 
 interface TelephonyGatewayInvokeEvent {
   source: "telephony-gateway";
-  action: "execute_tool";
+  action: "execute_tool" | "report_usage";
   tenantId: string;
   botId: string;
-  conversationId: string;
-  participantId: string;
-  locale: BotLocale;
-  name: string;
-  arguments: string;
+  conversationId?: string;
+  participantId?: string;
+  locale?: BotLocale;
+  name?: string;
+  arguments?: string;
+  callId?: string;
+  usage?: {
+    openaiInputTokens?: number;
+    openaiOutputTokens?: number;
+    elevenlabsCharacters?: number;
+  };
 }
 
 function isGatewayInvokeEvent(event: unknown): event is TelephonyGatewayInvokeEvent {
   return (
     typeof event === "object" &&
     event !== null &&
-    (event as TelephonyGatewayInvokeEvent).source === "telephony-gateway" &&
-    (event as TelephonyGatewayInvokeEvent).action === "execute_tool"
+    (event as TelephonyGatewayInvokeEvent).source === "telephony-gateway"
   );
 }
 
-async function handleGatewayToolInvoke(
+async function handleGatewayInvoke(
   event: TelephonyGatewayInvokeEvent
-): Promise<{ output: string; handoff?: boolean }> {
+): Promise<{ output?: string; handoff?: boolean; ok?: boolean }> {
+  if (event.action === "report_usage" && event.callId) {
+    await reportCallUsage({
+      tenantId: event.tenantId,
+      callId: event.callId,
+      usage: event.usage ?? {},
+    });
+    return { ok: true };
+  }
+
+  if (event.action !== "execute_tool" || !event.name || !event.arguments) {
+    return { output: JSON.stringify({ error: "Invalid gateway action" }) };
+  }
+
   const bot = await getBot(event.tenantId, event.botId);
   if (!bot) {
     return { output: JSON.stringify({ error: "Bot not found" }) };
@@ -74,9 +108,9 @@ async function handleGatewayToolInvoke(
   return executeVoicebotTool(event.name, event.arguments, {
     tenantId: event.tenantId,
     botId: event.botId,
-    conversationId: event.conversationId,
-    participantId: event.participantId,
-    locale: event.locale,
+    conversationId: event.conversationId ?? "",
+    participantId: event.participantId ?? "",
+    locale: event.locale ?? "es",
     knowledgeEnabled: Boolean(bot.knowledgeEnabled),
     apiKey,
   });
@@ -87,6 +121,14 @@ function getRawBody(event: APIGatewayProxyEventV2): string {
   return event.isBase64Encoded
     ? Buffer.from(event.body, "base64").toString("utf8")
     : event.body;
+}
+
+function maskWebhookSecret(bot: Awaited<ReturnType<typeof getBot>>) {
+  if (!bot) return bot;
+  return {
+    ...bot,
+    telephonyWebhookSecret: bot.telephonyWebhookSecret ? "***" : undefined,
+  };
 }
 
 async function handleTelnyxWebhook(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
@@ -130,6 +172,11 @@ async function handleTelnyxWebhook(event: APIGatewayProxyEventV2): Promise<APIGa
       continue;
     }
 
+    if (eventType === "call.recording.saved") {
+      await handleCallRecordingSaved(payload);
+      continue;
+    }
+
     if (eventType === "call.hangup" || eventType === "call.ended") {
       await handleCallHangup(payload);
     }
@@ -140,10 +187,10 @@ async function handleTelnyxWebhook(event: APIGatewayProxyEventV2): Promise<APIGa
 
 export async function handler(
   event: APIGatewayProxyEventV2 | APIGatewayProxyEventV2WithJWTAuthorizer | TelephonyGatewayInvokeEvent
-): Promise<APIGatewayProxyResultV2 | { output: string; handoff?: boolean }> {
+): Promise<APIGatewayProxyResultV2 | { output?: string; handoff?: boolean; ok?: boolean }> {
   try {
     if (isGatewayInvokeEvent(event)) {
-      return handleGatewayToolInvoke(event);
+      return handleGatewayInvoke(event);
     }
 
     const method = event.requestContext.http.method;
@@ -189,7 +236,14 @@ export async function handler(
         telephonyVoiceId: bot.telephonyVoiceId ?? "",
         telephonyModel: bot.telephonyModel ?? bot.voicebotModel ?? "gpt-realtime-2.1-mini",
         telephonyGreeting: bot.telephonyGreeting ?? "",
-        telephonySystemPrompt: bot.telephonySystemPrompt ?? bot.voicebotSystemPrompt ?? bot.systemPrompt ?? "",
+        telephonySystemPrompt:
+          bot.telephonySystemPrompt ?? bot.voicebotSystemPrompt ?? bot.systemPrompt ?? "",
+        telephonyRecordingEnabled: Boolean(bot.telephonyRecordingEnabled),
+        telephonyRecordingNotice: bot.telephonyRecordingNotice ?? "",
+        telephonyWebhookUrl: bot.telephonyWebhookUrl ?? "",
+        telephonyWebhookEnabled: Boolean(bot.telephonyWebhookEnabled),
+        telephonyWebhookEvents: bot.telephonyWebhookEvents ?? VOICE_AGENT_WEBHOOK_EVENTS,
+        telephonyWebhookSecret: bot.telephonyWebhookSecret ? "***" : undefined,
       });
     }
 
@@ -209,6 +263,12 @@ export async function handler(
           telephonyModel: z.string().min(3).max(64).optional(),
           telephonyGreeting: z.string().max(500).optional(),
           telephonySystemPrompt: z.string().max(4096).optional(),
+          telephonyRecordingEnabled: z.boolean().optional(),
+          telephonyRecordingNotice: z.string().max(500).optional(),
+          telephonyWebhookUrl: z.string().max(2048).optional(),
+          telephonyWebhookSecret: z.string().max(256).optional(),
+          telephonyWebhookEnabled: z.boolean().optional(),
+          telephonyWebhookEvents: z.array(z.string()).optional(),
         })
         .safeParse(body);
       if (!parsed.success) return badRequest(parsed.error.message);
@@ -230,6 +290,10 @@ export async function handler(
         assertAiAssistantActive(bot);
         await assertCanUseVoicebot(tenant);
         await assertCanEnableChannel(tenant, bot, "phone");
+      }
+
+      if (parsed.data.telephonyWebhookUrl) {
+        await assertSafeUrl(parsed.data.telephonyWebhookUrl);
       }
 
       const nextNumber = parsed.data.telephonyPhoneNumber
@@ -268,22 +332,91 @@ export async function handler(
       if (parsed.data.telephonySystemPrompt !== undefined) {
         updates.telephonySystemPrompt = parsed.data.telephonySystemPrompt;
       }
+      if (parsed.data.telephonyRecordingEnabled !== undefined) {
+        updates.telephonyRecordingEnabled = parsed.data.telephonyRecordingEnabled;
+      }
+      if (parsed.data.telephonyRecordingNotice !== undefined) {
+        updates.telephonyRecordingNotice = parsed.data.telephonyRecordingNotice;
+      }
+      if (parsed.data.telephonyWebhookUrl !== undefined) {
+        updates.telephonyWebhookUrl = parsed.data.telephonyWebhookUrl;
+      }
+      if (parsed.data.telephonyWebhookSecret !== undefined && parsed.data.telephonyWebhookSecret) {
+        updates.telephonyWebhookSecret = parsed.data.telephonyWebhookSecret;
+      }
+      if (parsed.data.telephonyWebhookEnabled !== undefined) {
+        updates.telephonyWebhookEnabled = parsed.data.telephonyWebhookEnabled;
+      }
+      if (parsed.data.telephonyWebhookEvents !== undefined) {
+        updates.telephonyWebhookEvents = parsed.data.telephonyWebhookEvents;
+      }
 
       const updated = await updateBot(auth.tenantId, botId, updates);
+      const masked = maskWebhookSecret(updated);
       return ok({
-        telephonyEnabled: updated.telephonyEnabled,
-        telephonyPhoneNumber: updated.telephonyPhoneNumber,
-        telephonyVoiceId: updated.telephonyVoiceId,
-        telephonyModel: updated.telephonyModel,
-        telephonyGreeting: updated.telephonyGreeting,
-        telephonySystemPrompt: updated.telephonySystemPrompt,
+        telephonyEnabled: masked?.telephonyEnabled,
+        telephonyPhoneNumber: masked?.telephonyPhoneNumber,
+        telephonyVoiceId: masked?.telephonyVoiceId,
+        telephonyModel: masked?.telephonyModel,
+        telephonyGreeting: masked?.telephonyGreeting,
+        telephonySystemPrompt: masked?.telephonySystemPrompt,
+        telephonyRecordingEnabled: masked?.telephonyRecordingEnabled,
+        telephonyRecordingNotice: masked?.telephonyRecordingNotice,
+        telephonyWebhookUrl: masked?.telephonyWebhookUrl,
+        telephonyWebhookEnabled: masked?.telephonyWebhookEnabled,
+        telephonyWebhookEvents: masked?.telephonyWebhookEvents,
+        telephonyWebhookSecret: masked?.telephonyWebhookSecret,
       });
+    }
+
+    if (method === "GET" && rawPath.endsWith("/telephony/webhook/deliveries")) {
+      const deliveries = await listVoiceAgentWebhookDeliveries(auth.tenantId, botId);
+      return ok({ deliveries });
+    }
+
+    if (method === "POST" && rawPath.endsWith("/telephony/webhook/test")) {
+      if (!bot.telephonyWebhookEnabled || !bot.telephonyWebhookUrl) {
+        return badRequest("Voice agent webhook is not configured");
+      }
+      const payload = buildIntegrationPayload({
+        event: "call.status",
+        tenantId: auth.tenantId,
+        data: {
+          botId,
+          callId: "test-call-id",
+          status: "accepted",
+          phoneNumber: "+10000000000",
+        },
+      });
+      await deliverVoiceAgentWebhook(bot, "call.status", payload);
+      return ok({ sent: true });
     }
 
     if (method === "GET" && rawPath.endsWith("/telephony/calls") && !callId) {
       const calls = await listCallsByBot(botId, 50);
       const telnyxCalls = calls.filter((call) => call.provider === "telnyx");
       return ok({ items: telnyxCalls });
+    }
+
+    if (method === "GET" && callId && rawPath.endsWith("/events")) {
+      const call = await getCallRecord(auth.tenantId, callId);
+      if (!call || call.botId !== botId || call.provider !== "telnyx") {
+        return notFound("Call not found");
+      }
+      const events = await listCallEvents(auth.tenantId, callId);
+      return ok({ items: events });
+    }
+
+    if (method === "GET" && callId && rawPath.endsWith("/recording")) {
+      const call = await getCallRecord(auth.tenantId, callId);
+      if (!call || call.botId !== botId || call.provider !== "telnyx") {
+        return notFound("Call not found");
+      }
+      if (!call.recordingS3Key || call.recordingStatus !== "ready") {
+        return notFound("Recording not available");
+      }
+      const url = await getPresignedReadUrl(call.recordingS3Key, 900);
+      return ok({ url, expiresInSeconds: 900 });
     }
 
     if (method === "GET" && callId && rawPath.includes("/telephony/calls/")) {

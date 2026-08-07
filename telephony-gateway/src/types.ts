@@ -28,6 +28,8 @@ export interface Bot {
   telephonyModel?: string;
   telephonyGreeting?: string;
   telephonySystemPrompt?: string;
+  telephonyRecordingEnabled?: boolean;
+  telephonyRecordingNotice?: string;
   voicebotModel?: string;
   voicebotGreeting?: string;
   voicebotSystemPrompt?: string;

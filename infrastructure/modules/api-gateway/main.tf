@@ -1158,6 +1158,30 @@ locals {
       function_arn = var.telephony_function_arn
       protected    = true
     }
+    bots_telephony_calls_events = {
+      route_key    = "GET /bots/{botId}/telephony/calls/{callId}/events"
+      invoke_arn   = var.telephony_invoke_arn
+      function_arn = var.telephony_function_arn
+      protected    = true
+    }
+    bots_telephony_calls_recording = {
+      route_key    = "GET /bots/{botId}/telephony/calls/{callId}/recording"
+      invoke_arn   = var.telephony_invoke_arn
+      function_arn = var.telephony_function_arn
+      protected    = true
+    }
+    bots_telephony_webhook_test = {
+      route_key    = "POST /bots/{botId}/telephony/webhook/test"
+      invoke_arn   = var.telephony_invoke_arn
+      function_arn = var.telephony_function_arn
+      protected    = true
+    }
+    bots_telephony_webhook_deliveries = {
+      route_key    = "GET /bots/{botId}/telephony/webhook/deliveries"
+      invoke_arn   = var.telephony_invoke_arn
+      function_arn = var.telephony_function_arn
+      protected    = true
+    }
     api_keys_list = {
       route_key    = "GET /api-keys"
       invoke_arn   = var.api_keys_invoke_arn

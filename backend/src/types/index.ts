@@ -236,6 +236,12 @@ export interface Bot {
   telephonyModel?: string;
   telephonyGreeting?: string;
   telephonySystemPrompt?: string;
+  telephonyRecordingEnabled?: boolean;
+  telephonyRecordingNotice?: string;
+  telephonyWebhookUrl?: string;
+  telephonyWebhookSecret?: string;
+  telephonyWebhookEnabled?: boolean;
+  telephonyWebhookEvents?: IntegrationEvent[];
   status: "active" | "inactive";
   createdAt: string;
   updatedAt: string;
@@ -541,6 +547,26 @@ export type CallRecordStatus =
   | "failed"
   | "terminated";
 
+export type CallRecordingStatus = "disabled" | "pending" | "processing" | "ready" | "failed";
+
+export type CallCostStatus = "pending" | "partial" | "final";
+
+export interface CallCostBreakdown {
+  telnyxUsd?: number;
+  openaiUsd?: number;
+  elevenlabsUsd?: number;
+  recordingUsd?: number;
+  totalUsd: number;
+  currency: "USD";
+  pricingVersion: string;
+}
+
+export interface CallUsageMetrics {
+  openaiInputTokens?: number;
+  openaiOutputTokens?: number;
+  elevenlabsCharacters?: number;
+}
+
 export interface CallRecord {
   callId: string;
   tenantId: string;
@@ -557,8 +583,39 @@ export interface CallRecord {
   conversationId?: string;
   startedAt?: string;
   endedAt?: string;
+  recordingStatus?: CallRecordingStatus;
+  recordingS3Key?: string;
+  recordingDurationSeconds?: number;
+  telnyxRecordingId?: string;
+  costStatus?: CallCostStatus;
+  costBreakdown?: CallCostBreakdown;
+  usageMetrics?: CallUsageMetrics;
   createdAt: string;
   updatedAt: string;
+}
+
+export type CallEventType =
+  | "initiated"
+  | "ringing"
+  | "answered"
+  | "recording_started"
+  | "recording_saved"
+  | "recording_failed"
+  | "hangup"
+  | "cost_pending"
+  | "cost_partial"
+  | "cost_finalized"
+  | "error";
+
+export interface CallEvent {
+  eventId: string;
+  tenantId: string;
+  botId: string;
+  callId: string;
+  type: CallEventType;
+  message?: string;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
 }
 
 export type TelephonySessionStatus = "pending" | "ringing" | "active" | "ended" | "failed";
@@ -1306,6 +1363,8 @@ export type IntegrationEvent =
   | "call.connect"
   | "call.status"
   | "call.terminated"
+  | "call.recording.ready"
+  | "call.cost.finalized"
   | "booking.created"
   | "booking.cancelled"
   | "payment.completed"

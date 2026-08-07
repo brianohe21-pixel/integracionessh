@@ -64,31 +64,54 @@ export async function updateCallRecordStatus(
     status: CallRecordStatus;
   }
 ): Promise<void> {
-  const now = new Date().toISOString();
-  const expressions: string[] = ["#status = :status", "#updatedAt = :updatedAt"];
-  const names: Record<string, string> = {
-    "#status": "status",
-    "#updatedAt": "updatedAt",
-  };
-  const values: Record<string, unknown> = {
-    ":status": updates.status,
-    ":updatedAt": now,
-  };
+  await updateCallRecord(tenantId, callId, updates);
+}
 
-  if (updates.duration !== undefined) {
-    expressions.push("#duration = :duration");
-    names["#duration"] = "duration";
-    values[":duration"] = updates.duration;
-  }
-  if (updates.endedAt !== undefined) {
-    expressions.push("#endedAt = :endedAt");
-    names["#endedAt"] = "endedAt";
-    values[":endedAt"] = updates.endedAt;
-  }
-  if (updates.startedAt !== undefined) {
-    expressions.push("#startedAt = :startedAt");
-    names["#startedAt"] = "startedAt";
-    values[":startedAt"] = updates.startedAt;
+export async function updateCallRecord(
+  tenantId: string,
+  callId: string,
+  updates: Partial<
+    Pick<
+      CallRecord,
+      | "status"
+      | "duration"
+      | "endedAt"
+      | "startedAt"
+      | "recordingStatus"
+      | "recordingS3Key"
+      | "recordingDurationSeconds"
+      | "telnyxRecordingId"
+      | "costStatus"
+      | "costBreakdown"
+      | "usageMetrics"
+    >
+  >
+): Promise<void> {
+  const now = new Date().toISOString();
+  const expressions: string[] = ["#updatedAt = :updatedAt"];
+  const names: Record<string, string> = { "#updatedAt": "updatedAt" };
+  const values: Record<string, unknown> = { ":updatedAt": now };
+
+  const fieldMap: Array<[keyof typeof updates, string]> = [
+    ["status", "status"],
+    ["duration", "duration"],
+    ["endedAt", "endedAt"],
+    ["startedAt", "startedAt"],
+    ["recordingStatus", "recordingStatus"],
+    ["recordingS3Key", "recordingS3Key"],
+    ["recordingDurationSeconds", "recordingDurationSeconds"],
+    ["telnyxRecordingId", "telnyxRecordingId"],
+    ["costStatus", "costStatus"],
+    ["costBreakdown", "costBreakdown"],
+    ["usageMetrics", "usageMetrics"],
+  ];
+
+  for (const [key, attr] of fieldMap) {
+    if (updates[key] !== undefined) {
+      expressions.push(`#${attr} = :${attr}`);
+      names[`#${attr}`] = attr;
+      values[`:${attr}`] = updates[key];
+    }
   }
 
   await docClient.send(

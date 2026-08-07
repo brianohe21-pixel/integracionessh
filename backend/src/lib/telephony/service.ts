@@ -1,7 +1,13 @@
 import { randomUUID } from "crypto";
+import { SendMessageCommand, SQSClient } from "@aws-sdk/client-sqs";
 import { getBot } from "../dynamodb/bot.repository.js";
 import { getOrCreateConversation } from "../dynamodb/conversation.repository.js";
-import { upsertCallRecord, updateCallRecordStatus } from "../dynamodb/call.repository.js";
+import {
+  upsertCallRecord,
+  updateCallRecord,
+  getCallRecord,
+} from "../dynamodb/call.repository.js";
+import { appendCallEvent } from "../dynamodb/call-event.repository.js";
 import { incrementVoicebotMinutes } from "../dynamodb/usage.repository.js";
 import { assertCanStartVoicebotSession } from "../billing/assert-plan.js";
 import { getTenant } from "../dynamodb/tenant.repository.js";
@@ -10,6 +16,8 @@ import {
   dialOutboundCall,
   directionToWhatsApp,
   hangupCall,
+  startCallRecording,
+  searchTelnyxDetailRecords,
 } from "../telnyx/client.js";
 import { normalizeE164 } from "../telnyx/phone.js";
 import {
@@ -22,12 +30,23 @@ import {
 import { emitIntegrationEvent } from "../integrations/emit.js";
 import {
   buildCallConnectPayload,
+  buildCallStatusPayload,
   buildCallTerminatedPayload,
+  buildIntegrationPayload,
 } from "../integrations/payloads.js";
-import type { BotLocale, CallRecord, TelephonyCallDirection } from "../../types/index.js";
+import { downloadRecordingToS3 } from "./recording.js";
+import { directionFromCallRecord, estimateTelephonyCost } from "./cost.js";
+import type {
+  BotLocale,
+  CallRecord,
+  CallUsageMetrics,
+  TelephonyCallDirection,
+} from "../../types/index.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 const GATEWAY_WS_URL = process.env.TELEPHONY_GATEWAY_WS_URL ?? "";
+const CDR_QUEUE_URL = process.env.TELEPHONY_CDR_SQS_QUEUE_URL ?? "";
+const sqs = new SQSClient({});
 
 function gatewayStreamUrl(streamToken: string): string {
   const base = GATEWAY_WS_URL.replace(/\/$/, "");
@@ -41,6 +60,46 @@ function encodeClientState(value: Record<string, string>): string {
   return Buffer.from(JSON.stringify(value)).toString("base64");
 }
 
+async function logCallEvent(
+  tenantId: string,
+  botId: string,
+  callId: string,
+  type: Parameters<typeof appendCallEvent>[0]["type"],
+  message?: string,
+  metadata?: Record<string, unknown>
+): Promise<void> {
+  await appendCallEvent({
+    tenantId,
+    botId,
+    callId,
+    type,
+    ...(message ? { message } : {}),
+    ...(metadata ? { metadata } : {}),
+  }).catch(() => undefined);
+}
+
+async function queueCdrReconciliation(params: {
+  tenantId: string;
+  botId: string;
+  callId: string;
+  callControlId: string;
+  attempt?: number;
+}): Promise<void> {
+  if (!CDR_QUEUE_URL) return;
+  await sqs.send(
+    new SendMessageCommand({
+      QueueUrl: CDR_QUEUE_URL,
+      MessageBody: JSON.stringify({
+        ...params,
+        attempt: params.attempt ?? 1,
+        scheduledAt: new Date().toISOString(),
+      }),
+      MessageGroupId: params.callId,
+      MessageDeduplicationId: `${params.callId}-cdr-${params.attempt ?? 1}-${randomUUID()}`,
+    })
+  );
+}
+
 export function buildTelephonyCallRecord(params: {
   callId: string;
   tenantId: string;
@@ -51,6 +110,7 @@ export function buildTelephonyCallRecord(params: {
   callControlId: string;
   conversationId?: string;
   status?: CallRecord["status"];
+  recordingEnabled?: boolean;
 }): CallRecord {
   const now = new Date().toISOString();
   return {
@@ -65,6 +125,8 @@ export function buildTelephonyCallRecord(params: {
     channel: "phone",
     callControlId: params.callControlId,
     ...(params.conversationId ? { conversationId: params.conversationId } : {}),
+    recordingStatus: params.recordingEnabled ? "pending" : "disabled",
+    costStatus: "pending",
     createdAt: now,
     updatedAt: now,
     startedAt: now,
@@ -144,8 +206,11 @@ export async function startOutboundTelephonyCall(params: {
       callControlId: dial.callControlId,
       conversationId: conversation.conversationId,
       status: "initiated",
+      recordingEnabled: Boolean(bot.telephonyRecordingEnabled),
     })
   );
+
+  await logCallEvent(params.tenantId, params.botId, callId, "initiated", "Outbound call started");
 
   return { callId, sessionId, status: "initiated" };
 }
@@ -218,8 +283,11 @@ export async function handleInboundCallInitiated(payload: Record<string, unknown
       direction: "inbound",
       callControlId,
       conversationId: conversation.conversationId,
+      recordingEnabled: Boolean(bot.telephonyRecordingEnabled),
     })
   );
+
+  await logCallEvent(lookup.tenantId, lookup.botId, callId, "initiated", "Inbound call received");
 
   await answerInboundCall({
     environment: ENVIRONMENT,
@@ -248,11 +316,130 @@ export async function handleCallAnswered(payload: Record<string, unknown>): Prom
   const session = await getTelephonySessionByCallControlId(callControlId);
   if (!session) return;
 
+  const bot = await getBot(session.tenantId, session.botId);
+  if (!bot) return;
+
   await updateTelephonySessionStatus(session.sessionId, "active");
-  await updateCallRecordStatus(session.tenantId, session.callId, {
+  await updateCallRecord(session.tenantId, session.callId, {
     status: "accepted",
     startedAt: new Date().toISOString(),
   });
+
+  await logCallEvent(session.tenantId, session.botId, session.callId, "answered");
+
+  await emitIntegrationEvent(
+    session.tenantId,
+    "call.status",
+    buildCallStatusPayload({
+      tenantId: session.tenantId,
+      botId: session.botId,
+      callId: session.callId,
+      status: "accepted",
+      phoneNumber: session.participantId,
+    })
+  );
+
+  if (bot.telephonyRecordingEnabled) {
+    try {
+      await startCallRecording(ENVIRONMENT, callControlId);
+      await updateCallRecord(session.tenantId, session.callId, {
+        recordingStatus: "processing",
+      });
+      await logCallEvent(
+        session.tenantId,
+        session.botId,
+        session.callId,
+        "recording_started"
+      );
+    } catch (error) {
+      await updateCallRecord(session.tenantId, session.callId, {
+        recordingStatus: "failed",
+      });
+      await logCallEvent(
+        session.tenantId,
+        session.botId,
+        session.callId,
+        "recording_failed",
+        error instanceof Error ? error.message : "Recording start failed"
+      );
+    }
+  }
+}
+
+export async function handleCallRecordingSaved(payload: Record<string, unknown>): Promise<void> {
+  const callControlId = String(payload.call_control_id ?? "");
+  if (!callControlId) return;
+
+  const session = await getTelephonySessionByCallControlId(callControlId);
+  if (!session) return;
+
+  const call = await getCallRecord(session.tenantId, session.callId);
+  if (!call) return;
+
+  const recordingUrls = payload.recording_urls as Record<string, string> | undefined;
+  const mp3Url = recordingUrls?.mp3 ?? recordingUrls?.wav;
+  const recordingId = String(payload.recording_id ?? "");
+
+  if (!mp3Url) {
+    await updateCallRecord(session.tenantId, session.callId, { recordingStatus: "failed" });
+    await logCallEvent(
+      session.tenantId,
+      session.botId,
+      session.callId,
+      "recording_failed",
+      "Recording URL missing"
+    );
+    return;
+  }
+
+  try {
+    const stored = await downloadRecordingToS3({
+      tenantId: session.tenantId,
+      botId: session.botId,
+      callId: session.callId,
+      sourceUrl: mp3Url,
+    });
+
+    await updateCallRecord(session.tenantId, session.callId, {
+      recordingStatus: "ready",
+      recordingS3Key: stored.s3Key,
+      ...(recordingId ? { telnyxRecordingId: recordingId } : {}),
+      ...(typeof payload.duration_millis === "number"
+        ? { recordingDurationSeconds: Math.ceil(payload.duration_millis / 1000) }
+        : {}),
+    });
+
+    await logCallEvent(session.tenantId, session.botId, session.callId, "recording_saved", undefined, {
+      sizeBytes: stored.sizeBytes,
+    });
+
+    await emitIntegrationEvent(
+      session.tenantId,
+      "call.recording.ready",
+      buildIntegrationPayload({
+        event: "call.recording.ready",
+        tenantId: session.tenantId,
+        data: {
+          botId: session.botId,
+          callId: session.callId,
+          recordingStatus: "ready",
+          durationSeconds:
+            typeof payload.duration_millis === "number"
+              ? Math.ceil(payload.duration_millis / 1000)
+              : call.duration,
+        },
+      })
+    );
+  } catch (error) {
+    await updateCallRecord(session.tenantId, session.callId, { recordingStatus: "failed" });
+    await logCallEvent(
+      session.tenantId,
+      session.botId,
+      session.callId,
+      "recording_failed",
+      error instanceof Error ? error.message : "Recording storage failed"
+    );
+  }
 }
 
 export async function handleCallHangup(payload: Record<string, unknown>): Promise<void> {
@@ -261,17 +448,42 @@ export async function handleCallHangup(payload: Record<string, unknown>): Promis
   const session = await getTelephonySessionByCallControlId(callControlId);
   if (!session || session.status === "ended") return;
 
+  const bot = await getBot(session.tenantId, session.botId);
   const startedMs = new Date(session.startedAt).getTime();
   const durationSeconds = Math.max(1, Math.ceil((Date.now() - startedMs) / 1000));
   const minutes = Math.max(1, Math.ceil(durationSeconds / 60));
 
   await endTelephonySession(session.sessionId, durationSeconds);
-  await updateCallRecordStatus(session.tenantId, session.callId, {
+
+  const call = await getCallRecord(session.tenantId, session.callId);
+  const direction = session.direction;
+  const estimate = estimateTelephonyCost({
+    direction,
+    durationSeconds,
+    ...(call?.usageMetrics ? { usage: call.usageMetrics } : {}),
+    recordingEnabled: Boolean(bot?.telephonyRecordingEnabled),
+  });
+
+  await updateCallRecord(session.tenantId, session.callId, {
     status: "completed",
     duration: durationSeconds,
     endedAt: new Date().toISOString(),
+    costStatus: estimate.status,
+    costBreakdown: estimate.breakdown,
   });
+
   await incrementVoicebotMinutes(session.tenantId, minutes);
+  await logCallEvent(session.tenantId, session.botId, session.callId, "hangup", undefined, {
+    durationSeconds,
+  });
+  await logCallEvent(session.tenantId, session.botId, session.callId, "cost_pending");
+
+  await queueCdrReconciliation({
+    tenantId: session.tenantId,
+    botId: session.botId,
+    callId: session.callId,
+    callControlId,
+  });
 
   await emitIntegrationEvent(
     session.tenantId,
@@ -288,11 +500,125 @@ export async function handleCallHangup(payload: Record<string, unknown>): Promis
   );
 }
 
+export async function reportCallUsage(params: {
+  tenantId: string;
+  callId: string;
+  usage: CallUsageMetrics;
+}): Promise<void> {
+  const call = await getCallRecord(params.tenantId, params.callId);
+  if (!call) return;
+
+  const bot = await getBot(params.tenantId, call.botId);
+  const direction = directionFromCallRecord(call);
+  const estimate = estimateTelephonyCost({
+    direction,
+    durationSeconds: call.duration ?? 1,
+    usage: params.usage,
+    recordingEnabled: Boolean(bot?.telephonyRecordingEnabled),
+    ...(call.costBreakdown?.telnyxUsd !== undefined
+      ? { telnyxCostUsd: call.costBreakdown.telnyxUsd }
+      : {}),
+  });
+
+  await updateCallRecord(params.tenantId, params.callId, {
+    usageMetrics: params.usage,
+    costStatus: estimate.status,
+    costBreakdown: estimate.breakdown,
+  });
+
+  if (estimate.status === "final") {
+    await logCallEvent(params.tenantId, call.botId, params.callId, "cost_finalized", undefined, {
+      totalUsd: estimate.breakdown.totalUsd,
+    });
+    await emitIntegrationEvent(
+      params.tenantId,
+      "call.cost.finalized",
+      buildIntegrationPayload({
+        event: "call.cost.finalized",
+        tenantId: params.tenantId,
+        data: {
+          botId: call.botId,
+          callId: params.callId,
+          costStatus: estimate.status,
+          costBreakdown: estimate.breakdown,
+        },
+      })
+    );
+  } else {
+    await logCallEvent(params.tenantId, call.botId, params.callId, "cost_partial", undefined, {
+      totalUsd: estimate.breakdown.totalUsd,
+    });
+  }
+}
+
+export async function reconcileCallCost(params: {
+  tenantId: string;
+  botId: string;
+  callId: string;
+  callControlId: string;
+  attempt: number;
+}): Promise<{ done: boolean }> {
+  const call = await getCallRecord(params.tenantId, params.callId);
+  if (!call) return { done: true };
+
+  const bot = await getBot(params.tenantId, params.botId);
+  const records = await searchTelnyxDetailRecords(ENVIRONMENT, params.callControlId);
+  const telnyxRecord = records[0];
+  const telnyxCostUsd = telnyxRecord?.cost ? Number(telnyxRecord.cost) : undefined;
+  const resolvedTelnyxCost =
+    telnyxCostUsd !== undefined && Number.isFinite(telnyxCostUsd) ? telnyxCostUsd : undefined;
+
+  const direction = directionFromCallRecord(call);
+  const estimate = estimateTelephonyCost({
+    direction,
+    durationSeconds: call.duration ?? telnyxRecord?.durationSecs ?? 1,
+    ...(call.usageMetrics ? { usage: call.usageMetrics } : {}),
+    recordingEnabled: Boolean(bot?.telephonyRecordingEnabled),
+    ...(resolvedTelnyxCost !== undefined ? { telnyxCostUsd: resolvedTelnyxCost } : {}),
+  });
+
+  await updateCallRecord(params.tenantId, params.callId, {
+    costStatus: estimate.status,
+    costBreakdown: estimate.breakdown,
+  });
+
+  if (estimate.status === "final") {
+    await logCallEvent(params.tenantId, params.botId, params.callId, "cost_finalized", undefined, {
+      totalUsd: estimate.breakdown.totalUsd,
+      attempt: params.attempt,
+    });
+    await emitIntegrationEvent(
+      params.tenantId,
+      "call.cost.finalized",
+      buildIntegrationPayload({
+        event: "call.cost.finalized",
+        tenantId: params.tenantId,
+        data: {
+          botId: params.botId,
+          callId: params.callId,
+          costStatus: estimate.status,
+          costBreakdown: estimate.breakdown,
+        },
+      })
+    );
+    return { done: true };
+  }
+
+  if (params.attempt >= 5) {
+    await logCallEvent(params.tenantId, params.botId, params.callId, "cost_partial", undefined, {
+      attempt: params.attempt,
+    });
+    return { done: true };
+  }
+
+  await queueCdrReconciliation({ ...params, attempt: params.attempt + 1 });
+  return { done: false };
+}
+
 export async function terminateTelephonyCall(
   tenantId: string,
   callId: string
 ): Promise<void> {
-  const { getCallRecord } = await import("../dynamodb/call.repository.js");
   const record = await getCallRecord(tenantId, callId);
   if (!record?.callControlId || record.provider !== "telnyx") {
     throw Object.assign(new Error("Call not found"), { statusCode: 404 });

@@ -106,6 +106,59 @@ export async function hangupCall(environment: string, callControlId: string): Pr
   });
 }
 
+export async function startCallRecording(
+  environment: string,
+  callControlId: string
+): Promise<void> {
+  await telnyxRequest(
+    environment,
+    `/calls/${encodeURIComponent(callControlId)}/actions/record_start`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        format: "mp3",
+        channels: "dual",
+        play_beep: false,
+      }),
+    }
+  );
+}
+
+export interface TelnyxDetailRecord {
+  id: string;
+  cost?: string;
+  currency?: string;
+  callControlId?: string;
+  durationSecs?: number;
+}
+
+export async function searchTelnyxDetailRecords(
+  environment: string,
+  callControlId: string
+): Promise<TelnyxDetailRecord[]> {
+  const data = await telnyxRequest<{
+    data: Array<{
+      id: string;
+      cost?: string;
+      currency?: string;
+      call_control_id?: string;
+      duration_secs?: number;
+    }>;
+  }>(environment, "/detail_records?filter[record_type]=call-control&page[size]=10", {
+    method: "GET",
+  });
+
+  return (data.data ?? [])
+    .filter((item) => item.call_control_id === callControlId)
+    .map((item) => ({
+      id: item.id,
+      ...(item.cost ? { cost: item.cost } : {}),
+      ...(item.currency ? { currency: item.currency } : {}),
+      ...(item.call_control_id ? { callControlId: item.call_control_id } : {}),
+      ...(item.duration_secs !== undefined ? { durationSecs: item.duration_secs } : {}),
+    }));
+}
+
 export interface TelnyxPhoneNumber {
   id: string;
   phoneNumber: string;

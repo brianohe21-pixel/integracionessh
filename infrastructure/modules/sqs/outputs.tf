@@ -21,6 +21,7 @@ output "dlq_arns" {
     flow_run    = aws_sqs_queue.flow_run_dlq.arn
     flow_event  = aws_sqs_queue.flow_event_dlq.arn
     call_events = aws_sqs_queue.call_events_dlq.arn
+    telephony_cdr = aws_sqs_queue.telephony_cdr_dlq.arn
   }
 }
 
@@ -35,6 +36,7 @@ output "queue_arns" {
     flow_run    = aws_sqs_queue.flow_run.arn
     flow_event  = aws_sqs_queue.flow_event.arn
     call_events = aws_sqs_queue.call_events.arn
+    telephony_cdr = aws_sqs_queue.telephony_cdr.arn
   }
 }
 
@@ -100,4 +102,12 @@ output "call_events_queue_url" {
 
 output "call_events_queue_arn" {
   value = aws_sqs_queue.call_events.arn
+}
+
+output "telephony_cdr_queue_url" {
+  value = aws_sqs_queue.telephony_cdr.url
+}
+
+output "telephony_cdr_queue_arn" {
+  value = aws_sqs_queue.telephony_cdr.arn
 }

@@ -206,6 +206,8 @@ module "lambda" {
   flow_event_sqs_queue_arn      = module.sqs.flow_event_queue_arn
   call_events_sqs_queue_url     = module.sqs.call_events_queue_url
   call_events_sqs_queue_arn     = module.sqs.call_events_queue_arn
+  telephony_cdr_sqs_queue_url   = module.sqs.telephony_cdr_queue_url
+  telephony_cdr_sqs_queue_arn   = module.sqs.telephony_cdr_queue_arn
   scheduler_role_arn            = aws_iam_role.scheduler.arn
   media_bucket_arn              = module.s3.media_bucket_arn
   media_bucket_name             = module.s3.media_bucket_name

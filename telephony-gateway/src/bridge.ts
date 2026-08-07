@@ -5,7 +5,7 @@ import { isCalendarEnabled } from "./calendar.js";
 import { docClient, tableName } from "./dynamo.js";
 import { persistPhoneMessage } from "./messages.js";
 import { getElevenLabsApiKey, getOpenAIApiKey } from "./secrets.js";
-import { buildRealtimeTools, executeTelephonyTool } from "./tools.js";
+import { buildRealtimeTools, executeTelephonyTool, reportCallUsage } from "./tools.js";
 import type { Bot, TelephonySession } from "./types.js";
 
 type OpenAIEvent = {
@@ -16,6 +16,12 @@ type OpenAIEvent = {
   arguments?: string;
   call_id?: string;
   event_id?: string;
+  response?: {
+    usage?: {
+      input_tokens?: number;
+      output_tokens?: number;
+    };
+  };
 };
 
 function sendJson(ws: WebSocket, payload: Record<string, unknown>): void {
@@ -68,7 +74,14 @@ function resolveInstructions(bot: Bot, locale: TelephonySession["locale"]): stri
 
 function resolveGreeting(bot: Bot): string | undefined {
   const greeting = bot.telephonyGreeting?.trim() || bot.voicebotGreeting?.trim();
-  return greeting || undefined;
+  if (!greeting) return undefined;
+  if (bot.telephonyRecordingEnabled) {
+    const notice =
+      bot.telephonyRecordingNotice?.trim() ||
+      "This call may be recorded for quality and training purposes.";
+    return `${notice} ${greeting}`;
+  }
+  return greeting;
 }
 
 export async function runTelephonyBridge(
@@ -99,10 +112,30 @@ export async function runTelephonyBridge(
   let responseTextBuffer = "";
   let speaking = false;
   let closed = false;
+  let openaiInputTokens = 0;
+  let openaiOutputTokens = 0;
+  let elevenlabsCharacters = 0;
+  let usageReported = false;
+
+  const reportUsageOnce = () => {
+    if (usageReported) return;
+    usageReported = true;
+    void reportCallUsage({
+      tenantId: session.tenantId,
+      botId: session.botId,
+      callId: session.callId,
+      usage: {
+        openaiInputTokens,
+        openaiOutputTokens,
+        elevenlabsCharacters,
+      },
+    });
+  };
 
   const closeAll = () => {
     if (closed) return;
     closed = true;
+    reportUsageOnce();
     if (openaiWs?.readyState === WebSocket.OPEN) openaiWs.close();
     if (elevenWs?.readyState === WebSocket.OPEN) elevenWs.close();
     if (telnyxWs.readyState === WebSocket.OPEN) telnyxWs.close();
@@ -121,6 +154,7 @@ export async function runTelephonyBridge(
   const speakText = (text: string) => {
     if (!elevenWs || elevenWs.readyState !== WebSocket.OPEN || !text.trim()) return;
     speaking = true;
+    elevenlabsCharacters += text.trim().length;
     elevenWs.send(
       JSON.stringify({
         text: `${text.trim()} `,
@@ -238,8 +272,18 @@ export async function runTelephonyBridge(
             data.type === "conversation.item.input_audio_transcription.completed" &&
             data.transcript
           ) {
+            openaiInputTokens += Math.ceil(data.transcript.length / 4);
             await persistTranscript("user", data.transcript, data.event_id ?? randomUUID());
             return;
+          }
+
+          if (data.type === "response.done" && data.response?.usage) {
+            const usage = data.response.usage as {
+              input_tokens?: number;
+              output_tokens?: number;
+            };
+            openaiInputTokens += usage.input_tokens ?? 0;
+            openaiOutputTokens += usage.output_tokens ?? 0;
           }
 
           if (data.type === "response.text.delta" && data.delta) {

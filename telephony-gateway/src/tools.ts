@@ -49,6 +49,33 @@ export async function executeTelephonyTool(params: {
   }
 }
 
+export async function reportCallUsage(params: {
+  tenantId: string;
+  botId: string;
+  callId: string;
+  usage: {
+    openaiInputTokens?: number;
+    openaiOutputTokens?: number;
+    elevenlabsCharacters?: number;
+  };
+}): Promise<void> {
+  if (!lambdaName) return;
+
+  await lambdaClient.send(
+    new InvokeCommand({
+      FunctionName: lambdaName,
+      InvocationType: "Event",
+      Payload: Buffer.from(
+        JSON.stringify({
+          source: "telephony-gateway",
+          action: "report_usage",
+          ...params,
+        })
+      ),
+    })
+  );
+}
+
 export function buildRealtimeTools(params: {
   locale: BotLocale;
   knowledgeEnabled: boolean;
