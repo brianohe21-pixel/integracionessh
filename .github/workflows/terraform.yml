@@ -66,6 +66,7 @@ jobs:
           GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
           WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
           REPOSITORY_URL: ${{ vars.REPOSITORY_URL }}
+          TELEPHONY_GATEWAY_VPC_ID: ${{ vars.TELEPHONY_GATEWAY_VPC_ID }}
         run: |
           set -euo pipefail
           if [ -z "${GH_ACCESS_TOKEN}" ]; then
@@ -80,6 +81,10 @@ jobs:
             echo "::error::REPOSITORY_URL is missing or empty. Add it under Settings → Secrets and variables → Actions → Variables (e.g. https://github.com/org/repo)."
             exit 1
           fi
+          if [ -z "${TELEPHONY_GATEWAY_VPC_ID:-}" ]; then
+            echo "::error::TELEPHONY_GATEWAY_VPC_ID is missing or empty. Add it under Settings → Environments → dev → Variables (e.g. vpc-xxxxxxxx)."
+            exit 1
+          fi
 
       - name: Clear stale Terraform state lock
         env:
@@ -92,6 +97,10 @@ jobs:
           GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
           WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
           REPOSITORY_URL: ${{ vars.REPOSITORY_URL }}
+          TELEPHONY_GATEWAY_VPC_ID: ${{ vars.TELEPHONY_GATEWAY_VPC_ID }}
+          TELEPHONY_GATEWAY_PUBLIC_SUBNET_IDS: ${{ vars.TELEPHONY_GATEWAY_PUBLIC_SUBNET_IDS }}
+          TELEPHONY_GATEWAY_DOMAIN: ${{ vars.TELEPHONY_GATEWAY_DOMAIN }}
+          TELEPHONY_GATEWAY_CERTIFICATE_ARN: ${{ vars.TELEPHONY_GATEWAY_CERTIFICATE_ARN }}
           META_APP_ID: ${{ vars.META_APP_ID }}
           META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
           META_EMBEDDED_SIGNUP_CONFIG_ID: ${{ vars.META_EMBEDDED_SIGNUP_CONFIG_ID }}
@@ -203,6 +212,7 @@ jobs:
           GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
           WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
           REPOSITORY_URL: ${{ vars.REPOSITORY_URL }}
+          TELEPHONY_GATEWAY_VPC_ID: ${{ vars.TELEPHONY_GATEWAY_VPC_ID }}
         run: bash ../../../.github/scripts/terraform-plan-apply.sh apply
 
       - name: Upload apply artifact
@@ -253,6 +263,7 @@ jobs:
           GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
           WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
           REPOSITORY_URL: ${{ vars.REPOSITORY_URL }}
+          TELEPHONY_GATEWAY_VPC_ID: ${{ vars.TELEPHONY_GATEWAY_VPC_ID }}
         run: |
           set -euo pipefail
           if [ -z "${GH_ACCESS_TOKEN}" ]; then
@@ -267,6 +278,10 @@ jobs:
             echo "::error::REPOSITORY_URL is missing or empty. Add it under Settings → Secrets and variables → Actions → Variables."
             exit 1
           fi
+          if [ -z "${TELEPHONY_GATEWAY_VPC_ID:-}" ]; then
+            echo "::error::TELEPHONY_GATEWAY_VPC_ID is missing or empty. Add it under Settings → Environments → prod → Variables (e.g. vpc-xxxxxxxx)."
+            exit 1
+          fi
 
       - name: Clear stale Terraform state lock
         env:
@@ -279,6 +294,10 @@ jobs:
           GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
           WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
           REPOSITORY_URL: ${{ vars.REPOSITORY_URL }}
+          TELEPHONY_GATEWAY_VPC_ID: ${{ vars.TELEPHONY_GATEWAY_VPC_ID }}
+          TELEPHONY_GATEWAY_PUBLIC_SUBNET_IDS: ${{ vars.TELEPHONY_GATEWAY_PUBLIC_SUBNET_IDS }}
+          TELEPHONY_GATEWAY_DOMAIN: ${{ vars.TELEPHONY_GATEWAY_DOMAIN }}
+          TELEPHONY_GATEWAY_CERTIFICATE_ARN: ${{ vars.TELEPHONY_GATEWAY_CERTIFICATE_ARN }}
           META_APP_ID: ${{ vars.META_APP_ID }}
           META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
           META_EMBEDDED_SIGNUP_CONFIG_ID: ${{ vars.META_EMBEDDED_SIGNUP_CONFIG_ID }}
@@ -314,6 +333,7 @@ jobs:
           GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
           WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
           REPOSITORY_URL: ${{ vars.REPOSITORY_URL }}
+          TELEPHONY_GATEWAY_VPC_ID: ${{ vars.TELEPHONY_GATEWAY_VPC_ID }}
         run: bash ../../../.github/scripts/terraform-plan-apply.sh apply
 
       - name: Upload apply artifact
