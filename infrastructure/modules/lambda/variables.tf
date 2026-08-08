@@ -301,6 +301,12 @@ variable "tags" {
   default = {}
 }
 
+variable "imap_poll_rate_minutes" {
+  type        = number
+  default     = 3
+  description = "Interval in minutes for polling active IMAP mailboxes"
+}
+
 variable "cloudwatch_log_group_import_exclude" {
   type = set(string)
   default = [
@@ -313,6 +319,8 @@ variable "cloudwatch_log_group_import_exclude" {
     "messenger_connect",
     "sms_webhook",
     "email_inbound",
+    "email_imap_connect",
+    "poll_imap_inbound",
     "reports",
     "voicebot",
     "voicebot_session",

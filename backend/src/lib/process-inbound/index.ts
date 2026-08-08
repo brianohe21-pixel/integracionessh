@@ -223,6 +223,13 @@ export async function processInboundMessage(
     if (updated) conversation = updated;
   }
 
+  const emailMetadata =
+    channel === "email"
+      ? (await import("../email/mime.js")).buildEmailMessageMetadata(
+          body.payload as import("../../types/index.js").EmailInboundPayload
+        )
+      : undefined;
+
   const outboundCtxBase = () =>
     buildOutboundContext({
       tenantId,
@@ -313,6 +320,7 @@ export async function processInboundMessage(
     ...(inbound.interactive?.responseJson
       ? { metadata: { responseJson: inbound.interactive.responseJson } }
       : {}),
+    ...(emailMetadata ? { metadata: emailMetadata } : {}),
     source,
     externalMessageId: externalId,
     ...(channel === "whatsapp" ? { whatsappMessageId: externalId } : {}),

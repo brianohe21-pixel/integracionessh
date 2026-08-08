@@ -444,7 +444,8 @@ export async function getOrCreateConversation(
       ? `${participantId}-${Date.now()}`
       : `${channel}-${participantId}-${Date.now()}`;
 
-  const phoneNumber = channel === "whatsapp" || channel === "sms" ? participantId : "";
+  const phoneNumber =
+    channel === "whatsapp" || channel === "sms" || channel === "phone" ? participantId : "";
 
   const conversation: Conversation = {
     conversationId,

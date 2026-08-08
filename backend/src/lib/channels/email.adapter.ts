@@ -32,5 +32,10 @@ export const emailAdapter: ChannelAdapter = {
 
 export function isEmailPayload(payload: unknown): payload is EmailInboundPayload {
   const p = payload as EmailInboundPayload;
-  return Boolean(p?.from && p?.to && p?.text && p?.messageId);
+  return Boolean(
+    p?.from &&
+      p?.to &&
+      p?.messageId &&
+      (p?.text || p?.html || p?.htmlS3Key || p?.attachments?.length)
+  );
 }

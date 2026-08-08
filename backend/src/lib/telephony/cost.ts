@@ -25,8 +25,8 @@ export function estimateTelephonyCost(params: {
       : TELEPHONY_RATES.telnyxOutboundPerMinuteUsd;
 
   const telnyxUsd =
-    params.telnyxCostUsd ??
-    roundUsd(minutes * (telnyxRate + TELEPHONY_RATES.telnyxPlatformPerMinuteUsd));
+    params.telnyxCostUsd ?? roundUsd(minutes * telnyxRate);
+  const platformUsd = roundUsd(minutes * TELEPHONY_RATES.platformPerMinuteUsd);
 
   const openaiInputTokens = params.usage?.openaiInputTokens ?? 0;
   const openaiOutputTokens = params.usage?.openaiOutputTokens ?? 0;
@@ -43,7 +43,7 @@ export function estimateTelephonyCost(params: {
     ? roundUsd(minutes * TELEPHONY_RATES.telnyxRecordingPerMinuteUsd)
     : 0;
 
-  const totalUsd = roundUsd(telnyxUsd + openaiUsd + elevenlabsUsd + recordingUsd);
+  const totalUsd = roundUsd(telnyxUsd + platformUsd + openaiUsd + elevenlabsUsd + recordingUsd);
   const hasUsage = openaiInputTokens > 0 || openaiOutputTokens > 0 || elevenlabsCharacters > 0;
   const status: CallCostStatus =
     params.telnyxCostUsd !== undefined && hasUsage
@@ -55,6 +55,7 @@ export function estimateTelephonyCost(params: {
   return {
     breakdown: {
       telnyxUsd,
+      platformUsd,
       openaiUsd,
       elevenlabsUsd,
       recordingUsd,

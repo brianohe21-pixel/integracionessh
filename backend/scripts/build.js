@@ -53,6 +53,8 @@ const entryPoints = [
   "src/functions/messenger-connect/index.ts",
   "src/functions/sms-webhook/index.ts",
   "src/functions/email-inbound/index.ts",
+  "src/functions/email-imap-connect/index.ts",
+  "src/functions/poll-imap-inbound/index.ts",
   "src/functions/webchat/index.ts",
   "src/functions/voicebot/index.ts",
   "src/functions/voicebot-session/index.ts",

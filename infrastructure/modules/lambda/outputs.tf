@@ -146,6 +146,18 @@ output "email_inbound_function_arn" {
   value = aws_lambda_function.functions["email_inbound"].arn
 }
 
+output "email_imap_connect_invoke_arn" {
+  value = aws_lambda_function.functions["email_imap_connect"].invoke_arn
+}
+
+output "email_imap_connect_function_arn" {
+  value = aws_lambda_function.functions["email_imap_connect"].arn
+}
+
+output "poll_imap_inbound_function_arn" {
+  value = aws_lambda_function.functions["poll_imap_inbound"].arn
+}
+
 output "webchat_invoke_arn" {
   value = aws_lambda_function.functions["webchat"].invoke_arn
 }

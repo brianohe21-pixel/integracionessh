@@ -426,6 +426,18 @@ locals {
       function_arn = var.conversations_function_arn
       protected    = true
     }
+    conversations_message_attachment = {
+      route_key    = "GET /conversations/{conversationId}/messages/{messageId}/attachments/{attachmentId}"
+      invoke_arn   = var.conversations_invoke_arn
+      function_arn = var.conversations_function_arn
+      protected    = true
+    }
+    conversations_message_html = {
+      route_key    = "GET /conversations/{conversationId}/messages/{messageId}/html"
+      invoke_arn   = var.conversations_invoke_arn
+      function_arn = var.conversations_function_arn
+      protected    = true
+    }
     conversations_calls_create = {
       route_key    = "POST /conversations/{conversationId}/calls"
       invoke_arn   = var.realtime_invoke_arn
@@ -515,6 +527,24 @@ locals {
       invoke_arn   = var.email_inbound_invoke_arn
       function_arn = var.email_inbound_function_arn
       protected    = false
+    }
+    email_imap_connect = {
+      route_key    = "POST /email/imap/connect"
+      invoke_arn   = var.email_imap_connect_invoke_arn
+      function_arn = var.email_imap_connect_function_arn
+      protected    = true
+    }
+    email_imap_test = {
+      route_key    = "POST /email/imap/test"
+      invoke_arn   = var.email_imap_connect_invoke_arn
+      function_arn = var.email_imap_connect_function_arn
+      protected    = true
+    }
+    email_imap_disconnect = {
+      route_key    = "DELETE /email/imap/connect"
+      invoke_arn   = var.email_imap_connect_invoke_arn
+      function_arn = var.email_imap_connect_function_arn
+      protected    = true
     }
     webchat_sessions_create = {
       route_key    = "POST /webchat/sessions"
@@ -1813,6 +1843,7 @@ resource "aws_lambda_permission" "api_gw" {
     messenger_connect = var.messenger_connect_function_arn
     sms_webhook       = var.sms_webhook_function_arn
     email_inbound     = var.email_inbound_function_arn
+    email_imap_connect = var.email_imap_connect_function_arn
     webchat           = var.webchat_function_arn
     voicebot          = var.voicebot_function_arn
     campaigns         = var.campaigns_function_arn

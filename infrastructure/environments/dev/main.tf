@@ -283,6 +283,8 @@ module "api_gateway" {
   sms_webhook_function_arn       = module.lambda.sms_webhook_function_arn
   email_inbound_invoke_arn       = module.lambda.email_inbound_invoke_arn
   email_inbound_function_arn     = module.lambda.email_inbound_function_arn
+  email_imap_connect_invoke_arn  = module.lambda.email_imap_connect_invoke_arn
+  email_imap_connect_function_arn = module.lambda.email_imap_connect_function_arn
   webchat_invoke_arn             = module.lambda.webchat_invoke_arn
   webchat_function_arn           = module.lambda.webchat_function_arn
   voicebot_invoke_arn            = module.lambda.voicebot_invoke_arn

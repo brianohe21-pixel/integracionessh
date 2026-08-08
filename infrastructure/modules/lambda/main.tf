@@ -503,6 +503,29 @@ locals {
       environment = {
         TABLE_NAME    = var.dynamodb_table_name
         SQS_QUEUE_URL = var.sqs_queue_url
+        MEDIA_BUCKET  = var.media_bucket_name
+      }
+    }
+    email_imap_connect = {
+      handler     = "email-imap-connect/index.handler"
+      description = "Connects IMAP mailbox credentials for email channel"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME  = var.dynamodb_table_name
+        ENVIRONMENT = var.environment
+      }
+    }
+    poll_imap_inbound = {
+      handler     = "poll-imap-inbound/index.handler"
+      description = "Polls active IMAP mailboxes for new inbound email"
+      timeout     = 180
+      memory      = 512
+      environment = {
+        TABLE_NAME    = var.dynamodb_table_name
+        ENVIRONMENT   = var.environment
+        SQS_QUEUE_URL = var.sqs_queue_url
+        MEDIA_BUCKET  = var.media_bucket_name
       }
     }
     webchat = {
@@ -964,6 +987,27 @@ resource "aws_lambda_event_source_mapping" "telephony_cdr_sqs_trigger" {
   batch_size                         = 1
   enabled                            = true
   maximum_batching_window_in_seconds = 0
+}
+
+resource "aws_cloudwatch_event_rule" "imap_poll" {
+  name                = "${var.project}-${var.environment}-imap-poll"
+  description         = "Poll active IMAP mailboxes for inbound email"
+  schedule_expression = "rate(${var.imap_poll_rate_minutes} minutes)"
+  tags                = var.tags
+}
+
+resource "aws_cloudwatch_event_target" "imap_poll" {
+  rule      = aws_cloudwatch_event_rule.imap_poll.name
+  target_id = "poll-imap-inbound"
+  arn       = aws_lambda_function.functions["poll_imap_inbound"].arn
+}
+
+resource "aws_lambda_permission" "imap_poll" {
+  statement_id  = "AllowEventBridgeImapPoll"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.functions["poll_imap_inbound"].function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.imap_poll.arn
 }
 
 resource "aws_cloudwatch_log_group" "lambda_logs" {

@@ -2,8 +2,12 @@ import type { Bot, BotLocale } from "../../types/index.js";
 import { getCalendarConfig } from "../dynamodb/calendar-config.repository.js";
 import { getZonedParts } from "../calendar/slot-engine.js";
 import { getSystemMessage, intlLocaleForBot } from "../i18n/index.js";
+import {
+  DEFAULT_REALTIME_MODEL_ID,
+  resolveRealtimeModelId,
+} from "./realtime-models.js";
 
-export const DEFAULT_VOICEBOT_MODEL = "gpt-realtime-2.1-mini";
+export const DEFAULT_VOICEBOT_MODEL = DEFAULT_REALTIME_MODEL_ID;
 export const DEFAULT_VOICEBOT_VOICE = "alloy";
 
 const VOICEBOT_VOICES = [
@@ -25,8 +29,7 @@ export function resolveVoicebotVoice(voice?: string): string {
 }
 
 export function resolveVoicebotModel(model?: string): string {
-  if (model?.startsWith("gpt-realtime")) return model;
-  return DEFAULT_VOICEBOT_MODEL;
+  return resolveRealtimeModelId(model);
 }
 
 async function buildCalendarInstructions(

@@ -1,13 +1,17 @@
 import type { EmailInboundPayload, InboundNormalized } from "../../types/index.js";
+import { simpleParser } from "mailparser";
+import { buildEmailInboundPayload, messageHashFromId } from "./mime.js";
 
 export function isProcessableEmailMessage(payload: EmailInboundPayload): boolean {
-  return Boolean(payload.from && payload.text?.trim());
+  return Boolean(
+    payload.from &&
+      (payload.text?.trim() || payload.html || payload.htmlS3Key || payload.attachments?.length)
+  );
 }
 
 export function normalizeEmailMessage(payload: EmailInboundPayload): InboundNormalized {
-  const subjectPrefix = payload.subject ? `[${payload.subject}] ` : "";
   return {
-    text: `${subjectPrefix}${payload.text}`,
+    text: payload.text,
     messageType: "text",
     raw: payload,
   };
@@ -29,23 +33,49 @@ export interface SesSnsNotification {
   content?: string;
 }
 
-export function parseSesInboundNotification(
-  snsMessage: string
-): EmailInboundPayload | null {
+export async function parseSesInboundNotification(
+  snsMessage: string,
+  options?: { tenantId: string; botId: string }
+): Promise<EmailInboundPayload | null> {
   try {
     const notification = JSON.parse(snsMessage) as SesSnsNotification;
+    const content = notification.content ?? "";
+    if (!content) return null;
+
+    const decoded = tryBase64Decode(content);
+    const parsed = await simpleParser(decoded);
+    if (options) {
+      const messageId = (
+        parsed.messageId ??
+        notification.mail?.commonHeaders?.messageId ??
+        `email-${Date.now()}`
+      ).replace(/^<|>$/g, "");
+      return buildEmailInboundPayload(parsed, decoded, {
+        tenantId: options.tenantId,
+        botId: options.botId,
+        messageHash: messageHashFromId(messageId),
+        storeRawMime: true,
+      });
+    }
+
     const headers = notification.mail?.commonHeaders;
     const from = extractEmailAddress(headers?.from?.[0] ?? notification.mail?.source ?? "");
     const to = extractEmailAddress(headers?.to?.[0] ?? notification.mail?.destination?.[0] ?? "");
-    const subject = headers?.subject ?? "";
-    const messageId = headers?.messageId ?? notification.mail?.messageId ?? `email-${Date.now()}`;
+    const subject = headers?.subject ?? parsed.subject ?? "";
+    const messageId = (
+      headers?.messageId ??
+      notification.mail?.messageId ??
+      `email-${Date.now()}`
+    ).replace(/^<|>$/g, "");
 
     if (!from || !to) return null;
 
-    const text = extractPlainTextFromMime(notification.content ?? "");
+    const text =
+      parsed.text?.trim() ||
+      (typeof parsed.html === "string" ? parsed.html.replace(/<[^>]+>/g, " ").trim() : "");
     if (!text.trim()) return null;
 
-    return { from, to, subject, text: text.trim(), messageId };
+    return { from, to, subject, text, messageId };
   } catch {
     return null;
   }
@@ -57,25 +87,10 @@ function extractEmailAddress(raw: string): string {
   return raw.trim().toLowerCase();
 }
 
-function extractPlainTextFromMime(content: string): string {
-  if (!content) return "";
-  const decoded = tryBase64Decode(content);
-  const textPart = decoded.match(/Content-Type:\s*text\/plain[\s\S]*?\r?\n\r?\n([\s\S]*?)(?:\r?\n--|$)/i);
-  if (textPart?.[1]) return decodeQuotedPrintable(textPart[1].trim());
-  const stripped = decoded.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-  return stripped;
-}
-
-function tryBase64Decode(content: string): string {
+function tryBase64Decode(content: string): Buffer {
   try {
-    return Buffer.from(content, "base64").toString("utf-8");
+    return Buffer.from(content, "base64");
   } catch {
-    return content;
+    return Buffer.from(content);
   }
-}
-
-function decodeQuotedPrintable(input: string): string {
-  return input
-    .replace(/=\r?\n/g, "")
-    .replace(/=([0-9A-F]{2})/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
 }

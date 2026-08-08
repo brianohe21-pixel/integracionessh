@@ -31,14 +31,23 @@ export async function handler(
       return { statusCode: 200, body: "OK" };
     }
 
-    const emailPayload = parseSesInboundNotification(body.Message);
-    if (!emailPayload) {
+    const notification = JSON.parse(body.Message) as {
+      mail?: { commonHeaders?: { to?: string[] }; destination?: string[] };
+    };
+    const toAddress =
+      notification.mail?.commonHeaders?.to?.[0] ??
+      notification.mail?.destination?.[0] ??
+      "";
+    const lookup = await getBotByEmailAddress(toAddress);
+    if (!lookup) {
       return { statusCode: 200, body: "OK" };
     }
 
-    const lookup = await getBotByEmailAddress(emailPayload.to);
-    if (!lookup) {
-      console.log(`No bot for email address: ${emailPayload.to}`);
+    const emailPayload = await parseSesInboundNotification(body.Message, {
+      tenantId: lookup.tenantId,
+      botId: lookup.botId,
+    });
+    if (!emailPayload) {
       return { statusCode: 200, body: "OK" };
     }
 

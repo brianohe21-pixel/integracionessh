@@ -252,9 +252,14 @@ export async function handler(
         .object({
           enabled: z.boolean().optional(),
           emailAddress: z.string().email().optional(),
+          inboundProvider: z.enum(["ses", "imap"]).optional(),
         })
         .safeParse(body);
       if (!parsed.success) return badRequest(parsed.error.message);
+
+      if (existing.emailInboundProvider === "imap" && parsed.data.inboundProvider !== "ses") {
+        return badRequest("Disconnect IMAP before changing SES settings");
+      }
 
       const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
       if (parsed.data.enabled === true) {
@@ -279,11 +284,17 @@ export async function handler(
       if (parsed.data.emailAddress) {
         updates.emailAddress = parsed.data.emailAddress.toLowerCase();
       }
+      if (parsed.data.inboundProvider) {
+        updates.emailInboundProvider = parsed.data.inboundProvider;
+      } else if (!existing.emailInboundProvider && parsed.data.enabled === true) {
+        updates.emailInboundProvider = "ses";
+      }
 
       const updated = await updateBot(auth.tenantId, botId, updates);
       return ok({
         emailEnabled: updated.emailEnabled,
         emailAddress: updated.emailAddress,
+        emailInboundProvider: updated.emailInboundProvider,
       });
     }
 

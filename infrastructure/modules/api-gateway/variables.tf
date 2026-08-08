@@ -158,6 +158,14 @@ variable "email_inbound_function_arn" {
   type = string
 }
 
+variable "email_imap_connect_invoke_arn" {
+  type = string
+}
+
+variable "email_imap_connect_function_arn" {
+  type = string
+}
+
 variable "webchat_invoke_arn" {
   type = string
 }
