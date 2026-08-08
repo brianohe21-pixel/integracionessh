@@ -72,16 +72,25 @@ function resolveInstructions(bot: Bot, locale: TelephonySession["locale"]): stri
   return `${base}\n\n${language}`;
 }
 
-function resolveGreeting(bot: Bot): string | undefined {
+function resolveGreeting(bot: Bot, locale: TelephonySession["locale"]): string {
   const greeting = bot.telephonyGreeting?.trim() || bot.voicebotGreeting?.trim();
-  if (!greeting) return undefined;
+  const text =
+    greeting ||
+    (locale === "en"
+      ? "Hello! How can I help you today?"
+      : "Hola, ¿en qué puedo ayudarte?");
   if (bot.telephonyRecordingEnabled) {
     const notice =
       bot.telephonyRecordingNotice?.trim() ||
       "This call may be recorded for quality and training purposes.";
-    return `${notice} ${greeting}`;
+    return `${notice} ${text}`;
   }
-  return greeting;
+  return text;
+}
+
+export function isInboundTelnyxMedia(track?: string): boolean {
+  if (!track) return true;
+  return track === "inbound";
 }
 
 export async function runTelephonyBridge(
@@ -99,7 +108,7 @@ export async function runTelephonyBridge(
   const voiceId = resolveVoiceId(bot);
   const model = resolveModel(bot);
   const instructions = resolveInstructions(bot, session.locale);
-  const greeting = resolveGreeting(bot);
+  const greeting = resolveGreeting(bot, session.locale);
   const calendarEnabled = await isCalendarEnabled(session.tenantId, session.botId);
   const tools = buildRealtimeTools({
     locale: session.locale,
@@ -112,6 +121,10 @@ export async function runTelephonyBridge(
   let responseTextBuffer = "";
   let speaking = false;
   let closed = false;
+  let streamReady = false;
+  let openaiReady = false;
+  let greetingSent = false;
+  const pendingTelnyxAudio: string[] = [];
   let openaiInputTokens = 0;
   let openaiOutputTokens = 0;
   let elevenlabsCharacters = 0;
@@ -128,6 +141,41 @@ export async function runTelephonyBridge(
         openaiInputTokens,
         openaiOutputTokens,
         elevenlabsCharacters,
+      },
+    });
+  };
+
+  const sendTelnyxMedia = (payload: string) => {
+    if (!streamReady) {
+      pendingTelnyxAudio.push(payload);
+      return;
+    }
+    sendJson(telnyxWs, {
+      event: "media",
+      media: { payload },
+    });
+  };
+
+  const flushPendingTelnyxAudio = () => {
+    for (const payload of pendingTelnyxAudio) {
+      sendJson(telnyxWs, {
+        event: "media",
+        media: { payload },
+      });
+    }
+    pendingTelnyxAudio.length = 0;
+  };
+
+  const maybeStartGreeting = () => {
+    if (greetingSent || !openaiWs || openaiWs.readyState !== WebSocket.OPEN || !streamReady || !openaiReady) {
+      return;
+    }
+    greetingSent = true;
+    sendJson(openaiWs, {
+      type: "response.create",
+      response: {
+        modalities: ["text"],
+        instructions: greeting,
       },
     });
   };
@@ -204,10 +252,7 @@ export async function runTelephonyBridge(
           return;
         }
         if (data.audio) {
-          sendJson(telnyxWs, {
-            event: "media",
-            media: { payload: data.audio },
-          });
+          sendTelnyxMedia(data.audio);
         }
         if (data.isFinal) speaking = false;
       });
@@ -246,16 +291,8 @@ export async function runTelephonyBridge(
             },
           },
         });
-
-        if (greeting) {
-          sendJson(socket, {
-            type: "response.create",
-            response: {
-              modalities: ["text"],
-              instructions: greeting,
-            },
-          });
-        }
+        openaiReady = true;
+        maybeStartGreeting();
         resolve(socket);
       });
 
@@ -265,6 +302,11 @@ export async function runTelephonyBridge(
           try {
             data = JSON.parse(String(raw)) as OpenAIEvent;
           } catch {
+            return;
+          }
+
+          if (data.type === "error") {
+            console.error("OpenAI realtime error:", data);
             return;
           }
 
@@ -362,14 +404,32 @@ export async function runTelephonyBridge(
   ]);
 
   telnyxWs.on("message", (raw) => {
-    let data: { event?: string; media?: { payload?: string } };
+    let data: {
+      event?: string;
+      media?: { payload?: string; track?: string };
+    };
     try {
-      data = JSON.parse(String(raw)) as { event?: string; media?: { payload?: string } };
+      data = JSON.parse(String(raw)) as {
+        event?: string;
+        media?: { payload?: string; track?: string };
+      };
     } catch {
       return;
     }
 
-    if (data.event === "media" && data.media?.payload && openaiSocket.readyState === WebSocket.OPEN) {
+    if (data.event === "start") {
+      streamReady = true;
+      flushPendingTelnyxAudio();
+      maybeStartGreeting();
+      return;
+    }
+
+    if (
+      data.event === "media" &&
+      data.media?.payload &&
+      isInboundTelnyxMedia(data.media.track) &&
+      openaiSocket.readyState === WebSocket.OPEN
+    ) {
       sendJson(openaiSocket, {
         type: "input_audio_buffer.append",
         audio: data.media.payload,

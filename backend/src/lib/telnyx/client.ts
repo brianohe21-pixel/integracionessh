@@ -24,6 +24,15 @@ export interface TelnyxAnswerParams {
   clientState?: string;
 }
 
+export function isTelnyxCallEndedError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return (
+    error.message.includes('"code":"90018"') ||
+    error.message.includes("Call has already ended") ||
+    error.message.includes("no longer active")
+  );
+}
+
 async function telnyxRequest<T>(
   environment: string,
   path: string,
@@ -57,6 +66,11 @@ async function telnyxRequest<T>(
         : text;
     throw Object.assign(new Error(`Telnyx API error (${response.status}): ${detail}`), {
       statusCode: response.status >= 500 ? 502 : 400,
+      telnyxStatus: response.status,
+      telnyxErrors:
+        typeof data === "object" && data && "errors" in data
+          ? (data as { errors: unknown }).errors
+          : undefined,
     });
   }
 
@@ -66,7 +80,7 @@ async function telnyxRequest<T>(
 function streamPayload(streamUrl: string, clientState?: string) {
   return {
     stream_url: streamUrl,
-    stream_track: "both_tracks",
+    stream_track: "inbound_track",
     stream_bidirectional_mode: "rtp",
     stream_bidirectional_codec: "PCMU",
     ...(clientState ? { client_state: clientState } : {}),
@@ -100,28 +114,38 @@ export async function answerInboundCall(params: TelnyxAnswerParams): Promise<voi
 }
 
 export async function hangupCall(environment: string, callControlId: string): Promise<void> {
-  await telnyxRequest(environment, `/calls/${encodeURIComponent(callControlId)}/actions/hangup`, {
-    method: "POST",
-    body: JSON.stringify({}),
-  });
+  try {
+    await telnyxRequest(environment, `/calls/${encodeURIComponent(callControlId)}/actions/hangup`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+  } catch (error) {
+    if (isTelnyxCallEndedError(error)) return;
+    throw error;
+  }
 }
 
 export async function startCallRecording(
   environment: string,
   callControlId: string
 ): Promise<void> {
-  await telnyxRequest(
-    environment,
-    `/calls/${encodeURIComponent(callControlId)}/actions/record_start`,
-    {
-      method: "POST",
-      body: JSON.stringify({
-        format: "mp3",
-        channels: "dual",
-        play_beep: false,
-      }),
-    }
-  );
+  try {
+    await telnyxRequest(
+      environment,
+      `/calls/${encodeURIComponent(callControlId)}/actions/record_start`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          format: "mp3",
+          channels: "dual",
+          play_beep: false,
+        }),
+      }
+    );
+  } catch (error) {
+    if (isTelnyxCallEndedError(error)) return;
+    throw error;
+  }
 }
 
 export interface TelnyxDetailRecord {

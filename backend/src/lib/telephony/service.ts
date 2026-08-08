@@ -16,6 +16,7 @@ import {
   dialOutboundCall,
   directionToWhatsApp,
   hangupCall,
+  isTelnyxCallEndedError,
   startCallRecording,
   searchTelnyxDetailRecords,
 } from "../telnyx/client.js";
@@ -289,12 +290,30 @@ export async function handleInboundCallInitiated(payload: Record<string, unknown
 
   await logCallEvent(lookup.tenantId, lookup.botId, callId, "initiated", "Inbound call received");
 
-  await answerInboundCall({
-    environment: ENVIRONMENT,
-    callControlId,
-    streamUrl: gatewayStreamUrl(session.streamToken),
-    clientState: encodeClientState({ sessionId, callId }),
-  });
+  try {
+    await answerInboundCall({
+      environment: ENVIRONMENT,
+      callControlId,
+      streamUrl: gatewayStreamUrl(session.streamToken),
+      clientState: encodeClientState({ sessionId, callId }),
+    });
+  } catch (error) {
+    if (!isTelnyxCallEndedError(error)) throw error;
+    await endTelephonySession(sessionId, 1);
+    await updateCallRecord(lookup.tenantId, callId, {
+      status: "completed",
+      endedAt: new Date().toISOString(),
+      duration: 1,
+    });
+    await logCallEvent(
+      lookup.tenantId,
+      lookup.botId,
+      callId,
+      "hangup",
+      "Caller hung up before answer"
+    );
+    return;
+  }
 
   await emitIntegrationEvent(
     lookup.tenantId,
@@ -622,6 +641,14 @@ export async function terminateTelephonyCall(
   const record = await getCallRecord(tenantId, callId);
   if (!record?.callControlId || record.provider !== "telnyx") {
     throw Object.assign(new Error("Call not found"), { statusCode: 404 });
+  }
+  if (
+    record.status === "completed" ||
+    record.status === "failed" ||
+    record.status === "rejected" ||
+    record.status === "terminated"
+  ) {
+    return;
   }
   await hangupCall(ENVIRONMENT, record.callControlId);
 }
