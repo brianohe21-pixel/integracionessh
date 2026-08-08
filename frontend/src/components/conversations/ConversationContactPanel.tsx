@@ -27,8 +27,10 @@ export function ConversationContactPanel({
   const assignedAdvisor = advisors?.find((a) => a.advisorId === conversation.assignedAdvisorId);
   const displayName =
     conversation.contactName ??
-    ((conversation.channel ?? "whatsapp") === "whatsapp"
-      ? conversation.phoneNumber
+    ((conversation.channel ?? "whatsapp") === "whatsapp" ||
+    conversation.channel === "sms" ||
+    conversation.channel === "phone"
+      ? conversation.phoneNumber || conversation.participantId
       : conversation.participantId ?? conversation.phoneNumber);
 
   const tags = activeLead?.tags ?? [];
@@ -54,13 +56,21 @@ export function ConversationContactPanel({
             {t("conversations.contactInfo")}
           </h3>
           <div className="space-y-2 text-sm">
-            {(conversation.channel ?? "whatsapp") === "whatsapp" && (
+            {((conversation.channel ?? "whatsapp") === "whatsapp" ||
+              conversation.channel === "sms" ||
+              conversation.channel === "phone") && (
               <div className="flex items-center gap-2 text-secondary">
                 <Phone className="h-4 w-4 text-muted" />
-                <span>{conversation.phoneNumber}</span>
+                <span>{conversation.phoneNumber || conversation.participantId}</span>
               </div>
             )}
-            {activeLead?.email && (
+            {conversation.channel === "email" && (
+              <div className="flex items-center gap-2 text-secondary">
+                <Mail className="h-4 w-4 text-muted" />
+                <span>{conversation.participantId}</span>
+              </div>
+            )}
+            {activeLead?.email && conversation.channel !== "email" && (
               <div className="flex items-center gap-2 text-secondary">
                 <Mail className="h-4 w-4 text-muted" />
                 <span>{activeLead.email}</span>

@@ -239,6 +239,16 @@ export interface Bot {
   smsOriginationNumber?: string;
   emailEnabled?: boolean;
   emailAddress?: string;
+  emailInboundProvider?: "ses" | "imap";
+  emailImapHost?: string;
+  emailImapPort?: number;
+  emailImapMailbox?: string;
+  emailImapUseTls?: boolean;
+  emailImapUsername?: string;
+  emailImapConnectedAt?: string;
+  emailImapLastSyncAt?: string;
+  emailImapLastError?: string;
+  emailImapPollingEnabled?: boolean;
   voicebotEnabled?: boolean;
   voicebotWidgetKey?: string;
   voicebotVoice?: string;
@@ -382,6 +392,8 @@ export interface Conversation {
   copilotGeneratedAt?: string;
   messageCount: number;
   lastMessageAt: string;
+  emailSubject?: string;
+  emailThreadMessageId?: string;
   locale?: BotLocale;
   createdAt: string;
 }
@@ -458,15 +470,45 @@ export interface CallingMetrics {
 
 export type MessageRole = "user" | "assistant" | "advisor" | "system";
 
+export interface EmailMessageAttachment {
+  attachmentId: string;
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+  disposition: "attachment" | "inline";
+  contentId?: string;
+}
+
+export interface EmailMessageMetadata {
+  kind: "email";
+  subject: string;
+  from: string;
+  fromName?: string;
+  to: string;
+  cc?: string[];
+  textBody: string;
+  htmlBody?: string;
+  htmlS3Key?: string;
+  hasAttachments: boolean;
+  attachmentCount: number;
+  attachments?: EmailMessageAttachment[];
+  inReplyTo?: string;
+  messageId: string;
+}
+
 export interface Message {
   messageId: string;
   conversationId: string;
   tenantId: string;
   role: MessageRole;
   content: string;
-  source?: "panel" | "whatsapp_inbound";
+  channel?: Channel;
+  messageType?: string;
+  metadata?: EmailMessageMetadata | Record<string, unknown>;
+  source?: string;
   sentByAdvisorId?: string;
   whatsappMessageId?: string;
+  externalMessageId?: string;
   timestamp: string;
 }
 
@@ -792,6 +834,7 @@ export type CallCostStatus = "pending" | "partial" | "final";
 
 export interface CallCostBreakdown {
   telnyxUsd?: number;
+  platformUsd?: number;
   openaiUsd?: number;
   elevenlabsUsd?: number;
   recordingUsd?: number;

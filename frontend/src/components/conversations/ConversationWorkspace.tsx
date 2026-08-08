@@ -32,6 +32,7 @@ import {
   User,
   Bot,
   Phone,
+  Mail,
   Headphones,
   Send,
   ExternalLink,
@@ -46,6 +47,7 @@ import Link from "next/link";
 import { AdvisorCallPanel } from "@/components/conversations/AdvisorCallPanel";
 import { WhatsAppSoftphone } from "@/components/conversations/WhatsAppSoftphone";
 import { ConversationContactPanel } from "@/components/conversations/ConversationContactPanel";
+import { EmailMessageBubble } from "@/components/conversations/EmailMessageBubble";
 import { MacroPicker } from "@/components/conversations/MacroPicker";
 import { AdvisorCopilotPanel } from "@/components/conversations/AdvisorCopilotPanel";
 import { QuotationDrawer } from "@/components/conversations/QuotationDrawer";
@@ -257,9 +259,13 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   const deleteConv = useDeleteConversation();
 
   const selectedConversation = conversations.find((c) => c.conversationId === selectedId);
-  const { data: activeLead } = useActiveLeadByPhone(selectedConversation?.phoneNumber);
+  const selectedContactPhone =
+    selectedConversation?.phoneNumber || selectedConversation?.participantId;
+  const { data: activeLead } = useActiveLeadByPhone(selectedContactPhone);
   const convertLead = useConvertLead();
   const selectedBot = bots?.find((b) => b.botId === selectedConversation?.botId);
+  const isImapReadOnly =
+    selectedConversation?.channel === "email" && selectedBot?.emailInboundProvider === "imap";
   const selectedWhatsAppPhone = selectedConversation
     ? normalizeWhatsAppPhone(selectedConversation.phoneNumber)
     : "";
@@ -276,12 +282,17 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     if (channel === "sms") return t("conversations.channelSms");
     if (channel === "email") return t("conversations.channelEmail");
     if (channel === "voicebot") return t("conversations.channelVoicebot");
+    if (channel === "phone") return t("conversations.channelPhone");
     return t("conversations.channelWhatsapp");
   }
 
   function contactDisplay(conv: { contactName?: string; phoneNumber: string; participantId?: string; channel?: Channel }) {
     if (conv.contactName) return conv.contactName;
-    if ((conv.channel ?? "whatsapp") === "whatsapp" || conv.channel === "sms") {
+    if (
+      (conv.channel ?? "whatsapp") === "whatsapp" ||
+      conv.channel === "sms" ||
+      conv.channel === "phone"
+    ) {
       return conv.phoneNumber || conv.participantId;
     }
     return conv.participantId ?? conv.phoneNumber;
@@ -303,7 +314,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     !!selectedConversation &&
     isHuman &&
     !selectedConversation.assignedAdvisorId;
-  const canCompose = isHuman && !!selectedConversation && !needsClaim;
+  const canCompose = isHuman && !!selectedConversation && !needsClaim && !isImapReadOnly;
   const assignedAdvisor = advisors?.find(
     (a) => a.advisorId === selectedConversation?.assignedAdvisorId
   );
@@ -505,6 +516,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
             <option value="sms">{t("conversations.channelSms")}</option>
             <option value="email">{t("conversations.channelEmail")}</option>
             <option value="voicebot">{t("conversations.channelVoicebot")}</option>
+            <option value="phone">{t("conversations.channelPhone")}</option>
           </Select>
           <Select
             value={handoffFilter}
@@ -741,7 +753,9 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                 </div>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-primary">
-                    {contactDisplay(selectedConversation)}
+                    {selectedConversation.channel === "email" && selectedConversation.emailSubject
+                      ? selectedConversation.emailSubject
+                      : contactDisplay(selectedConversation)}
                   </p>
                   <div className="flex items-center gap-1.5 text-xs text-secondary">
                     <Badge variant="accent" className="text-[10px]">
@@ -752,10 +766,17 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                         {t("conversations.detectedLocale", { locale: selectedConversation.locale.toUpperCase() })}
                       </Badge>
                     )}
-                    {(selectedConversation.channel ?? "whatsapp") === "whatsapp" ? (
+                    {(selectedConversation.channel ?? "whatsapp") === "whatsapp" ||
+                    selectedConversation.channel === "sms" ||
+                    selectedConversation.channel === "phone" ? (
                       <>
                         <Phone className="h-3 w-3 flex-shrink-0" />
-                        {selectedConversation.phoneNumber}
+                        {selectedConversation.phoneNumber || selectedConversation.participantId}
+                      </>
+                    ) : selectedConversation.channel === "email" ? (
+                      <>
+                        <Mail className="h-3 w-3 flex-shrink-0" />
+                        {selectedConversation.participantId}
                       </>
                     ) : (
                       <span>{selectedConversation.participantId}</span>
@@ -885,11 +906,16 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                       })}
                 </p>
               )}
-            {isHuman && (selectedConversation.channel ?? "whatsapp") !== "whatsapp" && (
+            {isHuman && (selectedConversation.channel ?? "whatsapp") !== "whatsapp" && !isImapReadOnly && (
               <p className="border-b border-default border-l-4 border-l-accent bg-surface-muted px-6 py-2.5 text-xs font-medium text-primary">
                 {t("conversations.replyViaChannel", {
                   channel: channelLabel(selectedConversation.channel),
                 })}
+              </p>
+            )}
+            {isImapReadOnly && (
+              <p className="border-b border-default border-l-4 border-l-warning bg-warning/10 px-6 py-2.5 text-xs font-medium text-primary">
+                {t("emailChannel.imapReadOnly")}
               </p>
             )}
 
@@ -993,7 +1019,11 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                             : "rounded-br-sm border border-accent/30 bg-accent-muted text-primary"
                       )}
                     >
-                      <p>{msg.content}</p>
+                      {selectedConversation.channel === "email" && isInbound ? (
+                        <EmailMessageBubble message={msg} botId={selectedConversation.botId} />
+                      ) : (
+                        <p>{msg.content}</p>
+                      )}
                       <p
                         className={cn(
                           "mt-1 text-[10px]",

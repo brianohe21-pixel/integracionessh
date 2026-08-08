@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import type { HTMLAttributes, ReactNode } from "react";
+import type { ComponentPropsWithoutRef, HTMLAttributes, ReactNode } from "react";
 
 type DataTableProps = HTMLAttributes<HTMLDivElement> & {
   children: ReactNode;
@@ -43,13 +43,14 @@ export function DataTableBody({ children, className }: DataTableBodyProps) {
   return <tbody className={className}>{children}</tbody>;
 }
 
-type DataTableRowProps = {
-  children: ReactNode;
-  className?: string;
-};
+type DataTableRowProps = ComponentPropsWithoutRef<"tr">;
 
-export function DataTableRow({ children, className }: DataTableRowProps) {
-  return <tr className={className}>{children}</tr>;
+export function DataTableRow({ children, className, ...props }: DataTableRowProps) {
+  return (
+    <tr className={className} {...props}>
+      {children}
+    </tr>
+  );
 }
 
 type DataTableCellProps = {

@@ -82,8 +82,11 @@ export const api = {
   patch: <T>(path: string, body: unknown) =>
     request<T>(path, { method: "PATCH", body: JSON.stringify(body) }),
 
-  delete: <T = void>(path: string) =>
-    request<T>(path, { method: "DELETE" }),
+  delete: <T = void>(path: string, body?: unknown) =>
+    request<T>(path, {
+      method: "DELETE",
+      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+    }),
 
   async download(path: string, filename: string): Promise<void> {
     assertApiBaseUrl();

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { PhoneCall } from "lucide-react";
+import { Badge } from "@/components/ui/Badge";
 import {
   useSaveTelephonySettings,
   useTelephonyNumbers,
@@ -10,8 +11,10 @@ import {
   type TelephonySettings,
 } from "@/hooks/useTelephony";
 import { useT } from "@/i18n/context";
-
-const MODELS = ["gpt-realtime-2.1-mini", "gpt-realtime-2.1"];
+import {
+  DEFAULT_REALTIME_MODEL_ID,
+  REALTIME_MODELS,
+} from "@/lib/realtime-models";
 
 function SettingsSwitch({
   checked,
@@ -57,7 +60,7 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
   const [success, setSuccess] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [voiceId, setVoiceId] = useState("");
-  const [model, setModel] = useState("gpt-realtime-2.1-mini");
+  const [model, setModel] = useState(DEFAULT_REALTIME_MODEL_ID);
   const [greeting, setGreeting] = useState("");
   const [systemPrompt, setSystemPrompt] = useState("");
   const [recordingEnabled, setRecordingEnabled] = useState(false);
@@ -67,7 +70,7 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
     if (!data) return;
     setPhoneNumber(data.telephonyPhoneNumber ?? "");
     setVoiceId(data.telephonyVoiceId ?? "");
-    setModel(data.telephonyModel ?? "gpt-realtime-2.1-mini");
+    setModel(data.telephonyModel ?? DEFAULT_REALTIME_MODEL_ID);
     setGreeting(data.telephonyGreeting ?? "");
     setSystemPrompt(data.telephonySystemPrompt ?? "");
     setRecordingEnabled(Boolean(data.telephonyRecordingEnabled));
@@ -83,6 +86,9 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
   const selectedVoiceRequiresPaidPlan =
     isFreeTier &&
     voices.some((voice) => voice.id === voiceId.trim() && voice.requiresPaidPlan);
+  const selectedVoice = voiceId.trim()
+    ? voices.find((voice) => voice.id === voiceId.trim())
+    : undefined;
   const enabled = Boolean(data?.telephonyEnabled);
   const hasPhoneNumber = phoneNumber.trim().length > 0;
 
@@ -220,7 +226,10 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
             <>
               <div className="grid grid-cols-1 gap-4 border-t border-subtle pt-4 md:grid-cols-2">
                 <label className="space-y-1">
-                  <span className="text-sm font-medium text-secondary">{t("telephony.voiceId")}</span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-medium text-secondary">{t("telephony.voiceId")}</span>
+                    {selectedVoice && <Badge variant="accent">{selectedVoice.name}</Badge>}
+                  </div>
                   <input
                     value={voiceId}
                     onChange={(e) => setVoiceId(e.target.value)}
@@ -254,9 +263,9 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
                     onChange={(e) => setModel(e.target.value)}
                     className="w-full rounded-lg border border-default px-3 py-2 text-sm"
                   >
-                    {MODELS.map((item) => (
-                      <option key={item} value={item}>
-                        {item}
+                    {REALTIME_MODELS.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.label}
                       </option>
                     ))}
                   </select>

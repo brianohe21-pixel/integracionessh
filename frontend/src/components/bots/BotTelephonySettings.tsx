@@ -5,6 +5,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PhoneCall } from "lucide-react";
 import { api } from "@/lib/api";
 import { useT } from "@/i18n/context";
+import {
+  DEFAULT_REALTIME_MODEL_ID,
+  REALTIME_MODELS,
+} from "@/lib/realtime-models";
 
 interface TelephonySettingsResponse {
   telephonyEnabled?: boolean;
@@ -25,7 +29,7 @@ interface BotTelephonySettingsProps {
   botId: string;
 }
 
-const MODELS = ["gpt-realtime-2.1-mini", "gpt-realtime-2.1"];
+const MODELS = REALTIME_MODELS;
 
 function SettingsSwitch({
   checked,
@@ -63,7 +67,7 @@ export function BotTelephonySettings({ botId }: BotTelephonySettingsProps) {
   const [success, setSuccess] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [voiceId, setVoiceId] = useState("");
-  const [model, setModel] = useState("gpt-realtime-2.1-mini");
+  const [model, setModel] = useState(DEFAULT_REALTIME_MODEL_ID);
   const [greeting, setGreeting] = useState("");
   const [systemPrompt, setSystemPrompt] = useState("");
   const [outboundTo, setOutboundTo] = useState("");
@@ -77,7 +81,7 @@ export function BotTelephonySettings({ botId }: BotTelephonySettingsProps) {
       );
       setPhoneNumber(settings.telephonyPhoneNumber ?? "");
       setVoiceId(settings.telephonyVoiceId ?? "");
-      setModel(settings.telephonyModel ?? "gpt-realtime-2.1-mini");
+      setModel(settings.telephonyModel ?? DEFAULT_REALTIME_MODEL_ID);
       setGreeting(settings.telephonyGreeting ?? "");
       setSystemPrompt(settings.telephonySystemPrompt ?? "");
       return settings;
@@ -279,8 +283,8 @@ export function BotTelephonySettings({ botId }: BotTelephonySettingsProps) {
                     className="w-full rounded-lg border border-default px-3 py-2 text-sm"
                   >
                     {MODELS.map((item) => (
-                      <option key={item} value={item}>
-                        {item}
+                      <option key={item.id} value={item.id}>
+                        {item.label}
                       </option>
                     ))}
                   </select>
