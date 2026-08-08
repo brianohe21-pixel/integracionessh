@@ -11,7 +11,10 @@ import { listCallEvents } from "../../lib/dynamodb/call-event.repository.js";
 import { listVoiceAgentWebhookDeliveries } from "../../lib/dynamodb/voice-agent-webhook.repository.js";
 import { hasTelnyxCredentials } from "../../lib/telnyx/secrets.js";
 import { listOwnedPhoneNumbers } from "../../lib/telnyx/client.js";
-import { listElevenLabsVoices } from "../../lib/telnyx/elevenlabs.js";
+import {
+  getElevenLabsAccountTier,
+  listElevenLabsVoices,
+} from "../../lib/telnyx/elevenlabs.js";
 import { parseTelnyxWebhookBody, verifyTelnyxWebhookSignature } from "../../lib/telnyx/webhook.js";
 import { markTelnyxEventProcessed } from "../../lib/telnyx/idempotency.js";
 import { getTelnyxSecrets } from "../../lib/telnyx/secrets.js";
@@ -223,11 +226,15 @@ export async function handler(
 
     if (method === "GET" && rawPath === "/telephony/voices") {
       try {
-        const voices = await listElevenLabsVoices(ENVIRONMENT);
-        return ok({ voices });
+        const [voices, tier] = await Promise.all([
+          listElevenLabsVoices(ENVIRONMENT),
+          getElevenLabsAccountTier(ENVIRONMENT),
+        ]);
+        return ok({ voices, tier });
       } catch {
         return ok({
-          voices: [{ id: "EXAVITQu4vr4xnSDxMaL", name: "Sarah" }],
+          voices: [{ id: "EXAVITQu4vr4xnSDxMaL", name: "Sarah", requiresPaidPlan: false }],
+          tier: null,
         });
       }
     }
