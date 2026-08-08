@@ -599,6 +599,8 @@ export const es = {
     selectVoice: "Seleccionar voz",
     voiceIdPlaceholder: "Pega el ID de voz de ElevenLabs",
     voiceIdHint: "Puedes pegar cualquier ID de voz o elegir una de tu cuenta.",
+    voicePaidPlanWarning:
+      "Esta voz de librería requiere un plan de pago de ElevenLabs y el agente se quedará en silencio en las llamadas. Elige una de las voces del listado o mejora tu plan.",
     recordingEnabled: "Grabar llamadas",
     recordingHint: "Activa la grabación por agente con retención de 90 días",
     recordingNotice: "Aviso de grabación",
@@ -621,6 +623,8 @@ export const es = {
     costBreakdown: "Desglose de costo",
     recordingCost: "Grabación",
     playRecording: "Reproducir grabación",
+    pauseRecording: "Pausar grabación",
+    recordingLoadError: "No se pudo cargar la forma de onda. Usa el reproductor estándar.",
     eventTimeline: "Línea de tiempo",
     noEvents: "Sin eventos registrados",
     transcriptTitle: "Transcripción",

@@ -34,6 +34,8 @@ export interface TelnyxNumber {
 export interface TelnyxVoice {
   id: string;
   name: string;
+  category?: string;
+  requiresPaidPlan?: boolean;
 }
 
 export function useTelephonySettings(botId: string) {
@@ -55,7 +57,8 @@ export function useTelephonyNumbers() {
 export function useTelephonyVoices() {
   return useQuery({
     queryKey: ["telephony-voices"],
-    queryFn: () => api.get<{ voices: TelnyxVoice[] }>("/telephony/voices"),
+    queryFn: () =>
+      api.get<{ voices: TelnyxVoice[]; tier: string | null }>("/telephony/voices"),
   });
 }
 

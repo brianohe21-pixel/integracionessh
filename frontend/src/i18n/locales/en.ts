@@ -600,6 +600,8 @@ export const en: Messages = {
     selectVoice: "Select voice",
     voiceIdPlaceholder: "Paste ElevenLabs voice ID",
     voiceIdHint: "Paste any voice ID or pick one from your account.",
+    voicePaidPlanWarning:
+      "This library voice requires a paid ElevenLabs plan and the agent will stay silent on calls. Pick one of the listed voices or upgrade your plan.",
     recordingEnabled: "Record calls",
     recordingHint: "Enable per-agent recording with 90-day retention",
     recordingNotice: "Recording notice",
@@ -622,6 +624,8 @@ export const en: Messages = {
     costBreakdown: "Cost breakdown",
     recordingCost: "Recording",
     playRecording: "Play recording",
+    pauseRecording: "Pause recording",
+    recordingLoadError: "Could not load the waveform. Use the standard player instead.",
     eventTimeline: "Timeline",
     noEvents: "No events recorded",
     transcriptTitle: "Transcript",

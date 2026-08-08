@@ -76,6 +76,13 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
 
   const numbers = numbersData?.numbers ?? [];
   const voices = voicesData?.voices ?? [];
+  const isFreeTier = voicesData?.tier === "free";
+  const selectableVoices = isFreeTier
+    ? voices.filter((voice) => !voice.requiresPaidPlan)
+    : voices;
+  const selectedVoiceRequiresPaidPlan =
+    isFreeTier &&
+    voices.some((voice) => voice.id === voiceId.trim() && voice.requiresPaidPlan);
   const enabled = Boolean(data?.telephonyEnabled);
   const hasPhoneNumber = phoneNumber.trim().length > 0;
 
@@ -218,19 +225,27 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
                     value={voiceId}
                     onChange={(e) => setVoiceId(e.target.value)}
                     placeholder={t("voiceAgents.voiceIdPlaceholder")}
-                    list={voices.length > 0 ? `elevenlabs-voices-${botId}` : undefined}
+                    list={
+                      selectableVoices.length > 0 ? `elevenlabs-voices-${botId}` : undefined
+                    }
                     className="w-full rounded-lg border border-default px-3 py-2 text-sm"
                   />
-                  {voices.length > 0 && (
+                  {selectableVoices.length > 0 && (
                     <datalist id={`elevenlabs-voices-${botId}`}>
-                      {voices.map((voice) => (
+                      {selectableVoices.map((voice) => (
                         <option key={voice.id} value={voice.id}>
                           {voice.name}
                         </option>
                       ))}
                     </datalist>
                   )}
-                  <p className="text-xs text-secondary">{t("voiceAgents.voiceIdHint")}</p>
+                  {selectedVoiceRequiresPaidPlan ? (
+                    <p className="text-xs text-warning">
+                      {t("voiceAgents.voicePaidPlanWarning")}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-secondary">{t("voiceAgents.voiceIdHint")}</p>
+                  )}
                 </label>
                 <label className="space-y-1">
                   <span className="text-sm font-medium text-secondary">{t("telephony.model")}</span>
