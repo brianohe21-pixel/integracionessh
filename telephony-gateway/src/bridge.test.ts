@@ -10,11 +10,11 @@ describe("telephony bridge", () => {
     expect(isInboundTelnyxMedia("outbound")).toBe(false);
   });
 
-  it("extracts assistant text from response.done payload", () => {
+  it("extracts assistant text from GA response.done payload", () => {
     const text = extractResponseText({
       output: [
         {
-          content: [{ type: "text", text: "Hola, ¿en qué puedo ayudarte?" }],
+          content: [{ type: "output_text", text: "Hola, ¿en qué puedo ayudarte?" }],
         },
       ],
     });

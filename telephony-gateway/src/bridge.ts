@@ -39,7 +39,7 @@ export function extractResponseText(response?: OpenAIEvent["response"]): string 
   if (!response?.output) return "";
   return response.output
     .flatMap((item) => item.content ?? [])
-    .filter((part) => part.type === "text" && part.text)
+    .filter((part) => (part.type === "text" || part.type === "output_text") && part.text)
     .map((part) => part.text ?? "")
     .join("")
     .trim();
@@ -298,9 +298,7 @@ export async function runTelephonyBridge(
 
   const processTelnyxEvent = (data: TelnyxInboundEvent) => {
     if (data.event === "start" || data.event === "connected") {
-      if (data.event === "start") {
-        markStreamReady();
-      }
+      markStreamReady();
       return;
     }
 
@@ -380,6 +378,7 @@ export async function runTelephonyBridge(
         },
       });
       openaiWs = socket;
+      openaiSocket = socket;
 
       socket.on("open", () => {
         sendJson(
@@ -390,8 +389,6 @@ export async function runTelephonyBridge(
             tools,
           })
         );
-        openaiReady = true;
-        maybeStartGreeting();
         resolve(socket);
       });
 
@@ -401,6 +398,12 @@ export async function runTelephonyBridge(
           try {
             data = JSON.parse(String(raw)) as OpenAIEvent;
           } catch {
+            return;
+          }
+
+          if (data.type === "session.updated") {
+            openaiReady = true;
+            maybeStartGreeting();
             return;
           }
 
