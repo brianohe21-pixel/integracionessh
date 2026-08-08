@@ -21,8 +21,29 @@ type OpenAIEvent = {
       input_tokens?: number;
       output_tokens?: number;
     };
+    output?: Array<{
+      content?: Array<{
+        type?: string;
+        text?: string;
+      }>;
+    }>;
   };
 };
+
+type TelnyxInboundEvent = {
+  event?: string;
+  media?: { payload?: string; track?: string };
+};
+
+export function extractResponseText(response?: OpenAIEvent["response"]): string {
+  if (!response?.output) return "";
+  return response.output
+    .flatMap((item) => item.content ?? [])
+    .filter((part) => part.type === "text" && part.text)
+    .map((part) => part.text ?? "")
+    .join("")
+    .trim();
+}
 
 function sendJson(ws: WebSocket, payload: Record<string, unknown>): void {
   if (ws.readyState === WebSocket.OPEN) {
@@ -118,12 +139,14 @@ export async function runTelephonyBridge(
 
   let elevenWs: WebSocket | null = null;
   let openaiWs: WebSocket | null = null;
+  let openaiSocket: WebSocket | null = null;
   let responseTextBuffer = "";
   let speaking = false;
   let closed = false;
   let streamReady = false;
   let openaiReady = false;
   let greetingSent = false;
+  let spokeFromStream = false;
   const pendingTelnyxAudio: string[] = [];
   let openaiInputTokens = 0;
   let openaiOutputTokens = 0;
@@ -180,6 +203,19 @@ export async function runTelephonyBridge(
     });
   };
 
+  const persistTranscript = async (role: "user" | "assistant", content: string, externalId?: string) => {
+    await persistPhoneMessage({
+      tenantId: session.tenantId,
+      botId: session.botId,
+      conversationId: session.conversationId,
+      role,
+      content,
+      externalId,
+    }).catch((error) => {
+      console.error("Failed to persist phone transcript:", error);
+    });
+  };
+
   const closeAll = () => {
     if (closed) return;
     closed = true;
@@ -212,18 +248,60 @@ export async function runTelephonyBridge(
     flushElevenLabs();
   };
 
-  const persistTranscript = async (role: "user" | "assistant", content: string, externalId?: string) => {
-    await persistPhoneMessage({
-      tenantId: session.tenantId,
-      botId: session.botId,
-      conversationId: session.conversationId,
-      role,
-      content,
-      externalId,
-    }).catch((error) => {
-      console.error("Failed to persist phone transcript:", error);
-    });
+  const flushAssistantResponse = async (text: string, eventId?: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    spokeFromStream = true;
+    await persistTranscript("assistant", trimmed, eventId ?? randomUUID());
+    speakText(trimmed);
   };
+
+  const markStreamReady = () => {
+    if (streamReady) return;
+    streamReady = true;
+    flushPendingTelnyxAudio();
+    maybeStartGreeting();
+  };
+
+  const processTelnyxEvent = (data: TelnyxInboundEvent) => {
+    if (data.event === "start" || data.event === "connected") {
+      if (data.event === "start") {
+        markStreamReady();
+      }
+      return;
+    }
+
+    if (
+      data.event === "media" &&
+      data.media?.payload &&
+      isInboundTelnyxMedia(data.media.track)
+    ) {
+      if (!streamReady) {
+        markStreamReady();
+      }
+      if (!openaiSocket || openaiSocket.readyState !== WebSocket.OPEN) return;
+      sendJson(openaiSocket, {
+        type: "input_audio_buffer.append",
+        audio: data.media.payload,
+      });
+      return;
+    }
+
+    if (data.event === "stop") {
+      closeAll();
+    }
+  };
+
+  telnyxWs.on("message", (raw) => {
+    try {
+      processTelnyxEvent(JSON.parse(String(raw)) as TelnyxInboundEvent);
+    } catch {
+      return;
+    }
+  });
+
+  telnyxWs.on("close", closeAll);
+  telnyxWs.on("error", closeAll);
 
   const connectElevenLabs = () =>
     new Promise<WebSocket>((resolve, reject) => {
@@ -285,6 +363,7 @@ export async function runTelephonyBridge(
               threshold: 0.5,
               prefix_padding_ms: 300,
               silence_duration_ms: 500,
+              create_response: true,
             },
             input_audio_transcription: {
               model: "gpt-4o-mini-transcribe",
@@ -319,13 +398,28 @@ export async function runTelephonyBridge(
             return;
           }
 
-          if (data.type === "response.done" && data.response?.usage) {
+          if (data.type === "response.created") {
+            spokeFromStream = false;
+            responseTextBuffer = "";
+            return;
+          }
+
+          if (data.type === "response.done" && data.response) {
             const usage = data.response.usage as {
               input_tokens?: number;
               output_tokens?: number;
-            };
-            openaiInputTokens += usage.input_tokens ?? 0;
-            openaiOutputTokens += usage.output_tokens ?? 0;
+            } | undefined;
+            if (usage) {
+              openaiInputTokens += usage.input_tokens ?? 0;
+              openaiOutputTokens += usage.output_tokens ?? 0;
+            }
+
+            const fallbackText = extractResponseText(data.response);
+            if (fallbackText && !spokeFromStream) {
+              await flushAssistantResponse(fallbackText, data.event_id);
+            }
+            spokeFromStream = false;
+            return;
           }
 
           if (data.type === "response.text.delta" && data.delta) {
@@ -337,8 +431,7 @@ export async function runTelephonyBridge(
             const text = responseTextBuffer.trim();
             responseTextBuffer = "";
             if (text) {
-              await persistTranscript("assistant", text, data.event_id ?? randomUUID());
-              speakText(text);
+              await flushAssistantResponse(text, data.event_id);
             }
             return;
           }
@@ -352,8 +445,7 @@ export async function runTelephonyBridge(
             const text = responseTextBuffer.trim();
             responseTextBuffer = "";
             if (text) {
-              await persistTranscript("assistant", text, data.event_id ?? randomUUID());
-              speakText(text);
+              await flushAssistantResponse(text, data.event_id);
             }
             return;
           }
@@ -398,51 +490,12 @@ export async function runTelephonyBridge(
       socket.on("error", (error) => reject(error));
     });
 
-  const [elevenSocket, openaiSocket] = await Promise.all([
+  const [elevenSocket, connectedOpenai] = await Promise.all([
     connectElevenLabs(),
     connectOpenAI(),
   ]);
+  openaiSocket = connectedOpenai;
 
-  telnyxWs.on("message", (raw) => {
-    let data: {
-      event?: string;
-      media?: { payload?: string; track?: string };
-    };
-    try {
-      data = JSON.parse(String(raw)) as {
-        event?: string;
-        media?: { payload?: string; track?: string };
-      };
-    } catch {
-      return;
-    }
-
-    if (data.event === "start") {
-      streamReady = true;
-      flushPendingTelnyxAudio();
-      maybeStartGreeting();
-      return;
-    }
-
-    if (
-      data.event === "media" &&
-      data.media?.payload &&
-      isInboundTelnyxMedia(data.media.track) &&
-      openaiSocket.readyState === WebSocket.OPEN
-    ) {
-      sendJson(openaiSocket, {
-        type: "input_audio_buffer.append",
-        audio: data.media.payload,
-      });
-    }
-
-    if (data.event === "stop") {
-      closeAll();
-    }
-  });
-
-  telnyxWs.on("close", closeAll);
-  telnyxWs.on("error", closeAll);
   openaiSocket.on("close", closeAll);
   elevenSocket.on("close", closeAll);
 

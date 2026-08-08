@@ -262,7 +262,7 @@ export async function handler(
           telephonyVoiceId: optionalNonEmptyString(64),
           telephonyModel: z.string().min(3).max(64).optional(),
           telephonyGreeting: z.string().max(500).optional(),
-          telephonySystemPrompt: z.string().max(4096).optional(),
+          telephonySystemPrompt: z.string().max(8000).optional(),
           telephonyRecordingEnabled: z.boolean().optional(),
           telephonyRecordingNotice: z.string().max(500).optional(),
           telephonyWebhookUrl: z.string().max(2048).optional(),
