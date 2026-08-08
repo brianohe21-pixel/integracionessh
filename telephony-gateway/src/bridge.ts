@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import { GetCommand } from "@aws-sdk/lib-dynamodb";
-import WebSocket from "ws";
+import WebSocket, { type RawData } from "ws";
 import { isCalendarEnabled } from "./calendar.js";
 import { docClient, tableName } from "./dynamo.js";
 import { persistPhoneMessage } from "./messages.js";
@@ -149,12 +149,13 @@ export function buildOpenAISessionUpdate(params: {
 
 export async function runTelephonyBridge(
   telnyxWs: WebSocket,
-  session: TelephonySession
+  session: TelephonySession,
+  initialMessages: string[] = []
 ): Promise<void> {
   const pendingTelnyxEvents: TelnyxInboundEvent[] = [];
   let handleTelnyxEvent: ((data: TelnyxInboundEvent) => void) | null = null;
 
-  telnyxWs.on("message", (raw) => {
+  const receiveTelnyxMessage = (raw: RawData | string) => {
     try {
       const data = JSON.parse(String(raw)) as TelnyxInboundEvent;
       if (handleTelnyxEvent) {
@@ -165,7 +166,12 @@ export async function runTelephonyBridge(
     } catch {
       return;
     }
-  });
+  };
+
+  for (const raw of initialMessages) {
+    receiveTelnyxMessage(raw);
+  }
+  telnyxWs.on("message", receiveTelnyxMessage);
 
   const bot = await getBot(session.tenantId, session.botId);
   if (!bot) {

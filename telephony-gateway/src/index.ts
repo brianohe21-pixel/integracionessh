@@ -1,6 +1,6 @@
 import http from "http";
 import { URL } from "url";
-import { WebSocketServer } from "ws";
+import { WebSocketServer, type RawData } from "ws";
 import { runTelephonyBridge } from "./bridge.js";
 import { getSessionByStreamToken } from "./session.js";
 
@@ -34,14 +34,23 @@ server.on("upgrade", (req, socket, head) => {
 
   wss.handleUpgrade(req, socket, head, (ws) => {
     void (async () => {
+      const initialMessages: string[] = [];
+      const bufferMessage = (raw: RawData) => {
+        initialMessages.push(String(raw));
+      };
+      ws.on("message", bufferMessage);
+
       try {
         const session = await getSessionByStreamToken(token);
         if (!session || session.status === "ended") {
           ws.close();
           return;
         }
-        await runTelephonyBridge(ws, session);
+        const bridge = runTelephonyBridge(ws, session, initialMessages);
+        ws.off("message", bufferMessage);
+        await bridge;
       } catch (error) {
+        ws.off("message", bufferMessage);
         console.error("Telephony bridge error:", error);
         ws.close();
       }

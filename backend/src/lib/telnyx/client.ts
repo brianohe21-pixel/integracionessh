@@ -7,7 +7,6 @@ export interface TelnyxDialParams {
   environment: string;
   to: string;
   from: string;
-  streamUrl: string;
   clientState?: string;
 }
 
@@ -23,6 +22,8 @@ export interface TelnyxAnswerParams {
   streamUrl: string;
   clientState?: string;
 }
+
+export type TelnyxStreamParams = TelnyxAnswerParams;
 
 export function isTelnyxCallEndedError(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
@@ -83,6 +84,7 @@ function streamPayload(streamUrl: string, clientState?: string) {
     stream_track: "inbound_track",
     stream_bidirectional_mode: "rtp",
     stream_bidirectional_codec: "PCMU",
+    stream_bidirectional_sampling_rate: 8000,
     ...(clientState ? { client_state: clientState } : {}),
   };
 }
@@ -95,7 +97,7 @@ export async function dialOutboundCall(params: TelnyxDialParams): Promise<Telnyx
       connection_id: connectionId,
       to: params.to,
       from: params.from,
-      ...streamPayload(params.streamUrl, params.clientState),
+      ...(params.clientState ? { client_state: params.clientState } : {}),
     }),
   });
 
@@ -111,6 +113,17 @@ export async function answerInboundCall(params: TelnyxAnswerParams): Promise<voi
     method: "POST",
     body: JSON.stringify(streamPayload(params.streamUrl, params.clientState)),
   });
+}
+
+export async function startCallStreaming(params: TelnyxStreamParams): Promise<void> {
+  await telnyxRequest(
+    params.environment,
+    `/calls/${encodeURIComponent(params.callControlId)}/actions/streaming_start`,
+    {
+      method: "POST",
+      body: JSON.stringify(streamPayload(params.streamUrl, params.clientState)),
+    }
+  );
 }
 
 export async function hangupCall(environment: string, callControlId: string): Promise<void> {

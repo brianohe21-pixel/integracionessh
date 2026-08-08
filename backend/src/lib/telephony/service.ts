@@ -18,6 +18,7 @@ import {
   hangupCall,
   isTelnyxCallEndedError,
   startCallRecording,
+  startCallStreaming,
   searchTelnyxDetailRecords,
 } from "../telnyx/client.js";
 import { normalizeE164 } from "../telnyx/phone.js";
@@ -174,7 +175,7 @@ export async function startOutboundTelephonyCall(params: {
     params.contactName
   );
 
-  const session = await createTelephonySession({
+  await createTelephonySession({
     sessionId,
     callControlId: "pending",
     callId,
@@ -193,7 +194,6 @@ export async function startOutboundTelephonyCall(params: {
     environment: ENVIRONMENT,
     to,
     from,
-    streamUrl: gatewayStreamUrl(session.streamToken),
     clientState: encodeClientState({ sessionId, callId }),
   });
 
@@ -434,6 +434,18 @@ export async function handleCallAnswered(payload: Record<string, unknown>): Prom
   });
 
   await logCallEvent(session.tenantId, session.botId, session.callId, "answered");
+
+  if (session.direction === "outbound") {
+    await startCallStreaming({
+      environment: ENVIRONMENT,
+      callControlId,
+      streamUrl: gatewayStreamUrl(session.streamToken),
+      clientState: encodeClientState({
+        sessionId: session.sessionId,
+        callId: session.callId,
+      }),
+    });
+  }
 
   await emitIntegrationEvent(
     session.tenantId,
