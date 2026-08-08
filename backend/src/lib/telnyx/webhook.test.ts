@@ -1,5 +1,5 @@
 import { createPrivateKey, generateKeyPairSync, sign } from "crypto";
-import { parseTelnyxWebhookBody, verifyTelnyxWebhookSignature } from "./webhook.js";
+import { parseTelnyxWebhookBody, verifyTelnyxWebhookSignature, decodeTelnyxClientState } from "./webhook.js";
 
 function generateTestKeyPair(): { publicKey: string; privateKey: ReturnType<typeof createPrivateKey> } {
   const pair = generateKeyPairSync("ed25519");
@@ -50,5 +50,16 @@ describe("telnyx webhook", () => {
         publicKey: "invalid",
       })
     ).toBe(false);
+  });
+
+  it("decodes client_state from Telnyx payloads", () => {
+    const clientState = Buffer.from(
+      JSON.stringify({ sessionId: "session-1", callId: "call-1" })
+    ).toString("base64");
+
+    expect(decodeTelnyxClientState({ client_state: clientState })).toEqual({
+      sessionId: "session-1",
+      callId: "call-1",
+    });
   });
 });

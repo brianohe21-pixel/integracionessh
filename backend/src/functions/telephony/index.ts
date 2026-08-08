@@ -20,6 +20,7 @@ import {
   handleCallHangup,
   handleCallRecordingSaved,
   handleInboundCallInitiated,
+  handleOutboundCallRinging,
   reportCallUsage,
   startOutboundTelephonyCall,
   terminateTelephonyCall,
@@ -158,11 +159,19 @@ async function handleTelnyxWebhook(event: APIGatewayProxyEventV2): Promise<APIGa
 
     const eventType = envelope.data.event_type;
     const payload = envelope.data.payload ?? {};
+    console.log(
+      "Telnyx webhook:",
+      eventType,
+      String(payload.call_control_id ?? ""),
+      String(payload.direction ?? "")
+    );
 
     if (eventType === "call.initiated") {
       const direction = String(payload.direction ?? "");
       if (direction === "incoming") {
         await handleInboundCallInitiated(payload);
+      } else if (direction === "outgoing") {
+        await handleOutboundCallRinging(payload);
       }
       continue;
     }

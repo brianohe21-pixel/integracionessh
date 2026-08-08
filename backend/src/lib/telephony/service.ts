@@ -24,10 +24,12 @@ import { normalizeE164 } from "../telnyx/phone.js";
 import {
   createTelephonySession,
   endTelephonySession,
+  getTelephonySession,
   getTelephonySessionByCallControlId,
   updateTelephonySessionStatus,
   attachTelephonyCallControlId,
 } from "./session.repository.js";
+import { decodeTelnyxClientState } from "../telnyx/webhook.js";
 import { emitIntegrationEvent } from "../integrations/emit.js";
 import {
   buildCallConnectPayload,
@@ -42,6 +44,7 @@ import type {
   CallRecord,
   CallUsageMetrics,
   TelephonyCallDirection,
+  TelephonySession,
 } from "../../types/index.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
@@ -216,6 +219,92 @@ export async function startOutboundTelephonyCall(params: {
   return { callId, sessionId, status: "initiated" };
 }
 
+async function resolveTelephonySessionFromPayload(
+  payload: Record<string, unknown>
+): Promise<TelephonySession | null> {
+  const callControlId = String(payload.call_control_id ?? "");
+  if (callControlId) {
+    const session = await getTelephonySessionByCallControlId(callControlId);
+    if (session) return session;
+  }
+
+  const { sessionId } = decodeTelnyxClientState(payload);
+  if (sessionId) {
+    return getTelephonySession(sessionId);
+  }
+
+  return null;
+}
+
+async function finalizeTelephonyCallSession(
+  session: TelephonySession,
+  callControlId: string
+): Promise<void> {
+  if (session.status === "ended") return;
+
+  const bot = await getBot(session.tenantId, session.botId);
+  const startedMs = new Date(session.startedAt).getTime();
+  const durationSeconds = Math.max(1, Math.ceil((Date.now() - startedMs) / 1000));
+  const minutes = Math.max(1, Math.ceil(durationSeconds / 60));
+
+  await endTelephonySession(session.sessionId, durationSeconds);
+
+  const call = await getCallRecord(session.tenantId, session.callId);
+  const estimate = estimateTelephonyCost({
+    direction: session.direction,
+    durationSeconds,
+    ...(call?.usageMetrics ? { usage: call.usageMetrics } : {}),
+    recordingEnabled: Boolean(bot?.telephonyRecordingEnabled),
+  });
+
+  await updateCallRecord(session.tenantId, session.callId, {
+    status: "completed",
+    duration: durationSeconds,
+    endedAt: new Date().toISOString(),
+    costStatus: estimate.status,
+    costBreakdown: estimate.breakdown,
+  });
+
+  await incrementVoicebotMinutes(session.tenantId, minutes);
+  await logCallEvent(session.tenantId, session.botId, session.callId, "hangup", undefined, {
+    durationSeconds,
+  });
+  await logCallEvent(session.tenantId, session.botId, session.callId, "cost_pending");
+
+  await queueCdrReconciliation({
+    tenantId: session.tenantId,
+    botId: session.botId,
+    callId: session.callId,
+    callControlId,
+  });
+
+  await emitIntegrationEvent(
+    session.tenantId,
+    "call.terminated",
+    buildCallTerminatedPayload({
+      tenantId: session.tenantId,
+      botId: session.botId,
+      callId: session.callId,
+      phoneNumber: session.participantId,
+      direction: session.direction === "inbound" ? "USER_INITIATED" : "BUSINESS_INITIATED",
+      duration: durationSeconds,
+      status: "completed",
+    })
+  );
+}
+
+export async function handleOutboundCallRinging(payload: Record<string, unknown>): Promise<void> {
+  const session = await resolveTelephonySessionFromPayload(payload);
+  if (!session) return;
+
+  const call = await getCallRecord(session.tenantId, session.callId);
+  if (!call || call.status !== "initiated") return;
+
+  await updateTelephonySessionStatus(session.sessionId, "ringing");
+  await updateCallRecord(session.tenantId, session.callId, { status: "ringing" });
+  await logCallEvent(session.tenantId, session.botId, session.callId, "ringing");
+}
+
 export async function handleInboundCallInitiated(payload: Record<string, unknown>): Promise<void> {
   const callControlId = String(payload.call_control_id ?? "");
   const from = normalizeE164(String(payload.from ?? ""));
@@ -332,7 +421,7 @@ export async function handleInboundCallInitiated(payload: Record<string, unknown
 export async function handleCallAnswered(payload: Record<string, unknown>): Promise<void> {
   const callControlId = String(payload.call_control_id ?? "");
   if (!callControlId) return;
-  const session = await getTelephonySessionByCallControlId(callControlId);
+  const session = await resolveTelephonySessionFromPayload(payload);
   if (!session) return;
 
   const bot = await getBot(session.tenantId, session.botId);
@@ -389,7 +478,7 @@ export async function handleCallRecordingSaved(payload: Record<string, unknown>)
   const callControlId = String(payload.call_control_id ?? "");
   if (!callControlId) return;
 
-  const session = await getTelephonySessionByCallControlId(callControlId);
+  const session = await resolveTelephonySessionFromPayload(payload);
   if (!session) return;
 
   const call = await getCallRecord(session.tenantId, session.callId);
@@ -464,59 +553,9 @@ export async function handleCallRecordingSaved(payload: Record<string, unknown>)
 export async function handleCallHangup(payload: Record<string, unknown>): Promise<void> {
   const callControlId = String(payload.call_control_id ?? "");
   if (!callControlId) return;
-  const session = await getTelephonySessionByCallControlId(callControlId);
-  if (!session || session.status === "ended") return;
-
-  const bot = await getBot(session.tenantId, session.botId);
-  const startedMs = new Date(session.startedAt).getTime();
-  const durationSeconds = Math.max(1, Math.ceil((Date.now() - startedMs) / 1000));
-  const minutes = Math.max(1, Math.ceil(durationSeconds / 60));
-
-  await endTelephonySession(session.sessionId, durationSeconds);
-
-  const call = await getCallRecord(session.tenantId, session.callId);
-  const direction = session.direction;
-  const estimate = estimateTelephonyCost({
-    direction,
-    durationSeconds,
-    ...(call?.usageMetrics ? { usage: call.usageMetrics } : {}),
-    recordingEnabled: Boolean(bot?.telephonyRecordingEnabled),
-  });
-
-  await updateCallRecord(session.tenantId, session.callId, {
-    status: "completed",
-    duration: durationSeconds,
-    endedAt: new Date().toISOString(),
-    costStatus: estimate.status,
-    costBreakdown: estimate.breakdown,
-  });
-
-  await incrementVoicebotMinutes(session.tenantId, minutes);
-  await logCallEvent(session.tenantId, session.botId, session.callId, "hangup", undefined, {
-    durationSeconds,
-  });
-  await logCallEvent(session.tenantId, session.botId, session.callId, "cost_pending");
-
-  await queueCdrReconciliation({
-    tenantId: session.tenantId,
-    botId: session.botId,
-    callId: session.callId,
-    callControlId,
-  });
-
-  await emitIntegrationEvent(
-    session.tenantId,
-    "call.terminated",
-    buildCallTerminatedPayload({
-      tenantId: session.tenantId,
-      botId: session.botId,
-      callId: session.callId,
-      phoneNumber: session.participantId,
-      direction: session.direction === "inbound" ? "USER_INITIATED" : "BUSINESS_INITIATED",
-      duration: durationSeconds,
-      status: "completed",
-    })
-  );
+  const session = await resolveTelephonySessionFromPayload(payload);
+  if (!session) return;
+  await finalizeTelephonyCallSession(session, callControlId);
 }
 
 export async function reportCallUsage(params: {
@@ -650,5 +689,40 @@ export async function terminateTelephonyCall(
   ) {
     return;
   }
-  await hangupCall(ENVIRONMENT, record.callControlId);
+
+  if (record.callControlId) {
+    try {
+      await hangupCall(ENVIRONMENT, record.callControlId);
+    } catch (error) {
+      if (!isTelnyxCallEndedError(error)) throw error;
+    }
+  }
+
+  const session = record.callControlId
+    ? await getTelephonySessionByCallControlId(record.callControlId)
+    : null;
+
+  if (session && session.status !== "ended") {
+    await finalizeTelephonyCallSession(session, record.callControlId);
+    return;
+  }
+
+  const bot = await getBot(tenantId, record.botId);
+  const startedMs = new Date(record.startedAt ?? record.createdAt).getTime();
+  const durationSeconds = Math.max(1, Math.ceil((Date.now() - startedMs) / 1000));
+  const estimate = estimateTelephonyCost({
+    direction: directionFromCallRecord(record),
+    durationSeconds,
+    ...(record.usageMetrics ? { usage: record.usageMetrics } : {}),
+    recordingEnabled: Boolean(bot?.telephonyRecordingEnabled),
+  });
+
+  await updateCallRecord(tenantId, callId, {
+    status: "completed",
+    duration: durationSeconds,
+    endedAt: new Date().toISOString(),
+    costStatus: estimate.status,
+    costBreakdown: estimate.breakdown,
+  });
+  await logCallEvent(tenantId, record.botId, callId, "hangup", undefined, { durationSeconds });
 }
