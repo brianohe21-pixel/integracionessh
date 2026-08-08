@@ -35,7 +35,7 @@ describe("telephony bridge", () => {
     expect(session.modalities).toBeUndefined();
     expect(session.input_audio_format).toBeUndefined();
     expect((session.audio as { input: { format: { type: string } } }).input.format.type).toBe(
-      "g711_ulaw"
+      "audio/pcmu"
     );
   });
 });

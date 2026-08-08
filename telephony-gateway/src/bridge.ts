@@ -130,7 +130,7 @@ export function buildOpenAISessionUpdate(params: {
       output_modalities: ["text"],
       audio: {
         input: {
-          format: { type: "g711_ulaw" },
+          format: { type: "audio/pcmu" },
           turn_detection: {
             type: "server_vad",
             threshold: 0.5,
