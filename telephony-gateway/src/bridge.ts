@@ -376,10 +376,21 @@ export async function runTelephonyBridge(
       });
 
       socket.on("message", (raw) => {
-        let data: { audio?: string; isFinal?: boolean };
+        let data: { audio?: string; isFinal?: boolean; error?: string; message?: string };
         try {
-          data = JSON.parse(String(raw)) as { audio?: string; isFinal?: boolean };
+          data = JSON.parse(String(raw)) as {
+            audio?: string;
+            isFinal?: boolean;
+            error?: string;
+            message?: string;
+          };
         } catch {
+          return;
+        }
+        if (data.error) {
+          console.error(
+            `ElevenLabs error for call ${session.callId}: ${data.error} - ${data.message ?? ""}`
+          );
           return;
         }
         if (data.audio) {
@@ -388,7 +399,16 @@ export async function runTelephonyBridge(
         if (data.isFinal) speaking = false;
       });
 
-      socket.on("error", (error) => reject(error));
+      socket.on("close", (code, reason) => {
+        console.error(
+          `ElevenLabs socket closed for call ${session.callId} code=${code} reason=${String(reason)}`
+        );
+      });
+
+      socket.on("error", (error) => {
+        console.error(`ElevenLabs socket error for call ${session.callId}:`, error);
+        reject(error);
+      });
     });
 
   const connectOpenAI = () =>
@@ -533,7 +553,16 @@ export async function runTelephonyBridge(
         });
       });
 
-      socket.on("error", (error) => reject(error));
+      socket.on("close", (code, reason) => {
+        console.error(
+          `OpenAI socket closed for call ${session.callId} code=${code} reason=${String(reason)}`
+        );
+      });
+
+      socket.on("error", (error) => {
+        console.error(`OpenAI socket error for call ${session.callId}:`, error);
+        reject(error);
+      });
     });
 
   const [elevenSocket, connectedOpenai] = await Promise.all([
