@@ -114,6 +114,39 @@ export function isInboundTelnyxMedia(track?: string): boolean {
   return track === "inbound";
 }
 
+export function buildOpenAISessionUpdate(params: {
+  model: string;
+  instructions: string;
+  tools: Array<Record<string, unknown>>;
+}): Record<string, unknown> {
+  return {
+    type: "session.update",
+    session: {
+      type: "realtime",
+      model: params.model,
+      instructions: params.instructions,
+      tools: params.tools,
+      tool_choice: "auto",
+      output_modalities: ["text"],
+      audio: {
+        input: {
+          format: { type: "g711_ulaw" },
+          turn_detection: {
+            type: "server_vad",
+            threshold: 0.5,
+            prefix_padding_ms: 300,
+            silence_duration_ms: 500,
+            create_response: true,
+          },
+          transcription: {
+            model: "gpt-4o-mini-transcribe",
+          },
+        },
+      },
+    },
+  };
+}
+
 export async function runTelephonyBridge(
   telnyxWs: WebSocket,
   session: TelephonySession
@@ -197,7 +230,7 @@ export async function runTelephonyBridge(
     sendJson(openaiWs, {
       type: "response.create",
       response: {
-        modalities: ["text"],
+        output_modalities: ["text"],
         instructions: greeting,
       },
     });
@@ -344,32 +377,19 @@ export async function runTelephonyBridge(
       const socket = new WebSocket(url, {
         headers: {
           Authorization: `Bearer ${openaiKey}`,
-          "OpenAI-Beta": "realtime=v1",
         },
       });
       openaiWs = socket;
 
       socket.on("open", () => {
-        sendJson(socket, {
-          type: "session.update",
-          session: {
-            modalities: ["text"],
+        sendJson(
+          socket,
+          buildOpenAISessionUpdate({
+            model,
             instructions,
             tools,
-            tool_choice: "auto",
-            input_audio_format: "g711_ulaw",
-            turn_detection: {
-              type: "server_vad",
-              threshold: 0.5,
-              prefix_padding_ms: 300,
-              silence_duration_ms: 500,
-              create_response: true,
-            },
-            input_audio_transcription: {
-              model: "gpt-4o-mini-transcribe",
-            },
-          },
-        });
+          })
+        );
         openaiReady = true;
         maybeStartGreeting();
         resolve(socket);

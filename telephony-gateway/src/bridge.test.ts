@@ -1,4 +1,4 @@
-import { extractResponseText, isInboundTelnyxMedia } from "./bridge.js";
+import { buildOpenAISessionUpdate, extractResponseText, isInboundTelnyxMedia } from "./bridge.js";
 
 describe("telephony bridge", () => {
   it("accepts inbound media and legacy frames without track", () => {
@@ -19,5 +19,23 @@ describe("telephony bridge", () => {
       ],
     });
     expect(text).toBe("Hola, ¿en qué puedo ayudarte?");
+  });
+
+  it("builds GA OpenAI session.update payload", () => {
+    const payload = buildOpenAISessionUpdate({
+      model: "gpt-realtime-2.1-mini",
+      instructions: "Hola",
+      tools: [],
+    });
+
+    expect(payload.type).toBe("session.update");
+    const session = payload.session as Record<string, unknown>;
+    expect(session.type).toBe("realtime");
+    expect(session.output_modalities).toEqual(["text"]);
+    expect(session.modalities).toBeUndefined();
+    expect(session.input_audio_format).toBeUndefined();
+    expect((session.audio as { input: { format: { type: string } } }).input.format.type).toBe(
+      "g711_ulaw"
+    );
   });
 });
