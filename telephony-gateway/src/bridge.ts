@@ -151,6 +151,22 @@ export async function runTelephonyBridge(
   telnyxWs: WebSocket,
   session: TelephonySession
 ): Promise<void> {
+  const pendingTelnyxEvents: TelnyxInboundEvent[] = [];
+  let handleTelnyxEvent: ((data: TelnyxInboundEvent) => void) | null = null;
+
+  telnyxWs.on("message", (raw) => {
+    try {
+      const data = JSON.parse(String(raw)) as TelnyxInboundEvent;
+      if (handleTelnyxEvent) {
+        handleTelnyxEvent(data);
+      } else {
+        pendingTelnyxEvents.push(data);
+      }
+    } catch {
+      return;
+    }
+  });
+
   const bot = await getBot(session.tenantId, session.botId);
   if (!bot) {
     telnyxWs.close();
@@ -227,6 +243,7 @@ export async function runTelephonyBridge(
       return;
     }
     greetingSent = true;
+    console.log(`Telephony greeting requested for call ${session.callId}`);
     sendJson(openaiWs, {
       type: "response.create",
       response: {
@@ -292,11 +309,12 @@ export async function runTelephonyBridge(
   const markStreamReady = () => {
     if (streamReady) return;
     streamReady = true;
+    console.log(`Telnyx stream ready for call ${session.callId}`);
     flushPendingTelnyxAudio();
     maybeStartGreeting();
   };
 
-  const processTelnyxEvent = (data: TelnyxInboundEvent) => {
+  handleTelnyxEvent = (data: TelnyxInboundEvent) => {
     if (data.event === "start" || data.event === "connected") {
       markStreamReady();
       return;
@@ -323,13 +341,10 @@ export async function runTelephonyBridge(
     }
   };
 
-  telnyxWs.on("message", (raw) => {
-    try {
-      processTelnyxEvent(JSON.parse(String(raw)) as TelnyxInboundEvent);
-    } catch {
-      return;
-    }
-  });
+  for (const event of pendingTelnyxEvents) {
+    handleTelnyxEvent(event);
+  }
+  pendingTelnyxEvents.length = 0;
 
   telnyxWs.on("close", closeAll);
   telnyxWs.on("error", closeAll);
@@ -343,6 +358,7 @@ export async function runTelephonyBridge(
       elevenWs = socket;
 
       socket.on("open", () => {
+        console.log(`ElevenLabs connected for call ${session.callId}`);
         socket.send(
           JSON.stringify({
             text: " ",
@@ -403,6 +419,7 @@ export async function runTelephonyBridge(
 
           if (data.type === "session.updated") {
             openaiReady = true;
+            console.log(`OpenAI session ready for call ${session.callId}`);
             maybeStartGreeting();
             return;
           }
