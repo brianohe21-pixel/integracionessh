@@ -147,6 +147,18 @@ export function buildOpenAISessionUpdate(params: {
   };
 }
 
+const FATAL_ELEVENLABS_ERRORS = new Set([
+  "payment_required",
+  "missing_permissions",
+  "invalid_api_key",
+  "voice_not_found",
+  "quota_exceeded",
+]);
+
+export function isFatalElevenLabsError(error: string): boolean {
+  return FATAL_ELEVENLABS_ERRORS.has(error);
+}
+
 export async function runTelephonyBridge(
   telnyxWs: WebSocket,
   session: TelephonySession,
@@ -193,6 +205,8 @@ export async function runTelephonyBridge(
   });
 
   let elevenWs: WebSocket | null = null;
+  let elevenUnavailable = false;
+  let elevenConnecting: Promise<WebSocket | null> | null = null;
   let openaiWs: WebSocket | null = null;
   let openaiSocket: WebSocket | null = null;
   let responseTextBuffer = "";
@@ -291,13 +305,16 @@ export async function runTelephonyBridge(
     );
   };
 
-  const speakText = (text: string) => {
-    if (!elevenWs || elevenWs.readyState !== WebSocket.OPEN || !text.trim()) return;
+  const speakText = async (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    const socket = await ensureElevenLabs();
+    if (!socket) return;
     speaking = true;
-    elevenlabsCharacters += text.trim().length;
-    elevenWs.send(
+    elevenlabsCharacters += trimmed.length;
+    socket.send(
       JSON.stringify({
-        text: `${text.trim()} `,
+        text: `${trimmed} `,
         try_trigger_generation: true,
       })
     );
@@ -309,7 +326,7 @@ export async function runTelephonyBridge(
     if (!trimmed) return;
     spokeFromStream = true;
     await persistTranscript("assistant", trimmed, eventId ?? randomUUID());
-    speakText(trimmed);
+    await speakText(trimmed);
   };
 
   const markStreamReady = () => {
@@ -355,16 +372,22 @@ export async function runTelephonyBridge(
   telnyxWs.on("close", closeAll);
   telnyxWs.on("error", closeAll);
 
-  const connectElevenLabs = () =>
-    new Promise<WebSocket>((resolve, reject) => {
+  const openElevenLabs = () =>
+    new Promise<WebSocket | null>((resolve) => {
       const url = `wss://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}/stream-input?model_id=eleven_flash_v2_5&output_format=ulaw_8000`;
       const socket = new WebSocket(url, {
         headers: { "xi-api-key": elevenKey },
       });
-      elevenWs = socket;
+      let settled = false;
+      const settle = (result: WebSocket | null) => {
+        if (settled) return;
+        settled = true;
+        resolve(result);
+      };
 
       socket.on("open", () => {
         console.log(`ElevenLabs connected for call ${session.callId}`);
+        elevenWs = socket;
         socket.send(
           JSON.stringify({
             text: " ",
@@ -372,7 +395,7 @@ export async function runTelephonyBridge(
             generation_config: { chunk_length_schedule: [80, 120, 160, 250] },
           })
         );
-        resolve(socket);
+        settle(socket);
       });
 
       socket.on("message", (raw) => {
@@ -391,6 +414,7 @@ export async function runTelephonyBridge(
           console.error(
             `ElevenLabs error for call ${session.callId}: ${data.error} - ${data.message ?? ""}`
           );
+          if (isFatalElevenLabsError(data.error)) elevenUnavailable = true;
           return;
         }
         if (data.audio) {
@@ -400,16 +424,33 @@ export async function runTelephonyBridge(
       });
 
       socket.on("close", (code, reason) => {
-        console.error(
-          `ElevenLabs socket closed for call ${session.callId} code=${code} reason=${String(reason)}`
-        );
+        if (elevenWs === socket) elevenWs = null;
+        speaking = false;
+        if (code === 1008) elevenUnavailable = true;
+        if (!closed) {
+          console.error(
+            `ElevenLabs socket closed for call ${session.callId} code=${code} reason=${String(reason)}`
+          );
+        }
+        settle(null);
       });
 
       socket.on("error", (error) => {
         console.error(`ElevenLabs socket error for call ${session.callId}:`, error);
-        reject(error);
+        settle(null);
       });
     });
+
+  const ensureElevenLabs = async (): Promise<WebSocket | null> => {
+    if (closed || elevenUnavailable) return null;
+    if (elevenWs?.readyState === WebSocket.OPEN) return elevenWs;
+    if (!elevenConnecting) {
+      elevenConnecting = openElevenLabs().finally(() => {
+        elevenConnecting = null;
+      });
+    }
+    return elevenConnecting;
+  };
 
   const connectOpenAI = () =>
     new Promise<WebSocket>((resolve, reject) => {
@@ -565,14 +606,10 @@ export async function runTelephonyBridge(
       });
     });
 
-  const [elevenSocket, connectedOpenai] = await Promise.all([
-    connectElevenLabs(),
-    connectOpenAI(),
-  ]);
+  const [, connectedOpenai] = await Promise.all([ensureElevenLabs(), connectOpenAI()]);
   openaiSocket = connectedOpenai;
 
   openaiSocket.on("close", closeAll);
-  elevenSocket.on("close", closeAll);
 
   setTimeout(closeAll, 14 * 60 * 1000);
 }
