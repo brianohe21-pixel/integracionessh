@@ -1,11 +1,12 @@
 "use client";
 
-import { X } from "lucide-react";
+import { Bot, User, X } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { formatCallDuration } from "@/hooks/useCallingMetrics";
 import {
   useTelephonyCall,
   useTelephonyCallEvents,
+  useTelephonyCallTranscript,
   useTelephonyRecording,
 } from "@/hooks/useTelephony";
 import { useT } from "@/i18n/context";
@@ -29,6 +30,10 @@ export function VoiceAgentCallDetail({ botId, callId, onClose }: VoiceAgentCallD
   const t = useT();
   const { data: call } = useTelephonyCall(botId, callId);
   const { data: eventsData } = useTelephonyCallEvents(botId, callId);
+  const { data: messages, isLoading: transcriptLoading } = useTelephonyCallTranscript(
+    call?.conversationId,
+    call?.status
+  );
   const recordingEnabled = call?.recordingStatus === "ready";
   const { data: recording } = useTelephonyRecording(botId, callId, recordingEnabled);
 
@@ -36,6 +41,9 @@ export function VoiceAgentCallDetail({ botId, callId, onClose }: VoiceAgentCallD
 
   const events = eventsData?.items ?? [];
   const breakdown = call.costBreakdown;
+  const transcript = (messages ?? []).filter(
+    (message) => message.role === "user" || message.role === "assistant"
+  );
 
   return (
     <div className="content-card space-y-4 p-6">
@@ -90,6 +98,53 @@ export function VoiceAgentCallDetail({ botId, callId, onClose }: VoiceAgentCallD
           <audio controls src={recording.url} className="w-full" />
         </div>
       )}
+
+      <div>
+        <h4 className="mb-2 text-sm font-semibold text-primary">{t("voiceAgents.transcriptTitle")}</h4>
+        {transcriptLoading ? (
+          <p className="text-sm text-secondary">{t("common.loading")}</p>
+        ) : transcript.length === 0 ? (
+          <p className="text-sm text-secondary">{t("voiceAgents.noTranscript")}</p>
+        ) : (
+          <ul className="space-y-3">
+            {transcript.map((message) => {
+              const isUser = message.role === "user";
+              return (
+                <li
+                  key={message.messageId}
+                  className={`flex items-end gap-2 ${isUser ? "justify-start" : "justify-end"}`}
+                >
+                  {isUser && (
+                    <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-surface-muted">
+                      <User className="h-3.5 w-3.5 text-secondary" />
+                    </div>
+                  )}
+                  <div
+                    className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${
+                      isUser
+                        ? "rounded-bl-sm border border-default bg-surface-elevated text-primary"
+                        : "rounded-br-sm border border-accent/30 bg-accent-muted text-primary"
+                    }`}
+                  >
+                    <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-secondary">
+                      {isUser ? t("voiceAgents.transcriptUser") : t("voiceAgents.transcriptAssistant")}
+                    </p>
+                    <p className="leading-relaxed">{message.content}</p>
+                    <p className="mt-1 text-[10px] text-secondary">
+                      {new Date(message.timestamp).toLocaleString()}
+                    </p>
+                  </div>
+                  {!isUser && (
+                    <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-accent/10">
+                      <Bot className="h-3.5 w-3.5 text-accent" />
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
 
       <div>
         <h4 className="mb-2 text-sm font-semibold text-primary">{t("voiceAgents.eventTimeline")}</h4>

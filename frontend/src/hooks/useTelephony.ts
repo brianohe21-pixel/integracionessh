@@ -6,6 +6,7 @@ import type {
   CallEvent,
   CallRecord,
   IntegrationEvent,
+  Message,
   VoiceAgentWebhookDelivery,
 } from "@/types";
 
@@ -97,6 +98,28 @@ export function useTelephonyCallEvents(botId: string, callId?: string) {
       ),
     enabled: Boolean(botId && callId),
     refetchInterval: 10_000,
+  });
+}
+
+export function useTelephonyCallTranscript(
+  conversationId?: string,
+  callStatus?: CallRecord["status"]
+) {
+  const active =
+    callStatus === "initiated" ||
+    callStatus === "ringing" ||
+    callStatus === "accepted";
+
+  return useQuery({
+    queryKey: ["conversation-messages", conversationId],
+    queryFn: async () => {
+      const raw = await api.get<unknown>(
+        `/conversations/${encodeURIComponent(conversationId!)}`
+      );
+      return Array.isArray(raw) ? (raw as Message[]) : [];
+    },
+    enabled: Boolean(conversationId),
+    refetchInterval: active ? 5000 : false,
   });
 }
 

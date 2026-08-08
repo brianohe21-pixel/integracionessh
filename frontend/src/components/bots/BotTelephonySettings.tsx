@@ -302,6 +302,7 @@ export function BotTelephonySettings({ botId }: BotTelephonySettingsProps) {
                   value={systemPrompt}
                   onChange={(e) => setSystemPrompt(e.target.value)}
                   rows={5}
+                  maxLength={8000}
                   className="w-full px-3 py-2 border border-default rounded-lg text-sm"
                 />
               </label>

@@ -214,27 +214,23 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
               <div className="grid grid-cols-1 gap-4 border-t border-subtle pt-4 md:grid-cols-2">
                 <label className="space-y-1">
                   <span className="text-sm font-medium text-secondary">{t("telephony.voiceId")}</span>
-                  {voices.length > 0 ? (
-                    <select
-                      value={voiceId}
-                      onChange={(e) => setVoiceId(e.target.value)}
-                      className="w-full rounded-lg border border-default px-3 py-2 text-sm"
-                    >
-                      <option value="">{t("voiceAgents.selectVoice")}</option>
+                  <input
+                    value={voiceId}
+                    onChange={(e) => setVoiceId(e.target.value)}
+                    placeholder={t("voiceAgents.voiceIdPlaceholder")}
+                    list={voices.length > 0 ? `elevenlabs-voices-${botId}` : undefined}
+                    className="w-full rounded-lg border border-default px-3 py-2 text-sm"
+                  />
+                  {voices.length > 0 && (
+                    <datalist id={`elevenlabs-voices-${botId}`}>
                       {voices.map((voice) => (
                         <option key={voice.id} value={voice.id}>
                           {voice.name}
                         </option>
                       ))}
-                    </select>
-                  ) : (
-                    <input
-                      value={voiceId}
-                      onChange={(e) => setVoiceId(e.target.value)}
-                      placeholder="ElevenLabs voice ID"
-                      className="w-full rounded-lg border border-default px-3 py-2 text-sm"
-                    />
+                    </datalist>
                   )}
+                  <p className="text-xs text-secondary">{t("voiceAgents.voiceIdHint")}</p>
                 </label>
                 <label className="space-y-1">
                   <span className="text-sm font-medium text-secondary">{t("telephony.model")}</span>
@@ -267,6 +263,7 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
                   value={systemPrompt}
                   onChange={(e) => setSystemPrompt(e.target.value)}
                   rows={5}
+                  maxLength={8000}
                   className="w-full rounded-lg border border-default px-3 py-2 text-sm"
                 />
               </label>
