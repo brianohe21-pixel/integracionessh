@@ -129,6 +129,13 @@ case "$ACTION" in
     ;;
   apply)
     test -f tfplan
+    if grep -q 'aws_apigatewayv2_integration.integrations.*will be destroyed' tfplan 2>/dev/null || \
+       grep -q 'aws_apigatewayv2_integration.integrations.*will be destroyed' plan.txt 2>/dev/null; then
+      echo "Detected API Gateway integration replacements; updating routes first..."
+      run_with_lock_retry apply-routes.txt \
+        terraform apply -auto-approve -parallelism=1 -lock-timeout="$LOCK_TIMEOUT" \
+        -target=module.api_gateway.aws_apigatewayv2_route.routes
+    fi
     run_with_lock_retry apply.txt \
       terraform apply -auto-approve -parallelism=1 -lock-timeout="$LOCK_TIMEOUT" tfplan
     ;;

@@ -1,34 +1,17 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
+from api_gateway_integration_slugs import canonical_slug_keys
+
 ROOT = Path(__file__).resolve().parents[1]
-MAIN_TF = ROOT / "modules/api-gateway/main.tf"
 OUT_TF = ROOT / "modules/api-gateway/moved-integrations.tf"
 
 
-def slug_for_function_arn(function_arn: str) -> str:
-    return function_arn.removeprefix("var.").removesuffix("_function_arn")
-
-
 def main() -> None:
-    text = MAIN_TF.read_text()
-    start = text.index("  routes = {")
-    end = text.index("  function_integration_keys")
-    routes_block = text[start:end]
-    pattern = re.compile(r"(\w+) = \{.*?function_arn\s*=\s*(\S+)", re.S)
-    canonical: dict[str, str] = {}
-    for match in pattern.finditer(routes_block):
-        key, function_arn = match.group(1), match.group(2)
-        slug = slug_for_function_arn(function_arn)
-        if slug not in canonical or key < canonical[slug]:
-            canonical[slug] = key
-
     blocks = []
-    for slug in sorted(canonical):
-        key = canonical[slug]
+    for slug, key in sorted(canonical_slug_keys().items()):
         if key == slug:
             continue
         blocks.append(

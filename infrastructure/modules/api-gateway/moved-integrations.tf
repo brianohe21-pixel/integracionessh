@@ -171,6 +171,6 @@ moved {
 }
 
 moved {
-  from = aws_apigatewayv2_integration.integrations["routes"]
+  from = aws_apigatewayv2_integration.integrations["webhook_receive"]
   to   = aws_apigatewayv2_integration.integrations["webhook"]
 }
