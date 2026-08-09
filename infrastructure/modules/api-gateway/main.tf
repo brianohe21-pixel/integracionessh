@@ -1940,21 +1940,26 @@ locals {
     }
   }
 
+  function_integration_keys = {
+    for key, route in local.routes :
+    key => replace(replace(route.function_arn, "var.", ""), "_function_arn", "")
+  }
+
   function_integration_ids = {
-    for arn in distinct([for route in local.routes : route.function_arn]) :
-    md5(arn) => {
-      invoke_arn   = [for route in local.routes : route.invoke_arn if route.function_arn == arn][0]
-      function_arn = arn
+    for slug in distinct(values(local.function_integration_keys)) :
+    slug => {
+      invoke_arn   = [for key, route in local.routes : route.invoke_arn if local.function_integration_keys[key] == slug][0]
+      function_arn = [for key, route in local.routes : route.function_arn if local.function_integration_keys[key] == slug][0]
     }
   }
 
   route_integration_ids = {
     for key, route in local.routes :
-    key => md5(route.function_arn)
+    key => local.function_integration_keys[key]
   }
 }
 
-resource "aws_apigatewayv2_integration" "lambda_integrations" {
+resource "aws_apigatewayv2_integration" "integrations" {
   for_each = local.function_integration_ids
 
   api_id                 = aws_apigatewayv2_api.main.id
@@ -1968,7 +1973,7 @@ resource "aws_apigatewayv2_route" "routes" {
 
   api_id    = aws_apigatewayv2_api.main.id
   route_key = each.value.route_key
-  target    = "integrations/${aws_apigatewayv2_integration.lambda_integrations[local.route_integration_ids[each.key]].id}"
+  target    = "integrations/${aws_apigatewayv2_integration.integrations[local.route_integration_ids[each.key]].id}"
 
   authorization_type = each.value.protected ? "JWT" : "NONE"
   authorizer_id      = each.value.protected ? aws_apigatewayv2_authorizer.jwt.id : null
