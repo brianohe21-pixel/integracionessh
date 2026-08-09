@@ -96,7 +96,7 @@ moved {
 }
 
 moved {
-  from = aws_apigatewayv2_integration.integrations["mailrelay_campaigns_create"]
+  from = aws_apigatewayv2_integration.integrations["mailrelay_proxy_delete"]
   to   = aws_apigatewayv2_integration.integrations["mailrelay"]
 }
 

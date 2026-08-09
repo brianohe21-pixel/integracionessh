@@ -92,6 +92,11 @@ jobs:
         run: bash ../../../.github/scripts/terraform-unlock-stale.sh
 
       - name: Migrate API Gateway integrations state
+        env:
+          TF_VAR_github_access_token: ${{ secrets.GH_ACCESS_TOKEN }}
+          TF_VAR_whatsapp_verify_token: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
+          TF_VAR_repository_url: ${{ vars.REPOSITORY_URL }}
+          ENVIRONMENT: dev
         run: bash ../../../.github/scripts/migrate-api-gateway-integrations.sh
 
       - name: Terraform Plan
@@ -298,6 +303,11 @@ jobs:
         run: bash ../../../.github/scripts/terraform-unlock-stale.sh
 
       - name: Migrate API Gateway integrations state
+        env:
+          TF_VAR_github_access_token: ${{ secrets.GH_ACCESS_TOKEN }}
+          TF_VAR_whatsapp_verify_token: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
+          TF_VAR_repository_url: ${{ vars.REPOSITORY_URL }}
+          ENVIRONMENT: prod
         run: bash ../../../.github/scripts/migrate-api-gateway-integrations.sh
 
       - name: Terraform Plan

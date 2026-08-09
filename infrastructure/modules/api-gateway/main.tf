@@ -1846,128 +1846,32 @@ locals {
       function_arn = var.flow_hooks_function_arn
       protected    = false
     }
-    mailrelay_credentials_get = {
-      route_key    = "GET /email-marketing/credentials"
+    mailrelay_proxy_get = {
+      route_key    = "GET /email-marketing/{proxy+}"
       invoke_arn   = var.mailrelay_invoke_arn
       function_arn = var.mailrelay_function_arn
       protected    = true
     }
-    mailrelay_credentials_put = {
-      route_key    = "PUT /email-marketing/credentials"
+    mailrelay_proxy_post = {
+      route_key    = "POST /email-marketing/{proxy+}"
       invoke_arn   = var.mailrelay_invoke_arn
       function_arn = var.mailrelay_function_arn
       protected    = true
     }
-    mailrelay_credentials_delete = {
-      route_key    = "DELETE /email-marketing/credentials"
+    mailrelay_proxy_put = {
+      route_key    = "PUT /email-marketing/{proxy+}"
       invoke_arn   = var.mailrelay_invoke_arn
       function_arn = var.mailrelay_function_arn
       protected    = true
     }
-    mailrelay_test = {
-      route_key    = "POST /email-marketing/test"
+    mailrelay_proxy_patch = {
+      route_key    = "PATCH /email-marketing/{proxy+}"
       invoke_arn   = var.mailrelay_invoke_arn
       function_arn = var.mailrelay_function_arn
       protected    = true
     }
-    mailrelay_config_get = {
-      route_key    = "GET /email-marketing/config"
-      invoke_arn   = var.mailrelay_invoke_arn
-      function_arn = var.mailrelay_function_arn
-      protected    = true
-    }
-    mailrelay_config_put = {
-      route_key    = "PUT /email-marketing/config"
-      invoke_arn   = var.mailrelay_invoke_arn
-      function_arn = var.mailrelay_function_arn
-      protected    = true
-    }
-    mailrelay_groups = {
-      route_key    = "GET /email-marketing/groups"
-      invoke_arn   = var.mailrelay_invoke_arn
-      function_arn = var.mailrelay_function_arn
-      protected    = true
-    }
-    mailrelay_senders = {
-      route_key    = "GET /email-marketing/senders"
-      invoke_arn   = var.mailrelay_invoke_arn
-      function_arn = var.mailrelay_function_arn
-      protected    = true
-    }
-    mailrelay_sync = {
-      route_key    = "POST /email-marketing/sync"
-      invoke_arn   = var.mailrelay_invoke_arn
-      function_arn = var.mailrelay_function_arn
-      protected    = true
-    }
-    mailrelay_syncs = {
-      route_key    = "GET /email-marketing/syncs"
-      invoke_arn   = var.mailrelay_invoke_arn
-      function_arn = var.mailrelay_function_arn
-      protected    = true
-    }
-    mailrelay_syncs_get = {
-      route_key    = "GET /email-marketing/syncs/{jobId}"
-      invoke_arn   = var.mailrelay_invoke_arn
-      function_arn = var.mailrelay_function_arn
-      protected    = true
-    }
-    mailrelay_campaigns_list = {
-      route_key    = "GET /email-marketing/campaigns"
-      invoke_arn   = var.mailrelay_invoke_arn
-      function_arn = var.mailrelay_function_arn
-      protected    = true
-    }
-    mailrelay_campaigns_create = {
-      route_key    = "POST /email-marketing/campaigns"
-      invoke_arn   = var.mailrelay_invoke_arn
-      function_arn = var.mailrelay_function_arn
-      protected    = true
-    }
-    mailrelay_campaigns_get = {
-      route_key    = "GET /email-marketing/campaigns/{campaignId}"
-      invoke_arn   = var.mailrelay_invoke_arn
-      function_arn = var.mailrelay_function_arn
-      protected    = true
-    }
-    mailrelay_campaigns_put = {
-      route_key    = "PUT /email-marketing/campaigns/{campaignId}"
-      invoke_arn   = var.mailrelay_invoke_arn
-      function_arn = var.mailrelay_function_arn
-      protected    = true
-    }
-    mailrelay_campaigns_delete = {
-      route_key    = "DELETE /email-marketing/campaigns/{campaignId}"
-      invoke_arn   = var.mailrelay_invoke_arn
-      function_arn = var.mailrelay_function_arn
-      protected    = true
-    }
-    mailrelay_campaigns_send_test = {
-      route_key    = "POST /email-marketing/campaigns/{campaignId}/send-test"
-      invoke_arn   = var.mailrelay_invoke_arn
-      function_arn = var.mailrelay_function_arn
-      protected    = true
-    }
-    mailrelay_campaigns_send = {
-      route_key    = "POST /email-marketing/campaigns/{campaignId}/send"
-      invoke_arn   = var.mailrelay_invoke_arn
-      function_arn = var.mailrelay_function_arn
-      protected    = true
-    }
-    mailrelay_sent_campaigns = {
-      route_key    = "GET /email-marketing/sent-campaigns"
-      invoke_arn   = var.mailrelay_invoke_arn
-      function_arn = var.mailrelay_function_arn
-      protected    = true
-    }
-    mailrelay_sent_campaign_get = {
-      route_key    = "GET /email-marketing/sent-campaigns/{sentCampaignId}"
-      invoke_arn   = var.mailrelay_invoke_arn
-      function_arn = var.mailrelay_function_arn
-      protected    = true
-    }
-    mailrelay_sent_campaign_metrics = {
-      route_key    = "GET /email-marketing/sent-campaigns/{sentCampaignId}/metrics"
+    mailrelay_proxy_delete = {
+      route_key    = "DELETE /email-marketing/{proxy+}"
       invoke_arn   = var.mailrelay_invoke_arn
       function_arn = var.mailrelay_function_arn
       protected    = true
