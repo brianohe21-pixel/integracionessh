@@ -208,6 +208,9 @@ module "lambda" {
   call_events_sqs_queue_arn     = module.sqs.call_events_queue_arn
   telephony_cdr_sqs_queue_url   = module.sqs.telephony_cdr_queue_url
   telephony_cdr_sqs_queue_arn   = module.sqs.telephony_cdr_queue_arn
+  mailrelay_sync_sqs_queue_url  = module.sqs.mailrelay_sync_queue_url
+  mailrelay_sync_sqs_queue_arn  = module.sqs.mailrelay_sync_queue_arn
+  mailrelay_event_types         = var.mailrelay_event_types
   scheduler_role_arn            = aws_iam_role.scheduler.arn
   media_bucket_arn              = module.s3.media_bucket_arn
   media_bucket_name             = module.s3.media_bucket_name
@@ -330,6 +333,10 @@ module "api_gateway" {
   payments_function_arn          = module.lambda.payments_function_arn
   catalog_invoke_arn             = module.lambda.catalog_invoke_arn
   catalog_function_arn           = module.lambda.catalog_function_arn
+  mailrelay_invoke_arn           = module.lambda.mailrelay_invoke_arn
+  mailrelay_function_arn         = module.lambda.mailrelay_function_arn
+  mailrelay_webhook_invoke_arn   = module.lambda.mailrelay_webhook_invoke_arn
+  mailrelay_webhook_function_arn = module.lambda.mailrelay_webhook_function_arn
   allowed_origins                = local.browser_origins
   api_custom_domain              = var.api_custom_domain
   tags                           = local.tags

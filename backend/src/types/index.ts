@@ -397,7 +397,7 @@ export interface Macro {
 
 export type MarketingConsent = "unknown" | "opt_in" | "opt_out";
 
-export type ConsentSource = "manual" | "import" | "whatsapp_keyword" | "panel";
+export type ConsentSource = "manual" | "import" | "whatsapp_keyword" | "panel" | "mailrelay";
 
 export type ContactSource = "sync" | "manual" | "import" | "lead_capture";
 
@@ -1731,6 +1731,8 @@ export interface AppCatalogItem {
   name: string;
   description: string;
   installedBots: Array<{ botId: string; botName: string; enabled: boolean }>;
+  configured?: boolean;
+  enabled?: boolean;
 }
 
 export const WEEKDAYS: Weekday[] = [
@@ -2041,4 +2043,118 @@ export interface IntegrationQueueMessage {
   event: IntegrationEvent;
   payload: IntegrationEventPayload;
   attempt: number;
+}
+
+export interface MailrelayCredentials {
+  apiKey: string;
+  webhookToken: string;
+}
+
+export interface MaskedMailrelayCredentials {
+  configured: boolean;
+  apiKey?: string;
+  webhookToken?: string;
+  secretId?: string;
+}
+
+export interface MailrelayTagGroupMapping {
+  tag: string;
+  groupIds: number[];
+}
+
+export interface MailrelayConfig {
+  tenantId: string;
+  enabled: boolean;
+  defaultSenderId?: number;
+  tagGroupMappings: MailrelayTagGroupMapping[];
+  defaultGroupIds: number[];
+  eventTypes: string[];
+  eventSubscriptionId?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MailrelayGroup {
+  id: number;
+  name: string;
+  [key: string]: unknown;
+}
+
+export interface MailrelaySender {
+  id: number;
+  name?: string;
+  email?: string;
+  [key: string]: unknown;
+}
+
+export interface MailrelaySubscriberLink {
+  tenantId: string;
+  subscriberId: number;
+  email: string;
+  phoneNumber?: string;
+  syncedAt: string;
+  updatedAt: string;
+}
+
+export type MailrelaySyncJobStatus = "queued" | "running" | "completed" | "completed_with_errors" | "failed";
+
+export interface MailrelaySyncError {
+  email?: string;
+  message: string;
+}
+
+export interface MailrelaySyncJob {
+  jobId: string;
+  tenantId: string;
+  status: MailrelaySyncJobStatus;
+  total: number;
+  processed: number;
+  succeeded: number;
+  failed: number;
+  errors: MailrelaySyncError[];
+  requestedBy?: string;
+  createdAt: string;
+  startedAt?: string;
+  completedAt?: string;
+  updatedAt: string;
+}
+
+export interface MailrelaySyncQueueMessage {
+  tenantId: string;
+  jobId: string;
+  cursor?: string;
+}
+
+export interface MailrelayCampaignRecord {
+  tenantId: string;
+  campaignId: number;
+  subject?: string;
+  status?: string;
+  remote: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MailrelayCampaignMetrics {
+  tenantId: string;
+  campaignId: number;
+  sent: number;
+  delivered: number;
+  opened: number;
+  clicked: number;
+  bounced: number;
+  unsubscribed: number;
+  complained: number;
+  updatedAt: string;
+}
+
+export interface MailrelayEvent {
+  eventId: string;
+  tenantId: string;
+  type: string;
+  campaignId?: number;
+  subscriberId?: number;
+  email?: string;
+  occurredAt: string;
+  payload: Record<string, unknown>;
 }

@@ -1800,11 +1800,162 @@ locals {
       function_arn = var.flow_hooks_function_arn
       protected    = false
     }
+    mailrelay_credentials_get = {
+      route_key    = "GET /email-marketing/credentials"
+      invoke_arn   = var.mailrelay_invoke_arn
+      function_arn = var.mailrelay_function_arn
+      protected    = true
+    }
+    mailrelay_credentials_put = {
+      route_key    = "PUT /email-marketing/credentials"
+      invoke_arn   = var.mailrelay_invoke_arn
+      function_arn = var.mailrelay_function_arn
+      protected    = true
+    }
+    mailrelay_credentials_delete = {
+      route_key    = "DELETE /email-marketing/credentials"
+      invoke_arn   = var.mailrelay_invoke_arn
+      function_arn = var.mailrelay_function_arn
+      protected    = true
+    }
+    mailrelay_test = {
+      route_key    = "POST /email-marketing/test"
+      invoke_arn   = var.mailrelay_invoke_arn
+      function_arn = var.mailrelay_function_arn
+      protected    = true
+    }
+    mailrelay_config_get = {
+      route_key    = "GET /email-marketing/config"
+      invoke_arn   = var.mailrelay_invoke_arn
+      function_arn = var.mailrelay_function_arn
+      protected    = true
+    }
+    mailrelay_config_put = {
+      route_key    = "PUT /email-marketing/config"
+      invoke_arn   = var.mailrelay_invoke_arn
+      function_arn = var.mailrelay_function_arn
+      protected    = true
+    }
+    mailrelay_groups = {
+      route_key    = "GET /email-marketing/groups"
+      invoke_arn   = var.mailrelay_invoke_arn
+      function_arn = var.mailrelay_function_arn
+      protected    = true
+    }
+    mailrelay_senders = {
+      route_key    = "GET /email-marketing/senders"
+      invoke_arn   = var.mailrelay_invoke_arn
+      function_arn = var.mailrelay_function_arn
+      protected    = true
+    }
+    mailrelay_sync = {
+      route_key    = "POST /email-marketing/sync"
+      invoke_arn   = var.mailrelay_invoke_arn
+      function_arn = var.mailrelay_function_arn
+      protected    = true
+    }
+    mailrelay_syncs = {
+      route_key    = "GET /email-marketing/syncs"
+      invoke_arn   = var.mailrelay_invoke_arn
+      function_arn = var.mailrelay_function_arn
+      protected    = true
+    }
+    mailrelay_syncs_get = {
+      route_key    = "GET /email-marketing/syncs/{jobId}"
+      invoke_arn   = var.mailrelay_invoke_arn
+      function_arn = var.mailrelay_function_arn
+      protected    = true
+    }
+    mailrelay_campaigns_list = {
+      route_key    = "GET /email-marketing/campaigns"
+      invoke_arn   = var.mailrelay_invoke_arn
+      function_arn = var.mailrelay_function_arn
+      protected    = true
+    }
+    mailrelay_campaigns_create = {
+      route_key    = "POST /email-marketing/campaigns"
+      invoke_arn   = var.mailrelay_invoke_arn
+      function_arn = var.mailrelay_function_arn
+      protected    = true
+    }
+    mailrelay_campaigns_get = {
+      route_key    = "GET /email-marketing/campaigns/{campaignId}"
+      invoke_arn   = var.mailrelay_invoke_arn
+      function_arn = var.mailrelay_function_arn
+      protected    = true
+    }
+    mailrelay_campaigns_put = {
+      route_key    = "PUT /email-marketing/campaigns/{campaignId}"
+      invoke_arn   = var.mailrelay_invoke_arn
+      function_arn = var.mailrelay_function_arn
+      protected    = true
+    }
+    mailrelay_campaigns_delete = {
+      route_key    = "DELETE /email-marketing/campaigns/{campaignId}"
+      invoke_arn   = var.mailrelay_invoke_arn
+      function_arn = var.mailrelay_function_arn
+      protected    = true
+    }
+    mailrelay_campaigns_send_test = {
+      route_key    = "POST /email-marketing/campaigns/{campaignId}/send-test"
+      invoke_arn   = var.mailrelay_invoke_arn
+      function_arn = var.mailrelay_function_arn
+      protected    = true
+    }
+    mailrelay_campaigns_send = {
+      route_key    = "POST /email-marketing/campaigns/{campaignId}/send"
+      invoke_arn   = var.mailrelay_invoke_arn
+      function_arn = var.mailrelay_function_arn
+      protected    = true
+    }
+    mailrelay_sent_campaigns = {
+      route_key    = "GET /email-marketing/sent-campaigns"
+      invoke_arn   = var.mailrelay_invoke_arn
+      function_arn = var.mailrelay_function_arn
+      protected    = true
+    }
+    mailrelay_sent_campaign_get = {
+      route_key    = "GET /email-marketing/sent-campaigns/{sentCampaignId}"
+      invoke_arn   = var.mailrelay_invoke_arn
+      function_arn = var.mailrelay_function_arn
+      protected    = true
+    }
+    mailrelay_sent_campaign_metrics = {
+      route_key    = "GET /email-marketing/sent-campaigns/{sentCampaignId}/metrics"
+      invoke_arn   = var.mailrelay_invoke_arn
+      function_arn = var.mailrelay_function_arn
+      protected    = true
+    }
+    mailrelay_webhook = {
+      route_key    = "POST /email-marketing/webhook"
+      invoke_arn   = var.mailrelay_webhook_invoke_arn
+      function_arn = var.mailrelay_webhook_function_arn
+      protected    = false
+    }
+    mailrelay_webhook_tenant = {
+      route_key    = "POST /email-marketing/webhook/{tenantId}"
+      invoke_arn   = var.mailrelay_webhook_invoke_arn
+      function_arn = var.mailrelay_webhook_function_arn
+      protected    = false
+    }
+  }
+
+  function_integration_ids = {
+    for arn in distinct([for route in local.routes : route.function_arn]) :
+    md5(arn) => {
+      invoke_arn   = [for route in local.routes : route.invoke_arn if route.function_arn == arn][0]
+      function_arn = arn
+    }
+  }
+
+  route_integration_ids = {
+    for key, route in local.routes :
+    key => md5(route.function_arn)
   }
 }
 
-resource "aws_apigatewayv2_integration" "integrations" {
-  for_each = local.routes
+resource "aws_apigatewayv2_integration" "lambda_integrations" {
+  for_each = local.function_integration_ids
 
   api_id                 = aws_apigatewayv2_api.main.id
   integration_type       = "AWS_PROXY"
@@ -1817,7 +1968,7 @@ resource "aws_apigatewayv2_route" "routes" {
 
   api_id    = aws_apigatewayv2_api.main.id
   route_key = each.value.route_key
-  target    = "integrations/${aws_apigatewayv2_integration.integrations[each.key].id}"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda_integrations[local.route_integration_ids[each.key]].id}"
 
   authorization_type = each.value.protected ? "JWT" : "NONE"
   authorizer_id      = each.value.protected ? aws_apigatewayv2_authorizer.jwt.id : null
@@ -1825,47 +1976,49 @@ resource "aws_apigatewayv2_route" "routes" {
 
 resource "aws_lambda_permission" "api_gw" {
   for_each = {
-    webhook           = var.webhook_function_arn
-    tenants           = var.tenants_function_arn
-    reseller          = var.reseller_function_arn
-    bots              = var.bots_function_arn
-    conversations     = var.conversations_function_arn
-    advisors          = var.advisors_function_arn
-    contacts          = var.contacts_function_arn
-    leads             = var.leads_function_arn
-    templates         = var.templates_function_arn
-    bulk_send         = var.bulk_send_function_arn
-    metrics           = var.metrics_function_arn
-    whatsapp_connect  = var.whatsapp_connect_function_arn
-    instagram_connect = var.instagram_connect_function_arn
-    telegram_connect  = var.telegram_connect_function_arn
-    telegram_webhook  = var.telegram_webhook_function_arn
-    messenger_connect = var.messenger_connect_function_arn
-    sms_webhook       = var.sms_webhook_function_arn
-    email_inbound     = var.email_inbound_function_arn
+    webhook            = var.webhook_function_arn
+    tenants            = var.tenants_function_arn
+    reseller           = var.reseller_function_arn
+    bots               = var.bots_function_arn
+    conversations      = var.conversations_function_arn
+    advisors           = var.advisors_function_arn
+    contacts           = var.contacts_function_arn
+    leads              = var.leads_function_arn
+    templates          = var.templates_function_arn
+    bulk_send          = var.bulk_send_function_arn
+    metrics            = var.metrics_function_arn
+    whatsapp_connect   = var.whatsapp_connect_function_arn
+    instagram_connect  = var.instagram_connect_function_arn
+    telegram_connect   = var.telegram_connect_function_arn
+    telegram_webhook   = var.telegram_webhook_function_arn
+    messenger_connect  = var.messenger_connect_function_arn
+    sms_webhook        = var.sms_webhook_function_arn
+    email_inbound      = var.email_inbound_function_arn
     email_imap_connect = var.email_imap_connect_function_arn
-    webchat           = var.webchat_function_arn
-    voicebot          = var.voicebot_function_arn
-    campaigns         = var.campaigns_function_arn
-    support_tickets   = var.support_tickets_function_arn
-    billing           = var.billing_function_arn
-    admin             = var.admin_function_arn
-    public_api        = var.public_api_function_arn
-    api_keys          = var.api_keys_function_arn
-    integrations      = var.integrations_function_arn
-    automations       = var.automations_function_arn
-    knowledge         = var.knowledge_function_arn
-    macros            = var.macros_function_arn
-    meta_flows        = var.meta_flows_function_arn
-    flows             = var.flows_function_arn
-    flow_hooks        = var.flow_hooks_function_arn
-    calling           = var.calling_function_arn
-    telephony         = var.telephony_function_arn
-    realtime          = var.realtime_function_arn
-    calendar          = var.calendar_function_arn
-    public_calendar   = var.public_calendar_function_arn
-    payments          = var.payments_function_arn
-    catalog           = var.catalog_function_arn
+    webchat            = var.webchat_function_arn
+    voicebot           = var.voicebot_function_arn
+    campaigns          = var.campaigns_function_arn
+    support_tickets    = var.support_tickets_function_arn
+    billing            = var.billing_function_arn
+    admin              = var.admin_function_arn
+    public_api         = var.public_api_function_arn
+    api_keys           = var.api_keys_function_arn
+    integrations       = var.integrations_function_arn
+    automations        = var.automations_function_arn
+    knowledge          = var.knowledge_function_arn
+    macros             = var.macros_function_arn
+    meta_flows         = var.meta_flows_function_arn
+    flows              = var.flows_function_arn
+    flow_hooks         = var.flow_hooks_function_arn
+    calling            = var.calling_function_arn
+    telephony          = var.telephony_function_arn
+    realtime           = var.realtime_function_arn
+    calendar           = var.calendar_function_arn
+    public_calendar    = var.public_calendar_function_arn
+    payments           = var.payments_function_arn
+    catalog            = var.catalog_function_arn
+    mailrelay          = var.mailrelay_function_arn
+    mailrelay_webhook  = var.mailrelay_webhook_function_arn
   }
 
   statement_id  = "AllowAPIGatewayInvoke-${each.key}"

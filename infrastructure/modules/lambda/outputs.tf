@@ -354,6 +354,22 @@ output "catalog_function_arn" {
   value = try(aws_lambda_function.functions["catalog"].arn, null)
 }
 
+output "mailrelay_invoke_arn" {
+  value = aws_lambda_function.functions["mailrelay"].invoke_arn
+}
+
+output "mailrelay_function_arn" {
+  value = aws_lambda_function.functions["mailrelay"].arn
+}
+
+output "mailrelay_webhook_invoke_arn" {
+  value = aws_lambda_function.functions["mailrelay_webhook"].invoke_arn
+}
+
+output "mailrelay_webhook_function_arn" {
+  value = aws_lambda_function.functions["mailrelay_webhook"].arn
+}
+
 output "lambda_log_group_ids" {
   value = {
     for k, _ in local.functions : k => "/aws/lambda/${var.project}-${var.environment}-${replace(k, "_", "-")}"

@@ -1,0 +1,2407 @@
+[0m[1mdata.external.amplify_browser_origin: Reading...[0m[0m
+[0m[1mmodule.lambda.data.aws_region.current: Reading...[0m[0m
+[0m[1mmodule.telephony_gateway.data.aws_caller_identity.current: Reading...[0m[0m
+[0m[1mmodule.lambda.data.aws_region.current: Read complete after 0s [id=us-east-1][0m
+[0m[1mmodule.telephony_gateway.aws_cloudwatch_log_group.gateway: Refreshing state... [id=/ecs/chatbot-platform-dev-telephony-gateway][0m
+[0m[1mmodule.sqs.aws_sqs_queue.bulk_dlq: Refreshing state... [id=https://sqs.us-east-1.amazonaws.com/979054355542/chatbot-platform-dev-bulk-dlq.fifo][0m
+[0m[1mmodule.telephony_gateway.aws_iam_role.task: Refreshing state... [id=chatbot-platform-dev-telephony-gateway-task][0m
+[0m[1mmodule.sqs.aws_sqs_queue.telephony_cdr_dlq: Refreshing state... [id=https://sqs.us-east-1.amazonaws.com/979054355542/chatbot-platform-dev-telephony-cdr-dlq.fifo][0m
+[0m[1mmodule.sqs.aws_sqs_queue.flow_event_dlq: Refreshing state... [id=https://sqs.us-east-1.amazonaws.com/979054355542/chatbot-platform-dev-flow-event-dlq.fifo][0m
+[0m[1mmodule.sqs.aws_sqs_queue.knowledge_dlq: Refreshing state... [id=https://sqs.us-east-1.amazonaws.com/979054355542/chatbot-platform-dev-knowledge-dlq.fifo][0m
+[0m[1mmodule.telephony_gateway.aws_lb_target_group.gateway: Refreshing state... [id=arn:aws:elasticloadbalancing:us-east-1:979054355542:targetgroup/chatbot-platform-dev-tel-gw/c9574f3b1b882b35][0m
+[0m[1mmodule.api_gateway.aws_cloudwatch_log_group.api_gw: Refreshing state... [id=/aws/api-gateway/chatbot-platform-dev][0m
+[0m[1mmodule.telephony_gateway.data.aws_caller_identity.current: Read complete after 0s [id=979054355542][0m
+[0m[1mmodule.sqs.aws_sqs_queue.dlq: Refreshing state... [id=https://sqs.us-east-1.amazonaws.com/979054355542/chatbot-platform-dev-dlq.fifo][0m
+[0m[1mmodule.lambda.data.aws_iam_policy_document.assume_role: Reading...[0m[0m
+[0m[1mmodule.cognito.data.aws_region.current: Reading...[0m[0m
+[0m[1mmodule.lambda.data.aws_iam_policy_document.assume_role: Read complete after 0s [id=2690255455][0m
+[0m[1mmodule.cognito.data.aws_region.current: Read complete after 0s [id=us-east-1][0m
+[0m[1mmodule.sqs.aws_sqs_queue.campaign_dlq: Refreshing state... [id=https://sqs.us-east-1.amazonaws.com/979054355542/chatbot-platform-dev-campaign-dlq.fifo][0m
+[0m[1mmodule.lambda.aws_ses_email_identity.from[0]: Refreshing state... [id=integracionessh@gmail.com][0m
+[0m[1mmodule.sqs.aws_sqs_queue.flow_run_dlq: Refreshing state... [id=https://sqs.us-east-1.amazonaws.com/979054355542/chatbot-platform-dev-flow-run-dlq.fifo][0m
+[0m[1mdata.aws_caller_identity.current: Reading...[0m[0m
+[0m[1maws_iam_role.scheduler: Refreshing state... [id=chatbot-platform-dev-scheduler][0m
+[0m[1mmodule.lambda.data.aws_caller_identity.current: Reading...[0m[0m
+[0m[1mdata.aws_apigatewayv2_apis.existing: Reading...[0m[0m
+[0m[1mdata.aws_caller_identity.current: Read complete after 0s [id=979054355542][0m
+[0m[1mmodule.sqs.aws_sqs_queue.integration_dlq: Refreshing state... [id=https://sqs.us-east-1.amazonaws.com/979054355542/chatbot-platform-dev-integration-dlq.fifo][0m
+[0m[1mmodule.lambda.data.aws_caller_identity.current: Read complete after 0s [id=979054355542][0m
+[0m[1mmodule.cognito.data.aws_iam_policy_document.cognito_trigger_assume_role: Reading...[0m[0m
+[0m[1mmodule.cognito.data.aws_iam_policy_document.cognito_trigger_assume_role: Read complete after 0s [id=2690255455][0m
+[0m[1mmodule.telephony_gateway.aws_ecr_repository.gateway: Refreshing state... [id=chatbot-platform-dev-telephony-gateway][0m
+[0m[1mmodule.telephony_gateway.aws_ecs_cluster.gateway: Refreshing state... [id=arn:aws:ecs:us-east-1:979054355542:cluster/chatbot-platform-dev-telephony][0m
+[0m[1mmodule.telephony_gateway.aws_security_group.alb: Refreshing state... [id=sg-0f025aebfd61543eb][0m
+[0m[1mmodule.telephony_gateway.aws_iam_role.task_execution: Refreshing state... [id=chatbot-platform-dev-telephony-gateway-exec][0m
+[0m[1mmodule.amplify.data.aws_iam_policy_document.amplify_assume: Reading...[0m[0m
+[0m[1mmodule.amplify.data.aws_iam_policy_document.amplify_assume: Read complete after 0s [id=3259836488][0m
+[0m[1mmodule.lambda.aws_apigatewayv2_api.websocket: Refreshing state... [id=9tl6020fr3][0m
+[0m[1mdata.external.amplify_browser_origin: Read complete after 1s [id=-][0m
+[0m[1mmodule.sqs.aws_sqs_queue.call_events_dlq: Refreshing state... [id=https://sqs.us-east-1.amazonaws.com/979054355542/chatbot-platform-dev-call-events-dlq.fifo][0m
+[0m[1mmodule.dynamodb.aws_dynamodb_table.main: Refreshing state... [id=chatbot-platform-dev][0m
+[0m[1mmodule.sqs.aws_sqs_queue.automation_dlq: Refreshing state... [id=https://sqs.us-east-1.amazonaws.com/979054355542/chatbot-platform-dev-automation-dlq.fifo][0m
+[0m[1mdata.aws_apigatewayv2_apis.existing: Read complete after 0s [id=us-east-1][0m
+[0m[1mmodule.sqs.aws_sqs_queue.flow_event: Refreshing state... [id=https://sqs.us-east-1.amazonaws.com/979054355542/chatbot-platform-dev-flow-event.fifo][0m
+[0m[1mmodule.sqs.aws_sqs_queue.telephony_cdr: Refreshing state... [id=https://sqs.us-east-1.amazonaws.com/979054355542/chatbot-platform-dev-telephony-cdr.fifo][0m
+[0m[1mmodule.sqs.aws_sqs_queue.knowledge_index: Refreshing state... [id=https://sqs.us-east-1.amazonaws.com/979054355542/chatbot-platform-dev-knowledge-index.fifo][0m
+[0m[1mmodule.sqs.aws_sqs_queue.bulk_send: Refreshing state... [id=https://sqs.us-east-1.amazonaws.com/979054355542/chatbot-platform-dev-bulk-send.fifo][0m
+[0m[1mmodule.lambda.aws_iam_role.lambda: Refreshing state... [id=chatbot-platform-dev-lambda][0m
+[0m[1mmodule.sqs.aws_sqs_queue.messages: Refreshing state... [id=https://sqs.us-east-1.amazonaws.com/979054355542/chatbot-platform-dev-messages.fifo][0m
+[0m[1mmodule.cognito.aws_iam_role.cognito_trigger: Refreshing state... [id=chatbot-platform-dev-cognito-trigger][0m
+[0m[1mmodule.sqs.aws_sqs_queue.campaign_send: Refreshing state... [id=https://sqs.us-east-1.amazonaws.com/979054355542/chatbot-platform-dev-campaign-send.fifo][0m
+[0m[1mmodule.sqs.aws_sqs_queue.flow_run: Refreshing state... [id=https://sqs.us-east-1.amazonaws.com/979054355542/chatbot-platform-dev-flow-run.fifo][0m
+[0m[1mmodule.sqs.aws_sqs_queue.integration_events: Refreshing state... [id=https://sqs.us-east-1.amazonaws.com/979054355542/chatbot-platform-dev-integration-events.fifo][0m
+[0m[1mmodule.amplify.aws_iam_role.amplify_service: Refreshing state... [id=chatbot-platform-dev-amplify-svc][0m
+[0m[1mdata.aws_apigatewayv2_api.existing["am04j5one2"]: Reading...[0m[0m
+[0m[1mdata.aws_apigatewayv2_api.existing["9tl6020fr3"]: Reading...[0m[0m
+[0m[1mdata.aws_apigatewayv2_api.existing["ccti8rpoj1"]: Reading...[0m[0m
+[0m[1mdata.aws_apigatewayv2_api.existing["laqd12rroj"]: Reading...[0m[0m
+[0m[1mmodule.lambda.aws_apigatewayv2_stage.websocket: Refreshing state... [id=$default][0m
+[0m[1mmodule.sqs.aws_sqs_queue.call_events: Refreshing state... [id=https://sqs.us-east-1.amazonaws.com/979054355542/chatbot-platform-dev-call-events.fifo][0m
+[0m[1mdata.aws_apigatewayv2_api.existing["am04j5one2"]: Read complete after 1s [id=am04j5one2][0m
+[0m[1mmodule.sqs.aws_sqs_queue.automation_run: Refreshing state... [id=https://sqs.us-east-1.amazonaws.com/979054355542/chatbot-platform-dev-automation-run.fifo][0m
+[0m[1mdata.aws_apigatewayv2_api.existing["9tl6020fr3"]: Read complete after 1s [id=9tl6020fr3][0m
+[0m[1mmodule.telephony_gateway.aws_iam_role_policy_attachment.task_execution: Refreshing state... [id=chatbot-platform-dev-telephony-gateway-exec-20260807163702045800000001][0m
+[0m[1mdata.aws_apigatewayv2_api.existing["laqd12rroj"]: Read complete after 1s [id=laqd12rroj][0m
+[0m[1mdata.aws_apigatewayv2_api.existing["ccti8rpoj1"]: Read complete after 1s [id=ccti8rpoj1][0m
+[0m[1mmodule.s3.aws_s3_bucket.media: Refreshing state... [id=chatbot-platform-dev-media-979054355542][0m
+[0m[1mmodule.s3.aws_s3_bucket.artifacts: Refreshing state... [id=chatbot-platform-dev-artifacts-979054355542][0m
+[0m[1mmodule.telephony_gateway.aws_security_group.service: Refreshing state... [id=sg-0aa4a74c0ddd397c3][0m
+[0m[1mmodule.telephony_gateway.aws_lb.gateway: Refreshing state... [id=arn:aws:elasticloadbalancing:us-east-1:979054355542:loadbalancer/app/chatbot-platform-dev-tel-gw/b47d8ebae6433147][0m
+[0m[1mmodule.amplify.aws_iam_role_policy_attachment.amplify_console_access: Refreshing state... [id=chatbot-platform-dev-amplify-svc-20260501175415757600000001][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_api.main: Refreshing state... [id=ccti8rpoj1][0m
+[0m[1mmodule.cognito.aws_iam_role_policy_attachment.cognito_trigger_basic: Refreshing state... [id=chatbot-platform-dev-cognito-trigger-20260727185315072400000001][0m
+[0m[1mmodule.cognito.aws_lambda_function.cognito_pre_signup: Refreshing state... [id=chatbot-platform-dev-cognito-pre-signup][0m
+[0m[1mmodule.lambda.aws_iam_role_policy_attachment.basic_execution: Refreshing state... [id=chatbot-platform-dev-lambda-20260430133140255500000001][0m
+[0m[1mmodule.telephony_gateway.aws_ecs_task_definition.gateway: Refreshing state... [id=chatbot-platform-dev-telephony-gateway][0m
+[0m[1mmodule.telephony_gateway.aws_iam_role_policy.task: Refreshing state... [id=chatbot-platform-dev-telephony-gateway-task:chatbot-platform-dev-telephony-gateway-task][0m
+[0m[1mmodule.sqs.aws_sqs_queue_policy.campaign_send: Refreshing state... [id=https://sqs.us-east-1.amazonaws.com/979054355542/chatbot-platform-dev-campaign-send.fifo][0m
+[0m[1mmodule.sqs.aws_sqs_queue_policy.bulk_send: Refreshing state... [id=https://sqs.us-east-1.amazonaws.com/979054355542/chatbot-platform-dev-bulk-send.fifo][0m
+[0m[1mmodule.sqs.aws_sqs_queue_policy.telephony_cdr: Refreshing state... [id=https://sqs.us-east-1.amazonaws.com/979054355542/chatbot-platform-dev-telephony-cdr.fifo][0m
+[0m[1mmodule.sqs.aws_sqs_queue_policy.automation_run: Refreshing state... [id=https://sqs.us-east-1.amazonaws.com/979054355542/chatbot-platform-dev-automation-run.fifo][0m
+[0m[1mmodule.sqs.aws_sqs_queue_policy.call_events: Refreshing state... [id=https://sqs.us-east-1.amazonaws.com/979054355542/chatbot-platform-dev-call-events.fifo][0m
+[0m[1mmodule.sqs.aws_sqs_queue_policy.knowledge_index: Refreshing state... [id=https://sqs.us-east-1.amazonaws.com/979054355542/chatbot-platform-dev-knowledge-index.fifo][0m
+[0m[1mmodule.sqs.aws_sqs_queue_policy.flow_event: Refreshing state... [id=https://sqs.us-east-1.amazonaws.com/979054355542/chatbot-platform-dev-flow-event.fifo][0m
+[0m[1mmodule.sqs.aws_sqs_queue_policy.messages: Refreshing state... [id=https://sqs.us-east-1.amazonaws.com/979054355542/chatbot-platform-dev-messages.fifo][0m
+[0m[1mmodule.sqs.aws_sqs_queue_policy.flow_run: Refreshing state... [id=https://sqs.us-east-1.amazonaws.com/979054355542/chatbot-platform-dev-flow-run.fifo][0m
+[0m[1mmodule.sqs.aws_sqs_queue_policy.integration_events: Refreshing state... [id=https://sqs.us-east-1.amazonaws.com/979054355542/chatbot-platform-dev-integration-events.fifo][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_stage.default: Refreshing state... [id=$default][0m
+[0m[1mmodule.telephony_gateway.aws_lb_listener.http: Refreshing state... [id=arn:aws:elasticloadbalancing:us-east-1:979054355542:listener/app/chatbot-platform-dev-tel-gw/b47d8ebae6433147/a297c7cd12b6506f][0m
+[0m[1mmodule.telephony_gateway.aws_ecs_service.gateway: Refreshing state... [id=arn:aws:ecs:us-east-1:979054355542:service/chatbot-platform-dev-telephony/chatbot-platform-dev-telephony-gateway][0m
+[0m[1mmodule.cognito.aws_cognito_user_pool.main: Refreshing state... [id=us-east-1_CWNhdPTjN][0m
+[0m[1mmodule.s3.aws_s3_bucket_public_access_block.media: Refreshing state... [id=chatbot-platform-dev-media-979054355542][0m
+[0m[1mmodule.s3.aws_s3_bucket_versioning.media: Refreshing state... [id=chatbot-platform-dev-media-979054355542][0m
+[0m[1mmodule.s3.aws_s3_bucket_cors_configuration.media: Refreshing state... [id=chatbot-platform-dev-media-979054355542][0m
+[0m[1mmodule.s3.aws_s3_bucket_public_access_block.artifacts: Refreshing state... [id=chatbot-platform-dev-artifacts-979054355542][0m
+[0m[1mmodule.s3.aws_s3_bucket_lifecycle_configuration.media: Refreshing state... [id=chatbot-platform-dev-media-979054355542][0m
+[0m[1mmodule.cognito.aws_iam_role_policy.cognito_trigger: Refreshing state... [id=chatbot-platform-dev-cognito-trigger:chatbot-platform-dev-cognito-trigger][0m
+[0m[1mmodule.cognito.aws_lambda_permission.cognito_pre_signup: Refreshing state... [id=AllowCognitoInvoke][0m
+[0m[1mmodule.cognito.aws_cognito_user_pool_domain.main: Refreshing state... [id=chatbot-platform-dev][0m
+[0m[1mmodule.cognito.aws_cognito_identity_provider.google[0]: Refreshing state... [id=us-east-1_CWNhdPTjN:Google][0m
+[0m[1mmodule.lambda.aws_iam_role_policy.lambda_permissions: Refreshing state... [id=chatbot-platform-dev-lambda:chatbot-platform-dev-lambda-permissions][0m
+[0m[1mmodule.cognito.aws_cognito_user_pool_client.web: Refreshing state... [id=7th9bgkj7fl2bp3hg786ttg5t6][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_authorizer.jwt: Refreshing state... [id=ij45hh][0m
+[0m[1mmodule.amplify.aws_amplify_app.frontend: Refreshing state... [id=d5sepmwbbwly9][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["process_integration"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-process-integration][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["process_automation"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-process-automation][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["contacts"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-contacts][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["telegram_webhook"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-telegram-webhook][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["realtime_ws"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-realtime-ws][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["telegram_connect"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-telegram-connect][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["calling"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-calling][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["bots"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-bots][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["macros"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-macros][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["voicebot"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-voicebot][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["webhook"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-webhook][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["calendar"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-calendar][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["public_calendar"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-public-calendar][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["webchat"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-webchat][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["billing"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-billing][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["realtime"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-realtime][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["leads"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-leads][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["email_inbound"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-email-inbound][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["tenants"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-tenants][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["catalog"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-catalog][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["reports"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-reports][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["process_telephony_cdr"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-process-telephony-cdr][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["telephony"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-telephony][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["knowledge"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-knowledge][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["process_flow"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-process-flow][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["campaigns"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-campaigns][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["api_keys"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-api-keys][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["support_tickets"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-support-tickets][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["process_knowledge"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-process-knowledge][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["metrics"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-metrics][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["advisors"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-advisors][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["process_campaign"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-process-campaign][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["automations"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-automations][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["process_bulk_send"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-process-bulk-send][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["reseller"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-reseller][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["messenger_connect"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-messenger-connect][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["voicebot_session"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-voicebot-session][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["whatsapp_connect"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-whatsapp-connect][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["integrations"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-integrations][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["meta_flows"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-meta-flows][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["templates"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-templates][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["instagram_connect"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-instagram-connect][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["process_call"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-process-call][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["conversations"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-conversations][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["flows"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-flows][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["flow_hooks"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-flow-hooks][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["sms_webhook"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-sms-webhook][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["public_api"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-public-api][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["process_flow_event"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-process-flow-event][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["payments"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-payments][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["admin"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-admin][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["process_message"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-process-message][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["bulk_send"]: Refreshing state... [id=/aws/lambda/chatbot-platform-dev-bulk-send][0m
+[0m[1mmodule.amplify.aws_amplify_branch.main: Refreshing state... [id=d5sepmwbbwly9/develop][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["leads"]: Refreshing state... [id=chatbot-platform-dev-leads][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["templates"]: Refreshing state... [id=chatbot-platform-dev-templates][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["conversations"]: Refreshing state... [id=chatbot-platform-dev-conversations][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["telegram_connect"]: Refreshing state... [id=chatbot-platform-dev-telegram-connect][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["voicebot"]: Refreshing state... [id=chatbot-platform-dev-voicebot][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["reseller"]: Refreshing state... [id=chatbot-platform-dev-reseller][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["process_automation"]: Refreshing state... [id=chatbot-platform-dev-process-automation][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["tenants"]: Refreshing state... [id=chatbot-platform-dev-tenants][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["instagram_connect"]: Refreshing state... [id=chatbot-platform-dev-instagram-connect][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["billing"]: Refreshing state... [id=chatbot-platform-dev-billing][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["process_call"]: Refreshing state... [id=chatbot-platform-dev-process-call][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["meta_flows"]: Refreshing state... [id=chatbot-platform-dev-meta-flows][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["calling"]: Refreshing state... [id=chatbot-platform-dev-calling][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["api_keys"]: Refreshing state... [id=chatbot-platform-dev-api-keys][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["metrics"]: Refreshing state... [id=chatbot-platform-dev-metrics][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["process_message"]: Refreshing state... [id=chatbot-platform-dev-process-message][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["email_inbound"]: Refreshing state... [id=chatbot-platform-dev-email-inbound][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["support_tickets"]: Refreshing state... [id=chatbot-platform-dev-support-tickets][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["webchat"]: Refreshing state... [id=chatbot-platform-dev-webchat][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["public_calendar"]: Refreshing state... [id=chatbot-platform-dev-public-calendar][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["process_campaign"]: Refreshing state... [id=chatbot-platform-dev-process-campaign][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["telegram_webhook"]: Refreshing state... [id=chatbot-platform-dev-telegram-webhook][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["integrations"]: Refreshing state... [id=chatbot-platform-dev-integrations][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["automations"]: Refreshing state... [id=chatbot-platform-dev-automations][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["telephony"]: Refreshing state... [id=chatbot-platform-dev-telephony][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["process_telephony_cdr"]: Refreshing state... [id=chatbot-platform-dev-process-telephony-cdr][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["catalog"]: Refreshing state... [id=chatbot-platform-dev-catalog][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["flow_hooks"]: Refreshing state... [id=chatbot-platform-dev-flow-hooks][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["admin"]: Refreshing state... [id=chatbot-platform-dev-admin][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["process_flow_event"]: Refreshing state... [id=chatbot-platform-dev-process-flow-event][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["bots"]: Refreshing state... [id=chatbot-platform-dev-bots][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["realtime"]: Refreshing state... [id=chatbot-platform-dev-realtime][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["process_flow"]: Refreshing state... [id=chatbot-platform-dev-process-flow][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["macros"]: Refreshing state... [id=chatbot-platform-dev-macros][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["whatsapp_connect"]: Refreshing state... [id=chatbot-platform-dev-whatsapp-connect][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["bulk_send"]: Refreshing state... [id=chatbot-platform-dev-bulk-send][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["advisors"]: Refreshing state... [id=chatbot-platform-dev-advisors][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["public_api"]: Refreshing state... [id=chatbot-platform-dev-public-api][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["process_bulk_send"]: Refreshing state... [id=chatbot-platform-dev-process-bulk-send][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["calendar"]: Refreshing state... [id=chatbot-platform-dev-calendar][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["payments"]: Refreshing state... [id=chatbot-platform-dev-payments][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["knowledge"]: Refreshing state... [id=chatbot-platform-dev-knowledge][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["realtime_ws"]: Refreshing state... [id=chatbot-platform-dev-realtime-ws][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["sms_webhook"]: Refreshing state... [id=chatbot-platform-dev-sms-webhook][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["flows"]: Refreshing state... [id=chatbot-platform-dev-flows][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["campaigns"]: Refreshing state... [id=chatbot-platform-dev-campaigns][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["process_integration"]: Refreshing state... [id=chatbot-platform-dev-process-integration][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["process_knowledge"]: Refreshing state... [id=chatbot-platform-dev-process-knowledge][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["webhook"]: Refreshing state... [id=chatbot-platform-dev-webhook][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["reports"]: Refreshing state... [id=chatbot-platform-dev-reports][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["messenger_connect"]: Refreshing state... [id=chatbot-platform-dev-messenger-connect][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["contacts"]: Refreshing state... [id=chatbot-platform-dev-contacts][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["voicebot_session"]: Refreshing state... [id=chatbot-platform-dev-voicebot-session][0m
+[0m[1mmodule.lambda.aws_lambda_event_source_mapping.telephony_cdr_sqs_trigger: Refreshing state... [id=b16f174e-f109-458a-a921-679529e6eef7][0m
+[0m[1mmodule.lambda.aws_lambda_event_source_mapping.flow_event_sqs_trigger: Refreshing state... [id=2bd6da41-9223-4811-9509-6160629825a7][0m
+[0m[1mmodule.lambda.aws_lambda_event_source_mapping.call_events_sqs_trigger: Refreshing state... [id=e252cbc4-127c-41b9-8204-64fc622b29b8][0m
+[0m[1mmodule.lambda.aws_lambda_event_source_mapping.automation_sqs_trigger: Refreshing state... [id=d7c99c1b-bffd-4d29-a990-fb473def7314][0m
+[0m[1mmodule.lambda.aws_lambda_event_source_mapping.sqs_trigger: Refreshing state... [id=7fbd54ed-8aef-43e9-95db-918dbe3d730a][0m
+[0m[1mmodule.lambda.aws_lambda_event_source_mapping.bulk_sqs_trigger: Refreshing state... [id=7d3eb6c4-364a-4b0b-8974-da5c33c3b749][0m
+[0m[1mmodule.lambda.aws_lambda_event_source_mapping.campaign_sqs_trigger: Refreshing state... [id=5913731b-102f-4094-a094-1ae0d9af8d86][0m
+[0m[1mmodule.lambda.aws_lambda_permission.websocket: Refreshing state... [id=AllowWebSocketAPIGatewayInvoke][0m
+[0m[1mmodule.lambda.aws_lambda_event_source_mapping.knowledge_sqs_trigger: Refreshing state... [id=4e9e9ddf-bc39-4fce-841f-27b8a5683efe][0m
+[0m[1mmodule.lambda.aws_apigatewayv2_integration.websocket: Refreshing state... [id=rsp0fq7][0m
+[0m[1mmodule.lambda.aws_lambda_event_source_mapping.integration_sqs_trigger: Refreshing state... [id=408b82a1-a5c2-41b5-b729-4968692c02f8][0m
+[0m[1mmodule.lambda.aws_lambda_event_source_mapping.flow_run_sqs_trigger: Refreshing state... [id=08573f43-eecd-4f22-b110-bdcfbdc9de87][0m
+[0m[1maws_iam_role_policy.scheduler_invoke: Refreshing state... [id=chatbot-platform-dev-scheduler:chatbot-platform-dev-scheduler-invoke][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["integrations"]: Refreshing state... [id=AllowAPIGatewayInvoke-integrations][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["meta_flows"]: Refreshing state... [id=AllowAPIGatewayInvoke-meta_flows][0m
+[0m[1mmodule.lambda.aws_apigatewayv2_route.websocket_disconnect: Refreshing state... [id=f3hptff][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["realtime"]: Refreshing state... [id=AllowAPIGatewayInvoke-realtime][0m
+[0m[1mmodule.lambda.aws_apigatewayv2_route.websocket_default: Refreshing state... [id=aopt0ee][0m
+[0m[1mmodule.lambda.aws_apigatewayv2_route.websocket_connect: Refreshing state... [id=0zr5ii8][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["leads"]: Refreshing state... [id=AllowAPIGatewayInvoke-leads][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["sms_webhook"]: Refreshing state... [id=AllowAPIGatewayInvoke-sms_webhook][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["macros"]: Refreshing state... [id=AllowAPIGatewayInvoke-macros][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["catalog"]: Refreshing state... [id=AllowAPIGatewayInvoke-catalog][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["campaigns"]: Refreshing state... [id=AllowAPIGatewayInvoke-campaigns][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["metrics"]: Refreshing state... [id=AllowAPIGatewayInvoke-metrics][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["knowledge"]: Refreshing state... [id=AllowAPIGatewayInvoke-knowledge][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["messenger_connect"]: Refreshing state... [id=AllowAPIGatewayInvoke-messenger_connect][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["bulk_send"]: Refreshing state... [id=AllowAPIGatewayInvoke-bulk_send][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["calling"]: Refreshing state... [id=AllowAPIGatewayInvoke-calling][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["payments"]: Refreshing state... [id=AllowAPIGatewayInvoke-payments][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["public_api"]: Refreshing state... [id=AllowAPIGatewayInvoke-public_api][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["telegram_webhook"]: Refreshing state... [id=AllowAPIGatewayInvoke-telegram_webhook][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["public_calendar"]: Refreshing state... [id=AllowAPIGatewayInvoke-public_calendar][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["webhook"]: Refreshing state... [id=AllowAPIGatewayInvoke-webhook][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["reseller"]: Refreshing state... [id=AllowAPIGatewayInvoke-reseller][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["tenants"]: Refreshing state... [id=AllowAPIGatewayInvoke-tenants][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["advisors"]: Refreshing state... [id=AllowAPIGatewayInvoke-advisors][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["automations"]: Refreshing state... [id=AllowAPIGatewayInvoke-automations][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["flows"]: Refreshing state... [id=AllowAPIGatewayInvoke-flows][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["webchat"]: Refreshing state... [id=AllowAPIGatewayInvoke-webchat][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["billing"]: Refreshing state... [id=AllowAPIGatewayInvoke-billing][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["instagram_connect"]: Refreshing state... [id=AllowAPIGatewayInvoke-instagram_connect][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["email_inbound"]: Refreshing state... [id=AllowAPIGatewayInvoke-email_inbound][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["voicebot"]: Refreshing state... [id=AllowAPIGatewayInvoke-voicebot][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["telegram_connect"]: Refreshing state... [id=AllowAPIGatewayInvoke-telegram_connect][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["contacts"]: Refreshing state... [id=AllowAPIGatewayInvoke-contacts][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["whatsapp_connect"]: Refreshing state... [id=AllowAPIGatewayInvoke-whatsapp_connect][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["admin"]: Refreshing state... [id=AllowAPIGatewayInvoke-admin][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["api_keys"]: Refreshing state... [id=AllowAPIGatewayInvoke-api_keys][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["templates"]: Refreshing state... [id=AllowAPIGatewayInvoke-templates][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["flow_hooks"]: Refreshing state... [id=AllowAPIGatewayInvoke-flow_hooks][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["support_tickets"]: Refreshing state... [id=AllowAPIGatewayInvoke-support_tickets][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["conversations"]: Refreshing state... [id=AllowAPIGatewayInvoke-conversations][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["calendar"]: Refreshing state... [id=AllowAPIGatewayInvoke-calendar][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["bots"]: Refreshing state... [id=AllowAPIGatewayInvoke-bots][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["telephony"]: Refreshing state... [id=AllowAPIGatewayInvoke-telephony][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["payments_disable"]: Refreshing state... [id=mornesi][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["campaigns_resume"]: Refreshing state... [id=sfa43xf][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["flows_runs"]: Refreshing state... [id=9wgqu9q][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["campaigns_create"]: Refreshing state... [id=egk2war][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["conversations_calls_token"]: Refreshing state... [id=npmc557][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["conversations_calls_create"]: Refreshing state... [id=87v89kn][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bots_webchat_rotate_key"]: Refreshing state... [id=asnntrd][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bots_telephony_calls_list"]: Refreshing state... [id=66jqbto][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["tenants_branding_logo_delete"]: Refreshing state... [id=j678fv6][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bots_list"]: Refreshing state... [id=eh1891h][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["conversations_send_message"]: Refreshing state... [id=ih2i6aa][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["automations_enable"]: Refreshing state... [id=9h0012v][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["flows_disable"]: Refreshing state... [id=ius1trr][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["contacts_create"]: Refreshing state... [id=38nq872][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["leads_get"]: Refreshing state... [id=26ul6mn][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["public_calendar_info"]: Refreshing state... [id=9hg0p17][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["public_api_calls_permission_status"]: Refreshing state... [id=mjl3lfg][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bots_voicebot_put"]: Refreshing state... [id=c8ekxdg][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bots_sms_put"]: Refreshing state... [id=3emdmyh][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["billing_portal"]: Refreshing state... [id=35u2t83][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["leads_update"]: Refreshing state... [id=t1hlv4a][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["automations_update"]: Refreshing state... [id=ywcgb5g][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bots_ai_assistant_get"]: Refreshing state... [id=b50wnzn][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["metrics_export"]: Refreshing state... [id=grr9m6t][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["templates_delete"]: Refreshing state... [id=5rastsr][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["calendar_bookings_patch"]: Refreshing state... [id=eqo9uv0][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bots_telephony_calls_get"]: Refreshing state... [id=s431pe9][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bots_telephony_calls_events"]: Refreshing state... [id=t24hip3][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["campaigns_pause"]: Refreshing state... [id=c2ugbdq][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["whatsapp_connect_manual"]: Refreshing state... [id=79e4ank][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bots_telephony_calls_create"]: Refreshing state... [id=iwm7jza][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["campaigns_clone"]: Refreshing state... [id=t4qwfj8][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["public_api_calls_settings_put"]: Refreshing state... [id=7eocow4][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bots_get"]: Refreshing state... [id=etsn08r][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["calendar_public_link_enable"]: Refreshing state... [id=d3m6jiv][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["conversations_get"]: Refreshing state... [id=if3t23n][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["advisors_create"]: Refreshing state... [id=hyh0lsb][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bots_telephony_calls_end"]: Refreshing state... [id=ubyyetd][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["calendar_config_get"]: Refreshing state... [id=b6qc9tk][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["meta_flows_list"]: Refreshing state... [id=kdg6k6k][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["catalog_disable"]: Refreshing state... [id=ybxcvrr][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["catalog_meta_catalogs"]: Refreshing state... [id=ooqmb6m][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["catalog_orders_get"]: Refreshing state... [id=z50fdsm][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bots_telephony_webhook_deliveries"]: Refreshing state... [id=uvuc4vc][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["voicebot_sessions_end"]: Refreshing state... [id=hh0zyge][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["reseller_domain_get"]: Refreshing state... [id=oh0357m][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["catalog_products_image_finalize"]: Refreshing state... [id=txfcqi3][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["webhook_receive"]: Refreshing state... [id=xvxcx2d][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["conversations_copilot"]: Refreshing state... [id=31g0vls][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["reseller_subaccounts_list"]: Refreshing state... [id=4h2mk73][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["knowledge_upload_url"]: Refreshing state... [id=l2x1ni5][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["meta_flows_update"]: Refreshing state... [id=che2htl][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["sms_dlr"]: Refreshing state... [id=wvp8ohf][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bots_telephony_webhook_test"]: Refreshing state... [id=dd4vjhp][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["calendar_public_link_disable"]: Refreshing state... [id=tlvdqim][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["payments_config_put"]: Refreshing state... [id=w26dutc][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["campaigns_retry"]: Refreshing state... [id=crt47vp][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["catalog_config_get"]: Refreshing state... [id=qd4452v][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["billing_checkout"]: Refreshing state... [id=pgtnk0a][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["public_api_templates_create"]: Refreshing state... [id=6ui9fko][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["whatsapp_register"]: Refreshing state... [id=iunom0u][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["whatsapp_connect"]: Refreshing state... [id=48iy1ns][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["sms_webhook"]: Refreshing state... [id=cqhmko6][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bots_email_put"]: Refreshing state... [id=0zhy617][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["payments_requests_create"]: Refreshing state... [id=v6s1bw4][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["conversations_calls_active"]: Refreshing state... [id=6gl7ayk][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["public_calendar_bookings"]: Refreshing state... [id=jx1od50][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["calendar_public_link_rotate"]: Refreshing state... [id=ikg4lz4][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["flows_update"]: Refreshing state... [id=yjyocj2][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["conversations_release"]: Refreshing state... [id=i8tp7zd][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["flow_hooks_submit"]: Refreshing state... [id=dsseeo4][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["public_branding_by_host"]: Refreshing state... [id=mbujlyc][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["public_api_sms_get"]: Refreshing state... [id=qjha1ed][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["automations_get"]: Refreshing state... [id=4ssv6mt][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["automations_delete"]: Refreshing state... [id=uekk2s3][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["admin_cognito_users_list"]: Refreshing state... [id=d5pff18][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["catalog_products_put"]: Refreshing state... [id=ny0vm7s][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["api_keys_logs"]: Refreshing state... [id=jwy64h8][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["conversations_claim"]: Refreshing state... [id=qr3889r][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["admin_reseller_plan_defaults_put"]: Refreshing state... [id=m2x1idi][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["flows_hook_rotate"]: Refreshing state... [id=pn1htve][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bots_calling_settings_put"]: Refreshing state... [id=ykhh1b8][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["instagram_connect"]: Refreshing state... [id=ntcguhl][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["conversations_resolve"]: Refreshing state... [id=3ur567e][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["metrics_advisor_workload"]: Refreshing state... [id=1f9j9tp][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["payments_wompi_credentials_delete"]: Refreshing state... [id=vmitbur][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bots_ai_assistant_enable"]: Refreshing state... [id=j74vhhb][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["tenants_openai_key_get"]: Refreshing state... [id=58imcjr][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["metrics_inbox_sla"]: Refreshing state... [id=4ylp8lh][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["advisors_delete"]: Refreshing state... [id=mkd8cyi][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["campaigns_start"]: Refreshing state... [id=5ptvv11][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["contacts_list"]: Refreshing state... [id=ujdbogl][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["integrations_webhook_put"]: Refreshing state... [id=0eaddgg][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["contacts_export"]: Refreshing state... [id=geixk1c][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["calendar_bookings_list"]: Refreshing state... [id=mojvesl][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["api_keys_usage"]: Refreshing state... [id=9659b2u][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["macros_update"]: Refreshing state... [id=l4yys43][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bulk_send_get"]: Refreshing state... [id=nylgwvc][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["catalog_orders_list"]: Refreshing state... [id=9seir9n][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["calendar_enable"]: Refreshing state... [id=cuyzuia][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["public_api_sms_send"]: Refreshing state... [id=8649qfc][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bots_calling_settings_get"]: Refreshing state... [id=o1pro5m][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["whatsapp_status"]: Refreshing state... [id=s5ob8og][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["api_keys_create"]: Refreshing state... [id=nzjd9ps][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["calendar_waitlist_convert"]: Refreshing state... [id=45lefgm][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["meta_flows_publish"]: Refreshing state... [id=hjh91zo][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["conversations_note"]: Refreshing state... [id=h2zv13t][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["public_api_calls_settings_get"]: Refreshing state... [id=qqih5yu][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["campaigns_archive"]: Refreshing state... [id=pny6r0p][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["payments_enable"]: Refreshing state... [id=by30zhf][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["flows_delete"]: Refreshing state... [id=nma08jm][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["billing_providers"]: Refreshing state... [id=ycqgvqe][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["public_api_calls_get"]: Refreshing state... [id=enfezuf][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["tenants_branding_logo_upload"]: Refreshing state... [id=ywowf85][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["billing_wompi_confirm"]: Refreshing state... [id=tb1mbu5][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["admin_payments_list"]: Refreshing state... [id=ur7qvg7][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["conversations_delete"]: Refreshing state... [id=ypm32tu][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["flows_list"]: Refreshing state... [id=t81vcr1][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["catalog_link"]: Refreshing state... [id=3az4023][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bots_telephony_settings_put"]: Refreshing state... [id=ehsmvoi][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["flows_create"]: Refreshing state... [id=0ifyq0d][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bots_ai_assistant_put"]: Refreshing state... [id=0hlfoid][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["catalog_enable"]: Refreshing state... [id=tkuvafm][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["webhook_verify"]: Refreshing state... [id=qwdkwfh][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["flows_get"]: Refreshing state... [id=z7eqlwf][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["templates_create"]: Refreshing state... [id=1vy8if1][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["campaigns_failures"]: Refreshing state... [id=ga26pnn][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["macros_get"]: Refreshing state... [id=nium7kk][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bots_webchat_put"]: Refreshing state... [id=lc4mqjq][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bots_calling_permission_status"]: Refreshing state... [id=otbimle][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["tenants_openai_key_delete"]: Refreshing state... [id=pvxcbem][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bots_calling_calls_list"]: Refreshing state... [id=gtiy8ia][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["tenants_delete"]: Refreshing state... [id=clbebrd][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["tenants_list"]: Refreshing state... [id=nvbgg8c][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["metrics_get"]: Refreshing state... [id=d4j609f][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["public_api_templates_update"]: Refreshing state... [id=yxk11k2][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["knowledge_delete"]: Refreshing state... [id=zvv9p7n][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["calendar_waitlist_list"]: Refreshing state... [id=mw0xr0e][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["catalog_config_put"]: Refreshing state... [id=xrxknau][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["telegram_connect"]: Refreshing state... [id=gzbmjog][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["calendar_disable"]: Refreshing state... [id=7mnx28p][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bulk_send_list"]: Refreshing state... [id=hbn7itu][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["catalog_products_create"]: Refreshing state... [id=2rfjjdd][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bots_voicebot_rotate_key"]: Refreshing state... [id=cn2woqm][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["support_tickets_create"]: Refreshing state... [id=3c7ckq4][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["public_calendar_dates"]: Refreshing state... [id=odzudk5][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["admin_cognito_users_patch"]: Refreshing state... [id=8p53nzp][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["integrations_deliveries"]: Refreshing state... [id=5zj2mj2][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["admin_support_tickets_patch"]: Refreshing state... [id=e32l4tc][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["reseller_subaccounts_update"]: Refreshing state... [id=ay5z4f3][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["payments_requests_list"]: Refreshing state... [id=7aye7dk][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["tenants_openai_key_save"]: Refreshing state... [id=0g5wwtl][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["payments_wompi_webhook"]: Refreshing state... [id=nihvnmn][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["tenants_inbox_sla_update"]: Refreshing state... [id=gbgc3pj][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bots_calling_permission_request"]: Refreshing state... [id=muvmd31][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["public_api_messages"]: Refreshing state... [id=lfmzfo9][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["flows_validate"]: Refreshing state... [id=fv4uudp][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["macros_delete"]: Refreshing state... [id=3dzcaw0][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["campaigns_recipients"]: Refreshing state... [id=o8zdnk6][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["auth_portal_access"]: Refreshing state... [id=iakl99a][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bots_telephony_calls_recording"]: Refreshing state... [id=i3nynxf][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["public_calendar_waitlist"]: Refreshing state... [id=3blbrzg][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["voicebot_sessions_create"]: Refreshing state... [id=hxxiryu][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["tenants_accept_terms"]: Refreshing state... [id=za5diru][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["conversations_status"]: Refreshing state... [id=hllslpp][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["leads_lose"]: Refreshing state... [id=zd719ys][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["api_keys_delete"]: Refreshing state... [id=hzk9gz6][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["leads_delete"]: Refreshing state... [id=w9shg13][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["payments_wompi_credentials_get"]: Refreshing state... [id=i8klu4j][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["telephony_webhook"]: Refreshing state... [id=yu8bmfh][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["tenants_get"]: Refreshing state... [id=eq4u4rt][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["admin_reseller_domain_activate"]: Refreshing state... [id=u0xrjfc][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["webchat_call_accept"]: Refreshing state... [id=roq0beq][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["metrics_sales"]: Refreshing state... [id=8vid1ip][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["tenants_update"]: Refreshing state... [id=j2za3kg][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["flows_events"]: Refreshing state... [id=ol6v6uu][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["metrics_marketing"]: Refreshing state... [id=zo5whsq][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["catalog_orders_patch"]: Refreshing state... [id=rvonlj6][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["conversations_quotations_create"]: Refreshing state... [id=g4kjfkq][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["calendar_config_put"]: Refreshing state... [id=g79lpdl][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["webchat_call_token"]: Refreshing state... [id=2ke9b13][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["templates_list"]: Refreshing state... [id=mtr5xs9][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["automations_disable"]: Refreshing state... [id=2pk8rfj][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["telephony_numbers"]: Refreshing state... [id=hjpxux6][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["tenants_inbox_sla_get"]: Refreshing state... [id=3ggrirk][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["billing_usage"]: Refreshing state... [id=6fg6mte][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["public_api_calls_create"]: Refreshing state... [id=k08wxxb][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["calendar_bookings_create"]: Refreshing state... [id=pdr99au][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["webchat_messages_send"]: Refreshing state... [id=j0hl370][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["flows_hook_get"]: Refreshing state... [id=8ixms7q][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bots_telephony_settings_get"]: Refreshing state... [id=waslunu][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["automations_create"]: Refreshing state... [id=ek1yv1h][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["campaigns_delete"]: Refreshing state... [id=pa69l3n][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["catalog_products_list"]: Refreshing state... [id=gajyhrc][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["meta_flows_deprecate"]: Refreshing state... [id=axziqg2][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["admin_reseller_plan_defaults_get"]: Refreshing state... [id=1g85tdl][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["catalog_sync"]: Refreshing state... [id=h9q5zuj][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["email_inbound"]: Refreshing state... [id=9fv6nvm][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["flows_enable"]: Refreshing state... [id=jh4zxrn][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["tenants_branding_get"]: Refreshing state... [id=zytxwyt][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["public_api_calls_action"]: Refreshing state... [id=x4zy7dj][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bots_calling_initiate"]: Refreshing state... [id=7zumg6p][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["conversations_handoff"]: Refreshing state... [id=fg6ewuu][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["templates_send"]: Refreshing state... [id=q9xf6b5][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["public_api_calls_permission"]: Refreshing state... [id=mqsjs6h][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["billing_wompi_webhook"]: Refreshing state... [id=c3azt0j][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["calendar_public_link_get"]: Refreshing state... [id=1z0utd1][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["payments_requests_get"]: Refreshing state... [id=dnv709d][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["conversations_wa_link"]: Refreshing state... [id=39yq544][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["meta_flows_test_send"]: Refreshing state... [id=kz9oi62][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["tenants_onboarding"]: Refreshing state... [id=5vhj50e][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["contacts_delete"]: Refreshing state... [id=8dgivou][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["reseller_subaccounts_create"]: Refreshing state... [id=cl63yxd][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["billing_webhook"]: Refreshing state... [id=igrjzf7][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["api_keys_update"]: Refreshing state... [id=z8w8fbv][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["macros_create"]: Refreshing state... [id=rjfmiub][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["webchat_call_decline"]: Refreshing state... [id=pqsc815][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["automations_list"]: Refreshing state... [id=fo1drbv][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["telephony_voices"]: Refreshing state... [id=wo2oglg][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["billing_transaction"]: Refreshing state... [id=aktfwr7][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bots_ai_assistant_disable"]: Refreshing state... [id=b7qq4mj][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["conversations_bulk_handoff"]: Refreshing state... [id=pxopvk8][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["advisors_get"]: Refreshing state... [id=ndf6628][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["apps_list"]: Refreshing state... [id=cz0hxfk][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["contacts_update"]: Refreshing state... [id=lovx14i][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["advisors_list"]: Refreshing state... [id=5y7twlg][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["flow_runs_get"]: Refreshing state... [id=eqlyp7v][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["integrations_webhook_test"]: Refreshing state... [id=c0zh7jf][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["tenants_branding_update"]: Refreshing state... [id=wekwxbe][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bots_update"]: Refreshing state... [id=7rlgutl][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["messenger_connect"]: Refreshing state... [id=s0bzcyc][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["meta_flows_get"]: Refreshing state... [id=w1pg0gt][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["admin_support_tickets_list"]: Refreshing state... [id=qs3ofu0][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["metrics_leads"]: Refreshing state... [id=d4f2y1t][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["integrations_webhook_get"]: Refreshing state... [id=pf1dhnl][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["telegram_webhook"]: Refreshing state... [id=5epxr4p][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["advisors_update"]: Refreshing state... [id=wodw66a][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bots_calling_action"]: Refreshing state... [id=8d3e164][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["leads_convert"]: Refreshing state... [id=wlrrl82][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["webchat_sessions_create"]: Refreshing state... [id=t17jzhe][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bots_create"]: Refreshing state... [id=e1g4ckf][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["knowledge_list"]: Refreshing state... [id=mezdoj4][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["catalog_products_get"]: Refreshing state... [id=89a831n][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["billing_status"]: Refreshing state... [id=3ypxpra][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["calendar_waitlist_patch"]: Refreshing state... [id=t28wqwb][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["knowledge_index"]: Refreshing state... [id=emnks8q][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["webchat_messages_poll"]: Refreshing state... [id=kpwfk06][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["tenants_create"]: Refreshing state... [id=7pk2wum][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["campaigns_metrics"]: Refreshing state... [id=ys7ftoc][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["metrics_calling"]: Refreshing state... [id=b6rz61u][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["macros_list"]: Refreshing state... [id=e8zbcdt][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["public_api_templates_delete"]: Refreshing state... [id=gjkbfde][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["catalog_products_image"]: Refreshing state... [id=3x83n62][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["conversations_quotations_list"]: Refreshing state... [id=kva2egr][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["campaigns_update"]: Refreshing state... [id=rzgwuho][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bots_calling_calls_get"]: Refreshing state... [id=owyrnyr][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["campaigns_get"]: Refreshing state... [id=xksuiui][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["catalog_products_delete"]: Refreshing state... [id=07ssqh0][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["campaigns_list"]: Refreshing state... [id=g2ufa55][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["public_api_templates_list"]: Refreshing state... [id=3ci0bqi][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["tenants_report_schedule_update"]: Refreshing state... [id=sgmde98][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["tenants_report_schedule_send_now"]: Refreshing state... [id=sfiwrvh][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["reseller_domain_put"]: Refreshing state... [id=cr5slja][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["tenants_report_schedule_get"]: Refreshing state... [id=m53x8y8][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["meta_flows_create"]: Refreshing state... [id=m8geaoa][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["payments_config_get"]: Refreshing state... [id=xgoce74][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["api_keys_list"]: Refreshing state... [id=8obccvb][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bots_delete"]: Refreshing state... [id=zo4tfdk][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["conversations_list"]: Refreshing state... [id=27ostag][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["tenants_legal"]: Refreshing state... [id=w6bxhha][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["support_tickets_list"]: Refreshing state... [id=ntwra0v][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["meta_flows_delete"]: Refreshing state... [id=lh93oqf][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["campaigns_export"]: Refreshing state... [id=az3p6mc][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["reseller_subaccounts_get"]: Refreshing state... [id=1n8vm7f][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["conversations_calls_end"]: Refreshing state... [id=8v6h8yr][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["payments_wompi_credentials_put"]: Refreshing state... [id=wigxc1k][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["templates_update"]: Refreshing state... [id=o9kef9r][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["meta_flows_responses"]: Refreshing state... [id=llsvk9f][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bulk_send_failures"]: Refreshing state... [id=pat0c88][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["calendar_slots"]: Refreshing state... [id=i21i0va][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["public_calendar_slots"]: Refreshing state... [id=d3x31ck][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["bulk_send_create"]: Refreshing state... [id=utf8bzs][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["reseller_subaccounts_assume"]: Refreshing state... [id=znydszr][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["contacts_get"]: Refreshing state... [id=fvq5yso][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["contacts_import"]: Refreshing state... [id=ykww0r1][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["leads_list"]: Refreshing state... [id=wllmy2h][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["automations_create"]: Refreshing state... [id=u0azsdn][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["catalog_products_delete"]: Refreshing state... [id=djzj2im][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["tenants_openai_key_get"]: Refreshing state... [id=7flb8b1][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["calendar_waitlist_patch"]: Refreshing state... [id=9h52fo4][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["webchat_call_token"]: Refreshing state... [id=fyrejqi][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["sms_webhook"]: Refreshing state... [id=h1we4vj][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["catalog_sync"]: Refreshing state... [id=bxd4kls][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bulk_send_list"]: Refreshing state... [id=p9u7ykh][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["tenants_openai_key_delete"]: Refreshing state... [id=gvomlp6][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["public_api_templates_delete"]: Refreshing state... [id=ut6q3t2][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["automations_get"]: Refreshing state... [id=a912fpl][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["contacts_update"]: Refreshing state... [id=mrg3ohp][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["conversations_note"]: Refreshing state... [id=thdyhh6][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["catalog_link"]: Refreshing state... [id=zd5extl][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["public_api_calls_settings_get"]: Refreshing state... [id=ivikb86][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["flows_disable"]: Refreshing state... [id=92jttcd][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["admin_support_tickets_list"]: Refreshing state... [id=a8hovzp][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["catalog_orders_list"]: Refreshing state... [id=68v35kh][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["public_api_templates_list"]: Refreshing state... [id=ahavgjp][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["tenants_legal"]: Refreshing state... [id=ylweyv6][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["meta_flows_update"]: Refreshing state... [id=wwrlmat][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bots_telephony_calls_create"]: Refreshing state... [id=zskup4i][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["templates_delete"]: Refreshing state... [id=1m8q3sf][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["meta_flows_list"]: Refreshing state... [id=zonw47t][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["catalog_products_list"]: Refreshing state... [id=a6ladif][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["calendar_bookings_list"]: Refreshing state... [id=c4xh4o2][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["contacts_export"]: Refreshing state... [id=xcjg2lr][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["contacts_import"]: Refreshing state... [id=6t0lkm9][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["telephony_webhook"]: Refreshing state... [id=rz9jmtm][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["campaigns_get"]: Refreshing state... [id=s23tace][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["metrics_calling"]: Refreshing state... [id=5c34jet][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["webhook_receive"]: Refreshing state... [id=eqtl9jt][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["reseller_domain_get"]: Refreshing state... [id=cwin89p][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["reseller_subaccounts_list"]: Refreshing state... [id=nb96omt][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["templates_list"]: Refreshing state... [id=r3np0hj][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["tenants_create"]: Refreshing state... [id=kur84c0][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["payments_wompi_credentials_delete"]: Refreshing state... [id=plf65n7][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["telegram_webhook"]: Refreshing state... [id=r6ufxwu][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["conversations_calls_active"]: Refreshing state... [id=k0cwch0][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["tenants_get"]: Refreshing state... [id=7l2iyps][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["admin_reseller_plan_defaults_put"]: Refreshing state... [id=ff2cptl][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["payments_config_get"]: Refreshing state... [id=v9ftdjd][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["tenants_onboarding"]: Refreshing state... [id=60wfm5k][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bots_voicebot_rotate_key"]: Refreshing state... [id=r3eh4vp][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["macros_create"]: Refreshing state... [id=pv8katb][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["conversations_delete"]: Refreshing state... [id=92rqpp9][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bots_calling_calls_list"]: Refreshing state... [id=0urjpq7][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["macros_list"]: Refreshing state... [id=hc9fln7][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["flows_list"]: Refreshing state... [id=vj031g0][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bots_telephony_settings_get"]: Refreshing state... [id=iny43nb][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bots_email_put"]: Refreshing state... [id=bysqmn9][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["knowledge_upload_url"]: Refreshing state... [id=vm4nfyb][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["knowledge_index"]: Refreshing state... [id=5125xvq][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bots_calling_settings_get"]: Refreshing state... [id=ft4k9rp][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["campaigns_delete"]: Refreshing state... [id=i9ct6xp][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bots_sms_put"]: Refreshing state... [id=zgsfb7i][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["catalog_products_create"]: Refreshing state... [id=dpn9yr8][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["automations_list"]: Refreshing state... [id=0a2d2ys][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["conversations_handoff"]: Refreshing state... [id=9kqmzud][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["conversations_bulk_handoff"]: Refreshing state... [id=9vc65u3][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["catalog_orders_patch"]: Refreshing state... [id=ekbn2fk][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["catalog_products_image"]: Refreshing state... [id=jfdzcy2][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["campaigns_export"]: Refreshing state... [id=x3q0ykm][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["conversations_list"]: Refreshing state... [id=af3as19][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["public_calendar_slots"]: Refreshing state... [id=4gt329e][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["api_keys_delete"]: Refreshing state... [id=ghcu632][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["payments_config_put"]: Refreshing state... [id=x9n7viu][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bulk_send_get"]: Refreshing state... [id=fe8v7yp][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["api_keys_logs"]: Refreshing state... [id=thgsa62][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["api_keys_list"]: Refreshing state... [id=6lm6nd6][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["instagram_connect"]: Refreshing state... [id=d7dwc3g][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["public_calendar_info"]: Refreshing state... [id=uvk3bq0][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["conversations_copilot"]: Refreshing state... [id=4c3myp1][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["webchat_messages_poll"]: Refreshing state... [id=egpc51q][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["meta_flows_get"]: Refreshing state... [id=yaotzhj][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["catalog_config_put"]: Refreshing state... [id=zerxawr][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["reseller_subaccounts_assume"]: Refreshing state... [id=dx41ovl][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["automations_disable"]: Refreshing state... [id=0csym6h][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["macros_get"]: Refreshing state... [id=w2teb9u][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["advisors_update"]: Refreshing state... [id=nwmbotf][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["tenants_inbox_sla_get"]: Refreshing state... [id=7xu05r2][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bots_ai_assistant_put"]: Refreshing state... [id=fyfltqc][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["metrics_marketing"]: Refreshing state... [id=m9jjzb2][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bots_telephony_calls_recording"]: Refreshing state... [id=xhjtwp2][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["tenants_report_schedule_get"]: Refreshing state... [id=prs4f0i][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["billing_transaction"]: Refreshing state... [id=dn8j5b4][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["billing_portal"]: Refreshing state... [id=6jfnsc8][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["metrics_leads"]: Refreshing state... [id=etn5qat][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["voicebot_sessions_end"]: Refreshing state... [id=pec08qf][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bots_create"]: Refreshing state... [id=4ud10ev][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["admin_payments_list"]: Refreshing state... [id=x7jhf6a][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bots_calling_initiate"]: Refreshing state... [id=qaesm1p][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bots_calling_permission_status"]: Refreshing state... [id=v6rkjcc][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bots_telephony_calls_list"]: Refreshing state... [id=7enbsta][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["integrations_webhook_get"]: Refreshing state... [id=z4z7opq][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["admin_cognito_users_patch"]: Refreshing state... [id=tybh0jh][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["metrics_inbox_sla"]: Refreshing state... [id=30izfpn][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bots_update"]: Refreshing state... [id=9b55ksd][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["calendar_config_get"]: Refreshing state... [id=qwg1syi][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["webchat_sessions_create"]: Refreshing state... [id=r2iod7c][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["leads_lose"]: Refreshing state... [id=ptf4d4i][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["meta_flows_responses"]: Refreshing state... [id=vv55463][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["payments_disable"]: Refreshing state... [id=fvucker][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["flows_update"]: Refreshing state... [id=kujc6ju][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["tenants_branding_update"]: Refreshing state... [id=2tmx588][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["reseller_subaccounts_get"]: Refreshing state... [id=2owi5ts][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["billing_wompi_confirm"]: Refreshing state... [id=sewizco][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["auth_portal_access"]: Refreshing state... [id=6a9bdhg][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["api_keys_create"]: Refreshing state... [id=548k3fb][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["templates_create"]: Refreshing state... [id=czoj3wd][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["calendar_config_put"]: Refreshing state... [id=1yuk498][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["billing_usage"]: Refreshing state... [id=lazo6xo][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["catalog_meta_catalogs"]: Refreshing state... [id=t378ji5][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["whatsapp_status"]: Refreshing state... [id=hjw2gbn][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["meta_flows_test_send"]: Refreshing state... [id=s0tz8b3][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["admin_cognito_users_list"]: Refreshing state... [id=b9357u6][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["calendar_bookings_patch"]: Refreshing state... [id=62hr186][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["support_tickets_list"]: Refreshing state... [id=3k8scr6][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["integrations_deliveries"]: Refreshing state... [id=355wkkp][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bots_list"]: Refreshing state... [id=mx7th8s][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["reseller_subaccounts_create"]: Refreshing state... [id=buchzx1][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["conversations_claim"]: Refreshing state... [id=md4e8g7][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["public_branding_by_host"]: Refreshing state... [id=5y9v8f6][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["flows_hook_rotate"]: Refreshing state... [id=gv5uw7l][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["catalog_products_image_finalize"]: Refreshing state... [id=40lfcck][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["campaigns_recipients"]: Refreshing state... [id=f7d7tdi][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["contacts_delete"]: Refreshing state... [id=t6l2g9q][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["conversations_send_message"]: Refreshing state... [id=gtn60hl][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["calendar_public_link_disable"]: Refreshing state... [id=8583jg1][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bots_telephony_settings_put"]: Refreshing state... [id=c7iyak0][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["admin_reseller_plan_defaults_get"]: Refreshing state... [id=yo37m35][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["macros_delete"]: Refreshing state... [id=0ah6zwl][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["campaigns_list"]: Refreshing state... [id=vibh2ln][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["calendar_public_link_rotate"]: Refreshing state... [id=dr07cv6][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bots_telephony_calls_events"]: Refreshing state... [id=3lgp8uu][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["catalog_orders_get"]: Refreshing state... [id=q8znlzf][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["payments_requests_list"]: Refreshing state... [id=qf3dr0j][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["knowledge_list"]: Refreshing state... [id=kja4se8][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["campaigns_retry"]: Refreshing state... [id=ove7j9e][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["public_calendar_dates"]: Refreshing state... [id=3klr8ic][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["webchat_call_decline"]: Refreshing state... [id=oe2eaee][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bots_ai_assistant_get"]: Refreshing state... [id=wts61i7][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["campaigns_start"]: Refreshing state... [id=42r1uii][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["webchat_call_accept"]: Refreshing state... [id=oxui2jc][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["messenger_connect"]: Refreshing state... [id=s2ntrj3][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bots_telephony_webhook_deliveries"]: Refreshing state... [id=oculkea][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["public_api_sms_send"]: Refreshing state... [id=oyz7ojb][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["flow_runs_get"]: Refreshing state... [id=nk0bqhm][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bots_webchat_put"]: Refreshing state... [id=t4cb8ag][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["calendar_bookings_create"]: Refreshing state... [id=q50xzv6][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["conversations_calls_create"]: Refreshing state... [id=md77xye][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["tenants_accept_terms"]: Refreshing state... [id=99ojq9t][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["payments_enable"]: Refreshing state... [id=sk5c111][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["reseller_domain_put"]: Refreshing state... [id=4csjil3][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["meta_flows_create"]: Refreshing state... [id=sh8xx4m][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["conversations_get"]: Refreshing state... [id=xtqyz6k][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["conversations_calls_token"]: Refreshing state... [id=wf0cmo0][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["flows_validate"]: Refreshing state... [id=ze42jn9][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["catalog_products_get"]: Refreshing state... [id=9t34rue][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["billing_status"]: Refreshing state... [id=r11jrbp][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["public_api_calls_permission_status"]: Refreshing state... [id=drwqpmh][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["macros_update"]: Refreshing state... [id=pwv0x61][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["flows_delete"]: Refreshing state... [id=wbpviom][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["conversations_quotations_list"]: Refreshing state... [id=jnmmdsu][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["webhook_verify"]: Refreshing state... [id=r6pcaei][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bots_calling_calls_get"]: Refreshing state... [id=lw2k9md][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["apps_list"]: Refreshing state... [id=ang12hl][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["leads_delete"]: Refreshing state... [id=2t580l0][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["email_inbound"]: Refreshing state... [id=glg412u][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["support_tickets_create"]: Refreshing state... [id=lxoczpd][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["metrics_sales"]: Refreshing state... [id=wwyeoa5][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["payments_wompi_credentials_put"]: Refreshing state... [id=7wyg31b][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["billing_webhook"]: Refreshing state... [id=i2keqpq][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["webchat_messages_send"]: Refreshing state... [id=dx6d98b][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["calendar_enable"]: Refreshing state... [id=j5axcyl][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["metrics_export"]: Refreshing state... [id=as8voja][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["public_api_templates_update"]: Refreshing state... [id=6f4fu2b][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["tenants_report_schedule_send_now"]: Refreshing state... [id=uo48o25][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["public_api_templates_create"]: Refreshing state... [id=l2zanb7][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["campaigns_metrics"]: Refreshing state... [id=o7qzuq7][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["calendar_slots"]: Refreshing state... [id=bi472fe][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["campaigns_clone"]: Refreshing state... [id=osz5d1l][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["tenants_report_schedule_update"]: Refreshing state... [id=3auurbe][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["advisors_delete"]: Refreshing state... [id=essj84d][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["public_calendar_bookings"]: Refreshing state... [id=wgwlhyt][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["telegram_connect"]: Refreshing state... [id=kuamq74][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["templates_send"]: Refreshing state... [id=ae7jkx9][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["metrics_get"]: Refreshing state... [id=s31dszb][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["conversations_calls_end"]: Refreshing state... [id=abt0rhc][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["telephony_voices"]: Refreshing state... [id=vhubjv1][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["conversations_resolve"]: Refreshing state... [id=2eskyzt][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["leads_update"]: Refreshing state... [id=qgjlq71][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["payments_wompi_credentials_get"]: Refreshing state... [id=gy19axk][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["admin_support_tickets_patch"]: Refreshing state... [id=9dhcra9][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["conversations_release"]: Refreshing state... [id=198aeun][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["payments_requests_create"]: Refreshing state... [id=rgeh1n8][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["flows_enable"]: Refreshing state... [id=1bbbxxr][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["flows_hook_get"]: Refreshing state... [id=lk719s0][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bots_voicebot_put"]: Refreshing state... [id=umpprc6][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bots_calling_permission_request"]: Refreshing state... [id=sojkzf6][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["sms_dlr"]: Refreshing state... [id=o0xz3jp][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["api_keys_update"]: Refreshing state... [id=27arom7][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bots_calling_settings_put"]: Refreshing state... [id=hbso6i9][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["public_api_calls_get"]: Refreshing state... [id=i8pt603][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["billing_checkout"]: Refreshing state... [id=3azne93][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["catalog_enable"]: Refreshing state... [id=ijdoccp][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["leads_list"]: Refreshing state... [id=ufxewv5][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["meta_flows_delete"]: Refreshing state... [id=sa7zx74][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["public_api_sms_get"]: Refreshing state... [id=x2rqreq][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["tenants_list"]: Refreshing state... [id=40hfere][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["leads_convert"]: Refreshing state... [id=wwfkryt][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bots_ai_assistant_disable"]: Refreshing state... [id=ckqvaio][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["whatsapp_connect"]: Refreshing state... [id=ethiggp][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["calendar_public_link_enable"]: Refreshing state... [id=rkhj05n][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["conversations_wa_link"]: Refreshing state... [id=05wiqei][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["tenants_branding_logo_delete"]: Refreshing state... [id=4jfihns][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["tenants_openai_key_save"]: Refreshing state... [id=pudnc55][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["contacts_create"]: Refreshing state... [id=trkxeqd][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["integrations_webhook_put"]: Refreshing state... [id=rwi48gr][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["campaigns_update"]: Refreshing state... [id=940gljg][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["public_api_calls_permission"]: Refreshing state... [id=lk3jruk][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["campaigns_resume"]: Refreshing state... [id=kzqbr9c][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["calendar_waitlist_convert"]: Refreshing state... [id=mf922qr][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["metrics_advisor_workload"]: Refreshing state... [id=j8p01dn][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["templates_update"]: Refreshing state... [id=jcbanwj][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["public_api_calls_action"]: Refreshing state... [id=u3av8xf][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["automations_update"]: Refreshing state... [id=9dg0izk][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["payments_requests_get"]: Refreshing state... [id=4fywcf6][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["tenants_branding_get"]: Refreshing state... [id=nph7xxd][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["flows_get"]: Refreshing state... [id=gbt6joe][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bots_telephony_calls_get"]: Refreshing state... [id=2elez27][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["payments_wompi_webhook"]: Refreshing state... [id=mltou45][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["billing_providers"]: Refreshing state... [id=kd2agol][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["integrations_webhook_test"]: Refreshing state... [id=3xghceh][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["tenants_inbox_sla_update"]: Refreshing state... [id=fcn20fp][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["advisors_list"]: Refreshing state... [id=y0udon2][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["public_api_messages"]: Refreshing state... [id=ihdjpe0][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["calendar_waitlist_list"]: Refreshing state... [id=nw7mvrb][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["tenants_update"]: Refreshing state... [id=284z1li][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["public_calendar_waitlist"]: Refreshing state... [id=e14cb8p][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bots_telephony_calls_end"]: Refreshing state... [id=filnzia][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bots_ai_assistant_enable"]: Refreshing state... [id=916zpad][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["catalog_disable"]: Refreshing state... [id=07bk84p][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["telephony_numbers"]: Refreshing state... [id=37lq9j0][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["public_api_calls_create"]: Refreshing state... [id=ui5tea0][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bots_webchat_rotate_key"]: Refreshing state... [id=s8h0056][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["automations_delete"]: Refreshing state... [id=z5afh5m][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["leads_get"]: Refreshing state... [id=3wd3scu][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["calendar_disable"]: Refreshing state... [id=e7elrsh][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["flows_create"]: Refreshing state... [id=gpb0y37][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["advisors_get"]: Refreshing state... [id=4djkwjf][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["reseller_subaccounts_update"]: Refreshing state... [id=0hbvut5][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["conversations_status"]: Refreshing state... [id=712y30v][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["conversations_quotations_create"]: Refreshing state... [id=8ipvpmi][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["advisors_create"]: Refreshing state... [id=xy8vmi5][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["meta_flows_publish"]: Refreshing state... [id=u3vbdiv][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["automations_enable"]: Refreshing state... [id=4j14126][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["tenants_branding_logo_upload"]: Refreshing state... [id=f6seadu][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bots_telephony_webhook_test"]: Refreshing state... [id=5h7yht8][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bulk_send_failures"]: Refreshing state... [id=n370n4q][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["knowledge_delete"]: Refreshing state... [id=fhvvyzr][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["admin_reseller_domain_activate"]: Refreshing state... [id=6fyrhac][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["calendar_public_link_get"]: Refreshing state... [id=brnsyu0][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["whatsapp_register"]: Refreshing state... [id=6z3mp7n][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["contacts_list"]: Refreshing state... [id=0gddj9u][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["flows_runs"]: Refreshing state... [id=86xdmbq][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["campaigns_create"]: Refreshing state... [id=dm97763][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bots_get"]: Refreshing state... [id=vzn5vmi][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bots_delete"]: Refreshing state... [id=xet4mv9][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["whatsapp_connect_manual"]: Refreshing state... [id=g8nbvai][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bulk_send_create"]: Refreshing state... [id=2rfm8le][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["campaigns_failures"]: Refreshing state... [id=wze5ibr][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["catalog_config_get"]: Refreshing state... [id=bxcfjsa][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["flows_events"]: Refreshing state... [id=4vjahga][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["voicebot_sessions_create"]: Refreshing state... [id=t2szgl5][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["campaigns_pause"]: Refreshing state... [id=qc3t3rf][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["contacts_get"]: Refreshing state... [id=iv5tvg9][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["tenants_delete"]: Refreshing state... [id=dcdmk58][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["public_api_calls_settings_put"]: Refreshing state... [id=j184bis][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["flow_hooks_submit"]: Refreshing state... [id=880e1m8][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["campaigns_archive"]: Refreshing state... [id=rmiv4m7][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["meta_flows_deprecate"]: Refreshing state... [id=5tczzg6][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["bots_calling_action"]: Refreshing state... [id=z3s7upo][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["billing_wompi_webhook"]: Refreshing state... [id=9i081dl][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["api_keys_usage"]: Refreshing state... [id=vgtijlg][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_route.routes["catalog_products_put"]: Refreshing state... [id=3gm79u3][0m
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  [32m+[0m create[0m
+  [33m~[0m update in-place[0m
+  [31m-[0m destroy[0m
+
+Terraform will perform the following actions:
+
+[1m  # module.amplify.aws_amplify_app.frontend[0m will be updated in-place
+[0m  [33m~[0m[0m resource "aws_amplify_app" "frontend" {
+      [33m~[0m[0m access_token                  = (sensitive value)
+      [33m~[0m[0m environment_variables         = {
+          [33m~[0m[0m "NEXT_PUBLIC_GOOGLE_AUTH_ENABLED"            = (sensitive value)
+            [90m# (11 unchanged elements hidden)[0m[0m
+        }
+        id                            = "d5sepmwbbwly9"
+        name                          = "chatbot-platform-dev"
+        tags                          = {
+            "Environment" = "dev"
+            "ManagedBy"   = "terraform"
+            "Project"     = "chatbot-platform"
+        }
+        [90m# (17 unchanged attributes hidden)[0m[0m
+
+        [90m# (1 unchanged block hidden)[0m[0m
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_api.main[0m will be updated in-place
+[0m  [33m~[0m[0m resource "aws_apigatewayv2_api" "main" {
+        id                           = "ccti8rpoj1"
+        name                         = "chatbot-platform-dev"
+        tags                         = {
+            "Environment" = "dev"
+            "ManagedBy"   = "terraform"
+            "Project"     = "chatbot-platform"
+        }
+        [90m# (11 unchanged attributes hidden)[0m[0m
+
+      [33m~[0m[0m cors_configuration {
+          [33m~[0m[0m allow_origins     = [
+              [32m+[0m[0m "https://app.integracionessh.lat",
+              [32m+[0m[0m "https://develop.integracionessh.lat",
+              [32m+[0m[0m "https://omnichannel.telcoredsas.com",
+                [90m# (3 unchanged elements hidden)[0m[0m
+            ]
+            [90m# (5 unchanged attributes hidden)[0m[0m
+        }
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_integration.integrations["conversations_message_attachment"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_integration" "integrations" {
+      [32m+[0m[0m api_id                                    = "ccti8rpoj1"
+      [32m+[0m[0m connection_type                           = "INTERNET"
+      [32m+[0m[0m id                                        = (known after apply)
+      [32m+[0m[0m integration_response_selection_expression = (known after apply)
+      [32m+[0m[0m integration_type                          = "AWS_PROXY"
+      [32m+[0m[0m integration_uri                           = "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:979054355542:function:chatbot-platform-dev-conversations/invocations"
+      [32m+[0m[0m payload_format_version                    = "2.0"
+      [32m+[0m[0m timeout_milliseconds                      = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_integration.integrations["conversations_message_html"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_integration" "integrations" {
+      [32m+[0m[0m api_id                                    = "ccti8rpoj1"
+      [32m+[0m[0m connection_type                           = "INTERNET"
+      [32m+[0m[0m id                                        = (known after apply)
+      [32m+[0m[0m integration_response_selection_expression = (known after apply)
+      [32m+[0m[0m integration_type                          = "AWS_PROXY"
+      [32m+[0m[0m integration_uri                           = "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:979054355542:function:chatbot-platform-dev-conversations/invocations"
+      [32m+[0m[0m payload_format_version                    = "2.0"
+      [32m+[0m[0m timeout_milliseconds                      = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_integration.integrations["email_imap_connect"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_integration" "integrations" {
+      [32m+[0m[0m api_id                                    = "ccti8rpoj1"
+      [32m+[0m[0m connection_type                           = "INTERNET"
+      [32m+[0m[0m id                                        = (known after apply)
+      [32m+[0m[0m integration_response_selection_expression = (known after apply)
+      [32m+[0m[0m integration_type                          = "AWS_PROXY"
+      [32m+[0m[0m integration_uri                           = (known after apply)
+      [32m+[0m[0m payload_format_version                    = "2.0"
+      [32m+[0m[0m timeout_milliseconds                      = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_integration.integrations["email_imap_disconnect"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_integration" "integrations" {
+      [32m+[0m[0m api_id                                    = "ccti8rpoj1"
+      [32m+[0m[0m connection_type                           = "INTERNET"
+      [32m+[0m[0m id                                        = (known after apply)
+      [32m+[0m[0m integration_response_selection_expression = (known after apply)
+      [32m+[0m[0m integration_type                          = "AWS_PROXY"
+      [32m+[0m[0m integration_uri                           = (known after apply)
+      [32m+[0m[0m payload_format_version                    = "2.0"
+      [32m+[0m[0m timeout_milliseconds                      = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_integration.integrations["email_imap_test"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_integration" "integrations" {
+      [32m+[0m[0m api_id                                    = "ccti8rpoj1"
+      [32m+[0m[0m connection_type                           = "INTERNET"
+      [32m+[0m[0m id                                        = (known after apply)
+      [32m+[0m[0m integration_response_selection_expression = (known after apply)
+      [32m+[0m[0m integration_type                          = "AWS_PROXY"
+      [32m+[0m[0m integration_uri                           = (known after apply)
+      [32m+[0m[0m payload_format_version                    = "2.0"
+      [32m+[0m[0m timeout_milliseconds                      = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_campaigns_create"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_integration" "integrations" {
+      [32m+[0m[0m api_id                                    = "ccti8rpoj1"
+      [32m+[0m[0m connection_type                           = "INTERNET"
+      [32m+[0m[0m id                                        = (known after apply)
+      [32m+[0m[0m integration_response_selection_expression = (known after apply)
+      [32m+[0m[0m integration_type                          = "AWS_PROXY"
+      [32m+[0m[0m integration_uri                           = (known after apply)
+      [32m+[0m[0m payload_format_version                    = "2.0"
+      [32m+[0m[0m timeout_milliseconds                      = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_campaigns_delete"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_integration" "integrations" {
+      [32m+[0m[0m api_id                                    = "ccti8rpoj1"
+      [32m+[0m[0m connection_type                           = "INTERNET"
+      [32m+[0m[0m id                                        = (known after apply)
+      [32m+[0m[0m integration_response_selection_expression = (known after apply)
+      [32m+[0m[0m integration_type                          = "AWS_PROXY"
+      [32m+[0m[0m integration_uri                           = (known after apply)
+      [32m+[0m[0m payload_format_version                    = "2.0"
+      [32m+[0m[0m timeout_milliseconds                      = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_campaigns_get"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_integration" "integrations" {
+      [32m+[0m[0m api_id                                    = "ccti8rpoj1"
+      [32m+[0m[0m connection_type                           = "INTERNET"
+      [32m+[0m[0m id                                        = (known after apply)
+      [32m+[0m[0m integration_response_selection_expression = (known after apply)
+      [32m+[0m[0m integration_type                          = "AWS_PROXY"
+      [32m+[0m[0m integration_uri                           = (known after apply)
+      [32m+[0m[0m payload_format_version                    = "2.0"
+      [32m+[0m[0m timeout_milliseconds                      = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_campaigns_list"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_integration" "integrations" {
+      [32m+[0m[0m api_id                                    = "ccti8rpoj1"
+      [32m+[0m[0m connection_type                           = "INTERNET"
+      [32m+[0m[0m id                                        = (known after apply)
+      [32m+[0m[0m integration_response_selection_expression = (known after apply)
+      [32m+[0m[0m integration_type                          = "AWS_PROXY"
+      [32m+[0m[0m integration_uri                           = (known after apply)
+      [32m+[0m[0m payload_format_version                    = "2.0"
+      [32m+[0m[0m timeout_milliseconds                      = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_campaigns_put"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_integration" "integrations" {
+      [32m+[0m[0m api_id                                    = "ccti8rpoj1"
+      [32m+[0m[0m connection_type                           = "INTERNET"
+      [32m+[0m[0m id                                        = (known after apply)
+      [32m+[0m[0m integration_response_selection_expression = (known after apply)
+      [32m+[0m[0m integration_type                          = "AWS_PROXY"
+      [32m+[0m[0m integration_uri                           = (known after apply)
+      [32m+[0m[0m payload_format_version                    = "2.0"
+      [32m+[0m[0m timeout_milliseconds                      = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_campaigns_send"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_integration" "integrations" {
+      [32m+[0m[0m api_id                                    = "ccti8rpoj1"
+      [32m+[0m[0m connection_type                           = "INTERNET"
+      [32m+[0m[0m id                                        = (known after apply)
+      [32m+[0m[0m integration_response_selection_expression = (known after apply)
+      [32m+[0m[0m integration_type                          = "AWS_PROXY"
+      [32m+[0m[0m integration_uri                           = (known after apply)
+      [32m+[0m[0m payload_format_version                    = "2.0"
+      [32m+[0m[0m timeout_milliseconds                      = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_campaigns_send_test"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_integration" "integrations" {
+      [32m+[0m[0m api_id                                    = "ccti8rpoj1"
+      [32m+[0m[0m connection_type                           = "INTERNET"
+      [32m+[0m[0m id                                        = (known after apply)
+      [32m+[0m[0m integration_response_selection_expression = (known after apply)
+      [32m+[0m[0m integration_type                          = "AWS_PROXY"
+      [32m+[0m[0m integration_uri                           = (known after apply)
+      [32m+[0m[0m payload_format_version                    = "2.0"
+      [32m+[0m[0m timeout_milliseconds                      = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_config_get"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_integration" "integrations" {
+      [32m+[0m[0m api_id                                    = "ccti8rpoj1"
+      [32m+[0m[0m connection_type                           = "INTERNET"
+      [32m+[0m[0m id                                        = (known after apply)
+      [32m+[0m[0m integration_response_selection_expression = (known after apply)
+      [32m+[0m[0m integration_type                          = "AWS_PROXY"
+      [32m+[0m[0m integration_uri                           = (known after apply)
+      [32m+[0m[0m payload_format_version                    = "2.0"
+      [32m+[0m[0m timeout_milliseconds                      = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_config_put"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_integration" "integrations" {
+      [32m+[0m[0m api_id                                    = "ccti8rpoj1"
+      [32m+[0m[0m connection_type                           = "INTERNET"
+      [32m+[0m[0m id                                        = (known after apply)
+      [32m+[0m[0m integration_response_selection_expression = (known after apply)
+      [32m+[0m[0m integration_type                          = "AWS_PROXY"
+      [32m+[0m[0m integration_uri                           = (known after apply)
+      [32m+[0m[0m payload_format_version                    = "2.0"
+      [32m+[0m[0m timeout_milliseconds                      = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_credentials_delete"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_integration" "integrations" {
+      [32m+[0m[0m api_id                                    = "ccti8rpoj1"
+      [32m+[0m[0m connection_type                           = "INTERNET"
+      [32m+[0m[0m id                                        = (known after apply)
+      [32m+[0m[0m integration_response_selection_expression = (known after apply)
+      [32m+[0m[0m integration_type                          = "AWS_PROXY"
+      [32m+[0m[0m integration_uri                           = (known after apply)
+      [32m+[0m[0m payload_format_version                    = "2.0"
+      [32m+[0m[0m timeout_milliseconds                      = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_credentials_get"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_integration" "integrations" {
+      [32m+[0m[0m api_id                                    = "ccti8rpoj1"
+      [32m+[0m[0m connection_type                           = "INTERNET"
+      [32m+[0m[0m id                                        = (known after apply)
+      [32m+[0m[0m integration_response_selection_expression = (known after apply)
+      [32m+[0m[0m integration_type                          = "AWS_PROXY"
+      [32m+[0m[0m integration_uri                           = (known after apply)
+      [32m+[0m[0m payload_format_version                    = "2.0"
+      [32m+[0m[0m timeout_milliseconds                      = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_credentials_put"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_integration" "integrations" {
+      [32m+[0m[0m api_id                                    = "ccti8rpoj1"
+      [32m+[0m[0m connection_type                           = "INTERNET"
+      [32m+[0m[0m id                                        = (known after apply)
+      [32m+[0m[0m integration_response_selection_expression = (known after apply)
+      [32m+[0m[0m integration_type                          = "AWS_PROXY"
+      [32m+[0m[0m integration_uri                           = (known after apply)
+      [32m+[0m[0m payload_format_version                    = "2.0"
+      [32m+[0m[0m timeout_milliseconds                      = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_groups"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_integration" "integrations" {
+      [32m+[0m[0m api_id                                    = "ccti8rpoj1"
+      [32m+[0m[0m connection_type                           = "INTERNET"
+      [32m+[0m[0m id                                        = (known after apply)
+      [32m+[0m[0m integration_response_selection_expression = (known after apply)
+      [32m+[0m[0m integration_type                          = "AWS_PROXY"
+      [32m+[0m[0m integration_uri                           = (known after apply)
+      [32m+[0m[0m payload_format_version                    = "2.0"
+      [32m+[0m[0m timeout_milliseconds                      = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_senders"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_integration" "integrations" {
+      [32m+[0m[0m api_id                                    = "ccti8rpoj1"
+      [32m+[0m[0m connection_type                           = "INTERNET"
+      [32m+[0m[0m id                                        = (known after apply)
+      [32m+[0m[0m integration_response_selection_expression = (known after apply)
+      [32m+[0m[0m integration_type                          = "AWS_PROXY"
+      [32m+[0m[0m integration_uri                           = (known after apply)
+      [32m+[0m[0m payload_format_version                    = "2.0"
+      [32m+[0m[0m timeout_milliseconds                      = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_sent_campaign_get"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_integration" "integrations" {
+      [32m+[0m[0m api_id                                    = "ccti8rpoj1"
+      [32m+[0m[0m connection_type                           = "INTERNET"
+      [32m+[0m[0m id                                        = (known after apply)
+      [32m+[0m[0m integration_response_selection_expression = (known after apply)
+      [32m+[0m[0m integration_type                          = "AWS_PROXY"
+      [32m+[0m[0m integration_uri                           = (known after apply)
+      [32m+[0m[0m payload_format_version                    = "2.0"
+      [32m+[0m[0m timeout_milliseconds                      = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_sent_campaign_metrics"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_integration" "integrations" {
+      [32m+[0m[0m api_id                                    = "ccti8rpoj1"
+      [32m+[0m[0m connection_type                           = "INTERNET"
+      [32m+[0m[0m id                                        = (known after apply)
+      [32m+[0m[0m integration_response_selection_expression = (known after apply)
+      [32m+[0m[0m integration_type                          = "AWS_PROXY"
+      [32m+[0m[0m integration_uri                           = (known after apply)
+      [32m+[0m[0m payload_format_version                    = "2.0"
+      [32m+[0m[0m timeout_milliseconds                      = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_sent_campaigns"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_integration" "integrations" {
+      [32m+[0m[0m api_id                                    = "ccti8rpoj1"
+      [32m+[0m[0m connection_type                           = "INTERNET"
+      [32m+[0m[0m id                                        = (known after apply)
+      [32m+[0m[0m integration_response_selection_expression = (known after apply)
+      [32m+[0m[0m integration_type                          = "AWS_PROXY"
+      [32m+[0m[0m integration_uri                           = (known after apply)
+      [32m+[0m[0m payload_format_version                    = "2.0"
+      [32m+[0m[0m timeout_milliseconds                      = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_sync"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_integration" "integrations" {
+      [32m+[0m[0m api_id                                    = "ccti8rpoj1"
+      [32m+[0m[0m connection_type                           = "INTERNET"
+      [32m+[0m[0m id                                        = (known after apply)
+      [32m+[0m[0m integration_response_selection_expression = (known after apply)
+      [32m+[0m[0m integration_type                          = "AWS_PROXY"
+      [32m+[0m[0m integration_uri                           = (known after apply)
+      [32m+[0m[0m payload_format_version                    = "2.0"
+      [32m+[0m[0m timeout_milliseconds                      = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_syncs"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_integration" "integrations" {
+      [32m+[0m[0m api_id                                    = "ccti8rpoj1"
+      [32m+[0m[0m connection_type                           = "INTERNET"
+      [32m+[0m[0m id                                        = (known after apply)
+      [32m+[0m[0m integration_response_selection_expression = (known after apply)
+      [32m+[0m[0m integration_type                          = "AWS_PROXY"
+      [32m+[0m[0m integration_uri                           = (known after apply)
+      [32m+[0m[0m payload_format_version                    = "2.0"
+      [32m+[0m[0m timeout_milliseconds                      = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_syncs_get"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_integration" "integrations" {
+      [32m+[0m[0m api_id                                    = "ccti8rpoj1"
+      [32m+[0m[0m connection_type                           = "INTERNET"
+      [32m+[0m[0m id                                        = (known after apply)
+      [32m+[0m[0m integration_response_selection_expression = (known after apply)
+      [32m+[0m[0m integration_type                          = "AWS_PROXY"
+      [32m+[0m[0m integration_uri                           = (known after apply)
+      [32m+[0m[0m payload_format_version                    = "2.0"
+      [32m+[0m[0m timeout_milliseconds                      = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_test"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_integration" "integrations" {
+      [32m+[0m[0m api_id                                    = "ccti8rpoj1"
+      [32m+[0m[0m connection_type                           = "INTERNET"
+      [32m+[0m[0m id                                        = (known after apply)
+      [32m+[0m[0m integration_response_selection_expression = (known after apply)
+      [32m+[0m[0m integration_type                          = "AWS_PROXY"
+      [32m+[0m[0m integration_uri                           = (known after apply)
+      [32m+[0m[0m payload_format_version                    = "2.0"
+      [32m+[0m[0m timeout_milliseconds                      = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_webhook"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_integration" "integrations" {
+      [32m+[0m[0m api_id                                    = "ccti8rpoj1"
+      [32m+[0m[0m connection_type                           = "INTERNET"
+      [32m+[0m[0m id                                        = (known after apply)
+      [32m+[0m[0m integration_response_selection_expression = (known after apply)
+      [32m+[0m[0m integration_type                          = "AWS_PROXY"
+      [32m+[0m[0m integration_uri                           = (known after apply)
+      [32m+[0m[0m payload_format_version                    = "2.0"
+      [32m+[0m[0m timeout_milliseconds                      = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_webhook_tenant"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_integration" "integrations" {
+      [32m+[0m[0m api_id                                    = "ccti8rpoj1"
+      [32m+[0m[0m connection_type                           = "INTERNET"
+      [32m+[0m[0m id                                        = (known after apply)
+      [32m+[0m[0m integration_response_selection_expression = (known after apply)
+      [32m+[0m[0m integration_type                          = "AWS_PROXY"
+      [32m+[0m[0m integration_uri                           = (known after apply)
+      [32m+[0m[0m payload_format_version                    = "2.0"
+      [32m+[0m[0m timeout_milliseconds                      = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_route.routes["conversations_message_attachment"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_route" "routes" {
+      [32m+[0m[0m api_id             = "ccti8rpoj1"
+      [32m+[0m[0m api_key_required   = false
+      [32m+[0m[0m authorization_type = "JWT"
+      [32m+[0m[0m authorizer_id      = "ij45hh"
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m route_key          = "GET /conversations/{conversationId}/messages/{messageId}/attachments/{attachmentId}"
+      [32m+[0m[0m target             = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_route.routes["conversations_message_html"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_route" "routes" {
+      [32m+[0m[0m api_id             = "ccti8rpoj1"
+      [32m+[0m[0m api_key_required   = false
+      [32m+[0m[0m authorization_type = "JWT"
+      [32m+[0m[0m authorizer_id      = "ij45hh"
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m route_key          = "GET /conversations/{conversationId}/messages/{messageId}/html"
+      [32m+[0m[0m target             = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_route.routes["email_imap_connect"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_route" "routes" {
+      [32m+[0m[0m api_id             = "ccti8rpoj1"
+      [32m+[0m[0m api_key_required   = false
+      [32m+[0m[0m authorization_type = "JWT"
+      [32m+[0m[0m authorizer_id      = "ij45hh"
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m route_key          = "POST /email/imap/connect"
+      [32m+[0m[0m target             = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_route.routes["email_imap_disconnect"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_route" "routes" {
+      [32m+[0m[0m api_id             = "ccti8rpoj1"
+      [32m+[0m[0m api_key_required   = false
+      [32m+[0m[0m authorization_type = "JWT"
+      [32m+[0m[0m authorizer_id      = "ij45hh"
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m route_key          = "DELETE /email/imap/connect"
+      [32m+[0m[0m target             = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_route.routes["email_imap_test"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_route" "routes" {
+      [32m+[0m[0m api_id             = "ccti8rpoj1"
+      [32m+[0m[0m api_key_required   = false
+      [32m+[0m[0m authorization_type = "JWT"
+      [32m+[0m[0m authorizer_id      = "ij45hh"
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m route_key          = "POST /email/imap/test"
+      [32m+[0m[0m target             = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_route.routes["mailrelay_campaigns_create"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_route" "routes" {
+      [32m+[0m[0m api_id             = "ccti8rpoj1"
+      [32m+[0m[0m api_key_required   = false
+      [32m+[0m[0m authorization_type = "JWT"
+      [32m+[0m[0m authorizer_id      = "ij45hh"
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m route_key          = "POST /email-marketing/campaigns"
+      [32m+[0m[0m target             = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_route.routes["mailrelay_campaigns_delete"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_route" "routes" {
+      [32m+[0m[0m api_id             = "ccti8rpoj1"
+      [32m+[0m[0m api_key_required   = false
+      [32m+[0m[0m authorization_type = "JWT"
+      [32m+[0m[0m authorizer_id      = "ij45hh"
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m route_key          = "DELETE /email-marketing/campaigns/{campaignId}"
+      [32m+[0m[0m target             = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_route.routes["mailrelay_campaigns_get"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_route" "routes" {
+      [32m+[0m[0m api_id             = "ccti8rpoj1"
+      [32m+[0m[0m api_key_required   = false
+      [32m+[0m[0m authorization_type = "JWT"
+      [32m+[0m[0m authorizer_id      = "ij45hh"
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m route_key          = "GET /email-marketing/campaigns/{campaignId}"
+      [32m+[0m[0m target             = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_route.routes["mailrelay_campaigns_list"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_route" "routes" {
+      [32m+[0m[0m api_id             = "ccti8rpoj1"
+      [32m+[0m[0m api_key_required   = false
+      [32m+[0m[0m authorization_type = "JWT"
+      [32m+[0m[0m authorizer_id      = "ij45hh"
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m route_key          = "GET /email-marketing/campaigns"
+      [32m+[0m[0m target             = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_route.routes["mailrelay_campaigns_put"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_route" "routes" {
+      [32m+[0m[0m api_id             = "ccti8rpoj1"
+      [32m+[0m[0m api_key_required   = false
+      [32m+[0m[0m authorization_type = "JWT"
+      [32m+[0m[0m authorizer_id      = "ij45hh"
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m route_key          = "PUT /email-marketing/campaigns/{campaignId}"
+      [32m+[0m[0m target             = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_route.routes["mailrelay_campaigns_send"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_route" "routes" {
+      [32m+[0m[0m api_id             = "ccti8rpoj1"
+      [32m+[0m[0m api_key_required   = false
+      [32m+[0m[0m authorization_type = "JWT"
+      [32m+[0m[0m authorizer_id      = "ij45hh"
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m route_key          = "POST /email-marketing/campaigns/{campaignId}/send"
+      [32m+[0m[0m target             = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_route.routes["mailrelay_campaigns_send_test"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_route" "routes" {
+      [32m+[0m[0m api_id             = "ccti8rpoj1"
+      [32m+[0m[0m api_key_required   = false
+      [32m+[0m[0m authorization_type = "JWT"
+      [32m+[0m[0m authorizer_id      = "ij45hh"
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m route_key          = "POST /email-marketing/campaigns/{campaignId}/send-test"
+      [32m+[0m[0m target             = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_route.routes["mailrelay_config_get"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_route" "routes" {
+      [32m+[0m[0m api_id             = "ccti8rpoj1"
+      [32m+[0m[0m api_key_required   = false
+      [32m+[0m[0m authorization_type = "JWT"
+      [32m+[0m[0m authorizer_id      = "ij45hh"
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m route_key          = "GET /email-marketing/config"
+      [32m+[0m[0m target             = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_route.routes["mailrelay_config_put"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_route" "routes" {
+      [32m+[0m[0m api_id             = "ccti8rpoj1"
+      [32m+[0m[0m api_key_required   = false
+      [32m+[0m[0m authorization_type = "JWT"
+      [32m+[0m[0m authorizer_id      = "ij45hh"
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m route_key          = "PUT /email-marketing/config"
+      [32m+[0m[0m target             = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_route.routes["mailrelay_credentials_delete"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_route" "routes" {
+      [32m+[0m[0m api_id             = "ccti8rpoj1"
+      [32m+[0m[0m api_key_required   = false
+      [32m+[0m[0m authorization_type = "JWT"
+      [32m+[0m[0m authorizer_id      = "ij45hh"
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m route_key          = "DELETE /email-marketing/credentials"
+      [32m+[0m[0m target             = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_route.routes["mailrelay_credentials_get"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_route" "routes" {
+      [32m+[0m[0m api_id             = "ccti8rpoj1"
+      [32m+[0m[0m api_key_required   = false
+      [32m+[0m[0m authorization_type = "JWT"
+      [32m+[0m[0m authorizer_id      = "ij45hh"
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m route_key          = "GET /email-marketing/credentials"
+      [32m+[0m[0m target             = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_route.routes["mailrelay_credentials_put"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_route" "routes" {
+      [32m+[0m[0m api_id             = "ccti8rpoj1"
+      [32m+[0m[0m api_key_required   = false
+      [32m+[0m[0m authorization_type = "JWT"
+      [32m+[0m[0m authorizer_id      = "ij45hh"
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m route_key          = "PUT /email-marketing/credentials"
+      [32m+[0m[0m target             = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_route.routes["mailrelay_groups"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_route" "routes" {
+      [32m+[0m[0m api_id             = "ccti8rpoj1"
+      [32m+[0m[0m api_key_required   = false
+      [32m+[0m[0m authorization_type = "JWT"
+      [32m+[0m[0m authorizer_id      = "ij45hh"
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m route_key          = "GET /email-marketing/groups"
+      [32m+[0m[0m target             = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_route.routes["mailrelay_senders"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_route" "routes" {
+      [32m+[0m[0m api_id             = "ccti8rpoj1"
+      [32m+[0m[0m api_key_required   = false
+      [32m+[0m[0m authorization_type = "JWT"
+      [32m+[0m[0m authorizer_id      = "ij45hh"
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m route_key          = "GET /email-marketing/senders"
+      [32m+[0m[0m target             = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_route.routes["mailrelay_sent_campaign_get"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_route" "routes" {
+      [32m+[0m[0m api_id             = "ccti8rpoj1"
+      [32m+[0m[0m api_key_required   = false
+      [32m+[0m[0m authorization_type = "JWT"
+      [32m+[0m[0m authorizer_id      = "ij45hh"
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m route_key          = "GET /email-marketing/sent-campaigns/{sentCampaignId}"
+      [32m+[0m[0m target             = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_route.routes["mailrelay_sent_campaign_metrics"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_route" "routes" {
+      [32m+[0m[0m api_id             = "ccti8rpoj1"
+      [32m+[0m[0m api_key_required   = false
+      [32m+[0m[0m authorization_type = "JWT"
+      [32m+[0m[0m authorizer_id      = "ij45hh"
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m route_key          = "GET /email-marketing/sent-campaigns/{sentCampaignId}/metrics"
+      [32m+[0m[0m target             = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_route.routes["mailrelay_sent_campaigns"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_route" "routes" {
+      [32m+[0m[0m api_id             = "ccti8rpoj1"
+      [32m+[0m[0m api_key_required   = false
+      [32m+[0m[0m authorization_type = "JWT"
+      [32m+[0m[0m authorizer_id      = "ij45hh"
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m route_key          = "GET /email-marketing/sent-campaigns"
+      [32m+[0m[0m target             = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_route.routes["mailrelay_sync"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_route" "routes" {
+      [32m+[0m[0m api_id             = "ccti8rpoj1"
+      [32m+[0m[0m api_key_required   = false
+      [32m+[0m[0m authorization_type = "JWT"
+      [32m+[0m[0m authorizer_id      = "ij45hh"
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m route_key          = "POST /email-marketing/sync"
+      [32m+[0m[0m target             = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_route.routes["mailrelay_syncs"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_route" "routes" {
+      [32m+[0m[0m api_id             = "ccti8rpoj1"
+      [32m+[0m[0m api_key_required   = false
+      [32m+[0m[0m authorization_type = "JWT"
+      [32m+[0m[0m authorizer_id      = "ij45hh"
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m route_key          = "GET /email-marketing/syncs"
+      [32m+[0m[0m target             = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_route.routes["mailrelay_syncs_get"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_route" "routes" {
+      [32m+[0m[0m api_id             = "ccti8rpoj1"
+      [32m+[0m[0m api_key_required   = false
+      [32m+[0m[0m authorization_type = "JWT"
+      [32m+[0m[0m authorizer_id      = "ij45hh"
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m route_key          = "GET /email-marketing/syncs/{jobId}"
+      [32m+[0m[0m target             = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_route.routes["mailrelay_test"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_route" "routes" {
+      [32m+[0m[0m api_id             = "ccti8rpoj1"
+      [32m+[0m[0m api_key_required   = false
+      [32m+[0m[0m authorization_type = "JWT"
+      [32m+[0m[0m authorizer_id      = "ij45hh"
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m route_key          = "POST /email-marketing/test"
+      [32m+[0m[0m target             = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_route.routes["mailrelay_webhook"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_route" "routes" {
+      [32m+[0m[0m api_id             = "ccti8rpoj1"
+      [32m+[0m[0m api_key_required   = false
+      [32m+[0m[0m authorization_type = "NONE"
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m route_key          = "POST /email-marketing/webhook"
+      [32m+[0m[0m target             = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_apigatewayv2_route.routes["mailrelay_webhook_tenant"][0m will be created
+[0m  [32m+[0m[0m resource "aws_apigatewayv2_route" "routes" {
+      [32m+[0m[0m api_id             = "ccti8rpoj1"
+      [32m+[0m[0m api_key_required   = false
+      [32m+[0m[0m authorization_type = "NONE"
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m route_key          = "POST /email-marketing/webhook/{tenantId}"
+      [32m+[0m[0m target             = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_lambda_permission.api_gw["email_imap_connect"][0m will be created
+[0m  [32m+[0m[0m resource "aws_lambda_permission" "api_gw" {
+      [32m+[0m[0m action              = "lambda:InvokeFunction"
+      [32m+[0m[0m function_name       = (known after apply)
+      [32m+[0m[0m id                  = (known after apply)
+      [32m+[0m[0m principal           = "apigateway.amazonaws.com"
+      [32m+[0m[0m source_arn          = "arn:aws:execute-api:us-east-1:979054355542:ccti8rpoj1/*/*"
+      [32m+[0m[0m statement_id        = "AllowAPIGatewayInvoke-email_imap_connect"
+      [32m+[0m[0m statement_id_prefix = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_lambda_permission.api_gw["mailrelay"][0m will be created
+[0m  [32m+[0m[0m resource "aws_lambda_permission" "api_gw" {
+      [32m+[0m[0m action              = "lambda:InvokeFunction"
+      [32m+[0m[0m function_name       = (known after apply)
+      [32m+[0m[0m id                  = (known after apply)
+      [32m+[0m[0m principal           = "apigateway.amazonaws.com"
+      [32m+[0m[0m source_arn          = "arn:aws:execute-api:us-east-1:979054355542:ccti8rpoj1/*/*"
+      [32m+[0m[0m statement_id        = "AllowAPIGatewayInvoke-mailrelay"
+      [32m+[0m[0m statement_id_prefix = (known after apply)
+    }
+
+[1m  # module.api_gateway.aws_lambda_permission.api_gw["mailrelay_webhook"][0m will be created
+[0m  [32m+[0m[0m resource "aws_lambda_permission" "api_gw" {
+      [32m+[0m[0m action              = "lambda:InvokeFunction"
+      [32m+[0m[0m function_name       = (known after apply)
+      [32m+[0m[0m id                  = (known after apply)
+      [32m+[0m[0m principal           = "apigateway.amazonaws.com"
+      [32m+[0m[0m source_arn          = "arn:aws:execute-api:us-east-1:979054355542:ccti8rpoj1/*/*"
+      [32m+[0m[0m statement_id        = "AllowAPIGatewayInvoke-mailrelay_webhook"
+      [32m+[0m[0m statement_id_prefix = (known after apply)
+    }
+
+[1m  # module.cognito.aws_cognito_identity_provider.google[0][0m will be [1m[31mdestroyed[0m
+  # (because index [0] is out of range for count)
+[0m  [31m-[0m[0m resource "aws_cognito_identity_provider" "google" {
+      [31m-[0m[0m attribute_mapping = {
+          [31m-[0m[0m "email"    = "email"
+          [31m-[0m[0m "name"     = "name"
+          [31m-[0m[0m "username" = "sub"
+        } [90m-> null[0m[0m
+      [31m-[0m[0m id                = "us-east-1_CWNhdPTjN:Google" [90m-> null[0m[0m
+      [31m-[0m[0m idp_identifiers   = [] [90m-> null[0m[0m
+      [31m-[0m[0m provider_details  = {
+          [31m-[0m[0m "attributes_url"                = "https://people.googleapis.com/v1/people/me?personFields="
+          [31m-[0m[0m "attributes_url_add_attributes" = "true"
+          [31m-[0m[0m "authorize_scopes"              = "email openid profile"
+          [31m-[0m[0m "authorize_url"                 = "https://accounts.google.com/o/oauth2/v2/auth"
+          [31m-[0m[0m "client_id"                     = "46372734450-tr6k9g6t02g0ali1ig223ptth0fssenr.apps.googleusercontent.com"
+          [31m-[0m[0m "client_secret"                 = (sensitive value)
+          [31m-[0m[0m "oidc_issuer"                   = "https://accounts.google.com"
+          [31m-[0m[0m "token_request_method"          = "POST"
+          [31m-[0m[0m "token_url"                     = "https://www.googleapis.com/oauth2/v4/token"
+        } [90m-> null[0m[0m
+      [31m-[0m[0m provider_name     = "Google" [90m-> null[0m[0m
+      [31m-[0m[0m provider_type     = "Google" [90m-> null[0m[0m
+      [31m-[0m[0m user_pool_id      = "us-east-1_CWNhdPTjN" [90m-> null[0m[0m
+    }
+
+[1m  # module.cognito.aws_cognito_user_pool_client.web[0m will be updated in-place
+[0m  [33m~[0m[0m resource "aws_cognito_user_pool_client" "web" {
+      [33m~[0m[0m callback_urls                                 = [
+          [32m+[0m[0m "https://app.integracionessh.lat/api/auth/callback/cognito",
+          [32m+[0m[0m "https://develop.integracionessh.lat/api/auth/callback/cognito",
+          [32m+[0m[0m "https://omnichannel.telcoredsas.com/api/auth/callback/cognito",
+            [90m# (3 unchanged elements hidden)[0m[0m
+        ]
+        id                                            = "7th9bgkj7fl2bp3hg786ttg5t6"
+      [33m~[0m[0m logout_urls                                   = [
+          [32m+[0m[0m "https://app.integracionessh.lat",
+          [32m+[0m[0m "https://develop.integracionessh.lat",
+          [32m+[0m[0m "https://omnichannel.telcoredsas.com",
+            [90m# (3 unchanged elements hidden)[0m[0m
+        ]
+        name                                          = "chatbot-platform-dev-web"
+      [33m~[0m[0m supported_identity_providers                  = (sensitive value)
+        [90m# (17 unchanged attributes hidden)[0m[0m
+
+        [90m# (1 unchanged block hidden)[0m[0m
+    }
+
+[1m  # module.lambda.aws_cloudwatch_event_rule.imap_poll[0m will be created
+[0m  [32m+[0m[0m resource "aws_cloudwatch_event_rule" "imap_poll" {
+      [32m+[0m[0m arn                 = (known after apply)
+      [32m+[0m[0m description         = "Poll active IMAP mailboxes for inbound email"
+      [32m+[0m[0m event_bus_name      = "default"
+      [32m+[0m[0m force_destroy       = false
+      [32m+[0m[0m id                  = (known after apply)
+      [32m+[0m[0m name                = "chatbot-platform-dev-imap-poll"
+      [32m+[0m[0m name_prefix         = (known after apply)
+      [32m+[0m[0m schedule_expression = "rate(3 minutes)"
+      [32m+[0m[0m tags                = {
+          [32m+[0m[0m "Environment" = "dev"
+          [32m+[0m[0m "ManagedBy"   = "terraform"
+          [32m+[0m[0m "Project"     = "chatbot-platform"
+        }
+      [32m+[0m[0m tags_all            = {
+          [32m+[0m[0m "Environment" = "dev"
+          [32m+[0m[0m "ManagedBy"   = "terraform"
+          [32m+[0m[0m "Project"     = "chatbot-platform"
+        }
+    }
+
+[1m  # module.lambda.aws_cloudwatch_event_target.imap_poll[0m will be created
+[0m  [32m+[0m[0m resource "aws_cloudwatch_event_target" "imap_poll" {
+      [32m+[0m[0m arn            = (known after apply)
+      [32m+[0m[0m event_bus_name = "default"
+      [32m+[0m[0m force_destroy  = false
+      [32m+[0m[0m id             = (known after apply)
+      [32m+[0m[0m rule           = "chatbot-platform-dev-imap-poll"
+      [32m+[0m[0m target_id      = "poll-imap-inbound"
+    }
+
+[1m  # module.lambda.aws_cloudwatch_log_group.lambda_logs["email_imap_connect"][0m will be created
+[0m  [32m+[0m[0m resource "aws_cloudwatch_log_group" "lambda_logs" {
+      [32m+[0m[0m arn               = (known after apply)
+      [32m+[0m[0m id                = (known after apply)
+      [32m+[0m[0m log_group_class   = (known after apply)
+      [32m+[0m[0m name              = "/aws/lambda/chatbot-platform-dev-email-imap-connect"
+      [32m+[0m[0m name_prefix       = (known after apply)
+      [32m+[0m[0m retention_in_days = 7
+      [32m+[0m[0m skip_destroy      = false
+      [32m+[0m[0m tags              = {
+          [32m+[0m[0m "Environment" = "dev"
+          [32m+[0m[0m "ManagedBy"   = "terraform"
+          [32m+[0m[0m "Project"     = "chatbot-platform"
+        }
+      [32m+[0m[0m tags_all          = {
+          [32m+[0m[0m "Environment" = "dev"
+          [32m+[0m[0m "ManagedBy"   = "terraform"
+          [32m+[0m[0m "Project"     = "chatbot-platform"
+        }
+    }
+
+[1m  # module.lambda.aws_cloudwatch_log_group.lambda_logs["mailrelay"][0m will be created
+[0m  [32m+[0m[0m resource "aws_cloudwatch_log_group" "lambda_logs" {
+      [32m+[0m[0m arn               = (known after apply)
+      [32m+[0m[0m id                = (known after apply)
+      [32m+[0m[0m log_group_class   = (known after apply)
+      [32m+[0m[0m name              = "/aws/lambda/chatbot-platform-dev-mailrelay"
+      [32m+[0m[0m name_prefix       = (known after apply)
+      [32m+[0m[0m retention_in_days = 7
+      [32m+[0m[0m skip_destroy      = false
+      [32m+[0m[0m tags              = {
+          [32m+[0m[0m "Environment" = "dev"
+          [32m+[0m[0m "ManagedBy"   = "terraform"
+          [32m+[0m[0m "Project"     = "chatbot-platform"
+        }
+      [32m+[0m[0m tags_all          = {
+          [32m+[0m[0m "Environment" = "dev"
+          [32m+[0m[0m "ManagedBy"   = "terraform"
+          [32m+[0m[0m "Project"     = "chatbot-platform"
+        }
+    }
+
+[1m  # module.lambda.aws_cloudwatch_log_group.lambda_logs["mailrelay_webhook"][0m will be created
+[0m  [32m+[0m[0m resource "aws_cloudwatch_log_group" "lambda_logs" {
+      [32m+[0m[0m arn               = (known after apply)
+      [32m+[0m[0m id                = (known after apply)
+      [32m+[0m[0m log_group_class   = (known after apply)
+      [32m+[0m[0m name              = "/aws/lambda/chatbot-platform-dev-mailrelay-webhook"
+      [32m+[0m[0m name_prefix       = (known after apply)
+      [32m+[0m[0m retention_in_days = 7
+      [32m+[0m[0m skip_destroy      = false
+      [32m+[0m[0m tags              = {
+          [32m+[0m[0m "Environment" = "dev"
+          [32m+[0m[0m "ManagedBy"   = "terraform"
+          [32m+[0m[0m "Project"     = "chatbot-platform"
+        }
+      [32m+[0m[0m tags_all          = {
+          [32m+[0m[0m "Environment" = "dev"
+          [32m+[0m[0m "ManagedBy"   = "terraform"
+          [32m+[0m[0m "Project"     = "chatbot-platform"
+        }
+    }
+
+[1m  # module.lambda.aws_cloudwatch_log_group.lambda_logs["poll_imap_inbound"][0m will be created
+[0m  [32m+[0m[0m resource "aws_cloudwatch_log_group" "lambda_logs" {
+      [32m+[0m[0m arn               = (known after apply)
+      [32m+[0m[0m id                = (known after apply)
+      [32m+[0m[0m log_group_class   = (known after apply)
+      [32m+[0m[0m name              = "/aws/lambda/chatbot-platform-dev-poll-imap-inbound"
+      [32m+[0m[0m name_prefix       = (known after apply)
+      [32m+[0m[0m retention_in_days = 7
+      [32m+[0m[0m skip_destroy      = false
+      [32m+[0m[0m tags              = {
+          [32m+[0m[0m "Environment" = "dev"
+          [32m+[0m[0m "ManagedBy"   = "terraform"
+          [32m+[0m[0m "Project"     = "chatbot-platform"
+        }
+      [32m+[0m[0m tags_all          = {
+          [32m+[0m[0m "Environment" = "dev"
+          [32m+[0m[0m "ManagedBy"   = "terraform"
+          [32m+[0m[0m "Project"     = "chatbot-platform"
+        }
+    }
+
+[1m  # module.lambda.aws_cloudwatch_log_group.lambda_logs["process_mailrelay_sync"][0m will be created
+[0m  [32m+[0m[0m resource "aws_cloudwatch_log_group" "lambda_logs" {
+      [32m+[0m[0m arn               = (known after apply)
+      [32m+[0m[0m id                = (known after apply)
+      [32m+[0m[0m log_group_class   = (known after apply)
+      [32m+[0m[0m name              = "/aws/lambda/chatbot-platform-dev-process-mailrelay-sync"
+      [32m+[0m[0m name_prefix       = (known after apply)
+      [32m+[0m[0m retention_in_days = 7
+      [32m+[0m[0m skip_destroy      = false
+      [32m+[0m[0m tags              = {
+          [32m+[0m[0m "Environment" = "dev"
+          [32m+[0m[0m "ManagedBy"   = "terraform"
+          [32m+[0m[0m "Project"     = "chatbot-platform"
+        }
+      [32m+[0m[0m tags_all          = {
+          [32m+[0m[0m "Environment" = "dev"
+          [32m+[0m[0m "ManagedBy"   = "terraform"
+          [32m+[0m[0m "Project"     = "chatbot-platform"
+        }
+    }
+
+[1m  # module.lambda.aws_iam_role_policy.lambda_permissions[0m will be updated in-place
+[0m  [33m~[0m[0m resource "aws_iam_role_policy" "lambda_permissions" {
+        id          = "chatbot-platform-dev-lambda:chatbot-platform-dev-lambda-permissions"
+        name        = "chatbot-platform-dev-lambda-permissions"
+      [33m~[0m[0m policy      = jsonencode(
+            {
+              [31m-[0m[0m Statement = [
+                  [31m-[0m[0m {
+                      [31m-[0m[0m Action   = [
+                          [31m-[0m[0m "dynamodb:GetItem",
+                          [31m-[0m[0m "dynamodb:PutItem",
+                          [31m-[0m[0m "dynamodb:UpdateItem",
+                          [31m-[0m[0m "dynamodb:DeleteItem",
+                          [31m-[0m[0m "dynamodb:Query",
+                          [31m-[0m[0m "dynamodb:Scan",
+                          [31m-[0m[0m "dynamodb:BatchWriteItem",
+                          [31m-[0m[0m "dynamodb:BatchGetItem",
+                        ]
+                      [31m-[0m[0m Effect   = "Allow"
+                      [31m-[0m[0m Resource = [
+                          [31m-[0m[0m "arn:aws:dynamodb:us-east-1:979054355542:table/chatbot-platform-dev",
+                          [31m-[0m[0m "arn:aws:dynamodb:us-east-1:979054355542:table/chatbot-platform-dev/index/*",
+                        ]
+                    },
+                  [31m-[0m[0m {
+                      [31m-[0m[0m Action   = [
+                          [31m-[0m[0m "sqs:SendMessage",
+                          [31m-[0m[0m "sqs:ReceiveMessage",
+                          [31m-[0m[0m "sqs:DeleteMessage",
+                          [31m-[0m[0m "sqs:GetQueueAttributes",
+                        ]
+                      [31m-[0m[0m Effect   = "Allow"
+                      [31m-[0m[0m Resource = [
+                          [31m-[0m[0m "arn:aws:sqs:us-east-1:979054355542:chatbot-platform-dev-messages.fifo",
+                          [31m-[0m[0m "arn:aws:sqs:us-east-1:979054355542:chatbot-platform-dev-bulk-send.fifo",
+                          [31m-[0m[0m "arn:aws:sqs:us-east-1:979054355542:chatbot-platform-dev-campaign-send.fifo",
+                          [31m-[0m[0m "arn:aws:sqs:us-east-1:979054355542:chatbot-platform-dev-integration-events.fifo",
+                          [31m-[0m[0m "arn:aws:sqs:us-east-1:979054355542:chatbot-platform-dev-automation-run.fifo",
+                          [31m-[0m[0m "arn:aws:sqs:us-east-1:979054355542:chatbot-platform-dev-knowledge-index.fifo",
+                          [31m-[0m[0m "arn:aws:sqs:us-east-1:979054355542:chatbot-platform-dev-flow-run.fifo",
+                          [31m-[0m[0m "arn:aws:sqs:us-east-1:979054355542:chatbot-platform-dev-flow-event.fifo",
+                          [31m-[0m[0m "arn:aws:sqs:us-east-1:979054355542:chatbot-platform-dev-call-events.fifo",
+                        ]
+                    },
+                  [31m-[0m[0m {
+                      [31m-[0m[0m Action   = [
+                          [31m-[0m[0m "scheduler:CreateSchedule",
+                          [31m-[0m[0m "scheduler:DeleteSchedule",
+                          [31m-[0m[0m "scheduler:GetSchedule",
+                        ]
+                      [31m-[0m[0m Effect   = "Allow"
+                      [31m-[0m[0m Resource = "arn:aws:scheduler:*:*:schedule/default/*"
+                    },
+                  [31m-[0m[0m {
+                      [31m-[0m[0m Action    = [
+                          [31m-[0m[0m "iam:PassRole",
+                        ]
+                      [31m-[0m[0m Condition = {
+                          [31m-[0m[0m StringEquals = {
+                              [31m-[0m[0m "iam:PassedToService" = "scheduler.amazonaws.com"
+                            }
+                        }
+                      [31m-[0m[0m Effect    = "Allow"
+                      [31m-[0m[0m Resource  = "arn:aws:iam::979054355542:role/chatbot-platform-dev-scheduler"
+                    },
+                  [31m-[0m[0m {
+                      [31m-[0m[0m Action   = [
+                          [31m-[0m[0m "secretsmanager:GetSecretValue",
+                          [31m-[0m[0m "secretsmanager:DescribeSecret",
+                        ]
+                      [31m-[0m[0m Effect   = "Allow"
+                      [31m-[0m[0m Resource = "arn:aws:secretsmanager:*:*:secret:/dev/tenants/*"
+                    },
+                  [31m-[0m[0m {
+                      [31m-[0m[0m Action   = [
+                          [31m-[0m[0m "secretsmanager:GetSecretValue",
+                          [31m-[0m[0m "secretsmanager:DescribeSecret",
+                        ]
+                      [31m-[0m[0m Effect   = "Allow"
+                      [31m-[0m[0m Resource = "arn:aws:secretsmanager:*:*:secret:/dev/platform/*"
+                    },
+                  [31m-[0m[0m {
+                      [31m-[0m[0m Action   = [
+                          [31m-[0m[0m "cognito-idp:ListUsers",
+                          [31m-[0m[0m "cognito-idp:AdminGetUser",
+                          [31m-[0m[0m "cognito-idp:AdminEnableUser",
+                          [31m-[0m[0m "cognito-idp:AdminDisableUser",
+                          [31m-[0m[0m "cognito-idp:AdminUpdateUserAttributes",
+                          [31m-[0m[0m "cognito-idp:AdminCreateUser",
+                          [31m-[0m[0m "cognito-idp:AdminDeleteUser",
+                          [31m-[0m[0m "cognito-idp:DescribeUserPoolClient",
+                          [31m-[0m[0m "cognito-idp:UpdateUserPoolClient",
+                        ]
+                      [31m-[0m[0m Effect   = "Allow"
+                      [31m-[0m[0m Resource = "arn:aws:cognito-idp:us-east-1:979054355542:userpool/us-east-1_CWNhdPTjN"
+                    },
+                  [31m-[0m[0m {
+                      [31m-[0m[0m Action   = [
+                          [31m-[0m[0m "amplify:ListApps",
+                          [31m-[0m[0m "amplify:GetApp",
+                          [31m-[0m[0m "amplify:CreateDomainAssociation",
+                          [31m-[0m[0m "amplify:GetDomainAssociation",
+                          [31m-[0m[0m "amplify:UpdateDomainAssociation",
+                          [31m-[0m[0m "amplify:DeleteDomainAssociation",
+                        ]
+                      [31m-[0m[0m Effect   = "Allow"
+                      [31m-[0m[0m Resource = "*"
+                    },
+                  [31m-[0m[0m {
+                      [31m-[0m[0m Action   = [
+                          [31m-[0m[0m "route53:ListHostedZones",
+                          [31m-[0m[0m "route53:ListHostedZonesByName",
+                          [31m-[0m[0m "route53:GetHostedZone",
+                          [31m-[0m[0m "route53:ListResourceRecordSets",
+                        ]
+                      [31m-[0m[0m Effect   = "Allow"
+                      [31m-[0m[0m Resource = "*"
+                    },
+                  [31m-[0m[0m {
+                      [31m-[0m[0m Action   = [
+                          [31m-[0m[0m "secretsmanager:CreateSecret",
+                          [31m-[0m[0m "secretsmanager:PutSecretValue",
+                          [31m-[0m[0m "secretsmanager:UpdateSecret",
+                        ]
+                      [31m-[0m[0m Effect   = "Allow"
+                      [31m-[0m[0m Resource = "arn:aws:secretsmanager:*:*:secret:/dev/tenants/*"
+                    },
+                  [31m-[0m[0m {
+                      [31m-[0m[0m Action   = [
+                          [31m-[0m[0m "s3:GetObject",
+                          [31m-[0m[0m "s3:PutObject",
+                          [31m-[0m[0m "s3:DeleteObject",
+                        ]
+                      [31m-[0m[0m Effect   = "Allow"
+                      [31m-[0m[0m Resource = "arn:aws:s3:::chatbot-platform-dev-media-979054355542/*"
+                    },
+                  [31m-[0m[0m {
+                      [31m-[0m[0m Action   = [
+                          [31m-[0m[0m "execute-api:ManageConnections",
+                        ]
+                      [31m-[0m[0m Effect   = "Allow"
+                      [31m-[0m[0m Resource = "arn:aws:execute-api:us-east-1:979054355542:9tl6020fr3/*"
+                    },
+                  [31m-[0m[0m {
+                      [31m-[0m[0m Action   = [
+                          [31m-[0m[0m "logs:CreateLogGroup",
+                          [31m-[0m[0m "logs:CreateLogStream",
+                          [31m-[0m[0m "logs:PutLogEvents",
+                        ]
+                      [31m-[0m[0m Effect   = "Allow"
+                      [31m-[0m[0m Resource = "arn:aws:logs:*:*:*"
+                    },
+                  [31m-[0m[0m {
+                      [31m-[0m[0m Action   = [
+                          [31m-[0m[0m "ses:SendEmail",
+                          [31m-[0m[0m "ses:SendRawEmail",
+                        ]
+                      [31m-[0m[0m Effect   = "Allow"
+                      [31m-[0m[0m Resource = "*"
+                    },
+                  [31m-[0m[0m {
+                      [31m-[0m[0m Action   = [
+                          [31m-[0m[0m "lambda:InvokeFunction",
+                        ]
+                      [31m-[0m[0m Effect   = "Allow"
+                      [31m-[0m[0m Resource = "arn:aws:lambda:us-east-1:979054355542:function:chatbot-platform-dev-voicebot-session"
+                    },
+                  [31m-[0m[0m {
+                      [31m-[0m[0m Action   = [
+                          [31m-[0m[0m "sns:Publish",
+                        ]
+                      [31m-[0m[0m Effect   = "Allow"
+                      [31m-[0m[0m Resource = "*"
+                    },
+                ]
+              [31m-[0m[0m Version   = "2012-10-17"
+            }
+        ) -> (known after apply)
+        [90m# (2 unchanged attributes hidden)[0m[0m
+    }
+
+[1m  # module.lambda.aws_lambda_event_source_mapping.mailrelay_sync_sqs_trigger[0m will be created
+[0m  [32m+[0m[0m resource "aws_lambda_event_source_mapping" "mailrelay_sync_sqs_trigger" {
+      [32m+[0m[0m arn                                = (known after apply)
+      [32m+[0m[0m batch_size                         = 1
+      [32m+[0m[0m enabled                            = true
+      [32m+[0m[0m event_source_arn                   = (known after apply)
+      [32m+[0m[0m function_arn                       = (known after apply)
+      [32m+[0m[0m function_name                      = (known after apply)
+      [32m+[0m[0m function_response_types            = [
+          [32m+[0m[0m "ReportBatchItemFailures",
+        ]
+      [32m+[0m[0m id                                 = (known after apply)
+      [32m+[0m[0m last_modified                      = (known after apply)
+      [32m+[0m[0m last_processing_result             = (known after apply)
+      [32m+[0m[0m maximum_batching_window_in_seconds = 0
+      [32m+[0m[0m maximum_record_age_in_seconds      = (known after apply)
+      [32m+[0m[0m maximum_retry_attempts             = (known after apply)
+      [32m+[0m[0m parallelization_factor             = (known after apply)
+      [32m+[0m[0m state                              = (known after apply)
+      [32m+[0m[0m state_transition_reason            = (known after apply)
+      [32m+[0m[0m tags_all                           = {
+          [32m+[0m[0m "Environment" = "dev"
+          [32m+[0m[0m "ManagedBy"   = "terraform"
+          [32m+[0m[0m "Project"     = "chatbot-platform"
+        }
+      [32m+[0m[0m uuid                               = (known after apply)
+
+      [32m+[0m[0m amazon_managed_kafka_event_source_config (known after apply)
+
+      [32m+[0m[0m self_managed_kafka_event_source_config (known after apply)
+    }
+
+[1m  # module.lambda.aws_lambda_function.functions["billing"][0m will be updated in-place
+[0m  [33m~[0m[0m resource "aws_lambda_function" "functions" {
+        id                             = "chatbot-platform-dev-billing"
+        tags                           = {
+            "Environment" = "dev"
+            "ManagedBy"   = "terraform"
+            "Project"     = "chatbot-platform"
+        }
+        [90m# (29 unchanged attributes hidden)[0m[0m
+
+      [33m~[0m[0m environment {
+          [33m~[0m[0m variables = {
+              [33m~[0m[0m "WOMPI_EVENTS_SECRET"           = (sensitive value)
+              [33m~[0m[0m "WOMPI_INTEGRITY_SECRET"        = (sensitive value)
+              [33m~[0m[0m "WOMPI_PRIVATE_KEY"             = (sensitive value)
+              [33m~[0m[0m "WOMPI_PUBLIC_KEY"              = [90mnull[0m[0m [33m->[0m[0m "pub_test_Z4k3lL5O7MRCSauGnZ1sjAt8xxS6sVZX"
+                [90m# (11 unchanged elements hidden)[0m[0m
+            }
+        }
+
+        [90m# (3 unchanged blocks hidden)[0m[0m
+    }
+
+[1m  # module.lambda.aws_lambda_function.functions["email_imap_connect"][0m will be created
+[0m  [32m+[0m[0m resource "aws_lambda_function" "functions" {
+      [32m+[0m[0m architectures                  = (known after apply)
+      [32m+[0m[0m arn                            = (known after apply)
+      [32m+[0m[0m code_sha256                    = (known after apply)
+      [32m+[0m[0m description                    = "Connects IMAP mailbox credentials for email channel"
+      [32m+[0m[0m filename                       = "/home/brayanrianodev/Documentos/integracionessh/backend/dist/functions.zip"
+      [32m+[0m[0m function_name                  = "chatbot-platform-dev-email-imap-connect"
+      [32m+[0m[0m handler                        = "email-imap-connect/index.handler"
+      [32m+[0m[0m id                             = (known after apply)
+      [32m+[0m[0m invoke_arn                     = (known after apply)
+      [32m+[0m[0m last_modified                  = (known after apply)
+      [32m+[0m[0m memory_size                    = 256
+      [32m+[0m[0m package_type                   = "Zip"
+      [32m+[0m[0m publish                        = false
+      [32m+[0m[0m qualified_arn                  = (known after apply)
+      [32m+[0m[0m qualified_invoke_arn           = (known after apply)
+      [32m+[0m[0m reserved_concurrent_executions = -1
+      [32m+[0m[0m role                           = "arn:aws:iam::979054355542:role/chatbot-platform-dev-lambda"
+      [32m+[0m[0m runtime                        = "nodejs20.x"
+      [32m+[0m[0m signing_job_arn                = (known after apply)
+      [32m+[0m[0m signing_profile_version_arn    = (known after apply)
+      [32m+[0m[0m skip_destroy                   = false
+      [32m+[0m[0m source_code_hash               = "/hbPYesOVGqUhLXQCaUakT/TCUFh01ita5YUhHP40aA="
+      [32m+[0m[0m source_code_size               = (known after apply)
+      [32m+[0m[0m tags                           = {
+          [32m+[0m[0m "Environment" = "dev"
+          [32m+[0m[0m "ManagedBy"   = "terraform"
+          [32m+[0m[0m "Project"     = "chatbot-platform"
+        }
+      [32m+[0m[0m tags_all                       = {
+          [32m+[0m[0m "Environment" = "dev"
+          [32m+[0m[0m "ManagedBy"   = "terraform"
+          [32m+[0m[0m "Project"     = "chatbot-platform"
+        }
+      [32m+[0m[0m timeout                        = 30
+      [32m+[0m[0m version                        = (known after apply)
+
+      [32m+[0m[0m environment {
+          [32m+[0m[0m variables = {
+              [32m+[0m[0m "ENVIRONMENT" = "dev"
+              [32m+[0m[0m "TABLE_NAME"  = "chatbot-platform-dev"
+            }
+        }
+
+      [32m+[0m[0m ephemeral_storage (known after apply)
+
+      [32m+[0m[0m logging_config (known after apply)
+
+      [32m+[0m[0m tracing_config (known after apply)
+    }
+
+[1m  # module.lambda.aws_lambda_function.functions["email_inbound"][0m will be updated in-place
+[0m  [33m~[0m[0m resource "aws_lambda_function" "functions" {
+        id                             = "chatbot-platform-dev-email-inbound"
+        tags                           = {
+            "Environment" = "dev"
+            "ManagedBy"   = "terraform"
+            "Project"     = "chatbot-platform"
+        }
+        [90m# (29 unchanged attributes hidden)[0m[0m
+
+      [33m~[0m[0m environment {
+          [33m~[0m[0m variables = {
+              [32m+[0m[0m "MEDIA_BUCKET"  = "chatbot-platform-dev-media-979054355542"
+                [90m# (2 unchanged elements hidden)[0m[0m
+            }
+        }
+
+        [90m# (3 unchanged blocks hidden)[0m[0m
+    }
+
+[1m  # module.lambda.aws_lambda_function.functions["mailrelay"][0m will be created
+[0m  [32m+[0m[0m resource "aws_lambda_function" "functions" {
+      [32m+[0m[0m architectures                  = (known after apply)
+      [32m+[0m[0m arn                            = (known after apply)
+      [32m+[0m[0m code_sha256                    = (known after apply)
+      [32m+[0m[0m description                    = "Mailrelay integration configuration, synchronization, and campaigns API"
+      [32m+[0m[0m filename                       = "/home/brayanrianodev/Documentos/integracionessh/backend/dist/functions.zip"
+      [32m+[0m[0m function_name                  = "chatbot-platform-dev-mailrelay"
+      [32m+[0m[0m handler                        = "mailrelay/index.handler"
+      [32m+[0m[0m id                             = (known after apply)
+      [32m+[0m[0m invoke_arn                     = (known after apply)
+      [32m+[0m[0m last_modified                  = (known after apply)
+      [32m+[0m[0m memory_size                    = 256
+      [32m+[0m[0m package_type                   = "Zip"
+      [32m+[0m[0m publish                        = false
+      [32m+[0m[0m qualified_arn                  = (known after apply)
+      [32m+[0m[0m qualified_invoke_arn           = (known after apply)
+      [32m+[0m[0m reserved_concurrent_executions = -1
+      [32m+[0m[0m role                           = "arn:aws:iam::979054355542:role/chatbot-platform-dev-lambda"
+      [32m+[0m[0m runtime                        = "nodejs20.x"
+      [32m+[0m[0m signing_job_arn                = (known after apply)
+      [32m+[0m[0m signing_profile_version_arn    = (known after apply)
+      [32m+[0m[0m skip_destroy                   = false
+      [32m+[0m[0m source_code_hash               = "/hbPYesOVGqUhLXQCaUakT/TCUFh01ita5YUhHP40aA="
+      [32m+[0m[0m source_code_size               = (known after apply)
+      [32m+[0m[0m tags                           = {
+          [32m+[0m[0m "Environment" = "dev"
+          [32m+[0m[0m "ManagedBy"   = "terraform"
+          [32m+[0m[0m "Project"     = "chatbot-platform"
+        }
+      [32m+[0m[0m tags_all                       = {
+          [32m+[0m[0m "Environment" = "dev"
+          [32m+[0m[0m "ManagedBy"   = "terraform"
+          [32m+[0m[0m "Project"     = "chatbot-platform"
+        }
+      [32m+[0m[0m timeout                        = 60
+      [32m+[0m[0m version                        = (known after apply)
+
+      [32m+[0m[0m environment {
+          [32m+[0m[0m variables = (known after apply)
+        }
+
+      [32m+[0m[0m ephemeral_storage (known after apply)
+
+      [32m+[0m[0m logging_config (known after apply)
+
+      [32m+[0m[0m tracing_config (known after apply)
+    }
+
+[1m  # module.lambda.aws_lambda_function.functions["mailrelay_webhook"][0m will be created
+[0m  [32m+[0m[0m resource "aws_lambda_function" "functions" {
+      [32m+[0m[0m architectures                  = (known after apply)
+      [32m+[0m[0m arn                            = (known after apply)
+      [32m+[0m[0m code_sha256                    = (known after apply)
+      [32m+[0m[0m description                    = "Receives Mailrelay campaign event webhooks"
+      [32m+[0m[0m filename                       = "/home/brayanrianodev/Documentos/integracionessh/backend/dist/functions.zip"
+      [32m+[0m[0m function_name                  = "chatbot-platform-dev-mailrelay-webhook"
+      [32m+[0m[0m handler                        = "mailrelay-webhook/index.handler"
+      [32m+[0m[0m id                             = (known after apply)
+      [32m+[0m[0m invoke_arn                     = (known after apply)
+      [32m+[0m[0m last_modified                  = (known after apply)
+      [32m+[0m[0m memory_size                    = 256
+      [32m+[0m[0m package_type                   = "Zip"
+      [32m+[0m[0m publish                        = false
+      [32m+[0m[0m qualified_arn                  = (known after apply)
+      [32m+[0m[0m qualified_invoke_arn           = (known after apply)
+      [32m+[0m[0m reserved_concurrent_executions = -1
+      [32m+[0m[0m role                           = "arn:aws:iam::979054355542:role/chatbot-platform-dev-lambda"
+      [32m+[0m[0m runtime                        = "nodejs20.x"
+      [32m+[0m[0m signing_job_arn                = (known after apply)
+      [32m+[0m[0m signing_profile_version_arn    = (known after apply)
+      [32m+[0m[0m skip_destroy                   = false
+      [32m+[0m[0m source_code_hash               = "/hbPYesOVGqUhLXQCaUakT/TCUFh01ita5YUhHP40aA="
+      [32m+[0m[0m source_code_size               = (known after apply)
+      [32m+[0m[0m tags                           = {
+          [32m+[0m[0m "Environment" = "dev"
+          [32m+[0m[0m "ManagedBy"   = "terraform"
+          [32m+[0m[0m "Project"     = "chatbot-platform"
+        }
+      [32m+[0m[0m tags_all                       = {
+          [32m+[0m[0m "Environment" = "dev"
+          [32m+[0m[0m "ManagedBy"   = "terraform"
+          [32m+[0m[0m "Project"     = "chatbot-platform"
+        }
+      [32m+[0m[0m timeout                        = 30
+      [32m+[0m[0m version                        = (known after apply)
+
+      [32m+[0m[0m environment {
+          [32m+[0m[0m variables = {
+              [32m+[0m[0m "ENVIRONMENT" = "dev"
+              [32m+[0m[0m "TABLE_NAME"  = "chatbot-platform-dev"
+            }
+        }
+
+      [32m+[0m[0m ephemeral_storage (known after apply)
+
+      [32m+[0m[0m logging_config (known after apply)
+
+      [32m+[0m[0m tracing_config (known after apply)
+    }
+
+[1m  # module.lambda.aws_lambda_function.functions["poll_imap_inbound"][0m will be created
+[0m  [32m+[0m[0m resource "aws_lambda_function" "functions" {
+      [32m+[0m[0m architectures                  = (known after apply)
+      [32m+[0m[0m arn                            = (known after apply)
+      [32m+[0m[0m code_sha256                    = (known after apply)
+      [32m+[0m[0m description                    = "Polls active IMAP mailboxes for new inbound email"
+      [32m+[0m[0m filename                       = "/home/brayanrianodev/Documentos/integracionessh/backend/dist/functions.zip"
+      [32m+[0m[0m function_name                  = "chatbot-platform-dev-poll-imap-inbound"
+      [32m+[0m[0m handler                        = "poll-imap-inbound/index.handler"
+      [32m+[0m[0m id                             = (known after apply)
+      [32m+[0m[0m invoke_arn                     = (known after apply)
+      [32m+[0m[0m last_modified                  = (known after apply)
+      [32m+[0m[0m memory_size                    = 512
+      [32m+[0m[0m package_type                   = "Zip"
+      [32m+[0m[0m publish                        = false
+      [32m+[0m[0m qualified_arn                  = (known after apply)
+      [32m+[0m[0m qualified_invoke_arn           = (known after apply)
+      [32m+[0m[0m reserved_concurrent_executions = -1
+      [32m+[0m[0m role                           = "arn:aws:iam::979054355542:role/chatbot-platform-dev-lambda"
+      [32m+[0m[0m runtime                        = "nodejs20.x"
+      [32m+[0m[0m signing_job_arn                = (known after apply)
+      [32m+[0m[0m signing_profile_version_arn    = (known after apply)
+      [32m+[0m[0m skip_destroy                   = false
+      [32m+[0m[0m source_code_hash               = "/hbPYesOVGqUhLXQCaUakT/TCUFh01ita5YUhHP40aA="
+      [32m+[0m[0m source_code_size               = (known after apply)
+      [32m+[0m[0m tags                           = {
+          [32m+[0m[0m "Environment" = "dev"
+          [32m+[0m[0m "ManagedBy"   = "terraform"
+          [32m+[0m[0m "Project"     = "chatbot-platform"
+        }
+      [32m+[0m[0m tags_all                       = {
+          [32m+[0m[0m "Environment" = "dev"
+          [32m+[0m[0m "ManagedBy"   = "terraform"
+          [32m+[0m[0m "Project"     = "chatbot-platform"
+        }
+      [32m+[0m[0m timeout                        = 180
+      [32m+[0m[0m version                        = (known after apply)
+
+      [32m+[0m[0m environment {
+          [32m+[0m[0m variables = {
+              [32m+[0m[0m "ENVIRONMENT"   = "dev"
+              [32m+[0m[0m "MEDIA_BUCKET"  = "chatbot-platform-dev-media-979054355542"
+              [32m+[0m[0m "SQS_QUEUE_URL" = "https://sqs.us-east-1.amazonaws.com/979054355542/chatbot-platform-dev-messages.fifo"
+              [32m+[0m[0m "TABLE_NAME"    = "chatbot-platform-dev"
+            }
+        }
+
+      [32m+[0m[0m ephemeral_storage (known after apply)
+
+      [32m+[0m[0m logging_config (known after apply)
+
+      [32m+[0m[0m tracing_config (known after apply)
+    }
+
+[1m  # module.lambda.aws_lambda_function.functions["process_mailrelay_sync"][0m will be created
+[0m  [32m+[0m[0m resource "aws_lambda_function" "functions" {
+      [32m+[0m[0m architectures                  = (known after apply)
+      [32m+[0m[0m arn                            = (known after apply)
+      [32m+[0m[0m code_sha256                    = (known after apply)
+      [32m+[0m[0m description                    = "Processes Mailrelay synchronization jobs from SQS"
+      [32m+[0m[0m filename                       = "/home/brayanrianodev/Documentos/integracionessh/backend/dist/functions.zip"
+      [32m+[0m[0m function_name                  = "chatbot-platform-dev-process-mailrelay-sync"
+      [32m+[0m[0m handler                        = "process-mailrelay-sync/index.handler"
+      [32m+[0m[0m id                             = (known after apply)
+      [32m+[0m[0m invoke_arn                     = (known after apply)
+      [32m+[0m[0m last_modified                  = (known after apply)
+      [32m+[0m[0m memory_size                    = 512
+      [32m+[0m[0m package_type                   = "Zip"
+      [32m+[0m[0m publish                        = false
+      [32m+[0m[0m qualified_arn                  = (known after apply)
+      [32m+[0m[0m qualified_invoke_arn           = (known after apply)
+      [32m+[0m[0m reserved_concurrent_executions = -1
+      [32m+[0m[0m role                           = "arn:aws:iam::979054355542:role/chatbot-platform-dev-lambda"
+      [32m+[0m[0m runtime                        = "nodejs20.x"
+      [32m+[0m[0m signing_job_arn                = (known after apply)
+      [32m+[0m[0m signing_profile_version_arn    = (known after apply)
+      [32m+[0m[0m skip_destroy                   = false
+      [32m+[0m[0m source_code_hash               = "/hbPYesOVGqUhLXQCaUakT/TCUFh01ita5YUhHP40aA="
+      [32m+[0m[0m source_code_size               = (known after apply)
+      [32m+[0m[0m tags                           = {
+          [32m+[0m[0m "Environment" = "dev"
+          [32m+[0m[0m "ManagedBy"   = "terraform"
+          [32m+[0m[0m "Project"     = "chatbot-platform"
+        }
+      [32m+[0m[0m tags_all                       = {
+          [32m+[0m[0m "Environment" = "dev"
+          [32m+[0m[0m "ManagedBy"   = "terraform"
+          [32m+[0m[0m "Project"     = "chatbot-platform"
+        }
+      [32m+[0m[0m timeout                        = 300
+      [32m+[0m[0m version                        = (known after apply)
+
+      [32m+[0m[0m environment {
+          [32m+[0m[0m variables = (known after apply)
+        }
+
+      [32m+[0m[0m ephemeral_storage (known after apply)
+
+      [32m+[0m[0m logging_config (known after apply)
+
+      [32m+[0m[0m tracing_config (known after apply)
+    }
+
+[1m  # module.lambda.aws_lambda_permission.imap_poll[0m will be created
+[0m  [32m+[0m[0m resource "aws_lambda_permission" "imap_poll" {
+      [32m+[0m[0m action              = "lambda:InvokeFunction"
+      [32m+[0m[0m function_name       = "chatbot-platform-dev-poll-imap-inbound"
+      [32m+[0m[0m id                  = (known after apply)
+      [32m+[0m[0m principal           = "events.amazonaws.com"
+      [32m+[0m[0m source_arn          = (known after apply)
+      [32m+[0m[0m statement_id        = "AllowEventBridgeImapPoll"
+      [32m+[0m[0m statement_id_prefix = (known after apply)
+    }
+
+[1m  # module.s3.aws_s3_bucket_cors_configuration.media[0m will be updated in-place
+[0m  [33m~[0m[0m resource "aws_s3_bucket_cors_configuration" "media" {
+        id                    = "chatbot-platform-dev-media-979054355542"
+        [90m# (2 unchanged attributes hidden)[0m[0m
+
+      [31m-[0m[0m cors_rule {
+          [31m-[0m[0m allowed_headers = [
+              [31m-[0m[0m "*",
+            ] [90m-> null[0m[0m
+          [31m-[0m[0m allowed_methods = [
+              [31m-[0m[0m "GET",
+              [31m-[0m[0m "PUT",
+            ] [90m-> null[0m[0m
+          [31m-[0m[0m allowed_origins = [
+              [31m-[0m[0m "http://127.0.0.1:3000",
+              [31m-[0m[0m "http://localhost:3000",
+              [31m-[0m[0m "https://develop.d5sepmwbbwly9.amplifyapp.com",
+            ] [90m-> null[0m[0m
+          [31m-[0m[0m expose_headers  = [] [90m-> null[0m[0m
+            id              = [90mnull[0m[0m
+          [31m-[0m[0m max_age_seconds = 3000 [90m-> null[0m[0m
+        }
+      [32m+[0m[0m cors_rule {
+          [32m+[0m[0m allowed_headers = [
+              [32m+[0m[0m "*",
+            ]
+          [32m+[0m[0m allowed_methods = [
+              [32m+[0m[0m "GET",
+              [32m+[0m[0m "PUT",
+            ]
+          [32m+[0m[0m allowed_origins = [
+              [32m+[0m[0m "http://127.0.0.1:3000",
+              [32m+[0m[0m "http://localhost:3000",
+              [32m+[0m[0m "https://app.integracionessh.lat",
+              [32m+[0m[0m "https://develop.d5sepmwbbwly9.amplifyapp.com",
+              [32m+[0m[0m "https://develop.integracionessh.lat",
+              [32m+[0m[0m "https://omnichannel.telcoredsas.com",
+            ]
+          [32m+[0m[0m expose_headers  = []
+            id              = [90mnull[0m[0m
+          [32m+[0m[0m max_age_seconds = 3000
+        }
+    }
+
+[1m  # module.sqs.aws_sqs_queue.mailrelay_sync[0m will be created
+[0m  [32m+[0m[0m resource "aws_sqs_queue" "mailrelay_sync" {
+      [32m+[0m[0m arn                               = (known after apply)
+      [32m+[0m[0m content_based_deduplication       = true
+      [32m+[0m[0m deduplication_scope               = (known after apply)
+      [32m+[0m[0m delay_seconds                     = 0
+      [32m+[0m[0m fifo_queue                        = true
+      [32m+[0m[0m fifo_throughput_limit             = (known after apply)
+      [32m+[0m[0m id                                = (known after apply)
+      [32m+[0m[0m kms_data_key_reuse_period_seconds = (known after apply)
+      [32m+[0m[0m max_message_size                  = 262144
+      [32m+[0m[0m message_retention_seconds         = 86400
+      [32m+[0m[0m name                              = "chatbot-platform-dev-mailrelay-sync.fifo"
+      [32m+[0m[0m name_prefix                       = (known after apply)
+      [32m+[0m[0m policy                            = (known after apply)
+      [32m+[0m[0m receive_wait_time_seconds         = 0
+      [32m+[0m[0m redrive_allow_policy              = (known after apply)
+      [32m+[0m[0m redrive_policy                    = (known after apply)
+      [32m+[0m[0m sqs_managed_sse_enabled           = (known after apply)
+      [32m+[0m[0m tags                              = {
+          [32m+[0m[0m "Environment" = "dev"
+          [32m+[0m[0m "ManagedBy"   = "terraform"
+          [32m+[0m[0m "Project"     = "chatbot-platform"
+        }
+      [32m+[0m[0m tags_all                          = {
+          [32m+[0m[0m "Environment" = "dev"
+          [32m+[0m[0m "ManagedBy"   = "terraform"
+          [32m+[0m[0m "Project"     = "chatbot-platform"
+        }
+      [32m+[0m[0m url                               = (known after apply)
+      [32m+[0m[0m visibility_timeout_seconds        = 300
+    }
+
+[1m  # module.sqs.aws_sqs_queue.mailrelay_sync_dlq[0m will be created
+[0m  [32m+[0m[0m resource "aws_sqs_queue" "mailrelay_sync_dlq" {
+      [32m+[0m[0m arn                               = (known after apply)
+      [32m+[0m[0m content_based_deduplication       = true
+      [32m+[0m[0m deduplication_scope               = (known after apply)
+      [32m+[0m[0m delay_seconds                     = 0
+      [32m+[0m[0m fifo_queue                        = true
+      [32m+[0m[0m fifo_throughput_limit             = (known after apply)
+      [32m+[0m[0m id                                = (known after apply)
+      [32m+[0m[0m kms_data_key_reuse_period_seconds = (known after apply)
+      [32m+[0m[0m max_message_size                  = 262144
+      [32m+[0m[0m message_retention_seconds         = 1209600
+      [32m+[0m[0m name                              = "chatbot-platform-dev-mailrelay-sync-dlq.fifo"
+      [32m+[0m[0m name_prefix                       = (known after apply)
+      [32m+[0m[0m policy                            = (known after apply)
+      [32m+[0m[0m receive_wait_time_seconds         = 0
+      [32m+[0m[0m redrive_allow_policy              = (known after apply)
+      [32m+[0m[0m redrive_policy                    = (known after apply)
+      [32m+[0m[0m sqs_managed_sse_enabled           = (known after apply)
+      [32m+[0m[0m tags                              = {
+          [32m+[0m[0m "Environment" = "dev"
+          [32m+[0m[0m "ManagedBy"   = "terraform"
+          [32m+[0m[0m "Project"     = "chatbot-platform"
+        }
+      [32m+[0m[0m tags_all                          = {
+          [32m+[0m[0m "Environment" = "dev"
+          [32m+[0m[0m "ManagedBy"   = "terraform"
+          [32m+[0m[0m "Project"     = "chatbot-platform"
+        }
+      [32m+[0m[0m url                               = (known after apply)
+      [32m+[0m[0m visibility_timeout_seconds        = 30
+    }
+
+[1m  # module.sqs.aws_sqs_queue_policy.mailrelay_sync[0m will be created
+[0m  [32m+[0m[0m resource "aws_sqs_queue_policy" "mailrelay_sync" {
+      [32m+[0m[0m id        = (known after apply)
+      [32m+[0m[0m policy    = (known after apply)
+      [32m+[0m[0m queue_url = (known after apply)
+    }
+
+[1m  # module.sqs.aws_sqs_queue_redrive_allow_policy.mailrelay_sync_dlq[0m will be created
+[0m  [32m+[0m[0m resource "aws_sqs_queue_redrive_allow_policy" "mailrelay_sync_dlq" {
+      [32m+[0m[0m id                   = (known after apply)
+      [32m+[0m[0m queue_url            = (known after apply)
+      [32m+[0m[0m redrive_allow_policy = (known after apply)
+    }
+
+[1mPlan:[0m [0m77 to add, 7 to change, 1 to destroy.
+
+Changes to Outputs:
+  [32m+[0m[0m mailrelay_sync_queue_url  = (known after apply)
+[90m
+─────────────────────────────────────────────────────────────────────────────[0m
+
+Saved the plan to: tfplan
+
+To perform exactly these actions, run the following command to apply:
+    terraform apply "tfplan"
+Releasing state lock. This may take a few moments...

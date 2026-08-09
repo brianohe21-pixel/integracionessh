@@ -67,6 +67,9 @@ const entryPoints = [
   "src/functions/payments/index.ts",
   "src/functions/catalog/index.ts",
   "src/functions/cognito-pre-signup/index.ts",
+  "src/functions/mailrelay/index.ts",
+  "src/functions/process-mailrelay-sync/index.ts",
+  "src/functions/mailrelay-webhook/index.ts",
 ];
 
 const buildOptions = {

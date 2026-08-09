@@ -390,3 +390,51 @@ resource "aws_sqs_queue_policy" "telephony_cdr" {
     ]
   })
 }
+
+resource "aws_sqs_queue" "mailrelay_sync_dlq" {
+  name                        = "${var.project}-${var.environment}-mailrelay-sync-dlq.fifo"
+  fifo_queue                  = true
+  content_based_deduplication = true
+  message_retention_seconds   = 1209600
+  tags                        = var.tags
+}
+
+resource "aws_sqs_queue" "mailrelay_sync" {
+  name                        = "${var.project}-${var.environment}-mailrelay-sync.fifo"
+  fifo_queue                  = true
+  content_based_deduplication = true
+  visibility_timeout_seconds  = 300
+  message_retention_seconds   = 86400
+
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.mailrelay_sync_dlq.arn
+    maxReceiveCount     = 3
+  })
+
+  tags = var.tags
+}
+
+resource "aws_sqs_queue_redrive_allow_policy" "mailrelay_sync_dlq" {
+  queue_url = aws_sqs_queue.mailrelay_sync_dlq.id
+
+  redrive_allow_policy = jsonencode({
+    redrivePermission = "byQueue"
+    sourceQueueArns   = [aws_sqs_queue.mailrelay_sync.arn]
+  })
+}
+
+resource "aws_sqs_queue_policy" "mailrelay_sync" {
+  queue_url = aws_sqs_queue.mailrelay_sync.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect    = "Allow"
+        Principal = { AWS = var.lambda_role_arns }
+        Action    = ["sqs:SendMessage", "sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes"]
+        Resource  = aws_sqs_queue.mailrelay_sync.arn
+      }
+    ]
+  })
+}

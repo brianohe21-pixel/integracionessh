@@ -1,4 +1,5 @@
 import {
+  DeleteCommand,
   GetCommand,
   PutCommand,
   QueryCommand,
@@ -10,9 +11,18 @@ export function normalizePhone(phone: string): string {
   return phone.replace(/\D/g, "");
 }
 
+export function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
 const contactKeys = (tenantId: string, phone: string) => ({
   PK: `TENANT#${tenantId}`,
   SK: `CONTACT#${phone}`,
+});
+
+const contactEmailKeys = (tenantId: string, email: string) => ({
+  PK: `TENANT#${tenantId}`,
+  SK: `CONTACT_EMAIL#${normalizeEmail(email)}`,
 });
 
 function gsi1Keys(tenantId: string, phone: string, updatedAt: string) {
@@ -45,6 +55,20 @@ function stripItem(item: Record<string, unknown>): Contact {
   return rest as unknown as Contact;
 }
 
+async function saveEmailLookup(tenantId: string, email: string, phone: string): Promise<void> {
+  await docClient.send(
+    new PutCommand({
+      TableName: TABLE_NAME,
+      Item: {
+        ...contactEmailKeys(tenantId, email),
+        phoneNumber: normalizePhone(phone),
+        email: normalizeEmail(email),
+        entityType: "ContactEmailLookup",
+      },
+    })
+  );
+}
+
 export async function getContactByPhone(
   tenantId: string,
   phone: string
@@ -58,6 +82,39 @@ export async function getContactByPhone(
   );
   if (!result.Item) return null;
   return stripItem(result.Item);
+}
+
+export async function getContactByEmail(
+  tenantId: string,
+  email: string
+): Promise<Contact | null> {
+  const normalized = normalizeEmail(email);
+  const lookup = await docClient.send(
+    new GetCommand({
+      TableName: TABLE_NAME,
+      Key: contactEmailKeys(tenantId, normalized),
+    })
+  );
+  if (typeof lookup.Item?.phoneNumber === "string") {
+    return getContactByPhone(tenantId, lookup.Item.phoneNumber);
+  }
+
+  let cursor: string | undefined;
+  do {
+    const page = await listContacts(tenantId, {
+      limit: 100,
+      ...(cursor ? { cursor } : {}),
+    });
+    const contact = page.items.find(
+      (item) => item.email && normalizeEmail(item.email) === normalized
+    );
+    if (contact) {
+      await saveEmailLookup(tenantId, normalized, contact.phoneNumber);
+      return contact;
+    }
+    cursor = page.nextCursor;
+  } while (cursor);
+  return null;
 }
 
 export async function getContactsByPhones(
@@ -244,6 +301,9 @@ export async function upsertFromConversation(params: {
       },
     })
   );
+  if (contact.email) {
+    await saveEmailLookup(params.tenantId, contact.email, phone);
+  }
 
   return contact;
 }
@@ -269,6 +329,9 @@ export async function createContact(contact: Contact): Promise<Contact> {
       ConditionExpression: "attribute_not_exists(PK)",
     })
   );
+  if (item.email) {
+    await saveEmailLookup(contact.tenantId, item.email, phone);
+  }
 
   return item;
 }
@@ -310,6 +373,19 @@ export async function updateContact(
       },
     })
   );
+  if (updates.email !== undefined && existing.email !== updates.email) {
+    if (existing.email) {
+      await docClient.send(
+        new DeleteCommand({
+          TableName: TABLE_NAME,
+          Key: contactEmailKeys(tenantId, existing.email),
+        })
+      );
+    }
+    if (updates.email) {
+      await saveEmailLookup(tenantId, updates.email, normalized);
+    }
+  }
 
   return merged;
 }
@@ -383,6 +459,20 @@ export async function suppressContact(tenantId: string, phone: string): Promise<
     marketingConsent: "opt_out",
     consentAt: now,
     consentSource: "panel",
+  });
+}
+
+export async function applyMailrelaySuppressionByEmail(
+  tenantId: string,
+  email: string
+): Promise<Contact | null> {
+  const contact = await getContactByEmail(tenantId, email);
+  if (!contact) return null;
+  return updateContact(tenantId, contact.phoneNumber, {
+    suppressed: true,
+    marketingConsent: "opt_out",
+    consentAt: new Date().toISOString(),
+    consentSource: "mailrelay",
   });
 }
 

@@ -1,0 +1,100 @@
+[0m[1mmodule.cognito.aws_cognito_identity_provider.google[0]: Destroying... [id=us-east-1_CWNhdPTjN:Google][0m[0m
+[0m[1mmodule.cognito.aws_cognito_identity_provider.google[0]: Destruction complete after 0s[0m
+[0m[1mmodule.lambda.aws_cloudwatch_event_rule.imap_poll: Creating...[0m[0m
+[0m[1mmodule.lambda.aws_cloudwatch_event_rule.imap_poll: Creation complete after 1s [id=chatbot-platform-dev-imap-poll][0m
+[0m[1mmodule.sqs.aws_sqs_queue.mailrelay_sync_dlq: Creating...[0m[0m
+[0m[1mmodule.sqs.aws_sqs_queue.mailrelay_sync_dlq: Still creating... [00m10s elapsed][0m[0m
+[0m[1mmodule.sqs.aws_sqs_queue.mailrelay_sync_dlq: Still creating... [00m20s elapsed][0m[0m
+[0m[1mmodule.sqs.aws_sqs_queue.mailrelay_sync_dlq: Creation complete after 26s [id=https://sqs.us-east-1.amazonaws.com/979054355542/chatbot-platform-dev-mailrelay-sync-dlq.fifo][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_api.main: Modifying... [id=ccti8rpoj1][0m[0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_api.main: Modifications complete after 1s [id=ccti8rpoj1][0m
+[0m[1mmodule.cognito.aws_cognito_user_pool_client.web: Modifying... [id=7th9bgkj7fl2bp3hg786ttg5t6][0m[0m
+[0m[1mmodule.cognito.aws_cognito_user_pool_client.web: Modifications complete after 0s [id=7th9bgkj7fl2bp3hg786ttg5t6][0m
+[0m[1mmodule.s3.aws_s3_bucket_cors_configuration.media: Modifying... [id=chatbot-platform-dev-media-979054355542][0m[0m
+[0m[1mmodule.s3.aws_s3_bucket_cors_configuration.media: Modifications complete after 5s [id=chatbot-platform-dev-media-979054355542][0m
+[0m[1mmodule.sqs.aws_sqs_queue.mailrelay_sync: Creating...[0m[0m
+[0m[1mmodule.sqs.aws_sqs_queue.mailrelay_sync: Still creating... [00m10s elapsed][0m[0m
+[0m[1mmodule.sqs.aws_sqs_queue.mailrelay_sync: Still creating... [00m20s elapsed][0m[0m
+[0m[1mmodule.sqs.aws_sqs_queue.mailrelay_sync: Creation complete after 26s [id=https://sqs.us-east-1.amazonaws.com/979054355542/chatbot-platform-dev-mailrelay-sync.fifo][0m
+[0m[1mmodule.sqs.aws_sqs_queue_redrive_allow_policy.mailrelay_sync_dlq: Creating...[0m[0m
+[0m[1mmodule.sqs.aws_sqs_queue_redrive_allow_policy.mailrelay_sync_dlq: Still creating... [00m10s elapsed][0m[0m
+[0m[1mmodule.sqs.aws_sqs_queue_redrive_allow_policy.mailrelay_sync_dlq: Still creating... [00m20s elapsed][0m[0m
+[0m[1mmodule.sqs.aws_sqs_queue_redrive_allow_policy.mailrelay_sync_dlq: Creation complete after 25s [id=https://sqs.us-east-1.amazonaws.com/979054355542/chatbot-platform-dev-mailrelay-sync-dlq.fifo][0m
+[0m[1mmodule.sqs.aws_sqs_queue_policy.mailrelay_sync: Creating...[0m[0m
+[0m[1mmodule.sqs.aws_sqs_queue_policy.mailrelay_sync: Still creating... [00m10s elapsed][0m[0m
+[0m[1mmodule.sqs.aws_sqs_queue_policy.mailrelay_sync: Still creating... [00m20s elapsed][0m[0m
+[0m[1mmodule.sqs.aws_sqs_queue_policy.mailrelay_sync: Creation complete after 26s [id=https://sqs.us-east-1.amazonaws.com/979054355542/chatbot-platform-dev-mailrelay-sync.fifo][0m
+[0m[1mmodule.lambda.aws_iam_role_policy.lambda_permissions: Modifying... [id=chatbot-platform-dev-lambda:chatbot-platform-dev-lambda-permissions][0m[0m
+[0m[1mmodule.lambda.aws_iam_role_policy.lambda_permissions: Modifications complete after 1s [id=chatbot-platform-dev-lambda:chatbot-platform-dev-lambda-permissions][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["mailrelay"]: Creating...[0m[0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["mailrelay"]: Creation complete after 0s [id=/aws/lambda/chatbot-platform-dev-mailrelay][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["mailrelay_webhook"]: Creating...[0m[0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["mailrelay_webhook"]: Creation complete after 1s [id=/aws/lambda/chatbot-platform-dev-mailrelay-webhook][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["poll_imap_inbound"]: Creating...[0m[0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["poll_imap_inbound"]: Creation complete after 0s [id=/aws/lambda/chatbot-platform-dev-poll-imap-inbound][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["email_imap_connect"]: Creating...[0m[0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["email_imap_connect"]: Creation complete after 1s [id=/aws/lambda/chatbot-platform-dev-email-imap-connect][0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["process_mailrelay_sync"]: Creating...[0m[0m
+[0m[1mmodule.lambda.aws_cloudwatch_log_group.lambda_logs["process_mailrelay_sync"]: Creation complete after 0s [id=/aws/lambda/chatbot-platform-dev-process-mailrelay-sync][0m
+[0m[1mmodule.amplify.aws_amplify_app.frontend: Modifying... [id=d5sepmwbbwly9][0m[0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["process_mailrelay_sync"]: Creating...[0m[0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["billing"]: Modifying... [id=chatbot-platform-dev-billing][0m[0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["billing"]: Modifications complete after 6s [id=chatbot-platform-dev-billing][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["email_inbound"]: Modifying... [id=chatbot-platform-dev-email-inbound][0m[0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["email_inbound"]: Modifications complete after 6s [id=chatbot-platform-dev-email-inbound][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["mailrelay"]: Creating...[0m[0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["email_imap_connect"]: Creating...[0m[0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["poll_imap_inbound"]: Creating...[0m[0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["mailrelay_webhook"]: Creating...[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mupdating Amplify App (d5sepmwbbwly9): operation error Amplify: UpdateApp, https response error StatusCode: 400, RequestID: b6977fb5-57bf-46ca-8f20-54db6b39f5a3, BadRequestException: There was an issue setting up your repository. Please try again later.({
+[31m│[0m [0m  "message": "Bad credentials",
+[31m│[0m [0m  "documentation_url": "https://docs.github.com/rest",
+[31m│[0m [0m  "status": "401"
+[31m│[0m [0m})[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m  with module.amplify.aws_amplify_app.frontend,
+[31m│[0m [0m  on ../../modules/amplify/main.tf line 5, in resource "aws_amplify_app" "frontend":
+[31m│[0m [0m   5: resource "aws_amplify_app" "frontend" [4m{[0m[0m
+[31m│[0m [0m
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mcreating Lambda Function (chatbot-platform-dev-process-mailrelay-sync): operation error Lambda: CreateFunction, https response error StatusCode: 413, RequestID: da81f115-3c11-4a24-8ff9-9e19a7f4e300, api error RequestEntityTooLargeException: Request must be smaller than 70167211 bytes for the CreateFunction operation[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m  with module.lambda.aws_lambda_function.functions["process_mailrelay_sync"],
+[31m│[0m [0m  on ../../modules/lambda/main.tf line 919, in resource "aws_lambda_function" "functions":
+[31m│[0m [0m 919: resource "aws_lambda_function" "functions" [4m{[0m[0m
+[31m│[0m [0m
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mcreating Lambda Function (chatbot-platform-dev-poll-imap-inbound): operation error Lambda: CreateFunction, https response error StatusCode: 413, RequestID: d0ef922a-5820-4f0f-88f5-9056b44a142b, api error RequestEntityTooLargeException: Request must be smaller than 70167211 bytes for the CreateFunction operation[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m  with module.lambda.aws_lambda_function.functions["poll_imap_inbound"],
+[31m│[0m [0m  on ../../modules/lambda/main.tf line 919, in resource "aws_lambda_function" "functions":
+[31m│[0m [0m 919: resource "aws_lambda_function" "functions" [4m{[0m[0m
+[31m│[0m [0m
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mcreating Lambda Function (chatbot-platform-dev-mailrelay): operation error Lambda: CreateFunction, https response error StatusCode: 413, RequestID: 82226d3b-06c7-4cc9-91c6-6f55345f5208, api error RequestEntityTooLargeException: Request must be smaller than 70167211 bytes for the CreateFunction operation[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m  with module.lambda.aws_lambda_function.functions["mailrelay"],
+[31m│[0m [0m  on ../../modules/lambda/main.tf line 919, in resource "aws_lambda_function" "functions":
+[31m│[0m [0m 919: resource "aws_lambda_function" "functions" [4m{[0m[0m
+[31m│[0m [0m
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mcreating Lambda Function (chatbot-platform-dev-mailrelay-webhook): operation error Lambda: CreateFunction, https response error StatusCode: 413, RequestID: 337ba68c-7573-4f4f-b175-648e6b54d4b6, api error RequestEntityTooLargeException: Request must be smaller than 70167211 bytes for the CreateFunction operation[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m  with module.lambda.aws_lambda_function.functions["mailrelay_webhook"],
+[31m│[0m [0m  on ../../modules/lambda/main.tf line 919, in resource "aws_lambda_function" "functions":
+[31m│[0m [0m 919: resource "aws_lambda_function" "functions" [4m{[0m[0m
+[31m│[0m [0m
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mcreating Lambda Function (chatbot-platform-dev-email-imap-connect): operation error Lambda: CreateFunction, https response error StatusCode: 413, RequestID: 41f3807d-c918-47c8-9da5-4a4c6918cf28, api error RequestEntityTooLargeException: Request must be smaller than 70167211 bytes for the CreateFunction operation[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m  with module.lambda.aws_lambda_function.functions["email_imap_connect"],
+[31m│[0m [0m  on ../../modules/lambda/main.tf line 919, in resource "aws_lambda_function" "functions":
+[31m│[0m [0m 919: resource "aws_lambda_function" "functions" [4m{[0m[0m
+[31m│[0m [0m
+[31m╵[0m[0m

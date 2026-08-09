@@ -220,3 +220,9 @@ variable "google_client_secret" {
   default   = ""
   sensitive = true
 }
+
+variable "mailrelay_event_types" {
+  type        = string
+  default     = ""
+  description = "Comma-separated Mailrelay webhook event types for tenant subscriptions"
+}

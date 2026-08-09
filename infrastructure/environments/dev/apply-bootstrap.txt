@@ -1,0 +1,191 @@
+[0m[1mmodule.lambda.aws_lambda_function.functions["process_mailrelay_sync"]: Creating...[0m[0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["process_mailrelay_sync"]: Creation complete after 7s [id=chatbot-platform-dev-process-mailrelay-sync][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["mailrelay_webhook"]: Creating...[0m[0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["mailrelay_webhook"]: Creation complete after 7s [id=chatbot-platform-dev-mailrelay-webhook][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["email_imap_connect"]: Creating...[0m[0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["email_imap_connect"]: Creation complete after 6s [id=chatbot-platform-dev-email-imap-connect][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["mailrelay"]: Creating...[0m[0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["mailrelay"]: Creation complete after 7s [id=chatbot-platform-dev-mailrelay][0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["poll_imap_inbound"]: Creating...[0m[0m
+[0m[1mmodule.lambda.aws_lambda_function.functions["poll_imap_inbound"]: Creation complete after 6s [id=chatbot-platform-dev-poll-imap-inbound][0m
+[0m[1mmodule.lambda.aws_lambda_event_source_mapping.mailrelay_sync_sqs_trigger: Creating...[0m[0m
+[0m[1mmodule.lambda.aws_lambda_event_source_mapping.mailrelay_sync_sqs_trigger: Still creating... [00m10s elapsed][0m[0m
+[0m[1mmodule.lambda.aws_lambda_event_source_mapping.mailrelay_sync_sqs_trigger: Creation complete after 15s [id=ee63e3e2-6bca-4033-927b-ca551b9ef77f][0m
+[0m[1mmodule.lambda.aws_cloudwatch_event_target.imap_poll: Creating...[0m[0m
+[0m[1mmodule.lambda.aws_cloudwatch_event_target.imap_poll: Creation complete after 1s [id=chatbot-platform-dev-imap-poll-poll-imap-inbound][0m
+[0m[1mmodule.lambda.aws_lambda_permission.imap_poll: Creating...[0m[0m
+[0m[1mmodule.lambda.aws_lambda_permission.imap_poll: Creation complete after 1s [id=AllowEventBridgeImapPoll][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["email_imap_connect"]: Creating...[0m[0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["email_imap_connect"]: Creation complete after 0s [id=AllowAPIGatewayInvoke-email_imap_connect][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["mailrelay_webhook"]: Creating...[0m[0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["mailrelay_webhook"]: Creation complete after 0s [id=AllowAPIGatewayInvoke-mailrelay_webhook][0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["mailrelay"]: Creating...[0m[0m
+[0m[1mmodule.api_gateway.aws_lambda_permission.api_gw["mailrelay"]: Creation complete after 1s [id=AllowAPIGatewayInvoke-mailrelay][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_sent_campaigns"]: Creating...[0m[0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_sent_campaigns"]: Creation complete after 0s [id=u81bjn3][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_credentials_get"]: Creating...[0m[0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_credentials_get"]: Creation complete after 1s [id=3wqf6ul][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_campaigns_create"]: Creating...[0m[0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_campaigns_create"]: Creation complete after 0s [id=j3m4clt][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["email_imap_test"]: Creating...[0m[0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["email_imap_test"]: Creation complete after 1s [id=sayeb43][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["conversations_message_html"]: Creating...[0m[0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["conversations_message_html"]: Creation complete after 0s [id=ujh34qo][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_campaigns_send"]: Creating...[0m[0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_campaigns_send"]: Creation complete after 0s [id=2g17k3v][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_campaigns_put"]: Creating...[0m[0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_campaigns_put"]: Creation complete after 1s [id=enwr9wp][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_sent_campaign_get"]: Creating...[0m[0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_sent_campaign_get"]: Creation complete after 0s [id=lp1k6jr][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_campaigns_get"]: Creating...[0m[0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_campaigns_get"]: Creation complete after 0s [id=h3by36t][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_syncs"]: Creating...[0m[0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_syncs"]: Creation complete after 1s [id=cg1s1fq][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_groups"]: Creating...[0m[0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_groups"]: Creation complete after 0s [id=stcdoy0][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_webhook_tenant"]: Creating...[0m[0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_webhook_tenant"]: Creation complete after 0s [id=dqh34eb][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_credentials_delete"]: Creating...[0m[0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_credentials_delete"]: Creation complete after 1s [id=ybg9lom][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_credentials_put"]: Creating...[0m[0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_credentials_put"]: Creation complete after 0s [id=dtr9j25][0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["conversations_message_attachment"]: Creating...[0m[0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_sync"]: Creating...[0m[0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["email_imap_connect"]: Creating...[0m[0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_config_put"]: Creating...[0m[0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_test"]: Creating...[0m[0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_config_get"]: Creating...[0m[0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_syncs_get"]: Creating...[0m[0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_senders"]: Creating...[0m[0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_sent_campaign_metrics"]: Creating...[0m[0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_campaigns_send_test"]: Creating...[0m[0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_campaigns_delete"]: Creating...[0m[0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_campaigns_list"]: Creating...[0m[0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["email_imap_disconnect"]: Creating...[0m[0m
+[0m[1mmodule.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_webhook"]: Creating...[0m[0m
+[33m╷[0m[0m
+[33m│[0m [0m[1m[33mWarning: [0m[0m[1mApplied changes may be incomplete[0m
+[33m│[0m [0m
+[33m│[0m [0m[0mThe plan was created with the -target option in effect, so some changes
+[33m│[0m [0mrequested in the configuration may have been ignored and the output values
+[33m│[0m [0mmay not be fully updated. Run the following command to verify that no other
+[33m│[0m [0mchanges are pending:
+[33m│[0m [0m    terraform plan
+[33m│[0m [0m
+[33m│[0m [0mNote that the -target option is not suitable for routine use, and is
+[33m│[0m [0mprovided only for exceptional situations such as recovering from errors or
+[33m│[0m [0mmistakes, or when Terraform specifically suggests to use it as part of an
+[33m│[0m [0merror message.
+[33m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mcreating API Gateway v2 Integration: operation error ApiGatewayV2: CreateIntegration, https response error StatusCode: 429, RequestID: 15de52ce-85bf-489a-aec1-008fad1ee15b, ConflictException: Maximum number of Integrations for this API has been reached. Please contact AWS if you need additional Integrations.[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m  with module.api_gateway.aws_apigatewayv2_integration.integrations["email_imap_disconnect"],
+[31m│[0m [0m  on ../../modules/api-gateway/main.tf line 1944, in resource "aws_apigatewayv2_integration" "integrations":
+[31m│[0m [0m1944: resource "aws_apigatewayv2_integration" "integrations" [4m{[0m[0m
+[31m│[0m [0m
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mcreating API Gateway v2 Integration: operation error ApiGatewayV2: CreateIntegration, https response error StatusCode: 429, RequestID: 0c01fcbd-8149-46cd-8566-a614d0de448c, ConflictException: Maximum number of Integrations for this API has been reached. Please contact AWS if you need additional Integrations.[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m  with module.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_sent_campaign_metrics"],
+[31m│[0m [0m  on ../../modules/api-gateway/main.tf line 1944, in resource "aws_apigatewayv2_integration" "integrations":
+[31m│[0m [0m1944: resource "aws_apigatewayv2_integration" "integrations" [4m{[0m[0m
+[31m│[0m [0m
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mcreating API Gateway v2 Integration: operation error ApiGatewayV2: CreateIntegration, https response error StatusCode: 429, RequestID: 35bcbae9-a593-4621-85e8-299da86011d7, ConflictException: Maximum number of Integrations for this API has been reached. Please contact AWS if you need additional Integrations.[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m  with module.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_campaigns_list"],
+[31m│[0m [0m  on ../../modules/api-gateway/main.tf line 1944, in resource "aws_apigatewayv2_integration" "integrations":
+[31m│[0m [0m1944: resource "aws_apigatewayv2_integration" "integrations" [4m{[0m[0m
+[31m│[0m [0m
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mcreating API Gateway v2 Integration: operation error ApiGatewayV2: CreateIntegration, https response error StatusCode: 429, RequestID: 363a7afd-39cf-408a-a7c8-431a107e04ce, ConflictException: Maximum number of Integrations for this API has been reached. Please contact AWS if you need additional Integrations.[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m  with module.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_syncs_get"],
+[31m│[0m [0m  on ../../modules/api-gateway/main.tf line 1944, in resource "aws_apigatewayv2_integration" "integrations":
+[31m│[0m [0m1944: resource "aws_apigatewayv2_integration" "integrations" [4m{[0m[0m
+[31m│[0m [0m
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mcreating API Gateway v2 Integration: operation error ApiGatewayV2: CreateIntegration, https response error StatusCode: 429, RequestID: 89185d0e-7104-48c8-ad1b-1cf25d046f00, ConflictException: Maximum number of Integrations for this API has been reached. Please contact AWS if you need additional Integrations.[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m  with module.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_webhook"],
+[31m│[0m [0m  on ../../modules/api-gateway/main.tf line 1944, in resource "aws_apigatewayv2_integration" "integrations":
+[31m│[0m [0m1944: resource "aws_apigatewayv2_integration" "integrations" [4m{[0m[0m
+[31m│[0m [0m
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mcreating API Gateway v2 Integration: operation error ApiGatewayV2: CreateIntegration, https response error StatusCode: 429, RequestID: 27e73715-37e6-492b-893c-759ee39dcc29, ConflictException: Maximum number of Integrations for this API has been reached. Please contact AWS if you need additional Integrations.[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m  with module.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_campaigns_send_test"],
+[31m│[0m [0m  on ../../modules/api-gateway/main.tf line 1944, in resource "aws_apigatewayv2_integration" "integrations":
+[31m│[0m [0m1944: resource "aws_apigatewayv2_integration" "integrations" [4m{[0m[0m
+[31m│[0m [0m
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mcreating API Gateway v2 Integration: operation error ApiGatewayV2: CreateIntegration, https response error StatusCode: 429, RequestID: af26ac1f-f3e9-4864-8b1a-e873ccbe63a0, ConflictException: Maximum number of Integrations for this API has been reached. Please contact AWS if you need additional Integrations.[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m  with module.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_campaigns_delete"],
+[31m│[0m [0m  on ../../modules/api-gateway/main.tf line 1944, in resource "aws_apigatewayv2_integration" "integrations":
+[31m│[0m [0m1944: resource "aws_apigatewayv2_integration" "integrations" [4m{[0m[0m
+[31m│[0m [0m
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mcreating API Gateway v2 Integration: operation error ApiGatewayV2: CreateIntegration, https response error StatusCode: 429, RequestID: 4de58a45-06bb-416c-a2f4-d7f1af9aa1ab, ConflictException: Maximum number of Integrations for this API has been reached. Please contact AWS if you need additional Integrations.[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m  with module.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_test"],
+[31m│[0m [0m  on ../../modules/api-gateway/main.tf line 1944, in resource "aws_apigatewayv2_integration" "integrations":
+[31m│[0m [0m1944: resource "aws_apigatewayv2_integration" "integrations" [4m{[0m[0m
+[31m│[0m [0m
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mcreating API Gateway v2 Integration: operation error ApiGatewayV2: CreateIntegration, https response error StatusCode: 429, RequestID: 59979e13-1a6e-4308-a5de-87dc7acc617f, ConflictException: Maximum number of Integrations for this API has been reached. Please contact AWS if you need additional Integrations.[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m  with module.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_config_put"],
+[31m│[0m [0m  on ../../modules/api-gateway/main.tf line 1944, in resource "aws_apigatewayv2_integration" "integrations":
+[31m│[0m [0m1944: resource "aws_apigatewayv2_integration" "integrations" [4m{[0m[0m
+[31m│[0m [0m
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mcreating API Gateway v2 Integration: operation error ApiGatewayV2: CreateIntegration, https response error StatusCode: 429, RequestID: 7cfa40e8-3632-4feb-886c-bc210b37214f, ConflictException: Maximum number of Integrations for this API has been reached. Please contact AWS if you need additional Integrations.[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m  with module.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_senders"],
+[31m│[0m [0m  on ../../modules/api-gateway/main.tf line 1944, in resource "aws_apigatewayv2_integration" "integrations":
+[31m│[0m [0m1944: resource "aws_apigatewayv2_integration" "integrations" [4m{[0m[0m
+[31m│[0m [0m
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mcreating API Gateway v2 Integration: operation error ApiGatewayV2: CreateIntegration, https response error StatusCode: 429, RequestID: 5257d8aa-220f-4ce2-ad68-4f041ba4ae11, ConflictException: Maximum number of Integrations for this API has been reached. Please contact AWS if you need additional Integrations.[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m  with module.api_gateway.aws_apigatewayv2_integration.integrations["email_imap_connect"],
+[31m│[0m [0m  on ../../modules/api-gateway/main.tf line 1944, in resource "aws_apigatewayv2_integration" "integrations":
+[31m│[0m [0m1944: resource "aws_apigatewayv2_integration" "integrations" [4m{[0m[0m
+[31m│[0m [0m
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mcreating API Gateway v2 Integration: operation error ApiGatewayV2: CreateIntegration, https response error StatusCode: 429, RequestID: 92dd3c78-e1d0-46f7-8972-70a179b6c02e, ConflictException: Maximum number of Integrations for this API has been reached. Please contact AWS if you need additional Integrations.[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m  with module.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_config_get"],
+[31m│[0m [0m  on ../../modules/api-gateway/main.tf line 1944, in resource "aws_apigatewayv2_integration" "integrations":
+[31m│[0m [0m1944: resource "aws_apigatewayv2_integration" "integrations" [4m{[0m[0m
+[31m│[0m [0m
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mcreating API Gateway v2 Integration: operation error ApiGatewayV2: CreateIntegration, https response error StatusCode: 429, RequestID: 9b7e5f0a-fb2f-4a27-a002-f40dd7f2bf4d, ConflictException: Maximum number of Integrations for this API has been reached. Please contact AWS if you need additional Integrations.[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m  with module.api_gateway.aws_apigatewayv2_integration.integrations["conversations_message_attachment"],
+[31m│[0m [0m  on ../../modules/api-gateway/main.tf line 1944, in resource "aws_apigatewayv2_integration" "integrations":
+[31m│[0m [0m1944: resource "aws_apigatewayv2_integration" "integrations" [4m{[0m[0m
+[31m│[0m [0m
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mcreating API Gateway v2 Integration: operation error ApiGatewayV2: CreateIntegration, https response error StatusCode: 429, RequestID: d6bfc26a-f5d8-48c8-a4eb-d2ea482e69bf, ConflictException: Maximum number of Integrations for this API has been reached. Please contact AWS if you need additional Integrations.[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m  with module.api_gateway.aws_apigatewayv2_integration.integrations["mailrelay_sync"],
+[31m│[0m [0m  on ../../modules/api-gateway/main.tf line 1944, in resource "aws_apigatewayv2_integration" "integrations":
+[31m│[0m [0m1944: resource "aws_apigatewayv2_integration" "integrations" [4m{[0m[0m
+[31m│[0m [0m
+[31m╵[0m[0m

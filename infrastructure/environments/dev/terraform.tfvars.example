@@ -29,6 +29,8 @@ frontend_url            = "https://develop.d5sepmwbbwly9.amplifyapp.com"
 api_custom_domain       = ""
 # Optional override when API Gateway does not exist yet. Otherwise Terraform resolves execute-api URL automatically.
 api_public_url          = ""
+# Mailrelay (global platform integration)
+# mailrelay_event_types = "email_sent,email_delivered,email_opened,email_clicked,email_bounced,email_unsubscribed"
 
 telephony_gateway_vpc_id             = "vpc-xxxxxxxx"
 # HCL list for CI: TELEPHONY_GATEWAY_PUBLIC_SUBNET_IDS='["subnet-aaa","subnet-bbb"]'

@@ -67,6 +67,7 @@ resource "aws_iam_role_policy" "lambda_permissions" {
           var.flow_run_sqs_queue_arn,
           var.flow_event_sqs_queue_arn,
           var.call_events_sqs_queue_arn,
+          var.mailrelay_sync_sqs_queue_arn,
         ]
       },
       {
@@ -143,6 +144,7 @@ resource "aws_iam_role_policy" "lambda_permissions" {
           "secretsmanager:CreateSecret",
           "secretsmanager:PutSecretValue",
           "secretsmanager:UpdateSecret",
+          "secretsmanager:DeleteSecret",
         ]
         Resource = "arn:aws:secretsmanager:*:*:secret:/${var.environment}/tenants/*"
       },
@@ -732,13 +734,13 @@ locals {
       timeout     = 60
       memory      = 256
       environment = {
-        TABLE_NAME                = var.dynamodb_table_name
-        FLOW_RUN_SQS_QUEUE_URL    = var.flow_run_sqs_queue_url
-        FLOW_EVENT_SQS_QUEUE_URL  = var.flow_event_sqs_queue_url
-        SCHEDULER_ROLE_ARN        = var.scheduler_role_arn
-        FLOWS_FUNCTION_ARN        = local.flows_function_arn
-        API_PUBLIC_URL            = var.api_public_url
-        ENVIRONMENT               = var.environment
+        TABLE_NAME               = var.dynamodb_table_name
+        FLOW_RUN_SQS_QUEUE_URL   = var.flow_run_sqs_queue_url
+        FLOW_EVENT_SQS_QUEUE_URL = var.flow_event_sqs_queue_url
+        SCHEDULER_ROLE_ARN       = var.scheduler_role_arn
+        FLOWS_FUNCTION_ARN       = local.flows_function_arn
+        API_PUBLIC_URL           = var.api_public_url
+        ENVIRONMENT              = var.environment
       }
     }
     flow_hooks = {
@@ -747,11 +749,11 @@ locals {
       timeout     = 30
       memory      = 256
       environment = {
-        TABLE_NAME               = var.dynamodb_table_name
-        FLOW_EVENT_SQS_QUEUE_URL = var.flow_event_sqs_queue_url
+        TABLE_NAME                = var.dynamodb_table_name
+        FLOW_EVENT_SQS_QUEUE_URL  = var.flow_event_sqs_queue_url
         INTEGRATION_SQS_QUEUE_URL = var.integration_sqs_queue_url
-        API_PUBLIC_URL           = var.api_public_url
-        ENVIRONMENT              = var.environment
+        API_PUBLIC_URL            = var.api_public_url
+        ENVIRONMENT               = var.environment
       }
     }
     process_flow = {
@@ -877,6 +879,40 @@ locals {
         MEDIA_BUCKET              = var.media_bucket_name
       }
     }
+    mailrelay = {
+      handler     = "mailrelay/index.handler"
+      description = "Mailrelay integration configuration, synchronization, and campaigns API"
+      timeout     = 60
+      memory      = 256
+      environment = {
+        TABLE_NAME               = var.dynamodb_table_name
+        ENVIRONMENT              = var.environment
+        API_PUBLIC_URL           = var.api_public_url
+        MAILRELAY_SYNC_QUEUE_URL = var.mailrelay_sync_sqs_queue_url
+        MAILRELAY_EVENT_TYPES    = var.mailrelay_event_types
+      }
+    }
+    process_mailrelay_sync = {
+      handler     = "process-mailrelay-sync/index.handler"
+      description = "Processes Mailrelay synchronization jobs from SQS"
+      timeout     = 300
+      memory      = 512
+      environment = {
+        TABLE_NAME               = var.dynamodb_table_name
+        ENVIRONMENT              = var.environment
+        MAILRELAY_SYNC_QUEUE_URL = var.mailrelay_sync_sqs_queue_url
+      }
+    }
+    mailrelay_webhook = {
+      handler     = "mailrelay-webhook/index.handler"
+      description = "Receives Mailrelay campaign event webhooks"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME  = var.dynamodb_table_name
+        ENVIRONMENT = var.environment
+      }
+    }
   }
 }
 
@@ -986,6 +1022,15 @@ resource "aws_lambda_event_source_mapping" "telephony_cdr_sqs_trigger" {
   function_name                      = aws_lambda_function.functions["process_telephony_cdr"].arn
   batch_size                         = 1
   enabled                            = true
+  maximum_batching_window_in_seconds = 0
+}
+
+resource "aws_lambda_event_source_mapping" "mailrelay_sync_sqs_trigger" {
+  event_source_arn                   = var.mailrelay_sync_sqs_queue_arn
+  function_name                      = aws_lambda_function.functions["process_mailrelay_sync"].arn
+  batch_size                         = 1
+  enabled                            = true
+  function_response_types            = ["ReportBatchItemFailures"]
   maximum_batching_window_in_seconds = 0
 }
 

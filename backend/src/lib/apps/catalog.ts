@@ -4,10 +4,12 @@ import { listPaymentsConfigs } from "../dynamodb/payments-config.repository.js";
 import { listCatalogConfigs } from "../dynamodb/catalog-config.repository.js";
 
 export async function listAppsCatalog(tenantId: string) {
-  const bots = await listBots(tenantId);
-  const calendarConfigs = await listCalendarConfigs(tenantId);
-  const paymentsConfigs = await listPaymentsConfigs(tenantId);
-  const catalogConfigs = await listCatalogConfigs(tenantId);
+  const [bots, calendarConfigs, paymentsConfigs, catalogConfigs] = await Promise.all([
+    listBots(tenantId),
+    listCalendarConfigs(tenantId),
+    listPaymentsConfigs(tenantId),
+    listCatalogConfigs(tenantId),
+  ]);
   const calendarByBot = new Map(calendarConfigs.map((c) => [c.botId, c]));
   const paymentsByBot = new Map(paymentsConfigs.map((c) => [c.botId, c]));
   const catalogByBot = new Map(catalogConfigs.map((c) => [c.botId, c]));
