@@ -110,7 +110,6 @@ jobs:
       - name: Check API Gateway guardrails
         env:
           ENVIRONMENT: dev
-          MAX_ORPHAN_INTEGRATIONS: ${{ github.event_name == 'pull_request' && '999' || '0' }}
         run: bash ../../../.github/scripts/check-api-gateway-guardrails.sh
 
       - name: Clear stale Terraform state lock
@@ -273,6 +272,7 @@ jobs:
         if: github.ref == 'refs/heads/develop' && github.event_name == 'push' && steps.plan.outcome == 'success'
         env:
           ENVIRONMENT: dev
+          ENFORCE_ORPHAN_LIMIT: "true"
           MAX_ORPHAN_INTEGRATIONS: "0"
         run: bash ../../../.github/scripts/check-api-gateway-guardrails.sh
 
@@ -361,8 +361,6 @@ jobs:
       - name: Check API Gateway guardrails
         env:
           ENVIRONMENT: prod
-          MAX_ORPHAN_INTEGRATIONS: "0"
-          FAIL_ON_ROUTE_LIMIT_WARNING: "true"
         run: bash ../../../.github/scripts/check-api-gateway-guardrails.sh
 
       - name: Clear stale Terraform state lock
@@ -449,8 +447,8 @@ jobs:
         if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && steps.plan.outcome == 'success'
         env:
           ENVIRONMENT: prod
+          ENFORCE_ORPHAN_LIMIT: "true"
           MAX_ORPHAN_INTEGRATIONS: "0"
-          FAIL_ON_ROUTE_LIMIT_WARNING: "true"
         run: bash ../../../.github/scripts/check-api-gateway-guardrails.sh
 
       - name: Smoke test API Gateway
