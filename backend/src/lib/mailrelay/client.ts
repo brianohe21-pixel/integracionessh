@@ -1,6 +1,6 @@
-const DEFAULT_BASE_URL = "https://api.mailrelay.com/v2";
 const DEFAULT_TIMEOUT_MS = 10_000;
 const DEFAULT_MAX_RETRIES = 2;
+const AUTH_HEADER = "X-AUTH-TOKEN";
 
 export class MailrelayApiError extends Error {
   constructor(
@@ -15,7 +15,7 @@ export class MailrelayApiError extends Error {
 
 export interface MailrelayClientOptions {
   apiKey: string;
-  baseUrl?: string;
+  baseUrl: string;
   timeoutMs?: number;
   maxRetries?: number;
   fetcher?: typeof fetch;
@@ -29,11 +29,56 @@ export interface MailrelayPage<T> {
   hasMore: boolean;
 }
 
+export function normalizeMailrelayBaseUrl(value: string): string {
+  const trimmed = value.trim().replace(/\/+$/, "");
+  if (!trimmed) {
+    throw new MailrelayApiError("Mailrelay base URL is not configured", 400);
+  }
+  const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  const url = new URL(withScheme);
+  const pathname = url.pathname.replace(/\/+$/, "");
+  if (!pathname || pathname === "/") {
+    url.pathname = "/api/v1";
+  } else if (!pathname.endsWith("/api/v1")) {
+    url.pathname = `${pathname}/api/v1`;
+  }
+  return url.toString().replace(/\/$/, "");
+}
+
+export function createMailrelayClient(
+  credentials: Pick<MailrelayClientOptions, "apiKey" | "baseUrl">,
+  options: Omit<MailrelayClientOptions, "apiKey" | "baseUrl"> = {}
+): MailrelayClient {
+  return new MailrelayClient({
+    ...options,
+    apiKey: credentials.apiKey,
+    baseUrl: normalizeMailrelayBaseUrl(credentials.baseUrl),
+  });
+}
+
+function stripHtml(value: string): string {
+  return value.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+}
+
 function responseMessage(payload: unknown, status: number): string {
   if (payload && typeof payload === "object") {
     const value = payload as Record<string, unknown>;
     const message = value.message ?? value.error;
-    if (typeof message === "string" && message) return message;
+    if (typeof message === "string" && message) return stripHtml(message);
+
+    const errors = value.errors;
+    if (errors && typeof errors === "object" && !Array.isArray(errors)) {
+      const parts: string[] = [];
+      for (const [field, messages] of Object.entries(errors as Record<string, unknown>)) {
+        const list = Array.isArray(messages) ? messages : [messages];
+        for (const item of list) {
+          if (typeof item === "string" && item) {
+            parts.push(field === "base" ? stripHtml(item) : `${field}: ${stripHtml(item)}`);
+          }
+        }
+      }
+      if (parts.length > 0) return parts.join("; ");
+    }
   }
   return `Email provider request failed with status ${status}`;
 }
@@ -53,10 +98,18 @@ export class MailrelayClient {
 
   constructor(options: MailrelayClientOptions) {
     this.apiKey = options.apiKey;
-    this.baseUrl = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/$/, "");
+    this.baseUrl = normalizeMailrelayBaseUrl(options.baseUrl);
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     this.maxRetries = options.maxRetries ?? DEFAULT_MAX_RETRIES;
     this.fetcher = options.fetcher ?? fetch;
+  }
+
+  private authHeaders(contentType = false): Record<string, string> {
+    return {
+      Accept: "application/json",
+      [AUTH_HEADER]: this.apiKey,
+      ...(contentType ? { "Content-Type": "application/json" } : {}),
+    };
   }
 
   async request<T>(
@@ -75,11 +128,7 @@ export class MailrelayClient {
       try {
         const response = await this.fetcher(url, {
           method,
-          headers: {
-            Accept: "application/json",
-            Authorization: `Bearer ${this.apiKey}`,
-            ...(options.body !== undefined ? { "Content-Type": "application/json" } : {}),
-          },
+          headers: this.authHeaders(options.body !== undefined),
           ...(options.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
           signal: controller.signal,
         });
@@ -143,7 +192,7 @@ export class MailrelayClient {
       const timer = setTimeout(() => controller.abort(), this.timeoutMs);
       try {
         const response = await this.fetcher(url, {
-          headers: { Accept: "application/json", Authorization: `Bearer ${this.apiKey}` },
+          headers: this.authHeaders(),
           signal: controller.signal,
         });
         const text = await response.text();

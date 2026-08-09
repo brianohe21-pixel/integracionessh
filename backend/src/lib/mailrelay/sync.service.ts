@@ -9,7 +9,7 @@ import {
   updateMailrelaySyncJob,
 } from "../dynamodb/mailrelay.repository.js";
 import type { Contact, MailrelaySyncError } from "../../types/index.js";
-import { MailrelayClient } from "./client.js";
+import { createMailrelayClient, type MailrelayClient } from "./client.js";
 import { getMailrelayCredentials } from "./secrets.js";
 import { isMailrelaySyncEligible, mapContactToMailrelaySubscriber } from "./mapping.js";
 import { enqueueMailrelaySync } from "./sync-queue.js";
@@ -28,7 +28,7 @@ function subscriberId(response: Record<string, unknown>): number | null {
 export interface ProcessMailrelaySyncOptions {
   cursor?: string;
   queueUrl?: string;
-  clientFactory?: (apiKey: string) => MailrelayClient;
+  clientFactory?: (apiKey: string, baseUrl: string) => MailrelayClient;
 }
 
 export async function processMailrelaySync(
@@ -73,8 +73,8 @@ export async function processMailrelaySync(
 
     const contacts: Contact[] = page.items.filter(isMailrelaySyncEligible);
     const client =
-      options.clientFactory?.(credentials.apiKey) ??
-      new MailrelayClient({ apiKey: credentials.apiKey });
+      options.clientFactory?.(credentials.apiKey, credentials.baseUrl) ??
+      createMailrelayClient(credentials);
     const errors: MailrelaySyncError[] = [];
     let succeeded = 0;
 

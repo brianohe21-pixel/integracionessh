@@ -53,6 +53,52 @@ resource "aws_apigatewayv2_authorizer" "jwt" {
 }
 
 locals {
+  lambda_functions = {
+    webhook            = var.webhook_function_arn
+    tenants            = var.tenants_function_arn
+    reseller           = var.reseller_function_arn
+    bots               = var.bots_function_arn
+    conversations      = var.conversations_function_arn
+    advisors           = var.advisors_function_arn
+    contacts           = var.contacts_function_arn
+    leads              = var.leads_function_arn
+    templates          = var.templates_function_arn
+    bulk_send          = var.bulk_send_function_arn
+    metrics            = var.metrics_function_arn
+    whatsapp_connect   = var.whatsapp_connect_function_arn
+    instagram_connect  = var.instagram_connect_function_arn
+    telegram_connect   = var.telegram_connect_function_arn
+    telegram_webhook   = var.telegram_webhook_function_arn
+    messenger_connect  = var.messenger_connect_function_arn
+    sms_webhook        = var.sms_webhook_function_arn
+    email_inbound      = var.email_inbound_function_arn
+    email_imap_connect = var.email_imap_connect_function_arn
+    webchat            = var.webchat_function_arn
+    voicebot           = var.voicebot_function_arn
+    campaigns          = var.campaigns_function_arn
+    support_tickets    = var.support_tickets_function_arn
+    billing            = var.billing_function_arn
+    admin              = var.admin_function_arn
+    public_api         = var.public_api_function_arn
+    api_keys           = var.api_keys_function_arn
+    integrations       = var.integrations_function_arn
+    automations        = var.automations_function_arn
+    knowledge          = var.knowledge_function_arn
+    macros             = var.macros_function_arn
+    meta_flows         = var.meta_flows_function_arn
+    flows              = var.flows_function_arn
+    flow_hooks         = var.flow_hooks_function_arn
+    calling            = var.calling_function_arn
+    telephony          = var.telephony_function_arn
+    realtime           = var.realtime_function_arn
+    calendar           = var.calendar_function_arn
+    public_calendar    = var.public_calendar_function_arn
+    payments           = var.payments_function_arn
+    catalog            = var.catalog_function_arn
+    mailrelay          = var.mailrelay_function_arn
+    mailrelay_webhook  = var.mailrelay_webhook_function_arn
+  }
+
   routes = {
     webhook_verify = {
       route_key    = "GET /webhook"
@@ -1942,7 +1988,10 @@ locals {
 
   function_integration_keys = {
     for key, route in local.routes :
-    key => replace(replace(route.function_arn, "var.", ""), "_function_arn", "")
+    key => one([
+      for slug, function_arn in local.lambda_functions : slug
+      if function_arn == route.function_arn
+    ])
   }
 
   function_integration_ids = {
@@ -1980,51 +2029,7 @@ resource "aws_apigatewayv2_route" "routes" {
 }
 
 resource "aws_lambda_permission" "api_gw" {
-  for_each = {
-    webhook            = var.webhook_function_arn
-    tenants            = var.tenants_function_arn
-    reseller           = var.reseller_function_arn
-    bots               = var.bots_function_arn
-    conversations      = var.conversations_function_arn
-    advisors           = var.advisors_function_arn
-    contacts           = var.contacts_function_arn
-    leads              = var.leads_function_arn
-    templates          = var.templates_function_arn
-    bulk_send          = var.bulk_send_function_arn
-    metrics            = var.metrics_function_arn
-    whatsapp_connect   = var.whatsapp_connect_function_arn
-    instagram_connect  = var.instagram_connect_function_arn
-    telegram_connect   = var.telegram_connect_function_arn
-    telegram_webhook   = var.telegram_webhook_function_arn
-    messenger_connect  = var.messenger_connect_function_arn
-    sms_webhook        = var.sms_webhook_function_arn
-    email_inbound      = var.email_inbound_function_arn
-    email_imap_connect = var.email_imap_connect_function_arn
-    webchat            = var.webchat_function_arn
-    voicebot           = var.voicebot_function_arn
-    campaigns          = var.campaigns_function_arn
-    support_tickets    = var.support_tickets_function_arn
-    billing            = var.billing_function_arn
-    admin              = var.admin_function_arn
-    public_api         = var.public_api_function_arn
-    api_keys           = var.api_keys_function_arn
-    integrations       = var.integrations_function_arn
-    automations        = var.automations_function_arn
-    knowledge          = var.knowledge_function_arn
-    macros             = var.macros_function_arn
-    meta_flows         = var.meta_flows_function_arn
-    flows              = var.flows_function_arn
-    flow_hooks         = var.flow_hooks_function_arn
-    calling            = var.calling_function_arn
-    telephony          = var.telephony_function_arn
-    realtime           = var.realtime_function_arn
-    calendar           = var.calendar_function_arn
-    public_calendar    = var.public_calendar_function_arn
-    payments           = var.payments_function_arn
-    catalog            = var.catalog_function_arn
-    mailrelay          = var.mailrelay_function_arn
-    mailrelay_webhook  = var.mailrelay_webhook_function_arn
-  }
+  for_each = local.lambda_functions
 
   statement_id  = "AllowAPIGatewayInvoke-${each.key}"
   action        = "lambda:InvokeFunction"

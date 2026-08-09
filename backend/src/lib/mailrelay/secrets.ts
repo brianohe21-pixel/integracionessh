@@ -5,6 +5,7 @@ import {
   SecretsManagerClient,
 } from "@aws-sdk/client-secrets-manager";
 import type { MailrelayCredentials, MaskedMailrelayCredentials } from "../../types/index.js";
+import { normalizeMailrelayBaseUrl } from "./client.js";
 
 const client = new SecretsManagerClient({});
 
@@ -25,6 +26,7 @@ export function maskMailrelayCredentials(
     configured: true,
     apiKey: suffix ? `********${suffix}` : "********",
     webhookToken: "********",
+    baseUrl: credentials.baseUrl,
   };
 }
 
@@ -36,10 +38,11 @@ export async function getPlatformMailrelaySecret(
       new GetSecretValueCommand({ SecretId: platformMailrelaySecretId(environment) })
     );
     const value = JSON.parse(response.SecretString ?? "{}") as Partial<PlatformMailrelaySecret>;
-    if (!value.apiKey || !value.webhookToken) return null;
+    if (!value.apiKey || !value.webhookToken || !value.baseUrl) return null;
     return {
       apiKey: value.apiKey,
       webhookToken: value.webhookToken,
+      baseUrl: normalizeMailrelayBaseUrl(value.baseUrl),
       ...(typeof value.eventSubscriptionId === "number" && value.eventSubscriptionId > 0
         ? { eventSubscriptionId: value.eventSubscriptionId }
         : {}),
@@ -55,7 +58,11 @@ export async function getMailrelayCredentials(
 ): Promise<MailrelayCredentials | null> {
   const secret = await getPlatformMailrelaySecret(environment);
   if (!secret) return null;
-  return { apiKey: secret.apiKey, webhookToken: secret.webhookToken };
+  return {
+    apiKey: secret.apiKey,
+    webhookToken: secret.webhookToken,
+    baseUrl: secret.baseUrl,
+  };
 }
 
 export async function savePlatformMailrelayEventSubscriptionId(

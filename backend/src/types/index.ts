@@ -2048,12 +2048,14 @@ export interface IntegrationQueueMessage {
 export interface MailrelayCredentials {
   apiKey: string;
   webhookToken: string;
+  baseUrl: string;
 }
 
 export interface MaskedMailrelayCredentials {
   configured: boolean;
   apiKey?: string;
   webhookToken?: string;
+  baseUrl?: string;
   secretId?: string;
 }
 

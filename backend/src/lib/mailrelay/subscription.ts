@@ -1,5 +1,5 @@
 import type { MailrelayCredentials } from "../../types/index.js";
-import { MailrelayClient } from "./client.js";
+import { createMailrelayClient, type MailrelayClient } from "./client.js";
 import {
   clearPlatformMailrelayEventSubscriptionId,
   getPlatformMailrelaySecret,
@@ -37,7 +37,7 @@ export async function ensureMailrelayEventSubscription(params: {
 
   const environment = process.env.ENVIRONMENT ?? "dev";
   const platformSecret = await getPlatformMailrelaySecret(environment);
-  const client = params.client ?? new MailrelayClient({ apiKey: params.credentials.apiKey });
+  const client = params.client ?? createMailrelayClient(params.credentials);
   const body = {
     name: `Platform ${environment}`,
     delivery_method: "webhook",
@@ -70,7 +70,7 @@ export async function deleteMailrelayEventSubscription(
   const platformSecret = await getPlatformMailrelaySecret(environment);
   if (!platformSecret?.eventSubscriptionId) return;
   try {
-    await new MailrelayClient({ apiKey: credentials.apiKey }).request(
+    await createMailrelayClient(credentials).request(
       "DELETE",
       `/event_subscriptions/${platformSecret.eventSubscriptionId}`
     );

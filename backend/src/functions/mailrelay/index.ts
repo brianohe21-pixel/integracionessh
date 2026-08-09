@@ -24,7 +24,8 @@ import {
   ok,
   parseJsonBody,
 } from "../../lib/http.js";
-import { MailrelayClient } from "../../lib/mailrelay/client.js";
+import { buildMailrelaySendPayload, ensureMailrelayCampaignHtml } from "../../lib/mailrelay/campaign.js";
+import { createMailrelayClient, type MailrelayClient } from "../../lib/mailrelay/client.js";
 import {
   getMailrelayCredentials,
   maskMailrelayCredentials,
@@ -83,6 +84,16 @@ const SendTestSchema = z.object({
   emails: z.array(z.string().email()).min(1).max(25),
 });
 
+const SendCampaignSchema = z
+  .object({
+    target: z.string().min(1).optional(),
+    group_ids: z.array(z.number().int().positive()).optional(),
+    segment_id: z.number().int().positive().optional(),
+    scheduled_at: z.string().min(1).optional(),
+    callback_url: z.string().url().optional(),
+  })
+  .optional();
+
 function defaultConfig(tenantId: string): MailrelayConfig {
   const now = new Date().toISOString();
   return {
@@ -123,7 +134,7 @@ async function authenticatedClient(): Promise<{
     (error as Error & { statusCode: number }).statusCode = 400;
     throw error;
   }
-  return { client: new MailrelayClient({ apiKey: credentials.apiKey }), credentials };
+  return { client: createMailrelayClient(credentials), credentials };
 }
 
 async function registerPlatformSubscription(): Promise<void> {
@@ -158,7 +169,9 @@ async function handleCampaignRoutes(
   if (method === "POST" && !id) {
     const body = CampaignSchema.parse(parseJsonBody(event));
     const campaign = remoteRecord(
-      await client.request("POST", "/campaigns", { body })
+      await client.request("POST", "/campaigns", {
+        body: { ...body, html: ensureMailrelayCampaignHtml(body.html) },
+      })
     );
     await saveMailrelayCampaignSnapshot(tenantId, campaign);
     return created({ campaign });
@@ -173,7 +186,14 @@ async function handleCampaignRoutes(
   if ((method === "PUT" || method === "PATCH") && segments.length === 2) {
     const body = UpdateCampaignSchema.parse(parseJsonBody(event));
     const campaign = remoteRecord(
-      await client.request("PATCH", `/campaigns/${id}`, { body })
+      await client.request("PATCH", `/campaigns/${id}`, {
+        body: {
+          ...body,
+          ...(body.html !== undefined
+            ? { html: ensureMailrelayCampaignHtml(body.html) }
+            : {}),
+        },
+      })
     );
     await saveMailrelayCampaignSnapshot(tenantId, campaign);
     return ok({ campaign });
@@ -190,8 +210,12 @@ async function handleCampaignRoutes(
     return ok({ campaign: { id, testSent: true } });
   }
   if (method === "POST" && segments[2] === "send") {
+    const override = SendCampaignSchema.parse(parseJsonBody(event));
+    const existing = remoteRecord(await client.request("GET", `/campaigns/${id}`));
     const campaign = remoteRecord(
-      await client.request("POST", `/campaigns/${id}/send_all`)
+      await client.request("POST", `/campaigns/${id}/send_all`, {
+        body: buildMailrelaySendPayload(existing, override ?? {}),
+      })
     );
     await saveMailrelayCampaignSnapshot(tenantId, {
       id,
