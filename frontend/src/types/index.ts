@@ -1273,6 +1273,85 @@ export interface AppCatalogItem {
   name: string;
   description: string;
   installedBots: Array<{ botId: string; botName: string; enabled: boolean }>;
+  configured?: boolean;
+  enabled?: boolean;
+}
+
+export interface MailrelayCredentials {
+  configured: boolean;
+  apiKey?: string;
+  updatedAt?: string;
+}
+
+export interface MailrelayCredentialsInput {
+  apiKey?: string;
+}
+
+export interface MailrelayTagGroupMapping {
+  tag: string;
+  groupId: string;
+}
+
+export interface MailrelayConfig {
+  senderId: string;
+  defaultGroupId: string;
+  tagGroupMappings: MailrelayTagGroupMapping[];
+  enabled?: boolean;
+  eventTypes?: string[];
+}
+
+export interface MailrelayGroup {
+  id: string;
+  name: string;
+  subscriberCount?: number;
+}
+
+export interface MailrelaySender {
+  id: string;
+  name: string;
+  email: string;
+}
+
+export type MailrelaySyncStatus = "pending" | "running" | "completed" | "failed";
+
+export interface MailrelaySync {
+  id: string;
+  status: MailrelaySyncStatus;
+  progress: number;
+  processed: number;
+  total: number;
+  createdAt: string;
+  completedAt?: string;
+  error?: string;
+}
+
+export interface MailrelayCampaignInput {
+  name: string;
+  subject: string;
+  previewText: string;
+  html: string;
+  senderId: string;
+  groupIds: string[];
+  trackOpens: boolean;
+  trackClicks: boolean;
+}
+
+export interface MailrelayCampaign extends MailrelayCampaignInput {
+  id: string;
+  status: "draft" | "sending" | "sent";
+  createdAt: string;
+  updatedAt: string;
+  sentAt?: string;
+}
+
+export interface MailrelayCampaignMetrics {
+  campaignId: string;
+  sent: number;
+  delivered: number;
+  opens: number;
+  clicks: number;
+  bounces: number;
+  unsubscribes: number;
 }
 
 export type PaymentRequestStatus = "pending" | "paid" | "declined" | "expired";

@@ -37,6 +37,7 @@ export function AppsGrid({ apps }: { apps: AppCatalogItem[] }) {
       {apps.map((app) => {
         const Icon = APP_ICONS[app.id] ?? LayoutGrid;
         const enabledCount = app.installedBots.filter((b) => b.enabled).length;
+        const tenantEnabled = app.enabled ?? app.configured;
         const route = APP_ROUTES[app.id];
         const i18n = APP_I18N_KEYS[app.id];
 
@@ -54,9 +55,11 @@ export function AppsGrid({ apps }: { apps: AppCatalogItem[] }) {
                   {i18n ? t(i18n.name) : app.name}
                 </h3>
                 <p className="text-sm text-secondary">
-                  {enabledCount > 0
-                    ? t("apps.installedOn", { count: String(enabledCount) })
-                    : t("apps.notInstalled")}
+                  {tenantEnabled !== undefined
+                    ? t(tenantEnabled ? "apps.configured" : "apps.notConfigured")
+                    : enabledCount > 0
+                      ? t("apps.installedOn", { count: String(enabledCount) })
+                      : t("apps.notInstalled")}
                 </p>
               </div>
             </div>

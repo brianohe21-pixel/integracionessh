@@ -22,32 +22,29 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Select } from "@/components/ui/Input";
-import { Tabs } from "@/components/ui/Tabs";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Textarea } from "@/components/ui/Input";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useT } from "@/i18n/context";
 import { buildWaMeLink, normalizeWhatsAppPhone } from "@/lib/wa-link";
 import {
   MessageSquare,
-  User,
-  Bot,
-  Phone,
-  Mail,
-  Headphones,
   Send,
-  ExternalLink,
   ChevronLeft,
-  Trash2,
   FileText,
+  Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Message, WorkflowStatus, Channel } from "@/types";
+import type { WorkflowStatus, Channel } from "@/types";
 import { useActiveLeadByPhone, useConvertLead } from "@/hooks/useLeads";
 import Link from "next/link";
 import { AdvisorCallPanel } from "@/components/conversations/AdvisorCallPanel";
 import { WhatsAppSoftphone } from "@/components/conversations/WhatsAppSoftphone";
 import { ConversationContactPanel } from "@/components/conversations/ConversationContactPanel";
-import { EmailMessageBubble } from "@/components/conversations/EmailMessageBubble";
+import { ConversationListSidebar } from "@/components/conversations/ConversationListSidebar";
+import { ConversationMessageThread } from "@/components/conversations/ConversationMessageThread";
+import { ConversationHeaderMenu } from "@/components/conversations/ConversationHeaderMenu";
+import { ChannelAvatar } from "@/components/conversations/conversation-ui";
 import { MacroPicker } from "@/components/conversations/MacroPicker";
 import { AdvisorCopilotPanel } from "@/components/conversations/AdvisorCopilotPanel";
 import { QuotationDrawer } from "@/components/conversations/QuotationDrawer";
@@ -61,8 +58,19 @@ import {
 } from "@/lib/inbox-sla";
 import type { InboxSlaStatus } from "@/types";
 
-function messageListKey(msg: Message, index: number): string {
-  return `${msg.messageId}::${msg.timestamp}::${index}`;
+function matchesSearchQuery(
+  conv: { contactName?: string; phoneNumber: string; participantId?: string; emailSubject?: string },
+  query: string
+): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  const fields = [
+    conv.contactName,
+    conv.phoneNumber,
+    conv.participantId,
+    conv.emailSubject,
+  ].filter(Boolean);
+  return fields.some((field) => field!.toLowerCase().includes(q));
 }
 
 type ListTab = "all" | "unread" | "mine" | "sla_breached" | "queue";
@@ -74,7 +82,7 @@ type Props = {
 export function ConversationWorkspace({ advisorMode = false }: Props) {
   const t = useT();
   const searchParams = useSearchParams();
-  const { formatRelativeTime, formatDate } = useFormatters();
+  const { formatRelativeTime } = useFormatters();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [botFilter, setBotFilter] = useState<string>("");
   const [handoffFilter, setHandoffFilter] = useState<"" | "human" | "bot">("");
@@ -98,6 +106,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   const [bulkReassignAdvisorId, setBulkReassignAdvisorId] = useState("");
   const [selectedConversationIds, setSelectedConversationIds] = useState<Set<string>>(new Set());
   const [listTab, setListTab] = useState<ListTab>("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const { data: bots } = useBots();
   const { data: advisors } = useAdvisors();
@@ -186,6 +195,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   );
 
   const filteredConversations = conversations.filter((conv) => {
+    if (!matchesSearchQuery(conv, searchQuery)) return false;
     if (advisorMode && listTab === "queue") return true;
     if (listTab === "unread") return conv.workflowStatus === "new";
     if (listTab === "mine") return (conv.handoffMode ?? "bot") === "human";
@@ -444,12 +454,6 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     return null;
   }
 
-  function slaBadgeVariant(status: InboxSlaStatus): "danger" | "warning" | "default" {
-    if (status === "breached") return "danger";
-    if (status === "at_risk") return "warning";
-    return "default";
-  }
-
   const selectedSlaStatus = selectedConversation
     ? conversationSlaStatuses.get(selectedConversation.conversationId) ?? "disabled"
     : "disabled";
@@ -462,422 +466,167 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
 
   return (
     <div className="flex h-[calc(100dvh-3.5rem)] lg:h-screen">
-      <div
-        className={cn(
-          "flex w-full flex-col border-r border-default bg-surface-elevated lg:w-80 lg:flex-shrink-0",
-          showListOnMobile ? "flex" : "hidden lg:flex"
-        )}
-      >
-        <div className="space-y-3 border-b border-default p-4">
-          <h1 className="font-bold text-primary">
-            {advisorMode ? t("inbox.title") : t("conversations.title")}
-          </h1>
-          <Tabs<ListTab>
-            items={[
-              { id: "all", label: t("conversations.filterTabAll") },
-              { id: "unread", label: t("conversations.filterTabUnread"), count: unreadCount },
-              { id: "mine", label: t("conversations.filterTabMine") },
-              ...(advisorMode
-                ? ([{ id: "queue" as const, label: t("conversations.filterTabQueue") }] as const)
-                : []),
-              ...(resolvedSlaSettings.enabled
-                ? ([
-                    {
-                      id: "sla_breached" as const,
-                      label: t("conversations.filterTabSlaBreached"),
-                      count: slaBreachedCount,
-                    },
-                  ] as const)
-                : []),
-            ]}
-            value={listTab}
-            onChange={setListTab}
-          />
-          {!advisorMode && (
-            <Select value={botFilter} onChange={(e) => setBotFilter(e.target.value)}>
-              <option value="">{t("conversations.allBots")}</option>
-              {bots?.map((bot) => (
-                <option key={bot.botId} value={bot.botId}>
-                  {bot.name}
-                </option>
-              ))}
-            </Select>
-          )}
-          <Select
-            value={channelFilter}
-            onChange={(e) => setChannelFilter(e.target.value as "" | Channel)}
-          >
-            <option value="">{t("conversations.filterChannelAll")}</option>
-            <option value="whatsapp">{t("conversations.channelWhatsapp")}</option>
-            <option value="instagram">{t("conversations.channelInstagram")}</option>
-            <option value="webchat">{t("conversations.channelWebchat")}</option>
-            <option value="telegram">{t("conversations.channelTelegram")}</option>
-            <option value="messenger">{t("conversations.channelMessenger")}</option>
-            <option value="sms">{t("conversations.channelSms")}</option>
-            <option value="email">{t("conversations.channelEmail")}</option>
-            <option value="voicebot">{t("conversations.channelVoicebot")}</option>
-            <option value="phone">{t("conversations.channelPhone")}</option>
-          </Select>
-          <Select
-            value={handoffFilter}
-            onChange={(e) => setHandoffFilter(e.target.value as "" | "human" | "bot")}
-          >
-            <option value="">{t("conversations.filterAll")}</option>
-            <option value="human">{t("conversations.filterHuman")}</option>
-            <option value="bot">{t("conversations.filterBot")}</option>
-          </Select>
-          {handoffFilter === "human" && (
-            <Select
-              value={workflowFilter}
-              onChange={(e) => setWorkflowFilter(e.target.value as "" | WorkflowStatus)}
-            >
-              <option value="">{t("conversations.filterWorkflowAll")}</option>
-              <option value="new">{t("conversations.filterWorkflowNew")}</option>
-              <option value="open">{t("conversations.filterWorkflowOpen")}</option>
-              <option value="pending">{t("conversations.filterWorkflowPending")}</option>
-              <option value="resolved">{t("conversations.filterWorkflowResolved")}</option>
-            </Select>
-          )}
-          {!advisorMode && (
-            <Select value={advisorFilter} onChange={(e) => setAdvisorFilter(e.target.value)}>
-              <option value="">{t("conversations.filterAdvisorAll")}</option>
-              {advisors
-                ?.filter((a) => a.status === "active")
-                .map((a) => (
-                  <option key={a.advisorId} value={a.advisorId}>
-                    {a.name}
-                  </option>
-                ))}
-            </Select>
-          )}
-          {!advisorMode && (
-            <Select
-              value={assignmentFilter}
-              onChange={(e) => setAssignmentFilter(e.target.value as "" | "unassigned")}
-            >
-              <option value="">{t("conversations.filterAll")}</option>
-              <option value="unassigned">{t("conversations.filterUnassigned")}</option>
-            </Select>
-          )}
-          {!advisorMode && filteredConversations.length > 0 && (
-            <label className="flex items-center gap-2 text-xs text-secondary">
-              <input
-                type="checkbox"
-                checked={
-                  filteredConversations.length > 0 &&
-                  selectedConversationIds.size === filteredConversations.length
-                }
-                onChange={toggleSelectAll}
-                className="rounded border-default"
-              />
-              {t("conversations.selectAll")}
-            </label>
-          )}
-        </div>
-
-        {!advisorMode && selectedConversationIds.size > 0 && (
-          <div className="flex items-center justify-between gap-2 border-b border-default bg-accent-muted px-4 py-2">
-            <span className="text-xs font-medium text-primary">
-              {t("conversations.bulkSelected", { count: selectedConversationIds.size })}
-            </span>
-            <Button type="button" size="sm" onClick={() => setShowBulkReassignModal(true)}>
-              {t("conversations.bulkReassign")}
-            </Button>
-          </div>
-        )}
-
-        <div ref={listScrollRef} className="flex-1 overflow-y-auto">
-          {isLoading && <p className="p-4 text-sm text-muted">{t("common.loading")}</p>}
-
-          {!isLoading && filteredConversations.length === 0 && (
-            <EmptyState
-              icon={<MessageSquare className="w-5 h-5" />}
-              title={t("conversations.emptyTitle")}
-              description={t("conversations.emptyDescription")}
-              className="py-12"
-            />
-          )}
-
-          {filteredConversations.map((conv) => {
-            const slaStatus = conversationSlaStatuses.get(conv.conversationId) ?? "disabled";
-            const slaText = slaLabel(slaStatus);
-            const elapsedSeconds =
-              (conv.handoffMode ?? "bot") === "human" && conv.handoffAt && !conv.firstHumanResponseAt
-                ? getElapsedSecondsSinceHandoff(conv.handoffAt)
-                : null;
-
-            return (
-            <div
-              key={conv.conversationId}
-              className={cn(
-                "flex w-full border-b border-subtle transition-colors hover:bg-surface-muted",
-                selectedId === conv.conversationId &&
-                  "border-l-2 border-l-accent bg-accent-muted",
-                slaStatus === "breached" && "border-l-2 border-l-red-500",
-                slaStatus === "at_risk" && "border-l-2 border-l-amber-500"
-              )}
-            >
-              {!advisorMode && (
-                <div className="flex items-center px-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedConversationIds.has(conv.conversationId)}
-                    onChange={() => toggleConversationSelection(conv.conversationId)}
-                    onClick={(e) => e.stopPropagation()}
-                    className="rounded border-default"
-                  />
-                </div>
-              )}
-              <button
-              type="button"
-              onClick={() => setSelectedId(conv.conversationId)}
-              className="min-w-0 flex-1 px-4 py-3 text-left"
-            >
-              <div className="flex items-center gap-3">
-                <div className="relative flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-surface-muted">
-                  <User className="h-4 w-4 text-muted" />
-                  {conv.workflowStatus === "new" && (
-                    <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-accent ring-2 ring-surface-elevated" />
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="mb-0.5 flex items-center justify-between">
-                    <p className="truncate text-sm font-medium text-primary">
-                      {contactDisplay(conv)}
-                    </p>
-                    <span className="ml-2 flex-shrink-0 text-xs text-muted">
-                      {formatRelativeTime(conv.lastMessageAt)}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="default" className="text-[10px]">
-                      {channelLabel(conv.channel)}
-                    </Badge>
-                    {conv.locale && (
-                      <Badge variant="default" className="text-[10px] uppercase">
-                        {conv.locale}
-                      </Badge>
-                    )}
-                    <Badge
-                      variant={(conv.handoffMode ?? "bot") === "human" ? "warning" : "default"}
-                      className="text-[10px]"
-                    >
-                      {(conv.handoffMode ?? "bot") === "human"
-                        ? t("conversations.modeHuman")
-                        : t("conversations.modeBot")}
-                    </Badge>
-                    {(conv.handoffMode ?? "bot") === "human" && (
-                      <Badge variant="info" className="text-[10px]">
-                        {workflowLabel(conv.workflowStatus)}
-                      </Badge>
-                    )}
-                    {slaText && (
-                      <Badge variant={slaBadgeVariant(slaStatus)} className="text-[10px]">
-                        {slaText}
-                      </Badge>
-                    )}
-                    {elapsedSeconds !== null && (
-                      <span className="text-[10px] text-muted">
-                        {t("conversations.slaElapsed", {
-                          duration: formatElapsedDuration(elapsedSeconds),
-                        })}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </button>
-            {advisorMode && listTab === "queue" && (
-              <div className="flex items-center px-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    setSelectedId(conv.conversationId);
-                    await claim.mutateAsync({
-                      conversationId: conv.conversationId,
-                      botId: conv.botId,
-                    });
-                    setListTab("mine");
-                  }}
-                  disabled={claim.isPending}
-                >
-                  {t("conversations.takeConversation")}
-                </Button>
-              </div>
-            )}
-            </div>
-            );
-          })}
-
-          <div ref={loadMoreRef} className="h-1" />
-          {isFetchingNextPage && (
-            <p className="p-4 text-center text-sm text-muted">{t("common.loading")}</p>
-          )}
-        </div>
-      </div>
+      <ConversationListSidebar
+        advisorMode={advisorMode}
+        listTab={listTab}
+        onListTabChange={setListTab}
+        unreadCount={unreadCount}
+        slaBreachedCount={slaBreachedCount}
+        slaEnabled={resolvedSlaSettings.enabled}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        botFilter={botFilter}
+        onBotFilterChange={setBotFilter}
+        channelFilter={channelFilter}
+        onChannelFilterChange={setChannelFilter}
+        handoffFilter={handoffFilter}
+        onHandoffFilterChange={setHandoffFilter}
+        workflowFilter={workflowFilter}
+        onWorkflowFilterChange={setWorkflowFilter}
+        advisorFilter={advisorFilter}
+        onAdvisorFilterChange={setAdvisorFilter}
+        assignmentFilter={assignmentFilter}
+        onAssignmentFilterChange={setAssignmentFilter}
+        bots={bots}
+        advisors={advisors}
+        conversations={conversations}
+        filteredConversations={filteredConversations}
+        conversationSlaStatuses={conversationSlaStatuses}
+        selectedId={selectedId}
+        onSelectId={setSelectedId}
+        selectedConversationIds={selectedConversationIds}
+        onToggleSelection={toggleConversationSelection}
+        onToggleSelectAll={toggleSelectAll}
+        onBulkReassign={() => setShowBulkReassignModal(true)}
+        isLoading={isLoading}
+        isFetchingNextPage={isFetchingNextPage}
+        listScrollRef={listScrollRef}
+        loadMoreRef={loadMoreRef}
+        formatRelativeTime={formatRelativeTime}
+        contactDisplay={contactDisplay}
+        channelLabel={channelLabel}
+        workflowLabel={workflowLabel}
+        slaLabel={slaLabel}
+        formatElapsed={formatElapsedDuration}
+        getElapsedSeconds={getElapsedSecondsSinceHandoff}
+        onClaimFromQueue={async (conv) => {
+          setSelectedId(conv.conversationId);
+          await claim.mutateAsync({
+            conversationId: conv.conversationId,
+            botId: conv.botId,
+          });
+          setListTab("mine");
+        }}
+        claimPending={claim.isPending}
+        showOnMobile={showListOnMobile}
+      />
 
       <div
         className={cn(
-          "relative flex min-w-0 flex-1 flex-col bg-surface",
+          "relative flex min-w-0 flex-1 flex-col",
           showDetailOnMobile ? "flex" : "hidden lg:flex"
         )}
       >
-        <div
-          className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-[var(--glow-accent)] to-transparent"
-          aria-hidden
-        />
         {!selectedConversation ? (
-          <div className="hidden flex-1 items-center justify-center lg:flex">
+          <div className="conversations-chat-bg hidden flex-1 items-center justify-center p-6 lg:flex">
             <EmptyState
-              icon={<MessageSquare className="w-6 h-6" />}
+              icon={<MessageSquare className="h-6 w-6" />}
               title={t("conversations.selectConversation")}
               description={t("conversations.selectDescription")}
             />
           </div>
         ) : (
           <>
-            <div className="relative z-10 flex flex-col gap-3 border-b border-default bg-surface-elevated px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <div className="conversations-chat-header relative z-30 flex min-h-[64px] flex-col gap-3 overflow-visible px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex min-w-0 items-center gap-3">
                 <button
                   type="button"
                   onClick={() => setSelectedId(null)}
-                  className="rounded-lg border border-default p-2 text-secondary hover:bg-surface-muted lg:hidden"
+                  className="rounded-xl p-2 text-secondary transition-colors hover:bg-surface-muted lg:hidden"
                   aria-label={t("conversations.backToList")}
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <ChevronLeft className="h-5 w-5" />
                 </button>
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-muted">
-                  <User className="h-4 w-4 text-muted" />
-                </div>
+                <ChannelAvatar channel={selectedConversation.channel} size="md" />
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-primary">
-                    {selectedConversation.channel === "email" && selectedConversation.emailSubject
-                      ? selectedConversation.emailSubject
-                      : contactDisplay(selectedConversation)}
-                  </p>
-                  <div className="flex items-center gap-1.5 text-xs text-secondary">
-                    <Badge variant="accent" className="text-[10px]">
-                      {channelLabel(selectedConversation.channel)}
-                    </Badge>
-                    {selectedConversation.locale && (
-                      <Badge variant="default" className="text-[10px] uppercase">
-                        {t("conversations.detectedLocale", { locale: selectedConversation.locale.toUpperCase() })}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="truncate text-base font-semibold text-primary">
+                      {selectedConversation.channel === "email" && selectedConversation.emailSubject
+                        ? selectedConversation.emailSubject
+                        : contactDisplay(selectedConversation)}
+                    </p>
+                    {activeLead?.tags?.slice(0, 2).map((tag) => (
+                      <Badge key={tag} variant="default" className="text-[10px]">
+                        {tag}
                       </Badge>
-                    )}
+                    ))}
+                  </div>
+                  <p className="truncate text-xs text-secondary">
+                    {channelLabel(selectedConversation.channel)}
+                    {" · "}
                     {(selectedConversation.channel ?? "whatsapp") === "whatsapp" ||
                     selectedConversation.channel === "sms" ||
-                    selectedConversation.channel === "phone" ? (
-                      <>
-                        <Phone className="h-3 w-3 flex-shrink-0" />
-                        {selectedConversation.phoneNumber || selectedConversation.participantId}
-                      </>
-                    ) : selectedConversation.channel === "email" ? (
-                      <>
-                        <Mail className="h-3 w-3 flex-shrink-0" />
-                        {selectedConversation.participantId}
-                      </>
-                    ) : (
-                      <span>{selectedConversation.participantId}</span>
-                    )}
-                  </div>
+                    selectedConversation.channel === "phone"
+                      ? selectedConversation.phoneNumber || selectedConversation.participantId
+                      : selectedConversation.channel === "email"
+                        ? selectedConversation.participantId
+                        : selectedConversation.participantId}
+                  </p>
                 </div>
               </div>
-              <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
-                {needsClaim && (
-                  <Button type="button" size="sm" onClick={handleClaim} disabled={claim.isPending}>
-                    {t("conversations.takeConversation")}
-                  </Button>
-                )}
-                {!advisorMode && selectedConversation.botId && (
-                  <Button
-                    type="button"
-                    variant="danger"
-                    size="sm"
-                    onClick={() => setShowDeleteModal(true)}
-                    className="gap-1"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                    {t("conversations.delete")}
-                  </Button>
-                )}
-                {!advisorMode && !isHuman && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => setShowHandoffModal(true)}
-                    className="bg-warning/15 text-warning hover:bg-warning/25"
-                  >
-                    {t("conversations.transfer")}
-                  </Button>
-                )}
-                {!advisorMode && selectedConversation.botId && (selectedConversation.channel ?? "whatsapp") === "whatsapp" && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCallPermissionFeedback(null);
-                        callPermission.mutate({
-                          botId: selectedConversation.botId,
-                          to: selectedConversation.phoneNumber,
-                        });
-                      }}
-                      disabled={callPermission.isPending || selectedWhatsAppPhone.length < 7}
-                      className="rounded-lg bg-human/15 px-3 py-1.5 text-xs font-medium text-human hover:bg-human/25 disabled:opacity-50"
-                    >
-                      {t("conversations.requestCallPermission")}
-                    </button>
-                    {callPermissionFeedback ? (
-                      <p
-                        className={cn(
-                          "w-full text-xs font-medium",
-                          callPermissionFeedback.type === "success"
-                            ? "text-success"
-                            : "text-danger"
-                        )}
-                      >
-                        {callPermissionFeedback.message}
-                      </p>
-                    ) : null}
-                  </>
-                )}
-                {isHuman && (
-                  <>
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={() => {
-                        setInternalNote(selectedConversation.internalNote ?? "");
-                        setShowResolveModal(true);
-                      }}
-                    >
-                      {t("conversations.resolve")}
-                    </Button>
-                    {(selectedConversation.channel ?? "whatsapp") === "whatsapp" && (
-                      <a
-                        href={buildWaMeLink(selectedConversation.phoneNumber)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 rounded-lg bg-success/15 px-3 py-1.5 text-xs font-medium text-success hover:bg-success/25"
-                      >
-                        <ExternalLink className="w-3 h-3" />
-                        {t("conversations.openWhatsApp")}
-                      </a>
-                    )}
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={handleRelease}
-                      disabled={release.isPending}
-                    >
-                      {t("conversations.release")}
-                    </Button>
-                  </>
-                )}
+              <div className="flex flex-shrink-0 items-center gap-2">
+                <ConversationHeaderMenu
+                  conversation={selectedConversation}
+                  advisorMode={advisorMode}
+                  isHuman={isHuman}
+                  needsClaim={needsClaim}
+                  claimPending={claim.isPending}
+                  releasePending={release.isPending}
+                  callPermissionPending={callPermission.isPending}
+                  canRequestCallPermission={
+                    !advisorMode &&
+                    Boolean(selectedConversation.botId) &&
+                    (selectedConversation.channel ?? "whatsapp") === "whatsapp"
+                  }
+                  callPermissionDisabled={
+                    callPermission.isPending || selectedWhatsAppPhone.length < 7
+                  }
+                  onClaim={handleClaim}
+                  onDelete={() => setShowDeleteModal(true)}
+                  onTransfer={() => setShowHandoffModal(true)}
+                  onRequestCallPermission={() => {
+                    setCallPermissionFeedback(null);
+                    callPermission.mutate({
+                      botId: selectedConversation.botId,
+                      to: selectedConversation.phoneNumber,
+                    });
+                  }}
+                  onResolve={() => {
+                    setInternalNote(selectedConversation.internalNote ?? "");
+                    setShowResolveModal(true);
+                  }}
+                  onOpenWhatsApp={
+                    isHuman && (selectedConversation.channel ?? "whatsapp") === "whatsapp"
+                      ? buildWaMeLink(selectedConversation.phoneNumber)
+                      : null
+                  }
+                  onRelease={handleRelease}
+                />
               </div>
             </div>
+
+            {callPermissionFeedback ? (
+              <p
+                className={cn(
+                  "border-b px-4 py-2 text-xs font-medium sm:px-6",
+                  callPermissionFeedback.type === "success"
+                    ? "border-success/30 bg-success/10 text-success"
+                    : "border-danger/30 bg-danger/10 text-danger"
+                )}
+              >
+                {callPermissionFeedback.message}
+              </p>
+            ) : null}
 
             {isHuman && (selectedConversation.channel ?? "whatsapp") === "whatsapp" && (
               <p className="border-b border-warning/30 bg-warning/10 px-6 py-2.5 text-xs font-medium text-primary">
@@ -891,8 +640,8 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                   className={cn(
                     "border-b px-6 py-2.5 text-xs font-medium",
                     selectedSlaStatus === "breached"
-                      ? "border-red-200 bg-red-50 text-red-800"
-                      : "border-amber-200 bg-amber-50 text-amber-800"
+                      ? "border-danger/30 bg-danger/10 text-danger"
+                      : "border-warning/30 bg-warning/10 text-warning"
                   )}
                 >
                   {selectedSlaStatus === "breached"
@@ -920,7 +669,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
             )}
 
             {selectedConversation && activeLead && (
-              <div className="mx-4 mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-primary">
+              <div className="relative z-10 mx-4 mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-warning/30 bg-warning/10 p-3 text-sm text-primary shadow-sm">
                 <div>
                   <span className="font-semibold">{t("leads.leadStatus")}: </span>
                   <span>{t(`leads.status_${activeLead.status}`)}</span>
@@ -953,25 +702,29 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
             )}
 
             {isHuman && selectedConversation.workflowStatus !== "resolved" && (
-              <div className="space-y-2 border-b border-default bg-surface-elevated px-6 py-3">
-                <label className="text-xs font-semibold text-primary">
-                  {t("conversations.internalNote")}
-                </label>
-                <Textarea
-                  value={internalNote || selectedConversation.internalNote || ""}
-                  onChange={(e) => setInternalNote(e.target.value)}
-                  rows={2}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleSaveNote}
-                  disabled={updateNote.isPending}
-                  className="text-accent hover:text-accent"
-                >
-                  {t("conversations.saveNote")}
-                </Button>
+              <div className="relative z-10 border-b border-default px-4 py-3 sm:px-6">
+                <div className="conversations-internal-note space-y-2 p-4">
+                  <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide">
+                    <Lock className="h-3.5 w-3.5" />
+                    {t("conversations.internalNote")}
+                  </label>
+                  <Textarea
+                    value={internalNote || selectedConversation.internalNote || ""}
+                    onChange={(e) => setInternalNote(e.target.value)}
+                    rows={2}
+                    className="border-none bg-transparent shadow-none focus:ring-0"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleSaveNote}
+                    disabled={updateNote.isPending}
+                    className="text-accent hover:text-accent-hover"
+                  >
+                    {t("conversations.saveNote")}
+                  </Button>
+                </div>
               </div>
             )}
 
@@ -985,72 +738,12 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                 </Button>
               </div>
             ) : (
-            <div className="relative z-10 flex-1 space-y-3 overflow-y-auto p-4 sm:p-6">
-              {loadingMessages && <p className="text-sm text-muted">{t("common.loading")}</p>}
-
-              {messages?.map((msg, index) => {
-                const listKey = messageListKey(msg, index);
-                const isInbound = msg.role === "user";
-                const isSystem = msg.role === "system";
-                if (isSystem) {
-                  return (
-                    <p key={listKey} className="py-1 text-center text-xs text-muted">
-                      {msg.content}
-                    </p>
-                  );
-                }
-                return (
-                  <div
-                    key={listKey}
-                    className={cn("flex items-end gap-2", isInbound ? "justify-start" : "justify-end")}
-                  >
-                    {isInbound && (
-                      <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-surface-muted">
-                        <User className="h-3.5 w-3.5 text-muted" />
-                      </div>
-                    )}
-                    <div
-                      className={cn(
-                        "max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed sm:max-w-xs lg:max-w-md",
-                        isInbound
-                          ? "rounded-bl-sm border border-default bg-surface-elevated text-primary"
-                          : msg.role === "advisor"
-                            ? "rounded-br-sm bg-success text-white"
-                            : "rounded-br-sm border border-accent/30 bg-accent-muted text-primary"
-                      )}
-                    >
-                      {selectedConversation.channel === "email" && isInbound ? (
-                        <EmailMessageBubble message={msg} botId={selectedConversation.botId} />
-                      ) : (
-                        <p>{msg.content}</p>
-                      )}
-                      <p
-                        className={cn(
-                          "mt-1 text-[10px]",
-                          isInbound ? "text-muted" : msg.role === "advisor" ? "text-white/70" : "text-secondary"
-                        )}
-                      >
-                        {formatDate(msg.timestamp)}
-                      </p>
-                    </div>
-                    {!isInbound && (
-                      <div
-                        className={cn(
-                          "flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full",
-                          msg.role === "advisor" ? "bg-success/15" : "bg-accent-muted"
-                        )}
-                      >
-                        {msg.role === "advisor" ? (
-                          <Headphones className="h-3.5 w-3.5 text-success" />
-                        ) : (
-                          <Bot className="h-3.5 w-3.5 text-accent" />
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+              <ConversationMessageThread
+                messages={messages}
+                conversation={selectedConversation}
+                loading={loadingMessages}
+                loadingLabel={t("common.loading")}
+              />
             )}
 
             {canCompose && selectedConversation && (
@@ -1063,40 +756,43 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
             {canCompose && (
               <form
                 onSubmit={handleSend}
-                className="relative z-10 flex gap-2 border-t border-default bg-surface-elevated p-4"
+                className="conversations-compose-bar relative z-10 px-4 py-3 sm:px-6"
               >
-                {selectedConversation && (
-                  <MacroPicker
-                    botId={selectedConversation.botId}
-                    placeholderContext={macroPlaceholderContext}
-                    draft={draft}
-                    onInsert={setDraft}
+                <div className="conversations-compose-input flex items-end gap-2 px-3 py-2">
+                  {selectedConversation ? (
+                    <MacroPicker
+                      botId={selectedConversation.botId}
+                      placeholderContext={macroPlaceholderContext}
+                      draft={draft}
+                      onInsert={setDraft}
+                    />
+                  ) : null}
+                  {selectedConversation && canCompose ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowQuotationDrawer(true)}
+                      title={t("quotations.drawerTitle")}
+                      className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl text-secondary transition-colors hover:bg-surface-elevated hover:text-primary"
+                    >
+                      <FileText className="h-5 w-5" />
+                    </button>
+                  ) : null}
+                  <Textarea
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    rows={1}
+                    placeholder={t("conversations.messagePlaceholderShort")}
+                    className="min-h-[42px] max-h-32 flex-1 resize-none border-0 bg-transparent py-2.5 shadow-none focus:ring-0"
                   />
-                )}
-                {selectedConversation && canCompose ? (
                   <button
-                    type="button"
-                    onClick={() => setShowQuotationDrawer(true)}
-                    title={t("quotations.drawerTitle")}
-                    className="flex h-10 w-10 flex-shrink-0 items-center justify-center self-end rounded-lg border border-default text-secondary hover:bg-surface-muted hover:text-primary"
+                    type="submit"
+                    disabled={!draft.trim() || sendMessage.isPending}
+                    className="conversations-send-btn inline-flex h-10 flex-shrink-0 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition-colors disabled:cursor-not-allowed"
                   >
-                    <FileText className="h-4 w-4" />
+                    <Send className="h-4 w-4" />
+                    <span className="hidden sm:inline">{t("conversations.send")}</span>
                   </button>
-                ) : null}
-                <Textarea
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  rows={2}
-                  placeholder={t("conversations.messagePlaceholderShort")}
-                  className="resize-none flex-1"
-                />
-                <Button
-                  type="submit"
-                  disabled={!draft.trim() || sendMessage.isPending}
-                  className="h-10 w-10 self-end rounded-full p-0"
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
+                </div>
               </form>
             )}
           </>
@@ -1141,20 +837,16 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
       )}
 
       {showDeleteModal && selectedConversation && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-sm space-y-4 rounded-xl border border-default bg-surface-elevated p-6 shadow-xl">
-            <h2 className="text-lg font-semibold text-primary">{t("conversations.deleteTitle")}</h2>
-            <p className="text-sm text-secondary">{t("conversations.deleteConfirm")}</p>
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="ghost" onClick={() => setShowDeleteModal(false)}>
-                {t("common.cancel")}
-              </Button>
-              <Button type="button" variant="danger" onClick={handleDelete} disabled={deleteConv.isPending}>
-                {t("conversations.delete")}
-              </Button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          open={showDeleteModal}
+          title={t("conversations.deleteTitle")}
+          description={t("conversations.deleteConfirm")}
+          confirmLabel={t("conversations.delete")}
+          tone="danger"
+          loading={deleteConv.isPending}
+          onConfirm={handleDelete}
+          onCancel={() => setShowDeleteModal(false)}
+        />
       )}
 
       {showHandoffModal && selectedConversation && (

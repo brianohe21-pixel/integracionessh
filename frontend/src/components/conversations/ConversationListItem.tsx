@@ -1,0 +1,151 @@
+"use client";
+
+import { Button } from "@/components/ui/Button";
+import { ChannelAvatar } from "@/components/conversations/conversation-ui";
+import { cn } from "@/lib/utils";
+import type { Conversation, InboxSlaStatus } from "@/types";
+
+type Props = {
+  conversation: Conversation;
+  selected: boolean;
+  slaStatus: InboxSlaStatus;
+  slaText: string | null;
+  elapsedSeconds: number | null;
+  elapsedLabel?: string;
+  contactName: string;
+  channelLabel: string;
+  workflowLabel: string;
+  relativeTime: string;
+  advisorMode: boolean;
+  showQueueClaim: boolean;
+  showCheckbox: boolean;
+  checked: boolean;
+  onToggleCheck: () => void;
+  onSelect: () => void;
+  onClaim: () => void;
+  claimPending: boolean;
+  modeHumanLabel: string;
+  modeBotLabel: string;
+  takeConversationLabel: string;
+};
+
+export function ConversationListItem({
+  conversation,
+  selected,
+  slaStatus,
+  slaText,
+  elapsedSeconds,
+  elapsedLabel,
+  contactName,
+  channelLabel,
+  workflowLabel,
+  relativeTime,
+  advisorMode,
+  showQueueClaim,
+  showCheckbox,
+  checked,
+  onToggleCheck,
+  onSelect,
+  onClaim,
+  claimPending,
+  modeHumanLabel,
+  modeBotLabel,
+  takeConversationLabel,
+}: Props) {
+  const isHuman = (conversation.handoffMode ?? "bot") === "human";
+  const isUnread = conversation.workflowStatus === "new";
+
+  const previewParts = [
+    channelLabel,
+    isHuman ? modeHumanLabel : modeBotLabel,
+    isHuman ? workflowLabel : null,
+    conversation.emailSubject,
+    slaText,
+  ].filter(Boolean);
+
+  return (
+    <div
+      className={cn(
+        "conversations-list-item flex items-stretch",
+        selected && "conversations-list-selected",
+        slaStatus === "breached" && !selected && "bg-danger/5",
+        slaStatus === "at_risk" && !selected && "bg-warning/5"
+      )}
+    >
+      {showCheckbox ? (
+        <div className="flex items-center pl-3">
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={onToggleCheck}
+            onClick={(e) => e.stopPropagation()}
+            className="rounded border-default text-accent focus:ring-accent"
+          />
+        </div>
+      ) : null}
+
+      <button
+        type="button"
+        onClick={onSelect}
+        className="min-w-0 flex-1 px-3 py-3 text-left"
+      >
+        <div className="flex items-center gap-3">
+          <ChannelAvatar
+            channel={conversation.channel}
+            unread={isUnread}
+            size="sm"
+          />
+          <div className="min-w-0 flex-1">
+            <div className="mb-0.5 flex items-baseline justify-between gap-2">
+              <p
+                className={cn(
+                  "truncate text-sm",
+                  isUnread ? "font-semibold text-primary" : "font-medium text-primary"
+                )}
+              >
+                {contactName}
+              </p>
+              <span
+                className={cn(
+                  "flex-shrink-0 text-[11px]",
+                  isUnread ? "font-semibold text-accent" : "text-muted"
+                )}
+              >
+                {relativeTime}
+              </span>
+            </div>
+            <p className="truncate text-xs text-secondary">
+              {previewParts.join(" · ")}
+            </p>
+            {elapsedSeconds !== null && elapsedLabel ? (
+              <p className="mt-0.5 truncate text-[11px] font-medium text-warning">
+                {elapsedLabel}
+              </p>
+            ) : null}
+          </div>
+          {isUnread ? (
+            <span className="flex h-5 min-w-5 flex-shrink-0 items-center justify-center rounded-full bg-accent px-1.5 text-[10px] font-bold text-white">
+              1
+            </span>
+          ) : null}
+        </div>
+      </button>
+
+      {advisorMode && showQueueClaim ? (
+        <div className="flex items-center pr-3">
+          <Button
+            type="button"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onClaim();
+            }}
+            disabled={claimPending}
+          >
+            {takeConversationLabel}
+          </Button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
