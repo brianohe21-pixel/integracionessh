@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-API_ID="${API_ID:-}"
 AWS_REGION="${AWS_REGION:-us-east-1}"
 PROJECT="${PROJECT:-chatbot-platform}"
 ENVIRONMENT="${ENVIRONMENT:-dev}"
-DRY_RUN="${DRY_RUN:-false}"
 
+API_ID="${API_ID:-}"
 if [[ -z "$API_ID" ]]; then
   API_ID="$(aws apigatewayv2 get-apis \
     --region "$AWS_REGION" \
@@ -15,8 +14,8 @@ if [[ -z "$API_ID" ]]; then
 fi
 
 if [[ -z "$API_ID" || "$API_ID" == "None" ]]; then
-  echo "API Gateway API not found for ${PROJECT}-${ENVIRONMENT}" >&2
-  exit 1
+  echo "0"
+  exit 0
 fi
 
 mapfile -t referenced < <(
@@ -34,7 +33,7 @@ for id in "${referenced[@]}"; do
   referenced_map[$id]=1
 done
 
-deleted=0
+orphan_count=0
 mapfile -t integration_ids < <(
   aws apigatewayv2 get-integrations \
     --api-id "$API_ID" \
@@ -45,22 +44,8 @@ mapfile -t integration_ids < <(
 
 for id in "${integration_ids[@]}"; do
   if [[ -z "${referenced_map[$id]:-}" ]]; then
-    if [[ "$DRY_RUN" == "true" ]]; then
-      echo "[dry-run] Would delete orphan integration ${id}"
-      deleted=$((deleted + 1))
-      continue
-    fi
-    aws apigatewayv2 delete-integration \
-      --api-id "$API_ID" \
-      --integration-id "$id" \
-      --region "$AWS_REGION" \
-      --no-cli-pager >/dev/null
-    deleted=$((deleted + 1))
+    orphan_count=$((orphan_count + 1))
   fi
 done
 
-if [[ "$DRY_RUN" == "true" ]]; then
-  echo "Would delete ${deleted} orphan API Gateway integration(s) from ${API_ID}."
-else
-  echo "Deleted ${deleted} orphan API Gateway integration(s) from ${API_ID}."
-fi
+echo "$orphan_count"

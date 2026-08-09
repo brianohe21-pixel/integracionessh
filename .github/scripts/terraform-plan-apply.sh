@@ -126,9 +126,15 @@ case "$ACTION" in
     fi
     run_with_lock_retry plan.txt \
       terraform plan "${PLAN_ARGS[@]}" "${OUTPUT_ARGS[@]}" -input=false -lock-timeout="$LOCK_TIMEOUT"
+    if [ -f "$(dirname "$0")/validate-terraform-plan.sh" ]; then
+      bash "$(dirname "$0")/validate-terraform-plan.sh" plan.txt
+    fi
     ;;
   apply)
     test -f tfplan
+    if [ -f plan.txt ] && [ -f "$(dirname "$0")/validate-terraform-plan.sh" ]; then
+      bash "$(dirname "$0")/validate-terraform-plan.sh" plan.txt
+    fi
     run_with_lock_retry apply.txt \
       terraform apply -auto-approve -parallelism=1 -lock-timeout="$LOCK_TIMEOUT" tfplan
     ;;
