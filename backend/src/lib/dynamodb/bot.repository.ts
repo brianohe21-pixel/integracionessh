@@ -5,6 +5,10 @@ import {
   DeleteCommand,
   QueryCommand,
 } from "@aws-sdk/lib-dynamodb";
+import {
+  putWabaLookup,
+  deleteWabaLookup,
+} from "./bot-lookup.repository.js";
 import { docClient, TABLE_NAME } from "./client.js";
 import type { Bot } from "../../types/index.js";
 
@@ -62,6 +66,10 @@ export async function createBot(bot: Bot): Promise<void> {
       ConditionExpression: "attribute_not_exists(SK)",
     })
   );
+
+  if (bot.whatsappBusinessAccountId?.trim()) {
+    await putWabaLookup(bot.whatsappBusinessAccountId, bot.tenantId, bot.botId);
+  }
 }
 
 export async function updateBot(
@@ -101,10 +109,17 @@ export async function updateBot(
   );
 
   const { PK, SK, GSI1PK, GSI1SK, ...rest } = result.Attributes ?? {};
-  return rest as Bot;
+  const updated = rest as Bot;
+
+  if (updates.whatsappBusinessAccountId?.trim()) {
+    await putWabaLookup(updates.whatsappBusinessAccountId, tenantId, botId);
+  }
+
+  return updated;
 }
 
 export async function deleteBot(tenantId: string, botId: string): Promise<void> {
+  const existing = await getBot(tenantId, botId);
   await docClient.send(
     new DeleteCommand({
       TableName: TABLE_NAME,
@@ -112,6 +127,9 @@ export async function deleteBot(tenantId: string, botId: string): Promise<void> 
       ConditionExpression: "attribute_exists(PK)",
     })
   );
+  if (existing?.whatsappBusinessAccountId?.trim()) {
+    await deleteWabaLookup(existing.whatsappBusinessAccountId);
+  }
 }
 
 export async function listBots(tenantId: string): Promise<Bot[]> {

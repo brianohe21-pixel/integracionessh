@@ -23,6 +23,7 @@ output "dlq_arns" {
     call_events    = aws_sqs_queue.call_events_dlq.arn
     telephony_cdr  = aws_sqs_queue.telephony_cdr_dlq.arn
     mailrelay_sync = aws_sqs_queue.mailrelay_sync_dlq.arn
+    whatsapp_sync  = aws_sqs_queue.whatsapp_sync_dlq.arn
   }
 }
 
@@ -39,6 +40,7 @@ output "queue_arns" {
     call_events    = aws_sqs_queue.call_events.arn
     telephony_cdr  = aws_sqs_queue.telephony_cdr.arn
     mailrelay_sync = aws_sqs_queue.mailrelay_sync.arn
+    whatsapp_sync  = aws_sqs_queue.whatsapp_sync.arn
   }
 }
 
@@ -124,4 +126,16 @@ output "mailrelay_sync_queue_arn" {
 
 output "mailrelay_sync_dlq_arn" {
   value = aws_sqs_queue.mailrelay_sync_dlq.arn
+}
+
+output "whatsapp_sync_queue_url" {
+  value = aws_sqs_queue.whatsapp_sync.url
+}
+
+output "whatsapp_sync_queue_arn" {
+  value = aws_sqs_queue.whatsapp_sync.arn
+}
+
+output "whatsapp_sync_dlq_arn" {
+  value = aws_sqs_queue.whatsapp_sync_dlq.arn
 }

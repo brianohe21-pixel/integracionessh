@@ -102,6 +102,16 @@ variable "mailrelay_sync_sqs_queue_arn" {
   type = string
 }
 
+variable "whatsapp_sync_sqs_queue_url" {
+  type    = string
+  default = ""
+}
+
+variable "whatsapp_sync_sqs_queue_arn" {
+  type    = string
+  default = ""
+}
+
 variable "mailrelay_event_types" {
   type        = string
   default     = ""
@@ -346,6 +356,7 @@ variable "cloudwatch_log_group_import_exclude" {
     "mailrelay",
     "process_mailrelay_sync",
     "mailrelay_webhook",
+    "process_whatsapp_sync",
   ]
   description = "Lambda keys whose log groups are created by Terraform instead of imported (new functions without pre-existing log groups in AWS)"
 }

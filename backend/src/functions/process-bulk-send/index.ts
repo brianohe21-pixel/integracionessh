@@ -7,6 +7,7 @@ import {
   saveMessageTracking,
 } from "../../lib/dynamodb/bulk-job.repository.js";
 import { sendTemplateMessage, getWhatsAppAccessToken } from "../../lib/whatsapp/client.js";
+import { applyCoexistenceSendThrottle } from "../../lib/whatsapp/coexistence/throughput.js";
 import { sendSmsFromTemplate } from "../../lib/sms/send-outbound.js";
 import type { BulkSendSQSBody } from "../../types/index.js";
 
@@ -62,6 +63,7 @@ async function processRecord(record: SQSRecord): Promise<void> {
       return;
     }
 
+    await applyCoexistenceSendThrottle(bot.whatsappOnboardingMode);
     const accessToken = await getWhatsAppAccessToken(tenantId, ENVIRONMENT);
     const result = await sendTemplateMessage({
       phoneNumberId: bot.phoneNumberId,

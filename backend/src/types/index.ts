@@ -252,9 +252,34 @@ export interface Bot {
   telephonyWebhookSecret?: string;
   telephonyWebhookEnabled?: boolean;
   telephonyWebhookEvents?: IntegrationEvent[];
+  whatsappOnboardingMode?: "cloud_api" | "coexistence";
+  isOnBizApp?: boolean;
+  platformType?: string;
+  whatsappSyncStatus?: WhatsAppSyncStatus;
+  whatsappDisconnectedAt?: string;
+  whatsappDisconnectionReason?: string;
   status: "active" | "inactive";
   createdAt: string;
   updatedAt: string;
+}
+
+export type WhatsAppSyncPhaseStatus =
+  | "pending"
+  | "in_progress"
+  | "completed"
+  | "failed"
+  | "declined";
+
+export interface WhatsAppSyncStatus {
+  contacts?: WhatsAppSyncPhaseStatus;
+  history?: WhatsAppSyncPhaseStatus;
+  contactsRequestId?: string;
+  historyRequestId?: string;
+  historyProgress?: number;
+  historyPhase?: number;
+  startedAt?: string;
+  completedAt?: string;
+  lastError?: string;
 }
 
 export type HandoffMode = "bot" | "human";
@@ -313,6 +338,8 @@ export type MessageRole = "user" | "assistant" | "advisor" | "system";
 export type MessageSource =
   | "panel"
   | "whatsapp_inbound"
+  | "whatsapp_history"
+  | "whatsapp_app_echo"
   | "instagram_inbound"
   | "webchat_inbound"
   | "telegram_inbound"
@@ -501,6 +528,93 @@ export interface WhatsAppValue {
   messages?: WhatsAppMessage[];
   statuses?: Array<WhatsAppStatus | WhatsAppCallStatusItem>;
   calls?: WhatsAppCallWebhookItem[];
+  history?: WhatsAppHistoryChunk[];
+  state_sync?: WhatsAppStateSyncItem[];
+  message_echoes?: WhatsAppMessageEcho[];
+  errors?: Array<{ code: number; title?: string; message?: string }>;
+}
+
+export interface WhatsAppHistoryMetadata {
+  phase: number;
+  chunk_order: number;
+  progress: number;
+}
+
+export interface WhatsAppHistoryThread {
+  id: string;
+  messages: WhatsAppHistoryMessage[];
+}
+
+export interface WhatsAppHistoryChunk {
+  metadata?: WhatsAppHistoryMetadata;
+  threads?: WhatsAppHistoryThread[];
+  errors?: Array<{ code: number; title?: string; message?: string }>;
+}
+
+export interface WhatsAppHistoryContext {
+  status?: string;
+}
+
+export interface WhatsAppHistoryMessage {
+  from: string;
+  id: string;
+  timestamp: string;
+  type: string;
+  to?: string;
+  text?: { body: string };
+  image?: { id: string; mime_type?: string; caption?: string };
+  audio?: { id: string; mime_type?: string };
+  video?: { id: string; mime_type?: string; caption?: string };
+  document?: { id: string; mime_type?: string; caption?: string };
+  history_context?: WhatsAppHistoryContext;
+}
+
+export interface WhatsAppStateSyncItem {
+  type: string;
+  contact?: {
+    full_name?: string;
+    first_name?: string;
+    phone_number: string;
+  };
+  action?: "add" | "remove";
+  metadata?: { timestamp?: string };
+}
+
+export interface WhatsAppMessageEcho {
+  from: string;
+  to: string;
+  id: string;
+  timestamp: string;
+  type: string;
+  text?: { body: string };
+  image?: { id: string; mime_type?: string; caption?: string };
+  audio?: { id: string; mime_type?: string };
+  video?: { id: string; mime_type?: string; caption?: string };
+  document?: { id: string; mime_type?: string; caption?: string };
+}
+
+export interface WhatsAppAccountUpdateValue {
+  phone_number?: string;
+  event?: string;
+  waba_info?: { waba_id?: string; owner_business_id?: string };
+  disconnection_info?: { reason?: string; initiated_by?: string };
+}
+
+export type WhatsAppSyncQueueJobType =
+  | "start_sync"
+  | "history_chunk"
+  | "echo_batch"
+  | "contact_batch"
+  | "account_update";
+
+export interface WhatsAppSyncQueueMessage {
+  jobType: WhatsAppSyncQueueJobType;
+  tenantId?: string;
+  botId?: string;
+  phoneNumberId?: string;
+  s3Key?: string;
+  payload?: Record<string, unknown>;
+  dedupeKey?: string;
 }
 
 export type WhatsAppCallAction =

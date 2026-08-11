@@ -69,6 +69,7 @@ const entryPoints = [
   "src/functions/cognito-pre-signup/index.ts",
   "src/functions/mailrelay/index.ts",
   "src/functions/process-mailrelay-sync/index.ts",
+  "src/functions/process-whatsapp-sync/index.ts",
   "src/functions/mailrelay-webhook/index.ts",
 ];
 

@@ -68,6 +68,7 @@ resource "aws_iam_role_policy" "lambda_permissions" {
           var.flow_event_sqs_queue_arn,
           var.call_events_sqs_queue_arn,
           var.mailrelay_sync_sqs_queue_arn,
+          var.whatsapp_sync_sqs_queue_arn,
         ]
       },
       {
@@ -220,11 +221,13 @@ locals {
       timeout     = 30
       memory      = 256
       environment = {
-        WHATSAPP_VERIFY_TOKEN = var.whatsapp_verify_token
-        WHATSAPP_APP_SECRET   = var.whatsapp_app_secret != "" ? var.whatsapp_app_secret : var.meta_app_secret
-        SQS_QUEUE_URL         = var.sqs_queue_url
-        CALL_EVENTS_QUEUE_URL = var.call_events_sqs_queue_url
-        TABLE_NAME            = var.dynamodb_table_name
+        WHATSAPP_VERIFY_TOKEN    = var.whatsapp_verify_token
+        WHATSAPP_APP_SECRET      = var.whatsapp_app_secret != "" ? var.whatsapp_app_secret : var.meta_app_secret
+        SQS_QUEUE_URL            = var.sqs_queue_url
+        CALL_EVENTS_QUEUE_URL    = var.call_events_sqs_queue_url
+        WHATSAPP_SYNC_QUEUE_URL  = var.whatsapp_sync_sqs_queue_url
+        MEDIA_BUCKET             = var.media_bucket_name
+        TABLE_NAME               = var.dynamodb_table_name
       }
     }
     process_message = {
@@ -280,8 +283,9 @@ locals {
       timeout     = 30
       memory      = 256
       environment = {
-        TABLE_NAME  = var.dynamodb_table_name
-        ENVIRONMENT = var.environment
+        TABLE_NAME               = var.dynamodb_table_name
+        ENVIRONMENT              = var.environment
+        WHATSAPP_SYNC_QUEUE_URL  = var.whatsapp_sync_sqs_queue_url
       }
     }
     conversations = {
@@ -913,6 +917,17 @@ locals {
         ENVIRONMENT = var.environment
       }
     }
+    process_whatsapp_sync = {
+      handler     = "process-whatsapp-sync/index.handler"
+      description = "Processes WhatsApp coexistence sync jobs from SQS"
+      timeout     = 300
+      memory      = 512
+      environment = {
+        TABLE_NAME   = var.dynamodb_table_name
+        ENVIRONMENT  = var.environment
+        MEDIA_BUCKET = var.media_bucket_name
+      }
+    }
   }
 }
 
@@ -1030,6 +1045,15 @@ resource "aws_lambda_event_source_mapping" "mailrelay_sync_sqs_trigger" {
   function_name                      = aws_lambda_function.functions["process_mailrelay_sync"].arn
   batch_size                         = 1
   enabled                            = true
+  function_response_types            = ["ReportBatchItemFailures"]
+  maximum_batching_window_in_seconds = 0
+}
+
+resource "aws_lambda_event_source_mapping" "whatsapp_sync_sqs_trigger" {
+  event_source_arn                   = var.whatsapp_sync_sqs_queue_arn
+  function_name                      = aws_lambda_function.functions["process_whatsapp_sync"].arn
+  batch_size                         = 1
+  enabled                            = var.whatsapp_sync_sqs_queue_arn != ""
   function_response_types            = ["ReportBatchItemFailures"]
   maximum_batching_window_in_seconds = 0
 }

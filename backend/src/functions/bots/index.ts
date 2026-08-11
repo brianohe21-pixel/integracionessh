@@ -1,6 +1,6 @@
 import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
-import { z } from "zod";
 import { randomUUID } from "crypto";
+import { z } from "zod";
 import {
   getBot,
   createBot,
@@ -32,9 +32,11 @@ import {
 } from "../../lib/whatsapp/client.js";
 import { ok, created, noContent, badRequest, notFound, handleError } from "../../lib/http.js";
 import { shouldRegisterSmsInboundLookup } from "../../lib/sms/client.js";
+import { enqueueWhatsAppSync } from "../../lib/whatsapp/coexistence/sync-queue.js";
 import type { Bot } from "../../types/index.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
+const WHATSAPP_SYNC_QUEUE_URL = process.env.WHATSAPP_SYNC_QUEUE_URL ?? "";
 
 type BotDetailResponse = Bot & { whatsappPhone?: WhatsAppPhoneInfo | null };
 
@@ -61,6 +63,9 @@ const CreateBotSchema = z
     webhookSecret: z.string().min(8).max(256).optional(),
     phoneNumberId: z.string().optional().default(""),
     whatsappBusinessAccountId: z.string().optional().default(""),
+    whatsappOnboardingMode: z.enum(["cloud_api", "coexistence"]).optional(),
+    isOnBizApp: z.boolean().optional(),
+    platformType: z.string().optional(),
   })
   .superRefine((data, ctx) => {
     if (data.responseMode === "openai" && !data.systemPrompt) {
@@ -87,6 +92,9 @@ const UpdateBotSchema = z.object({
   webhookSecret: z.string().min(8).max(256).optional(),
   phoneNumberId: z.string().min(1).optional(),
   whatsappBusinessAccountId: z.string().min(1).optional(),
+  whatsappOnboardingMode: z.enum(["cloud_api", "coexistence"]).optional(),
+  isOnBizApp: z.boolean().optional(),
+  platformType: z.string().optional(),
   status: z.enum(["active", "inactive"]).optional(),
 });
 
@@ -511,6 +519,11 @@ export async function handler(
         name: data.name,
         phoneNumberId: data.phoneNumberId,
         whatsappBusinessAccountId: data.whatsappBusinessAccountId,
+        ...(data.whatsappOnboardingMode
+          ? { whatsappOnboardingMode: data.whatsappOnboardingMode }
+          : {}),
+        ...(data.isOnBizApp !== undefined ? { isOnBizApp: data.isOnBizApp } : {}),
+        ...(data.platformType ? { platformType: data.platformType } : {}),
         status: "active" as const,
         createdAt: now,
         updatedAt: now,
@@ -543,6 +556,21 @@ export async function handler(
       }
 
       await createBot(newBot);
+
+      if (
+        newBot.whatsappOnboardingMode === "coexistence" &&
+        newBot.phoneNumberId?.trim() &&
+        WHATSAPP_SYNC_QUEUE_URL
+      ) {
+        await enqueueWhatsAppSync(WHATSAPP_SYNC_QUEUE_URL, {
+          jobType: "start_sync",
+          tenantId: newBot.tenantId,
+          botId: newBot.botId,
+          phoneNumberId: newBot.phoneNumberId,
+          dedupeKey: `start-sync-${newBot.botId}`,
+        });
+      }
+
       return created(newBot);
     }
 
@@ -567,6 +595,28 @@ export async function handler(
         botId,
         parsed.data as Partial<Omit<Bot, "tenantId" | "botId" | "createdAt">>
       );
+
+      if (
+        updated.whatsappOnboardingMode === "coexistence" &&
+        updated.phoneNumberId?.trim() &&
+        WHATSAPP_SYNC_QUEUE_URL &&
+        (parsed.data.phoneNumberId || parsed.data.whatsappOnboardingMode === "coexistence")
+      ) {
+        const syncPending =
+          !updated.whatsappSyncStatus?.contacts ||
+          updated.whatsappSyncStatus.contacts === "pending" ||
+          updated.whatsappSyncStatus.contacts === "failed";
+        if (syncPending) {
+          await enqueueWhatsAppSync(WHATSAPP_SYNC_QUEUE_URL, {
+            jobType: "start_sync",
+            tenantId: updated.tenantId,
+            botId: updated.botId,
+            phoneNumberId: updated.phoneNumberId,
+            dedupeKey: `start-sync-${updated.botId}-${Date.now()}`,
+          });
+        }
+      }
+
       return ok(updated);
     }
 

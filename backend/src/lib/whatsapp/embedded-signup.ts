@@ -1,7 +1,23 @@
-import { getPhoneNumberInfo, registerPhoneNumber } from "./client.js";
+import {
+  getPhoneNumberInfo,
+  listWabaPhoneNumbers,
+  registerPhoneNumber,
+  type WabaPhoneNumberEntry,
+} from "./client.js";
 import { saveTenantWhatsAppSecret } from "./secrets.js";
 
 const GRAPH_API_URL = "https://graph.facebook.com/v22.0";
+
+const COEXISTENCE_WEBHOOK_FIELDS = [
+  "messages",
+  "calls",
+  "history",
+  "smb_app_state_sync",
+  "smb_message_echoes",
+  "account_update",
+];
+
+const CLOUD_API_WEBHOOK_FIELDS = ["messages", "calls"];
 
 export function assertDistinctWabaAndPhone(wabaId: string, phoneNumberId: string): void {
   if (wabaId === phoneNumberId) {
@@ -45,7 +61,11 @@ export async function exchangeCodeForToken(
   return json.access_token;
 }
 
-export async function subscribeWabaWebhooks(wabaId: string, accessToken: string): Promise<void> {
+export async function subscribeWabaWebhooks(
+  wabaId: string,
+  accessToken: string,
+  fields: string[] = CLOUD_API_WEBHOOK_FIELDS
+): Promise<void> {
   const response = await fetch(`${GRAPH_API_URL}/${wabaId}/subscribed_apps`, {
     method: "POST",
     headers: {
@@ -53,7 +73,7 @@ export async function subscribeWabaWebhooks(wabaId: string, accessToken: string)
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      subscribed_fields: ["messages", "calls"],
+      subscribed_fields: fields,
     }),
   });
 
@@ -65,6 +85,52 @@ export async function subscribeWabaWebhooks(wabaId: string, accessToken: string)
     err.statusCode = 502;
     throw err;
   }
+}
+
+export function resolveCoexistencePhoneNumber(
+  numbers: WabaPhoneNumberEntry[],
+  hintPhoneNumberId?: string
+): WabaPhoneNumberEntry {
+  if (hintPhoneNumberId) {
+    const byId = numbers.find((n) => n.id === hintPhoneNumberId);
+    if (byId) return byId;
+  }
+
+  const coexistenceCandidates = numbers.filter(
+    (n) => n.isOnBizApp === true && n.platformType === "CLOUD_API"
+  );
+
+  if (coexistenceCandidates.length === 1) {
+    return coexistenceCandidates[0];
+  }
+
+  if (numbers.length === 1) {
+    return numbers[0];
+  }
+
+  const err = new Error(
+    "Could not resolve a unique phone number for coexistence onboarding"
+  ) as Error & { statusCode?: number };
+  err.statusCode = 400;
+  throw err;
+}
+
+export async function validateCoexistencePhone(
+  phoneNumberId: string,
+  accessToken: string
+): Promise<{ isOnBizApp: boolean; platformType: string }> {
+  const info = await getPhoneNumberInfo(phoneNumberId, accessToken);
+  if (!info.isOnBizApp || info.platformType !== "CLOUD_API") {
+    const err = new Error(
+      "Phone number is not registered for WhatsApp Business App coexistence"
+    ) as Error & { statusCode?: number };
+    err.statusCode = 400;
+    throw err;
+  }
+  return {
+    isOnBizApp: info.isOnBizApp,
+    platformType: info.platformType ?? "CLOUD_API",
+  };
 }
 
 export async function completeEmbeddedSignup(params: {
@@ -105,6 +171,55 @@ export async function completeEmbeddedSignup(params: {
   return {
     phoneNumberId,
     whatsappBusinessAccountId: wabaId,
+  };
+}
+
+export async function completeCoexistenceSignup(params: {
+  tenantId: string;
+  environment: string;
+  code: string;
+  wabaId: string;
+  phoneNumberId?: string;
+  appId: string;
+  appSecret: string;
+  platformAppSecret: string;
+}): Promise<{
+  phoneNumberId: string;
+  whatsappBusinessAccountId: string;
+  isOnBizApp: boolean;
+  platformType: string;
+}> {
+  const { tenantId, environment, code, wabaId, phoneNumberId, appId, appSecret, platformAppSecret } =
+    params;
+
+  const accessToken = await exchangeCodeForToken(code, appId, appSecret);
+
+  await saveTenantWhatsAppSecret(tenantId, environment, {
+    accessToken,
+    appSecret: platformAppSecret,
+  });
+
+  await subscribeWabaWebhooks(wabaId, accessToken, COEXISTENCE_WEBHOOK_FIELDS);
+
+  const numbers = await listWabaPhoneNumbers(wabaId, accessToken);
+  if (!numbers.length) {
+    const err = new Error("No phone numbers found for this WhatsApp Business account") as Error & {
+      statusCode?: number;
+    };
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const resolved = resolveCoexistencePhoneNumber(numbers, phoneNumberId);
+  assertDistinctWabaAndPhone(wabaId, resolved.id);
+
+  const coexistence = await validateCoexistencePhone(resolved.id, accessToken);
+
+  return {
+    phoneNumberId: resolved.id,
+    whatsappBusinessAccountId: wabaId,
+    isOnBizApp: coexistence.isOnBizApp,
+    platformType: coexistence.platformType,
   };
 }
 

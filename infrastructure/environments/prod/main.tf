@@ -210,6 +210,8 @@ module "lambda" {
   telephony_cdr_sqs_queue_arn   = module.sqs.telephony_cdr_queue_arn
   mailrelay_sync_sqs_queue_url  = module.sqs.mailrelay_sync_queue_url
   mailrelay_sync_sqs_queue_arn  = module.sqs.mailrelay_sync_queue_arn
+  whatsapp_sync_sqs_queue_url   = module.sqs.whatsapp_sync_queue_url
+  whatsapp_sync_sqs_queue_arn   = module.sqs.whatsapp_sync_queue_arn
   mailrelay_event_types         = var.mailrelay_event_types
   scheduler_role_arn            = aws_iam_role.scheduler.arn
   media_bucket_arn              = module.s3.media_bucket_arn

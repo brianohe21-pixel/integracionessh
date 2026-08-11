@@ -64,6 +64,56 @@ function telegramBotKey(botId: string) {
   };
 }
 
+function wabaLookupKey(wabaId: string) {
+  return {
+    PK: `LOOKUP#WABA#${wabaId}`,
+    SK: "META",
+  };
+}
+
+export async function putWabaLookup(
+  wabaId: string,
+  tenantId: string,
+  botId: string
+): Promise<void> {
+  await docClient.send(
+    new PutCommand({
+      TableName: TABLE_NAME,
+      Item: {
+        ...wabaLookupKey(wabaId),
+        tenantId,
+        botId,
+        updatedAt: new Date().toISOString(),
+      },
+    })
+  );
+}
+
+export async function deleteWabaLookup(wabaId: string): Promise<void> {
+  await docClient.send(
+    new DeleteCommand({
+      TableName: TABLE_NAME,
+      Key: wabaLookupKey(wabaId),
+    })
+  );
+}
+
+export async function getBotByWabaId(
+  wabaId: string
+): Promise<{ tenantId: string; botId: string } | null> {
+  const result = await docClient.send(
+    new GetCommand({
+      TableName: TABLE_NAME,
+      Key: wabaLookupKey(wabaId),
+    })
+  );
+  if (!result.Item) return null;
+  return {
+    tenantId: result.Item.tenantId as string,
+    botId: result.Item.botId as string,
+  };
+}
+
 export async function putInstagramPageLookup(
   pageId: string,
   tenantId: string,

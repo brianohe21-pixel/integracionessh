@@ -186,6 +186,8 @@ export async function updateConversation(
       | "emailSubject"
       | "emailThreadMessageId"
       | "locale"
+      | "lastMessageAt"
+      | "messageCount"
     >
   >
 ): Promise<Conversation | null> {
@@ -490,55 +492,121 @@ export async function getOrCreateConversation(
 }
 
 export async function addMessage(message: Message, botId: string): Promise<void> {
-  const now = message.timestamp;
+  await addMessageIdempotent(message, botId, {
+    updateCounters: true,
+    updateLastMessageAt: true,
+    publishRealtime: true,
+  });
+}
 
-  await docClient.send(
-    new TransactWriteCommand({
-      TransactItems: [
-        {
-          Put: {
-            TableName: TABLE_NAME,
-            Item: {
-              ...messageKeys(message.tenantId, message.conversationId, now, message.messageId),
-              GSI1PK: `TENANT#${message.tenantId}#CONV#${message.conversationId}`,
-              GSI1SK: `MSG#${now}`,
-              ttl: Math.floor(Date.now() / 1000) + 90 * 24 * 60 * 60,
-              ...message,
-            },
-          },
-        },
-        {
-          Update: {
-            TableName: TABLE_NAME,
-            Key: {
-              PK: `TENANT#${message.tenantId}#BOT#${botId}`,
-              SK: `CONV#${message.conversationId}`,
-            },
-            UpdateExpression:
-              "SET messageCount = messageCount + :inc, lastMessageAt = :now",
-            ExpressionAttributeValues: {
-              ":inc": 1,
-              ":now": now,
-            },
-          },
-        },
-      ],
+export async function addMessageIdempotent(
+  message: Message,
+  botId: string,
+  options: {
+    updateCounters?: boolean;
+    updateLastMessageAt?: boolean;
+    publishRealtime?: boolean;
+  } = {}
+): Promise<boolean> {
+  const updateCounters = options.updateCounters ?? true;
+  const updateLastMessageAt = options.updateLastMessageAt ?? true;
+  const publishRealtime = options.publishRealtime ?? true;
+  const now = message.timestamp;
+  const msgKey = messageKeys(message.tenantId, message.conversationId, now, message.messageId);
+
+  const existing = await docClient.send(
+    new QueryCommand({
+      TableName: TABLE_NAME,
+      KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+      FilterExpression: "messageId = :messageId",
+      ExpressionAttributeValues: {
+        ":pk": `TENANT#${message.tenantId}#CONV#${message.conversationId}`,
+        ":sk": "MSG#",
+        ":messageId": message.messageId,
+      },
+      Limit: 1,
     })
   );
 
-  const conversation = await getConversation(message.tenantId, botId, message.conversationId);
-  if (conversation) {
-    publishRealtimeEventSafe(message.tenantId, {
-      type: "message.created",
-      conversationId: message.conversationId,
-      message,
-      conversation: {
-        ...conversation,
-        lastMessageAt: now,
-        messageCount: (conversation.messageCount ?? 0) + 1,
+  if (existing.Items?.length) {
+    return false;
+  }
+
+  const transactItems: Array<Record<string, unknown>> = [
+    {
+      Put: {
+        TableName: TABLE_NAME,
+        Item: {
+          ...msgKey,
+          GSI1PK: `TENANT#${message.tenantId}#CONV#${message.conversationId}`,
+          GSI1SK: `MSG#${now}`,
+          ttl: Math.floor(Date.now() / 1000) + 90 * 24 * 60 * 60,
+          ...message,
+        },
+        ConditionExpression: "attribute_not_exists(SK)",
+      },
+    },
+  ];
+
+  if (updateCounters || updateLastMessageAt) {
+    const updateParts: string[] = [];
+    const values: Record<string, unknown> = {};
+    if (updateCounters) {
+      updateParts.push("messageCount = messageCount + :inc");
+      values[":inc"] = 1;
+    }
+    if (updateLastMessageAt) {
+      updateParts.push("lastMessageAt = :now");
+      values[":now"] = now;
+    }
+    transactItems.push({
+      Update: {
+        TableName: TABLE_NAME,
+        Key: {
+          PK: `TENANT#${message.tenantId}#BOT#${botId}`,
+          SK: `CONV#${message.conversationId}`,
+        },
+        UpdateExpression: `SET ${updateParts.join(", ")}`,
+        ExpressionAttributeValues: values,
       },
     });
   }
+
+  try {
+    await docClient.send(
+      new TransactWriteCommand({
+        TransactItems: transactItems as NonNullable<
+          ConstructorParameters<typeof TransactWriteCommand>[0]["TransactItems"]
+        >,
+      })
+    );
+  } catch (error) {
+    const name = (error as { name?: string }).name;
+    if (name === "TransactionCanceledException") {
+      return false;
+    }
+    throw error;
+  }
+
+  if (publishRealtime) {
+    const conversation = await getConversation(message.tenantId, botId, message.conversationId);
+    if (conversation) {
+      publishRealtimeEventSafe(message.tenantId, {
+        type: "message.created",
+        conversationId: message.conversationId,
+        message,
+        conversation: {
+          ...conversation,
+          lastMessageAt: updateLastMessageAt ? now : conversation.lastMessageAt,
+          messageCount: updateCounters
+            ? (conversation.messageCount ?? 0) + 1
+            : conversation.messageCount,
+        },
+      });
+    }
+  }
+
+  return true;
 }
 
 export async function getConversationMessages(

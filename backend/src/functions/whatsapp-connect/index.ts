@@ -2,7 +2,11 @@ import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 }
 import { z } from "zod";
 import { resolveRequestAuth, assertMemberRole } from "../../lib/auth/cognito.js";
 import { listBots } from "../../lib/dynamodb/bot.repository.js";
-import { completeEmbeddedSignup, completeManualConnect } from "../../lib/whatsapp/embedded-signup.js";
+import {
+  completeEmbeddedSignup,
+  completeCoexistenceSignup,
+  completeManualConnect,
+} from "../../lib/whatsapp/embedded-signup.js";
 import { registerPhoneNumber } from "../../lib/whatsapp/client.js";
 import { getWhatsAppAccessToken } from "../../lib/whatsapp/secrets.js";
 import { ok, badRequest, notFound, handleError } from "../../lib/http.js";
@@ -14,11 +18,35 @@ const WHATSAPP_APP_SECRET = process.env.WHATSAPP_APP_SECRET ?? "";
 
 const PinSchema = z.string().regex(/^\d{6}$/, "PIN must be exactly 6 digits");
 
-const ConnectSchema = z.object({
+const ConnectSchema = z
+  .object({
+    code: z.string().min(1),
+    wabaId: z.string().min(1),
+    phoneNumberId: z.string().optional(),
+    pin: z.string().optional(),
+    onboardingMode: z.enum(["cloud_api", "coexistence"]).optional().default("cloud_api"),
+  })
+  .superRefine((data, ctx) => {
+    if (data.onboardingMode === "cloud_api") {
+      if (!data.phoneNumberId?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "phoneNumberId is required for Cloud API onboarding",
+        });
+      }
+      if (!data.pin || !/^\d{6}$/.test(data.pin)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "PIN must be exactly 6 digits",
+        });
+      }
+    }
+  });
+
+const ConnectCoexistenceSchema = z.object({
   code: z.string().min(1),
   wabaId: z.string().min(1),
-  phoneNumberId: z.string().min(1),
-  pin: PinSchema,
+  phoneNumberId: z.string().optional(),
 });
 
 const RegisterSchema = z.object({
@@ -49,13 +77,35 @@ async function handleConnect(
     return badRequest(parsed.error.message);
   }
 
+  if (parsed.data.onboardingMode === "coexistence") {
+    const coexistence = await completeCoexistenceSignup({
+      tenantId: auth.tenantId,
+      environment: ENVIRONMENT,
+      code: parsed.data.code,
+      wabaId: parsed.data.wabaId,
+      ...(parsed.data.phoneNumberId ? { phoneNumberId: parsed.data.phoneNumberId } : {}),
+      appId: META_APP_ID,
+      appSecret: META_APP_SECRET,
+      platformAppSecret: WHATSAPP_APP_SECRET || META_APP_SECRET,
+    });
+
+    return ok({
+      connected: true,
+      onboardingMode: "coexistence",
+      phoneNumberId: coexistence.phoneNumberId,
+      whatsappBusinessAccountId: coexistence.whatsappBusinessAccountId,
+      isOnBizApp: coexistence.isOnBizApp,
+      platformType: coexistence.platformType,
+    });
+  }
+
   const result = await completeEmbeddedSignup({
     tenantId: auth.tenantId,
     environment: ENVIRONMENT,
     code: parsed.data.code,
     wabaId: parsed.data.wabaId,
-    phoneNumberId: parsed.data.phoneNumberId,
-    pin: parsed.data.pin,
+    phoneNumberId: parsed.data.phoneNumberId!,
+    pin: parsed.data.pin!,
     appId: META_APP_ID,
     appSecret: META_APP_SECRET,
     platformAppSecret: WHATSAPP_APP_SECRET || META_APP_SECRET,
@@ -63,8 +113,46 @@ async function handleConnect(
 
   return ok({
     connected: true,
+    onboardingMode: "cloud_api",
     phoneNumberId: result.phoneNumberId,
     whatsappBusinessAccountId: result.whatsappBusinessAccountId,
+  });
+}
+
+async function handleConnectCoexistence(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer
+): Promise<APIGatewayProxyResultV2> {
+  if (!META_APP_ID || !META_APP_SECRET) {
+    return badRequest("WhatsApp embedded signup is not configured on the server");
+  }
+
+  const auth = await resolveRequestAuth(event);
+  assertMemberRole(auth);
+  const body = JSON.parse(event.body ?? "{}");
+  const parsed = ConnectCoexistenceSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return badRequest(parsed.error.message);
+  }
+
+  const result = await completeCoexistenceSignup({
+    tenantId: auth.tenantId,
+    environment: ENVIRONMENT,
+    code: parsed.data.code,
+    wabaId: parsed.data.wabaId,
+    ...(parsed.data.phoneNumberId ? { phoneNumberId: parsed.data.phoneNumberId } : {}),
+    appId: META_APP_ID,
+    appSecret: META_APP_SECRET,
+    platformAppSecret: WHATSAPP_APP_SECRET || META_APP_SECRET,
+  });
+
+  return ok({
+    connected: true,
+    onboardingMode: "coexistence",
+    phoneNumberId: result.phoneNumberId,
+    whatsappBusinessAccountId: result.whatsappBusinessAccountId,
+    isOnBizApp: result.isOnBizApp,
+    platformType: result.platformType,
   });
 }
 
@@ -92,6 +180,7 @@ async function handleConnectManual(
 
   return ok({
     connected: true,
+    onboardingMode: "cloud_api",
     phoneNumberId: result.phoneNumberId,
     whatsappBusinessAccountId: result.whatsappBusinessAccountId,
   });
@@ -143,13 +232,25 @@ async function handleStatus(
   }
 
   const bots = await listBots(auth.tenantId);
-  const firstBot = bots[0];
+  const whatsappBot = bots.find((b) => b.phoneNumberId?.trim()) ?? bots[0];
 
   return ok({
     connected,
-    ...(firstBot?.phoneNumberId ? { phoneNumberId: firstBot.phoneNumberId } : {}),
-    ...(firstBot?.whatsappBusinessAccountId
-      ? { whatsappBusinessAccountId: firstBot.whatsappBusinessAccountId }
+    ...(whatsappBot?.phoneNumberId ? { phoneNumberId: whatsappBot.phoneNumberId } : {}),
+    ...(whatsappBot?.whatsappBusinessAccountId
+      ? { whatsappBusinessAccountId: whatsappBot.whatsappBusinessAccountId }
+      : {}),
+    ...(whatsappBot?.whatsappOnboardingMode
+      ? { onboardingMode: whatsappBot.whatsappOnboardingMode }
+      : {}),
+    ...(whatsappBot?.isOnBizApp !== undefined ? { isOnBizApp: whatsappBot.isOnBizApp } : {}),
+    ...(whatsappBot?.platformType ? { platformType: whatsappBot.platformType } : {}),
+    ...(whatsappBot?.whatsappSyncStatus ? { syncStatus: whatsappBot.whatsappSyncStatus } : {}),
+    ...(whatsappBot?.whatsappDisconnectedAt
+      ? { disconnectedAt: whatsappBot.whatsappDisconnectedAt }
+      : {}),
+    ...(whatsappBot?.whatsappDisconnectionReason
+      ? { disconnectionReason: whatsappBot.whatsappDisconnectionReason }
       : {}),
   });
 }
@@ -174,6 +275,9 @@ export async function handler(
     }
     if (path.endsWith("/connect-manual")) {
       return await handleConnectManual(event);
+    }
+    if (path.endsWith("/connect-coexistence")) {
+      return await handleConnectCoexistence(event);
     }
 
     return await handleConnect(event);

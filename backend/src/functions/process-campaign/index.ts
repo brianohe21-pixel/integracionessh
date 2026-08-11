@@ -21,6 +21,7 @@ import {
 } from "../../lib/dynamodb/campaign-send-attempt.repository.js";
 import { getContactByPhone } from "../../lib/dynamodb/contact.repository.js";
 import { sendTemplateMessage, getWhatsAppAccessToken } from "../../lib/whatsapp/client.js";
+import { applyCoexistenceSendThrottle } from "../../lib/whatsapp/coexistence/throughput.js";
 import { sendSmsFromTemplate } from "../../lib/sms/send-outbound.js";
 import type { CampaignSQSBody } from "../../types/index.js";
 import { computeNextBatchAt } from "../../lib/campaign/batch.js";
@@ -238,6 +239,7 @@ async function processRecipient(body: CampaignSQSBody, sqsMessageId: string): Pr
         console.warn(`Failed to save campaign message tracking for ${result.messageId}:`, err)
       );
     } else {
+      await applyCoexistenceSendThrottle(bot.whatsappOnboardingMode);
       const accessToken = await getWhatsAppAccessToken(tenantId, ENVIRONMENT);
       const result = await sendTemplateMessage({
         phoneNumberId: bot.phoneNumberId,
