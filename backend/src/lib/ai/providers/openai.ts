@@ -442,24 +442,6 @@ export async function getOpenAIApiKey(
   tenantId: string,
   environment: string
 ): Promise<string> {
-  const { SecretsManagerClient, GetSecretValueCommand } = await import(
-    "@aws-sdk/client-secrets-manager"
-  );
-
-  const client = new SecretsManagerClient({});
-
-  try {
-    const command = new GetSecretValueCommand({
-      SecretId: `/${environment}/tenants/${tenantId}/openai`,
-    });
-    const response = await client.send(command);
-    const secret = JSON.parse(response.SecretString ?? "{}") as { apiKey: string };
-    if (secret.apiKey) return secret.apiKey;
-  } catch {
-    // Fall through to platform key
-  }
-
-  const platformKey = process.env.OPENAI_API_KEY;
-  if (!platformKey) throw new Error("No OpenAI API key configured");
-  return platformKey;
+  const { resolveOpenAIApiKey } = await import("../../integrations/provider-credentials.js");
+  return resolveOpenAIApiKey(tenantId, environment);
 }

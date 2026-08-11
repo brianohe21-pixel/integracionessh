@@ -192,6 +192,7 @@ export async function startOutboundTelephonyCall(params: {
 
   const dial = await dialOutboundCall({
     environment: ENVIRONMENT,
+    tenantId: params.tenantId,
     to,
     from,
     clientState: encodeClientState({ sessionId, callId }),
@@ -305,36 +306,41 @@ export async function handleOutboundCallRinging(payload: Record<string, unknown>
   await logCallEvent(session.tenantId, session.botId, session.callId, "ringing");
 }
 
-export async function handleInboundCallInitiated(payload: Record<string, unknown>): Promise<void> {
+export async function handleInboundCallInitiated(
+  payload: Record<string, unknown>,
+  credentialTenantId?: string
+): Promise<void> {
   const callControlId = String(payload.call_control_id ?? "");
   const from = normalizeE164(String(payload.from ?? ""));
   const to = normalizeE164(String(payload.to ?? ""));
   if (!callControlId || !from || !to) return;
 
+  const telnyxTenantId = credentialTenantId;
+
   const lookup = await import("../dynamodb/bot-lookup.repository.js").then((m) =>
     m.getBotByTelephonyNumber(to)
   );
   if (!lookup) {
-    await hangupCall(ENVIRONMENT, callControlId).catch(() => undefined);
+    await hangupCall(ENVIRONMENT, callControlId, telnyxTenantId).catch(() => undefined);
     return;
   }
 
   const bot = await getBot(lookup.tenantId, lookup.botId);
   if (!bot?.telephonyEnabled || bot.status !== "active" || bot.responseMode !== "openai") {
-    await hangupCall(ENVIRONMENT, callControlId).catch(() => undefined);
+    await hangupCall(ENVIRONMENT, callControlId, lookup.tenantId).catch(() => undefined);
     return;
   }
 
   const tenant = await getTenant(lookup.tenantId);
   if (!tenant) {
-    await hangupCall(ENVIRONMENT, callControlId).catch(() => undefined);
+    await hangupCall(ENVIRONMENT, callControlId, lookup.tenantId).catch(() => undefined);
     return;
   }
 
   try {
     await assertCanStartVoicebotSession(tenant);
   } catch {
-    await hangupCall(ENVIRONMENT, callControlId).catch(() => undefined);
+    await hangupCall(ENVIRONMENT, callControlId, lookup.tenantId).catch(() => undefined);
     return;
   }
 
@@ -382,6 +388,7 @@ export async function handleInboundCallInitiated(payload: Record<string, unknown
   try {
     await answerInboundCall({
       environment: ENVIRONMENT,
+      tenantId: lookup.tenantId,
       callControlId,
       streamUrl: gatewayStreamUrl(session.streamToken),
       clientState: encodeClientState({ sessionId, callId }),
@@ -438,6 +445,7 @@ export async function handleCallAnswered(payload: Record<string, unknown>): Prom
   if (session.direction === "outbound") {
     await startCallStreaming({
       environment: ENVIRONMENT,
+      tenantId: session.tenantId,
       callControlId,
       streamUrl: gatewayStreamUrl(session.streamToken),
       clientState: encodeClientState({
@@ -461,7 +469,7 @@ export async function handleCallAnswered(payload: Record<string, unknown>): Prom
 
   if (bot.telephonyRecordingEnabled) {
     try {
-      await startCallRecording(ENVIRONMENT, callControlId);
+      await startCallRecording(ENVIRONMENT, callControlId, session.tenantId);
       await updateCallRecord(session.tenantId, session.callId, {
         recordingStatus: "processing",
       });
@@ -632,7 +640,11 @@ export async function reconcileCallCost(params: {
   if (!call) return { done: true };
 
   const bot = await getBot(params.tenantId, params.botId);
-  const records = await searchTelnyxDetailRecords(ENVIRONMENT, params.callControlId);
+  const records = await searchTelnyxDetailRecords(
+    ENVIRONMENT,
+    params.callControlId,
+    params.tenantId
+  );
   const telnyxRecord = records[0];
   const telnyxCostUsd = telnyxRecord?.cost ? Number(telnyxRecord.cost) : undefined;
   const resolvedTelnyxCost =
@@ -704,7 +716,7 @@ export async function terminateTelephonyCall(
 
   if (record.callControlId) {
     try {
-      await hangupCall(ENVIRONMENT, record.callControlId);
+      await hangupCall(ENVIRONMENT, record.callControlId, tenantId);
     } catch (error) {
       if (!isTelnyxCallEndedError(error)) throw error;
     }

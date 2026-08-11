@@ -1,87 +1,60 @@
+import type { TelnyxSecretPayload, ElevenLabsSecretPayload } from "./secrets.types.js";
 import {
-  SecretsManagerClient,
-  GetSecretValueCommand,
-  ResourceNotFoundException,
-} from "@aws-sdk/client-secrets-manager";
+  getPlatformProviderCredential,
+  resolveElevenLabsSecrets,
+  resolveTelnyxSecrets,
+  hasResolvedTelnyxCredentials,
+} from "../integrations/provider-credentials.js";
 
-export interface TelnyxSecretPayload {
-  apiKey: string;
-  publicKey?: string;
-  connectionId: string;
-}
+export type { TelnyxSecretPayload, ElevenLabsSecretPayload };
 
-export interface ElevenLabsSecretPayload {
-  apiKey: string;
-}
-
-function telnyxSecretId(environment: string): string {
-  return `/${environment}/platform/telnyx`;
-}
-
-function elevenLabsSecretId(environment: string): string {
-  return `/${environment}/platform/elevenlabs`;
-}
-
-export async function getTelnyxSecrets(environment: string): Promise<TelnyxSecretPayload> {
-  const client = new SecretsManagerClient({});
-  const id = telnyxSecretId(environment);
-  try {
-    const response = await client.send(new GetSecretValueCommand({ SecretId: id }));
-    const parsed = JSON.parse(response.SecretString ?? "{}") as Partial<TelnyxSecretPayload>;
-    const apiKey = parsed.apiKey?.trim() ?? "";
-    const connectionId = parsed.connectionId?.trim() ?? "";
-    if (!apiKey || !connectionId) {
-      throw Object.assign(
-        new Error(
-          `Telnyx credentials are incomplete. Set apiKey and connectionId in secret ${id}.`
-        ),
-        { statusCode: 400 }
-      );
-    }
-    return {
-      apiKey,
-      connectionId,
-      ...(parsed.publicKey?.trim() ? { publicKey: parsed.publicKey.trim() } : {}),
-    };
-  } catch (error) {
-    if (error instanceof ResourceNotFoundException) {
-      throw Object.assign(
-        new Error(
-          `Telnyx is not configured. Create secret ${id} with {"apiKey":"...","connectionId":"...","publicKey":"..."}.`
-        ),
-        { statusCode: 400 }
-      );
-    }
-    throw error;
+export async function getTelnyxSecrets(
+  environment: string,
+  tenantId?: string
+): Promise<TelnyxSecretPayload> {
+  if (tenantId) {
+    const resolved = await resolveTelnyxSecrets(tenantId, environment);
+    return resolved.payload;
   }
-}
 
-export async function getElevenLabsSecrets(environment: string): Promise<ElevenLabsSecretPayload> {
-  const client = new SecretsManagerClient({});
-  const id = elevenLabsSecretId(environment);
-  try {
-    const response = await client.send(new GetSecretValueCommand({ SecretId: id }));
-    const parsed = JSON.parse(response.SecretString ?? "{}") as Partial<ElevenLabsSecretPayload>;
-    const apiKey = parsed.apiKey?.trim() ?? "";
-    if (!apiKey) {
-      throw Object.assign(
-        new Error(`ElevenLabs credentials are incomplete. Set apiKey in secret ${id}.`),
-        { statusCode: 400 }
-      );
-    }
-    return { apiKey };
-  } catch (error) {
-    if (error instanceof ResourceNotFoundException) {
-      throw Object.assign(
-        new Error(`ElevenLabs is not configured. Create secret ${id} with {"apiKey":"..."}.`),
-        { statusCode: 400 }
-      );
-    }
-    throw error;
+  const platform = await getPlatformProviderCredential(environment, "telnyx");
+  if (!platform) {
+    throw Object.assign(
+      new Error(
+        `Telnyx is not configured. Create secret /${environment}/platform/telnyx with {"apiKey":"...","connectionId":"...","publicKey":"..."}.`
+      ),
+      { statusCode: 400 }
+    );
   }
+  return platform;
 }
 
-export async function hasTelnyxCredentials(environment: string): Promise<boolean> {
+export async function getElevenLabsSecrets(
+  environment: string,
+  tenantId?: string
+): Promise<ElevenLabsSecretPayload> {
+  if (tenantId) {
+    const resolved = await resolveElevenLabsSecrets(tenantId, environment);
+    return resolved.payload;
+  }
+
+  const platform = await getPlatformProviderCredential(environment, "elevenlabs");
+  if (!platform) {
+    throw Object.assign(
+      new Error(`ElevenLabs is not configured. Create secret /${environment}/platform/elevenlabs.`),
+      { statusCode: 400 }
+    );
+  }
+  return platform;
+}
+
+export async function hasTelnyxCredentials(
+  environment: string,
+  tenantId?: string
+): Promise<boolean> {
+  if (tenantId) {
+    return hasResolvedTelnyxCredentials(tenantId, environment);
+  }
   try {
     await getTelnyxSecrets(environment);
     return true;

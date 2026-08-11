@@ -7,8 +7,11 @@ export interface ElevenLabsVoice {
   requiresPaidPlan: boolean;
 }
 
-export async function listElevenLabsVoices(environment: string): Promise<ElevenLabsVoice[]> {
-  const { apiKey } = await getElevenLabsSecrets(environment);
+export async function listElevenLabsVoices(
+  environment: string,
+  tenantId: string
+): Promise<ElevenLabsVoice[]> {
+  const { apiKey } = await getElevenLabsSecrets(environment, tenantId);
   const response = await fetch("https://api.elevenlabs.io/v1/voices", {
     headers: {
       "xi-api-key": apiKey,
@@ -41,9 +44,12 @@ export async function listElevenLabsVoices(environment: string): Promise<ElevenL
     }));
 }
 
-export async function getElevenLabsAccountTier(environment: string): Promise<string | null> {
+export async function getElevenLabsAccountTier(
+  environment: string,
+  tenantId: string
+): Promise<string | null> {
   try {
-    const { apiKey } = await getElevenLabsSecrets(environment);
+    const { apiKey } = await getElevenLabsSecrets(environment, tenantId);
     const response = await fetch("https://api.elevenlabs.io/v1/user/subscription", {
       headers: {
         "xi-api-key": apiKey,

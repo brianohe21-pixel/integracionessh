@@ -192,7 +192,7 @@ export async function runTelephonyBridge(
   }
 
   const openaiKey = await getOpenAIApiKey(session.tenantId);
-  const elevenKey = await getElevenLabsApiKey();
+  const elevenKey = await getElevenLabsApiKey(session.tenantId);
   const voiceId = resolveVoiceId(bot);
   const model = resolveModel(bot);
   const instructions = resolveInstructions(bot, session.locale);

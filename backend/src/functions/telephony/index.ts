@@ -18,6 +18,9 @@ import {
 import { parseTelnyxWebhookBody, verifyTelnyxWebhookSignature } from "../../lib/telnyx/webhook.js";
 import { markTelnyxEventProcessed } from "../../lib/telnyx/idempotency.js";
 import { getTelnyxSecrets } from "../../lib/telnyx/secrets.js";
+import { resolveProviderCredential } from "../../lib/integrations/provider-credentials.js";
+import { normalizeE164 } from "../../lib/telnyx/phone.js";
+import { getBotByTelephonyNumber } from "../../lib/dynamodb/bot-lookup.repository.js";
 import {
   handleCallAnswered,
   handleCallHangup,
@@ -135,9 +138,12 @@ function maskWebhookSecret(bot: Awaited<ReturnType<typeof getBot>>) {
   };
 }
 
-async function handleTelnyxWebhook(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
+async function handleTelnyxWebhook(
+  event: APIGatewayProxyEventV2,
+  credentialTenantId?: string
+): Promise<APIGatewayProxyResultV2> {
   const rawBody = getRawBody(event);
-  const secrets = await getTelnyxSecrets(ENVIRONMENT);
+  const secrets = await getTelnyxSecrets(ENVIRONMENT, credentialTenantId);
   const signature = event.headers["telnyx-signature-ed25519"] ?? event.headers["Telnyx-Signature-Ed25519"];
   const timestamp = event.headers["telnyx-timestamp"] ?? event.headers["Telnyx-Timestamp"];
 
@@ -172,7 +178,27 @@ async function handleTelnyxWebhook(event: APIGatewayProxyEventV2): Promise<APIGa
     if (eventType === "call.initiated") {
       const direction = String(payload.direction ?? "");
       if (direction === "incoming") {
-        await handleInboundCallInitiated(payload);
+        const to = normalizeE164(String(payload.to ?? ""));
+        if (to) {
+          const lookup = await getBotByTelephonyNumber(to);
+          if (lookup) {
+            const resolved = await resolveProviderCredential(
+              lookup.tenantId,
+              ENVIRONMENT,
+              "telnyx"
+            );
+            const expectedOwner = credentialTenantId ?? "platform";
+            if (!resolved || resolved.ownerTenantId !== expectedOwner) {
+              console.warn("Telnyx webhook tenant mismatch", {
+                lookupTenantId: lookup.tenantId,
+                expectedOwner,
+                resolvedOwner: resolved?.ownerTenantId,
+              });
+              continue;
+            }
+          }
+        }
+        await handleInboundCallInitiated(payload, credentialTenantId);
       } else if (direction === "outgoing") {
         await handleOutboundCallRinging(payload);
       }
@@ -210,25 +236,31 @@ export async function handler(
     const botId = event.pathParameters?.botId;
     const callId = event.pathParameters?.callId;
 
+    const credentialTenantId = event.pathParameters?.credentialTenantId;
+
     if (method === "POST" && rawPath === "/telephony/webhook") {
       return handleTelnyxWebhook(event);
+    }
+
+    if (method === "POST" && credentialTenantId && rawPath.startsWith("/telephony/webhook/")) {
+      return handleTelnyxWebhook(event, credentialTenantId);
     }
 
     const auth = await resolveRequestAuth(event as APIGatewayProxyEventV2WithJWTAuthorizer);
     assertMemberRole(auth);
 
     if (method === "GET" && rawPath === "/telephony/numbers") {
-      const configured = await hasTelnyxCredentials(ENVIRONMENT);
+      const configured = await hasTelnyxCredentials(ENVIRONMENT, auth.tenantId);
       if (!configured) return ok({ numbers: [] });
-      const numbers = await listOwnedPhoneNumbers(ENVIRONMENT);
+      const numbers = await listOwnedPhoneNumbers(ENVIRONMENT, auth.tenantId);
       return ok({ numbers });
     }
 
     if (method === "GET" && rawPath === "/telephony/voices") {
       try {
         const [voices, tier] = await Promise.all([
-          listElevenLabsVoices(ENVIRONMENT),
-          getElevenLabsAccountTier(ENVIRONMENT),
+          listElevenLabsVoices(ENVIRONMENT, auth.tenantId),
+          getElevenLabsAccountTier(ENVIRONMENT, auth.tenantId),
         ]);
         return ok({ voices, tier });
       } catch {

@@ -5,6 +5,7 @@ const TELNYX_API_BASE = "https://api.telnyx.com/v2";
 
 export interface TelnyxDialParams {
   environment: string;
+  tenantId: string;
   to: string;
   from: string;
   clientState?: string;
@@ -18,6 +19,7 @@ export interface TelnyxDialResult {
 
 export interface TelnyxAnswerParams {
   environment: string;
+  tenantId: string;
   callControlId: string;
   streamUrl: string;
   clientState?: string;
@@ -37,9 +39,10 @@ export function isTelnyxCallEndedError(error: unknown): boolean {
 async function telnyxRequest<T>(
   environment: string,
   path: string,
-  init: RequestInit
+  init: RequestInit,
+  tenantId?: string
 ): Promise<T> {
-  const { apiKey } = await getTelnyxSecrets(environment);
+  const { apiKey } = await getTelnyxSecrets(environment, tenantId);
   const response = await fetch(`${TELNYX_API_BASE}${path}`, {
     ...init,
     headers: {
@@ -90,16 +93,21 @@ function streamPayload(streamUrl: string, clientState?: string) {
 }
 
 export async function dialOutboundCall(params: TelnyxDialParams): Promise<TelnyxDialResult> {
-  const { connectionId } = await getTelnyxSecrets(params.environment);
-  const data = await telnyxRequest<{ data: Record<string, string> }>(params.environment, "/calls", {
-    method: "POST",
-    body: JSON.stringify({
-      connection_id: connectionId,
-      to: params.to,
-      from: params.from,
-      ...(params.clientState ? { client_state: params.clientState } : {}),
-    }),
-  });
+  const { connectionId } = await getTelnyxSecrets(params.environment, params.tenantId);
+  const data = await telnyxRequest<{ data: Record<string, string> }>(
+    params.environment,
+    "/calls",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        connection_id: connectionId,
+        to: params.to,
+        from: params.from,
+        ...(params.clientState ? { client_state: params.clientState } : {}),
+      }),
+    },
+    params.tenantId
+  );
 
   return {
     callControlId: data.data.call_control_id,
@@ -109,10 +117,15 @@ export async function dialOutboundCall(params: TelnyxDialParams): Promise<Telnyx
 }
 
 export async function answerInboundCall(params: TelnyxAnswerParams): Promise<void> {
-  await telnyxRequest(params.environment, `/calls/${encodeURIComponent(params.callControlId)}/actions/answer`, {
-    method: "POST",
-    body: JSON.stringify(streamPayload(params.streamUrl, params.clientState)),
-  });
+  await telnyxRequest(
+    params.environment,
+    `/calls/${encodeURIComponent(params.callControlId)}/actions/answer`,
+    {
+      method: "POST",
+      body: JSON.stringify(streamPayload(params.streamUrl, params.clientState)),
+    },
+    params.tenantId
+  );
 }
 
 export async function startCallStreaming(params: TelnyxStreamParams): Promise<void> {
@@ -122,16 +135,26 @@ export async function startCallStreaming(params: TelnyxStreamParams): Promise<vo
     {
       method: "POST",
       body: JSON.stringify(streamPayload(params.streamUrl, params.clientState)),
-    }
+    },
+    params.tenantId
   );
 }
 
-export async function hangupCall(environment: string, callControlId: string): Promise<void> {
+export async function hangupCall(
+  environment: string,
+  callControlId: string,
+  tenantId?: string
+): Promise<void> {
   try {
-    await telnyxRequest(environment, `/calls/${encodeURIComponent(callControlId)}/actions/hangup`, {
-      method: "POST",
-      body: JSON.stringify({}),
-    });
+    await telnyxRequest(
+      environment,
+      `/calls/${encodeURIComponent(callControlId)}/actions/hangup`,
+      {
+        method: "POST",
+        body: JSON.stringify({}),
+      },
+      tenantId
+    );
   } catch (error) {
     if (isTelnyxCallEndedError(error)) return;
     throw error;
@@ -140,7 +163,8 @@ export async function hangupCall(environment: string, callControlId: string): Pr
 
 export async function startCallRecording(
   environment: string,
-  callControlId: string
+  callControlId: string,
+  tenantId: string
 ): Promise<void> {
   try {
     await telnyxRequest(
@@ -153,7 +177,8 @@ export async function startCallRecording(
           channels: "dual",
           play_beep: false,
         }),
-      }
+      },
+      tenantId
     );
   } catch (error) {
     if (isTelnyxCallEndedError(error)) return;
@@ -171,7 +196,8 @@ export interface TelnyxDetailRecord {
 
 export async function searchTelnyxDetailRecords(
   environment: string,
-  callControlId: string
+  callControlId: string,
+  tenantId: string
 ): Promise<TelnyxDetailRecord[]> {
   const data = await telnyxRequest<{
     data: Array<{
@@ -181,9 +207,12 @@ export async function searchTelnyxDetailRecords(
       call_control_id?: string;
       duration_secs?: number;
     }>;
-  }>(environment, "/detail_records?filter[record_type]=call-control&page[size]=10", {
-    method: "GET",
-  });
+  }>(
+    environment,
+    "/detail_records?filter[record_type]=call-control&page[size]=10",
+    { method: "GET" },
+    tenantId
+  );
 
   return (data.data ?? [])
     .filter((item) => item.call_control_id === callControlId)
@@ -202,10 +231,13 @@ export interface TelnyxPhoneNumber {
   status: string;
 }
 
-export async function listOwnedPhoneNumbers(environment: string): Promise<TelnyxPhoneNumber[]> {
+export async function listOwnedPhoneNumbers(
+  environment: string,
+  tenantId: string
+): Promise<TelnyxPhoneNumber[]> {
   const data = await telnyxRequest<{
     data: Array<{ id: string; phone_number: string; status: string }>;
-  }>(environment, "/phone_numbers?page[size]=100", { method: "GET" });
+  }>(environment, "/phone_numbers?page[size]=100", { method: "GET" }, tenantId);
 
   return (data.data ?? []).map((item) => ({
     id: item.id,

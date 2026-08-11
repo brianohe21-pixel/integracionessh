@@ -994,6 +994,24 @@ locals {
       function_arn = var.tenants_function_arn
       protected    = true
     }
+    tenants_provider_credentials_get = {
+      route_key    = "GET /tenants/me/provider-credentials"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_provider_credentials_save = {
+      route_key    = "PUT /tenants/me/provider-credentials/{provider}"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_provider_credentials_delete = {
+      route_key    = "DELETE /tenants/me/provider-credentials/{provider}"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
     tenants_branding_get = {
       route_key    = "GET /tenants/me/branding"
       invoke_arn   = var.tenants_invoke_arn
@@ -1182,6 +1200,12 @@ locals {
     }
     telephony_webhook = {
       route_key    = "POST /telephony/webhook"
+      invoke_arn   = var.telephony_invoke_arn
+      function_arn = var.telephony_function_arn
+      protected    = false
+    }
+    telephony_webhook_tenant = {
+      route_key    = "POST /telephony/webhook/{credentialTenantId}"
       invoke_arn   = var.telephony_invoke_arn
       function_arn = var.telephony_function_arn
       protected    = false
