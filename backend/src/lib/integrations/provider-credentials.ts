@@ -273,8 +273,8 @@ export async function hasResolvedTelnyxCredentials(
 function telnyxWebhookPath(ownerTenantId: string, apiBaseUrl: string): string | undefined {
   if (!apiBaseUrl) return undefined;
   const base = apiBaseUrl.replace(/\/$/, "");
-  if (ownerTenantId === "platform") return `${base}/telephony/webhook`;
-  return `${base}/telephony/webhook/${ownerTenantId}`;
+  const owner = ownerTenantId === "platform" ? "platform" : ownerTenantId;
+  return `${base}/telephony/webhook/${owner}`;
 }
 
 export async function getProviderCredentialStatuses(

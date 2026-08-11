@@ -238,12 +238,9 @@ export async function handler(
 
     const credentialTenantId = event.pathParameters?.credentialTenantId;
 
-    if (method === "POST" && rawPath === "/telephony/webhook") {
-      return handleTelnyxWebhook(event);
-    }
-
     if (method === "POST" && credentialTenantId && rawPath.startsWith("/telephony/webhook/")) {
-      return handleTelnyxWebhook(event, credentialTenantId);
+      const ownerId = credentialTenantId === "platform" ? undefined : credentialTenantId;
+      return handleTelnyxWebhook(event, ownerId);
     }
 
     const auth = await resolveRequestAuth(event as APIGatewayProxyEventV2WithJWTAuthorizer);

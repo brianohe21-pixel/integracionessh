@@ -976,24 +976,6 @@ locals {
       function_arn = var.tenants_function_arn
       protected    = true
     }
-    tenants_openai_key_get = {
-      route_key    = "GET /tenants/me/openai-key"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_openai_key_save = {
-      route_key    = "PUT /tenants/me/openai-key"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_openai_key_delete = {
-      route_key    = "DELETE /tenants/me/openai-key"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
     tenants_provider_credentials_get = {
       route_key    = "GET /tenants/me/provider-credentials"
       invoke_arn   = var.tenants_invoke_arn
@@ -1197,12 +1179,6 @@ locals {
       invoke_arn   = var.calling_invoke_arn
       function_arn = var.calling_function_arn
       protected    = true
-    }
-    telephony_webhook = {
-      route_key    = "POST /telephony/webhook"
-      invoke_arn   = var.telephony_invoke_arn
-      function_arn = var.telephony_function_arn
-      protected    = false
     }
     telephony_webhook_tenant = {
       route_key    = "POST /telephony/webhook/{credentialTenantId}"
