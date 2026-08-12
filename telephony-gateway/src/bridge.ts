@@ -17,6 +17,7 @@ type OpenAIEvent = {
   call_id?: string;
   event_id?: string;
   response?: {
+    id?: string;
     usage?: {
       input_tokens?: number;
       output_tokens?: number;
@@ -137,13 +138,7 @@ export function buildOpenAISessionUpdate(params: {
       audio: {
         input: {
           format: { type: "audio/pcmu" },
-          turn_detection: {
-            type: "server_vad",
-            threshold: 0.5,
-            prefix_padding_ms: 300,
-            silence_duration_ms: 500,
-            create_response: true,
-          },
+          turn_detection: TELEPHONY_TURN_DETECTION,
           transcription: {
             model: "gpt-4o-mini-transcribe",
           },
@@ -166,6 +161,14 @@ export function isFatalElevenLabsError(error: string): boolean {
 }
 
 export const TELEPHONY_TTS_DRAIN_TIMEOUT_MS = 30_000;
+
+export const TELEPHONY_TURN_DETECTION = {
+  type: "server_vad" as const,
+  threshold: 0.65,
+  prefix_padding_ms: 400,
+  silence_duration_ms: 900,
+  create_response: true,
+};
 
 export function estimateSpeechDrainMs(charCount: number): number {
   const msPerChar = 75;
@@ -227,18 +230,15 @@ export async function runTelephonyBridge(
   let elevenConnecting: Promise<WebSocket | null> | null = null;
   let openaiWs: WebSocket | null = null;
   let openaiSocket: WebSocket | null = null;
-  let responseTextBuffer = "";
   let speaking = false;
   let closed = false;
   let draining = false;
   let drainPromise: Promise<void> | null = null;
   let openaiHandlerCount = 0;
-  let speechCompleteResolver: (() => void) | null = null;
   let ttsQueue: Promise<boolean> = Promise.resolve(true);
   let streamReady = false;
-  let openaiReady = false;
   let greetingSent = false;
-  let spokeFromStream = false;
+  const spokenResponseIds = new Set<string>();
   const pendingTelnyxAudio: string[] = [];
   let openaiInputTokens = 0;
   let openaiOutputTokens = 0;
@@ -282,18 +282,15 @@ export async function runTelephonyBridge(
   };
 
   const maybeStartGreeting = () => {
-    if (greetingSent || !openaiWs || openaiWs.readyState !== WebSocket.OPEN || !streamReady || !openaiReady) {
-      return;
-    }
+    if (greetingSent || !streamReady) return;
     greetingSent = true;
-    console.log(`Telephony greeting requested for call ${session.callId}`);
-    sendJson(openaiWs, {
-      type: "response.create",
-      response: {
-        output_modalities: ["text"],
-        instructions: greeting,
-      },
-    });
+    console.log(`Telephony greeting for call ${session.callId}`);
+    void (async () => {
+      const spoke = await speakText(greeting);
+      if (spoke) {
+        await persistTranscript("assistant", greeting, `greeting-${session.callId}`);
+      }
+    })();
   };
 
   const persistTranscript = async (role: "user" | "assistant", content: string, externalId?: string) => {
@@ -311,25 +308,10 @@ export async function runTelephonyBridge(
 
   const resolveSpeechComplete = () => {
     speaking = false;
-    speechCompleteResolver?.();
-    speechCompleteResolver = null;
   };
 
-  const waitForSpeechComplete = (charCount: number): Promise<void> =>
-    new Promise((resolve) => {
-      let settled = false;
-      const finish = () => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timeout);
-        if (speechCompleteResolver === finish) {
-          speechCompleteResolver = null;
-        }
-        resolve();
-      };
-      speechCompleteResolver = finish;
-      const timeout = setTimeout(finish, estimateSpeechDrainMs(charCount));
-    });
+  const waitForSpeechPlayback = (charCount: number): Promise<void> =>
+    sleep(estimateSpeechDrainMs(charCount));
 
   const closeAll = () => {
     if (closed) return;
@@ -379,7 +361,6 @@ export async function runTelephonyBridge(
 
     speaking = true;
     elevenlabsCharacters += trimmed.length;
-    const playbackDone = waitForSpeechComplete(trimmed.length);
     socket.send(
       JSON.stringify({
         text: `${trimmed} `,
@@ -387,7 +368,8 @@ export async function runTelephonyBridge(
       })
     );
     flushElevenLabs();
-    await playbackDone;
+    await waitForSpeechPlayback(trimmed.length);
+    speaking = false;
     return true;
   };
 
@@ -405,7 +387,6 @@ export async function runTelephonyBridge(
   const flushAssistantResponse = async (text: string, eventId?: string) => {
     const trimmed = text.trim();
     if (!trimmed) return;
-    spokeFromStream = true;
     const spoke = await speakText(trimmed);
     if (spoke) {
       await persistTranscript("assistant", trimmed, eventId ?? randomUUID());
@@ -442,7 +423,9 @@ export async function runTelephonyBridge(
       if (!streamReady) {
         markStreamReady();
       }
-      if (!openaiSocket || openaiSocket.readyState !== WebSocket.OPEN || draining) return;
+      if (!openaiSocket || openaiSocket.readyState !== WebSocket.OPEN || draining || speaking) {
+        return;
+      }
       sendJson(openaiSocket, {
         type: "input_audio_buffer.append",
         audio: data.media.payload,
@@ -511,9 +494,6 @@ export async function runTelephonyBridge(
         if (data.audio) {
           sendTelnyxMedia(data.audio);
         }
-        if (data.isFinal) {
-          resolveSpeechComplete();
-        }
       });
 
       socket.on("close", (code, reason) => {
@@ -580,9 +560,7 @@ export async function runTelephonyBridge(
           }
 
           if (data.type === "session.updated") {
-            openaiReady = true;
             console.log(`OpenAI session ready for call ${session.callId}`);
-            maybeStartGreeting();
             return;
           }
 
@@ -600,52 +578,20 @@ export async function runTelephonyBridge(
             return;
           }
 
-          if (data.type === "response.created") {
-            spokeFromStream = false;
-            responseTextBuffer = "";
-            return;
-          }
-
           if (data.type === "response.done" && data.response) {
-            const usage = data.response.usage as {
-              input_tokens?: number;
-              output_tokens?: number;
-            } | undefined;
+            const usage = data.response.usage;
             if (usage) {
               openaiInputTokens += usage.input_tokens ?? 0;
               openaiOutputTokens += usage.output_tokens ?? 0;
             }
 
-            const fallbackText = extractResponseText(data.response);
-            if (fallbackText && !spokeFromStream) {
-              await flushAssistantResponse(fallbackText, data.event_id);
+            const responseId = data.response.id ?? data.event_id;
+            if (responseId) {
+              if (spokenResponseIds.has(responseId)) return;
+              spokenResponseIds.add(responseId);
             }
-            spokeFromStream = false;
-            return;
-          }
 
-          if (data.type === "response.text.delta" && data.delta) {
-            responseTextBuffer += data.delta;
-            return;
-          }
-
-          if (data.type === "response.text.done") {
-            const text = responseTextBuffer.trim();
-            responseTextBuffer = "";
-            if (text) {
-              await flushAssistantResponse(text, data.event_id);
-            }
-            return;
-          }
-
-          if (data.type === "response.output_text.delta" && data.delta) {
-            responseTextBuffer += data.delta;
-            return;
-          }
-
-          if (data.type === "response.output_text.done") {
-            const text = responseTextBuffer.trim();
-            responseTextBuffer = "";
+            const text = extractResponseText(data.response);
             if (text) {
               await flushAssistantResponse(text, data.event_id);
             }
@@ -677,12 +623,6 @@ export async function runTelephonyBridge(
               beginDrain();
             }
             return;
-          }
-
-          if (data.type === "input_audio_buffer.speech_started" && speaking) {
-            sendJson(telnyxWs, { event: "clear" });
-            resolveSpeechComplete();
-            sendJson(socket, { type: "response.cancel" });
           }
           } finally {
             openaiHandlerCount -= 1;

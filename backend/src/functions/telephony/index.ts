@@ -26,6 +26,7 @@ import {
   handleCallHangup,
   handleCallRecordingSaved,
   handleInboundCallInitiated,
+  handleMachineDetectionEnded,
   handleOutboundCallRinging,
   reportCallUsage,
   startOutboundTelephonyCall,
@@ -215,6 +216,16 @@ async function handleTelnyxWebhook(
 
     if (eventType === "call.answered") {
       await handleCallAnswered(payload);
+      continue;
+    }
+
+    if (
+      eventType === "call.machine.premium.detection.ended" ||
+      eventType === "call.machine.detection.ended" ||
+      eventType === "call.machine.premium.greeting.ended" ||
+      eventType === "call.machine.greeting.ended"
+    ) {
+      await handleMachineDetectionEnded(payload);
       continue;
     }
 

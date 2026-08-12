@@ -103,6 +103,10 @@ export async function dialOutboundCall(params: TelnyxDialParams): Promise<Telnyx
         connection_id: connectionId,
         to: params.to,
         from: params.from,
+        answering_machine_detection: "premium",
+        answering_machine_detection_config: {
+          total_analysis_time_millis: 5000,
+        },
         ...(params.clientState ? { client_state: params.clientState } : {}),
       }),
     },

@@ -72,6 +72,7 @@ export function isOutboundAttempt(call: CallRecord): boolean {
 
 export function isPickedUp(call: CallRecord): boolean {
   if (!isOutboundAttempt(call)) return false;
+  if (call.status === "voicemail" || call.status === "terminated") return false;
   if (call.status === "accepted" || call.status === "completed") return true;
   return (call.duration ?? 0) > 0;
 }

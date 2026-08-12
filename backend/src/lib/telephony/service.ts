@@ -31,6 +31,10 @@ import {
   attachTelephonyCallControlId,
 } from "./session.repository.js";
 import { decodeTelnyxClientState } from "../telnyx/webhook.js";
+import {
+  isTelnyxMachineResult,
+  shouldConnectOutboundAfterAmd,
+} from "../telnyx/amd.js";
 import { emitIntegrationEvent } from "../integrations/emit.js";
 import {
   buildCallConnectPayload,
@@ -243,11 +247,238 @@ async function resolveTelephonySessionFromPayload(
   return null;
 }
 
+async function finalizeUnansweredOutboundCall(
+  session: TelephonySession,
+  callControlId: string,
+  call: CallRecord | null
+): Promise<void> {
+  const startedMs = new Date(session.startedAt).getTime();
+  const durationSeconds = Math.max(1, Math.ceil((Date.now() - startedMs) / 1000));
+
+  await endTelephonySession(session.sessionId, durationSeconds);
+
+  const bot = await getBot(session.tenantId, session.botId);
+  const estimate = estimateTelephonyCost({
+    direction: "outbound",
+    durationSeconds,
+    recordingEnabled: false,
+  });
+
+  await updateCallRecord(session.tenantId, session.callId, {
+    status: "terminated",
+    duration: durationSeconds,
+    endedAt: new Date().toISOString(),
+    costStatus: estimate.status,
+    costBreakdown: estimate.breakdown,
+    ...(call?.recordingStatus === "pending"
+      ? { recordingStatus: "disabled" as const }
+      : call?.recordingStatus
+        ? { recordingStatus: call.recordingStatus }
+        : {}),
+  });
+
+  await logCallEvent(session.tenantId, session.botId, session.callId, "hangup", undefined, {
+    durationSeconds,
+    reason: "unanswered",
+  });
+  await logCallEvent(session.tenantId, session.botId, session.callId, "cost_pending");
+
+  await queueCdrReconciliation({
+    tenantId: session.tenantId,
+    botId: session.botId,
+    callId: session.callId,
+    callControlId,
+  });
+
+  const endedAt = new Date().toISOString();
+  const businessPhoneNumber = call?.businessPhoneNumber ?? bot?.telephonyPhoneNumber;
+
+  await emitIntegrationEvent(
+    session.tenantId,
+    "call.terminated",
+    buildCallTerminatedPayload({
+      tenantId: session.tenantId,
+      botId: session.botId,
+      callId: session.callId,
+      phoneNumber: session.participantId,
+      direction: "BUSINESS_INITIATED",
+      duration: durationSeconds,
+      status: "terminated",
+      startedAt: session.startedAt,
+      endedAt,
+      ...(businessPhoneNumber ? { businessPhoneNumber } : {}),
+    })
+  );
+}
+
+async function finalizeVoicemailCall(
+  session: TelephonySession,
+  callControlId: string,
+  amdResult: string
+): Promise<void> {
+  if (session.status === "ended") return;
+
+  const call = await getCallRecord(session.tenantId, session.callId);
+  if (call?.status === "voicemail") return;
+
+  await logCallEvent(
+    session.tenantId,
+    session.botId,
+    session.callId,
+    "voicemail_detected",
+    amdResult
+  );
+
+  try {
+    await hangupCall(ENVIRONMENT, callControlId, session.tenantId);
+  } catch (error) {
+    if (!isTelnyxCallEndedError(error)) throw error;
+  }
+
+  const startedMs = new Date(session.startedAt).getTime();
+  const durationSeconds = Math.max(1, Math.ceil((Date.now() - startedMs) / 1000));
+
+  await endTelephonySession(session.sessionId, durationSeconds);
+
+  const bot = await getBot(session.tenantId, session.botId);
+  const estimate = estimateTelephonyCost({
+    direction: "outbound",
+    durationSeconds,
+    recordingEnabled: false,
+  });
+
+  await updateCallRecord(session.tenantId, session.callId, {
+    status: "voicemail",
+    duration: durationSeconds,
+    endedAt: new Date().toISOString(),
+    costStatus: estimate.status,
+    costBreakdown: estimate.breakdown,
+    recordingStatus: "disabled",
+  });
+
+  await logCallEvent(session.tenantId, session.botId, session.callId, "hangup", undefined, {
+    durationSeconds,
+    reason: "voicemail",
+  });
+  await logCallEvent(session.tenantId, session.botId, session.callId, "cost_pending");
+
+  await queueCdrReconciliation({
+    tenantId: session.tenantId,
+    botId: session.botId,
+    callId: session.callId,
+    callControlId,
+  });
+
+  const endedAt = new Date().toISOString();
+  const businessPhoneNumber = call?.businessPhoneNumber ?? bot?.telephonyPhoneNumber;
+
+  await emitIntegrationEvent(
+    session.tenantId,
+    "call.terminated",
+    buildCallTerminatedPayload({
+      tenantId: session.tenantId,
+      botId: session.botId,
+      callId: session.callId,
+      phoneNumber: session.participantId,
+      direction: "BUSINESS_INITIATED",
+      duration: durationSeconds,
+      status: "voicemail",
+      startedAt: session.startedAt,
+      endedAt,
+      ...(businessPhoneNumber ? { businessPhoneNumber } : {}),
+    })
+  );
+}
+
+async function connectOutboundTelephonyCall(
+  session: TelephonySession,
+  callControlId: string
+): Promise<void> {
+  const call = await getCallRecord(session.tenantId, session.callId);
+  if (
+    call?.status === "accepted" ||
+    call?.status === "completed" ||
+    call?.status === "voicemail"
+  ) {
+    return;
+  }
+
+  const bot = await getBot(session.tenantId, session.botId);
+  if (!bot) return;
+
+  await updateTelephonySessionStatus(session.sessionId, "active");
+  await updateCallRecord(session.tenantId, session.callId, {
+    status: "accepted",
+    startedAt: new Date().toISOString(),
+  });
+
+  await logCallEvent(session.tenantId, session.botId, session.callId, "answered");
+
+  await startCallStreaming({
+    environment: ENVIRONMENT,
+    tenantId: session.tenantId,
+    callControlId,
+    streamUrl: gatewayStreamUrl(session.streamToken),
+    clientState: encodeClientState({
+      sessionId: session.sessionId,
+      callId: session.callId,
+    }),
+  });
+
+  await emitIntegrationEvent(
+    session.tenantId,
+    "call.status",
+    buildCallStatusPayload({
+      tenantId: session.tenantId,
+      botId: session.botId,
+      callId: session.callId,
+      status: "accepted",
+      phoneNumber: session.participantId,
+    })
+  );
+
+  if (bot.telephonyRecordingEnabled) {
+    try {
+      await startCallRecording(ENVIRONMENT, callControlId, session.tenantId);
+      await updateCallRecord(session.tenantId, session.callId, {
+        recordingStatus: "processing",
+      });
+      await logCallEvent(
+        session.tenantId,
+        session.botId,
+        session.callId,
+        "recording_started"
+      );
+    } catch (error) {
+      await updateCallRecord(session.tenantId, session.callId, {
+        recordingStatus: "failed",
+      });
+      await logCallEvent(
+        session.tenantId,
+        session.botId,
+        session.callId,
+        "recording_failed",
+        error instanceof Error ? error.message : "Recording start failed"
+      );
+    }
+  }
+}
+
 async function finalizeTelephonyCallSession(
   session: TelephonySession,
   callControlId: string
 ): Promise<void> {
   if (session.status === "ended") return;
+
+  const existingCall = await getCallRecord(session.tenantId, session.callId);
+  if (existingCall?.status === "voicemail") return;
+
+  const wasConnected =
+    existingCall?.status === "accepted" || existingCall?.status === "completed";
+  if (session.direction === "outbound" && !wasConnected) {
+    await finalizeUnansweredOutboundCall(session, callControlId, existingCall);
+    return;
+  }
 
   const bot = await getBot(session.tenantId, session.botId);
   const startedMs = new Date(session.startedAt).getTime();
@@ -464,6 +695,17 @@ export async function handleCallAnswered(payload: Record<string, unknown>): Prom
   const bot = await getBot(session.tenantId, session.botId);
   if (!bot) return;
 
+  if (session.direction === "outbound") {
+    await logCallEvent(
+      session.tenantId,
+      session.botId,
+      session.callId,
+      "answered",
+      "Awaiting answering machine detection"
+    );
+    return;
+  }
+
   await updateTelephonySessionStatus(session.sessionId, "active");
   await updateCallRecord(session.tenantId, session.callId, {
     status: "accepted",
@@ -471,19 +713,6 @@ export async function handleCallAnswered(payload: Record<string, unknown>): Prom
   });
 
   await logCallEvent(session.tenantId, session.botId, session.callId, "answered");
-
-  if (session.direction === "outbound") {
-    await startCallStreaming({
-      environment: ENVIRONMENT,
-      tenantId: session.tenantId,
-      callControlId,
-      streamUrl: gatewayStreamUrl(session.streamToken),
-      clientState: encodeClientState({
-        sessionId: session.sessionId,
-        callId: session.callId,
-      }),
-    });
-  }
 
   await emitIntegrationEvent(
     session.tenantId,
@@ -521,6 +750,36 @@ export async function handleCallAnswered(payload: Record<string, unknown>): Prom
         error instanceof Error ? error.message : "Recording start failed"
       );
     }
+  }
+}
+
+export async function handleMachineDetectionEnded(
+  payload: Record<string, unknown>
+): Promise<void> {
+  const callControlId = String(payload.call_control_id ?? "");
+  if (!callControlId) return;
+
+  const session = await resolveTelephonySessionFromPayload(payload);
+  if (!session || session.direction !== "outbound") return;
+
+  const call = await getCallRecord(session.tenantId, session.callId);
+  if (
+    call?.status === "accepted" ||
+    call?.status === "completed" ||
+    call?.status === "voicemail" ||
+    call?.status === "terminated"
+  ) {
+    return;
+  }
+
+  const result = String(payload.result ?? "");
+  if (isTelnyxMachineResult(result) || result.toLowerCase() === "beep_detected") {
+    await finalizeVoicemailCall(session, callControlId, result);
+    return;
+  }
+
+  if (shouldConnectOutboundAfterAmd(result)) {
+    await connectOutboundTelephonyCall(session, callControlId);
   }
 }
 
@@ -605,6 +864,10 @@ export async function handleCallHangup(payload: Record<string, unknown>): Promis
   if (!callControlId) return;
   const session = await resolveTelephonySessionFromPayload(payload);
   if (!session) return;
+
+  const call = await getCallRecord(session.tenantId, session.callId);
+  if (call?.status === "voicemail") return;
+
   await finalizeTelephonyCallSession(session, callControlId);
 }
 
@@ -739,7 +1002,8 @@ export async function terminateTelephonyCall(
     record.status === "completed" ||
     record.status === "failed" ||
     record.status === "rejected" ||
-    record.status === "terminated"
+    record.status === "terminated" ||
+    record.status === "voicemail"
   ) {
     return;
   }

@@ -4,6 +4,7 @@ import {
   extractResponseText,
   isInboundTelnyxMedia,
   TELEPHONY_TTS_DRAIN_TIMEOUT_MS,
+  TELEPHONY_TURN_DETECTION,
 } from "./bridge.js";
 
 describe("telephony bridge", () => {
@@ -43,6 +44,10 @@ describe("telephony bridge", () => {
     expect((session.audio as { input: { format: { type: string } } }).input.format.type).toBe(
       "audio/pcmu"
     );
+    expect(
+      (session.audio as { input: { turn_detection: typeof TELEPHONY_TURN_DETECTION } }).input
+        .turn_detection
+    ).toEqual(TELEPHONY_TURN_DETECTION);
   });
 
   it("estimates speech drain time with bounds", () => {
