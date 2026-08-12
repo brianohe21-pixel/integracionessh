@@ -14,7 +14,8 @@ import {
   makeDocId,
 } from "../../lib/dynamodb/knowledge.repository.js";
 import { buildKnowledgeS3Key, getPresignedUploadUrl, deleteObject } from "../../lib/s3/client.js";
-import { assertAiAssistantActive } from "../../lib/ai-assistant/config.js";
+import { assertKnowledgeManagementAllowed } from "../../lib/ai-assistant/config.js";
+import { isAllowedKnowledgeFilename } from "../../lib/knowledge/extract-text.js";
 import { ok, created, badRequest, notFound, noContent, handleError } from "../../lib/http.js";
 
 const sqs = new SQSClient({});
@@ -44,7 +45,7 @@ export async function handler(
     if (!bot) return notFound("Bot not found");
 
     if (method !== "GET") {
-      assertAiAssistantActive(bot);
+      assertKnowledgeManagementAllowed(bot);
     }
 
     if (method === "GET" && rawPath.endsWith("/knowledge") && !docId) {
@@ -54,6 +55,9 @@ export async function handler(
 
     if (method === "POST" && rawPath.endsWith("/upload-url")) {
       const body = UploadUrlSchema.parse(JSON.parse(event.body ?? "{}"));
+      if (!isAllowedKnowledgeFilename(body.filename)) {
+        return badRequest("Unsupported knowledge file type");
+      }
       const tenant = await getTenant(auth.tenantId);
       if (tenant) {
         await assertCanAddKnowledgeDocument(tenant, botId, body.sizeBytes);

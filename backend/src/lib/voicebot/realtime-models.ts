@@ -34,6 +34,18 @@ export const REALTIME_MODELS: RealtimeModelDefinition[] = [
     tier: "legacy",
     description: "Optimized classic voice model for audio in and out",
   },
+  {
+    id: "gpt-realtime",
+    label: "GPT-Realtime",
+    tier: "legacy",
+    description: "Original realtime speech model for audio and text over live connections",
+  },
+  {
+    id: "gpt-realtime-mini",
+    label: "GPT-Realtime Mini",
+    tier: "legacy",
+    description: "Cost-efficient legacy realtime speech model",
+  },
 ];
 
 const REALTIME_MODEL_IDS = new Set(REALTIME_MODELS.map((model) => model.id));

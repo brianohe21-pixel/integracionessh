@@ -12,6 +12,11 @@ describe("ai models registry", () => {
     expect(isValidModelId("gpt-4o-mini")).toBe(true);
     expect(isValidModelId("gpt-4.1")).toBe(true);
     expect(isValidModelId("gpt-5-nano")).toBe(true);
+    expect(isValidModelId("gpt-5")).toBe(true);
+    expect(isValidModelId("gpt-5.1")).toBe(true);
+    expect(isValidModelId("gpt-5.2")).toBe(true);
+    expect(isValidModelId("gpt-5.2-pro")).toBe(true);
+    expect(isValidModelId("gpt-5.6")).toBe(true);
     expect(isValidModelId("gpt-5.6-sol")).toBe(true);
     expect(isValidModelId("o3-mini")).toBe(true);
     expect(isValidModelId("o3")).toBe(true);
@@ -41,6 +46,11 @@ describe("ai models registry", () => {
       expect.arrayContaining([
         "gpt-4.1",
         "gpt-4o",
+        "gpt-5",
+        "gpt-5.1",
+        "gpt-5.2",
+        "gpt-5.2-pro",
+        "gpt-5.6",
         "gpt-5.6-sol",
         "gpt-5.6-terra",
         "o3-mini",

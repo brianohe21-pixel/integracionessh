@@ -13,6 +13,8 @@ describe("realtime models registry", () => {
         "gpt-realtime-2.1",
         "gpt-realtime-2",
         "gpt-realtime-1.5",
+        "gpt-realtime",
+        "gpt-realtime-mini",
       ])
     );
   });

@@ -37,3 +37,15 @@ export function assertAiAssistantActive(bot: Bot): void {
     });
   }
 }
+
+export function assertKnowledgeManagementAllowed(bot: Bot): void {
+  if (
+    isAiAssistantEnabled(bot) ||
+    bot.telephonyEnabled ||
+    bot.voicebotEnabled ||
+    Boolean(bot.telephonyPhoneNumber?.trim())
+  ) {
+    return;
+  }
+  assertAiAssistantActive(bot);
+}

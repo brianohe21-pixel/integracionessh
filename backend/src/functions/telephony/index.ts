@@ -298,6 +298,7 @@ export async function handler(
         telephonyRecordingEnabled: Boolean(bot.telephonyRecordingEnabled),
         telephonyRecordingNotice: bot.telephonyRecordingNotice ?? "",
         telephonyHandoffEnabled: Boolean(bot.telephonyHandoffEnabled),
+        knowledgeEnabled: Boolean(bot.knowledgeEnabled),
         telephonyWebhookUrl: bot.telephonyWebhookUrl ?? "",
         telephonyWebhookEnabled: Boolean(bot.telephonyWebhookEnabled),
         telephonyWebhookEvents: bot.telephonyWebhookEvents ?? VOICE_AGENT_WEBHOOK_EVENTS,
@@ -325,6 +326,7 @@ export async function handler(
           telephonyRecordingEnabled: z.boolean().optional(),
           telephonyRecordingNotice: z.string().max(500).optional(),
           telephonyHandoffEnabled: z.boolean().optional(),
+          knowledgeEnabled: z.boolean().optional(),
           telephonyWebhookUrl: z.string().max(2048).optional(),
           telephonyWebhookSecret: z.string().max(256).optional(),
           telephonyWebhookEnabled: z.boolean().optional(),
@@ -355,6 +357,7 @@ export async function handler(
       const { assertCanUseVoicebot, assertCanEnableChannel } = await import(
         "../../lib/billing/assert-plan.js"
       );
+      const { assertCanEnableKnowledge } = await import("../../lib/billing/plan-config.js");
       const { assertAiAssistantActive } = await import("../../lib/ai-assistant/config.js");
       const { normalizeE164 } = await import("../../lib/telnyx/phone.js");
 
@@ -414,6 +417,12 @@ export async function handler(
       if (parsed.data.telephonyHandoffEnabled !== undefined) {
         updates.telephonyHandoffEnabled = parsed.data.telephonyHandoffEnabled;
       }
+      if (parsed.data.knowledgeEnabled !== undefined) {
+        if (parsed.data.knowledgeEnabled) {
+          assertCanEnableKnowledge(tenant);
+        }
+        updates.knowledgeEnabled = parsed.data.knowledgeEnabled;
+      }
       if (parsed.data.telephonyWebhookUrl !== undefined) {
         updates.telephonyWebhookUrl = parsed.data.telephonyWebhookUrl;
       }
@@ -460,6 +469,7 @@ export async function handler(
         telephonyRecordingEnabled: masked?.telephonyRecordingEnabled,
         telephonyRecordingNotice: masked?.telephonyRecordingNotice,
         telephonyHandoffEnabled: Boolean(masked?.telephonyHandoffEnabled),
+        knowledgeEnabled: Boolean(masked?.knowledgeEnabled),
         telephonyWebhookUrl: masked?.telephonyWebhookUrl,
         telephonyWebhookEnabled: masked?.telephonyWebhookEnabled,
         telephonyWebhookEvents: masked?.telephonyWebhookEvents,
