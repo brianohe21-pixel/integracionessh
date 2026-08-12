@@ -1,4 +1,10 @@
-import { buildOpenAISessionUpdate, extractResponseText, isInboundTelnyxMedia } from "./bridge.js";
+import {
+  buildOpenAISessionUpdate,
+  estimateSpeechDrainMs,
+  extractResponseText,
+  isInboundTelnyxMedia,
+  TELEPHONY_TTS_DRAIN_TIMEOUT_MS,
+} from "./bridge.js";
 
 describe("telephony bridge", () => {
   it("accepts inbound media and legacy frames without track", () => {
@@ -37,5 +43,11 @@ describe("telephony bridge", () => {
     expect((session.audio as { input: { format: { type: string } } }).input.format.type).toBe(
       "audio/pcmu"
     );
+  });
+
+  it("estimates speech drain time with bounds", () => {
+    expect(estimateSpeechDrainMs(0)).toBe(2_000);
+    expect(estimateSpeechDrainMs(285)).toBe(21_375);
+    expect(estimateSpeechDrainMs(10_000)).toBe(TELEPHONY_TTS_DRAIN_TIMEOUT_MS);
   });
 });

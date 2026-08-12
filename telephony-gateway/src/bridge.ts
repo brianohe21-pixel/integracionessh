@@ -165,6 +165,17 @@ export function isFatalElevenLabsError(error: string): boolean {
   return FATAL_ELEVENLABS_ERRORS.has(error);
 }
 
+export const TELEPHONY_TTS_DRAIN_TIMEOUT_MS = 30_000;
+
+export function estimateSpeechDrainMs(charCount: number): number {
+  const msPerChar = 75;
+  return Math.min(Math.max(charCount * msPerChar, 2_000), TELEPHONY_TTS_DRAIN_TIMEOUT_MS);
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function runTelephonyBridge(
   telnyxWs: WebSocket,
   session: TelephonySession,
@@ -219,6 +230,11 @@ export async function runTelephonyBridge(
   let responseTextBuffer = "";
   let speaking = false;
   let closed = false;
+  let draining = false;
+  let drainPromise: Promise<void> | null = null;
+  let openaiHandlerCount = 0;
+  let speechCompleteResolver: (() => void) | null = null;
+  let ttsQueue: Promise<boolean> = Promise.resolve(true);
   let streamReady = false;
   let openaiReady = false;
   let greetingSent = false;
@@ -293,13 +309,56 @@ export async function runTelephonyBridge(
     });
   };
 
+  const resolveSpeechComplete = () => {
+    speaking = false;
+    speechCompleteResolver?.();
+    speechCompleteResolver = null;
+  };
+
+  const waitForSpeechComplete = (charCount: number): Promise<void> =>
+    new Promise((resolve) => {
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        if (speechCompleteResolver === finish) {
+          speechCompleteResolver = null;
+        }
+        resolve();
+      };
+      speechCompleteResolver = finish;
+      const timeout = setTimeout(finish, estimateSpeechDrainMs(charCount));
+    });
+
   const closeAll = () => {
     if (closed) return;
     closed = true;
+    draining = true;
     reportUsageOnce();
     if (openaiWs?.readyState === WebSocket.OPEN) openaiWs.close();
     if (elevenWs?.readyState === WebSocket.OPEN) elevenWs.close();
     if (telnyxWs.readyState === WebSocket.OPEN) telnyxWs.close();
+  };
+
+  const beginDrain = () => {
+    if (closed || drainPromise) return;
+    draining = true;
+    drainPromise = (async () => {
+      console.log(`Draining TTS for call ${session.callId}`);
+      const deadline = Date.now() + TELEPHONY_TTS_DRAIN_TIMEOUT_MS;
+      while (openaiHandlerCount > 0 && Date.now() < deadline) {
+        await sleep(50);
+      }
+      await ttsQueue.catch(() => false);
+      while (speaking && Date.now() < deadline) {
+        await sleep(100);
+      }
+      closeAll();
+    })().catch((error) => {
+      console.error(`Drain failed for call ${session.callId}:`, error);
+      closeAll();
+    });
   };
 
   const flushElevenLabs = () => {
@@ -312,13 +371,15 @@ export async function runTelephonyBridge(
     );
   };
 
-  const speakText = async (text: string) => {
+  const speakTextOnce = async (text: string): Promise<boolean> => {
     const trimmed = text.trim();
-    if (!trimmed) return;
+    if (!trimmed || closed) return false;
     const socket = await ensureElevenLabs();
-    if (!socket) return;
+    if (!socket) return false;
+
     speaking = true;
     elevenlabsCharacters += trimmed.length;
+    const playbackDone = waitForSpeechComplete(trimmed.length);
     socket.send(
       JSON.stringify({
         text: `${trimmed} `,
@@ -326,14 +387,37 @@ export async function runTelephonyBridge(
       })
     );
     flushElevenLabs();
+    await playbackDone;
+    return true;
+  };
+
+  const speakText = (text: string): Promise<boolean> => {
+    const trimmed = text.trim();
+    if (!trimmed || closed) return Promise.resolve(false);
+    const next = ttsQueue.then(() => speakTextOnce(trimmed), () => speakTextOnce(trimmed));
+    ttsQueue = next.then(
+      () => true,
+      () => false
+    );
+    return next;
   };
 
   const flushAssistantResponse = async (text: string, eventId?: string) => {
     const trimmed = text.trim();
     if (!trimmed) return;
     spokeFromStream = true;
-    await persistTranscript("assistant", trimmed, eventId ?? randomUUID());
-    await speakText(trimmed);
+    const spoke = await speakText(trimmed);
+    if (spoke) {
+      await persistTranscript("assistant", trimmed, eventId ?? randomUUID());
+      return;
+    }
+    if (!draining && !closed) {
+      await persistTranscript("assistant", trimmed, eventId ?? randomUUID());
+      return;
+    }
+    console.warn(
+      `Skipped transcript for unspoken assistant message on call ${session.callId}`
+    );
   };
 
   const markStreamReady = () => {
@@ -358,7 +442,7 @@ export async function runTelephonyBridge(
       if (!streamReady) {
         markStreamReady();
       }
-      if (!openaiSocket || openaiSocket.readyState !== WebSocket.OPEN) return;
+      if (!openaiSocket || openaiSocket.readyState !== WebSocket.OPEN || draining) return;
       sendJson(openaiSocket, {
         type: "input_audio_buffer.append",
         audio: data.media.payload,
@@ -367,7 +451,7 @@ export async function runTelephonyBridge(
     }
 
     if (data.event === "stop") {
-      closeAll();
+      beginDrain();
     }
   };
 
@@ -376,8 +460,8 @@ export async function runTelephonyBridge(
   }
   pendingTelnyxEvents.length = 0;
 
-  telnyxWs.on("close", closeAll);
-  telnyxWs.on("error", closeAll);
+  telnyxWs.on("close", beginDrain);
+  telnyxWs.on("error", beginDrain);
 
   const openElevenLabs = () =>
     new Promise<WebSocket | null>((resolve) => {
@@ -427,12 +511,14 @@ export async function runTelephonyBridge(
         if (data.audio) {
           sendTelnyxMedia(data.audio);
         }
-        if (data.isFinal) speaking = false;
+        if (data.isFinal) {
+          resolveSpeechComplete();
+        }
       });
 
       socket.on("close", (code, reason) => {
         if (elevenWs === socket) elevenWs = null;
-        speaking = false;
+        resolveSpeechComplete();
         if (code === 1008) elevenUnavailable = true;
         if (!closed) {
           console.error(
@@ -484,6 +570,8 @@ export async function runTelephonyBridge(
 
       socket.on("message", (raw) => {
         void (async () => {
+          openaiHandlerCount += 1;
+          try {
           let data: OpenAIEvent;
           try {
             data = JSON.parse(String(raw)) as OpenAIEvent;
@@ -586,15 +674,18 @@ export async function runTelephonyBridge(
             sendJson(socket, { type: "response.create" });
 
             if (result.handoff) {
-              closeAll();
+              beginDrain();
             }
             return;
           }
 
           if (data.type === "input_audio_buffer.speech_started" && speaking) {
             sendJson(telnyxWs, { event: "clear" });
-            speaking = false;
+            resolveSpeechComplete();
             sendJson(socket, { type: "response.cancel" });
+          }
+          } finally {
+            openaiHandlerCount -= 1;
           }
         })().catch((error) => {
           console.error("OpenAI bridge handler error:", error);
@@ -616,7 +707,7 @@ export async function runTelephonyBridge(
   const [, connectedOpenai] = await Promise.all([ensureElevenLabs(), connectOpenAI()]);
   openaiSocket = connectedOpenai;
 
-  openaiSocket.on("close", closeAll);
+  openaiSocket.on("close", beginDrain);
 
-  setTimeout(closeAll, 14 * 60 * 1000);
+  setTimeout(beginDrain, 14 * 60 * 1000);
 }
