@@ -302,6 +302,9 @@ async function finalizeTelephonyCallSession(
     callControlId,
   });
 
+  const endedAt = new Date().toISOString();
+  const businessPhoneNumber = call?.businessPhoneNumber ?? bot?.telephonyPhoneNumber;
+
   await emitIntegrationEvent(
     session.tenantId,
     "call.terminated",
@@ -313,6 +316,9 @@ async function finalizeTelephonyCallSession(
       direction: session.direction === "inbound" ? "USER_INITIATED" : "BUSINESS_INITIATED",
       duration: durationSeconds,
       status: "completed",
+      startedAt: session.startedAt,
+      endedAt,
+      ...(businessPhoneNumber ? { businessPhoneNumber } : {}),
       ...(extractedFields ? { structuredOutputs: extractedFields } : {}),
     })
   );

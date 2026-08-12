@@ -77,7 +77,8 @@ export async function updateBot(
   botId: string,
   updates: Partial<Omit<Bot, "tenantId" | "botId" | "createdAt">>
 ): Promise<Bot> {
-  const updateExpression: string[] = [];
+  const setExpressions: string[] = [];
+  const removeExpressions: string[] = [];
   const expressionAttributeNames: Record<string, string> = {};
   const expressionAttributeValues: Record<string, unknown> = {};
 
@@ -85,24 +86,48 @@ export async function updateBot(
 
   if (updates.phoneNumberId) {
     payload.phoneNumberId = updates.phoneNumberId;
-    updateExpression.push("#GSI1PK = :gsi1pk");
+    setExpressions.push("#GSI1PK = :gsi1pk");
     expressionAttributeNames["#GSI1PK"] = "GSI1PK";
     expressionAttributeValues[":gsi1pk"] = `PHONE#${updates.phoneNumberId}`;
   }
 
   Object.entries(payload).forEach(([key, value]) => {
-    updateExpression.push(`#${key} = :${key}`);
     expressionAttributeNames[`#${key}`] = key;
+
+    if (value === undefined || value === null) {
+      removeExpressions.push(`#${key}`);
+      return;
+    }
+
+    setExpressions.push(`#${key} = :${key}`);
     expressionAttributeValues[`:${key}`] = value;
   });
+
+  const updateParts: string[] = [];
+  if (setExpressions.length > 0) {
+    updateParts.push(`SET ${setExpressions.join(", ")}`);
+  }
+  if (removeExpressions.length > 0) {
+    updateParts.push(`REMOVE ${removeExpressions.join(", ")}`);
+  }
+
+  if (updateParts.length === 0) {
+    const existing = await getBot(tenantId, botId);
+    if (!existing) {
+      throw Object.assign(new Error("Bot not found"), { statusCode: 404 });
+    }
+    return existing;
+  }
 
   const result = await docClient.send(
     new UpdateCommand({
       TableName: TABLE_NAME,
       Key: keys(tenantId, botId),
-      UpdateExpression: `SET ${updateExpression.join(", ")}`,
+      UpdateExpression: updateParts.join(" "),
       ExpressionAttributeNames: expressionAttributeNames,
-      ExpressionAttributeValues: expressionAttributeValues,
+      ...(Object.keys(expressionAttributeValues).length > 0
+        ? { ExpressionAttributeValues: expressionAttributeValues }
+        : {}),
       ConditionExpression: "attribute_exists(PK)",
       ReturnValues: "ALL_NEW",
     })

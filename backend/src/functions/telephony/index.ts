@@ -37,7 +37,7 @@ import { executeVoicebotTool } from "../../lib/voicebot/tools.js";
 import { getOpenAIApiKey } from "../../lib/ai/providers/openai.js";
 import { getPresignedReadUrl } from "../../lib/s3/client.js";
 import { assertSafeUrl } from "../../lib/webhook/client.js";
-import { buildIntegrationPayload } from "../../lib/integrations/payloads.js";
+import { buildCallTerminatedPayload } from "../../lib/integrations/payloads.js";
 import type { BotLocale, IntegrationEvent } from "../../types/index.js";
 import {
   accepted,
@@ -438,10 +438,8 @@ export async function handler(
       }
       if (parsed.data.telephonyStructuredOutput !== undefined) {
         updates.telephonyStructuredOutput = parsed.data.telephonyStructuredOutput;
-        if (parsed.data.telephonyStructuredOutput) {
-          updates.telephonyStructuredOutputs = undefined;
-          updates.telephonyStructuredOutputSchemaName = undefined;
-        }
+        updates.telephonyStructuredOutputs = undefined;
+        updates.telephonyStructuredOutputSchemaName = undefined;
       }
       if (parsed.data.telephonyStructuredOutputs !== undefined) {
         const names = parsed.data.telephonyStructuredOutputs.map((field) => field.name);
@@ -486,17 +484,45 @@ export async function handler(
       if (!bot.telephonyWebhookEnabled || !bot.telephonyWebhookUrl) {
         return badRequest("Voice agent webhook is not configured");
       }
-      const payload = buildIntegrationPayload({
-        event: "call.status",
+
+      const definition = resolveTelephonyStructuredOutput(bot);
+      const endedAt = new Date().toISOString();
+      const payload = buildCallTerminatedPayload({
         tenantId: auth.tenantId,
-        data: {
-          botId,
-          callId: "test-call-id",
-          status: "accepted",
-          phoneNumber: "+10000000000",
-        },
+        botId,
+        callId: `test-call-${Date.now()}`,
+        direction: "USER_INITIATED",
+        phoneNumber: "+17875550199",
+        status: "completed",
+        duration: 185,
+        startedAt: new Date(Date.now() - 185_000).toISOString(),
+        endedAt,
+        ...(bot.telephonyPhoneNumber ? { businessPhoneNumber: bot.telephonyPhoneNumber } : {}),
+        ...(definition
+          ? {
+              structuredOutputs: {
+                name: definition.name,
+                result: {
+                  subtotal: 34.98,
+                  impuestos: 4.02,
+                  metodo_pago: "tarjeta_credito",
+                  valor_total: 42.5,
+                  delivery_fee: 3.5,
+                  tipo_servicio: "delivery",
+                  detalle_pedido: "Pizza grande All Meat con extra queso y una Coca-Cola",
+                  nombre_cliente: "Daniel Salcedo",
+                  direccion_entrega: "Urbanizacion Hyde Park, calle Muñoz 452, apto 3B",
+                  telefono_contacto: "+17875550199",
+                  monto_pago_efectivo: "N/A",
+                  upsell_ofrecido: false,
+                  upsell_aceptado: false,
+                  upsell_monto: 0,
+                },
+              },
+            }
+          : {}),
       });
-      await deliverVoiceAgentWebhook(bot, "call.status", payload);
+      await deliverVoiceAgentWebhook(bot, "call.terminated", payload);
       return ok({ sent: true });
     }
 

@@ -1,6 +1,7 @@
 import {
   buildMessageReceivedPayload,
   buildConversationHandoffPayload,
+  buildCallTerminatedPayload,
   buildTestPayload,
 } from "./payloads.js";
 
@@ -37,5 +38,32 @@ describe("integration payloads", () => {
     const payload = buildTestPayload("t1");
     expect(payload.tenantId).toBe("t1");
     expect(payload.event).toBe("message.received");
+  });
+
+  it("builds call.terminated payload", () => {
+    const payload = buildCallTerminatedPayload({
+      tenantId: "t1",
+      botId: "b1",
+      callId: "c1",
+      direction: "USER_INITIATED",
+      phoneNumber: "+17875550199",
+      status: "completed",
+      duration: 185,
+      startedAt: "2026-08-12T17:25:00.000Z",
+      endedAt: "2026-08-12T17:28:05.000Z",
+      businessPhoneNumber: "+576013075392",
+      structuredOutputs: {
+        name: "customer_order",
+        result: { subtotal: 34.98 },
+      },
+    });
+
+    expect(payload.event).toBe("call.terminated");
+    expect(payload.data.botId).toBe("b1");
+    expect(payload.data.businessPhoneNumber).toBe("+576013075392");
+    expect(payload.data.structuredOutputs).toEqual({
+      name: "customer_order",
+      result: { subtotal: 34.98 },
+    });
   });
 });
