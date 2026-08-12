@@ -633,6 +633,7 @@ locals {
         FRONTEND_URL   = var.frontend_url
         SES_FROM_EMAIL = var.ses_from_email
         API_PUBLIC_URL = var.api_public_url
+        MEDIA_BUCKET   = var.media_bucket_name
       }
     }
     api_keys = {

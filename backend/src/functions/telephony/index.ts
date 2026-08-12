@@ -43,6 +43,7 @@ import { getOpenAIApiKey } from "../../lib/ai/providers/openai.js";
 import { getPresignedReadUrl } from "../../lib/s3/client.js";
 import { assertSafeUrl } from "../../lib/webhook/client.js";
 import { buildCallTerminatedPayload } from "../../lib/integrations/payloads.js";
+import { TELEPHONY_SYSTEM_PROMPT_MAX_LENGTH } from "../../lib/telephony/limits.js";
 import type { BotLocale, IntegrationEvent } from "../../types/index.js";
 import {
   accepted,
@@ -244,6 +245,10 @@ export async function handler(
 
     const credentialTenantId = event.pathParameters?.credentialTenantId;
 
+    if (method === "POST" && rawPath === "/telephony/webhook") {
+      return handleTelnyxWebhook(event);
+    }
+
     if (method === "POST" && credentialTenantId && rawPath.startsWith("/telephony/webhook/")) {
       const ownerId = credentialTenantId === "platform" ? undefined : credentialTenantId;
       return handleTelnyxWebhook(event, ownerId);
@@ -314,7 +319,7 @@ export async function handler(
           telephonyVoiceId: optionalNonEmptyString(64),
           telephonyModel: z.string().min(3).max(64).optional(),
           telephonyGreeting: z.string().max(500).optional(),
-          telephonySystemPrompt: z.string().max(8000).optional(),
+          telephonySystemPrompt: z.string().max(TELEPHONY_SYSTEM_PROMPT_MAX_LENGTH).optional(),
           telephonyRecordingEnabled: z.boolean().optional(),
           telephonyRecordingNotice: z.string().max(500).optional(),
           telephonyWebhookUrl: z.string().max(2048).optional(),

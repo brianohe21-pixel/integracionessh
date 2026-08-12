@@ -1126,6 +1126,12 @@ locals {
       function_arn = var.calling_function_arn
       protected    = true
     }
+    telephony_webhook = {
+      route_key    = "POST /telephony/webhook"
+      invoke_arn   = var.telephony_invoke_arn
+      function_arn = var.telephony_function_arn
+      protected    = false
+    }
     telephony_webhook_tenant = {
       route_key    = "POST /telephony/webhook/{credentialTenantId}"
       invoke_arn   = var.telephony_invoke_arn

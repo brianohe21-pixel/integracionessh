@@ -20,6 +20,7 @@ import {
   assertCanDisableAiAssistant,
   toAiAssistantConfig,
 } from "../../lib/ai-assistant/config.js";
+import { TELEPHONY_SYSTEM_PROMPT_MAX_LENGTH } from "../../lib/telephony/limits.js";
 import {
   DEFAULT_MODEL_ID,
   getModelProviderMismatch,
@@ -318,7 +319,7 @@ export async function handler(
           voicebotVoice: z.string().min(2).max(32).optional(),
           voicebotModel: z.string().min(3).max(64).optional(),
           voicebotGreeting: z.string().max(500).optional(),
-          voicebotSystemPrompt: z.string().max(4096).optional(),
+          voicebotSystemPrompt: z.string().max(TELEPHONY_SYSTEM_PROMPT_MAX_LENGTH).optional(),
         })
         .safeParse(body);
       if (!parsed.success) return badRequest(parsed.error.message);
