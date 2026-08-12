@@ -1054,128 +1054,26 @@ locals {
       function_arn = var.tenants_function_arn
       protected    = true
     }
-    public_api_messages = {
-      route_key    = "POST /v1/messages"
+    public_api_proxy_get = {
+      route_key    = "GET /v1/{proxy+}"
       invoke_arn   = var.public_api_invoke_arn
       function_arn = var.public_api_function_arn
       protected    = false
     }
-    public_api_sms_send = {
-      route_key    = "POST /v1/sms"
+    public_api_proxy_post = {
+      route_key    = "POST /v1/{proxy+}"
       invoke_arn   = var.public_api_invoke_arn
       function_arn = var.public_api_function_arn
       protected    = false
     }
-    public_api_sms_get = {
-      route_key    = "GET /v1/sms/{traceId}"
+    public_api_proxy_put = {
+      route_key    = "PUT /v1/{proxy+}"
       invoke_arn   = var.public_api_invoke_arn
       function_arn = var.public_api_function_arn
       protected    = false
     }
-    public_api_templates_list = {
-      route_key    = "GET /v1/templates"
-      invoke_arn   = var.public_api_invoke_arn
-      function_arn = var.public_api_function_arn
-      protected    = false
-    }
-    public_api_templates_create = {
-      route_key    = "POST /v1/templates"
-      invoke_arn   = var.public_api_invoke_arn
-      function_arn = var.public_api_function_arn
-      protected    = false
-    }
-    public_api_templates_update = {
-      route_key    = "PUT /v1/templates/{name}"
-      invoke_arn   = var.public_api_invoke_arn
-      function_arn = var.public_api_function_arn
-      protected    = false
-    }
-    public_api_templates_delete = {
-      route_key    = "DELETE /v1/templates/{name}"
-      invoke_arn   = var.public_api_invoke_arn
-      function_arn = var.public_api_function_arn
-      protected    = false
-    }
-    public_api_calls_create = {
-      route_key    = "POST /v1/calls"
-      invoke_arn   = var.public_api_invoke_arn
-      function_arn = var.public_api_function_arn
-      protected    = false
-    }
-    public_api_calls_action = {
-      route_key    = "POST /v1/calls/{callId}"
-      invoke_arn   = var.public_api_invoke_arn
-      function_arn = var.public_api_function_arn
-      protected    = false
-    }
-    public_api_calls_get = {
-      route_key    = "GET /v1/calls/{callId}"
-      invoke_arn   = var.public_api_invoke_arn
-      function_arn = var.public_api_function_arn
-      protected    = false
-    }
-    public_api_calls_settings_get = {
-      route_key    = "GET /v1/calls/settings"
-      invoke_arn   = var.public_api_invoke_arn
-      function_arn = var.public_api_function_arn
-      protected    = false
-    }
-    public_api_calls_settings_put = {
-      route_key    = "PUT /v1/calls/settings"
-      invoke_arn   = var.public_api_invoke_arn
-      function_arn = var.public_api_function_arn
-      protected    = false
-    }
-    public_api_calls_permission = {
-      route_key    = "POST /v1/calls/permission-request"
-      invoke_arn   = var.public_api_invoke_arn
-      function_arn = var.public_api_function_arn
-      protected    = false
-    }
-    public_api_calls_permission_status = {
-      route_key    = "GET /v1/calls/permission/{userWaId}"
-      invoke_arn   = var.public_api_invoke_arn
-      function_arn = var.public_api_function_arn
-      protected    = false
-    }
-    public_api_voice_calls_create = {
-      route_key    = "POST /v1/voice/calls"
-      invoke_arn   = var.public_api_invoke_arn
-      function_arn = var.public_api_function_arn
-      protected    = false
-    }
-    public_api_voice_calls_list = {
-      route_key    = "GET /v1/voice/calls"
-      invoke_arn   = var.public_api_invoke_arn
-      function_arn = var.public_api_function_arn
-      protected    = false
-    }
-    public_api_voice_calls_get = {
-      route_key    = "GET /v1/voice/calls/{callId}"
-      invoke_arn   = var.public_api_invoke_arn
-      function_arn = var.public_api_function_arn
-      protected    = false
-    }
-    public_api_voice_calls_end = {
-      route_key    = "POST /v1/voice/calls/{callId}/end"
-      invoke_arn   = var.public_api_invoke_arn
-      function_arn = var.public_api_function_arn
-      protected    = false
-    }
-    public_api_voice_calls_events = {
-      route_key    = "GET /v1/voice/calls/{callId}/events"
-      invoke_arn   = var.public_api_invoke_arn
-      function_arn = var.public_api_function_arn
-      protected    = false
-    }
-    public_api_voice_calls_transcript = {
-      route_key    = "GET /v1/voice/calls/{callId}/transcript"
-      invoke_arn   = var.public_api_invoke_arn
-      function_arn = var.public_api_function_arn
-      protected    = false
-    }
-    public_api_voice_calls_recording = {
-      route_key    = "GET /v1/voice/calls/{callId}/recording"
+    public_api_proxy_delete = {
+      route_key    = "DELETE /v1/{proxy+}"
       invoke_arn   = var.public_api_invoke_arn
       function_arn = var.public_api_function_arn
       protected    = false
