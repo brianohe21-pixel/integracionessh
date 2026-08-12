@@ -3,9 +3,11 @@ import {
   estimateSpeechDrainMs,
   extractResponseText,
   isInboundTelnyxMedia,
+  resolveGreeting,
   TELEPHONY_TTS_DRAIN_TIMEOUT_MS,
   TELEPHONY_TURN_DETECTION,
 } from "./bridge.js";
+import type { Bot } from "./types.js";
 
 describe("telephony bridge", () => {
   it("accepts inbound media and legacy frames without track", () => {
@@ -26,6 +28,40 @@ describe("telephony bridge", () => {
       ],
     });
     expect(text).toBe("Hola, ¿en qué puedo ayudarte?");
+  });
+
+  it("does not add a recording notice when it is empty", () => {
+    const bot: Bot = {
+      botId: "bot-1",
+      tenantId: "tenant-1",
+      telephonyGreeting: "Hola, ¿en qué puedo ayudarte?",
+      telephonyRecordingEnabled: true,
+      telephonyRecordingNotice: "",
+    };
+
+    expect(resolveGreeting(bot, "es")).toBe("Hola, ¿en qué puedo ayudarte?");
+  });
+
+  it("adds a configured recording notice", () => {
+    const bot: Bot = {
+      botId: "bot-1",
+      tenantId: "tenant-1",
+      telephonyGreeting: "Hola",
+      telephonyRecordingEnabled: true,
+      telephonyRecordingNotice: "Esta llamada será grabada.",
+    };
+
+    expect(resolveGreeting(bot, "es")).toBe("Esta llamada será grabada. Hola");
+  });
+
+  it("removes trailing quote characters from greetings", () => {
+    const bot: Bot = {
+      botId: "bot-1",
+      tenantId: "tenant-1",
+      telephonyGreeting: 'Hola, ¿en qué puedo ayudarte?"',
+    };
+
+    expect(resolveGreeting(bot, "es")).toBe("Hola, ¿en qué puedo ayudarte?");
   });
 
   it("builds GA OpenAI session.update payload", () => {

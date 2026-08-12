@@ -198,6 +198,10 @@ export interface TelnyxDetailRecord {
   durationSecs?: number;
 }
 
+export function buildTelnyxDetailRecordsPath(callControlId: string): string {
+  return `/detail_records?filter[record_type]=call-control&filter[call_control_id]=${encodeURIComponent(callControlId)}&page[size]=10`;
+}
+
 export async function searchTelnyxDetailRecords(
   environment: string,
   callControlId: string,
@@ -213,7 +217,7 @@ export async function searchTelnyxDetailRecords(
     }>;
   }>(
     environment,
-    "/detail_records?filter[record_type]=call-control&page[size]=10",
+    buildTelnyxDetailRecordsPath(callControlId),
     { method: "GET" },
     tenantId
   );

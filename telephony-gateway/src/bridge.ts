@@ -100,19 +100,18 @@ function resolveInstructions(bot: Bot, locale: TelephonySession["locale"]): stri
   return `${base}\n\n${language}${handoffInstruction}`;
 }
 
-function resolveGreeting(bot: Bot, locale: TelephonySession["locale"]): string {
+export function resolveGreeting(bot: Bot, locale: TelephonySession["locale"]): string {
   const greeting = bot.telephonyGreeting?.trim() || bot.voicebotGreeting?.trim();
-  const text =
+  const text = (
     greeting ||
     (locale === "en"
       ? "Hello! How can I help you today?"
-      : "Hola, ¿en qué puedo ayudarte?");
-  if (bot.telephonyRecordingEnabled) {
-    const notice =
-      bot.telephonyRecordingNotice?.trim() ||
-      "This call may be recorded for quality and training purposes.";
-    return `${notice} ${text}`;
-  }
+      : "Hola, ¿en qué puedo ayudarte?")
+  )
+    .replace(/["“”]+$/u, "")
+    .trim();
+  const notice = bot.telephonyRecordingNotice?.trim();
+  if (bot.telephonyRecordingEnabled && notice) return `${notice} ${text}`;
   return text;
 }
 
@@ -161,6 +160,7 @@ export function isFatalElevenLabsError(error: string): boolean {
 }
 
 export const TELEPHONY_TTS_DRAIN_TIMEOUT_MS = 30_000;
+export const ELEVENLABS_KEEPALIVE_MS = 10_000;
 
 export const TELEPHONY_TURN_DETECTION = {
   type: "server_vad" as const,
@@ -453,6 +453,12 @@ export async function runTelephonyBridge(
         headers: { "xi-api-key": elevenKey },
       });
       let settled = false;
+      let keepalive: NodeJS.Timeout | null = null;
+      const stopKeepalive = () => {
+        if (!keepalive) return;
+        clearInterval(keepalive);
+        keepalive = null;
+      };
       const settle = (result: WebSocket | null) => {
         if (settled) return;
         settled = true;
@@ -469,6 +475,11 @@ export async function runTelephonyBridge(
             generation_config: { chunk_length_schedule: [80, 120, 160, 250] },
           })
         );
+        keepalive = setInterval(() => {
+          if (socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({ text: " " }));
+          }
+        }, ELEVENLABS_KEEPALIVE_MS);
         settle(socket);
       });
 
@@ -497,9 +508,9 @@ export async function runTelephonyBridge(
       });
 
       socket.on("close", (code, reason) => {
+        stopKeepalive();
         if (elevenWs === socket) elevenWs = null;
         resolveSpeechComplete();
-        if (code === 1008) elevenUnavailable = true;
         if (!closed) {
           console.error(
             `ElevenLabs socket closed for call ${session.callId} code=${code} reason=${String(reason)}`
@@ -509,6 +520,7 @@ export async function runTelephonyBridge(
       });
 
       socket.on("error", (error) => {
+        stopKeepalive();
         console.error(`ElevenLabs socket error for call ${session.callId}:`, error);
         settle(null);
       });
