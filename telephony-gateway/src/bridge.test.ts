@@ -4,6 +4,7 @@ import {
   extractResponseText,
   isInboundTelnyxMedia,
   resolveGreeting,
+  resolveInstructions,
   TELEPHONY_TTS_DRAIN_TIMEOUT_MS,
   TELEPHONY_TURN_DETECTION,
 } from "./bridge.js";
@@ -64,11 +65,25 @@ describe("telephony bridge", () => {
     expect(resolveGreeting(bot, "es")).toBe("Hola, ¿en qué puedo ayudarte?");
   });
 
+  it("instructs the model not to repeat the spoken greeting", () => {
+    const bot: Bot = {
+      botId: "bot-1",
+      tenantId: "tenant-1",
+      telephonySystemPrompt: "Atiende el pedido.",
+    };
+
+    const instructions = resolveInstructions(bot, "es", "Hola, ¿cómo puedo ayudarte?");
+
+    expect(instructions).toContain("Nunca repitas ni reinicies el saludo inicial");
+    expect(instructions).toContain("Hola, ¿cómo puedo ayudarte?");
+  });
+
   it("builds GA OpenAI session.update payload", () => {
     const payload = buildOpenAISessionUpdate({
       model: "gpt-realtime-2.1-mini",
       instructions: "Hola",
       tools: [],
+      locale: "es",
     });
 
     expect(payload.type).toBe("session.update");
@@ -84,6 +99,10 @@ describe("telephony bridge", () => {
       (session.audio as { input: { turn_detection: typeof TELEPHONY_TURN_DETECTION } }).input
         .turn_detection
     ).toEqual(TELEPHONY_TURN_DETECTION);
+    expect(
+      (session.audio as { input: { transcription: { language: string } } }).input.transcription
+        .language
+    ).toBe("es");
   });
 
   it("estimates speech drain time with bounds", () => {

@@ -364,6 +364,7 @@ resource "aws_sqs_queue" "telephony_cdr" {
   name                        = "${var.project}-${var.environment}-telephony-cdr.fifo"
   fifo_queue                  = true
   content_based_deduplication = true
+  delay_seconds               = 30
   visibility_timeout_seconds  = 120
   message_retention_seconds   = 86400
 

@@ -81,7 +81,11 @@ function resolveModel(bot: Bot): string {
   return "gpt-realtime-2.1-mini";
 }
 
-function resolveInstructions(bot: Bot, locale: TelephonySession["locale"]): string {
+export function resolveInstructions(
+  bot: Bot,
+  locale: TelephonySession["locale"],
+  greeting: string
+): string {
   const base =
     bot.telephonySystemPrompt?.trim() ||
     bot.voicebotSystemPrompt?.trim() ||
@@ -97,7 +101,11 @@ function resolveInstructions(bot: Bot, locale: TelephonySession["locale"]): stri
     : locale === "en"
       ? "\n\nNever transfer or offer to transfer the call to a human advisor."
       : "\n\nNunca transfieras ni ofrezcas pasar la llamada a un asesor humano.";
-  return `${base}\n\n${language}${handoffInstruction}`;
+  const greetingInstruction =
+    locale === "en"
+      ? `\n\nThe caller has already heard this opening greeting: "${greeting}". Never repeat or restart the opening greeting. Respond directly to what the caller says next.`
+      : `\n\nLa persona ya escuchó este saludo inicial: "${greeting}". Nunca repitas ni reinicies el saludo inicial. Responde directamente a lo próximo que diga la persona.`;
+  return `${base}\n\n${language}${handoffInstruction}${greetingInstruction}`;
 }
 
 export function resolveGreeting(bot: Bot, locale: TelephonySession["locale"]): string {
@@ -124,6 +132,7 @@ export function buildOpenAISessionUpdate(params: {
   model: string;
   instructions: string;
   tools: Array<Record<string, unknown>>;
+  locale: TelephonySession["locale"];
 }): Record<string, unknown> {
   return {
     type: "session.update",
@@ -140,6 +149,7 @@ export function buildOpenAISessionUpdate(params: {
           turn_detection: TELEPHONY_TURN_DETECTION,
           transcription: {
             model: "gpt-4o-mini-transcribe",
+            language: params.locale,
           },
         },
       },
@@ -215,8 +225,8 @@ export async function runTelephonyBridge(
   const elevenKey = await getElevenLabsApiKey(session.tenantId);
   const voiceId = resolveVoiceId(bot);
   const model = resolveModel(bot);
-  const instructions = resolveInstructions(bot, session.locale);
   const greeting = resolveGreeting(bot, session.locale);
+  const instructions = resolveInstructions(bot, session.locale, greeting);
   const calendarEnabled = await isCalendarEnabled(session.tenantId, session.botId);
   const tools = buildRealtimeTools({
     locale: session.locale,
@@ -555,6 +565,7 @@ export async function runTelephonyBridge(
             model,
             instructions,
             tools,
+            locale: session.locale,
           })
         );
         resolve(socket);
