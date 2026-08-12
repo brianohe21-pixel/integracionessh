@@ -29,6 +29,16 @@ export const REALTIME_MODELS: RealtimeModelDefinition[] = [
     label: "GPT-Realtime 1.5",
     tier: "legacy",
   },
+  {
+    id: "gpt-realtime",
+    label: "GPT-Realtime",
+    tier: "legacy",
+  },
+  {
+    id: "gpt-realtime-mini",
+    label: "GPT-Realtime Mini",
+    tier: "legacy",
+  },
 ];
 
 export function getRealtimeModelLabel(modelId: string): string {

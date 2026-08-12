@@ -89,12 +89,7 @@ export default function VoiceAgentDetailPage() {
         ))}
       </div>
 
-      {tab === "overview" && (
-        <div className="space-y-6">
-          <VoiceAgentSummary botId={botId} />
-          <VoiceAgentCallsTable botId={botId} />
-        </div>
-      )}
+      {tab === "overview" && <VoiceAgentSummary botId={botId} />}
       {tab === "config" && <VoiceAgentSettings botId={botId} />}
       {tab === "structuredOutputs" && <VoiceAgentStructuredOutputsPanel botId={botId} />}
       {tab === "calls" && <VoiceAgentCallsTable botId={botId} />}

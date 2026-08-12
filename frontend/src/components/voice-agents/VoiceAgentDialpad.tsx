@@ -46,7 +46,8 @@ export function VoiceAgentDialpad({ botId }: VoiceAgentDialpadProps) {
       activeCall?.status === "completed" ||
       activeCall?.status === "failed" ||
       activeCall?.status === "terminated" ||
-      activeCall?.status === "rejected"
+      activeCall?.status === "rejected" ||
+      activeCall?.status === "voicemail"
     ) {
       const timer = setTimeout(() => setActiveCallId(null), 4000);
       return () => clearTimeout(timer);

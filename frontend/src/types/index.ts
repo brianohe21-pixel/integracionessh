@@ -285,6 +285,7 @@ export interface Bot {
   telephonySystemPrompt?: string;
   telephonyRecordingEnabled?: boolean;
   telephonyRecordingNotice?: string;
+  telephonyHandoffEnabled?: boolean;
   telephonyWebhookUrl?: string;
   telephonyWebhookSecret?: string;
   telephonyWebhookEnabled?: boolean;
@@ -876,7 +877,8 @@ export type CallRecordStatus =
   | "rejected"
   | "completed"
   | "failed"
-  | "terminated";
+  | "terminated"
+  | "voicemail";
 
 export type CallRecordingStatus = "disabled" | "pending" | "processing" | "ready" | "failed";
 
@@ -928,6 +930,7 @@ export type CallEventType =
   | "initiated"
   | "ringing"
   | "answered"
+  | "voicemail_detected"
   | "recording_started"
   | "recording_saved"
   | "recording_failed"

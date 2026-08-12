@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PhoneCall } from "lucide-react";
+import { Eye, PhoneCall, X } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
+import { BotKnowledge } from "@/components/bots/BotKnowledge";
 import {
   useSaveTelephonySettings,
   useTelephonyNumbers,
@@ -10,6 +13,7 @@ import {
   useTelephonyVoices,
   type TelephonySettings,
 } from "@/hooks/useTelephony";
+import { useBot } from "@/hooks/useBots";
 import { useT } from "@/i18n/context";
 import {
   DEFAULT_REALTIME_MODEL_ID,
@@ -52,6 +56,7 @@ interface VoiceAgentSettingsProps {
 
 export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
   const t = useT();
+  const { data: bot } = useBot(botId);
   const { data, isLoading } = useTelephonySettings(botId);
   const { data: numbersData, isLoading: numbersLoading } = useTelephonyNumbers();
   const { data: voicesData } = useTelephonyVoices();
@@ -66,6 +71,8 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
   const [systemPrompt, setSystemPrompt] = useState("");
   const [recordingEnabled, setRecordingEnabled] = useState(false);
   const [recordingNotice, setRecordingNotice] = useState("");
+  const [handoffEnabled, setHandoffEnabled] = useState(false);
+  const [showPromptModal, setShowPromptModal] = useState(false);
 
   useEffect(() => {
     if (!data) return;
@@ -76,6 +83,7 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
     setSystemPrompt(data.telephonySystemPrompt ?? "");
     setRecordingEnabled(Boolean(data.telephonyRecordingEnabled));
     setRecordingNotice(data.telephonyRecordingNotice ?? "");
+    setHandoffEnabled(Boolean(data.telephonyHandoffEnabled));
   }, [data]);
 
   const numbers = numbersData?.numbers ?? [];
@@ -115,6 +123,7 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
       telephonyModel: model,
       telephonyRecordingEnabled: recordingEnabled,
       telephonyRecordingNotice: recordingNotice.trim(),
+      telephonyHandoffEnabled: handoffEnabled,
     };
     if (includeEnabled !== undefined) payload.enabled = includeEnabled;
     if (voiceId.trim()) payload.telephonyVoiceId = voiceId.trim();
@@ -169,7 +178,8 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
   }
 
   return (
-    <div className="content-card space-y-4 p-6">
+    <div className="space-y-6">
+      <div className="content-card space-y-4 p-6">
       <div className="flex items-center gap-2">
         <PhoneCall className="h-5 w-5 text-accent" />
         <div>
@@ -293,7 +303,20 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
               </label>
 
               <label className="block space-y-1">
-                <span className="text-sm font-medium text-secondary">{t("telephony.systemPrompt")}</span>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-medium text-secondary">
+                    {t("telephony.systemPrompt")}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowPromptModal(true)}
+                  >
+                    <Eye className="h-4 w-4" />
+                    {t("voiceAgents.viewPrompt")}
+                  </Button>
+                </div>
                 <textarea
                   value={systemPrompt}
                   onChange={(e) => setSystemPrompt(e.target.value)}
@@ -308,6 +331,16 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
                   })}
                 </p>
               </label>
+
+              <div className="space-y-3 rounded-xl border border-default bg-surface p-4">
+                <label className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="font-medium text-primary">{t("voiceAgents.handoffEnabled")}</p>
+                    <p className="text-sm text-secondary">{t("voiceAgents.handoffHint")}</p>
+                  </div>
+                  <SettingsSwitch checked={handoffEnabled} onChange={setHandoffEnabled} />
+                </label>
+              </div>
 
               <div className="space-y-3 rounded-xl border border-default bg-surface p-4">
                 <label className="flex items-center justify-between gap-4">
@@ -344,6 +377,54 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
           )}
         </>
       )}
+      </div>
+
+      {bot ? (
+        <BotKnowledge
+          bot={bot}
+          showToggle={false}
+          title={t("voiceAgents.knowledgeTitle")}
+          subtitle={t("voiceAgents.knowledgeSubtitle")}
+          onKnowledgeEnabledChange={(next) => {
+            if (!next) return;
+            save.mutate({ knowledgeEnabled: true });
+          }}
+        />
+      ) : null}
+
+      {showPromptModal ? (
+        <Modal className="p-4">
+          <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-default bg-surface-elevated shadow-xl">
+            <div className="flex items-center justify-between border-b border-default px-6 py-4">
+              <h2 className="text-lg font-semibold text-primary">{t("telephony.systemPrompt")}</h2>
+              <button
+                type="button"
+                onClick={() => setShowPromptModal(false)}
+                className="rounded-md p-1 text-muted hover:bg-surface-muted hover:text-secondary"
+                aria-label={t("common.close")}
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="overflow-y-auto px-6 py-5">
+              <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-relaxed text-primary">
+                {systemPrompt.trim() || t("voiceAgents.viewPromptEmpty")}
+              </pre>
+            </div>
+            <div className="flex items-center justify-between gap-3 border-t border-default px-6 py-4">
+              <p className="text-xs text-muted">
+                {t("bots.systemPromptCharCount", {
+                  current: systemPrompt.length,
+                  max: TELEPHONY_SYSTEM_PROMPT_MAX_LENGTH,
+                })}
+              </p>
+              <Button type="button" variant="ghost" onClick={() => setShowPromptModal(false)}>
+                {t("common.close")}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      ) : null}
     </div>
   );
 }

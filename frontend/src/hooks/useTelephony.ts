@@ -21,6 +21,8 @@ export interface TelephonySettings {
   telephonySystemPrompt?: string;
   telephonyRecordingEnabled?: boolean;
   telephonyRecordingNotice?: string;
+  telephonyHandoffEnabled?: boolean;
+  knowledgeEnabled?: boolean;
   telephonyWebhookUrl?: string;
   telephonyWebhookSecret?: string;
   telephonyWebhookEnabled?: boolean;

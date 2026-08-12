@@ -22,6 +22,7 @@ export type LatencyQuality = "fast" | "medium" | "slow";
 export function statusVariant(status: CallRecord["status"]) {
   if (status === "completed" || status === "accepted") return "success" as const;
   if (status === "failed" || status === "rejected" || status === "terminated") return "danger" as const;
+  if (status === "voicemail") return "warning" as const;
   if (status === "ringing" || status === "initiated") return "warning" as const;
   return "default" as const;
 }
@@ -44,6 +45,7 @@ export function eventVariant(type: CallEvent["type"]) {
     return "success" as const;
   }
   if (type === "error" || type === "recording_failed") return "danger" as const;
+  if (type === "voicemail_detected") return "warning" as const;
   if (
     type === "ringing" ||
     type === "cost_pending" ||
