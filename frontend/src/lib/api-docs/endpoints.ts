@@ -623,7 +623,7 @@ export const API_DOC_ENDPOINTS: ApiDocEndpoint[] = [
     path: "/v1/voice/agents/{botId}/structured-output",
     scope: "voice:calls:manage",
     descriptionKey: "apiDocs.endpoints.putVoiceStructuredOutput",
-    requestBodyExample: VOICE_STRUCTURED_OUTPUT_BODY,
+    requestExample: VOICE_STRUCTURED_OUTPUT_BODY,
     responseExample: VOICE_STRUCTURED_OUTPUT_RESPONSE,
     curlExample: buildCurlExample({
       method: "PUT",
