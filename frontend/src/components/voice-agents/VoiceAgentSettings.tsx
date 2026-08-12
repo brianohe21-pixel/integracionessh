@@ -15,6 +15,7 @@ import {
   DEFAULT_REALTIME_MODEL_ID,
   REALTIME_MODELS,
 } from "@/lib/realtime-models";
+import { TELEPHONY_SYSTEM_PROMPT_MAX_LENGTH } from "@/lib/voice-agent-limits";
 
 function SettingsSwitch({
   checked,
@@ -89,6 +90,16 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
   const selectedVoice = voiceId.trim()
     ? voices.find((voice) => voice.id === voiceId.trim())
     : undefined;
+  const systemPromptTooLong = systemPrompt.length > TELEPHONY_SYSTEM_PROMPT_MAX_LENGTH;
+
+  function validateSystemPrompt(): boolean {
+    if (!systemPromptTooLong) return true;
+    setSuccess("");
+    setError(
+      t("bots.validationSystemPromptTooLong", { max: TELEPHONY_SYSTEM_PROMPT_MAX_LENGTH })
+    );
+    return false;
+  }
   const enabled = Boolean(data?.telephonyEnabled);
   const hasPhoneNumber = phoneNumber.trim().length > 0;
 
@@ -121,7 +132,7 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
 
   function handleEnabledChange(next: boolean) {
     if (next) {
-      if (!validatePhoneNumber()) return;
+      if (!validatePhoneNumber() || !validateSystemPrompt()) return;
       setError("");
       save.mutate(buildPayload(true), {
         onSuccess: () => {
@@ -146,7 +157,7 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
   }
 
   function handleSave() {
-    if (!validatePhoneNumber()) return;
+    if (!validatePhoneNumber() || !validateSystemPrompt()) return;
     setError("");
     save.mutate(buildPayload(), {
       onSuccess: () => {
@@ -286,10 +297,16 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
                 <textarea
                   value={systemPrompt}
                   onChange={(e) => setSystemPrompt(e.target.value)}
-                  rows={5}
-                  maxLength={8000}
+                  rows={8}
+                  maxLength={TELEPHONY_SYSTEM_PROMPT_MAX_LENGTH}
                   className="w-full rounded-lg border border-default px-3 py-2 text-sm"
                 />
+                <p className="text-xs text-muted">
+                  {t("bots.systemPromptCharCount", {
+                    current: systemPrompt.length,
+                    max: TELEPHONY_SYSTEM_PROMPT_MAX_LENGTH,
+                  })}
+                </p>
               </label>
 
               <div className="space-y-3 rounded-xl border border-default bg-surface p-4">
@@ -318,7 +335,7 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
               <button
                 type="button"
                 onClick={handleSave}
-                disabled={save.isPending}
+                disabled={save.isPending || systemPromptTooLong}
                 className="rounded-lg bg-accent px-4 py-2 text-sm text-white disabled:opacity-50"
               >
                 {save.isPending ? t("bots.saving") : t("common.save")}
