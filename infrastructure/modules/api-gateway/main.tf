@@ -1138,6 +1138,48 @@ locals {
       function_arn = var.public_api_function_arn
       protected    = false
     }
+    public_api_voice_calls_create = {
+      route_key    = "POST /v1/voice/calls"
+      invoke_arn   = var.public_api_invoke_arn
+      function_arn = var.public_api_function_arn
+      protected    = false
+    }
+    public_api_voice_calls_list = {
+      route_key    = "GET /v1/voice/calls"
+      invoke_arn   = var.public_api_invoke_arn
+      function_arn = var.public_api_function_arn
+      protected    = false
+    }
+    public_api_voice_calls_get = {
+      route_key    = "GET /v1/voice/calls/{callId}"
+      invoke_arn   = var.public_api_invoke_arn
+      function_arn = var.public_api_function_arn
+      protected    = false
+    }
+    public_api_voice_calls_end = {
+      route_key    = "POST /v1/voice/calls/{callId}/end"
+      invoke_arn   = var.public_api_invoke_arn
+      function_arn = var.public_api_function_arn
+      protected    = false
+    }
+    public_api_voice_calls_events = {
+      route_key    = "GET /v1/voice/calls/{callId}/events"
+      invoke_arn   = var.public_api_invoke_arn
+      function_arn = var.public_api_function_arn
+      protected    = false
+    }
+    public_api_voice_calls_transcript = {
+      route_key    = "GET /v1/voice/calls/{callId}/transcript"
+      invoke_arn   = var.public_api_invoke_arn
+      function_arn = var.public_api_function_arn
+      protected    = false
+    }
+    public_api_voice_calls_recording = {
+      route_key    = "GET /v1/voice/calls/{callId}/recording"
+      invoke_arn   = var.public_api_invoke_arn
+      function_arn = var.public_api_function_arn
+      protected    = false
+    }
     bots_calling_settings_get = {
       route_key    = "GET /bots/{botId}/calling/settings"
       invoke_arn   = var.calling_invoke_arn

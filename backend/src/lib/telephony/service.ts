@@ -40,12 +40,18 @@ import {
 } from "../integrations/payloads.js";
 import { downloadRecordingToS3 } from "./recording.js";
 import { directionFromCallRecord, estimateTelephonyCost } from "./cost.js";
+import { extractCallStructuredOutputs } from "./structured-output.js";
+import {
+  resolveTelephonyStructuredOutput,
+  wrapStructuredOutputResult,
+} from "./structured-output-config.js";
 import type {
   BotLocale,
   CallRecord,
   CallUsageMetrics,
   TelephonyCallDirection,
   TelephonySession,
+  TelephonyStructuredOutputPayload,
 } from "../../types/index.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
@@ -258,12 +264,29 @@ async function finalizeTelephonyCallSession(
     recordingEnabled: Boolean(bot?.telephonyRecordingEnabled),
   });
 
+  let extractedFields: TelephonyStructuredOutputPayload | null = null;
+  if (bot && session.conversationId) {
+    const definition = resolveTelephonyStructuredOutput(bot);
+    if (definition) {
+      const raw = await extractCallStructuredOutputs({
+        tenantId: session.tenantId,
+        conversationId: session.conversationId,
+        definition,
+        locale: session.locale,
+      });
+      if (raw) {
+        extractedFields = wrapStructuredOutputResult(definition.name, raw);
+      }
+    }
+  }
+
   await updateCallRecord(session.tenantId, session.callId, {
     status: "completed",
     duration: durationSeconds,
     endedAt: new Date().toISOString(),
     costStatus: estimate.status,
     costBreakdown: estimate.breakdown,
+    ...(extractedFields ? { extractedFields } : {}),
   });
 
   await incrementVoicebotMinutes(session.tenantId, minutes);
@@ -290,6 +313,7 @@ async function finalizeTelephonyCallSession(
       direction: session.direction === "inbound" ? "USER_INITIATED" : "BUSINESS_INITIATED",
       duration: durationSeconds,
       status: "completed",
+      ...(extractedFields ? { structuredOutputs: extractedFields } : {}),
     })
   );
 }

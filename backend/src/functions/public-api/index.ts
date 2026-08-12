@@ -55,6 +55,18 @@ import {
   notFound,
   handleError,
 } from "../../lib/http.js";
+import type { PublicApiAuth } from "./shared.js";
+import {
+  extractVoiceCallIdFromPath,
+  handleEndVoiceCall,
+  handleGetVoiceCall,
+  handleGetVoiceCallEvents,
+  handleGetVoiceCallRecording,
+  handleGetVoiceCallTranscript,
+  handleListVoiceCalls,
+  handleStartVoiceCall,
+  isVoiceCallSubPath,
+} from "./voice-handlers.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 
@@ -414,6 +426,17 @@ async function loadBotForApiKey(apiKey: ApiKey) {
     throw Object.assign(new Error("Bot is inactive."), { statusCode: 403 });
   }
   return bot;
+}
+
+function buildPublicApiAuth(auth: AuthResult): PublicApiAuth {
+  return {
+    apiKey: auth.apiKey,
+    hashedKey: auth.hashedKey,
+    rateResult: auth.rateResult,
+    successHeaders,
+    logUsage,
+    maskPhone,
+  };
 }
 
 async function handleSendMessage(
@@ -1156,6 +1179,41 @@ export async function handler(
     if (path.endsWith("/v1/templates") && method === "POST") {
       return await handleCreateTemplate(event);
     }
+
+    if (path.endsWith("/v1/voice/calls") && method === "POST") {
+      const auth = await authenticateApiKey(event);
+      if (!isAuthResult(auth)) return auth;
+      return await handleStartVoiceCall(event, buildPublicApiAuth(auth));
+    }
+    if (path.endsWith("/v1/voice/calls") && method === "GET") {
+      const auth = await authenticateApiKey(event);
+      if (!isAuthResult(auth)) return auth;
+      return await handleListVoiceCalls(event, buildPublicApiAuth(auth));
+    }
+
+    const voiceCallId = extractVoiceCallIdFromPath(path);
+    if (voiceCallId) {
+      const auth = await authenticateApiKey(event);
+      if (!isAuthResult(auth)) return auth;
+      const publicAuth = buildPublicApiAuth(auth);
+
+      if (method === "POST" && isVoiceCallSubPath(path, voiceCallId, "end")) {
+        return await handleEndVoiceCall(event, publicAuth, voiceCallId);
+      }
+      if (method === "GET" && isVoiceCallSubPath(path, voiceCallId, "events")) {
+        return await handleGetVoiceCallEvents(event, publicAuth, voiceCallId);
+      }
+      if (method === "GET" && isVoiceCallSubPath(path, voiceCallId, "transcript")) {
+        return await handleGetVoiceCallTranscript(event, publicAuth, voiceCallId);
+      }
+      if (method === "GET" && isVoiceCallSubPath(path, voiceCallId, "recording")) {
+        return await handleGetVoiceCallRecording(event, publicAuth, voiceCallId);
+      }
+      if (method === "GET" && path.endsWith(`/v1/voice/calls/${voiceCallId}`)) {
+        return await handleGetVoiceCall(event, publicAuth, voiceCallId);
+      }
+    }
+
     if (path.endsWith("/v1/calls") && method === "POST") {
       return await handleInitiateCall(event);
     }

@@ -1,4 +1,4 @@
-import type { IntegrationEvent, IntegrationEventPayload } from "../../types/index.js";
+import type { IntegrationEvent, IntegrationEventPayload, TelephonyStructuredOutputPayload } from "../../types/index.js";
 
 export function buildIntegrationPayload(params: {
   event: IntegrationEvent;
@@ -209,6 +209,7 @@ export function buildCallTerminatedPayload(params: {
   duration?: number;
   status: string;
   bizOpaqueCallbackData?: string;
+  structuredOutputs?: TelephonyStructuredOutputPayload;
 }): IntegrationEventPayload {
   return buildIntegrationPayload({
     event: "call.terminated",
@@ -223,6 +224,7 @@ export function buildCallTerminatedPayload(params: {
       ...(params.bizOpaqueCallbackData
         ? { bizOpaqueCallbackData: params.bizOpaqueCallbackData }
         : {}),
+      ...(params.structuredOutputs ? { structuredOutputs: params.structuredOutputs } : {}),
     },
   });
 }

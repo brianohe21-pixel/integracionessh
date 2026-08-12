@@ -158,28 +158,75 @@ export async function listAllCallsForTenant(tenantId: string): Promise<CallRecor
   return items;
 }
 
+function mapCallRecordItem(item: Record<string, unknown>): CallRecord {
+  const { PK, SK, GSI1PK, GSI1SK, ttl, ...rest } = item;
+  void PK;
+  void SK;
+  void GSI1PK;
+  void GSI1SK;
+  void ttl;
+  return rest as unknown as CallRecord;
+}
+
+function decodeCallListCursor(cursor: string): Record<string, unknown> | undefined {
+  try {
+    return JSON.parse(Buffer.from(cursor, "base64url").toString("utf8")) as Record<
+      string,
+      unknown
+    >;
+  } catch {
+    return undefined;
+  }
+}
+
+function encodeCallListCursor(lastEvaluatedKey: Record<string, unknown>): string {
+  return Buffer.from(JSON.stringify(lastEvaluatedKey)).toString("base64url");
+}
+
 export async function listCallsByBot(
   botId: string,
   limit = 50
 ): Promise<CallRecord[]> {
+  const result = await listCallsByBotPaginated(botId, { limit });
+  return result.items;
+}
+
+export async function listCallsByBotPaginated(
+  botId: string,
+  options: { limit?: number; cursor?: string; provider?: CallRecord["provider"] } = {}
+): Promise<{ items: CallRecord[]; nextCursor?: string }> {
+  const limit = Math.min(Math.max(options.limit ?? 50, 1), 100);
+  const exclusiveStartKey = options.cursor ? decodeCallListCursor(options.cursor) : undefined;
+
+  const expressionValues: Record<string, unknown> = {
+    ":gsi1pk": `BOT#${botId}#CALLS`,
+  };
+  let filterExpression: string | undefined;
+  if (options.provider) {
+    filterExpression = "provider = :provider";
+    expressionValues[":provider"] = options.provider;
+  }
+
   const result = await docClient.send(
     new QueryCommand({
       TableName: TABLE_NAME,
       IndexName: "GSI1",
       KeyConditionExpression: "GSI1PK = :gsi1pk",
-      ExpressionAttributeValues: { ":gsi1pk": `BOT#${botId}#CALLS` },
+      ExpressionAttributeValues: expressionValues,
+      ...(filterExpression ? { FilterExpression: filterExpression } : {}),
       ScanIndexForward: false,
-      Limit: Math.min(limit, 100),
+      Limit: limit,
+      ...(exclusiveStartKey ? { ExclusiveStartKey: exclusiveStartKey } : {}),
     })
   );
 
-  return (result.Items ?? []).map((item) => {
-    const { PK, SK, GSI1PK, GSI1SK, ttl, ...rest } = item;
-    void PK;
-    void SK;
-    void GSI1PK;
-    void GSI1SK;
-    void ttl;
-    return rest as CallRecord;
-  });
+  const items = (result.Items ?? []).map((item) => mapCallRecordItem(item));
+  const nextCursor = result.LastEvaluatedKey
+    ? encodeCallListCursor(result.LastEvaluatedKey)
+    : undefined;
+
+  return {
+    items,
+    ...(nextCursor ? { nextCursor } : {}),
+  };
 }

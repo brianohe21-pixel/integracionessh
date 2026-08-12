@@ -32,6 +32,7 @@ import {
   terminateTelephonyCall,
 } from "../../lib/telephony/service.js";
 import { deliverVoiceAgentWebhook } from "../../lib/telephony/webhook-delivery.js";
+import { resolveTelephonyStructuredOutput } from "../../lib/telephony/structured-output-config.js";
 import { executeVoicebotTool } from "../../lib/voicebot/tools.js";
 import { getOpenAIApiKey } from "../../lib/ai/providers/openai.js";
 import { getPresignedReadUrl } from "../../lib/s3/client.js";
@@ -58,6 +59,32 @@ const VOICE_AGENT_WEBHOOK_EVENTS: IntegrationEvent[] = [
   "call.recording.ready",
   "call.cost.finalized",
 ];
+
+const StructuredOutputDefinitionSchema = z
+  .object({
+    name: z.string().regex(/^[a-zA-Z_][a-zA-Z0-9_]*$/).max(64),
+    type: z.enum(["ai", "regex"]).optional(),
+    description: z.string().max(500).optional(),
+    schema: z.record(z.unknown()).optional(),
+    patterns: z.record(z.string()).optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.type === "regex") {
+      if (!value.patterns || Object.keys(value.patterns).length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "patterns required for regex extraction",
+        });
+      }
+      return;
+    }
+    if (!value.schema) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "schema required for ai extraction",
+      });
+    }
+  });
 
 const OutboundCallSchema = z.object({
   to: z.string().min(7).max(20),
@@ -289,6 +316,7 @@ export async function handler(
         telephonyWebhookEnabled: Boolean(bot.telephonyWebhookEnabled),
         telephonyWebhookEvents: bot.telephonyWebhookEvents ?? VOICE_AGENT_WEBHOOK_EVENTS,
         telephonyWebhookSecret: bot.telephonyWebhookSecret ? "***" : undefined,
+        telephonyStructuredOutput: resolveTelephonyStructuredOutput(bot),
       });
     }
 
@@ -314,6 +342,19 @@ export async function handler(
           telephonyWebhookSecret: z.string().max(256).optional(),
           telephonyWebhookEnabled: z.boolean().optional(),
           telephonyWebhookEvents: z.array(z.string()).optional(),
+          telephonyStructuredOutput: StructuredOutputDefinitionSchema.nullable().optional(),
+          telephonyStructuredOutputs: z
+            .array(
+              z.object({
+                name: z.string().regex(/^[a-zA-Z_][a-zA-Z0-9_]*$/).max(64),
+                type: z.enum(["string", "number", "integer", "boolean"]),
+                description: z.string().max(500),
+                required: z.boolean().optional(),
+              })
+            )
+            .max(20)
+            .optional(),
+          telephonyStructuredOutputSchemaName: z.string().max(64).optional(),
         })
         .safeParse(body);
       if (!parsed.success) return badRequest(parsed.error.message);
@@ -395,6 +436,27 @@ export async function handler(
       if (parsed.data.telephonyWebhookEvents !== undefined) {
         updates.telephonyWebhookEvents = parsed.data.telephonyWebhookEvents;
       }
+      if (parsed.data.telephonyStructuredOutput !== undefined) {
+        updates.telephonyStructuredOutput = parsed.data.telephonyStructuredOutput;
+        if (parsed.data.telephonyStructuredOutput) {
+          updates.telephonyStructuredOutputs = undefined;
+          updates.telephonyStructuredOutputSchemaName = undefined;
+        }
+      }
+      if (parsed.data.telephonyStructuredOutputs !== undefined) {
+        const names = parsed.data.telephonyStructuredOutputs.map((field) => field.name);
+        if (names.length !== new Set(names).size) {
+          return badRequest("Duplicate structured output field names");
+        }
+        updates.telephonyStructuredOutputs = parsed.data.telephonyStructuredOutputs;
+      }
+      if (parsed.data.telephonyStructuredOutputSchemaName !== undefined) {
+        const schemaName = parsed.data.telephonyStructuredOutputSchemaName.trim();
+        if (schemaName && !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(schemaName)) {
+          return badRequest("Invalid structured output schema name");
+        }
+        updates.telephonyStructuredOutputSchemaName = schemaName;
+      }
 
       const updated = await updateBot(auth.tenantId, botId, updates);
       const masked = maskWebhookSecret(updated);
@@ -411,6 +473,7 @@ export async function handler(
         telephonyWebhookEnabled: masked?.telephonyWebhookEnabled,
         telephonyWebhookEvents: masked?.telephonyWebhookEvents,
         telephonyWebhookSecret: masked?.telephonyWebhookSecret,
+        telephonyStructuredOutput: resolveTelephonyStructuredOutput(updated ?? bot),
       });
     }
 

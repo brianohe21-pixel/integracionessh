@@ -187,6 +187,28 @@ export type Channel =
 
 export type TelephonyProvider = "telnyx";
 
+export type TelephonyStructuredOutputType = "string" | "number" | "integer" | "boolean";
+
+export interface TelephonyStructuredOutputField {
+  name: string;
+  type: TelephonyStructuredOutputType;
+  description: string;
+  required?: boolean;
+}
+
+export interface TelephonyStructuredOutputPayload {
+  name: string;
+  result: Record<string, unknown>;
+}
+
+export interface TelephonyStructuredOutputDefinition {
+  name: string;
+  type?: "ai" | "regex";
+  description?: string;
+  schema?: Record<string, unknown>;
+  patterns?: Record<string, string>;
+}
+
 export type TelephonyCallDirection = "inbound" | "outbound";
 
 export type BotLocale = "es" | "en";
@@ -252,6 +274,9 @@ export interface Bot {
   telephonyWebhookSecret?: string;
   telephonyWebhookEnabled?: boolean;
   telephonyWebhookEvents?: IntegrationEvent[];
+  telephonyStructuredOutputs?: TelephonyStructuredOutputField[];
+  telephonyStructuredOutputSchemaName?: string;
+  telephonyStructuredOutput?: TelephonyStructuredOutputDefinition;
   whatsappOnboardingMode?: "cloud_api" | "coexistence";
   isOnBizApp?: boolean;
   platformType?: string;
@@ -712,6 +737,7 @@ export interface CallRecord {
   recordingS3Key?: string;
   recordingDurationSeconds?: number;
   telnyxRecordingId?: string;
+  extractedFields?: TelephonyStructuredOutputPayload;
   costStatus?: CallCostStatus;
   costBreakdown?: CallCostBreakdown;
   usageMetrics?: CallUsageMetrics;
