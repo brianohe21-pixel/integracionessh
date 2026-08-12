@@ -90,7 +90,13 @@ function resolveInstructions(bot: Bot, locale: TelephonySession["locale"]): stri
     locale === "en"
       ? "Always respond in English."
       : "Responde siempre en español.";
-  return `${base}\n\n${language}`;
+  const handoffEnabled = Boolean(bot.telephonyHandoffEnabled);
+  const handoffInstruction = handoffEnabled
+    ? ""
+    : locale === "en"
+      ? "\n\nNever transfer or offer to transfer the call to a human advisor."
+      : "\n\nNunca transfieras ni ofrezcas pasar la llamada a un asesor humano.";
+  return `${base}\n\n${language}${handoffInstruction}`;
 }
 
 function resolveGreeting(bot: Bot, locale: TelephonySession["locale"]): string {
@@ -202,6 +208,7 @@ export async function runTelephonyBridge(
     locale: session.locale,
     knowledgeEnabled: Boolean(bot.knowledgeEnabled),
     calendarEnabled,
+    handoffEnabled: Boolean(bot.telephonyHandoffEnabled),
   });
 
   let elevenWs: WebSocket | null = null;

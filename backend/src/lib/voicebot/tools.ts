@@ -17,6 +17,7 @@ export interface VoicebotToolContext {
   participantId: string;
   locale: BotLocale;
   knowledgeEnabled: boolean;
+  handoffEnabled: boolean;
   apiKey: string;
 }
 
@@ -33,6 +34,9 @@ export async function executeVoicebotTool(
   }
 
   if (name === "transfer_to_human") {
+    if (!ctx.handoffEnabled) {
+      return { output: JSON.stringify({ error: "Human handoff is disabled for this agent" }) };
+    }
     const reason =
       typeof args.reason === "string" && args.reason.trim()
         ? args.reason.trim()

@@ -126,6 +126,7 @@ async function handleGatewayInvoke(
     participantId: event.participantId ?? "",
     locale: event.locale ?? "es",
     knowledgeEnabled: Boolean(bot.knowledgeEnabled),
+    handoffEnabled: Boolean(bot.telephonyHandoffEnabled),
     apiKey,
   });
 }
@@ -296,6 +297,7 @@ export async function handler(
           bot.telephonySystemPrompt ?? bot.voicebotSystemPrompt ?? bot.systemPrompt ?? "",
         telephonyRecordingEnabled: Boolean(bot.telephonyRecordingEnabled),
         telephonyRecordingNotice: bot.telephonyRecordingNotice ?? "",
+        telephonyHandoffEnabled: Boolean(bot.telephonyHandoffEnabled),
         telephonyWebhookUrl: bot.telephonyWebhookUrl ?? "",
         telephonyWebhookEnabled: Boolean(bot.telephonyWebhookEnabled),
         telephonyWebhookEvents: bot.telephonyWebhookEvents ?? VOICE_AGENT_WEBHOOK_EVENTS,
@@ -322,6 +324,7 @@ export async function handler(
           telephonySystemPrompt: z.string().max(TELEPHONY_SYSTEM_PROMPT_MAX_LENGTH).optional(),
           telephonyRecordingEnabled: z.boolean().optional(),
           telephonyRecordingNotice: z.string().max(500).optional(),
+          telephonyHandoffEnabled: z.boolean().optional(),
           telephonyWebhookUrl: z.string().max(2048).optional(),
           telephonyWebhookSecret: z.string().max(256).optional(),
           telephonyWebhookEnabled: z.boolean().optional(),
@@ -408,6 +411,9 @@ export async function handler(
       if (parsed.data.telephonyRecordingNotice !== undefined) {
         updates.telephonyRecordingNotice = parsed.data.telephonyRecordingNotice;
       }
+      if (parsed.data.telephonyHandoffEnabled !== undefined) {
+        updates.telephonyHandoffEnabled = parsed.data.telephonyHandoffEnabled;
+      }
       if (parsed.data.telephonyWebhookUrl !== undefined) {
         updates.telephonyWebhookUrl = parsed.data.telephonyWebhookUrl;
       }
@@ -453,6 +459,7 @@ export async function handler(
         telephonySystemPrompt: masked?.telephonySystemPrompt,
         telephonyRecordingEnabled: masked?.telephonyRecordingEnabled,
         telephonyRecordingNotice: masked?.telephonyRecordingNotice,
+        telephonyHandoffEnabled: Boolean(masked?.telephonyHandoffEnabled),
         telephonyWebhookUrl: masked?.telephonyWebhookUrl,
         telephonyWebhookEnabled: masked?.telephonyWebhookEnabled,
         telephonyWebhookEvents: masked?.telephonyWebhookEvents,

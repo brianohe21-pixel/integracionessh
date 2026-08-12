@@ -182,6 +182,7 @@ export async function runVoicebotSideband(params: VoicebotSidebandParams): Promi
             participantId: params.participantId,
             locale: params.locale,
             knowledgeEnabled: Boolean(bot.knowledgeEnabled),
+            handoffEnabled: true,
             apiKey,
           });
 

@@ -270,6 +270,7 @@ export interface Bot {
   telephonySystemPrompt?: string;
   telephonyRecordingEnabled?: boolean;
   telephonyRecordingNotice?: string;
+  telephonyHandoffEnabled?: boolean;
   telephonyWebhookUrl?: string;
   telephonyWebhookSecret?: string;
   telephonyWebhookEnabled?: boolean;

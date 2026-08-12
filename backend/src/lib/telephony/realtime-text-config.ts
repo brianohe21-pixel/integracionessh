@@ -17,6 +17,7 @@ export async function buildTelephonyRealtimeTextConfig(params: {
     params.bot.telephonySystemPrompt?.trim() ||
     params.bot.voicebotSystemPrompt?.trim() ||
     params.bot.systemPrompt;
+  const handoffEnabled = Boolean(params.bot.telephonyHandoffEnabled);
   const instructions = await buildVoicebotInstructions({
     bot: {
       ...params.bot,
@@ -25,11 +26,13 @@ export async function buildTelephonyRealtimeTextConfig(params: {
     },
     tenantId: params.tenantId,
     locale: params.locale,
+    handoffEnabled,
   });
   const tools = buildVoicebotTools({
     locale: params.locale,
     knowledgeEnabled: Boolean(params.bot.knowledgeEnabled),
     calendarEnabled: Boolean(calendarConfig?.enabled),
+    handoffEnabled,
   });
 
   return {

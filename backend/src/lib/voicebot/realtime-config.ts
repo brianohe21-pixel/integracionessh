@@ -69,8 +69,10 @@ export async function buildVoicebotInstructions(params: {
   bot: Bot;
   tenantId: string;
   locale: BotLocale;
+  handoffEnabled?: boolean;
 }): Promise<string> {
   const { bot, tenantId, locale } = params;
+  const handoffEnabled = params.handoffEnabled === true;
   const basePrompt = bot.voicebotSystemPrompt?.trim() || bot.systemPrompt?.trim() || "";
   const languageInstruction =
     locale === "en"
@@ -81,19 +83,26 @@ export async function buildVoicebotInstructions(params: {
     locale === "en"
       ? "\n\nUse search_knowledge when you need business-specific information."
       : "\n\nUsa search_knowledge cuando necesites información específica del negocio.";
+  const handoffInstruction = handoffEnabled
+    ? getSystemMessage("handoffToolInstruction", locale)
+    : getSystemMessage("telephonyHandoffDisabledInstruction", locale);
 
-  return `${basePrompt}${calendarBlock}${knowledgeHint}\n\n${languageInstruction}\n\n${getSystemMessage("handoffToolInstruction", locale)}`;
+  return `${basePrompt}${calendarBlock}${knowledgeHint}\n\n${languageInstruction}\n\n${handoffInstruction}`;
 }
 
 export function buildVoicebotTools(params: {
   locale: BotLocale;
   knowledgeEnabled: boolean;
   calendarEnabled: boolean;
+  handoffEnabled?: boolean;
 }): Array<Record<string, unknown>> {
   const { locale, knowledgeEnabled, calendarEnabled } = params;
+  const handoffEnabled = params.handoffEnabled === true;
   const isEn = locale === "en";
-  const tools: Array<Record<string, unknown>> = [
-    {
+  const tools: Array<Record<string, unknown>> = [];
+
+  if (handoffEnabled) {
+    tools.push({
       type: "function",
       name: "transfer_to_human",
       description: getSystemMessage("transferToHumanDescription", locale),
@@ -107,8 +116,8 @@ export function buildVoicebotTools(params: {
         },
         required: ["reason"],
       },
-    },
-  ];
+    });
+  }
 
   if (knowledgeEnabled) {
     tools.push({
@@ -183,11 +192,15 @@ export async function buildRealtimeSessionConfig(params: {
   locale: BotLocale;
 }): Promise<Record<string, unknown>> {
   const calendarConfig = await getCalendarConfig(params.tenantId, params.bot.botId);
-  const instructions = await buildVoicebotInstructions(params);
+  const instructions = await buildVoicebotInstructions({
+    ...params,
+    handoffEnabled: true,
+  });
   const tools = buildVoicebotTools({
     locale: params.locale,
     knowledgeEnabled: Boolean(params.bot.knowledgeEnabled),
     calendarEnabled: Boolean(calendarConfig?.enabled),
+    handoffEnabled: true,
   });
 
   return {

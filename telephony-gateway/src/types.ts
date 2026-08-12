@@ -30,6 +30,7 @@ export interface Bot {
   telephonySystemPrompt?: string;
   telephonyRecordingEnabled?: boolean;
   telephonyRecordingNotice?: string;
+  telephonyHandoffEnabled?: boolean;
   voicebotModel?: string;
   voicebotGreeting?: string;
   voicebotSystemPrompt?: string;

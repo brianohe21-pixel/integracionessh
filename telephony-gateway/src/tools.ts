@@ -80,10 +80,14 @@ export function buildRealtimeTools(params: {
   locale: BotLocale;
   knowledgeEnabled: boolean;
   calendarEnabled: boolean;
+  handoffEnabled?: boolean;
 }): Array<Record<string, unknown>> {
   const isEn = params.locale === "en";
-  const tools: Array<Record<string, unknown>> = [
-    {
+  const handoffEnabled = params.handoffEnabled === true;
+  const tools: Array<Record<string, unknown>> = [];
+
+  if (handoffEnabled) {
+    tools.push({
       type: "function",
       name: "transfer_to_human",
       description: isEn
@@ -99,8 +103,8 @@ export function buildRealtimeTools(params: {
         },
         required: ["reason"],
       },
-    },
-  ];
+    });
+  }
 
   if (params.knowledgeEnabled) {
     tools.push({
