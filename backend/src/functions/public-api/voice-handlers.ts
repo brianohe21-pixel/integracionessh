@@ -13,12 +13,19 @@ import {
   toPublicVoiceCallEvent,
   toPublicVoiceTranscriptMessage,
 } from "../../lib/public-api/voice-calls.js";
+import { toPublicVoiceStructuredOutputResponse } from "../../lib/public-api/voice-structured-output.js";
+import { getBot, updateBot } from "../../lib/dynamodb/bot.repository.js";
+import { resolveTelephonyStructuredOutput } from "../../lib/telephony/structured-output-config.js";
+import {
+  buildStructuredOutputBotUpdates,
+  parseStructuredOutputDefinitionInput,
+} from "../../lib/telephony/structured-output-schema.js";
 import {
   startOutboundTelephonyCall,
   terminateTelephonyCall,
 } from "../../lib/telephony/service.js";
 import { getPresignedReadUrl } from "../../lib/s3/client.js";
-import { badRequest, notFound, parseJsonBody } from "../../lib/http.js";
+import { badRequest, forbidden, notFound, parseJsonBody } from "../../lib/http.js";
 import type { Message } from "../../types/index.js";
 import type { PublicApiAuth } from "./shared.js";
 
@@ -342,6 +349,117 @@ export async function handleGetVoiceCallRecording(
       expiresInSeconds: VOICE_RECORDING_URL_TTL_SECONDS,
     }),
   };
+}
+
+export function extractVoiceAgentIdFromStructuredOutputPath(path: string): string | null {
+  const match = path.match(/\/v1\/voice\/agents\/([^/]+)\/structured-output\/?$/);
+  return match?.[1] ? decodeURIComponent(match[1]) : null;
+}
+
+function assertVoiceAgentAccess(apiKey: PublicApiAuth["apiKey"], botId: string): void {
+  if (apiKey.botId !== botId) {
+    throw Object.assign(new Error("API key is not authorized for this voice agent"), {
+      statusCode: 403,
+    });
+  }
+}
+
+async function getVoiceAgentForApiKey(tenantId: string, botId: string) {
+  const bot = await getBot(tenantId, botId);
+  if (!bot) {
+    throw Object.assign(new Error("Voice agent not found"), { statusCode: 404 });
+  }
+  return bot;
+}
+
+export async function handleGetVoiceStructuredOutput(
+  _event: APIGatewayProxyEventV2,
+  auth: PublicApiAuth,
+  botId: string
+): Promise<APIGatewayProxyResultV2> {
+  const startMs = Date.now();
+  const { apiKey, hashedKey, rateResult } = auth;
+
+  try {
+    assertApiKeyScope(apiKey, API_KEY_SCOPES.voiceCallsRead);
+    assertVoiceAgentAccess(apiKey, botId);
+    const bot = await getVoiceAgentForApiKey(apiKey.tenantId, botId);
+    const structuredOutput = resolveTelephonyStructuredOutput(bot);
+
+    await auth.logUsage({
+      apiKey,
+      hashedKey,
+      endpoint: "GET /v1/voice/agents/{botId}/structured-output",
+      method: "GET",
+      statusCode: 200,
+      durationMs: Date.now() - startMs,
+    });
+
+    return {
+      statusCode: 200,
+      headers: auth.successHeaders(apiKey, rateResult),
+      body: JSON.stringify(toPublicVoiceStructuredOutputResponse(botId, structuredOutput)),
+    };
+  } catch (error) {
+    const statusCode = (error as { statusCode?: number }).statusCode ?? 500;
+    if (statusCode === 403) return forbidden((error as Error).message);
+    if (statusCode === 404) return notFound((error as Error).message);
+    throw error;
+  }
+}
+
+export async function handlePutVoiceStructuredOutput(
+  event: APIGatewayProxyEventV2,
+  auth: PublicApiAuth,
+  botId: string
+): Promise<APIGatewayProxyResultV2> {
+  const startMs = Date.now();
+  const { apiKey, hashedKey, rateResult } = auth;
+
+  try {
+    assertApiKeyScope(apiKey, API_KEY_SCOPES.voiceCallsManage);
+    assertVoiceAgentAccess(apiKey, botId);
+    await getVoiceAgentForApiKey(apiKey.tenantId, botId);
+
+    const rawBody = parseJsonBody(event);
+    let definition: ReturnType<typeof parseStructuredOutputDefinitionInput>;
+    try {
+      definition = parseStructuredOutputDefinitionInput(rawBody);
+    } catch (error) {
+      const statusCode = (error as { statusCode?: number }).statusCode;
+      if (statusCode === 400) {
+        return badRequest((error as Error).message);
+      }
+      throw error;
+    }
+
+    const updated = await updateBot(
+      apiKey.tenantId,
+      botId,
+      buildStructuredOutputBotUpdates(definition) as Parameters<typeof updateBot>[2]
+    );
+    const structuredOutput = resolveTelephonyStructuredOutput(updated);
+
+    await auth.logUsage({
+      apiKey,
+      hashedKey,
+      endpoint: "PUT /v1/voice/agents/{botId}/structured-output",
+      method: "PUT",
+      statusCode: 200,
+      durationMs: Date.now() - startMs,
+    });
+
+    return {
+      statusCode: 200,
+      headers: auth.successHeaders(apiKey, rateResult),
+      body: JSON.stringify(toPublicVoiceStructuredOutputResponse(botId, structuredOutput)),
+    };
+  } catch (error) {
+    const statusCode = (error as { statusCode?: number }).statusCode ?? 500;
+    if (statusCode === 403) return forbidden((error as Error).message);
+    if (statusCode === 404) return notFound((error as Error).message);
+    throw error;
+  }
 }
 
 export function extractVoiceCallIdFromPath(path: string): string | null {

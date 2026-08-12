@@ -35,6 +35,11 @@ jest.mock("../../lib/dynamodb/conversation.repository.js", () => ({
   getConversationMessages: jest.fn(),
 }));
 
+jest.mock("../../lib/dynamodb/bot.repository.js", () => ({
+  getBot: jest.fn(),
+  updateBot: jest.fn(),
+}));
+
 jest.mock("../../lib/telephony/service.js", () => ({
   startOutboundTelephonyCall: jest.fn(),
   terminateTelephonyCall: jest.fn(),
@@ -48,6 +53,7 @@ import { getApiKeyByHash } from "../../lib/dynamodb/api-key.repository.js";
 import { getCallRecord, listCallsByBotPaginated } from "../../lib/dynamodb/call.repository.js";
 import { listCallEvents } from "../../lib/dynamodb/call-event.repository.js";
 import { getConversationMessages } from "../../lib/dynamodb/conversation.repository.js";
+import { getBot, updateBot } from "../../lib/dynamodb/bot.repository.js";
 import { startOutboundTelephonyCall, terminateTelephonyCall } from "../../lib/telephony/service.js";
 import { getPresignedReadUrl } from "../../lib/s3/client.js";
 import { API_KEY_SCOPES } from "../../lib/api-keys/scopes.js";
@@ -58,6 +64,8 @@ const mockedGetCallRecord = jest.mocked(getCallRecord);
 const mockedListCallsByBotPaginated = jest.mocked(listCallsByBotPaginated);
 const mockedListCallEvents = jest.mocked(listCallEvents);
 const mockedGetConversationMessages = jest.mocked(getConversationMessages);
+const mockedGetBot = jest.mocked(getBot);
+const mockedUpdateBot = jest.mocked(updateBot);
 const mockedStartOutbound = jest.mocked(startOutboundTelephonyCall);
 const mockedTerminate = jest.mocked(terminateTelephonyCall);
 const mockedGetPresignedReadUrl = jest.mocked(getPresignedReadUrl);
@@ -96,6 +104,18 @@ const telnyxCall = {
   recordingS3Key: "recordings/call-1.mp3",
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:01:00.000Z",
+};
+
+const baseBot = {
+  tenantId: "tenant-1",
+  botId: "bot-1",
+  name: "Voice Agent",
+  phoneNumberId: "pn-1",
+  whatsappBusinessAccountId: "waba-1",
+  status: "active" as const,
+  responseMode: "none" as const,
+  createdAt: "2026-01-01T00:00:00.000Z",
+  updatedAt: "2026-01-01T00:00:00.000Z",
 };
 
 function makeEvent(
@@ -275,5 +295,88 @@ describe("public-api voice routes", () => {
         },
       ],
     });
+  });
+
+  it("gets voice structured output config", async () => {
+    mockedGetBot.mockResolvedValue({
+      ...baseBot,
+      telephonyStructuredOutput: {
+        name: "customer_order",
+        type: "ai",
+        schema: {
+          type: "object",
+          properties: {
+            subtotal: { type: "number", description: "subtotal" },
+          },
+          additionalProperties: false,
+        },
+      },
+    });
+
+    const response = asObjectResponse(
+      await handler(makeEvent("GET", "/v1/voice/agents/bot-1/structured-output"))
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body ?? "{}")).toEqual({
+      botId: "bot-1",
+      structuredOutput: {
+        name: "customer_order",
+        type: "ai",
+        schema: {
+          type: "object",
+          properties: {
+            subtotal: { type: "number", description: "subtotal" },
+          },
+          additionalProperties: false,
+        },
+      },
+    });
+  });
+
+  it("updates voice structured output config", async () => {
+    mockedGetBot.mockResolvedValue(baseBot);
+    mockedUpdateBot.mockResolvedValue({
+      ...baseBot,
+      telephonyStructuredOutput: {
+        name: "customer_order",
+        type: "ai",
+        schema: {
+          type: "object",
+          properties: {
+            nombre_cliente: { type: "string", description: "nombre cliente" },
+          },
+          additionalProperties: false,
+        },
+      },
+    });
+
+    const response = asObjectResponse(
+      await handler(
+        makeEvent(
+          "PUT",
+          "/v1/voice/agents/bot-1/structured-output",
+          JSON.stringify({
+            name: "customer_order",
+            type: "ai",
+            result: {
+              nombre_cliente: "Daniel Salcedo",
+            },
+          })
+        )
+      )
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(mockedUpdateBot).toHaveBeenCalled();
+    expect(JSON.parse(response.body ?? "{}").structuredOutput?.name).toBe("customer_order");
+  });
+
+  it("returns 403 for structured output on another bot", async () => {
+    const response = asObjectResponse(
+      await handler(makeEvent("GET", "/v1/voice/agents/other-bot/structured-output"))
+    );
+
+    expect(response.statusCode).toBe(403);
   });
 });

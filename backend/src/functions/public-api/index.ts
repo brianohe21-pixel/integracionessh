@@ -57,13 +57,16 @@ import {
 } from "../../lib/http.js";
 import type { PublicApiAuth } from "./shared.js";
 import {
+  extractVoiceAgentIdFromStructuredOutputPath,
   extractVoiceCallIdFromPath,
   handleEndVoiceCall,
   handleGetVoiceCall,
   handleGetVoiceCallEvents,
   handleGetVoiceCallRecording,
   handleGetVoiceCallTranscript,
+  handleGetVoiceStructuredOutput,
   handleListVoiceCalls,
+  handlePutVoiceStructuredOutput,
   handleStartVoiceCall,
   isVoiceCallSubPath,
 } from "./voice-handlers.js";
@@ -1189,6 +1192,20 @@ export async function handler(
       const auth = await authenticateApiKey(event);
       if (!isAuthResult(auth)) return auth;
       return await handleListVoiceCalls(event, buildPublicApiAuth(auth));
+    }
+
+    const voiceAgentId = extractVoiceAgentIdFromStructuredOutputPath(path);
+    if (voiceAgentId) {
+      const auth = await authenticateApiKey(event);
+      if (!isAuthResult(auth)) return auth;
+      const publicAuth = buildPublicApiAuth(auth);
+
+      if (method === "GET") {
+        return await handleGetVoiceStructuredOutput(event, publicAuth, voiceAgentId);
+      }
+      if (method === "PUT") {
+        return await handlePutVoiceStructuredOutput(event, publicAuth, voiceAgentId);
+      }
     }
 
     const voiceCallId = extractVoiceCallIdFromPath(path);

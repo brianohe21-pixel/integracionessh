@@ -33,6 +33,11 @@ import {
 } from "../../lib/telephony/service.js";
 import { deliverVoiceAgentWebhook } from "../../lib/telephony/webhook-delivery.js";
 import { resolveTelephonyStructuredOutput } from "../../lib/telephony/structured-output-config.js";
+import {
+  buildStructuredOutputBotUpdates,
+  parseStructuredOutputDefinitionInput,
+  StructuredOutputDefinitionSchema,
+} from "../../lib/telephony/structured-output-schema.js";
 import { executeVoicebotTool } from "../../lib/voicebot/tools.js";
 import { getOpenAIApiKey } from "../../lib/ai/providers/openai.js";
 import { getPresignedReadUrl } from "../../lib/s3/client.js";
@@ -59,32 +64,6 @@ const VOICE_AGENT_WEBHOOK_EVENTS: IntegrationEvent[] = [
   "call.recording.ready",
   "call.cost.finalized",
 ];
-
-const StructuredOutputDefinitionSchema = z
-  .object({
-    name: z.string().regex(/^[a-zA-Z_][a-zA-Z0-9_]*$/).max(64),
-    type: z.enum(["ai", "regex"]).optional(),
-    description: z.string().max(500).optional(),
-    schema: z.record(z.unknown()).optional(),
-    patterns: z.record(z.string()).optional(),
-  })
-  .superRefine((value, ctx) => {
-    if (value.type === "regex") {
-      if (!value.patterns || Object.keys(value.patterns).length === 0) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "patterns required for regex extraction",
-        });
-      }
-      return;
-    }
-    if (!value.schema) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "schema required for ai extraction",
-      });
-    }
-  });
 
 const OutboundCallSchema = z.object({
   to: z.string().min(7).max(20),
@@ -437,9 +416,11 @@ export async function handler(
         updates.telephonyWebhookEvents = parsed.data.telephonyWebhookEvents;
       }
       if (parsed.data.telephonyStructuredOutput !== undefined) {
-        updates.telephonyStructuredOutput = parsed.data.telephonyStructuredOutput;
-        updates.telephonyStructuredOutputs = undefined;
-        updates.telephonyStructuredOutputSchemaName = undefined;
+        const definition =
+          parsed.data.telephonyStructuredOutput === null
+            ? null
+            : parseStructuredOutputDefinitionInput(parsed.data.telephonyStructuredOutput);
+        Object.assign(updates, buildStructuredOutputBotUpdates(definition));
       }
       if (parsed.data.telephonyStructuredOutputs !== undefined) {
         const names = parsed.data.telephonyStructuredOutputs.map((field) => field.name);
