@@ -11,6 +11,10 @@ import { useT } from "@/i18n/context";
 import type { IntegrationEvent } from "@/types";
 import { Badge } from "@/components/ui/Badge";
 import { TableContainer } from "@/components/ui/TableContainer";
+import {
+  serializeVoiceAgentWebhookExample,
+  VOICE_AGENT_WEBHOOK_HEADERS,
+} from "@/lib/voice-agent-webhook-contract";
 
 const EVENT_OPTIONS: IntegrationEvent[] = [
   "call.connect",
@@ -169,6 +173,29 @@ export function VoiceAgentWebhookPanel({ botId }: VoiceAgentWebhookPanelProps) {
           </p>
         )}
       </form>
+
+      <div className="rounded-lg border border-default bg-surface-muted/40 p-4 space-y-3">
+        <div>
+          <p className="text-sm font-semibold text-primary">{t("voiceAgents.webhookContractTitle")}</p>
+          <p className="mt-1 text-xs text-secondary">{t("voiceAgents.webhookContractHint")}</p>
+        </div>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-secondary">
+            {t("voiceAgents.webhookContractHeaders")}
+          </p>
+          <pre className="mt-2 overflow-x-auto rounded-lg border border-default bg-surface-elevated p-3 text-xs text-primary">
+            {VOICE_AGENT_WEBHOOK_HEADERS.join("\n")}
+          </pre>
+        </div>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-secondary">
+            {t("voiceAgents.webhookContractPayload")}
+          </p>
+          <pre className="mt-2 overflow-x-auto rounded-lg border border-default bg-surface-elevated p-3 text-xs text-primary">
+            {serializeVoiceAgentWebhookExample(botId, settings?.telephonyPhoneNumber)}
+          </pre>
+        </div>
+      </div>
 
       <div>
         <h3 className="mb-3 text-sm font-semibold text-primary">{t("integrations.recentDeliveries")}</h3>

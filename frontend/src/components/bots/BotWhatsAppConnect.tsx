@@ -6,6 +6,7 @@ import { useUpdateBot } from "@/hooks/useBots";
 import { useWhatsAppConnect } from "@/hooks/useWhatsAppConnect";
 import { useT } from "@/i18n/context";
 import { EmbeddedSignupLauncher } from "@/components/whatsapp/EmbeddedSignupLauncher";
+import { BotWhatsAppCoexistenceStatus } from "@/components/bots/BotWhatsAppCoexistenceStatus";
 import { Button } from "@/components/ui/Button";
 import type { Bot } from "@/types";
 
@@ -28,6 +29,9 @@ export function BotWhatsAppConnect({ bot }: BotWhatsAppConnectProps) {
   const [pinError, setPinError] = useState("");
   const [error, setError] = useState("");
   const [advancedMode, setAdvancedMode] = useState(false);
+  const [connectMode, setConnectMode] = useState<"coexistence" | "cloud_api">(
+    bot.whatsappOnboardingMode === "cloud_api" ? "cloud_api" : "coexistence"
+  );
 
   const whatsappConnected = Boolean(bot.whatsappPhone) || Boolean(bot.phoneNumberId?.trim());
   const pinValid = /^\d{6}$/.test(pin);
@@ -48,12 +52,20 @@ export function BotWhatsAppConnect({ bot }: BotWhatsAppConnectProps) {
   async function handleEmbeddedConnected(data: {
     phoneNumberId: string;
     whatsappBusinessAccountId: string;
+    onboardingMode?: "cloud_api" | "coexistence";
+    isOnBizApp?: boolean;
+    platformType?: string;
   }) {
     setError("");
     try {
       setPhoneNumberId(data.phoneNumberId);
       setWhatsappBusinessAccountId(data.whatsappBusinessAccountId);
       await linkBotToWhatsApp(data.phoneNumberId, data.whatsappBusinessAccountId);
+      await updateBot.mutateAsync({
+        whatsappOnboardingMode: data.onboardingMode ?? connectMode,
+        ...(data.isOnBizApp !== undefined ? { isOnBizApp: data.isOnBizApp } : {}),
+        ...(data.platformType ? { platformType: data.platformType } : {}),
+      });
     } catch (err) {
       setError((err as Error).message ?? t("bots.saveError"));
     }
@@ -97,10 +109,36 @@ export function BotWhatsAppConnect({ bot }: BotWhatsAppConnectProps) {
 
       {!advancedMode && (
         <>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setConnectMode("coexistence")}
+              className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+                connectMode === "coexistence"
+                  ? "bg-accent text-white"
+                  : "bg-surface-muted text-secondary"
+              }`}
+            >
+              {t("whatsapp.modeCoexistence")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setConnectMode("cloud_api")}
+              className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+                connectMode === "cloud_api"
+                  ? "bg-accent text-white"
+                  : "bg-surface-muted text-secondary"
+              }`}
+            >
+              {t("whatsapp.modeCloudApi")}
+            </button>
+          </div>
           <EmbeddedSignupLauncher
             alreadyConnected={whatsappConnected}
+            onboardingMode={connectMode}
             onConnected={handleEmbeddedConnected}
           />
+          <BotWhatsAppCoexistenceStatus bot={bot} />
           <p className="text-xs text-secondary">{t("bots.sharedTokenNote")}</p>
         </>
       )}

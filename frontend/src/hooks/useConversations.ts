@@ -111,7 +111,7 @@ export function useConversationMessages(conversationId: string, enabled = true) 
     queryKey: ["conversation-messages", conversationId],
     queryFn: async () => {
       const raw = await api.get<unknown>(
-        `/conversations/${encodeURIComponent(conversationId)}`
+        `/conversations/${encodeURIComponent(conversationId)}?limit=100`
       );
       return Array.isArray(raw) ? (raw as Message[]) : [];
     },

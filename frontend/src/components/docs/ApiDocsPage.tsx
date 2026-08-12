@@ -9,6 +9,7 @@ import {
   KeyRound,
   MessageSquare,
   Phone,
+  PhoneCall,
   Shield,
   TriangleAlert,
   LayoutTemplate,
@@ -74,6 +75,12 @@ const ENDPOINT_GROUPS: EndpointGroup[] = [
     titleKey: "apiDocs.groups.calls",
     icon: Phone,
     match: (e) => e.path.startsWith("/v1/calls"),
+  },
+  {
+    id: "voice",
+    titleKey: "apiDocs.groups.voice",
+    icon: PhoneCall,
+    match: (e) => e.path.startsWith("/v1/voice"),
   },
 ];
 

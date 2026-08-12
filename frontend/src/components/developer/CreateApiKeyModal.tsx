@@ -4,7 +4,9 @@ import { useState } from "react";
 import { X, Copy, CheckCircle, Eye, EyeOff } from "lucide-react";
 import { useCreateApiKey } from "@/hooks/useApiKeys";
 import type { ApiKeyWithSecret } from "@/types";
+import { buildApiKeyScopes, OPTIONAL_VOICE_API_KEY_SCOPES } from "@/lib/api-key-scopes";
 import { buildSendMessageCurlExample, CALLS_ENDPOINT_HINT } from "@/lib/api-docs/curl";
+import { useT } from "@/i18n/context";
 
 interface CreateApiKeyModalProps {
   bots: Array<{ botId: string; name: string }>;
@@ -19,12 +21,24 @@ export function CreateApiKeyModal({ bots, onClose }: CreateApiKeyModalProps) {
 
   const [name, setName] = useState("");
   const [botId, setBotId] = useState(bots[0]?.botId ?? "");
+  const [voiceScopes, setVoiceScopes] = useState<string[]>([]);
 
   const createKey = useCreateApiKey();
+  const t = useT();
+
+  const voiceScopeLabels: Record<string, string> = {
+    "voice:calls:initiate": t("developer.scopeVoiceInitiate"),
+    "voice:calls:read": t("developer.scopeVoiceRead"),
+    "voice:calls:manage": t("developer.scopeVoiceManage"),
+  };
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const result = await createKey.mutateAsync({ name, botId });
+    const result = await createKey.mutateAsync({
+      name,
+      botId,
+      scopes: buildApiKeyScopes(voiceScopes),
+    });
     setCreatedKey(result);
     setStep("reveal");
   }
@@ -76,6 +90,35 @@ export function CreateApiKeyModal({ bots, onClose }: CreateApiKeyModalProps) {
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-secondary mb-1.5">
+                {t("developer.voiceScopesLabel")}
+              </label>
+              <p className="text-xs text-muted mb-2">{t("developer.voiceScopesHint")}</p>
+              <div className="space-y-2">
+                {OPTIONAL_VOICE_API_KEY_SCOPES.map((scope) => (
+                  <label
+                    key={scope}
+                    className="flex items-center gap-2 text-sm text-secondary cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={voiceScopes.includes(scope)}
+                      onChange={() =>
+                        setVoiceScopes((current) =>
+                          current.includes(scope)
+                            ? current.filter((s) => s !== scope)
+                            : [...current, scope]
+                        )
+                      }
+                      className="h-4 w-4 rounded border-default text-accent focus:ring-accent"
+                    />
+                    <span>{voiceScopeLabels[scope]}</span>
+                  </label>
+                ))}
+              </div>
             </div>
 
             {createKey.isError && (

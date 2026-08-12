@@ -119,7 +119,10 @@ export default function EditBotPage() {
                     phoneNumberId={bot.phoneNumberId}
                     whatsappPhone={bot.whatsappPhone}
                   />
-                  <BotCallingSettings botId={bot.botId} />
+                  <BotCallingSettings
+                    botId={bot.botId}
+                    coexistence={bot.whatsappOnboardingMode === "coexistence"}
+                  />
                 </div>
               ) : null}
             </div>

@@ -12,13 +12,19 @@ const CONFIG_ID = process.env.NEXT_PUBLIC_META_EMBEDDED_SIGNUP_CONFIG_ID ?? "";
 const FB_SDK_VERSION = "v22.0";
 const PIN_LENGTH = 6;
 
+export type WhatsAppOnboardingMode = "cloud_api" | "coexistence";
+
 interface EmbeddedSignupLauncherProps {
   onConnected: (data: {
     phoneNumberId: string;
     whatsappBusinessAccountId: string;
+    onboardingMode?: WhatsAppOnboardingMode;
+    isOnBizApp?: boolean;
+    platformType?: string;
   }) => void;
   alreadyConnected?: boolean;
   className?: string;
+  onboardingMode?: WhatsAppOnboardingMode;
 }
 
 interface FBLoginResponse {
@@ -49,9 +55,10 @@ export function EmbeddedSignupLauncher({
   onConnected,
   alreadyConnected = false,
   className,
+  onboardingMode = "cloud_api",
 }: EmbeddedSignupLauncherProps) {
   const t = useT();
-  const { status, error, connect, reset } = useWhatsAppConnect();
+  const { status, error, connect, connectCoexistence, reset } = useWhatsAppConnect();
   const [sdkReady, setSdkReady] = useState(false);
   const [localConnected, setLocalConnected] = useState(alreadyConnected);
   const [pin, setPin] = useState("");
@@ -60,20 +67,41 @@ export function EmbeddedSignupLauncher({
     code?: string;
     wabaId?: string;
     phoneNumberId?: string;
+    coexistence?: boolean;
   }>({});
   const messageHandlerRef = useRef<((event: MessageEvent) => void) | null>(null);
 
   const isConfigured = Boolean(META_APP_ID && CONFIG_ID);
+  const isCoexistence = onboardingMode === "coexistence";
   const pinValid = /^\d{6}$/.test(pin);
 
   const tryComplete = useCallback(async () => {
-    const { code, wabaId, phoneNumberId } = pendingRef.current;
-    if (!code || !wabaId || !phoneNumberId || !pinValid) return;
+    const { code, wabaId, phoneNumberId, coexistence } = pendingRef.current;
+    if (!code || !wabaId) return;
+    if (!coexistence && (!phoneNumberId || !pinValid)) return;
 
     try {
+      if (coexistence) {
+        const result = await connectCoexistence({
+          code,
+          wabaId,
+          phoneNumberId,
+        });
+        pendingRef.current = {};
+        setLocalConnected(true);
+        onConnected({
+          phoneNumberId: result.phoneNumberId,
+          whatsappBusinessAccountId: result.whatsappBusinessAccountId,
+          onboardingMode: "coexistence",
+          ...(result.isOnBizApp !== undefined ? { isOnBizApp: result.isOnBizApp } : {}),
+          ...(result.platformType ? { platformType: result.platformType } : {}),
+        });
+        return;
+      }
+
       const result = await connect({
         code,
-        phoneNumberId,
+        phoneNumberId: phoneNumberId!,
         whatsappBusinessAccountId: wabaId,
         pin,
       });
@@ -82,11 +110,12 @@ export function EmbeddedSignupLauncher({
       onConnected({
         phoneNumberId: result.phoneNumberId,
         whatsappBusinessAccountId: result.whatsappBusinessAccountId,
+        onboardingMode: "cloud_api",
       });
     } catch {
       pendingRef.current = {};
     }
-  }, [connect, onConnected, pin, pinValid]);
+  }, [connect, connectCoexistence, onConnected, pin, pinValid]);
 
   useEffect(() => {
     setLocalConnected(alreadyConnected);
@@ -105,14 +134,14 @@ export function EmbeddedSignupLauncher({
       return;
     }
 
-    if (!pinValid) {
+    if (!isCoexistence && !pinValid) {
       setPinError(t("whatsapp.pinInvalid"));
       return;
     }
 
     setPinError("");
     reset();
-    pendingRef.current = {};
+    pendingRef.current = { coexistence: isCoexistence };
 
     if (messageHandlerRef.current) {
       window.removeEventListener("message", messageHandlerRef.current);
@@ -137,15 +166,34 @@ export function EmbeddedSignupLauncher({
         return;
       }
 
-      if (payload.event === "FINISH" && payload.data) {
+      if (
+        (payload.event === "FINISH" || payload.event === "FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING") &&
+        payload.data
+      ) {
         pendingRef.current.wabaId = payload.data.waba_id;
-        pendingRef.current.phoneNumberId = payload.data.phone_number_id;
+        if (payload.data.phone_number_id) {
+          pendingRef.current.phoneNumberId = payload.data.phone_number_id;
+        }
         void tryComplete();
       }
     };
 
     messageHandlerRef.current = handler;
     window.addEventListener("message", handler);
+
+    const loginOptions: Record<string, unknown> = {
+      config_id: CONFIG_ID,
+      response_type: "code",
+      override_default_response_type: true,
+    };
+
+    if (isCoexistence) {
+      loginOptions.extras = {
+        setup: {},
+        featureType: "whatsapp_business_app_onboarding",
+        sessionInfoVersion: "3",
+      };
+    }
 
     window.FB.login(
       (response) => {
@@ -158,13 +206,9 @@ export function EmbeddedSignupLauncher({
           reset();
         }
       },
-      {
-        config_id: CONFIG_ID,
-        response_type: "code",
-        override_default_response_type: true,
-      }
+      loginOptions
     );
-  }, [pinValid, reset, sdkReady, t, tryComplete]);
+  }, [isCoexistence, pinValid, reset, sdkReady, t, tryComplete]);
 
   const isConnecting = status === "connecting";
   const showConnected = localConnected || status === "connected";
@@ -202,30 +246,38 @@ export function EmbeddedSignupLauncher({
 
       <div className="rounded-lg border border-default bg-surface p-4">
         <p className="text-sm font-medium text-primary mb-1">{t("whatsapp.sectionTitle")}</p>
-        <p className="text-xs text-secondary mb-4">{t("whatsapp.sectionDescription")}</p>
+        <p className="text-xs text-secondary mb-4">
+          {isCoexistence ? t("whatsapp.coexistenceDescription") : t("whatsapp.sectionDescription")}
+        </p>
 
-        <div className="mb-4">
-          <label htmlFor="whatsapp-pin" className="block text-xs font-medium text-secondary mb-1">
-            {t("whatsapp.pinLabel")}
-          </label>
-          <input
-            id="whatsapp-pin"
-            type="password"
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            maxLength={PIN_LENGTH}
-            value={pin}
-            onChange={(e) => {
-              const next = e.target.value.replace(/\D/g, "").slice(0, PIN_LENGTH);
-              setPin(next);
-              if (pinError) setPinError("");
-            }}
-            placeholder={t("whatsapp.pinPlaceholder")}
-            className="w-full max-w-xs rounded-lg border border-default px-3 py-2 text-sm font-mono tracking-widest"
-          />
-          <p className="mt-1 text-xs text-secondary">{t("whatsapp.pinHint")}</p>
-          {pinError && <p className="mt-1 text-xs text-red-600">{pinError}</p>}
-        </div>
+        {isCoexistence && (
+          <p className="mb-4 text-xs text-secondary">{t("whatsapp.coexistenceSyncHint")}</p>
+        )}
+
+        {!isCoexistence && (
+          <div className="mb-4">
+            <label htmlFor="whatsapp-pin" className="block text-xs font-medium text-secondary mb-1">
+              {t("whatsapp.pinLabel")}
+            </label>
+            <input
+              id="whatsapp-pin"
+              type="password"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={PIN_LENGTH}
+              value={pin}
+              onChange={(e) => {
+                const next = e.target.value.replace(/\D/g, "").slice(0, PIN_LENGTH);
+                setPin(next);
+                if (pinError) setPinError("");
+              }}
+              placeholder={t("whatsapp.pinPlaceholder")}
+              className="w-full max-w-xs rounded-lg border border-default px-3 py-2 text-sm font-mono tracking-widest"
+            />
+            <p className="mt-1 text-xs text-secondary">{t("whatsapp.pinHint")}</p>
+            {pinError && <p className="mt-1 text-xs text-red-600">{pinError}</p>}
+          </div>
+        )}
 
         {showConnected ? (
           <div className="flex items-center gap-2 text-sm text-green-700">
@@ -251,9 +303,11 @@ export function EmbeddedSignupLauncher({
             )}
             {isConnecting
               ? t("whatsapp.connecting")
-              : showConnected
-                ? t("whatsapp.reconnect")
-                : t("whatsapp.connectButton")}
+              : isCoexistence
+                ? t("whatsapp.coexistenceConnectButton")
+                : showConnected
+                  ? t("whatsapp.reconnect")
+                  : t("whatsapp.connectButton")}
           </button>
         )}
 

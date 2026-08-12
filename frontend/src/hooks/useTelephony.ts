@@ -7,6 +7,8 @@ import type {
   CallRecord,
   IntegrationEvent,
   Message,
+  TelephonyStructuredOutputDefinition,
+  TelephonyStructuredOutputField,
   VoiceAgentWebhookDelivery,
 } from "@/types";
 
@@ -23,6 +25,9 @@ export interface TelephonySettings {
   telephonyWebhookSecret?: string;
   telephonyWebhookEnabled?: boolean;
   telephonyWebhookEvents?: IntegrationEvent[];
+  telephonyStructuredOutput?: TelephonyStructuredOutputDefinition | null;
+  telephonyStructuredOutputs?: TelephonyStructuredOutputField[];
+  telephonyStructuredOutputSchemaName?: string;
 }
 
 export interface TelnyxNumber {

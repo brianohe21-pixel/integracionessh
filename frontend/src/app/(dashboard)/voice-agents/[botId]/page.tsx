@@ -9,12 +9,14 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { VoiceAgentCallsTable } from "@/components/voice-agents/VoiceAgentCallsTable";
 import { VoiceAgentDialpad } from "@/components/voice-agents/VoiceAgentDialpad";
 import { VoiceAgentSettings } from "@/components/voice-agents/VoiceAgentSettings";
+import { VoiceAgentStructuredOutputsPanel } from "@/components/voice-agents/VoiceAgentStructuredOutputsPanel";
+import { VoiceAgentBotIdCopy } from "@/components/voice-agents/VoiceAgentBotIdCopy";
 import { VoiceAgentSummary } from "@/components/voice-agents/VoiceAgentSummary";
 import { VoiceAgentWebhookPanel } from "@/components/voice-agents/VoiceAgentWebhookPanel";
 import { useBot } from "@/hooks/useBots";
 import { useT } from "@/i18n/context";
 
-const TABS = ["overview", "config", "calls", "webhooks", "test"] as const;
+const TABS = ["overview", "config", "structuredOutputs", "calls", "webhooks", "test"] as const;
 type TabId = (typeof TABS)[number];
 
 function isTabId(value: string | null): value is TabId {
@@ -68,6 +70,8 @@ export default function VoiceAgentDetailPage() {
         subtitle={t("voiceAgents.manageSubtitle")}
       />
 
+      <VoiceAgentBotIdCopy botId={botId} />
+
       <div className="flex flex-wrap gap-2 border-b border-default pb-2">
         {TABS.map((item) => (
           <button
@@ -92,6 +96,7 @@ export default function VoiceAgentDetailPage() {
         </div>
       )}
       {tab === "config" && <VoiceAgentSettings botId={botId} />}
+      {tab === "structuredOutputs" && <VoiceAgentStructuredOutputsPanel botId={botId} />}
       {tab === "calls" && <VoiceAgentCallsTable botId={botId} />}
       {tab === "webhooks" && <VoiceAgentWebhookPanel botId={botId} />}
       {tab === "test" && <VoiceAgentDialpad botId={botId} />}

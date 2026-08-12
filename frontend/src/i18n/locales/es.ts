@@ -346,6 +346,30 @@ export const es = {
     registerButton: "Registrar número",
     registering: "Registrando...",
     registerSuccess: "Número registrado. El estado puede tardar unos minutos en actualizarse.",
+    modeCoexistence: "WhatsApp Business App (coexistencia)",
+    modeCloudApi: "Número Cloud API nuevo",
+    coexistenceDescription:
+      "Conecta tu número existente de WhatsApp Business App sin perder la app móvil.",
+    coexistenceConnectButton: "Conectar número existente",
+    coexistenceSyncHint:
+      "Mantén WhatsApp Business App abierta durante la sincronización (hasta 24 horas).",
+    coexistenceStatusTitle: "Coexistencia WhatsApp",
+    coexistenceSyncPending: "La sincronización comenzará al vincular el bot.",
+    coexistenceDisconnected:
+      "El número fue desconectado de la plataforma desde WhatsApp Business App.",
+    coexistenceLimitations:
+      "En coexistencia no se sincronizan grupos, llamadas ni herramientas de negocio. Límite fijo: 20 mensajes/segundo.",
+    syncContacts: "Contactos",
+    syncHistory: "Historial",
+    syncPhase: {
+      pending: "pendiente",
+      in_progress: "en progreso",
+      completed: "completado",
+      failed: "fallido",
+      declined: "rechazado",
+    },
+    coexistenceCallingDisabled:
+      "Las llamadas de WhatsApp no están disponibles en modo coexistencia.",
   },
   conversations: {
     title: "Conversaciones",
@@ -632,6 +656,9 @@ export const es = {
     backToList: "Volver a agentes de voz",
     manageTitle: "Agente de voz: {{name}}",
     manageSubtitle: "Configuración, historial, webhooks y pruebas de llamada",
+    botIdLabel: "ID del agente",
+    botIdCopy: "Copiar ID",
+    botIdCopied: "Copiado",
     configTitle: "Configuración del agente",
     configSubtitle: "Número Telnyx, voz, modelo, saludo y grabación",
     selectVoice: "Seleccionar voz",
@@ -643,6 +670,33 @@ export const es = {
     recordingHint: "Activa la grabación por agente con retención de 90 días",
     recordingNotice: "Aviso de grabación",
     recordingNoticePlaceholder: "Esta llamada puede ser grabada...",
+    structuredOutputsTitle: "Datos extraídos",
+    structuredOutputsHint:
+      "Configura qué información quieres recibir automáticamente cuando termina cada llamada (en tu webhook).",
+    structuredOutputsStep1: "1. Pega un JSON con el nombre del esquema y un ejemplo de los datos que quieres recibir.",
+    structuredOutputsStep2: "2. Guarda. No necesitas configurar nada más.",
+    structuredOutputsStep3:
+      "3. Al terminar cada llamada, tu webhook recibe esos datos rellenados desde la conversación.",
+    structuredOutputsLoadExample: "Cargar ejemplo",
+    structuredOutputsJsonLabel: "Configuración JSON",
+    structuredOutputsWebhookNote:
+      "Requiere webhook activo en la pestaña Webhooks, evento call.terminated.",
+    structuredOutputsMethodTitle: "Método de extracción",
+    structuredOutputsMethodHint: "Elige cómo encontrar los datos en la transcripción de cada llamada.",
+    structuredOutputsMethodAi: "Extracción con IA",
+    structuredOutputsMethodAiHint:
+      "Ideal para resúmenes, sentimiento y datos que requieren contexto de la conversación.",
+    structuredOutputsMethodRegex: "Extracción con regex",
+    structuredOutputsMethodRegexHint:
+      "Ideal para patrones exactos: IDs de pedido, teléfonos, códigos de confirmación.",
+    structuredOutputsRegexFormatHint:
+      "Define patrones regex por campo. Si el patrón tiene grupos (), se usa el primer grupo capturado.",
+    structuredOutputsJsonInvalid:
+      "JSON inválido. Usa el formato del ejemplo: name + result con los campos que necesitas.",
+    structuredOutputsSchemaInvalid:
+      "El name debe empezar con letra o _ (ej: customer_order)",
+    structuredOutputsFormatHint:
+      "Tip: puedes copiar un JSON que ya uses en tu integración. Al guardar, el sistema sabe qué campos extraer de cada llamada.",
     callsTitle: "Historial de llamadas",
     callsSubtitle: "Logs, duración, costo estimado y grabaciones",
     noCalls: "Aún no hay llamadas registradas",
@@ -741,6 +795,11 @@ export const es = {
     webhooksTitle: "Webhooks del agente",
     webhooksSubtitle: "Recibe eventos de llamadas en tu endpoint",
     webhookEnabled: "Activar webhook",
+    webhookContractTitle: "Contrato del webhook",
+    webhookContractHint:
+      "Todos los eventos usan el mismo formato. Los datos extraídos llegan en data.structuredOutputs.result.",
+    webhookContractHeaders: "Headers",
+    webhookContractPayload: "Ejemplo call.terminated",
     webhookTestSuccess: "Webhook de prueba enviado",
     testTitle: "Teclado de prueba",
     testSubtitle: "Marca un número para iniciar una llamada saliente con el agente",
@@ -757,6 +816,7 @@ export const es = {
     tab: {
       overview: "Resumen",
       config: "Configuración",
+      structuredOutputs: "Datos extraídos",
       calls: "Llamadas",
       webhooks: "Webhooks",
       test: "Prueba",
@@ -1262,6 +1322,16 @@ export const es = {
     logsToggleTrace: "Mostrar u ocultar detalle del error",
     logsErrorMessage: "Mensaje de error",
     logsStackTrace: "Stack trace",
+    voiceScopesLabel: "Permisos de agente de voz",
+    voiceScopesHint: "Scopes opcionales para agentes PSTN. No se habilitan por defecto.",
+    scopeVoiceInitiate: "Iniciar llamadas salientes",
+    scopeVoiceRead: "Leer llamadas, eventos, transcripciones y grabaciones",
+    scopeVoiceManage: "Finalizar llamadas activas",
+    scopesTitle: "Permisos de API key",
+    scopesSubtitle: "Habilita scopes de agente de voz para integraciones de terceros.",
+    scopesSaveError: "No se pudieron actualizar los scopes",
+    editScopes: "Editar scopes de voz",
+    noVoiceScopes: "Sin scopes de voz",
   },
   settings: {
     title: "Configuración",
@@ -1299,7 +1369,7 @@ export const es = {
     step3: "Suscríbete a messages (WhatsApp, Messenger) y calls (WhatsApp)",
     secretsTitle: "API Keys",
     secretsDescription:
-      "Las credenciales de WhatsApp se guardan al conectar un bot con Embedded Signup. OpenAI usa la clave de la plataforma salvo que tengas la propia.",
+      "Las credenciales de WhatsApp se guardan al conectar un bot con Embedded Signup. Telnyx, OpenAI y ElevenLabs pueden configurarse a nivel de cuenta y heredarse a subcuentas.",
     whatsappToken: "WhatsApp Access Token",
     whatsappTokenStored: "Almacenado en Secrets Manager",
     configured: "Configurado",
@@ -1365,6 +1435,30 @@ export const es = {
     scheduledReportsSendError: "No se pudo enviar el reporte",
     platformBadge: "Plataforma",
     ownBadge: "Propia",
+    resellerBadge: "Reseller",
+    notConfiguredBadge: "Sin configurar",
+    providerAdd: "Añadir clave",
+    providerRemove: "Eliminar clave propia",
+    providerRemoveConfirm: "¿Eliminar tu clave propia? Se usará la heredada si existe.",
+    providerSaveError: "No se pudo guardar la credencial",
+    providerApiKey: "API Key",
+    telnyxConnectionId: "Connection ID",
+    telnyxPublicKey: "Public key (webhook)",
+    telnyxWebhookUrl: "URL de webhook para Telnyx",
+    provider: {
+      openai: {
+        title: "OpenAI API Key",
+        desc: "Usa la clave heredada o de plataforma si no configuras la propia",
+      },
+      telnyx: {
+        title: "Telnyx",
+        desc: "Cuenta Telnyx global para telefonía de tus subcuentas",
+      },
+      elevenlabs: {
+        title: "ElevenLabs",
+        desc: "Voces TTS para agentes de voz",
+      },
+    },
     cancel: "Cancelar",
   },
   campaigns: {
@@ -1772,6 +1866,7 @@ export const es = {
       sms: "SMS",
       templates: "Templates",
       calls: "Llamadas",
+      voice: "Agentes de voz",
     },
     toc: {
       intro: "Introducción",
@@ -1845,6 +1940,27 @@ export const es = {
       updateCallSettings: "Actualiza la configuración de llamadas del número de WhatsApp del bot.",
       permissionRequest: "Envía un mensaje solicitando permiso de llamada al usuario.",
       getCallPermission: "Consulta si un usuario ha concedido permiso de llamada.",
+      startVoiceCall: "Inicia una llamada PSTN saliente con el agente de voz del bot de la API key.",
+      startVoiceCallNotes:
+        "Requiere telefonía habilitada en el bot, Telnyx configurado y el scope voice:calls:initiate. Usa webhooks para eventos asíncronos.",
+      listVoiceCalls: "Lista llamadas Telnyx del bot asociado a la API key.",
+      listVoiceCallsNotes: "Soporta limit (1-100) y paginación con cursor. Solo devuelve llamadas PSTN del agente de voz.",
+      getVoiceCall: "Obtiene una llamada por callId con estado, costos y structured outputs.",
+      endVoiceCall: "Finaliza una llamada PSTN activa.",
+      endVoiceCallNotes: "Es idempotente si la llamada ya terminó.",
+      getVoiceCallEvents: "Lista eventos de la línea de tiempo de una llamada.",
+      getVoiceCallTranscript: "Lee los mensajes de la transcripción de la llamada.",
+      getVoiceCallTranscriptNotes: "Soporta limit y cursor sobre mensajes en orden cronológico.",
+      getVoiceCallRecording: "Obtiene una URL firmada para descargar la grabación.",
+      getVoiceCallRecordingNotes: "La URL expira en 900 segundos. La grabación debe estar lista.",
+      getVoiceStructuredOutput:
+        "Lee la configuración de datos extraídos del agente de voz asociado a la API key.",
+      getVoiceStructuredOutputNotes:
+        "El botId del path debe coincidir con el bot de la API key. Devuelve null si no hay esquema configurado.",
+      putVoiceStructuredOutput:
+        "Crea o actualiza la configuración de datos extraídos del agente de voz.",
+      putVoiceStructuredOutputNotes:
+        "Acepta schema JSON Schema o un ejemplo con name + result. Envía null para eliminar la configuración.",
     },
   },
   admin: {

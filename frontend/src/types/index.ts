@@ -210,6 +210,28 @@ export type AiProvider = "openai" | "anthropic";
 
 export type LocalizedText = string | Record<BotLocale, string>;
 
+export type TelephonyStructuredOutputType = "string" | "number" | "integer" | "boolean";
+
+export interface TelephonyStructuredOutputField {
+  name: string;
+  type: TelephonyStructuredOutputType;
+  description: string;
+  required?: boolean;
+}
+
+export interface TelephonyStructuredOutputPayload {
+  name: string;
+  result: Record<string, unknown>;
+}
+
+export interface TelephonyStructuredOutputDefinition {
+  name: string;
+  type?: "ai" | "regex";
+  description?: string;
+  schema?: Record<string, unknown>;
+  patterns?: Record<string, string>;
+}
+
 export interface Bot {
   botId: string;
   tenantId: string;
@@ -267,10 +289,38 @@ export interface Bot {
   telephonyWebhookSecret?: string;
   telephonyWebhookEnabled?: boolean;
   telephonyWebhookEvents?: IntegrationEvent[];
+  telephonyStructuredOutputs?: TelephonyStructuredOutputField[];
+  telephonyStructuredOutputSchemaName?: string;
+  telephonyStructuredOutput?: TelephonyStructuredOutputDefinition | null;
+  whatsappOnboardingMode?: "cloud_api" | "coexistence";
+  isOnBizApp?: boolean;
+  platformType?: string;
+  whatsappSyncStatus?: WhatsAppSyncStatus;
+  whatsappDisconnectedAt?: string;
+  whatsappDisconnectionReason?: string;
   status: "active" | "inactive";
   createdAt: string;
   updatedAt: string;
   whatsappPhone?: WhatsAppPhoneInfo | null;
+}
+
+export type WhatsAppSyncPhaseStatus =
+  | "pending"
+  | "in_progress"
+  | "completed"
+  | "failed"
+  | "declined";
+
+export interface WhatsAppSyncStatus {
+  contacts?: WhatsAppSyncPhaseStatus;
+  history?: WhatsAppSyncPhaseStatus;
+  contactsRequestId?: string;
+  historyRequestId?: string;
+  historyProgress?: number;
+  historyPhase?: number;
+  startedAt?: string;
+  completedAt?: string;
+  lastError?: string;
 }
 
 export type HandoffMode = "bot" | "human";
@@ -866,6 +916,7 @@ export interface CallRecord {
   recordingStatus?: CallRecordingStatus;
   recordingS3Key?: string;
   recordingDurationSeconds?: number;
+  extractedFields?: TelephonyStructuredOutputPayload;
   costStatus?: CallCostStatus;
   costBreakdown?: CallCostBreakdown;
   usageMetrics?: CallUsageMetrics;

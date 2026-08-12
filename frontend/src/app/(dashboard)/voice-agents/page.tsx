@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { useBots } from "@/hooks/useBots";
 import { useTelephonyCalls } from "@/hooks/useTelephony";
+import { VoiceAgentBotIdCopy } from "@/components/voice-agents/VoiceAgentBotIdCopy";
 import { useT } from "@/i18n/context";
 import type { Bot } from "@/types";
 
@@ -20,9 +21,10 @@ function VoiceAgentListItem({ bot }: { bot: Bot }) {
   return (
     <li className="flex flex-wrap items-center justify-between gap-3 px-4 py-4">
       <div className="min-w-0">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <PhoneCall className="h-4 w-4 text-accent" />
           <p className="font-medium text-primary">{bot.name}</p>
+          <VoiceAgentBotIdCopy botId={bot.botId} compact />
           {bot.telephonyEnabled ? (
             <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
               {t("common.active")}

@@ -9,7 +9,7 @@ import { useFormatters } from "@/hooks/useFormatters";
 import { useT } from "@/i18n/context";
 import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
 import { ThemeSwitcher } from "@/components/theme/ThemeSwitcher";
-import { OpenAIKeyCard } from "@/components/settings/OpenAIKeyCard";
+import { ProviderCredentialsSection } from "@/components/settings/ProviderCredentialCard";
 import { InboxSlaCard } from "@/components/settings/InboxSlaCard";
 import { ScheduledReportsCard } from "@/components/settings/ScheduledReportsCard";
 import { BrandingSettingsCard } from "@/components/branding/BrandingSettingsCard";
@@ -238,7 +238,7 @@ export default function SettingsPage() {
                 <Badge variant="success">{t("settings.configured")}</Badge>
               </div>
 
-              <OpenAIKeyCard />
+              <ProviderCredentialsSection />
             </div>
           </div>
         )}

@@ -15,9 +15,10 @@ interface CallingSettingsResponse {
 
 interface BotCallingSettingsProps {
   botId: string;
+  coexistence?: boolean;
 }
 
-export function BotCallingSettings({ botId }: BotCallingSettingsProps) {
+export function BotCallingSettings({ botId, coexistence = false }: BotCallingSettingsProps) {
   const t = useT();
   const queryClient = useQueryClient();
   const [error, setError] = useState("");
@@ -55,6 +56,10 @@ export function BotCallingSettings({ botId }: BotCallingSettingsProps) {
       </div>
       <p className="text-sm text-secondary mb-4">{t("bots.callingDescription")}</p>
 
+      {coexistence ? (
+        <p className="text-sm text-secondary mb-4">{t("whatsapp.coexistenceCallingDisabled")}</p>
+      ) : null}
+
       <div className="bg-amber-50 border border-amber-100 rounded-lg p-3 mb-4">
         <p className="text-xs text-amber-800">{t("bots.callingPrerequisites")}</p>
         <a
@@ -76,7 +81,7 @@ export function BotCallingSettings({ botId }: BotCallingSettingsProps) {
             type="button"
             role="switch"
             aria-checked={enabled}
-            disabled={updateMutation.isPending}
+            disabled={updateMutation.isPending || coexistence}
             onClick={() => updateMutation.mutate(!enabled)}
             className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${
               enabled ? "bg-accent" : "bg-gray-200"
