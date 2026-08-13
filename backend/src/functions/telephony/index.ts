@@ -81,6 +81,32 @@ import type { VoiceAgentHttpTool } from "../../types/index.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 
+function readTelephonyResourceId(
+  pathParameters: APIGatewayProxyEventV2["pathParameters"],
+  rawPath: string,
+  resource: "calls" | "tools"
+): string | undefined {
+  const paramKey = resource === "calls" ? "callId" : "toolId";
+  const fromParam = pathParameters?.[paramKey];
+  if (fromParam) return fromParam;
+  const match = rawPath.match(
+    resource === "calls" ? /\/telephony\/calls\/([^/]+)/ : /\/telephony\/tools\/([^/]+)/
+  );
+  const segment = match?.[1];
+  if (!segment || segment === "secrets") return undefined;
+  return segment;
+}
+
+function readTelephonyToolSecretName(
+  pathParameters: APIGatewayProxyEventV2["pathParameters"],
+  rawPath: string
+): string | undefined {
+  const fromParam = pathParameters?.secretName;
+  if (fromParam) return fromParam;
+  const match = rawPath.match(/\/telephony\/tools\/secrets\/([^/]+)$/);
+  return match?.[1];
+}
+
 const VOICE_AGENT_WEBHOOK_EVENTS: IntegrationEvent[] = [
   "call.connect",
   "call.status",
@@ -363,9 +389,9 @@ export async function handler(
     const method = event.requestContext.http.method;
     const rawPath = event.rawPath ?? event.requestContext.http.path;
     const botId = event.pathParameters?.botId;
-    const callId = event.pathParameters?.callId;
-    const toolId = event.pathParameters?.toolId;
-    const secretName = event.pathParameters?.secretName;
+    const callId = readTelephonyResourceId(event.pathParameters, rawPath, "calls");
+    const toolId = readTelephonyResourceId(event.pathParameters, rawPath, "tools");
+    const secretName = readTelephonyToolSecretName(event.pathParameters, rawPath);
 
     const credentialTenantId = event.pathParameters?.credentialTenantId;
 

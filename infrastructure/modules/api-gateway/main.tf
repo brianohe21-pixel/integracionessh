@@ -1168,32 +1168,20 @@ locals {
       function_arn = var.telephony_function_arn
       protected    = true
     }
-    bots_telephony_calls_get = {
-      route_key    = "GET /bots/{botId}/telephony/calls/{callId}"
-      invoke_arn   = var.telephony_invoke_arn
-      function_arn = var.telephony_function_arn
-      protected    = true
-    }
     bots_telephony_calls_create = {
       route_key    = "POST /bots/{botId}/telephony/calls"
       invoke_arn   = var.telephony_invoke_arn
       function_arn = var.telephony_function_arn
       protected    = true
     }
-    bots_telephony_calls_end = {
-      route_key    = "POST /bots/{botId}/telephony/calls/{callId}/end"
+    bots_telephony_calls_proxy_get = {
+      route_key    = "GET /bots/{botId}/telephony/calls/{proxy+}"
       invoke_arn   = var.telephony_invoke_arn
       function_arn = var.telephony_function_arn
       protected    = true
     }
-    bots_telephony_calls_events = {
-      route_key    = "GET /bots/{botId}/telephony/calls/{callId}/events"
-      invoke_arn   = var.telephony_invoke_arn
-      function_arn = var.telephony_function_arn
-      protected    = true
-    }
-    bots_telephony_calls_recording = {
-      route_key    = "GET /bots/{botId}/telephony/calls/{callId}/recording"
+    bots_telephony_calls_proxy_post = {
+      route_key    = "POST /bots/{botId}/telephony/calls/{proxy+}"
       invoke_arn   = var.telephony_invoke_arn
       function_arn = var.telephony_function_arn
       protected    = true
@@ -1222,44 +1210,26 @@ locals {
       function_arn = var.telephony_function_arn
       protected    = true
     }
-    bots_telephony_tools_secrets_get = {
-      route_key    = "GET /bots/{botId}/telephony/tools/secrets"
+    bots_telephony_tools_proxy_get = {
+      route_key    = "GET /bots/{botId}/telephony/tools/{proxy+}"
       invoke_arn   = var.telephony_invoke_arn
       function_arn = var.telephony_function_arn
       protected    = true
     }
-    bots_telephony_tools_secrets_put = {
-      route_key    = "PUT /bots/{botId}/telephony/tools/secrets"
+    bots_telephony_tools_proxy_post = {
+      route_key    = "POST /bots/{botId}/telephony/tools/{proxy+}"
       invoke_arn   = var.telephony_invoke_arn
       function_arn = var.telephony_function_arn
       protected    = true
     }
-    bots_telephony_tools_secrets_delete = {
-      route_key    = "DELETE /bots/{botId}/telephony/tools/secrets/{secretName}"
+    bots_telephony_tools_proxy_put = {
+      route_key    = "PUT /bots/{botId}/telephony/tools/{proxy+}"
       invoke_arn   = var.telephony_invoke_arn
       function_arn = var.telephony_function_arn
       protected    = true
     }
-    bots_telephony_tools_get = {
-      route_key    = "GET /bots/{botId}/telephony/tools/{toolId}"
-      invoke_arn   = var.telephony_invoke_arn
-      function_arn = var.telephony_function_arn
-      protected    = true
-    }
-    bots_telephony_tools_update = {
-      route_key    = "PUT /bots/{botId}/telephony/tools/{toolId}"
-      invoke_arn   = var.telephony_invoke_arn
-      function_arn = var.telephony_function_arn
-      protected    = true
-    }
-    bots_telephony_tools_delete = {
-      route_key    = "DELETE /bots/{botId}/telephony/tools/{toolId}"
-      invoke_arn   = var.telephony_invoke_arn
-      function_arn = var.telephony_function_arn
-      protected    = true
-    }
-    bots_telephony_tools_test = {
-      route_key    = "POST /bots/{botId}/telephony/tools/{toolId}/test"
+    bots_telephony_tools_proxy_delete = {
+      route_key    = "DELETE /bots/{botId}/telephony/tools/{proxy+}"
       invoke_arn   = var.telephony_invoke_arn
       function_arn = var.telephony_function_arn
       protected    = true
