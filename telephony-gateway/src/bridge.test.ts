@@ -102,7 +102,7 @@ describe("telephony bridge", () => {
       (session.audio as { input: { turn_detection: typeof TELEPHONY_TURN_DETECTION } }).input
         .turn_detection
     ).toEqual(TELEPHONY_TURN_DETECTION);
-    expect(TELEPHONY_TURN_DETECTION.threshold).toBe(0.48);
+    expect(TELEPHONY_TURN_DETECTION.threshold).toBe(0.52);
     expect(TELEPHONY_TURN_DETECTION.interrupt_response).toBe(true);
     expect(TELEPHONY_IDLE_REPROMPT_MS).toBe(8_000);
     expect(

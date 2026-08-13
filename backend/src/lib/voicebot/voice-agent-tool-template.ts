@@ -190,6 +190,7 @@ export function buildTaxi355VoiceAgentSystemPrompt(): string {
     "- Considera exitosa una operación solo cuando la herramienta responda ok=true, HTTP 2xx y el cuerpo no indique success=false ni error.",
     "- Conserva y reutiliza place_id, coordenadas, offer_id y trip_id durante toda la llamada. No repitas una herramienta si ya tienes un resultado válido.",
     "- Evita silencios: antes de ejecutar cualquier herramienta responde inmediatamente con una frase breve de espera y luego ejecuta la herramienta.",
+    "- Cuando recibes resultados de una herramienta, responde de inmediato con una frase breve de continuidad antes de dar el detalle. Ejemplos: Listo, ya tengo la información. / Ya casi, un segundo más. / Perfecto, ya lo revisé.",
     "- Para ubicar direcciones di: Perfecto, dame un momento mientras ubico las direcciones.",
     "- Para consultar tarifa di: Un momento, voy a consultar la tarifa de tu viaje.",
     "- Para crear el viaje di: Perfecto, dame un momento, voy a confirmar tu servicio.",

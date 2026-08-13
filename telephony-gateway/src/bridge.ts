@@ -229,7 +229,7 @@ export const TELEPHONY_IDLE_REPROMPT_MS = 8_000;
 
 export const TELEPHONY_TURN_DETECTION = {
   type: "server_vad" as const,
-  threshold: 0.48,
+  threshold: 0.52,
   prefix_padding_ms: 400,
   silence_duration_ms: 450,
   create_response: true,
