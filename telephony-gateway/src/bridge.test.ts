@@ -7,6 +7,7 @@ import {
   resolveInstructions,
   TELEPHONY_TTS_DRAIN_TIMEOUT_MS,
   TELEPHONY_TURN_DETECTION,
+  ToolResponseCoordinator,
 } from "./bridge.js";
 import type { Bot } from "./types.js";
 
@@ -109,5 +110,47 @@ describe("telephony bridge", () => {
     expect(estimateSpeechDrainMs(0)).toBe(1_000);
     expect(estimateSpeechDrainMs(285)).toBe(15_675);
     expect(estimateSpeechDrainMs(10_000)).toBe(TELEPHONY_TTS_DRAIN_TIMEOUT_MS);
+  });
+
+  it("requests one response after parallel tools finish", () => {
+    const requestResponse = jest.fn();
+    const coordinator = new ToolResponseCoordinator(requestResponse);
+
+    coordinator.responseStarted();
+    coordinator.toolStarted();
+    coordinator.toolStarted();
+    coordinator.responseFinished();
+    coordinator.toolFinished();
+
+    expect(requestResponse).not.toHaveBeenCalled();
+
+    coordinator.toolFinished();
+
+    expect(requestResponse).toHaveBeenCalledTimes(1);
+  });
+
+  it("waits for the active response to finish after tool output", () => {
+    const requestResponse = jest.fn();
+    const coordinator = new ToolResponseCoordinator(requestResponse);
+
+    coordinator.responseStarted();
+    coordinator.toolStarted();
+    coordinator.toolFinished();
+
+    expect(requestResponse).not.toHaveBeenCalled();
+
+    coordinator.responseFinished();
+
+    expect(requestResponse).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not request another response without tool output", () => {
+    const requestResponse = jest.fn();
+    const coordinator = new ToolResponseCoordinator(requestResponse);
+
+    coordinator.responseStarted();
+    coordinator.responseFinished();
+
+    expect(requestResponse).not.toHaveBeenCalled();
   });
 });

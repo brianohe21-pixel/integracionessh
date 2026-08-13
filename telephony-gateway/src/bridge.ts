@@ -59,6 +59,41 @@ function sendJson(ws: WebSocket, payload: Record<string, unknown>): void {
   }
 }
 
+export class ToolResponseCoordinator {
+  private pendingTools = 0;
+  private responseActive = false;
+  private responseRequired = false;
+
+  constructor(private readonly requestResponse: () => void) {}
+
+  responseStarted(): void {
+    this.responseActive = true;
+  }
+
+  responseFinished(): void {
+    this.responseActive = false;
+    this.flush();
+  }
+
+  toolStarted(): void {
+    this.pendingTools += 1;
+    this.responseActive = true;
+    this.responseRequired = true;
+  }
+
+  toolFinished(): void {
+    this.pendingTools = Math.max(0, this.pendingTools - 1);
+    this.flush();
+  }
+
+  private flush(): void {
+    if (!this.responseRequired || this.responseActive || this.pendingTools > 0) return;
+    this.responseRequired = false;
+    this.responseActive = true;
+    this.requestResponse();
+  }
+}
+
 async function getBot(tenantId: string, botId: string): Promise<Bot | null> {
   const result = await docClient.send(
     new GetCommand({
@@ -594,6 +629,9 @@ export async function runTelephonyBridge(
       });
       openaiWs = socket;
       openaiSocket = socket;
+      const toolResponseCoordinator = new ToolResponseCoordinator(() => {
+        sendJson(socket, { type: "response.create" });
+      });
 
       socket.on("open", () => {
         sendJson(
@@ -629,6 +667,11 @@ export async function runTelephonyBridge(
             return;
           }
 
+          if (data.type === "response.created") {
+            toolResponseCoordinator.responseStarted();
+            return;
+          }
+
           if (
             data.type === "conversation.item.input_audio_transcription.completed" &&
             data.transcript
@@ -639,6 +682,7 @@ export async function runTelephonyBridge(
           }
 
           if (data.type === "response.done" && data.response) {
+            toolResponseCoordinator.responseFinished();
             const usage = data.response.usage;
             if (usage) {
               openaiInputTokens += usage.input_tokens ?? 0;
@@ -659,43 +703,56 @@ export async function runTelephonyBridge(
           }
 
           if (data.type === "response.function_call_arguments.done" && data.name && data.call_id) {
+            toolResponseCoordinator.toolStarted();
             const toolStartedAt = Date.now();
-            const result = await executeTelephonyTool({
-              tenantId: session.tenantId,
-              botId: session.botId,
-              conversationId: session.conversationId,
-              participantId: session.participantId,
-              locale: session.locale,
-              name: data.name,
-              arguments: data.arguments ?? "{}",
-            });
-            const toolLatencyMs = Date.now() - toolStartedAt;
-            const toolOutcome = parseToolExecutionResult(result.output);
-            void reportToolExecution({
-              tenantId: session.tenantId,
-              botId: session.botId,
-              callId: session.callId,
-              toolName: data.name,
-              latencyMs: toolLatencyMs,
-              success: toolOutcome.success,
-              ...(toolOutcome.statusCode !== undefined
-                ? { statusCode: toolOutcome.statusCode }
-                : {}),
-              ...(toolOutcome.error ? { error: toolOutcome.error } : {}),
-            });
+            try {
+              let result: Awaited<ReturnType<typeof executeTelephonyTool>>;
+              try {
+                result = await executeTelephonyTool({
+                  tenantId: session.tenantId,
+                  botId: session.botId,
+                  conversationId: session.conversationId,
+                  participantId: session.participantId,
+                  locale: session.locale,
+                  name: data.name,
+                  arguments: data.arguments ?? "{}",
+                });
+              } catch (error) {
+                console.error(`Tool execution failed for ${data.name}:`, error);
+                result = {
+                  output: JSON.stringify({ error: "Tool execution failed" }),
+                };
+              }
 
-            sendJson(socket, {
-              type: "conversation.item.create",
-              item: {
-                type: "function_call_output",
-                call_id: data.call_id,
-                output: result.output,
-              },
-            });
-            sendJson(socket, { type: "response.create" });
+              const toolLatencyMs = Date.now() - toolStartedAt;
+              const toolOutcome = parseToolExecutionResult(result.output);
+              void reportToolExecution({
+                tenantId: session.tenantId,
+                botId: session.botId,
+                callId: session.callId,
+                toolName: data.name,
+                latencyMs: toolLatencyMs,
+                success: toolOutcome.success,
+                ...(toolOutcome.statusCode !== undefined
+                  ? { statusCode: toolOutcome.statusCode }
+                  : {}),
+                ...(toolOutcome.error ? { error: toolOutcome.error } : {}),
+              });
 
-            if (result.handoff) {
-              beginDrain();
+              sendJson(socket, {
+                type: "conversation.item.create",
+                item: {
+                  type: "function_call_output",
+                  call_id: data.call_id,
+                  output: result.output,
+                },
+              });
+
+              if (result.handoff) {
+                beginDrain();
+              }
+            } finally {
+              toolResponseCoordinator.toolFinished();
             }
             return;
           }
