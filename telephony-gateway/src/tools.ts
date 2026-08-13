@@ -92,6 +92,67 @@ export async function executeTelephonyTool(params: {
   }
 }
 
+export function parseToolExecutionResult(output: string): {
+  success: boolean;
+  statusCode?: number;
+  error?: string;
+} {
+  try {
+    const parsed = JSON.parse(output) as Record<string, unknown>;
+    if (typeof parsed.error === "string" && parsed.error.trim()) {
+      return { success: false, error: parsed.error.trim() };
+    }
+    const statusCode = typeof parsed.status === "number" ? parsed.status : undefined;
+    if (parsed.ok === false || (statusCode !== undefined && statusCode >= 400)) {
+      return {
+        success: false,
+        statusCode,
+        error: typeof parsed.error === "string" ? parsed.error : undefined,
+      };
+    }
+    return {
+      success: true,
+      ...(statusCode !== undefined ? { statusCode } : {}),
+    };
+  } catch {
+    return { success: false, error: "Invalid tool response" };
+  }
+}
+
+export async function reportToolExecution(params: {
+  tenantId: string;
+  botId: string;
+  callId: string;
+  toolName: string;
+  latencyMs: number;
+  success: boolean;
+  statusCode?: number;
+  error?: string;
+}): Promise<void> {
+  if (!lambdaName) return;
+
+  await lambdaClient.send(
+    new InvokeCommand({
+      FunctionName: lambdaName,
+      InvocationType: "Event",
+      Payload: Buffer.from(
+        JSON.stringify({
+          source: "telephony-gateway",
+          action: "report_tool_execution",
+          tenantId: params.tenantId,
+          botId: params.botId,
+          callId: params.callId,
+          toolName: params.toolName,
+          latencyMs: params.latencyMs,
+          success: params.success,
+          ...(params.statusCode !== undefined ? { statusCode: params.statusCode } : {}),
+          ...(params.error ? { error: params.error } : {}),
+        })
+      ),
+    })
+  );
+}
+
 export async function reportCallUsage(params: {
   tenantId: string;
   botId: string;

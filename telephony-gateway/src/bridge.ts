@@ -5,7 +5,14 @@ import { isCalendarEnabled } from "./calendar.js";
 import { docClient, tableName } from "./dynamo.js";
 import { persistPhoneMessage } from "./messages.js";
 import { getElevenLabsApiKey, getOpenAIApiKey } from "./secrets.js";
-import { buildRealtimeTools, executeTelephonyTool, fetchVoiceRuntime, reportCallUsage } from "./tools.js";
+import {
+  buildRealtimeTools,
+  executeTelephonyTool,
+  fetchVoiceRuntime,
+  parseToolExecutionResult,
+  reportCallUsage,
+  reportToolExecution,
+} from "./tools.js";
 import type { Bot, TelephonySession } from "./types.js";
 
 type OpenAIEvent = {
@@ -652,6 +659,7 @@ export async function runTelephonyBridge(
           }
 
           if (data.type === "response.function_call_arguments.done" && data.name && data.call_id) {
+            const toolStartedAt = Date.now();
             const result = await executeTelephonyTool({
               tenantId: session.tenantId,
               botId: session.botId,
@@ -660,6 +668,20 @@ export async function runTelephonyBridge(
               locale: session.locale,
               name: data.name,
               arguments: data.arguments ?? "{}",
+            });
+            const toolLatencyMs = Date.now() - toolStartedAt;
+            const toolOutcome = parseToolExecutionResult(result.output);
+            void reportToolExecution({
+              tenantId: session.tenantId,
+              botId: session.botId,
+              callId: session.callId,
+              toolName: data.name,
+              latencyMs: toolLatencyMs,
+              success: toolOutcome.success,
+              ...(toolOutcome.statusCode !== undefined
+                ? { statusCode: toolOutcome.statusCode }
+                : {}),
+              ...(toolOutcome.error ? { error: toolOutcome.error } : {}),
             });
 
             sendJson(socket, {

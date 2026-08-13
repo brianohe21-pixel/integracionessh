@@ -1,4 +1,4 @@
-import { buildRealtimeTools } from "./tools.js";
+import { buildRealtimeTools, parseToolExecutionResult } from "./tools.js";
 
 describe("telephony gateway tools", () => {
   it("includes knowledge and calendar tools when enabled", () => {
@@ -32,5 +32,20 @@ describe("telephony gateway tools", () => {
       handoffEnabled: false,
     });
     expect(tools).toEqual([]);
+  });
+
+  it("parses successful and failed tool outputs", () => {
+    expect(parseToolExecutionResult(JSON.stringify({ ok: true, status: 200 }))).toEqual({
+      success: true,
+      statusCode: 200,
+    });
+    expect(parseToolExecutionResult(JSON.stringify({ ok: false, status: 500 }))).toEqual({
+      success: false,
+      statusCode: 500,
+    });
+    expect(parseToolExecutionResult(JSON.stringify({ error: "timeout" }))).toEqual({
+      success: false,
+      error: "timeout",
+    });
   });
 });
