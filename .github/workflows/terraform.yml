@@ -127,6 +127,7 @@ jobs:
           TF_VAR_github_access_token: ${{ secrets.GH_ACCESS_TOKEN }}
           TF_VAR_whatsapp_verify_token: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
           TF_VAR_repository_url: ${{ vars.REPOSITORY_URL }}
+          TF_VAR_telephony_gateway_vpc_id: ${{ vars.TELEPHONY_GATEWAY_VPC_ID }}
           ENVIRONMENT: dev
           DRY_RUN: ${{ github.event_name == 'pull_request' && 'true' || 'false' }}
           SKIP_STATE_BACKUP: ${{ github.event_name == 'pull_request' && 'true' || 'false' }}
@@ -378,6 +379,7 @@ jobs:
           TF_VAR_github_access_token: ${{ secrets.GH_ACCESS_TOKEN }}
           TF_VAR_whatsapp_verify_token: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
           TF_VAR_repository_url: ${{ vars.REPOSITORY_URL }}
+          TF_VAR_telephony_gateway_vpc_id: ${{ vars.TELEPHONY_GATEWAY_VPC_ID }}
           ENVIRONMENT: prod
           DRY_RUN: "false"
           SKIP_STATE_BACKUP: "false"

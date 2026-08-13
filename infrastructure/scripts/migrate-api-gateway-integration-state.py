@@ -51,6 +51,15 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def terraform_command(*parts: str) -> list[str]:
+    command = ["terraform", "-input=false"]
+    tfvars = Path("terraform.tfvars")
+    if tfvars.is_file():
+        command.extend(["-var-file", str(tfvars)])
+    command.extend(parts)
+    return command
+
+
 def run(command: list[str], *, dry_run: bool = False, check: bool = True) -> str:
     action = " ".join(command)
     if dry_run:
@@ -64,7 +73,7 @@ def run(command: list[str], *, dry_run: bool = False, check: bool = True) -> str
 
 
 def state_resources() -> dict[str, dict[str, Any]]:
-    state = json.loads(run(["terraform", "show", "-json"]))
+    state = json.loads(run(terraform_command("show", "-json")))
     resources: dict[str, dict[str, Any]] = {}
 
     def collect(module: dict[str, Any]) -> None:
@@ -139,7 +148,7 @@ def backup_state(backup_dir: Path, *, dry_run: bool = False) -> Path | None:
     if dry_run:
         print(f"[dry-run] Would write Terraform state backup to {backup_path}")
         return backup_path
-    output = run(["terraform", "state", "pull"])
+    output = run(terraform_command("state", "pull"))
     backup_path.write_text(output)
     print(f"Terraform state backup written to {backup_path}")
     return backup_path
@@ -206,14 +215,14 @@ def move_existing_integrations(
 
         if canonical != target:
             print(f"Moving {canonical} -> {target}")
-            run(["terraform", "state", "mv", canonical, target], dry_run=dry_run)
+            run(terraform_command("state", "mv", canonical, target), dry_run=dry_run)
             moved += 1
 
         for address in group:
             if address == canonical or address == target:
                 continue
             print(f"Removing duplicate integration state: {address}")
-            run(["terraform", "state", "rm", address], dry_run=dry_run)
+            run(terraform_command("state", "rm", address), dry_run=dry_run)
             removed += 1
 
     return moved, removed
@@ -272,17 +281,15 @@ def reconcile_integrations(
         existing_address = state_address_by_id.get(integration_id)
         if existing_address:
             print(f"Moving {existing_address} -> {target_address}")
-            run(["terraform", "state", "mv", existing_address, target_address], dry_run=dry_run)
+            run(terraform_command("state", "mv", existing_address, target_address), dry_run=dry_run)
         else:
             print(f"Importing integration {integration_id} -> {target_address}")
             run(
-                [
-                    "terraform",
+                terraform_command(
                     "import",
-                    "-input=false",
                     target_address,
                     f"{gateway_id}/{integration_id}",
-                ],
+                ),
                 dry_run=dry_run,
             )
         imported += 1
@@ -303,7 +310,7 @@ def remove_noncanonical_integration_state(
         if address in canonical_addresses:
             continue
         print(f"Removing obsolete integration state: {address}")
-        run(["terraform", "state", "rm", address], dry_run=dry_run)
+        run(terraform_command("state", "rm", address), dry_run=dry_run)
         removed += 1
     return removed
 
@@ -340,17 +347,15 @@ def reconcile_routes(
         existing_address = state_address_by_id.get(route_id)
         if existing_address:
             print(f"Moving {existing_address} -> {target_address}")
-            run(["terraform", "state", "mv", existing_address, target_address], dry_run=dry_run)
+            run(terraform_command("state", "mv", existing_address, target_address), dry_run=dry_run)
         else:
             print(f"Importing route {route_id} -> {target_address}")
             run(
-                [
-                    "terraform",
+                terraform_command(
                     "import",
-                    "-input=false",
                     target_address,
                     f"{gateway_id}/{route_id}",
-                ],
+                ),
                 dry_run=dry_run,
             )
         imported += 1
