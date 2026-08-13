@@ -1,4 +1,5 @@
 import { formatCallDuration } from "@/hooks/useCallingMetrics";
+import { formatLatencyMs } from "@/lib/voice-agent-call-latency";
 import type { CallEvent, CallEventType } from "@/types";
 
 type TranslateFn = (key: string, values?: Record<string, string | number>) => string;
@@ -36,6 +37,16 @@ export function formatCallEventDetails(t: TranslateFn, event: CallEvent): string
       return t("voiceAgents.callEventMessage.costPending");
     }
     return null;
+  }
+
+  if (event.type === "tool_executed") {
+    const toolName =
+      typeof metadata.toolName === "string" ? metadata.toolName : event.message ?? "tool";
+    const latencyMs = typeof metadata.latencyMs === "number" ? metadata.latencyMs : 0;
+    return t("voiceAgents.callEventMessage.toolExecuted", {
+      toolName,
+      latency: formatLatencyMs(latencyMs),
+    });
   }
 
   if (event.type === "hangup" && typeof metadata.durationSeconds === "number") {

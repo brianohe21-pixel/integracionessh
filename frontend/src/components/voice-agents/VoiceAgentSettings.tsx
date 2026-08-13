@@ -14,7 +14,9 @@ import {
   type TelephonySettings,
 } from "@/hooks/useTelephony";
 import { useBot } from "@/hooks/useBots";
+import { useVoiceAgentTools } from "@/hooks/useVoiceAgentTools";
 import { useT } from "@/i18n/context";
+import { buildVoiceAgentToolPromptSnippet } from "@/lib/voice-agent-tool-secret-refs";
 import {
   DEFAULT_REALTIME_MODEL_ID,
   REALTIME_MODELS,
@@ -57,6 +59,7 @@ interface VoiceAgentSettingsProps {
 export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
   const t = useT();
   const { data: bot } = useBot(botId);
+  const { data: toolsData } = useVoiceAgentTools(botId);
   const { data, isLoading } = useTelephonySettings(botId);
   const { data: numbersData, isLoading: numbersLoading } = useTelephonyNumbers();
   const { data: voicesData } = useTelephonyVoices();
@@ -72,6 +75,18 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
   const [recordingEnabled, setRecordingEnabled] = useState(false);
   const [recordingNotice, setRecordingNotice] = useState("");
   const [handoffEnabled, setHandoffEnabled] = useState(false);
+  const enabledTools = (toolsData?.tools ?? []).filter((tool) => tool.enabled);
+
+  function insertToolIntoPrompt(toolId: string) {
+    const tool = enabledTools.find((item) => item.toolId === toolId);
+    if (!tool) return;
+    const snippet = buildVoiceAgentToolPromptSnippet(tool);
+    setSystemPrompt((current) => {
+      const trimmed = current.trim();
+      return trimmed ? `${trimmed}\n\n${snippet}` : snippet;
+    });
+  }
+
   const [showPromptModal, setShowPromptModal] = useState(false);
 
   useEffect(() => {
@@ -303,19 +318,40 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
               </label>
 
               <label className="block space-y-1">
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
                   <span className="text-sm font-medium text-secondary">
                     {t("telephony.systemPrompt")}
                   </span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowPromptModal(true)}
-                  >
-                    <Eye className="h-4 w-4" />
-                    {t("voiceAgents.viewPrompt")}
-                  </Button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {enabledTools.length > 0 ? (
+                      <select
+                        defaultValue=""
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (!value) return;
+                          insertToolIntoPrompt(value);
+                          e.currentTarget.value = "";
+                        }}
+                        className="rounded-lg border border-default px-2 py-1.5 text-sm"
+                      >
+                        <option value="">{t("voiceAgents.toolsInsertPrompt")}</option>
+                        {enabledTools.map((tool) => (
+                          <option key={tool.toolId} value={tool.toolId}>
+                            {tool.name}
+                          </option>
+                        ))}
+                      </select>
+                    ) : null}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowPromptModal(true)}
+                    >
+                      <Eye className="h-4 w-4" />
+                      {t("voiceAgents.viewPrompt")}
+                    </Button>
+                  </div>
                 </div>
                 <textarea
                   value={systemPrompt}

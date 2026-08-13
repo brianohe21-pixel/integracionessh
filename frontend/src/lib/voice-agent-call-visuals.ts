@@ -54,7 +54,7 @@ export function eventVariant(type: CallEvent["type"]) {
   ) {
     return "warning" as const;
   }
-  if (type === "initiated" || type === "hangup") return "info" as const;
+  if (type === "initiated" || type === "hangup" || type === "tool_executed") return "info" as const;
   return "accent" as const;
 }
 

@@ -14,11 +14,12 @@ import { VoiceAgentBotIdCopy } from "@/components/voice-agents/VoiceAgentBotIdCo
 import { VoiceAgentFlowPanel } from "@/components/voice-agents/VoiceAgentFlowPanel";
 import { VoiceAgentSetupChecklist } from "@/components/voice-agents/VoiceAgentSetupChecklist";
 import { VoiceAgentSummary } from "@/components/voice-agents/VoiceAgentSummary";
+import { VoiceAgentToolsPanel } from "@/components/voice-agents/VoiceAgentToolsPanel";
 import { VoiceAgentWebhookPanel } from "@/components/voice-agents/VoiceAgentWebhookPanel";
 import { useBot } from "@/hooks/useBots";
 import { useT } from "@/i18n/context";
 
-const TABS = ["overview", "flow", "config", "structuredOutputs", "calls", "webhooks", "test"] as const;
+const TABS = ["overview", "flow", "config", "tools", "structuredOutputs", "calls", "webhooks", "test"] as const;
 type TabId = (typeof TABS)[number];
 
 function isTabId(value: string | null): value is TabId {
@@ -96,6 +97,7 @@ export default function VoiceAgentDetailPage() {
       {tab === "overview" && <VoiceAgentSummary botId={botId} />}
       {tab === "flow" && <VoiceAgentFlowPanel botId={botId} />}
       {tab === "config" && <VoiceAgentSettings botId={botId} />}
+      {tab === "tools" && <VoiceAgentToolsPanel botId={botId} />}
       {tab === "structuredOutputs" && <VoiceAgentStructuredOutputsPanel botId={botId} />}
       {tab === "calls" && <VoiceAgentCallsTable botId={botId} />}
       {tab === "webhooks" && <VoiceAgentWebhookPanel botId={botId} />}

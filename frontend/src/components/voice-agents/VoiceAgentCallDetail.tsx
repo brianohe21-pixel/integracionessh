@@ -20,6 +20,11 @@ import {
   formatLatencyMs,
 } from "@/lib/voice-agent-call-latency";
 import {
+  buildCallToolLatencySummary,
+  buildToolLatencyBarPoints,
+  formatToolLatencyDetail,
+} from "@/lib/voice-agent-call-tool-latency";
+import {
   buildCostSlices,
   buildSetupLatencyChart,
   buildTurnLatencyChart,
@@ -45,7 +50,7 @@ interface VoiceAgentCallDetailProps {
   onClose: () => void;
 }
 
-type CallDetailTab = "summary" | "costs" | "latency" | "timeline";
+type CallDetailTab = "summary" | "costs" | "latency" | "toolLatency" | "timeline";
 
 function formatUsd(value?: number): string {
   if (value === undefined) return "—";
@@ -92,6 +97,7 @@ export function VoiceAgentCallDetail({ botId, call: previewCall, open, onClose }
     messages: transcript,
     durationSeconds: call?.duration,
   });
+  const toolLatency = buildCallToolLatencySummary(events);
 
   const costSlices = useMemo(
     () =>
@@ -122,6 +128,10 @@ export function VoiceAgentCallDetail({ botId, call: previewCall, open, onClose }
   );
 
   const turnLatencyChart = useMemo(() => buildTurnLatencyChart(latency.turns), [latency.turns]);
+  const toolLatencyChart = useMemo(
+    () => buildToolLatencyBarPoints(toolLatency.entries),
+    [toolLatency.entries]
+  );
 
   useEffect(() => {
     setMounted(true);
@@ -146,6 +156,11 @@ export function VoiceAgentCallDetail({ botId, call: previewCall, open, onClose }
     { id: "summary" as const, label: t("voiceAgents.callDetailTabSummary") },
     { id: "costs" as const, label: t("voiceAgents.callDetailTabCosts") },
     { id: "latency" as const, label: t("voiceAgents.callDetailTabLatency") },
+    {
+      id: "toolLatency" as const,
+      label: t("voiceAgents.callDetailTabToolLatency"),
+      count: toolLatency.entries.length > 0 ? toolLatency.entries.length : undefined,
+    },
     { id: "timeline" as const, label: t("voiceAgents.eventTimeline"), count: events.length },
   ];
 
@@ -451,6 +466,124 @@ export function VoiceAgentCallDetail({ botId, call: previewCall, open, onClose }
                   </>
                 )}
               </div>
+          </div>
+
+          <div
+            className={cn(
+              "min-h-0 flex-1 space-y-5 overflow-y-auto",
+              activeTab !== "toolLatency" && "hidden"
+            )}
+          >
+            {eventsLoading ? (
+              <p className="text-sm text-secondary">{t("common.loading")}</p>
+            ) : toolLatency.entries.length === 0 ? (
+              <p className="text-sm text-secondary">{t("voiceAgents.toolLatencyNoData")}</p>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: t("voiceAgents.toolLatencyAvg"), value: toolLatency.avgLatencyMs },
+                    { label: t("voiceAgents.toolLatencyMax"), value: toolLatency.maxLatencyMs },
+                    {
+                      label: t("voiceAgents.toolLatencySuccessCount"),
+                      value: toolLatency.successCount,
+                      format: (v: number) => String(v),
+                    },
+                    {
+                      label: t("voiceAgents.toolLatencyFailureCount"),
+                      value: toolLatency.failureCount,
+                      format: (v: number) => String(v),
+                    },
+                  ].map((metric) => {
+                    const displayValue =
+                      typeof metric.value === "number"
+                        ? metric.format
+                          ? metric.format(metric.value)
+                          : formatLatencyMs(metric.value)
+                        : "—";
+                    return (
+                      <div
+                        key={metric.label}
+                        className="rounded-xl border border-default bg-surface p-3"
+                      >
+                        <p className="text-xs text-secondary">{metric.label}</p>
+                        <p className="mt-1 text-lg font-semibold text-primary">{displayValue}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="rounded-xl border border-default bg-surface p-4">
+                  <h4 className="mb-2 text-sm font-semibold text-primary">
+                    {t("voiceAgents.toolLatencyChartTitle")}
+                  </h4>
+                  <CallTurnLatencyBarChart
+                    data={toolLatencyChart}
+                    cappedLabel={t("voiceAgents.latencyChartCapped")}
+                  />
+                  <ul className="mt-3 space-y-2">
+                    {toolLatency.entries.map((entry, index) => (
+                      <li
+                        key={`${entry.createdAt}-${entry.toolName}-${index}`}
+                        className="flex items-center justify-between gap-3 rounded-lg border border-subtle px-3 py-2 text-sm"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge variant="accent">{entry.toolName}</Badge>
+                            <Badge variant={entry.success ? "success" : "danger"} dot>
+                              {entry.success
+                                ? t("voiceAgents.toolLatencyStatusSuccess")
+                                : t("voiceAgents.toolLatencyStatusFailure")}
+                            </Badge>
+                            <span className="text-xs text-secondary">
+                              {t("voiceAgents.toolLatencyInvocationLabel", { index: index + 1 })}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-xs text-secondary">
+                            {formatToolLatencyDetail(entry)}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-medium text-primary">
+                            {formatLatencyMs(entry.latencyMs)}
+                          </span>
+                          <p className="text-[10px] text-secondary">
+                            {new Date(entry.createdAt).toLocaleTimeString()}
+                          </p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {toolLatency.byTool.length > 0 && (
+                  <div className="rounded-xl border border-default bg-surface p-4">
+                    <h4 className="mb-3 text-sm font-semibold text-primary">
+                      {t("voiceAgents.toolLatencyByToolTitle")}
+                    </h4>
+                    <ul className="space-y-2">
+                      {toolLatency.byTool.map((tool) => (
+                        <li
+                          key={tool.toolName}
+                          className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-subtle px-3 py-2 text-sm"
+                        >
+                          <span className="font-medium text-primary">{tool.toolName}</span>
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-secondary">
+                            <span>{tool.count}×</span>
+                            <span>{formatLatencyMs(tool.avgLatencyMs)} avg</span>
+                            <span>{formatLatencyMs(tool.maxLatencyMs)} max</span>
+                            <Badge variant="success" dot>{tool.successCount}</Badge>
+                            {tool.failureCount > 0 && (
+                              <Badge variant="danger" dot>{tool.failureCount}</Badge>
+                            )}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </>
+            )}
           </div>
 
           <div

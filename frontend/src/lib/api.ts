@@ -49,16 +49,23 @@ async function request<T>(
   assertApiBaseUrl();
   const authHeader = await getAuthHeader();
 
-  const response = await fetch(`${BASE_URL}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeader,
-      ...getTenantContextHeader(),
-      ...getPortalHostHeader(),
-      ...options.headers,
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${BASE_URL}${path}`, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeader,
+        ...getTenantContextHeader(),
+        ...getPortalHostHeader(),
+        ...options.headers,
+      },
+    });
+  } catch {
+    throw new Error(
+      `Network error calling ${BASE_URL}${path}. Check API URL, CORS, and that the route is deployed.`
+    );
+  }
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: "Unknown error" }));
