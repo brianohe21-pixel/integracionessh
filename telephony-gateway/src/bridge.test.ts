@@ -5,6 +5,7 @@ import {
   isInboundTelnyxMedia,
   resolveGreeting,
   resolveInstructions,
+  TELEPHONY_IDLE_REPROMPT_MS,
   TELEPHONY_TTS_DRAIN_TIMEOUT_MS,
   TELEPHONY_TURN_DETECTION,
   ToolResponseCoordinator,
@@ -14,6 +15,7 @@ import type { Bot } from "./types.js";
 describe("telephony bridge", () => {
   it("accepts inbound media and legacy frames without track", () => {
     expect(isInboundTelnyxMedia("inbound")).toBe(true);
+    expect(isInboundTelnyxMedia("inbound_track")).toBe(true);
     expect(isInboundTelnyxMedia(undefined)).toBe(true);
   });
 
@@ -100,6 +102,9 @@ describe("telephony bridge", () => {
       (session.audio as { input: { turn_detection: typeof TELEPHONY_TURN_DETECTION } }).input
         .turn_detection
     ).toEqual(TELEPHONY_TURN_DETECTION);
+    expect(TELEPHONY_TURN_DETECTION.threshold).toBe(0.48);
+    expect(TELEPHONY_TURN_DETECTION.interrupt_response).toBe(true);
+    expect(TELEPHONY_IDLE_REPROMPT_MS).toBe(8_000);
     expect(
       (session.audio as { input: { transcription: { language: string } } }).input.transcription
         .language

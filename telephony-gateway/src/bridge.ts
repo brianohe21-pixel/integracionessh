@@ -23,6 +23,12 @@ type OpenAIEvent = {
   arguments?: string;
   call_id?: string;
   event_id?: string;
+  item_id?: string;
+  error?: {
+    type?: string;
+    code?: string;
+    message?: string;
+  };
   response?: {
     id?: string;
     usage?: {
@@ -40,6 +46,8 @@ type OpenAIEvent = {
 
 type TelnyxInboundEvent = {
   event?: string;
+  stream_id?: string;
+  start?: { stream_id?: string };
   media?: { payload?: string; track?: string };
 };
 
@@ -84,6 +92,10 @@ export class ToolResponseCoordinator {
   toolFinished(): void {
     this.pendingTools = Math.max(0, this.pendingTools - 1);
     this.flush();
+  }
+
+  hasActiveResponse(): boolean {
+    return this.responseActive;
   }
 
   private flush(): void {
@@ -167,7 +179,7 @@ export function resolveGreeting(bot: Bot, locale: TelephonySession["locale"]): s
 
 export function isInboundTelnyxMedia(track?: string): boolean {
   if (!track) return true;
-  return track === "inbound";
+  return track === "inbound" || track === "inbound_track";
 }
 
 export function buildOpenAISessionUpdate(params: {
@@ -213,13 +225,15 @@ export function isFatalElevenLabsError(error: string): boolean {
 
 export const TELEPHONY_TTS_DRAIN_TIMEOUT_MS = 30_000;
 export const ELEVENLABS_KEEPALIVE_MS = 10_000;
+export const TELEPHONY_IDLE_REPROMPT_MS = 8_000;
 
 export const TELEPHONY_TURN_DETECTION = {
   type: "server_vad" as const,
-  threshold: 0.65,
-  prefix_padding_ms: 300,
-  silence_duration_ms: 500,
+  threshold: 0.48,
+  prefix_padding_ms: 400,
+  silence_duration_ms: 450,
   create_response: true,
+  interrupt_response: true,
 };
 
 export function estimateSpeechDrainMs(charCount: number): number {
@@ -304,8 +318,13 @@ export async function runTelephonyBridge(
   let openaiHandlerCount = 0;
   let ttsQueue: Promise<boolean> = Promise.resolve(true);
   let streamReady = false;
+  let telnyxStreamId: string | undefined;
+  let mediaTrackLogged = false;
   let greetingSent = false;
+  let speechEpoch = 0;
+  let idleRepromptTimer: NodeJS.Timeout | null = null;
   const spokenResponseIds = new Set<string>();
+  const interruptedElevenSockets = new Set<WebSocket>();
   const pendingTelnyxAudio: string[] = [];
   let openaiInputTokens = 0;
   let openaiOutputTokens = 0;
@@ -314,11 +333,36 @@ export async function runTelephonyBridge(
   let activeSpeechComplete: (() => void) | null = null;
 
   const completeActiveSpeech = () => {
+    speaking = false;
     if (!activeSpeechComplete) return;
     const resolve = activeSpeechComplete;
     activeSpeechComplete = null;
-    speaking = false;
     resolve();
+  };
+
+  const clearIdleReprompt = () => {
+    if (!idleRepromptTimer) return;
+    clearTimeout(idleRepromptTimer);
+    idleRepromptTimer = null;
+  };
+
+  const interruptSpeech = () => {
+    const wasSpeaking = speaking;
+    speechEpoch += 1;
+    clearIdleReprompt();
+    pendingTelnyxAudio.length = 0;
+    sendJson(telnyxWs, {
+      event: "clear",
+      ...(telnyxStreamId ? { stream_id: telnyxStreamId } : {}),
+    });
+    if (!wasSpeaking) return;
+    const socket = elevenWs;
+    if (socket?.readyState === WebSocket.OPEN) {
+      interruptedElevenSockets.add(socket);
+      elevenWs = null;
+      socket.close();
+    }
+    completeActiveSpeech();
   };
 
   const reportUsageOnce = () => {
@@ -365,6 +409,7 @@ export async function runTelephonyBridge(
       const spoke = await speakText(greeting);
       if (spoke) {
         await persistTranscript("assistant", greeting, `greeting-${session.callId}`);
+        scheduleIdleReprompt();
       }
     })();
   };
@@ -393,6 +438,7 @@ export async function runTelephonyBridge(
     if (closed) return;
     closed = true;
     draining = true;
+    clearIdleReprompt();
     reportUsageOnce();
     if (openaiWs?.readyState === WebSocket.OPEN) openaiWs.close();
     if (elevenWs?.readyState === WebSocket.OPEN) elevenWs.close();
@@ -429,11 +475,11 @@ export async function runTelephonyBridge(
     );
   };
 
-  const speakTextOnce = async (text: string): Promise<boolean> => {
+  const speakTextOnce = async (text: string, epoch: number): Promise<boolean> => {
     const trimmed = text.trim();
-    if (!trimmed || closed) return false;
+    if (!trimmed || closed || epoch !== speechEpoch) return false;
     const socket = await ensureElevenLabs();
-    if (!socket) return false;
+    if (!socket || epoch !== speechEpoch) return false;
 
     speaking = true;
     elevenlabsCharacters += trimmed.length;
@@ -448,6 +494,7 @@ export async function runTelephonyBridge(
     );
     flushElevenLabs();
     await Promise.race([playbackDone, waitForSpeechPlayback(trimmed.length)]);
+    if (epoch !== speechEpoch) return false;
     completeActiveSpeech();
     return true;
   };
@@ -455,7 +502,11 @@ export async function runTelephonyBridge(
   const speakText = (text: string): Promise<boolean> => {
     const trimmed = text.trim();
     if (!trimmed || closed) return Promise.resolve(false);
-    const next = ttsQueue.then(() => speakTextOnce(trimmed), () => speakTextOnce(trimmed));
+    const epoch = speechEpoch;
+    const next = ttsQueue.then(
+      () => speakTextOnce(trimmed, epoch),
+      () => speakTextOnce(trimmed, epoch)
+    );
     ttsQueue = next.then(
       () => true,
       () => false
@@ -463,12 +514,39 @@ export async function runTelephonyBridge(
     return next;
   };
 
+  const scheduleIdleReprompt = () => {
+    clearIdleReprompt();
+    if (closed || draining) return;
+    idleRepromptTimer = setTimeout(() => {
+      idleRepromptTimer = null;
+      if (closed || draining || speaking) return;
+      const text =
+        session.locale === "en"
+          ? "Are you still there? Tell me how I can help."
+          : "¿Sigues ahí? Dime cómo puedo ayudarte.";
+      void (async () => {
+        const epoch = speechEpoch;
+        const spoke = await speakText(text);
+        if (spoke && epoch === speechEpoch) {
+          await persistTranscript("assistant", text, `idle-${randomUUID()}`);
+        }
+      })();
+    }, TELEPHONY_IDLE_REPROMPT_MS);
+  };
+
   const flushAssistantResponse = async (text: string, eventId?: string) => {
     const trimmed = text.trim();
     if (!trimmed) return;
+    clearIdleReprompt();
+    const epoch = speechEpoch;
     const spoke = await speakText(trimmed);
     if (spoke) {
       await persistTranscript("assistant", trimmed, eventId ?? randomUUID());
+      scheduleIdleReprompt();
+      return;
+    }
+    if (epoch !== speechEpoch) {
+      console.log(`Assistant speech interrupted for call ${session.callId}`);
       return;
     }
     if (!draining && !closed) {
@@ -490,15 +568,19 @@ export async function runTelephonyBridge(
 
   handleTelnyxEvent = (data: TelnyxInboundEvent) => {
     if (data.event === "start" || data.event === "connected") {
+      telnyxStreamId = data.stream_id ?? data.start?.stream_id ?? telnyxStreamId;
       markStreamReady();
       return;
     }
 
-    if (
-      data.event === "media" &&
-      data.media?.payload &&
-      isInboundTelnyxMedia(data.media.track)
-    ) {
+    if (data.event === "media" && data.media?.payload) {
+      if (!mediaTrackLogged) {
+        mediaTrackLogged = true;
+        console.log(
+          `Telnyx media track for call ${session.callId}: ${data.media.track ?? "legacy"}`
+        );
+      }
+      if (!isInboundTelnyxMedia(data.media.track)) return;
       if (!streamReady) {
         markStreamReady();
       }
@@ -581,6 +663,7 @@ export async function runTelephonyBridge(
           if (isFatalElevenLabsError(data.error)) elevenUnavailable = true;
           return;
         }
+        if (socket !== elevenWs) return;
         if (data.audio) {
           sendTelnyxMedia(data.audio);
         }
@@ -591,9 +674,10 @@ export async function runTelephonyBridge(
 
       socket.on("close", (code, reason) => {
         stopKeepalive();
+        const interrupted = interruptedElevenSockets.delete(socket);
         if (elevenWs === socket) elevenWs = null;
         resolveSpeechComplete();
-        if (!closed) {
+        if (!closed && !interrupted) {
           console.error(
             `ElevenLabs socket closed for call ${session.callId} code=${code} reason=${String(reason)}`
           );
@@ -672,10 +756,42 @@ export async function runTelephonyBridge(
             return;
           }
 
-          if (
-            data.type === "conversation.item.input_audio_transcription.completed" &&
-            data.transcript
-          ) {
+          if (data.type === "input_audio_buffer.speech_started") {
+            console.log(
+              `OpenAI speech started for call ${session.callId} item=${data.item_id ?? "unknown"}`
+            );
+            interruptSpeech();
+            return;
+          }
+
+          if (data.type === "input_audio_buffer.speech_stopped") {
+            console.log(
+              `OpenAI speech stopped for call ${session.callId} item=${data.item_id ?? "unknown"}`
+            );
+            return;
+          }
+
+          if (data.type === "conversation.item.input_audio_transcription.failed") {
+            clearIdleReprompt();
+            console.error(
+              `OpenAI transcription failed for call ${session.callId}: ${data.error?.message ?? data.error?.code ?? "unknown error"}`
+            );
+            scheduleIdleReprompt();
+            return;
+          }
+
+          if (data.type === "conversation.item.input_audio_transcription.completed") {
+            clearIdleReprompt();
+            if (!data.transcript?.trim()) {
+              console.warn(
+                `OpenAI transcription was empty for call ${session.callId} item=${data.item_id ?? "unknown"}`
+              );
+              scheduleIdleReprompt();
+              return;
+            }
+            console.log(
+              `OpenAI transcription completed for call ${session.callId} item=${data.item_id ?? "unknown"}`
+            );
             openaiInputTokens += Math.ceil(data.transcript.length / 4);
             await persistTranscript("user", data.transcript, data.event_id ?? randomUUID());
             return;
