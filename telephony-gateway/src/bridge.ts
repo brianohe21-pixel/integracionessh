@@ -225,7 +225,7 @@ export function isFatalElevenLabsError(error: string): boolean {
 
 export const TELEPHONY_TTS_DRAIN_TIMEOUT_MS = 30_000;
 export const ELEVENLABS_KEEPALIVE_MS = 10_000;
-export const TELEPHONY_IDLE_REPROMPT_MS = 8_000;
+export const TELEPHONY_IDLE_REPROMPT_MS = 15_000;
 
 export const TELEPHONY_TURN_DETECTION = {
   type: "server_vad" as const,
@@ -248,6 +248,10 @@ export function shouldAcceptUserTranscript(params: {
   if (!params.speaking) return true;
   const now = params.now ?? Date.now();
   return now - params.speakingStartedAt >= TELEPHONY_BARGE_IN_ECHO_GUARD_MS;
+}
+
+export function shouldSkipIdleReprompt(text: string): boolean {
+  return text.includes("?");
 }
 
 export function estimateSpeechDrainMs(charCount: number): number {
@@ -425,7 +429,7 @@ export async function runTelephonyBridge(
       const spoke = await speakText(greeting);
       if (spoke) {
         await persistTranscript("assistant", greeting, `greeting-${session.callId}`);
-        scheduleIdleReprompt();
+        scheduleIdleReprompt(greeting);
       }
     })();
   };
@@ -531,9 +535,10 @@ export async function runTelephonyBridge(
     return next;
   };
 
-  const scheduleIdleReprompt = () => {
+  const scheduleIdleReprompt = (lastAssistantText?: string) => {
     clearIdleReprompt();
     if (closed || draining) return;
+    if (lastAssistantText && shouldSkipIdleReprompt(lastAssistantText)) return;
     idleRepromptTimer = setTimeout(() => {
       idleRepromptTimer = null;
       if (closed || draining || speaking) return;
@@ -559,7 +564,7 @@ export async function runTelephonyBridge(
     const spoke = await speakText(trimmed);
     if (spoke) {
       await persistTranscript("assistant", trimmed, eventId ?? randomUUID());
-      scheduleIdleReprompt();
+      scheduleIdleReprompt(trimmed);
       return;
     }
     if (epoch !== speechEpoch) {
@@ -814,6 +819,9 @@ export async function runTelephonyBridge(
                 console.warn(
                   `Ignoring echo transcription for call ${session.callId} item=${data.item_id ?? "unknown"}`
                 );
+                if (openaiWs?.readyState === WebSocket.OPEN) {
+                  sendJson(openaiWs, { type: "response.cancel" });
+                }
               }
               return;
             }

@@ -10,6 +10,7 @@ import {
   TELEPHONY_IDLE_REPROMPT_MS,
   TELEPHONY_TTS_DRAIN_TIMEOUT_MS,
   TELEPHONY_TURN_DETECTION,
+  shouldSkipIdleReprompt,
   ToolResponseCoordinator,
 } from "./bridge.js";
 import type { Bot } from "./types.js";
@@ -107,7 +108,7 @@ describe("telephony bridge", () => {
     expect(TELEPHONY_TURN_DETECTION.threshold).toBe(0.65);
     expect(TELEPHONY_TURN_DETECTION.interrupt_response).toBe(false);
     expect(TELEPHONY_TURN_DETECTION.silence_duration_ms).toBe(550);
-    expect(TELEPHONY_IDLE_REPROMPT_MS).toBe(8_000);
+    expect(TELEPHONY_IDLE_REPROMPT_MS).toBe(15_000);
     expect(
       (session.audio as { input: { transcription: { language: string } } }).input.transcription
         .language
@@ -147,6 +148,13 @@ describe("telephony bridge", () => {
         now: 1_000,
       })
     ).toBe(false);
+  });
+
+  it("skips idle reprompt after a question", () => {
+    expect(shouldSkipIdleReprompt("La tarifa es 35 soles. ¿Deseas confirmar el servicio?")).toBe(
+      true
+    );
+    expect(shouldSkipIdleReprompt("Tu taxi quedó solicitado.")).toBe(false);
   });
 
   it("estimates speech drain time with bounds", () => {
