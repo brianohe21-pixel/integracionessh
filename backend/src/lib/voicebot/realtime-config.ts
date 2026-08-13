@@ -2,6 +2,7 @@ import type { Bot, BotLocale } from "../../types/index.js";
 import { getCalendarConfig } from "../dynamodb/calendar-config.repository.js";
 import { getZonedParts } from "../calendar/slot-engine.js";
 import { getSystemMessage, intlLocaleForBot } from "../i18n/index.js";
+import { loadVoiceFlowRuntime } from "../flow/voice-flow-runtime.js";
 import {
   DEFAULT_REALTIME_MODEL_ID,
   resolveRealtimeModelId,
@@ -191,17 +192,30 @@ export async function buildRealtimeSessionConfig(params: {
   tenantId: string;
   locale: BotLocale;
 }): Promise<Record<string, unknown>> {
-  const calendarConfig = await getCalendarConfig(params.tenantId, params.bot.botId);
-  const instructions = await buildVoicebotInstructions({
-    ...params,
-    handoffEnabled: true,
-  });
-  const tools = buildVoicebotTools({
+  const voiceRuntime = await loadVoiceFlowRuntime({
+    tenantId: params.tenantId,
+    botId: params.bot.botId,
     locale: params.locale,
-    knowledgeEnabled: Boolean(params.bot.knowledgeEnabled),
-    calendarEnabled: Boolean(calendarConfig?.enabled),
-    handoffEnabled: true,
   });
+
+  const calendarConfig = await getCalendarConfig(params.tenantId, params.bot.botId);
+  const handoffEnabled = voiceRuntime?.hasHandoff ?? true;
+  const instructions = voiceRuntime
+    ? voiceRuntime.instructions
+    : await buildVoicebotInstructions({
+        bot: params.bot,
+        tenantId: params.tenantId,
+        locale: params.locale,
+        handoffEnabled,
+      });
+  const tools =
+    voiceRuntime?.tools ??
+    buildVoicebotTools({
+      locale: params.locale,
+      knowledgeEnabled: Boolean(params.bot.knowledgeEnabled),
+      calendarEnabled: Boolean(calendarConfig?.enabled),
+      handoffEnabled,
+    });
 
   return {
     type: "realtime",

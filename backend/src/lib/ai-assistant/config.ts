@@ -1,7 +1,32 @@
 import type { AiAssistantConfig, Bot } from "../../types/index.js";
+import { DEFAULT_MODEL_ID } from "../ai/models.js";
+
+const DEFAULT_AI_ASSISTANT_PROMPT =
+  "You are a helpful virtual assistant. Reply clearly and professionally.";
 
 export function isAiAssistantEnabled(bot: Bot): boolean {
   return bot.responseMode === "openai";
+}
+
+export function buildAiAssistantAutoEnableUpdates(
+  bot: Bot
+): Partial<Omit<Bot, "tenantId" | "botId" | "createdAt">> {
+  if (isAiAssistantEnabled(bot)) return {};
+
+  const systemPrompt =
+    bot.telephonySystemPrompt?.trim() ||
+    bot.voicebotSystemPrompt?.trim() ||
+    bot.systemPrompt?.trim() ||
+    DEFAULT_AI_ASSISTANT_PROMPT;
+
+  return {
+    responseMode: "openai",
+    systemPrompt,
+    model: bot.model ?? DEFAULT_MODEL_ID,
+    temperature: bot.temperature ?? 0.7,
+    maxTokens: bot.maxTokens ?? 1024,
+    ...(bot.aiProvider ? { aiProvider: bot.aiProvider } : {}),
+  };
 }
 
 export function toAiAssistantConfig(bot: Bot): AiAssistantConfig {

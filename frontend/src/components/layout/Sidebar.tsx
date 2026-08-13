@@ -765,7 +765,7 @@ export function Sidebar() {
     queryFn: () => api.get<Tenant>("/tenants/me"),
     enabled: isAuthenticated && !authLoading && !isAdmin,
   });
-  const [assumedId, setAssumedId] = useState<string | null>(null);
+  const [assumedId, setAssumedId] = useState<string | null>(() => getTenantContext());
 
   const isResellerTenant =
     me?.plan === "reseller" || me?.tenantKind === "reseller";
@@ -789,13 +789,7 @@ export function Sidebar() {
       return;
     }
 
-    if (stored && isResellerTenant && !isSubaccountTenant) {
-      clearContext();
-      setAssumedId(null);
-      return;
-    }
-
-    setAssumedId(stored && isSubaccountTenant ? stored : null);
+    setAssumedId(stored);
   }, [me, isResellerTenant, isSubaccountTenant, clearContext, queryClient]);
 
   const isResellerHome = canManageSubaccounts && !assumedId && isResellerTenant;

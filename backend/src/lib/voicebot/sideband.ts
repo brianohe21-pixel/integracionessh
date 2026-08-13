@@ -184,6 +184,7 @@ export async function runVoicebotSideband(params: VoicebotSidebandParams): Promi
             knowledgeEnabled: Boolean(bot.knowledgeEnabled),
             handoffEnabled: true,
             apiKey,
+            environment: ENVIRONMENT,
           });
 
           sendJson(ws, {

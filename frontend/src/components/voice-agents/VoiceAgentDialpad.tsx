@@ -13,6 +13,13 @@ import { Button } from "@/components/ui/Button";
 
 const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "*", "0", "#"];
 
+function formatTelephonyError(message: string, t: (key: string) => string): string {
+  if (message.includes("10015") || message.includes("connection_id")) {
+    return t("telephony.invalidConnectionId");
+  }
+  return message;
+}
+
 interface VoiceAgentDialpadProps {
   botId: string;
 }
@@ -79,7 +86,7 @@ export function VoiceAgentDialpad({ botId }: VoiceAgentDialpadProps) {
       });
       setActiveCallId(result.callId);
     } catch (err) {
-      setError((err as Error).message);
+      setError(formatTelephonyError((err as Error).message, t));
     }
   }
 
@@ -88,7 +95,7 @@ export function VoiceAgentDialpad({ botId }: VoiceAgentDialpadProps) {
     try {
       await endCall.mutateAsync(activeCallId);
     } catch (err) {
-      setError((err as Error).message);
+      setError(formatTelephonyError((err as Error).message, t));
     }
   }
 

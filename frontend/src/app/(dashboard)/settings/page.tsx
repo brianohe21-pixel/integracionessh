@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -33,11 +34,24 @@ type SettingsTab = "general" | "branding" | "integrations" | "apiKeys";
 
 export default function SettingsPage() {
   const t = useT();
+  const searchParams = useSearchParams();
   const { formatDate, planLabel } = useFormatters();
   const [tab, setTab] = useState<SettingsTab>("general");
   const [webhookCopied, setWebhookCopied] = useState(false);
   const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
   const webhookUrl = `${apiUrl}/webhook`;
+
+  useEffect(() => {
+    const requested = searchParams.get("tab");
+    if (
+      requested === "general" ||
+      requested === "branding" ||
+      requested === "integrations" ||
+      requested === "apiKeys"
+    ) {
+      setTab(requested);
+    }
+  }, [searchParams]);
 
   const { data: tenant } = useQuery({
     queryKey: ["tenant"],

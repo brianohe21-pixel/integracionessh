@@ -418,7 +418,7 @@ export async function handler(
     const auth = await resolveRequestAuth(event);
     const tenantId = event.pathParameters?.tenantId;
 
-    if (method === "GET" && !tenantId) {
+    if (method === "GET" && rawPath === "/tenants") {
       if (auth.role !== "admin") {
         const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
         return ok([tenant]);

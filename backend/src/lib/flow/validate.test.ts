@@ -79,4 +79,32 @@ describe("validateFlowDefinition", () => {
     );
     expect(issues.some((issue) => issue.code === "unsupported_node")).toBe(true);
   });
+
+  it("requires voice tool names for voice http nodes", () => {
+    const issues = validateFlowDefinition(
+      baseFlow({
+        flowKind: "voice_ai",
+        nodes: [
+          {
+            id: "trigger-1",
+            type: "trigger",
+            position: { x: 0, y: 0 },
+            data: { triggerType: "voice_call", flowVariables: {} },
+          },
+          {
+            id: "http-1",
+            type: "http_request",
+            position: { x: 0, y: 100 },
+            data: { httpUrl: "https://example.com" },
+          },
+          { id: "end-1", type: "end", position: { x: 0, y: 200 }, data: {} },
+        ],
+        edges: [
+          { id: "e1", source: "trigger-1", target: "http-1" },
+          { id: "e2", source: "http-1", target: "end-1" },
+        ],
+      })
+    );
+    expect(issues.some((issue) => issue.code === "missing_voice_tool_name")).toBe(true);
+  });
 });

@@ -10,6 +10,8 @@ import { retrieveContext } from "../knowledge/retrieve.js";
 import { performHandoff } from "../advisor/handoff.js";
 import { getSystemMessage } from "../i18n/index.js";
 
+import { executeVoiceFlowTool } from "./voice-flow-tools.js";
+
 export interface VoicebotToolContext {
   tenantId: string;
   botId: string;
@@ -19,6 +21,7 @@ export interface VoicebotToolContext {
   knowledgeEnabled: boolean;
   handoffEnabled: boolean;
   apiKey: string;
+  environment: string;
 }
 
 export async function executeVoicebotTool(
@@ -31,6 +34,18 @@ export async function executeVoicebotTool(
     args = JSON.parse(argsJson) as Record<string, unknown>;
   } catch {
     return { output: JSON.stringify({ error: "Invalid tool arguments" }) };
+  }
+
+  const flowResult = await executeVoiceFlowTool({
+    tenantId: ctx.tenantId,
+    botId: ctx.botId,
+    locale: ctx.locale,
+    toolName: name,
+    args,
+    environment: ctx.environment,
+  });
+  if (flowResult) {
+    return { output: flowResult.output };
   }
 
   if (name === "transfer_to_human") {

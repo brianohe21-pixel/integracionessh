@@ -18,6 +18,7 @@ import { assertAllowedModel, assertCanEnableKnowledge } from "../../lib/billing/
 import {
   assertAiAssistantActive,
   assertCanDisableAiAssistant,
+  buildAiAssistantAutoEnableUpdates,
   toAiAssistantConfig,
 } from "../../lib/ai-assistant/config.js";
 import { TELEPHONY_SYSTEM_PROMPT_MAX_LENGTH } from "../../lib/telephony/limits.js";
@@ -325,8 +326,9 @@ export async function handler(
       if (!parsed.success) return badRequest(parsed.error.message);
 
       const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
+      const aiAssistantUpdates =
+        parsed.data.enabled === true ? buildAiAssistantAutoEnableUpdates(existing) : {};
       if (parsed.data.enabled === true) {
-        assertAiAssistantActive(existing);
         await assertCanUseVoicebot(tenant);
         await assertCanEnableChannel(tenant, existing, "voicebot");
       }
@@ -337,7 +339,7 @@ export async function handler(
         await putVoicebotWidgetKeyLookup(widgetKey, auth.tenantId, botId);
       }
 
-      const updates: Record<string, unknown> = {};
+      const updates: Record<string, unknown> = { ...aiAssistantUpdates };
       if (parsed.data.enabled !== undefined) {
         updates.voicebotEnabled = parsed.data.enabled;
         if (widgetKey) updates.voicebotWidgetKey = widgetKey;

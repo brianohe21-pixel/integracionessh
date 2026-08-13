@@ -106,8 +106,8 @@ describe("telephony bridge", () => {
   });
 
   it("estimates speech drain time with bounds", () => {
-    expect(estimateSpeechDrainMs(0)).toBe(2_000);
-    expect(estimateSpeechDrainMs(285)).toBe(21_375);
+    expect(estimateSpeechDrainMs(0)).toBe(1_000);
+    expect(estimateSpeechDrainMs(285)).toBe(15_675);
     expect(estimateSpeechDrainMs(10_000)).toBe(TELEPHONY_TTS_DRAIN_TIMEOUT_MS);
   });
 });

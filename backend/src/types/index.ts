@@ -271,6 +271,7 @@ export interface Bot {
   telephonyRecordingEnabled?: boolean;
   telephonyRecordingNotice?: string;
   telephonyHandoffEnabled?: boolean;
+  telephonyVoiceFlowId?: string;
   telephonyWebhookUrl?: string;
   telephonyWebhookSecret?: string;
   telephonyWebhookEnabled?: boolean;
@@ -1951,7 +1952,15 @@ export type FlowTriggerType =
   | "keyword"
   | "first_message"
   | "any_message"
-  | "web_form_submitted";
+  | "web_form_submitted"
+  | "voice_call";
+
+export type FlowKind = "messaging" | "voice_ai";
+
+export interface FlowHttpHeader {
+  key: string;
+  value: string;
+}
 
 export interface FlowNodeData {
   label?: string;
@@ -1972,8 +1981,15 @@ export interface FlowNodeData {
   variableName?: string;
   variableValue?: string;
   httpUrl?: string;
-  httpMethod?: "GET" | "POST";
+  httpMethod?: "GET" | "POST" | "PATCH";
   httpBody?: string;
+  httpHeaders?: FlowHttpHeader[];
+  httpResponseVariable?: string;
+  voiceToolName?: string;
+  voiceToolDescription?: string;
+  voiceToolParameters?: string;
+  voiceInstruction?: string;
+  flowVariables?: Record<string, string>;
   haltPipeline?: boolean;
   confirmationMessage?: LocalizedText;
   maxDaysToShow?: number;
@@ -2022,6 +2038,7 @@ export interface FlowDefinition {
   tenantId: string;
   botId: string;
   name: string;
+  flowKind?: FlowKind;
   enabled: boolean;
   version: number;
   nodes: FlowNode[];

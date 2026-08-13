@@ -1786,6 +1786,30 @@ locals {
       function_arn = var.flows_function_arn
       protected    = true
     }
+    flows_template_taxi = {
+      route_key    = "POST /flows/templates/taxi-355-satelital"
+      invoke_arn   = var.flows_invoke_arn
+      function_arn = var.flows_function_arn
+      protected    = true
+    }
+    flows_secrets_get = {
+      route_key    = "GET /flows/{flowId}/secrets"
+      invoke_arn   = var.flows_invoke_arn
+      function_arn = var.flows_function_arn
+      protected    = true
+    }
+    flows_secrets_put = {
+      route_key    = "PUT /flows/{flowId}/secrets"
+      invoke_arn   = var.flows_invoke_arn
+      function_arn = var.flows_function_arn
+      protected    = true
+    }
+    flows_secrets_delete = {
+      route_key    = "DELETE /flows/{flowId}/secrets/{secretName}"
+      invoke_arn   = var.flows_invoke_arn
+      function_arn = var.flows_function_arn
+      protected    = true
+    }
     flow_runs_get = {
       route_key    = "GET /flow-runs/{runId}"
       invoke_arn   = var.flows_invoke_arn

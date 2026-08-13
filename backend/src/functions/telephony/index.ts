@@ -40,6 +40,7 @@ import {
   StructuredOutputDefinitionSchema,
 } from "../../lib/telephony/structured-output-schema.js";
 import { executeVoicebotTool } from "../../lib/voicebot/tools.js";
+import { loadVoiceFlowRuntime } from "../../lib/flow/voice-flow-runtime.js";
 import { getOpenAIApiKey } from "../../lib/ai/providers/openai.js";
 import { getPresignedReadUrl } from "../../lib/s3/client.js";
 import { assertSafeUrl } from "../../lib/webhook/client.js";
@@ -74,7 +75,7 @@ const OutboundCallSchema = z.object({
 
 interface TelephonyGatewayInvokeEvent {
   source: "telephony-gateway";
-  action: "execute_tool" | "report_usage";
+  action: "execute_tool" | "report_usage" | "get_voice_runtime";
   tenantId: string;
   botId: string;
   conversationId?: string;
@@ -100,7 +101,12 @@ function isGatewayInvokeEvent(event: unknown): event is TelephonyGatewayInvokeEv
 
 async function handleGatewayInvoke(
   event: TelephonyGatewayInvokeEvent
-): Promise<{ output?: string; handoff?: boolean; ok?: boolean }> {
+): Promise<{
+  output?: string;
+  handoff?: boolean;
+  ok?: boolean;
+  runtime?: Awaited<ReturnType<typeof loadVoiceFlowRuntime>>;
+}> {
   if (event.action === "report_usage" && event.callId) {
     await reportCallUsage({
       tenantId: event.tenantId,
@@ -108,6 +114,19 @@ async function handleGatewayInvoke(
       usage: event.usage ?? {},
     });
     return { ok: true };
+  }
+
+  if (event.action === "get_voice_runtime") {
+    const bot = await getBot(event.tenantId, event.botId);
+    if (!bot) {
+      return { runtime: null };
+    }
+    const runtime = await loadVoiceFlowRuntime({
+      tenantId: event.tenantId,
+      botId: event.botId,
+      locale: event.locale ?? bot.defaultLocale ?? "es",
+    });
+    return { runtime };
   }
 
   if (event.action !== "execute_tool" || !event.name || !event.arguments) {
@@ -120,15 +139,21 @@ async function handleGatewayInvoke(
   }
 
   const apiKey = await getOpenAIApiKey(event.tenantId, ENVIRONMENT);
+  const voiceRuntime = await loadVoiceFlowRuntime({
+    tenantId: event.tenantId,
+    botId: event.botId,
+    locale: event.locale ?? bot.defaultLocale ?? "es",
+  });
   return executeVoicebotTool(event.name, event.arguments, {
     tenantId: event.tenantId,
     botId: event.botId,
     conversationId: event.conversationId ?? "",
     participantId: event.participantId ?? "",
     locale: event.locale ?? "es",
-    knowledgeEnabled: Boolean(bot.knowledgeEnabled),
-    handoffEnabled: Boolean(bot.telephonyHandoffEnabled),
+    knowledgeEnabled: voiceRuntime?.knowledgeEnabled ?? Boolean(bot.knowledgeEnabled),
+    handoffEnabled: voiceRuntime?.hasHandoff ?? Boolean(bot.telephonyHandoffEnabled),
     apiKey,
+    environment: ENVIRONMENT,
   });
 }
 
@@ -244,7 +269,14 @@ async function handleTelnyxWebhook(
 
 export async function handler(
   event: APIGatewayProxyEventV2 | APIGatewayProxyEventV2WithJWTAuthorizer | TelephonyGatewayInvokeEvent
-): Promise<APIGatewayProxyResultV2 | { output?: string; handoff?: boolean; ok?: boolean }> {
+): Promise<
+  APIGatewayProxyResultV2 | {
+    output?: string;
+    handoff?: boolean;
+    ok?: boolean;
+    runtime?: Awaited<ReturnType<typeof loadVoiceFlowRuntime>>;
+  }
+> {
   try {
     if (isGatewayInvokeEvent(event)) {
       return handleGatewayInvoke(event);
@@ -309,6 +341,7 @@ export async function handler(
         telephonyRecordingEnabled: Boolean(bot.telephonyRecordingEnabled),
         telephonyRecordingNotice: bot.telephonyRecordingNotice ?? "",
         telephonyHandoffEnabled: Boolean(bot.telephonyHandoffEnabled),
+        telephonyVoiceFlowId: bot.telephonyVoiceFlowId ?? "",
         knowledgeEnabled: Boolean(bot.knowledgeEnabled),
         telephonyWebhookUrl: bot.telephonyWebhookUrl ?? "",
         telephonyWebhookEnabled: Boolean(bot.telephonyWebhookEnabled),
@@ -337,6 +370,7 @@ export async function handler(
           telephonyRecordingEnabled: z.boolean().optional(),
           telephonyRecordingNotice: z.string().max(500).optional(),
           telephonyHandoffEnabled: z.boolean().optional(),
+          telephonyVoiceFlowId: z.union([z.string().uuid(), z.literal("")]).optional(),
           knowledgeEnabled: z.boolean().optional(),
           telephonyWebhookUrl: z.string().max(2048).optional(),
           telephonyWebhookSecret: z.string().max(256).optional(),
@@ -369,12 +403,15 @@ export async function handler(
         "../../lib/billing/assert-plan.js"
       );
       const { assertCanEnableKnowledge } = await import("../../lib/billing/plan-config.js");
-      const { assertAiAssistantActive } = await import("../../lib/ai-assistant/config.js");
+      const { buildAiAssistantAutoEnableUpdates } = await import(
+        "../../lib/ai-assistant/config.js"
+      );
       const { normalizeE164 } = await import("../../lib/telnyx/phone.js");
 
       const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
+      const aiAssistantUpdates =
+        parsed.data.enabled === true ? buildAiAssistantAutoEnableUpdates(bot) : {};
       if (parsed.data.enabled === true) {
-        assertAiAssistantActive(bot);
         await assertCanUseVoicebot(tenant);
         await assertCanEnableChannel(tenant, bot, "phone");
       }
@@ -404,7 +441,7 @@ export async function handler(
         await putTelephonyNumberLookup(nextNumber, auth.tenantId, botId);
       }
 
-      const updates: Record<string, unknown> = {};
+      const updates: Record<string, unknown> = { ...aiAssistantUpdates };
       if (parsed.data.enabled !== undefined) updates.telephonyEnabled = parsed.data.enabled;
       if (parsed.data.telephonyPhoneNumber) updates.telephonyPhoneNumber = nextNumber;
       if (parsed.data.telephonyVoiceId !== undefined) {
@@ -427,6 +464,9 @@ export async function handler(
       }
       if (parsed.data.telephonyHandoffEnabled !== undefined) {
         updates.telephonyHandoffEnabled = parsed.data.telephonyHandoffEnabled;
+      }
+      if (parsed.data.telephonyVoiceFlowId !== undefined) {
+        updates.telephonyVoiceFlowId = parsed.data.telephonyVoiceFlowId || undefined;
       }
       if (parsed.data.knowledgeEnabled !== undefined) {
         if (parsed.data.knowledgeEnabled) {
@@ -480,6 +520,7 @@ export async function handler(
         telephonyRecordingEnabled: masked?.telephonyRecordingEnabled,
         telephonyRecordingNotice: masked?.telephonyRecordingNotice,
         telephonyHandoffEnabled: Boolean(masked?.telephonyHandoffEnabled),
+        telephonyVoiceFlowId: masked?.telephonyVoiceFlowId ?? "",
         knowledgeEnabled: Boolean(masked?.knowledgeEnabled),
         telephonyWebhookUrl: masked?.telephonyWebhookUrl,
         telephonyWebhookEnabled: masked?.telephonyWebhookEnabled,

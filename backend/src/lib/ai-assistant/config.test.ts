@@ -2,6 +2,7 @@ import type { Bot } from "../../types/index.js";
 import {
   assertAiAssistantActive,
   assertCanDisableAiAssistant,
+  buildAiAssistantAutoEnableUpdates,
   isAiAssistantEnabled,
   toAiAssistantConfig,
 } from "./config.js";
@@ -63,5 +64,23 @@ describe("ai-assistant config", () => {
       "AI Assistant is not enabled"
     );
     expect(() => assertAiAssistantActive(makeBot({ responseMode: "openai" }))).not.toThrow();
+  });
+
+  it("builds auto-enable updates from telephony prompt", () => {
+    expect(
+      buildAiAssistantAutoEnableUpdates(
+        makeBot({
+          responseMode: "none",
+          telephonySystemPrompt: "Handle phone calls",
+        })
+      )
+    ).toEqual({
+      responseMode: "openai",
+      systemPrompt: "Handle phone calls",
+      model: "gpt-4.1-mini",
+      temperature: 0.7,
+      maxTokens: 1024,
+    });
+    expect(buildAiAssistantAutoEnableUpdates(makeBot({ responseMode: "openai" }))).toEqual({});
   });
 });

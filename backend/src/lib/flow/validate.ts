@@ -1,5 +1,6 @@
-import { extractBindingPaths } from "./binding.js";
-import type { FlowDefinition, FlowNode, FlowNodeType } from "../../types/index.js";
+import type { FlowDefinition, FlowNode } from "../../types/index.js";
+import { getFlowSecretNamesSet } from "./flow-secrets.repository.js";
+import { isVoiceAiFlow } from "./voice-flow-compiler.js";
 
 export interface FlowValidationIssue {
   code: string;
@@ -7,7 +8,7 @@ export interface FlowValidationIssue {
   nodeId?: string;
 }
 
-const CONVERSATION_ONLY_NODES: FlowNodeType[] = [
+const CONVERSATION_ONLY_NODES = [
   "buttons",
   "meta_flow",
   "handoff",
@@ -16,17 +17,17 @@ const CONVERSATION_ONLY_NODES: FlowNodeType[] = [
   "send_catalog",
   "send_products",
   "await_order",
-];
+] as const;
 
-const BRANCHING_NODES: FlowNodeType[] = ["condition", "buttons"];
+const BRANCHING_NODES = ["condition", "buttons"] as const;
 
 function isFormFlow(flow: FlowDefinition): boolean {
-  const trigger = flow.nodes.find((n) => n.type === "trigger");
+  const trigger = flow.nodes.find((node) => node.type === "trigger");
   return trigger?.data.triggerType === "web_form_submitted";
 }
 
 function getTriggerNode(flow: FlowDefinition): FlowNode | undefined {
-  return flow.nodes.find((n) => n.type === "trigger");
+  return flow.nodes.find((node) => node.type === "trigger");
 }
 
 function reachableNodeIds(flow: FlowDefinition): Set<string> {
@@ -40,7 +41,7 @@ function reachableNodeIds(flow: FlowDefinition): Set<string> {
     const current = queue.shift();
     if (!current || visited.has(current)) continue;
     visited.add(current);
-    for (const edge of flow.edges.filter((e) => e.source === current)) {
+    for (const edge of flow.edges.filter((item) => item.source === current)) {
       queue.push(edge.target);
     }
   }
@@ -48,10 +49,17 @@ function reachableNodeIds(flow: FlowDefinition): Set<string> {
   return visited;
 }
 
-function validateBindings(
-  node: FlowNode,
-  issues: FlowValidationIssue[]
-): void {
+function extractSecretRefs(value: string): string[] {
+  const refs: string[] = [];
+  const pattern = /\{\{secret\.([^}]+)\}\}/g;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(value)) !== null) {
+    refs.push(match[1].trim());
+  }
+  return refs;
+}
+
+function validateBindings(node: FlowNode, issues: FlowValidationIssue[]): void {
   const bindingFields: Array<{ field: string; value?: string; required?: boolean }> = [];
 
   if (node.type === "save_contact") {
@@ -107,8 +115,8 @@ function validateBindings(
       continue;
     }
     if (!binding.value) continue;
-    for (const path of extractBindingPaths(binding.value)) {
-      if (!path.startsWith("form.")) {
+    for (const path of binding.value.match(/\{\{([^}]+)\}\}/g) ?? []) {
+      if (!path.includes("form.")) {
         issues.push({
           code: "invalid_binding",
           message: `Binding ${path} must start with form.`,
@@ -119,10 +127,101 @@ function validateBindings(
   }
 }
 
+function validateVoiceFlow(flow: FlowDefinition, issues: FlowValidationIssue[]): void {
+  const trigger = getTriggerNode(flow);
+  if (!trigger || trigger.data.triggerType !== "voice_call") {
+    issues.push({
+      code: "invalid_voice_trigger",
+      message: "Voice flows must use voice_call trigger",
+      ...(trigger?.id ? { nodeId: trigger.id } : {}),
+    });
+  }
+
+  const toolNames = new Set<string>();
+  for (const node of flow.nodes) {
+    if (node.type !== "http_request") continue;
+    const toolName = node.data.voiceToolName?.trim();
+    if (!toolName) {
+      issues.push({
+        code: "missing_voice_tool_name",
+        message: "HTTP nodes in voice flows require voiceToolName",
+        nodeId: node.id,
+      });
+      continue;
+    }
+    if (toolNames.has(toolName)) {
+      issues.push({
+        code: "duplicate_voice_tool_name",
+        message: `Duplicate voice tool name: ${toolName}`,
+        nodeId: node.id,
+      });
+    }
+    toolNames.add(toolName);
+    if (!node.data.httpUrl?.trim()) {
+      issues.push({
+        code: "missing_http_url",
+        message: "httpUrl is required",
+        nodeId: node.id,
+      });
+    }
+    if (node.data.httpUrl && !node.data.httpUrl.startsWith("https://")) {
+      issues.push({
+        code: "invalid_http_url",
+        message: "httpUrl must use HTTPS",
+        nodeId: node.id,
+      });
+    }
+    if (node.data.voiceToolParameters?.trim()) {
+      try {
+        JSON.parse(node.data.voiceToolParameters);
+      } catch {
+        issues.push({
+          code: "invalid_voice_tool_parameters",
+          message: "voiceToolParameters must be valid JSON",
+          nodeId: node.id,
+        });
+      }
+    }
+  }
+}
+
+export async function validateFlowDefinitionWithSecrets(
+  flow: FlowDefinition,
+  environment: string
+): Promise<FlowValidationIssue[]> {
+  const issues = validateFlowDefinition(flow);
+  if (!isVoiceAiFlow(flow) || !flow.enabled) return issues;
+
+  const configuredSecrets = await getFlowSecretNamesSet(flow.tenantId, environment, flow.flowId);
+  for (const node of flow.nodes) {
+    if (node.type !== "http_request") continue;
+    const refs = new Set<string>([
+      ...extractSecretRefs(node.data.httpUrl ?? ""),
+      ...extractSecretRefs(node.data.httpBody ?? ""),
+      ...(node.data.httpHeaders ?? []).flatMap((header) => [
+        ...extractSecretRefs(header.key),
+        ...extractSecretRefs(header.value),
+      ]),
+    ]);
+    for (const ref of refs) {
+      if (!configuredSecrets.has(ref)) {
+        issues.push({
+          code: "missing_flow_secret",
+          message: `Missing flow secret: ${ref}`,
+          nodeId: node.id,
+        });
+      }
+    }
+  }
+
+  return issues;
+}
+
 export function validateFlowDefinition(flow: FlowDefinition): FlowValidationIssue[] {
   const issues: FlowValidationIssue[] = [];
-  const triggers = flow.nodes.filter((n) => n.type === "trigger");
+  const triggers = flow.nodes.filter((node) => node.type === "trigger");
   const formFlow = isFormFlow(flow);
+  const voiceFlow = isVoiceAiFlow(flow);
 
   if (triggers.length !== 1) {
     issues.push({
@@ -132,14 +231,16 @@ export function validateFlowDefinition(flow: FlowDefinition): FlowValidationIssu
   }
 
   const trigger = getTriggerNode(flow);
-  if (trigger && formFlow) {
-    if (trigger.data.triggerType !== "web_form_submitted") {
-      issues.push({
-        code: "invalid_trigger",
-        message: "Form flows must use web_form_submitted trigger",
-        nodeId: trigger.id,
-      });
-    }
+  if (trigger && formFlow && trigger.data.triggerType !== "web_form_submitted") {
+    issues.push({
+      code: "invalid_trigger",
+      message: "Form flows must use web_form_submitted trigger",
+      nodeId: trigger.id,
+    });
+  }
+
+  if (voiceFlow) {
+    validateVoiceFlow(flow, issues);
   }
 
   const reachable = reachableNodeIds(flow);
@@ -152,10 +253,23 @@ export function validateFlowDefinition(flow: FlowDefinition): FlowValidationIssu
       });
     }
 
-    if (formFlow && CONVERSATION_ONLY_NODES.includes(node.type)) {
+    if (formFlow && CONVERSATION_ONLY_NODES.includes(node.type as (typeof CONVERSATION_ONLY_NODES)[number])) {
       issues.push({
         code: "unsupported_node",
         message: `${node.type} is not supported in form flows`,
+        nodeId: node.id,
+      });
+    }
+
+    if (
+      voiceFlow &&
+      ["buttons", "meta_flow", "book_appointment", "request_payment", "send_catalog", "send_products", "await_order"].includes(
+        node.type
+      )
+    ) {
+      issues.push({
+        code: "unsupported_voice_node",
+        message: `${node.type} is not supported in voice flows`,
         nodeId: node.id,
       });
     }
@@ -181,10 +295,10 @@ export function validateFlowDefinition(flow: FlowDefinition): FlowValidationIssu
       }
     }
 
-    if (BRANCHING_NODES.includes(node.type)) {
-      const outgoing = flow.edges.filter((e) => e.source === node.id);
+    if (BRANCHING_NODES.includes(node.type as (typeof BRANCHING_NODES)[number])) {
+      const outgoing = flow.edges.filter((edge) => edge.source === node.id);
       if (node.type === "condition") {
-        const handles = new Set(outgoing.map((e) => e.sourceHandle));
+        const handles = new Set(outgoing.map((edge) => edge.sourceHandle));
         for (const handle of ["true", "false"]) {
           if (!handles.has(handle)) {
             issues.push({
@@ -195,15 +309,12 @@ export function validateFlowDefinition(flow: FlowDefinition): FlowValidationIssu
           }
         }
       }
-      if (node.type === "buttons") {
-        const buttons = node.data.buttons ?? [];
-        if (buttons.length === 0) {
-          issues.push({
-            code: "missing_buttons",
-            message: "Buttons node requires at least one button",
-            nodeId: node.id,
-          });
-        }
+      if (node.type === "buttons" && (node.data.buttons ?? []).length === 0) {
+        issues.push({
+          code: "missing_buttons",
+          message: "Buttons node requires at least one button",
+          nodeId: node.id,
+        });
       }
     }
   }

@@ -9,7 +9,7 @@ interface OpenAIKeyStatus {
 }
 
 function openAIStatusFromResponse(data: ProviderCredentialsResponse | undefined): OpenAIKeyStatus {
-  const openai = data?.items.find((item) => item.provider === "openai");
+  const openai = data?.items?.find((item) => item.provider === "openai");
   return { configured: openai?.source === "own" };
 }
 
@@ -18,7 +18,8 @@ export function useOpenAIKeyStatus() {
     queryKey: ["openai-key-status"],
     queryFn: async () => {
       const data = await api.get<ProviderCredentialsResponse>("/tenants/me/provider-credentials");
-      return openAIStatusFromResponse(data);
+      const normalized = Array.isArray(data?.items) ? data : { items: [] };
+      return openAIStatusFromResponse(normalized);
     },
     staleTime: 30_000,
   });

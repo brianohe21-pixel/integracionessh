@@ -165,6 +165,7 @@ export function buildNodePreview(type: FlowNodeType, data: FlowNodeData, locale:
     case "trigger": {
       const triggerType = data.triggerType ?? "any_message";
       if (triggerType === "web_form_submitted") return "webhook";
+      if (triggerType === "voice_call") return "voice";
       if (triggerType === "keyword" && data.keywords?.length) {
         return truncate(data.keywords.join(", "));
       }

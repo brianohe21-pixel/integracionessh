@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Eye, EyeOff, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import {
@@ -20,11 +20,7 @@ interface FieldConfig {
 
 const PROVIDER_FIELDS: Record<ProviderId, FieldConfig[]> = {
   openai: [{ key: "apiKey", labelKey: "settings.providerApiKey", secret: true, placeholder: "sk-..." }],
-  telnyx: [
-    { key: "apiKey", labelKey: "settings.providerApiKey", secret: true },
-    { key: "connectionId", labelKey: "settings.telnyxConnectionId" },
-    { key: "publicKey", labelKey: "settings.telnyxPublicKey", secret: true },
-  ],
+  telnyx: [{ key: "apiKey", labelKey: "settings.providerApiKey", secret: true }],
   elevenlabs: [
     { key: "apiKey", labelKey: "settings.providerApiKey", secret: true },
   ],
@@ -43,11 +39,18 @@ export function ProviderCredentialCard({ provider }: { provider: ProviderId }) {
   const save = useSaveProviderCredential(provider);
   const remove = useDeleteProviderCredential(provider);
 
-  const status = data?.items.find((item) => item.provider === provider);
+  const status = data?.items?.find((item) => item.provider === provider);
   const [editing, setEditing] = useState(false);
   const [values, setValues] = useState<Record<string, string>>({});
   const [visibleFields, setVisibleFields] = useState<Record<string, boolean>>({});
   const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (!saved) return;
+    const timer = window.setTimeout(() => setSaved(false), 3000);
+    return () => window.clearTimeout(timer);
+  }, [saved]);
 
   const isOwn = status?.source === "own";
   const isConfigured = status?.configured ?? false;
@@ -67,6 +70,7 @@ export function ProviderCredentialCard({ provider }: { provider: ProviderId }) {
       await save.mutateAsync(values);
       setValues({});
       setEditing(false);
+      setSaved(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("settings.providerSaveError"));
     }
@@ -97,7 +101,13 @@ export function ProviderCredentialCard({ provider }: { provider: ProviderId }) {
         <div className={`w-2 h-2 rounded-full ${isConfigured ? "bg-accent" : "bg-gray-300"}`} />
         <div className="flex-1 min-w-0">
           <p className="text-xs font-medium text-secondary">{t(`settings.provider.${provider}.title`)}</p>
-          <p className="text-xs text-muted">{t(`settings.provider.${provider}.desc`)}</p>
+          <p className="text-xs text-muted">
+            {isOwn
+              ? provider === "telnyx"
+                ? t("settings.telnyxConnected")
+                : t("settings.providerOwnSaved")
+              : t(`settings.provider.${provider}.desc`)}
+          </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <Badge variant={sourceBadgeVariant(status?.source ?? "none")}>
@@ -129,9 +139,10 @@ export function ProviderCredentialCard({ provider }: { provider: ProviderId }) {
         </div>
       </div>
 
-      {status?.webhookUrl && provider === "telnyx" ? (
+      {status?.webhookUrl && provider === "telnyx" && !isOwn ? (
         <div className="px-3 pb-3 bg-surface border-t border-subtle">
           <p className="text-xs text-secondary mt-2">{t("settings.telnyxWebhookUrl")}</p>
+          <p className="text-xs text-muted mb-1">{t("settings.telnyxWebhookHint")}</p>
           <code className="mt-1 block break-all rounded-md bg-surface-muted px-2 py-1.5 text-xs text-primary">
             {status.webhookUrl}
           </code>
@@ -140,6 +151,9 @@ export function ProviderCredentialCard({ provider }: { provider: ProviderId }) {
 
       {editing && !isOwn ? (
         <form onSubmit={(e) => void handleSave(e)} className="p-3 border-t border-subtle bg-surface-elevated space-y-2">
+          {provider === "telnyx" ? (
+            <p className="text-xs text-muted">{t("settings.telnyxPlugAndPlayHint")}</p>
+          ) : null}
           {fields.map((field) => (
             <div key={field.key} className="space-y-1">
               <label className="text-xs font-medium text-secondary">{t(field.labelKey)}</label>
@@ -199,14 +213,24 @@ export function ProviderCredentialCard({ provider }: { provider: ProviderId }) {
         </form>
       ) : null}
 
+      {!editing && saved ? (
+        <p className="px-3 pb-3 text-xs text-green-600">{t("settings.providerSaved")}</p>
+      ) : null}
+
       {!editing && error ? <p className="px-3 pb-3 text-xs text-red-600">{error}</p> : null}
     </div>
   );
 }
 
 export function ProviderCredentialsSection() {
+  const t = useT();
+  const { isError } = useProviderCredentials();
+
   return (
     <div className="space-y-3">
+      {isError ? (
+        <p className="text-xs text-red-600">{t("settings.providerLoadError")}</p>
+      ) : null}
       <ProviderCredentialCard provider="openai" />
       <ProviderCredentialCard provider="telnyx" />
       <ProviderCredentialCard provider="elevenlabs" />

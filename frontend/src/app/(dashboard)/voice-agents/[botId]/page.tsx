@@ -11,12 +11,14 @@ import { VoiceAgentDialpad } from "@/components/voice-agents/VoiceAgentDialpad";
 import { VoiceAgentSettings } from "@/components/voice-agents/VoiceAgentSettings";
 import { VoiceAgentStructuredOutputsPanel } from "@/components/voice-agents/VoiceAgentStructuredOutputsPanel";
 import { VoiceAgentBotIdCopy } from "@/components/voice-agents/VoiceAgentBotIdCopy";
+import { VoiceAgentFlowPanel } from "@/components/voice-agents/VoiceAgentFlowPanel";
+import { VoiceAgentSetupChecklist } from "@/components/voice-agents/VoiceAgentSetupChecklist";
 import { VoiceAgentSummary } from "@/components/voice-agents/VoiceAgentSummary";
 import { VoiceAgentWebhookPanel } from "@/components/voice-agents/VoiceAgentWebhookPanel";
 import { useBot } from "@/hooks/useBots";
 import { useT } from "@/i18n/context";
 
-const TABS = ["overview", "config", "structuredOutputs", "calls", "webhooks", "test"] as const;
+const TABS = ["overview", "flow", "config", "structuredOutputs", "calls", "webhooks", "test"] as const;
 type TabId = (typeof TABS)[number];
 
 function isTabId(value: string | null): value is TabId {
@@ -72,6 +74,8 @@ export default function VoiceAgentDetailPage() {
 
       <VoiceAgentBotIdCopy botId={botId} />
 
+      <VoiceAgentSetupChecklist botId={botId} />
+
       <div className="flex flex-wrap gap-2 border-b border-default pb-2">
         {TABS.map((item) => (
           <button
@@ -90,6 +94,7 @@ export default function VoiceAgentDetailPage() {
       </div>
 
       {tab === "overview" && <VoiceAgentSummary botId={botId} />}
+      {tab === "flow" && <VoiceAgentFlowPanel botId={botId} />}
       {tab === "config" && <VoiceAgentSettings botId={botId} />}
       {tab === "structuredOutputs" && <VoiceAgentStructuredOutputsPanel botId={botId} />}
       {tab === "calls" && <VoiceAgentCallsTable botId={botId} />}

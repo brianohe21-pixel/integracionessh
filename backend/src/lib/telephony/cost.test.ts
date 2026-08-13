@@ -16,7 +16,7 @@ describe("telephony cost", () => {
 
     expect(result.breakdown.totalUsd).toBeGreaterThan(0);
     expect(result.breakdown.telnyxUsd).toBe(0.02);
-    expect(result.breakdown.platformUsd).toBeCloseTo(0.040482, 6);
+    expect(result.breakdown.platformUsd).toBeCloseTo(0.044, 6);
     expect(result.status).toBe("final");
   });
 

@@ -175,14 +175,14 @@ export const ELEVENLABS_KEEPALIVE_MS = 10_000;
 export const TELEPHONY_TURN_DETECTION = {
   type: "server_vad" as const,
   threshold: 0.65,
-  prefix_padding_ms: 400,
-  silence_duration_ms: 900,
+  prefix_padding_ms: 300,
+  silence_duration_ms: 500,
   create_response: true,
 };
 
 export function estimateSpeechDrainMs(charCount: number): number {
-  const msPerChar = 75;
-  return Math.min(Math.max(charCount * msPerChar, 2_000), TELEPHONY_TTS_DRAIN_TIMEOUT_MS);
+  const msPerChar = 55;
+  return Math.min(Math.max(charCount * msPerChar, 1_000), TELEPHONY_TTS_DRAIN_TIMEOUT_MS);
 }
 
 function sleep(ms: number): Promise<void> {
@@ -221,16 +221,19 @@ export async function runTelephonyBridge(
     return;
   }
 
-  const openaiKey = await getOpenAIApiKey(session.tenantId);
-  const elevenKey = await getElevenLabsApiKey(session.tenantId);
+  const [openaiKey, elevenKey, voiceRuntime, calendarEnabled] = await Promise.all([
+    getOpenAIApiKey(session.tenantId),
+    getElevenLabsApiKey(session.tenantId),
+    fetchVoiceRuntime({
+      tenantId: session.tenantId,
+      botId: session.botId,
+      locale: session.locale,
+    }),
+    isCalendarEnabled(session.tenantId, session.botId),
+  ]);
   const voiceId = resolveVoiceId(bot);
   const model = resolveModel(bot);
   const greeting = resolveGreeting(bot, session.locale);
-  const voiceRuntime = await fetchVoiceRuntime({
-    tenantId: session.tenantId,
-    botId: session.botId,
-    locale: session.locale,
-  });
   const instructions = voiceRuntime
     ? `${voiceRuntime.instructions}\n\n${
         session.locale === "en"
@@ -238,7 +241,6 @@ export async function runTelephonyBridge(
           : `La persona ya escuchó este saludo inicial: "${greeting}". Nunca repitas ni reinicies el saludo inicial. Responde directamente a lo próximo que diga la persona.`
       }`
     : resolveInstructions(bot, session.locale, greeting);
-  const calendarEnabled = await isCalendarEnabled(session.tenantId, session.botId);
   const tools =
     voiceRuntime?.tools ??
     buildRealtimeTools({
@@ -267,6 +269,15 @@ export async function runTelephonyBridge(
   let openaiOutputTokens = 0;
   let elevenlabsCharacters = 0;
   let usageReported = false;
+  let activeSpeechComplete: (() => void) | null = null;
+
+  const completeActiveSpeech = () => {
+    if (!activeSpeechComplete) return;
+    const resolve = activeSpeechComplete;
+    activeSpeechComplete = null;
+    speaking = false;
+    resolve();
+  };
 
   const reportUsageOnce = () => {
     if (usageReported) return;
@@ -330,7 +341,7 @@ export async function runTelephonyBridge(
   };
 
   const resolveSpeechComplete = () => {
-    speaking = false;
+    completeActiveSpeech();
   };
 
   const waitForSpeechPlayback = (charCount: number): Promise<void> =>
@@ -384,6 +395,9 @@ export async function runTelephonyBridge(
 
     speaking = true;
     elevenlabsCharacters += trimmed.length;
+    const playbackDone = new Promise<void>((resolve) => {
+      activeSpeechComplete = resolve;
+    });
     socket.send(
       JSON.stringify({
         text: `${trimmed} `,
@@ -391,8 +405,8 @@ export async function runTelephonyBridge(
       })
     );
     flushElevenLabs();
-    await waitForSpeechPlayback(trimmed.length);
-    speaking = false;
+    await Promise.race([playbackDone, waitForSpeechPlayback(trimmed.length)]);
+    completeActiveSpeech();
     return true;
   };
 
@@ -446,7 +460,7 @@ export async function runTelephonyBridge(
       if (!streamReady) {
         markStreamReady();
       }
-      if (!openaiSocket || openaiSocket.readyState !== WebSocket.OPEN || draining || speaking) {
+      if (!openaiSocket || openaiSocket.readyState !== WebSocket.OPEN || draining) {
         return;
       }
       sendJson(openaiSocket, {
@@ -527,6 +541,9 @@ export async function runTelephonyBridge(
         }
         if (data.audio) {
           sendTelnyxMedia(data.audio);
+        }
+        if (data.isFinal) {
+          completeActiveSpeech();
         }
       });
 

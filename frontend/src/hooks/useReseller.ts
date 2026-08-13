@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, setTenantContext } from "@/lib/api";
 import type { Tenant } from "@/types";
@@ -96,10 +97,10 @@ export function useAssumeSubaccount() {
 
 export function useClearTenantContext() {
   const queryClient = useQueryClient();
-  return () => {
+  return useCallback(() => {
     setTenantContext(null);
     queryClient.invalidateQueries();
-  };
+  }, [queryClient]);
 }
 
 export function useResellerDomain(enabled = true) {

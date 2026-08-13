@@ -15,28 +15,75 @@ async function assertOpenAIKey(apiKey: string): Promise<void> {
   }
 }
 
-async function assertTelnyxCredentials(payload: TelnyxCredentialPayload): Promise<void> {
+async function assertTelnyxApiKey(apiKey: string): Promise<void> {
   const response = await fetch("https://api.telnyx.com/v2/phone_numbers?page[size]=1", {
     headers: {
-      Authorization: `Bearer ${payload.apiKey}`,
+      Authorization: `Bearer ${apiKey}`,
       Accept: "application/json",
     },
   });
   if (!response.ok) {
     throw Object.assign(new Error("Invalid Telnyx API key"), { statusCode: 400 });
   }
-  if (!payload.connectionId.trim()) {
-    throw Object.assign(new Error("Telnyx connectionId is required"), { statusCode: 400 });
+}
+
+export async function assertTelnyxApiKeyValid(apiKey: string): Promise<void> {
+  await assertTelnyxApiKey(apiKey);
+}
+
+async function readElevenLabsError(
+  response: Response
+): Promise<{ status?: string; message?: string } | undefined> {
+  try {
+    const body = (await response.json()) as {
+      detail?: { status?: string; message?: string };
+    };
+    return body.detail;
+  } catch {
+    return undefined;
   }
 }
 
 async function assertElevenLabsKey(apiKey: string): Promise<void> {
-  const response = await fetch("https://api.elevenlabs.io/v1/user", {
-    headers: { "xi-api-key": apiKey },
-  });
-  if (!response.ok) {
-    throw Object.assign(new Error("Invalid ElevenLabs API key"), { statusCode: 400 });
+  const probes = [
+    "https://api.elevenlabs.io/v1/models",
+    "https://api.elevenlabs.io/v1/voices",
+    "https://api.elevenlabs.io/v1/user",
+  ];
+
+  let sawForbidden = false;
+  let lastMessage: string | undefined;
+
+  for (const url of probes) {
+    const response = await fetch(url, {
+      headers: {
+        "xi-api-key": apiKey,
+        Accept: "application/json",
+      },
+    });
+    if (response.ok) return;
+
+    const detail = await readElevenLabsError(response);
+    lastMessage = detail?.message;
+
+    if (detail?.status === "quota_exceeded") return;
+
+    if (response.status === 403) {
+      sawForbidden = true;
+      continue;
+    }
   }
+
+  if (sawForbidden) {
+    throw Object.assign(
+      new Error(
+        "ElevenLabs API key rejected. Disable IP allowlist or allow Models/Voices access for this key."
+      ),
+      { statusCode: 400 }
+    );
+  }
+
+  throw Object.assign(new Error(lastMessage ?? "Invalid ElevenLabs API key"), { statusCode: 400 });
 }
 
 export function normalizeOpenAIPayload(body: { apiKey?: string }): OpenAICredentialPayload {
@@ -51,19 +98,16 @@ export function normalizeTelnyxPayload(body: {
   apiKey?: string;
   connectionId?: string;
   publicKey?: string;
-}): TelnyxCredentialPayload {
+}): Pick<TelnyxCredentialPayload, "apiKey"> & Partial<TelnyxCredentialPayload> {
   const apiKey = (body.apiKey ?? "").trim();
   const connectionId = (body.connectionId ?? "").trim();
   const publicKey = (body.publicKey ?? "").trim();
   if (!apiKey || apiKey.length < 10) {
     throw Object.assign(new Error("Telnyx apiKey is required"), { statusCode: 400 });
   }
-  if (!connectionId) {
-    throw Object.assign(new Error("Telnyx connectionId is required"), { statusCode: 400 });
-  }
   return {
     apiKey,
-    connectionId,
+    ...(connectionId ? { connectionId } : {}),
     ...(publicKey ? { publicKey } : {}),
   };
 }
@@ -85,7 +129,7 @@ export async function validateProviderCredential<P extends ProviderId>(
     return;
   }
   if (provider === "telnyx") {
-    await assertTelnyxCredentials(payload as TelnyxCredentialPayload);
+    await assertTelnyxApiKey((payload as TelnyxCredentialPayload).apiKey);
     return;
   }
   await assertElevenLabsKey((payload as ElevenLabsCredentialPayload).apiKey);

@@ -4,6 +4,7 @@ import type { AuthContext } from "../../types/index.js";
 import {
   deleteTenantProviderCredential,
   getProviderCredentialStatuses,
+  getTenantProviderCredential,
   saveTenantProviderCredential,
   type ProviderId,
 } from "../../lib/integrations/provider-credentials.js";
@@ -11,8 +12,11 @@ import {
   normalizeElevenLabsPayload,
   normalizeOpenAIPayload,
   normalizeTelnyxPayload,
+  assertTelnyxApiKeyValid,
   validateProviderCredential,
 } from "../../lib/integrations/provider-credentials.validation.js";
+import { resolveApiBaseUrl } from "../../lib/api-base-url.js";
+import { prepareTelnyxCredentialPayload } from "../../lib/telnyx/provision.js";
 import { badRequest, handleError, ok, parseJsonBody } from "../../lib/http.js";
 
 const ProviderSchema = z.enum(["openai", "telnyx", "elevenlabs"]);
@@ -27,8 +31,7 @@ export async function handleProviderCredentialRoutes(
   if (!rawPath.includes("/provider-credentials")) return null;
 
   const providerParam = event.pathParameters?.provider;
-  const apiBaseUrl =
-    process.env.API_BASE_URL ?? process.env.API_PUBLIC_URL ?? process.env.PUBLIC_API_URL ?? "";
+  const apiBaseUrl = resolveApiBaseUrl(event);
 
   if (method === "GET" && rawPath.endsWith("/provider-credentials")) {
     const items = await getProviderCredentialStatuses(auth.tenantId, environment, apiBaseUrl);
@@ -50,10 +53,19 @@ export async function handleProviderCredentialRoutes(
         await validateProviderCredential(provider, payload);
         await saveTenantProviderCredential(auth.tenantId, environment, provider, payload);
       } else if (provider === "telnyx") {
-        const payload = normalizeTelnyxPayload(
+        const normalized = normalizeTelnyxPayload(
           body as { apiKey?: string; connectionId?: string; publicKey?: string }
         );
-        await validateProviderCredential(provider, payload);
+        await assertTelnyxApiKeyValid(normalized.apiKey);
+        const existing = await getTenantProviderCredential(auth.tenantId, environment, "telnyx");
+        const payload = await prepareTelnyxCredentialPayload({
+          apiKey: normalized.apiKey,
+          tenantId: auth.tenantId,
+          apiBaseUrl,
+          ...(normalized.connectionId ? { connectionId: normalized.connectionId } : {}),
+          ...(normalized.publicKey ? { publicKey: normalized.publicKey } : {}),
+          existing,
+        });
         await saveTenantProviderCredential(auth.tenantId, environment, provider, payload);
       } else {
         const payload = normalizeElevenLabsPayload(body as { apiKey?: string });

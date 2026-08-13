@@ -259,6 +259,7 @@ locals {
         COGNITO_USER_POOL_ID      = var.cognito_user_pool_id
         COGNITO_CLIENT_ID         = var.cognito_client_id
         MEDIA_BUCKET              = var.media_bucket_name
+        API_PUBLIC_URL            = var.api_public_url
       }
     }
     reseller = {
