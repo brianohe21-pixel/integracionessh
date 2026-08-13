@@ -5,7 +5,7 @@ import { isCalendarEnabled } from "./calendar.js";
 import { docClient, tableName } from "./dynamo.js";
 import { persistPhoneMessage } from "./messages.js";
 import { getElevenLabsApiKey, getOpenAIApiKey } from "./secrets.js";
-import { buildRealtimeTools, executeTelephonyTool, reportCallUsage } from "./tools.js";
+import { buildRealtimeTools, executeTelephonyTool, fetchVoiceRuntime, reportCallUsage } from "./tools.js";
 import type { Bot, TelephonySession } from "./types.js";
 
 type OpenAIEvent = {
@@ -226,14 +226,27 @@ export async function runTelephonyBridge(
   const voiceId = resolveVoiceId(bot);
   const model = resolveModel(bot);
   const greeting = resolveGreeting(bot, session.locale);
-  const instructions = resolveInstructions(bot, session.locale, greeting);
-  const calendarEnabled = await isCalendarEnabled(session.tenantId, session.botId);
-  const tools = buildRealtimeTools({
+  const voiceRuntime = await fetchVoiceRuntime({
+    tenantId: session.tenantId,
+    botId: session.botId,
     locale: session.locale,
-    knowledgeEnabled: Boolean(bot.knowledgeEnabled),
-    calendarEnabled,
-    handoffEnabled: Boolean(bot.telephonyHandoffEnabled),
   });
+  const instructions = voiceRuntime
+    ? `${voiceRuntime.instructions}\n\n${
+        session.locale === "en"
+          ? `The caller has already heard this opening greeting: "${greeting}". Never repeat or restart the opening greeting. Respond directly to what the caller says next.`
+          : `La persona ya escuchó este saludo inicial: "${greeting}". Nunca repitas ni reinicies el saludo inicial. Responde directamente a lo próximo que diga la persona.`
+      }`
+    : resolveInstructions(bot, session.locale, greeting);
+  const calendarEnabled = await isCalendarEnabled(session.tenantId, session.botId);
+  const tools =
+    voiceRuntime?.tools ??
+    buildRealtimeTools({
+      locale: session.locale,
+      knowledgeEnabled: Boolean(bot.knowledgeEnabled),
+      calendarEnabled,
+      handoffEnabled: Boolean(bot.telephonyHandoffEnabled),
+    });
 
   let elevenWs: WebSocket | null = null;
   let elevenUnavailable = false;

@@ -6,6 +6,49 @@ const lambdaName = process.env.TELEPHONY_LAMBDA_NAME ?? "";
 
 const lambdaClient = new LambdaClient({ region });
 
+export async function fetchVoiceRuntime(params: {
+  tenantId: string;
+  botId: string;
+  locale: BotLocale;
+}): Promise<{
+  instructions: string;
+  tools: Array<Record<string, unknown>>;
+  hasHandoff: boolean;
+  knowledgeEnabled: boolean;
+} | null> {
+  if (!lambdaName) return null;
+
+  const response = await lambdaClient.send(
+    new InvokeCommand({
+      FunctionName: lambdaName,
+      InvocationType: "RequestResponse",
+      Payload: Buffer.from(
+        JSON.stringify({
+          source: "telephony-gateway",
+          action: "get_voice_runtime",
+          ...params,
+        })
+      ),
+    })
+  );
+
+  if (response.FunctionError) return null;
+  const raw = response.Payload ? Buffer.from(response.Payload).toString("utf8") : "{}";
+  try {
+    const parsed = JSON.parse(raw) as {
+      runtime?: {
+        instructions: string;
+        tools: Array<Record<string, unknown>>;
+        hasHandoff: boolean;
+        knowledgeEnabled: boolean;
+      } | null;
+    };
+    return parsed.runtime ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function executeTelephonyTool(params: {
   tenantId: string;
   botId: string;
