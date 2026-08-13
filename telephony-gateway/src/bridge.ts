@@ -229,12 +229,26 @@ export const TELEPHONY_IDLE_REPROMPT_MS = 8_000;
 
 export const TELEPHONY_TURN_DETECTION = {
   type: "server_vad" as const,
-  threshold: 0.52,
+  threshold: 0.65,
   prefix_padding_ms: 400,
-  silence_duration_ms: 450,
+  silence_duration_ms: 550,
   create_response: true,
-  interrupt_response: true,
+  interrupt_response: false,
 };
+
+export const TELEPHONY_BARGE_IN_ECHO_GUARD_MS = 900;
+
+export function shouldAcceptUserTranscript(params: {
+  transcript: string;
+  speaking: boolean;
+  speakingStartedAt: number;
+  now?: number;
+}): boolean {
+  if (!params.transcript.trim()) return false;
+  if (!params.speaking) return true;
+  const now = params.now ?? Date.now();
+  return now - params.speakingStartedAt >= TELEPHONY_BARGE_IN_ECHO_GUARD_MS;
+}
 
 export function estimateSpeechDrainMs(charCount: number): number {
   const msPerChar = 55;
@@ -312,6 +326,7 @@ export async function runTelephonyBridge(
   let openaiWs: WebSocket | null = null;
   let openaiSocket: WebSocket | null = null;
   let speaking = false;
+  let speakingStartedAt = 0;
   let closed = false;
   let draining = false;
   let drainPromise: Promise<void> | null = null;
@@ -334,6 +349,7 @@ export async function runTelephonyBridge(
 
   const completeActiveSpeech = () => {
     speaking = false;
+    speakingStartedAt = 0;
     if (!activeSpeechComplete) return;
     const resolve = activeSpeechComplete;
     activeSpeechComplete = null;
@@ -482,6 +498,7 @@ export async function runTelephonyBridge(
     if (!socket || epoch !== speechEpoch) return false;
 
     speaking = true;
+    speakingStartedAt = Date.now();
     elevenlabsCharacters += trimmed.length;
     const playbackDone = new Promise<void>((resolve) => {
       activeSpeechComplete = resolve;
@@ -760,7 +777,6 @@ export async function runTelephonyBridge(
             console.log(
               `OpenAI speech started for call ${session.callId} item=${data.item_id ?? "unknown"}`
             );
-            interruptSpeech();
             return;
           }
 
@@ -776,24 +792,38 @@ export async function runTelephonyBridge(
             console.error(
               `OpenAI transcription failed for call ${session.callId}: ${data.error?.message ?? data.error?.code ?? "unknown error"}`
             );
-            scheduleIdleReprompt();
+            if (!speaking) scheduleIdleReprompt();
             return;
           }
 
           if (data.type === "conversation.item.input_audio_transcription.completed") {
-            clearIdleReprompt();
-            if (!data.transcript?.trim()) {
-              console.warn(
-                `OpenAI transcription was empty for call ${session.callId} item=${data.item_id ?? "unknown"}`
-              );
-              scheduleIdleReprompt();
+            const transcript = data.transcript?.trim() ?? "";
+            if (
+              !shouldAcceptUserTranscript({
+                transcript,
+                speaking,
+                speakingStartedAt,
+              })
+            ) {
+              if (!transcript) {
+                console.warn(
+                  `OpenAI transcription was empty for call ${session.callId} item=${data.item_id ?? "unknown"}`
+                );
+                if (!speaking) scheduleIdleReprompt();
+              } else {
+                console.warn(
+                  `Ignoring echo transcription for call ${session.callId} item=${data.item_id ?? "unknown"}`
+                );
+              }
               return;
             }
+            clearIdleReprompt();
+            if (speaking) interruptSpeech();
             console.log(
               `OpenAI transcription completed for call ${session.callId} item=${data.item_id ?? "unknown"}`
             );
-            openaiInputTokens += Math.ceil(data.transcript.length / 4);
-            await persistTranscript("user", data.transcript, data.event_id ?? randomUUID());
+            openaiInputTokens += Math.ceil(transcript.length / 4);
+            await persistTranscript("user", transcript, data.event_id ?? randomUUID());
             return;
           }
 

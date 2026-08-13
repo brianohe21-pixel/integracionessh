@@ -5,6 +5,8 @@ import {
   isInboundTelnyxMedia,
   resolveGreeting,
   resolveInstructions,
+  shouldAcceptUserTranscript,
+  TELEPHONY_BARGE_IN_ECHO_GUARD_MS,
   TELEPHONY_IDLE_REPROMPT_MS,
   TELEPHONY_TTS_DRAIN_TIMEOUT_MS,
   TELEPHONY_TURN_DETECTION,
@@ -102,13 +104,49 @@ describe("telephony bridge", () => {
       (session.audio as { input: { turn_detection: typeof TELEPHONY_TURN_DETECTION } }).input
         .turn_detection
     ).toEqual(TELEPHONY_TURN_DETECTION);
-    expect(TELEPHONY_TURN_DETECTION.threshold).toBe(0.52);
-    expect(TELEPHONY_TURN_DETECTION.interrupt_response).toBe(true);
+    expect(TELEPHONY_TURN_DETECTION.threshold).toBe(0.65);
+    expect(TELEPHONY_TURN_DETECTION.interrupt_response).toBe(false);
+    expect(TELEPHONY_TURN_DETECTION.silence_duration_ms).toBe(550);
     expect(TELEPHONY_IDLE_REPROMPT_MS).toBe(8_000);
     expect(
       (session.audio as { input: { transcription: { language: string } } }).input.transcription
         .language
     ).toBe("es");
+  });
+
+  it("rejects echo transcripts while the agent is speaking", () => {
+    expect(
+      shouldAcceptUserTranscript({
+        transcript: "Joaquín",
+        speaking: true,
+        speakingStartedAt: 1_000,
+        now: 1_000 + TELEPHONY_BARGE_IN_ECHO_GUARD_MS - 1,
+      })
+    ).toBe(false);
+    expect(
+      shouldAcceptUserTranscript({
+        transcript: "Aeropuerto a Plaza Brasil",
+        speaking: true,
+        speakingStartedAt: 1_000,
+        now: 1_000 + TELEPHONY_BARGE_IN_ECHO_GUARD_MS,
+      })
+    ).toBe(true);
+    expect(
+      shouldAcceptUserTranscript({
+        transcript: "quiero un taxi",
+        speaking: false,
+        speakingStartedAt: 0,
+        now: 1_000,
+      })
+    ).toBe(true);
+    expect(
+      shouldAcceptUserTranscript({
+        transcript: "   ",
+        speaking: false,
+        speakingStartedAt: 0,
+        now: 1_000,
+      })
+    ).toBe(false);
   });
 
   it("estimates speech drain time with bounds", () => {
