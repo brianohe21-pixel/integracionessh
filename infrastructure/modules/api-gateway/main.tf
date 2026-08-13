@@ -1210,6 +1210,60 @@ locals {
       function_arn = var.telephony_function_arn
       protected    = true
     }
+    bots_telephony_tools_list = {
+      route_key    = "GET /bots/{botId}/telephony/tools"
+      invoke_arn   = var.telephony_invoke_arn
+      function_arn = var.telephony_function_arn
+      protected    = true
+    }
+    bots_telephony_tools_create = {
+      route_key    = "POST /bots/{botId}/telephony/tools"
+      invoke_arn   = var.telephony_invoke_arn
+      function_arn = var.telephony_function_arn
+      protected    = true
+    }
+    bots_telephony_tools_secrets_get = {
+      route_key    = "GET /bots/{botId}/telephony/tools/secrets"
+      invoke_arn   = var.telephony_invoke_arn
+      function_arn = var.telephony_function_arn
+      protected    = true
+    }
+    bots_telephony_tools_secrets_put = {
+      route_key    = "PUT /bots/{botId}/telephony/tools/secrets"
+      invoke_arn   = var.telephony_invoke_arn
+      function_arn = var.telephony_function_arn
+      protected    = true
+    }
+    bots_telephony_tools_secrets_delete = {
+      route_key    = "DELETE /bots/{botId}/telephony/tools/secrets/{secretName}"
+      invoke_arn   = var.telephony_invoke_arn
+      function_arn = var.telephony_function_arn
+      protected    = true
+    }
+    bots_telephony_tools_get = {
+      route_key    = "GET /bots/{botId}/telephony/tools/{toolId}"
+      invoke_arn   = var.telephony_invoke_arn
+      function_arn = var.telephony_function_arn
+      protected    = true
+    }
+    bots_telephony_tools_update = {
+      route_key    = "PUT /bots/{botId}/telephony/tools/{toolId}"
+      invoke_arn   = var.telephony_invoke_arn
+      function_arn = var.telephony_function_arn
+      protected    = true
+    }
+    bots_telephony_tools_delete = {
+      route_key    = "DELETE /bots/{botId}/telephony/tools/{toolId}"
+      invoke_arn   = var.telephony_invoke_arn
+      function_arn = var.telephony_function_arn
+      protected    = true
+    }
+    bots_telephony_tools_test = {
+      route_key    = "POST /bots/{botId}/telephony/tools/{toolId}/test"
+      invoke_arn   = var.telephony_invoke_arn
+      function_arn = var.telephony_function_arn
+      protected    = true
+    }
     api_keys_list = {
       route_key    = "GET /api-keys"
       invoke_arn   = var.api_keys_invoke_arn

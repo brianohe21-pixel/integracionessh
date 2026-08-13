@@ -7,7 +7,7 @@ import { z } from "zod";
 import { resolveRequestAuth, assertTenantAccess, assertMemberRole } from "../../lib/auth/cognito.js";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
 import { listCallsByBot, getCallRecord } from "../../lib/dynamodb/call.repository.js";
-import { listCallEvents } from "../../lib/dynamodb/call-event.repository.js";
+import { appendCallEvent, listCallEvents } from "../../lib/dynamodb/call-event.repository.js";
 import { listVoiceAgentWebhookDeliveries } from "../../lib/dynamodb/voice-agent-webhook.repository.js";
 import { hasTelnyxCredentials } from "../../lib/telnyx/secrets.js";
 import { listOwnedPhoneNumbers } from "../../lib/telnyx/client.js";
@@ -52,11 +52,32 @@ import {
   badRequest,
   created,
   handleError,
+  noContent,
   notFound,
   ok,
   parseJsonBody,
   unauthorized,
 } from "../../lib/http.js";
+import {
+  createVoiceAgentHttpTool,
+  deleteVoiceAgentHttpTool,
+  getVoiceAgentHttpTool,
+  listVoiceAgentHttpTools,
+  makeVoiceAgentToolId,
+  updateVoiceAgentHttpTool,
+} from "../../lib/dynamodb/voice-agent-tool.repository.js";
+import {
+  deleteVoiceAgentToolSecret,
+  getVoiceAgentToolSecret,
+  listVoiceAgentToolSecretNames,
+  saveVoiceAgentToolSecret,
+} from "../../lib/voicebot/voice-agent-tool-secrets.repository.js";
+import {
+  buildVoiceAgentToolTestResult,
+  validateVoiceAgentHttpToolInput,
+  VoiceAgentHttpToolInputSchema,
+} from "../../lib/voicebot/voice-agent-tool.service.js";
+import type { VoiceAgentHttpTool } from "../../types/index.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 
@@ -73,9 +94,38 @@ const OutboundCallSchema = z.object({
   contactName: z.string().max(120).optional(),
 });
 
+const VoiceAgentToolSecretSchema = z.object({
+  name: z.string().min(1).max(120),
+  value: z.string().min(1).max(4096),
+});
+
+const VoiceAgentToolTestSchema = z.object({
+  args: z.record(z.unknown()).optional(),
+  variables: z.record(z.string()).optional(),
+});
+
+function serializeVoiceAgentHttpTool(tool: VoiceAgentHttpTool) {
+  return {
+    toolId: tool.toolId,
+    name: tool.name,
+    description: tool.description,
+    httpUrl: tool.httpUrl,
+    httpMethod: tool.httpMethod,
+    httpBody: tool.httpBody ?? "",
+    httpHeaders: tool.httpHeaders ?? [],
+    httpResponseVariable: tool.httpResponseVariable ?? "",
+    parametersJson: tool.parametersJson,
+    instruction: tool.instruction ?? "",
+    enabled: tool.enabled,
+    sortOrder: tool.sortOrder,
+    createdAt: tool.createdAt,
+    updatedAt: tool.updatedAt,
+  };
+}
+
 interface TelephonyGatewayInvokeEvent {
   source: "telephony-gateway";
-  action: "execute_tool" | "report_usage" | "get_voice_runtime";
+  action: "execute_tool" | "report_usage" | "get_voice_runtime" | "report_tool_execution";
   tenantId: string;
   botId: string;
   conversationId?: string;
@@ -89,6 +139,11 @@ interface TelephonyGatewayInvokeEvent {
     openaiOutputTokens?: number;
     elevenlabsCharacters?: number;
   };
+  toolName?: string;
+  latencyMs?: number;
+  success?: boolean;
+  statusCode?: number;
+  error?: string;
 }
 
 function isGatewayInvokeEvent(event: unknown): event is TelephonyGatewayInvokeEvent {
@@ -112,6 +167,29 @@ async function handleGatewayInvoke(
       tenantId: event.tenantId,
       callId: event.callId,
       usage: event.usage ?? {},
+    });
+    return { ok: true };
+  }
+
+  if (
+    event.action === "report_tool_execution" &&
+    event.callId &&
+    event.toolName &&
+    typeof event.latencyMs === "number"
+  ) {
+    await appendCallEvent({
+      tenantId: event.tenantId,
+      botId: event.botId,
+      callId: event.callId,
+      type: "tool_executed",
+      message: event.toolName,
+      metadata: {
+        toolName: event.toolName,
+        latencyMs: event.latencyMs,
+        success: Boolean(event.success),
+        ...(event.statusCode !== undefined ? { statusCode: event.statusCode } : {}),
+        ...(event.error ? { error: event.error } : {}),
+      },
     });
     return { ok: true };
   }
@@ -286,6 +364,8 @@ export async function handler(
     const rawPath = event.rawPath ?? event.requestContext.http.path;
     const botId = event.pathParameters?.botId;
     const callId = event.pathParameters?.callId;
+    const toolId = event.pathParameters?.toolId;
+    const secretName = event.pathParameters?.secretName;
 
     const credentialTenantId = event.pathParameters?.credentialTenantId;
 
@@ -528,6 +608,155 @@ export async function handler(
         telephonyWebhookSecret: masked?.telephonyWebhookSecret,
         telephonyStructuredOutput: resolveTelephonyStructuredOutput(updated ?? bot),
       });
+    }
+
+    if (method === "GET" && rawPath.endsWith("/telephony/tools/secrets")) {
+      const names = await listVoiceAgentToolSecretNames(auth.tenantId, ENVIRONMENT, botId);
+      return ok({
+        secrets: names.map((name) => ({ name, configured: true })),
+      });
+    }
+
+    if (method === "PUT" && rawPath.endsWith("/telephony/tools/secrets")) {
+      const body = VoiceAgentToolSecretSchema.safeParse(parseJsonBody(event));
+      if (!body.success) return badRequest(body.error.message);
+      await saveVoiceAgentToolSecret(
+        auth.tenantId,
+        ENVIRONMENT,
+        botId,
+        body.data.name,
+        body.data.value
+      );
+      return ok({ name: body.data.name, configured: true });
+    }
+
+    if (method === "DELETE" && secretName && rawPath.includes("/telephony/tools/secrets/")) {
+      const existing = await getVoiceAgentToolSecret(
+        auth.tenantId,
+        ENVIRONMENT,
+        botId,
+        secretName
+      );
+      if (!existing) return notFound("Secret not found");
+      await deleteVoiceAgentToolSecret(auth.tenantId, ENVIRONMENT, botId, secretName);
+      return noContent();
+    }
+
+    if (method === "GET" && rawPath.endsWith("/telephony/tools") && !toolId) {
+      const tools = await listVoiceAgentHttpTools(auth.tenantId, botId);
+      return ok({ tools: tools.map(serializeVoiceAgentHttpTool) });
+    }
+
+    if (method === "POST" && rawPath.endsWith("/telephony/tools") && !toolId) {
+      const body = VoiceAgentHttpToolInputSchema.safeParse(parseJsonBody(event));
+      if (!body.success) return badRequest(body.error.message);
+      const issues = await validateVoiceAgentHttpToolInput({
+        tenantId: auth.tenantId,
+        botId,
+        input: body.data,
+        ...(bot.telephonyVoiceFlowId ? { preferredFlowId: bot.telephonyVoiceFlowId } : {}),
+        environment: ENVIRONMENT,
+      });
+      if (issues.length > 0) {
+        return badRequest(issues.map((issue) => issue.message).join("; "));
+      }
+      const existing = await listVoiceAgentHttpTools(auth.tenantId, botId);
+      const now = new Date().toISOString();
+      const tool = await createVoiceAgentHttpTool({
+        tenantId: auth.tenantId,
+        botId,
+        toolId: makeVoiceAgentToolId(),
+        name: body.data.name,
+        description: body.data.description,
+        httpUrl: body.data.httpUrl,
+        httpMethod: body.data.httpMethod,
+        parametersJson: body.data.parametersJson ?? "",
+        enabled: body.data.enabled ?? true,
+        sortOrder: body.data.sortOrder ?? existing.length,
+        createdAt: now,
+        updatedAt: now,
+        ...(body.data.httpBody !== undefined ? { httpBody: body.data.httpBody } : {}),
+        ...(body.data.httpHeaders !== undefined ? { httpHeaders: body.data.httpHeaders } : {}),
+        ...(body.data.httpResponseVariable !== undefined
+          ? { httpResponseVariable: body.data.httpResponseVariable }
+          : {}),
+        ...(body.data.instruction !== undefined ? { instruction: body.data.instruction } : {}),
+      });
+      return created(serializeVoiceAgentHttpTool(tool));
+    }
+
+    if (toolId && rawPath.includes("/telephony/tools/")) {
+      const tool = await getVoiceAgentHttpTool(auth.tenantId, botId, toolId);
+      if (!tool) return notFound("Tool not found");
+
+      if (method === "GET" && rawPath.endsWith(`/telephony/tools/${toolId}`)) {
+        return ok(serializeVoiceAgentHttpTool(tool));
+      }
+
+      if (method === "PUT" && rawPath.endsWith(`/telephony/tools/${toolId}`)) {
+        const body = VoiceAgentHttpToolInputSchema.partial().safeParse(parseJsonBody(event));
+        if (!body.success) return badRequest(body.error.message);
+        const mergedInput = {
+          name: body.data.name ?? tool.name,
+          description: body.data.description ?? tool.description,
+          httpUrl: body.data.httpUrl ?? tool.httpUrl,
+          httpMethod: body.data.httpMethod ?? tool.httpMethod,
+          httpBody: body.data.httpBody ?? tool.httpBody,
+          httpHeaders: body.data.httpHeaders ?? tool.httpHeaders,
+          httpResponseVariable: body.data.httpResponseVariable ?? tool.httpResponseVariable,
+          parametersJson: body.data.parametersJson ?? tool.parametersJson,
+          instruction: body.data.instruction ?? tool.instruction,
+          enabled: body.data.enabled ?? tool.enabled,
+          sortOrder: body.data.sortOrder ?? tool.sortOrder,
+        };
+        const issues = await validateVoiceAgentHttpToolInput({
+          tenantId: auth.tenantId,
+          botId,
+          toolId,
+          input: mergedInput,
+          ...(bot.telephonyVoiceFlowId ? { preferredFlowId: bot.telephonyVoiceFlowId } : {}),
+          environment: ENVIRONMENT,
+        });
+        if (issues.length > 0) {
+          return badRequest(issues.map((issue) => issue.message).join("; "));
+        }
+        const updated = await updateVoiceAgentHttpTool(auth.tenantId, botId, toolId, {
+          name: mergedInput.name,
+          description: mergedInput.description,
+          httpUrl: mergedInput.httpUrl,
+          httpMethod: mergedInput.httpMethod,
+          parametersJson: mergedInput.parametersJson,
+          enabled: mergedInput.enabled,
+          sortOrder: mergedInput.sortOrder,
+          updatedAt: new Date().toISOString(),
+          ...(mergedInput.httpBody !== undefined ? { httpBody: mergedInput.httpBody } : {}),
+          ...(mergedInput.httpHeaders !== undefined ? { httpHeaders: mergedInput.httpHeaders } : {}),
+          ...(mergedInput.httpResponseVariable !== undefined
+            ? { httpResponseVariable: mergedInput.httpResponseVariable }
+            : {}),
+          ...(mergedInput.instruction !== undefined ? { instruction: mergedInput.instruction } : {}),
+        });
+        return ok(serializeVoiceAgentHttpTool(updated!));
+      }
+
+      if (method === "DELETE" && rawPath.endsWith(`/telephony/tools/${toolId}`)) {
+        await deleteVoiceAgentHttpTool(auth.tenantId, botId, toolId);
+        return noContent();
+      }
+
+      if (method === "POST" && rawPath.endsWith(`/telephony/tools/${toolId}/test`)) {
+        const body = VoiceAgentToolTestSchema.safeParse(parseJsonBody(event));
+        if (!body.success) return badRequest(body.error.message);
+        const result = await buildVoiceAgentToolTestResult({
+          tenantId: auth.tenantId,
+          botId,
+          toolId,
+          args: body.data.args ?? {},
+          environment: ENVIRONMENT,
+          ...(body.data.variables ? { variables: body.data.variables } : {}),
+        });
+        return ok(result);
+      }
     }
 
     if (method === "GET" && rawPath.endsWith("/telephony/webhook/deliveries")) {

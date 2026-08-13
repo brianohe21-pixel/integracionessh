@@ -199,15 +199,15 @@ export async function buildRealtimeSessionConfig(params: {
   });
 
   const calendarConfig = await getCalendarConfig(params.tenantId, params.bot.botId);
-  const handoffEnabled = voiceRuntime?.hasHandoff ?? true;
-  const instructions = voiceRuntime
-    ? voiceRuntime.instructions
-    : await buildVoicebotInstructions({
-        bot: params.bot,
-        tenantId: params.tenantId,
-        locale: params.locale,
-        handoffEnabled,
-      });
+  const handoffEnabled = voiceRuntime?.hasHandoff ?? Boolean(params.bot.telephonyHandoffEnabled);
+  const instructions =
+    voiceRuntime?.instructions ??
+    await buildVoicebotInstructions({
+      bot: params.bot,
+      tenantId: params.tenantId,
+      locale: params.locale,
+      handoffEnabled,
+    });
   const tools =
     voiceRuntime?.tools ??
     buildVoicebotTools({

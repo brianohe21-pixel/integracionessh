@@ -55,7 +55,8 @@ export async function executeVoiceHttpNode(params: {
   variables: Record<string, string>;
   tenantId: string;
   environment: string;
-  flowId: string;
+  flowId?: string;
+  secretsOverride?: Record<string, string>;
 }): Promise<{ output: string; variables: Record<string, string> }> {
   const urlTemplate = params.node.data.httpUrl?.trim();
   if (!urlTemplate) {
@@ -65,7 +66,11 @@ export async function executeVoiceHttpNode(params: {
     };
   }
 
-  const secrets = await getFlowSecrets(params.tenantId, params.environment, params.flowId);
+  const secrets =
+    params.secretsOverride ??
+    (params.flowId
+      ? await getFlowSecrets(params.tenantId, params.environment, params.flowId)
+      : {});
   const context: Record<string, unknown> = {
     args: params.args,
     var: params.variables,

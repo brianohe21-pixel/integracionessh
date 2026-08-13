@@ -11,6 +11,7 @@ import { performHandoff } from "../advisor/handoff.js";
 import { getSystemMessage } from "../i18n/index.js";
 
 import { executeVoiceFlowTool } from "./voice-flow-tools.js";
+import { executeVoiceAgentHttpTool } from "./voice-agent-tool-executor.js";
 
 export interface VoicebotToolContext {
   tenantId: string;
@@ -34,6 +35,17 @@ export async function executeVoicebotTool(
     args = JSON.parse(argsJson) as Record<string, unknown>;
   } catch {
     return { output: JSON.stringify({ error: "Invalid tool arguments" }) };
+  }
+
+  const agentResult = await executeVoiceAgentHttpTool({
+    tenantId: ctx.tenantId,
+    botId: ctx.botId,
+    toolName: name,
+    args,
+    environment: ctx.environment,
+  });
+  if (agentResult) {
+    return { output: agentResult.output };
   }
 
   const flowResult = await executeVoiceFlowTool({

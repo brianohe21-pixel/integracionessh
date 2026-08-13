@@ -760,6 +760,7 @@ export type CallEventType =
   | "cost_pending"
   | "cost_partial"
   | "cost_finalized"
+  | "tool_executed"
   | "error";
 
 export interface CallEvent {
@@ -1960,6 +1961,25 @@ export type FlowKind = "messaging" | "voice_ai";
 export interface FlowHttpHeader {
   key: string;
   value: string;
+}
+
+export interface VoiceAgentHttpTool {
+  tenantId: string;
+  botId: string;
+  toolId: string;
+  name: string;
+  description: string;
+  httpUrl: string;
+  httpMethod: "GET" | "POST" | "PATCH";
+  httpBody?: string;
+  httpHeaders?: FlowHttpHeader[];
+  httpResponseVariable?: string;
+  parametersJson: string;
+  instruction?: string;
+  enabled: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface FlowNodeData {
