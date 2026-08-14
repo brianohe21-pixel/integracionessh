@@ -51,12 +51,20 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+COMMANDS_WITH_VARS = {"apply", "console", "import", "plan", "refresh"}
+
+
 def terraform_command(*parts: str) -> list[str]:
-    command = ["terraform", "-input=false"]
-    tfvars = Path("terraform.tfvars")
-    if tfvars.is_file():
-        command.extend(["-var-file", str(tfvars)])
-    command.extend(parts)
+    if not parts:
+        return ["terraform"]
+    subcommand, *rest = parts
+    command = ["terraform", subcommand]
+    if subcommand in COMMANDS_WITH_VARS:
+        command.append("-input=false")
+        tfvars = Path("terraform.tfvars")
+        if tfvars.is_file():
+            command.extend(["-var-file", str(tfvars)])
+    command.extend(rest)
     return command
 
 
