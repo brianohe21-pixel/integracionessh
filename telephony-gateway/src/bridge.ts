@@ -1,6 +1,12 @@
 import { randomUUID } from "crypto";
 import { GetCommand } from "@aws-sdk/lib-dynamodb";
 import WebSocket, { type RawData } from "ws";
+import { BackgroundSoundEngine } from "./background-audio.js";
+import {
+  fetchBackgroundSoundLoop,
+  resolveBackgroundSoundId,
+  resolveBackgroundSoundVolume,
+} from "./background-sounds.js";
 import { isCalendarEnabled } from "./calendar.js";
 import { docClient, tableName } from "./dynamo.js";
 import { persistPhoneMessage } from "./messages.js";
@@ -13,6 +19,13 @@ import {
   reportCallUsage,
   reportToolExecution,
 } from "./tools.js";
+import { resolveTelephonyTranscriptionModelId } from "./transcription-models.js";
+import {
+  buildTurnDetection,
+  isBargeInEnabled,
+  type TelephonyTurnDetection,
+} from "./transcription-settings.js";
+import { resolveTtsModel, resolveVoiceSettings } from "./voice-settings.js";
 import type { Bot, TelephonySession } from "./types.js";
 
 type OpenAIEvent = {
@@ -135,6 +148,10 @@ function resolveModel(bot: Bot): string {
   return "gpt-realtime-2.1-mini";
 }
 
+function resolveTranscriptionModel(bot: Bot): string {
+  return resolveTelephonyTranscriptionModelId(bot.telephonyTranscriptionModel);
+}
+
 export function resolveInstructions(
   bot: Bot,
   locale: TelephonySession["locale"],
@@ -184,9 +201,11 @@ export function isInboundTelnyxMedia(track?: string): boolean {
 
 export function buildOpenAISessionUpdate(params: {
   model: string;
+  transcriptionModel: string;
   instructions: string;
   tools: Array<Record<string, unknown>>;
   locale: TelephonySession["locale"];
+  turnDetection: TelephonyTurnDetection;
 }): Record<string, unknown> {
   return {
     type: "session.update",
@@ -200,9 +219,9 @@ export function buildOpenAISessionUpdate(params: {
       audio: {
         input: {
           format: { type: "audio/pcmu" },
-          turn_detection: TELEPHONY_TURN_DETECTION,
+          turn_detection: params.turnDetection,
           transcription: {
-            model: "gpt-4o-mini-transcribe",
+            model: params.transcriptionModel,
             language: params.locale,
           },
         },
@@ -227,14 +246,10 @@ export const TELEPHONY_TTS_DRAIN_TIMEOUT_MS = 30_000;
 export const ELEVENLABS_KEEPALIVE_MS = 10_000;
 export const TELEPHONY_IDLE_REPROMPT_MS = 15_000;
 
-export const TELEPHONY_TURN_DETECTION = {
-  type: "server_vad" as const,
-  threshold: 0.65,
-  prefix_padding_ms: 400,
-  silence_duration_ms: 550,
-  create_response: true,
-  interrupt_response: false,
-};
+export const TELEPHONY_TURN_DETECTION: TelephonyTurnDetection = buildTurnDetection({
+  botId: "",
+  tenantId: "",
+});
 
 export const TELEPHONY_BARGE_IN_ECHO_GUARD_MS = 900;
 
@@ -306,7 +321,12 @@ export async function runTelephonyBridge(
     isCalendarEnabled(session.tenantId, session.botId),
   ]);
   const voiceId = resolveVoiceId(bot);
+  const ttsModel = resolveTtsModel(bot);
+  const voiceSettings = resolveVoiceSettings(bot);
+  const turnDetection = buildTurnDetection(bot);
+  const bargeInEnabled = isBargeInEnabled(bot);
   const model = resolveModel(bot);
+  const transcriptionModel = resolveTranscriptionModel(bot);
   const greeting = resolveGreeting(bot, session.locale);
   const instructions = voiceRuntime
     ? `${voiceRuntime.instructions}\n\n${
@@ -350,10 +370,24 @@ export async function runTelephonyBridge(
   let elevenlabsCharacters = 0;
   let usageReported = false;
   let activeSpeechComplete: (() => void) | null = null;
+  let backgroundEngine: BackgroundSoundEngine | null = null;
+
+  const backgroundSoundId = resolveBackgroundSoundId(bot.telephonyBackgroundSound);
+  if (backgroundSoundId) {
+    const loop = await fetchBackgroundSoundLoop(backgroundSoundId, elevenKey);
+    if (loop) {
+      backgroundEngine = new BackgroundSoundEngine(
+        loop,
+        resolveBackgroundSoundVolume(bot.telephonyBackgroundSoundVolume)
+      );
+      console.log(`Background sound ${backgroundSoundId} enabled for call ${session.callId}`);
+    }
+  }
 
   const completeActiveSpeech = () => {
     speaking = false;
     speakingStartedAt = 0;
+    backgroundEngine?.setTtsActive(false);
     if (!activeSpeechComplete) return;
     const resolve = activeSpeechComplete;
     activeSpeechComplete = null;
@@ -376,6 +410,7 @@ export async function runTelephonyBridge(
       ...(telnyxStreamId ? { stream_id: telnyxStreamId } : {}),
     });
     if (!wasSpeaking) return;
+    backgroundEngine?.setTtsActive(false);
     const socket = elevenWs;
     if (socket?.readyState === WebSocket.OPEN) {
       interruptedElevenSockets.add(socket);
@@ -400,7 +435,7 @@ export async function runTelephonyBridge(
     });
   };
 
-  const sendTelnyxMedia = (payload: string) => {
+  const sendTelnyxMediaRaw = (payload: string) => {
     if (!streamReady) {
       pendingTelnyxAudio.push(payload);
       return;
@@ -411,12 +446,14 @@ export async function runTelephonyBridge(
     });
   };
 
+  const sendTelnyxMedia = (payload: string) => {
+    const output = backgroundEngine ? backgroundEngine.mixTtsPayload(payload) : payload;
+    sendTelnyxMediaRaw(output);
+  };
+
   const flushPendingTelnyxAudio = () => {
     for (const payload of pendingTelnyxAudio) {
-      sendJson(telnyxWs, {
-        event: "media",
-        media: { payload },
-      });
+      sendTelnyxMedia(payload);
     }
     pendingTelnyxAudio.length = 0;
   };
@@ -460,6 +497,7 @@ export async function runTelephonyBridge(
     draining = true;
     clearIdleReprompt();
     reportUsageOnce();
+    backgroundEngine?.stop();
     if (openaiWs?.readyState === WebSocket.OPEN) openaiWs.close();
     if (elevenWs?.readyState === WebSocket.OPEN) elevenWs.close();
     if (telnyxWs.readyState === WebSocket.OPEN) telnyxWs.close();
@@ -503,6 +541,7 @@ export async function runTelephonyBridge(
 
     speaking = true;
     speakingStartedAt = Date.now();
+    backgroundEngine?.setTtsActive(true);
     elevenlabsCharacters += trimmed.length;
     const playbackDone = new Promise<void>((resolve) => {
       activeSpeechComplete = resolve;
@@ -585,6 +624,9 @@ export async function runTelephonyBridge(
     streamReady = true;
     console.log(`Telnyx stream ready for call ${session.callId}`);
     flushPendingTelnyxAudio();
+    if (backgroundEngine) {
+      backgroundEngine.startIdlePump(sendTelnyxMediaRaw);
+    }
     maybeStartGreeting();
   };
 
@@ -631,7 +673,7 @@ export async function runTelephonyBridge(
 
   const openElevenLabs = () =>
     new Promise<WebSocket | null>((resolve) => {
-      const url = `wss://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}/stream-input?model_id=eleven_flash_v2_5&output_format=ulaw_8000`;
+      const url = `wss://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}/stream-input?model_id=${encodeURIComponent(ttsModel)}&output_format=ulaw_8000`;
       const socket = new WebSocket(url, {
         headers: { "xi-api-key": elevenKey },
       });
@@ -654,7 +696,7 @@ export async function runTelephonyBridge(
         socket.send(
           JSON.stringify({
             text: " ",
-            voice_settings: { stability: 0.5, similarity_boost: 0.75, speed: 1 },
+            voice_settings: voiceSettings,
             generation_config: { chunk_length_schedule: [80, 120, 160, 250] },
           })
         );
@@ -744,9 +786,11 @@ export async function runTelephonyBridge(
           socket,
           buildOpenAISessionUpdate({
             model,
+            transcriptionModel,
             instructions,
             tools,
             locale: session.locale,
+            turnDetection,
           })
         );
         resolve(socket);
@@ -779,6 +823,7 @@ export async function runTelephonyBridge(
           }
 
           if (data.type === "input_audio_buffer.speech_started") {
+            if (bargeInEnabled && speaking) interruptSpeech();
             console.log(
               `OpenAI speech started for call ${session.callId} item=${data.item_id ?? "unknown"}`
             );

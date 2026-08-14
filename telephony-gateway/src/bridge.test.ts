@@ -87,9 +87,11 @@ describe("telephony bridge", () => {
   it("builds GA OpenAI session.update payload", () => {
     const payload = buildOpenAISessionUpdate({
       model: "gpt-realtime-2.1-mini",
+      transcriptionModel: "gpt-4o-mini-transcribe",
       instructions: "Hola",
       tools: [],
       locale: "es",
+      turnDetection: TELEPHONY_TURN_DETECTION,
     });
 
     expect(payload.type).toBe("session.update");
@@ -110,9 +112,12 @@ describe("telephony bridge", () => {
     expect(TELEPHONY_TURN_DETECTION.silence_duration_ms).toBe(550);
     expect(TELEPHONY_IDLE_REPROMPT_MS).toBe(15_000);
     expect(
-      (session.audio as { input: { transcription: { language: string } } }).input.transcription
-        .language
+      (session.audio as { input: { transcription: { language: string; model: string } } }).input
+        .transcription.language
     ).toBe("es");
+    expect(
+      (session.audio as { input: { transcription: { model: string } } }).input.transcription.model
+    ).toBe("gpt-4o-mini-transcribe");
   });
 
   it("rejects echo transcripts while the agent is speaking", () => {
