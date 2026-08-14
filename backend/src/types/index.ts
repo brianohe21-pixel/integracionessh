@@ -435,6 +435,7 @@ export interface Message {
   sentByAdvisorId?: string;
   whatsappMessageId?: string;
   externalMessageId?: string | undefined;
+  callId?: string;
   timestamp: string;
 }
 

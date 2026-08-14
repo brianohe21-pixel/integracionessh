@@ -1,13 +1,13 @@
 import { getOpenAIApiKey } from "../ai/providers/openai.js";
 import { OpenAIProvider } from "../ai/providers/openai.js";
-import { getConversationMessages } from "../dynamodb/conversation.repository.js";
-import type { BotLocale, TelephonyStructuredOutputDefinition } from "../../types/index.js";
+import type { BotLocale, CallRecord, TelephonyStructuredOutputDefinition } from "../../types/index.js";
+import { getCallTranscriptMessages } from "./transcript.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 const EXTRACTION_MODEL = "gpt-4o-mini";
 
 function buildTranscript(
-  messages: Awaited<ReturnType<typeof getConversationMessages>>,
+  messages: Awaited<ReturnType<typeof getCallTranscriptMessages>>,
   locale: BotLocale
 ): string {
   const userLabel = locale === "en" ? "User" : "Usuario";
@@ -44,11 +44,11 @@ function extractWithRegex(
 
 export async function extractCallStructuredOutputs(params: {
   tenantId: string;
-  conversationId: string;
+  call: CallRecord;
   definition: TelephonyStructuredOutputDefinition;
   locale: BotLocale;
 }): Promise<Record<string, unknown> | null> {
-  const messages = await getConversationMessages(params.tenantId, params.conversationId, 100);
+  const messages = await getCallTranscriptMessages(params.tenantId, params.call);
   const transcript = buildTranscript(messages, params.locale);
   if (!transcript.trim()) return null;
 

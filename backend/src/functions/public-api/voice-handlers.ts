@@ -6,13 +6,13 @@ import {
 } from "../../lib/api-keys/scopes.js";
 import { getCallRecord, listCallsByBotPaginated } from "../../lib/dynamodb/call.repository.js";
 import { listCallEvents } from "../../lib/dynamodb/call-event.repository.js";
-import { getConversationMessages } from "../../lib/dynamodb/conversation.repository.js";
 import {
   isTelnyxVoiceCall,
   toPublicVoiceCall,
   toPublicVoiceCallEvent,
   toPublicVoiceTranscriptMessage,
 } from "../../lib/public-api/voice-calls.js";
+import { getCallTranscriptMessages } from "../../lib/telephony/transcript.js";
 import { toPublicVoiceStructuredOutputResponse } from "../../lib/public-api/voice-structured-output.js";
 import { getBot, updateBot } from "../../lib/dynamodb/bot.repository.js";
 import { resolveTelephonyStructuredOutput } from "../../lib/telephony/structured-output-config.js";
@@ -288,11 +288,7 @@ export async function handleGetVoiceCallTranscript(
 
   const limit = parseLimitParam(event.queryStringParameters?.limit, 50);
   const cursor = event.queryStringParameters?.cursor;
-  const messages = await getConversationMessages(
-    apiKey.tenantId,
-    call.conversationId,
-    200
-  );
+  const messages = await getCallTranscriptMessages(apiKey.tenantId, call);
   const { items, nextCursor } = paginateTranscriptMessages(messages, limit, cursor);
 
   await auth.logUsage({

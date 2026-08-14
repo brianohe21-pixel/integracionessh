@@ -496,12 +496,12 @@ async function finalizeTelephonyCallSession(
   });
 
   let extractedFields: TelephonyStructuredOutputPayload | null = null;
-  if (bot && session.conversationId) {
+  if (bot && call) {
     const definition = resolveTelephonyStructuredOutput(bot);
     if (definition) {
       const raw = await extractCallStructuredOutputs({
         tenantId: session.tenantId,
-        conversationId: session.conversationId,
+        call,
         definition,
         locale: session.locale,
       });

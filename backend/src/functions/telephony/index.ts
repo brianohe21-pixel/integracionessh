@@ -33,6 +33,7 @@ import {
   terminateTelephonyCall,
 } from "../../lib/telephony/service.js";
 import { deliverVoiceAgentWebhook } from "../../lib/telephony/webhook-delivery.js";
+import { getCallTranscriptMessages } from "../../lib/telephony/transcript.js";
 import { resolveTelephonyStructuredOutput } from "../../lib/telephony/structured-output-config.js";
 import {
   buildStructuredOutputBotUpdates,
@@ -957,6 +958,15 @@ export async function handler(
       }
       const events = await listCallEvents(auth.tenantId, callId);
       return ok({ items: events });
+    }
+
+    if (method === "GET" && callId && rawPath.endsWith("/transcript")) {
+      const call = await getCallRecord(auth.tenantId, callId);
+      if (!call || call.botId !== botId || call.provider !== "telnyx") {
+        return notFound("Call not found");
+      }
+      const items = await getCallTranscriptMessages(auth.tenantId, call);
+      return ok({ items });
     }
 
     if (method === "GET" && callId && rawPath.endsWith("/recording")) {
