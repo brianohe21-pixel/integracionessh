@@ -84,6 +84,15 @@ export async function updateCallRecord(
       | "costStatus"
       | "costBreakdown"
       | "usageMetrics"
+      | "queueId"
+      | "advisorId"
+      | "conferenceId"
+      | "disposition"
+      | "ivrPath"
+      | "waitSeconds"
+      | "talkSeconds"
+      | "contactCenterMode"
+      | "campaignId"
     >
   >
 ): Promise<void> {
@@ -104,6 +113,15 @@ export async function updateCallRecord(
     ["costStatus", "costStatus"],
     ["costBreakdown", "costBreakdown"],
     ["usageMetrics", "usageMetrics"],
+    ["queueId", "queueId"],
+    ["advisorId", "advisorId"],
+    ["conferenceId", "conferenceId"],
+    ["disposition", "disposition"],
+    ["ivrPath", "ivrPath"],
+    ["waitSeconds", "waitSeconds"],
+    ["talkSeconds", "talkSeconds"],
+    ["contactCenterMode", "contactCenterMode"],
+    ["campaignId", "campaignId"],
   ];
 
   for (const [key, attr] of fieldMap) {

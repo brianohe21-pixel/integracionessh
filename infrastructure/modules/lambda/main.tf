@@ -819,6 +819,7 @@ locals {
         INTEGRATION_SQS_QUEUE_URL   = var.integration_sqs_queue_url
         TELEPHONY_CDR_SQS_QUEUE_URL = var.telephony_cdr_sqs_queue_url
         MEDIA_BUCKET                = var.media_bucket_name
+        API_PUBLIC_URL              = var.api_public_url
       }
     }
     process_telephony_cdr = {

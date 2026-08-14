@@ -43,6 +43,10 @@ export async function createTelephonySession(params: {
   toNumber: string;
   locale: BotLocale;
   contactName?: string;
+  mode?: TelephonySession["mode"];
+  queueId?: string;
+  ivrFlowId?: string;
+  campaignId?: string;
 }): Promise<TelephonySession> {
   const now = new Date().toISOString();
   const ttl = Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS;
@@ -64,6 +68,10 @@ export async function createTelephonySession(params: {
     startedAt: now,
     ttl,
     ...(params.contactName ? { contactName: params.contactName } : {}),
+    ...(params.mode ? { mode: params.mode } : {}),
+    ...(params.queueId ? { queueId: params.queueId } : {}),
+    ...(params.ivrFlowId ? { ivrFlowId: params.ivrFlowId } : {}),
+    ...(params.campaignId ? { campaignId: params.campaignId } : {}),
   };
 
   await docClient.send(
@@ -148,13 +156,47 @@ export async function updateTelephonySessionStatus(
   sessionId: string,
   status: TelephonySessionStatus
 ): Promise<TelephonySession | null> {
+  return patchTelephonySession(sessionId, { status });
+}
+
+export async function patchTelephonySession(
+  sessionId: string,
+  updates: Partial<
+    Pick<
+      TelephonySession,
+      | "status"
+      | "mode"
+      | "queueId"
+      | "conferenceId"
+      | "advisorId"
+      | "agentCallControlId"
+      | "supervisorCallControlId"
+      | "ivrFlowId"
+      | "ivrNodeId"
+      | "campaignId"
+      | "consultCallControlId"
+      | "callControlId"
+    >
+  >
+): Promise<TelephonySession | null> {
+  const names: Record<string, string> = {};
+  const values: Record<string, unknown> = {};
+  const expressions: string[] = [];
+  for (const [key, value] of Object.entries(updates)) {
+    if (value === undefined) continue;
+    names[`#${key}`] = key;
+    values[`:${key}`] = value;
+    expressions.push(`#${key} = :${key}`);
+  }
+  if (expressions.length === 0) return getTelephonySession(sessionId);
+
   const result = await docClient.send(
     new UpdateCommand({
       TableName: TABLE_NAME,
       Key: sessionKey(sessionId),
-      UpdateExpression: "SET #status = :status",
-      ExpressionAttributeNames: { "#status": "status" },
-      ExpressionAttributeValues: { ":status": status },
+      UpdateExpression: `SET ${expressions.join(", ")}`,
+      ExpressionAttributeNames: names,
+      ExpressionAttributeValues: values,
       ReturnValues: "ALL_NEW",
     })
   );
@@ -163,6 +205,26 @@ export async function updateTelephonySessionStatus(
   void PK;
   void SK;
   return rest as TelephonySession;
+}
+
+export async function indexTelephonyCallControlId(
+  sessionId: string,
+  callControlId: string
+): Promise<void> {
+  const session = await getTelephonySession(sessionId);
+  if (!session) return;
+  await docClient.send(
+    new PutCommand({
+      TableName: TABLE_NAME,
+      Item: {
+        ...callControlIndexKey(callControlId),
+        sessionId,
+        tenantId: session.tenantId,
+        botId: session.botId,
+        ttl: session.ttl,
+      },
+    })
+  );
 }
 
 export async function attachTelephonyCallControlId(

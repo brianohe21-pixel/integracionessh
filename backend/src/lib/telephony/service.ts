@@ -587,7 +587,20 @@ export async function handleInboundCallInitiated(
   }
 
   const bot = await getBot(lookup.tenantId, lookup.botId);
-  if (!bot?.telephonyEnabled || bot.status !== "active" || bot.responseMode !== "openai") {
+  if (!bot?.telephonyEnabled || bot.status !== "active") {
+    await hangupCall(ENVIRONMENT, callControlId, lookup.tenantId).catch(() => undefined);
+    return;
+  }
+
+  const { startContactCenterInbound } = await import("../contact-center/service.js");
+  const routed = await startContactCenterInbound({
+    payload,
+    bot,
+    tenantId: lookup.tenantId,
+  });
+  if (routed === "handled") return;
+
+  if (bot.responseMode !== "openai") {
     await hangupCall(ENVIRONMENT, callControlId, lookup.tenantId).catch(() => undefined);
     return;
   }

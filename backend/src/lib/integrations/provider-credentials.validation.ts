@@ -97,10 +97,12 @@ export function normalizeOpenAIPayload(body: { apiKey?: string }): OpenAICredent
 export function normalizeTelnyxPayload(body: {
   apiKey?: string;
   connectionId?: string;
+  credentialConnectionId?: string;
   publicKey?: string;
 }): Pick<TelnyxCredentialPayload, "apiKey"> & Partial<TelnyxCredentialPayload> {
   const apiKey = (body.apiKey ?? "").trim();
   const connectionId = (body.connectionId ?? "").trim();
+  const credentialConnectionId = (body.credentialConnectionId ?? "").trim();
   const publicKey = (body.publicKey ?? "").trim();
   if (!apiKey || apiKey.length < 10) {
     throw Object.assign(new Error("Telnyx apiKey is required"), { statusCode: 400 });
@@ -108,6 +110,7 @@ export function normalizeTelnyxPayload(body: {
   return {
     apiKey,
     ...(connectionId ? { connectionId } : {}),
+    ...(credentialConnectionId ? { credentialConnectionId } : {}),
     ...(publicKey ? { publicKey } : {}),
   };
 }

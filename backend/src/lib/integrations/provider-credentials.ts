@@ -15,6 +15,7 @@ export type CredentialSource = "own" | "reseller" | "platform" | "none";
 export interface TelnyxCredentialPayload {
   apiKey: string;
   connectionId: string;
+  credentialConnectionId?: string;
   publicKey?: string;
 }
 
@@ -105,6 +106,9 @@ function parseTelnyx(payload: Partial<TelnyxCredentialPayload> | null): TelnyxCr
   return {
     apiKey,
     connectionId,
+    ...(payload?.credentialConnectionId?.trim()
+      ? { credentialConnectionId: payload.credentialConnectionId.trim() }
+      : {}),
     ...(payload?.publicKey?.trim() ? { publicKey: payload.publicKey.trim() } : {}),
   };
 }

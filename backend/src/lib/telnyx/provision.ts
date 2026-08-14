@@ -28,6 +28,10 @@ export function buildTelnyxOutboundProfileName(tenantId: string): string {
   return `integracionessh-${tenantId}`;
 }
 
+export function buildTelnyxCredentialConnectionName(tenantId: string): string {
+  return `integracionessh-${tenantId}-webrtc`;
+}
+
 function buildCallControlApplicationPayload(
   applicationName: string,
   webhookUrl: string,
@@ -272,13 +276,123 @@ export async function prepareTelnyxCredentialPayload(params: {
     connectionId: provisioned.connectionId,
   });
 
+  const credentialConnection = await ensureTelnyxCredentialConnection({
+    apiKey: params.apiKey,
+    tenantId: params.tenantId,
+    apiBaseUrl: params.apiBaseUrl,
+    outboundVoiceProfileId: (
+      await ensureTelnyxOutboundVoiceProfile({
+        apiKey: params.apiKey,
+        tenantId: params.tenantId,
+      })
+    ).outboundVoiceProfileId,
+    ...(params.existing?.credentialConnectionId
+      ? { existingCredentialConnectionId: params.existing.credentialConnectionId }
+      : {}),
+  });
+
   return {
     apiKey: params.apiKey,
     connectionId: provisioned.connectionId,
+    credentialConnectionId: credentialConnection.credentialConnectionId,
     ...(params.publicKey
       ? { publicKey: params.publicKey }
       : params.existing?.publicKey
         ? { publicKey: params.existing.publicKey }
         : {}),
   };
+}
+
+interface CredentialConnection {
+  id: string;
+  connection_name?: string;
+}
+
+async function listCredentialConnections(apiKey: string): Promise<CredentialConnection[]> {
+  const data = await telnyxRequest<{ data?: CredentialConnection[] }>(
+    apiKey,
+    "/credential_connections?page[size]=100",
+    { method: "GET" }
+  );
+  return data.data ?? [];
+}
+
+export async function ensureTelnyxCredentialConnection(params: {
+  apiKey: string;
+  tenantId: string;
+  apiBaseUrl: string;
+  outboundVoiceProfileId: string;
+  existingCredentialConnectionId?: string;
+}): Promise<{ credentialConnectionId: string }> {
+  const webhookUrl = buildTelnyxWebhookUrl(params.tenantId, params.apiBaseUrl);
+  const connectionName = buildTelnyxCredentialConnectionName(params.tenantId);
+  const connections = await listCredentialConnections(params.apiKey);
+  const existing =
+    (params.existingCredentialConnectionId
+      ? connections.find((item) => item.id === params.existingCredentialConnectionId)
+      : undefined) ?? connections.find((item) => item.connection_name === connectionName);
+
+  const payload = {
+    connection_name: connectionName,
+    user_name: `cc${params.tenantId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 16) || "tenant"}`,
+    password: `Wx${params.tenantId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 12)}Aa1!`,
+    webhook_event_url: webhookUrl,
+    webhook_api_version: "2",
+    outbound: { outbound_voice_profile_id: params.outboundVoiceProfileId },
+  };
+
+  if (existing) {
+    await telnyxRequest(params.apiKey, `/credential_connections/${encodeURIComponent(existing.id)}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        connection_name: connectionName,
+        webhook_event_url: webhookUrl,
+        webhook_api_version: "2",
+        outbound: { outbound_voice_profile_id: params.outboundVoiceProfileId },
+      }),
+    });
+    return { credentialConnectionId: existing.id };
+  }
+
+  const created = await telnyxRequest<{ data: CredentialConnection }>(
+    params.apiKey,
+    "/credential_connections",
+    { method: "POST", body: JSON.stringify(payload) }
+  );
+  return { credentialConnectionId: created.data.id };
+}
+
+export async function createAdvisorTelephonyCredential(params: {
+  apiKey: string;
+  credentialConnectionId: string;
+  name: string;
+}): Promise<{ id: string; sipUsername: string; sipPassword: string }> {
+  const data = await telnyxRequest<{
+    data: { id: string; sip_username?: string; sip_password?: string };
+  }>(params.apiKey, "/telephony_credentials", {
+    method: "POST",
+    body: JSON.stringify({
+      connection_id: params.credentialConnectionId,
+      name: params.name,
+    }),
+  });
+  return {
+    id: data.data.id,
+    sipUsername: data.data.sip_username ?? "",
+    sipPassword: data.data.sip_password ?? "",
+  };
+}
+
+export async function createTelephonyCredentialToken(params: {
+  apiKey: string;
+  credentialId: string;
+}): Promise<string> {
+  const data = await telnyxRequest<{ data?: string } | string>(
+    params.apiKey,
+    `/telephony_credentials/${encodeURIComponent(params.credentialId)}/token`,
+    { method: "POST" }
+  );
+  if (typeof data === "string" && data.trim()) return data.trim();
+  if (data && typeof data === "object" && typeof data.data === "string") return data.data;
+  throw Object.assign(new Error("Telnyx did not return a WebRTC token"), { statusCode: 502 });
 }

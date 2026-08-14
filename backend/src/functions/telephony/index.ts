@@ -40,6 +40,14 @@ import {
   StructuredOutputDefinitionSchema,
 } from "../../lib/telephony/structured-output-schema.js";
 import { executeVoicebotTool } from "../../lib/voicebot/tools.js";
+import { handleContactCenterHttp } from "../../lib/contact-center/http.js";
+import {
+  handleAgentLegAnswered,
+  handleContactCenterHangup,
+  handleGatherEnded,
+  handleOutboundCustomerAnswered,
+  handleSpeakEnded,
+} from "../../lib/contact-center/service.js";
 import { loadVoiceFlowRuntime } from "../../lib/flow/voice-flow-runtime.js";
 import { getOpenAIApiKey } from "../../lib/ai/providers/openai.js";
 import { getPresignedReadUrl } from "../../lib/s3/client.js";
@@ -258,6 +266,7 @@ async function handleGatewayInvoke(
     handoffEnabled: voiceRuntime?.hasHandoff ?? Boolean(bot.telephonyHandoffEnabled),
     apiKey,
     environment: ENVIRONMENT,
+    ...(event.callId ? { callId: event.callId } : {}),
   });
 }
 
@@ -344,7 +353,21 @@ async function handleTelnyxWebhook(
     }
 
     if (eventType === "call.answered") {
-      await handleCallAnswered(payload);
+      const handledAgent = await handleAgentLegAnswered(payload);
+      if (!handledAgent) {
+        const handledOutbound = await handleOutboundCustomerAnswered(payload);
+        if (!handledOutbound) await handleCallAnswered(payload);
+      }
+      continue;
+    }
+
+    if (eventType === "call.gather.ended") {
+      await handleGatherEnded(payload);
+      continue;
+    }
+
+    if (eventType === "call.speak.ended") {
+      await handleSpeakEnded(payload);
       continue;
     }
 
@@ -364,6 +387,7 @@ async function handleTelnyxWebhook(
     }
 
     if (eventType === "call.hangup" || eventType === "call.ended") {
+      await handleContactCenterHangup(payload);
       await handleCallHangup(payload);
     }
   }
@@ -386,14 +410,18 @@ export async function handler(
       return handleGatewayInvoke(event);
     }
 
-    const method = event.requestContext.http.method;
+    const credentialTenantId = event.pathParameters?.credentialTenantId;
     const rawPath = event.rawPath ?? event.requestContext.http.path;
+
+    if (rawPath.includes("/contact-center")) {
+      return handleContactCenterHttp(event as APIGatewayProxyEventV2WithJWTAuthorizer);
+    }
+
+    const method = event.requestContext.http.method;
     const botId = event.pathParameters?.botId;
     const callId = readTelephonyResourceId(event.pathParameters, rawPath, "calls");
     const toolId = readTelephonyResourceId(event.pathParameters, rawPath, "tools");
     const secretName = readTelephonyToolSecretName(event.pathParameters, rawPath);
-
-    const credentialTenantId = event.pathParameters?.credentialTenantId;
 
     if (method === "POST" && rawPath === "/telephony/webhook") {
       return handleTelnyxWebhook(event);
@@ -465,6 +493,9 @@ export async function handler(
         telephonyWebhookEvents: bot.telephonyWebhookEvents ?? VOICE_AGENT_WEBHOOK_EVENTS,
         telephonyWebhookSecret: bot.telephonyWebhookSecret ? "***" : undefined,
         telephonyStructuredOutput: resolveTelephonyStructuredOutput(bot),
+        telephonyRoutingMode: bot.telephonyRoutingMode ?? "ai",
+        telephonyQueueId: bot.telephonyQueueId ?? "",
+        telephonyIvrFlowId: bot.telephonyIvrFlowId ?? "",
       });
     }
 

@@ -915,6 +915,7 @@ export async function runTelephonyBridge(
                   locale: session.locale,
                   name: data.name,
                   arguments: data.arguments ?? "{}",
+                  callId: session.callId,
                 });
               } catch (error) {
                 console.error(`Tool execution failed for ${data.name}:`, error);

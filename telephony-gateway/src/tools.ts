@@ -57,6 +57,7 @@ export async function executeTelephonyTool(params: {
   locale: BotLocale;
   name: string;
   arguments: string;
+  callId?: string;
 }): Promise<{ output: string; handoff?: boolean }> {
   if (!lambdaName) {
     return { output: JSON.stringify({ error: "Tool execution is not configured" }) };

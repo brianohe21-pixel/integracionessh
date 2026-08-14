@@ -1234,6 +1234,12 @@ locals {
       function_arn = var.telephony_function_arn
       protected    = true
     }
+    contact_center_proxy = {
+      route_key    = "ANY /contact-center/{proxy+}"
+      invoke_arn   = var.telephony_invoke_arn
+      function_arn = var.telephony_function_arn
+      protected    = true
+    }
     api_keys_list = {
       route_key    = "GET /api-keys"
       invoke_arn   = var.api_keys_invoke_arn

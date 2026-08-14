@@ -23,6 +23,7 @@ export interface VoicebotToolContext {
   handoffEnabled: boolean;
   apiKey: string;
   environment: string;
+  callId?: string;
 }
 
 export async function executeVoicebotTool(
@@ -74,6 +75,14 @@ export async function executeVoicebotTool(
       conversationId: ctx.conversationId,
       reason: "ai",
     });
+    if (ctx.callId) {
+      const { enqueueFromAiHandoff } = await import("../contact-center/service.js");
+      await enqueueFromAiHandoff({
+        tenantId: ctx.tenantId,
+        botId: ctx.botId,
+        callId: ctx.callId,
+      });
+    }
     return {
       output: JSON.stringify({ success: true, message: reason }),
       handoff: true,

@@ -119,7 +119,18 @@ export async function updateAdvisor(
   tenantId: string,
   advisorId: string,
   updates: Partial<
-    Pick<Advisor, "name" | "phoneNumber" | "status" | "botIds" | "cognitoUserId" | "lastAssignedAt">
+    Pick<
+      Advisor,
+      | "name"
+      | "phoneNumber"
+      | "status"
+      | "botIds"
+      | "cognitoUserId"
+      | "lastAssignedAt"
+      | "skills"
+      | "queueIds"
+      | "voiceEnabled"
+    >
   >
 ): Promise<Advisor | null> {
   const existing = await getAdvisor(tenantId, advisorId);

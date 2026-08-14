@@ -259,3 +259,299 @@ export function directionToWhatsApp(
 ): "USER_INITIATED" | "BUSINESS_INITIATED" {
   return direction === "inbound" ? "USER_INITIATED" : "BUSINESS_INITIATED";
 }
+
+export async function answerCall(params: {
+  environment: string;
+  tenantId: string;
+  callControlId: string;
+  clientState?: string;
+}): Promise<void> {
+  await telnyxRequest(
+    params.environment,
+    `/calls/${encodeURIComponent(params.callControlId)}/actions/answer`,
+    {
+      method: "POST",
+      body: JSON.stringify(params.clientState ? { client_state: params.clientState } : {}),
+    },
+    params.tenantId
+  );
+}
+
+export async function stopCallStreaming(
+  environment: string,
+  callControlId: string,
+  tenantId: string
+): Promise<void> {
+  try {
+    await telnyxRequest(
+      environment,
+      `/calls/${encodeURIComponent(callControlId)}/actions/streaming_stop`,
+      { method: "POST", body: JSON.stringify({}) },
+      tenantId
+    );
+  } catch (error) {
+    if (isTelnyxCallEndedError(error)) return;
+    throw error;
+  }
+}
+
+export async function startPlayback(params: {
+  environment: string;
+  tenantId: string;
+  callControlId: string;
+  audioUrl: string;
+  loop?: boolean;
+}): Promise<void> {
+  try {
+    await telnyxRequest(
+      params.environment,
+      `/calls/${encodeURIComponent(params.callControlId)}/actions/playback_start`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          audio_url: params.audioUrl,
+          loop: params.loop === false ? "1" : "infinity",
+        }),
+      },
+      params.tenantId
+    );
+  } catch (error) {
+    if (isTelnyxCallEndedError(error)) return;
+    throw error;
+  }
+}
+
+export async function stopPlayback(
+  environment: string,
+  callControlId: string,
+  tenantId: string
+): Promise<void> {
+  try {
+    await telnyxRequest(
+      environment,
+      `/calls/${encodeURIComponent(callControlId)}/actions/playback_stop`,
+      { method: "POST", body: JSON.stringify({}) },
+      tenantId
+    );
+  } catch (error) {
+    if (isTelnyxCallEndedError(error)) return;
+    throw error;
+  }
+}
+
+export async function speakOnCall(params: {
+  environment: string;
+  tenantId: string;
+  callControlId: string;
+  payload: string;
+  language?: string;
+  voice?: string;
+}): Promise<void> {
+  try {
+    await telnyxRequest(
+      params.environment,
+      `/calls/${encodeURIComponent(params.callControlId)}/actions/speak`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          payload: params.payload,
+          voice: params.voice ?? "female",
+          language: params.language ?? "es-ES",
+        }),
+      },
+      params.tenantId
+    );
+  } catch (error) {
+    if (isTelnyxCallEndedError(error)) return;
+    throw error;
+  }
+}
+
+export async function gatherUsingSpeak(params: {
+  environment: string;
+  tenantId: string;
+  callControlId: string;
+  payload: string;
+  validDigits?: string;
+  timeoutMillis?: number;
+  language?: string;
+  voice?: string;
+  minimumDigits?: number;
+  maximumDigits?: number;
+}): Promise<void> {
+  await telnyxRequest(
+    params.environment,
+    `/calls/${encodeURIComponent(params.callControlId)}/actions/gather_using_speak`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        payload: params.payload,
+        voice: params.voice ?? "female",
+        language: params.language ?? "es-ES",
+        minimum_digits: params.minimumDigits ?? 1,
+        maximum_digits: params.maximumDigits ?? 1,
+        timeout_millis: params.timeoutMillis ?? 8000,
+        valid_digits: params.validDigits ?? "1234567890*#",
+      }),
+    },
+    params.tenantId
+  );
+}
+
+export async function createConference(params: {
+  environment: string;
+  tenantId: string;
+  callControlId: string;
+  name: string;
+}): Promise<{ conferenceId: string }> {
+  const data = await telnyxRequest<{ data: { id: string } }>(
+    params.environment,
+    "/conferences",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        name: params.name,
+        call_control_id: params.callControlId,
+        beep_enabled: "never",
+      }),
+    },
+    params.tenantId
+  );
+  return { conferenceId: data.data.id };
+}
+
+export async function joinConference(params: {
+  environment: string;
+  tenantId: string;
+  conferenceId: string;
+  callControlId: string;
+  supervisorRole?: "none" | "barge" | "whisper" | "monitor";
+}): Promise<void> {
+  await telnyxRequest(
+    params.environment,
+    `/conferences/${encodeURIComponent(params.conferenceId)}/actions/join`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        call_control_id: params.callControlId,
+        supervisor_role: params.supervisorRole ?? "none",
+      }),
+    },
+    params.tenantId
+  );
+}
+
+export async function leaveConference(params: {
+  environment: string;
+  tenantId: string;
+  conferenceId: string;
+  callControlId: string;
+}): Promise<void> {
+  try {
+    await telnyxRequest(
+      params.environment,
+      `/conferences/${encodeURIComponent(params.conferenceId)}/actions/leave`,
+      {
+        method: "POST",
+        body: JSON.stringify({ call_control_id: params.callControlId }),
+      },
+      params.tenantId
+    );
+  } catch (error) {
+    if (isTelnyxCallEndedError(error)) return;
+    throw error;
+  }
+}
+
+export async function holdConferenceParticipant(params: {
+  environment: string;
+  tenantId: string;
+  conferenceId: string;
+  callControlId: string;
+}): Promise<void> {
+  await telnyxRequest(
+    params.environment,
+    `/conferences/${encodeURIComponent(params.conferenceId)}/actions/hold`,
+    {
+      method: "POST",
+      body: JSON.stringify({ call_control_ids: [params.callControlId] }),
+    },
+    params.tenantId
+  );
+}
+
+export async function unholdConferenceParticipant(params: {
+  environment: string;
+  tenantId: string;
+  conferenceId: string;
+  callControlId: string;
+}): Promise<void> {
+  await telnyxRequest(
+    params.environment,
+    `/conferences/${encodeURIComponent(params.conferenceId)}/actions/unhold`,
+    {
+      method: "POST",
+      body: JSON.stringify({ call_control_ids: [params.callControlId] }),
+    },
+    params.tenantId
+  );
+}
+
+export async function dialCall(params: {
+  environment: string;
+  tenantId: string;
+  to: string;
+  from: string;
+  connectionId?: string;
+  clientState?: string;
+  answeringMachineDetection?: "disabled" | "premium";
+  timeoutSecs?: number;
+}): Promise<TelnyxDialResult> {
+  const { connectionId } = params.connectionId
+    ? { connectionId: params.connectionId }
+    : await getTelnyxSecrets(params.environment, params.tenantId);
+  const data = await telnyxRequest<{ data: Record<string, string> }>(
+    params.environment,
+    "/calls",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        connection_id: connectionId,
+        to: params.to,
+        from: params.from,
+        timeout_secs: params.timeoutSecs ?? 30,
+        ...(params.answeringMachineDetection && params.answeringMachineDetection !== "disabled"
+          ? {
+              answering_machine_detection: params.answeringMachineDetection,
+              answering_machine_detection_config: { total_analysis_time_millis: 5000 },
+            }
+          : {}),
+        ...(params.clientState ? { client_state: params.clientState } : {}),
+      }),
+    },
+    params.tenantId
+  );
+
+  return {
+    callControlId: data.data.call_control_id,
+    callLegId: data.data.call_leg_id,
+    callSessionId: data.data.call_session_id,
+  };
+}
+
+export async function transferCall(params: {
+  environment: string;
+  tenantId: string;
+  callControlId: string;
+  to: string;
+}): Promise<void> {
+  await telnyxRequest(
+    params.environment,
+    `/calls/${encodeURIComponent(params.callControlId)}/actions/transfer`,
+    {
+      method: "POST",
+      body: JSON.stringify({ to: params.to }),
+    },
+    params.tenantId
+  );
+}
