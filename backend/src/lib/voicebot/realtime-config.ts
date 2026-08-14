@@ -7,6 +7,7 @@ import {
   DEFAULT_REALTIME_MODEL_ID,
   resolveRealtimeModelId,
 } from "./realtime-models.js";
+import { resolveVoicebotTranscriptionModelId } from "./transcription-models.js";
 
 export const DEFAULT_VOICEBOT_MODEL = DEFAULT_REALTIME_MODEL_ID;
 export const DEFAULT_VOICEBOT_VOICE = "alloy";
@@ -225,7 +226,9 @@ export async function buildRealtimeSessionConfig(params: {
     tool_choice: "auto",
     audio: {
       input: {
-        transcription: { model: "whisper-1" },
+        transcription: {
+          model: resolveVoicebotTranscriptionModelId(params.bot.voicebotTranscriptionModel),
+        },
       },
       output: {
         voice: resolveVoicebotVoice(params.bot.voicebotVoice),

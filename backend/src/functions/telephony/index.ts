@@ -440,7 +440,18 @@ export async function handler(
         telephonyEnabled: Boolean(bot.telephonyEnabled),
         telephonyPhoneNumber: bot.telephonyPhoneNumber ?? "",
         telephonyVoiceId: bot.telephonyVoiceId ?? "",
+        telephonyBackgroundSound: bot.telephonyBackgroundSound ?? "none",
+        telephonyBackgroundSoundVolume: bot.telephonyBackgroundSoundVolume ?? 0.6,
+        telephonyTtsModel: bot.telephonyTtsModel ?? "eleven_flash_v2_5",
+        telephonyVoiceSpeed: bot.telephonyVoiceSpeed ?? 1,
+        telephonyVoiceStability: bot.telephonyVoiceStability ?? 0.5,
+        telephonyVoiceSimilarity: bot.telephonyVoiceSimilarity ?? 0.75,
+        telephonyTranscriptionVadThreshold: bot.telephonyTranscriptionVadThreshold ?? 0.65,
+        telephonyTranscriptionSilenceMs: bot.telephonyTranscriptionSilenceMs ?? 550,
+        telephonyTranscriptionBargeIn: Boolean(bot.telephonyTranscriptionBargeIn),
         telephonyModel: bot.telephonyModel ?? bot.voicebotModel ?? "gpt-realtime-2.1-mini",
+        telephonyTranscriptionModel:
+          bot.telephonyTranscriptionModel ?? "gpt-4o-mini-transcribe",
         telephonyGreeting: bot.telephonyGreeting ?? "",
         telephonySystemPrompt:
           bot.telephonySystemPrompt ?? bot.voicebotSystemPrompt ?? bot.systemPrompt ?? "",
@@ -471,6 +482,16 @@ export async function handler(
           telephonyPhoneNumber: z.string().min(7).max(20).optional(),
           telephonyVoiceId: optionalNonEmptyString(64),
           telephonyModel: z.string().min(3).max(64).optional(),
+          telephonyTranscriptionModel: z.string().min(3).max(64).optional(),
+          telephonyBackgroundSound: z.string().min(1).max(32).optional(),
+          telephonyBackgroundSoundVolume: z.number().min(0.01).max(1).optional(),
+          telephonyTtsModel: z.string().min(3).max(64).optional(),
+          telephonyVoiceSpeed: z.number().min(0.7).max(1.2).optional(),
+          telephonyVoiceStability: z.number().min(0).max(1).optional(),
+          telephonyVoiceSimilarity: z.number().min(0).max(1).optional(),
+          telephonyTranscriptionVadThreshold: z.number().min(0.3).max(0.9).optional(),
+          telephonyTranscriptionSilenceMs: z.number().min(300).max(1200).optional(),
+          telephonyTranscriptionBargeIn: z.boolean().optional(),
           telephonyGreeting: z.string().max(500).optional(),
           telephonySystemPrompt: z.string().max(TELEPHONY_SYSTEM_PROMPT_MAX_LENGTH).optional(),
           telephonyRecordingEnabled: z.boolean().optional(),
@@ -498,6 +519,22 @@ export async function handler(
         })
         .safeParse(body);
       if (!parsed.success) return badRequest(parsed.error.message);
+
+      if (parsed.data.telephonyBackgroundSound !== undefined) {
+        const { isValidBackgroundSoundId } = await import(
+          "../../lib/telephony/background-sounds.js"
+        );
+        if (!isValidBackgroundSoundId(parsed.data.telephonyBackgroundSound)) {
+          return badRequest("Invalid background sound preset");
+        }
+      }
+
+      if (parsed.data.telephonyTtsModel !== undefined) {
+        const { isValidTtsModelId } = await import("../../lib/telephony/tts-models.js");
+        if (!isValidTtsModelId(parsed.data.telephonyTtsModel)) {
+          return badRequest("Invalid TTS model");
+        }
+      }
 
       const { ensureTenant } = await import("../../lib/dynamodb/tenant.repository.js");
       const { updateBot } = await import("../../lib/dynamodb/bot.repository.js");
@@ -555,6 +592,36 @@ export async function handler(
       }
       if (parsed.data.telephonyModel !== undefined) {
         updates.telephonyModel = parsed.data.telephonyModel;
+      }
+      if (parsed.data.telephonyTranscriptionModel !== undefined) {
+        updates.telephonyTranscriptionModel = parsed.data.telephonyTranscriptionModel;
+      }
+      if (parsed.data.telephonyBackgroundSound !== undefined) {
+        updates.telephonyBackgroundSound = parsed.data.telephonyBackgroundSound;
+      }
+      if (parsed.data.telephonyBackgroundSoundVolume !== undefined) {
+        updates.telephonyBackgroundSoundVolume = parsed.data.telephonyBackgroundSoundVolume;
+      }
+      if (parsed.data.telephonyTtsModel !== undefined) {
+        updates.telephonyTtsModel = parsed.data.telephonyTtsModel;
+      }
+      if (parsed.data.telephonyVoiceSpeed !== undefined) {
+        updates.telephonyVoiceSpeed = parsed.data.telephonyVoiceSpeed;
+      }
+      if (parsed.data.telephonyVoiceStability !== undefined) {
+        updates.telephonyVoiceStability = parsed.data.telephonyVoiceStability;
+      }
+      if (parsed.data.telephonyVoiceSimilarity !== undefined) {
+        updates.telephonyVoiceSimilarity = parsed.data.telephonyVoiceSimilarity;
+      }
+      if (parsed.data.telephonyTranscriptionVadThreshold !== undefined) {
+        updates.telephonyTranscriptionVadThreshold = parsed.data.telephonyTranscriptionVadThreshold;
+      }
+      if (parsed.data.telephonyTranscriptionSilenceMs !== undefined) {
+        updates.telephonyTranscriptionSilenceMs = parsed.data.telephonyTranscriptionSilenceMs;
+      }
+      if (parsed.data.telephonyTranscriptionBargeIn !== undefined) {
+        updates.telephonyTranscriptionBargeIn = parsed.data.telephonyTranscriptionBargeIn;
       }
       if (parsed.data.telephonyGreeting !== undefined) {
         updates.telephonyGreeting = parsed.data.telephonyGreeting;
@@ -621,6 +688,16 @@ export async function handler(
         telephonyPhoneNumber: masked?.telephonyPhoneNumber,
         telephonyVoiceId: masked?.telephonyVoiceId,
         telephonyModel: masked?.telephonyModel,
+        telephonyTranscriptionModel: masked?.telephonyTranscriptionModel,
+        telephonyBackgroundSound: masked?.telephonyBackgroundSound,
+        telephonyBackgroundSoundVolume: masked?.telephonyBackgroundSoundVolume,
+        telephonyTtsModel: masked?.telephonyTtsModel,
+        telephonyVoiceSpeed: masked?.telephonyVoiceSpeed,
+        telephonyVoiceStability: masked?.telephonyVoiceStability,
+        telephonyVoiceSimilarity: masked?.telephonyVoiceSimilarity,
+        telephonyTranscriptionVadThreshold: masked?.telephonyTranscriptionVadThreshold,
+        telephonyTranscriptionSilenceMs: masked?.telephonyTranscriptionSilenceMs,
+        telephonyTranscriptionBargeIn: Boolean(masked?.telephonyTranscriptionBargeIn),
         telephonyGreeting: masked?.telephonyGreeting,
         telephonySystemPrompt: masked?.telephonySystemPrompt,
         telephonyRecordingEnabled: masked?.telephonyRecordingEnabled,

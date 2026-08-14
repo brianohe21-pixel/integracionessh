@@ -4,6 +4,7 @@ import {
   buildVoicebotTools,
   resolveVoicebotModel,
 } from "../voicebot/realtime-config.js";
+import { resolveTelephonyTranscriptionModelId } from "../voicebot/transcription-models.js";
 import { getCalendarConfig } from "../dynamodb/calendar-config.repository.js";
 
 export async function buildTelephonyRealtimeTextConfig(params: {
@@ -50,7 +51,7 @@ export async function buildTelephonyRealtimeTextConfig(params: {
       silence_duration_ms: 900,
     },
     input_audio_transcription: {
-      model: "gpt-4o-mini-transcribe",
+      model: resolveTelephonyTranscriptionModelId(params.bot.telephonyTranscriptionModel),
     },
   };
 }

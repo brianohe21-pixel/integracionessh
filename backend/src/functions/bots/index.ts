@@ -319,6 +319,7 @@ export async function handler(
           enabled: z.boolean().optional(),
           voicebotVoice: z.string().min(2).max(32).optional(),
           voicebotModel: z.string().min(3).max(64).optional(),
+          voicebotTranscriptionModel: z.string().min(3).max(64).optional(),
           voicebotGreeting: z.string().max(500).optional(),
           voicebotSystemPrompt: z.string().max(TELEPHONY_SYSTEM_PROMPT_MAX_LENGTH).optional(),
         })
@@ -350,6 +351,9 @@ export async function handler(
       if (parsed.data.voicebotModel !== undefined) {
         updates.voicebotModel = parsed.data.voicebotModel;
       }
+      if (parsed.data.voicebotTranscriptionModel !== undefined) {
+        updates.voicebotTranscriptionModel = parsed.data.voicebotTranscriptionModel;
+      }
       if (parsed.data.voicebotGreeting !== undefined) {
         updates.voicebotGreeting = parsed.data.voicebotGreeting;
       }
@@ -363,6 +367,7 @@ export async function handler(
         voicebotWidgetKey: updated.voicebotWidgetKey,
         voicebotVoice: updated.voicebotVoice,
         voicebotModel: updated.voicebotModel,
+        voicebotTranscriptionModel: updated.voicebotTranscriptionModel,
         voicebotGreeting: updated.voicebotGreeting,
         voicebotSystemPrompt: updated.voicebotSystemPrompt,
       });
