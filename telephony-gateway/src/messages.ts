@@ -6,6 +6,7 @@ export async function persistPhoneMessage(params: {
   tenantId: string;
   botId: string;
   conversationId: string;
+  callId: string;
   role: "user" | "assistant";
   content: string;
   externalId?: string;
@@ -34,6 +35,7 @@ export async function persistPhoneMessage(params: {
               role: params.role,
               content,
               channel: "phone",
+              callId: params.callId,
               externalMessageId: params.externalId,
               timestamp,
               ...(params.role === "user" ? { source: "phone_inbound" } : {}),

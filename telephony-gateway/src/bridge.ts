@@ -476,6 +476,7 @@ export async function runTelephonyBridge(
       tenantId: session.tenantId,
       botId: session.botId,
       conversationId: session.conversationId,
+      callId: session.callId,
       role,
       content,
       externalId,
