@@ -101,16 +101,36 @@ def address_key(address: str) -> str:
     return match.group(1) if match else ""
 
 
+def aws_region() -> str:
+    return os.environ.get("AWS_REGION", os.environ.get("AWS_DEFAULT_REGION", "us-east-1"))
+
+
 def aws_json(arguments: list[str], *, dry_run: bool = False) -> dict[str, Any]:
-    region = os.environ.get("AWS_REGION", os.environ.get("AWS_DEFAULT_REGION", "us-east-1"))
     output = run(
-        ["aws", *arguments, "--region", region, "--output", "json", "--no-cli-pager"],
+        ["aws", *arguments, "--region", aws_region(), "--output", "json", "--no-cli-pager"],
         dry_run=dry_run,
         check=not dry_run,
     )
     if dry_run:
         return {}
     return json.loads(output)
+
+
+def aws_paginated_items(arguments: list[str], *, dry_run: bool = False) -> list[dict[str, Any]]:
+    if dry_run:
+        return []
+    items: list[dict[str, Any]] = []
+    next_token: str | None = None
+    while True:
+        page_args = [*arguments, "--no-paginate"]
+        if next_token:
+            page_args.extend(["--next-token", next_token])
+        response = aws_json(page_args)
+        items.extend(response.get("Items", []))
+        next_token = response.get("NextToken")
+        if not next_token:
+            break
+    return items
 
 
 def api_id(resources: dict[str, dict[str, Any]], *, dry_run: bool = False) -> str:
@@ -371,6 +391,68 @@ def reconcile_routes(
     return imported
 
 
+def delete_stale_live_routes(
+    resources: dict[str, dict[str, Any]],
+    gateway_id: str,
+    live_routes: list[dict[str, Any]],
+    *,
+    dry_run: bool,
+) -> int:
+    desired_keys = {definition.route_key for definition in route_definitions().values()}
+    desired_addresses = {canonical_route_address(key) for key in route_definitions()}
+    in_place_ids = {
+        str(values.get("id"))
+        for address, values in resources.items()
+        if address.startswith(f"{ROUTE_ADDRESS_PREFIX}[")
+        and address in desired_addresses
+        and values.get("id")
+    }
+    deleted = 0
+    for route in live_routes:
+        route_key = str(route.get("RouteKey", ""))
+        route_id = str(route.get("RouteId", ""))
+        if not route_id:
+            continue
+        if route_key in desired_keys or route_id in in_place_ids:
+            continue
+        print(f"Deleting stale live route {route_key} ({route_id})")
+        run(
+            [
+                "aws",
+                "apigatewayv2",
+                "delete-route",
+                "--api-id",
+                gateway_id,
+                "--route-id",
+                route_id,
+                "--region",
+                aws_region(),
+                "--no-cli-pager",
+            ],
+            dry_run=dry_run,
+        )
+        deleted += 1
+    return deleted
+
+
+def remove_noncanonical_route_state(
+    resources: dict[str, dict[str, Any]],
+    *,
+    dry_run: bool,
+) -> int:
+    desired_addresses = {canonical_route_address(key) for key in route_definitions()}
+    removed = 0
+    for address in sorted(
+        addr for addr in resources if addr.startswith(f"{ROUTE_ADDRESS_PREFIX}[")
+    ):
+        if address in desired_addresses:
+            continue
+        print(f"Removing obsolete route state: {address}")
+        run(terraform_command("state", "rm", address), dry_run=dry_run)
+        removed += 1
+    return removed
+
+
 def postflight(resources: dict[str, dict[str, Any]], *, dry_run: bool) -> None:
     expected = len(canonical_slug_keys())
     actual = len(integration_state(resources))
@@ -400,20 +482,13 @@ def main() -> None:
         backup_state(Path(args.backup_dir))
 
     gateway_id = api_id(resources, dry_run=dry_run)
-    live_routes = (
-        aws_json(["apigatewayv2", "get-routes", "--api-id", gateway_id], dry_run=dry_run).get(
-            "Items", []
-        )
-        if not dry_run
-        else []
+    live_routes = aws_paginated_items(
+        ["apigatewayv2", "get-routes", "--api-id", gateway_id],
+        dry_run=dry_run,
     )
-    live_integrations = (
-        aws_json(
-            ["apigatewayv2", "get-integrations", "--api-id", gateway_id],
-            dry_run=dry_run,
-        ).get("Items", [])
-        if not dry_run
-        else []
+    live_integrations = aws_paginated_items(
+        ["apigatewayv2", "get-integrations", "--api-id", gateway_id],
+        dry_run=dry_run,
     )
 
     moved, removed = move_existing_integrations(resources, dry_run=dry_run)
@@ -434,13 +509,22 @@ def main() -> None:
     routes_reconciled = reconcile_routes(resources, gateway_id, live_routes, dry_run=dry_run)
     if not dry_run:
         resources = state_resources()
+    stale_routes = delete_stale_live_routes(
+        resources, gateway_id, live_routes, dry_run=dry_run
+    )
+    if not dry_run:
+        resources = state_resources()
+    removed += remove_noncanonical_route_state(resources, dry_run=dry_run)
+    if not dry_run:
+        resources = state_resources()
         postflight(resources, dry_run=False)
 
     print(
         "API Gateway state migration complete "
         f"({moved} moved, {removed} removed, "
         f"{integrations_reconciled} integrations reconciled, "
-        f"{routes_reconciled} routes reconciled)."
+        f"{routes_reconciled} routes reconciled, "
+        f"{stale_routes} stale live routes deleted)."
     )
 
 

@@ -61,3 +61,9 @@ fi
 if (( LIVE_INTEGRATIONS > EXPECTED_INTEGRATIONS + 5 )); then
   echo "::warning::Live AWS has ${LIVE_INTEGRATIONS} integrations; cleanup may be required after apply."
 fi
+
+if (( LIVE_ROUTES >= 300 )); then
+  echo "::warning::Live AWS has ${LIVE_ROUTES} routes, at the HTTP API quota. Stale route cleanup must run before apply."
+elif (( LIVE_ROUTES >= 280 )); then
+  echo "::warning::Live AWS has ${LIVE_ROUTES} routes, near the HTTP API quota of 300."
+fi

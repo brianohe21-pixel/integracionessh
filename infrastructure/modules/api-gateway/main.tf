@@ -101,73 +101,31 @@ locals {
 
   routes = {
     webhook_verify = {
-      route_key    = "GET /webhook"
-      invoke_arn   = var.webhook_invoke_arn
-      function_arn = var.webhook_function_arn
-      protected    = false
-    }
-    webhook_receive = {
-      route_key    = "POST /webhook"
+      route_key    = "ANY /webhook"
       invoke_arn   = var.webhook_invoke_arn
       function_arn = var.webhook_function_arn
       protected    = false
     }
     tenants_list = {
-      route_key    = "GET /tenants"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_create = {
-      route_key    = "POST /tenants"
+      route_key    = "ANY /tenants"
       invoke_arn   = var.tenants_invoke_arn
       function_arn = var.tenants_function_arn
       protected    = true
     }
     tenants_get = {
-      route_key    = "GET /tenants/{tenantId}"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_update = {
-      route_key    = "PUT /tenants/{tenantId}"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_delete = {
-      route_key    = "DELETE /tenants/{tenantId}"
+      route_key    = "ANY /tenants/{tenantId}"
       invoke_arn   = var.tenants_invoke_arn
       function_arn = var.tenants_function_arn
       protected    = true
     }
     bots_list = {
-      route_key    = "GET /bots"
-      invoke_arn   = var.bots_invoke_arn
-      function_arn = var.bots_function_arn
-      protected    = true
-    }
-    bots_create = {
-      route_key    = "POST /bots"
+      route_key    = "ANY /bots"
       invoke_arn   = var.bots_invoke_arn
       function_arn = var.bots_function_arn
       protected    = true
     }
     bots_get = {
-      route_key    = "GET /bots/{botId}"
-      invoke_arn   = var.bots_invoke_arn
-      function_arn = var.bots_function_arn
-      protected    = true
-    }
-    bots_update = {
-      route_key    = "PUT /bots/{botId}"
-      invoke_arn   = var.bots_invoke_arn
-      function_arn = var.bots_function_arn
-      protected    = true
-    }
-    bots_delete = {
-      route_key    = "DELETE /bots/{botId}"
+      route_key    = "ANY /bots/{botId}"
       invoke_arn   = var.bots_invoke_arn
       function_arn = var.bots_function_arn
       protected    = true
@@ -185,7 +143,7 @@ locals {
       protected    = true
     }
     conversations_get = {
-      route_key    = "GET /conversations/{conversationId}"
+      route_key    = "ANY /conversations/{conversationId}"
       invoke_arn   = var.conversations_invoke_arn
       function_arn = var.conversations_function_arn
       protected    = true
@@ -221,13 +179,7 @@ locals {
       protected    = true
     }
     conversations_quotations_list = {
-      route_key    = "GET /conversations/{conversationId}/quotations"
-      invoke_arn   = var.conversations_invoke_arn
-      function_arn = var.conversations_function_arn
-      protected    = true
-    }
-    conversations_quotations_create = {
-      route_key    = "POST /conversations/{conversationId}/quotations"
+      route_key    = "ANY /conversations/{conversationId}/quotations"
       invoke_arn   = var.conversations_invoke_arn
       function_arn = var.conversations_function_arn
       protected    = true
@@ -239,31 +191,13 @@ locals {
       protected    = true
     }
     advisors_list = {
-      route_key    = "GET /advisors"
-      invoke_arn   = var.advisors_invoke_arn
-      function_arn = var.advisors_function_arn
-      protected    = true
-    }
-    advisors_create = {
-      route_key    = "POST /advisors"
+      route_key    = "ANY /advisors"
       invoke_arn   = var.advisors_invoke_arn
       function_arn = var.advisors_function_arn
       protected    = true
     }
     advisors_get = {
-      route_key    = "GET /advisors/{advisorId}"
-      invoke_arn   = var.advisors_invoke_arn
-      function_arn = var.advisors_function_arn
-      protected    = true
-    }
-    advisors_update = {
-      route_key    = "PUT /advisors/{advisorId}"
-      invoke_arn   = var.advisors_invoke_arn
-      function_arn = var.advisors_function_arn
-      protected    = true
-    }
-    advisors_delete = {
-      route_key    = "DELETE /advisors/{advisorId}"
+      route_key    = "ANY /advisors/{advisorId}"
       invoke_arn   = var.advisors_invoke_arn
       function_arn = var.advisors_function_arn
       protected    = true
@@ -281,31 +215,13 @@ locals {
       protected    = true
     }
     contacts_list = {
-      route_key    = "GET /contacts"
-      invoke_arn   = var.contacts_invoke_arn
-      function_arn = var.contacts_function_arn
-      protected    = true
-    }
-    contacts_create = {
-      route_key    = "POST /contacts"
+      route_key    = "ANY /contacts"
       invoke_arn   = var.contacts_invoke_arn
       function_arn = var.contacts_function_arn
       protected    = true
     }
     contacts_get = {
-      route_key    = "GET /contacts/{phone}"
-      invoke_arn   = var.contacts_invoke_arn
-      function_arn = var.contacts_function_arn
-      protected    = true
-    }
-    contacts_update = {
-      route_key    = "PATCH /contacts/{phone}"
-      invoke_arn   = var.contacts_invoke_arn
-      function_arn = var.contacts_function_arn
-      protected    = true
-    }
-    contacts_delete = {
-      route_key    = "DELETE /contacts/{phone}"
+      route_key    = "ANY /contacts/{phone}"
       invoke_arn   = var.contacts_invoke_arn
       function_arn = var.contacts_function_arn
       protected    = true
@@ -317,13 +233,7 @@ locals {
       protected    = true
     }
     leads_get = {
-      route_key    = "GET /leads/{leadId}"
-      invoke_arn   = var.leads_invoke_arn
-      function_arn = var.leads_function_arn
-      protected    = true
-    }
-    leads_update = {
-      route_key    = "PATCH /leads/{leadId}"
+      route_key    = "ANY /leads/{leadId}"
       invoke_arn   = var.leads_invoke_arn
       function_arn = var.leads_function_arn
       protected    = true
@@ -340,32 +250,14 @@ locals {
       function_arn = var.leads_function_arn
       protected    = true
     }
-    leads_delete = {
-      route_key    = "DELETE /leads/{leadId}"
-      invoke_arn   = var.leads_invoke_arn
-      function_arn = var.leads_function_arn
-      protected    = true
-    }
     templates_list = {
-      route_key    = "GET /templates"
-      invoke_arn   = var.templates_invoke_arn
-      function_arn = var.templates_function_arn
-      protected    = true
-    }
-    templates_create = {
-      route_key    = "POST /templates"
+      route_key    = "ANY /templates"
       invoke_arn   = var.templates_invoke_arn
       function_arn = var.templates_function_arn
       protected    = true
     }
     templates_update = {
-      route_key    = "PUT /templates/{name}"
-      invoke_arn   = var.templates_invoke_arn
-      function_arn = var.templates_function_arn
-      protected    = true
-    }
-    templates_delete = {
-      route_key    = "DELETE /templates/{name}"
+      route_key    = "ANY /templates/{name}"
       invoke_arn   = var.templates_invoke_arn
       function_arn = var.templates_function_arn
       protected    = true
@@ -377,13 +269,7 @@ locals {
       protected    = true
     }
     bulk_send_create = {
-      route_key    = "POST /bulk-send"
-      invoke_arn   = var.bulk_send_invoke_arn
-      function_arn = var.bulk_send_function_arn
-      protected    = true
-    }
-    bulk_send_list = {
-      route_key    = "GET /bulk-send"
+      route_key    = "ANY /bulk-send"
       invoke_arn   = var.bulk_send_invoke_arn
       function_arn = var.bulk_send_function_arn
       protected    = true
@@ -462,12 +348,6 @@ locals {
     }
     conversations_resolve = {
       route_key    = "POST /conversations/{conversationId}/resolve"
-      invoke_arn   = var.conversations_invoke_arn
-      function_arn = var.conversations_function_arn
-      protected    = true
-    }
-    conversations_delete = {
-      route_key    = "DELETE /conversations/{conversationId}"
       invoke_arn   = var.conversations_invoke_arn
       function_arn = var.conversations_function_arn
       protected    = true
@@ -581,19 +461,13 @@ locals {
       protected    = false
     }
     email_imap_connect = {
-      route_key    = "POST /email/imap/connect"
+      route_key    = "ANY /email/imap/connect"
       invoke_arn   = var.email_imap_connect_invoke_arn
       function_arn = var.email_imap_connect_function_arn
       protected    = true
     }
     email_imap_test = {
       route_key    = "POST /email/imap/test"
-      invoke_arn   = var.email_imap_connect_invoke_arn
-      function_arn = var.email_imap_connect_function_arn
-      protected    = true
-    }
-    email_imap_disconnect = {
-      route_key    = "DELETE /email/imap/connect"
       invoke_arn   = var.email_imap_connect_invoke_arn
       function_arn = var.email_imap_connect_function_arn
       protected    = true
@@ -605,13 +479,7 @@ locals {
       protected    = false
     }
     webchat_messages_send = {
-      route_key    = "POST /webchat/sessions/{sessionId}/messages"
-      invoke_arn   = var.webchat_invoke_arn
-      function_arn = var.webchat_function_arn
-      protected    = false
-    }
-    webchat_messages_poll = {
-      route_key    = "GET /webchat/sessions/{sessionId}/messages"
+      route_key    = "ANY /webchat/sessions/{sessionId}/messages"
       invoke_arn   = var.webchat_invoke_arn
       function_arn = var.webchat_function_arn
       protected    = false
@@ -671,13 +539,7 @@ locals {
       protected    = true
     }
     bots_ai_assistant_get = {
-      route_key    = "GET /bots/{botId}/ai-assistant"
-      invoke_arn   = var.bots_invoke_arn
-      function_arn = var.bots_function_arn
-      protected    = true
-    }
-    bots_ai_assistant_put = {
-      route_key    = "PUT /bots/{botId}/ai-assistant"
+      route_key    = "ANY /bots/{botId}/ai-assistant"
       invoke_arn   = var.bots_invoke_arn
       function_arn = var.bots_function_arn
       protected    = true
@@ -707,31 +569,13 @@ locals {
       protected    = false
     }
     campaigns_list = {
-      route_key    = "GET /campaigns"
-      invoke_arn   = var.campaigns_invoke_arn
-      function_arn = var.campaigns_function_arn
-      protected    = true
-    }
-    campaigns_create = {
-      route_key    = "POST /campaigns"
+      route_key    = "ANY /campaigns"
       invoke_arn   = var.campaigns_invoke_arn
       function_arn = var.campaigns_function_arn
       protected    = true
     }
     campaigns_get = {
-      route_key    = "GET /campaigns/{campaignId}"
-      invoke_arn   = var.campaigns_invoke_arn
-      function_arn = var.campaigns_function_arn
-      protected    = true
-    }
-    campaigns_update = {
-      route_key    = "PUT /campaigns/{campaignId}"
-      invoke_arn   = var.campaigns_invoke_arn
-      function_arn = var.campaigns_function_arn
-      protected    = true
-    }
-    campaigns_delete = {
-      route_key    = "DELETE /campaigns/{campaignId}"
+      route_key    = "ANY /campaigns/{campaignId}"
       invoke_arn   = var.campaigns_invoke_arn
       function_arn = var.campaigns_function_arn
       protected    = true
@@ -797,13 +641,7 @@ locals {
       protected    = true
     }
     support_tickets_list = {
-      route_key    = "GET /support/tickets"
-      invoke_arn   = var.support_tickets_invoke_arn
-      function_arn = var.support_tickets_function_arn
-      protected    = true
-    }
-    support_tickets_create = {
-      route_key    = "POST /support/tickets"
+      route_key    = "ANY /support/tickets"
       invoke_arn   = var.support_tickets_invoke_arn
       function_arn = var.support_tickets_function_arn
       protected    = true
@@ -839,13 +677,7 @@ locals {
       protected    = true
     }
     admin_reseller_plan_defaults_get = {
-      route_key    = "GET /admin/reseller-plan-defaults"
-      invoke_arn   = var.admin_invoke_arn
-      function_arn = var.admin_function_arn
-      protected    = true
-    }
-    admin_reseller_plan_defaults_put = {
-      route_key    = "PUT /admin/reseller-plan-defaults"
+      route_key    = "ANY /admin/reseller-plan-defaults"
       invoke_arn   = var.admin_invoke_arn
       function_arn = var.admin_function_arn
       protected    = true
@@ -857,25 +689,13 @@ locals {
       protected    = true
     }
     reseller_subaccounts_list = {
-      route_key    = "GET /reseller/subaccounts"
-      invoke_arn   = var.reseller_invoke_arn
-      function_arn = var.reseller_function_arn
-      protected    = true
-    }
-    reseller_subaccounts_create = {
-      route_key    = "POST /reseller/subaccounts"
+      route_key    = "ANY /reseller/subaccounts"
       invoke_arn   = var.reseller_invoke_arn
       function_arn = var.reseller_function_arn
       protected    = true
     }
     reseller_subaccounts_get = {
-      route_key    = "GET /reseller/subaccounts/{subaccountId}"
-      invoke_arn   = var.reseller_invoke_arn
-      function_arn = var.reseller_function_arn
-      protected    = true
-    }
-    reseller_subaccounts_update = {
-      route_key    = "PUT /reseller/subaccounts/{subaccountId}"
+      route_key    = "ANY /reseller/subaccounts/{subaccountId}"
       invoke_arn   = var.reseller_invoke_arn
       function_arn = var.reseller_function_arn
       protected    = true
@@ -887,13 +707,7 @@ locals {
       protected    = true
     }
     reseller_domain_get = {
-      route_key    = "GET /reseller/domain"
-      invoke_arn   = var.reseller_invoke_arn
-      function_arn = var.reseller_function_arn
-      protected    = true
-    }
-    reseller_domain_put = {
-      route_key    = "PUT /reseller/domain"
+      route_key    = "ANY /reseller/domain"
       invoke_arn   = var.reseller_invoke_arn
       function_arn = var.reseller_function_arn
       protected    = true
@@ -989,61 +803,31 @@ locals {
       protected    = true
     }
     tenants_provider_credentials_save = {
-      route_key    = "PUT /tenants/me/provider-credentials/{provider}"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_provider_credentials_delete = {
-      route_key    = "DELETE /tenants/me/provider-credentials/{provider}"
+      route_key    = "ANY /tenants/me/provider-credentials/{provider}"
       invoke_arn   = var.tenants_invoke_arn
       function_arn = var.tenants_function_arn
       protected    = true
     }
     tenants_branding_get = {
-      route_key    = "GET /tenants/me/branding"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_branding_update = {
-      route_key    = "PUT /tenants/me/branding"
+      route_key    = "ANY /tenants/me/branding"
       invoke_arn   = var.tenants_invoke_arn
       function_arn = var.tenants_function_arn
       protected    = true
     }
     tenants_branding_logo_upload = {
-      route_key    = "POST /tenants/me/branding/logo"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_branding_logo_delete = {
-      route_key    = "DELETE /tenants/me/branding/logo"
+      route_key    = "ANY /tenants/me/branding/logo"
       invoke_arn   = var.tenants_invoke_arn
       function_arn = var.tenants_function_arn
       protected    = true
     }
     tenants_inbox_sla_get = {
-      route_key    = "GET /tenants/me/inbox-sla"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_inbox_sla_update = {
-      route_key    = "PUT /tenants/me/inbox-sla"
+      route_key    = "ANY /tenants/me/inbox-sla"
       invoke_arn   = var.tenants_invoke_arn
       function_arn = var.tenants_function_arn
       protected    = true
     }
     tenants_report_schedule_get = {
-      route_key    = "GET /tenants/me/report-schedule"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_report_schedule_update = {
-      route_key    = "PUT /tenants/me/report-schedule"
+      route_key    = "ANY /tenants/me/report-schedule"
       invoke_arn   = var.tenants_invoke_arn
       function_arn = var.tenants_function_arn
       protected    = true
@@ -1055,37 +839,13 @@ locals {
       protected    = true
     }
     public_api_proxy_get = {
-      route_key    = "GET /v1/{proxy+}"
-      invoke_arn   = var.public_api_invoke_arn
-      function_arn = var.public_api_function_arn
-      protected    = false
-    }
-    public_api_proxy_post = {
-      route_key    = "POST /v1/{proxy+}"
-      invoke_arn   = var.public_api_invoke_arn
-      function_arn = var.public_api_function_arn
-      protected    = false
-    }
-    public_api_proxy_put = {
-      route_key    = "PUT /v1/{proxy+}"
-      invoke_arn   = var.public_api_invoke_arn
-      function_arn = var.public_api_function_arn
-      protected    = false
-    }
-    public_api_proxy_delete = {
-      route_key    = "DELETE /v1/{proxy+}"
+      route_key    = "ANY /v1/{proxy+}"
       invoke_arn   = var.public_api_invoke_arn
       function_arn = var.public_api_function_arn
       protected    = false
     }
     bots_calling_settings_get = {
-      route_key    = "GET /bots/{botId}/calling/settings"
-      invoke_arn   = var.calling_invoke_arn
-      function_arn = var.calling_function_arn
-      protected    = true
-    }
-    bots_calling_settings_put = {
-      route_key    = "PUT /bots/{botId}/calling/settings"
+      route_key    = "ANY /bots/{botId}/calling/settings"
       invoke_arn   = var.calling_invoke_arn
       function_arn = var.calling_function_arn
       protected    = true
@@ -1151,37 +911,19 @@ locals {
       protected    = true
     }
     bots_telephony_settings_get = {
-      route_key    = "GET /bots/{botId}/telephony/settings"
-      invoke_arn   = var.telephony_invoke_arn
-      function_arn = var.telephony_function_arn
-      protected    = true
-    }
-    bots_telephony_settings_put = {
-      route_key    = "PUT /bots/{botId}/telephony/settings"
+      route_key    = "ANY /bots/{botId}/telephony/settings"
       invoke_arn   = var.telephony_invoke_arn
       function_arn = var.telephony_function_arn
       protected    = true
     }
     bots_telephony_calls_list = {
-      route_key    = "GET /bots/{botId}/telephony/calls"
-      invoke_arn   = var.telephony_invoke_arn
-      function_arn = var.telephony_function_arn
-      protected    = true
-    }
-    bots_telephony_calls_create = {
-      route_key    = "POST /bots/{botId}/telephony/calls"
+      route_key    = "ANY /bots/{botId}/telephony/calls"
       invoke_arn   = var.telephony_invoke_arn
       function_arn = var.telephony_function_arn
       protected    = true
     }
     bots_telephony_calls_proxy_get = {
-      route_key    = "GET /bots/{botId}/telephony/calls/{proxy+}"
-      invoke_arn   = var.telephony_invoke_arn
-      function_arn = var.telephony_function_arn
-      protected    = true
-    }
-    bots_telephony_calls_proxy_post = {
-      route_key    = "POST /bots/{botId}/telephony/calls/{proxy+}"
+      route_key    = "ANY /bots/{botId}/telephony/calls/{proxy+}"
       invoke_arn   = var.telephony_invoke_arn
       function_arn = var.telephony_function_arn
       protected    = true
@@ -1199,37 +941,13 @@ locals {
       protected    = true
     }
     bots_telephony_tools_list = {
-      route_key    = "GET /bots/{botId}/telephony/tools"
-      invoke_arn   = var.telephony_invoke_arn
-      function_arn = var.telephony_function_arn
-      protected    = true
-    }
-    bots_telephony_tools_create = {
-      route_key    = "POST /bots/{botId}/telephony/tools"
+      route_key    = "ANY /bots/{botId}/telephony/tools"
       invoke_arn   = var.telephony_invoke_arn
       function_arn = var.telephony_function_arn
       protected    = true
     }
     bots_telephony_tools_proxy_get = {
-      route_key    = "GET /bots/{botId}/telephony/tools/{proxy+}"
-      invoke_arn   = var.telephony_invoke_arn
-      function_arn = var.telephony_function_arn
-      protected    = true
-    }
-    bots_telephony_tools_proxy_post = {
-      route_key    = "POST /bots/{botId}/telephony/tools/{proxy+}"
-      invoke_arn   = var.telephony_invoke_arn
-      function_arn = var.telephony_function_arn
-      protected    = true
-    }
-    bots_telephony_tools_proxy_put = {
-      route_key    = "PUT /bots/{botId}/telephony/tools/{proxy+}"
-      invoke_arn   = var.telephony_invoke_arn
-      function_arn = var.telephony_function_arn
-      protected    = true
-    }
-    bots_telephony_tools_proxy_delete = {
-      route_key    = "DELETE /bots/{botId}/telephony/tools/{proxy+}"
+      route_key    = "ANY /bots/{botId}/telephony/tools/{proxy+}"
       invoke_arn   = var.telephony_invoke_arn
       function_arn = var.telephony_function_arn
       protected    = true
@@ -1241,25 +959,13 @@ locals {
       protected    = true
     }
     api_keys_list = {
-      route_key    = "GET /api-keys"
-      invoke_arn   = var.api_keys_invoke_arn
-      function_arn = var.api_keys_function_arn
-      protected    = true
-    }
-    api_keys_create = {
-      route_key    = "POST /api-keys"
+      route_key    = "ANY /api-keys"
       invoke_arn   = var.api_keys_invoke_arn
       function_arn = var.api_keys_function_arn
       protected    = true
     }
     api_keys_update = {
-      route_key    = "PATCH /api-keys/{keyId}"
-      invoke_arn   = var.api_keys_invoke_arn
-      function_arn = var.api_keys_function_arn
-      protected    = true
-    }
-    api_keys_delete = {
-      route_key    = "DELETE /api-keys/{keyId}"
+      route_key    = "ANY /api-keys/{keyId}"
       invoke_arn   = var.api_keys_invoke_arn
       function_arn = var.api_keys_function_arn
       protected    = true
@@ -1277,13 +983,7 @@ locals {
       protected    = true
     }
     integrations_webhook_get = {
-      route_key    = "GET /integrations/webhook"
-      invoke_arn   = var.integrations_invoke_arn
-      function_arn = var.integrations_function_arn
-      protected    = true
-    }
-    integrations_webhook_put = {
-      route_key    = "PUT /integrations/webhook"
+      route_key    = "ANY /integrations/webhook"
       invoke_arn   = var.integrations_invoke_arn
       function_arn = var.integrations_function_arn
       protected    = true
@@ -1301,31 +1001,13 @@ locals {
       protected    = true
     }
     automations_list = {
-      route_key    = "GET /automations"
-      invoke_arn   = var.automations_invoke_arn
-      function_arn = var.automations_function_arn
-      protected    = true
-    }
-    automations_create = {
-      route_key    = "POST /automations"
+      route_key    = "ANY /automations"
       invoke_arn   = var.automations_invoke_arn
       function_arn = var.automations_function_arn
       protected    = true
     }
     automations_get = {
-      route_key    = "GET /automations/{ruleId}"
-      invoke_arn   = var.automations_invoke_arn
-      function_arn = var.automations_function_arn
-      protected    = true
-    }
-    automations_update = {
-      route_key    = "PUT /automations/{ruleId}"
-      invoke_arn   = var.automations_invoke_arn
-      function_arn = var.automations_function_arn
-      protected    = true
-    }
-    automations_delete = {
-      route_key    = "DELETE /automations/{ruleId}"
+      route_key    = "ANY /automations/{ruleId}"
       invoke_arn   = var.automations_invoke_arn
       function_arn = var.automations_function_arn
       protected    = true
@@ -1349,13 +1031,7 @@ locals {
       protected    = true
     }
     calendar_config_get = {
-      route_key    = "GET /calendar/{botId}/config"
-      invoke_arn   = var.calendar_invoke_arn
-      function_arn = var.calendar_function_arn
-      protected    = true
-    }
-    calendar_config_put = {
-      route_key    = "PUT /calendar/{botId}/config"
+      route_key    = "ANY /calendar/{botId}/config"
       invoke_arn   = var.calendar_invoke_arn
       function_arn = var.calendar_function_arn
       protected    = true
@@ -1379,13 +1055,7 @@ locals {
       protected    = true
     }
     calendar_bookings_list = {
-      route_key    = "GET /calendar/{botId}/bookings"
-      invoke_arn   = var.calendar_invoke_arn
-      function_arn = var.calendar_function_arn
-      protected    = true
-    }
-    calendar_bookings_create = {
-      route_key    = "POST /calendar/{botId}/bookings"
+      route_key    = "ANY /calendar/{botId}/bookings"
       invoke_arn   = var.calendar_invoke_arn
       function_arn = var.calendar_function_arn
       protected    = true
@@ -1469,31 +1139,13 @@ locals {
       protected    = false
     }
     payments_wompi_credentials_get = {
-      route_key    = "GET /payments/wompi/credentials"
-      invoke_arn   = var.payments_invoke_arn
-      function_arn = var.payments_function_arn
-      protected    = true
-    }
-    payments_wompi_credentials_put = {
-      route_key    = "PUT /payments/wompi/credentials"
-      invoke_arn   = var.payments_invoke_arn
-      function_arn = var.payments_function_arn
-      protected    = true
-    }
-    payments_wompi_credentials_delete = {
-      route_key    = "DELETE /payments/wompi/credentials"
+      route_key    = "ANY /payments/wompi/credentials"
       invoke_arn   = var.payments_invoke_arn
       function_arn = var.payments_function_arn
       protected    = true
     }
     payments_config_get = {
-      route_key    = "GET /payments/{botId}/config"
-      invoke_arn   = var.payments_invoke_arn
-      function_arn = var.payments_function_arn
-      protected    = true
-    }
-    payments_config_put = {
-      route_key    = "PUT /payments/{botId}/config"
+      route_key    = "ANY /payments/{botId}/config"
       invoke_arn   = var.payments_invoke_arn
       function_arn = var.payments_function_arn
       protected    = true
@@ -1511,13 +1163,7 @@ locals {
       protected    = true
     }
     payments_requests_list = {
-      route_key    = "GET /payments/{botId}/requests"
-      invoke_arn   = var.payments_invoke_arn
-      function_arn = var.payments_function_arn
-      protected    = true
-    }
-    payments_requests_create = {
-      route_key    = "POST /payments/{botId}/requests"
+      route_key    = "ANY /payments/{botId}/requests"
       invoke_arn   = var.payments_invoke_arn
       function_arn = var.payments_function_arn
       protected    = true
@@ -1535,13 +1181,7 @@ locals {
       protected    = false
     }
     catalog_config_get = {
-      route_key    = "GET /catalog/{botId}/config"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_config_put = {
-      route_key    = "PUT /catalog/{botId}/config"
+      route_key    = "ANY /catalog/{botId}/config"
       invoke_arn   = var.catalog_invoke_arn
       function_arn = var.catalog_function_arn
       protected    = true
@@ -1577,31 +1217,13 @@ locals {
       protected    = true
     }
     catalog_products_list = {
-      route_key    = "GET /catalog/{botId}/products"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_products_create = {
-      route_key    = "POST /catalog/{botId}/products"
+      route_key    = "ANY /catalog/{botId}/products"
       invoke_arn   = var.catalog_invoke_arn
       function_arn = var.catalog_function_arn
       protected    = true
     }
     catalog_products_get = {
-      route_key    = "GET /catalog/{botId}/products/{productId}"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_products_put = {
-      route_key    = "PUT /catalog/{botId}/products/{productId}"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_products_delete = {
-      route_key    = "DELETE /catalog/{botId}/products/{productId}"
+      route_key    = "ANY /catalog/{botId}/products/{productId}"
       invoke_arn   = var.catalog_invoke_arn
       function_arn = var.catalog_function_arn
       protected    = true
@@ -1625,13 +1247,7 @@ locals {
       protected    = true
     }
     catalog_orders_get = {
-      route_key    = "GET /catalog/{botId}/orders/{orderId}"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_orders_patch = {
-      route_key    = "PATCH /catalog/{botId}/orders/{orderId}"
+      route_key    = "ANY /catalog/{botId}/orders/{orderId}"
       invoke_arn   = var.catalog_invoke_arn
       function_arn = var.catalog_function_arn
       protected    = true
@@ -1661,31 +1277,13 @@ locals {
       protected    = true
     }
     macros_list = {
-      route_key    = "GET /bots/{botId}/macros"
-      invoke_arn   = var.macros_invoke_arn
-      function_arn = var.macros_function_arn
-      protected    = true
-    }
-    macros_create = {
-      route_key    = "POST /bots/{botId}/macros"
+      route_key    = "ANY /bots/{botId}/macros"
       invoke_arn   = var.macros_invoke_arn
       function_arn = var.macros_function_arn
       protected    = true
     }
     macros_get = {
-      route_key    = "GET /bots/{botId}/macros/{macroId}"
-      invoke_arn   = var.macros_invoke_arn
-      function_arn = var.macros_function_arn
-      protected    = true
-    }
-    macros_update = {
-      route_key    = "PUT /bots/{botId}/macros/{macroId}"
-      invoke_arn   = var.macros_invoke_arn
-      function_arn = var.macros_function_arn
-      protected    = true
-    }
-    macros_delete = {
-      route_key    = "DELETE /bots/{botId}/macros/{macroId}"
+      route_key    = "ANY /bots/{botId}/macros/{macroId}"
       invoke_arn   = var.macros_invoke_arn
       function_arn = var.macros_function_arn
       protected    = true
@@ -1697,31 +1295,13 @@ locals {
       protected    = true
     }
     meta_flows_list = {
-      route_key    = "GET /bots/{botId}/meta-flows"
-      invoke_arn   = var.meta_flows_invoke_arn
-      function_arn = var.meta_flows_function_arn
-      protected    = true
-    }
-    meta_flows_create = {
-      route_key    = "POST /bots/{botId}/meta-flows"
+      route_key    = "ANY /bots/{botId}/meta-flows"
       invoke_arn   = var.meta_flows_invoke_arn
       function_arn = var.meta_flows_function_arn
       protected    = true
     }
     meta_flows_get = {
-      route_key    = "GET /bots/{botId}/meta-flows/{flowId}"
-      invoke_arn   = var.meta_flows_invoke_arn
-      function_arn = var.meta_flows_function_arn
-      protected    = true
-    }
-    meta_flows_update = {
-      route_key    = "PUT /bots/{botId}/meta-flows/{flowId}"
-      invoke_arn   = var.meta_flows_invoke_arn
-      function_arn = var.meta_flows_function_arn
-      protected    = true
-    }
-    meta_flows_delete = {
-      route_key    = "DELETE /bots/{botId}/meta-flows/{flowId}"
+      route_key    = "ANY /bots/{botId}/meta-flows/{flowId}"
       invoke_arn   = var.meta_flows_invoke_arn
       function_arn = var.meta_flows_function_arn
       protected    = true
@@ -1745,31 +1325,13 @@ locals {
       protected    = true
     }
     flows_list = {
-      route_key    = "GET /flows"
-      invoke_arn   = var.flows_invoke_arn
-      function_arn = var.flows_function_arn
-      protected    = true
-    }
-    flows_create = {
-      route_key    = "POST /flows"
+      route_key    = "ANY /flows"
       invoke_arn   = var.flows_invoke_arn
       function_arn = var.flows_function_arn
       protected    = true
     }
     flows_get = {
-      route_key    = "GET /flows/{flowId}"
-      invoke_arn   = var.flows_invoke_arn
-      function_arn = var.flows_function_arn
-      protected    = true
-    }
-    flows_update = {
-      route_key    = "PUT /flows/{flowId}"
-      invoke_arn   = var.flows_invoke_arn
-      function_arn = var.flows_function_arn
-      protected    = true
-    }
-    flows_delete = {
-      route_key    = "DELETE /flows/{flowId}"
+      route_key    = "ANY /flows/{flowId}"
       invoke_arn   = var.flows_invoke_arn
       function_arn = var.flows_function_arn
       protected    = true
@@ -1823,13 +1385,7 @@ locals {
       protected    = true
     }
     flows_secrets_get = {
-      route_key    = "GET /flows/{flowId}/secrets"
-      invoke_arn   = var.flows_invoke_arn
-      function_arn = var.flows_function_arn
-      protected    = true
-    }
-    flows_secrets_put = {
-      route_key    = "PUT /flows/{flowId}/secrets"
+      route_key    = "ANY /flows/{flowId}/secrets"
       invoke_arn   = var.flows_invoke_arn
       function_arn = var.flows_function_arn
       protected    = true
@@ -1853,31 +1409,7 @@ locals {
       protected    = false
     }
     mailrelay_proxy_get = {
-      route_key    = "GET /email-marketing/{proxy+}"
-      invoke_arn   = var.mailrelay_invoke_arn
-      function_arn = var.mailrelay_function_arn
-      protected    = true
-    }
-    mailrelay_proxy_post = {
-      route_key    = "POST /email-marketing/{proxy+}"
-      invoke_arn   = var.mailrelay_invoke_arn
-      function_arn = var.mailrelay_function_arn
-      protected    = true
-    }
-    mailrelay_proxy_put = {
-      route_key    = "PUT /email-marketing/{proxy+}"
-      invoke_arn   = var.mailrelay_invoke_arn
-      function_arn = var.mailrelay_function_arn
-      protected    = true
-    }
-    mailrelay_proxy_patch = {
-      route_key    = "PATCH /email-marketing/{proxy+}"
-      invoke_arn   = var.mailrelay_invoke_arn
-      function_arn = var.mailrelay_function_arn
-      protected    = true
-    }
-    mailrelay_proxy_delete = {
-      route_key    = "DELETE /email-marketing/{proxy+}"
+      route_key    = "ANY /email-marketing/{proxy+}"
       invoke_arn   = var.mailrelay_invoke_arn
       function_arn = var.mailrelay_function_arn
       protected    = true

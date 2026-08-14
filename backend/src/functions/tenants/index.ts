@@ -154,19 +154,11 @@ async function handleInboxSlaRoutes(
   event: APIGatewayProxyEventV2WithJWTAuthorizer,
   auth: AuthContext
 ): Promise<APIGatewayProxyResultV2 | null> {
-  const routeKey = event.routeKey;
   const rawPath = event.rawPath ?? event.requestContext.http.path ?? "";
-  const isInboxSlaRoute =
-    routeKey === "GET /tenants/me/inbox-sla" ||
-    routeKey === "PUT /tenants/me/inbox-sla" ||
-    rawPath.includes("/tenants/me/inbox-sla");
+  const isInboxSlaRoute = rawPath.includes("/tenants/me/inbox-sla");
   if (!isInboxSlaRoute) return null;
 
-  const method = (
-    routeKey?.split(" ")[0] ??
-    event.requestContext.http.method ??
-    ""
-  ).toUpperCase();
+  const method = (event.requestContext.http.method ?? "").toUpperCase();
 
   assertMemberRole(auth);
   await ensureTenant(auth.tenantId, auth.email, auth.name);
@@ -195,16 +187,11 @@ async function handleReportScheduleRoutes(
   event: APIGatewayProxyEventV2WithJWTAuthorizer,
   auth: AuthContext
 ): Promise<APIGatewayProxyResultV2 | null> {
-  const routeKey = event.routeKey;
   const rawPath = event.rawPath ?? event.requestContext.http.path ?? "";
   const isReportScheduleRoute = rawPath.includes("/tenants/me/report-schedule");
   if (!isReportScheduleRoute) return null;
 
-  const method = (
-    routeKey?.split(" ")[0] ??
-    event.requestContext.http.method ??
-    ""
-  ).toUpperCase();
+  const method = (event.requestContext.http.method ?? "").toUpperCase();
 
   assertMemberRole(auth);
   await ensureTenant(auth.tenantId, auth.email, auth.name);
