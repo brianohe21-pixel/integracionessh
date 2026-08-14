@@ -19,3 +19,21 @@ export function isTelnyxUncertainResult(result: string): boolean {
 export function shouldConnectOutboundAfterAmd(result: string): boolean {
   return isTelnyxHumanResult(result) || isTelnyxUncertainResult(result);
 }
+
+export function isTelnyxSilenceResult(result: string): boolean {
+  return result.trim().toLowerCase() === "silence";
+}
+
+export function shouldHangupOutboundAfterAmd(
+  result: string,
+  alreadyConnected: boolean
+): boolean {
+  const normalized = result.trim().toLowerCase();
+  if (normalized === "beep_detected" || normalized === "machine" || normalized === "fax_detected") {
+    return true;
+  }
+  if (normalized === "silence") {
+    return !alreadyConnected;
+  }
+  return false;
+}

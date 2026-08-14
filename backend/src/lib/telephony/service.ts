@@ -19,6 +19,7 @@ import {
   isTelnyxCallEndedError,
   startCallRecording,
   startCallStreaming,
+  stopCallStreaming,
   searchTelnyxDetailRecords,
 } from "../telnyx/client.js";
 import { normalizeE164 } from "../telnyx/phone.js";
@@ -32,8 +33,8 @@ import {
 } from "./session.repository.js";
 import { decodeTelnyxClientState } from "../telnyx/webhook.js";
 import {
-  isTelnyxMachineResult,
   shouldConnectOutboundAfterAmd,
+  shouldHangupOutboundAfterAmd,
 } from "../telnyx/amd.js";
 import { emitIntegrationEvent } from "../integrations/emit.js";
 import {
@@ -330,6 +331,7 @@ async function finalizeVoicemailCall(
   );
 
   try {
+    await stopCallStreaming(ENVIRONMENT, callControlId, session.tenantId).catch(() => undefined);
     await hangupCall(ENVIRONMENT, callControlId, session.tenantId);
   } catch (error) {
     if (!isTelnyxCallEndedError(error)) throw error;
@@ -709,13 +711,7 @@ export async function handleCallAnswered(payload: Record<string, unknown>): Prom
   if (!bot) return;
 
   if (session.direction === "outbound") {
-    await logCallEvent(
-      session.tenantId,
-      session.botId,
-      session.callId,
-      "answered",
-      "Awaiting answering machine detection"
-    );
+    await connectOutboundTelephonyCall(session, callControlId);
     return;
   }
 
@@ -774,10 +770,10 @@ export async function handleMachineDetectionEnded(
 
   const session = await resolveTelephonySessionFromPayload(payload);
   if (!session || session.direction !== "outbound") return;
+  if (session.mode === "agent") return;
 
   const call = await getCallRecord(session.tenantId, session.callId);
   if (
-    call?.status === "accepted" ||
     call?.status === "completed" ||
     call?.status === "voicemail" ||
     call?.status === "terminated"
@@ -785,13 +781,14 @@ export async function handleMachineDetectionEnded(
     return;
   }
 
+  const alreadyConnected = call?.status === "accepted";
   const result = String(payload.result ?? "");
-  if (isTelnyxMachineResult(result) || result.toLowerCase() === "beep_detected") {
+  if (shouldHangupOutboundAfterAmd(result, alreadyConnected)) {
     await finalizeVoicemailCall(session, callControlId, result);
     return;
   }
 
-  if (shouldConnectOutboundAfterAmd(result)) {
+  if (!alreadyConnected && shouldConnectOutboundAfterAmd(result)) {
     await connectOutboundTelephonyCall(session, callControlId);
   }
 }
