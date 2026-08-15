@@ -141,6 +141,9 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.100.6
         version: 5.100.10(react@19.2.4)
+      '@telnyx/webrtc':
+        specifier: ^2.27.9
+        version: 2.27.9
       '@xyflow/react':
         specifier: ^12.11.0
         version: 12.11.0(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(immer@11.1.15)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -1965,6 +1968,10 @@ packages:
   '@pdf-lib/upng@1.0.1':
     resolution: {integrity: sha512-dQK2FUMQtowVP00mtIksrlZhdFXQZPC+taih1q4CvPZ5vqdxR/LKBaFg0oAfzd1GlHZXXSPdQfzQnt+ViGvEIQ==}
 
+  '@peermetrics/webrtc-stats@5.9.0':
+    resolution: {integrity: sha512-eQYGGdj+H4MUEuwbccy9bxRV3uAqPM5+Say9PSx/alrtv5ccmKCqGfLbqXrRJ/qThZvjZNBna5K/YnCWoaTQBw==}
+    engines: {node: '>=18'}
+
   '@pinojs/redact@0.4.0':
     resolution: {integrity: sha512-k2ENnmBugE/rzQfEcdWHcCY+/FM3VLzH9cYEsbdsoqrvzAKRhUZeRNhAZvB8OitQJ1TBed3yqWtdjzS6wJKBwg==}
 
@@ -2581,6 +2588,10 @@ packages:
     resolution: {integrity: sha512-FLaZf2RCrA/Zgp4aiu5tG3TyasTRO7aZ99skxQpr3Hg/zXOhu6yq5FZCYQ/tRaJtM9ylnoK8tFK7PolXQadv6Q==}
     peerDependencies:
       react: ^18 || ^19
+
+  '@telnyx/webrtc@2.27.9':
+    resolution: {integrity: sha512-4ZUY6K7tWdKewrUTFiajFQicmPIriSq2tkHmL0xHFhzRAKAD/sHD8hizHbOmGKFUQYLHXItzSmxVF844undgWQ==}
+    engines: {node: '>=14.x'}
 
   '@tybys/wasm-util@0.10.2':
     resolution: {integrity: sha512-RoBvJ2X0wuKlWFIjrwffGw1IqZHKQqzIchKaadZZfnNpsAYp2mM0h36JtPCjNDAHGgYez/15uMBpfGwchhiMgg==}
@@ -5621,6 +5632,16 @@ packages:
     resolution: {integrity: sha512-vIYxrBCC/N/K+Js3qSN88go7kIfNPssr/hHCesKCQNAjmgvYS2oqr69kIufEG+O4+PfezOH4EbIeHCfFov8ZgQ==}
     hasBin: true
 
+  uuid@7.0.3:
+    resolution: {integrity: sha512-DPSke0pXhTZgoF/d+WSt2QaKMCFSfx7QegxEWT+JOuHF5aWrKEn0G+ztjuJg/gG8/ItK+rbPCD/yNv8yyih6Cg==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
+    hasBin: true
+
+  uuid@8.3.2:
+    resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
+    hasBin: true
+
   v8-to-istanbul@9.3.0:
     resolution: {integrity: sha512-kiGUalWN+rgBJ/1OHZsBtU4rXZOfj/7rKQxULKlIzwzQSvMJUUNgPwJEEh7gU6xEVxC0ahoOBvN2YI8GH6FNgA==}
     engines: {node: '>=10.12.0'}
@@ -8356,6 +8377,11 @@ snapshots:
     dependencies:
       pako: 1.0.11
 
+  '@peermetrics/webrtc-stats@5.9.0':
+    dependencies:
+      events: 3.3.0
+      uuid: 8.3.2
+
   '@pinojs/redact@0.4.0': {}
 
   '@radix-ui/number@1.1.1': {}
@@ -8994,6 +9020,12 @@ snapshots:
     dependencies:
       '@tanstack/query-core': 5.100.10
       react: 19.2.4
+
+  '@telnyx/webrtc@2.27.9':
+    dependencies:
+      '@peermetrics/webrtc-stats': 5.9.0
+      loglevel: 1.9.2
+      uuid: 7.0.3
 
   '@tybys/wasm-util@0.10.2':
     dependencies:
@@ -12633,6 +12665,10 @@ snapshots:
   util-deprecate@1.0.2: {}
 
   uuid@11.1.1: {}
+
+  uuid@7.0.3: {}
+
+  uuid@8.3.2: {}
 
   v8-to-istanbul@9.3.0:
     dependencies:
