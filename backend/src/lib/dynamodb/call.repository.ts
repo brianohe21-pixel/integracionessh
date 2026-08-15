@@ -93,6 +93,7 @@ export async function updateCallRecord(
       | "talkSeconds"
       | "contactCenterMode"
       | "campaignId"
+      | "callControlId"
     >
   >
 ): Promise<void> {
@@ -122,6 +123,7 @@ export async function updateCallRecord(
     ["talkSeconds", "talkSeconds"],
     ["contactCenterMode", "contactCenterMode"],
     ["campaignId", "campaignId"],
+    ["callControlId", "callControlId"],
   ];
 
   for (const [key, attr] of fieldMap) {

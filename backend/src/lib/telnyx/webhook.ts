@@ -54,6 +54,7 @@ export function parseTelnyxWebhookBody(body: string): TelnyxWebhookEvent[] {
 export function decodeTelnyxClientState(payload: Record<string, unknown>): {
   sessionId?: string;
   callId?: string;
+  leg?: string;
 } {
   const raw = String(payload.client_state ?? "");
   if (!raw) return {};
@@ -61,10 +62,12 @@ export function decodeTelnyxClientState(payload: Record<string, unknown>): {
     const parsed = JSON.parse(Buffer.from(raw, "base64").toString("utf8")) as {
       sessionId?: string;
       callId?: string;
+      leg?: string;
     };
     return {
       ...(parsed.sessionId ? { sessionId: parsed.sessionId } : {}),
       ...(parsed.callId ? { callId: parsed.callId } : {}),
+      ...(parsed.leg ? { leg: parsed.leg } : {}),
     };
   } catch {
     return {};

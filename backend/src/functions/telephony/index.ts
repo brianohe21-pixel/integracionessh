@@ -44,10 +44,12 @@ import { executeVoicebotTool } from "../../lib/voicebot/tools.js";
 import { handleContactCenterHttp } from "../../lib/contact-center/http.js";
 import {
   handleAgentLegAnswered,
+  handleAdvisorWebrtcOutboundAnswered,
   handleContactCenterHangup,
   handleGatherEnded,
   handleOutboundCustomerAnswered,
   handleSpeakEnded,
+  handleWebrtcOutboundInitiated,
 } from "../../lib/contact-center/service.js";
 import { loadVoiceFlowRuntime } from "../../lib/flow/voice-flow-runtime.js";
 import { getOpenAIApiKey } from "../../lib/ai/providers/openai.js";
@@ -348,16 +350,20 @@ async function handleTelnyxWebhook(
         }
         await handleInboundCallInitiated(payload, credentialTenantId);
       } else if (direction === "outgoing") {
-        await handleOutboundCallRinging(payload);
+        const handledWebrtc = await handleWebrtcOutboundInitiated(payload);
+        if (!handledWebrtc) await handleOutboundCallRinging(payload);
       }
       continue;
     }
 
     if (eventType === "call.answered") {
-      const handledAgent = await handleAgentLegAnswered(payload);
-      if (!handledAgent) {
-        const handledOutbound = await handleOutboundCustomerAnswered(payload);
-        if (!handledOutbound) await handleCallAnswered(payload);
+      const handledWebrtc = await handleAdvisorWebrtcOutboundAnswered(payload);
+      if (!handledWebrtc) {
+        const handledAgent = await handleAgentLegAnswered(payload);
+        if (!handledAgent) {
+          const handledOutbound = await handleOutboundCustomerAnswered(payload);
+          if (!handledOutbound) await handleCallAnswered(payload);
+        }
       }
       continue;
     }

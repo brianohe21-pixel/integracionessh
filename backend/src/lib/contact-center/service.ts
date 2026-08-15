@@ -61,6 +61,7 @@ import {
   getTelephonySession,
   getTelephonySessionByCallControlId,
   patchTelephonySession,
+  updateTelephonySessionStatus,
 } from "../telephony/session.repository.js";
 import { buildTelephonyCallRecord } from "../telephony/service.js";
 import { pickAgentForQueue, queuePosition } from "./acd.js";
@@ -568,6 +569,8 @@ export async function handleAgentLegAnswered(payload: Record<string, unknown>): 
     session.callControlId === callControlId &&
     !session.conferenceId
   ) {
+    const { leg } = decodeTelnyxClientState(payload);
+    if (leg === "webrtc") return false;
     return handleOutboundCustomerAnswered(payload);
   }
 
@@ -888,6 +891,95 @@ export async function startPreviewOutbound(params: {
   await updateCallRecord(params.tenantId, callId, { status: "ringing" });
   await logEvent(params.tenantId, params.botId, callId, "initiated", "Preview outbound");
   return { callId };
+}
+
+export async function prepareWebrtcOutbound(params: {
+  tenantId: string;
+  botId: string;
+  advisorId: string;
+  to: string;
+}): Promise<{ callId: string; clientState: string; callerNumber: string }> {
+  const bot = await getBot(params.tenantId, params.botId);
+  if (!bot?.telephonyPhoneNumber) {
+    throw Object.assign(new Error("Bot has no telephony number"), { statusCode: 400 });
+  }
+  const to = normalizeE164(params.to);
+  if (!to) throw Object.assign(new Error("Invalid destination"), { statusCode: 400 });
+  const from = normalizeE164(bot.telephonyPhoneNumber);
+  const callId = randomUUID();
+  const sessionId = randomUUID();
+  const conversation = await getOrCreateConversation(params.tenantId, params.botId, "phone", to);
+  const locale: BotLocale = bot.defaultLocale ?? "es";
+  const clientState = encodeClientState({ sessionId, callId, leg: "webrtc" });
+
+  await createTelephonySession({
+    sessionId,
+    callControlId: "pending",
+    callId,
+    tenantId: params.tenantId,
+    botId: params.botId,
+    conversationId: conversation.conversationId,
+    participantId: to,
+    direction: "outbound",
+    fromNumber: from,
+    toNumber: to,
+    locale,
+    mode: "agent",
+    advisorId: params.advisorId,
+  });
+  await upsertCallRecord({
+    ...buildTelephonyCallRecord({
+      callId,
+      tenantId: params.tenantId,
+      botId: params.botId,
+      phoneNumber: to,
+      businessPhoneNumber: from,
+      direction: "outbound",
+      callControlId: "pending",
+      conversationId: conversation.conversationId,
+      recordingEnabled: Boolean(bot.telephonyRecordingEnabled),
+    }),
+    advisorId: params.advisorId,
+    contactCenterMode: "agent",
+  });
+  await markAgentOffered({ tenantId: params.tenantId, advisorId: params.advisorId });
+  await logEvent(params.tenantId, params.botId, callId, "initiated", "WebRTC outbound");
+  return { callId, clientState, callerNumber: from };
+}
+
+export async function handleWebrtcOutboundInitiated(
+  payload: Record<string, unknown>
+): Promise<boolean> {
+  const { sessionId, leg } = decodeTelnyxClientState(payload);
+  if (leg !== "webrtc" || !sessionId) return false;
+  const session = await getTelephonySession(sessionId);
+  if (!session || session.callControlId !== "pending") return false;
+  const callControlId = String(payload.call_control_id ?? "");
+  if (!callControlId) return false;
+  await attachTelephonyCallControlId(sessionId, callControlId);
+  await updateCallRecord(session.tenantId, session.callId, { callControlId, status: "ringing" });
+  await logEvent(session.tenantId, session.botId, session.callId, "ringing");
+  return true;
+}
+
+export async function handleAdvisorWebrtcOutboundAnswered(
+  payload: Record<string, unknown>
+): Promise<boolean> {
+  const { leg } = decodeTelnyxClientState(payload);
+  if (leg !== "webrtc") return false;
+  const session = await resolveContactCenterSession(payload);
+  if (!session || session.direction !== "outbound" || session.mode !== "agent") return false;
+
+  await updateTelephonySessionStatus(session.sessionId, "active");
+  await updateCallRecord(session.tenantId, session.callId, {
+    status: "accepted",
+    startedAt: new Date().toISOString(),
+  });
+  if (session.advisorId) {
+    await markAgentOnCall({ tenantId: session.tenantId, advisorId: session.advisorId });
+  }
+  await logEvent(session.tenantId, session.botId, session.callId, "answered");
+  return true;
 }
 
 export async function handleOutboundCustomerAnswered(

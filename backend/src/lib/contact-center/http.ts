@@ -54,6 +54,7 @@ import {
   refreshStaleAgentsAndDispatch,
   requestCallback,
   setCallDisposition,
+  prepareWebrtcOutbound,
   startPreviewOutbound,
   superviseCall,
   transferCallToQueue,
@@ -201,6 +202,24 @@ export async function handleContactCenterHttp(
         }
       }
       return ok(presence);
+    }
+
+    if (path === "/me/calls/webrtc-outbound" && method === "POST") {
+      const parsed = z
+        .object({
+          botId: z.string().uuid(),
+          to: z.string().min(7).max(20),
+        })
+        .safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
+      const agentId = await resolveAgentId(auth);
+      const result = await prepareWebrtcOutbound({
+        tenantId: auth.tenantId,
+        botId: parsed.data.botId,
+        advisorId: agentId,
+        to: parsed.data.to,
+      });
+      return created(result);
     }
 
     if (path === "/calls/outbound" && method === "POST") {
