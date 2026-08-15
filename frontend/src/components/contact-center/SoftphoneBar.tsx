@@ -11,7 +11,16 @@ export function SoftphoneBar() {
   const phone = useSoftphone();
 
   return (
-    <div className="flex items-center gap-2 rounded-xl border border-default bg-surface-elevated px-3 py-2 shadow-sm">
+    <div
+      className={cn(
+        "flex flex-wrap items-center gap-2 rounded-xl border px-3 py-2 shadow-sm",
+        phone.status === "ringing"
+          ? "border-amber-400 bg-amber-50 dark:bg-amber-950/40"
+          : phone.status === "dialing"
+            ? "border-sky-400 bg-sky-50 dark:bg-sky-950/40"
+            : "border-default bg-surface-elevated"
+      )}
+    >
       <Phone className="h-4 w-4 text-accent" />
       <span className="text-xs font-medium text-secondary">{t("contactCenter.softphone")}</span>
       <span
@@ -19,16 +28,18 @@ export function SoftphoneBar() {
           "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase",
           phone.status === "ready" || phone.status === "active"
             ? "bg-emerald-500/15 text-emerald-600"
-            : phone.status === "ringing"
+            : phone.status === "ringing" || phone.status === "dialing"
               ? "bg-amber-500/15 text-amber-700"
               : "bg-surface-muted text-muted"
         )}
       >
         {phone.status}
       </span>
-      {phone.incoming?.from ? (
+      {phone.incoming?.remote ? (
         <span className="text-xs text-primary">
-          {t("contactCenter.caller")}: {phone.incoming.from}
+          {phone.callDirection === "outbound"
+            ? `${t("contactCenter.dialTo")}: ${phone.incoming.remote}`
+            : `${t("contactCenter.caller")}: ${phone.incoming.remote}`}
         </span>
       ) : null}
       {phone.status === "idle" || phone.status === "error" ? (
@@ -42,13 +53,19 @@ export function SoftphoneBar() {
       )}
       {phone.status === "ringing" ? (
         <>
-          <Button size="sm" onClick={phone.answer}>
+          <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={phone.answer}>
             {t("contactCenter.answer")}
           </Button>
           <Button size="sm" variant="danger" onClick={phone.reject}>
             {t("contactCenter.reject")}
           </Button>
         </>
+      ) : null}
+      {phone.status === "dialing" ? (
+        <Button size="sm" variant="danger" onClick={phone.hangup}>
+          <PhoneOff className="h-4 w-4" />
+          {t("contactCenter.hangup")}
+        </Button>
       ) : null}
       {phone.status === "active" ? (
         <>
@@ -61,6 +78,15 @@ export function SoftphoneBar() {
             {t("contactCenter.hangup")}
           </Button>
         </>
+      ) : null}
+      {phone.status === "dialing" ? (
+        <span className="text-xs text-sky-700">{t("contactCenter.dialingCustomer")}</span>
+      ) : null}
+      {phone.status === "ringing" ? (
+        <span className="text-xs text-amber-700">{t("contactCenter.answerToTalk")}</span>
+      ) : null}
+      {phone.status === "active" ? (
+        <span className="text-xs text-secondary">{t("contactCenter.inCallHint")}</span>
       ) : null}
       {phone.error ? <span className="text-xs text-red-600">{phone.error}</span> : null}
     </div>

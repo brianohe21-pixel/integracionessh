@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ContactCenterDialpad } from "@/components/contact-center/ContactCenterDialpad";
 import { ContactCenterWallboard } from "@/components/contact-center/ContactCenterWallboard";
 import { useBots } from "@/hooks/useBots";
 import { useAdvisors } from "@/hooks/useAdvisors";
@@ -26,11 +27,11 @@ import {
 import { useT } from "@/i18n/context";
 import { PhoneCall } from "lucide-react";
 
-type TabId = "queues" | "ivr" | "routing" | "agents" | "campaigns" | "wallboard";
+type TabId = "dial" | "queues" | "ivr" | "routing" | "agents" | "campaigns" | "wallboard";
 
 export default function ContactCenterPage() {
   const t = useT();
-  const [tab, setTab] = useState<TabId>("queues");
+  const [tab, setTab] = useState<TabId>("dial");
   const { data: bots = [] } = useBots();
   const voiceBots = bots.filter((bot) => bot.telephonyEnabled);
   const [botId, setBotId] = useState(voiceBots[0]?.botId ?? "");
@@ -64,6 +65,7 @@ export default function ContactCenterPage() {
 
   const tabs = useMemo(
     () => [
+      { id: "dial" as const, label: t("contactCenter.tabDial") },
       { id: "queues" as const, label: t("contactCenter.tabQueues") },
       { id: "ivr" as const, label: t("contactCenter.tabIvr") },
       { id: "routing" as const, label: t("contactCenter.tabRouting") },
@@ -87,6 +89,20 @@ export default function ContactCenterPage() {
         </Select>
         <Tabs items={tabs} value={tab} onChange={setTab} />
       </div>
+
+      {tab === "dial" ? (
+        selectedBotId ? (
+          <ContactCenterDialpad
+            botId={selectedBotId}
+            fromNumber={voiceBots.find((bot) => bot.botId === selectedBotId)?.telephonyPhoneNumber}
+          />
+        ) : (
+          <EmptyState
+            icon={<PhoneCall className="h-5 w-5" />}
+            title={t("contactCenter.dialNoBot")}
+          />
+        )
+      ) : null}
 
       {tab === "queues" ? (
         <Card padding="md" className="space-y-4">

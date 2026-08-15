@@ -212,3 +212,16 @@ export function useClickToCall() {
       api.post<{ callId: string }>("/contact-center/calls/outbound", body),
   });
 }
+
+export interface WebrtcOutboundPrepareResponse {
+  callId: string;
+  clientState: string;
+  callerNumber: string;
+}
+
+export function usePrepareWebrtcOutbound() {
+  return useMutation({
+    mutationFn: (body: { botId: string; to: string }) =>
+      api.post<WebrtcOutboundPrepareResponse>("/contact-center/me/calls/webrtc-outbound", body),
+  });
+}
