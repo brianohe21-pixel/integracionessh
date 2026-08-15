@@ -34,6 +34,7 @@ import {
   ChevronDown,
   Check,
   PhoneCall,
+  Headphones,
   Building2,
 } from "lucide-react";
 import { useAdminRole } from "@/hooks/useAdminRole";
@@ -71,6 +72,7 @@ const memberNavCategories: NavCategory[] = [
     items: [
       { href: "/bots", labelKey: "nav.bots", icon: BotMessageSquare },
       { href: "/voice-agents", labelKey: "nav.voiceAgents", icon: PhoneCall },
+      { href: "/contact-center", labelKey: "nav.contactCenter", icon: Headphones },
       { href: "/conversations", labelKey: "nav.conversations", icon: MessageSquare },
       { href: "/supervisor", labelKey: "nav.supervisor", icon: LayoutGrid },
       { href: "/contacts", labelKey: "nav.contacts", icon: BookUser },

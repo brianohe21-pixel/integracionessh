@@ -275,12 +275,23 @@ export interface Bot {
   voicebotWidgetKey?: string;
   voicebotVoice?: string;
   voicebotModel?: string;
+  voicebotTranscriptionModel?: string;
   voicebotGreeting?: string;
   voicebotSystemPrompt?: string;
   telephonyEnabled?: boolean;
   telephonyPhoneNumber?: string;
   telephonyVoiceId?: string;
+  telephonyBackgroundSound?: string;
+  telephonyBackgroundSoundVolume?: number;
+  telephonyTtsModel?: string;
+  telephonyVoiceSpeed?: number;
+  telephonyVoiceStability?: number;
+  telephonyVoiceSimilarity?: number;
+  telephonyTranscriptionVadThreshold?: number;
+  telephonyTranscriptionSilenceMs?: number;
+  telephonyTranscriptionBargeIn?: boolean;
   telephonyModel?: string;
+  telephonyTranscriptionModel?: string;
   telephonyGreeting?: string;
   telephonySystemPrompt?: string;
   telephonyRecordingEnabled?: boolean;
@@ -294,6 +305,9 @@ export interface Bot {
   telephonyStructuredOutputs?: TelephonyStructuredOutputField[];
   telephonyStructuredOutputSchemaName?: string;
   telephonyStructuredOutput?: TelephonyStructuredOutputDefinition | null;
+  telephonyRoutingMode?: TelephonyRoutingMode;
+  telephonyQueueId?: string;
+  telephonyIvrFlowId?: string;
   whatsappOnboardingMode?: "cloud_api" | "coexistence";
   isOnBizApp?: boolean;
   platformType?: string;
@@ -561,6 +575,7 @@ export interface Message {
   sentByAdvisorId?: string;
   whatsappMessageId?: string;
   externalMessageId?: string;
+  callId?: string;
   timestamp: string;
 }
 
@@ -572,6 +587,9 @@ export interface Advisor {
   cognitoUserId?: string;
   status: "active" | "inactive";
   botIds?: string[];
+  skills?: string[];
+  queueIds?: string[];
+  voiceEnabled?: boolean;
   lastAssignedAt?: string;
   createdAt: string;
   updatedAt: string;
@@ -923,6 +941,15 @@ export interface CallRecord {
   costStatus?: CallCostStatus;
   costBreakdown?: CallCostBreakdown;
   usageMetrics?: CallUsageMetrics;
+  queueId?: string;
+  advisorId?: string;
+  conferenceId?: string;
+  disposition?: string;
+  ivrPath?: string;
+  waitSeconds?: number;
+  talkSeconds?: number;
+  contactCenterMode?: ContactCenterCallMode;
+  campaignId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -940,7 +967,16 @@ export type CallEventType =
   | "cost_partial"
   | "cost_finalized"
   | "tool_executed"
-  | "error";
+  | "error"
+  | "queued"
+  | "offered"
+  | "agent_answered"
+  | "transferred"
+  | "supervised"
+  | "wrap_up"
+  | "dtmf"
+  | "overflow"
+  | "callback";
 
 export interface CallEvent {
   eventId: string;
@@ -1669,4 +1705,186 @@ export interface TenantWompiSecretPayload {
   privateKey: string;
   integritySecret: string;
   eventsSecret: string;
+}
+
+export type TelephonyRoutingMode = "ai" | "ivr" | "queue";
+
+export type ContactCenterCallMode = "ai" | "queue" | "ivr" | "agent";
+
+export type AgentPresenceState =
+  | "offline"
+  | "available"
+  | "ringing"
+  | "on_call"
+  | "wrap_up"
+  | "break";
+
+export type QueueStrategy = "longest_idle" | "round_robin" | "fewest_calls";
+
+export type AfterHoursAction = "ai" | "voicemail" | "hangup";
+
+export type IvrNodeType = "menu" | "queue" | "ai" | "hangup" | "voicemail";
+
+export type VoiceCampaignMode = "preview" | "progressive";
+
+export type VoiceCampaignStatus = "draft" | "running" | "paused" | "completed" | "cancelled";
+
+export type SupervisorRole = "monitor" | "whisper" | "barge";
+
+export interface QueueDayHours {
+  start: string;
+  end: string;
+}
+
+export interface QueueBusinessHours {
+  timezone: string;
+  days: Record<string, QueueDayHours | null>;
+}
+
+export interface ContactCenterQueue {
+  queueId: string;
+  tenantId: string;
+  botId: string;
+  name: string;
+  strategy: QueueStrategy;
+  skills: string[];
+  slaSeconds: number;
+  maxWaitSeconds?: number;
+  holdAudioUrl?: string;
+  overflowQueueId?: string;
+  afterHoursAction: AfterHoursAction;
+  announcePosition?: boolean;
+  callbackEnabled?: boolean;
+  hours?: QueueBusinessHours;
+  wrapUpSeconds?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IvrMenuOption {
+  digit: string;
+  targetType: IvrNodeType;
+  targetId?: string;
+}
+
+export interface IvrNode {
+  nodeId: string;
+  type: IvrNodeType;
+  prompt?: string;
+  options?: IvrMenuOption[];
+  queueId?: string;
+  timeoutSeconds?: number;
+}
+
+export interface ContactCenterIvrFlow {
+  ivrFlowId: string;
+  tenantId: string;
+  botId: string;
+  name: string;
+  entryNodeId: string;
+  nodes: IvrNode[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AgentPresence {
+  advisorId: string;
+  tenantId: string;
+  state: AgentPresenceState;
+  skills: string[];
+  queueIds: string[];
+  webrtcConnected: boolean;
+  lastHeartbeatAt: string;
+  telnyxSipUsername?: string;
+  telnyxCredentialId?: string;
+  lastCallAt?: string;
+  callsHandled?: number;
+  wrapUpUntil?: string;
+  kind?: "advisor" | "member";
+  updatedAt: string;
+}
+
+export interface QueueMembership {
+  membershipId: string;
+  tenantId: string;
+  queueId: string;
+  callId: string;
+  sessionId: string;
+  botId: string;
+  priority: number;
+  queuedAt: string;
+  callbackNumber?: string;
+  expiresAt?: string;
+}
+
+export interface VoiceCampaign {
+  campaignId: string;
+  tenantId: string;
+  botId: string;
+  name: string;
+  mode: VoiceCampaignMode;
+  status: VoiceCampaignStatus;
+  fromNumber: string;
+  queueId: string;
+  recipients: string[];
+  nextIndex: number;
+  amdEnabled: boolean;
+  dispositions?: string[];
+  createdAt: string;
+  updatedAt: string;
+  startedAt?: string;
+  completedAt?: string;
+}
+
+export interface VoiceCampaignAttempt {
+  attemptId: string;
+  tenantId: string;
+  campaignId: string;
+  to: string;
+  callId?: string;
+  status: "queued" | "dialing" | "connected" | "voicemail" | "failed" | "no_answer";
+  disposition?: string;
+  createdAt: string;
+}
+
+export interface ContactCenterWallboard {
+  agents: Array<{
+    advisorId: string;
+    name: string;
+    state: AgentPresenceState;
+    queueIds: string[];
+    webrtcConnected: boolean;
+    callsHandled: number;
+    currentCallId?: string;
+  }>;
+  queues: Array<{
+    queueId: string;
+    name: string;
+    waiting: number;
+    longestWaitSeconds: number;
+    slaSeconds: number;
+  }>;
+  liveCalls: Array<{
+    callId: string;
+    queueId?: string;
+    advisorId?: string;
+    fromNumber: string;
+    conferenceId?: string;
+    startedAt?: string;
+    waitSeconds?: number;
+  }>;
+  metrics: {
+    availableAgents: number;
+    callsInQueue: number;
+    callsLive: number;
+    abandonRate: number;
+    averageSpeedOfAnswerSeconds: number;
+  };
+}
+
+export interface SoftphoneTokenResponse {
+  loginToken: string;
+  sipUsername: string;
+  callerId?: string;
+  presence: AgentPresence;
 }

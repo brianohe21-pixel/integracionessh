@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Eye, EyeOff, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
   useDeleteProviderCredential,
   useProviderCredentials,
@@ -45,6 +46,7 @@ export function ProviderCredentialCard({ provider }: { provider: ProviderId }) {
   const [visibleFields, setVisibleFields] = useState<Record<string, boolean>>({});
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     if (!saved) return;
@@ -77,12 +79,13 @@ export function ProviderCredentialCard({ provider }: { provider: ProviderId }) {
   }
 
   async function handleDelete() {
-    if (!window.confirm(t("settings.providerRemoveConfirm"))) return;
     setError("");
     try {
       await remove.mutateAsync();
+      setConfirmDelete(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("settings.providerSaveError"));
+      setConfirmDelete(false);
     }
   }
 
@@ -96,7 +99,8 @@ export function ProviderCredentialCard({ provider }: { provider: ProviderId }) {
   }
 
   return (
-    <div className="rounded-lg border border-default overflow-hidden">
+    <>
+      <div className="rounded-lg border border-default overflow-hidden">
       <div className="flex items-center gap-3 p-3 bg-surface">
         <div className={`w-2 h-2 rounded-full ${isConfigured ? "bg-accent" : "bg-gray-300"}`} />
         <div className="flex-1 min-w-0">
@@ -116,7 +120,7 @@ export function ProviderCredentialCard({ provider }: { provider: ProviderId }) {
           {isOwn ? (
             <button
               type="button"
-              onClick={() => void handleDelete()}
+              onClick={() => setConfirmDelete(true)}
               disabled={remove.isPending}
               title={t("settings.providerRemove")}
               className="p-1 text-muted hover:text-red-500 transition-colors disabled:opacity-50"
@@ -218,7 +222,18 @@ export function ProviderCredentialCard({ provider }: { provider: ProviderId }) {
       ) : null}
 
       {!editing && error ? <p className="px-3 pb-3 text-xs text-red-600">{error}</p> : null}
-    </div>
+      </div>
+      <ConfirmDialog
+        open={confirmDelete}
+        title={t("settings.providerRemove")}
+        description={t("settings.providerRemoveConfirm")}
+        confirmLabel={t("common.delete")}
+        tone="danger"
+        loading={remove.isPending}
+        onConfirm={() => void handleDelete()}
+        onCancel={() => setConfirmDelete(false)}
+      />
+    </>
   );
 }
 

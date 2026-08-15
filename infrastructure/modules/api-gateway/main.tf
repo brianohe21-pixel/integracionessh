@@ -99,7 +99,57 @@ locals {
     mailrelay_webhook  = var.mailrelay_webhook_function_arn
   }
 
-  routes = {
+  http_proxy_groups = {
+    public_api = {
+      path         = "/v1/{proxy+}"
+      methods      = ["GET", "POST", "PUT", "DELETE"]
+      invoke_arn   = var.public_api_invoke_arn
+      function_arn = var.public_api_function_arn
+      protected    = false
+    }
+    bots_telephony = {
+      path         = "/bots/{botId}/telephony/{proxy+}"
+      methods      = ["GET", "POST", "PUT", "DELETE"]
+      invoke_arn   = var.telephony_invoke_arn
+      function_arn = var.telephony_function_arn
+      protected    = true
+    }
+    contact_center = {
+      path         = "/contact-center/{proxy+}"
+      methods      = ["GET", "POST", "PUT", "DELETE"]
+      invoke_arn   = var.telephony_invoke_arn
+      function_arn = var.telephony_function_arn
+      protected    = true
+    }
+    mailrelay = {
+      path         = "/email-marketing/{proxy+}"
+      methods      = ["GET", "POST", "PUT", "PATCH", "DELETE"]
+      invoke_arn   = var.mailrelay_invoke_arn
+      function_arn = var.mailrelay_function_arn
+      protected    = true
+    }
+  }
+
+  http_proxy_routes = {
+    for item in flatten([
+      for group_key, group in local.http_proxy_groups : [
+        for method in group.methods : {
+          key          = "${group_key}_proxy_${lower(method)}"
+          route_key    = "${method} ${group.path}"
+          invoke_arn   = group.invoke_arn
+          function_arn = group.function_arn
+          protected    = group.protected
+        }
+      ]
+      ]) : item.key => {
+      route_key    = item.route_key
+      invoke_arn   = item.invoke_arn
+      function_arn = item.function_arn
+      protected    = item.protected
+    }
+  }
+
+  explicit_routes = {
     webhook_verify = {
       route_key    = "GET /webhook"
       invoke_arn   = var.webhook_invoke_arn
@@ -1054,30 +1104,6 @@ locals {
       function_arn = var.tenants_function_arn
       protected    = true
     }
-    public_api_proxy_get = {
-      route_key    = "GET /v1/{proxy+}"
-      invoke_arn   = var.public_api_invoke_arn
-      function_arn = var.public_api_function_arn
-      protected    = false
-    }
-    public_api_proxy_post = {
-      route_key    = "POST /v1/{proxy+}"
-      invoke_arn   = var.public_api_invoke_arn
-      function_arn = var.public_api_function_arn
-      protected    = false
-    }
-    public_api_proxy_put = {
-      route_key    = "PUT /v1/{proxy+}"
-      invoke_arn   = var.public_api_invoke_arn
-      function_arn = var.public_api_function_arn
-      protected    = false
-    }
-    public_api_proxy_delete = {
-      route_key    = "DELETE /v1/{proxy+}"
-      invoke_arn   = var.public_api_invoke_arn
-      function_arn = var.public_api_function_arn
-      protected    = false
-    }
     bots_calling_settings_get = {
       route_key    = "GET /bots/{botId}/calling/settings"
       invoke_arn   = var.calling_invoke_arn
@@ -1146,54 +1172,6 @@ locals {
     }
     telephony_voices = {
       route_key    = "GET /telephony/voices"
-      invoke_arn   = var.telephony_invoke_arn
-      function_arn = var.telephony_function_arn
-      protected    = true
-    }
-    bots_telephony_proxy_get = {
-      route_key    = "GET /bots/{botId}/telephony/{proxy+}"
-      invoke_arn   = var.telephony_invoke_arn
-      function_arn = var.telephony_function_arn
-      protected    = true
-    }
-    bots_telephony_proxy_post = {
-      route_key    = "POST /bots/{botId}/telephony/{proxy+}"
-      invoke_arn   = var.telephony_invoke_arn
-      function_arn = var.telephony_function_arn
-      protected    = true
-    }
-    bots_telephony_proxy_put = {
-      route_key    = "PUT /bots/{botId}/telephony/{proxy+}"
-      invoke_arn   = var.telephony_invoke_arn
-      function_arn = var.telephony_function_arn
-      protected    = true
-    }
-    bots_telephony_proxy_delete = {
-      route_key    = "DELETE /bots/{botId}/telephony/{proxy+}"
-      invoke_arn   = var.telephony_invoke_arn
-      function_arn = var.telephony_function_arn
-      protected    = true
-    }
-    contact_center_proxy_get = {
-      route_key    = "GET /contact-center/{proxy+}"
-      invoke_arn   = var.telephony_invoke_arn
-      function_arn = var.telephony_function_arn
-      protected    = true
-    }
-    contact_center_proxy_post = {
-      route_key    = "POST /contact-center/{proxy+}"
-      invoke_arn   = var.telephony_invoke_arn
-      function_arn = var.telephony_function_arn
-      protected    = true
-    }
-    contact_center_proxy_put = {
-      route_key    = "PUT /contact-center/{proxy+}"
-      invoke_arn   = var.telephony_invoke_arn
-      function_arn = var.telephony_function_arn
-      protected    = true
-    }
-    contact_center_proxy_delete = {
-      route_key    = "DELETE /contact-center/{proxy+}"
       invoke_arn   = var.telephony_invoke_arn
       function_arn = var.telephony_function_arn
       protected    = true
@@ -1810,36 +1788,6 @@ locals {
       function_arn = var.flow_hooks_function_arn
       protected    = false
     }
-    mailrelay_proxy_get = {
-      route_key    = "GET /email-marketing/{proxy+}"
-      invoke_arn   = var.mailrelay_invoke_arn
-      function_arn = var.mailrelay_function_arn
-      protected    = true
-    }
-    mailrelay_proxy_post = {
-      route_key    = "POST /email-marketing/{proxy+}"
-      invoke_arn   = var.mailrelay_invoke_arn
-      function_arn = var.mailrelay_function_arn
-      protected    = true
-    }
-    mailrelay_proxy_put = {
-      route_key    = "PUT /email-marketing/{proxy+}"
-      invoke_arn   = var.mailrelay_invoke_arn
-      function_arn = var.mailrelay_function_arn
-      protected    = true
-    }
-    mailrelay_proxy_patch = {
-      route_key    = "PATCH /email-marketing/{proxy+}"
-      invoke_arn   = var.mailrelay_invoke_arn
-      function_arn = var.mailrelay_function_arn
-      protected    = true
-    }
-    mailrelay_proxy_delete = {
-      route_key    = "DELETE /email-marketing/{proxy+}"
-      invoke_arn   = var.mailrelay_invoke_arn
-      function_arn = var.mailrelay_function_arn
-      protected    = true
-    }
     mailrelay_webhook = {
       route_key    = "POST /email-marketing/webhook"
       invoke_arn   = var.mailrelay_webhook_invoke_arn
@@ -1853,6 +1801,8 @@ locals {
       protected    = false
     }
   }
+
+  routes = merge(local.explicit_routes, local.http_proxy_routes)
 
   function_integration_keys = {
     for key, route in local.routes :

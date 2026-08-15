@@ -2,6 +2,7 @@ import {
   assignTelnyxPhoneNumbers,
   buildTelnyxAppName,
   buildTelnyxWebhookUrl,
+  createTelephonyCredentialToken,
   ensureTelnyxCallControlApp,
   ensureTelnyxOutboundVoiceProfile,
 } from "./provision.js";
@@ -121,5 +122,31 @@ describe("telnyx provision", () => {
     await expect(
       assignTelnyxPhoneNumbers({ apiKey: "KEY1234567890", connectionId: "conn-1" })
     ).resolves.toBe(1);
+  });
+
+  it("parses a raw JWT from Telnyx WebRTC token endpoint", async () => {
+    const jwt = "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.payload.signature";
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      status: 201,
+      text: async () => jwt,
+    }) as unknown as typeof fetch;
+
+    await expect(
+      createTelephonyCredentialToken({ apiKey: "KEY1234567890", credentialId: "cred-1" })
+    ).resolves.toBe(jwt);
+  });
+
+  it("parses a JSON-wrapped WebRTC token", async () => {
+    const jwt = "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.payload.signature";
+    global.fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      status: 201,
+      text: async () => JSON.stringify({ data: jwt }),
+    }) as unknown as typeof fetch;
+
+    await expect(
+      createTelephonyCredentialToken({ apiKey: "KEY1234567890", credentialId: "cred-1" })
+    ).resolves.toBe(jwt);
   });
 });

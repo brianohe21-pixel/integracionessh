@@ -17,6 +17,16 @@ export interface TelephonySettings {
   telephonyPhoneNumber?: string;
   telephonyVoiceId?: string;
   telephonyModel?: string;
+  telephonyTranscriptionModel?: string;
+  telephonyBackgroundSound?: string;
+  telephonyBackgroundSoundVolume?: number;
+  telephonyTtsModel?: string;
+  telephonyVoiceSpeed?: number;
+  telephonyVoiceStability?: number;
+  telephonyVoiceSimilarity?: number;
+  telephonyTranscriptionVadThreshold?: number;
+  telephonyTranscriptionSilenceMs?: number;
+  telephonyTranscriptionBargeIn?: boolean;
   telephonyGreeting?: string;
   telephonySystemPrompt?: string;
   telephonyRecordingEnabled?: boolean;
@@ -112,24 +122,21 @@ export function useTelephonyCallEvents(botId: string, callId?: string) {
   });
 }
 
-export function useTelephonyCallTranscript(
-  conversationId?: string,
-  callStatus?: CallRecord["status"]
-) {
+export function useTelephonyCallTranscript(botId?: string, callId?: string, callStatus?: CallRecord["status"]) {
   const active =
     callStatus === "initiated" ||
     callStatus === "ringing" ||
     callStatus === "accepted";
 
   return useQuery({
-    queryKey: ["conversation-messages", conversationId],
+    queryKey: ["telephony-call-transcript", botId, callId],
     queryFn: async () => {
-      const raw = await api.get<unknown>(
-        `/conversations/${encodeURIComponent(conversationId!)}`
+      const raw = await api.get<{ items: Message[] }>(
+        `/bots/${encodeURIComponent(botId!)}/telephony/calls/${encodeURIComponent(callId!)}/transcript`
       );
-      return Array.isArray(raw) ? (raw as Message[]) : [];
+      return raw.items ?? [];
     },
-    enabled: Boolean(conversationId),
+    enabled: Boolean(botId && callId),
     refetchInterval: active ? 5000 : false,
   });
 }

@@ -20,6 +20,7 @@ def main() -> int:
     print(
         "API Gateway consolidation summary: "
         f"{summary['route_count']} routes, "
+        f"{summary['proxy_route_count']} proxy routes, "
         f"{summary['integration_count']} integrations, "
         f"{summary['lambda_count']} lambdas"
     )

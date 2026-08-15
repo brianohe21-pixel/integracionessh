@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
 import { useAdvisors } from "@/hooks/useAdvisors";
+import { useClickToCall } from "@/hooks/useContactCenter";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useT } from "@/i18n/context";
 import type { Channel, Conversation, Lead } from "@/types";
@@ -31,6 +32,7 @@ export function ConversationContactPanel({
   const t = useT();
   const { formatDate, formatRelativeTime } = useFormatters();
   const { data: advisors } = useAdvisors();
+  const clickToCall = useClickToCall();
   const [panelTab, setPanelTab] = useState<PanelTab>("contact");
   const assignedAdvisor = advisors?.find((a) => a.advisorId === conversation.assignedAdvisorId);
   const displayName =
@@ -75,6 +77,19 @@ export function ConversationContactPanel({
         <h2 className="text-lg font-semibold tracking-tight text-primary">{displayName}</h2>
         {phone ? (
           <p className="mt-1 text-sm text-secondary">{phone}</p>
+        ) : null}
+        {phone ? (
+          <Button
+            size="sm"
+            className="mt-2"
+            onClick={() =>
+              void clickToCall.mutateAsync({ botId: conversation.botId, to: phone })
+            }
+            disabled={clickToCall.isPending}
+          >
+            <Phone className="h-4 w-4" />
+            {t("contactCenter.clickToCall")}
+          </Button>
         ) : null}
         <p className="mt-0.5 text-xs text-muted">{channelLabel(conversation.channel)}</p>
         <div className="mt-3 flex flex-wrap justify-center gap-1.5">

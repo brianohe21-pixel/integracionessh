@@ -383,16 +383,34 @@ export async function createAdvisorTelephonyCredential(params: {
   };
 }
 
+function extractWebRtcToken(data: unknown): string | null {
+  if (typeof data === "string" && data.trim()) return data.trim();
+  if (!data || typeof data !== "object") return null;
+  const obj = data as Record<string, unknown>;
+  for (const key of ["data", "raw", "token"]) {
+    const value = obj[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+    if (value && typeof value === "object") {
+      const nested = (value as { token?: unknown }).token;
+      if (typeof nested === "string" && nested.trim()) return nested.trim();
+    }
+  }
+  return null;
+}
+
 export async function createTelephonyCredentialToken(params: {
   apiKey: string;
   credentialId: string;
 }): Promise<string> {
-  const data = await telnyxRequest<{ data?: string } | string>(
+  const data = await telnyxRequest<unknown>(
     params.apiKey,
     `/telephony_credentials/${encodeURIComponent(params.credentialId)}/token`,
-    { method: "POST" }
+    {
+      method: "POST",
+      headers: { Accept: "text/plain, application/json" },
+    }
   );
-  if (typeof data === "string" && data.trim()) return data.trim();
-  if (data && typeof data === "object" && typeof data.data === "string") return data.data;
+  const token = extractWebRtcToken(data);
+  if (token) return token;
   throw Object.assign(new Error("Telnyx did not return a WebRTC token"), { statusCode: 502 });
 }

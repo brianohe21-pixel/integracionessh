@@ -3,6 +3,7 @@
 import { Users } from "lucide-react";
 import { useAdvisorWorkload } from "@/hooks/useAdvisorWorkload";
 import { AdvisorWorkloadTable } from "@/components/supervisor/AdvisorWorkloadTable";
+import { ContactCenterWallboard } from "@/components/contact-center/ContactCenterWallboard";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -38,6 +39,10 @@ export default function SupervisorPage() {
       {data && (data.advisors.length > 0 || data.unassigned.count > 0) && (
         <AdvisorWorkloadTable advisors={data.advisors} unassigned={data.unassigned} />
       )}
+
+      <div className="mt-8">
+        <ContactCenterWallboard showSupervise />
+      </div>
     </DashboardPage>
   );
 }

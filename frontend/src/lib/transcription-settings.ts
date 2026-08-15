@@ -1,0 +1,5 @@
+export const DEFAULT_VAD_THRESHOLD = 0.65;
+export const DEFAULT_SILENCE_MS = 550;
+export const DEFAULT_VOICE_SPEED = 1;
+export const DEFAULT_VOICE_STABILITY = 0.5;
+export const DEFAULT_VOICE_SIMILARITY = 0.75;

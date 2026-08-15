@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Eye, PhoneCall, X } from "lucide-react";
-import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { BotKnowledge } from "@/components/bots/BotKnowledge";
@@ -17,11 +16,28 @@ import { useBot } from "@/hooks/useBots";
 import { useVoiceAgentTools } from "@/hooks/useVoiceAgentTools";
 import { useT } from "@/i18n/context";
 import { buildVoiceAgentToolPromptSnippet } from "@/lib/voice-agent-tool-secret-refs";
-import {
-  DEFAULT_REALTIME_MODEL_ID,
-  REALTIME_MODELS,
-} from "@/lib/realtime-models";
 import { TELEPHONY_SYSTEM_PROMPT_MAX_LENGTH } from "@/lib/voice-agent-limits";
+import {
+  VoiceAgentConfigDrawer,
+  type VoiceAgentConfigSection,
+} from "@/components/voice-agents/VoiceAgentConfigDrawer";
+import { VoiceAgentModelCards } from "@/components/voice-agents/VoiceAgentModelCards";
+import { DEFAULT_REALTIME_MODEL_ID } from "@/lib/realtime-models";
+import { DEFAULT_TELEPHONY_TRANSCRIPTION_MODEL_ID } from "@/lib/transcription-models";
+import {
+  BACKGROUND_SOUND_NONE,
+  DEFAULT_BACKGROUND_SOUND_VOLUME,
+} from "@/lib/background-sounds";
+import {
+  DEFAULT_TTS_MODEL_ID,
+  DEFAULT_VOICE_SIMILARITY,
+  DEFAULT_VOICE_SPEED,
+  DEFAULT_VOICE_STABILITY,
+} from "@/lib/tts-models";
+import {
+  DEFAULT_SILENCE_MS,
+  DEFAULT_VAD_THRESHOLD,
+} from "@/lib/transcription-settings";
 
 function SettingsSwitch({
   checked,
@@ -70,11 +86,25 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [voiceId, setVoiceId] = useState("");
   const [model, setModel] = useState(DEFAULT_REALTIME_MODEL_ID);
+  const [transcriptionModel, setTranscriptionModel] = useState(
+    DEFAULT_TELEPHONY_TRANSCRIPTION_MODEL_ID
+  );
   const [greeting, setGreeting] = useState("");
   const [systemPrompt, setSystemPrompt] = useState("");
   const [recordingEnabled, setRecordingEnabled] = useState(false);
   const [recordingNotice, setRecordingNotice] = useState("");
   const [handoffEnabled, setHandoffEnabled] = useState(false);
+  const [backgroundSound, setBackgroundSound] = useState(BACKGROUND_SOUND_NONE);
+  const [backgroundSoundVolume, setBackgroundSoundVolume] = useState(
+    DEFAULT_BACKGROUND_SOUND_VOLUME
+  );
+  const [ttsModel, setTtsModel] = useState(DEFAULT_TTS_MODEL_ID);
+  const [voiceSpeed, setVoiceSpeed] = useState(DEFAULT_VOICE_SPEED);
+  const [voiceStability, setVoiceStability] = useState(DEFAULT_VOICE_STABILITY);
+  const [voiceSimilarity, setVoiceSimilarity] = useState(DEFAULT_VOICE_SIMILARITY);
+  const [vadThreshold, setVadThreshold] = useState(DEFAULT_VAD_THRESHOLD);
+  const [silenceMs, setSilenceMs] = useState(DEFAULT_SILENCE_MS);
+  const [bargeIn, setBargeIn] = useState(false);
   const enabledTools = (toolsData?.tools ?? []).filter((tool) => tool.enabled);
 
   function insertToolIntoPrompt(toolId: string) {
@@ -88,32 +118,48 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
   }
 
   const [showPromptModal, setShowPromptModal] = useState(false);
+  const [configDrawerOpen, setConfigDrawerOpen] = useState(false);
+  const [configDrawerSection, setConfigDrawerSection] =
+    useState<VoiceAgentConfigSection>("assistant");
 
   useEffect(() => {
     if (!data) return;
     setPhoneNumber(data.telephonyPhoneNumber ?? "");
     setVoiceId(data.telephonyVoiceId ?? "");
     setModel(data.telephonyModel ?? DEFAULT_REALTIME_MODEL_ID);
+    setTranscriptionModel(
+      data.telephonyTranscriptionModel ?? DEFAULT_TELEPHONY_TRANSCRIPTION_MODEL_ID
+    );
     setGreeting(data.telephonyGreeting ?? "");
     setSystemPrompt(data.telephonySystemPrompt ?? "");
     setRecordingEnabled(Boolean(data.telephonyRecordingEnabled));
     setRecordingNotice(data.telephonyRecordingNotice ?? "");
     setHandoffEnabled(Boolean(data.telephonyHandoffEnabled));
+    setBackgroundSound(data.telephonyBackgroundSound ?? BACKGROUND_SOUND_NONE);
+    setBackgroundSoundVolume(
+      data.telephonyBackgroundSoundVolume ?? DEFAULT_BACKGROUND_SOUND_VOLUME
+    );
+    setTtsModel(data.telephonyTtsModel ?? DEFAULT_TTS_MODEL_ID);
+    setVoiceSpeed(data.telephonyVoiceSpeed ?? DEFAULT_VOICE_SPEED);
+    setVoiceStability(data.telephonyVoiceStability ?? DEFAULT_VOICE_STABILITY);
+    setVoiceSimilarity(data.telephonyVoiceSimilarity ?? DEFAULT_VOICE_SIMILARITY);
+    setVadThreshold(data.telephonyTranscriptionVadThreshold ?? DEFAULT_VAD_THRESHOLD);
+    setSilenceMs(data.telephonyTranscriptionSilenceMs ?? DEFAULT_SILENCE_MS);
+    setBargeIn(Boolean(data.telephonyTranscriptionBargeIn));
   }, [data]);
 
-  const numbers = numbersData?.numbers ?? [];
+  const numbers = useMemo(() => numbersData?.numbers ?? [], [numbersData?.numbers]);
   const voices = voicesData?.voices ?? [];
   const isFreeTier = voicesData?.tier === "free";
-  const selectableVoices = isFreeTier
-    ? voices.filter((voice) => !voice.requiresPaidPlan)
-    : voices;
   const selectedVoiceRequiresPaidPlan =
     isFreeTier &&
     voices.some((voice) => voice.id === voiceId.trim() && voice.requiresPaidPlan);
-  const selectedVoice = voiceId.trim()
-    ? voices.find((voice) => voice.id === voiceId.trim())
-    : undefined;
   const systemPromptTooLong = systemPrompt.length > TELEPHONY_SYSTEM_PROMPT_MAX_LENGTH;
+
+  function openConfigDrawer(section: VoiceAgentConfigSection) {
+    setConfigDrawerSection(section);
+    setConfigDrawerOpen(true);
+  }
 
   function validateSystemPrompt(): boolean {
     if (!systemPromptTooLong) return true;
@@ -136,6 +182,16 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
     const payload: TelephonySettings & { enabled?: boolean } = {
       telephonyPhoneNumber: phoneNumber.trim(),
       telephonyModel: model,
+      telephonyTranscriptionModel: transcriptionModel,
+      telephonyBackgroundSound: backgroundSound,
+      telephonyBackgroundSoundVolume: backgroundSoundVolume,
+      telephonyTtsModel: ttsModel,
+      telephonyVoiceSpeed: voiceSpeed,
+      telephonyVoiceStability: voiceStability,
+      telephonyVoiceSimilarity: voiceSimilarity,
+      telephonyTranscriptionVadThreshold: vadThreshold,
+      telephonyTranscriptionSilenceMs: silenceMs,
+      telephonyTranscriptionBargeIn: bargeIn,
       telephonyRecordingEnabled: recordingEnabled,
       telephonyRecordingNotice: recordingNotice.trim(),
       telephonyHandoffEnabled: handoffEnabled,
@@ -260,52 +316,21 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
 
           {enabled && (
             <>
-              <div className="grid grid-cols-1 gap-4 border-t border-subtle pt-4 md:grid-cols-2">
-                <label className="space-y-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-medium text-secondary">{t("telephony.voiceId")}</span>
-                    {selectedVoice && <Badge variant="accent">{selectedVoice.name}</Badge>}
-                  </div>
-                  <input
-                    value={voiceId}
-                    onChange={(e) => setVoiceId(e.target.value)}
-                    placeholder={t("voiceAgents.voiceIdPlaceholder")}
-                    list={
-                      selectableVoices.length > 0 ? `elevenlabs-voices-${botId}` : undefined
-                    }
-                    className="w-full rounded-lg border border-default px-3 py-2 text-sm"
-                  />
-                  {selectableVoices.length > 0 && (
-                    <datalist id={`elevenlabs-voices-${botId}`}>
-                      {selectableVoices.map((voice) => (
-                        <option key={voice.id} value={voice.id}>
-                          {voice.name}
-                        </option>
-                      ))}
-                    </datalist>
-                  )}
-                  {selectedVoiceRequiresPaidPlan ? (
-                    <p className="text-xs text-warning">
-                      {t("voiceAgents.voicePaidPlanWarning")}
-                    </p>
-                  ) : (
-                    <p className="text-xs text-secondary">{t("voiceAgents.voiceIdHint")}</p>
-                  )}
-                </label>
-                <label className="space-y-1">
-                  <span className="text-sm font-medium text-secondary">{t("telephony.model")}</span>
-                  <select
-                    value={model}
-                    onChange={(e) => setModel(e.target.value)}
-                    className="w-full rounded-lg border border-default px-3 py-2 text-sm"
-                  >
-                    {REALTIME_MODELS.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+              <div className="border-t border-subtle pt-4">
+                <VoiceAgentModelCards
+                  assistantModel={model}
+                  transcriptionModel={transcriptionModel}
+                  voiceId={voiceId}
+                  voices={voices}
+                  isFreeTier={isFreeTier}
+                  backgroundSound={backgroundSound}
+                  onOpenSection={openConfigDrawer}
+                />
+                {selectedVoiceRequiresPaidPlan ? (
+                  <p className="mt-3 text-xs text-warning">
+                    {t("voiceAgents.voicePaidPlanWarning")}
+                  </p>
+                ) : null}
               </div>
 
               <label className="block space-y-1">
@@ -425,6 +450,40 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
             if (!next) return;
             save.mutate({ knowledgeEnabled: true });
           }}
+        />
+      ) : null}
+
+      {configDrawerOpen ? (
+        <VoiceAgentConfigDrawer
+          open={configDrawerOpen}
+          section={configDrawerSection}
+          assistantModel={model}
+          transcriptionModel={transcriptionModel}
+          voiceId={voiceId}
+          voices={voices}
+          isFreeTier={isFreeTier}
+          onClose={() => setConfigDrawerOpen(false)}
+          onAssistantModelChange={setModel}
+          onTranscriptionModelChange={setTranscriptionModel}
+          onVoiceIdChange={setVoiceId}
+          backgroundSound={backgroundSound}
+          backgroundSoundVolume={backgroundSoundVolume}
+          onBackgroundSoundChange={setBackgroundSound}
+          onBackgroundSoundVolumeChange={setBackgroundSoundVolume}
+          ttsModel={ttsModel}
+          voiceSpeed={voiceSpeed}
+          voiceStability={voiceStability}
+          voiceSimilarity={voiceSimilarity}
+          onTtsModelChange={setTtsModel}
+          onVoiceSpeedChange={setVoiceSpeed}
+          onVoiceStabilityChange={setVoiceStability}
+          onVoiceSimilarityChange={setVoiceSimilarity}
+          vadThreshold={vadThreshold}
+          silenceMs={silenceMs}
+          bargeIn={bargeIn}
+          onVadThresholdChange={setVadThreshold}
+          onSilenceMsChange={setSilenceMs}
+          onBargeInChange={setBargeIn}
         />
       ) : null}
 

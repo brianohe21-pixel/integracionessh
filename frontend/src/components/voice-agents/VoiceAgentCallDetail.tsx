@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { Bot, User, X } from "lucide-react";
+import { Bot, Download, User, X } from "lucide-react";
 import { AudioWaveformPlayer } from "@/components/ui/AudioWaveformPlayer";
 import { Badge } from "@/components/ui/Badge";
 import { Tabs } from "@/components/ui/Tabs";
@@ -71,6 +71,24 @@ function latencyQualityLabel(
   return t("voiceAgents.latencySlow");
 }
 
+async function downloadCallRecording(url: string, callId: string): Promise<void> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("fetch failed");
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = blobUrl;
+    anchor.download = `call-${callId}.mp3`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(blobUrl);
+  } catch {
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+}
+
 export function VoiceAgentCallDetail({ botId, call: previewCall, open, onClose }: VoiceAgentCallDetailProps) {
   const t = useT();
   const locale = useLocale();
@@ -81,7 +99,8 @@ export function VoiceAgentCallDetail({ botId, call: previewCall, open, onClose }
   const call = detailCall ?? previewCall;
   const { data: eventsData, isLoading: eventsLoading } = useTelephonyCallEvents(botId, callId);
   const { data: messages, isLoading: transcriptLoading } = useTelephonyCallTranscript(
-    call?.conversationId,
+    botId,
+    callId,
     call?.status
   );
   const recordingEnabled = call?.recordingStatus === "ready";
@@ -89,8 +108,12 @@ export function VoiceAgentCallDetail({ botId, call: previewCall, open, onClose }
 
   const events = eventsData?.items ?? [];
   const breakdown = call?.costBreakdown;
-  const transcript = (messages ?? []).filter(
-    (message) => message.role === "user" || message.role === "assistant"
+  const transcript = useMemo(
+    () =>
+      (messages ?? [])
+        .filter((message) => message.role === "user" || message.role === "assistant")
+        .sort((a, b) => a.timestamp.localeCompare(b.timestamp)),
+    [messages]
   );
   const latency = buildCallLatencySummary({
     events,
@@ -237,9 +260,19 @@ export function VoiceAgentCallDetail({ botId, call: previewCall, open, onClose }
                     <h4 className="text-sm font-semibold text-primary">
                       {t("voiceAgents.playRecording")}
                     </h4>
-                    <Badge variant="success" dot>
-                      {t("voiceAgents.recordingReady")}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void downloadCallRecording(recording.url, call.callId)}
+                        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-secondary transition hover:bg-surface-muted hover:text-primary"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        {t("voiceAgents.downloadRecording")}
+                      </button>
+                      <Badge variant="success" dot>
+                        {t("voiceAgents.recordingReady")}
+                      </Badge>
+                    </div>
                   </div>
                   <AudioWaveformPlayer src={recording.url} />
                 </div>
