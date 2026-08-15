@@ -47,6 +47,7 @@ export async function createTelephonySession(params: {
   queueId?: string;
   ivrFlowId?: string;
   campaignId?: string;
+  advisorId?: string;
 }): Promise<TelephonySession> {
   const now = new Date().toISOString();
   const ttl = Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS;
@@ -72,6 +73,7 @@ export async function createTelephonySession(params: {
     ...(params.queueId ? { queueId: params.queueId } : {}),
     ...(params.ivrFlowId ? { ivrFlowId: params.ivrFlowId } : {}),
     ...(params.campaignId ? { campaignId: params.campaignId } : {}),
+    ...(params.advisorId ? { advisorId: params.advisorId } : {}),
   };
 
   await docClient.send(

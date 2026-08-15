@@ -711,6 +711,7 @@ export async function handleCallAnswered(payload: Record<string, unknown>): Prom
   if (!bot) return;
 
   if (session.direction === "outbound") {
+    if (session.mode === "agent") return;
     await connectOutboundTelephonyCall(session, callControlId);
     return;
   }

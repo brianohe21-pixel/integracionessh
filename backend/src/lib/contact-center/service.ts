@@ -53,6 +53,7 @@ import {
 } from "../telnyx/client.js";
 import { getTelnyxSecrets } from "../telnyx/secrets.js";
 import { normalizeE164 } from "../telnyx/phone.js";
+import { decodeTelnyxClientState } from "../telnyx/webhook.js";
 import {
   attachTelephonyCallControlId,
   indexTelephonyCallControlId,
@@ -542,16 +543,39 @@ async function offerCallToAgent(params: {
   );
 }
 
+async function resolveContactCenterSession(
+  payload: Record<string, unknown>
+): Promise<TelephonySession | null> {
+  const callControlId = String(payload.call_control_id ?? "");
+  if (callControlId) {
+    const session = await getTelephonySessionByCallControlId(callControlId);
+    if (session) return session;
+  }
+  const { sessionId } = decodeTelnyxClientState(payload);
+  if (sessionId) return getTelephonySession(sessionId);
+  return null;
+}
+
 export async function handleAgentLegAnswered(payload: Record<string, unknown>): Promise<boolean> {
   const callControlId = String(payload.call_control_id ?? "");
   if (!callControlId) return false;
-  const session = await getTelephonySessionByCallControlId(callControlId);
-  if (!session?.conferenceId) return false;
-  if (session.agentCallControlId !== callControlId && session.supervisorCallControlId !== callControlId) {
-    if (session.callControlId === callControlId && session.mode === "agent") return false;
-    if (session.direction === "outbound" && session.mode === "agent" && session.callControlId === callControlId) {
-      return handleOutboundCustomerAnswered(payload);
-    }
+  const session = await resolveContactCenterSession(payload);
+  if (!session) return false;
+
+  if (
+    session.direction === "outbound" &&
+    session.mode === "agent" &&
+    session.callControlId === callControlId &&
+    !session.conferenceId
+  ) {
+    return handleOutboundCustomerAnswered(payload);
+  }
+
+  if (!session.conferenceId) return false;
+  if (
+    session.agentCallControlId !== callControlId &&
+    session.supervisorCallControlId !== callControlId
+  ) {
     return false;
   }
 
@@ -583,7 +607,7 @@ export async function handleAgentLegAnswered(payload: Record<string, unknown>): 
 export async function handleContactCenterHangup(payload: Record<string, unknown>): Promise<boolean> {
   const callControlId = String(payload.call_control_id ?? "");
   if (!callControlId) return false;
-  const session = await getTelephonySessionByCallControlId(callControlId);
+  const session = await resolveContactCenterSession(payload);
   if (!session?.mode || session.mode === "ai") return false;
 
   const membership = await getQueueMembershipByCallId(session.callId);
@@ -827,6 +851,7 @@ export async function startPreviewOutbound(params: {
     toNumber: to,
     locale,
     mode: "agent",
+    advisorId: params.advisorId,
     ...(params.campaignId ? { campaignId: params.campaignId } : {}),
   });
   await upsertCallRecord({
@@ -857,11 +882,9 @@ export async function startPreviewOutbound(params: {
     to,
     from,
     connectionId: secrets.connectionId,
-    answeringMachineDetection: "premium",
     clientState: encodeClientState({ sessionId, callId, leg: "customer" }),
   });
   await attachTelephonyCallControlId(sessionId, customerDial.callControlId);
-  await patchTelephonySession(sessionId, { advisorId: params.advisorId });
   await updateCallRecord(params.tenantId, callId, { status: "ringing" });
   await logEvent(params.tenantId, params.botId, callId, "initiated", "Preview outbound");
   return { callId };
@@ -894,11 +917,15 @@ export async function handleOutboundCustomerAnswered(
       callId: session.callId,
       leg: "agent",
     }),
+    timeoutSecs: 25,
   });
   await patchTelephonySession(session.sessionId, {
     conferenceId,
     agentCallControlId: agentDial.callControlId,
   });
+  await indexTelephonyCallControlId(session.sessionId, agentDial.callControlId).catch(
+    () => undefined
+  );
   await updateCallRecord(session.tenantId, session.callId, { conferenceId, status: "accepted" });
   await markAgentOffered({ tenantId: session.tenantId, advisorId: session.advisorId });
   return true;
