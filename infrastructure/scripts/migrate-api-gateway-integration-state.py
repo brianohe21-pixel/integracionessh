@@ -164,6 +164,17 @@ def canonical_integration_address(slug: str) -> str:
     return f'{INTEGRATION_ADDRESS_PREFIX}["{slug}"]'
 
 
+def slug_from_lambda_uri(uri: str, slugs: set[str]) -> str:
+    project = os.environ.get("PROJECT", "chatbot-platform")
+    environment = os.environ.get("ENVIRONMENT", "dev")
+    needle = f":function:{project}-{environment}-"
+    if needle not in uri or "/invocations" not in uri:
+        return ""
+    name = uri.split(needle, 1)[1].split("/invocations", 1)[0]
+    candidate = name.replace("-", "_")
+    return candidate if candidate in slugs else ""
+
+
 def canonical_route_address(key: str) -> str:
     return f'{ROUTE_ADDRESS_PREFIX}["{key}"]'
 
@@ -231,6 +242,13 @@ def move_existing_integrations(
             for key in (address_key(address) for address in group)
         }
         candidates.discard("")
+        if not candidates:
+            inferred = slug_from_lambda_uri(uri, slugs)
+            if inferred:
+                candidates = {inferred}
+            else:
+                print(f"Skipping unmapped integration state group for URI {uri}")
+                continue
         if len(candidates) != 1:
             raise MigrationError(
                 f"Ambiguous integration state group ({len(candidates)} slugs) for URI {uri}: "
