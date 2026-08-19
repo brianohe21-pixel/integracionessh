@@ -24,6 +24,7 @@ import { useRouter } from "next/navigation";
 import { MEMBER_HOME } from "@/lib/post-login-path";
 import { ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Tabs } from "@/components/ui/Tabs";
 import { Modal } from "@/components/ui/Modal";
 import { ResellerBagPanel } from "@/components/reseller/ResellerBagPanel";
 import { SubaccountServicesFields } from "@/components/reseller/SubaccountServicesFields";
@@ -265,6 +266,9 @@ export default function SubaccountsPage() {
   const [domainHydrated, setDomainHydrated] = useState(false);
   const [inviteInfo, setInviteInfo] = useState<string | null>(null);
   const [assumed, setAssumed] = useState<string | null>(null);
+  const [pageTab, setPageTab] = useState<"accounts" | "create" | "bag" | "domain">(
+    "accounts"
+  );
 
   useEffect(() => {
     setAssumed(getTenantContext());
@@ -314,6 +318,7 @@ export default function SubaccountsPage() {
     setOwnerName("");
     setEnabledServices(defaultEnabledServices());
     setServiceLimits(emptyServiceLimits());
+    setPageTab("accounts");
     if (result.invite?.temporaryPassword) {
       setInviteInfo(
         `${t("reseller.invitePassword")}: ${result.invite.temporaryPassword}`
@@ -350,15 +355,40 @@ export default function SubaccountsPage() {
         </div>
       )}
 
-      <p className="text-sm text-secondary">
-        {t("reseller.usage", {
-          count: String(subaccounts.data?.count ?? 0),
-          max: String(subaccounts.data?.maxSubaccounts ?? 0),
-        })}
-      </p>
+      {inviteInfo ? (
+        <p className="rounded-xl border border-success/25 bg-success/10 px-4 py-3 text-sm text-success">
+          {inviteInfo}
+        </p>
+      ) : null}
 
-      <ResellerBagPanel bag={subaccounts.data?.bag} />
+      <Tabs
+        className="w-full"
+        items={[
+          {
+            id: "accounts",
+            label: t("reseller.tabAccounts"),
+            count: subaccounts.data?.count ?? 0,
+          },
+          { id: "create", label: t("reseller.tabCreate") },
+          { id: "bag", label: t("reseller.tabBag") },
+          { id: "domain", label: t("reseller.tabDomain") },
+        ]}
+        value={pageTab}
+        onChange={setPageTab}
+      />
 
+      {pageTab === "accounts" ? (
+        <p className="text-sm text-secondary">
+          {t("reseller.usage", {
+            count: String(subaccounts.data?.count ?? 0),
+            max: String(subaccounts.data?.maxSubaccounts ?? 0),
+          })}
+        </p>
+      ) : null}
+
+      {pageTab === "bag" ? <ResellerBagPanel bag={subaccounts.data?.bag} /> : null}
+
+      {pageTab === "create" ? (
       <form
         onSubmit={(e) => void handleCreate(e)}
         className="content-card space-y-5 p-5 sm:p-6"
@@ -390,7 +420,7 @@ export default function SubaccountsPage() {
             className="rounded-lg border border-default bg-surface px-3 py-2 text-sm text-primary"
           />
         </div>
-        <div className="max-h-[32rem] overflow-y-auto rounded-xl border border-default bg-surface p-4">
+        <div className="rounded-xl border border-default bg-surface p-4">
           <SubaccountServicesFields
             enabledServices={enabledServices}
             serviceLimits={serviceLimits}
@@ -408,17 +438,16 @@ export default function SubaccountsPage() {
               : t("reseller.created")}
           </p>
         ) : null}
-        {inviteInfo ? (
-          <p className="text-sm text-green-600">{inviteInfo}</p>
-        ) : null}
         <div className="flex justify-end">
           <Button type="submit" disabled={createSubaccount.isPending}>
             {t("reseller.create")}
           </Button>
         </div>
       </form>
+      ) : null}
 
-      {subaccounts.isLoading ? (
+      {pageTab === "accounts" ? (
+      subaccounts.isLoading ? (
         <div className="h-32 animate-pulse rounded-xl bg-surface-muted" />
       ) : !subaccounts.data?.items.length ? (
         <p className="text-sm text-secondary">{t("reseller.empty")}</p>
@@ -496,9 +525,11 @@ export default function SubaccountsPage() {
             </tbody>
           </table>
         </TableContainer>
-      )}
+      )
+      ) : null}
 
-      <section className="space-y-4 rounded-xl border border-default bg-surface-elevated p-4">
+      {pageTab === "domain" ? (
+      <section className="content-card space-y-4 p-5 sm:p-6">
         <div className="space-y-1">
           <h2 className="text-base font-semibold text-primary">{t("reseller.domainTitle")}</h2>
           <p className="text-sm text-secondary">{t("reseller.domainHint")}</p>
@@ -589,6 +620,7 @@ export default function SubaccountsPage() {
           </div>
         )}
       </section>
+      ) : null}
 
       {editing ? (
         <Modal>

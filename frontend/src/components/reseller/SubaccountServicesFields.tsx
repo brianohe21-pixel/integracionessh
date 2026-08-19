@@ -1,6 +1,6 @@
 "use client";
 
-import type { ComponentType } from "react";
+import { useState, type ComponentType } from "react";
 import {
   SERVICE_CATEGORIES,
   SERVICE_LIMIT_KEYS,
@@ -13,6 +13,7 @@ import type { ResellerLimitsOverride } from "@/types";
 import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
+import { Tabs } from "@/components/ui/Tabs";
 import {
   BarChart3,
   BookUser,
@@ -75,7 +76,12 @@ export function SubaccountServicesFields({
   }) => void;
 }) {
   const t = useT();
+  const [tab, setTab] = useState(SERVICE_CATEGORIES[0]!.id);
   const enabled = new Set(enabledServices);
+  const category =
+    SERVICE_CATEGORIES.find((item) => item.id === tab) ?? SERVICE_CATEGORIES[0]!;
+  const onCount = category.services.filter((id) => enabled.has(id)).length;
+  const allOn = onCount === category.services.length;
 
   function emit(nextEnabled: SubaccountServiceId[], nextLimits: ResellerLimitsOverride) {
     onChange({ enabledServices: nextEnabled, serviceLimits: nextLimits });
@@ -118,7 +124,7 @@ export function SubaccountServicesFields({
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {showHeader ? (
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -134,136 +140,135 @@ export function SubaccountServicesFields({
         </div>
       ) : null}
 
-      {SERVICE_CATEGORIES.map((category) => {
-        const onCount = category.services.filter((id) => enabled.has(id)).length;
-        const allOn = onCount === category.services.length;
-        return (
-          <section key={category.id} className="space-y-2.5">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-secondary">
-                {t(category.labelKey)}
-              </p>
+      <Tabs
+        className="w-full"
+        items={SERVICE_CATEGORIES.map((item) => ({
+          id: item.id,
+          label: t(item.labelKey),
+          count: item.services.filter((id) => enabled.has(id)).length,
+        }))}
+        value={tab}
+        onChange={setTab}
+      />
+
+      <div className="flex justify-end">
+        <button
+          type="button"
+          className="text-xs font-medium text-accent hover:underline"
+          onClick={() => setCategory(category.services, !allOn)}
+        >
+          {allOn ? t("reseller.selectNone") : t("reseller.selectAll")}
+        </button>
+      </div>
+
+      <div className="grid gap-2 sm:grid-cols-2">
+        {category.services.map((service) => {
+          const keys = SERVICE_LIMIT_KEYS[service];
+          const isOn = enabled.has(service);
+          const Icon = SERVICE_ICONS[service];
+          return (
+            <div
+              key={service}
+              className={cn(
+                "rounded-xl border transition-colors",
+                isOn
+                  ? "border-accent/35 bg-accent/[0.06]"
+                  : "border-default bg-surface"
+              )}
+            >
               <button
                 type="button"
-                className="text-xs font-medium text-accent hover:underline"
-                onClick={() => setCategory(category.services, !allOn)}
+                role="switch"
+                aria-checked={isOn}
+                onClick={() => toggle(service, !isOn)}
+                className="flex w-full items-center gap-3 px-3 py-2.5 text-left"
               >
-                {allOn ? t("reseller.selectNone") : t("reseller.selectAll")}
-              </button>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {category.services.map((service) => {
-                const keys = SERVICE_LIMIT_KEYS[service];
-                const isOn = enabled.has(service);
-                const Icon = SERVICE_ICONS[service];
-                return (
-                  <div
-                    key={service}
+                <span
+                  className={cn(
+                    "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+                    isOn ? "bg-accent text-white" : "bg-surface-muted text-secondary"
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium text-primary">
+                    {t(SERVICE_NAV_KEYS[service])}
+                  </span>
+                  <span className="block text-[11px] text-secondary">
+                    {keys.length > 0 ? t("reseller.hasQuotas") : t("reseller.noQuota")}
+                  </span>
+                </span>
+                <span
+                  className={cn(
+                    "relative h-5 w-9 shrink-0 rounded-full transition-colors",
+                    isOn ? "bg-accent" : "bg-surface-muted ring-1 ring-default"
+                  )}
+                >
+                  <span
                     className={cn(
-                      "rounded-xl border transition-colors",
-                      isOn
-                        ? "border-accent/35 bg-accent/[0.06]"
-                        : "border-default bg-surface"
+                      "absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform",
+                      isOn ? "translate-x-4" : "translate-x-0.5"
                     )}
-                  >
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={isOn}
-                      onClick={() => toggle(service, !isOn)}
-                      className="flex w-full items-center gap-3 px-3 py-2.5 text-left"
-                    >
-                      <span
-                        className={cn(
-                          "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
-                          isOn ? "bg-accent text-white" : "bg-surface-muted text-secondary"
-                        )}
-                      >
-                        <Icon className="h-4 w-4" />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-medium text-primary">
-                          {t(SERVICE_NAV_KEYS[service])}
-                        </span>
-                        <span className="block text-[11px] text-secondary">
-                          {keys.length > 0
-                            ? t("reseller.hasQuotas")
-                            : t("reseller.noQuota")}
-                        </span>
-                      </span>
-                      <span
-                        className={cn(
-                          "relative h-5 w-9 shrink-0 rounded-full transition-colors",
-                          isOn ? "bg-accent" : "bg-surface-muted ring-1 ring-default"
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            "absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform",
-                            isOn ? "translate-x-4" : "translate-x-0.5"
+                  />
+                </span>
+              </button>
+              {isOn && keys.length > 0 ? (
+                <div className="grid gap-2 border-t border-accent/15 px-3 py-3 sm:grid-cols-2">
+                  {keys.map((key) => {
+                    const remaining = bag?.remaining[key];
+                    const current = currentLimits?.[key] ?? 0;
+                    const available =
+                      remaining === null || remaining === undefined
+                        ? null
+                        : remaining + (typeof current === "number" ? current : 0);
+                    const value = serviceLimits[key] ?? 0;
+                    const pct =
+                      available && available > 0
+                        ? Math.min(100, (value / available) * 100)
+                        : 0;
+                    return (
+                      <label key={key} className="space-y-1.5">
+                        <span className="flex items-center justify-between gap-2 text-[11px] text-secondary">
+                          <span>{t(`reseller.limits.${key}`)}</span>
+                          {available === null ? (
+                            <span className="text-accent">{t("reseller.unlimited")}</span>
+                          ) : (
+                            <span>
+                              {t("reseller.availableShort", {
+                                remaining: String(available),
+                              })}
+                            </span>
                           )}
+                        </span>
+                        <input
+                          type="number"
+                          min={0}
+                          max={available ?? undefined}
+                          value={value}
+                          onChange={(e) => setLimit(key, Number(e.target.value))}
+                          className="w-full rounded-lg border border-default bg-surface px-2.5 py-1.5 text-sm text-primary"
                         />
-                      </span>
-                    </button>
-                    {isOn && keys.length > 0 ? (
-                      <div className="grid gap-2 border-t border-accent/15 px-3 py-3 sm:grid-cols-2">
-                        {keys.map((key) => {
-                          const remaining = bag?.remaining[key];
-                          const current = currentLimits?.[key] ?? 0;
-                          const available =
-                            remaining === null || remaining === undefined
-                              ? null
-                              : remaining + (typeof current === "number" ? current : 0);
-                          const value = serviceLimits[key] ?? 0;
-                          const pct =
-                            available && available > 0
-                              ? Math.min(100, (value / available) * 100)
-                              : 0;
-                          return (
-                            <label key={key} className="space-y-1.5">
-                              <span className="flex items-center justify-between gap-2 text-[11px] text-secondary">
-                                <span>{t(`reseller.limits.${key}`)}</span>
-                                {available === null ? (
-                                  <span className="text-accent">{t("reseller.unlimited")}</span>
-                                ) : (
-                                  <span>
-                                    {t("reseller.availableShort", {
-                                      remaining: String(available),
-                                    })}
-                                  </span>
-                                )}
-                              </span>
-                              <input
-                                type="number"
-                                min={0}
-                                max={available ?? undefined}
-                                value={value}
-                                onChange={(e) => setLimit(key, Number(e.target.value))}
-                                className="w-full rounded-lg border border-default bg-surface px-2.5 py-1.5 text-sm text-primary"
-                              />
-                              {available !== null ? (
-                                <span className="block h-1 overflow-hidden rounded-full bg-surface-muted">
-                                  <span
-                                    className={cn(
-                                      "block h-full rounded-full",
-                                      pct >= 90 ? "bg-warning" : "bg-accent"
-                                    )}
-                                    style={{ width: `${pct}%` }}
-                                  />
-                                </span>
-                              ) : null}
-                            </label>
-                          );
-                        })}
-                      </div>
-                    ) : null}
-                  </div>
-                );
-              })}
+                        {available !== null ? (
+                          <span className="block h-1 overflow-hidden rounded-full bg-surface-muted">
+                            <span
+                              className={cn(
+                                "block h-full rounded-full",
+                                pct >= 90 ? "bg-warning" : "bg-accent"
+                              )}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </span>
+                        ) : null}
+                      </label>
+                    );
+                  })}
+                </div>
+              ) : null}
             </div>
-          </section>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }

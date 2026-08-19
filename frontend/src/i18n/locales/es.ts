@@ -2239,6 +2239,10 @@ export const es = {
     noQuota: "Solo acceso",
     moreServices: "+{{count}}",
     allServices: "Todos los módulos",
+    tabAccounts: "Cuentas",
+    tabCreate: "Crear",
+    tabBag: "Bolsa",
+    tabDomain: "Dominio",
     limits: {
       maxActiveBots: "Bots activos",
       maxChannelsPerBot: "Canales por bot",

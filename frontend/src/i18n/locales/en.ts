@@ -2239,6 +2239,10 @@ export const en: Messages = {
     noQuota: "Access only",
     moreServices: "+{{count}}",
     allServices: "All modules",
+    tabAccounts: "Accounts",
+    tabCreate: "Create",
+    tabBag: "Bag",
+    tabDomain: "Domain",
     limits: {
       maxActiveBots: "Active bots",
       maxChannelsPerBot: "Channels per bot",
