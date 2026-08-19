@@ -11,6 +11,7 @@ import { useT } from "@/i18n/context";
 import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
 import { ThemeSwitcher } from "@/components/theme/ThemeSwitcher";
 import { ProviderCredentialsSection } from "@/components/settings/ProviderCredentialCard";
+import { ChangePasswordCard } from "@/components/settings/ChangePasswordCard";
 import { InboxSlaCard } from "@/components/settings/InboxSlaCard";
 import { ScheduledReportsCard } from "@/components/settings/ScheduledReportsCard";
 import { BrandingSettingsCard } from "@/components/branding/BrandingSettingsCard";
@@ -172,6 +173,8 @@ export default function SettingsPage() {
                 </div>
               )}
             </div>
+
+            <ChangePasswordCard />
           </>
         )}
 
