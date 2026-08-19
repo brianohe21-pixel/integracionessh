@@ -179,23 +179,29 @@ resource "aws_lb_target_group" "gateway" {
   tags = var.tags
 }
 
-resource "aws_lb_listener" "http_redirect" {
+resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.gateway.arn
   port              = 80
   protocol          = "HTTP"
 
   default_action {
-    type = "redirect"
+    type = var.certificate_arn != "" ? "redirect" : "forward"
 
-    redirect {
-      port        = "443"
-      protocol    = "HTTPS"
-      status_code = "HTTP_301"
+    dynamic "redirect" {
+      for_each = var.certificate_arn != "" ? [1] : []
+      content {
+        port        = "443"
+        protocol    = "HTTPS"
+        status_code = "HTTP_301"
+      }
     }
+
+    target_group_arn = var.certificate_arn != "" ? null : aws_lb_target_group.gateway.arn
   }
 }
 
 resource "aws_lb_listener" "https" {
+  count             = var.certificate_arn != "" ? 1 : 0
   load_balancer_arn = aws_lb.gateway.arn
   port              = 443
   protocol          = "HTTPS"
@@ -262,6 +268,6 @@ resource "aws_ecs_service" "gateway" {
     container_name   = "telephony-gateway"
     container_port   = 8080
   }
-  depends_on = [aws_lb_listener.http_redirect, aws_lb_listener.https]
+  depends_on = [aws_lb_listener.http, aws_lb_listener.https]
   tags       = var.tags
 }

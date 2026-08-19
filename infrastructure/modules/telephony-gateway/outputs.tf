@@ -7,7 +7,7 @@ output "alb_dns_name" {
 }
 
 output "ws_url" {
-  value = var.domain_name != "" ? "wss://${var.domain_name}" : "wss://${aws_lb.gateway.dns_name}"
+  value = var.certificate_arn != "" && var.domain_name != "" ? "wss://${var.domain_name}" : "ws://${aws_lb.gateway.dns_name}"
 }
 
 output "cluster_name" {
