@@ -23,7 +23,7 @@
     "isomorphic-dompurify": "^2.21.0",
     "livekit-client": "^2.19.2",
     "lucide-react": "^1.14.0",
-    "next": "^15.5.23",
+    "next": "^16.3.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-simple-wysiwyg": "^3.4.1",
@@ -37,14 +37,13 @@
     "uuid": "^11.1.1"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3.3.5",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20.19.39",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "esbuild": "^0.23.1",
     "eslint": "^9",
-    "eslint-config-next": "^15.5.23",
+    "eslint-config-next": "^16.3.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
