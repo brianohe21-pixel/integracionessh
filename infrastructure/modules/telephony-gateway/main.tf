@@ -109,18 +109,6 @@ resource "aws_security_group" "alb" {
   name        = "${var.project}-${var.environment}-telephony-alb"
   description = "Telephony gateway ALB"
   vpc_id      = local.vpc_id
-  ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
   egress {
     from_port   = 0
     to_port     = 0
@@ -128,6 +116,22 @@ resource "aws_security_group" "alb" {
     cidr_blocks = ["0.0.0.0/0"]
   }
   tags = var.tags
+}
+
+resource "aws_vpc_security_group_ingress_rule" "alb_https" {
+  security_group_id = aws_security_group.alb.id
+  from_port         = 443
+  to_port           = 443
+  ip_protocol       = "tcp"
+  cidr_ipv4         = "0.0.0.0/0"
+}
+
+resource "aws_vpc_security_group_ingress_rule" "alb_http" {
+  security_group_id = aws_security_group.alb.id
+  from_port         = 80
+  to_port           = 80
+  ip_protocol       = "tcp"
+  cidr_ipv4         = "0.0.0.0/0"
 }
 
 resource "aws_security_group" "service" {
@@ -175,29 +179,23 @@ resource "aws_lb_target_group" "gateway" {
   tags = var.tags
 }
 
-resource "aws_lb_listener" "http" {
+resource "aws_lb_listener" "http_redirect" {
   load_balancer_arn = aws_lb.gateway.arn
   port              = 80
   protocol          = "HTTP"
 
   default_action {
-    type = var.certificate_arn != "" ? "redirect" : "forward"
+    type = "redirect"
 
-    dynamic "redirect" {
-      for_each = var.certificate_arn != "" ? [1] : []
-      content {
-        port        = "443"
-        protocol    = "HTTPS"
-        status_code = "HTTP_301"
-      }
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
     }
-
-    target_group_arn = var.certificate_arn != "" ? null : aws_lb_target_group.gateway.arn
   }
 }
 
 resource "aws_lb_listener" "https" {
-  count             = var.certificate_arn != "" ? 1 : 0
   load_balancer_arn = aws_lb.gateway.arn
   port              = 443
   protocol          = "HTTPS"
@@ -264,6 +262,6 @@ resource "aws_ecs_service" "gateway" {
     container_name   = "telephony-gateway"
     container_port   = 8080
   }
-  depends_on = [aws_lb_listener.http]
+  depends_on = [aws_lb_listener.http_redirect, aws_lb_listener.https]
   tags       = var.tags
 }

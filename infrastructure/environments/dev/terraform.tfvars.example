@@ -36,7 +36,7 @@ telephony_gateway_vpc_id             = "vpc-xxxxxxxx"
 # HCL list for CI: TELEPHONY_GATEWAY_PUBLIC_SUBNET_IDS='["subnet-aaa","subnet-bbb"]'
 telephony_gateway_public_subnet_ids  = ["subnet-xxxxxxxx", "subnet-yyyyyyyy"]
 telephony_gateway_domain             = ""
-telephony_gateway_certificate_arn    = ""
+telephony_gateway_certificate_arn    = "arn:aws:acm:us-east-1:123456789012:certificate/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 
 enable_monitoring = false
 ops_alert_email   = "ops@example.com"

@@ -31,8 +31,12 @@ variable "dynamodb_table_name" {
 
 variable "certificate_arn" {
   type        = string
-  default     = ""
-  description = "Optional ACM certificate ARN for HTTPS/WSS on the ALB"
+  description = "ACM certificate ARN for HTTPS/WSS on the ALB"
+
+  validation {
+    condition     = var.certificate_arn != ""
+    error_message = "certificate_arn is required for the telephony gateway ALB."
+  }
 }
 
 variable "domain_name" {
