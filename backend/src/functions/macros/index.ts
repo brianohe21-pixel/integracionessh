@@ -6,6 +6,7 @@ import {
   assertMemberRole,
   assertAdvisorOrMember,
 } from "../../lib/auth/cognito.js";
+import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import type { AuthContext } from "../../types/index.js";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
 import { getAdvisorByCognitoUserId } from "../../lib/dynamodb/advisor.repository.js";
@@ -83,6 +84,9 @@ export async function handler(
 ): Promise<APIGatewayProxyResultV2> {
   try {
     const auth = await resolveRequestAuth(event);
+    if (auth.role !== "advisor") {
+      await assertAssignedServices(auth.tenantId, ["conversations", "bots"]);
+    }
     const method = event.requestContext.http.method;
     const botId = event.pathParameters?.botId;
     const macroId = event.pathParameters?.macroId;

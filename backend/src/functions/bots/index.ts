@@ -10,6 +10,7 @@ import {
 } from "../../lib/dynamodb/bot.repository.js";
 import { resolveRequestAuth, assertTenantAccess, assertMemberRole } from "../../lib/auth/cognito.js";
 import { ensureTenant } from "../../lib/dynamodb/tenant.repository.js";
+import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import { assertCanCreateBot, assertCanUseWebChat, assertCanEnableChannel, assertCanStartLiveKitCall, assertCanUseVoicebot } from "../../lib/billing/assert-plan.js";
 import { putWidgetKeyLookup, putSmsNumberLookup, deleteSmsNumberLookup, putEmailAddressLookup, deleteEmailAddressLookup, putVoicebotWidgetKeyLookup, deleteVoicebotWidgetKeyLookup } from "../../lib/dynamodb/bot-lookup.repository.js";
 import { generateWidgetKey } from "../../lib/webchat/session.repository.js";
@@ -124,6 +125,7 @@ export async function handler(
   try {
     const auth = await resolveRequestAuth(event);
     assertMemberRole(auth);
+    await assertAssignedServices(auth.tenantId, "bots");
     const method = event.requestContext.http.method;
     const botId = event.pathParameters?.botId;
     const rawPath = event.rawPath ?? event.requestContext.http.path;

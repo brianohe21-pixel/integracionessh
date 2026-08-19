@@ -51,11 +51,11 @@ export function parseJsonBody(event: APIGatewayProxyEventV2): unknown {
   return JSON.parse(trimmed);
 }
 
-export function badRequest(message: string): APIGatewayProxyResultV2 {
+export function badRequest(message: string, code?: string): APIGatewayProxyResultV2 {
   return {
     statusCode: 400,
     headers: CORS_HEADERS,
-    body: JSON.stringify({ error: message }),
+    body: JSON.stringify({ error: message, ...(code ? { code } : {}) }),
   };
 }
 
@@ -67,11 +67,11 @@ export function unauthorized(message = "Unauthorized"): APIGatewayProxyResultV2 
   };
 }
 
-export function forbidden(message = "Forbidden"): APIGatewayProxyResultV2 {
+export function forbidden(message = "Forbidden", code?: string): APIGatewayProxyResultV2 {
   return {
     statusCode: 403,
     headers: CORS_HEADERS,
-    body: JSON.stringify({ error: message }),
+    body: JSON.stringify({ error: message, ...(code ? { code } : {}) }),
   };
 }
 
@@ -150,14 +150,14 @@ export function handleError(error: unknown): APIGatewayProxyResultV2 {
     return badRequest(error.issues.map((issue) => issue.message).join("; "));
   }
 
-  const err = error as Error & { statusCode?: number };
+  const err = error as Error & { statusCode?: number; code?: string };
 
   if (err.statusCode === 401) return unauthorized(err.message);
-  if (err.statusCode === 400) return badRequest(err.message);
+  if (err.statusCode === 400) return badRequest(err.message, err.code);
   if (err.statusCode === 402) {
-    return paymentRequired(err.message, (err as Error & { code?: string }).code);
+    return paymentRequired(err.message, err.code);
   }
-  if (err.statusCode === 403) return forbidden(err.message);
+  if (err.statusCode === 403) return forbidden(err.message, err.code);
   if (err.statusCode === 404) return notFound(err.message);
   if (err.statusCode === 409) return conflict(err.message);
   if (err.statusCode === 422) {

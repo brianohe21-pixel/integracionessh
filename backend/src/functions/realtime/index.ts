@@ -4,6 +4,7 @@ import {
   resolveRequestAuth,
   assertAdvisorOrMember,
 } from "../../lib/auth/cognito.js";
+import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import { getAdvisorByCognitoUserId } from "../../lib/dynamodb/advisor.repository.js";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
 import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
@@ -92,6 +93,9 @@ export async function handler(
   try {
     const auth = await resolveRequestAuth(event);
     assertAdvisorOrMember(auth);
+    if (auth.role !== "advisor") {
+      await assertAssignedServices(auth.tenantId, ["conversations", "supervisor"]);
+    }
 
     const method = event.requestContext.http.method;
     const conversationId = event.pathParameters?.conversationId;

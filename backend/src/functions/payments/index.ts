@@ -5,6 +5,7 @@ import type {
 } from "aws-lambda";
 import { z } from "zod";
 import { resolveRequestAuth, assertMemberRole } from "../../lib/auth/cognito.js";
+import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import { assertCanEnablePayments } from "../../lib/billing/assert-plan.js";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
 import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
@@ -86,6 +87,7 @@ export async function handler(
 
     const auth = await resolveRequestAuth(event as APIGatewayProxyEventV2WithJWTAuthorizer);
     assertMemberRole(auth);
+    await assertAssignedServices(auth.tenantId, "apps");
 
     if (method === "GET" && rawPath === "/payments/wompi/credentials") {
       const secrets = await getTenantWompiSecrets(auth.tenantId, ENVIRONMENT);

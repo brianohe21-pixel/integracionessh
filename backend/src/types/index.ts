@@ -2,6 +2,28 @@ export type TenantPlan = "free" | "pro" | "enterprise" | "reseller";
 
 export type TenantKind = "standard" | "reseller" | "subaccount";
 
+export const SUBACCOUNT_SERVICES = [
+  "bots",
+  "voiceAgents",
+  "contactCenter",
+  "conversations",
+  "supervisor",
+  "contacts",
+  "leads",
+  "advisors",
+  "automations",
+  "flows",
+  "templates",
+  "bulkSend",
+  "campaigns",
+  "emailMarketing",
+  "metrics",
+  "apps",
+  "developer",
+] as const;
+
+export type SubaccountServiceId = (typeof SUBACCOUNT_SERVICES)[number];
+
 export type CustomDomainStatus = "none" | "pending_dns" | "active" | "error";
 
 export type SubscriptionStatus =
@@ -149,6 +171,8 @@ export interface Tenant {
   status: "active" | "suspended" | "pending";
   tenantKind?: TenantKind;
   parentTenantId?: string;
+  enabledServices?: SubaccountServiceId[];
+  serviceLimits?: ResellerLimitsOverride;
   resellerConfig?: ResellerConfig;
   branding?: TenantBranding;
   inboxSla?: InboxSlaSettings;

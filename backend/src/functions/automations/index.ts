@@ -8,6 +8,7 @@ import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
 import { randomUUID } from "crypto";
 import { z } from "zod";
 import { resolveRequestAuth, assertMemberRole } from "../../lib/auth/cognito.js";
+import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
 import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
 import {
@@ -117,6 +118,7 @@ export async function handler(
     const apiEvent = event as APIGatewayProxyEventV2WithJWTAuthorizer;
     const auth = await resolveRequestAuth(apiEvent);
     assertMemberRole(auth);
+    await assertAssignedServices(auth.tenantId, "automations");
 
     const method = apiEvent.requestContext.http.method;
     const ruleId = apiEvent.pathParameters?.ruleId;

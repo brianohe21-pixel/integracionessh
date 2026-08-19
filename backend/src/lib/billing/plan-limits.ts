@@ -168,11 +168,50 @@ export function getPlanLimits(plan: TenantPlan | string | undefined): PlanLimits
   return LIMITS.free;
 }
 
+function emptyNumericLimits(canCustomizeBranding: boolean): PlanLimits {
+  return {
+    maxActiveBots: 0,
+    maxMessagesPerMonth: 0,
+    maxBulkRecipientsPerJob: 0,
+    maxActiveCampaigns: 0,
+    maxContacts: 0,
+    maxAutomationsPerBot: 0,
+    maxScheduledAutomations: 0,
+    maxDocumentsPerBot: 0,
+    maxKnowledgeStorageMb: 0,
+    maxMetaFlowsPerBot: 0,
+    maxVisualFlowsPerBot: 0,
+    maxFlowNodes: 0,
+    maxActiveFlowRuns: 0,
+    maxChannelsPerBot: 0,
+    maxActiveWebChatSessions: 0,
+    maxConcurrentLiveKitCalls: 0,
+    maxVoicebotMinutesPerMonth: 0,
+    maxCalendarAppsPerTenant: 0,
+    maxPaymentsAppsPerTenant: 0,
+    maxCatalogAppsPerTenant: 0,
+    maxProductsPerBot: 0,
+    maxOrdersPerMonth: 0,
+    canCustomizeBranding,
+    apiRateLimitPerMinute: 0,
+    apiRateLimitPerDay: 0,
+  };
+}
+
 export function getEffectivePlanLimits(tenant: Tenant): PlanLimits {
   const base = getPlanLimits(tenant.plan);
   if (tenant.plan === "reseller" && tenant.resellerConfig?.limitsOverride) {
     return applyLimitsOverride(base, tenant.resellerConfig.limitsOverride);
   }
+
+  const isSubaccount = tenant.tenantKind === "subaccount" || Boolean(tenant.parentTenantId);
+  if (isSubaccount && tenant.serviceLimits !== undefined) {
+    return applyLimitsOverride(
+      emptyNumericLimits(base.canCustomizeBranding),
+      tenant.serviceLimits
+    );
+  }
+
   return base;
 }
 

@@ -6,6 +6,7 @@ import {
   assertMemberRole,
   assertTenantAccess,
 } from "../../lib/auth/cognito.js";
+import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import { loadBotAndToken } from "../../lib/whatsapp/bot-context.js";
 import {
   getCallSettings,
@@ -76,6 +77,9 @@ export async function handler(
     const method = event.requestContext.http.method;
     const botId = event.pathParameters?.botId;
     if (!botId) return badRequest("botId is required");
+    if (auth.role !== "advisor") {
+      await assertAssignedServices(auth.tenantId, ["conversations", "bots"]);
+    }
 
     const bot = await getBot(auth.tenantId, botId);
     if (!bot) return notFound("Bot not found");

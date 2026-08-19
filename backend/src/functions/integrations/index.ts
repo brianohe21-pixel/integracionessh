@@ -1,6 +1,7 @@
 import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
 import { z } from "zod";
 import { resolveRequestAuth, assertMemberRole } from "../../lib/auth/cognito.js";
+import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import {
   getTenantIntegration,
   listIntegrationDeliveries,
@@ -71,6 +72,7 @@ export async function handler(
   try {
     const auth = await resolveRequestAuth(event);
     assertMemberRole(auth);
+    await assertAssignedServices(auth.tenantId, "developer");
 
     const method = event.requestContext.http.method;
     const path = event.rawPath ?? "";

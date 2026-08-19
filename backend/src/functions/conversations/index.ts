@@ -19,6 +19,7 @@ import {
   assertAdvisorOrMember,
   assertTenantManagerRole,
 } from "../../lib/auth/cognito.js";
+import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import { performHandoff, releaseToBot, claimConversation, performBulkHandoff } from "../../lib/advisor/handoff.js";
 import { resolveConversation } from "../../lib/advisor/resolve.js";
 import { updateConversation } from "../../lib/dynamodb/conversation.repository.js";
@@ -168,6 +169,9 @@ export async function handler(
   try {
     const auth = await resolveRequestAuth(event);
     assertAdvisorOrMember(auth);
+    if (auth.role !== "advisor") {
+      await assertAssignedServices(auth.tenantId, ["conversations", "supervisor"]);
+    }
 
     const method = event.requestContext.http.method;
     const conversationId = event.pathParameters?.conversationId;

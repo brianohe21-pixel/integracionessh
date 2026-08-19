@@ -5,6 +5,7 @@ import type {
 } from "aws-lambda";
 import { z } from "zod";
 import { assertTenantManagerRole, resolveRequestAuth } from "../../lib/auth/cognito.js";
+import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import {
   createMailrelaySyncJob,
   getMailrelayCampaignMetrics,
@@ -258,6 +259,7 @@ export async function handler(
   try {
     const auth = await resolveRequestAuth(event);
     assertTenantManagerRole(auth);
+    await assertAssignedServices(auth.tenantId, "emailMarketing");
     const method = event.requestContext.http.method;
     const segments = resourceSegments(event);
 

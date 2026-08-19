@@ -13,6 +13,7 @@ import {
   resolveRequestAuth,
   assertTenantManagerRole,
 } from "../../lib/auth/cognito.js";
+import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import { inviteAdvisorUser } from "../../lib/cognito/invite-advisor.js";
 import { deleteCognitoUserBySub } from "../../lib/cognito/admin-users.js";
 import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
@@ -41,6 +42,7 @@ export async function handler(
   try {
     const auth = await resolveRequestAuth(event);
     assertTenantManagerRole(auth);
+    await assertAssignedServices(auth.tenantId, "advisors");
 
     const method = event.requestContext.http.method;
     const advisorId = event.pathParameters?.advisorId;

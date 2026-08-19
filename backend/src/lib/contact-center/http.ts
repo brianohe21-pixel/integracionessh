@@ -9,6 +9,7 @@ import {
   assertMemberRole,
   resolveRequestAuth,
 } from "../auth/cognito.js";
+import { assertAssignedServices } from "../billing/subaccount-services.js";
 import { getAdvisorByCognitoUserId, listAdvisors, updateAdvisor } from "../dynamodb/advisor.repository.js";
 import {
   deleteContactCenterIvrFlow,
@@ -149,6 +150,7 @@ export async function handleContactCenterHttp(
   try {
     const auth = await resolveRequestAuth(event);
     assertAdvisorOrMember(auth);
+    await assertAssignedServices(auth.tenantId, "contactCenter");
     const method = event.requestContext.http.method;
     const rawPath = event.rawPath ?? event.requestContext.http.path;
     const path = pathAfter(rawPath);

@@ -2,6 +2,7 @@ import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 }
 import { randomUUID } from "crypto";
 import { z } from "zod";
 import { resolveRequestAuth, assertMemberRole } from "../../lib/auth/cognito.js";
+import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import { generateApiKey, hashApiKey, getKeyPrefix } from "../../lib/api-keys/manager.js";
 import {
   createApiKey,
@@ -15,7 +16,7 @@ import {
 } from "../../lib/dynamodb/api-key-usage.repository.js";
 import { listBots } from "../../lib/dynamodb/bot.repository.js";
 import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
-import { getPlanLimits } from "../../lib/billing/plan-limits.js";
+import { getEffectivePlanLimits, getPlanLimits } from "../../lib/billing/plan-limits.js";
 import {
   ok,
   created,
@@ -81,6 +82,7 @@ export async function handler(
   try {
     const auth = await resolveRequestAuth(event);
     assertMemberRole(auth);
+    await assertAssignedServices(auth.tenantId, "developer");
 
     const method = event.requestContext.http.method;
     const path = event.rawPath ?? "";
@@ -145,7 +147,9 @@ export async function handler(
       const bot = bots.find((b) => b.botId === parsed.data.botId);
       if (!bot) return notFound("Bot not found");
 
-      const planLimits = getPlanLimits(tenant?.plan);
+      const planLimits = tenant
+        ? getEffectivePlanLimits(tenant)
+        : getPlanLimits("free");
 
       const rawKey = generateApiKey();
       const hashedKey = hashApiKey(rawKey);

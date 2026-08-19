@@ -1,6 +1,7 @@
 import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
 import { z } from "zod";
 import { resolveRequestAuth, assertMemberRole } from "../../lib/auth/cognito.js";
+import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import { listBots } from "../../lib/dynamodb/bot.repository.js";
 import {
   completeEmbeddedSignup,
@@ -70,6 +71,7 @@ async function handleConnect(
 
   const auth = await resolveRequestAuth(event);
   assertMemberRole(auth);
+  await assertAssignedServices(auth.tenantId, "bots");
   const body = JSON.parse(event.body ?? "{}");
   const parsed = ConnectSchema.safeParse(body);
 
@@ -128,6 +130,7 @@ async function handleConnectCoexistence(
 
   const auth = await resolveRequestAuth(event);
   assertMemberRole(auth);
+  await assertAssignedServices(auth.tenantId, "bots");
   const body = JSON.parse(event.body ?? "{}");
   const parsed = ConnectCoexistenceSchema.safeParse(body);
 
@@ -161,6 +164,7 @@ async function handleConnectManual(
 ): Promise<APIGatewayProxyResultV2> {
   const auth = await resolveRequestAuth(event);
   assertMemberRole(auth);
+  await assertAssignedServices(auth.tenantId, "bots");
   const body = JSON.parse(event.body ?? "{}");
   const parsed = ConnectManualSchema.safeParse(body);
 
@@ -191,6 +195,7 @@ async function handleRegister(
 ): Promise<APIGatewayProxyResultV2> {
   const auth = await resolveRequestAuth(event);
   assertMemberRole(auth);
+  await assertAssignedServices(auth.tenantId, "bots");
   const body = JSON.parse(event.body ?? "{}");
   const parsed = RegisterSchema.safeParse(body);
 
@@ -222,6 +227,7 @@ async function handleStatus(
 ): Promise<APIGatewayProxyResultV2> {
   const auth = await resolveRequestAuth(event);
   assertMemberRole(auth);
+  await assertAssignedServices(auth.tenantId, "bots");
 
   let connected = false;
   try {

@@ -1,6 +1,7 @@
 import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
 import { z } from "zod";
 import { resolveRequestAuth, assertMemberRole } from "../../lib/auth/cognito.js";
+import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import { getBot, updateBot } from "../../lib/dynamodb/bot.repository.js";
 import {
   deleteInstagramPageLookup,
@@ -28,6 +29,7 @@ export async function handler(
 
     const auth = await resolveRequestAuth(event);
     assertMemberRole(auth);
+    await assertAssignedServices(auth.tenantId, "bots");
     const body = JSON.parse(event.body ?? "{}");
     const parsed = ConnectSchema.safeParse(body);
     if (!parsed.success) return badRequest(parsed.error.message);

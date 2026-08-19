@@ -5,6 +5,7 @@ import type {
 } from "aws-lambda";
 import { z } from "zod";
 import { resolveRequestAuth, assertTenantAccess, assertMemberRole } from "../../lib/auth/cognito.js";
+import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
 import { listCallsByBot, getCallRecord } from "../../lib/dynamodb/call.repository.js";
 import { appendCallEvent, listCallEvents } from "../../lib/dynamodb/call-event.repository.js";
@@ -441,6 +442,7 @@ export async function handler(
 
     const auth = await resolveRequestAuth(event as APIGatewayProxyEventV2WithJWTAuthorizer);
     assertMemberRole(auth);
+    await assertAssignedServices(auth.tenantId, ["voiceAgents", "bots"]);
 
     if (method === "GET" && rawPath === "/telephony/numbers") {
       const configured = await hasTelnyxCredentials(ENVIRONMENT, auth.tenantId);
