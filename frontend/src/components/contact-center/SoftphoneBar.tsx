@@ -5,10 +5,23 @@ import { Button } from "@/components/ui/Button";
 import { useSoftphone } from "@/components/contact-center/SoftphoneProvider";
 import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import type { Tenant } from "@/types";
+import { isSubaccountServiceEnabled } from "@/lib/subaccount-services";
+import { useAdminRole } from "@/hooks/useAdminRole";
 
 export function SoftphoneBar() {
   const t = useT();
   const phone = useSoftphone();
+  const { isAdmin } = useAdminRole();
+  const { data: me } = useQuery({
+    queryKey: ["tenants", "me"],
+    queryFn: () => api.get<Tenant>("/tenants/me"),
+    enabled: !isAdmin,
+  });
+
+  if (!isSubaccountServiceEnabled(me, "contactCenter")) return null;
 
   return (
     <div

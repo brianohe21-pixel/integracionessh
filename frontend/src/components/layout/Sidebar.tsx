@@ -45,6 +45,10 @@ import { useSidebar } from "@/components/layout/SidebarContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, getTenantContext } from "@/lib/api";
 import type { Tenant } from "@/types";
+import {
+  isSubaccountServiceEnabled,
+  serviceForNavHref,
+} from "@/lib/subaccount-services";
 import { useClearTenantContext, useAssumeSubaccount, useResellerSubaccounts } from "@/hooks/useReseller";
 import { useAuthSession } from "@/hooks/useAuthSession";
 import { ThemeSwitcherCompact } from "@/components/theme/ThemeSwitcherCompact";
@@ -826,6 +830,17 @@ export function Sidebar() {
       )
     : baseCategories;
 
+  const filteredNavCategories = navCategories
+    .map((category) => ({
+      ...category,
+      items: category.items.filter((item) => {
+        const service = serviceForNavHref(item.href);
+        if (!service) return true;
+        return isSubaccountServiceEnabled(me, service);
+      }),
+    }))
+    .filter((category) => category.items.length > 0);
+
   const standaloneItems =
     loading || isAdmin || isAdvisor ? [] : memberStandaloneNavItems;
 
@@ -878,7 +893,7 @@ export function Sidebar() {
         {brand(isCollapsed, true)}
         <SidebarNav
           standaloneItems={standaloneItems}
-          navCategories={navCategories}
+          navCategories={filteredNavCategories}
           collapsed={isCollapsed}
         />
         <SidebarUserProfile collapsed={isCollapsed} />
@@ -904,7 +919,7 @@ export function Sidebar() {
         {brand(isCollapsed, true)}
         <SidebarNav
           standaloneItems={standaloneItems}
-          navCategories={navCategories}
+          navCategories={filteredNavCategories}
           collapsed={isCollapsed}
           onNavigate={close}
         />

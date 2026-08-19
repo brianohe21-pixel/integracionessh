@@ -1,0 +1,185 @@
+import {
+  SUBACCOUNT_SERVICES,
+  type ResellerLimitsOverride,
+  type SubaccountServiceId,
+  type Tenant,
+} from "@/types";
+
+export { SUBACCOUNT_SERVICES, type SubaccountServiceId };
+
+export type BagLimitKey = Exclude<keyof ResellerLimitsOverride, "canCustomizeBranding">;
+
+export const SERVICE_LIMIT_KEYS: Record<SubaccountServiceId, readonly BagLimitKey[]> = {
+  bots: [
+    "maxActiveBots",
+    "maxChannelsPerBot",
+    "maxDocumentsPerBot",
+    "maxKnowledgeStorageMb",
+    "maxMetaFlowsPerBot",
+    "maxActiveWebChatSessions",
+  ],
+  voiceAgents: ["maxVoicebotMinutesPerMonth", "maxConcurrentLiveKitCalls"],
+  contactCenter: [],
+  conversations: [],
+  supervisor: [],
+  contacts: ["maxContacts"],
+  leads: [],
+  advisors: [],
+  automations: ["maxAutomationsPerBot", "maxScheduledAutomations"],
+  flows: ["maxVisualFlowsPerBot", "maxFlowNodes", "maxActiveFlowRuns"],
+  templates: [],
+  bulkSend: ["maxBulkRecipientsPerJob"],
+  campaigns: ["maxActiveCampaigns", "maxMessagesPerMonth"],
+  emailMarketing: [],
+  metrics: [],
+  apps: [
+    "maxCalendarAppsPerTenant",
+    "maxPaymentsAppsPerTenant",
+    "maxCatalogAppsPerTenant",
+    "maxProductsPerBot",
+    "maxOrdersPerMonth",
+  ],
+  developer: ["apiRateLimitPerMinute", "apiRateLimitPerDay"],
+};
+
+export const BAG_LIMIT_KEYS = Array.from(
+  new Set(SUBACCOUNT_SERVICES.flatMap((service) => [...SERVICE_LIMIT_KEYS[service]]))
+) as BagLimitKey[];
+
+export const SERVICE_CATEGORIES: Array<{
+  id: string;
+  labelKey: string;
+  services: SubaccountServiceId[];
+}> = [
+  {
+    id: "operations",
+    labelKey: "nav.categoryOperations",
+    services: [
+      "bots",
+      "voiceAgents",
+      "contactCenter",
+      "conversations",
+      "supervisor",
+      "contacts",
+      "leads",
+      "advisors",
+    ],
+  },
+  {
+    id: "automation",
+    labelKey: "nav.categoryAutomation",
+    services: ["automations", "flows"],
+  },
+  {
+    id: "outreach",
+    labelKey: "nav.categoryOutreach",
+    services: ["templates", "bulkSend", "campaigns", "emailMarketing"],
+  },
+  {
+    id: "insights",
+    labelKey: "nav.categoryInsights",
+    services: ["metrics"],
+  },
+  {
+    id: "integrations",
+    labelKey: "nav.categoryIntegrations",
+    services: ["apps", "developer"],
+  },
+];
+
+const SERVICE_PATHS: Array<{ prefix: string; service: SubaccountServiceId }> = [
+  { prefix: "/voice-agents", service: "voiceAgents" },
+  { prefix: "/contact-center", service: "contactCenter" },
+  { prefix: "/conversations", service: "conversations" },
+  { prefix: "/supervisor", service: "supervisor" },
+  { prefix: "/contacts", service: "contacts" },
+  { prefix: "/leads", service: "leads" },
+  { prefix: "/advisors", service: "advisors" },
+  { prefix: "/automations", service: "automations" },
+  { prefix: "/flows", service: "flows" },
+  { prefix: "/templates", service: "templates" },
+  { prefix: "/bulk-send", service: "bulkSend" },
+  { prefix: "/campaigns", service: "campaigns" },
+  { prefix: "/email-marketing", service: "emailMarketing" },
+  { prefix: "/metrics", service: "metrics" },
+  { prefix: "/apps", service: "apps" },
+  { prefix: "/developer", service: "developer" },
+  { prefix: "/bots", service: "bots" },
+];
+
+const ALWAYS_ALLOWED_PREFIXES = [
+  "/dashboard",
+  "/settings",
+  "/support",
+  "/billing",
+  "/onboarding",
+  "/subaccounts",
+  "/inbox",
+  "/admin",
+];
+
+export const SERVICE_NAV_KEYS: Record<SubaccountServiceId, string> = {
+  bots: "nav.bots",
+  voiceAgents: "nav.voiceAgents",
+  contactCenter: "nav.contactCenter",
+  conversations: "nav.conversations",
+  supervisor: "nav.supervisor",
+  contacts: "nav.contacts",
+  leads: "nav.leads",
+  advisors: "nav.advisors",
+  automations: "nav.automations",
+  flows: "nav.flows",
+  templates: "nav.templates",
+  bulkSend: "nav.bulkSend",
+  campaigns: "nav.campaigns",
+  emailMarketing: "nav.emailMarketing",
+  metrics: "nav.metrics",
+  apps: "nav.apps",
+  developer: "nav.developer",
+};
+
+export type ResellerBag = {
+  total: Record<string, number>;
+  allocated: Record<string, number>;
+  remaining: Record<string, number | null>;
+};
+
+export function isUnlimitedLimit(value: number | null | undefined): boolean {
+  return typeof value === "number" && value >= Number.MAX_SAFE_INTEGER / 2;
+}
+
+export function isSubaccountTenant(tenant: Tenant | undefined | null): boolean {
+  if (!tenant) return false;
+  return tenant.tenantKind === "subaccount" || Boolean(tenant.parentTenantId);
+}
+
+export function isSubaccountServiceEnabled(
+  tenant: Tenant | undefined | null,
+  service: SubaccountServiceId
+): boolean {
+  if (!isSubaccountTenant(tenant)) return true;
+  if (!tenant?.enabledServices) return true;
+  return tenant.enabledServices.includes(service);
+}
+
+export function serviceForPath(pathname: string): SubaccountServiceId | null {
+  if (ALWAYS_ALLOWED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))) {
+    return null;
+  }
+  const match = SERVICE_PATHS.find(
+    (item) => pathname === item.prefix || pathname.startsWith(`${item.prefix}/`)
+  );
+  return match?.service ?? null;
+}
+
+export function serviceForNavHref(href: string): SubaccountServiceId | null {
+  return serviceForPath(href);
+}
+
+export function defaultEnabledServices(): SubaccountServiceId[] {
+  return [...SUBACCOUNT_SERVICES];
+}
+
+export function emptyServiceLimits(): ResellerLimitsOverride {
+  return {};
+}

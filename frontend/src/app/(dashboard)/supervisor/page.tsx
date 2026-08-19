@@ -8,10 +8,19 @@ import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useT } from "@/i18n/context";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import type { Tenant } from "@/types";
+import { isSubaccountServiceEnabled } from "@/lib/subaccount-services";
 
 export default function SupervisorPage() {
   const t = useT();
   const { data, isLoading, error } = useAdvisorWorkload();
+  const { data: me } = useQuery({
+    queryKey: ["tenants", "me"],
+    queryFn: () => api.get<Tenant>("/tenants/me"),
+  });
+  const showWallboard = isSubaccountServiceEnabled(me, "contactCenter");
 
   return (
     <DashboardPage>
@@ -40,9 +49,11 @@ export default function SupervisorPage() {
         <AdvisorWorkloadTable advisors={data.advisors} unassigned={data.unassigned} />
       )}
 
-      <div className="mt-8">
-        <ContactCenterWallboard showSupervise />
-      </div>
+      {showWallboard ? (
+        <div className="mt-8">
+          <ContactCenterWallboard showSupervise />
+        </div>
+      ) : null}
     </DashboardPage>
   );
 }

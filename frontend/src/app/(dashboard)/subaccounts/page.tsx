@@ -14,14 +14,24 @@ import {
   useCreateSubaccount,
   useResellerDomain,
   useRegisterResellerDomain,
+  useDeleteResellerDomain,
   useResellerSubaccounts,
   useUpdateSubaccount,
   type ResellerDomainDnsRecord,
 } from "@/hooks/useReseller";
-import type { Tenant } from "@/types";
+import type { ResellerLimitsOverride, SubaccountServiceId, Tenant } from "@/types";
 import { useRouter } from "next/navigation";
 import { MEMBER_HOME } from "@/lib/post-login-path";
 import { ExternalLink } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
+import { ResellerBagPanel } from "@/components/reseller/ResellerBagPanel";
+import { SubaccountServicesFields } from "@/components/reseller/SubaccountServicesFields";
+import {
+  SERVICE_NAV_KEYS,
+  defaultEnabledServices,
+  emptyServiceLimits,
+} from "@/lib/subaccount-services";
 
 function portalUrl(customDomain: string): string {
   const host = customDomain.trim().replace(/^https?:\/\//, "").replace(/\/$/, "");
@@ -130,6 +140,34 @@ function DnsCopyField({
   );
 }
 
+function SubaccountServiceChips({
+  services,
+  t,
+}: {
+  services?: SubaccountServiceId[];
+  t: (key: string, values?: Record<string, string | number>) => string;
+}) {
+  const list = services ?? defaultEnabledServices();
+  const catalogSize = defaultEnabledServices().length;
+  if (list.length === catalogSize) {
+    return <Badge variant="accent">{t("reseller.allServices")}</Badge>;
+  }
+  const shown = list.slice(0, 3);
+  const extra = list.length - shown.length;
+  return (
+    <div className="flex max-w-[18rem] flex-wrap gap-1">
+      {shown.map((id) => (
+        <Badge key={id} variant="default">
+          {t(SERVICE_NAV_KEYS[id])}
+        </Badge>
+      ))}
+      {extra > 0 ? (
+        <Badge variant="info">{t("reseller.moreServices", { count: String(extra) })}</Badge>
+      ) : null}
+    </div>
+  );
+}
+
 function DnsRecordCard({
   record,
   customDomain,
@@ -207,17 +245,36 @@ export default function SubaccountsPage() {
   const clearContext = useClearTenantContext();
   const domainQuery = useResellerDomain(Boolean(isReseller));
   const registerDomain = useRegisterResellerDomain();
+  const deleteDomain = useDeleteResellerDomain();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [ownerName, setOwnerName] = useState("");
+  const [enabledServices, setEnabledServices] = useState<SubaccountServiceId[]>(
+    defaultEnabledServices
+  );
+  const [serviceLimits, setServiceLimits] = useState<ResellerLimitsOverride>(
+    emptyServiceLimits
+  );
+  const [editing, setEditing] = useState<Tenant | null>(null);
+  const [editServices, setEditServices] = useState<SubaccountServiceId[]>(
+    defaultEnabledServices
+  );
+  const [editLimits, setEditLimits] = useState<ResellerLimitsOverride>({});
   const [domain, setDomain] = useState("");
+  const [domainHydrated, setDomainHydrated] = useState(false);
   const [inviteInfo, setInviteInfo] = useState<string | null>(null);
   const [assumed, setAssumed] = useState<string | null>(null);
 
   useEffect(() => {
     setAssumed(getTenantContext());
   }, []);
+
+  useEffect(() => {
+    if (domainHydrated || !domainQuery.isSuccess) return;
+    setDomain(domainQuery.data?.customDomain ?? "");
+    setDomainHydrated(true);
+  }, [domainHydrated, domainQuery.isSuccess, domainQuery.data?.customDomain]);
 
   const domainStatus = domainQuery.data?.customDomainStatus ?? "none";
   const statusLabel =
@@ -249,10 +306,14 @@ export default function SubaccountsPage() {
       name,
       email,
       ownerName: ownerName || undefined,
+      enabledServices,
+      serviceLimits,
     });
     setName("");
     setEmail("");
     setOwnerName("");
+    setEnabledServices(defaultEnabledServices());
+    setServiceLimits(emptyServiceLimits());
     if (result.invite?.temporaryPassword) {
       setInviteInfo(
         `${t("reseller.invitePassword")}: ${result.invite.temporaryPassword}`
@@ -296,44 +357,65 @@ export default function SubaccountsPage() {
         })}
       </p>
 
+      <ResellerBagPanel bag={subaccounts.data?.bag} />
+
       <form
         onSubmit={(e) => void handleCreate(e)}
-        className="grid gap-3 rounded-xl border border-default bg-surface-elevated p-4 sm:grid-cols-2"
+        className="content-card space-y-5 p-5 sm:p-6"
       >
-        <h2 className="sm:col-span-2 text-base font-semibold text-primary">
-          {t("reseller.create")}
-        </h2>
-        <input
-          required
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder={t("reseller.name")}
-          className="rounded-lg border border-default px-3 py-2 text-sm"
-        />
-        <input
-          required
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder={t("reseller.ownerEmail")}
-          className="rounded-lg border border-default px-3 py-2 text-sm"
-        />
-        <input
-          value={ownerName}
-          onChange={(e) => setOwnerName(e.target.value)}
-          placeholder={t("reseller.ownerName")}
-          className="rounded-lg border border-default px-3 py-2 text-sm"
-        />
-        <button
-          type="submit"
-          disabled={createSubaccount.isPending}
-          className="rounded-lg bg-accent px-4 py-2 text-sm text-white disabled:opacity-50"
-        >
-          {t("reseller.create")}
-        </button>
-        {inviteInfo && (
-          <p className="sm:col-span-2 text-sm text-green-600">{inviteInfo}</p>
-        )}
+        <div>
+          <h2 className="text-base font-semibold text-primary">{t("reseller.create")}</h2>
+          <p className="mt-1 text-sm text-secondary">{t("reseller.servicesHint")}</p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <input
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={t("reseller.name")}
+            className="rounded-lg border border-default bg-surface px-3 py-2 text-sm text-primary"
+          />
+          <input
+            required
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder={t("reseller.ownerEmail")}
+            className="rounded-lg border border-default bg-surface px-3 py-2 text-sm text-primary"
+          />
+          <input
+            value={ownerName}
+            onChange={(e) => setOwnerName(e.target.value)}
+            placeholder={t("reseller.ownerName")}
+            className="rounded-lg border border-default bg-surface px-3 py-2 text-sm text-primary"
+          />
+        </div>
+        <div className="max-h-[32rem] overflow-y-auto rounded-xl border border-default bg-surface p-4">
+          <SubaccountServicesFields
+            enabledServices={enabledServices}
+            serviceLimits={serviceLimits}
+            bag={subaccounts.data?.bag}
+            onChange={(next) => {
+              setEnabledServices(next.enabledServices);
+              setServiceLimits(next.serviceLimits);
+            }}
+          />
+        </div>
+        {createSubaccount.isError ? (
+          <p className="text-sm text-red-600">
+            {createSubaccount.error instanceof Error
+              ? createSubaccount.error.message
+              : t("reseller.created")}
+          </p>
+        ) : null}
+        {inviteInfo ? (
+          <p className="text-sm text-green-600">{inviteInfo}</p>
+        ) : null}
+        <div className="flex justify-end">
+          <Button type="submit" disabled={createSubaccount.isPending}>
+            {t("reseller.create")}
+          </Button>
+        </div>
       </form>
 
       {subaccounts.isLoading ? (
@@ -348,6 +430,7 @@ export default function SubaccountsPage() {
                 <th className="px-4 py-3 font-medium">{t("reseller.name")}</th>
                 <th className="px-4 py-3 font-medium">{t("common.email")}</th>
                 <th className="px-4 py-3 font-medium">{t("admin.users.plan")}</th>
+                <th className="px-4 py-3 font-medium">{t("reseller.services")}</th>
                 <th className="px-4 py-3 font-medium">{t("common.status")}</th>
                 <th className="px-4 py-3 font-medium" />
               </tr>
@@ -358,6 +441,9 @@ export default function SubaccountsPage() {
                   <td className="px-4 py-3 text-primary">{item.name}</td>
                   <td className="px-4 py-3 text-secondary">{item.email}</td>
                   <td className="px-4 py-3 text-secondary">{item.plan}</td>
+                  <td className="px-4 py-3">
+                    <SubaccountServiceChips services={item.enabledServices} t={t} />
+                  </td>
                   <td className="px-4 py-3">
                     <Badge variant={item.status === "active" ? "success" : "default"}>
                       {item.status}
@@ -371,6 +457,21 @@ export default function SubaccountsPage() {
                         onClick={() => void handleAssume(item.tenantId)}
                       >
                         {t("reseller.assume")}
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded border border-default px-2 py-1 text-xs"
+                        onClick={() => {
+                          setEditing(item);
+                          setEditServices(
+                            item.enabledServices?.length
+                              ? item.enabledServices
+                              : defaultEnabledServices()
+                          );
+                          setEditLimits(item.serviceLimits ?? {});
+                        }}
+                      >
+                        {t("reseller.editServices")}
                       </button>
                       <button
                         type="button"
@@ -404,25 +505,31 @@ export default function SubaccountsPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <input
-            value={domain || domainQuery.data?.customDomain || ""}
+            value={domain}
             onChange={(e) => setDomain(e.target.value)}
             placeholder={t("reseller.domainPlaceholder")}
             className="min-w-[16rem] flex-1 rounded-lg border border-default px-3 py-2 text-sm"
           />
           <button
             type="button"
-            disabled={
-              registerDomain.isPending || !(domain || domainQuery.data?.customDomain)
-            }
-            onClick={() =>
-              void registerDomain.mutateAsync(
-                domain || domainQuery.data?.customDomain || ""
-              )
-            }
+            disabled={registerDomain.isPending || !domain.trim()}
+            onClick={() => void registerDomain.mutateAsync(domain.trim())}
             className="rounded-lg bg-accent px-4 py-2 text-sm text-white disabled:opacity-50"
           >
             {t("reseller.saveDomain")}
           </button>
+          {domainQuery.data?.customDomain ? (
+            <button
+              type="button"
+              disabled={deleteDomain.isPending}
+              onClick={() =>
+                void deleteDomain.mutateAsync().then(() => setDomain(""))
+              }
+              className="rounded-lg border border-default px-4 py-2 text-sm text-secondary disabled:opacity-50"
+            >
+              {t("reseller.removeDomain")}
+            </button>
+          ) : null}
         </div>
 
         <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -482,6 +589,66 @@ export default function SubaccountsPage() {
           </div>
         )}
       </section>
+
+      {editing ? (
+        <Modal>
+          <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-surface-elevated shadow-xl">
+            <div className="flex items-start justify-between gap-3 border-b border-default px-5 py-4">
+              <div>
+                <h2 className="text-base font-semibold text-primary">
+                  {t("reseller.servicesTitle")}
+                </h2>
+                <p className="mt-0.5 text-sm text-secondary">{editing.name}</p>
+              </div>
+              <Badge variant="accent" dot>
+                {t("reseller.enabledOf", {
+                  count: String(editServices.length),
+                  total: String(defaultEnabledServices().length),
+                })}
+              </Badge>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+              <SubaccountServicesFields
+                showHeader={false}
+                enabledServices={editServices}
+                serviceLimits={editLimits}
+                bag={subaccounts.data?.bag}
+                currentLimits={editing.serviceLimits}
+                onChange={(next) => {
+                  setEditServices(next.enabledServices);
+                  setEditLimits(next.serviceLimits);
+                }}
+              />
+            </div>
+            {updateSubaccount.isError ? (
+              <p className="border-t border-default px-5 py-2 text-sm text-red-600">
+                {updateSubaccount.error instanceof Error
+                  ? updateSubaccount.error.message
+                  : t("reseller.bagTitle")}
+              </p>
+            ) : null}
+            <div className="flex justify-end gap-2 border-t border-default px-5 py-3">
+              <Button variant="outline" onClick={() => setEditing(null)}>
+                {t("common.cancel")}
+              </Button>
+              <Button
+                disabled={updateSubaccount.isPending}
+                onClick={() =>
+                  void updateSubaccount
+                    .mutateAsync({
+                      subaccountId: editing.tenantId,
+                      enabledServices: editServices,
+                      serviceLimits: editLimits,
+                    })
+                    .then(() => setEditing(null))
+                }
+              >
+                {t("reseller.saveServices")}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      ) : null}
     </DashboardPage>
   );
 }

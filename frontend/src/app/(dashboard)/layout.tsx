@@ -4,6 +4,7 @@ import { SidebarProvider } from "@/components/layout/SidebarContext";
 import { MobileTopBar } from "@/components/layout/MobileTopBar";
 import { DashboardAuthGuard } from "@/components/layout/DashboardAuthGuard";
 import { DashboardRoleGuard } from "@/components/layout/DashboardRoleGuard";
+import { SubaccountServiceGuard } from "@/components/layout/SubaccountServiceGuard";
 import { TermsAcceptanceSync } from "@/components/legal/TermsAcceptanceSync";
 import { OnboardingGate } from "@/components/onboarding/OnboardingGate";
 import { HelpCenterMount } from "@/components/help-center/HelpCenterMount";
@@ -29,7 +30,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <main className="canvas-bg min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
                 <OnboardingGate>
                   <HelpCenterMount>
-                    <DashboardRoleGuard>{children}</DashboardRoleGuard>
+                    <DashboardRoleGuard>
+                      <SubaccountServiceGuard>{children}</SubaccountServiceGuard>
+                    </DashboardRoleGuard>
                   </HelpCenterMount>
                 </OnboardingGate>
               </main>
