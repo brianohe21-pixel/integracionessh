@@ -51,12 +51,52 @@ function appName(): string {
   return name;
 }
 
+const MULTI_PART_PUBLIC_SUFFIXES = [
+  "com.co",
+  "net.co",
+  "nom.co",
+  "com.mx",
+  "com.br",
+  "com.ar",
+  "com.pe",
+  "com.ec",
+  "com.cl",
+  "co.uk",
+  "org.uk",
+  "com.au",
+];
+
+const SHARED_HOSTING_ROOTS = new Set(["amplifyapp.com", "vercel.app", "netlify.app"]);
+
+function normalizeHost(domain: string): string {
+  return domain
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/\/$/, "")
+    .split("/")[0]!
+    .split(":")[0]!;
+}
+
 export function splitFqdn(domain: string): { rootDomain: string; prefix: string } {
-  const host = domain.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/$/, "");
+  const host = normalizeHost(domain);
   const parts = host.split(".").filter(Boolean);
   if (parts.length < 2) {
     throw Object.assign(new Error("Invalid domain"), { statusCode: 400 });
   }
+
+  const suffix = MULTI_PART_PUBLIC_SUFFIXES.find((item) => host === item || host.endsWith(`.${item}`));
+  if (suffix) {
+    const suffixLabels = suffix.split(".").length;
+    if (parts.length <= suffixLabels + 1) {
+      return { rootDomain: host, prefix: "" };
+    }
+    return {
+      rootDomain: parts.slice(-(suffixLabels + 1)).join("."),
+      prefix: parts.slice(0, -(suffixLabels + 1)).join("."),
+    };
+  }
+
   if (parts.length === 2) {
     return { rootDomain: host, prefix: "" };
   }
@@ -64,6 +104,33 @@ export function splitFqdn(domain: string): { rootDomain: string; prefix: string 
     rootDomain: parts.slice(-2).join("."),
     prefix: parts.slice(0, -2).join("."),
   };
+}
+
+export function platformFrontendHost(): string {
+  return normalizeHost(process.env.FRONTEND_URL ?? "");
+}
+
+export function isReservedPlatformDomain(domain: string): boolean {
+  const host = normalizeHost(domain);
+  const platformHost = platformFrontendHost();
+  if (!host || !platformHost) return false;
+  if (platformHost === "localhost" || platformHost === "127.0.0.1") return false;
+  if (host === platformHost) return true;
+
+  let platformRoot: string;
+  let hostRoot: string;
+  try {
+    platformRoot = splitFqdn(platformHost).rootDomain;
+    hostRoot = splitFqdn(host).rootDomain;
+  } catch {
+    return false;
+  }
+
+  if (SHARED_HOSTING_ROOTS.has(platformRoot)) {
+    return host === platformHost || host.endsWith(`.${platformHost}`);
+  }
+
+  return hostRoot === platformRoot;
 }
 
 function parseDnsLine(line: string | undefined, purpose: DomainDnsRecord["purpose"]): DomainDnsRecord | null {

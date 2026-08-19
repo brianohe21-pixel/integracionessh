@@ -948,6 +948,12 @@ locals {
       function_arn = var.reseller_function_arn
       protected    = true
     }
+    reseller_domain_delete = {
+      route_key    = "DELETE /reseller/domain"
+      invoke_arn   = var.reseller_invoke_arn
+      function_arn = var.reseller_function_arn
+      protected    = true
+    }
     public_branding_by_host = {
       route_key    = "GET /public/branding-by-host"
       invoke_arn   = var.tenants_invoke_arn

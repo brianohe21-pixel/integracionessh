@@ -205,6 +205,10 @@ resource "aws_cognito_user_pool_client" "web" {
   callback_urls = var.callback_urls
   logout_urls   = var.logout_urls
 
+  lifecycle {
+    ignore_changes = [callback_urls, logout_urls]
+  }
+
   allowed_oauth_flows_user_pool_client = length(var.callback_urls) > 0
   allowed_oauth_flows                  = length(var.callback_urls) > 0 ? ["code"] : []
   allowed_oauth_scopes                 = length(var.callback_urls) > 0 ? ["email", "openid", "profile"] : []

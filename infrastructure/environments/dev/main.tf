@@ -125,7 +125,7 @@ module "s3" {
   project         = local.project
   environment     = local.environment
   account_id      = data.aws_caller_identity.current.account_id
-  allowed_origins = local.browser_origins
+  allowed_origins = ["*"]
   tags            = local.tags
 }
 
@@ -338,7 +338,7 @@ module "api_gateway" {
   mailrelay_function_arn          = module.lambda.mailrelay_function_arn
   mailrelay_webhook_invoke_arn    = module.lambda.mailrelay_webhook_invoke_arn
   mailrelay_webhook_function_arn  = module.lambda.mailrelay_webhook_function_arn
-  allowed_origins                 = local.browser_origins
+  allowed_origins                 = ["*"]
   api_custom_domain               = var.api_custom_domain
   tags                            = local.tags
 }

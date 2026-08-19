@@ -2,6 +2,7 @@ import {
   CognitoIdentityProviderClient,
   DescribeUserPoolClientCommand,
   UpdateUserPoolClientCommand,
+  type UserPoolClientType,
 } from "@aws-sdk/client-cognito-identity-provider";
 
 function getPoolId(): string {
@@ -29,12 +30,20 @@ function normalizeOrigin(domain: string): string {
   return `https://${host}`;
 }
 
-export async function addCustomDomainToCognitoClient(domain: string): Promise<void> {
+function urlsForDomain(domain: string): { origin: string; callback: string } {
+  const origin = normalizeOrigin(domain);
+  return { origin, callback: `${origin}/api/auth/callback/cognito` };
+}
+
+async function updateCognitoClientUrls(
+  nextUrls: (current: UserPoolClientType) => {
+    callbackUrls: string[];
+    logoutUrls: string[];
+  }
+): Promise<void> {
   const client = new CognitoIdentityProviderClient({});
   const userPoolId = getPoolId();
   const clientId = getClientId();
-  const origin = normalizeOrigin(domain);
-  const callback = `${origin}/api/auth/callback/cognito`;
 
   const described = await client.send(
     new DescribeUserPoolClientCommand({
@@ -50,10 +59,8 @@ export async function addCustomDomainToCognitoClient(domain: string): Promise<vo
     });
   }
 
-  const callbackUrls = Array.from(
-    new Set([...(current.CallbackURLs ?? []), callback])
-  );
-  const logoutUrls = Array.from(new Set([...(current.LogoutURLs ?? []), origin]));
+  const { callbackUrls, logoutUrls } = nextUrls(current);
+  if (callbackUrls.length === 0) return;
 
   await client.send(
     new UpdateUserPoolClientCommand({
@@ -69,7 +76,7 @@ export async function addCustomDomainToCognitoClient(domain: string): Promise<vo
       ExplicitAuthFlows: current.ExplicitAuthFlows,
       SupportedIdentityProviders: current.SupportedIdentityProviders,
       CallbackURLs: callbackUrls,
-      LogoutURLs: logoutUrls,
+      LogoutURLs: logoutUrls.length > 0 ? logoutUrls : current.LogoutURLs,
       AllowedOAuthFlows: current.AllowedOAuthFlows,
       AllowedOAuthScopes: current.AllowedOAuthScopes,
       AllowedOAuthFlowsUserPoolClient: current.AllowedOAuthFlowsUserPoolClient,
@@ -80,4 +87,20 @@ export async function addCustomDomainToCognitoClient(domain: string): Promise<vo
       AuthSessionValidity: current.AuthSessionValidity,
     })
   );
+}
+
+export async function addCustomDomainToCognitoClient(domain: string): Promise<void> {
+  const { origin, callback } = urlsForDomain(domain);
+  await updateCognitoClientUrls((current) => ({
+    callbackUrls: Array.from(new Set([...(current.CallbackURLs ?? []), callback])),
+    logoutUrls: Array.from(new Set([...(current.LogoutURLs ?? []), origin])),
+  }));
+}
+
+export async function removeCustomDomainFromCognitoClient(domain: string): Promise<void> {
+  const { origin, callback } = urlsForDomain(domain);
+  await updateCognitoClientUrls((current) => ({
+    callbackUrls: (current.CallbackURLs ?? []).filter((url) => url !== callback),
+    logoutUrls: (current.LogoutURLs ?? []).filter((url) => url !== origin),
+  }));
 }

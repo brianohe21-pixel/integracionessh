@@ -20,10 +20,14 @@ import { PlanLimitError } from "../../lib/billing/plan-limits.js";
 import {
   ensureResellerDomainInAmplify,
   getResellerDomainDnsInfo,
+  isReservedPlatformDomain,
   removeResellerDomainFromAmplify,
   type ResellerDomainDnsInfo,
 } from "../../lib/amplify/custom-domain.js";
-import { addCustomDomainToCognitoClient } from "../../lib/cognito/custom-domain-callbacks.js";
+import {
+  addCustomDomainToCognitoClient,
+  removeCustomDomainFromCognitoClient,
+} from "../../lib/cognito/custom-domain-callbacks.js";
 import {
   ok,
   created,
@@ -203,7 +207,8 @@ export async function handler(
           subaccountName: parsed.data.name,
           resellerName: reseller.name,
           temporaryPassword: invited.temporaryPassword,
-          ...(reseller.resellerConfig?.customDomain
+          ...(reseller.resellerConfig?.customDomain &&
+          reseller.resellerConfig.customDomainStatus === "active"
             ? { customDomain: reseller.resellerConfig.customDomain }
             : {}),
         });
@@ -290,6 +295,9 @@ export async function handler(
       }
 
       const domain = normalizeDomain(parsed.data.customDomain);
+      if (isReservedPlatformDomain(domain)) {
+        return badRequest("This domain is reserved by the platform");
+      }
       const mappedTenantId = await getTenantIdByDomain(domain);
       if (mappedTenantId && mappedTenantId !== parentId) {
         return badRequest("Domain is already registered to another tenant");
@@ -303,6 +311,11 @@ export async function handler(
           await removeResellerDomainFromAmplify(previousDomain);
         } catch (error) {
           console.error("Failed to remove previous Amplify domain", error);
+        }
+        try {
+          await removeCustomDomainFromCognitoClient(previousDomain);
+        } catch (error) {
+          console.error("Failed to remove previous Cognito callbacks", error);
         }
       }
 
@@ -339,6 +352,37 @@ export async function handler(
           dns
         )
       );
+    }
+
+    if (method === "DELETE" && path.endsWith("/reseller/domain")) {
+      const domain = reseller.resellerConfig?.customDomain
+        ? normalizeDomain(reseller.resellerConfig.customDomain)
+        : null;
+      if (!domain) {
+        return ok(domainResponse(null, "none"));
+      }
+
+      try {
+        await removeResellerDomainFromAmplify(domain);
+      } catch (error) {
+        console.error("Failed to remove Amplify domain", error);
+      }
+      try {
+        await removeCustomDomainFromCognitoClient(domain);
+      } catch (error) {
+        console.error("Failed to remove Cognito callbacks", error);
+      }
+
+      const base = defaultResellerConfig(reseller.resellerConfig);
+      const resellerConfig: ResellerConfig = {
+        maxSubaccounts: base.maxSubaccounts,
+        defaultSubaccountPlan: base.defaultSubaccountPlan,
+        allowSubaccountBranding: base.allowSubaccountBranding,
+        customDomainStatus: "none",
+        ...(base.limitsOverride ? { limitsOverride: base.limitsOverride } : {}),
+      };
+      await updateTenant(parentId, { resellerConfig });
+      return ok(domainResponse(null, "none"));
     }
 
     return notFound("Route not found");
