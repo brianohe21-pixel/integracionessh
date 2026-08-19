@@ -19,6 +19,7 @@ import {
   assertAdvisorOrMember,
   assertTenantManagerRole,
 } from "../../lib/auth/cognito.js";
+import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import { performHandoff, releaseToBot, claimConversation, performBulkHandoff } from "../../lib/advisor/handoff.js";
 import { resolveConversation } from "../../lib/advisor/resolve.js";
 import { updateConversation } from "../../lib/dynamodb/conversation.repository.js";
@@ -168,6 +169,9 @@ export async function handler(
   try {
     const auth = await resolveRequestAuth(event);
     assertAdvisorOrMember(auth);
+    if (auth.role !== "advisor") {
+      await assertAssignedServices(auth.tenantId, ["conversations", "supervisor"]);
+    }
 
     const method = event.requestContext.http.method;
     const conversationId = event.pathParameters?.conversationId;
@@ -216,7 +220,8 @@ export async function handler(
         params.channel === "messenger" ||
         params.channel === "sms" ||
         params.channel === "email" ||
-        params.channel === "voicebot"
+        params.channel === "voicebot" ||
+        params.channel === "phone"
           ? params.channel
           : undefined;
       const limit = params.limit ? parseInt(params.limit, 10) : 20;
@@ -376,7 +381,14 @@ export async function handler(
           channel,
           refreshed.botId
         );
-        if (accessToken || channel === "webchat" || channel === "sms" || channel === "email" || channel === "voicebot") {
+        if (
+          accessToken ||
+          channel === "webchat" ||
+          channel === "sms" ||
+          channel === "email" ||
+          channel === "voicebot" ||
+          channel === "phone"
+        ) {
           await sendChannelText(
             buildOutboundContext({
               tenantId: auth.tenantId,
@@ -792,6 +804,59 @@ export async function handler(
         url: buildWaMeLink(conversation.phoneNumber),
         phoneNumber: conversation.phoneNumber,
       });
+    }
+
+    if (method === "GET" && rawPath.includes("/messages/") && rawPath.includes("/attachments/")) {
+      const conversation = await findConversationById(auth.tenantId, conversationId);
+      if (!conversation) return notFound("Conversation not found");
+      await assertCanAccessConversation(auth, conversation);
+
+      const botId = params.botId;
+      if (!botId || !z.string().uuid().safeParse(botId).success) {
+        return badRequest("botId query parameter is required");
+      }
+      if (conversation.botId !== botId) return notFound("Conversation not found");
+
+      const match = rawPath.match(/\/messages\/([^/]+)\/attachments\/([^/]+)$/);
+      if (!match) return badRequest("Invalid attachment path");
+      const [, messageId, attachmentId] = match;
+
+      const { resolveEmailAttachmentUrl } = await import("../../lib/email/attachments.js");
+      const result = await resolveEmailAttachmentUrl({
+        tenantId: auth.tenantId,
+        botId,
+        conversationId,
+        messageId: decodeURIComponent(messageId),
+        attachmentId: decodeURIComponent(attachmentId),
+      });
+      if (!result) return notFound("Attachment not found");
+      return ok(result);
+    }
+
+    if (method === "GET" && rawPath.includes("/messages/") && rawPath.endsWith("/html")) {
+      const conversation = await findConversationById(auth.tenantId, conversationId);
+      if (!conversation) return notFound("Conversation not found");
+      await assertCanAccessConversation(auth, conversation);
+
+      const botId = params.botId;
+      if (!botId || !z.string().uuid().safeParse(botId).success) {
+        return badRequest("botId query parameter is required");
+      }
+      if (conversation.botId !== botId) return notFound("Conversation not found");
+
+      const match = rawPath.match(/\/messages\/([^/]+)\/html$/);
+      if (!match) return badRequest("Invalid html path");
+      const [, messageId] = match;
+
+      const { resolveEmailHtmlBody } = await import("../../lib/email/attachments.js");
+      const result = await resolveEmailHtmlBody({
+        tenantId: auth.tenantId,
+        botId,
+        conversationId,
+        messageId: decodeURIComponent(messageId),
+      });
+      if (!result) return notFound("HTML body not found");
+      return ok(result);
     }
 
     if (method === "DELETE" && !subPath) {

@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useCreateBot } from "@/hooks/useBots";
 import { useLocale, useT } from "@/i18n/context";
-import { DEFAULT_MODEL_ID } from "@/lib/ai-models";
 import { getBotTemplate, type BotIndustryTemplateId } from "@/lib/bot-templates";
 import { BotTemplatePicker } from "@/components/bots/BotTemplatePicker";
 import { Button } from "@/components/ui/Button";
@@ -12,6 +11,9 @@ import { Input } from "@/components/ui/Input";
 interface OnboardingStepCreateBotProps {
   phoneNumberId: string;
   whatsappBusinessAccountId: string;
+  whatsappOnboardingMode?: "cloud_api" | "coexistence";
+  isOnBizApp?: boolean;
+  platformType?: string;
   templateId: BotIndustryTemplateId | null;
   onTemplateChange: (templateId: BotIndustryTemplateId | null) => void;
   onCreated: (botId: string, templateId: BotIndustryTemplateId | null) => void;
@@ -20,6 +22,9 @@ interface OnboardingStepCreateBotProps {
 export function OnboardingStepCreateBot({
   phoneNumberId,
   whatsappBusinessAccountId,
+  whatsappOnboardingMode,
+  isOnBizApp,
+  platformType,
   templateId,
   onTemplateChange,
   onCreated,
@@ -49,20 +54,15 @@ export function OnboardingStepCreateBot({
     e.preventDefault();
     setError("");
 
-    const systemPrompt = templateId
-      ? getBotTemplate(templateId).getSystemPrompt(locale)
-      : "You are a helpful customer support assistant.";
-
     try {
       const bot = await createBot.mutateAsync({
         name: name.trim(),
-        responseMode: "openai",
-        systemPrompt,
-        model: DEFAULT_MODEL_ID,
-        temperature: 0.7,
-        maxTokens: 1024,
+        responseMode: "none",
         phoneNumberId,
         whatsappBusinessAccountId,
+        ...(whatsappOnboardingMode ? { whatsappOnboardingMode } : {}),
+        ...(isOnBizApp !== undefined ? { isOnBizApp } : {}),
+        ...(platformType ? { platformType } : {}),
       });
       onCreated(bot.botId, templateId);
     } catch (err) {

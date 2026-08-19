@@ -49,20 +49,43 @@ async function request<T>(
   assertApiBaseUrl();
   const authHeader = await getAuthHeader();
 
-  const response = await fetch(`${BASE_URL}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeader,
-      ...getTenantContextHeader(),
-      ...getPortalHostHeader(),
-      ...options.headers,
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${BASE_URL}${path}`, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeader,
+        ...getTenantContextHeader(),
+        ...getPortalHostHeader(),
+        ...options.headers,
+      },
+    });
+  } catch {
+    throw new Error(
+      `Network error calling ${BASE_URL}${path}. Check API URL, CORS, and that the route is deployed.`
+    );
+  }
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: "Unknown error" }));
-    throw new Error((error as { error: string }).error ?? `HTTP ${response.status}`);
+    const record = error as { error?: string; errors?: Record<string, unknown> };
+    if (record.error) {
+      throw new Error(record.error);
+    }
+    if (record.errors && typeof record.errors === "object") {
+      const parts: string[] = [];
+      for (const [field, messages] of Object.entries(record.errors)) {
+        const list = Array.isArray(messages) ? messages : [messages];
+        for (const item of list) {
+          if (typeof item === "string" && item) {
+            parts.push(field === "base" ? item : `${field}: ${item}`);
+          }
+        }
+      }
+      if (parts.length > 0) throw new Error(parts.join("; "));
+    }
+    throw new Error(`HTTP ${response.status}`);
   }
 
   if (response.status === 204) return undefined as T;
@@ -82,8 +105,11 @@ export const api = {
   patch: <T>(path: string, body: unknown) =>
     request<T>(path, { method: "PATCH", body: JSON.stringify(body) }),
 
-  delete: <T = void>(path: string) =>
-    request<T>(path, { method: "DELETE" }),
+  delete: <T = void>(path: string, body?: unknown) =>
+    request<T>(path, {
+      method: "DELETE",
+      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+    }),
 
   async download(path: string, filename: string): Promise<void> {
     assertApiBaseUrl();

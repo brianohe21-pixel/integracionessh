@@ -1,9 +1,11 @@
 import { SendMessageCommand, SQSClient } from "@aws-sdk/client-sqs";
 import { randomUUID } from "crypto";
+import { getBot } from "../dynamodb/bot.repository.js";
 import {
   createIntegrationDelivery,
   getTenantIntegration,
 } from "../dynamodb/integration.repository.js";
+import { deliverVoiceAgentWebhook } from "../telephony/webhook-delivery.js";
 import type { IntegrationEvent, IntegrationEventPayload } from "../../types/index.js";
 
 const sqs = new SQSClient({});
@@ -14,6 +16,15 @@ export async function emitIntegrationEvent(
   event: IntegrationEvent,
   payload: IntegrationEventPayload
 ): Promise<void> {
+  const botId = typeof payload.data.botId === "string" ? payload.data.botId : undefined;
+
+  if (botId) {
+    const bot = await getBot(tenantId, botId);
+    if (bot) {
+      await deliverVoiceAgentWebhook(bot, event, payload).catch(() => undefined);
+    }
+  }
+
   if (!QUEUE_URL) return;
 
   const integration = await getTenantIntegration(tenantId);

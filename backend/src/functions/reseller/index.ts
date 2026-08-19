@@ -16,14 +16,26 @@ import {
 } from "../../lib/dynamodb/tenant.repository.js";
 import { inviteMemberUser } from "../../lib/cognito/invite-member.js";
 import { sendSubaccountInviteEmail } from "../../lib/email/subaccount-invite.js";
-import { PlanLimitError } from "../../lib/billing/plan-limits.js";
+import { getEffectivePlanLimits, PlanLimitError } from "../../lib/billing/plan-limits.js";
+import {
+  SUBACCOUNT_SERVICES,
+  assertBagAllocation,
+  buildResellerBag,
+  normalizeEnabledServices,
+  normalizeServiceLimits,
+  trimServiceLimitsForEnabled,
+} from "../../lib/billing/subaccount-services.js";
 import {
   ensureResellerDomainInAmplify,
   getResellerDomainDnsInfo,
+  isReservedPlatformDomain,
   removeResellerDomainFromAmplify,
   type ResellerDomainDnsInfo,
 } from "../../lib/amplify/custom-domain.js";
-import { addCustomDomainToCognitoClient } from "../../lib/cognito/custom-domain-callbacks.js";
+import {
+  addCustomDomainToCognitoClient,
+  removeCustomDomainFromCognitoClient,
+} from "../../lib/cognito/custom-domain-callbacks.js";
 import {
   ok,
   created,
@@ -32,7 +44,19 @@ import {
   handleError,
   parseJsonBody,
 } from "../../lib/http.js";
-import type { CustomDomainStatus, ResellerConfig, Tenant } from "../../types/index.js";
+import type {
+  CustomDomainStatus,
+  ResellerConfig,
+  ResellerLimitsOverride,
+  SubaccountServiceId,
+  Tenant,
+} from "../../types/index.js";
+
+const SubaccountServiceSchema = z.enum(
+  SUBACCOUNT_SERVICES as unknown as [SubaccountServiceId, ...SubaccountServiceId[]]
+);
+
+const ServiceLimitsSchema = z.record(z.number().int().min(0)).optional();
 
 const CreateSubaccountSchema = z.object({
   name: z.string().min(1).max(128),
@@ -40,12 +64,16 @@ const CreateSubaccountSchema = z.object({
   ownerName: z.string().min(1).max(128).optional(),
   plan: z.enum(["free", "pro", "enterprise"]).optional(),
   inviteOwner: z.boolean().optional().default(true),
+  enabledServices: z.array(SubaccountServiceSchema).optional(),
+  serviceLimits: ServiceLimitsSchema,
 });
 
 const UpdateSubaccountSchema = z.object({
   name: z.string().min(1).max(128).optional(),
   status: z.enum(["active", "suspended"]).optional(),
   plan: z.enum(["free", "pro", "enterprise"]).optional(),
+  enabledServices: z.array(SubaccountServiceSchema).optional(),
+  serviceLimits: ServiceLimitsSchema,
 });
 
 const RegisterDomainSchema = z.object({
@@ -61,6 +89,20 @@ const RegisterDomainSchema = z.object({
 
 function homeTenantId(auth: { tenantId: string; homeTenantId?: string }): string {
   return auth.homeTenantId ?? auth.tenantId;
+}
+
+function resolveSubaccountServices(
+  enabledServices: SubaccountServiceId[] | undefined,
+  serviceLimits: Record<string, number> | undefined,
+  fallbackEnabled?: SubaccountServiceId[],
+  fallbackLimits?: ResellerLimitsOverride
+): { enabledServices: SubaccountServiceId[]; serviceLimits: ResellerLimitsOverride } {
+  const enabled = normalizeEnabledServices(enabledServices ?? fallbackEnabled);
+  const limits = trimServiceLimitsForEnabled(
+    enabled,
+    normalizeServiceLimits(serviceLimits ?? fallbackLimits)
+  );
+  return { enabledServices: enabled, serviceLimits: limits };
 }
 
 function fallbackCnameTarget(): string {
@@ -143,10 +185,12 @@ export async function handler(
 
     if (method === "GET" && path.endsWith("/reseller/subaccounts")) {
       const items = await listSubaccounts(parentId);
+      const bag = buildResellerBag(getEffectivePlanLimits(reseller), items);
       return ok({
         items,
         maxSubaccounts: reseller.resellerConfig?.maxSubaccounts ?? 25,
         count: items.length,
+        bag,
       });
     }
 
@@ -172,6 +216,16 @@ export async function handler(
         reseller.resellerConfig?.defaultSubaccountPlan ??
         "pro";
       const childId = randomUUID();
+      const siblings = await listSubaccounts(parentId);
+      const services = resolveSubaccountServices(
+        parsed.data.enabledServices,
+        parsed.data.serviceLimits
+      );
+      assertBagAllocation(
+        getEffectivePlanLimits(reseller),
+        siblings,
+        services.serviceLimits
+      );
       const child: Tenant = {
         tenantId: childId,
         name: parsed.data.name,
@@ -181,6 +235,8 @@ export async function handler(
         parentTenantId: parentId,
         status: "active",
         subscriptionStatus: "active",
+        enabledServices: services.enabledServices,
+        serviceLimits: services.serviceLimits,
         createdAt: now,
         updatedAt: now,
       };
@@ -203,7 +259,8 @@ export async function handler(
           subaccountName: parsed.data.name,
           resellerName: reseller.name,
           temporaryPassword: invited.temporaryPassword,
-          ...(reseller.resellerConfig?.customDomain
+          ...(reseller.resellerConfig?.customDomain &&
+          reseller.resellerConfig.customDomainStatus === "active"
             ? { customDomain: reseller.resellerConfig.customDomain }
             : {}),
         });
@@ -239,6 +296,24 @@ export async function handler(
       if (parsed.data.name !== undefined) updates.name = parsed.data.name;
       if (parsed.data.status !== undefined) updates.status = parsed.data.status;
       if (parsed.data.plan !== undefined) updates.plan = parsed.data.plan;
+      if (parsed.data.enabledServices !== undefined || parsed.data.serviceLimits !== undefined) {
+        const services = resolveSubaccountServices(
+          parsed.data.enabledServices,
+          parsed.data.serviceLimits,
+          child.enabledServices,
+          child.serviceLimits
+        );
+        const siblings = (await listSubaccounts(parentId)).filter(
+          (item) => item.tenantId !== child.tenantId
+        );
+        assertBagAllocation(
+          getEffectivePlanLimits(reseller),
+          siblings,
+          services.serviceLimits
+        );
+        updates.enabledServices = services.enabledServices;
+        updates.serviceLimits = services.serviceLimits;
+      }
 
       const updated = await updateTenant(child.tenantId, updates);
       return ok(updated);
@@ -290,6 +365,9 @@ export async function handler(
       }
 
       const domain = normalizeDomain(parsed.data.customDomain);
+      if (isReservedPlatformDomain(domain)) {
+        return badRequest("This domain is reserved by the platform");
+      }
       const mappedTenantId = await getTenantIdByDomain(domain);
       if (mappedTenantId && mappedTenantId !== parentId) {
         return badRequest("Domain is already registered to another tenant");
@@ -303,6 +381,11 @@ export async function handler(
           await removeResellerDomainFromAmplify(previousDomain);
         } catch (error) {
           console.error("Failed to remove previous Amplify domain", error);
+        }
+        try {
+          await removeCustomDomainFromCognitoClient(previousDomain);
+        } catch (error) {
+          console.error("Failed to remove previous Cognito callbacks", error);
         }
       }
 
@@ -339,6 +422,37 @@ export async function handler(
           dns
         )
       );
+    }
+
+    if (method === "DELETE" && path.endsWith("/reseller/domain")) {
+      const domain = reseller.resellerConfig?.customDomain
+        ? normalizeDomain(reseller.resellerConfig.customDomain)
+        : null;
+      if (!domain) {
+        return ok(domainResponse(null, "none"));
+      }
+
+      try {
+        await removeResellerDomainFromAmplify(domain);
+      } catch (error) {
+        console.error("Failed to remove Amplify domain", error);
+      }
+      try {
+        await removeCustomDomainFromCognitoClient(domain);
+      } catch (error) {
+        console.error("Failed to remove Cognito callbacks", error);
+      }
+
+      const base = defaultResellerConfig(reseller.resellerConfig);
+      const resellerConfig: ResellerConfig = {
+        maxSubaccounts: base.maxSubaccounts,
+        defaultSubaccountPlan: base.defaultSubaccountPlan,
+        allowSubaccountBranding: base.allowSubaccountBranding,
+        customDomainStatus: "none",
+        ...(base.limitsOverride ? { limitsOverride: base.limitsOverride } : {}),
+      };
+      await updateTenant(parentId, { resellerConfig });
+      return ok(domainResponse(null, "none"));
     }
 
     return notFound("Route not found");

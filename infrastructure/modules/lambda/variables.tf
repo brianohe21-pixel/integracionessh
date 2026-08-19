@@ -86,6 +86,38 @@ variable "call_events_sqs_queue_arn" {
   type = string
 }
 
+variable "telephony_cdr_sqs_queue_url" {
+  type = string
+}
+
+variable "telephony_cdr_sqs_queue_arn" {
+  type = string
+}
+
+variable "mailrelay_sync_sqs_queue_url" {
+  type = string
+}
+
+variable "mailrelay_sync_sqs_queue_arn" {
+  type = string
+}
+
+variable "whatsapp_sync_sqs_queue_url" {
+  type    = string
+  default = ""
+}
+
+variable "whatsapp_sync_sqs_queue_arn" {
+  type    = string
+  default = ""
+}
+
+variable "mailrelay_event_types" {
+  type        = string
+  default     = ""
+  description = "Comma-separated Mailrelay webhook event types enabled for tenant subscriptions"
+}
+
 variable "scheduler_role_arn" {
   type        = string
   default     = ""
@@ -167,6 +199,12 @@ variable "livekit_api_secret" {
   default     = ""
   sensitive   = true
   description = "LiveKit API secret"
+}
+
+variable "telephony_gateway_ws_url" {
+  type        = string
+  default     = ""
+  description = "Public WSS URL for Telnyx media streaming gateway"
 }
 
 variable "lambda_zip_path" {
@@ -287,6 +325,12 @@ variable "tags" {
   default = {}
 }
 
+variable "imap_poll_rate_minutes" {
+  type        = number
+  default     = 3
+  description = "Interval in minutes for polling active IMAP mailboxes"
+}
+
 variable "cloudwatch_log_group_import_exclude" {
   type = set(string)
   default = [
@@ -299,12 +343,20 @@ variable "cloudwatch_log_group_import_exclude" {
     "messenger_connect",
     "sms_webhook",
     "email_inbound",
+    "email_imap_connect",
+    "poll_imap_inbound",
     "reports",
     "voicebot",
     "voicebot_session",
+    "telephony",
     "reseller",
     "flow_hooks",
     "process_flow_event",
+    "process_telephony_cdr",
+    "mailrelay",
+    "process_mailrelay_sync",
+    "mailrelay_webhook",
+    "process_whatsapp_sync",
   ]
   description = "Lambda keys whose log groups are created by Terraform instead of imported (new functions without pre-existing log groups in AWS)"
 }

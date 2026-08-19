@@ -67,6 +67,8 @@ resource "aws_iam_role_policy" "lambda_permissions" {
           var.flow_run_sqs_queue_arn,
           var.flow_event_sqs_queue_arn,
           var.call_events_sqs_queue_arn,
+          var.mailrelay_sync_sqs_queue_arn,
+          var.whatsapp_sync_sqs_queue_arn,
         ]
       },
       {
@@ -143,6 +145,7 @@ resource "aws_iam_role_policy" "lambda_permissions" {
           "secretsmanager:CreateSecret",
           "secretsmanager:PutSecretValue",
           "secretsmanager:UpdateSecret",
+          "secretsmanager:DeleteSecret",
         ]
         Resource = "arn:aws:secretsmanager:*:*:secret:/${var.environment}/tenants/*"
       },
@@ -218,11 +221,13 @@ locals {
       timeout     = 30
       memory      = 256
       environment = {
-        WHATSAPP_VERIFY_TOKEN = var.whatsapp_verify_token
-        WHATSAPP_APP_SECRET   = var.whatsapp_app_secret != "" ? var.whatsapp_app_secret : var.meta_app_secret
-        SQS_QUEUE_URL         = var.sqs_queue_url
-        CALL_EVENTS_QUEUE_URL = var.call_events_sqs_queue_url
-        TABLE_NAME            = var.dynamodb_table_name
+        WHATSAPP_VERIFY_TOKEN    = var.whatsapp_verify_token
+        WHATSAPP_APP_SECRET      = var.whatsapp_app_secret != "" ? var.whatsapp_app_secret : var.meta_app_secret
+        SQS_QUEUE_URL            = var.sqs_queue_url
+        CALL_EVENTS_QUEUE_URL    = var.call_events_sqs_queue_url
+        WHATSAPP_SYNC_QUEUE_URL  = var.whatsapp_sync_sqs_queue_url
+        MEDIA_BUCKET             = var.media_bucket_name
+        TABLE_NAME               = var.dynamodb_table_name
       }
     }
     process_message = {
@@ -254,6 +259,7 @@ locals {
         COGNITO_USER_POOL_ID      = var.cognito_user_pool_id
         COGNITO_CLIENT_ID         = var.cognito_client_id
         MEDIA_BUCKET              = var.media_bucket_name
+        API_PUBLIC_URL            = var.api_public_url
       }
     }
     reseller = {
@@ -278,8 +284,9 @@ locals {
       timeout     = 30
       memory      = 256
       environment = {
-        TABLE_NAME  = var.dynamodb_table_name
-        ENVIRONMENT = var.environment
+        TABLE_NAME               = var.dynamodb_table_name
+        ENVIRONMENT              = var.environment
+        WHATSAPP_SYNC_QUEUE_URL  = var.whatsapp_sync_sqs_queue_url
       }
     }
     conversations = {
@@ -503,6 +510,29 @@ locals {
       environment = {
         TABLE_NAME    = var.dynamodb_table_name
         SQS_QUEUE_URL = var.sqs_queue_url
+        MEDIA_BUCKET  = var.media_bucket_name
+      }
+    }
+    email_imap_connect = {
+      handler     = "email-imap-connect/index.handler"
+      description = "Connects IMAP mailbox credentials for email channel"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME  = var.dynamodb_table_name
+        ENVIRONMENT = var.environment
+      }
+    }
+    poll_imap_inbound = {
+      handler     = "poll-imap-inbound/index.handler"
+      description = "Polls active IMAP mailboxes for new inbound email"
+      timeout     = 180
+      memory      = 512
+      environment = {
+        TABLE_NAME    = var.dynamodb_table_name
+        ENVIRONMENT   = var.environment
+        SQS_QUEUE_URL = var.sqs_queue_url
+        MEDIA_BUCKET  = var.media_bucket_name
       }
     }
     webchat = {
@@ -603,6 +633,8 @@ locals {
         ENVIRONMENT    = var.environment
         FRONTEND_URL   = var.frontend_url
         SES_FROM_EMAIL = var.ses_from_email
+        API_PUBLIC_URL = var.api_public_url
+        MEDIA_BUCKET   = var.media_bucket_name
       }
     }
     api_keys = {
@@ -708,13 +740,13 @@ locals {
       timeout     = 60
       memory      = 256
       environment = {
-        TABLE_NAME                = var.dynamodb_table_name
-        FLOW_RUN_SQS_QUEUE_URL    = var.flow_run_sqs_queue_url
-        FLOW_EVENT_SQS_QUEUE_URL  = var.flow_event_sqs_queue_url
-        SCHEDULER_ROLE_ARN        = var.scheduler_role_arn
-        FLOWS_FUNCTION_ARN        = local.flows_function_arn
-        API_PUBLIC_URL            = var.api_public_url
-        ENVIRONMENT               = var.environment
+        TABLE_NAME               = var.dynamodb_table_name
+        FLOW_RUN_SQS_QUEUE_URL   = var.flow_run_sqs_queue_url
+        FLOW_EVENT_SQS_QUEUE_URL = var.flow_event_sqs_queue_url
+        SCHEDULER_ROLE_ARN       = var.scheduler_role_arn
+        FLOWS_FUNCTION_ARN       = local.flows_function_arn
+        API_PUBLIC_URL           = var.api_public_url
+        ENVIRONMENT              = var.environment
       }
     }
     flow_hooks = {
@@ -723,11 +755,11 @@ locals {
       timeout     = 30
       memory      = 256
       environment = {
-        TABLE_NAME               = var.dynamodb_table_name
-        FLOW_EVENT_SQS_QUEUE_URL = var.flow_event_sqs_queue_url
+        TABLE_NAME                = var.dynamodb_table_name
+        FLOW_EVENT_SQS_QUEUE_URL  = var.flow_event_sqs_queue_url
         INTEGRATION_SQS_QUEUE_URL = var.integration_sqs_queue_url
-        API_PUBLIC_URL           = var.api_public_url
-        ENVIRONMENT              = var.environment
+        API_PUBLIC_URL            = var.api_public_url
+        ENVIRONMENT               = var.environment
       }
     }
     process_flow = {
@@ -773,6 +805,33 @@ locals {
       environment = {
         TABLE_NAME  = var.dynamodb_table_name
         ENVIRONMENT = var.environment
+      }
+    }
+    telephony = {
+      handler     = "telephony/index.handler"
+      description = "Telnyx PSTN telephony webhooks and call control API"
+      timeout     = 30
+      memory      = 512
+      environment = {
+        TABLE_NAME                  = var.dynamodb_table_name
+        ENVIRONMENT                 = var.environment
+        TELEPHONY_GATEWAY_WS_URL    = var.telephony_gateway_ws_url
+        INTEGRATION_SQS_QUEUE_URL   = var.integration_sqs_queue_url
+        TELEPHONY_CDR_SQS_QUEUE_URL = var.telephony_cdr_sqs_queue_url
+        MEDIA_BUCKET                = var.media_bucket_name
+        API_PUBLIC_URL              = var.api_public_url
+      }
+    }
+    process_telephony_cdr = {
+      handler     = "process-telephony-cdr/index.handler"
+      description = "Reconciles Telnyx CDR costs for telephony calls"
+      timeout     = 60
+      memory      = 256
+      environment = {
+        TABLE_NAME                  = var.dynamodb_table_name
+        ENVIRONMENT                 = var.environment
+        INTEGRATION_SQS_QUEUE_URL   = var.integration_sqs_queue_url
+        TELEPHONY_CDR_SQS_QUEUE_URL = var.telephony_cdr_sqs_queue_url
       }
     }
     calendar = {
@@ -825,6 +884,51 @@ locals {
         INTEGRATION_SQS_QUEUE_URL = var.integration_sqs_queue_url
         FRONTEND_URL              = var.frontend_url
         MEDIA_BUCKET              = var.media_bucket_name
+      }
+    }
+    mailrelay = {
+      handler     = "mailrelay/index.handler"
+      description = "Mailrelay integration configuration, synchronization, and campaigns API"
+      timeout     = 60
+      memory      = 256
+      environment = {
+        TABLE_NAME               = var.dynamodb_table_name
+        ENVIRONMENT              = var.environment
+        API_PUBLIC_URL           = var.api_public_url
+        MAILRELAY_SYNC_QUEUE_URL = var.mailrelay_sync_sqs_queue_url
+        MAILRELAY_EVENT_TYPES    = var.mailrelay_event_types
+      }
+    }
+    process_mailrelay_sync = {
+      handler     = "process-mailrelay-sync/index.handler"
+      description = "Processes Mailrelay synchronization jobs from SQS"
+      timeout     = 300
+      memory      = 512
+      environment = {
+        TABLE_NAME               = var.dynamodb_table_name
+        ENVIRONMENT              = var.environment
+        MAILRELAY_SYNC_QUEUE_URL = var.mailrelay_sync_sqs_queue_url
+      }
+    }
+    mailrelay_webhook = {
+      handler     = "mailrelay-webhook/index.handler"
+      description = "Receives Mailrelay campaign event webhooks"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME  = var.dynamodb_table_name
+        ENVIRONMENT = var.environment
+      }
+    }
+    process_whatsapp_sync = {
+      handler     = "process-whatsapp-sync/index.handler"
+      description = "Processes WhatsApp coexistence sync jobs from SQS"
+      timeout     = 300
+      memory      = 512
+      environment = {
+        TABLE_NAME   = var.dynamodb_table_name
+        ENVIRONMENT  = var.environment
+        MEDIA_BUCKET = var.media_bucket_name
       }
     }
   }
@@ -929,6 +1033,53 @@ resource "aws_lambda_event_source_mapping" "call_events_sqs_trigger" {
   batch_size                         = 1
   enabled                            = true
   maximum_batching_window_in_seconds = 0
+}
+
+resource "aws_lambda_event_source_mapping" "telephony_cdr_sqs_trigger" {
+  event_source_arn                   = var.telephony_cdr_sqs_queue_arn
+  function_name                      = aws_lambda_function.functions["process_telephony_cdr"].arn
+  batch_size                         = 1
+  enabled                            = true
+  maximum_batching_window_in_seconds = 0
+}
+
+resource "aws_lambda_event_source_mapping" "mailrelay_sync_sqs_trigger" {
+  event_source_arn                   = var.mailrelay_sync_sqs_queue_arn
+  function_name                      = aws_lambda_function.functions["process_mailrelay_sync"].arn
+  batch_size                         = 1
+  enabled                            = true
+  function_response_types            = ["ReportBatchItemFailures"]
+  maximum_batching_window_in_seconds = 0
+}
+
+resource "aws_lambda_event_source_mapping" "whatsapp_sync_sqs_trigger" {
+  event_source_arn                   = var.whatsapp_sync_sqs_queue_arn
+  function_name                      = aws_lambda_function.functions["process_whatsapp_sync"].arn
+  batch_size                         = 1
+  enabled                            = var.whatsapp_sync_sqs_queue_arn != ""
+  function_response_types            = ["ReportBatchItemFailures"]
+  maximum_batching_window_in_seconds = 0
+}
+
+resource "aws_cloudwatch_event_rule" "imap_poll" {
+  name                = "${var.project}-${var.environment}-imap-poll"
+  description         = "Poll active IMAP mailboxes for inbound email"
+  schedule_expression = "rate(${var.imap_poll_rate_minutes} minutes)"
+  tags                = var.tags
+}
+
+resource "aws_cloudwatch_event_target" "imap_poll" {
+  rule      = aws_cloudwatch_event_rule.imap_poll.name
+  target_id = "poll-imap-inbound"
+  arn       = aws_lambda_function.functions["poll_imap_inbound"].arn
+}
+
+resource "aws_lambda_permission" "imap_poll" {
+  statement_id  = "AllowEventBridgeImapPoll"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.functions["poll_imap_inbound"].function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.imap_poll.arn
 }
 
 resource "aws_cloudwatch_log_group" "lambda_logs" {

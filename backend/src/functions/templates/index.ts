@@ -25,6 +25,7 @@ import {
 } from "../../lib/whatsapp/client.js";
 import type { SendTemplateOptions } from "../../lib/whatsapp/client.js";
 import { resolveRequestAuth, assertMemberRole } from "../../lib/auth/cognito.js";
+import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import {
   sendTemplateApprovedEmail,
   sendTemplateCreatedEmail,
@@ -215,6 +216,7 @@ export async function handler(
   try {
     const auth = await resolveRequestAuth(event);
     assertMemberRole(auth);
+    await assertAssignedServices(auth.tenantId, "templates");
     const method = event.requestContext.http.method;
     const templateName = event.pathParameters?.name;
     const params = event.queryStringParameters ?? {};

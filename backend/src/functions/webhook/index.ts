@@ -1,8 +1,11 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
+import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { randomUUID } from "crypto";
 import { validateWebhookSignature } from "../../lib/whatsapp/client.js";
 import { isProcessableInboundMessage } from "../../lib/whatsapp/inbound.js";
 import { normalizeWhatsAppContact } from "../../lib/whatsapp/contact.js";
+import { enqueueWhatsAppSync } from "../../lib/whatsapp/coexistence/sync-queue.js";
 import { isProcessableInstagramMessage } from "../../lib/instagram/inbound.js";
 import { isProcessableMessengerMessage } from "../../lib/messenger/inbound.js";
 import { getBotByPhoneNumberId } from "../../lib/dynamodb/bot.repository.js";
@@ -29,8 +32,11 @@ import type {
 } from "../../types/index.js";
 
 const sqs = new SQSClient({});
+const s3 = new S3Client({});
 const QUEUE_URL = process.env.SQS_QUEUE_URL ?? "";
 const CALL_QUEUE_URL = process.env.CALL_EVENTS_QUEUE_URL ?? "";
+const WHATSAPP_SYNC_QUEUE_URL = process.env.WHATSAPP_SYNC_QUEUE_URL ?? "";
+const MEDIA_BUCKET = process.env.MEDIA_BUCKET ?? "";
 const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN ?? "";
 const APP_SECRET = process.env.WHATSAPP_APP_SECRET ?? "";
 
@@ -203,11 +209,119 @@ async function handleMessengerWebhook(payload: InstagramWebhookEvent): Promise<v
   await Promise.all(sqsPromises);
 }
 
+async function handleCoexistenceChange(
+  wabaId: string,
+  change: WhatsAppWebhookEvent["entry"][number]["changes"][number]
+): Promise<void> {
+  if (!WHATSAPP_SYNC_QUEUE_URL) {
+    console.warn("WHATSAPP_SYNC_QUEUE_URL not configured; skipping coexistence webhook");
+    return;
+  }
+
+  const value = change.value as unknown as Record<string, unknown>;
+  const metadata = value.metadata as
+    | { phone_number_id?: string; display_phone_number?: string }
+    | undefined;
+  const phoneNumberId = metadata?.phone_number_id;
+
+  if (change.field === "account_update") {
+    await enqueueWhatsAppSync(WHATSAPP_SYNC_QUEUE_URL, {
+      jobType: "account_update",
+      dedupeKey: `account-update-${wabaId}-${Date.now()}`,
+      payload: {
+        wabaId,
+        value,
+      },
+    });
+    return;
+  }
+
+  if (!phoneNumberId) return;
+
+  if (change.field === "smb_message_echoes") {
+    const echoes = value.message_echoes as unknown[] | undefined;
+    if (!echoes?.length) return;
+    await enqueueWhatsAppSync(WHATSAPP_SYNC_QUEUE_URL, {
+      jobType: "echo_batch",
+      phoneNumberId,
+      dedupeKey: `echo-${phoneNumberId}-${echoes[0] && (echoes[0] as { id?: string }).id}`,
+      payload: { echoes },
+    });
+    return;
+  }
+
+  if (change.field === "smb_app_state_sync") {
+    const stateSync = value.state_sync as unknown[] | undefined;
+    if (!stateSync?.length) return;
+    await enqueueWhatsAppSync(WHATSAPP_SYNC_QUEUE_URL, {
+      jobType: "contact_batch",
+      phoneNumberId,
+      dedupeKey: `contacts-${phoneNumberId}-${Date.now()}`,
+      payload: { stateSync },
+    });
+    return;
+  }
+
+  if (change.field === "history") {
+    const history = value.history as unknown[] | undefined;
+    const rawPayload = {
+      history,
+      metadata,
+      businessPhone: metadata?.display_phone_number,
+    };
+    const serialized = JSON.stringify(rawPayload);
+    const chunkMeta = (history?.[0] as { metadata?: { phase?: number; chunk_order?: number; progress?: number } })
+      ?.metadata;
+    const dedupeKey = `history-${phoneNumberId}-${chunkMeta?.phase ?? 0}-${chunkMeta?.chunk_order ?? 0}`;
+
+    if (serialized.length > 200_000 && MEDIA_BUCKET) {
+      const s3Key = `coexistence/webhooks/${phoneNumberId}/${randomUUID()}.json`;
+      await s3.send(
+        new PutObjectCommand({
+          Bucket: MEDIA_BUCKET,
+          Key: s3Key,
+          Body: serialized,
+          ContentType: "application/json",
+        })
+      );
+      await enqueueWhatsAppSync(WHATSAPP_SYNC_QUEUE_URL, {
+        jobType: "history_chunk",
+        phoneNumberId,
+        s3Key,
+        dedupeKey,
+        payload: {
+          businessPhone: metadata?.display_phone_number,
+          progress: chunkMeta?.progress,
+          phase: chunkMeta?.phase,
+        },
+      });
+      return;
+    }
+
+    await enqueueWhatsAppSync(WHATSAPP_SYNC_QUEUE_URL, {
+      jobType: "history_chunk",
+      phoneNumberId,
+      dedupeKey,
+      payload: rawPayload,
+    });
+  }
+}
+
 async function handleWhatsAppWebhook(payload: WhatsAppWebhookEvent): Promise<void> {
   const sqsPromises: Promise<unknown>[] = [];
 
   for (const entry of payload.entry) {
     for (const change of entry.changes) {
+      if (
+        change.field === "history" ||
+        change.field === "smb_app_state_sync" ||
+        change.field === "smb_message_echoes" ||
+        change.field === "account_update"
+      ) {
+        sqsPromises.push(handleCoexistenceChange(entry.id, change));
+        continue;
+      }
+
       if (change.field === "calls") {
         if (!CALL_QUEUE_URL) continue;
 

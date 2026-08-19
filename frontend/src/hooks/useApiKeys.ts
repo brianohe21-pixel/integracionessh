@@ -57,7 +57,7 @@ export function useCreateApiKey() {
   return useMutation<
     ApiKeyWithSecret,
     Error,
-    { name: string; botId: string }
+    { name: string; botId: string; scopes?: string[] }
   >({
     mutationFn: (payload) => api.post<ApiKeyWithSecret>("/api-keys", payload),
     onSuccess: () => {
@@ -71,7 +71,7 @@ export function useUpdateApiKey() {
   return useMutation<
     ApiKey,
     Error,
-    { keyId: string; name?: string; enabled?: boolean }
+    { keyId: string; name?: string; enabled?: boolean; scopes?: string[] }
   >({
     mutationFn: ({ keyId, ...payload }) => api.patch<ApiKey>(`/api-keys/${keyId}`, payload),
     onSuccess: () => {

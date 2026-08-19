@@ -1,6 +1,7 @@
 import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
 import { z } from "zod";
 import { resolveRequestAuth, assertMemberRole } from "../../lib/auth/cognito.js";
+import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import { assertCanEnableCatalog, assertCanAddProduct } from "../../lib/billing/assert-plan.js";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
 import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
@@ -91,6 +92,7 @@ export async function handler(
   try {
     const auth = await resolveRequestAuth(event);
     assertMemberRole(auth);
+    await assertAssignedServices(auth.tenantId, "apps");
     const method = event.requestContext.http.method;
     const rawPath = event.rawPath ?? event.requestContext.http.path;
     const botId = event.pathParameters?.botId;

@@ -79,9 +79,9 @@ export function DashboardOperationalStatus({
 
   return (
     <div className="content-card overflow-hidden">
-      <div className="border-b border-subtle px-4 py-4 sm:px-6">
-        <h2 className="text-sm font-semibold text-primary">{t("dashboard.opsTitle")}</h2>
-        <p className="mt-0.5 text-xs text-secondary">{t("dashboard.opsSubtitle")}</p>
+      <div className="section-header">
+        <h2 className="section-header-title">{t("dashboard.opsTitle")}</h2>
+        <p className="section-header-subtitle">{t("dashboard.opsSubtitle")}</p>
       </div>
       <div className="divide-y divide-subtle">
         {items.map((item) => {

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -9,7 +10,8 @@ import { useFormatters } from "@/hooks/useFormatters";
 import { useT } from "@/i18n/context";
 import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
 import { ThemeSwitcher } from "@/components/theme/ThemeSwitcher";
-import { OpenAIKeyCard } from "@/components/settings/OpenAIKeyCard";
+import { ProviderCredentialsSection } from "@/components/settings/ProviderCredentialCard";
+import { ChangePasswordCard } from "@/components/settings/ChangePasswordCard";
 import { InboxSlaCard } from "@/components/settings/InboxSlaCard";
 import { ScheduledReportsCard } from "@/components/settings/ScheduledReportsCard";
 import { BrandingSettingsCard } from "@/components/branding/BrandingSettingsCard";
@@ -33,11 +35,24 @@ type SettingsTab = "general" | "branding" | "integrations" | "apiKeys";
 
 export default function SettingsPage() {
   const t = useT();
+  const searchParams = useSearchParams();
   const { formatDate, planLabel } = useFormatters();
   const [tab, setTab] = useState<SettingsTab>("general");
   const [webhookCopied, setWebhookCopied] = useState(false);
   const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
   const webhookUrl = `${apiUrl}/webhook`;
+
+  useEffect(() => {
+    const requested = searchParams.get("tab");
+    if (
+      requested === "general" ||
+      requested === "branding" ||
+      requested === "integrations" ||
+      requested === "apiKeys"
+    ) {
+      setTab(requested);
+    }
+  }, [searchParams]);
 
   const { data: tenant } = useQuery({
     queryKey: ["tenant"],
@@ -158,6 +173,8 @@ export default function SettingsPage() {
                 </div>
               )}
             </div>
+
+            <ChangePasswordCard />
           </>
         )}
 
@@ -238,7 +255,7 @@ export default function SettingsPage() {
                 <Badge variant="success">{t("settings.configured")}</Badge>
               </div>
 
-              <OpenAIKeyCard />
+              <ProviderCredentialsSection />
             </div>
           </div>
         )}

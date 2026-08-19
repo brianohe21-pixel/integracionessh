@@ -17,9 +17,9 @@ export function PageHeader({ title, subtitle, actions, className }: PageHeaderPr
       )}
     >
       <div className="min-w-0 flex items-start gap-3">
-        <div className="mt-1.5 hidden h-8 w-1 shrink-0 rounded-full bg-accent sm:block" />
+        <div className="mt-1 hidden h-9 w-1 shrink-0 rounded-full bg-gradient-to-b from-accent to-brand-primary sm:block" />
         <div className="min-w-0">
-          <h1 className="text-xl font-bold tracking-tight text-primary sm:text-2xl">{title}</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-primary sm:text-[1.75rem]">{title}</h1>
           {subtitle ? (
             <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-secondary">{subtitle}</p>
           ) : null}

@@ -22,7 +22,6 @@ import { countActiveLiveKitCallsForTenant } from "../dynamodb/livekit-call.repos
 import { getTenant } from "../dynamodb/tenant.repository.js";
 import type { Tenant, Channel } from "../../types/index.js";
 import {
-  getPlanLimits,
   getEffectivePlanLimits,
   isUnlimited,
   PlanLimitError,
@@ -40,7 +39,7 @@ export function assertCanUseCopilot(tenant: Tenant): void {
 }
 
 export async function assertCanCreateBot(tenant: Tenant): Promise<void> {
-  const limits = getPlanLimits(tenant.plan);
+  const limits = getEffectivePlanLimits(tenant);
   if (isUnlimited(limits.maxActiveBots)) return;
 
   const bots = await listBots(tenant.tenantId);
@@ -58,7 +57,7 @@ export async function assertCanSendMessages(
   additionalMessages = 1
 ): Promise<void> {
   assertSubscriptionAllowsSending(tenant);
-  const limits = getPlanLimits(tenant.plan);
+  const limits = getEffectivePlanLimits(tenant);
   const usage = await getMonthlyUsage(tenant.tenantId);
   if (usage.messagesCount + additionalMessages > limits.maxMessagesPerMonth) {
     throw new PlanLimitError(
@@ -70,7 +69,7 @@ export async function assertCanSendMessages(
 
 export async function assertBulkRecipients(tenant: Tenant, count: number): Promise<void> {
   assertSubscriptionAllowsSending(tenant);
-  const limits = getPlanLimits(tenant.plan);
+  const limits = getEffectivePlanLimits(tenant);
   if (count > limits.maxBulkRecipientsPerJob) {
     throw new PlanLimitError(
       "PLAN_LIMIT_BULK",
@@ -84,7 +83,7 @@ export async function assertBulkRecipients(tenant: Tenant, count: number): Promi
 }
 
 export async function assertCanAddContacts(tenant: Tenant, totalAfter: number): Promise<void> {
-  const limits = getPlanLimits(tenant.plan);
+  const limits = getEffectivePlanLimits(tenant);
   if (isUnlimited(limits.maxContacts)) return;
   if (totalAfter > limits.maxContacts) {
     throw new PlanLimitError(
@@ -95,7 +94,7 @@ export async function assertCanAddContacts(tenant: Tenant, totalAfter: number): 
 }
 
 export async function assertCanCreateAutomation(tenant: Tenant, botId: string): Promise<void> {
-  const limits = getPlanLimits(tenant.plan);
+  const limits = getEffectivePlanLimits(tenant);
   if (isUnlimited(limits.maxAutomationsPerBot)) return;
 
   const count = await countAutomationsForBot(tenant.tenantId, botId);
@@ -108,7 +107,7 @@ export async function assertCanCreateAutomation(tenant: Tenant, botId: string): 
 }
 
 export async function assertCanEnableScheduledAutomation(tenant: Tenant): Promise<void> {
-  const limits = getPlanLimits(tenant.plan);
+  const limits = getEffectivePlanLimits(tenant);
   if (isUnlimited(limits.maxScheduledAutomations)) return;
 
   const count = await countScheduledAutomations(tenant.tenantId);
@@ -126,7 +125,7 @@ export async function assertCanAddKnowledgeDocument(
   additionalBytes: number
 ): Promise<void> {
   assertCanEnableKnowledge(tenant);
-  const limits = getPlanLimits(tenant.plan);
+  const limits = getEffectivePlanLimits(tenant);
   const docCount = await countDocumentsForBot(tenant.tenantId, botId);
   if (docCount >= limits.maxDocumentsPerBot) {
     throw new PlanLimitError(
@@ -146,7 +145,7 @@ export async function assertCanAddKnowledgeDocument(
 }
 
 export async function assertCanCreateMetaFlow(tenant: Tenant, botId: string): Promise<void> {
-  const limits = getPlanLimits(tenant.plan);
+  const limits = getEffectivePlanLimits(tenant);
   if (isUnlimited(limits.maxMetaFlowsPerBot)) return;
 
   const count = await countMetaFlowsForBot(tenant.tenantId, botId);
@@ -163,7 +162,7 @@ export async function assertCanCreateVisualFlow(
   botId: string,
   nodeCount: number
 ): Promise<void> {
-  const limits = getPlanLimits(tenant.plan);
+  const limits = getEffectivePlanLimits(tenant);
   if (nodeCount > limits.maxFlowNodes) {
     throw new PlanLimitError(
       "PLAN_LIMIT_FLOW_NODES",
@@ -182,7 +181,7 @@ export async function assertCanCreateVisualFlow(
 }
 
 export async function assertCanEnableVisualFlow(tenant: Tenant): Promise<void> {
-  const limits = getPlanLimits(tenant.plan);
+  const limits = getEffectivePlanLimits(tenant);
   if (isUnlimited(limits.maxActiveFlowRuns)) return;
 
   const count = await countActiveFlowRuns(tenant.tenantId);
@@ -196,7 +195,7 @@ export async function assertCanEnableVisualFlow(tenant: Tenant): Promise<void> {
 
 export async function assertCanStartCampaign(tenant: Tenant): Promise<void> {
   assertSubscriptionAllowsSending(tenant);
-  const limits = getPlanLimits(tenant.plan);
+  const limits = getEffectivePlanLimits(tenant);
   if (isUnlimited(limits.maxActiveCampaigns)) return;
 
   const campaigns = await listCampaigns(tenant.tenantId);
@@ -212,7 +211,7 @@ export async function assertCanStartCampaign(tenant: Tenant): Promise<void> {
 }
 
 export async function assertCanStartLiveKitCall(tenant: Tenant): Promise<void> {
-  const limits = getPlanLimits(tenant.plan);
+  const limits = getEffectivePlanLimits(tenant);
   if (limits.maxConcurrentLiveKitCalls <= 0) {
     throw new PlanLimitError(
       "PLAN_LIMIT_LIVEKIT",
@@ -256,7 +255,7 @@ export async function assertCanCustomizeBrandingAsync(tenant: Tenant): Promise<v
 }
 
 export async function assertCanUseWebChat(tenant: Tenant): Promise<void> {
-  const limits = getPlanLimits(tenant.plan);
+  const limits = getEffectivePlanLimits(tenant);
   if (limits.maxActiveWebChatSessions <= 0) {
     throw new PlanLimitError(
       "PLAN_LIMIT_WEBCHAT",
@@ -266,7 +265,7 @@ export async function assertCanUseWebChat(tenant: Tenant): Promise<void> {
 }
 
 export async function assertCanUseVoicebot(tenant: Tenant): Promise<void> {
-  const limits = getPlanLimits(tenant.plan);
+  const limits = getEffectivePlanLimits(tenant);
   if (limits.maxVoicebotMinutesPerMonth <= 0) {
     throw new PlanLimitError(
       "PLAN_LIMIT_VOICEBOT",
@@ -277,7 +276,7 @@ export async function assertCanUseVoicebot(tenant: Tenant): Promise<void> {
 
 export async function assertCanStartVoicebotSession(tenant: Tenant): Promise<void> {
   await assertCanUseVoicebot(tenant);
-  const limits = getPlanLimits(tenant.plan);
+  const limits = getEffectivePlanLimits(tenant);
   const usage = await getMonthlyUsage(tenant.tenantId);
   const usedMinutes = usage.voicebotMinutesCount ?? 0;
   if (usedMinutes >= limits.maxVoicebotMinutesPerMonth) {
@@ -297,6 +296,7 @@ export function countEnabledChannels(bot: import("../../types/index.js").Bot): n
   if (bot.smsEnabled) enabled += 1;
   if (bot.emailEnabled) enabled += 1;
   if (bot.voicebotEnabled) enabled += 1;
+  if (bot.telephonyEnabled) enabled += 1;
   return enabled;
 }
 
@@ -311,6 +311,7 @@ function isChannelAlreadyEnabled(
   if (channel === "sms") return Boolean(bot.smsEnabled);
   if (channel === "email") return Boolean(bot.emailEnabled);
   if (channel === "voicebot") return Boolean(bot.voicebotEnabled);
+  if (channel === "phone") return Boolean(bot.telephonyEnabled);
   return false;
 }
 
@@ -322,14 +323,7 @@ export async function assertCanEnableChannel(
   if (channel === "whatsapp") return;
   if (isChannelAlreadyEnabled(bot, channel)) return;
 
-  const limits = getPlanLimits(tenant.plan);
-  if (tenant.plan === "free") {
-    throw new PlanLimitError(
-      "PLAN_LIMIT_CHANNEL",
-      "Additional channels require Pro plan or higher"
-    );
-  }
-
+  const limits = getEffectivePlanLimits(tenant);
   const enabled = countEnabledChannels(bot) + 1;
 
   if (enabled > limits.maxChannelsPerBot) {
@@ -341,7 +335,7 @@ export async function assertCanEnableChannel(
 }
 
 export async function assertCanEnableCalendar(tenant: Tenant, botId?: string): Promise<void> {
-  const limits = getPlanLimits(tenant.plan);
+  const limits = getEffectivePlanLimits(tenant);
   if (isUnlimited(limits.maxCalendarAppsPerTenant)) return;
 
   const configs = await listEnabledCalendarsForTenant(tenant.tenantId);
@@ -357,7 +351,7 @@ export async function assertCanEnableCalendar(tenant: Tenant, botId?: string): P
 }
 
 export async function assertCanEnablePayments(tenant: Tenant, botId?: string): Promise<void> {
-  const limits = getPlanLimits(tenant.plan);
+  const limits = getEffectivePlanLimits(tenant);
   if (isUnlimited(limits.maxPaymentsAppsPerTenant)) return;
 
   const configs = await listEnabledPaymentsForTenant(tenant.tenantId);
@@ -373,7 +367,7 @@ export async function assertCanEnablePayments(tenant: Tenant, botId?: string): P
 }
 
 export async function assertCanEnableCatalog(tenant: Tenant, botId?: string): Promise<void> {
-  const limits = getPlanLimits(tenant.plan);
+  const limits = getEffectivePlanLimits(tenant);
   if (isUnlimited(limits.maxCatalogAppsPerTenant)) return;
 
   const configs = await listEnabledCatalogsForTenant(tenant.tenantId);
@@ -389,7 +383,7 @@ export async function assertCanEnableCatalog(tenant: Tenant, botId?: string): Pr
 }
 
 export async function assertCanAddProduct(tenant: Tenant, botId: string): Promise<void> {
-  const limits = getPlanLimits(tenant.plan);
+  const limits = getEffectivePlanLimits(tenant);
   if (isUnlimited(limits.maxProductsPerBot)) return;
 
   const count = await countProducts(tenant.tenantId, botId);
@@ -402,7 +396,7 @@ export async function assertCanAddProduct(tenant: Tenant, botId: string): Promis
 }
 
 export async function assertCanCreateOrder(tenant: Tenant): Promise<void> {
-  const limits = getPlanLimits(tenant.plan);
+  const limits = getEffectivePlanLimits(tenant);
   if (isUnlimited(limits.maxOrdersPerMonth)) return;
 
   const count = await countOrdersThisMonth(tenant.tenantId);

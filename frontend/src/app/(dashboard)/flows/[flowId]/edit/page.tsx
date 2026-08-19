@@ -10,6 +10,7 @@ import { NodePalette } from "@/components/flows/NodePalette";
 import { NodePropertiesPanel } from "@/components/flows/NodePropertiesPanel";
 import { FlowEditorToolbar } from "@/components/flows/FlowEditorToolbar";
 import { FlowWebhookPanel } from "@/components/flows/FlowWebhookPanel";
+import { FlowSecretsPanel } from "@/components/flows/FlowSecretsPanel";
 import { FlowRunsPanel } from "@/components/flows/FlowRunsPanel";
 
 const FlowCanvas = dynamic(
@@ -37,6 +38,8 @@ export default function EditFlowPage() {
   const selected = localNodes.find((n) => n.id === selectedNodeId);
   const triggerNode = localNodes.find((n) => n.type === "trigger");
   const isFormFlow = triggerNode?.data.triggerType === "web_form_submitted";
+  const isVoiceFlow =
+    flow?.flowKind === "voice_ai" || triggerNode?.data.triggerType === "voice_call";
   const samplePayload = triggerNode?.data.formSamplePayload;
   const triggerCount = localNodes.filter((n) => n.type === "trigger").length;
   const canDeleteSelected =
@@ -170,10 +173,16 @@ export default function EditFlowPage() {
         </div>
 
         <aside className="hidden w-60 flex-shrink-0 overflow-y-auto border-l border-default bg-surface-elevated p-3 lg:block xl:w-64 space-y-4">
+          <FlowSecretsPanel
+            flowId={flow.flowId}
+            isVoiceFlow={isVoiceFlow}
+            nodes={localNodes.length > 0 ? localNodes : flow.nodes}
+          />
           <FlowWebhookPanel flowId={flow.flowId} isFormFlow={isFormFlow} />
           <NodePropertiesPanel
             selected={selected}
             botId={flow.botId}
+            isVoiceFlow={isVoiceFlow}
             samplePayload={samplePayload}
             onUpdate={updateSelectedData}
             onDelete={deleteSelectedNode}

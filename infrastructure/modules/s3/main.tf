@@ -36,6 +36,19 @@ resource "aws_s3_bucket_lifecycle_configuration" "media" {
       days = 90
     }
   }
+
+  rule {
+    id     = "expire-coexistence-webhook-payloads"
+    status = "Enabled"
+
+    filter {
+      prefix = "coexistence/"
+    }
+
+    expiration {
+      days = 7
+    }
+  }
 }
 
 resource "aws_s3_bucket_cors_configuration" "media" {

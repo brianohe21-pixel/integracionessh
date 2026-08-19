@@ -351,3 +351,139 @@ resource "aws_sqs_queue_policy" "call_events" {
     ]
   })
 }
+
+resource "aws_sqs_queue" "telephony_cdr_dlq" {
+  name                        = "${var.project}-${var.environment}-telephony-cdr-dlq.fifo"
+  fifo_queue                  = true
+  content_based_deduplication = true
+  message_retention_seconds   = 1209600
+  tags                        = var.tags
+}
+
+resource "aws_sqs_queue" "telephony_cdr" {
+  name                        = "${var.project}-${var.environment}-telephony-cdr.fifo"
+  fifo_queue                  = true
+  content_based_deduplication = true
+  delay_seconds               = 30
+  visibility_timeout_seconds  = 120
+  message_retention_seconds   = 86400
+
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.telephony_cdr_dlq.arn
+    maxReceiveCount     = 3
+  })
+
+  tags = var.tags
+}
+
+resource "aws_sqs_queue_policy" "telephony_cdr" {
+  queue_url = aws_sqs_queue.telephony_cdr.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect    = "Allow"
+        Principal = { AWS = var.lambda_role_arns }
+        Action    = ["sqs:SendMessage", "sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes"]
+        Resource  = aws_sqs_queue.telephony_cdr.arn
+      }
+    ]
+  })
+}
+
+resource "aws_sqs_queue" "mailrelay_sync_dlq" {
+  name                        = "${var.project}-${var.environment}-mailrelay-sync-dlq.fifo"
+  fifo_queue                  = true
+  content_based_deduplication = true
+  message_retention_seconds   = 1209600
+  tags                        = var.tags
+}
+
+resource "aws_sqs_queue" "mailrelay_sync" {
+  name                        = "${var.project}-${var.environment}-mailrelay-sync.fifo"
+  fifo_queue                  = true
+  content_based_deduplication = true
+  visibility_timeout_seconds  = 300
+  message_retention_seconds   = 86400
+
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.mailrelay_sync_dlq.arn
+    maxReceiveCount     = 3
+  })
+
+  tags = var.tags
+}
+
+resource "aws_sqs_queue_redrive_allow_policy" "mailrelay_sync_dlq" {
+  queue_url = aws_sqs_queue.mailrelay_sync_dlq.id
+
+  redrive_allow_policy = jsonencode({
+    redrivePermission = "byQueue"
+    sourceQueueArns   = [aws_sqs_queue.mailrelay_sync.arn]
+  })
+}
+
+resource "aws_sqs_queue_policy" "mailrelay_sync" {
+  queue_url = aws_sqs_queue.mailrelay_sync.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect    = "Allow"
+        Principal = { AWS = var.lambda_role_arns }
+        Action    = ["sqs:SendMessage", "sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes"]
+        Resource  = aws_sqs_queue.mailrelay_sync.arn
+      }
+    ]
+  })
+}
+
+resource "aws_sqs_queue" "whatsapp_sync_dlq" {
+  name                        = "${var.project}-${var.environment}-whatsapp-sync-dlq.fifo"
+  fifo_queue                  = true
+  content_based_deduplication = true
+  message_retention_seconds   = 1209600
+  tags                        = var.tags
+}
+
+resource "aws_sqs_queue" "whatsapp_sync" {
+  name                        = "${var.project}-${var.environment}-whatsapp-sync.fifo"
+  fifo_queue                  = true
+  content_based_deduplication = true
+  visibility_timeout_seconds  = 300
+  message_retention_seconds   = 86400
+
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.whatsapp_sync_dlq.arn
+    maxReceiveCount     = 3
+  })
+
+  tags = var.tags
+}
+
+resource "aws_sqs_queue_redrive_allow_policy" "whatsapp_sync_dlq" {
+  queue_url = aws_sqs_queue.whatsapp_sync_dlq.id
+
+  redrive_allow_policy = jsonencode({
+    redrivePermission = "byQueue"
+    sourceQueueArns   = [aws_sqs_queue.whatsapp_sync.arn]
+  })
+}
+
+resource "aws_sqs_queue_policy" "whatsapp_sync" {
+  queue_url = aws_sqs_queue.whatsapp_sync.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect    = "Allow"
+        Principal = { AWS = var.lambda_role_arns }
+        Action    = ["sqs:SendMessage", "sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes"]
+        Resource  = aws_sqs_queue.whatsapp_sync.arn
+      }
+    ]
+  })
+}

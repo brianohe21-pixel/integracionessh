@@ -18,6 +18,10 @@ output "sqs_queue_url" {
   value = module.sqs.queue_url
 }
 
+output "mailrelay_sync_queue_url" {
+  value = module.sqs.mailrelay_sync_queue_url
+}
+
 output "media_bucket_name" {
   value = module.s3.media_bucket_name
 }

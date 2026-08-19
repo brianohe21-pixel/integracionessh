@@ -51,6 +51,10 @@ resource "aws_amplify_app" "frontend" {
     NODE_VERSION                               = "20"
   }
 
+  lifecycle {
+    ignore_changes = [access_token]
+  }
+
   tags = var.tags
 }
 

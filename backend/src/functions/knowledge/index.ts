@@ -3,6 +3,7 @@ import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
 import { randomUUID } from "crypto";
 import { z } from "zod";
 import { resolveRequestAuth, assertMemberRole } from "../../lib/auth/cognito.js";
+import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
 import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
 import { assertCanAddKnowledgeDocument } from "../../lib/billing/assert-plan.js";
@@ -14,6 +15,8 @@ import {
   makeDocId,
 } from "../../lib/dynamodb/knowledge.repository.js";
 import { buildKnowledgeS3Key, getPresignedUploadUrl, deleteObject } from "../../lib/s3/client.js";
+import { assertKnowledgeManagementAllowed } from "../../lib/ai-assistant/config.js";
+import { isAllowedKnowledgeFilename } from "../../lib/knowledge/extract-text.js";
 import { ok, created, badRequest, notFound, noContent, handleError } from "../../lib/http.js";
 
 const sqs = new SQSClient({});
@@ -31,6 +34,7 @@ export async function handler(
   try {
     const auth = await resolveRequestAuth(event);
     assertMemberRole(auth);
+    await assertAssignedServices(auth.tenantId, "bots");
 
     const method = event.requestContext.http.method;
     const rawPath = event.rawPath ?? "";
@@ -42,6 +46,10 @@ export async function handler(
     const bot = await getBot(auth.tenantId, botId);
     if (!bot) return notFound("Bot not found");
 
+    if (method !== "GET") {
+      assertKnowledgeManagementAllowed(bot);
+    }
+
     if (method === "GET" && rawPath.endsWith("/knowledge") && !docId) {
       const documents = await listDocuments(auth.tenantId, botId);
       return ok({ documents });
@@ -49,6 +57,9 @@ export async function handler(
 
     if (method === "POST" && rawPath.endsWith("/upload-url")) {
       const body = UploadUrlSchema.parse(JSON.parse(event.body ?? "{}"));
+      if (!isAllowedKnowledgeFilename(body.filename)) {
+        return badRequest("Unsupported knowledge file type");
+      }
       const tenant = await getTenant(auth.tenantId);
       if (tenant) {
         await assertCanAddKnowledgeDocument(tenant, botId, body.sizeBytes);

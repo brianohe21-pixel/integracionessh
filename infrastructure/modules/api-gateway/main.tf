@@ -53,7 +53,103 @@ resource "aws_apigatewayv2_authorizer" "jwt" {
 }
 
 locals {
-  routes = {
+  lambda_functions = {
+    webhook            = var.webhook_function_arn
+    tenants            = var.tenants_function_arn
+    reseller           = var.reseller_function_arn
+    bots               = var.bots_function_arn
+    conversations      = var.conversations_function_arn
+    advisors           = var.advisors_function_arn
+    contacts           = var.contacts_function_arn
+    leads              = var.leads_function_arn
+    templates          = var.templates_function_arn
+    bulk_send          = var.bulk_send_function_arn
+    metrics            = var.metrics_function_arn
+    whatsapp_connect   = var.whatsapp_connect_function_arn
+    instagram_connect  = var.instagram_connect_function_arn
+    telegram_connect   = var.telegram_connect_function_arn
+    telegram_webhook   = var.telegram_webhook_function_arn
+    messenger_connect  = var.messenger_connect_function_arn
+    sms_webhook        = var.sms_webhook_function_arn
+    email_inbound      = var.email_inbound_function_arn
+    email_imap_connect = var.email_imap_connect_function_arn
+    webchat            = var.webchat_function_arn
+    voicebot           = var.voicebot_function_arn
+    campaigns          = var.campaigns_function_arn
+    support_tickets    = var.support_tickets_function_arn
+    billing            = var.billing_function_arn
+    admin              = var.admin_function_arn
+    public_api         = var.public_api_function_arn
+    api_keys           = var.api_keys_function_arn
+    integrations       = var.integrations_function_arn
+    automations        = var.automations_function_arn
+    knowledge          = var.knowledge_function_arn
+    macros             = var.macros_function_arn
+    meta_flows         = var.meta_flows_function_arn
+    flows              = var.flows_function_arn
+    flow_hooks         = var.flow_hooks_function_arn
+    calling            = var.calling_function_arn
+    telephony          = var.telephony_function_arn
+    realtime           = var.realtime_function_arn
+    calendar           = var.calendar_function_arn
+    public_calendar    = var.public_calendar_function_arn
+    payments           = var.payments_function_arn
+    catalog            = var.catalog_function_arn
+    mailrelay          = var.mailrelay_function_arn
+    mailrelay_webhook  = var.mailrelay_webhook_function_arn
+  }
+
+  http_proxy_groups = {
+    public_api = {
+      path         = "/v1/{proxy+}"
+      methods      = ["GET", "POST", "PUT", "DELETE"]
+      invoke_arn   = var.public_api_invoke_arn
+      function_arn = var.public_api_function_arn
+      protected    = false
+    }
+    bots_telephony = {
+      path         = "/bots/{botId}/telephony/{proxy+}"
+      methods      = ["GET", "POST", "PUT", "DELETE"]
+      invoke_arn   = var.telephony_invoke_arn
+      function_arn = var.telephony_function_arn
+      protected    = true
+    }
+    contact_center = {
+      path         = "/contact-center/{proxy+}"
+      methods      = ["GET", "POST", "PUT", "DELETE"]
+      invoke_arn   = var.telephony_invoke_arn
+      function_arn = var.telephony_function_arn
+      protected    = true
+    }
+    mailrelay = {
+      path         = "/email-marketing/{proxy+}"
+      methods      = ["GET", "POST", "PUT", "PATCH", "DELETE"]
+      invoke_arn   = var.mailrelay_invoke_arn
+      function_arn = var.mailrelay_function_arn
+      protected    = true
+    }
+  }
+
+  http_proxy_routes = {
+    for item in flatten([
+      for group_key, group in local.http_proxy_groups : [
+        for method in group.methods : {
+          key          = "${group_key}_proxy_${lower(method)}"
+          route_key    = "${method} ${group.path}"
+          invoke_arn   = group.invoke_arn
+          function_arn = group.function_arn
+          protected    = group.protected
+        }
+      ]
+      ]) : item.key => {
+      route_key    = item.route_key
+      invoke_arn   = item.invoke_arn
+      function_arn = item.function_arn
+      protected    = item.protected
+    }
+  }
+
+  explicit_routes = {
     webhook_verify = {
       route_key    = "GET /webhook"
       invoke_arn   = var.webhook_invoke_arn
@@ -426,6 +522,18 @@ locals {
       function_arn = var.conversations_function_arn
       protected    = true
     }
+    conversations_message_attachment = {
+      route_key    = "GET /conversations/{conversationId}/messages/{messageId}/attachments/{attachmentId}"
+      invoke_arn   = var.conversations_invoke_arn
+      function_arn = var.conversations_function_arn
+      protected    = true
+    }
+    conversations_message_html = {
+      route_key    = "GET /conversations/{conversationId}/messages/{messageId}/html"
+      invoke_arn   = var.conversations_invoke_arn
+      function_arn = var.conversations_function_arn
+      protected    = true
+    }
     conversations_calls_create = {
       route_key    = "POST /conversations/{conversationId}/calls"
       invoke_arn   = var.realtime_invoke_arn
@@ -474,6 +582,12 @@ locals {
       function_arn = var.whatsapp_connect_function_arn
       protected    = true
     }
+    whatsapp_connect_coexistence = {
+      route_key    = "POST /whatsapp/connect-coexistence"
+      invoke_arn   = var.whatsapp_connect_invoke_arn
+      function_arn = var.whatsapp_connect_function_arn
+      protected    = true
+    }
     instagram_connect = {
       route_key    = "POST /instagram/connect"
       invoke_arn   = var.instagram_connect_invoke_arn
@@ -515,6 +629,24 @@ locals {
       invoke_arn   = var.email_inbound_invoke_arn
       function_arn = var.email_inbound_function_arn
       protected    = false
+    }
+    email_imap_connect = {
+      route_key    = "POST /email/imap/connect"
+      invoke_arn   = var.email_imap_connect_invoke_arn
+      function_arn = var.email_imap_connect_function_arn
+      protected    = true
+    }
+    email_imap_test = {
+      route_key    = "POST /email/imap/test"
+      invoke_arn   = var.email_imap_connect_invoke_arn
+      function_arn = var.email_imap_connect_function_arn
+      protected    = true
+    }
+    email_imap_disconnect = {
+      route_key    = "DELETE /email/imap/connect"
+      invoke_arn   = var.email_imap_connect_invoke_arn
+      function_arn = var.email_imap_connect_function_arn
+      protected    = true
     }
     webchat_sessions_create = {
       route_key    = "POST /webchat/sessions"
@@ -584,6 +716,30 @@ locals {
     }
     bots_voicebot_rotate_key = {
       route_key    = "POST /bots/{botId}/voicebot/rotate-key"
+      invoke_arn   = var.bots_invoke_arn
+      function_arn = var.bots_function_arn
+      protected    = true
+    }
+    bots_ai_assistant_get = {
+      route_key    = "GET /bots/{botId}/ai-assistant"
+      invoke_arn   = var.bots_invoke_arn
+      function_arn = var.bots_function_arn
+      protected    = true
+    }
+    bots_ai_assistant_put = {
+      route_key    = "PUT /bots/{botId}/ai-assistant"
+      invoke_arn   = var.bots_invoke_arn
+      function_arn = var.bots_function_arn
+      protected    = true
+    }
+    bots_ai_assistant_enable = {
+      route_key    = "POST /bots/{botId}/ai-assistant/enable"
+      invoke_arn   = var.bots_invoke_arn
+      function_arn = var.bots_function_arn
+      protected    = true
+    }
+    bots_ai_assistant_disable = {
+      route_key    = "POST /bots/{botId}/ai-assistant/disable"
       invoke_arn   = var.bots_invoke_arn
       function_arn = var.bots_function_arn
       protected    = true
@@ -792,6 +948,12 @@ locals {
       function_arn = var.reseller_function_arn
       protected    = true
     }
+    reseller_domain_delete = {
+      route_key    = "DELETE /reseller/domain"
+      invoke_arn   = var.reseller_invoke_arn
+      function_arn = var.reseller_function_arn
+      protected    = true
+    }
     public_branding_by_host = {
       route_key    = "GET /public/branding-by-host"
       invoke_arn   = var.tenants_invoke_arn
@@ -876,20 +1038,20 @@ locals {
       function_arn = var.tenants_function_arn
       protected    = true
     }
-    tenants_openai_key_get = {
-      route_key    = "GET /tenants/me/openai-key"
+    tenants_provider_credentials_get = {
+      route_key    = "GET /tenants/me/provider-credentials"
       invoke_arn   = var.tenants_invoke_arn
       function_arn = var.tenants_function_arn
       protected    = true
     }
-    tenants_openai_key_save = {
-      route_key    = "PUT /tenants/me/openai-key"
+    tenants_provider_credentials_save = {
+      route_key    = "PUT /tenants/me/provider-credentials/{provider}"
       invoke_arn   = var.tenants_invoke_arn
       function_arn = var.tenants_function_arn
       protected    = true
     }
-    tenants_openai_key_delete = {
-      route_key    = "DELETE /tenants/me/openai-key"
+    tenants_provider_credentials_delete = {
+      route_key    = "DELETE /tenants/me/provider-credentials/{provider}"
       invoke_arn   = var.tenants_invoke_arn
       function_arn = var.tenants_function_arn
       protected    = true
@@ -948,78 +1110,6 @@ locals {
       function_arn = var.tenants_function_arn
       protected    = true
     }
-    public_api_messages = {
-      route_key    = "POST /v1/messages"
-      invoke_arn   = var.public_api_invoke_arn
-      function_arn = var.public_api_function_arn
-      protected    = false
-    }
-    public_api_templates_list = {
-      route_key    = "GET /v1/templates"
-      invoke_arn   = var.public_api_invoke_arn
-      function_arn = var.public_api_function_arn
-      protected    = false
-    }
-    public_api_templates_create = {
-      route_key    = "POST /v1/templates"
-      invoke_arn   = var.public_api_invoke_arn
-      function_arn = var.public_api_function_arn
-      protected    = false
-    }
-    public_api_templates_update = {
-      route_key    = "PUT /v1/templates/{name}"
-      invoke_arn   = var.public_api_invoke_arn
-      function_arn = var.public_api_function_arn
-      protected    = false
-    }
-    public_api_templates_delete = {
-      route_key    = "DELETE /v1/templates/{name}"
-      invoke_arn   = var.public_api_invoke_arn
-      function_arn = var.public_api_function_arn
-      protected    = false
-    }
-    public_api_calls_create = {
-      route_key    = "POST /v1/calls"
-      invoke_arn   = var.public_api_invoke_arn
-      function_arn = var.public_api_function_arn
-      protected    = false
-    }
-    public_api_calls_action = {
-      route_key    = "POST /v1/calls/{callId}"
-      invoke_arn   = var.public_api_invoke_arn
-      function_arn = var.public_api_function_arn
-      protected    = false
-    }
-    public_api_calls_get = {
-      route_key    = "GET /v1/calls/{callId}"
-      invoke_arn   = var.public_api_invoke_arn
-      function_arn = var.public_api_function_arn
-      protected    = false
-    }
-    public_api_calls_settings_get = {
-      route_key    = "GET /v1/calls/settings"
-      invoke_arn   = var.public_api_invoke_arn
-      function_arn = var.public_api_function_arn
-      protected    = false
-    }
-    public_api_calls_settings_put = {
-      route_key    = "PUT /v1/calls/settings"
-      invoke_arn   = var.public_api_invoke_arn
-      function_arn = var.public_api_function_arn
-      protected    = false
-    }
-    public_api_calls_permission = {
-      route_key    = "POST /v1/calls/permission-request"
-      invoke_arn   = var.public_api_invoke_arn
-      function_arn = var.public_api_function_arn
-      protected    = false
-    }
-    public_api_calls_permission_status = {
-      route_key    = "GET /v1/calls/permission/{userWaId}"
-      invoke_arn   = var.public_api_invoke_arn
-      function_arn = var.public_api_function_arn
-      protected    = false
-    }
     bots_calling_settings_get = {
       route_key    = "GET /bots/{botId}/calling/settings"
       invoke_arn   = var.calling_invoke_arn
@@ -1066,6 +1156,30 @@ locals {
       route_key    = "POST /bots/{botId}/calling/calls/{callId}/action"
       invoke_arn   = var.calling_invoke_arn
       function_arn = var.calling_function_arn
+      protected    = true
+    }
+    telephony_webhook = {
+      route_key    = "POST /telephony/webhook"
+      invoke_arn   = var.telephony_invoke_arn
+      function_arn = var.telephony_function_arn
+      protected    = false
+    }
+    telephony_webhook_tenant = {
+      route_key    = "POST /telephony/webhook/{credentialTenantId}"
+      invoke_arn   = var.telephony_invoke_arn
+      function_arn = var.telephony_function_arn
+      protected    = false
+    }
+    telephony_numbers = {
+      route_key    = "GET /telephony/numbers"
+      invoke_arn   = var.telephony_invoke_arn
+      function_arn = var.telephony_function_arn
+      protected    = true
+    }
+    telephony_voices = {
+      route_key    = "GET /telephony/voices"
+      invoke_arn   = var.telephony_invoke_arn
+      function_arn = var.telephony_function_arn
       protected    = true
     }
     api_keys_list = {
@@ -1644,6 +1758,30 @@ locals {
       function_arn = var.flows_function_arn
       protected    = true
     }
+    flows_template_taxi = {
+      route_key    = "POST /flows/templates/taxi-355-satelital"
+      invoke_arn   = var.flows_invoke_arn
+      function_arn = var.flows_function_arn
+      protected    = true
+    }
+    flows_secrets_get = {
+      route_key    = "GET /flows/{flowId}/secrets"
+      invoke_arn   = var.flows_invoke_arn
+      function_arn = var.flows_function_arn
+      protected    = true
+    }
+    flows_secrets_put = {
+      route_key    = "PUT /flows/{flowId}/secrets"
+      invoke_arn   = var.flows_invoke_arn
+      function_arn = var.flows_function_arn
+      protected    = true
+    }
+    flows_secrets_delete = {
+      route_key    = "DELETE /flows/{flowId}/secrets/{secretName}"
+      invoke_arn   = var.flows_invoke_arn
+      function_arn = var.flows_function_arn
+      protected    = true
+    }
     flow_runs_get = {
       route_key    = "GET /flow-runs/{runId}"
       invoke_arn   = var.flows_invoke_arn
@@ -1656,11 +1794,46 @@ locals {
       function_arn = var.flow_hooks_function_arn
       protected    = false
     }
+    mailrelay_webhook = {
+      route_key    = "POST /email-marketing/webhook"
+      invoke_arn   = var.mailrelay_webhook_invoke_arn
+      function_arn = var.mailrelay_webhook_function_arn
+      protected    = false
+    }
+    mailrelay_webhook_tenant = {
+      route_key    = "POST /email-marketing/webhook/{tenantId}"
+      invoke_arn   = var.mailrelay_webhook_invoke_arn
+      function_arn = var.mailrelay_webhook_function_arn
+      protected    = false
+    }
+  }
+
+  routes = merge(local.explicit_routes, local.http_proxy_routes)
+
+  function_integration_keys = {
+    for key, route in local.routes :
+    key => one([
+      for slug, function_arn in local.lambda_functions : slug
+      if function_arn == route.function_arn
+    ])
+  }
+
+  function_integration_ids = {
+    for slug in distinct(values(local.function_integration_keys)) :
+    slug => {
+      invoke_arn   = [for key, route in local.routes : route.invoke_arn if local.function_integration_keys[key] == slug][0]
+      function_arn = [for key, route in local.routes : route.function_arn if local.function_integration_keys[key] == slug][0]
+    }
+  }
+
+  route_integration_ids = {
+    for key, route in local.routes :
+    key => local.function_integration_keys[key]
   }
 }
 
 resource "aws_apigatewayv2_integration" "integrations" {
-  for_each = local.routes
+  for_each = local.function_integration_ids
 
   api_id                 = aws_apigatewayv2_api.main.id
   integration_type       = "AWS_PROXY"
@@ -1673,54 +1846,14 @@ resource "aws_apigatewayv2_route" "routes" {
 
   api_id    = aws_apigatewayv2_api.main.id
   route_key = each.value.route_key
-  target    = "integrations/${aws_apigatewayv2_integration.integrations[each.key].id}"
+  target    = "integrations/${aws_apigatewayv2_integration.integrations[local.route_integration_ids[each.key]].id}"
 
   authorization_type = each.value.protected ? "JWT" : "NONE"
   authorizer_id      = each.value.protected ? aws_apigatewayv2_authorizer.jwt.id : null
 }
 
 resource "aws_lambda_permission" "api_gw" {
-  for_each = {
-    webhook           = var.webhook_function_arn
-    tenants           = var.tenants_function_arn
-    reseller          = var.reseller_function_arn
-    bots              = var.bots_function_arn
-    conversations     = var.conversations_function_arn
-    advisors          = var.advisors_function_arn
-    contacts          = var.contacts_function_arn
-    leads             = var.leads_function_arn
-    templates         = var.templates_function_arn
-    bulk_send         = var.bulk_send_function_arn
-    metrics           = var.metrics_function_arn
-    whatsapp_connect  = var.whatsapp_connect_function_arn
-    instagram_connect = var.instagram_connect_function_arn
-    telegram_connect  = var.telegram_connect_function_arn
-    telegram_webhook  = var.telegram_webhook_function_arn
-    messenger_connect = var.messenger_connect_function_arn
-    sms_webhook       = var.sms_webhook_function_arn
-    email_inbound     = var.email_inbound_function_arn
-    webchat           = var.webchat_function_arn
-    voicebot          = var.voicebot_function_arn
-    campaigns         = var.campaigns_function_arn
-    support_tickets   = var.support_tickets_function_arn
-    billing           = var.billing_function_arn
-    admin             = var.admin_function_arn
-    public_api        = var.public_api_function_arn
-    api_keys          = var.api_keys_function_arn
-    integrations      = var.integrations_function_arn
-    automations       = var.automations_function_arn
-    knowledge         = var.knowledge_function_arn
-    macros            = var.macros_function_arn
-    meta_flows        = var.meta_flows_function_arn
-    flows             = var.flows_function_arn
-    flow_hooks        = var.flow_hooks_function_arn
-    calling           = var.calling_function_arn
-    realtime          = var.realtime_function_arn
-    calendar          = var.calendar_function_arn
-    public_calendar   = var.public_calendar_function_arn
-    payments          = var.payments_function_arn
-    catalog           = var.catalog_function_arn
-  }
+  for_each = local.lambda_functions
 
   statement_id  = "AllowAPIGatewayInvoke-${each.key}"
   action        = "lambda:InvokeFunction"

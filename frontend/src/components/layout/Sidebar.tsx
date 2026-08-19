@@ -20,6 +20,7 @@ import {
   Settings,
   LogOut,
   Megaphone,
+  Mail,
   Zap,
   GitBranch,
   LifeBuoy,
@@ -32,6 +33,8 @@ import {
   ChevronRight,
   ChevronDown,
   Check,
+  PhoneCall,
+  Headphones,
   Building2,
 } from "lucide-react";
 import { useAdminRole } from "@/hooks/useAdminRole";
@@ -42,8 +45,13 @@ import { useSidebar } from "@/components/layout/SidebarContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, getTenantContext } from "@/lib/api";
 import type { Tenant } from "@/types";
+import {
+  isSubaccountServiceEnabled,
+  serviceForNavHref,
+} from "@/lib/subaccount-services";
 import { useClearTenantContext, useAssumeSubaccount, useResellerSubaccounts } from "@/hooks/useReseller";
 import { useAuthSession } from "@/hooks/useAuthSession";
+import { ThemeSwitcherCompact } from "@/components/theme/ThemeSwitcherCompact";
 
 type NavItem = {
   href: string;
@@ -63,15 +71,25 @@ const memberStandaloneNavItems: NavItem[] = [
 
 const memberNavCategories: NavCategory[] = [
   {
-    id: "messaging",
-    labelKey: "nav.categoryMessaging",
+    id: "operations",
+    labelKey: "nav.categoryOperations",
     items: [
       { href: "/bots", labelKey: "nav.bots", icon: BotMessageSquare },
+      { href: "/voice-agents", labelKey: "nav.voiceAgents", icon: PhoneCall },
+      { href: "/contact-center", labelKey: "nav.contactCenter", icon: Headphones },
       { href: "/conversations", labelKey: "nav.conversations", icon: MessageSquare },
       { href: "/supervisor", labelKey: "nav.supervisor", icon: LayoutGrid },
       { href: "/contacts", labelKey: "nav.contacts", icon: BookUser },
       { href: "/leads", labelKey: "nav.leads", icon: UserPlus },
       { href: "/advisors", labelKey: "nav.advisors", icon: Users },
+    ],
+  },
+  {
+    id: "automation",
+    labelKey: "nav.categoryAutomation",
+    items: [
+      { href: "/automations", labelKey: "nav.automations", icon: Zap },
+      { href: "/flows", labelKey: "nav.flows", icon: GitBranch },
     ],
   },
   {
@@ -81,14 +99,7 @@ const memberNavCategories: NavCategory[] = [
       { href: "/templates", labelKey: "nav.templates", icon: LayoutTemplate },
       { href: "/bulk-send", labelKey: "nav.bulkSend", icon: SendHorizonal },
       { href: "/campaigns", labelKey: "nav.campaigns", icon: Megaphone },
-    ],
-  },
-  {
-    id: "automation",
-    labelKey: "nav.categoryAutomation",
-    items: [
-      { href: "/automations", labelKey: "nav.automations", icon: Zap },
-      { href: "/flows", labelKey: "nav.flows", icon: GitBranch },
+      { href: "/email-marketing", labelKey: "nav.emailMarketing", icon: Mail },
     ],
   },
   {
@@ -185,14 +196,14 @@ function NavLink({
         "flex items-center rounded-lg py-2 text-[13px] transition-all duration-150",
         collapsed ? "justify-center px-2" : "gap-2.5 px-2.5",
         active
-          ? "bg-brand-primary font-semibold text-[var(--sidebar-icon-active)] shadow-[0_1px_0_rgba(255,255,255,0.08)_inset]"
-          : "font-medium text-[var(--sidebar-text-secondary)] hover:bg-white/5 hover:text-[var(--sidebar-text)]"
+          ? "nav-item-active shadow-sm"
+          : "nav-item-idle"
       )}
     >
       <Icon
         className={cn(
           "h-4 w-4 shrink-0 stroke-[2]",
-          active ? "text-[var(--sidebar-icon-active)]" : "text-[var(--sidebar-icon)]"
+          active ? "text-brand-primary" : "text-[var(--sidebar-icon)]"
         )}
       />
       {!collapsed ? <span className="truncate">{label}</span> : null}
@@ -309,7 +320,7 @@ function SidebarNav({
                   "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors",
                   hasActiveItem
                     ? "text-brand-primary"
-                    : "text-[var(--sidebar-text-muted)] hover:bg-white/5 hover:text-[var(--sidebar-text-secondary)]"
+                    : "text-[var(--sidebar-text-muted)] hover:bg-sidebar-hover hover:text-[var(--sidebar-text-secondary)]"
                 )}
               >
                 {isOpen ? (
@@ -347,6 +358,15 @@ function SidebarNav({
         )}
       >
         {!collapsed ? (
+          <div className="mb-3 px-1">
+            <ThemeSwitcherCompact />
+          </div>
+        ) : (
+          <div className="mb-3 flex justify-center">
+            <ThemeSwitcherCompact collapsed />
+          </div>
+        )}
+        {!collapsed ? (
           <div className="mb-2 flex gap-3 px-2.5 text-[11px] text-[var(--sidebar-text-muted)]">
             <a
               href="/legal/terms"
@@ -367,7 +387,7 @@ function SidebarNav({
           onClick={() => void handleSignOut()}
           title={collapsed ? t("nav.signOut") : undefined}
           className={cn(
-            "flex w-full items-center rounded-lg py-2 text-[13px] font-medium text-[var(--sidebar-text-secondary)] transition-colors hover:bg-white/5 hover:text-[var(--sidebar-text)]",
+            "flex w-full items-center rounded-lg py-2 text-[13px] font-medium text-[var(--sidebar-text-secondary)] transition-colors hover:bg-sidebar-hover hover:text-[var(--sidebar-text)]",
             collapsed ? "justify-center px-2" : "gap-2.5 px-2.5"
           )}
         >
@@ -390,7 +410,7 @@ function SidebarUserProfile({ collapsed }: { collapsed: boolean }) {
     <div className={cn("shrink-0 border-t border-[var(--sidebar-border)] py-3", collapsed ? "px-2" : "px-3")}>
       <div
         className={cn(
-          "flex items-center rounded-xl bg-sidebar-elevated/80 ring-1 ring-white/5",
+          "flex items-center rounded-xl bg-sidebar-elevated ring-1 ring-[var(--sidebar-border)]",
           collapsed ? "justify-center px-2 py-2" : "gap-2.5 px-2.5 py-2"
         )}
         title={collapsed && displayName ? displayName : undefined}
@@ -490,8 +510,8 @@ function SubaccountSwitcher({
         onClick={() => setOpen((value) => !value)}
         className={cn(
           "group flex w-full items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left transition-all",
-          "border-white/8 bg-white/[0.03] hover:border-white/15 hover:bg-white/[0.06]",
-          open && "border-brand-primary/35 bg-brand-primary/10",
+          "border-[var(--sidebar-border)] bg-sidebar-muted hover:border-[color-mix(in_srgb,var(--brand-primary)_30%,var(--sidebar-border))] hover:bg-sidebar-hover",
+          open && "border-brand-primary/35 bg-accent-muted",
           switching && "opacity-60"
         )}
       >
@@ -500,7 +520,7 @@ function SubaccountSwitcher({
             "flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[10px] font-bold",
             assumedId
               ? "bg-brand-primary/20 text-brand-primary"
-              : "bg-white/10 text-[var(--sidebar-text-secondary)]"
+              : "bg-sidebar-muted text-[var(--sidebar-text-secondary)]"
           )}
         >
           {assumedId ? (
@@ -535,9 +555,9 @@ function SubaccountSwitcher({
         <div
           role="listbox"
           aria-label={t("nav.switchSubaccount")}
-          className="absolute left-0 right-0 z-50 mt-1.5 min-w-full overflow-hidden rounded-xl border border-[var(--sidebar-border)] bg-[#0f1728] shadow-[0_12px_40px_rgba(0,0,0,0.45)] ring-1 ring-white/10"
+          className="absolute left-0 right-0 z-50 mt-1.5 min-w-full overflow-hidden rounded-xl border border-[var(--sidebar-border)] bg-sidebar-elevated shadow-lg"
         >
-          <div className="border-b border-white/5 px-2.5 py-2">
+          <div className="border-b border-[var(--sidebar-border)] px-2.5 py-2">
             <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--sidebar-text-muted)]">
               {t("nav.subaccounts")}
             </p>
@@ -551,11 +571,11 @@ function SubaccountSwitcher({
               className={cn(
                 "flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left transition-colors",
                 !assumedId
-                  ? "bg-brand-primary/15 text-[var(--sidebar-text)]"
-                  : "text-[var(--sidebar-text-secondary)] hover:bg-white/5 hover:text-[var(--sidebar-text)]"
+                  ? "bg-accent-muted text-[var(--sidebar-text)]"
+                  : "text-[var(--sidebar-text-secondary)] hover:bg-sidebar-hover hover:text-[var(--sidebar-text)]"
               )}
             >
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white/10">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-sidebar-muted">
                 <Building2 className="h-3.5 w-3.5" />
               </span>
               <span className="min-w-0 flex-1 truncate text-xs font-medium">
@@ -565,7 +585,7 @@ function SubaccountSwitcher({
             </button>
 
             {subaccounts.length > 0 ? (
-              <div className="my-1 border-t border-white/5" />
+              <div className="my-1 border-t border-[var(--sidebar-border)]" />
             ) : null}
 
             {subaccounts.map((item) => {
@@ -582,15 +602,15 @@ function SubaccountSwitcher({
                   className={cn(
                     "flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left transition-colors",
                     active
-                      ? "bg-brand-primary/15 text-[var(--sidebar-text)]"
-                      : "text-[var(--sidebar-text-secondary)] hover:bg-white/5 hover:text-[var(--sidebar-text)]",
+                      ? "bg-accent-muted text-[var(--sidebar-text)]"
+                      : "text-[var(--sidebar-text-secondary)] hover:bg-sidebar-hover hover:text-[var(--sidebar-text)]",
                     suspended && "cursor-not-allowed opacity-45"
                   )}
                 >
                   <span
                     className={cn(
                       "flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[10px] font-bold",
-                      active ? "bg-brand-primary/25 text-brand-primary" : "bg-white/10"
+                      active ? "bg-brand-primary/25 text-brand-primary" : "bg-sidebar-muted"
                     )}
                   >
                     {accountInitials(item.name)}
@@ -652,14 +672,14 @@ function SidebarBrand({
             {logoUrl ? (
               <img src={logoUrl} alt="" className="max-h-full max-w-full object-contain" key={logoUrl} />
             ) : (
-              <BotMessageSquare className="h-4 w-4 text-[var(--sidebar-icon-active)]" />
+              <BotMessageSquare className="h-4 w-4 text-white" />
             )}
           </div>
           {onToggleCollapsed ? (
             <button
               type="button"
               onClick={onToggleCollapsed}
-              className="inline-flex rounded-lg p-1.5 text-[var(--sidebar-text-muted)] transition-colors hover:bg-white/5 hover:text-[var(--sidebar-text)]"
+              className="inline-flex rounded-lg p-1.5 text-[var(--sidebar-text-muted)] transition-colors hover:bg-sidebar-hover hover:text-[var(--sidebar-text)]"
               aria-label={t("nav.expandSidebar")}
             >
               <ChevronRight className="h-4 w-4" />
@@ -668,7 +688,7 @@ function SidebarBrand({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-[var(--sidebar-text-muted)] transition-colors hover:bg-white/5 hover:text-[var(--sidebar-text)] lg:hidden"
+            className="rounded-lg p-1.5 text-[var(--sidebar-text-muted)] transition-colors hover:bg-sidebar-hover hover:text-[var(--sidebar-text)] lg:hidden"
             aria-label={t("nav.closeMenu")}
           >
             <X className="h-5 w-5" />
@@ -680,8 +700,8 @@ function SidebarBrand({
 
   return (
     <div className="relative z-20 shrink-0 px-3 pt-3">
-      <div className="relative rounded-xl border border-[var(--sidebar-border)] bg-sidebar-elevated/70 px-3 py-3 ring-1 ring-white/5">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand-primary/60 to-transparent" />
+      <div className="relative rounded-xl border border-[var(--sidebar-border)] bg-sidebar-elevated px-3 py-3">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand-primary/40 to-transparent" />
         <div className="flex items-center gap-3">
           <div
             className={cn(
@@ -692,7 +712,7 @@ function SidebarBrand({
             {logoUrl ? (
               <img src={logoUrl} alt="" className="max-h-full max-w-full object-contain" key={logoUrl} />
             ) : (
-              <BotMessageSquare className="h-4 w-4 text-[var(--sidebar-icon-active)]" />
+              <BotMessageSquare className="h-4 w-4 text-white" />
             )}
           </div>
           <div className="min-w-0 flex-1">
@@ -705,7 +725,7 @@ function SidebarBrand({
               <button
                 type="button"
                 onClick={onToggleCollapsed}
-                className="inline-flex rounded-lg p-1.5 text-[var(--sidebar-text-muted)] transition-colors hover:bg-white/5 hover:text-[var(--sidebar-text)]"
+                className="inline-flex rounded-lg p-1.5 text-[var(--sidebar-text-muted)] transition-colors hover:bg-sidebar-hover hover:text-[var(--sidebar-text)]"
                 aria-label={t("nav.collapseSidebar")}
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -714,7 +734,7 @@ function SidebarBrand({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg p-1.5 text-[var(--sidebar-text-muted)] transition-colors hover:bg-white/5 hover:text-[var(--sidebar-text)] lg:hidden"
+              className="rounded-lg p-1.5 text-[var(--sidebar-text-muted)] transition-colors hover:bg-sidebar-hover hover:text-[var(--sidebar-text)] lg:hidden"
               aria-label={t("nav.closeMenu")}
             >
               <X className="h-5 w-5" />
@@ -751,7 +771,7 @@ export function Sidebar() {
     queryFn: () => api.get<Tenant>("/tenants/me"),
     enabled: isAuthenticated && !authLoading && !isAdmin,
   });
-  const [assumedId, setAssumedId] = useState<string | null>(null);
+  const [assumedId, setAssumedId] = useState<string | null>(() => getTenantContext());
 
   const isResellerTenant =
     me?.plan === "reseller" || me?.tenantKind === "reseller";
@@ -775,13 +795,7 @@ export function Sidebar() {
       return;
     }
 
-    if (stored && isResellerTenant && !isSubaccountTenant) {
-      clearContext();
-      setAssumedId(null);
-      return;
-    }
-
-    setAssumedId(stored && isSubaccountTenant ? stored : null);
+    setAssumedId(stored);
   }, [me, isResellerTenant, isSubaccountTenant, clearContext, queryClient]);
 
   const isResellerHome = canManageSubaccounts && !assumedId && isResellerTenant;
@@ -815,6 +829,17 @@ export function Sidebar() {
           : category
       )
     : baseCategories;
+
+  const filteredNavCategories = navCategories
+    .map((category) => ({
+      ...category,
+      items: category.items.filter((item) => {
+        const service = serviceForNavHref(item.href);
+        if (!service) return true;
+        return isSubaccountServiceEnabled(me, service);
+      }),
+    }))
+    .filter((category) => category.items.length > 0);
 
   const standaloneItems =
     loading || isAdmin || isAdvisor ? [] : memberStandaloneNavItems;
@@ -868,7 +893,7 @@ export function Sidebar() {
         {brand(isCollapsed, true)}
         <SidebarNav
           standaloneItems={standaloneItems}
-          navCategories={navCategories}
+          navCategories={filteredNavCategories}
           collapsed={isCollapsed}
         />
         <SidebarUserProfile collapsed={isCollapsed} />
@@ -894,7 +919,7 @@ export function Sidebar() {
         {brand(isCollapsed, true)}
         <SidebarNav
           standaloneItems={standaloneItems}
-          navCategories={navCategories}
+          navCategories={filteredNavCategories}
           collapsed={isCollapsed}
           onNavigate={close}
         />

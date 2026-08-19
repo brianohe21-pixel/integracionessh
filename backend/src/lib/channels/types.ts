@@ -55,5 +55,6 @@ export function inboundSourceForChannel(
   if (channel === "sms") return "sms_inbound";
   if (channel === "email") return "email_inbound";
   if (channel === "voicebot") return "voicebot_inbound";
+  if (channel === "phone") return "phone_inbound";
   return "whatsapp_inbound";
 }

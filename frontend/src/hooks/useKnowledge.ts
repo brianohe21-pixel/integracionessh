@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { inferKnowledgeMimeType } from "@/lib/knowledge-upload";
 import type { KnowledgeDocument } from "@/types";
 
 export function useKnowledgeDocuments(botId: string) {
@@ -25,7 +26,7 @@ export function useUploadKnowledgeDocument(botId: string) {
         uploadUrl: string;
       }>(`/bots/${botId}/knowledge/upload-url`, {
         filename: file.name,
-        mimeType: file.type || "text/plain",
+        mimeType: inferKnowledgeMimeType(file.name, file.type || "text/plain"),
         sizeBytes: file.size,
       });
 

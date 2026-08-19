@@ -39,6 +39,7 @@ const CHANNEL_COLORS: Record<Channel, { bar: string; text: string }> = {
   sms: { bar: "bg-amber-500", text: "text-amber-700" },
   email: { bar: "bg-violet-500", text: "text-violet-700" },
   voicebot: { bar: "bg-rose-500", text: "text-rose-700" },
+  phone: { bar: "bg-teal-500", text: "text-teal-700" },
 };
 
 interface CampaignRealtimeMetricsPanelProps {

@@ -1,6 +1,7 @@
 import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
 import { z } from "zod";
 import { resolveRequestAuth, assertMemberRole } from "../../lib/auth/cognito.js";
+import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import {
   assertCanCreateVisualFlow,
   assertCanEnableVisualFlow,
@@ -31,9 +32,19 @@ import {
   generateFlowHookSecret,
   hashFlowHookSecret,
 } from "../../lib/flow/hook-credentials.js";
-import { validateFlowDefinition } from "../../lib/flow/validate.js";
+import { validateFlowDefinition, validateFlowDefinitionWithSecrets } from "../../lib/flow/validate.js";
+import {
+  deleteFlowSecret,
+  getFlowSecret,
+  listFlowSecretNames,
+  saveFlowSecret,
+} from "../../lib/flow/flow-secrets.repository.js";
+import { buildTaxi355SatelitalVoiceFlow } from "../../lib/flow/voice-flow-template.js";
+import { isVoiceAiFlow } from "../../lib/flow/voice-flow-compiler.js";
 import { ok, created, badRequest, notFound, noContent, handleError } from "../../lib/http.js";
-import type { FlowDefinition, FlowEdge, FlowHookConfig, FlowNode } from "../../types/index.js";
+import type { FlowDefinition, FlowEdge, FlowHookConfig, FlowNode, FlowKind } from "../../types/index.js";
+
+const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 
 const FlowNodeSchema = z.object({
   id: z.string(),
@@ -72,10 +83,20 @@ const FlowEdgeSchema = z.object({
 const FlowSchema = z.object({
   name: z.string().min(1).max(120),
   botId: z.string().uuid(),
+  flowKind: z.enum(["messaging", "voice_ai"]).optional(),
   enabled: z.boolean().default(false),
   nodes: z.array(FlowNodeSchema).min(1),
   edges: z.array(FlowEdgeSchema),
   entryNodeId: z.string().optional(),
+});
+
+const FlowSecretSchema = z.object({
+  name: z.string().min(1).max(120),
+  value: z.string().min(1).max(4096),
+});
+
+const TaxiTemplateSchema = z.object({
+  botId: z.string().uuid(),
 });
 
 function resolveEntryNodeId(nodes: FlowNode[]): string {
@@ -127,6 +148,7 @@ export async function handler(
     const apiEvent = event as APIGatewayProxyEventV2WithJWTAuthorizer;
     const auth = await resolveRequestAuth(apiEvent);
     assertMemberRole(auth);
+    await assertAssignedServices(auth.tenantId, "flows");
     const method = apiEvent.requestContext.http.method;
     const flowId = apiEvent.pathParameters?.flowId;
     const runId = apiEvent.pathParameters?.runId;
@@ -181,6 +203,67 @@ export async function handler(
       });
     }
 
+    if (method === "POST" && !flowId && path.endsWith("/templates/taxi-355-satelital")) {
+      const body = TaxiTemplateSchema.safeParse(JSON.parse(apiEvent.body ?? "{}"));
+      if (!body.success) return badRequest(body.error.message);
+
+      const bot = await getBot(auth.tenantId, body.data.botId);
+      if (!bot) return notFound("Bot not found");
+
+      const existingFlows = await listFlowDefinitions(auth.tenantId, body.data.botId);
+      const existingVoice = existingFlows.find(
+        (item) => isVoiceAiFlow(item) && item.name.includes("355 Satelital")
+      );
+      if (existingVoice) {
+        return ok(existingVoice);
+      }
+
+      const now = new Date().toISOString();
+      const flow = buildTaxi355SatelitalVoiceFlow({
+        flowId: makeFlowId(),
+        tenantId: auth.tenantId,
+        botId: body.data.botId,
+        companyId: "",
+        now,
+      });
+      await createFlowDefinition(flow);
+      return created(flow);
+    }
+
+    if (method === "GET" && flowId && path.endsWith("/secrets")) {
+      const flow = await getFlowDefinition(auth.tenantId, flowId);
+      if (!flow) return notFound("Flow not found");
+      const names = await listFlowSecretNames(auth.tenantId, ENVIRONMENT, flowId);
+      return ok({
+        secrets: names.map((name) => ({ name, configured: true })),
+      });
+    }
+
+    if (method === "PUT" && flowId && path.endsWith("/secrets")) {
+      const flow = await getFlowDefinition(auth.tenantId, flowId);
+      if (!flow) return notFound("Flow not found");
+      const body = FlowSecretSchema.safeParse(JSON.parse(apiEvent.body ?? "{}"));
+      if (!body.success) return badRequest(body.error.message);
+      await saveFlowSecret(
+        auth.tenantId,
+        ENVIRONMENT,
+        flowId,
+        body.data.name,
+        body.data.value
+      );
+      return ok({ name: body.data.name, configured: true });
+    }
+
+    if (method === "DELETE" && flowId && apiEvent.pathParameters?.secretName) {
+      const flow = await getFlowDefinition(auth.tenantId, flowId);
+      if (!flow) return notFound("Flow not found");
+      const secretName = apiEvent.pathParameters.secretName;
+      const existing = await getFlowSecret(auth.tenantId, ENVIRONMENT, flowId, secretName);
+      if (!existing) return notFound("Secret not found");
+      await deleteFlowSecret(auth.tenantId, ENVIRONMENT, flowId, secretName);
+      return noContent();
+    }
+
     if (method === "POST" && flowId && path.endsWith("/validate")) {
       const flow = await getFlowDefinition(auth.tenantId, flowId);
       if (!flow) return notFound("Flow not found");
@@ -196,7 +279,10 @@ export async function handler(
             ? resolveEntryNodeId(body.data.nodes as FlowNode[])
             : flow.entryNodeId),
       };
-      return ok({ issues: validateFlowDefinition(candidate) });
+      const issues = isVoiceAiFlow(candidate)
+        ? await validateFlowDefinitionWithSecrets(candidate, ENVIRONMENT)
+        : validateFlowDefinition(candidate);
+      return ok({ issues });
     }
 
     if (method === "GET" && flowId) {
@@ -228,6 +314,7 @@ export async function handler(
         tenantId: auth.tenantId,
         botId: body.data.botId,
         name: body.data.name,
+        ...(body.data.flowKind ? { flowKind: body.data.flowKind as FlowKind } : {}),
         enabled: body.data.enabled,
         version: 1,
         nodes,
@@ -256,6 +343,7 @@ export async function handler(
       const candidate: FlowDefinition = {
         ...existing,
         ...(body.data.name !== undefined ? { name: body.data.name } : {}),
+        ...(body.data.flowKind !== undefined ? { flowKind: body.data.flowKind as FlowKind } : {}),
         ...(body.data.enabled !== undefined ? { enabled: body.data.enabled } : {}),
         ...(body.data.nodes ? { nodes, version: existing.version + 1 } : {}),
         ...(body.data.edges ? { edges: body.data.edges as FlowEdge[] } : {}),
@@ -265,11 +353,14 @@ export async function handler(
         ...(body.data.enabled ? { publishedAt: new Date().toISOString() } : {}),
       };
 
-      const issues = validateFlowDefinition(candidate);
+      const issues = isVoiceAiFlow(candidate)
+        ? await validateFlowDefinitionWithSecrets(candidate, ENVIRONMENT)
+        : validateFlowDefinition(candidate);
       const isFormFlow = nodes.some(
         (node) => node.type === "trigger" && node.data.triggerType === "web_form_submitted"
       );
-      if (isFormFlow && issues.length > 0) {
+      const isVoiceFlow = isVoiceAiFlow(candidate);
+      if ((isFormFlow || isVoiceFlow) && issues.length > 0) {
         return badRequest(issues.map((issue) => issue.message).join("; "));
       }
 
@@ -283,12 +374,25 @@ export async function handler(
       const existing = await getFlowDefinition(auth.tenantId, flowId);
       if (!existing) return notFound("Flow not found");
 
-      const issues = validateFlowDefinition(existing);
+      const issues = isVoiceAiFlow(existing)
+        ? await validateFlowDefinitionWithSecrets(existing, ENVIRONMENT)
+        : validateFlowDefinition(existing);
       const isFormFlow = existing.nodes.some(
         (node) => node.type === "trigger" && node.data.triggerType === "web_form_submitted"
       );
-      if (isFormFlow && issues.length > 0) {
+      const isVoiceFlow = isVoiceAiFlow(existing);
+      if ((isFormFlow || isVoiceFlow) && issues.length > 0) {
         return badRequest(issues.map((issue) => issue.message).join("; "));
+      }
+
+      if (isVoiceFlow) {
+        const siblingFlows = await listFlowDefinitions(auth.tenantId, existing.botId);
+        const otherEnabled = siblingFlows.find(
+          (item) => item.flowId !== existing.flowId && item.enabled && isVoiceAiFlow(item)
+        );
+        if (otherEnabled) {
+          return badRequest("Only one voice flow can be enabled per bot");
+        }
       }
 
       const updated = await updateFlowDefinition(auth.tenantId, flowId, {

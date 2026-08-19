@@ -2,6 +2,7 @@ import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 }
 import { randomUUID } from "crypto";
 import { z } from "zod";
 import { resolveRequestAuth, assertMemberRole } from "../../lib/auth/cognito.js";
+import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import { generateApiKey, hashApiKey, getKeyPrefix } from "../../lib/api-keys/manager.js";
 import {
   createApiKey,
@@ -15,7 +16,7 @@ import {
 } from "../../lib/dynamodb/api-key-usage.repository.js";
 import { listBots } from "../../lib/dynamodb/bot.repository.js";
 import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
-import { getPlanLimits } from "../../lib/billing/plan-limits.js";
+import { getEffectivePlanLimits, getPlanLimits } from "../../lib/billing/plan-limits.js";
 import {
   ok,
   created,
@@ -25,17 +26,19 @@ import {
   forbidden,
   handleError,
 } from "../../lib/http.js";
-import { DEFAULT_API_KEY_SCOPES, mergeDefaultScopes } from "../../lib/api-keys/scopes.js";
+import { DEFAULT_API_KEY_SCOPES, mergeDefaultScopes, validateAndNormalizeScopes } from "../../lib/api-keys/scopes.js";
 import type { ApiKey } from "../../types/index.js";
 
 const CreateApiKeySchema = z.object({
   name: z.string().min(1).max(128),
   botId: z.string().uuid(),
+  scopes: z.array(z.string()).optional(),
 });
 
 const UpdateApiKeySchema = z.object({
   name: z.string().min(1).max(128).optional(),
   enabled: z.boolean().optional(),
+  scopes: z.array(z.string()).optional(),
 });
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
@@ -79,6 +82,7 @@ export async function handler(
   try {
     const auth = await resolveRequestAuth(event);
     assertMemberRole(auth);
+    await assertAssignedServices(auth.tenantId, "developer");
 
     const method = event.requestContext.http.method;
     const path = event.rawPath ?? "";
@@ -143,12 +147,18 @@ export async function handler(
       const bot = bots.find((b) => b.botId === parsed.data.botId);
       if (!bot) return notFound("Bot not found");
 
-      const planLimits = getPlanLimits(tenant?.plan);
+      const planLimits = tenant
+        ? getEffectivePlanLimits(tenant)
+        : getPlanLimits("free");
 
       const rawKey = generateApiKey();
       const hashedKey = hashApiKey(rawKey);
       const prefix = getKeyPrefix(rawKey);
       const now = new Date().toISOString();
+
+      const scopes = parsed.data.scopes
+        ? validateAndNormalizeScopes(parsed.data.scopes)
+        : [...DEFAULT_API_KEY_SCOPES];
 
       const newKey: ApiKey = {
         keyId: randomUUID(),
@@ -157,7 +167,7 @@ export async function handler(
         name: parsed.data.name,
         prefix,
         hashedKey,
-        scopes: [...DEFAULT_API_KEY_SCOPES],
+        scopes,
         rateLimitPerMinute: planLimits.apiRateLimitPerMinute,
         rateLimitPerDay: planLimits.apiRateLimitPerDay,
         enabled: true,
@@ -184,9 +194,12 @@ export async function handler(
 
       const now = new Date().toISOString();
       const fields: Parameters<typeof updateApiKey>[1] = { updatedAt: now };
-      const { name, enabled } = parsed.data;
+      const { name, enabled, scopes } = parsed.data;
       if (name !== undefined) fields.name = name;
       if (enabled !== undefined) fields.enabled = enabled;
+      if (scopes !== undefined) {
+        fields.scopes = validateAndNormalizeScopes(scopes);
+      }
 
       const updated = await updateApiKey(existing.hashedKey, fields);
 

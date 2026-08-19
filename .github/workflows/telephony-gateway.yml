@@ -1,0 +1,77 @@
+name: Telephony Gateway
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        default: dev
+        type: choice
+        options:
+          - dev
+          - prod
+  push:
+    branches: [develop, main]
+    paths:
+      - "telephony-gateway/**"
+      - ".github/workflows/telephony-gateway.yml"
+
+concurrency:
+  group: telephony-gateway-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Build, push and deploy (${{ github.event_name == 'workflow_dispatch' && inputs.environment || (github.ref == 'refs/heads/main' && 'prod' || 'dev') }})
+    runs-on: ubuntu-latest
+    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || (github.ref == 'refs/heads/main' && 'prod' || 'dev') }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve environment
+        id: env
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "name=${{ inputs.environment }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "name=prod" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=dev" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Login to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        env:
+          ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
+          ECR_REPOSITORY: chatbot-platform-${{ steps.env.outputs.name }}-telephony-gateway
+          IMAGE_TAG: latest
+        run: |
+          docker build -t "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" telephony-gateway/
+          docker push "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+      - name: Force ECS deployment
+        env:
+          ENV_NAME: ${{ steps.env.outputs.name }}
+        run: |
+          aws ecs update-service \
+            --cluster "chatbot-platform-${ENV_NAME}-telephony" \
+            --service "chatbot-platform-${ENV_NAME}-telephony-gateway" \
+            --force-new-deployment
+          aws ecs wait services-stable \
+            --cluster "chatbot-platform-${ENV_NAME}-telephony" \
+            --services "chatbot-platform-${ENV_NAME}-telephony-gateway"

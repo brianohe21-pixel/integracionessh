@@ -4,6 +4,10 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useT } from "@/i18n/context";
+import {
+  DEFAULT_REALTIME_MODEL_ID,
+  REALTIME_MODELS,
+} from "@/lib/realtime-models";
 import type { Bot } from "@/types";
 
 type VoicebotSettingsResponse = {
@@ -16,7 +20,6 @@ type VoicebotSettingsResponse = {
 };
 
 const VOICES = ["alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse"];
-const MODELS = ["gpt-realtime-2.1-mini", "gpt-realtime-2.1"];
 
 function SettingsSwitch({
   checked,
@@ -53,7 +56,7 @@ export function BotVoicebotSettings({ bot }: { bot: Bot }) {
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
   const [voice, setVoice] = useState(bot.voicebotVoice ?? "alloy");
-  const [model, setModel] = useState(bot.voicebotModel ?? "gpt-realtime-2.1-mini");
+  const [model, setModel] = useState(bot.voicebotModel ?? DEFAULT_REALTIME_MODEL_ID);
   const [greeting, setGreeting] = useState(bot.voicebotGreeting ?? "");
   const [systemPrompt, setSystemPrompt] = useState(
     bot.voicebotSystemPrompt ?? bot.systemPrompt ?? ""
@@ -146,9 +149,9 @@ export function BotVoicebotSettings({ bot }: { bot: Bot }) {
                 onChange={(e) => setModel(e.target.value)}
                 className="w-full px-3 py-2 border border-default rounded-lg text-sm"
               >
-                {MODELS.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
+                {REALTIME_MODELS.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.label}
                   </option>
                 ))}
               </select>

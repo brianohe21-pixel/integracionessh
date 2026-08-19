@@ -1,5 +1,6 @@
 import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
 import { resolveRequestAuth, assertMemberRole } from "../../lib/auth/cognito.js";
+import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import { getTenantUsageMetrics } from "../../lib/dynamodb/metrics.repository.js";
 import { getMarketingMetrics } from "../../lib/dynamodb/marketing-metrics.repository.js";
 import { getLeadMetrics } from "../../lib/dynamodb/lead-metrics.repository.js";
@@ -18,6 +19,10 @@ export async function handler(
     assertMemberRole(auth);
     const method = event.requestContext.http.method;
     const rawPath = event.rawPath ?? event.requestContext.http.path;
+
+    if (method === "GET" && rawPath.endsWith("/metrics/advisor-workload")) {
+      await assertAssignedServices(auth.tenantId, ["supervisor", "metrics"]);
+    }
 
     if (method === "GET" && rawPath.endsWith("/metrics/export")) {
       const { filename, content } = await buildUsageMarketingCsv(auth.tenantId);

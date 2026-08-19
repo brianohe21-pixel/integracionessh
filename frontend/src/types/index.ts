@@ -2,6 +2,28 @@ export type TenantPlan = "free" | "pro" | "enterprise" | "reseller";
 
 export type TenantKind = "standard" | "reseller" | "subaccount";
 
+export const SUBACCOUNT_SERVICES = [
+  "bots",
+  "voiceAgents",
+  "contactCenter",
+  "conversations",
+  "supervisor",
+  "contacts",
+  "leads",
+  "advisors",
+  "automations",
+  "flows",
+  "templates",
+  "bulkSend",
+  "campaigns",
+  "emailMarketing",
+  "metrics",
+  "apps",
+  "developer",
+] as const;
+
+export type SubaccountServiceId = (typeof SUBACCOUNT_SERVICES)[number];
+
 export type CustomDomainStatus = "none" | "pending_dns" | "active" | "error";
 
 export type SubscriptionStatus =
@@ -144,6 +166,8 @@ export interface Tenant {
   status: "active" | "suspended" | "pending";
   tenantKind?: TenantKind;
   parentTenantId?: string;
+  enabledServices?: SubaccountServiceId[];
+  serviceLimits?: ResellerLimitsOverride;
   resellerConfig?: ResellerConfig;
   branding?: TenantBranding;
   inboxSla?: InboxSlaSettings;
@@ -201,7 +225,8 @@ export type Channel =
   | "messenger"
   | "sms"
   | "email"
-  | "voicebot";
+  | "voicebot"
+  | "phone";
 
 export type BotLocale = "es" | "en";
 
@@ -209,12 +234,34 @@ export type AiProvider = "openai" | "anthropic";
 
 export type LocalizedText = string | Record<BotLocale, string>;
 
+export type TelephonyStructuredOutputType = "string" | "number" | "integer" | "boolean";
+
+export interface TelephonyStructuredOutputField {
+  name: string;
+  type: TelephonyStructuredOutputType;
+  description: string;
+  required?: boolean;
+}
+
+export interface TelephonyStructuredOutputPayload {
+  name: string;
+  result: Record<string, unknown>;
+}
+
+export interface TelephonyStructuredOutputDefinition {
+  name: string;
+  type?: "ai" | "regex";
+  description?: string;
+  schema?: Record<string, unknown>;
+  patterns?: Record<string, string>;
+}
+
 export interface Bot {
   botId: string;
   tenantId: string;
   name: string;
   defaultLocale?: BotLocale;
-  responseMode: "openai" | "webhook";
+  responseMode: "none" | "openai" | "webhook";
   systemPrompt?: string;
   aiProvider?: AiProvider;
   model?: string;
@@ -238,21 +285,97 @@ export interface Bot {
   smsOriginationNumber?: string;
   emailEnabled?: boolean;
   emailAddress?: string;
+  emailInboundProvider?: "ses" | "imap";
+  emailImapHost?: string;
+  emailImapPort?: number;
+  emailImapMailbox?: string;
+  emailImapUseTls?: boolean;
+  emailImapUsername?: string;
+  emailImapConnectedAt?: string;
+  emailImapLastSyncAt?: string;
+  emailImapLastError?: string;
+  emailImapPollingEnabled?: boolean;
   voicebotEnabled?: boolean;
   voicebotWidgetKey?: string;
   voicebotVoice?: string;
   voicebotModel?: string;
+  voicebotTranscriptionModel?: string;
   voicebotGreeting?: string;
   voicebotSystemPrompt?: string;
+  telephonyEnabled?: boolean;
+  telephonyPhoneNumber?: string;
+  telephonyVoiceId?: string;
+  telephonyBackgroundSound?: string;
+  telephonyBackgroundSoundVolume?: number;
+  telephonyTtsModel?: string;
+  telephonyVoiceSpeed?: number;
+  telephonyVoiceStability?: number;
+  telephonyVoiceSimilarity?: number;
+  telephonyTranscriptionVadThreshold?: number;
+  telephonyTranscriptionSilenceMs?: number;
+  telephonyTranscriptionBargeIn?: boolean;
+  telephonyModel?: string;
+  telephonyTranscriptionModel?: string;
+  telephonyGreeting?: string;
+  telephonySystemPrompt?: string;
+  telephonyRecordingEnabled?: boolean;
+  telephonyRecordingNotice?: string;
+  telephonyHandoffEnabled?: boolean;
+  telephonyVoiceFlowId?: string;
+  telephonyWebhookUrl?: string;
+  telephonyWebhookSecret?: string;
+  telephonyWebhookEnabled?: boolean;
+  telephonyWebhookEvents?: IntegrationEvent[];
+  telephonyStructuredOutputs?: TelephonyStructuredOutputField[];
+  telephonyStructuredOutputSchemaName?: string;
+  telephonyStructuredOutput?: TelephonyStructuredOutputDefinition | null;
+  telephonyRoutingMode?: TelephonyRoutingMode;
+  telephonyQueueId?: string;
+  telephonyIvrFlowId?: string;
+  whatsappOnboardingMode?: "cloud_api" | "coexistence";
+  isOnBizApp?: boolean;
+  platformType?: string;
+  whatsappSyncStatus?: WhatsAppSyncStatus;
+  whatsappDisconnectedAt?: string;
+  whatsappDisconnectionReason?: string;
   status: "active" | "inactive";
   createdAt: string;
   updatedAt: string;
   whatsappPhone?: WhatsAppPhoneInfo | null;
 }
 
+export type WhatsAppSyncPhaseStatus =
+  | "pending"
+  | "in_progress"
+  | "completed"
+  | "failed"
+  | "declined";
+
+export interface WhatsAppSyncStatus {
+  contacts?: WhatsAppSyncPhaseStatus;
+  history?: WhatsAppSyncPhaseStatus;
+  contactsRequestId?: string;
+  historyRequestId?: string;
+  historyProgress?: number;
+  historyPhase?: number;
+  startedAt?: string;
+  completedAt?: string;
+  lastError?: string;
+}
+
 export type HandoffMode = "bot" | "human";
 
-export type HandoffReason = "manual" | "ai" | "webhook";
+export type HandoffReason = "manual" | "ai" | "webhook" | "no_ai";
+
+export interface AiAssistantConfig {
+  enabled: boolean;
+  systemPrompt?: string;
+  aiProvider?: AiProvider;
+  model?: string;
+  temperature?: number;
+  maxTokens?: number;
+  knowledgeEnabled?: boolean;
+}
 
 export type WorkflowStatus = "new" | "open" | "pending" | "resolved";
 
@@ -359,6 +482,8 @@ export interface Conversation {
   copilotGeneratedAt?: string;
   messageCount: number;
   lastMessageAt: string;
+  emailSubject?: string;
+  emailThreadMessageId?: string;
   locale?: BotLocale;
   createdAt: string;
 }
@@ -435,15 +560,46 @@ export interface CallingMetrics {
 
 export type MessageRole = "user" | "assistant" | "advisor" | "system";
 
+export interface EmailMessageAttachment {
+  attachmentId: string;
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+  disposition: "attachment" | "inline";
+  contentId?: string;
+}
+
+export interface EmailMessageMetadata {
+  kind: "email";
+  subject: string;
+  from: string;
+  fromName?: string;
+  to: string;
+  cc?: string[];
+  textBody: string;
+  htmlBody?: string;
+  htmlS3Key?: string;
+  hasAttachments: boolean;
+  attachmentCount: number;
+  attachments?: EmailMessageAttachment[];
+  inReplyTo?: string;
+  messageId: string;
+}
+
 export interface Message {
   messageId: string;
   conversationId: string;
   tenantId: string;
   role: MessageRole;
   content: string;
-  source?: "panel" | "whatsapp_inbound";
+  channel?: Channel;
+  messageType?: string;
+  metadata?: EmailMessageMetadata | Record<string, unknown>;
+  source?: string;
   sentByAdvisorId?: string;
   whatsappMessageId?: string;
+  externalMessageId?: string;
+  callId?: string;
   timestamp: string;
 }
 
@@ -455,6 +611,9 @@ export interface Advisor {
   cognitoUserId?: string;
   status: "active" | "inactive";
   botIds?: string[];
+  skills?: string[];
+  queueIds?: string[];
+  voiceEnabled?: boolean;
   lastAssignedAt?: string;
   createdAt: string;
   updatedAt: string;
@@ -750,7 +909,120 @@ export type IntegrationEvent =
   | "lead.converted"
   | "call.connect"
   | "call.status"
-  | "call.terminated";
+  | "call.terminated"
+  | "call.recording.ready"
+  | "call.cost.finalized";
+
+export type CallRecordStatus =
+  | "initiated"
+  | "ringing"
+  | "accepted"
+  | "rejected"
+  | "completed"
+  | "failed"
+  | "terminated"
+  | "voicemail";
+
+export type CallRecordingStatus = "disabled" | "pending" | "processing" | "ready" | "failed";
+
+export type CallCostStatus = "pending" | "partial" | "final";
+
+export interface CallCostBreakdown {
+  telnyxUsd?: number;
+  platformUsd?: number;
+  openaiUsd?: number;
+  elevenlabsUsd?: number;
+  recordingUsd?: number;
+  totalUsd: number;
+  currency: "USD";
+  pricingVersion: string;
+}
+
+export interface CallUsageMetrics {
+  openaiInputTokens?: number;
+  openaiOutputTokens?: number;
+  elevenlabsCharacters?: number;
+}
+
+export interface CallRecord {
+  callId: string;
+  tenantId: string;
+  botId: string;
+  phoneNumber: string;
+  businessPhoneNumber?: string;
+  direction: "USER_INITIATED" | "BUSINESS_INITIATED";
+  status: CallRecordStatus;
+  duration?: number;
+  provider?: "telnyx" | "meta";
+  channel?: "phone" | "whatsapp";
+  conversationId?: string;
+  startedAt?: string;
+  endedAt?: string;
+  recordingStatus?: CallRecordingStatus;
+  recordingS3Key?: string;
+  recordingDurationSeconds?: number;
+  extractedFields?: TelephonyStructuredOutputPayload;
+  costStatus?: CallCostStatus;
+  costBreakdown?: CallCostBreakdown;
+  usageMetrics?: CallUsageMetrics;
+  queueId?: string;
+  advisorId?: string;
+  conferenceId?: string;
+  disposition?: string;
+  ivrPath?: string;
+  waitSeconds?: number;
+  talkSeconds?: number;
+  contactCenterMode?: ContactCenterCallMode;
+  campaignId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CallEventType =
+  | "initiated"
+  | "ringing"
+  | "answered"
+  | "voicemail_detected"
+  | "recording_started"
+  | "recording_saved"
+  | "recording_failed"
+  | "hangup"
+  | "cost_pending"
+  | "cost_partial"
+  | "cost_finalized"
+  | "tool_executed"
+  | "error"
+  | "queued"
+  | "offered"
+  | "agent_answered"
+  | "transferred"
+  | "supervised"
+  | "wrap_up"
+  | "dtmf"
+  | "overflow"
+  | "callback";
+
+export interface CallEvent {
+  eventId: string;
+  tenantId: string;
+  botId: string;
+  callId: string;
+  type: CallEventType;
+  message?: string;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface VoiceAgentWebhookDelivery {
+  deliveryId: string;
+  tenantId: string;
+  botId: string;
+  event: IntegrationEvent;
+  status: "pending" | "delivered" | "failed";
+  attempts: number;
+  lastError?: string;
+  createdAt: string;
+}
 
 export type MetaFlowStatus = "DRAFT" | "PUBLISHED" | "DEPRECATED";
 
@@ -805,7 +1077,43 @@ export type FlowTriggerType =
   | "keyword"
   | "first_message"
   | "any_message"
-  | "web_form_submitted";
+  | "web_form_submitted"
+  | "voice_call";
+
+export type FlowKind = "messaging" | "voice_ai";
+
+export interface FlowHttpHeader {
+  key: string;
+  value: string;
+}
+
+export interface VoiceAgentHttpTool {
+  toolId: string;
+  name: string;
+  description: string;
+  httpUrl: string;
+  httpMethod: "GET" | "POST" | "PATCH";
+  httpBody?: string;
+  httpHeaders?: FlowHttpHeader[];
+  httpResponseVariable?: string;
+  parametersJson: string;
+  instruction?: string;
+  enabled: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VoiceAgentHttpToolTestResult {
+  ok: boolean;
+  status?: number;
+  durationMs: number;
+  resolvedUrl?: string;
+  headers?: Record<string, string>;
+  body?: unknown;
+  variables?: Record<string, string>;
+  error?: string;
+}
 
 export interface FlowNodeData {
   label?: string;
@@ -826,8 +1134,15 @@ export interface FlowNodeData {
   variableName?: string;
   variableValue?: string;
   httpUrl?: string;
-  httpMethod?: "GET" | "POST";
+  httpMethod?: "GET" | "POST" | "PATCH";
   httpBody?: string;
+  httpHeaders?: FlowHttpHeader[];
+  httpResponseVariable?: string;
+  voiceToolName?: string;
+  voiceToolDescription?: string;
+  voiceToolParameters?: string;
+  voiceInstruction?: string;
+  flowVariables?: Record<string, string>;
   haltPipeline?: boolean;
   confirmationMessage?: LocalizedText;
   maxDaysToShow?: number;
@@ -876,6 +1191,7 @@ export interface FlowDefinition {
   tenantId: string;
   botId: string;
   name: string;
+  flowKind?: FlowKind;
   enabled: boolean;
   version: number;
   nodes: FlowNode[];
@@ -1117,6 +1433,85 @@ export interface AppCatalogItem {
   name: string;
   description: string;
   installedBots: Array<{ botId: string; botName: string; enabled: boolean }>;
+  configured?: boolean;
+  enabled?: boolean;
+}
+
+export interface MailrelayCredentials {
+  configured: boolean;
+  apiKey?: string;
+  updatedAt?: string;
+}
+
+export interface MailrelayCredentialsInput {
+  apiKey?: string;
+}
+
+export interface MailrelayTagGroupMapping {
+  tag: string;
+  groupId: string;
+}
+
+export interface MailrelayConfig {
+  senderId: string;
+  defaultGroupId: string;
+  tagGroupMappings: MailrelayTagGroupMapping[];
+  enabled?: boolean;
+  eventTypes?: string[];
+}
+
+export interface MailrelayGroup {
+  id: string;
+  name: string;
+  subscriberCount?: number;
+}
+
+export interface MailrelaySender {
+  id: string;
+  name: string;
+  email: string;
+}
+
+export type MailrelaySyncStatus = "pending" | "running" | "completed" | "failed";
+
+export interface MailrelaySync {
+  id: string;
+  status: MailrelaySyncStatus;
+  progress: number;
+  processed: number;
+  total: number;
+  createdAt: string;
+  completedAt?: string;
+  error?: string;
+}
+
+export interface MailrelayCampaignInput {
+  name: string;
+  subject: string;
+  previewText: string;
+  html: string;
+  senderId: string;
+  groupIds: string[];
+  trackOpens: boolean;
+  trackClicks: boolean;
+}
+
+export interface MailrelayCampaign extends MailrelayCampaignInput {
+  id: string;
+  status: "draft" | "sending" | "sent";
+  createdAt: string;
+  updatedAt: string;
+  sentAt?: string;
+}
+
+export interface MailrelayCampaignMetrics {
+  campaignId: string;
+  sent: number;
+  delivered: number;
+  opens: number;
+  clicks: number;
+  bounces: number;
+  unsubscribes: number;
 }
 
 export type PaymentRequestStatus = "pending" | "paid" | "declined" | "expired";
@@ -1334,4 +1729,186 @@ export interface TenantWompiSecretPayload {
   privateKey: string;
   integritySecret: string;
   eventsSecret: string;
+}
+
+export type TelephonyRoutingMode = "ai" | "ivr" | "queue";
+
+export type ContactCenterCallMode = "ai" | "queue" | "ivr" | "agent";
+
+export type AgentPresenceState =
+  | "offline"
+  | "available"
+  | "ringing"
+  | "on_call"
+  | "wrap_up"
+  | "break";
+
+export type QueueStrategy = "longest_idle" | "round_robin" | "fewest_calls";
+
+export type AfterHoursAction = "ai" | "voicemail" | "hangup";
+
+export type IvrNodeType = "menu" | "queue" | "ai" | "hangup" | "voicemail";
+
+export type VoiceCampaignMode = "preview" | "progressive";
+
+export type VoiceCampaignStatus = "draft" | "running" | "paused" | "completed" | "cancelled";
+
+export type SupervisorRole = "monitor" | "whisper" | "barge";
+
+export interface QueueDayHours {
+  start: string;
+  end: string;
+}
+
+export interface QueueBusinessHours {
+  timezone: string;
+  days: Record<string, QueueDayHours | null>;
+}
+
+export interface ContactCenterQueue {
+  queueId: string;
+  tenantId: string;
+  botId: string;
+  name: string;
+  strategy: QueueStrategy;
+  skills: string[];
+  slaSeconds: number;
+  maxWaitSeconds?: number;
+  holdAudioUrl?: string;
+  overflowQueueId?: string;
+  afterHoursAction: AfterHoursAction;
+  announcePosition?: boolean;
+  callbackEnabled?: boolean;
+  hours?: QueueBusinessHours;
+  wrapUpSeconds?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IvrMenuOption {
+  digit: string;
+  targetType: IvrNodeType;
+  targetId?: string;
+}
+
+export interface IvrNode {
+  nodeId: string;
+  type: IvrNodeType;
+  prompt?: string;
+  options?: IvrMenuOption[];
+  queueId?: string;
+  timeoutSeconds?: number;
+}
+
+export interface ContactCenterIvrFlow {
+  ivrFlowId: string;
+  tenantId: string;
+  botId: string;
+  name: string;
+  entryNodeId: string;
+  nodes: IvrNode[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AgentPresence {
+  advisorId: string;
+  tenantId: string;
+  state: AgentPresenceState;
+  skills: string[];
+  queueIds: string[];
+  webrtcConnected: boolean;
+  lastHeartbeatAt: string;
+  telnyxSipUsername?: string;
+  telnyxCredentialId?: string;
+  lastCallAt?: string;
+  callsHandled?: number;
+  wrapUpUntil?: string;
+  kind?: "advisor" | "member";
+  updatedAt: string;
+}
+
+export interface QueueMembership {
+  membershipId: string;
+  tenantId: string;
+  queueId: string;
+  callId: string;
+  sessionId: string;
+  botId: string;
+  priority: number;
+  queuedAt: string;
+  callbackNumber?: string;
+  expiresAt?: string;
+}
+
+export interface VoiceCampaign {
+  campaignId: string;
+  tenantId: string;
+  botId: string;
+  name: string;
+  mode: VoiceCampaignMode;
+  status: VoiceCampaignStatus;
+  fromNumber: string;
+  queueId: string;
+  recipients: string[];
+  nextIndex: number;
+  amdEnabled: boolean;
+  dispositions?: string[];
+  createdAt: string;
+  updatedAt: string;
+  startedAt?: string;
+  completedAt?: string;
+}
+
+export interface VoiceCampaignAttempt {
+  attemptId: string;
+  tenantId: string;
+  campaignId: string;
+  to: string;
+  callId?: string;
+  status: "queued" | "dialing" | "connected" | "voicemail" | "failed" | "no_answer";
+  disposition?: string;
+  createdAt: string;
+}
+
+export interface ContactCenterWallboard {
+  agents: Array<{
+    advisorId: string;
+    name: string;
+    state: AgentPresenceState;
+    queueIds: string[];
+    webrtcConnected: boolean;
+    callsHandled: number;
+    currentCallId?: string;
+  }>;
+  queues: Array<{
+    queueId: string;
+    name: string;
+    waiting: number;
+    longestWaitSeconds: number;
+    slaSeconds: number;
+  }>;
+  liveCalls: Array<{
+    callId: string;
+    queueId?: string;
+    advisorId?: string;
+    fromNumber: string;
+    conferenceId?: string;
+    startedAt?: string;
+    waitSeconds?: number;
+  }>;
+  metrics: {
+    availableAgents: number;
+    callsInQueue: number;
+    callsLive: number;
+    abandonRate: number;
+    averageSpeedOfAnswerSeconds: number;
+  };
+}
+
+export interface SoftphoneTokenResponse {
+  loginToken: string;
+  sipUsername: string;
+  callerId?: string;
+  presence: AgentPresence;
 }

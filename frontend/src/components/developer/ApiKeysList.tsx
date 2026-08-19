@@ -1,12 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Key, Trash2, ToggleLeft, ToggleRight, Clock, Bot } from "lucide-react";
+import { Key, Trash2, ToggleLeft, ToggleRight, Clock, Bot, Shield } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useUpdateApiKey, useDeleteApiKey } from "@/hooks/useApiKeys";
 import type { ApiKey } from "@/types";
 import { TableContainer } from "@/components/ui/TableContainer";
+import { getSelectedVoiceScopes } from "@/lib/api-key-scopes";
+import { ApiKeyScopesModal } from "@/components/developer/ApiKeyScopesModal";
+import { useT } from "@/i18n/context";
 
 interface ApiKeysListProps {
   keys: ApiKey[];
@@ -15,8 +18,10 @@ interface ApiKeysListProps {
 
 export function ApiKeysList({ keys, bots }: ApiKeysListProps) {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [scopesKey, setScopesKey] = useState<ApiKey | null>(null);
   const updateKey = useUpdateApiKey();
   const deleteKey = useDeleteApiKey();
+  const t = useT();
 
   function botName(botId: string): string {
     return bots.find((b) => b.botId === botId)?.name ?? botId;
@@ -57,6 +62,7 @@ export function ApiKeysList({ keys, bots }: ApiKeysListProps) {
             <th className="px-6 py-3 font-medium">Name</th>
             <th className="px-6 py-3 font-medium">Key prefix</th>
             <th className="px-6 py-3 font-medium">Bot</th>
+            <th className="px-6 py-3 font-medium">Scopes</th>
             <th className="px-6 py-3 font-medium">Status</th>
             <th className="px-6 py-3 font-medium">Last used</th>
             <th className="px-6 py-3 font-medium">Created</th>
@@ -79,6 +85,19 @@ export function ApiKeysList({ keys, bots }: ApiKeysListProps) {
                 </span>
               </td>
               <td className="px-6 py-3.5">
+                <div className="flex flex-wrap gap-1 max-w-[220px]">
+                  {getSelectedVoiceScopes(key.scopes).length === 0 ? (
+                    <span className="text-xs text-muted">{t("developer.noVoiceScopes")}</span>
+                  ) : (
+                    getSelectedVoiceScopes(key.scopes).map((scope) => (
+                      <Badge key={scope} variant="default" className="text-[10px]">
+                        {scope.replace("voice:calls:", "")}
+                      </Badge>
+                    ))
+                  )}
+                </div>
+              </td>
+              <td className="px-6 py-3.5">
                 <Badge variant={key.enabled ? "success" : "default"}>
                   {key.enabled ? "Active" : "Disabled"}
                 </Badge>
@@ -96,6 +115,13 @@ export function ApiKeysList({ keys, bots }: ApiKeysListProps) {
               <td className="px-6 py-3.5 text-secondary">{formatDate(key.createdAt)}</td>
               <td className="px-6 py-3.5">
                 <div className="flex items-center gap-2 justify-end">
+                  <button
+                    onClick={() => setScopesKey(key)}
+                    title={t("developer.editScopes")}
+                    className="text-muted hover:text-accent transition-colors"
+                  >
+                    <Shield className="w-4 h-4" />
+                  </button>
                   <button
                     onClick={() => handleToggle(key)}
                     disabled={updateKey.isPending}
@@ -140,6 +166,9 @@ export function ApiKeysList({ keys, bots }: ApiKeysListProps) {
           ))}
         </tbody>
       </table>
+      {scopesKey && (
+        <ApiKeyScopesModal apiKey={scopesKey} onClose={() => setScopesKey(null)} />
+      )}
     </TableContainer>
   );
 }

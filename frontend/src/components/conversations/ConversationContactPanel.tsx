@@ -1,13 +1,20 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { User, Phone, Mail, Headphones, History } from "lucide-react";
-import { useT } from "@/i18n/context";
+import { History, Headphones, Lock, Mail, Phone, User } from "lucide-react";
+import { ChannelAvatar } from "@/components/conversations/conversation-ui";
+import { ConversationQuotationsPanel } from "@/components/conversations/ConversationQuotationsPanel";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { Tabs } from "@/components/ui/Tabs";
 import { useAdvisors } from "@/hooks/useAdvisors";
-import type { Conversation, Lead, Channel } from "@/types";
-import { ConversationQuotationsPanel } from "@/components/conversations/ConversationQuotationsPanel";
+import { useClickToCall } from "@/hooks/useContactCenter";
+import { useFormatters } from "@/hooks/useFormatters";
+import { useT } from "@/i18n/context";
+import type { Channel, Conversation, Lead } from "@/types";
+
+type PanelTab = "contact" | "details";
 
 type Props = {
   conversation: Conversation;
@@ -23,98 +30,195 @@ export function ConversationContactPanel({
   channelLabel,
 }: Props) {
   const t = useT();
+  const { formatDate, formatRelativeTime } = useFormatters();
   const { data: advisors } = useAdvisors();
+  const clickToCall = useClickToCall();
+  const [panelTab, setPanelTab] = useState<PanelTab>("contact");
   const assignedAdvisor = advisors?.find((a) => a.advisorId === conversation.assignedAdvisorId);
   const displayName =
     conversation.contactName ??
-    ((conversation.channel ?? "whatsapp") === "whatsapp"
-      ? conversation.phoneNumber
+    ((conversation.channel ?? "whatsapp") === "whatsapp" ||
+    conversation.channel === "sms" ||
+    conversation.channel === "phone"
+      ? conversation.phoneNumber || conversation.participantId
       : conversation.participantId ?? conversation.phoneNumber);
 
   const tags = activeLead?.tags ?? [];
+  const isHuman = (conversation.handoffMode ?? "bot") === "human";
+  const phone =
+    (conversation.channel ?? "whatsapp") === "whatsapp" ||
+    conversation.channel === "sms" ||
+    conversation.channel === "phone"
+      ? conversation.phoneNumber || conversation.participantId
+      : null;
+  const email =
+    conversation.channel === "email"
+      ? conversation.participantId
+      : activeLead?.email;
 
   return (
-    <aside className="hidden w-80 flex-shrink-0 flex-col border-l border-default bg-surface-elevated xl:flex">
-      <div className="border-b border-default p-6 text-center">
-        <div className="relative mx-auto mb-4 h-20 w-20">
-          <div className="flex h-full w-full items-center justify-center rounded-full bg-surface-muted">
-            <User className="h-8 w-8 text-muted" />
-          </div>
-          <span className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-white">
-            {(conversation.channel ?? "whatsapp").charAt(0).toUpperCase()}
-          </span>
-        </div>
-        <h2 className="text-lg font-semibold text-primary">{displayName}</h2>
-        <p className="mt-1 text-sm text-secondary">{channelLabel(conversation.channel)}</p>
-      </div>
-
-      <div className="flex-1 space-y-6 overflow-y-auto p-5">
-        <section className="space-y-3">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
-            {t("conversations.contactInfo")}
-          </h3>
-          <div className="space-y-2 text-sm">
-            {(conversation.channel ?? "whatsapp") === "whatsapp" && (
-              <div className="flex items-center gap-2 text-secondary">
-                <Phone className="h-4 w-4 text-muted" />
-                <span>{conversation.phoneNumber}</span>
-              </div>
-            )}
-            {activeLead?.email && (
-              <div className="flex items-center gap-2 text-secondary">
-                <Mail className="h-4 w-4 text-muted" />
-                <span>{activeLead.email}</span>
-              </div>
-            )}
-          </div>
-        </section>
-
-        {activeLead && (
-          <section className="space-y-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
-              {t("leads.leadStatus")}
-            </h3>
-            <Badge variant="accent">{t(`leads.status_${activeLead.status}`)}</Badge>
-          </section>
-        )}
-
-        {tags.length > 0 && (
-          <section className="space-y-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
-              {t("conversations.tags")}
-            </h3>
-            <div className="flex flex-wrap gap-1.5">
-              {tags.map((tag) => (
-                <Badge key={tag} variant="default">
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {assignedAdvisor && (
-          <section className="space-y-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
-              {t("conversations.assignedAdvisor")}
-            </h3>
-            <p className="text-sm text-secondary">{assignedAdvisor.name}</p>
-          </section>
-        )}
-
-        <ConversationQuotationsPanel
-          conversationId={conversation.conversationId}
-          botId={conversation.botId}
+    <aside className="conversations-sidebar-bg hidden w-80 flex-shrink-0 flex-col border-l border-default xl:flex">
+      <div className="border-b border-default px-4 pt-4">
+        <Tabs<PanelTab>
+          items={[
+            { id: "contact", label: t("conversations.tabContact") },
+            { id: "details", label: t("conversations.tabDetails") },
+          ]}
+          value={panelTab}
+          onChange={setPanelTab}
+          className="w-full"
         />
       </div>
 
+      <div className="conversations-sidebar-header border-b border-default p-5 text-center">
+        <div className="relative mx-auto mb-4">
+          <ChannelAvatar channel={conversation.channel} size="lg" className="mx-auto" />
+        </div>
+        <h2 className="text-lg font-semibold tracking-tight text-primary">{displayName}</h2>
+        {phone ? (
+          <p className="mt-1 text-sm text-secondary">{phone}</p>
+        ) : null}
+        {phone ? (
+          <Button
+            size="sm"
+            className="mt-2"
+            onClick={() =>
+              void clickToCall.mutateAsync({ botId: conversation.botId, to: phone })
+            }
+            disabled={clickToCall.isPending}
+          >
+            <Phone className="h-4 w-4" />
+            {t("contactCenter.clickToCall")}
+          </Button>
+        ) : null}
+        <p className="mt-0.5 text-xs text-muted">{channelLabel(conversation.channel)}</p>
+        <div className="mt-3 flex flex-wrap justify-center gap-1.5">
+          <Badge variant={isHuman ? "warning" : "default"}>
+            {isHuman ? t("conversations.modeHuman") : t("conversations.modeBot")}
+          </Badge>
+          {conversation.locale ? (
+            <Badge variant="default" className="uppercase">{conversation.locale}</Badge>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="sidebar-scroll flex-1 space-y-4 overflow-y-auto p-4">
+        {panelTab === "contact" ? (
+          <>
+            <section className="content-card p-4">
+              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
+                {t("conversations.contactInfo")}
+              </h3>
+              <div className="space-y-2.5 text-sm">
+                {phone ? (
+                  <div className="flex items-center gap-3 rounded-lg bg-surface-muted px-3 py-2.5 text-secondary">
+                    <Phone className="h-4 w-4 flex-shrink-0 text-muted" />
+                    <span className="truncate">{phone}</span>
+                  </div>
+                ) : null}
+                {email ? (
+                  <div className="flex items-center gap-3 rounded-lg bg-surface-muted px-3 py-2.5 text-secondary">
+                    <Mail className="h-4 w-4 flex-shrink-0 text-muted" />
+                    <span className="truncate">{email}</span>
+                  </div>
+                ) : null}
+                {conversation.locale ? (
+                  <div className="flex items-center justify-between rounded-lg bg-surface-muted px-3 py-2.5">
+                    <span className="text-muted">{t("conversations.language")}</span>
+                    <span className="font-medium uppercase text-primary">{conversation.locale}</span>
+                  </div>
+                ) : null}
+              </div>
+            </section>
+
+            {activeLead ? (
+              <section className="content-card p-4">
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
+                  {t("leads.leadStatus")}
+                </h3>
+                <Badge variant="accent">{t(`leads.status_${activeLead.status}`)}</Badge>
+              </section>
+            ) : null}
+
+            {tags.length > 0 ? (
+              <section className="content-card p-4">
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
+                  {t("conversations.tags")}
+                </h3>
+                <div className="flex flex-wrap gap-1.5">
+                  {tags.map((tag) => (
+                    <Badge key={tag} variant="default">{tag}</Badge>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            {assignedAdvisor ? (
+              <section className="content-card p-4">
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
+                  {t("conversations.assignedAdvisor")}
+                </h3>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-surface-muted">
+                    <User className="h-4 w-4 text-muted" />
+                  </div>
+                  <p className="text-sm font-medium text-primary">{assignedAdvisor.name}</p>
+                </div>
+              </section>
+            ) : null}
+
+            {conversation.internalNote ? (
+              <section className="conversations-internal-note p-4">
+                <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide">
+                  <Lock className="h-3.5 w-3.5" />
+                  {t("conversations.internalNote")}
+                </div>
+                <p className="text-sm leading-relaxed">{conversation.internalNote}</p>
+              </section>
+            ) : null}
+          </>
+        ) : (
+          <>
+            <section className="content-card p-4">
+              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
+                {t("conversations.history")}
+              </h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-secondary">{t("conversations.messageCount", { count: conversation.messageCount })}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-secondary">{t("conversations.firstContact")}</span>
+                  <span className="font-medium text-primary">{formatDate(conversation.createdAt)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-secondary">{t("conversations.lastActivity")}</span>
+                  <span className="font-medium text-primary">{formatRelativeTime(conversation.lastMessageAt)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-secondary">{t("conversations.source")}</span>
+                  <span className="font-medium text-primary">{channelLabel(conversation.channel)}</span>
+                </div>
+              </div>
+            </section>
+
+            <section className="content-card p-4">
+              <ConversationQuotationsPanel
+                conversationId={conversation.conversationId}
+                botId={conversation.botId}
+              />
+            </section>
+          </>
+        )}
+      </div>
+
       <div className="space-y-2 border-t border-default p-4">
-        {(conversation.handoffMode ?? "bot") !== "human" && (
+        {!isHuman ? (
           <Button type="button" className="w-full" onClick={onAssignAdvisor}>
             <Headphones className="h-4 w-4" />
             {t("conversations.assignAdvisor")}
           </Button>
-        )}
+        ) : null}
         <Link href="/leads" className="block">
           <Button type="button" variant="secondary" className="w-full">
             <History className="h-4 w-4" />

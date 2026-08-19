@@ -12,6 +12,7 @@ import {
   updateBulkJobStatus,
 } from "../../lib/dynamodb/bulk-job.repository.js";
 import { resolveRequestAuth, assertMemberRole } from "../../lib/auth/cognito.js";
+import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import { ensureTenant } from "../../lib/dynamodb/tenant.repository.js";
 import { assertBulkRecipients } from "../../lib/billing/assert-plan.js";
 import { incrementBulkRecipients } from "../../lib/dynamodb/usage.repository.js";
@@ -106,6 +107,7 @@ export async function handler(
   try {
     const auth = await resolveRequestAuth(event);
     assertMemberRole(auth);
+    await assertAssignedServices(auth.tenantId, "bulkSend");
     const method = event.requestContext.http.method;
     const jobId = event.pathParameters?.jobId;
 

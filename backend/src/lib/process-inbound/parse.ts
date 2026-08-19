@@ -102,5 +102,7 @@ export function channelLabel(channel: Channel): string {
   if (channel === "messenger") return "Messenger";
   if (channel === "sms") return "SMS";
   if (channel === "email") return "Email";
+  if (channel === "voicebot") return "Voicebot";
+  if (channel === "phone") return "Phone";
   return "WhatsApp";
 }

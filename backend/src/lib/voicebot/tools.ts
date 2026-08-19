@@ -10,6 +10,9 @@ import { retrieveContext } from "../knowledge/retrieve.js";
 import { performHandoff } from "../advisor/handoff.js";
 import { getSystemMessage } from "../i18n/index.js";
 
+import { executeVoiceFlowTool } from "./voice-flow-tools.js";
+import { executeVoiceAgentHttpTool } from "./voice-agent-tool-executor.js";
+
 export interface VoicebotToolContext {
   tenantId: string;
   botId: string;
@@ -17,7 +20,10 @@ export interface VoicebotToolContext {
   participantId: string;
   locale: BotLocale;
   knowledgeEnabled: boolean;
+  handoffEnabled: boolean;
   apiKey: string;
+  environment: string;
+  callId?: string;
 }
 
 export async function executeVoicebotTool(
@@ -32,7 +38,33 @@ export async function executeVoicebotTool(
     return { output: JSON.stringify({ error: "Invalid tool arguments" }) };
   }
 
+  const agentResult = await executeVoiceAgentHttpTool({
+    tenantId: ctx.tenantId,
+    botId: ctx.botId,
+    toolName: name,
+    args,
+    environment: ctx.environment,
+  });
+  if (agentResult) {
+    return { output: agentResult.output };
+  }
+
+  const flowResult = await executeVoiceFlowTool({
+    tenantId: ctx.tenantId,
+    botId: ctx.botId,
+    locale: ctx.locale,
+    toolName: name,
+    args,
+    environment: ctx.environment,
+  });
+  if (flowResult) {
+    return { output: flowResult.output };
+  }
+
   if (name === "transfer_to_human") {
+    if (!ctx.handoffEnabled) {
+      return { output: JSON.stringify({ error: "Human handoff is disabled for this agent" }) };
+    }
     const reason =
       typeof args.reason === "string" && args.reason.trim()
         ? args.reason.trim()
@@ -43,6 +75,14 @@ export async function executeVoicebotTool(
       conversationId: ctx.conversationId,
       reason: "ai",
     });
+    if (ctx.callId) {
+      const { enqueueFromAiHandoff } = await import("../contact-center/service.js");
+      await enqueueFromAiHandoff({
+        tenantId: ctx.tenantId,
+        botId: ctx.botId,
+        callId: ctx.callId,
+      });
+    }
     return {
       output: JSON.stringify({ success: true, message: reason }),
       handoff: true,

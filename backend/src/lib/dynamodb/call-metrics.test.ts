@@ -98,10 +98,13 @@ describe("call metrics", () => {
   });
 
   it("detects picked up calls by duration", () => {
-    const picked = call({ callId: "1", botId: "b1", status: "terminated", duration: 10 });
+    const picked = call({ callId: "1", botId: "b1", status: "completed", duration: 10 });
     const missed = call({ callId: "2", botId: "b1", status: "terminated" });
+    const voicemail = call({ callId: "3", botId: "b1", status: "voicemail", duration: 8 });
     expect(isPickedUp(picked)).toBe(true);
     expect(isMissedOutbound(missed)).toBe(true);
+    expect(isPickedUp(voicemail)).toBe(false);
+    expect(isMissedOutbound(voicemail)).toBe(true);
     expect(isOutboundAttempt(picked)).toBe(true);
     expect(averageDurationSeconds([picked])).toBe(10);
   });

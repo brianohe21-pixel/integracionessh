@@ -443,6 +443,8 @@ export interface WhatsAppPhoneInfo {
   displayPhoneNumber?: string;
   verifiedName?: string;
   messagingLimit?: string;
+  isOnBizApp?: boolean;
+  platformType?: string;
 }
 
 function isAlreadyRegisteredError(body: string): boolean {
@@ -492,6 +494,8 @@ export async function getPhoneNumberInfo(
     "display_phone_number",
     "verified_name",
     "whatsapp_business_manager_messaging_limit",
+    "is_on_biz_app",
+    "platform_type",
   ].join(",");
 
   const response = await fetch(
@@ -510,6 +514,8 @@ export async function getPhoneNumberInfo(
     display_phone_number?: string;
     verified_name?: string;
     whatsapp_business_manager_messaging_limit?: string;
+    is_on_biz_app?: boolean;
+    platform_type?: string;
   };
 
   return {
@@ -522,7 +528,79 @@ export async function getPhoneNumberInfo(
     ...(json.whatsapp_business_manager_messaging_limit
       ? { messagingLimit: json.whatsapp_business_manager_messaging_limit }
       : {}),
+    ...(json.is_on_biz_app !== undefined ? { isOnBizApp: json.is_on_biz_app } : {}),
+    ...(json.platform_type ? { platformType: json.platform_type } : {}),
   };
+}
+
+export interface WabaPhoneNumberEntry {
+  id: string;
+  displayPhoneNumber?: string;
+  verifiedName?: string;
+  isOnBizApp?: boolean;
+  platformType?: string;
+}
+
+export async function listWabaPhoneNumbers(
+  wabaId: string,
+  accessToken: string
+): Promise<WabaPhoneNumberEntry[]> {
+  const fields = "id,display_phone_number,verified_name,is_on_biz_app,platform_type";
+  const response = await fetch(
+    `${GRAPH_API_URL}/${wabaId}/phone_numbers?fields=${fields}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    throwGraphApiError(response.status, error);
+  }
+
+  const json = (await response.json()) as {
+    data?: Array<{
+      id: string;
+      display_phone_number?: string;
+      verified_name?: string;
+      is_on_biz_app?: boolean;
+      platform_type?: string;
+    }>;
+  };
+
+  return (json.data ?? []).map((entry) => ({
+    id: entry.id,
+    ...(entry.display_phone_number
+      ? { displayPhoneNumber: entry.display_phone_number }
+      : {}),
+    ...(entry.verified_name ? { verifiedName: entry.verified_name } : {}),
+    ...(entry.is_on_biz_app !== undefined ? { isOnBizApp: entry.is_on_biz_app } : {}),
+    ...(entry.platform_type ? { platformType: entry.platform_type } : {}),
+  }));
+}
+
+export async function requestSmbAppData(
+  phoneNumberId: string,
+  accessToken: string,
+  syncType: "smb_app_state_sync" | "history"
+): Promise<{ requestId: string }> {
+  const response = await fetch(`${GRAPH_API_URL}/${phoneNumberId}/smb_app_data`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      sync_type: syncType,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throwGraphApiError(response.status, error);
+  }
+
+  const json = (await response.json()) as { request_id?: string };
+  return { requestId: json.request_id ?? "" };
 }
 
 export async function sendTemplateMessage(

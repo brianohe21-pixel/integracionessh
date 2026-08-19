@@ -37,6 +37,41 @@ export function buildQuotationPdfS3Key(
   return `tenants/${tenantId}/bots/${botId}/quotations/${quotationId}.pdf`;
 }
 
+export function buildVoiceRecordingS3Key(
+  tenantId: string,
+  botId: string,
+  callId: string
+): string {
+  return `tenants/${tenantId}/voice-recordings/${botId}/${callId}.mp3`;
+}
+
+export function buildEmailRawMimeS3Key(
+  tenantId: string,
+  botId: string,
+  messageHash: string
+): string {
+  return `tenants/${tenantId}/bots/${botId}/email/${messageHash}/raw.eml`;
+}
+
+export function buildEmailHtmlS3Key(
+  tenantId: string,
+  botId: string,
+  messageHash: string
+): string {
+  return `tenants/${tenantId}/bots/${botId}/email/${messageHash}/body.html`;
+}
+
+export function buildEmailAttachmentS3Key(
+  tenantId: string,
+  botId: string,
+  messageHash: string,
+  attachmentId: string,
+  filename: string
+): string {
+  const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
+  return `tenants/${tenantId}/bots/${botId}/email/${messageHash}/attachments/${attachmentId}/${safeName}`;
+}
+
 export async function putObjectBuffer(
   s3Key: string,
   buffer: Uint8Array,

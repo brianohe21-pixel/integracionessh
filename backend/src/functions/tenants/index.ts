@@ -64,6 +64,7 @@ import { resolveMetricsReportSchedule } from "../../lib/reports/resolve-schedule
 import { syncReportSchedule } from "../../lib/reports/report-schedule.js";
 import { sendScheduledReport } from "../../lib/reports/send-scheduled-report.js";
 import { addCustomDomainToCognitoClient } from "../../lib/cognito/custom-domain-callbacks.js";
+import { handleProviderCredentialRoutes } from "./provider-credentials.routes.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 
@@ -153,19 +154,11 @@ async function handleInboxSlaRoutes(
   event: APIGatewayProxyEventV2WithJWTAuthorizer,
   auth: AuthContext
 ): Promise<APIGatewayProxyResultV2 | null> {
-  const routeKey = event.routeKey;
   const rawPath = event.rawPath ?? event.requestContext.http.path ?? "";
-  const isInboxSlaRoute =
-    routeKey === "GET /tenants/me/inbox-sla" ||
-    routeKey === "PUT /tenants/me/inbox-sla" ||
-    rawPath.includes("/tenants/me/inbox-sla");
+  const isInboxSlaRoute = rawPath.includes("/tenants/me/inbox-sla");
   if (!isInboxSlaRoute) return null;
 
-  const method = (
-    routeKey?.split(" ")[0] ??
-    event.requestContext.http.method ??
-    ""
-  ).toUpperCase();
+  const method = (event.requestContext.http.method ?? "").toUpperCase();
 
   assertMemberRole(auth);
   await ensureTenant(auth.tenantId, auth.email, auth.name);
@@ -194,16 +187,11 @@ async function handleReportScheduleRoutes(
   event: APIGatewayProxyEventV2WithJWTAuthorizer,
   auth: AuthContext
 ): Promise<APIGatewayProxyResultV2 | null> {
-  const routeKey = event.routeKey;
   const rawPath = event.rawPath ?? event.requestContext.http.path ?? "";
   const isReportScheduleRoute = rawPath.includes("/tenants/me/report-schedule");
   if (!isReportScheduleRoute) return null;
 
-  const method = (
-    routeKey?.split(" ")[0] ??
-    event.requestContext.http.method ??
-    ""
-  ).toUpperCase();
+  const method = (event.requestContext.http.method ?? "").toUpperCase();
 
   assertMemberRole(auth);
   await ensureTenant(auth.tenantId, auth.email, auth.name);
@@ -417,7 +405,7 @@ export async function handler(
     const auth = await resolveRequestAuth(event);
     const tenantId = event.pathParameters?.tenantId;
 
-    if (method === "GET" && !tenantId) {
+    if (method === "GET" && rawPath === "/tenants") {
       if (auth.role !== "admin") {
         const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
         return ok([tenant]);
@@ -469,6 +457,14 @@ export async function handler(
 
     const reportScheduleResponse = await handleReportScheduleRoutes(event, auth);
     if (reportScheduleResponse) return reportScheduleResponse;
+
+    const providerCredentialsResponse = await handleProviderCredentialRoutes(
+      event,
+      method,
+      auth,
+      ENVIRONMENT
+    );
+    if (providerCredentialsResponse) return providerCredentialsResponse;
 
     if (event.rawPath?.endsWith("/openai-key")) {
       if (method === "GET") {

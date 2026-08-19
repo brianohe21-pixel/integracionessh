@@ -15,6 +15,7 @@ import {
   assertMemberRole,
   assertTenantManagerRole,
 } from "../../lib/auth/cognito.js";
+import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import {
   ok,
   badRequest,
@@ -51,6 +52,7 @@ export async function handler(
   try {
     const auth = await resolveRequestAuth(event);
     assertMemberRole(auth);
+    await assertAssignedServices(auth.tenantId, "leads");
 
     const method = event.requestContext.http.method;
     const rawPath = event.rawPath ?? event.requestContext.http.path;

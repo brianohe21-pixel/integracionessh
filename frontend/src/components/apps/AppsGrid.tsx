@@ -1,23 +1,29 @@
 "use client";
 
 import Link from "next/link";
-import { Calendar, CreditCard, LayoutGrid, ShoppingBag } from "lucide-react";
+import { Calendar, CreditCard, LayoutGrid, ShoppingBag, Sparkles } from "lucide-react";
 import { useT } from "@/i18n/context";
 import type { AppCatalogItem } from "@/types";
 
 const APP_ICONS: Record<string, typeof Calendar> = {
+  "ai-assistant": Sparkles,
   calendar: Calendar,
   payments: CreditCard,
   catalog: ShoppingBag,
 };
 
 const APP_ROUTES: Record<string, string> = {
+  "ai-assistant": "/apps/ai-assistant",
   calendar: "/apps/calendar",
   payments: "/apps/payments",
   catalog: "/apps/catalog",
 };
 
 const APP_I18N_KEYS: Record<string, { name: string; description: string }> = {
+  "ai-assistant": {
+    name: "aiAssistant.appName",
+    description: "aiAssistant.appDescription",
+  },
   calendar: { name: "apps.calendarName", description: "apps.calendarDescription" },
   payments: { name: "apps.paymentsName", description: "apps.paymentsDescription" },
   catalog: { name: "apps.catalogName", description: "apps.catalogDescription" },
@@ -31,6 +37,7 @@ export function AppsGrid({ apps }: { apps: AppCatalogItem[] }) {
       {apps.map((app) => {
         const Icon = APP_ICONS[app.id] ?? LayoutGrid;
         const enabledCount = app.installedBots.filter((b) => b.enabled).length;
+        const tenantEnabled = app.enabled ?? app.configured;
         const route = APP_ROUTES[app.id];
         const i18n = APP_I18N_KEYS[app.id];
 
@@ -48,9 +55,11 @@ export function AppsGrid({ apps }: { apps: AppCatalogItem[] }) {
                   {i18n ? t(i18n.name) : app.name}
                 </h3>
                 <p className="text-sm text-secondary">
-                  {enabledCount > 0
-                    ? t("apps.installedOn", { count: String(enabledCount) })
-                    : t("apps.notInstalled")}
+                  {tenantEnabled !== undefined
+                    ? t(tenantEnabled ? "apps.configured" : "apps.notConfigured")
+                    : enabledCount > 0
+                      ? t("apps.installedOn", { count: String(enabledCount) })
+                      : t("apps.notInstalled")}
                 </p>
               </div>
             </div>

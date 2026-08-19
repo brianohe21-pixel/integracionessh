@@ -116,3 +116,31 @@ export function useFlowEvents(flowId: string, enabled = true) {
     enabled: !!flowId && enabled,
   });
 }
+
+export function useCreateTaxiVoiceFlow() {
+  const qc = useQueryClient();
+  return useMutation<FlowDefinition, Error, { botId: string }>({
+    mutationFn: (body) =>
+      api.post<FlowDefinition>("/flows/templates/taxi-355-satelital", body),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["flows"] }),
+  });
+}
+
+export function useFlowSecrets(flowId: string, enabled = true) {
+  return useQuery<{ secrets: Array<{ name: string; configured: boolean }> }>({
+    queryKey: ["flows", flowId, "secrets"],
+    queryFn: () => api.get(`/flows/${encodeURIComponent(flowId)}/secrets`),
+    enabled: !!flowId && enabled,
+  });
+}
+
+export function useSaveFlowSecret(flowId: string) {
+  const qc = useQueryClient();
+  return useMutation<{ name: string; configured: boolean }, Error, { name: string; value: string }>({
+    mutationFn: (body) =>
+      api.put(`/flows/${encodeURIComponent(flowId)}/secrets`, body),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["flows", flowId, "secrets"] });
+    },
+  });
+}

@@ -1,0 +1,38 @@
+---
+description: API Gateway HTTP route strategy — {proxy+} per method, never ANY
+globs: infrastructure/modules/api-gateway/**/*.tf,infrastructure/scripts/api_gateway*.py,backend/src/functions/**/*.ts,frontend/src/hooks/*.ts
+alwaysApply: false
+---
+
+# API Gateway routes
+
+HTTP APIs have a 300-route quota. `ANY` intercepts CORS `OPTIONS` and JWT returns 401, so the browser shows a network error.
+
+## New endpoint under an existing prefix
+
+Do **not** add a Terraform route. Handle it in the Lambda with `rawPath` + HTTP method.
+
+Existing prefixes: `/contact-center/{proxy+}`, `/bots/{botId}/telephony/{proxy+}`, `/v1/{proxy+}`, `/email-marketing/{proxy+}`.
+
+```typescript
+// GET /contact-center/queues/stats → already covered
+if (path === "/queues/stats" && method === "GET") {
+  return ok(stats);
+}
+```
+
+## New top-level prefix
+
+Add one group in `local.http_proxy_groups` (not `explicit_routes`):
+
+```hcl
+foo = {
+  path         = "/foo/{proxy+}"
+  methods      = ["GET", "POST", "PUT", "DELETE"]
+  invoke_arn   = var.foo_invoke_arn
+  function_arn = var.foo_function_arn
+  protected    = true
+}
+```
+
+Never use `ANY`. Only list methods the Lambda actually serves. Public webhooks that must skip JWT stay as explicit routes (more specific than `{proxy+}`).

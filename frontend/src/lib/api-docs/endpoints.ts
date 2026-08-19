@@ -145,6 +145,138 @@ const UPDATE_CALL_SETTINGS_BODY = JSON.stringify(
 
 const PERMISSION_REQUEST_BODY = '{"to":"521234567890","bodyText":"Can we call you?"}';
 
+const START_VOICE_CALL_BODY = '{"to":"573001234567","contactName":"Jane Doe"}';
+
+const VOICE_CALL_RESPONSE = JSON.stringify(
+  {
+    callId: "550e8400-e29b-41d4-a716-446655440000",
+    botId: "bot_xxx",
+    phoneNumber: "573001234567",
+    businessPhoneNumber: "+12025550100",
+    direction: "outbound",
+    status: "accepted",
+    duration: 120,
+    startedAt: "2026-06-17T12:00:00.000Z",
+    recordingStatus: "ready",
+    structuredOutputs: {
+      name: "customer_order",
+      result: { intent: "support" },
+    },
+    costStatus: "final",
+    createdAt: "2026-06-17T12:00:00.000Z",
+    updatedAt: "2026-06-17T12:02:00.000Z",
+  },
+  null,
+  2
+);
+
+const VOICE_CALLS_LIST_RESPONSE = JSON.stringify(
+  {
+    items: [JSON.parse(VOICE_CALL_RESPONSE)],
+    nextCursor: "eyJjYWxsSWQiOiIuLi4ifQ",
+  },
+  null,
+  2
+);
+
+const VOICE_CALL_EVENTS_RESPONSE = JSON.stringify(
+  {
+    items: [
+      {
+        eventId: "evt_1",
+        callId: "call_xxx",
+        type: "initiated",
+        message: "Outbound call started",
+        createdAt: "2026-06-17T12:00:00.000Z",
+      },
+    ],
+  },
+  null,
+  2
+);
+
+const VOICE_CALL_TRANSCRIPT_RESPONSE = JSON.stringify(
+  {
+    items: [
+      {
+        messageId: "msg_1",
+        role: "assistant",
+        content: "Hello, how can I help?",
+        timestamp: "2026-06-17T12:00:05.000Z",
+      },
+    ],
+  },
+  null,
+  2
+);
+
+const VOICE_STRUCTURED_OUTPUT_BODY = JSON.stringify(
+  {
+    name: "customer_order",
+    type: "ai",
+    result: {
+      subtotal: 34.98,
+      nombre_cliente: "Daniel Salcedo",
+      tipo_servicio: "delivery",
+    },
+  },
+  null,
+  2
+);
+
+const VOICE_STRUCTURED_OUTPUT_RESPONSE = JSON.stringify(
+  {
+    botId: "bot_xxx",
+    structuredOutput: {
+      name: "customer_order",
+      type: "ai",
+      schema: {
+        type: "object",
+        properties: {
+          subtotal: { type: "number", description: "subtotal" },
+          nombre_cliente: { type: "string", description: "nombre cliente" },
+          tipo_servicio: { type: "string", description: "tipo servicio" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  null,
+  2
+);
+
+const SEND_SMS_BODY = '{"to":"573001234567","text":"Hello from SMS API"}';
+
+const SMS_TRACE_RESPONSE = JSON.stringify(
+  {
+    traceId: "550e8400-e29b-41d4-a716-446655440000",
+    phone: "573001234567",
+    channel: "sms",
+    status: "delivered",
+    failureKind: null,
+    externalMessageId: "telcored-123",
+    telcoredMessageId: "telcored-123",
+    sendErrorMessage: null,
+    deliveryErrorCode: null,
+    deliveryErrorMessage: null,
+    deliveryStatus: "DELIVRD",
+    finalDeliveryCode: 1,
+    lastIntermediateCode: null,
+    sentAt: "2026-06-17T12:00:01.000Z",
+    deliveredAt: "2026-06-17T12:00:05.000Z",
+    failedAt: null,
+    dlrAt: "2026-06-17T12:00:05.000Z",
+    cost: "0.02",
+    part: "1",
+    sender: "msg",
+    requestDlr: true,
+    createdAt: "2026-06-17T12:00:00.000Z",
+    updatedAt: "2026-06-17T12:00:05.000Z",
+  },
+  null,
+  2
+);
+
 export const API_DOC_ENDPOINTS: ApiDocEndpoint[] = [
   {
     id: "send-message-text",
@@ -164,6 +296,43 @@ export const API_DOC_ENDPOINTS: ApiDocEndpoint[] = [
       body: SEND_MESSAGE_TEXT_BODY,
     }),
     notesKey: "apiDocs.endpoints.sendMessageNotes",
+  },
+  {
+    id: "send-sms",
+    method: "POST",
+    path: "/v1/sms",
+    scope: "sms:send",
+    descriptionKey: "apiDocs.endpoints.sendSms",
+    requestExample: SEND_SMS_BODY,
+    responseExample: JSON.stringify(
+      {
+        traceId: "550e8400-e29b-41d4-a716-446655440000",
+        messageId: "telcored-123",
+        status: "sent",
+        timestamp: "2026-06-17T12:00:00.000Z",
+      },
+      null,
+      2
+    ),
+    curlExample: buildCurlExample({
+      method: "POST",
+      path: "/v1/sms",
+      body: SEND_SMS_BODY,
+    }),
+    notesKey: "apiDocs.endpoints.sendSmsNotes",
+  },
+  {
+    id: "get-sms-trace",
+    method: "GET",
+    path: "/v1/sms/{traceId}",
+    scope: "sms:read",
+    descriptionKey: "apiDocs.endpoints.getSmsTrace",
+    responseExample: SMS_TRACE_RESPONSE,
+    curlExample: buildCurlExample({
+      method: "GET",
+      path: "/v1/sms/550e8400-e29b-41d4-a716-446655440000",
+    }),
+    notesKey: "apiDocs.endpoints.getSmsTraceNotes",
   },
   {
     id: "send-message-template",
@@ -339,5 +508,128 @@ export const API_DOC_ENDPOINTS: ApiDocEndpoint[] = [
       2
     ),
     curlExample: buildCurlExample({ method: "GET", path: "/v1/calls/permission/521234567890" }),
+  },
+  {
+    id: "start-voice-call",
+    method: "POST",
+    path: "/v1/voice/calls",
+    scope: "voice:calls:initiate",
+    descriptionKey: "apiDocs.endpoints.startVoiceCall",
+    requestExample: START_VOICE_CALL_BODY,
+    responseExample: JSON.stringify(
+      {
+        callId: "550e8400-e29b-41d4-a716-446655440000",
+        sessionId: "660e8400-e29b-41d4-a716-446655440001",
+        status: "initiated",
+        timestamp: "2026-06-17T12:00:00.000Z",
+      },
+      null,
+      2
+    ),
+    curlExample: buildCurlExample({
+      method: "POST",
+      path: "/v1/voice/calls",
+      body: START_VOICE_CALL_BODY,
+    }),
+    notesKey: "apiDocs.endpoints.startVoiceCallNotes",
+  },
+  {
+    id: "list-voice-calls",
+    method: "GET",
+    path: "/v1/voice/calls",
+    scope: "voice:calls:read",
+    descriptionKey: "apiDocs.endpoints.listVoiceCalls",
+    responseExample: VOICE_CALLS_LIST_RESPONSE,
+    curlExample: buildCurlExample({ method: "GET", path: "/v1/voice/calls" }),
+    notesKey: "apiDocs.endpoints.listVoiceCallsNotes",
+  },
+  {
+    id: "get-voice-call",
+    method: "GET",
+    path: "/v1/voice/calls/{callId}",
+    scope: "voice:calls:read",
+    descriptionKey: "apiDocs.endpoints.getVoiceCall",
+    responseExample: VOICE_CALL_RESPONSE,
+    curlExample: buildCurlExample({ method: "GET", path: "/v1/voice/calls/call_xxx" }),
+  },
+  {
+    id: "end-voice-call",
+    method: "POST",
+    path: "/v1/voice/calls/{callId}/end",
+    scope: "voice:calls:manage",
+    descriptionKey: "apiDocs.endpoints.endVoiceCall",
+    responseExample: JSON.stringify({ callId: "call_xxx", status: "ending" }, null, 2),
+    curlExample: buildCurlExample({ method: "POST", path: "/v1/voice/calls/call_xxx/end" }),
+    notesKey: "apiDocs.endpoints.endVoiceCallNotes",
+  },
+  {
+    id: "get-voice-call-events",
+    method: "GET",
+    path: "/v1/voice/calls/{callId}/events",
+    scope: "voice:calls:read",
+    descriptionKey: "apiDocs.endpoints.getVoiceCallEvents",
+    responseExample: VOICE_CALL_EVENTS_RESPONSE,
+    curlExample: buildCurlExample({
+      method: "GET",
+      path: "/v1/voice/calls/call_xxx/events",
+    }),
+  },
+  {
+    id: "get-voice-call-transcript",
+    method: "GET",
+    path: "/v1/voice/calls/{callId}/transcript",
+    scope: "voice:calls:read",
+    descriptionKey: "apiDocs.endpoints.getVoiceCallTranscript",
+    responseExample: VOICE_CALL_TRANSCRIPT_RESPONSE,
+    curlExample: buildCurlExample({
+      method: "GET",
+      path: "/v1/voice/calls/call_xxx/transcript",
+    }),
+    notesKey: "apiDocs.endpoints.getVoiceCallTranscriptNotes",
+  },
+  {
+    id: "get-voice-call-recording",
+    method: "GET",
+    path: "/v1/voice/calls/{callId}/recording",
+    scope: "voice:calls:read",
+    descriptionKey: "apiDocs.endpoints.getVoiceCallRecording",
+    responseExample: JSON.stringify(
+      { url: "https://s3.amazonaws.com/...", expiresInSeconds: 900 },
+      null,
+      2
+    ),
+    curlExample: buildCurlExample({
+      method: "GET",
+      path: "/v1/voice/calls/call_xxx/recording",
+    }),
+    notesKey: "apiDocs.endpoints.getVoiceCallRecordingNotes",
+  },
+  {
+    id: "get-voice-structured-output",
+    method: "GET",
+    path: "/v1/voice/agents/{botId}/structured-output",
+    scope: "voice:calls:read",
+    descriptionKey: "apiDocs.endpoints.getVoiceStructuredOutput",
+    responseExample: VOICE_STRUCTURED_OUTPUT_RESPONSE,
+    curlExample: buildCurlExample({
+      method: "GET",
+      path: "/v1/voice/agents/bot_xxx/structured-output",
+    }),
+    notesKey: "apiDocs.endpoints.getVoiceStructuredOutputNotes",
+  },
+  {
+    id: "put-voice-structured-output",
+    method: "PUT",
+    path: "/v1/voice/agents/{botId}/structured-output",
+    scope: "voice:calls:manage",
+    descriptionKey: "apiDocs.endpoints.putVoiceStructuredOutput",
+    requestExample: VOICE_STRUCTURED_OUTPUT_BODY,
+    responseExample: VOICE_STRUCTURED_OUTPUT_RESPONSE,
+    curlExample: buildCurlExample({
+      method: "PUT",
+      path: "/v1/voice/agents/bot_xxx/structured-output",
+      body: VOICE_STRUCTURED_OUTPUT_BODY,
+    }),
+    notesKey: "apiDocs.endpoints.putVoiceStructuredOutputNotes",
   },
 ];

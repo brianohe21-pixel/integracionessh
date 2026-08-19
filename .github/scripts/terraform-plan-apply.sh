@@ -75,6 +75,18 @@ build_plan_args() {
   if [ -n "${GOOGLE_CLIENT_SECRET:-}" ]; then
     PLAN_ARGS+=(-var="google_client_secret=${GOOGLE_CLIENT_SECRET}")
   fi
+  if [ -n "${TELEPHONY_GATEWAY_VPC_ID:-}" ]; then
+    PLAN_ARGS+=(-var="telephony_gateway_vpc_id=${TELEPHONY_GATEWAY_VPC_ID}")
+  fi
+  if [ -n "${TELEPHONY_GATEWAY_PUBLIC_SUBNET_IDS:-}" ]; then
+    PLAN_ARGS+=(-var="telephony_gateway_public_subnet_ids=${TELEPHONY_GATEWAY_PUBLIC_SUBNET_IDS}")
+  fi
+  if [ -n "${TELEPHONY_GATEWAY_DOMAIN:-}" ]; then
+    PLAN_ARGS+=(-var="telephony_gateway_domain=${TELEPHONY_GATEWAY_DOMAIN}")
+  fi
+  if [ -n "${TELEPHONY_GATEWAY_CERTIFICATE_ARN:-}" ]; then
+    PLAN_ARGS+=(-var="telephony_gateway_certificate_arn=${TELEPHONY_GATEWAY_CERTIFICATE_ARN}")
+  fi
 }
 
 run_with_lock_retry() {
@@ -113,10 +125,16 @@ case "$ACTION" in
       OUTPUT_ARGS=(-out=tfplan)
     fi
     run_with_lock_retry plan.txt \
-      terraform plan "${PLAN_ARGS[@]}" "${OUTPUT_ARGS[@]}" -lock-timeout="$LOCK_TIMEOUT"
+      terraform plan "${PLAN_ARGS[@]}" "${OUTPUT_ARGS[@]}" -input=false -lock-timeout="$LOCK_TIMEOUT"
+    if [ -f "$(dirname "$0")/validate-terraform-plan.sh" ]; then
+      bash "$(dirname "$0")/validate-terraform-plan.sh" plan.txt
+    fi
     ;;
   apply)
     test -f tfplan
+    if [ -f plan.txt ] && [ -f "$(dirname "$0")/validate-terraform-plan.sh" ]; then
+      bash "$(dirname "$0")/validate-terraform-plan.sh" plan.txt
+    fi
     run_with_lock_retry apply.txt \
       terraform apply -auto-approve -parallelism=1 -lock-timeout="$LOCK_TIMEOUT" tfplan
     ;;

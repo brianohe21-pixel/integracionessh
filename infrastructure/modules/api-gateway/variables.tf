@@ -158,6 +158,14 @@ variable "email_inbound_function_arn" {
   type = string
 }
 
+variable "email_imap_connect_invoke_arn" {
+  type = string
+}
+
+variable "email_imap_connect_function_arn" {
+  type = string
+}
+
 variable "webchat_invoke_arn" {
   type = string
 }
@@ -286,6 +294,14 @@ variable "calling_function_arn" {
   type = string
 }
 
+variable "telephony_invoke_arn" {
+  type = string
+}
+
+variable "telephony_function_arn" {
+  type = string
+}
+
 variable "realtime_invoke_arn" {
   type = string
 }
@@ -323,6 +339,22 @@ variable "catalog_invoke_arn" {
 }
 
 variable "catalog_function_arn" {
+  type = string
+}
+
+variable "mailrelay_invoke_arn" {
+  type = string
+}
+
+variable "mailrelay_function_arn" {
+  type = string
+}
+
+variable "mailrelay_webhook_invoke_arn" {
+  type = string
+}
+
+variable "mailrelay_webhook_function_arn" {
   type = string
 }
 

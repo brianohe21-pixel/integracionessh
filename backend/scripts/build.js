@@ -53,9 +53,13 @@ const entryPoints = [
   "src/functions/messenger-connect/index.ts",
   "src/functions/sms-webhook/index.ts",
   "src/functions/email-inbound/index.ts",
+  "src/functions/email-imap-connect/index.ts",
+  "src/functions/poll-imap-inbound/index.ts",
   "src/functions/webchat/index.ts",
   "src/functions/voicebot/index.ts",
   "src/functions/voicebot-session/index.ts",
+  "src/functions/telephony/index.ts",
+  "src/functions/process-telephony-cdr/index.ts",
   "src/functions/realtime/index.ts",
   "src/functions/realtime-ws/index.ts",
   "src/functions/calendar/index.ts",
@@ -63,6 +67,10 @@ const entryPoints = [
   "src/functions/payments/index.ts",
   "src/functions/catalog/index.ts",
   "src/functions/cognito-pre-signup/index.ts",
+  "src/functions/mailrelay/index.ts",
+  "src/functions/process-mailrelay-sync/index.ts",
+  "src/functions/process-whatsapp-sync/index.ts",
+  "src/functions/mailrelay-webhook/index.ts",
 ];
 
 const buildOptions = {

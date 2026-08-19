@@ -10,6 +10,14 @@ export const API_SCOPES = [
     endpoints: ["POST /v1/messages"],
   },
   {
+    scope: "sms:send",
+    endpoints: ["POST /v1/sms"],
+  },
+  {
+    scope: "sms:read",
+    endpoints: ["GET /v1/sms/{traceId}"],
+  },
+  {
     scope: "templates:read",
     endpoints: ["GET /v1/templates"],
   },
@@ -32,5 +40,23 @@ export const API_SCOPES = [
   {
     scope: "calls:settings",
     endpoints: ["GET /v1/calls/settings", "PUT /v1/calls/settings"],
+  },
+  {
+    scope: "voice:calls:initiate",
+    endpoints: ["POST /v1/voice/calls"],
+  },
+  {
+    scope: "voice:calls:read",
+    endpoints: [
+      "GET /v1/voice/calls",
+      "GET /v1/voice/calls/{callId}",
+      "GET /v1/voice/calls/{callId}/events",
+      "GET /v1/voice/calls/{callId}/transcript",
+      "GET /v1/voice/calls/{callId}/recording",
+    ],
+  },
+  {
+    scope: "voice:calls:manage",
+    endpoints: ["POST /v1/voice/calls/{callId}/end"],
   },
 ] as const;

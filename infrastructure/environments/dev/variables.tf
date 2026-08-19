@@ -186,6 +186,27 @@ variable "livekit_api_secret" {
   sensitive = true
 }
 
+variable "telephony_gateway_domain" {
+  type    = string
+  default = ""
+}
+
+variable "telephony_gateway_certificate_arn" {
+  type    = string
+  default = ""
+}
+
+variable "telephony_gateway_vpc_id" {
+  type        = string
+  description = "VPC ID for the telephony gateway (required for ECS Fargate + ALB)"
+}
+
+variable "telephony_gateway_public_subnet_ids" {
+  type        = list(string)
+  default     = []
+  description = "Public subnet IDs for telephony gateway. Pass explicitly if IAM lacks ec2:DescribeSubnets."
+}
+
 variable "google_client_id" {
   type    = string
   default = ""
@@ -195,4 +216,10 @@ variable "google_client_secret" {
   type      = string
   default   = ""
   sensitive = true
+}
+
+variable "mailrelay_event_types" {
+  type        = string
+  default     = ""
+  description = "Comma-separated Mailrelay webhook event types for tenant subscriptions"
 }

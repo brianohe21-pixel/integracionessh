@@ -5,11 +5,28 @@ import { useQuery } from "@tanstack/react-query";
 import { FileText, Trash2, Upload } from "lucide-react";
 import { api } from "@/lib/api";
 import { useKnowledgeDocuments, useUploadKnowledgeDocument, useDeleteKnowledgeDocument } from "@/hooks/useKnowledge";
-import { useUpdateBot } from "@/hooks/useBots";
+import { useSaveAiAssistant } from "@/hooks/useAiAssistant";
+import { KNOWLEDGE_ACCEPT } from "@/lib/knowledge-upload";
 import { useT } from "@/i18n/context";
 import type { Bot, Tenant } from "@/types";
 
-export function BotKnowledge({ bot }: { bot: Bot }) {
+export function BotKnowledge({
+  bot,
+  knowledgeEnabled,
+  showToggle = true,
+  title,
+  subtitle,
+  enabledLabel,
+  onKnowledgeEnabledChange,
+}: {
+  bot: Bot;
+  knowledgeEnabled?: boolean;
+  showToggle?: boolean;
+  title?: string;
+  subtitle?: string;
+  enabledLabel?: string;
+  onKnowledgeEnabledChange?: (enabled: boolean) => void;
+}) {
   const t = useT();
   const fileRef = useRef<HTMLInputElement>(null);
   const { data: tenant } = useQuery({
@@ -19,14 +36,18 @@ export function BotKnowledge({ bot }: { bot: Bot }) {
   const { data, isLoading } = useKnowledgeDocuments(bot.botId);
   const upload = useUploadKnowledgeDocument(bot.botId);
   const remove = useDeleteKnowledgeDocument(bot.botId);
-  const updateBot = useUpdateBot(bot.botId);
+  const saveAiAssistant = useSaveAiAssistant(bot.botId);
 
   const documents = data?.documents ?? [];
+  const enabled = knowledgeEnabled ?? bot.knowledgeEnabled ?? false;
+  const sectionTitle = title ?? t("knowledge.title");
+  const sectionSubtitle = subtitle ?? t("knowledge.subtitle");
+  const sectionEnabledLabel = enabledLabel ?? t("knowledge.enabled");
 
   if (tenant?.plan === "free") {
     return (
       <div className="bg-surface-elevated rounded-xl border border-default p-6">
-        <h2 className="text-lg font-semibold text-primary">{t("knowledge.title")}</h2>
+        <h2 className="text-lg font-semibold text-primary">{sectionTitle}</h2>
         <p className="text-sm text-secondary mt-2">{t("knowledge.planRequired")}</p>
       </div>
     );
@@ -34,30 +55,46 @@ export function BotKnowledge({ bot }: { bot: Bot }) {
 
   async function handleFile(file: File) {
     await upload.mutateAsync({ file });
+    if (!enabled) {
+      if (onKnowledgeEnabledChange) {
+        onKnowledgeEnabledChange(true);
+      } else {
+        saveAiAssistant.mutate({ knowledgeEnabled: true });
+      }
+    }
   }
 
   return (
     <div className="bg-surface-elevated rounded-xl border border-default p-6 space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-primary">{t("knowledge.title")}</h2>
-          <p className="text-sm text-secondary">{t("knowledge.subtitle")}</p>
+          <h2 className="text-lg font-semibold text-primary">{sectionTitle}</h2>
+          <p className="text-sm text-secondary">{sectionSubtitle}</p>
         </div>
-        <label className="flex items-center gap-2 text-sm text-secondary">
-          <input
-            type="checkbox"
-            checked={bot.knowledgeEnabled ?? false}
-            onChange={(e) => updateBot.mutate({ knowledgeEnabled: e.target.checked })}
-            className="rounded border-default"
-          />
-          {t("knowledge.enabled")}
-        </label>
+        {showToggle && (
+          <label className="flex items-center gap-2 text-sm text-secondary">
+            <input
+              type="checkbox"
+              checked={enabled}
+              onChange={(e) => {
+                const next = e.target.checked;
+                if (onKnowledgeEnabledChange) {
+                  onKnowledgeEnabledChange(next);
+                  return;
+                }
+                saveAiAssistant.mutate({ knowledgeEnabled: next });
+              }}
+              className="rounded border-default"
+            />
+            {sectionEnabledLabel}
+          </label>
+        )}
       </div>
 
       <input
         ref={fileRef}
         type="file"
-        accept=".txt,.md,.csv,text/plain,text/markdown"
+        accept={KNOWLEDGE_ACCEPT}
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];

@@ -24,6 +24,9 @@ import { OnboardingStepActivateFlow } from "./OnboardingStepActivateFlow";
 interface WhatsAppCredentials {
   phoneNumberId: string;
   whatsappBusinessAccountId: string;
+  onboardingMode?: "cloud_api" | "coexistence";
+  isOnBizApp?: boolean;
+  platformType?: string;
 }
 
 const ONBOARDING_WA_STORAGE_KEY = "onboardingWhatsApp";
@@ -64,6 +67,7 @@ function readStoredWhatsAppCredentials(): WhatsAppCredentials | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as WhatsAppCredentials;
     if (parsed.phoneNumberId && parsed.whatsappBusinessAccountId) return parsed;
+    if (parsed.phoneNumberId && parsed.onboardingMode === "coexistence") return parsed;
     return null;
   } catch {
     return null;
@@ -255,6 +259,9 @@ export function OnboardingWizard() {
           <OnboardingStepCreateBot
             phoneNumberId={credentials.phoneNumberId}
             whatsappBusinessAccountId={credentials.whatsappBusinessAccountId}
+            whatsappOnboardingMode={credentials.onboardingMode}
+            isOnBizApp={credentials.isOnBizApp}
+            platformType={credentials.platformType}
             templateId={templateId}
             onTemplateChange={(id) => {
               setTemplateId(id);

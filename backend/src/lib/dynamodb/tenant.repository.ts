@@ -5,6 +5,7 @@ import {
   DeleteCommand,
   QueryCommand,
 } from "@aws-sdk/lib-dynamodb";
+import { ConditionalCheckFailedException } from "@aws-sdk/client-dynamodb";
 import { docClient, TABLE_NAME } from "./client.js";
 import type { Tenant } from "../../types/index.js";
 import { notifyAdminsOfNewRegistration } from "../email/registration-admin-notify.js";
@@ -121,11 +122,11 @@ export async function updateTenant(
     ? normalizeDomain(updated.resellerConfig.customDomain)
     : undefined;
 
-  if (oldDomain && oldDomain !== newDomain) {
-    await deleteDomainMapping(oldDomain);
-  }
   if (newDomain) {
     await putDomainMapping(newDomain, tenantId);
+  }
+  if (oldDomain && oldDomain !== newDomain) {
+    await deleteDomainMapping(oldDomain);
   }
 
   return updated;
@@ -240,18 +241,31 @@ export async function countSubaccounts(parentTenantId: string): Promise<number> 
 
 export async function putDomainMapping(domain: string, tenantId: string): Promise<void> {
   const normalized = normalizeDomain(domain);
-  await docClient.send(
-    new PutCommand({
-      TableName: TABLE_NAME,
-      Item: {
-        PK: `DOMAIN#${normalized}`,
-        SK: "METADATA",
-        domain: normalized,
-        tenantId,
-        updatedAt: new Date().toISOString(),
-      },
-    })
-  );
+  try {
+    await docClient.send(
+      new PutCommand({
+        TableName: TABLE_NAME,
+        Item: {
+          PK: `DOMAIN#${normalized}`,
+          SK: "METADATA",
+          domain: normalized,
+          tenantId,
+          updatedAt: new Date().toISOString(),
+        },
+        ConditionExpression: "attribute_not_exists(PK) OR tenantId = :tid",
+        ExpressionAttributeValues: {
+          ":tid": tenantId,
+        },
+      })
+    );
+  } catch (error) {
+    if (error instanceof ConditionalCheckFailedException) {
+      throw Object.assign(new Error("Domain is already registered to another tenant"), {
+        statusCode: 400,
+      });
+    }
+    throw error;
+  }
 }
 
 export async function deleteDomainMapping(domain: string): Promise<void> {

@@ -1,13 +1,16 @@
 "use client";
 
+import { useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, setTenantContext } from "@/lib/api";
-import type { Tenant } from "@/types";
+import type { Tenant, ResellerLimitsOverride, SubaccountServiceId } from "@/types";
+import type { ResellerBag } from "@/lib/subaccount-services";
 
 export interface SubaccountsResponse {
   items: Tenant[];
   maxSubaccounts: number;
   count: number;
+  bag?: ResellerBag;
 }
 
 export interface ResellerDomainDnsRecord {
@@ -44,6 +47,8 @@ export function useCreateSubaccount() {
       ownerName?: string;
       plan?: "free" | "pro" | "enterprise";
       inviteOwner?: boolean;
+      enabledServices?: SubaccountServiceId[];
+      serviceLimits?: ResellerLimitsOverride;
     }) =>
       api.post<{
         tenant: Tenant;
@@ -67,11 +72,17 @@ export function useUpdateSubaccount() {
       name?: string;
       status?: "active" | "suspended";
       plan?: "free" | "pro" | "enterprise";
+      enabledServices?: SubaccountServiceId[];
+      serviceLimits?: ResellerLimitsOverride;
     }) =>
       api.put<Tenant>(`/reseller/subaccounts/${input.subaccountId}`, {
         ...(input.name !== undefined ? { name: input.name } : {}),
         ...(input.status !== undefined ? { status: input.status } : {}),
         ...(input.plan !== undefined ? { plan: input.plan } : {}),
+        ...(input.enabledServices !== undefined
+          ? { enabledServices: input.enabledServices }
+          : {}),
+        ...(input.serviceLimits !== undefined ? { serviceLimits: input.serviceLimits } : {}),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reseller-subaccounts"] });
@@ -96,10 +107,10 @@ export function useAssumeSubaccount() {
 
 export function useClearTenantContext() {
   const queryClient = useQueryClient();
-  return () => {
+  return useCallback(() => {
     setTenantContext(null);
     queryClient.invalidateQueries();
-  };
+  }, [queryClient]);
 }
 
 export function useResellerDomain(enabled = true) {
@@ -119,6 +130,17 @@ export function useRegisterResellerDomain() {
   return useMutation({
     mutationFn: (customDomain: string) =>
       api.put<ResellerDomainResponse>("/reseller/domain", { customDomain }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reseller-domain"] });
+      queryClient.invalidateQueries({ queryKey: ["tenants"] });
+    },
+  });
+}
+
+export function useDeleteResellerDomain() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.delete<ResellerDomainResponse>("/reseller/domain"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reseller-domain"] });
       queryClient.invalidateQueries({ queryKey: ["tenants"] });

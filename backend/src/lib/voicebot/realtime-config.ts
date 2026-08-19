@@ -2,8 +2,14 @@ import type { Bot, BotLocale } from "../../types/index.js";
 import { getCalendarConfig } from "../dynamodb/calendar-config.repository.js";
 import { getZonedParts } from "../calendar/slot-engine.js";
 import { getSystemMessage, intlLocaleForBot } from "../i18n/index.js";
+import { loadVoiceFlowRuntime } from "../flow/voice-flow-runtime.js";
+import {
+  DEFAULT_REALTIME_MODEL_ID,
+  resolveRealtimeModelId,
+} from "./realtime-models.js";
+import { resolveVoicebotTranscriptionModelId } from "./transcription-models.js";
 
-export const DEFAULT_VOICEBOT_MODEL = "gpt-realtime-2.1-mini";
+export const DEFAULT_VOICEBOT_MODEL = DEFAULT_REALTIME_MODEL_ID;
 export const DEFAULT_VOICEBOT_VOICE = "alloy";
 
 const VOICEBOT_VOICES = [
@@ -25,8 +31,7 @@ export function resolveVoicebotVoice(voice?: string): string {
 }
 
 export function resolveVoicebotModel(model?: string): string {
-  if (model?.startsWith("gpt-realtime")) return model;
-  return DEFAULT_VOICEBOT_MODEL;
+  return resolveRealtimeModelId(model);
 }
 
 async function buildCalendarInstructions(
@@ -66,8 +71,10 @@ export async function buildVoicebotInstructions(params: {
   bot: Bot;
   tenantId: string;
   locale: BotLocale;
+  handoffEnabled?: boolean;
 }): Promise<string> {
   const { bot, tenantId, locale } = params;
+  const handoffEnabled = params.handoffEnabled === true;
   const basePrompt = bot.voicebotSystemPrompt?.trim() || bot.systemPrompt?.trim() || "";
   const languageInstruction =
     locale === "en"
@@ -78,19 +85,26 @@ export async function buildVoicebotInstructions(params: {
     locale === "en"
       ? "\n\nUse search_knowledge when you need business-specific information."
       : "\n\nUsa search_knowledge cuando necesites información específica del negocio.";
+  const handoffInstruction = handoffEnabled
+    ? getSystemMessage("handoffToolInstruction", locale)
+    : getSystemMessage("telephonyHandoffDisabledInstruction", locale);
 
-  return `${basePrompt}${calendarBlock}${knowledgeHint}\n\n${languageInstruction}\n\n${getSystemMessage("handoffToolInstruction", locale)}`;
+  return `${basePrompt}${calendarBlock}${knowledgeHint}\n\n${languageInstruction}\n\n${handoffInstruction}`;
 }
 
 export function buildVoicebotTools(params: {
   locale: BotLocale;
   knowledgeEnabled: boolean;
   calendarEnabled: boolean;
+  handoffEnabled?: boolean;
 }): Array<Record<string, unknown>> {
   const { locale, knowledgeEnabled, calendarEnabled } = params;
+  const handoffEnabled = params.handoffEnabled === true;
   const isEn = locale === "en";
-  const tools: Array<Record<string, unknown>> = [
-    {
+  const tools: Array<Record<string, unknown>> = [];
+
+  if (handoffEnabled) {
+    tools.push({
       type: "function",
       name: "transfer_to_human",
       description: getSystemMessage("transferToHumanDescription", locale),
@@ -104,8 +118,8 @@ export function buildVoicebotTools(params: {
         },
         required: ["reason"],
       },
-    },
-  ];
+    });
+  }
 
   if (knowledgeEnabled) {
     tools.push({
@@ -179,13 +193,30 @@ export async function buildRealtimeSessionConfig(params: {
   tenantId: string;
   locale: BotLocale;
 }): Promise<Record<string, unknown>> {
-  const calendarConfig = await getCalendarConfig(params.tenantId, params.bot.botId);
-  const instructions = await buildVoicebotInstructions(params);
-  const tools = buildVoicebotTools({
+  const voiceRuntime = await loadVoiceFlowRuntime({
+    tenantId: params.tenantId,
+    botId: params.bot.botId,
     locale: params.locale,
-    knowledgeEnabled: Boolean(params.bot.knowledgeEnabled),
-    calendarEnabled: Boolean(calendarConfig?.enabled),
   });
+
+  const calendarConfig = await getCalendarConfig(params.tenantId, params.bot.botId);
+  const handoffEnabled = voiceRuntime?.hasHandoff ?? Boolean(params.bot.telephonyHandoffEnabled);
+  const instructions =
+    voiceRuntime?.instructions ??
+    await buildVoicebotInstructions({
+      bot: params.bot,
+      tenantId: params.tenantId,
+      locale: params.locale,
+      handoffEnabled,
+    });
+  const tools =
+    voiceRuntime?.tools ??
+    buildVoicebotTools({
+      locale: params.locale,
+      knowledgeEnabled: Boolean(params.bot.knowledgeEnabled),
+      calendarEnabled: Boolean(calendarConfig?.enabled),
+      handoffEnabled,
+    });
 
   return {
     type: "realtime",
@@ -195,7 +226,9 @@ export async function buildRealtimeSessionConfig(params: {
     tool_choice: "auto",
     audio: {
       input: {
-        transcription: { model: "whisper-1" },
+        transcription: {
+          model: resolveVoicebotTranscriptionModelId(params.bot.voicebotTranscriptionModel),
+        },
       },
       output: {
         voice: resolveVoicebotVoice(params.bot.voicebotVoice),

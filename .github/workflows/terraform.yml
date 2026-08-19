@@ -9,6 +9,15 @@ on:
       - ".github/workflows/terraform.yml"
       - ".github/scripts/terraform-plan-apply.sh"
       - ".github/scripts/terraform-unlock-stale.sh"
+      - ".github/scripts/migrate-api-gateway-integrations.sh"
+      - ".github/scripts/deploy-api-gateway-migration.sh"
+      - ".github/scripts/validate-api-gateway-integrations.sh"
+      - ".github/scripts/validate-terraform-plan.sh"
+      - ".github/scripts/preflight-api-gateway-migration.sh"
+      - ".github/scripts/cleanup-orphan-api-integrations.sh"
+      - ".github/scripts/smoke-test-api-gateway.sh"
+      - ".github/scripts/check-api-gateway-guardrails.sh"
+      - ".github/scripts/count-orphan-api-integrations.sh"
   pull_request:
     branches: [main, develop]
     paths:
@@ -16,6 +25,15 @@ on:
       - ".github/workflows/terraform.yml"
       - ".github/scripts/terraform-plan-apply.sh"
       - ".github/scripts/terraform-unlock-stale.sh"
+      - ".github/scripts/migrate-api-gateway-integrations.sh"
+      - ".github/scripts/deploy-api-gateway-migration.sh"
+      - ".github/scripts/validate-api-gateway-integrations.sh"
+      - ".github/scripts/validate-terraform-plan.sh"
+      - ".github/scripts/preflight-api-gateway-migration.sh"
+      - ".github/scripts/cleanup-orphan-api-integrations.sh"
+      - ".github/scripts/smoke-test-api-gateway.sh"
+      - ".github/scripts/check-api-gateway-guardrails.sh"
+      - ".github/scripts/count-orphan-api-integrations.sh"
 
 concurrency:
   group: ${{ github.event_name == 'pull_request' && github.base_ref == 'main' && 'ci-main' || format('{0}-{1}', github.workflow, github.ref) }}
@@ -66,6 +84,7 @@ jobs:
           GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
           WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
           REPOSITORY_URL: ${{ vars.REPOSITORY_URL }}
+          TELEPHONY_GATEWAY_VPC_ID: ${{ vars.TELEPHONY_GATEWAY_VPC_ID }}
         run: |
           set -euo pipefail
           if [ -z "${GH_ACCESS_TOKEN}" ]; then
@@ -80,11 +99,39 @@ jobs:
             echo "::error::REPOSITORY_URL is missing or empty. Add it under Settings → Secrets and variables → Actions → Variables (e.g. https://github.com/org/repo)."
             exit 1
           fi
+          if [ -z "${TELEPHONY_GATEWAY_VPC_ID:-}" ]; then
+            echo "::error::TELEPHONY_GATEWAY_VPC_ID is missing or empty. Add it under Settings → Environments → dev → Variables (e.g. vpc-xxxxxxxx)."
+            exit 1
+          fi
+
+      - name: Validate API Gateway integration model
+        run: bash ../../../.github/scripts/validate-api-gateway-integrations.sh
+
+      - name: Check API Gateway guardrails
+        env:
+          ENVIRONMENT: dev
+        run: bash ../../../.github/scripts/check-api-gateway-guardrails.sh
 
       - name: Clear stale Terraform state lock
         env:
           TF_STATE_KEY: dev/terraform.tfstate
         run: bash ../../../.github/scripts/terraform-unlock-stale.sh
+
+      - name: Preflight API Gateway migration
+        env:
+          ENVIRONMENT: dev
+        run: bash ../../../.github/scripts/preflight-api-gateway-migration.sh
+
+      - name: Migrate API Gateway integrations state
+        env:
+          TF_VAR_github_access_token: ${{ secrets.GH_ACCESS_TOKEN }}
+          TF_VAR_whatsapp_verify_token: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
+          TF_VAR_repository_url: ${{ vars.REPOSITORY_URL }}
+          TF_VAR_telephony_gateway_vpc_id: ${{ vars.TELEPHONY_GATEWAY_VPC_ID }}
+          ENVIRONMENT: dev
+          DRY_RUN: ${{ github.event_name == 'pull_request' && 'true' || 'false' }}
+          SKIP_STATE_BACKUP: ${{ github.event_name == 'pull_request' && 'true' || 'false' }}
+        run: bash ../../../.github/scripts/migrate-api-gateway-integrations.sh
 
       - name: Terraform Plan
         id: plan
@@ -92,6 +139,10 @@ jobs:
           GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
           WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
           REPOSITORY_URL: ${{ vars.REPOSITORY_URL }}
+          TELEPHONY_GATEWAY_VPC_ID: ${{ vars.TELEPHONY_GATEWAY_VPC_ID }}
+          TELEPHONY_GATEWAY_PUBLIC_SUBNET_IDS: ${{ vars.TELEPHONY_GATEWAY_PUBLIC_SUBNET_IDS }}
+          TELEPHONY_GATEWAY_DOMAIN: ${{ vars.TELEPHONY_GATEWAY_DOMAIN }}
+          TELEPHONY_GATEWAY_CERTIFICATE_ARN: ${{ vars.TELEPHONY_GATEWAY_CERTIFICATE_ARN }}
           META_APP_ID: ${{ vars.META_APP_ID }}
           META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
           META_EMBEDDED_SIGNUP_CONFIG_ID: ${{ vars.META_EMBEDDED_SIGNUP_CONFIG_ID }}
@@ -203,7 +254,39 @@ jobs:
           GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
           WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
           REPOSITORY_URL: ${{ vars.REPOSITORY_URL }}
+          TELEPHONY_GATEWAY_VPC_ID: ${{ vars.TELEPHONY_GATEWAY_VPC_ID }}
         run: bash ../../../.github/scripts/terraform-plan-apply.sh apply
+
+      - name: Post-apply API Gateway preflight
+        if: github.ref == 'refs/heads/develop' && github.event_name == 'push' && steps.plan.outcome == 'success'
+        env:
+          ENVIRONMENT: dev
+        run: bash ../../../.github/scripts/preflight-api-gateway-migration.sh
+
+      - name: Cleanup orphan API Gateway integrations
+        if: github.ref == 'refs/heads/develop' && github.event_name == 'push' && steps.plan.outcome == 'success'
+        env:
+          ENVIRONMENT: dev
+        run: bash ../../../.github/scripts/cleanup-orphan-api-integrations.sh
+
+      - name: Check API Gateway guardrails
+        if: github.ref == 'refs/heads/develop' && github.event_name == 'push' && steps.plan.outcome == 'success'
+        env:
+          ENVIRONMENT: dev
+          ENFORCE_ORPHAN_LIMIT: "true"
+          MAX_ORPHAN_INTEGRATIONS: "0"
+        run: bash ../../../.github/scripts/check-api-gateway-guardrails.sh
+
+      - name: Smoke test API Gateway
+        if: github.ref == 'refs/heads/develop' && github.event_name == 'push' && steps.plan.outcome == 'success'
+        env:
+          API_PUBLIC_URL: ${{ vars.API_PUBLIC_URL }}
+        run: |
+          if [ -z "${API_PUBLIC_URL:-}" ]; then
+            echo "Skipping smoke tests because API_PUBLIC_URL is not configured."
+            exit 0
+          fi
+          bash ../../../.github/scripts/smoke-test-api-gateway.sh
 
       - name: Upload apply artifact
         if: always() && hashFiles('infrastructure/environments/dev/apply.txt') != ''
@@ -253,6 +336,7 @@ jobs:
           GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
           WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
           REPOSITORY_URL: ${{ vars.REPOSITORY_URL }}
+          TELEPHONY_GATEWAY_VPC_ID: ${{ vars.TELEPHONY_GATEWAY_VPC_ID }}
         run: |
           set -euo pipefail
           if [ -z "${GH_ACCESS_TOKEN}" ]; then
@@ -267,11 +351,39 @@ jobs:
             echo "::error::REPOSITORY_URL is missing or empty. Add it under Settings → Secrets and variables → Actions → Variables."
             exit 1
           fi
+          if [ -z "${TELEPHONY_GATEWAY_VPC_ID:-}" ]; then
+            echo "::error::TELEPHONY_GATEWAY_VPC_ID is missing or empty. Add it under Settings → Environments → prod → Variables (e.g. vpc-xxxxxxxx)."
+            exit 1
+          fi
+
+      - name: Validate API Gateway integration model
+        run: bash ../../../.github/scripts/validate-api-gateway-integrations.sh
+
+      - name: Check API Gateway guardrails
+        env:
+          ENVIRONMENT: prod
+        run: bash ../../../.github/scripts/check-api-gateway-guardrails.sh
 
       - name: Clear stale Terraform state lock
         env:
           TF_STATE_KEY: prod/terraform.tfstate
         run: bash ../../../.github/scripts/terraform-unlock-stale.sh
+
+      - name: Preflight API Gateway migration
+        env:
+          ENVIRONMENT: prod
+        run: bash ../../../.github/scripts/preflight-api-gateway-migration.sh
+
+      - name: Migrate API Gateway integrations state
+        env:
+          TF_VAR_github_access_token: ${{ secrets.GH_ACCESS_TOKEN }}
+          TF_VAR_whatsapp_verify_token: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
+          TF_VAR_repository_url: ${{ vars.REPOSITORY_URL }}
+          TF_VAR_telephony_gateway_vpc_id: ${{ vars.TELEPHONY_GATEWAY_VPC_ID }}
+          ENVIRONMENT: prod
+          DRY_RUN: "false"
+          SKIP_STATE_BACKUP: "false"
+        run: bash ../../../.github/scripts/migrate-api-gateway-integrations.sh
 
       - name: Terraform Plan
         id: plan
@@ -279,6 +391,10 @@ jobs:
           GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
           WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
           REPOSITORY_URL: ${{ vars.REPOSITORY_URL }}
+          TELEPHONY_GATEWAY_VPC_ID: ${{ vars.TELEPHONY_GATEWAY_VPC_ID }}
+          TELEPHONY_GATEWAY_PUBLIC_SUBNET_IDS: ${{ vars.TELEPHONY_GATEWAY_PUBLIC_SUBNET_IDS }}
+          TELEPHONY_GATEWAY_DOMAIN: ${{ vars.TELEPHONY_GATEWAY_DOMAIN }}
+          TELEPHONY_GATEWAY_CERTIFICATE_ARN: ${{ vars.TELEPHONY_GATEWAY_CERTIFICATE_ARN }}
           META_APP_ID: ${{ vars.META_APP_ID }}
           META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
           META_EMBEDDED_SIGNUP_CONFIG_ID: ${{ vars.META_EMBEDDED_SIGNUP_CONFIG_ID }}
@@ -314,7 +430,39 @@ jobs:
           GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
           WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
           REPOSITORY_URL: ${{ vars.REPOSITORY_URL }}
+          TELEPHONY_GATEWAY_VPC_ID: ${{ vars.TELEPHONY_GATEWAY_VPC_ID }}
         run: bash ../../../.github/scripts/terraform-plan-apply.sh apply
+
+      - name: Post-apply API Gateway preflight
+        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && steps.plan.outcome == 'success'
+        env:
+          ENVIRONMENT: prod
+        run: bash ../../../.github/scripts/preflight-api-gateway-migration.sh
+
+      - name: Cleanup orphan API Gateway integrations
+        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && steps.plan.outcome == 'success'
+        env:
+          ENVIRONMENT: prod
+        run: bash ../../../.github/scripts/cleanup-orphan-api-integrations.sh
+
+      - name: Check API Gateway guardrails
+        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && steps.plan.outcome == 'success'
+        env:
+          ENVIRONMENT: prod
+          ENFORCE_ORPHAN_LIMIT: "true"
+          MAX_ORPHAN_INTEGRATIONS: "0"
+        run: bash ../../../.github/scripts/check-api-gateway-guardrails.sh
+
+      - name: Smoke test API Gateway
+        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && steps.plan.outcome == 'success'
+        env:
+          API_PUBLIC_URL: ${{ vars.API_PUBLIC_URL }}
+        run: |
+          if [ -z "${API_PUBLIC_URL:-}" ]; then
+            echo "Skipping smoke tests because API_PUBLIC_URL is not configured."
+            exit 0
+          fi
+          bash ../../../.github/scripts/smoke-test-api-gateway.sh
 
       - name: Upload apply artifact
         if: always() && hashFiles('infrastructure/environments/prod/apply.txt') != ''

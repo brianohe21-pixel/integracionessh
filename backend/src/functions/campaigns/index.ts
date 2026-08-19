@@ -23,6 +23,7 @@ import { listBulkSendFailures } from "../../lib/dynamodb/bulk-job.repository.js"
 import { getCampaignMetrics } from "../../lib/dynamodb/campaign-metrics.repository.js";
 import { buildCampaignExportCsv } from "../../lib/reports/campaign-export-csv.js";
 import { resolveRequestAuth, assertMemberRole } from "../../lib/auth/cognito.js";
+import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import { ensureTenant } from "../../lib/dynamodb/tenant.repository.js";
 import { assertBulkRecipients, assertCanStartCampaign } from "../../lib/billing/assert-plan.js";
 import { incrementBulkRecipients, incrementCampaignsStarted } from "../../lib/dynamodb/usage.repository.js";
@@ -260,6 +261,7 @@ export async function handler(
 
     const auth = await resolveRequestAuth(event);
     assertMemberRole(auth);
+    await assertAssignedServices(auth.tenantId, "campaigns");
     const method = event.requestContext.http.method;
     const campaignId = event.pathParameters?.campaignId;
     const rawPath = event.rawPath ?? event.requestContext.http.path ?? "";

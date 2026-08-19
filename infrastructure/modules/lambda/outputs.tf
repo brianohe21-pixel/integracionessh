@@ -146,6 +146,18 @@ output "email_inbound_function_arn" {
   value = aws_lambda_function.functions["email_inbound"].arn
 }
 
+output "email_imap_connect_invoke_arn" {
+  value = aws_lambda_function.functions["email_imap_connect"].invoke_arn
+}
+
+output "email_imap_connect_function_arn" {
+  value = aws_lambda_function.functions["email_imap_connect"].arn
+}
+
+output "poll_imap_inbound_function_arn" {
+  value = aws_lambda_function.functions["poll_imap_inbound"].arn
+}
+
 output "webchat_invoke_arn" {
   value = aws_lambda_function.functions["webchat"].invoke_arn
 }
@@ -278,6 +290,14 @@ output "calling_function_arn" {
   value = aws_lambda_function.functions["calling"].arn
 }
 
+output "telephony_invoke_arn" {
+  value = aws_lambda_function.functions["telephony"].invoke_arn
+}
+
+output "telephony_function_arn" {
+  value = aws_lambda_function.functions["telephony"].arn
+}
+
 output "realtime_invoke_arn" {
   value = aws_lambda_function.functions["realtime"].invoke_arn
 }
@@ -332,6 +352,22 @@ output "catalog_invoke_arn" {
 
 output "catalog_function_arn" {
   value = try(aws_lambda_function.functions["catalog"].arn, null)
+}
+
+output "mailrelay_invoke_arn" {
+  value = aws_lambda_function.functions["mailrelay"].invoke_arn
+}
+
+output "mailrelay_function_arn" {
+  value = aws_lambda_function.functions["mailrelay"].arn
+}
+
+output "mailrelay_webhook_invoke_arn" {
+  value = aws_lambda_function.functions["mailrelay_webhook"].invoke_arn
+}
+
+output "mailrelay_webhook_function_arn" {
+  value = aws_lambda_function.functions["mailrelay_webhook"].arn
 }
 
 output "lambda_log_group_ids" {

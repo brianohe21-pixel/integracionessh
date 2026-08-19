@@ -31,6 +31,7 @@ async function processRecord(record: SQSRecord): Promise<void> {
     docId,
     s3Key: doc.s3Key,
     mimeType: doc.mimeType,
+    filename: doc.filename,
     apiKey,
   });
 }

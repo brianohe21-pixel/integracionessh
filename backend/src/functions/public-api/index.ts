@@ -40,6 +40,9 @@ import {
 } from "../../lib/whatsapp/calls.js";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
 import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
+import { getSmsDlrReceipt } from "../../lib/dynamodb/sms-dlr.repository.js";
+import { sendSmsTextWithDlr } from "../../lib/sms/send-outbound.js";
+import { mapSmsDlrReceiptToTraceability } from "../../lib/sms/traceability.js";
 import {
   sendTemplateApprovedEmail,
   sendTemplateCreatedEmail,
@@ -52,6 +55,21 @@ import {
   notFound,
   handleError,
 } from "../../lib/http.js";
+import type { PublicApiAuth } from "./shared.js";
+import {
+  extractVoiceAgentIdFromStructuredOutputPath,
+  extractVoiceCallIdFromPath,
+  handleEndVoiceCall,
+  handleGetVoiceCall,
+  handleGetVoiceCallEvents,
+  handleGetVoiceCallRecording,
+  handleGetVoiceCallTranscript,
+  handleGetVoiceStructuredOutput,
+  handleListVoiceCalls,
+  handlePutVoiceStructuredOutput,
+  handleStartVoiceCall,
+  isVoiceCallSubPath,
+} from "./voice-handlers.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 
@@ -137,6 +155,13 @@ const PermissionRequestSchema = z.object({
 });
 
 const UserWaIdParamSchema = z.string().min(7).max(20).regex(/^\d+$/);
+
+const SendSmsSchema = z.object({
+  to: z.string().min(7).max(20).regex(/^\d+$/, "Phone number must contain only digits"),
+  text: z.string().min(1).max(1024),
+});
+
+const TraceIdParamSchema = z.string().uuid("Invalid trace ID");
 
 const TemplateComponentSchema = z
   .object({
@@ -388,11 +413,33 @@ async function logUnhandledApiError(
 }
 
 async function loadActiveBot(apiKey: ApiKey) {
-  const bot = await getBot(apiKey.tenantId, apiKey.botId);
-  if (!bot) throw Object.assign(new Error("Bot associated with this API key not found."), { statusCode: 404 });
-  if (bot.status !== "active") throw Object.assign(new Error("Bot is inactive."), { statusCode: 403 });
+  const bot = await loadBotForApiKey(apiKey);
   const accessToken = await getWhatsAppAccessToken(apiKey.tenantId, ENVIRONMENT);
   return { bot, accessToken };
+}
+
+async function loadBotForApiKey(apiKey: ApiKey) {
+  const bot = await getBot(apiKey.tenantId, apiKey.botId);
+  if (!bot) {
+    throw Object.assign(new Error("Bot associated with this API key not found."), {
+      statusCode: 404,
+    });
+  }
+  if (bot.status !== "active") {
+    throw Object.assign(new Error("Bot is inactive."), { statusCode: 403 });
+  }
+  return bot;
+}
+
+function buildPublicApiAuth(auth: AuthResult): PublicApiAuth {
+  return {
+    apiKey: auth.apiKey,
+    hashedKey: auth.hashedKey,
+    rateResult: auth.rateResult,
+    successHeaders,
+    logUsage,
+    maskPhone,
+  };
 }
 
 async function handleSendMessage(
@@ -474,6 +521,117 @@ async function handleSendMessage(
     statusCode: 200,
     headers: successHeaders(apiKey, rateResult),
     body: JSON.stringify({ messageId, status: "sent", timestamp: now }),
+  };
+}
+
+async function handleSendSms(
+  event: APIGatewayProxyEventV2
+): Promise<APIGatewayProxyResultV2> {
+  const startMs = Date.now();
+  const auth = await authenticateApiKey(event);
+  if (!isAuthResult(auth)) return auth;
+
+  const { apiKey, hashedKey, rateResult } = auth;
+  assertApiKeyScope(apiKey, API_KEY_SCOPES.smsSend);
+
+  const parsed = SendSmsSchema.safeParse(JSON.parse(event.body ?? "{}"));
+  if (!parsed.success) {
+    return badRequest(parsed.error.errors[0]?.message ?? "Invalid request body");
+  }
+
+  const bot = await loadBotForApiKey(apiKey);
+  const now = new Date().toISOString();
+
+  try {
+    const result = await sendSmsTextWithDlr({
+      tenantId: apiKey.tenantId,
+      bot,
+      botId: apiKey.botId,
+      to: parsed.data.to,
+      text: parsed.data.text,
+      environment: ENVIRONMENT,
+    });
+
+    await incrementMessages(apiKey.tenantId);
+    await logUsage({
+      apiKey,
+      hashedKey,
+      endpoint: "POST /v1/sms",
+      method: "POST",
+      statusCode: 200,
+      durationMs: Date.now() - startMs,
+      messageId: result.messageId,
+      maskedPhone: maskPhone(parsed.data.to),
+    });
+
+    return {
+      statusCode: 200,
+      headers: successHeaders(apiKey, rateResult),
+      body: JSON.stringify({
+        traceId: result.receiptId,
+        messageId: result.messageId,
+        status: "sent",
+        timestamp: now,
+      }),
+    };
+  } catch (err) {
+    const error = err as Error & { receiptId?: string; statusCode?: number };
+    const statusCode = error.statusCode ?? 502;
+    const loggedError = err as Error & { __apiUsageLogged?: boolean };
+    loggedError.__apiUsageLogged = true;
+
+    await logUsage({
+      apiKey,
+      hashedKey,
+      endpoint: "POST /v1/sms",
+      method: "POST",
+      statusCode,
+      durationMs: Date.now() - startMs,
+      maskedPhone: maskPhone(parsed.data.to),
+      ...captureError(err),
+    });
+
+    if (error.receiptId) {
+      return {
+        statusCode,
+        headers: successHeaders(apiKey, rateResult),
+        body: JSON.stringify({
+          traceId: error.receiptId,
+          status: "send_failed",
+          error: error.message,
+          timestamp: now,
+        }),
+      };
+    }
+
+    throw err;
+  }
+}
+
+async function handleGetSmsTrace(
+  event: APIGatewayProxyEventV2,
+  traceId: string
+): Promise<APIGatewayProxyResultV2> {
+  const auth = await authenticateApiKey(event);
+  if (!isAuthResult(auth)) return auth;
+
+  const { apiKey, rateResult } = auth;
+  assertApiKeyScope(apiKey, API_KEY_SCOPES.smsRead);
+
+  const parsed = TraceIdParamSchema.safeParse(traceId);
+  if (!parsed.success) {
+    return badRequest(parsed.error.errors[0]?.message ?? "Invalid trace ID");
+  }
+
+  const receipt = await getSmsDlrReceipt(parsed.data);
+  if (!receipt || receipt.tenantId !== apiKey.tenantId || receipt.botId !== apiKey.botId) {
+    return notFound("SMS trace not found");
+  }
+
+  return {
+    statusCode: 200,
+    headers: successHeaders(apiKey, rateResult),
+    body: JSON.stringify(mapSmsDlrReceiptToTraceability(receipt)),
   };
 }
 
@@ -995,6 +1153,11 @@ function extractCallIdFromPath(path: string): string | null {
   return decodeURIComponent(match[1]);
 }
 
+function extractTraceIdFromPath(path: string): string | null {
+  const match = path.match(/\/v1\/sms\/([^/]+)$/);
+  return match?.[1] ? decodeURIComponent(match[1]) : null;
+}
+
 export async function handler(
   event: APIGatewayProxyEventV2
 ): Promise<APIGatewayProxyResultV2> {
@@ -1010,12 +1173,64 @@ export async function handler(
     if (path.endsWith("/v1/messages") && method === "POST") {
       return await handleSendMessage(event);
     }
+    if (path.endsWith("/v1/sms") && method === "POST") {
+      return await handleSendSms(event);
+    }
     if (path.endsWith("/v1/templates") && method === "GET") {
       return await handleListTemplates(event);
     }
     if (path.endsWith("/v1/templates") && method === "POST") {
       return await handleCreateTemplate(event);
     }
+
+    if (path.endsWith("/v1/voice/calls") && method === "POST") {
+      const auth = await authenticateApiKey(event);
+      if (!isAuthResult(auth)) return auth;
+      return await handleStartVoiceCall(event, buildPublicApiAuth(auth));
+    }
+    if (path.endsWith("/v1/voice/calls") && method === "GET") {
+      const auth = await authenticateApiKey(event);
+      if (!isAuthResult(auth)) return auth;
+      return await handleListVoiceCalls(event, buildPublicApiAuth(auth));
+    }
+
+    const voiceAgentId = extractVoiceAgentIdFromStructuredOutputPath(path);
+    if (voiceAgentId) {
+      const auth = await authenticateApiKey(event);
+      if (!isAuthResult(auth)) return auth;
+      const publicAuth = buildPublicApiAuth(auth);
+
+      if (method === "GET") {
+        return await handleGetVoiceStructuredOutput(event, publicAuth, voiceAgentId);
+      }
+      if (method === "PUT") {
+        return await handlePutVoiceStructuredOutput(event, publicAuth, voiceAgentId);
+      }
+    }
+
+    const voiceCallId = extractVoiceCallIdFromPath(path);
+    if (voiceCallId) {
+      const auth = await authenticateApiKey(event);
+      if (!isAuthResult(auth)) return auth;
+      const publicAuth = buildPublicApiAuth(auth);
+
+      if (method === "POST" && isVoiceCallSubPath(path, voiceCallId, "end")) {
+        return await handleEndVoiceCall(event, publicAuth, voiceCallId);
+      }
+      if (method === "GET" && isVoiceCallSubPath(path, voiceCallId, "events")) {
+        return await handleGetVoiceCallEvents(event, publicAuth, voiceCallId);
+      }
+      if (method === "GET" && isVoiceCallSubPath(path, voiceCallId, "transcript")) {
+        return await handleGetVoiceCallTranscript(event, publicAuth, voiceCallId);
+      }
+      if (method === "GET" && isVoiceCallSubPath(path, voiceCallId, "recording")) {
+        return await handleGetVoiceCallRecording(event, publicAuth, voiceCallId);
+      }
+      if (method === "GET" && path.endsWith(`/v1/voice/calls/${voiceCallId}`)) {
+        return await handleGetVoiceCall(event, publicAuth, voiceCallId);
+      }
+    }
+
     if (path.endsWith("/v1/calls") && method === "POST") {
       return await handleInitiateCall(event);
     }
@@ -1048,6 +1263,11 @@ export async function handler(
     }
     if (callId && method === "GET") {
       return await handleGetCall(event, callId);
+    }
+
+    const traceId = extractTraceIdFromPath(path);
+    if (traceId && method === "GET") {
+      return await handleGetSmsTrace(event, traceId);
     }
 
     return {

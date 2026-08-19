@@ -13,16 +13,21 @@ const ROUTE_LABEL_KEYS: Record<string, string> = {
   "/contacts": "nav.contacts",
   "/leads": "nav.leads",
   "/advisors": "nav.advisors",
+  "/supervisor": "nav.supervisor",
   "/inbox": "nav.inbox",
+  "/contact-center": "nav.contactCenter",
   "/templates": "nav.templates",
   "/bulk-send": "nav.bulkSend",
   "/campaigns": "nav.campaigns",
   "/automations": "nav.automations",
   "/flows": "nav.flows",
+  "/apps": "nav.apps",
   "/developer": "nav.developer",
   "/support": "nav.support",
   "/billing": "nav.billing",
   "/settings": "nav.settings",
+  "/onboarding": "nav.onboarding",
+  "/subaccounts": "nav.subaccounts",
   "/admin/users": "nav.adminUsers",
   "/admin/payments": "nav.adminPayments",
   "/admin/support": "nav.adminSupport",
@@ -46,16 +51,18 @@ export function MobileTopBar() {
   const { toggle } = useSidebar();
 
   return (
-    <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-default bg-surface-elevated px-4 py-3 lg:hidden">
+    <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-default bg-surface-elevated/95 px-4 py-3 backdrop-blur-md lg:hidden">
       <button
         type="button"
         onClick={toggle}
-        className="inline-flex items-center justify-center rounded-lg border border-default p-2 text-secondary hover:bg-surface-muted"
+        className="inline-flex items-center justify-center rounded-xl border border-default p-2 text-secondary transition-colors hover:bg-surface-muted hover:text-primary"
         aria-label={t("nav.openMenu")}
       >
         <PanelLeft className="h-5 w-5" />
       </button>
-      <p className="truncate text-sm font-semibold text-primary">{resolveTitle(pathname, t)}</p>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold text-primary">{resolveTitle(pathname, t)}</p>
+      </div>
     </header>
   );
 }

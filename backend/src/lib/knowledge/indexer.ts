@@ -1,5 +1,6 @@
 import { generateEmbedding } from "../openai/client.js";
-import { getObjectText } from "../s3/client.js";
+import { getObjectBuffer } from "../s3/client.js";
+import { extractKnowledgeText } from "./extract-text.js";
 import {
   saveChunks,
   updateDocument,
@@ -29,6 +30,7 @@ export async function indexDocument(params: {
   docId: string;
   s3Key: string;
   mimeType: string;
+  filename: string;
   apiKey: string;
 }): Promise<number> {
   await updateDocument(params.tenantId, params.botId, params.docId, {
@@ -36,7 +38,12 @@ export async function indexDocument(params: {
   });
 
   try {
-    const raw = await getObjectText(params.s3Key);
+    const rawBuffer = await getObjectBuffer(params.s3Key);
+    const raw = await extractKnowledgeText({
+      buffer: rawBuffer,
+      mimeType: params.mimeType,
+      filename: params.filename,
+    });
     const textChunks = chunkText(raw);
     if (textChunks.length === 0) {
       throw new Error("Document has no indexable text content");

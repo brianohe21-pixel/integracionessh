@@ -9,9 +9,11 @@ import {
   KeyRound,
   MessageSquare,
   Phone,
+  PhoneCall,
   Shield,
   TriangleAlert,
   LayoutTemplate,
+  Smartphone,
 } from "lucide-react";
 import { API_DOC_ENDPOINTS, type ApiDocEndpoint } from "@/lib/api-docs/endpoints";
 import { getApiBaseUrl } from "@/lib/api-docs/constants";
@@ -57,6 +59,12 @@ const ENDPOINT_GROUPS: EndpointGroup[] = [
     match: (e) => e.path.startsWith("/v1/messages"),
   },
   {
+    id: "sms",
+    titleKey: "apiDocs.groups.sms",
+    icon: Smartphone,
+    match: (e) => e.path.startsWith("/v1/sms"),
+  },
+  {
     id: "templates",
     titleKey: "apiDocs.groups.templates",
     icon: LayoutTemplate,
@@ -67,6 +75,12 @@ const ENDPOINT_GROUPS: EndpointGroup[] = [
     titleKey: "apiDocs.groups.calls",
     icon: Phone,
     match: (e) => e.path.startsWith("/v1/calls"),
+  },
+  {
+    id: "voice",
+    titleKey: "apiDocs.groups.voice",
+    icon: PhoneCall,
+    match: (e) => e.path.startsWith("/v1/voice"),
   },
 ];
 

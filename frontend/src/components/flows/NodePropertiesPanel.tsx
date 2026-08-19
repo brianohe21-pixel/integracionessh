@@ -13,6 +13,7 @@ import { extractSampleFields, FormBindingField } from "./FormBindingField";
 interface NodePropertiesPanelProps {
   selected: FlowNode | undefined;
   botId: string;
+  isVoiceFlow?: boolean;
   samplePayload?: Record<string, unknown>;
   onUpdate: (patch: Record<string, unknown>) => void;
   onDelete: () => void;
@@ -58,6 +59,7 @@ function textArea(
 export function NodePropertiesPanel({
   selected,
   botId,
+  isVoiceFlow = false,
   samplePayload,
   onUpdate,
   onDelete,
@@ -122,8 +124,28 @@ export function NodePropertiesPanel({
               <option value="first_message">{t("flows.fields.triggerFirstMessage")}</option>
               <option value="keyword">{t("flows.fields.triggerKeyword")}</option>
               <option value="web_form_submitted">{t("flows.fields.triggerWebForm")}</option>
+              {isVoiceFlow ? (
+                <option value="voice_call">{t("flows.fields.triggerVoiceCall")}</option>
+              ) : null}
             </select>
           </div>
+          {isVoiceFlow && (d.triggerType ?? "any_message") === "voice_call" && (
+            <div>
+              <FieldLabel>{t("flows.fields.flowVariables")}</FieldLabel>
+              {textArea(
+                JSON.stringify(d.flowVariables ?? {}, null, 2),
+                (v) => {
+                  try {
+                    onUpdate({ flowVariables: JSON.parse(v || "{}") });
+                  } catch {
+                    /* ignore invalid json while typing */
+                  }
+                },
+                5,
+                t("flows.fields.flowVariablesHint")
+              )}
+            </div>
+          )}
           {(d.triggerType ?? "any_message") === "web_form_submitted" && (
             <div>
               <FieldLabel>{t("flows.fields.samplePayload")}</FieldLabel>
@@ -370,12 +392,52 @@ export function NodePropertiesPanel({
             >
               <option value="GET">GET</option>
               <option value="POST">POST</option>
+              <option value="PATCH">PATCH</option>
             </select>
+          </div>
+          <div>
+            <FieldLabel>{t("flows.fields.httpHeaders")}</FieldLabel>
+            {textArea(
+              JSON.stringify(d.httpHeaders ?? [], null, 2),
+              (v) => {
+                try {
+                  onUpdate({ httpHeaders: JSON.parse(v || "[]") });
+                } catch {
+                  /* ignore invalid json while typing */
+                }
+              },
+              4,
+              t("flows.fields.httpHeadersHint")
+            )}
           </div>
           <div>
             <FieldLabel>{t("flows.fields.httpBody")}</FieldLabel>
             {textArea(d.httpBody ?? "", (v) => onUpdate({ httpBody: v }), 4)}
           </div>
+          {isVoiceFlow ? (
+            <>
+              <div>
+                <FieldLabel>{t("flows.fields.voiceToolName")}</FieldLabel>
+                {textInput(d.voiceToolName ?? "", (v) => onUpdate({ voiceToolName: v }))}
+              </div>
+              <div>
+                <FieldLabel>{t("flows.fields.voiceToolDescription")}</FieldLabel>
+                {textArea(d.voiceToolDescription ?? "", (v) => onUpdate({ voiceToolDescription: v }), 2)}
+              </div>
+              <div>
+                <FieldLabel>{t("flows.fields.voiceToolParameters")}</FieldLabel>
+                {textArea(d.voiceToolParameters ?? "", (v) => onUpdate({ voiceToolParameters: v }), 4)}
+              </div>
+              <div>
+                <FieldLabel>{t("flows.fields.voiceInstruction")}</FieldLabel>
+                {textArea(d.voiceInstruction ?? "", (v) => onUpdate({ voiceInstruction: v }), 3)}
+              </div>
+              <div>
+                <FieldLabel>{t("flows.fields.httpResponseVariable")}</FieldLabel>
+                {textInput(d.httpResponseVariable ?? "", (v) => onUpdate({ httpResponseVariable: v }))}
+              </div>
+            </>
+          ) : null}
         </>
       )}
 
