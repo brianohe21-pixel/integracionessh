@@ -37,7 +37,7 @@ resource "aws_dynamodb_table" "main" {
   }
 
   point_in_time_recovery {
-    enabled = var.environment == "prod"
+    enabled = true
   }
 
   tags = var.tags
