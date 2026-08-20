@@ -65,6 +65,7 @@ import { syncReportSchedule } from "../../lib/reports/report-schedule.js";
 import { sendScheduledReport } from "../../lib/reports/send-scheduled-report.js";
 import { addCustomDomainToCognitoClient } from "../../lib/cognito/custom-domain-callbacks.js";
 import { handleProviderCredentialRoutes } from "./provider-credentials.routes.js";
+import { handleMemberRoutes } from "./members.routes.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 
@@ -465,6 +466,9 @@ export async function handler(
       ENVIRONMENT
     );
     if (providerCredentialsResponse) return providerCredentialsResponse;
+
+    const memberRoutesResponse = await handleMemberRoutes(event, method, auth);
+    if (memberRoutesResponse) return memberRoutesResponse;
 
     if (event.rawPath?.endsWith("/openai-key")) {
       if (method === "GET") {

@@ -1322,6 +1322,27 @@ locals {
       function_arn = var.tenants_function_arn
       protected    = true
     }
+    tenants_members_list = {
+      route_key    = "GET /tenants/me/members"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_members_create = {
+      route_key    = "POST /tenants/me/members"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_members_delete = {
+      route_key    = "DELETE /tenants/me/members/{userId}"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
     bots_calling_settings_get = {
       route_key    = "GET /bots/{botId}/calling/settings"
       slug         = "calling"

@@ -479,6 +479,17 @@ export interface Advisor {
   updatedAt: string;
 }
 
+export interface TenantMember {
+  userId: string;
+  username: string;
+  email: string;
+  name: string;
+  role: "member" | "advisor";
+  enabled: boolean;
+  createdAt: string;
+  advisorId?: string;
+}
+
 export interface Macro {
   macroId: string;
   tenantId: string;
