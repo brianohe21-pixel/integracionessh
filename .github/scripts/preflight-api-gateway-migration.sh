@@ -59,7 +59,7 @@ if (( STATE_INTEGRATIONS > EXPECTED_INTEGRATIONS )); then
 fi
 
 if (( LIVE_INTEGRATIONS > EXPECTED_INTEGRATIONS + 5 )); then
-  echo "::warning::Live AWS has ${LIVE_INTEGRATIONS} integrations; cleanup may be required after apply."
+  echo "::warning::Live AWS has ${LIVE_INTEGRATIONS} integrations; cleanup may be required before apply."
 fi
 
 if (( LIVE_ROUTES >= 300 )); then

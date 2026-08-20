@@ -133,6 +133,12 @@ jobs:
           SKIP_STATE_BACKUP: ${{ github.event_name == 'pull_request' && 'true' || 'false' }}
         run: bash ../../../.github/scripts/migrate-api-gateway-integrations.sh
 
+      - name: Cleanup orphan API Gateway integrations
+        if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+        env:
+          ENVIRONMENT: dev
+        run: bash ../../../.github/scripts/cleanup-orphan-api-integrations.sh
+
       - name: Terraform Plan
         id: plan
         env:
@@ -384,6 +390,11 @@ jobs:
           DRY_RUN: "false"
           SKIP_STATE_BACKUP: "false"
         run: bash ../../../.github/scripts/migrate-api-gateway-integrations.sh
+
+      - name: Cleanup orphan API Gateway integrations
+        env:
+          ENVIRONMENT: prod
+        run: bash ../../../.github/scripts/cleanup-orphan-api-integrations.sh
 
       - name: Terraform Plan
         id: plan
