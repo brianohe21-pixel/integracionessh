@@ -281,7 +281,7 @@ def reconcile_integrations(
     live_integrations: list[dict[str, Any]],
     *,
     dry_run: bool,
-) -> int:
+) -> tuple[int, set[str]]:
     definitions = route_definitions()
     desired_slug_by_route = {
         definition.route_key: definition.slug for definition in definitions.values()
@@ -301,6 +301,7 @@ def reconcile_integrations(
             route_targets[slug].append(target.removeprefix("integrations/"))
 
     imported = 0
+    deferred: set[str] = set()
     for slug in sorted(canonical_slug_keys()):
         target_address = canonical_integration_address(slug)
         if target_address in integrations:
@@ -317,11 +318,12 @@ def reconcile_integrations(
                 if function_suffix in str(integration.get("IntegrationUri", ""))
             ]
         if not candidates:
-            if dry_run:
-                print(f"[dry-run] Would reconcile missing integration state for {slug}")
-                imported += 1
-                continue
-            raise MigrationError(f"No live integration is available for {slug}")
+            message = (
+                f"Skipping {slug}: no live integration; Terraform will create it on apply"
+            )
+            print(f"[dry-run] {message}" if dry_run else message)
+            deferred.add(slug)
+            continue
 
         integration_id = Counter(candidates).most_common(1)[0][0]
         existing_address = state_address_by_id.get(integration_id)
@@ -340,7 +342,7 @@ def reconcile_integrations(
             )
         imported += 1
 
-    return imported
+    return imported, deferred
 
 
 def remove_noncanonical_integration_state(
@@ -471,17 +473,39 @@ def remove_noncanonical_route_state(
     return removed
 
 
-def postflight(resources: dict[str, dict[str, Any]], *, dry_run: bool) -> None:
-    expected = len(canonical_slug_keys())
-    actual = len(integration_state(resources))
+def postflight(
+    resources: dict[str, dict[str, Any]],
+    *,
+    dry_run: bool,
+    deferred_slugs: set[str],
+) -> None:
+    expected_slugs = set(canonical_slug_keys())
+    actual_slugs = {address_key(address) for address in integration_state(resources)}
     if dry_run:
-        print(f"[dry-run] Expected canonical integration addresses after migration: {expected}")
-        return
-    if actual != expected:
-        raise MigrationError(
-            f"Postflight failed: expected {expected} integration addresses, found {actual}"
+        print(
+            "[dry-run] Expected canonical integration addresses after migration: "
+            f"{len(expected_slugs)}"
         )
-    print(f"Postflight passed with {actual} canonical integration addresses")
+        return
+
+    unexpected = sorted(actual_slugs - expected_slugs)
+    if unexpected:
+        raise MigrationError(
+            "Postflight failed: unexpected integration addresses: " + ", ".join(unexpected)
+        )
+
+    missing = expected_slugs - actual_slugs
+    unexplained = sorted(missing - deferred_slugs)
+    if unexplained:
+        raise MigrationError(
+            "Postflight failed: missing integration addresses: " + ", ".join(unexplained)
+        )
+
+    message = f"Postflight passed with {len(actual_slugs)} canonical integration addresses"
+    deferred = sorted(missing & deferred_slugs)
+    if deferred:
+        message += f" ({len(deferred)} will be created on apply: {', '.join(deferred)})"
+    print(message)
 
 
 def main() -> None:
@@ -512,7 +536,7 @@ def main() -> None:
     moved, removed = move_existing_integrations(resources, dry_run=dry_run)
     if not dry_run:
         resources = state_resources()
-    integrations_reconciled = reconcile_integrations(
+    integrations_reconciled, deferred_slugs = reconcile_integrations(
         resources,
         gateway_id,
         live_routes,
@@ -535,14 +559,15 @@ def main() -> None:
     removed += remove_noncanonical_route_state(resources, dry_run=dry_run)
     if not dry_run:
         resources = state_resources()
-        postflight(resources, dry_run=False)
+        postflight(resources, dry_run=False, deferred_slugs=deferred_slugs)
 
+    deferred = f", {len(deferred_slugs)} deferred to apply" if deferred_slugs else ""
     print(
         "API Gateway state migration complete "
         f"({moved} moved, {removed} removed, "
         f"{integrations_reconciled} integrations reconciled, "
         f"{routes_reconciled} routes reconciled, "
-        f"{stale_routes} stale live routes deleted)."
+        f"{stale_routes} stale live routes deleted{deferred})."
     )
 
 
