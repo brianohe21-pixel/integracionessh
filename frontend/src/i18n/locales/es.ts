@@ -3103,6 +3103,265 @@ export const es = {
       goToBots: "Ir a mis bots",
     },
   },
+  userManual: {
+    navLink: "Manual",
+    badge: "Guía de usuario",
+    title: "Manual de usuario",
+    subtitle:
+      "Aprende a configurar bots, conectar canales, atender conversaciones y automatizar respuestas en el panel.",
+    onThisPage: "En esta página",
+    cta: "Empezar en el panel",
+    toc: {
+      intro: "Introducción",
+      gettingStarted: "Primeros pasos",
+      bots: "Bots",
+      channels: "Canales",
+      inbox: "Inbox",
+      flows: "Flujos",
+    },
+    sections: {
+      intro: {
+        title: "Introducción",
+        body:
+          "El panel te permite operar agentes conversacionales en varios canales desde un solo lugar. Este manual cubre las tareas esenciales para un operador del negocio (rol member).",
+        steps: {
+          "0": "El rol member gestiona bots, canales, flujos, campañas y configuración de la cuenta.",
+          "1": "El rol advisor solo accede al Inbox para responder conversaciones asignadas.",
+          "2": "Si es tu primera vez, sigue el onboarding en /onboarding o usa el checklist del Centro de ayuda.",
+        },
+      },
+      gettingStarted: {
+        title: "Primeros pasos",
+        body:
+          "El asistente de onboarding te guía en cuatro pasos: conectar WhatsApp, crear un bot, enviar un mensaje de prueba y activar un flujo de bienvenida.",
+        steps: {
+          "0": "Inicia sesión y abre /onboarding desde el banner o el Centro de ayuda.",
+          "1": "Conecta tu número de WhatsApp Business con Embedded Signup o tokens de Meta.",
+          "2": "Crea tu primer bot y elige el modo OpenAI o webhook según tu caso de uso.",
+          "3": "Envía un mensaje de prueba desde tu teléfono y activa el flujo automático de bienvenida.",
+        },
+        troubleshooting: {
+          title: "Si WhatsApp no conecta",
+          body:
+            "Verifica que el número esté en Meta Business Manager, que los permisos de la app sean correctos y que el bot esté vinculado al phone_number_id correcto. Revisa también la pestaña WhatsApp del bot.",
+        },
+      },
+      bots: {
+        title: "Bots",
+        body:
+          "Un bot es tu asistente principal. Puedes tener varios bots y configurar cada uno con distintos canales, macros y flujos.",
+        steps: {
+          "0": "Ve a Bots (/bots) para ver el listado y el estado de cada asistente.",
+          "1": "Pulsa Crear bot (/bots/new) y asigna un nombre descriptivo.",
+          "2": "En la pestaña General elige OpenAI para respuestas con IA o webhook si tienes tu propio backend.",
+          "3": "Opcionalmente aplica una plantilla de industria para acelerar la configuración inicial.",
+        },
+        troubleshooting: {
+          title: "Si el bot no responde",
+          body:
+            "Confirma que el bot esté activo, que tenga un canal conectado y que exista al menos un flujo habilitado para el trigger correspondiente.",
+        },
+      },
+      channels: {
+        title: "Canales",
+        body:
+          "Cada bot expone pestañas de canal en su pantalla de edición. Conecta solo los canales que vayas a usar.",
+        steps: {
+          "0": "Abre un bot y navega por las pestañas: WhatsApp, Instagram, Webchat, Telegram, Messenger, SMS y Email.",
+          "1": "WhatsApp: usa Embedded Signup o pega phone_number_id, WABA y token de acceso.",
+          "2": "Webchat: copia el snippet o enlace público desde la pestaña Webchat.",
+          "3": "Telegram, Instagram y Messenger requieren tokens o IDs de cuenta según el proveedor.",
+        },
+        troubleshooting: {
+          title: "Si un canal no recibe mensajes",
+          body:
+            "Revisa credenciales, webhooks del proveedor y que el canal aparezca activo en la tarjeta del bot. Para WhatsApp, confirma que el número esté verificado en Meta.",
+        },
+      },
+      inbox: {
+        title: "Inbox",
+        body:
+          "El Inbox (/inbox) concentra las conversaciones entrantes. Los miembros ven todo el workspace; los asesores solo atienden lo asignado.",
+        steps: {
+          "0": "Filtra conversaciones por estado: abierta, pendiente o cerrada.",
+          "1": "Selecciona un hilo para leer el historial y responder desde el compositor.",
+          "2": "Asigna la conversación a un asesor y añade notas internas en el panel lateral.",
+          "3": "Usa macros del bot para respuestas rápidas cuando estén configuradas.",
+        },
+        troubleshooting: {
+          title: "Si no ves conversaciones",
+          body:
+            "Comprueba que el canal esté conectado, que hayas recibido al menos un mensaje y que tu rol tenga acceso al Inbox. Los asesores solo ven conversaciones asignadas.",
+        },
+      },
+      flows: {
+        title: "Flujos",
+        body:
+          "Los flujos visuales (/flows) automatizan respuestas con nodos de mensaje, botones y ramificaciones. Deben estar activos para ejecutarse.",
+        steps: {
+          "0": "Ve a Flujos y crea uno nuevo con el editor visual.",
+          "1": "Define el trigger (cualquier mensaje, primer mensaje, palabra clave, etc.).",
+          "2": "Conecta nodos de mensaje, botones y acciones en el canvas.",
+          "3": "Guarda y activa el flujo con el interruptor de la tabla. Para reglas por horario o keyword, revisa Automatizaciones.",
+        },
+        troubleshooting: {
+          title: "Si el flujo no se ejecuta",
+          body:
+            "Verifica que el flujo esté habilitado, que el trigger coincida con el mensaje recibido y que no haya otro flujo o automatización con mayor prioridad bloqueándolo.",
+        },
+      },
+    },
+    figures: {
+      onboarding: {
+        title: "Asistente de onboarding",
+        caption: "Progreso guiado: WhatsApp, bot, prueba y flujo activo.",
+      },
+      botsGrid: {
+        title: "Listado de bots",
+        caption: "Cada tarjeta muestra canales conectados y acceso a la edición.",
+      },
+      botCreate: {
+        title: "Crear bot",
+        caption: "Nombre, modo de respuesta y plantilla de industria.",
+      },
+      channels: {
+        title: "Pestañas de canal",
+        caption: "Configura cada canal desde la navegación lateral del bot.",
+      },
+      inbox: {
+        title: "Workspace del Inbox",
+        caption: "Lista de hilos, chat central y detalle con asignación y notas.",
+      },
+      flows: {
+        title: "Editor de flujos",
+        caption: "Canvas con trigger, mensaje de bienvenida y botones.",
+      },
+    },
+    mockups: {
+      onboarding: {
+        title: "Configuración inicial",
+        action: "Escanea el código o envía un mensaje de prueba",
+        cta: "Confirmar prueba",
+        steps: {
+          whatsapp: {
+            title: "Conectar WhatsApp",
+            hint: "Vincula tu número con Meta.",
+          },
+          createBot: {
+            title: "Crear bot",
+            hint: "Define nombre y modo de respuesta.",
+          },
+          testMessage: {
+            title: "Mensaje de prueba",
+            hint: "Escribe desde tu teléfono al número conectado.",
+          },
+          activateFlow: {
+            title: "Activar flujo",
+            hint: "Habilita la respuesta automática de bienvenida.",
+          },
+        },
+      },
+      botsGrid: {
+        title: "Mis bots",
+        subtitle: "Gestiona asistentes y canales",
+        create: "Crear bot",
+        cards: {
+          support: {
+            name: "Soporte",
+            mode: "OpenAI",
+          },
+          sales: {
+            name: "Ventas",
+            mode: "Webhook",
+          },
+        },
+      },
+      botCreate: {
+        title: "Nuevo bot",
+        nameLabel: "Nombre",
+        nameValue: "Asistente de soporte",
+        modeLabel: "Modo",
+        modeOpenAi: "OpenAI",
+        modeWebhook: "Webhook",
+        templateLabel: "Plantilla",
+        templateValue: "Atención al cliente",
+      },
+      channels: {
+        tabs: {
+          general: "General",
+          whatsapp: "WhatsApp",
+          instagram: "Instagram",
+          webchat: "Webchat",
+          telegram: "Telegram",
+          messenger: "Messenger",
+          sms: "SMS",
+          email: "Email",
+        },
+        panelTitle: "Conectar WhatsApp",
+        panelBody: "Usa Embedded Signup o ingresa los tokens de Meta Business.",
+        connectCta: "Conectar con Meta",
+        cards: {
+          whatsapp: {
+            title: "WhatsApp",
+            hint: "Embedded Signup o tokens manuales.",
+          },
+          webchat: {
+            title: "Webchat",
+            hint: "Snippet para tu sitio web.",
+          },
+          telegram: {
+            title: "Telegram",
+            hint: "Token del BotFather.",
+          },
+        },
+      },
+      inbox: {
+        listTitle: "Conversaciones",
+        chatTitle: "Chat",
+        detailTitle: "Detalle",
+        composePlaceholder: "Escribe una respuesta…",
+        detailAssignee: "Asignado a",
+        detailAssigneeValue: "María (asesor)",
+        detailNotes: "Notas",
+        detailNotesValue: "Cliente interesado en plan Pro.",
+        threads: {
+          open: {
+            name: "Ana García",
+            preview: "¿Tienen soporte los fines de semana?",
+            status: "Abierta",
+          },
+          pending: {
+            name: "Carlos Ruiz",
+            preview: "Gracias, lo reviso y confirmo.",
+            status: "Pendiente",
+          },
+          closed: {
+            name: "Laura Méndez",
+            preview: "Perfecto, muchas gracias.",
+            status: "Cerrada",
+          },
+        },
+        messages: {
+          incoming: "Hola, necesito ayuda con mi pedido.",
+          outgoing: "Claro, comparte tu número de referencia.",
+        },
+      },
+      flows: {
+        title: "Flujo de bienvenida",
+        subtitle: "Trigger: primer mensaje",
+        enabled: "Activo",
+        nodes: {
+          trigger: "Trigger",
+          triggerHint: "Primer mensaje",
+          message: "Mensaje",
+          messageHint: "Saludo inicial",
+          buttons: "Botones",
+          buttonA: "Ver catálogo",
+          buttonB: "Hablar con asesor",
+        },
+      },
+    },
+  },
   helpCenter: {
     title: "Centro de ayuda",
     subtitle: "Guías, checklist y soporte en un solo lugar.",
@@ -3114,6 +3373,7 @@ export const es = {
       help: "Ayuda",
     },
     faqTitle: "Preguntas frecuentes",
+    viewManuals: "Ver manuales",
     contactSupport: "Contactar soporte",
     startTour: "Iniciar tour",
     replayTour: "Repetir tour",

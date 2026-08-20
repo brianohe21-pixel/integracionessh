@@ -3101,6 +3101,265 @@ export const en: Messages = {
       goToBots: "Go to my bots",
     },
   },
+  userManual: {
+    navLink: "Manual",
+    badge: "User guide",
+    title: "User manual",
+    subtitle:
+      "Learn how to set up bots, connect channels, handle conversations, and automate replies in the dashboard.",
+    onThisPage: "On this page",
+    cta: "Open the dashboard",
+    toc: {
+      intro: "Introduction",
+      gettingStarted: "Getting started",
+      bots: "Bots",
+      channels: "Channels",
+      inbox: "Inbox",
+      flows: "Flows",
+    },
+    sections: {
+      intro: {
+        title: "Introduction",
+        body:
+          "The dashboard lets you operate conversational agents across multiple channels from one place. This manual covers essential tasks for a business operator (member role).",
+        steps: {
+          "0": "The member role manages bots, channels, flows, campaigns, and account settings.",
+          "1": "The advisor role only accesses the Inbox to reply to assigned conversations.",
+          "2": "If this is your first time, follow onboarding at /onboarding or use the Help Center checklist.",
+        },
+      },
+      gettingStarted: {
+        title: "Getting started",
+        body:
+          "The onboarding wizard guides you through four steps: connect WhatsApp, create a bot, send a test message, and activate a welcome flow.",
+        steps: {
+          "0": "Sign in and open /onboarding from the banner or Help Center.",
+          "1": "Connect your WhatsApp Business number with Embedded Signup or Meta tokens.",
+          "2": "Create your first bot and choose OpenAI or webhook mode for your use case.",
+          "3": "Send a test message from your phone and activate the automatic welcome flow.",
+        },
+        troubleshooting: {
+          title: "If WhatsApp does not connect",
+          body:
+            "Verify the number is in Meta Business Manager, app permissions are correct, and the bot is linked to the right phone_number_id. Also check the bot WhatsApp tab.",
+        },
+      },
+      bots: {
+        title: "Bots",
+        body:
+          "A bot is your main assistant. You can have multiple bots, each with its own channels, macros, and flows.",
+        steps: {
+          "0": "Go to Bots (/bots) to see the list and status of each assistant.",
+          "1": "Click Create bot (/bots/new) and choose a descriptive name.",
+          "2": "On the General tab pick OpenAI for AI replies or webhook if you have your own backend.",
+          "3": "Optionally apply an industry template to speed up initial setup.",
+        },
+        troubleshooting: {
+          title: "If the bot does not reply",
+          body:
+            "Confirm the bot is active, a channel is connected, and at least one flow is enabled for the matching trigger.",
+        },
+      },
+      channels: {
+        title: "Channels",
+        body:
+          "Each bot exposes channel tabs on its edit screen. Connect only the channels you plan to use.",
+        steps: {
+          "0": "Open a bot and browse tabs: WhatsApp, Instagram, Webchat, Telegram, Messenger, SMS, and Email.",
+          "1": "WhatsApp: use Embedded Signup or paste phone_number_id, WABA, and access token.",
+          "2": "Webchat: copy the snippet or public link from the Webchat tab.",
+          "3": "Telegram, Instagram, and Messenger require provider tokens or account IDs.",
+        },
+        troubleshooting: {
+          title: "If a channel does not receive messages",
+          body:
+            "Check credentials, provider webhooks, and that the channel shows as active on the bot card. For WhatsApp, confirm the number is verified in Meta.",
+        },
+      },
+      inbox: {
+        title: "Inbox",
+        body:
+          "The Inbox (/inbox) centralizes incoming conversations. Members see the full workspace; advisors only handle assigned threads.",
+        steps: {
+          "0": "Filter conversations by status: open, pending, or closed.",
+          "1": "Select a thread to read history and reply from the composer.",
+          "2": "Assign the conversation to an advisor and add internal notes in the side panel.",
+          "3": "Use bot macros for quick replies when configured.",
+        },
+        troubleshooting: {
+          title: "If you see no conversations",
+          body:
+            "Check the channel is connected, at least one message was received, and your role can access the Inbox. Advisors only see assigned conversations.",
+        },
+      },
+      flows: {
+        title: "Flows",
+        body:
+          "Visual flows (/flows) automate replies with message, button, and branch nodes. They must be enabled to run.",
+        steps: {
+          "0": "Go to Flows and create a new one in the visual editor.",
+          "1": "Set the trigger (any message, first message, keyword, etc.).",
+          "2": "Connect message, button, and action nodes on the canvas.",
+          "3": "Save and enable the flow with the table toggle. For schedules or keywords, see Automations.",
+        },
+        troubleshooting: {
+          title: "If the flow does not run",
+          body:
+            "Verify the flow is enabled, the trigger matches the incoming message, and no higher-priority flow or automation is blocking it.",
+        },
+      },
+    },
+    figures: {
+      onboarding: {
+        title: "Onboarding wizard",
+        caption: "Guided progress: WhatsApp, bot, test, and active flow.",
+      },
+      botsGrid: {
+        title: "Bot list",
+        caption: "Each card shows connected channels and edit access.",
+      },
+      botCreate: {
+        title: "Create bot",
+        caption: "Name, reply mode, and industry template.",
+      },
+      channels: {
+        title: "Channel tabs",
+        caption: "Configure each channel from the bot side navigation.",
+      },
+      inbox: {
+        title: "Inbox workspace",
+        caption: "Thread list, central chat, and detail with assignment and notes.",
+      },
+      flows: {
+        title: "Flow editor",
+        caption: "Canvas with trigger, welcome message, and buttons.",
+      },
+    },
+    mockups: {
+      onboarding: {
+        title: "Initial setup",
+        action: "Scan the code or send a test message",
+        cta: "Confirm test",
+        steps: {
+          whatsapp: {
+            title: "Connect WhatsApp",
+            hint: "Link your number with Meta.",
+          },
+          createBot: {
+            title: "Create bot",
+            hint: "Set name and reply mode.",
+          },
+          testMessage: {
+            title: "Test message",
+            hint: "Message the connected number from your phone.",
+          },
+          activateFlow: {
+            title: "Activate flow",
+            hint: "Enable the automatic welcome reply.",
+          },
+        },
+      },
+      botsGrid: {
+        title: "My bots",
+        subtitle: "Manage assistants and channels",
+        create: "Create bot",
+        cards: {
+          support: {
+            name: "Support",
+            mode: "OpenAI",
+          },
+          sales: {
+            name: "Sales",
+            mode: "Webhook",
+          },
+        },
+      },
+      botCreate: {
+        title: "New bot",
+        nameLabel: "Name",
+        nameValue: "Support assistant",
+        modeLabel: "Mode",
+        modeOpenAi: "OpenAI",
+        modeWebhook: "Webhook",
+        templateLabel: "Template",
+        templateValue: "Customer support",
+      },
+      channels: {
+        tabs: {
+          general: "General",
+          whatsapp: "WhatsApp",
+          instagram: "Instagram",
+          webchat: "Webchat",
+          telegram: "Telegram",
+          messenger: "Messenger",
+          sms: "SMS",
+          email: "Email",
+        },
+        panelTitle: "Connect WhatsApp",
+        panelBody: "Use Embedded Signup or enter Meta Business tokens.",
+        connectCta: "Connect with Meta",
+        cards: {
+          whatsapp: {
+            title: "WhatsApp",
+            hint: "Embedded Signup or manual tokens.",
+          },
+          webchat: {
+            title: "Webchat",
+            hint: "Snippet for your website.",
+          },
+          telegram: {
+            title: "Telegram",
+            hint: "BotFather token.",
+          },
+        },
+      },
+      inbox: {
+        listTitle: "Conversations",
+        chatTitle: "Chat",
+        detailTitle: "Details",
+        composePlaceholder: "Write a reply…",
+        detailAssignee: "Assigned to",
+        detailAssigneeValue: "Maria (advisor)",
+        detailNotes: "Notes",
+        detailNotesValue: "Customer interested in Pro plan.",
+        threads: {
+          open: {
+            name: "Ana Garcia",
+            preview: "Do you offer support on weekends?",
+            status: "Open",
+          },
+          pending: {
+            name: "Carlos Ruiz",
+            preview: "Thanks, I will review and confirm.",
+            status: "Pending",
+          },
+          closed: {
+            name: "Laura Mendez",
+            preview: "Perfect, thank you very much.",
+            status: "Closed",
+          },
+        },
+        messages: {
+          incoming: "Hi, I need help with my order.",
+          outgoing: "Sure, please share your reference number.",
+        },
+      },
+      flows: {
+        title: "Welcome flow",
+        subtitle: "Trigger: first message",
+        enabled: "Enabled",
+        nodes: {
+          trigger: "Trigger",
+          triggerHint: "First message",
+          message: "Message",
+          messageHint: "Initial greeting",
+          buttons: "Buttons",
+          buttonA: "View catalog",
+          buttonB: "Talk to advisor",
+        },
+      },
+    },
+  },
   helpCenter: {
     title: "Help center",
     subtitle: "Guides, setup checklist, and support in one place.",
@@ -3112,6 +3371,7 @@ export const en: Messages = {
       help: "Help",
     },
     faqTitle: "Frequently asked questions",
+    viewManuals: "View manuals",
     contactSupport: "Contact support",
     startTour: "Start tour",
     replayTour: "Replay tour",

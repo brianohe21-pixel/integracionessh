@@ -50,7 +50,7 @@ function clearPortalCookies(response: NextResponse): void {
   response.cookies.delete("wl-logo-url");
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const host = request.headers.get("host")?.split(":")[0]?.toLowerCase() ?? "";
   const pathname = request.nextUrl.pathname;
 

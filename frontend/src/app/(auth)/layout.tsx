@@ -110,6 +110,10 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             {t("apiDocs.navLink")}
           </a>
           {" · "}
+          <a href="/docs/manual" className="hover:text-secondary">
+            {t("userManual.navLink")}
+          </a>
+          {" · "}
           <a href="/legal/terms" className="hover:text-secondary">
             {t("legal.footerTerms")}
           </a>
