@@ -42,14 +42,9 @@ locals {
   sns_actions = [aws_sns_topic.alerts.arn]
 }
 
-resource "aws_kms_key" "sns" {
-  description             = "SNS topic encryption for ${var.project}-${var.environment}"
-  deletion_window_in_days = 7
-}
-
 resource "aws_sns_topic" "alerts" {
   name              = "${var.project}-${var.environment}-ops-alerts"
-  kms_master_key_id = aws_kms_key.sns.id
+  kms_master_key_id = "alias/aws/sns"
 }
 
 resource "aws_sns_topic_subscription" "email" {

@@ -23,7 +23,7 @@ if command -v aws >/dev/null 2>&1 && command -v terraform >/dev/null 2>&1; then
       exit 1
     fi
   elif (( orphan_count > 0 )); then
-    echo "::warning::Found ${orphan_count} orphan API Gateway integrations. Cleanup runs after a successful apply."
+    echo "::warning::Found ${orphan_count} orphan API Gateway integrations. Cleanup runs before apply."
   fi
   echo "Orphan API Gateway integrations: ${orphan_count}"
 fi
