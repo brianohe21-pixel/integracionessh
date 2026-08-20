@@ -43,7 +43,7 @@ def _hcl_block(start_marker: str, end_marker: str) -> str:
 
 
 def lambda_function_slugs() -> dict[str, str]:
-    block = _hcl_block("  lambda_functions = {", "  http_proxy_groups = {")
+    block = _hcl_block("  lambda_functions = {", "  lambda_invoke_arns = {")
     pattern = re.compile(r"^\s{4}(\w+)\s*=\s*var\.(\w+)", re.M)
     return {
         slug: f"var.{function_arn_var}"
@@ -179,6 +179,44 @@ def validate_consolidation() -> list[ValidationIssue]:
                 ValidationIssue(
                     "error",
                     f"Route {route_key} slug mismatch: parsed {definition.slug}, expected {expected_slug}",
+                )
+            )
+
+    for key, body in (
+        (match.group(1), match.group(2))
+        for match in NESTED_BLOCK.finditer(_hcl_block("  explicit_routes = {", "  routes = merge("))
+    ):
+        slug_match = re.search(r'slug\s*=\s*"([^"]+)"', body)
+        function_arn_match = re.search(r"function_arn\s*=\s*(\S+)", body)
+        if not function_arn_match:
+            continue
+        expected_slug = slug_for_function_arn(function_arn_match.group(1))
+        if not slug_match:
+            issues.append(ValidationIssue("error", f"Route {key} is missing a static slug"))
+        elif slug_match.group(1) != expected_slug:
+            issues.append(
+                ValidationIssue(
+                    "error",
+                    f"Route {key} slug {slug_match.group(1)} does not match {expected_slug}",
+                )
+            )
+
+    for key, body in (
+        (match.group(1), match.group(2))
+        for match in NESTED_BLOCK.finditer(_hcl_block("  http_proxy_groups = {", "  http_proxy_routes = {"))
+    ):
+        slug_match = re.search(r'slug\s*=\s*"([^"]+)"', body)
+        function_arn_match = re.search(r"function_arn\s*=\s*(\S+)", body)
+        if not function_arn_match:
+            continue
+        expected_slug = slug_for_function_arn(function_arn_match.group(1))
+        if not slug_match:
+            issues.append(ValidationIssue("error", f"http_proxy_groups entry {key} is missing a static slug"))
+        elif slug_match.group(1) != expected_slug:
+            issues.append(
+                ValidationIssue(
+                    "error",
+                    f"http_proxy_groups entry {key} slug {slug_match.group(1)} does not match {expected_slug}",
                 )
             )
 
