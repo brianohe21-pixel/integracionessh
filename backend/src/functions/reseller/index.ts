@@ -394,6 +394,8 @@ export async function handler(
         dns = await ensureResellerDomainInAmplify(domain);
       } catch (error) {
         console.error("Failed to create Amplify domain association", error);
+        const statusCode = (error as { statusCode?: number }).statusCode;
+        if (statusCode) return handleError(error);
         const message =
           error instanceof Error ? error.message : "Failed to provision domain in Amplify";
         return badRequest(message);
