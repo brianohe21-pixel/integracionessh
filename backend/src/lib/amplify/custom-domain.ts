@@ -211,36 +211,179 @@ function toDnsInfo(association: DomainAssociation, fqdn: string, prefix: string)
   };
 }
 
+async function listAllApps(): Promise<Array<{ appId: string; name?: string }>> {
+  const client = amplifyClient();
+  const apps: Array<{ appId: string; name?: string }> = [];
+  let nextToken: string | undefined;
+  do {
+    const page = await client.send(new ListAppsCommand({ maxResults: 50, nextToken }));
+    for (const app of page.apps ?? []) {
+      if (app.appId) apps.push({ appId: app.appId, ...(app.name ? { name: app.name } : {}) });
+    }
+    nextToken = page.nextToken;
+  } while (nextToken);
+  return apps;
+}
+
 async function resolveAppId(): Promise<string> {
   const configured = process.env.AMPLIFY_APP_ID?.trim();
   if (configured) return configured;
 
   const name = appName();
-  const client = amplifyClient();
-  let nextToken: string | undefined;
-  do {
-    const page = await client.send(new ListAppsCommand({ maxResults: 50, nextToken }));
-    const match = (page.apps ?? []).find((app) => app.name === name);
-    if (match?.appId) return match.appId;
-    nextToken = page.nextToken;
-  } while (nextToken);
+  const match = (await listAllApps()).find((app) => app.name === name);
+  if (match?.appId) return match.appId;
 
   throw Object.assign(new Error(`Amplify app not found: ${name}`), { statusCode: 500 });
 }
 
 async function getAssociation(
   appId: string,
-  rootDomain: string
+  domainName: string
 ): Promise<DomainAssociation | null> {
   try {
     const result = await amplifyClient().send(
-      new GetDomainAssociationCommand({ appId, domainName: rootDomain })
+      new GetDomainAssociationCommand({ appId, domainName })
     );
     return result.domainAssociation ?? null;
   } catch (error) {
     const name = (error as { name?: string }).name;
     if (name === "NotFoundException") return null;
     throw error;
+  }
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+export function isDomainTakenByAnotherApp(error: unknown): boolean {
+  return /already associated with another Amplify app/i.test(errorMessage(error));
+}
+
+function domainConflictError(fqdn: string, detail?: string): Error {
+  const suffix = detail ? ` ${detail}` : " Remove it in the AWS Amplify console and try again.";
+  return Object.assign(new Error(`Domain ${fqdn} is already associated with another Amplify app.${suffix}`), {
+    statusCode: 409,
+  });
+}
+
+function candidateDomainNames(rootDomain: string, fqdn: string): string[] {
+  const names = [rootDomain];
+  const host = normalizeHost(fqdn);
+  if (host && host !== rootDomain) names.push(host);
+  return names;
+}
+
+async function findAssociationsOnOtherApps(
+  currentAppId: string,
+  domainNames: string[]
+): Promise<Array<{ appId: string; domainName: string }>> {
+  const uniqueNames = [...new Set(domainNames)];
+  const found: Array<{ appId: string; domainName: string }> = [];
+  const seen = new Set<string>();
+
+  for (const app of await listAllApps()) {
+    if (app.appId === currentAppId) continue;
+    for (const domainName of uniqueNames) {
+      let association: DomainAssociation | null = null;
+      try {
+        association = await getAssociation(app.appId, domainName);
+      } catch (error) {
+        console.error(`Failed to read Amplify domain ${domainName} on app ${app.appId}`, error);
+        continue;
+      }
+      if (!association) continue;
+      const resolvedName = association.domainName ?? domainName;
+      const key = `${app.appId}:${resolvedName}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      found.push({ appId: app.appId, domainName: resolvedName });
+    }
+  }
+
+  return found;
+}
+
+async function reclaimDomainFromOtherApps(
+  currentAppId: string,
+  rootDomain: string,
+  fqdn: string
+): Promise<boolean> {
+  const conflicts = await findAssociationsOnOtherApps(
+    currentAppId,
+    candidateDomainNames(rootDomain, fqdn)
+  );
+  if (conflicts.length === 0) return false;
+
+  const client = amplifyClient();
+  for (const conflict of conflicts) {
+    await client.send(
+      new DeleteDomainAssociationCommand({
+        appId: conflict.appId,
+        domainName: conflict.domainName,
+      })
+    );
+    console.warn(
+      `Released Amplify domain ${conflict.domainName} from app ${conflict.appId} so it can be attached to ${currentAppId}`
+    );
+  }
+  return true;
+}
+
+async function createDomainAssociation(
+  appId: string,
+  fqdn: string,
+  rootDomain: string,
+  prefix: string,
+  branch: string
+): Promise<DomainAssociation> {
+  const client = amplifyClient();
+  const input = {
+    appId,
+    domainName: rootDomain,
+    subDomainSettings: [{ prefix, branchName: branch }],
+    enableAutoSubDomain: false,
+  };
+
+  try {
+    const created = await client.send(new CreateDomainAssociationCommand(input));
+    if (!created.domainAssociation) {
+      throw Object.assign(new Error("Failed to create Amplify domain association"), {
+        statusCode: 500,
+      });
+    }
+    return created.domainAssociation;
+  } catch (error) {
+    if (!isDomainTakenByAnotherApp(error)) throw error;
+
+    const reclaimed = await reclaimDomainFromOtherApps(appId, rootDomain, fqdn);
+    if (!reclaimed) throw domainConflictError(fqdn);
+
+    const retry = async (): Promise<DomainAssociation> => {
+      const created = await client.send(new CreateDomainAssociationCommand(input));
+      if (!created.domainAssociation) {
+        throw Object.assign(new Error("Failed to create Amplify domain association"), {
+          statusCode: 500,
+        });
+      }
+      return created.domainAssociation;
+    };
+
+    try {
+      return await retry();
+    } catch (retryError) {
+      if (!isDomainTakenByAnotherApp(retryError)) throw retryError;
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      try {
+        return await retry();
+      } catch (finalError) {
+        if (!isDomainTakenByAnotherApp(finalError)) throw finalError;
+        throw domainConflictError(
+          fqdn,
+          " It was released from another app, but Amplify has not finished detaching it yet. Retry in a few minutes."
+        );
+      }
+    }
   }
 }
 
@@ -261,20 +404,8 @@ export async function ensureResellerDomainInAmplify(fqdn: string): Promise<Resel
   const existing = await getAssociation(appId, rootDomain);
 
   if (!existing) {
-    const created = await client.send(
-      new CreateDomainAssociationCommand({
-        appId,
-        domainName: rootDomain,
-        subDomainSettings: [{ prefix, branchName: branch }],
-        enableAutoSubDomain: false,
-      })
-    );
-    if (!created.domainAssociation) {
-      throw Object.assign(new Error("Failed to create Amplify domain association"), {
-        statusCode: 500,
-      });
-    }
-    return toDnsInfo(created.domainAssociation, fqdn, prefix);
+    const created = await createDomainAssociation(appId, fqdn, rootDomain, prefix, branch);
+    return toDnsInfo(created, fqdn, prefix);
   }
 
   const currentSettings: SubDomainSetting[] = (existing.subDomains ?? []).map((s) => ({
