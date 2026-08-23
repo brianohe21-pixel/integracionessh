@@ -373,6 +373,8 @@ variable "cloudwatch_log_group_import_exclude" {
     "process_mailrelay_sync",
     "mailrelay_webhook",
     "process_whatsapp_sync",
+    "sales",
+    "process_sequence",
   ]
   description = "Lambda keys whose log groups are created by Terraform instead of imported (new functions without pre-existing log groups in AWS)"
 }
