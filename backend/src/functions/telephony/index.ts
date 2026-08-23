@@ -433,8 +433,8 @@ export async function handler(
       return handleGatewayInvoke(event);
     }
 
-    const credentialTenantId = readTelephonyWebhookTenantId(event.pathParameters, rawPath);
     const rawPath = event.rawPath ?? event.requestContext.http.path;
+    const credentialTenantId = readTelephonyWebhookTenantId(event.pathParameters, rawPath);
 
     if (rawPath.includes("/contact-center")) {
       return handleContactCenterHttp(event as APIGatewayProxyEventV2WithJWTAuthorizer);
