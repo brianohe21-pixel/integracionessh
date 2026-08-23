@@ -1,5 +1,6 @@
 import { ConditionalCheckFailedException } from "@aws-sdk/client-dynamodb";
 import {
+  DeleteCommand,
   GetCommand,
   PutCommand,
   QueryCommand,
@@ -11,6 +12,7 @@ import type {
   MailrelayCampaignMetrics,
   MailrelayCampaignRecord,
   MailrelayConfig,
+  MailrelayEmailTemplate,
   MailrelayEvent,
   MailrelaySubscriberLink,
   MailrelaySyncError,
@@ -43,6 +45,10 @@ const metricsKey = (tenantId: string, campaignId: number) => ({
 const eventKey = (tenantId: string, eventId: string) => ({
   PK: tenantPk(tenantId),
   SK: `MAILRELAY#EVENT#${eventId}`,
+});
+const templateKey = (tenantId: string, templateId: string) => ({
+  PK: tenantPk(tenantId),
+  SK: `MAILRELAY#TEMPLATE#${templateId}`,
 });
 const syncPageKey = (tenantId: string, jobId: string, pageToken: string) => ({
   PK: tenantPk(tenantId),
@@ -502,6 +508,8 @@ export async function recordMailrelayEvent(event: MailrelayEvent): Promise<boole
         TableName: TABLE_NAME,
         Item: {
           ...eventKey(event.tenantId, event.eventId),
+          GSI1PK: `${tenantPk(event.tenantId)}#MAILRELAY_EVENTS`,
+          GSI1SK: `${event.occurredAt}#${event.eventId}`,
           entityType: "MailrelayEvent",
           ...event,
           ttl: Math.floor(Date.now() / 1000) + 90 * 24 * 60 * 60,
@@ -514,4 +522,110 @@ export async function recordMailrelayEvent(event: MailrelayEvent): Promise<boole
     if (error instanceof ConditionalCheckFailedException) return false;
     throw error;
   }
+}
+
+export async function listMailrelayEvents(
+  tenantId: string,
+  options: { limit?: number; campaignId?: number } = {}
+): Promise<MailrelayEvent[]> {
+  const limit = Math.min(Math.max(options.limit ?? 50, 1), 200);
+  const result = await docClient.send(
+    new QueryCommand({
+      TableName: TABLE_NAME,
+      KeyConditionExpression: "PK = :pk AND begins_with(SK, :prefix)",
+      ExpressionAttributeValues: {
+        ":pk": tenantPk(tenantId),
+        ":prefix": "MAILRELAY#EVENT#",
+      },
+      Limit: limit * 4,
+    })
+  );
+  const events = (result.Items ?? [])
+    .map((item) => strip<MailrelayEvent>(item))
+    .filter((event) =>
+      options.campaignId ? event.campaignId === options.campaignId : true
+    )
+    .sort((left, right) => right.occurredAt.localeCompare(left.occurredAt));
+  return events.slice(0, limit);
+}
+
+export async function listMailrelayCampaignMetrics(
+  tenantId: string
+): Promise<MailrelayCampaignMetrics[]> {
+  const result = await docClient.send(
+    new QueryCommand({
+      TableName: TABLE_NAME,
+      KeyConditionExpression: "PK = :pk AND begins_with(SK, :prefix)",
+      ExpressionAttributeValues: {
+        ":pk": tenantPk(tenantId),
+        ":prefix": "MAILRELAY#METRICS#",
+      },
+    })
+  );
+  return (result.Items ?? []).map((item) => strip<MailrelayCampaignMetrics>(item));
+}
+
+export async function listMailrelayEmailTemplates(
+  tenantId: string
+): Promise<MailrelayEmailTemplate[]> {
+  const result = await docClient.send(
+    new QueryCommand({
+      TableName: TABLE_NAME,
+      KeyConditionExpression: "PK = :pk AND begins_with(SK, :prefix)",
+      ExpressionAttributeValues: {
+        ":pk": tenantPk(tenantId),
+        ":prefix": "MAILRELAY#TEMPLATE#",
+      },
+      ScanIndexForward: false,
+    })
+  );
+  return (result.Items ?? []).map((item) => strip<MailrelayEmailTemplate>(item));
+}
+
+export async function getMailrelayEmailTemplate(
+  tenantId: string,
+  templateId: string
+): Promise<MailrelayEmailTemplate | null> {
+  const result = await docClient.send(
+    new GetCommand({ TableName: TABLE_NAME, Key: templateKey(tenantId, templateId) })
+  );
+  return result.Item ? strip<MailrelayEmailTemplate>(result.Item) : null;
+}
+
+export async function saveMailrelayEmailTemplate(
+  tenantId: string,
+  templateId: string,
+  data: Pick<MailrelayEmailTemplate, "name" | "subject" | "previewText" | "html">
+): Promise<MailrelayEmailTemplate> {
+  const existing = await getMailrelayEmailTemplate(tenantId, templateId);
+  const now = new Date().toISOString();
+  const template: MailrelayEmailTemplate = {
+    templateId,
+    tenantId,
+    name: data.name,
+    subject: data.subject,
+    html: data.html,
+    createdAt: existing?.createdAt ?? now,
+    updatedAt: now,
+    ...(data.previewText ? { previewText: data.previewText } : {}),
+  };
+  await docClient.send(
+    new PutCommand({
+      TableName: TABLE_NAME,
+      Item: { ...templateKey(tenantId, templateId), entityType: "MailrelayEmailTemplate", ...template },
+    })
+  );
+  return template;
+}
+
+export async function deleteMailrelayEmailTemplate(
+  tenantId: string,
+  templateId: string
+): Promise<void> {
+  await docClient.send(
+    new DeleteCommand({
+      TableName: TABLE_NAME,
+      Key: templateKey(tenantId, templateId),
+    })
+  );
 }

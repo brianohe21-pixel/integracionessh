@@ -2800,3 +2800,25 @@ export interface MailrelayEvent {
   occurredAt: string;
   payload: Record<string, unknown>;
 }
+
+export interface MailrelayEmailTemplate {
+  templateId: string;
+  tenantId: string;
+  name: string;
+  subject: string;
+  previewText?: string;
+  html: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MailrelayOverview {
+  subscriberCount: number;
+  draftCampaigns: number;
+  sentCampaigns: number;
+  templateCount: number;
+  averageOpenRate: number;
+  averageClickRate: number;
+  lastSyncAt?: string;
+  lastSyncStatus?: MailrelaySyncJobStatus;
+}

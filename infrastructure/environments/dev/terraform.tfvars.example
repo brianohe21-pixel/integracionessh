@@ -39,6 +39,9 @@ telephony_gateway_public_subnet_ids  = ["subnet-xxxxxxxx", "subnet-yyyyyyyy"]
 telephony_gateway_domain             = ""
 telephony_gateway_certificate_arn    = "arn:aws:acm:us-east-1:123456789012:certificate/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 
+demo_account_email    = "demo@integracionessh.dev"
+demo_account_password = "DemoAccess2026!"
+
 enable_monitoring = false
 ops_alert_email   = "ops@example.com"
 # ops_alert_emails = ["ops@example.com", "oncall@example.com"]

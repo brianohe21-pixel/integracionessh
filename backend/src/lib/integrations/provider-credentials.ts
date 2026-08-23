@@ -288,6 +288,20 @@ export async function hasResolvedTelnyxCredentials(
   }
 }
 
+export async function assertOwnTelnyxCredential(
+  tenantId: string,
+  environment: string
+): Promise<TelnyxCredentialPayload> {
+  const payload = await getTenantProviderCredential(tenantId, environment, "telnyx");
+  if (!payload) {
+    throw Object.assign(
+      new Error("Own Telnyx API key required to search or purchase phone numbers"),
+      { statusCode: 403 }
+    );
+  }
+  return payload;
+}
+
 function telnyxWebhookPath(ownerTenantId: string, apiBaseUrl: string): string | undefined {
   if (!apiBaseUrl) return undefined;
   const base = apiBaseUrl.replace(/\/$/, "");

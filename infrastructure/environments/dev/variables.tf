@@ -228,3 +228,16 @@ variable "mailrelay_event_types" {
   default     = ""
   description = "Comma-separated Mailrelay webhook event types for tenant subscriptions"
 }
+
+variable "demo_account_email" {
+  type        = string
+  default     = "demo@integracionessh.dev"
+  description = "Public demo account email shown on the develop login page"
+}
+
+variable "demo_account_password" {
+  type        = string
+  default     = "DemoAccess2026!"
+  sensitive   = true
+  description = "Public demo account password for the develop environment only"
+}

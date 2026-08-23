@@ -172,6 +172,14 @@ locals {
       function_arn = var.telephony_function_arn
       protected    = true
     }
+    telephony = {
+      path         = "/telephony/{proxy+}"
+      slug         = "telephony"
+      methods      = ["GET", "POST"]
+      invoke_arn   = var.telephony_invoke_arn
+      function_arn = var.telephony_function_arn
+      protected    = true
+    }
     mailrelay = {
       path         = "/email-marketing/{proxy+}"
       slug         = "mailrelay"
