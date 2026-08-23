@@ -108,6 +108,10 @@ async function ensureFlowHook(
   tenantId: string,
   flow: FlowDefinition
 ): Promise<{ config: FlowHookConfig; secret?: string }> {
+  if (!flow.botId) {
+    throw new Error("Flow must have an assigned bot to configure a webhook");
+  }
+
   const existing = await getFlowHookConfig(tenantId, flow.flowId);
   if (existing) {
     return { config: existing };

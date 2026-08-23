@@ -163,6 +163,9 @@ export async function startEventFlowRun(params: {
   if (!flow || !flow.enabled) {
     throw new Error("Flow not found or disabled");
   }
+  if (!flow.botId) {
+    throw new Error("Flow must have an assigned bot");
+  }
 
   const entryId =
     flow.entryNodeId || flow.nodes.find((n) => n.type === "trigger")?.id || flow.nodes[0]?.id;
