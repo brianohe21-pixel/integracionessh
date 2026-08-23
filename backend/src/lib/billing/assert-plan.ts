@@ -236,7 +236,7 @@ export function assertCanCustomizeBranding(tenant: Tenant): void {
   if (!limits.canCustomizeBranding) {
     throw new PlanLimitError(
       "PLAN_LIMIT_BRANDING",
-      "Custom branding requires Enterprise or Reseller plan"
+      "Custom branding requires Pro plan or higher"
     );
   }
 }

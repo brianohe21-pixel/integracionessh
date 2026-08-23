@@ -19,8 +19,12 @@ describe("assertCanCustomizeBranding", () => {
     expect(() => assertCanCustomizeBranding(tenant("enterprise"))).not.toThrow();
   });
 
-  it("blocks free and pro tenants", () => {
+  it("allows pro tenants", () => {
+    expect(() => assertCanCustomizeBranding(tenant("pro"))).not.toThrow();
+  });
+
+  it("blocks free and starter tenants", () => {
     expect(() => assertCanCustomizeBranding(tenant("free"))).toThrow(PlanLimitError);
-    expect(() => assertCanCustomizeBranding(tenant("pro"))).toThrow(PlanLimitError);
+    expect(() => assertCanCustomizeBranding(tenant("starter"))).toThrow(PlanLimitError);
   });
 });
