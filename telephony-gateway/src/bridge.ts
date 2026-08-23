@@ -431,6 +431,7 @@ export async function runTelephonyBridge(
         openaiInputTokens,
         openaiOutputTokens,
         elevenlabsCharacters,
+        elevenlabsModelId: ttsModel,
       },
     });
   };

@@ -41,10 +41,15 @@ import {
   handleError,
   unauthorized,
 } from "../../lib/http.js";
+import {
+  PLAN_LIST_PRICE_USD,
+  type PaidTenantPlan,
+} from "../../lib/billing/plan-config.js";
+
 import type { SubscriptionStatus, TenantPlan } from "../../types/index.js";
 
 const CheckoutSchema = z.object({
-  plan: z.enum(["pro", "enterprise"]),
+  plan: z.enum(["starter", "pro", "enterprise"]),
   provider: z.enum(["wompi", "stripe"]).optional(),
 });
 
@@ -124,7 +129,7 @@ async function syncSubscriptionToTenant(
 async function handleWompiCheckout(
   tenantId: string,
   email: string,
-  plan: "pro" | "enterprise"
+  plan: PaidTenantPlan
 ) {
   const amountInCents = amountInCentsForPlan(plan);
   const reference = buildPaymentReference(tenantId, plan);
@@ -157,7 +162,7 @@ async function handleWompiCheckout(
 
 async function handleStripeCheckout(
   tenant: Awaited<ReturnType<typeof ensureTenant>>,
-  plan: "pro" | "enterprise"
+  plan: PaidTenantPlan
 ) {
   const stripe = getStripe();
   let customerId = tenant.stripeCustomerId;
@@ -306,13 +311,21 @@ export async function handler(
         stripe,
         default: defaultProvider,
         plans: {
+          starter: {
+            amountCents: amountInCentsForPlan("starter"),
+            listPriceUsd: PLAN_LIST_PRICE_USD.starter,
+            currency: "COP",
+            periodDays: 30,
+          },
           pro: {
             amountCents: amountInCentsForPlan("pro"),
+            listPriceUsd: PLAN_LIST_PRICE_USD.pro,
             currency: "COP",
             periodDays: 30,
           },
           enterprise: {
             amountCents: amountInCentsForPlan("enterprise"),
+            listPriceUsd: PLAN_LIST_PRICE_USD.enterprise,
             currency: "COP",
             periodDays: 30,
           },

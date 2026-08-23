@@ -296,16 +296,22 @@ variable "wompi_events_secret" {
   description = "Wompi events secret for webhook verification"
 }
 
+variable "wompi_amount_starter_cents" {
+  type        = string
+  default     = "24190000"
+  description = "Starter plan price in COP cents (default 241900 COP)"
+}
+
 variable "wompi_amount_pro_cents" {
   type        = string
-  default     = "17990000"
-  description = "Pro plan price in COP cents (default 179900 COP)"
+  default     = "81590000"
+  description = "Growth plan price in COP cents (default 815900 COP)"
 }
 
 variable "wompi_amount_enterprise_cents" {
   type        = string
-  default     = "74990000"
-  description = "Enterprise plan price in COP cents (default 749900 COP)"
+  default     = "286590000"
+  description = "Scale plan price in COP cents (default 2865900 COP)"
 }
 
 variable "wompi_api_base" {

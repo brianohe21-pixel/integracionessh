@@ -176,6 +176,7 @@ interface TelephonyGatewayInvokeEvent {
     openaiInputTokens?: number;
     openaiOutputTokens?: number;
     elevenlabsCharacters?: number;
+    elevenlabsModelId?: string;
   };
   toolName?: string;
   latencyMs?: number;

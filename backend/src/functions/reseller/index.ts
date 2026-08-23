@@ -62,7 +62,7 @@ const CreateSubaccountSchema = z.object({
   name: z.string().min(1).max(128),
   email: z.string().email(),
   ownerName: z.string().min(1).max(128).optional(),
-  plan: z.enum(["free", "pro", "enterprise"]).optional(),
+  plan: z.enum(["free", "starter", "pro", "enterprise"]).optional(),
   inviteOwner: z.boolean().optional().default(true),
   enabledServices: z.array(SubaccountServiceSchema).optional(),
   serviceLimits: ServiceLimitsSchema,
@@ -71,7 +71,7 @@ const CreateSubaccountSchema = z.object({
 const UpdateSubaccountSchema = z.object({
   name: z.string().min(1).max(128).optional(),
   status: z.enum(["active", "suspended"]).optional(),
-  plan: z.enum(["free", "pro", "enterprise"]).optional(),
+  plan: z.enum(["free", "starter", "pro", "enterprise"]).optional(),
   enabledServices: z.array(SubaccountServiceSchema).optional(),
   serviceLimits: ServiceLimitsSchema,
 });

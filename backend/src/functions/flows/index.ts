@@ -82,7 +82,7 @@ const FlowEdgeSchema = z.object({
 
 const FlowSchema = z.object({
   name: z.string().min(1).max(120),
-  botId: z.string().uuid(),
+  botId: z.string().uuid().optional(),
   flowKind: z.enum(["messaging", "voice_ai"]).optional(),
   enabled: z.boolean().default(false),
   nodes: z.array(FlowNodeSchema).min(1),
@@ -295,8 +295,14 @@ export async function handler(
       const body = FlowSchema.safeParse(JSON.parse(apiEvent.body ?? "{}"));
       if (!body.success) return badRequest(body.error.message);
 
-      const bot = await getBot(auth.tenantId, body.data.botId);
-      if (!bot) return notFound("Bot not found");
+      if (body.data.botId) {
+        const bot = await getBot(auth.tenantId, body.data.botId);
+        if (!bot) return notFound("Bot not found");
+      }
+
+      if (body.data.enabled && !body.data.botId) {
+        return badRequest("Assign a bot before enabling this flow");
+      }
 
       const tenant = await getTenant(auth.tenantId);
       if (tenant) {
@@ -312,7 +318,7 @@ export async function handler(
       const flow: FlowDefinition = {
         flowId: makeFlowId(),
         tenantId: auth.tenantId,
-        botId: body.data.botId,
+        ...(body.data.botId ? { botId: body.data.botId } : {}),
         name: body.data.name,
         ...(body.data.flowKind ? { flowKind: body.data.flowKind as FlowKind } : {}),
         enabled: body.data.enabled,
@@ -334,14 +340,29 @@ export async function handler(
       const body = FlowSchema.partial().safeParse(JSON.parse(apiEvent.body ?? "{}"));
       if (!body.success) return badRequest(body.error.message);
 
+      if (body.data.botId !== undefined) {
+        const bot = await getBot(auth.tenantId, body.data.botId);
+        if (!bot) return notFound("Bot not found");
+      }
+
+      const nextBotId = body.data.botId !== undefined ? body.data.botId : existing.botId;
+      if (body.data.enabled && !nextBotId) {
+        return badRequest("Assign a bot before enabling this flow");
+      }
+
       const tenant = await getTenant(auth.tenantId);
-      if (tenant && body.data.nodes) {
-        await assertCanCreateVisualFlow(tenant, existing.botId, body.data.nodes.length);
+      const nodeCount = (body.data.nodes ?? existing.nodes).length;
+      if (tenant && (body.data.nodes || body.data.botId !== undefined)) {
+        await assertCanCreateVisualFlow(tenant, nextBotId, nodeCount);
+      }
+      if (tenant && body.data.botId !== undefined && body.data.botId !== existing.botId) {
+        await assertCanCreateVisualFlow(tenant, body.data.botId, nodeCount);
       }
 
       const nodes = (body.data.nodes ?? existing.nodes) as FlowNode[];
       const candidate: FlowDefinition = {
         ...existing,
+        ...(body.data.botId !== undefined ? { botId: body.data.botId } : {}),
         ...(body.data.name !== undefined ? { name: body.data.name } : {}),
         ...(body.data.flowKind !== undefined ? { flowKind: body.data.flowKind as FlowKind } : {}),
         ...(body.data.enabled !== undefined ? { enabled: body.data.enabled } : {}),
@@ -373,6 +394,10 @@ export async function handler(
       if (tenant) await assertCanEnableVisualFlow(tenant);
       const existing = await getFlowDefinition(auth.tenantId, flowId);
       if (!existing) return notFound("Flow not found");
+
+      if (!existing.botId) {
+        return badRequest("Assign a bot before enabling this flow");
+      }
 
       const issues = isVoiceAiFlow(existing)
         ? await validateFlowDefinitionWithSecrets(existing, ENVIRONMENT)

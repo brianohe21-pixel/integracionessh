@@ -425,6 +425,7 @@ locals {
         WOMPI_PRIVATE_KEY             = var.wompi_private_key
         WOMPI_INTEGRITY_SECRET        = var.wompi_integrity_secret
         WOMPI_EVENTS_SECRET           = var.wompi_events_secret
+        WOMPI_AMOUNT_STARTER_CENTS     = var.wompi_amount_starter_cents
         WOMPI_AMOUNT_PRO_CENTS        = var.wompi_amount_pro_cents
         WOMPI_AMOUNT_ENTERPRISE_CENTS = var.wompi_amount_enterprise_cents
         WOMPI_API_BASE                = var.wompi_api_base

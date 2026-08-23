@@ -1,4 +1,4 @@
-export type TenantPlan = "free" | "pro" | "enterprise" | "reseller";
+export type TenantPlan = "free" | "starter" | "pro" | "enterprise" | "reseller";
 
 export type TenantKind = "standard" | "reseller" | "subaccount";
 
@@ -75,7 +75,7 @@ export interface ResellerLimitsOverride {
 
 export interface ResellerConfig {
   maxSubaccounts: number;
-  defaultSubaccountPlan: "free" | "pro" | "enterprise";
+  defaultSubaccountPlan: "free" | "starter" | "pro" | "enterprise";
   customDomain?: string;
   customDomainStatus?: CustomDomainStatus;
   allowSubaccountBranding: boolean;
@@ -84,7 +84,7 @@ export interface ResellerConfig {
 
 export interface ResellerPlanDefaults {
   maxSubaccounts: number;
-  defaultSubaccountPlan: "free" | "pro" | "enterprise";
+  defaultSubaccountPlan: "free" | "starter" | "pro" | "enterprise";
   allowSubaccountBranding: boolean;
   limitsOverride?: ResellerLimitsOverride;
 }
@@ -771,6 +771,7 @@ export interface CallUsageMetrics {
   openaiInputTokens?: number;
   openaiOutputTokens?: number;
   elevenlabsCharacters?: number;
+  elevenlabsModelId?: string;
 }
 
 export interface CallRecord {
@@ -2314,7 +2315,7 @@ export interface FlowEdge {
 export interface FlowDefinition {
   flowId: string;
   tenantId: string;
-  botId: string;
+  botId?: string;
   name: string;
   flowKind?: FlowKind;
   enabled: boolean;

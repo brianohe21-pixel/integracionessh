@@ -5,7 +5,11 @@ import type {
   CallUsageMetrics,
   TelephonyCallDirection,
 } from "../../types/index.js";
-import { TELEPHONY_PRICING_VERSION, TELEPHONY_RATES } from "./pricing.js";
+import {
+  getElevenLabsPerCharacterUsd,
+  TELEPHONY_PRICING_VERSION,
+  TELEPHONY_RATES,
+} from "./pricing.js";
 
 function roundUsd(value: number): number {
   return Math.round(value * 1_000_000) / 1_000_000;
@@ -17,6 +21,7 @@ export function estimateTelephonyCost(params: {
   usage?: CallUsageMetrics;
   recordingEnabled?: boolean;
   telnyxCostUsd?: number;
+  elevenlabsModelId?: string;
 }): { breakdown: CallCostBreakdown; status: CallCostStatus } {
   const minutes = Math.max(params.durationSeconds, 1) / 60;
   const telnyxRate =
@@ -31,13 +36,15 @@ export function estimateTelephonyCost(params: {
   const openaiInputTokens = params.usage?.openaiInputTokens ?? 0;
   const openaiOutputTokens = params.usage?.openaiOutputTokens ?? 0;
   const elevenlabsCharacters = params.usage?.elevenlabsCharacters ?? 0;
+  const elevenlabsModelId =
+    params.usage?.elevenlabsModelId ?? params.elevenlabsModelId;
 
   const openaiUsd = roundUsd(
     (openaiInputTokens / 1000) * TELEPHONY_RATES.openaiInputPer1kTokensUsd +
       (openaiOutputTokens / 1000) * TELEPHONY_RATES.openaiOutputPer1kTokensUsd
   );
   const elevenlabsUsd = roundUsd(
-    elevenlabsCharacters * TELEPHONY_RATES.elevenlabsPerCharacterUsd
+    elevenlabsCharacters * getElevenLabsPerCharacterUsd(elevenlabsModelId)
   );
   const recordingUsd = params.recordingEnabled
     ? roundUsd(minutes * TELEPHONY_RATES.telnyxRecordingPerMinuteUsd)

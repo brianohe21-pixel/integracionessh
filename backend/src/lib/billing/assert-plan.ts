@@ -159,7 +159,7 @@ export async function assertCanCreateMetaFlow(tenant: Tenant, botId: string): Pr
 
 export async function assertCanCreateVisualFlow(
   tenant: Tenant,
-  botId: string,
+  botId: string | undefined,
   nodeCount: number
 ): Promise<void> {
   const limits = getEffectivePlanLimits(tenant);
@@ -169,7 +169,7 @@ export async function assertCanCreateVisualFlow(
       `Plan limit: maximum ${limits.maxFlowNodes} nodes per flow`
     );
   }
-  if (isUnlimited(limits.maxVisualFlowsPerBot)) return;
+  if (!botId || isUnlimited(limits.maxVisualFlowsPerBot)) return;
 
   const count = await countFlowsForBot(tenant.tenantId, botId);
   if (count >= limits.maxVisualFlowsPerBot) {

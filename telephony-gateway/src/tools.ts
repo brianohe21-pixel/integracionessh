@@ -162,6 +162,7 @@ export async function reportCallUsage(params: {
     openaiInputTokens?: number;
     openaiOutputTokens?: number;
     elevenlabsCharacters?: number;
+    elevenlabsModelId?: string;
   };
 }): Promise<void> {
   if (!lambdaName) return;

@@ -25,7 +25,7 @@ const CognitoPatchSchema = z.object({
 
 const ResellerDefaultsSchema = z.object({
   maxSubaccounts: z.number().int().min(1).max(10_000),
-  defaultSubaccountPlan: z.enum(["free", "pro", "enterprise"]),
+  defaultSubaccountPlan: z.enum(["free", "starter", "pro", "enterprise"]),
   allowSubaccountBranding: z.boolean(),
   limitsOverride: z.record(z.union([z.number(), z.boolean()])).optional(),
 });

@@ -72,17 +72,17 @@ const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 const CreateTenantSchema = z.object({
   name: z.string().min(1).max(128),
   email: z.string().email(),
-  plan: z.enum(["free", "pro", "enterprise", "reseller"]).default("free"),
+  plan: z.enum(["free", "starter", "pro", "enterprise", "reseller"]).default("free"),
 });
 
 const UpdateTenantSchema = z.object({
   name: z.string().min(1).max(128).optional(),
-  plan: z.enum(["free", "pro", "enterprise", "reseller"]).optional(),
+  plan: z.enum(["free", "starter", "pro", "enterprise", "reseller"]).optional(),
   status: z.enum(["active", "suspended"]).optional(),
   resellerConfig: z
     .object({
       maxSubaccounts: z.number().int().min(1).max(10_000).optional(),
-      defaultSubaccountPlan: z.enum(["free", "pro", "enterprise"]).optional(),
+      defaultSubaccountPlan: z.enum(["free", "starter", "pro", "enterprise"]).optional(),
       customDomain: z.string().min(3).max(253).optional(),
       customDomainStatus: z
         .enum(["none", "pending_dns", "active", "error"])
