@@ -235,7 +235,7 @@ module "lambda" {
   wompi_private_key             = var.wompi_private_key
   wompi_integrity_secret        = var.wompi_integrity_secret
   wompi_events_secret           = var.wompi_events_secret
-  wompi_amount_starter_cents      = var.wompi_amount_starter_cents
+  wompi_amount_starter_cents    = var.wompi_amount_starter_cents
   wompi_amount_pro_cents        = var.wompi_amount_pro_cents
   wompi_amount_enterprise_cents = var.wompi_amount_enterprise_cents
   wompi_api_base                = var.wompi_api_base

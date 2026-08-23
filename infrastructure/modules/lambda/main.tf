@@ -221,13 +221,13 @@ locals {
       timeout     = 30
       memory      = 256
       environment = {
-        WHATSAPP_VERIFY_TOKEN    = var.whatsapp_verify_token
-        WHATSAPP_APP_SECRET      = var.whatsapp_app_secret != "" ? var.whatsapp_app_secret : var.meta_app_secret
-        SQS_QUEUE_URL            = var.sqs_queue_url
-        CALL_EVENTS_QUEUE_URL    = var.call_events_sqs_queue_url
-        WHATSAPP_SYNC_QUEUE_URL  = var.whatsapp_sync_sqs_queue_url
-        MEDIA_BUCKET             = var.media_bucket_name
-        TABLE_NAME               = var.dynamodb_table_name
+        WHATSAPP_VERIFY_TOKEN   = var.whatsapp_verify_token
+        WHATSAPP_APP_SECRET     = var.whatsapp_app_secret != "" ? var.whatsapp_app_secret : var.meta_app_secret
+        SQS_QUEUE_URL           = var.sqs_queue_url
+        CALL_EVENTS_QUEUE_URL   = var.call_events_sqs_queue_url
+        WHATSAPP_SYNC_QUEUE_URL = var.whatsapp_sync_sqs_queue_url
+        MEDIA_BUCKET            = var.media_bucket_name
+        TABLE_NAME              = var.dynamodb_table_name
       }
     }
     process_message = {
@@ -284,9 +284,9 @@ locals {
       timeout     = 30
       memory      = 256
       environment = {
-        TABLE_NAME               = var.dynamodb_table_name
-        ENVIRONMENT              = var.environment
-        WHATSAPP_SYNC_QUEUE_URL  = var.whatsapp_sync_sqs_queue_url
+        TABLE_NAME              = var.dynamodb_table_name
+        ENVIRONMENT             = var.environment
+        WHATSAPP_SYNC_QUEUE_URL = var.whatsapp_sync_sqs_queue_url
       }
     }
     conversations = {
@@ -425,7 +425,7 @@ locals {
         WOMPI_PRIVATE_KEY             = var.wompi_private_key
         WOMPI_INTEGRITY_SECRET        = var.wompi_integrity_secret
         WOMPI_EVENTS_SECRET           = var.wompi_events_secret
-        WOMPI_AMOUNT_STARTER_CENTS     = var.wompi_amount_starter_cents
+        WOMPI_AMOUNT_STARTER_CENTS    = var.wompi_amount_starter_cents
         WOMPI_AMOUNT_PRO_CENTS        = var.wompi_amount_pro_cents
         WOMPI_AMOUNT_ENTERPRISE_CENTS = var.wompi_amount_enterprise_cents
         WOMPI_API_BASE                = var.wompi_api_base
