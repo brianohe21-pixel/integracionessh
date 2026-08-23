@@ -120,6 +120,22 @@ describe("telephony bridge", () => {
     ).toBe("gpt-4o-mini-transcribe");
   });
 
+  it("disables openai transcription when external stt is active", () => {
+    const payload = buildOpenAISessionUpdate({
+      model: "gpt-realtime-2.1-mini",
+      transcriptionModel: null,
+      instructions: "Hola",
+      tools: [],
+      locale: "es",
+      turnDetection: TELEPHONY_TURN_DETECTION,
+    });
+
+    const session = payload.session as Record<string, unknown>;
+    expect(
+      (session.audio as { input: { transcription: null } }).input.transcription
+    ).toBeNull();
+  });
+
   it("rejects echo transcripts while the agent is speaking", () => {
     expect(
       shouldAcceptUserTranscript({

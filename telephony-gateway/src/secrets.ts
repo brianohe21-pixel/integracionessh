@@ -6,7 +6,7 @@ function environmentName(): string {
   return process.env.ENVIRONMENT ?? "dev";
 }
 
-type ProviderId = "openai" | "elevenlabs";
+type ProviderId = "openai" | "elevenlabs" | "deepgram";
 
 async function readSecret(secretId: string): Promise<Record<string, string> | null> {
   const client = new SecretsManagerClient({ region: process.env.AWS_REGION ?? "us-east-1" });
@@ -56,4 +56,8 @@ export async function getOpenAIApiKey(tenantId: string): Promise<string> {
 
 export async function getElevenLabsApiKey(tenantId: string): Promise<string> {
   return resolveApiKey(tenantId, "elevenlabs");
+}
+
+export async function getDeepgramApiKey(tenantId: string): Promise<string> {
+  return resolveApiKey(tenantId, "deepgram");
 }

@@ -1,12 +1,13 @@
-export const DEFAULT_TELEPHONY_TRANSCRIPTION_MODEL_ID = "gpt-4o-mini-transcribe";
+export {
+  DEFAULT_TELEPHONY_TRANSCRIPTION_MODEL_ID,
+  resolveOpenAiTranscriptionModelId,
+  resolveTelephonySttModel,
+  isValidTelephonySttModelId,
+  TELEPHONY_STT_MODELS,
+} from "./stt/registry.js";
 
-const TRANSCRIPTION_MODEL_IDS = new Set([
-  "gpt-4o-mini-transcribe",
-  "gpt-4o-transcribe",
-  "whisper-1",
-]);
+import { resolveOpenAiTranscriptionModelId } from "./stt/registry.js";
 
 export function resolveTelephonyTranscriptionModelId(modelId?: string): string {
-  if (modelId && TRANSCRIPTION_MODEL_IDS.has(modelId)) return modelId;
-  return DEFAULT_TELEPHONY_TRANSCRIPTION_MODEL_ID;
+  return resolveOpenAiTranscriptionModelId(modelId);
 }

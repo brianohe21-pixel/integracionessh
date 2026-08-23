@@ -6,6 +6,7 @@ import type {
   TelephonyCallDirection,
 } from "../../types/index.js";
 import {
+  getDeepgramPerMinuteUsd,
   getElevenLabsPerCharacterUsd,
   TELEPHONY_PRICING_VERSION,
   TELEPHONY_RATES,
@@ -46,12 +47,23 @@ export function estimateTelephonyCost(params: {
   const elevenlabsUsd = roundUsd(
     elevenlabsCharacters * getElevenLabsPerCharacterUsd(elevenlabsModelId)
   );
+  const sttAudioSeconds = params.usage?.sttAudioSeconds ?? 0;
+  const sttUsd =
+    sttAudioSeconds > 0
+      ? roundUsd((sttAudioSeconds / 60) * getDeepgramPerMinuteUsd(params.usage?.sttModelId))
+      : 0;
   const recordingUsd = params.recordingEnabled
     ? roundUsd(minutes * TELEPHONY_RATES.telnyxRecordingPerMinuteUsd)
     : 0;
 
-  const totalUsd = roundUsd(telnyxUsd + platformUsd + openaiUsd + elevenlabsUsd + recordingUsd);
-  const hasUsage = openaiInputTokens > 0 || openaiOutputTokens > 0 || elevenlabsCharacters > 0;
+  const totalUsd = roundUsd(
+    telnyxUsd + platformUsd + openaiUsd + elevenlabsUsd + sttUsd + recordingUsd
+  );
+  const hasUsage =
+    openaiInputTokens > 0 ||
+    openaiOutputTokens > 0 ||
+    elevenlabsCharacters > 0 ||
+    sttAudioSeconds > 0;
   const status: CallCostStatus =
     params.telnyxCostUsd !== undefined && hasUsage
       ? "final"
@@ -65,6 +77,7 @@ export function estimateTelephonyCost(params: {
       platformUsd,
       openaiUsd,
       elevenlabsUsd,
+      ...(sttUsd > 0 ? { sttUsd } : {}),
       recordingUsd,
       totalUsd,
       currency: "USD",

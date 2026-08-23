@@ -41,7 +41,7 @@ jest.mock("./dynamo.js", () => ({
   tableName: "test-table",
 }));
 
-import { getElevenLabsApiKey, getOpenAIApiKey } from "./secrets.js";
+import { getDeepgramApiKey, getElevenLabsApiKey, getOpenAIApiKey } from "./secrets.js";
 
 describe("telephony gateway credential resolution", () => {
   beforeEach(() => {
@@ -68,5 +68,14 @@ describe("telephony gateway credential resolution", () => {
     );
 
     await expect(getElevenLabsApiKey("sub-1")).resolves.toBe("el-platform");
+  });
+
+  it("inherits Deepgram key from platform fallback", async () => {
+    secretStore.set(
+      "/test/platform/deepgram",
+      JSON.stringify({ apiKey: "dg-platform" })
+    );
+
+    await expect(getDeepgramApiKey("sub-1")).resolves.toBe("dg-platform");
   });
 });

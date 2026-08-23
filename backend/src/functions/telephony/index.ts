@@ -177,6 +177,9 @@ interface TelephonyGatewayInvokeEvent {
     openaiOutputTokens?: number;
     elevenlabsCharacters?: number;
     elevenlabsModelId?: string;
+    sttProvider?: string;
+    sttModelId?: string;
+    sttAudioSeconds?: number;
   };
   toolName?: string;
   latencyMs?: number;
@@ -574,6 +577,15 @@ export async function handler(
         const { isValidTtsModelId } = await import("../../lib/telephony/tts-models.js");
         if (!isValidTtsModelId(parsed.data.telephonyTtsModel)) {
           return badRequest("Invalid TTS model");
+        }
+      }
+
+      if (parsed.data.telephonyTranscriptionModel !== undefined) {
+        const { isValidTelephonyTranscriptionModelId } = await import(
+          "../../lib/voicebot/transcription-models.js"
+        );
+        if (!isValidTelephonyTranscriptionModelId(parsed.data.telephonyTranscriptionModel)) {
+          return badRequest("Invalid transcription model");
         }
       }
 

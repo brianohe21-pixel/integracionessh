@@ -919,6 +919,7 @@ export interface CallCostBreakdown {
   platformUsd?: number;
   openaiUsd?: number;
   elevenlabsUsd?: number;
+  sttUsd?: number;
   recordingUsd?: number;
   totalUsd: number;
   currency: "USD";
@@ -930,6 +931,9 @@ export interface CallUsageMetrics {
   openaiOutputTokens?: number;
   elevenlabsCharacters?: number;
   elevenlabsModelId?: string;
+  sttProvider?: string;
+  sttModelId?: string;
+  sttAudioSeconds?: number;
 }
 
 export interface CallRecord {

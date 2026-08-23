@@ -1,4 +1,5 @@
 import type {
+  DeepgramCredentialPayload,
   ElevenLabsCredentialPayload,
   OpenAICredentialPayload,
   ProviderId,
@@ -41,6 +42,18 @@ async function readElevenLabsError(
     return body.detail;
   } catch {
     return undefined;
+  }
+}
+
+async function assertDeepgramKey(apiKey: string): Promise<void> {
+  const response = await fetch("https://api.deepgram.com/v1/projects", {
+    headers: {
+      Authorization: `Token ${apiKey}`,
+      Accept: "application/json",
+    },
+  });
+  if (!response.ok) {
+    throw Object.assign(new Error("Invalid Deepgram API key"), { statusCode: 400 });
   }
 }
 
@@ -123,6 +136,14 @@ export function normalizeElevenLabsPayload(body: { apiKey?: string }): ElevenLab
   return { apiKey };
 }
 
+export function normalizeDeepgramPayload(body: { apiKey?: string }): DeepgramCredentialPayload {
+  const apiKey = (body.apiKey ?? "").trim();
+  if (!apiKey || apiKey.length < 10) {
+    throw Object.assign(new Error("Deepgram apiKey is required"), { statusCode: 400 });
+  }
+  return { apiKey };
+}
+
 export async function validateProviderCredential<P extends ProviderId>(
   provider: P,
   payload: ProviderPayloadMap[P]
@@ -133,6 +154,10 @@ export async function validateProviderCredential<P extends ProviderId>(
   }
   if (provider === "telnyx") {
     await assertTelnyxApiKey((payload as TelnyxCredentialPayload).apiKey);
+    return;
+  }
+  if (provider === "deepgram") {
+    await assertDeepgramKey((payload as DeepgramCredentialPayload).apiKey);
     return;
   }
   await assertElevenLabsKey((payload as ElevenLabsCredentialPayload).apiKey);

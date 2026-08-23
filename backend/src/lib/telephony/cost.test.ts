@@ -43,6 +43,21 @@ describe("telephony cost", () => {
     expect(multilingual.breakdown.elevenlabsUsd).toBe(0.2);
   });
 
+  it("estimates deepgram stt cost from audio seconds", () => {
+    const result = estimateTelephonyCost({
+      direction: "inbound",
+      durationSeconds: 120,
+      usage: {
+        sttProvider: "deepgram",
+        sttModelId: "deepgram:nova-3",
+        sttAudioSeconds: 120,
+      },
+    });
+
+    expect(result.breakdown.sttUsd).toBeCloseTo(0.0096, 6);
+    expect(result.status).toBe("partial");
+  });
+
   it("returns pending when no usage or telnyx cost is available", () => {
     const result = estimateTelephonyCost({
       direction: "inbound",

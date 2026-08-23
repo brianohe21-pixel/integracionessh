@@ -8,7 +8,7 @@ import {
 } from "@aws-sdk/client-secrets-manager";
 import { getTenant } from "../dynamodb/tenant.repository.js";
 
-export type ProviderId = "openai" | "telnyx" | "elevenlabs";
+export type ProviderId = "openai" | "telnyx" | "elevenlabs" | "deepgram";
 
 export type CredentialSource = "own" | "reseller" | "platform" | "none";
 
@@ -27,10 +27,15 @@ export interface ElevenLabsCredentialPayload {
   apiKey: string;
 }
 
+export interface DeepgramCredentialPayload {
+  apiKey: string;
+}
+
 export type ProviderPayloadMap = {
   openai: OpenAICredentialPayload;
   telnyx: TelnyxCredentialPayload;
   elevenlabs: ElevenLabsCredentialPayload;
+  deepgram: DeepgramCredentialPayload;
 };
 
 export interface ResolvedCredential<P> {
@@ -121,12 +126,21 @@ function parseElevenLabs(
   return { apiKey };
 }
 
+function parseDeepgram(
+  payload: Partial<DeepgramCredentialPayload> | null
+): DeepgramCredentialPayload | null {
+  const apiKey = payload?.apiKey?.trim() ?? "";
+  if (!apiKey) return null;
+  return { apiKey };
+}
+
 function parseProvider<P extends ProviderId>(
   provider: P,
   raw: unknown
 ): ProviderPayloadMap[P] | null {
   if (provider === "openai") return parseOpenAI(raw as Partial<OpenAICredentialPayload>) as ProviderPayloadMap[P] | null;
   if (provider === "telnyx") return parseTelnyx(raw as Partial<TelnyxCredentialPayload>) as ProviderPayloadMap[P] | null;
+  if (provider === "deepgram") return parseDeepgram(raw as Partial<DeepgramCredentialPayload>) as ProviderPayloadMap[P] | null;
   return parseElevenLabs(raw as Partial<ElevenLabsCredentialPayload>) as ProviderPayloadMap[P] | null;
 }
 
@@ -286,7 +300,7 @@ export async function getProviderCredentialStatuses(
   environment: string,
   apiBaseUrl?: string
 ): Promise<ProviderCredentialStatus[]> {
-  const providers: ProviderId[] = ["openai", "telnyx", "elevenlabs"];
+  const providers: ProviderId[] = ["openai", "telnyx", "elevenlabs", "deepgram"];
   const ownFlags = await Promise.all(
     providers.map((provider) => hasTenantProviderCredential(tenantId, environment, provider))
   );

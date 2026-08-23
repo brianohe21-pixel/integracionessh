@@ -10,7 +10,7 @@ import {
 import { isCalendarEnabled } from "./calendar.js";
 import { docClient, tableName } from "./dynamo.js";
 import { persistPhoneMessage } from "./messages.js";
-import { getElevenLabsApiKey, getOpenAIApiKey } from "./secrets.js";
+import { getDeepgramApiKey, getElevenLabsApiKey, getOpenAIApiKey } from "./secrets.js";
 import {
   buildRealtimeTools,
   executeTelephonyTool,
@@ -19,7 +19,9 @@ import {
   reportCallUsage,
   reportToolExecution,
 } from "./tools.js";
-import { resolveTelephonyTranscriptionModelId } from "./transcription-models.js";
+import { deepgramSttAdapter } from "./stt/deepgram.js";
+import { resolveTelephonySttModel } from "./stt/registry.js";
+import type { SttLiveSession } from "./stt/types.js";
 import {
   buildTurnDetection,
   isBargeInEnabled,
@@ -148,8 +150,8 @@ function resolveModel(bot: Bot): string {
   return "gpt-realtime-2.1-mini";
 }
 
-function resolveTranscriptionModel(bot: Bot): string {
-  return resolveTelephonyTranscriptionModelId(bot.telephonyTranscriptionModel);
+function resolveTranscriptionModel(bot: Bot) {
+  return resolveTelephonySttModel(bot.telephonyTranscriptionModel);
 }
 
 export function resolveInstructions(
@@ -201,12 +203,25 @@ export function isInboundTelnyxMedia(track?: string): boolean {
 
 export function buildOpenAISessionUpdate(params: {
   model: string;
-  transcriptionModel: string;
+  transcriptionModel: string | null;
   instructions: string;
   tools: Array<Record<string, unknown>>;
   locale: TelephonySession["locale"];
   turnDetection: TelephonyTurnDetection;
 }): Record<string, unknown> {
+  const audioInput: Record<string, unknown> = {
+    format: { type: "audio/pcmu" },
+    turn_detection: params.turnDetection,
+  };
+  if (params.transcriptionModel) {
+    audioInput.transcription = {
+      model: params.transcriptionModel,
+      language: params.locale,
+    };
+  } else {
+    audioInput.transcription = null;
+  }
+
   return {
     type: "session.update",
     session: {
@@ -217,14 +232,7 @@ export function buildOpenAISessionUpdate(params: {
       tool_choice: "auto",
       output_modalities: ["text"],
       audio: {
-        input: {
-          format: { type: "audio/pcmu" },
-          turn_detection: params.turnDetection,
-          transcription: {
-            model: params.transcriptionModel,
-            language: params.locale,
-          },
-        },
+        input: audioInput,
       },
     },
   };
@@ -320,13 +328,20 @@ export async function runTelephonyBridge(
     }),
     isCalendarEnabled(session.tenantId, session.botId),
   ]);
+  const sttConfig = resolveTranscriptionModel(bot);
+  let deepgramKey: string | null = null;
+  if (sttConfig.provider === "deepgram") {
+    deepgramKey = await getDeepgramApiKey(session.tenantId);
+  }
   const voiceId = resolveVoiceId(bot);
   const ttsModel = resolveTtsModel(bot);
   const voiceSettings = resolveVoiceSettings(bot);
   const turnDetection = buildTurnDetection(bot);
   const bargeInEnabled = isBargeInEnabled(bot);
   const model = resolveModel(bot);
-  const transcriptionModel = resolveTranscriptionModel(bot);
+  const openAiTranscriptionModel = sttConfig.usesOpenAiNativeTranscription
+    ? sttConfig.model
+    : null;
   const greeting = resolveGreeting(bot, session.locale);
   const instructions = voiceRuntime
     ? `${voiceRuntime.instructions}\n\n${
@@ -368,6 +383,11 @@ export async function runTelephonyBridge(
   let openaiInputTokens = 0;
   let openaiOutputTokens = 0;
   let elevenlabsCharacters = 0;
+  let sttAudioSeconds = 0;
+  let sttProvider = sttConfig.provider;
+  let sttModelId = sttConfig.id;
+  let useOpenAiTranscription = sttConfig.usesOpenAiNativeTranscription;
+  let externalSttSession: SttLiveSession | null = null;
   let usageReported = false;
   let activeSpeechComplete: (() => void) | null = null;
   let backgroundEngine: BackgroundSoundEngine | null = null;
@@ -423,6 +443,9 @@ export async function runTelephonyBridge(
   const reportUsageOnce = () => {
     if (usageReported) return;
     usageReported = true;
+    if (externalSttSession) {
+      sttAudioSeconds = Math.max(sttAudioSeconds, externalSttSession.getAudioSeconds());
+    }
     void reportCallUsage({
       tenantId: session.tenantId,
       botId: session.botId,
@@ -432,6 +455,13 @@ export async function runTelephonyBridge(
         openaiOutputTokens,
         elevenlabsCharacters,
         elevenlabsModelId: ttsModel,
+        ...(sttAudioSeconds > 0
+          ? {
+              sttProvider,
+              sttModelId,
+              sttAudioSeconds,
+            }
+          : {}),
       },
     });
   };
@@ -486,6 +516,79 @@ export async function runTelephonyBridge(
     });
   };
 
+  const handleUserTranscript = async (transcript: string, externalId: string, source: string) => {
+    if (
+      !shouldAcceptUserTranscript({
+        transcript,
+        speaking,
+        speakingStartedAt,
+      })
+    ) {
+      if (!transcript.trim()) {
+        console.warn(`Empty transcription for call ${session.callId} source=${source}`);
+        if (!speaking) scheduleIdleReprompt();
+      } else {
+        console.warn(`Ignoring echo transcription for call ${session.callId} source=${source}`);
+        if (openaiWs?.readyState === WebSocket.OPEN) {
+          sendJson(openaiWs, { type: "response.cancel" });
+        }
+      }
+      return;
+    }
+
+    clearIdleReprompt();
+    if (speaking) interruptSpeech();
+    console.log(`Transcription completed for call ${session.callId} source=${source}`);
+    if (useOpenAiTranscription) {
+      openaiInputTokens += Math.ceil(transcript.length / 4);
+    }
+    await persistTranscript("user", transcript, externalId);
+  };
+
+  const enableOpenAiTranscriptionFallback = () => {
+    if (useOpenAiTranscription || !openaiSocket || openaiSocket.readyState !== WebSocket.OPEN) {
+      return;
+    }
+    useOpenAiTranscription = true;
+    sttProvider = "openai";
+    sttModelId = "gpt-4o-mini-transcribe";
+    console.warn(`Falling back to OpenAI transcription for call ${session.callId}`);
+    sendJson(
+      openaiSocket,
+      buildOpenAISessionUpdate({
+        model,
+        transcriptionModel: "gpt-4o-mini-transcribe",
+        instructions,
+        tools,
+        locale: session.locale,
+        turnDetection,
+      })
+    );
+  };
+
+  const connectExternalStt = async () => {
+    if (!deepgramKey || sttConfig.provider !== "deepgram") return;
+    try {
+      externalSttSession = await deepgramSttAdapter.connect({
+        locale: session.locale,
+        silenceMs: bot.telephonyTranscriptionSilenceMs ?? 550,
+        model: sttConfig.model,
+        apiKey: deepgramKey,
+        callbacks: {
+          onFinalTranscript: (text, externalId) => {
+            void handleUserTranscript(text, externalId, "deepgram");
+          },
+          onError: (message) => {
+            console.error(`Deepgram error for call ${session.callId}: ${message}`);
+          },
+        },
+      });
+    } catch (error) {
+      console.error(`Failed to connect Deepgram for call ${session.callId}:`, error);
+      enableOpenAiTranscriptionFallback();
+    }
+  };
+
   const resolveSpeechComplete = () => {
     completeActiveSpeech();
   };
@@ -500,6 +603,8 @@ export async function runTelephonyBridge(
     clearIdleReprompt();
     reportUsageOnce();
     backgroundEngine?.stop();
+    externalSttSession?.close();
+    externalSttSession = null;
     if (openaiWs?.readyState === WebSocket.OPEN) openaiWs.close();
     if (elevenWs?.readyState === WebSocket.OPEN) elevenWs.close();
     if (telnyxWs.readyState === WebSocket.OPEN) telnyxWs.close();
@@ -657,6 +762,9 @@ export async function runTelephonyBridge(
         type: "input_audio_buffer.append",
         audio: data.media.payload,
       });
+      if (externalSttSession) {
+        externalSttSession.sendAudio(data.media.payload);
+      }
       return;
     }
 
@@ -788,7 +896,7 @@ export async function runTelephonyBridge(
           socket,
           buildOpenAISessionUpdate({
             model,
-            transcriptionModel,
+            transcriptionModel: openAiTranscriptionModel,
             instructions,
             tools,
             locale: session.locale,
@@ -840,6 +948,7 @@ export async function runTelephonyBridge(
           }
 
           if (data.type === "conversation.item.input_audio_transcription.failed") {
+            if (!useOpenAiTranscription) return;
             clearIdleReprompt();
             console.error(
               `OpenAI transcription failed for call ${session.callId}: ${data.error?.message ?? data.error?.code ?? "unknown error"}`
@@ -849,36 +958,9 @@ export async function runTelephonyBridge(
           }
 
           if (data.type === "conversation.item.input_audio_transcription.completed") {
+            if (!useOpenAiTranscription) return;
             const transcript = data.transcript?.trim() ?? "";
-            if (
-              !shouldAcceptUserTranscript({
-                transcript,
-                speaking,
-                speakingStartedAt,
-              })
-            ) {
-              if (!transcript) {
-                console.warn(
-                  `OpenAI transcription was empty for call ${session.callId} item=${data.item_id ?? "unknown"}`
-                );
-                if (!speaking) scheduleIdleReprompt();
-              } else {
-                console.warn(
-                  `Ignoring echo transcription for call ${session.callId} item=${data.item_id ?? "unknown"}`
-                );
-                if (openaiWs?.readyState === WebSocket.OPEN) {
-                  sendJson(openaiWs, { type: "response.cancel" });
-                }
-              }
-              return;
-            }
-            clearIdleReprompt();
-            if (speaking) interruptSpeech();
-            console.log(
-              `OpenAI transcription completed for call ${session.callId} item=${data.item_id ?? "unknown"}`
-            );
-            openaiInputTokens += Math.ceil(transcript.length / 4);
-            await persistTranscript("user", transcript, data.event_id ?? randomUUID());
+            await handleUserTranscript(transcript, data.event_id ?? randomUUID(), "openai");
             return;
           }
 
@@ -978,7 +1060,11 @@ export async function runTelephonyBridge(
       });
     });
 
-  const [, connectedOpenai] = await Promise.all([ensureElevenLabs(), connectOpenAI()]);
+  const [, connectedOpenai] = await Promise.all([
+    ensureElevenLabs(),
+    connectOpenAI(),
+    connectExternalStt(),
+  ]);
   openaiSocket = connectedOpenai;
 
   openaiSocket.on("close", beginDrain);

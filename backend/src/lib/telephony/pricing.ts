@@ -19,6 +19,16 @@ export const TELEPHONY_RATES = {
     ELEVENLABS_TTS_PER_1K_CHARACTERS_USD.eleven_flash_v2_5 / 1000,
 } as const;
 
+export const DEEPGRAM_STT_PER_MINUTE_USD = {
+  "nova-3": 0.0048,
+  "deepgram:nova-3": 0.0048,
+} as const;
+
+export function getDeepgramPerMinuteUsd(modelId?: string): number {
+  const key = modelId as keyof typeof DEEPGRAM_STT_PER_MINUTE_USD;
+  return DEEPGRAM_STT_PER_MINUTE_USD[key] ?? DEEPGRAM_STT_PER_MINUTE_USD["nova-3"];
+}
+
 export function getElevenLabsPerCharacterUsd(modelId?: string): number {
   const per1kCharacters =
     ELEVENLABS_TTS_PER_1K_CHARACTERS_USD[

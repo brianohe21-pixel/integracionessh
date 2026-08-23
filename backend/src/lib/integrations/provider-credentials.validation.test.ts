@@ -1,4 +1,5 @@
 import {
+  normalizeDeepgramPayload,
   normalizeElevenLabsPayload,
   normalizeOpenAIPayload,
   normalizeTelnyxPayload,
@@ -49,6 +50,24 @@ describe("provider credential validation", () => {
     expect(normalizeElevenLabsPayload({ apiKey: "el-key-1234567890" })).toEqual({
       apiKey: "el-key-1234567890",
     });
+  });
+
+  it("normalizes Deepgram payload", () => {
+    expect(normalizeDeepgramPayload({ apiKey: "dg-key-1234567890" })).toEqual({
+      apiKey: "dg-key-1234567890",
+    });
+  });
+
+  it("accepts Deepgram key when projects endpoint succeeds", async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ projects: [] }),
+    }) as unknown as typeof fetch;
+
+    await expect(
+      validateProviderCredential("deepgram", { apiKey: "dg-key-1234567890" })
+    ).resolves.toBeUndefined();
   });
 
   it("accepts ElevenLabs key when voices endpoint succeeds", async () => {
