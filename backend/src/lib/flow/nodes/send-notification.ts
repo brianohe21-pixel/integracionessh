@@ -13,7 +13,7 @@ import type { Channel, Conversation } from "../../../types/index.js";
 
 function buildSyntheticConversation(params: {
   tenantId: string;
-  botId?: string;
+  botId: string;
   channel: Channel;
   participantId: string;
 }): Conversation {
@@ -21,7 +21,7 @@ function buildSyntheticConversation(params: {
   return {
     conversationId: `form-${params.participantId}`,
     tenantId: params.tenantId,
-    ...(params.botId ? { botId: params.botId } : {}),
+    botId: params.botId,
     channel: params.channel,
     participantId: params.participantId,
     phoneNumber: params.participantId,

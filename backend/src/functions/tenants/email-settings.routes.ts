@@ -46,7 +46,12 @@ export async function handleEmailSettingsRoutes(
     const body = parseJsonBody(event);
     const parsed = UpdateEmailSettingsSchema.safeParse(body);
     if (!parsed.success) return badRequest(formatZodError(parsed.error));
-    const view = await updateTenantEmailSettings(auth.tenantId, parsed.data);
+    const { enabled, fromEmail, fromName } = parsed.data;
+    const view = await updateTenantEmailSettings(auth.tenantId, {
+      ...(enabled !== undefined ? { enabled } : {}),
+      ...(fromEmail !== undefined ? { fromEmail } : {}),
+      ...(fromName !== undefined ? { fromName } : {}),
+    });
     return ok(view);
   }
 

@@ -15,7 +15,7 @@ function strip(item: Record<string, unknown>): TenantEmailSettings {
   void GSI1SK;
   void ttl;
   void entityType;
-  return rest as TenantEmailSettings;
+  return rest as unknown as TenantEmailSettings;
 }
 
 export async function getTenantEmailSettings(tenantId: string): Promise<TenantEmailSettings | null> {
