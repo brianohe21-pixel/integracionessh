@@ -3,7 +3,8 @@
   "private": true,
   "packageManager": "pnpm@9.15.9",
   "scripts": {
-    "prepare": "husky"
+    "prepare": "husky",
+    "type-check": "pnpm --filter chatbot-platform-backend run type-check && pnpm --filter frontend run type-check && pnpm --filter telephony-gateway run type-check"
   },
   "pnpm": {
     "overrides": {
