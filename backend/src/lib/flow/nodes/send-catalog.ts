@@ -1,6 +1,6 @@
 import type { FlowNode, FlowRun } from "../../../types/index.js";
 import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
-import { requireMessagingContext } from "../types.js";
+import { requireBotId, requireMessagingContext } from "../types.js";
 import { getNextNodeId } from "../graph.js";
 import { requireEnabledCatalog } from "../../catalog/catalog.service.js";
 import { listProductsForBot } from "../../dynamodb/product.repository.js";
@@ -13,8 +13,9 @@ export async function executeSendCatalogNode(
   _run: FlowRun
 ): Promise<NodeExecutionResult> {
   const { conversation, phoneNumberId, accessToken, customerPhone } = requireMessagingContext(ctx);
+  const botId = requireBotId(ctx);
   const locale = getBotLocale(conversation, ctx.bot);
-  const config = await requireEnabledCatalog(ctx.tenantId, ctx.botId);
+  const config = await requireEnabledCatalog(ctx.tenantId, botId);
   if (!config.metaCatalogId) {
     return {
       nextNodeId: null,
@@ -24,7 +25,7 @@ export async function executeSendCatalogNode(
     };
   }
 
-  const products = await listProductsForBot(ctx.tenantId, ctx.botId);
+  const products = await listProductsForBot(ctx.tenantId, botId);
   const inStock = products.filter((p) => p.availability === "in_stock");
   const thumbnail = inStock[0] ?? products[0];
   if (!thumbnail) {

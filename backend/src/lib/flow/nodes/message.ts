@@ -1,6 +1,7 @@
 import { buildOutboundContext, sendChannelText } from "../../channels/router.js";
 import type { FlowNode, FlowRun } from "../../../types/index.js";
 import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
+import { requireBotContext } from "../types.js";
 import { getNextNodeId } from "../graph.js";
 import { getBotLocale, resolveLocalizedText } from "../../i18n/index.js";
 
@@ -9,14 +10,15 @@ export async function executeMessageNode(
   ctx: FlowExecutionContext,
   _run: FlowRun
 ): Promise<NodeExecutionResult> {
-  const locale = getBotLocale(ctx.conversation!, ctx.bot);
+  const { botId, bot } = requireBotContext(ctx);
+  const locale = getBotLocale(ctx.conversation!, bot);
   const text = resolveLocalizedText(node.data.messageText, locale);
   if (text) {
     await sendChannelText(
       buildOutboundContext({
         tenantId: ctx.tenantId,
-        botId: ctx.botId,
-        bot: ctx.bot,
+        botId,
+        bot,
         conversation: ctx.conversation!,
         accessToken: ctx.accessToken,
         environment: ctx.environment,

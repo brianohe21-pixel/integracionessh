@@ -1,6 +1,7 @@
 import type { FlowDefinition, FlowNode } from "../../types/index.js";
 import { getFlowSecretNamesSet } from "./flow-secrets.repository.js";
 import { isVoiceAiFlow } from "./voice-flow-compiler.js";
+import { isWebhookReceivingFlow } from "./webhook-flow.js";
 
 export interface FlowValidationIssue {
   code: string;
@@ -22,8 +23,7 @@ const CONVERSATION_ONLY_NODES = [
 const BRANCHING_NODES = ["condition", "buttons"] as const;
 
 function isFormFlow(flow: FlowDefinition): boolean {
-  const trigger = flow.nodes.find((node) => node.type === "trigger");
-  return trigger?.data.triggerType === "web_form_submitted";
+  return isWebhookReceivingFlow(flow.nodes);
 }
 
 function getTriggerNode(flow: FlowDefinition): FlowNode | undefined {
@@ -231,14 +231,6 @@ export function validateFlowDefinition(flow: FlowDefinition): FlowValidationIssu
   }
 
   const trigger = getTriggerNode(flow);
-  if (trigger && formFlow && trigger.data.triggerType !== "web_form_submitted") {
-    issues.push({
-      code: "invalid_trigger",
-      message: "Form flows must use web_form_submitted trigger",
-      nodeId: trigger.id,
-    });
-  }
-
   if (voiceFlow) {
     validateVoiceFlow(flow, issues);
   }

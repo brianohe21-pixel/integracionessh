@@ -3,7 +3,7 @@ import { sendFlowMessage } from "../../whatsapp/flows.js";
 import { setMetaFlowSession } from "../../dynamodb/conversation.repository.js";
 import type { FlowNode, FlowRun } from "../../../types/index.js";
 import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
-import { requireMessagingContext } from "../types.js";
+import { requireBotId, requireMessagingContext } from "../types.js";
 import { skipWhatsAppOnlyNode } from "./channel-guard.js";
 import { getBotLocale, getSystemMessage, resolveLocalizedText } from "../../i18n/index.js";
 
@@ -36,7 +36,7 @@ export async function executeMetaFlowNode(
 
   await setMetaFlowSession(
     ctx.tenantId,
-    ctx.botId,
+    requireBotId(ctx),
     conversation.conversationId,
     metaFlowId,
     flowToken

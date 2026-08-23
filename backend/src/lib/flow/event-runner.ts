@@ -248,7 +248,7 @@ export async function resumeEventFlowRun(
 
   const ctx = await buildEventContext({
     tenantId,
-    botId: run.botId,
+    ...(run.botId ? { botId: run.botId } : {}),
     flow,
     formPayload: run.formPayload ?? {},
   });
