@@ -58,6 +58,28 @@ describe("validateFlowDefinition", () => {
     expect(issues.some((issue) => issue.code === "missing_binding")).toBe(true);
   });
 
+  it("requires title and phone bindings for create_opportunity", () => {
+    const issues = validateFlowDefinition(
+      baseFlow({
+        nodes: [
+          {
+            id: "trigger-1",
+            type: "trigger",
+            position: { x: 0, y: 0 },
+            data: { triggerType: "web_form_submitted" },
+          },
+          { id: "opp-1", type: "create_opportunity", position: { x: 0, y: 100 }, data: {} },
+          { id: "end-1", type: "end", position: { x: 0, y: 200 }, data: {} },
+        ],
+        edges: [
+          { id: "e1", source: "trigger-1", target: "opp-1" },
+          { id: "e2", source: "opp-1", target: "end-1" },
+        ],
+      })
+    );
+    expect(issues.some((issue) => issue.code === "missing_binding")).toBe(true);
+  });
+
   it("rejects conversation-only nodes in form flows", () => {
     const issues = validateFlowDefinition(
       baseFlow({

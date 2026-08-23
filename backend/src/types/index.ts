@@ -551,6 +551,27 @@ export interface Lead {
   updatedAt: string;
 }
 
+export type OpportunityStage = "new" | "quoted" | "negotiation" | "won" | "lost";
+
+export interface Opportunity {
+  opportunityId: string;
+  tenantId: string;
+  botId?: string;
+  title: string;
+  amount?: number;
+  currency: string;
+  stage: OpportunityStage;
+  phone?: string;
+  name?: string;
+  email?: string;
+  description?: string;
+  tags: string[];
+  leadId?: string;
+  sourceId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface LeadsListResponse {
   items: Lead[];
   nextCursor?: string;
@@ -1817,6 +1838,7 @@ export type IntegrationEvent =
   | "form.submitted"
   | "lead.created"
   | "lead.converted"
+  | "opportunity.created"
   | "call.connect"
   | "call.status"
   | "call.terminated"
@@ -2205,6 +2227,7 @@ export type FlowNodeType =
   | "await_order"
   | "save_contact"
   | "create_lead"
+  | "create_opportunity"
   | "send_notification"
   | "assign_bot"
   | "webhook"
@@ -2292,6 +2315,15 @@ export interface FlowNodeData {
   leadNameBinding?: string;
   leadEmailBinding?: string;
   leadTags?: string[];
+  opportunityTitleBinding?: string;
+  opportunityAmountBinding?: string;
+  opportunityCurrency?: string;
+  opportunityStage?: OpportunityStage;
+  opportunityPhoneBinding?: string;
+  opportunityNameBinding?: string;
+  opportunityEmailBinding?: string;
+  opportunityDescriptionBinding?: string;
+  opportunityTags?: string[];
   notificationChannel?: Channel;
   notificationRecipientBinding?: string;
   notificationMessageBinding?: string;

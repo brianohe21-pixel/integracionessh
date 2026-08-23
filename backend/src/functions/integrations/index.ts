@@ -21,6 +21,7 @@ const IntegrationEventSchema = z.enum([
   "flow.completed",
   "lead.created",
   "lead.converted",
+  "opportunity.created",
   "call.connect",
   "call.status",
   "call.terminated",

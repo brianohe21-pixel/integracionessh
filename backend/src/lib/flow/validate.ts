@@ -90,6 +90,29 @@ function validateBindings(node: FlowNode, issues: FlowValidationIssue[]): void {
     );
   }
 
+  if (node.type === "create_opportunity") {
+    bindingFields.push(
+      ...(node.data.opportunityTitleBinding
+        ? [{ field: "opportunityTitleBinding", value: node.data.opportunityTitleBinding, required: true as const }]
+        : [{ field: "opportunityTitleBinding", required: true as const }]),
+      ...(node.data.opportunityPhoneBinding
+        ? [{ field: "opportunityPhoneBinding", value: node.data.opportunityPhoneBinding, required: true as const }]
+        : [{ field: "opportunityPhoneBinding", required: true as const }]),
+      ...(node.data.opportunityAmountBinding
+        ? [{ field: "opportunityAmountBinding", value: node.data.opportunityAmountBinding }]
+        : []),
+      ...(node.data.opportunityNameBinding
+        ? [{ field: "opportunityNameBinding", value: node.data.opportunityNameBinding }]
+        : []),
+      ...(node.data.opportunityEmailBinding
+        ? [{ field: "opportunityEmailBinding", value: node.data.opportunityEmailBinding }]
+        : []),
+      ...(node.data.opportunityDescriptionBinding
+        ? [{ field: "opportunityDescriptionBinding", value: node.data.opportunityDescriptionBinding }]
+        : [])
+    );
+  }
+
   if (node.type === "send_notification") {
     bindingFields.push(
       ...(node.data.notificationRecipientBinding
@@ -276,7 +299,7 @@ export function validateFlowDefinition(flow: FlowDefinition): FlowValidationIssu
       }
     }
 
-    if (node.type === "save_contact" || node.type === "create_lead" || node.type === "send_notification") {
+    if (node.type === "save_contact" || node.type === "create_lead" || node.type === "create_opportunity" || node.type === "send_notification") {
       validateBindings(node, issues);
     }
 

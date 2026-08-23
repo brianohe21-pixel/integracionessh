@@ -68,6 +68,7 @@ const FlowNodeSchema = z.object({
     "await_order",
     "save_contact",
     "create_lead",
+    "create_opportunity",
     "send_notification",
     "assign_bot",
     "webhook",
