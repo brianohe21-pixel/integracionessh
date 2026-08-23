@@ -69,6 +69,7 @@ resource "aws_iam_role_policy" "lambda_permissions" {
           var.call_events_sqs_queue_arn,
           var.mailrelay_sync_sqs_queue_arn,
           var.whatsapp_sync_sqs_queue_arn,
+          var.sequence_sqs_queue_arn,
         ]
       },
       {
@@ -215,6 +216,8 @@ locals {
   calendar_function_arn          = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.calendar_function_name}"
   reports_function_name          = "${var.project}-${var.environment}-reports"
   reports_function_arn           = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.reports_function_name}"
+  sales_function_name            = "${var.project}-${var.environment}-sales"
+  sales_function_arn             = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.sales_function_name}"
   voicebot_session_function_name = "${var.project}-${var.environment}-voicebot-session"
   voicebot_session_function_arn  = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.voicebot_session_function_name}"
 
@@ -332,6 +335,29 @@ locals {
       handler     = "leads/index.handler"
       description = "CRUD API for lead pipeline and conversion"
       timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME  = var.dynamodb_table_name
+        ENVIRONMENT = var.environment
+      }
+    }
+    sales = {
+      handler     = "sales/index.handler"
+      description = "CRUD API for sales pipelines, opportunities and sequences"
+      timeout     = 60
+      memory      = 256
+      environment = {
+        TABLE_NAME             = var.dynamodb_table_name
+        ENVIRONMENT            = var.environment
+        SCHEDULER_ROLE_ARN     = var.scheduler_role_arn
+        SALES_FUNCTION_ARN     = local.sales_function_arn
+        SEQUENCE_SQS_QUEUE_URL = var.sequence_sqs_queue_url
+      }
+    }
+    process_sequence = {
+      handler     = "process-sequence/index.handler"
+      description = "Processes scheduled sales sequence steps from SQS"
+      timeout     = 120
       memory      = 256
       environment = {
         TABLE_NAME  = var.dynamodb_table_name
@@ -1003,6 +1029,14 @@ resource "aws_lambda_event_source_mapping" "integration_sqs_trigger" {
 resource "aws_lambda_event_source_mapping" "automation_sqs_trigger" {
   event_source_arn                   = var.automation_sqs_queue_arn
   function_name                      = aws_lambda_function.functions["process_automation"].arn
+  batch_size                         = 1
+  enabled                            = true
+  maximum_batching_window_in_seconds = 0
+}
+
+resource "aws_lambda_event_source_mapping" "sequence_sqs_trigger" {
+  event_source_arn                   = var.sequence_sqs_queue_arn
+  function_name                      = aws_lambda_function.functions["process_sequence"].arn
   batch_size                         = 1
   enabled                            = true
   maximum_batching_window_in_seconds = 0

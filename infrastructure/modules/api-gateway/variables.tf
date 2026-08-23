@@ -78,6 +78,14 @@ variable "leads_function_arn" {
   type = string
 }
 
+variable "sales_invoke_arn" {
+  type = string
+}
+
+variable "sales_function_arn" {
+  type = string
+}
+
 variable "templates_invoke_arn" {
   type = string
 }

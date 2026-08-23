@@ -112,6 +112,16 @@ variable "whatsapp_sync_sqs_queue_arn" {
   default = ""
 }
 
+variable "sequence_sqs_queue_url" {
+  type    = string
+  default = ""
+}
+
+variable "sequence_sqs_queue_arn" {
+  type    = string
+  default = ""
+}
+
 variable "mailrelay_event_types" {
   type        = string
   default     = ""

@@ -26,6 +26,7 @@ export const SERVICE_LIMIT_KEYS: Record<SubaccountServiceId, readonly BagLimitKe
   supervisor: [],
   contacts: ["maxContacts"],
   leads: [],
+  sales: [],
   advisors: [],
   automations: ["maxAutomationsPerBot", "maxScheduledAutomations"],
   flows: ["maxVisualFlowsPerBot", "maxFlowNodes", "maxActiveFlowRuns"],

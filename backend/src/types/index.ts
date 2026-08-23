@@ -10,6 +10,7 @@ export const SUBACCOUNT_SERVICES = [
   "supervisor",
   "contacts",
   "leads",
+  "sales",
   "advisors",
   "automations",
   "flows",
@@ -553,9 +554,31 @@ export interface Lead {
 
 export type OpportunityStage = "new" | "quoted" | "negotiation" | "won" | "lost";
 
+export interface PipelineStage {
+  stageId: string;
+  key: string;
+  label: string;
+  sortOrder: number;
+  probability?: number;
+  isClosed?: boolean;
+  outcome?: "won" | "lost";
+}
+
+export interface SalesPipeline {
+  pipelineId: string;
+  tenantId: string;
+  name: string;
+  isDefault: boolean;
+  stages: PipelineStage[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Opportunity {
   opportunityId: string;
   tenantId: string;
+  pipelineId: string;
+  stageId: string;
   botId?: string;
   title: string;
   amount?: number;
@@ -567,9 +590,123 @@ export interface Opportunity {
   description?: string;
   tags: string[];
   leadId?: string;
+  conversationId?: string;
   sourceId?: string;
+  assignedAdvisorId?: string;
+  quotationId?: string;
+  paymentId?: string;
+  closedAt?: string;
+  closeReason?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface OpportunityStageHistoryEntry {
+  historyId: string;
+  opportunityId: string;
+  tenantId: string;
+  fromStageId?: string;
+  toStageId: string;
+  fromStageKey?: string;
+  toStageKey: string;
+  changedBy?: string;
+  changedAt: string;
+}
+
+export type SequenceStepChannel = "whatsapp" | "email" | "task";
+
+export interface SalesSequenceStep {
+  stepId: string;
+  order: number;
+  delayMinutes: number;
+  channel: SequenceStepChannel;
+  messageText?: string;
+  templateName?: string;
+  templateLanguage?: string;
+  emailSubject?: string;
+  taskTitle?: string;
+  taskDescription?: string;
+  taskDueMinutes?: number;
+  assignToAdvisor?: boolean;
+}
+
+export type SalesSequenceTrigger = "manual" | "stage_entered" | "opportunity_created";
+
+export interface SalesSequence {
+  sequenceId: string;
+  tenantId: string;
+  name: string;
+  enabled: boolean;
+  trigger: SalesSequenceTrigger;
+  triggerStageId?: string;
+  pipelineId?: string;
+  steps: SalesSequenceStep[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type SequenceEnrollmentStatus = "active" | "paused" | "completed" | "cancelled";
+
+export interface SequenceEnrollment {
+  enrollmentId: string;
+  tenantId: string;
+  sequenceId: string;
+  opportunityId: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  currentStepIndex: number;
+  status: SequenceEnrollmentStatus;
+  nextRunAt?: string;
+  scheduleName?: string;
+  botId?: string;
+  assignedAdvisorId?: string;
+  lastRunAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type SalesTaskStatus = "open" | "done" | "cancelled";
+
+export interface SalesTask {
+  taskId: string;
+  tenantId: string;
+  opportunityId?: string;
+  enrollmentId?: string;
+  advisorId?: string;
+  title: string;
+  description?: string;
+  dueAt?: string;
+  status: SalesTaskStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SalesFunnelMetrics {
+  pipelineId: string;
+  total: number;
+  totalValue: number;
+  wonValue: number;
+  forecastValue: number;
+  conversionRate: number;
+  byStage: Array<{
+    stageId: string;
+    key: string;
+    label: string;
+    count: number;
+    value: number;
+    probability?: number;
+  }>;
+  funnel: Record<string, number>;
+}
+
+export interface OpportunitiesListResponse {
+  items: Opportunity[];
+  nextCursor?: string;
+}
+
+export interface SalesTasksListResponse {
+  items: SalesTask[];
+  nextCursor?: string;
 }
 
 export interface LeadsListResponse {

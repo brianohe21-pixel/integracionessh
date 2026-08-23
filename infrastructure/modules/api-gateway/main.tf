@@ -62,6 +62,7 @@ locals {
     advisors           = var.advisors_function_arn
     contacts           = var.contacts_function_arn
     leads              = var.leads_function_arn
+    sales              = var.sales_function_arn
     templates          = var.templates_function_arn
     bulk_send          = var.bulk_send_function_arn
     metrics            = var.metrics_function_arn
@@ -108,6 +109,7 @@ locals {
     advisors           = var.advisors_invoke_arn
     contacts           = var.contacts_invoke_arn
     leads              = var.leads_invoke_arn
+    sales              = var.sales_invoke_arn
     templates          = var.templates_invoke_arn
     bulk_send          = var.bulk_send_invoke_arn
     metrics            = var.metrics_invoke_arn
@@ -176,6 +178,14 @@ locals {
       methods      = ["GET", "POST", "PUT", "PATCH", "DELETE"]
       invoke_arn   = var.mailrelay_invoke_arn
       function_arn = var.mailrelay_function_arn
+      protected    = true
+    }
+    sales = {
+      path         = "/sales/{proxy+}"
+      slug         = "sales"
+      methods      = ["GET", "POST", "PUT", "PATCH", "DELETE"]
+      invoke_arn   = var.sales_invoke_arn
+      function_arn = var.sales_function_arn
       protected    = true
     }
   }

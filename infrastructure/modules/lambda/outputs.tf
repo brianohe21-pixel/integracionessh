@@ -58,6 +58,14 @@ output "leads_function_arn" {
   value = aws_lambda_function.functions["leads"].arn
 }
 
+output "sales_invoke_arn" {
+  value = aws_lambda_function.functions["sales"].invoke_arn
+}
+
+output "sales_function_arn" {
+  value = aws_lambda_function.functions["sales"].arn
+}
+
 output "templates_invoke_arn" {
   value = aws_lambda_function.functions["templates"].invoke_arn
 }

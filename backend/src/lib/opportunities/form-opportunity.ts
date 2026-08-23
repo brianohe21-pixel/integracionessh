@@ -3,6 +3,8 @@ import { normalizePhone } from "../dynamodb/contact.repository.js";
 import { createOpportunity } from "../dynamodb/opportunity.repository.js";
 import { emitIntegrationEvent } from "../integrations/emit.js";
 import { buildOpportunityCreatedPayload } from "../integrations/payloads.js";
+import { ensureDefaultPipeline } from "../sales/pipeline-bootstrap.js";
+import { findStageByKey } from "../sales/default-pipeline.js";
 import type { Opportunity, OpportunityStage } from "../../types/index.js";
 
 const STAGES: OpportunityStage[] = ["new", "quoted", "negotiation", "won", "lost"];
@@ -39,19 +41,24 @@ export async function createOpportunityFromFormData(params: {
   const title = params.title.trim();
   if (!title) throw new Error("Opportunity title is required");
 
+  const pipeline = await ensureDefaultPipeline(params.tenantId);
+  const stageKey = parseStage(params.stage);
+  const stage = findStageByKey(pipeline, stageKey) ?? pipeline.stages[0]!;
+
   const now = new Date().toISOString();
   const opportunityId = randomUUID();
   const phone = params.phone ? normalizePhone(params.phone) : undefined;
   const amount = parseAmount(params.amount);
-  const stage = parseStage(params.stage);
   const currency = params.currency?.trim() || "USD";
 
   const opportunity: Opportunity = {
     opportunityId,
     tenantId: params.tenantId,
+    pipelineId: pipeline.pipelineId,
+    stageId: stage.stageId,
     title,
     currency,
-    stage,
+    stage: stageKey,
     tags: params.tags ?? [],
     createdAt: now,
     updatedAt: now,
@@ -75,7 +82,7 @@ export async function createOpportunityFromFormData(params: {
       opportunityId,
       title,
       currency,
-      stage,
+      stage: stageKey,
       ...(params.botId ? { botId: params.botId } : {}),
       ...(amount !== undefined ? { amount } : {}),
       ...(phone ? { phone } : {}),

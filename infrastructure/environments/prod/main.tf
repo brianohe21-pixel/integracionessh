@@ -162,6 +162,7 @@ resource "aws_iam_role_policy" "scheduler_invoke" {
         module.lambda.flows_function_arn,
         module.lambda.calendar_function_arn,
         module.lambda.reports_function_arn,
+        module.lambda.sales_function_arn,
       ]
     }]
   })
@@ -212,6 +213,8 @@ module "lambda" {
   mailrelay_sync_sqs_queue_arn  = module.sqs.mailrelay_sync_queue_arn
   whatsapp_sync_sqs_queue_url   = module.sqs.whatsapp_sync_queue_url
   whatsapp_sync_sqs_queue_arn   = module.sqs.whatsapp_sync_queue_arn
+  sequence_sqs_queue_url        = module.sqs.sequence_queue_url
+  sequence_sqs_queue_arn        = module.sqs.sequence_queue_arn
   mailrelay_event_types         = var.mailrelay_event_types
   scheduler_role_arn            = aws_iam_role.scheduler.arn
   media_bucket_arn              = module.s3.media_bucket_arn
@@ -272,6 +275,8 @@ module "api_gateway" {
   contacts_function_arn           = module.lambda.contacts_function_arn
   leads_invoke_arn                = module.lambda.leads_invoke_arn
   leads_function_arn              = module.lambda.leads_function_arn
+  sales_invoke_arn                = module.lambda.sales_invoke_arn
+  sales_function_arn              = module.lambda.sales_function_arn
   templates_invoke_arn            = module.lambda.templates_invoke_arn
   templates_function_arn          = module.lambda.function_arns["templates"]
   bulk_send_invoke_arn            = module.lambda.bulk_send_invoke_arn

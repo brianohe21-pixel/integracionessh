@@ -19,6 +19,8 @@ const entryPoints = [
   "src/functions/advisors/index.ts",
   "src/functions/contacts/index.ts",
   "src/functions/leads/index.ts",
+  "src/functions/sales/index.ts",
+  "src/functions/process-sequence/index.ts",
   "src/functions/templates/index.ts",
   "src/functions/bulk-send/index.ts",
   "src/functions/process-bulk-send/index.ts",
