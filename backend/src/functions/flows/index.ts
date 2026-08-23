@@ -104,6 +104,34 @@ const TaxiTemplateSchema = z.object({
   botId: z.string().uuid(),
 });
 
+function resolveFlowId(
+  rawPath: string,
+  pathParams: { flowId?: string } | undefined
+): string | undefined {
+  if (pathParams?.flowId) return pathParams.flowId;
+  if (rawPath === "/flows" || rawPath.includes("/flows/templates/")) return undefined;
+  const match = rawPath.match(/^\/flows\/([^/]+)/);
+  return match?.[1];
+}
+
+function resolveRunId(
+  rawPath: string,
+  pathParams: { runId?: string } | undefined
+): string | undefined {
+  if (pathParams?.runId) return pathParams.runId;
+  const match = rawPath.match(/^\/flow-runs\/([^/]+)/);
+  return match?.[1];
+}
+
+function resolveSecretName(
+  rawPath: string,
+  pathParams: { secretName?: string } | undefined
+): string | undefined {
+  if (pathParams?.secretName) return pathParams.secretName;
+  const match = rawPath.match(/\/secrets\/([^/]+)$/);
+  return match?.[1];
+}
+
 function isFormFlowDefinition(nodes: FlowNode[]): boolean {
   return nodes.some(
     (node) => node.type === "trigger" && node.data.triggerType === "web_form_submitted"
@@ -173,9 +201,10 @@ export async function handler(
     assertMemberRole(auth);
     await assertAssignedServices(auth.tenantId, "flows");
     const method = apiEvent.requestContext.http.method;
-    const flowId = apiEvent.pathParameters?.flowId;
-    const runId = apiEvent.pathParameters?.runId;
-    const path = apiEvent.rawPath;
+    const path = apiEvent.rawPath ?? apiEvent.requestContext.http.path;
+    const flowId = resolveFlowId(path, apiEvent.pathParameters);
+    const runId = resolveRunId(path, apiEvent.pathParameters);
+    const secretName = resolveSecretName(path, apiEvent.pathParameters);
 
     if (method === "GET" && runId && path.includes("/flow-runs/")) {
       const run = await getFlowRun(auth.tenantId, runId);
@@ -277,10 +306,9 @@ export async function handler(
       return ok({ name: body.data.name, configured: true });
     }
 
-    if (method === "DELETE" && flowId && apiEvent.pathParameters?.secretName) {
+    if (method === "DELETE" && flowId && secretName) {
       const flow = await getFlowDefinition(auth.tenantId, flowId);
       if (!flow) return notFound("Flow not found");
-      const secretName = apiEvent.pathParameters.secretName;
       const existing = await getFlowSecret(auth.tenantId, ENVIRONMENT, flowId, secretName);
       if (!existing) return notFound("Secret not found");
       await deleteFlowSecret(auth.tenantId, ENVIRONMENT, flowId, secretName);

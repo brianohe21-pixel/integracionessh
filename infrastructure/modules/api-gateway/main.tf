@@ -188,6 +188,38 @@ locals {
       function_arn = var.sales_function_arn
       protected    = true
     }
+    catalog = {
+      path         = "/catalog/{proxy+}"
+      slug         = "catalog"
+      methods      = ["GET", "POST", "PUT", "PATCH", "DELETE"]
+      invoke_arn   = var.catalog_invoke_arn
+      function_arn = var.catalog_function_arn
+      protected    = true
+    }
+    metrics = {
+      path         = "/metrics/{proxy+}"
+      slug         = "metrics"
+      methods      = ["GET"]
+      invoke_arn   = var.metrics_invoke_arn
+      function_arn = var.metrics_function_arn
+      protected    = true
+    }
+    conversations = {
+      path         = "/conversations/{proxy+}"
+      slug         = "conversations"
+      methods      = ["GET", "POST", "PATCH", "DELETE"]
+      invoke_arn   = var.conversations_invoke_arn
+      function_arn = var.conversations_function_arn
+      protected    = true
+    }
+    flows = {
+      path         = "/flows/{proxy+}"
+      slug         = "flows"
+      methods      = ["GET", "POST", "PUT", "DELETE"]
+      invoke_arn   = var.flows_invoke_arn
+      function_arn = var.flows_function_arn
+      protected    = true
+    }
   }
 
   http_proxy_routes = {
@@ -298,76 +330,6 @@ locals {
     }
     conversations_list = {
       route_key    = "GET /conversations"
-      slug         = "conversations"
-      invoke_arn   = var.conversations_invoke_arn
-      function_arn = var.conversations_function_arn
-      protected    = true
-    }
-    conversations_bulk_handoff = {
-      route_key    = "POST /conversations/bulk-handoff"
-      slug         = "conversations"
-      invoke_arn   = var.conversations_invoke_arn
-      function_arn = var.conversations_function_arn
-      protected    = true
-    }
-    conversations_get = {
-      route_key    = "GET /conversations/{conversationId}"
-      slug         = "conversations"
-      invoke_arn   = var.conversations_invoke_arn
-      function_arn = var.conversations_function_arn
-      protected    = true
-    }
-    conversations_handoff = {
-      route_key    = "POST /conversations/{conversationId}/handoff"
-      slug         = "conversations"
-      invoke_arn   = var.conversations_invoke_arn
-      function_arn = var.conversations_function_arn
-      protected    = true
-    }
-    conversations_claim = {
-      route_key    = "POST /conversations/{conversationId}/claim"
-      slug         = "conversations"
-      invoke_arn   = var.conversations_invoke_arn
-      function_arn = var.conversations_function_arn
-      protected    = true
-    }
-    conversations_release = {
-      route_key    = "POST /conversations/{conversationId}/release"
-      slug         = "conversations"
-      invoke_arn   = var.conversations_invoke_arn
-      function_arn = var.conversations_function_arn
-      protected    = true
-    }
-    conversations_send_message = {
-      route_key    = "POST /conversations/{conversationId}/messages"
-      slug         = "conversations"
-      invoke_arn   = var.conversations_invoke_arn
-      function_arn = var.conversations_function_arn
-      protected    = true
-    }
-    conversations_copilot = {
-      route_key    = "POST /conversations/{conversationId}/copilot"
-      slug         = "conversations"
-      invoke_arn   = var.conversations_invoke_arn
-      function_arn = var.conversations_function_arn
-      protected    = true
-    }
-    conversations_quotations_list = {
-      route_key    = "GET /conversations/{conversationId}/quotations"
-      slug         = "conversations"
-      invoke_arn   = var.conversations_invoke_arn
-      function_arn = var.conversations_function_arn
-      protected    = true
-    }
-    conversations_quotations_create = {
-      route_key    = "POST /conversations/{conversationId}/quotations"
-      slug         = "conversations"
-      invoke_arn   = var.conversations_invoke_arn
-      function_arn = var.conversations_function_arn
-      protected    = true
-    }
-    conversations_wa_link = {
-      route_key    = "GET /conversations/{conversationId}/wa-link"
       slug         = "conversations"
       invoke_arn   = var.conversations_invoke_arn
       function_arn = var.conversations_function_arn
@@ -562,102 +524,11 @@ locals {
       function_arn = var.bulk_send_function_arn
       protected    = true
     }
-    metrics_leads = {
-      route_key    = "GET /metrics/leads"
-      slug         = "metrics"
-      invoke_arn   = var.metrics_invoke_arn
-      function_arn = var.metrics_function_arn
-      protected    = true
-    }
-    metrics_marketing = {
-      route_key    = "GET /metrics/marketing"
-      slug         = "metrics"
-      invoke_arn   = var.metrics_invoke_arn
-      function_arn = var.metrics_function_arn
-      protected    = true
-    }
-    metrics_calling = {
-      route_key    = "GET /metrics/calling"
-      slug         = "metrics"
-      invoke_arn   = var.metrics_invoke_arn
-      function_arn = var.metrics_function_arn
-      protected    = true
-    }
-    metrics_sales = {
-      route_key    = "GET /metrics/sales"
-      slug         = "metrics"
-      invoke_arn   = var.metrics_invoke_arn
-      function_arn = var.metrics_function_arn
-      protected    = true
-    }
-    metrics_inbox_sla = {
-      route_key    = "GET /metrics/inbox-sla"
-      slug         = "metrics"
-      invoke_arn   = var.metrics_invoke_arn
-      function_arn = var.metrics_function_arn
-      protected    = true
-    }
-    metrics_advisor_workload = {
-      route_key    = "GET /metrics/advisor-workload"
-      slug         = "metrics"
-      invoke_arn   = var.metrics_invoke_arn
-      function_arn = var.metrics_function_arn
-      protected    = true
-    }
     metrics_get = {
       route_key    = "GET /metrics"
       slug         = "metrics"
       invoke_arn   = var.metrics_invoke_arn
       function_arn = var.metrics_function_arn
-      protected    = true
-    }
-    metrics_export = {
-      route_key    = "GET /metrics/export"
-      slug         = "metrics"
-      invoke_arn   = var.metrics_invoke_arn
-      function_arn = var.metrics_function_arn
-      protected    = true
-    }
-    conversations_status = {
-      route_key    = "PATCH /conversations/{conversationId}/status"
-      slug         = "conversations"
-      invoke_arn   = var.conversations_invoke_arn
-      function_arn = var.conversations_function_arn
-      protected    = true
-    }
-    conversations_note = {
-      route_key    = "PATCH /conversations/{conversationId}/note"
-      slug         = "conversations"
-      invoke_arn   = var.conversations_invoke_arn
-      function_arn = var.conversations_function_arn
-      protected    = true
-    }
-    conversations_resolve = {
-      route_key    = "POST /conversations/{conversationId}/resolve"
-      slug         = "conversations"
-      invoke_arn   = var.conversations_invoke_arn
-      function_arn = var.conversations_function_arn
-      protected    = true
-    }
-    conversations_delete = {
-      route_key    = "DELETE /conversations/{conversationId}"
-      slug         = "conversations"
-      invoke_arn   = var.conversations_invoke_arn
-      function_arn = var.conversations_function_arn
-      protected    = true
-    }
-    conversations_message_attachment = {
-      route_key    = "GET /conversations/{conversationId}/messages/{messageId}/attachments/{attachmentId}"
-      slug         = "conversations"
-      invoke_arn   = var.conversations_invoke_arn
-      function_arn = var.conversations_function_arn
-      protected    = true
-    }
-    conversations_message_html = {
-      route_key    = "GET /conversations/{conversationId}/messages/{messageId}/html"
-      slug         = "conversations"
-      invoke_arn   = var.conversations_invoke_arn
-      function_arn = var.conversations_function_arn
       protected    = true
     }
     conversations_calls_create = {
@@ -1815,125 +1686,6 @@ locals {
       function_arn = var.payments_function_arn
       protected    = false
     }
-    catalog_config_get = {
-      route_key    = "GET /catalog/{botId}/config"
-      slug         = "catalog"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_config_put = {
-      route_key    = "PUT /catalog/{botId}/config"
-      slug         = "catalog"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_enable = {
-      route_key    = "POST /catalog/{botId}/enable"
-      slug         = "catalog"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_disable = {
-      route_key    = "POST /catalog/{botId}/disable"
-      slug         = "catalog"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_meta_catalogs = {
-      route_key    = "GET /catalog/{botId}/meta-catalogs"
-      slug         = "catalog"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_link = {
-      route_key    = "POST /catalog/{botId}/link-catalog"
-      slug         = "catalog"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_sync = {
-      route_key    = "POST /catalog/{botId}/sync"
-      slug         = "catalog"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_products_list = {
-      route_key    = "GET /catalog/{botId}/products"
-      slug         = "catalog"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_products_create = {
-      route_key    = "POST /catalog/{botId}/products"
-      slug         = "catalog"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_products_get = {
-      route_key    = "GET /catalog/{botId}/products/{productId}"
-      slug         = "catalog"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_products_put = {
-      route_key    = "PUT /catalog/{botId}/products/{productId}"
-      slug         = "catalog"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_products_delete = {
-      route_key    = "DELETE /catalog/{botId}/products/{productId}"
-      slug         = "catalog"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_products_image = {
-      route_key    = "POST /catalog/{botId}/products/{productId}/image"
-      slug         = "catalog"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_products_image_finalize = {
-      route_key    = "POST /catalog/{botId}/products/{productId}/image/finalize"
-      slug         = "catalog"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_orders_list = {
-      route_key    = "GET /catalog/{botId}/orders"
-      slug         = "catalog"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_orders_get = {
-      route_key    = "GET /catalog/{botId}/orders/{orderId}"
-      slug         = "catalog"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_orders_patch = {
-      route_key    = "PATCH /catalog/{botId}/orders/{orderId}"
-      slug         = "catalog"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
     knowledge_list = {
       route_key    = "GET /bots/{botId}/knowledge"
       slug         = "knowledge"
@@ -2069,104 +1821,6 @@ locals {
     }
     flows_create = {
       route_key    = "POST /flows"
-      slug         = "flows"
-      invoke_arn   = var.flows_invoke_arn
-      function_arn = var.flows_function_arn
-      protected    = true
-    }
-    flows_get = {
-      route_key    = "GET /flows/{flowId}"
-      slug         = "flows"
-      invoke_arn   = var.flows_invoke_arn
-      function_arn = var.flows_function_arn
-      protected    = true
-    }
-    flows_update = {
-      route_key    = "PUT /flows/{flowId}"
-      slug         = "flows"
-      invoke_arn   = var.flows_invoke_arn
-      function_arn = var.flows_function_arn
-      protected    = true
-    }
-    flows_delete = {
-      route_key    = "DELETE /flows/{flowId}"
-      slug         = "flows"
-      invoke_arn   = var.flows_invoke_arn
-      function_arn = var.flows_function_arn
-      protected    = true
-    }
-    flows_enable = {
-      route_key    = "POST /flows/{flowId}/enable"
-      slug         = "flows"
-      invoke_arn   = var.flows_invoke_arn
-      function_arn = var.flows_function_arn
-      protected    = true
-    }
-    flows_disable = {
-      route_key    = "POST /flows/{flowId}/disable"
-      slug         = "flows"
-      invoke_arn   = var.flows_invoke_arn
-      function_arn = var.flows_function_arn
-      protected    = true
-    }
-    flows_validate = {
-      route_key    = "POST /flows/{flowId}/validate"
-      slug         = "flows"
-      invoke_arn   = var.flows_invoke_arn
-      function_arn = var.flows_function_arn
-      protected    = true
-    }
-    flows_hook_get = {
-      route_key    = "GET /flows/{flowId}/hook"
-      slug         = "flows"
-      invoke_arn   = var.flows_invoke_arn
-      function_arn = var.flows_function_arn
-      protected    = true
-    }
-    flows_hook_rotate = {
-      route_key    = "POST /flows/{flowId}/hook/rotate"
-      slug         = "flows"
-      invoke_arn   = var.flows_invoke_arn
-      function_arn = var.flows_function_arn
-      protected    = true
-    }
-    flows_runs = {
-      route_key    = "GET /flows/{flowId}/runs"
-      slug         = "flows"
-      invoke_arn   = var.flows_invoke_arn
-      function_arn = var.flows_function_arn
-      protected    = true
-    }
-    flows_events = {
-      route_key    = "GET /flows/{flowId}/events"
-      slug         = "flows"
-      invoke_arn   = var.flows_invoke_arn
-      function_arn = var.flows_function_arn
-      protected    = true
-    }
-    flows_template_taxi = {
-      route_key    = "POST /flows/templates/taxi-355-satelital"
-      slug         = "flows"
-      invoke_arn   = var.flows_invoke_arn
-      function_arn = var.flows_function_arn
-      protected    = true
-    }
-    flows_secrets_get = {
-      route_key    = "GET /flows/{flowId}/secrets"
-      slug         = "flows"
-      invoke_arn   = var.flows_invoke_arn
-      function_arn = var.flows_function_arn
-      protected    = true
-    }
-    flows_secrets_put = {
-      route_key    = "PUT /flows/{flowId}/secrets"
-      slug         = "flows"
-      invoke_arn   = var.flows_invoke_arn
-      function_arn = var.flows_function_arn
-      protected    = true
-    }
-    flows_secrets_delete = {
-      route_key    = "DELETE /flows/{flowId}/secrets/{secretName}"
       slug         = "flows"
       invoke_arn   = var.flows_invoke_arn
       function_arn = var.flows_function_arn

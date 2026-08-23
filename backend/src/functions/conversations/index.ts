@@ -163,6 +163,18 @@ function parseSubPath(rawPath: string, conversationId: string): string | null {
   return suffix.replace(/^\//, "").split("/")[0] ?? null;
 }
 
+function resolveConversationId(
+  rawPath: string,
+  pathParams: { conversationId?: string } | undefined
+): string | undefined {
+  if (pathParams?.conversationId) return pathParams.conversationId;
+  if (rawPath === "/conversations" || rawPath.endsWith("/conversations/bulk-handoff")) {
+    return undefined;
+  }
+  const match = rawPath.match(/^\/conversations\/([^/]+)/);
+  return match?.[1];
+}
+
 export async function handler(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): Promise<APIGatewayProxyResultV2> {
@@ -174,9 +186,9 @@ export async function handler(
     }
 
     const method = event.requestContext.http.method;
-    const conversationId = event.pathParameters?.conversationId;
-    const params = event.queryStringParameters ?? {};
     const rawPath = event.rawPath ?? event.requestContext.http.path;
+    const conversationId = resolveConversationId(rawPath, event.pathParameters);
+    const params = event.queryStringParameters ?? {};
 
     if (method === "POST" && rawPath.endsWith("/conversations/bulk-handoff")) {
       assertTenantManagerRole(auth);
