@@ -30,8 +30,8 @@ export function requireMessagingContext(ctx: FlowExecutionContext): {
 export interface FlowExecutionContext {
   mode: FlowExecutionMode;
   tenantId: string;
-  botId: string;
-  bot: Bot;
+  botId?: string;
+  bot?: Bot;
   flow: FlowDefinition;
   environment: string;
   formPayload?: Record<string, unknown>;

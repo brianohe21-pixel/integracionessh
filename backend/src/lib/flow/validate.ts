@@ -274,6 +274,16 @@ export function validateFlowDefinition(flow: FlowDefinition): FlowValidationIssu
       });
     }
 
+    if (node.type === "assign_bot") {
+      if (!node.data.botId?.trim()) {
+        issues.push({
+          code: "missing_bot",
+          message: "Select a bot in the assign bot node",
+          nodeId: node.id,
+        });
+      }
+    }
+
     if (node.type === "save_contact" || node.type === "create_lead" || node.type === "send_notification") {
       validateBindings(node, issues);
     }

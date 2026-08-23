@@ -36,6 +36,10 @@ export async function executeSendNotificationNode(
   run: FlowRun
 ): Promise<NodeExecutionResult> {
   const channel = node.data.notificationChannel ?? "whatsapp";
+  if (!ctx.botId || !ctx.bot) {
+    throw new Error("Add an assign bot node before sending notifications");
+  }
+
   const bindingContext = buildBindingContext({
     formPayload: ctx.formPayload,
     variables: run.variables,

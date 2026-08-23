@@ -17,6 +17,7 @@ export async function executeCreateLeadNode(
 
   const phone = normalizePhone(resolveBindingValue(node.data.leadPhoneBinding, bindingContext));
   if (!phone) throw new Error("Valid phone binding is required");
+  if (!ctx.botId) throw new Error("Add an assign bot node before creating leads");
 
   const name = resolveBindingValue(node.data.leadNameBinding, bindingContext) || undefined;
   const email = resolveBindingValue(node.data.leadEmailBinding, bindingContext) || undefined;

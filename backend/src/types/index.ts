@@ -2206,6 +2206,8 @@ export type FlowNodeType =
   | "save_contact"
   | "create_lead"
   | "send_notification"
+  | "assign_bot"
+  | "webhook"
   | "end";
 
 export type FlowTriggerType =
@@ -2296,6 +2298,11 @@ export interface FlowNodeData {
   notificationMessageText?: LocalizedText;
   notificationTemplateName?: string;
   notificationTemplateLanguage?: string;
+  botId?: string;
+  webhookUrl?: string;
+  webhookBody?: string;
+  webhookHeaders?: FlowHttpHeader[];
+  webhookResponseVariable?: string;
 }
 
 export interface FlowNode {
@@ -2343,7 +2350,7 @@ export interface FlowRun {
   runId: string;
   flowId: string;
   tenantId: string;
-  botId: string;
+  botId?: string;
   source?: FlowRunSource;
   conversationId?: string;
   customerPhone?: string;
@@ -2365,7 +2372,7 @@ export interface FlowHookConfig {
   hookKey: string;
   tenantId: string;
   flowId: string;
-  botId: string;
+  botId?: string;
   secretHash: string;
   enabled: boolean;
   createdAt: string;

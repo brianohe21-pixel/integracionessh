@@ -13,6 +13,7 @@ import {
   makeSubmissionId,
 } from "../../lib/flow/enqueue-event.js";
 import { hashFlowHookSecret, timingSafeEqual } from "../../lib/flow/hook-credentials.js";
+import { isWebhookReceivingFlow } from "../../lib/flow/webhook-flow.js";
 import { checkAndIncrement } from "../../lib/rate-limiter/index.js";
 import { emitIntegrationEvent } from "../../lib/integrations/emit.js";
 import { accepted, badRequest, handleError } from "../../lib/http.js";
@@ -96,9 +97,8 @@ export async function handler(
       return json(400, { error: "Flow is not published" });
     }
 
-    const trigger = flow.nodes.find((node) => node.type === "trigger");
-    if (trigger?.data.triggerType !== "web_form_submitted") {
-      return json(400, { error: "Flow is not configured for web forms" });
+    if (!isWebhookReceivingFlow(flow.nodes)) {
+      return json(400, { error: "Flow is not configured to receive webhook submissions" });
     }
 
     const idempotencyKey =

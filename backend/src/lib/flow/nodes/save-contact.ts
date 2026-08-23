@@ -19,6 +19,7 @@ export async function executeSaveContactNode(
     resolveBindingValue(node.data.contactPhoneBinding, bindingContext)
   );
   if (!phone) throw new Error("Valid phone binding is required");
+  if (!ctx.botId) throw new Error("Add an assign bot node before saving contacts");
 
   const name = resolveBindingValue(node.data.contactNameBinding, bindingContext) || undefined;
   const email = resolveBindingValue(node.data.contactEmailBinding, bindingContext) || undefined;
