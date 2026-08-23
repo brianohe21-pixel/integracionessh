@@ -50,7 +50,7 @@ export function DashboardActivityChart({ usage, isLoading, error }: DashboardAct
       emptyDescription={t("dashboard.activityEmptyDescription")}
       emptyIcon={<BotMessageSquare className="h-5 w-5" />}
     >
-      <div className="h-64 w-full min-w-0">
+      <div className="h-56 w-full min-w-0">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />

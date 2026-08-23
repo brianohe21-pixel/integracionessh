@@ -71,6 +71,10 @@ export function latencyVariant(ms: number) {
   return "danger" as const;
 }
 
+export function aiCostUsd(breakdown: CallCostBreakdown): number {
+  return (breakdown.openaiUsd ?? 0) + (breakdown.sttUsd ?? 0);
+}
+
 export function buildCostSlices(
   breakdown: CallCostBreakdown,
   labels: Record<keyof typeof COST_SLICE_COLORS, string>
@@ -78,7 +82,7 @@ export function buildCostSlices(
   const items = [
     { key: "telephony" as const, label: labels.telephony, value: breakdown.telnyxUsd ?? 0 },
     { key: "platform" as const, label: labels.platform, value: breakdown.platformUsd ?? 0 },
-    { key: "ai" as const, label: labels.ai, value: breakdown.openaiUsd ?? 0 },
+    { key: "ai" as const, label: labels.ai, value: aiCostUsd(breakdown) },
     { key: "voice" as const, label: labels.voice, value: breakdown.elevenlabsUsd ?? 0 },
     { key: "recording" as const, label: labels.recording, value: breakdown.recordingUsd ?? 0 },
   ].filter((item) => item.value > 0);

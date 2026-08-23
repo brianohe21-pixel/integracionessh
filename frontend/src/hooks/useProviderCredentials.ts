@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
-export type ProviderId = "openai" | "telnyx" | "elevenlabs";
+export type ProviderId = "openai" | "telnyx" | "elevenlabs" | "deepgram";
 export type CredentialSource = "own" | "reseller" | "platform" | "none";
 
 export interface ProviderCredentialStatus {

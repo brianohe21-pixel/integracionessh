@@ -19,22 +19,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <DashboardAuthGuard>
           <ConversationRealtimeProvider>
             <SoftphoneProvider>
-            <div className="flex h-screen overflow-hidden">
+            <div className="flex h-screen overflow-x-clip">
             <TermsAcceptanceSync />
             <Sidebar />
-            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-canvas">
               <MobileTopBar />
-              <div className="border-b border-default px-4 py-2">
+              <div className="px-4 py-2">
                 <SoftphoneBar />
               </div>
-              <main className="canvas-bg min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
-                <OnboardingGate>
-                  <HelpCenterMount>
-                    <DashboardRoleGuard>
-                      <SubaccountServiceGuard>{children}</SubaccountServiceGuard>
-                    </DashboardRoleGuard>
-                  </HelpCenterMount>
-                </OnboardingGate>
+              <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto bg-canvas">
+                <div className="flex min-h-full flex-1 flex-col">
+                  <OnboardingGate>
+                    <HelpCenterMount>
+                      <DashboardRoleGuard>
+                        <SubaccountServiceGuard>{children}</SubaccountServiceGuard>
+                      </DashboardRoleGuard>
+                    </HelpCenterMount>
+                  </OnboardingGate>
+                </div>
               </main>
             </div>
             </div>

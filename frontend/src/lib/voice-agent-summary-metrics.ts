@@ -163,6 +163,10 @@ export function buildVoiceAgentStatusSeries(
     .sort((a, b) => b.value - a.value);
 }
 
+function aiCostUsd(breakdown: CallCostBreakdown): number {
+  return (breakdown.openaiUsd ?? 0) + (breakdown.sttUsd ?? 0);
+}
+
 function sumCostField(
   calls: CallRecord[],
   picker: (breakdown: CallCostBreakdown) => number | undefined
@@ -190,7 +194,7 @@ export function buildVoiceAgentAggregatedCostSlices(
     {
       key: "ai" as const,
       label: labels.ai,
-      value: sumCostField(calls, (breakdown) => breakdown.openaiUsd),
+      value: sumCostField(calls, aiCostUsd),
       color: COST_SLICE_COLORS.ai,
     },
     {

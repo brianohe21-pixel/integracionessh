@@ -22,7 +22,8 @@ export default function FlowsPage() {
   const toggle = useToggleFlow();
   const remove = useDeleteFlow();
 
-  const botName = (botId: string) => bots?.find((b) => b.botId === botId)?.name ?? botId;
+  const botName = (botId?: string) =>
+    botId ? (bots?.find((b) => b.botId === botId)?.name ?? botId) : t("flows.bot.unassigned");
 
   return (
     <DashboardPage>

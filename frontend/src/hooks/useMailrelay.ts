@@ -4,12 +4,18 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type {
   MailrelayCampaign,
+  MailrelayCampaignFolder,
   MailrelayCampaignInput,
   MailrelayCampaignMetrics,
   MailrelayConfig,
   MailrelayCredentials,
   MailrelayCredentialsInput,
+  MailrelayEmailTemplate,
+  MailrelayEvent,
   MailrelayGroup,
+  MailrelayOverview,
+  MailrelayPagination,
+  MailrelaySegment,
   MailrelaySender,
   MailrelaySync,
 } from "@/types";
@@ -82,6 +88,11 @@ function normalizeSync(value: unknown): MailrelaySync {
   };
 }
 
+function ensureUnsubscribeHtml(html: string): string {
+  if (/unsubscribe_url|%UNSUBSCRIBE%/i.test(html)) return html.trim();
+  return `${html.trim()}\n<p style="font-size:12px;color:#666;margin-top:24px;"><a href="{{ unsubscribe_url }}">Unsubscribe</a></p>`;
+}
+
 function normalizeCampaign(value: unknown, defaultStatus: MailrelayCampaign["status"] = "draft") {
   const raw = record(value);
   const groupIds = Array.isArray(raw.groupIds)
@@ -89,6 +100,8 @@ function normalizeCampaign(value: unknown, defaultStatus: MailrelayCampaign["sta
     : Array.isArray(raw.group_ids)
       ? raw.group_ids
       : [];
+  const rawTarget = String(raw.target ?? (raw.segment_id || raw.segmentId ? "segment" : "groups"));
+  const target = rawTarget === "segment" ? "segment" : "groups";
   const rawStatus = String(raw.status ?? defaultStatus);
   const status =
     rawStatus === "sent" || rawStatus === "sending" || rawStatus === "draft"
@@ -101,7 +114,15 @@ function normalizeCampaign(value: unknown, defaultStatus: MailrelayCampaign["sta
     previewText: String(raw.previewText ?? raw.preview_text ?? ""),
     html: String(raw.html ?? ""),
     senderId: String(raw.senderId ?? raw.sender_id ?? ""),
+    target,
     groupIds: groupIds.map((id) => String(id)),
+    segmentId: String(raw.segmentId ?? raw.segment_id ?? ""),
+    campaignFolderId: String(raw.campaignFolderId ?? raw.campaign_folder_id ?? ""),
+    replyTo: String(raw.replyTo ?? raw.reply_to ?? ""),
+    analyticsUtmCampaign: String(
+      raw.analyticsUtmCampaign ?? raw.analytics_utm_campaign ?? ""
+    ),
+    usePremailer: Boolean(raw.usePremailer ?? raw.use_premailer ?? false),
     trackOpens: Boolean(raw.trackOpens ?? raw.track_opens ?? true),
     trackClicks: Boolean(raw.trackClicks ?? raw.track_clicks ?? true),
     status,
@@ -111,22 +132,33 @@ function normalizeCampaign(value: unknown, defaultStatus: MailrelayCampaign["sta
   } satisfies MailrelayCampaign;
 }
 
-function ensureUnsubscribeHtml(html: string): string {
-  if (/unsubscribe_url|%UNSUBSCRIBE%/i.test(html)) return html.trim();
-  return `${html.trim()}\n<p style="font-size:12px;color:#666;margin-top:24px;"><a href="{{ unsubscribe_url }}">Unsubscribe</a></p>`;
-}
-
 function campaignPayload(payload: MailrelayCampaignInput) {
-  return {
+  const body: Record<string, unknown> = {
     sender_id: Number(payload.senderId),
     subject: payload.subject,
     ...(payload.previewText ? { preview_text: payload.previewText } : {}),
     html: ensureUnsubscribeHtml(payload.html),
-    target: "groups",
-    group_ids: payload.groupIds.map(Number),
+    target: payload.target,
     track_opens: payload.trackOpens,
     track_clicks: payload.trackClicks,
   };
+
+  if (payload.target === "segment") {
+    body.segment_id = Number(payload.segmentId);
+  } else {
+    body.group_ids = payload.groupIds.map(Number);
+  }
+
+  if (payload.campaignFolderId) {
+    body.campaign_folder_id = Number(payload.campaignFolderId);
+  }
+  if (payload.replyTo) body.reply_to = payload.replyTo;
+  if (payload.analyticsUtmCampaign) {
+    body.analytics_utm_campaign = payload.analyticsUtmCampaign;
+  }
+  if (payload.usePremailer) body.use_premailer = true;
+
+  return body;
 }
 
 export function useMailrelayCredentials() {
@@ -234,6 +266,45 @@ export function useMailrelaySenders(enabled = true) {
   });
 }
 
+export function useMailrelaySegments(enabled = true) {
+  return useQuery<{ segments: MailrelaySegment[] }>({
+    queryKey: [...key, "segments"],
+    queryFn: async () => {
+      const response = await api.get<{ segments: unknown[] }>("/email-marketing/segments");
+      return {
+        segments: response.segments.map((value) => {
+          const segment = record(value);
+          return {
+            id: String(segment.id ?? ""),
+            name: String(segment.name ?? segment.title ?? `Segment ${segment.id ?? ""}`),
+          };
+        }),
+      };
+    },
+    enabled,
+    retry: false,
+  });
+}
+
+export function useMailrelayCampaignFolders(enabled = true) {
+  return useQuery<{ folders: MailrelayCampaignFolder[] }>({
+    queryKey: [...key, "campaign-folders"],
+    queryFn: async () => {
+      const response = await api.get<{ folders: unknown[] }>("/email-marketing/campaign-folders");
+      return {
+        folders: response.folders.map((value) => {
+          const folder = record(value);
+          return {
+            id: String(folder.id ?? ""),
+            name: String(folder.name ?? `Folder ${folder.id ?? ""}`),
+          };
+        }),
+      };
+    },
+    enabled,
+  });
+}
+
 export function useStartMailrelaySync() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -281,12 +352,46 @@ export function useMailrelaySync(syncId: string) {
   });
 }
 
-export function useMailrelayCampaigns(enabled = true) {
-  return useQuery<{ campaigns: MailrelayCampaign[] }>({
-    queryKey: [...key, "campaigns"],
+function normalizeMetrics(value: unknown, campaignId: string): MailrelayCampaignMetrics {
+  const metrics = record(value);
+  return {
+    campaignId: String(metrics.campaignId ?? campaignId),
+    sent: Number(metrics.sent ?? 0),
+    delivered: Number(metrics.delivered ?? 0),
+    opens: Number(metrics.opens ?? metrics.opened ?? 0),
+    clicks: Number(metrics.clicks ?? metrics.clicked ?? 0),
+    bounces: Number(metrics.bounces ?? metrics.bounced ?? 0),
+    unsubscribes: Number(metrics.unsubscribes ?? metrics.unsubscribed ?? 0),
+    complaints: Number(metrics.complaints ?? metrics.complained ?? 0),
+  };
+}
+
+function normalizePagination(value: unknown): MailrelayPagination {
+  const raw = record(value);
+  return {
+    page: Number(raw.page ?? 1),
+    perPage: Number(raw.perPage ?? raw.per_page ?? 20),
+    hasMore: Boolean(raw.hasMore),
+    ...(raw.totalPages != null ? { totalPages: Number(raw.totalPages) } : {}),
+  };
+}
+
+export function useMailrelayCampaigns(
+  enabled = true,
+  options: { page?: number; perPage?: number } = {}
+) {
+  const page = options.page ?? 1;
+  const perPage = options.perPage ?? 20;
+  return useQuery<{ campaigns: MailrelayCampaign[]; pagination: MailrelayPagination }>({
+    queryKey: [...key, "campaigns", page, perPage],
     queryFn: async () => {
-      const response = await api.get<{ campaigns: unknown[] }>("/email-marketing/campaigns");
-      return { campaigns: response.campaigns.map((campaign) => normalizeCampaign(campaign)) };
+      const response = await api.get<{ campaigns: unknown[]; pagination?: unknown }>(
+        `/email-marketing/campaigns?page=${page}&per_page=${perPage}`
+      );
+      return {
+        campaigns: response.campaigns.map((campaign) => normalizeCampaign(campaign)),
+        pagination: normalizePagination(response.pagination),
+      };
     },
     enabled,
   });
@@ -360,13 +465,26 @@ export function useSendMailrelayTest() {
 export function useSendMailrelayCampaign() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (campaign: Pick<MailrelayCampaign, "id" | "groupIds">) => {
+    mutationFn: async ({
+      campaign,
+      scheduledAt,
+    }: {
+      campaign: Pick<MailrelayCampaign, "id" | "target" | "groupIds" | "segmentId">;
+      scheduledAt?: string;
+    }) => {
+      const body: Record<string, unknown> = {
+        target: campaign.target,
+      };
+      if (campaign.target === "segment") {
+        body.segment_id = Number(campaign.segmentId);
+      } else {
+        body.group_ids = campaign.groupIds.map(Number);
+      }
+      if (scheduledAt) body.scheduled_at = scheduledAt;
+
       const response = await api.post<{ campaign: unknown }>(
         `/email-marketing/campaigns/${campaign.id}/send`,
-        {
-          target: "groups",
-          group_ids: campaign.groupIds.map(Number),
-        }
+        body
       );
       return { campaign: normalizeCampaign(response.campaign, "sending") };
     },
@@ -397,19 +515,97 @@ export function useMailrelayCampaignMetrics(campaignId: string) {
       const response = await api.get<{ metrics: unknown }>(
         `/email-marketing/sent-campaigns/${campaignId}/metrics`
       );
-      const metrics = record(response.metrics);
-      return {
-        metrics: {
-          campaignId: String(metrics.campaignId ?? campaignId),
-          sent: Number(metrics.sent ?? 0),
-          delivered: Number(metrics.delivered ?? 0),
-          opens: Number(metrics.opens ?? metrics.opened ?? 0),
-          clicks: Number(metrics.clicks ?? metrics.clicked ?? 0),
-          bounces: Number(metrics.bounces ?? metrics.bounced ?? 0),
-          unsubscribes: Number(metrics.unsubscribes ?? metrics.unsubscribed ?? 0),
-        },
-      };
+      return { metrics: normalizeMetrics(response.metrics, campaignId) };
     },
     enabled: Boolean(campaignId),
+  });
+}
+
+export function useMailrelayOverview(enabled = true) {
+  return useQuery<{ overview: MailrelayOverview }>({
+    queryKey: [...key, "overview"],
+    queryFn: () => api.get<{ overview: MailrelayOverview }>("/email-marketing/overview"),
+    enabled,
+  });
+}
+
+export function useMailrelayEvents(
+  enabled = true,
+  options: { campaignId?: string; limit?: number } = {}
+) {
+  const params = new URLSearchParams();
+  if (options.campaignId) params.set("campaignId", options.campaignId);
+  if (options.limit) params.set("limit", String(options.limit));
+  const query = params.toString();
+  return useQuery<{ events: MailrelayEvent[] }>({
+    queryKey: [...key, "events", options.campaignId ?? "all", options.limit ?? 50],
+    queryFn: async () => {
+      const response = await api.get<{ events: unknown[] }>(
+        `/email-marketing/events${query ? `?${query}` : ""}`
+      );
+      return {
+        events: response.events.map((value) => {
+          const event = record(value);
+          const campaignId = event.campaignId;
+          return {
+            eventId: String(event.eventId ?? ""),
+            type: String(event.type ?? ""),
+            occurredAt: String(event.occurredAt ?? ""),
+            ...(typeof event.email === "string" ? { email: event.email } : {}),
+            ...(campaignId != null ? { campaignId: Number(campaignId) } : {}),
+            ...(event.subscriberId != null ? { subscriberId: Number(event.subscriberId) } : {}),
+          };
+        }),
+      };
+    },
+    enabled,
+  });
+}
+
+export function useMailrelayTemplates(enabled = true) {
+  return useQuery<{ templates: MailrelayEmailTemplate[] }>({
+    queryKey: [...key, "templates"],
+    queryFn: async () => {
+      const response = await api.get<{ templates: unknown[] }>("/email-marketing/templates");
+      return {
+        templates: response.templates.map((value) => {
+          const template = record(value);
+          return {
+            templateId: String(template.templateId ?? ""),
+            name: String(template.name ?? ""),
+            subject: String(template.subject ?? ""),
+            html: String(template.html ?? ""),
+            createdAt: String(template.createdAt ?? ""),
+            updatedAt: String(template.updatedAt ?? ""),
+            ...(template.previewText ? { previewText: String(template.previewText) } : {}),
+          };
+        }),
+      };
+    },
+    enabled,
+  });
+}
+
+export function useCreateMailrelayTemplate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: Pick<MailrelayEmailTemplate, "name" | "subject" | "previewText" | "html">) =>
+      api.post<{ template: MailrelayEmailTemplate }>("/email-marketing/templates", payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: [...key, "templates"] });
+      void queryClient.invalidateQueries({ queryKey: [...key, "overview"] });
+    },
+  });
+}
+
+export function useDeleteMailrelayTemplate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (templateId: string) =>
+      api.delete(`/email-marketing/templates/${templateId}`),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: [...key, "templates"] });
+      void queryClient.invalidateQueries({ queryKey: [...key, "overview"] });
+    },
   });
 }

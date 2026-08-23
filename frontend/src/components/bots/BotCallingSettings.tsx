@@ -11,6 +11,7 @@ interface CallingSettingsResponse {
     status?: "ENABLED" | "DISABLED";
     callback_permission_status?: string;
   };
+  available?: boolean;
 }
 
 interface BotCallingSettingsProps {
@@ -24,12 +25,14 @@ export function BotCallingSettings({ botId, coexistence = false }: BotCallingSet
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error: loadError } = useQuery({
     queryKey: ["calling-settings", botId],
     queryFn: () => api.get<CallingSettingsResponse>(`/bots/${botId}/calling/settings`),
+    enabled: !coexistence,
   });
 
   const enabled = data?.calling?.status === "ENABLED";
+  const callingUnavailable = coexistence || data?.available === false;
 
   const updateMutation = useMutation({
     mutationFn: (nextEnabled: boolean) =>
@@ -48,6 +51,8 @@ export function BotCallingSettings({ botId, coexistence = false }: BotCallingSet
     },
   });
 
+  const toggleDisabled = updateMutation.isPending || callingUnavailable;
+
   return (
     <div className="bg-surface-elevated rounded-xl border border-default p-6">
       <div className="flex items-center gap-2 mb-2">
@@ -58,6 +63,8 @@ export function BotCallingSettings({ botId, coexistence = false }: BotCallingSet
 
       {coexistence ? (
         <p className="text-sm text-secondary mb-4">{t("whatsapp.coexistenceCallingDisabled")}</p>
+      ) : data?.available === false ? (
+        <p className="text-sm text-secondary mb-4">{t("bots.callingUnavailable")}</p>
       ) : null}
 
       <div className="bg-amber-50 border border-amber-100 rounded-lg p-3 mb-4">
@@ -81,11 +88,11 @@ export function BotCallingSettings({ botId, coexistence = false }: BotCallingSet
             type="button"
             role="switch"
             aria-checked={enabled}
-            disabled={updateMutation.isPending || coexistence}
+            disabled={toggleDisabled}
             onClick={() => updateMutation.mutate(!enabled)}
             className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${
               enabled ? "bg-accent" : "bg-gray-200"
-            } ${updateMutation.isPending ? "opacity-50" : ""}`}
+            } ${toggleDisabled ? "opacity-50" : ""}`}
           >
             <span
               className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-surface-elevated shadow transition ${
@@ -96,6 +103,9 @@ export function BotCallingSettings({ botId, coexistence = false }: BotCallingSet
         </label>
       )}
 
+      {loadError instanceof Error && (
+        <p className="text-sm text-red-600 mt-3">{loadError.message || t("bots.callingLoadError")}</p>
+      )}
       {error && <p className="text-sm text-red-600 mt-3">{error}</p>}
       {success && <p className="text-sm text-green-600 mt-3">{success}</p>}
     </div>

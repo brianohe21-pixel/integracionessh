@@ -69,9 +69,10 @@ export function GoogleSignInButton({ className, onError, onBeforeSignIn }: Googl
   );
 }
 
-export function AuthDivider() {
+export function AuthDivider({ label }: { label?: string }) {
   const t = useT();
-  if (!isGoogleAuthConfigured()) return null;
+  const text = label ?? t("auth.orContinueWith");
+  if (!isGoogleAuthConfigured() && !label) return null;
 
   return (
     <div className="relative my-6">
@@ -79,7 +80,7 @@ export function AuthDivider() {
         <div className="w-full border-t border-default" />
       </div>
       <div className="relative flex justify-center text-xs uppercase">
-        <span className="bg-surface-elevated px-2 text-muted">{t("auth.orContinueWith")}</span>
+        <span className="bg-surface-elevated px-2 text-muted">{text}</span>
       </div>
     </div>
   );

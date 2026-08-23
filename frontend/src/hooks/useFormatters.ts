@@ -58,6 +58,7 @@ export function useFormatters() {
     (plan: string) => {
       const labels: Record<string, string> = {
         free: t("common.planFree"),
+        starter: t("common.planStarter"),
         pro: t("common.planPro"),
         enterprise: t("common.planEnterprise"),
         reseller: t("common.planReseller"),

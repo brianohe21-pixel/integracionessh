@@ -1,4 +1,4 @@
-export type TenantPlan = "free" | "pro" | "enterprise" | "reseller";
+export type TenantPlan = "free" | "starter" | "pro" | "enterprise" | "reseller";
 
 export type TenantKind = "standard" | "reseller" | "subaccount";
 
@@ -10,6 +10,7 @@ export const SUBACCOUNT_SERVICES = [
   "supervisor",
   "contacts",
   "leads",
+  "sales",
   "advisors",
   "automations",
   "flows",
@@ -45,6 +46,32 @@ export interface ResolvedTenantBranding {
   logoUrl?: string;
 }
 
+export type TenantEmailDomainStatus = "none" | "pending" | "verified" | "failed";
+
+export interface TenantEmailDnsRecord {
+  type: string;
+  name: string;
+  value: string;
+  purpose: "verification" | "dkim";
+}
+
+export interface TenantEmailSettings {
+  tenantId: string;
+  enabled: boolean;
+  domain?: string;
+  domainStatus?: TenantEmailDomainStatus;
+  fromEmail?: string;
+  fromName?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TenantEmailSettingsResponse {
+  settings: TenantEmailSettings;
+  dnsRecords?: TenantEmailDnsRecord[];
+  canSend: boolean;
+}
+
 export interface ResellerLimitsOverride {
   maxActiveBots?: number;
   maxMessagesPerMonth?: number;
@@ -75,7 +102,7 @@ export interface ResellerLimitsOverride {
 
 export interface ResellerConfig {
   maxSubaccounts: number;
-  defaultSubaccountPlan: "free" | "pro" | "enterprise";
+  defaultSubaccountPlan: "free" | "starter" | "pro" | "enterprise";
   customDomain?: string;
   customDomainStatus?: CustomDomainStatus;
   allowSubaccountBranding: boolean;
@@ -84,7 +111,7 @@ export interface ResellerConfig {
 
 export interface ResellerPlanDefaults {
   maxSubaccounts: number;
-  defaultSubaccountPlan: "free" | "pro" | "enterprise";
+  defaultSubaccountPlan: "free" | "starter" | "pro" | "enterprise";
   allowSubaccountBranding: boolean;
   limitsOverride?: ResellerLimitsOverride;
 }
@@ -425,6 +452,151 @@ export interface Lead {
   updatedAt: string;
 }
 
+export type OpportunityStage = "new" | "quoted" | "negotiation" | "won" | "lost";
+
+export interface PipelineStage {
+  stageId: string;
+  key: string;
+  label: string;
+  sortOrder: number;
+  probability?: number;
+  isClosed?: boolean;
+  outcome?: "won" | "lost";
+}
+
+export interface SalesPipeline {
+  pipelineId: string;
+  tenantId: string;
+  name: string;
+  isDefault: boolean;
+  stages: PipelineStage[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Opportunity {
+  opportunityId: string;
+  tenantId: string;
+  pipelineId: string;
+  stageId: string;
+  botId?: string;
+  title: string;
+  amount?: number;
+  currency: string;
+  stage: OpportunityStage;
+  phone?: string;
+  name?: string;
+  email?: string;
+  description?: string;
+  tags: string[];
+  leadId?: string;
+  conversationId?: string;
+  sourceId?: string;
+  assignedAdvisorId?: string;
+  quotationId?: string;
+  paymentId?: string;
+  closedAt?: string;
+  closeReason?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type SequenceStepChannel = "whatsapp" | "email" | "task";
+
+export interface SalesSequenceStep {
+  stepId: string;
+  order: number;
+  delayMinutes: number;
+  channel: SequenceStepChannel;
+  messageText?: string;
+  templateName?: string;
+  templateLanguage?: string;
+  emailSubject?: string;
+  taskTitle?: string;
+  taskDescription?: string;
+  taskDueMinutes?: number;
+  assignToAdvisor?: boolean;
+}
+
+export type SalesSequenceTrigger = "manual" | "stage_entered" | "opportunity_created";
+
+export interface SalesSequence {
+  sequenceId: string;
+  tenantId: string;
+  name: string;
+  enabled: boolean;
+  trigger: SalesSequenceTrigger;
+  triggerStageId?: string;
+  pipelineId?: string;
+  steps: SalesSequenceStep[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type SequenceEnrollmentStatus = "active" | "paused" | "completed" | "cancelled";
+
+export interface SequenceEnrollment {
+  enrollmentId: string;
+  tenantId: string;
+  sequenceId: string;
+  opportunityId: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  currentStepIndex: number;
+  status: SequenceEnrollmentStatus;
+  nextRunAt?: string;
+  scheduleName?: string;
+  botId?: string;
+  assignedAdvisorId?: string;
+  lastRunAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type SalesTaskStatus = "open" | "done" | "cancelled";
+
+export interface SalesTask {
+  taskId: string;
+  tenantId: string;
+  opportunityId?: string;
+  enrollmentId?: string;
+  advisorId?: string;
+  title: string;
+  description?: string;
+  dueAt?: string;
+  status: SalesTaskStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SalesFunnelMetrics {
+  pipelineId: string;
+  total: number;
+  totalValue: number;
+  wonValue: number;
+  forecastValue: number;
+  conversionRate: number;
+  byStage: Array<{
+    stageId: string;
+    key: string;
+    label: string;
+    count: number;
+    value: number;
+    probability?: number;
+  }>;
+  funnel: Record<string, number>;
+}
+
+export interface OpportunitiesListResponse {
+  items: Opportunity[];
+  nextCursor?: string;
+}
+
+export interface SalesTasksListResponse {
+  items: SalesTask[];
+  nextCursor?: string;
+}
+
 export interface LeadsListResponse {
   items: Lead[];
   nextCursor?: string;
@@ -626,6 +798,33 @@ export interface AdvisorInviteResponse {
     email: string;
     emailSent?: boolean;
     emailFailureReason?: "not_configured" | "recipient_not_verified" | "send_failed";
+  };
+}
+
+export interface TenantMember {
+  userId: string;
+  username: string;
+  email: string;
+  name: string;
+  role: "member" | "advisor";
+  enabled: boolean;
+  createdAt: string;
+  advisorId?: string;
+}
+
+export interface TenantMembersResponse {
+  members: TenantMember[];
+  currentUserId: string;
+}
+
+export interface TenantMemberInviteResponse {
+  member: TenantMember;
+  advisor?: Advisor;
+  invite?: {
+    email: string;
+    emailSent: boolean;
+    emailFailureReason?: "not_configured" | "recipient_not_verified" | "send_failed";
+    temporaryPassword?: string;
   };
 }
 
@@ -907,6 +1106,7 @@ export type IntegrationEvent =
   | "flow.completed"
   | "lead.created"
   | "lead.converted"
+  | "opportunity.created"
   | "call.connect"
   | "call.status"
   | "call.terminated"
@@ -932,6 +1132,7 @@ export interface CallCostBreakdown {
   platformUsd?: number;
   openaiUsd?: number;
   elevenlabsUsd?: number;
+  sttUsd?: number;
   recordingUsd?: number;
   totalUsd: number;
   currency: "USD";
@@ -942,6 +1143,10 @@ export interface CallUsageMetrics {
   openaiInputTokens?: number;
   openaiOutputTokens?: number;
   elevenlabsCharacters?: number;
+  elevenlabsModelId?: string;
+  sttProvider?: string;
+  sttModelId?: string;
+  sttAudioSeconds?: number;
 }
 
 export interface CallRecord {
@@ -1070,7 +1275,10 @@ export type FlowNodeType =
   | "await_order"
   | "save_contact"
   | "create_lead"
+  | "create_opportunity"
   | "send_notification"
+  | "assign_bot"
+  | "webhook"
   | "end";
 
 export type FlowTriggerType =
@@ -1164,12 +1372,29 @@ export interface FlowNodeData {
   leadNameBinding?: string;
   leadEmailBinding?: string;
   leadTags?: string[];
-  notificationChannel?: Channel;
+  opportunityTitleBinding?: string;
+  opportunityAmountBinding?: string;
+  opportunityCurrency?: string;
+  opportunityStage?: OpportunityStage;
+  opportunityPhoneBinding?: string;
+  opportunityNameBinding?: string;
+  opportunityEmailBinding?: string;
+  opportunityDescriptionBinding?: string;
+  opportunityTags?: string[];
+  notificationChannel?: "whatsapp" | "sms" | "email";
+  notificationMessageType?: "text" | "template";
   notificationRecipientBinding?: string;
+  notificationEmailSubject?: string;
   notificationMessageBinding?: string;
   notificationMessageText?: LocalizedText;
   notificationTemplateName?: string;
   notificationTemplateLanguage?: string;
+  notificationTemplateVariables?: Record<string, string>;
+  botId?: string;
+  webhookUrl?: string;
+  webhookBody?: string;
+  webhookHeaders?: FlowHttpHeader[];
+  webhookResponseVariable?: string;
 }
 
 export interface FlowNode {
@@ -1189,7 +1414,7 @@ export interface FlowEdge {
 export interface FlowDefinition {
   flowId: string;
   tenantId: string;
-  botId: string;
+  botId?: string;
   name: string;
   flowKind?: FlowKind;
   enabled: boolean;
@@ -1472,6 +1697,18 @@ export interface MailrelaySender {
   email: string;
 }
 
+export interface MailrelaySegment {
+  id: string;
+  name: string;
+}
+
+export interface MailrelayCampaignFolder {
+  id: string;
+  name: string;
+}
+
+export type MailrelayCampaignTarget = "groups" | "segment";
+
 export type MailrelaySyncStatus = "pending" | "running" | "completed" | "failed";
 
 export interface MailrelaySync {
@@ -1491,7 +1728,13 @@ export interface MailrelayCampaignInput {
   previewText: string;
   html: string;
   senderId: string;
+  target: MailrelayCampaignTarget;
   groupIds: string[];
+  segmentId: string;
+  campaignFolderId: string;
+  replyTo: string;
+  analyticsUtmCampaign: string;
+  usePremailer: boolean;
   trackOpens: boolean;
   trackClicks: boolean;
 }
@@ -1512,6 +1755,44 @@ export interface MailrelayCampaignMetrics {
   clicks: number;
   bounces: number;
   unsubscribes: number;
+  complaints: number;
+}
+
+export interface MailrelayPagination {
+  page: number;
+  perPage: number;
+  hasMore: boolean;
+  totalPages?: number;
+}
+
+export interface MailrelayEmailTemplate {
+  templateId: string;
+  name: string;
+  subject: string;
+  previewText?: string;
+  html: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MailrelayEvent {
+  eventId: string;
+  type: string;
+  campaignId?: number;
+  subscriberId?: number;
+  email?: string;
+  occurredAt: string;
+}
+
+export interface MailrelayOverview {
+  subscriberCount: number;
+  draftCampaigns: number;
+  sentCampaigns: number;
+  templateCount: number;
+  averageOpenRate: number;
+  averageClickRate: number;
+  lastSyncAt?: string;
+  lastSyncStatus?: MailrelaySyncStatus;
 }
 
 export type PaymentRequestStatus = "pending" | "paid" | "declined" | "expired";

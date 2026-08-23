@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Undo2, Redo2, Maximize2 } from "lucide-react";
+import { ArrowLeft, Undo2, Redo2, Maximize2, Minimize2 } from "lucide-react";
 import Link from "next/link";
 import { useT } from "@/i18n/context";
 import { Badge } from "@/components/ui/Badge";
@@ -10,14 +10,36 @@ type FlowEditorToolbarProps = {
   flowName: string;
   isPublished?: boolean;
   isSaving?: boolean;
+  isToggling?: boolean;
+  isDirty?: boolean;
+  justSaved?: boolean;
   onSave: () => void;
+  onToggleEnabled?: () => void;
+  onPreview?: () => void;
+  isFullscreen?: boolean;
+  onToggleFullscreen?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  onUndo?: () => void;
+  onRedo?: () => void;
 };
 
 export function FlowEditorToolbar({
   flowName,
   isPublished = true,
   isSaving = false,
+  isToggling = false,
+  isDirty = false,
+  justSaved = false,
   onSave,
+  onToggleEnabled,
+  onPreview,
+  isFullscreen = false,
+  onToggleFullscreen,
+  canUndo = false,
+  canRedo = false,
+  onUndo,
+  onRedo,
 }: FlowEditorToolbarProps) {
   const t = useT();
 
@@ -32,39 +54,72 @@ export function FlowEditorToolbar({
         </Link>
         <div className="min-w-0">
           <h1 className="truncate text-base font-semibold text-primary">{flowName}</h1>
-          <Badge variant={isPublished ? "success" : "warning"} className="mt-1">
-            {isPublished ? t("flows.published") : t("flows.draft")}
-          </Badge>
+          <div className="mt-1 flex items-center gap-2">
+            <Badge variant={isPublished ? "success" : "warning"}>
+              {isPublished ? t("flows.enabled") : t("flows.disabled")}
+            </Badge>
+            {isSaving ? (
+              <span className="text-[11px] font-medium text-secondary">{t("common.saving")}</span>
+            ) : isDirty ? (
+              <span className="text-[11px] font-medium text-warning">{t("flows.unsaved")}</span>
+            ) : justSaved ? (
+              <span className="text-[11px] font-medium text-success">{t("flows.saved")}</span>
+            ) : null}
+            {onToggleEnabled ? (
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isPublished}
+                aria-label={isPublished ? t("flows.disable") : t("flows.enable")}
+                disabled={isToggling}
+                onClick={onToggleEnabled}
+                className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${
+                  isPublished ? "bg-accent" : "bg-surface-muted"
+                } ${isToggling ? "cursor-not-allowed opacity-50" : ""}`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-surface-elevated shadow transition ${
+                    isPublished ? "translate-x-4" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            ) : null}
+          </div>
         </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
-          className="inline-flex items-center justify-center rounded-lg border border-default p-2 text-secondary hover:bg-surface-muted"
+          onClick={onUndo}
+          disabled={!canUndo}
+          className="inline-flex items-center justify-center rounded-lg border border-default p-2 text-secondary hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-40"
           aria-label={t("flows.undo")}
         >
           <Undo2 className="h-4 w-4" />
         </button>
         <button
           type="button"
-          className="inline-flex items-center justify-center rounded-lg border border-default p-2 text-secondary hover:bg-surface-muted"
+          onClick={onRedo}
+          disabled={!canRedo}
+          className="inline-flex items-center justify-center rounded-lg border border-default p-2 text-secondary hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-40"
           aria-label={t("flows.redo")}
         >
           <Redo2 className="h-4 w-4" />
         </button>
         <button
           type="button"
+          onClick={onToggleFullscreen}
           className="inline-flex items-center justify-center rounded-lg border border-default p-2 text-secondary hover:bg-surface-muted"
-          aria-label={t("flows.fullscreen")}
+          aria-label={isFullscreen ? t("flows.exitFullscreen") : t("flows.fullscreen")}
         >
-          <Maximize2 className="h-4 w-4" />
+          {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
         </button>
-        <Button type="button" variant="secondary" size="sm">
+        <Button type="button" variant="secondary" size="sm" onClick={onPreview}>
           {t("flows.preview")}
         </Button>
-        <Button type="button" size="sm" onClick={() => onSave()} disabled={isSaving}>
-          {t("flows.publishChanges")}
+        <Button type="button" size="sm" onClick={() => onSave()} disabled={isSaving || !isDirty}>
+          {isSaving ? t("common.saving") : t("flows.save")}
         </Button>
       </div>
     </div>

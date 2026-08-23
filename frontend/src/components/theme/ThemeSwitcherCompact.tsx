@@ -48,8 +48,8 @@ export function ThemeSwitcherCompact({ collapsed = false }: Props) {
               "inline-flex items-center justify-center rounded-md transition-colors",
               collapsed ? "h-8 w-8" : "flex-1 gap-1.5 px-2 py-1.5 text-xs font-medium",
               active
-                ? "bg-sidebar-elevated text-brand-primary shadow-sm"
-                : "text-[var(--sidebar-text-muted)] hover:bg-sidebar-hover hover:text-[var(--sidebar-text-secondary)]"
+                ? "bg-[var(--sidebar-active)] text-[var(--sidebar-text)]"
+                : "text-[var(--sidebar-icon)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text-secondary)]"
             )}
           >
             <Icon className="h-3.5 w-3.5" />

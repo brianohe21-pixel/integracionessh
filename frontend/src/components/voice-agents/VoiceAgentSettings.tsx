@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 import { Eye, PhoneCall, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { BotKnowledge } from "@/components/bots/BotKnowledge";
 import {
   useSaveTelephonySettings,
-  useTelephonyNumbers,
   useTelephonySettings,
   useTelephonyVoices,
   type TelephonySettings,
@@ -77,13 +77,11 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
   const { data: bot } = useBot(botId);
   const { data: toolsData } = useVoiceAgentTools(botId);
   const { data, isLoading } = useTelephonySettings(botId);
-  const { data: numbersData, isLoading: numbersLoading } = useTelephonyNumbers();
   const { data: voicesData } = useTelephonyVoices();
   const save = useSaveTelephonySettings(botId);
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
   const [voiceId, setVoiceId] = useState("");
   const [model, setModel] = useState(DEFAULT_REALTIME_MODEL_ID);
   const [transcriptionModel, setTranscriptionModel] = useState(
@@ -124,7 +122,6 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
 
   useEffect(() => {
     if (!data) return;
-    setPhoneNumber(data.telephonyPhoneNumber ?? "");
     setVoiceId(data.telephonyVoiceId ?? "");
     setModel(data.telephonyModel ?? DEFAULT_REALTIME_MODEL_ID);
     setTranscriptionModel(
@@ -148,7 +145,6 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
     setBargeIn(Boolean(data.telephonyTranscriptionBargeIn));
   }, [data]);
 
-  const numbers = useMemo(() => numbersData?.numbers ?? [], [numbersData?.numbers]);
   const voices = voicesData?.voices ?? [];
   const isFreeTier = voicesData?.tier === "free";
   const selectedVoiceRequiresPaidPlan =
@@ -170,17 +166,9 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
     return false;
   }
   const enabled = Boolean(data?.telephonyEnabled);
-  const hasPhoneNumber = phoneNumber.trim().length > 0;
 
-  useEffect(() => {
-    if (numbers.length > 0 && !phoneNumber.trim()) {
-      setPhoneNumber(numbers[0]!.phoneNumber);
-    }
-  }, [numbers, phoneNumber]);
-
-  function buildPayload(includeEnabled?: boolean): TelephonySettings & { enabled?: boolean } {
-    const payload: TelephonySettings & { enabled?: boolean } = {
-      telephonyPhoneNumber: phoneNumber.trim(),
+  function buildPayload(): TelephonySettings {
+    const payload: TelephonySettings = {
       telephonyModel: model,
       telephonyTranscriptionModel: transcriptionModel,
       telephonyBackgroundSound: backgroundSound,
@@ -196,48 +184,14 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
       telephonyRecordingNotice: recordingNotice.trim(),
       telephonyHandoffEnabled: handoffEnabled,
     };
-    if (includeEnabled !== undefined) payload.enabled = includeEnabled;
     if (voiceId.trim()) payload.telephonyVoiceId = voiceId.trim();
     if (greeting.trim()) payload.telephonyGreeting = greeting.trim();
     if (systemPrompt.trim()) payload.telephonySystemPrompt = systemPrompt.trim();
     return payload;
   }
 
-  function validatePhoneNumber(): boolean {
-    if (phoneNumber.trim()) return true;
-    setSuccess("");
-    setError(t("telephony.phoneNumberRequired"));
-    return false;
-  }
-
-  function handleEnabledChange(next: boolean) {
-    if (next) {
-      if (!validatePhoneNumber() || !validateSystemPrompt()) return;
-      setError("");
-      save.mutate(buildPayload(true), {
-        onSuccess: () => {
-          setSuccess(t("telephony.saved"));
-          setTimeout(() => setSuccess(""), 3000);
-        },
-        onError: (err) => setError(err.message),
-      });
-      return;
-    }
-    setError("");
-    save.mutate(
-      { enabled: false },
-      {
-        onSuccess: () => {
-          setSuccess(t("telephony.saved"));
-          setTimeout(() => setSuccess(""), 3000);
-        },
-        onError: (err) => setError(err.message),
-      }
-    );
-  }
-
   function handleSave() {
-    if (!validatePhoneNumber() || !validateSystemPrompt()) return;
+    if (!validateSystemPrompt()) return;
     setError("");
     save.mutate(buildPayload(), {
       onSuccess: () => {
@@ -274,47 +228,17 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
         <div className="h-24 animate-pulse rounded bg-surface-muted" />
       ) : (
         <>
-          <label className="block space-y-1">
-            <span className="text-sm font-medium text-secondary">{t("telephony.phoneNumber")}</span>
-            {numbersLoading ? (
-              <div className="h-10 animate-pulse rounded-lg bg-surface-muted" />
-            ) : numbers.length > 0 ? (
-              <select
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                className="w-full rounded-lg border border-default px-3 py-2 text-sm"
+          {!enabled ? (
+            <div className="rounded-lg border border-default bg-surface-muted/50 p-4 text-sm text-secondary">
+              {t("voiceAgents.configRequiresTelephony")}
+              <Link
+                href={`/voice-agents?tab=phoneNumbers&botId=${botId}`}
+                className="ml-1 font-medium text-accent hover:underline"
               >
-                {numbers.map((item) => (
-                  <option key={item.id} value={item.phoneNumber}>
-                    {item.phoneNumber}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                placeholder="+17871234567"
-                className="w-full rounded-lg border border-default px-3 py-2 text-sm"
-              />
-            )}
-          </label>
-
-          <label className="flex items-center justify-between gap-4">
-            <div>
-              <p className="font-medium text-primary">{t("telephony.enableLabel")}</p>
-              <p className="text-sm text-secondary">
-                {hasPhoneNumber ? t("telephony.enableHint") : t("telephony.configureNumberFirst")}
-              </p>
+                {t("voiceAgents.configOpenNumbersTab")}
+              </Link>
             </div>
-            <SettingsSwitch
-              checked={enabled}
-              disabled={save.isPending || !hasPhoneNumber}
-              onChange={handleEnabledChange}
-            />
-          </label>
-
-          {enabled && (
+          ) : (
             <>
               <div className="border-t border-subtle pt-4">
                 <VoiceAgentModelCards

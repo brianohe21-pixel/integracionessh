@@ -25,6 +25,7 @@ const PROVIDER_FIELDS: Record<ProviderId, FieldConfig[]> = {
   elevenlabs: [
     { key: "apiKey", labelKey: "settings.providerApiKey", secret: true },
   ],
+  deepgram: [{ key: "apiKey", labelKey: "settings.providerApiKey", secret: true }],
 };
 
 function sourceBadgeVariant(source: string): "info" | "success" | "default" | "warning" {
@@ -249,6 +250,7 @@ export function ProviderCredentialsSection() {
       <ProviderCredentialCard provider="openai" />
       <ProviderCredentialCard provider="telnyx" />
       <ProviderCredentialCard provider="elevenlabs" />
+      <ProviderCredentialCard provider="deepgram" />
     </div>
   );
 }

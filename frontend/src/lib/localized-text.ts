@@ -13,10 +13,9 @@ export function toLocalizedRecord(value: LocalizedText | undefined): Record<BotL
 }
 
 export function fromLocalizedRecord(record: Record<BotLocale, string>): LocalizedText {
-  const es = record.es.trim();
-  const en = record.en.trim();
-  if (es && es === en) return es;
-  if (!es && !en) return "";
+  const { es, en } = record;
+  if (!es.trim() && !en.trim()) return "";
+  if (es === en) return es;
   return { es, en };
 }
 

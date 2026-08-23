@@ -370,6 +370,7 @@ export function VoiceAgentConfigDrawer({
                       title={item.label}
                       description={item.description}
                       metaId={item.id}
+                      badges={<Badge variant="default">{item.providerLabel}</Badge>}
                     />
                   ))}
                 </OptionList>

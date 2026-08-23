@@ -152,6 +152,7 @@ export default function AdminUsersPage() {
   }
 
   function tenantPlanLabel(plan: TenantPlan) {
+    if (plan === "starter") return t("common.planStarter");
     if (plan === "pro") return t("common.planPro");
     if (plan === "enterprise") return t("common.planEnterprise");
     if (plan === "reseller") return t("common.planReseller");
@@ -335,6 +336,7 @@ export default function AdminUsersPage() {
                             className="rounded-lg border border-default px-2 py-1 text-sm"
                           >
                             <option value="free">{t("common.planFree")}</option>
+                            <option value="starter">{t("common.planStarter")}</option>
                             <option value="pro">{t("common.planPro")}</option>
                             <option value="enterprise">{t("common.planEnterprise")}</option>
                             <option value="reseller">{t("common.planReseller")}</option>
@@ -425,12 +427,13 @@ export default function AdminUsersPage() {
                     onChange={(e) =>
                       setDefaultsForm({
                         ...defaultsForm,
-                        defaultSubaccountPlan: e.target.value as "free" | "pro" | "enterprise",
+                        defaultSubaccountPlan: e.target.value as "free" | "starter" | "pro" | "enterprise",
                       })
                     }
                     className="w-full rounded-lg border border-default px-3 py-2"
                   >
                     <option value="free">{t("common.planFree")}</option>
+                    <option value="starter">{t("common.planStarter")}</option>
                     <option value="pro">{t("common.planPro")}</option>
                     <option value="enterprise">{t("common.planEnterprise")}</option>
                   </select>

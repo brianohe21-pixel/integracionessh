@@ -15,6 +15,8 @@ import { ChangePasswordCard } from "@/components/settings/ChangePasswordCard";
 import { InboxSlaCard } from "@/components/settings/InboxSlaCard";
 import { ScheduledReportsCard } from "@/components/settings/ScheduledReportsCard";
 import { BrandingSettingsCard } from "@/components/branding/BrandingSettingsCard";
+import { TeamMembersCard } from "@/components/settings/TeamMembersCard";
+import { TenantEmailSettingsCard } from "@/components/settings/TenantEmailSettingsCard";
 import {
   Building2,
   Key,
@@ -25,13 +27,14 @@ import {
   Settings2,
   Plug,
   SunMoon,
+  Users,
 } from "lucide-react";
 import { PlanUsageCard } from "@/components/billing/PlanUsageCard";
 import type { Tenant } from "@/types";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
 
-type SettingsTab = "general" | "branding" | "integrations" | "apiKeys";
+type SettingsTab = "general" | "team" | "branding" | "integrations" | "apiKeys";
 
 export default function SettingsPage() {
   const t = useT();
@@ -46,6 +49,7 @@ export default function SettingsPage() {
     const requested = searchParams.get("tab");
     if (
       requested === "general" ||
+      requested === "team" ||
       requested === "branding" ||
       requested === "integrations" ||
       requested === "apiKeys"
@@ -67,6 +71,7 @@ export default function SettingsPage() {
 
   const tabs: { id: SettingsTab; label: string; icon: ReactNode }[] = [
     { id: "general", label: t("settings.tabGeneral"), icon: <Settings2 className="w-4 h-4" /> },
+    { id: "team", label: t("settings.tabTeam"), icon: <Users className="w-4 h-4" /> },
     { id: "branding", label: t("settings.tabBranding"), icon: <Palette className="w-4 h-4" /> },
     {
       id: "integrations",
@@ -178,10 +183,14 @@ export default function SettingsPage() {
           </>
         )}
 
+        {tab === "team" && <TeamMembersCard />}
+
         {tab === "branding" && <BrandingSettingsCard />}
 
         {tab === "integrations" && (
-          <div className="bg-surface-elevated rounded-xl border border-default p-6">
+          <div className="space-y-6">
+            <TenantEmailSettingsCard />
+            <div className="bg-surface-elevated rounded-xl border border-default p-6">
             <div className="flex items-center gap-2 mb-4">
               <Webhook className="w-4 h-4 text-secondary" />
               <h2 className="font-semibold text-primary text-sm">{t("settings.webhookTitle")}</h2>
@@ -233,6 +242,7 @@ export default function SettingsPage() {
               </code>
               <p className="text-xs text-secondary">{t("settings.emailWebhookUrl")}</p>
             </div>
+          </div>
           </div>
         )}
 

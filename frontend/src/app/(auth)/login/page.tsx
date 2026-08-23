@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import {
   signIn,
   confirmSignIn,
-  getCurrentUser,
   resetPassword,
   confirmResetPassword,
 } from "aws-amplify/auth";
@@ -21,8 +20,10 @@ import {
   storePendingBillingPlan,
 } from "@/lib/post-login-path";
 import { signOutUser, ensureAuthSession } from "@/lib/auth-session";
+import { useAuthSession } from "@/hooks/useAuthSession";
 import { AuthDivider, GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 import { validatePortalSession, getBrowserPortalHost, isRestrictedPortalHost } from "@/lib/host-portal";
+import { getDemoCredentials, isDemoLoginEnabled } from "@/lib/demo-access";
 
 function isUserAlreadyAuthenticatedError(err: unknown): boolean {
   return (
@@ -64,6 +65,9 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [registerAllowed, setRegisterAllowed] = useState(true);
+  const [sessionRedirecting, setSessionRedirecting] = useState(false);
+  const demoLoginEnabled = isDemoLoginEnabled();
+  const { isAuthenticated, loading: authLoading } = useAuthSession();
 
   useEffect(() => {
     if (pendingPlan) storePendingBillingPlan(pendingPlan);
@@ -84,24 +88,28 @@ export default function LoginPage() {
   }, []);
 
   useEffect(() => {
+    if (authLoading || !isAuthenticated) return;
+
     let cancelled = false;
-    getCurrentUser()
-      .then(async () => {
-        if (cancelled) return;
-        const portalCheck = await validatePortalSession();
-        if (!portalCheck.ok) {
-          await signOutUser();
-          if (!cancelled) setError(t(portalCheck.messageKey));
-          return;
-        }
-        const target = redirectTo ?? (pendingPlan ? billingRedirectForPlan(pendingPlan) : null);
-        router.replace(await getPostLoginPath(target));
-      })
-      .catch(() => {});
+    setSessionRedirecting(true);
+
+    void (async () => {
+      const portalCheck = await validatePortalSession();
+      if (cancelled) return;
+      if (!portalCheck.ok) {
+        await signOutUser();
+        setSessionRedirecting(false);
+        setError(t(portalCheck.messageKey));
+        return;
+      }
+      const target = redirectTo ?? (pendingPlan ? billingRedirectForPlan(pendingPlan) : null);
+      router.replace(await getPostLoginPath(target));
+    })();
+
     return () => {
       cancelled = true;
     };
-  }, [router, redirectTo, pendingPlan, t]);
+  }, [authLoading, isAuthenticated, router, redirectTo, pendingPlan, t]);
 
   async function finishLogin() {
     const portalCheck = await validatePortalSession();
@@ -163,6 +171,43 @@ export default function LoginPage() {
       }
     } catch (err) {
       setError((err as Error).message ?? t("auth.signInError"));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleDemoLogin() {
+    const credentials = getDemoCredentials();
+    if (!credentials) return;
+
+    setError("");
+    setSuccessMessage("");
+    setLoading(true);
+
+    try {
+      let out: Awaited<ReturnType<typeof signIn>>;
+      try {
+        out = await signIn({
+          username: credentials.email,
+          password: credentials.password,
+        });
+      } catch (err) {
+        if (isUserAlreadyAuthenticatedError(err)) {
+          await signOutUser();
+          out = await signIn({
+            username: credentials.email,
+            password: credentials.password,
+          });
+        } else {
+          throw err;
+        }
+      }
+      const result = applySignInResult(out);
+      if (result === "unsupported") {
+        setError(t("auth.unsupportedStep"));
+      }
+    } catch (err) {
+      setError((err as Error).message ?? t("auth.demoLoginError"));
     } finally {
       setLoading(false);
     }
@@ -546,6 +591,10 @@ export default function LoginPage() {
     );
   }
 
+  if (authLoading || sessionRedirecting || isAuthenticated) {
+    return null;
+  }
+
   return (
     <div className="bg-surface-elevated rounded-2xl shadow-xl p-8 border border-subtle">
       <h2 className="text-xl font-semibold text-primary mb-6">{t("auth.signIn")}</h2>
@@ -622,6 +671,26 @@ export default function LoginPage() {
           {loading ? t("auth.signingIn") : t("auth.signIn")}
         </button>
       </form>
+
+      {demoLoginEnabled ? (
+        <div className="mt-6 space-y-3">
+          <AuthDivider label={t("auth.demoDivider")} />
+          <button
+            type="button"
+            onClick={() => void handleDemoLogin()}
+            disabled={loading}
+            className={cn(
+              "w-full py-2.5 px-4 rounded-lg text-sm font-medium border transition-colors",
+              loading
+                ? "border-default text-secondary cursor-not-allowed opacity-60"
+                : "border-accent text-accent hover:bg-accent/5"
+            )}
+          >
+            {loading ? t("auth.demoSigningIn") : t("auth.demoLogin")}
+          </button>
+          <p className="text-center text-xs text-secondary">{t("auth.demoLoginHint")}</p>
+        </div>
+      ) : null}
 
       <p className="text-center text-sm text-secondary mt-6">
         {registerAllowed ? (

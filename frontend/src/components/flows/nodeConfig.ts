@@ -18,7 +18,10 @@ import {
   Square,
   Contact,
   UserPlus,
+  Target,
   Bell,
+  Webhook,
+  Bot,
 } from "lucide-react";
 import type { FlowNodeData, FlowNodeType, LocalizedText } from "@/types";
 import { resolveLocalizedText } from "@/lib/localized-text";
@@ -70,7 +73,10 @@ export const FLOW_NODE_META: Record<FlowNodeType, FlowNodeMeta> = {
   await_order: { category: "apps", icon: ShoppingCart, hasInput: true, hasOutput: true },
   save_contact: { category: "crm", icon: Contact, hasInput: true, hasOutput: true },
   create_lead: { category: "crm", icon: UserPlus, hasInput: true, hasOutput: true },
+  create_opportunity: { category: "crm", icon: Target, hasInput: true, hasOutput: true },
   send_notification: { category: "crm", icon: Bell, hasInput: true, hasOutput: true },
+  assign_bot: { category: "integrations", icon: Bot, hasInput: true, hasOutput: true },
+  webhook: { category: "integrations", icon: Webhook, hasInput: true, hasOutput: true },
   end: { category: "end", icon: Square, hasInput: true, hasOutput: false },
 };
 
@@ -86,10 +92,10 @@ export const FLOW_NODE_CATEGORIES: FlowPaletteCategory[] = [
 ];
 
 export const FLOW_PALETTE_NODES: Record<FlowPaletteCategory, FlowNodeType[]> = {
-  crm: ["save_contact", "create_lead", "send_notification"],
+  crm: ["save_contact", "create_lead", "create_opportunity", "send_notification"],
   messaging: ["message", "template", "buttons"],
   logic: ["condition", "delay", "set_variable"],
-  integrations: ["meta_flow", "http_request", "handoff"],
+  integrations: ["assign_bot", "webhook", "meta_flow", "http_request", "handoff"],
   apps: [
     "book_appointment",
     "request_payment",
@@ -201,8 +207,21 @@ export function buildNodePreview(type: FlowNodeType, data: FlowNodeData, locale:
       return data.contactPhoneBinding ?? "";
     case "create_lead":
       return data.leadPhoneBinding ?? "";
-    case "send_notification":
-      return data.notificationRecipientBinding ?? data.notificationChannel ?? "";
+    case "create_opportunity":
+      return data.opportunityTitleBinding || data.opportunityPhoneBinding || "";
+    case "send_notification": {
+      const channel = data.notificationChannel ?? "whatsapp";
+      const channelLabel: Record<string, string> = { whatsapp: "WhatsApp", sms: "SMS", email: "Email" };
+      const recipient = data.notificationRecipientBinding ?? "";
+      if (data.notificationMessageType === "template") {
+        return truncate(`[${channelLabel[channel]}] ${data.notificationTemplateName ?? ""}`.trim());
+      }
+      return truncate(`[${channelLabel[channel]}] ${recipient}`.trim());
+    }
+    case "assign_bot":
+      return data.botId ?? "";
+    case "webhook":
+      return locale === "es" ? "Recibir JSON" : "Receive JSON";
   }
   return data.label ?? "";
 }

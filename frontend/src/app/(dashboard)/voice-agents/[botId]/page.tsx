@@ -1,9 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
+import {
+  Braces,
+  ChevronLeft,
+  LayoutDashboard,
+  PhoneCall,
+  Settings,
+  Webhook,
+  Wrench,
+  Workflow,
+} from "lucide-react";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { VoiceAgentCallsTable } from "@/components/voice-agents/VoiceAgentCallsTable";
@@ -16,6 +25,7 @@ import { VoiceAgentSetupChecklist } from "@/components/voice-agents/VoiceAgentSe
 import { VoiceAgentSummary } from "@/components/voice-agents/VoiceAgentSummary";
 import { VoiceAgentToolsPanel } from "@/components/voice-agents/VoiceAgentToolsPanel";
 import { VoiceAgentWebhookPanel } from "@/components/voice-agents/VoiceAgentWebhookPanel";
+import { VoiceAgentSideNav } from "@/components/voice-agents/VoiceAgentSideNav";
 import { useBot } from "@/hooks/useBots";
 import { useT } from "@/i18n/context";
 
@@ -37,6 +47,53 @@ export default function VoiceAgentDetailPage() {
     const value = searchParams.get("tab");
     return isTabId(value) ? value : "overview";
   }, [searchParams]);
+
+  const tabs = useMemo(
+    () =>
+      [
+        {
+          id: "overview" as const,
+          label: t("voiceAgents.tab.overview"),
+          icon: <LayoutDashboard className="h-4 w-4" />,
+        },
+        {
+          id: "flow" as const,
+          label: t("voiceAgents.tab.flow"),
+          icon: <Workflow className="h-4 w-4" />,
+        },
+        {
+          id: "config" as const,
+          label: t("voiceAgents.tab.config"),
+          icon: <Settings className="h-4 w-4" />,
+        },
+        {
+          id: "tools" as const,
+          label: t("voiceAgents.tab.tools"),
+          icon: <Wrench className="h-4 w-4" />,
+        },
+        {
+          id: "structuredOutputs" as const,
+          label: t("voiceAgents.tab.structuredOutputs"),
+          icon: <Braces className="h-4 w-4" />,
+        },
+        {
+          id: "calls" as const,
+          label: t("voiceAgents.tab.calls"),
+          icon: <PhoneCall className="h-4 w-4" />,
+        },
+        {
+          id: "webhooks" as const,
+          label: t("voiceAgents.tab.webhooks"),
+          icon: <Webhook className="h-4 w-4" />,
+        },
+        {
+          id: "test" as const,
+          label: t("voiceAgents.tab.test"),
+          icon: <PhoneCall className="h-4 w-4" />,
+        },
+      ] satisfies Array<{ id: TabId; label: string; icon: ReactNode }>,
+    [t]
+  );
 
   function setTab(next: TabId) {
     router.replace(`/voice-agents/${botId}?tab=${next}`);
@@ -77,31 +134,26 @@ export default function VoiceAgentDetailPage() {
 
       <VoiceAgentSetupChecklist botId={botId} />
 
-      <div className="flex flex-wrap gap-2 border-b border-default pb-2">
-        {TABS.map((item) => (
-          <button
-            key={item}
-            type="button"
-            onClick={() => setTab(item)}
-            className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
-              tab === item
-                ? "bg-accent text-white"
-                : "text-secondary hover:bg-surface-muted hover:text-primary"
-            }`}
-          >
-            {t(`voiceAgents.tab.${item}`)}
-          </button>
-        ))}
-      </div>
+      <div className="grid gap-6 lg:grid-cols-[16rem_minmax(0,1fr)]">
+        <VoiceAgentSideNav
+          tabs={tabs}
+          activeTab={tab}
+          onSelect={setTab}
+          sectionTitle={bot.name}
+          sectionSubtitle={t("voiceAgents.manageSubtitle")}
+        />
 
-      {tab === "overview" && <VoiceAgentSummary botId={botId} />}
-      {tab === "flow" && <VoiceAgentFlowPanel botId={botId} />}
-      {tab === "config" && <VoiceAgentSettings botId={botId} />}
-      {tab === "tools" && <VoiceAgentToolsPanel botId={botId} />}
-      {tab === "structuredOutputs" && <VoiceAgentStructuredOutputsPanel botId={botId} />}
-      {tab === "calls" && <VoiceAgentCallsTable botId={botId} />}
-      {tab === "webhooks" && <VoiceAgentWebhookPanel botId={botId} />}
-      {tab === "test" && <VoiceAgentDialpad botId={botId} />}
+        <div className="min-w-0">
+          {tab === "overview" && <VoiceAgentSummary botId={botId} />}
+          {tab === "flow" && <VoiceAgentFlowPanel botId={botId} />}
+          {tab === "config" && <VoiceAgentSettings botId={botId} />}
+          {tab === "tools" && <VoiceAgentToolsPanel botId={botId} />}
+          {tab === "structuredOutputs" && <VoiceAgentStructuredOutputsPanel botId={botId} />}
+          {tab === "calls" && <VoiceAgentCallsTable botId={botId} />}
+          {tab === "webhooks" && <VoiceAgentWebhookPanel botId={botId} />}
+          {tab === "test" && <VoiceAgentDialpad botId={botId} />}
+        </div>
+      </div>
     </DashboardPage>
   );
 }

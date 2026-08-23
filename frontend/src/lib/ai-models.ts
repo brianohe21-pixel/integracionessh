@@ -16,9 +16,10 @@ export const DEFAULT_MODEL_ID = "gpt-4.1-mini";
 
 const PLAN_RANK: Record<TenantPlan, number> = {
   free: 0,
-  pro: 1,
-  enterprise: 2,
-  reseller: 2,
+  starter: 1,
+  pro: 2,
+  enterprise: 3,
+  reseller: 3,
 };
 
 export const AI_MODELS: AiModelDefinition[] = [

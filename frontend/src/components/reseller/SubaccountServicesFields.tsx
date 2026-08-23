@@ -30,6 +30,7 @@ import {
   SendHorizonal,
   UserPlus,
   Users,
+  TrendingUp,
   Zap,
 } from "lucide-react";
 
@@ -41,6 +42,7 @@ const SERVICE_ICONS: Record<SubaccountServiceId, ComponentType<{ className?: str
   supervisor: LayoutGrid,
   contacts: BookUser,
   leads: UserPlus,
+  sales: TrendingUp,
   advisors: Users,
   automations: Zap,
   flows: GitBranch,

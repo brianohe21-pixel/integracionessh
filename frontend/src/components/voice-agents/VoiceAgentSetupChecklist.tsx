@@ -108,7 +108,7 @@ export function VoiceAgentSetupChecklist({ botId }: VoiceAgentSetupChecklistProp
           action={
             telephonyEnabled && hasNumber ? null : (
               <Link
-                href={`/voice-agents/${botId}?tab=config`}
+                href={`/voice-agents?tab=phoneNumbers&botId=${botId}`}
                 className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline"
               >
                 <PhoneCall className="h-3.5 w-3.5" />

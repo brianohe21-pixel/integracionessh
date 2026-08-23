@@ -12,9 +12,9 @@ const variants: Record<ButtonVariant, string> = {
   primary:
     "bg-accent text-white shadow-sm hover:bg-accent-hover hover:shadow-md active:scale-[0.98] disabled:opacity-50",
   secondary:
-    "border border-default bg-surface-elevated text-primary shadow-sm hover:bg-surface-muted hover:shadow-md active:scale-[0.98] disabled:opacity-50",
+    "border border-field-border bg-surface-elevated text-primary shadow-sm hover:bg-surface-muted hover:shadow-md active:scale-[0.98] disabled:opacity-50",
   outline:
-    "border border-default bg-transparent text-primary hover:bg-surface-muted active:scale-[0.98] disabled:opacity-50",
+    "border border-field-border bg-transparent text-primary hover:bg-surface-muted active:scale-[0.98] disabled:opacity-50",
   ghost:
     "text-secondary hover:bg-surface-muted hover:text-primary active:scale-[0.98] disabled:opacity-50",
   danger:

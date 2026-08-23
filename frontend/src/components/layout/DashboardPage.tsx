@@ -1,30 +1,21 @@
 import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
 
-const MAX_WIDTH_CLASS = {
-  none: "",
-  "3xl": "max-w-3xl",
-  "4xl": "max-w-4xl",
-  "5xl": "max-w-5xl",
-  "6xl": "max-w-6xl",
-} as const;
-
 type DashboardPageProps = {
   children: ReactNode;
-  maxWidth?: keyof typeof MAX_WIDTH_CLASS;
+  maxWidth?: "none" | "3xl" | "4xl" | "5xl" | "6xl";
   className?: string;
 };
 
 export function DashboardPage({
   children,
-  maxWidth = "none",
+  maxWidth: _maxWidth,
   className,
 }: DashboardPageProps) {
   return (
     <div
       className={cn(
-        "page-enter mx-auto w-full px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8",
-        MAX_WIDTH_CLASS[maxWidth],
+        "page-enter flex h-full min-h-full w-full max-w-none flex-1 flex-col px-5 py-5 lg:px-6 lg:py-6",
         className
       )}
     >

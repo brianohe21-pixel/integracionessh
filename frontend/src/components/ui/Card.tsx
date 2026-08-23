@@ -11,7 +11,7 @@ interface CardProps extends HTMLAttributes<HTMLDivElement> {
 const variants: Record<CardVariant, string> = {
   default: "content-card",
   elevated: "content-card shadow-[var(--shadow-md)]",
-  glass: "bg-surface-elevated/80 border border-default backdrop-blur-md rounded-xl shadow-[var(--shadow-card)]",
+  glass: "bg-surface-elevated/80 backdrop-blur-md rounded-xl shadow-[var(--shadow-card)]",
   interactive: "content-card content-card-interactive",
 };
 

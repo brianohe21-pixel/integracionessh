@@ -52,10 +52,11 @@ export default function DashboardPageRoute() {
   const controlLoading = usageLoading || marketingLoading || slaLoading;
 
   return (
-    <DashboardPage maxWidth="6xl" className="space-y-6">
+    <DashboardPage maxWidth="6xl" className="gap-6">
       <PageHeader
         title={t("dashboard.title")}
         subtitle={t("dashboard.subtitle")}
+        className="mb-0 sm:mb-0"
         actions={
           <Link
             href="/metrics"

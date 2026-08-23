@@ -2,12 +2,14 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import type { PaidBillingPlan } from "@/lib/plan-config";
 import type { BillingUsageResponse, TenantPlan } from "@/types";
 
 export type BillingProvider = "wompi" | "stripe";
 
 export interface BillingPlanPrice {
   amountCents: number;
+  listPriceUsd: number;
   currency: string;
   periodDays: number;
 }
@@ -34,6 +36,7 @@ export interface BillingProvidersResponse {
   stripe: boolean;
   default: BillingProvider | null;
   plans?: {
+    starter: BillingPlanPrice;
     pro: BillingPlanPrice;
     enterprise: BillingPlanPrice;
   };
@@ -94,7 +97,7 @@ export function useBillingTransaction(reference: string | null) {
 
 export function useCheckout() {
   return useMutation({
-    mutationFn: (input: { plan: "pro" | "enterprise"; provider?: BillingProvider }) =>
+    mutationFn: (input: { plan: PaidBillingPlan; provider?: BillingProvider }) =>
       api.post<BillingCheckoutResponse>("/billing/checkout", input),
   });
 }

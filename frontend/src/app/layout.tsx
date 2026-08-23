@@ -29,7 +29,7 @@ export default function RootLayout({
       <head>
         <ThemeInitScript />
       </head>
-      <body className="min-h-full bg-surface text-primary">
+      <body className="min-h-full bg-canvas text-primary">
         <Providers>{children}</Providers>
       </body>
     </html>
