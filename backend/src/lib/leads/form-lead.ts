@@ -98,7 +98,7 @@ export async function createLeadFromFormData(params: {
 
 export async function saveContactFromFormData(params: {
   tenantId: string;
-  botId: string;
+  botId?: string;
   phone: string;
   name?: string;
   email?: string;
@@ -111,7 +111,7 @@ export async function saveContactFromFormData(params: {
   if (existing) {
     await updateContact(params.tenantId, phone, {
       lastSeenAt: now,
-      lastBotId: params.botId,
+      ...(params.botId ? { lastBotId: params.botId } : {}),
       ...(params.name ? { displayName: params.name } : {}),
       ...(params.email ? { email: params.email } : {}),
       ...(params.tags?.length
@@ -124,7 +124,7 @@ export async function saveContactFromFormData(params: {
   await upsertFromConversation({
     tenantId: params.tenantId,
     phoneNumber: phone,
-    botId: params.botId,
+    ...(params.botId ? { botId: params.botId } : {}),
     source: "lead_capture",
     tags: params.tags ?? ["form"],
     ...(params.name ? { displayName: params.name } : {}),
