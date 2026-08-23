@@ -1,5 +1,6 @@
 import { normalizeEmailMessage } from "../email/inbound.js";
 import { sendEmail } from "../email/client.js";
+import { resolveTenantOutboundFrom } from "../email/tenant-email.service.js";
 import type { EmailInboundPayload } from "../../types/index.js";
 import type { ChannelAdapter, OutboundContext, OutboundResult } from "./types.js";
 
@@ -11,9 +12,12 @@ export const emailAdapter: ChannelAdapter = {
   },
 
   async sendText(ctx: OutboundContext, text: string): Promise<OutboundResult> {
-    const from = ctx.emailAddress ?? ctx.bot.emailAddress;
+    let from = ctx.emailAddress ?? ctx.bot?.emailAddress;
     if (!from) {
-      throw new Error("Email outbound requires emailAddress");
+      from = await resolveTenantOutboundFrom(ctx.tenantId) ?? undefined;
+    }
+    if (!from) {
+      throw new Error("Email outbound requires a configured sender address");
     }
     const subject = ctx.emailSubject ?? ctx.conversation.emailSubject ?? "Re: Your message";
     const threadId = ctx.emailThreadMessageId ?? ctx.conversation.emailThreadMessageId;

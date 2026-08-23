@@ -175,6 +175,10 @@ resource "aws_iam_role_policy" "lambda_permissions" {
         Action = [
           "ses:SendEmail",
           "ses:SendRawEmail",
+          "ses:VerifyDomainIdentity",
+          "ses:VerifyDomainDkim",
+          "ses:GetIdentityVerificationAttributes",
+          "ses:GetIdentityDkimAttributes",
         ]
         Resource = "*"
       },

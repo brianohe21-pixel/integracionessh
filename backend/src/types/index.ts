@@ -2296,6 +2296,7 @@ export interface FlowNodeData {
   notificationRecipientBinding?: string;
   notificationMessageBinding?: string;
   notificationMessageText?: LocalizedText;
+  notificationEmailSubject?: string;
   notificationTemplateName?: string;
   notificationTemplateLanguage?: string;
   botId?: string;
@@ -2395,6 +2396,26 @@ export interface FlowEventSubmission {
   status: FlowEventStatus;
   runId?: string;
   errorMessage?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type TenantEmailDomainStatus = "none" | "pending" | "verified" | "failed";
+
+export interface TenantEmailDnsRecord {
+  type: string;
+  name: string;
+  value: string;
+  purpose: "verification" | "dkim";
+}
+
+export interface TenantEmailSettings {
+  tenantId: string;
+  enabled: boolean;
+  domain?: string;
+  domainStatus?: TenantEmailDomainStatus;
+  fromEmail?: string;
+  fromName?: string;
   createdAt: string;
   updatedAt: string;
 }

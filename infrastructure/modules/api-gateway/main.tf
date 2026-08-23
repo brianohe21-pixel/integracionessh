@@ -1343,6 +1343,41 @@ locals {
       function_arn = var.tenants_function_arn
       protected    = true
     }
+    tenants_email_settings_get = {
+      route_key    = "GET /tenants/me/email-settings"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_email_settings_update = {
+      route_key    = "PUT /tenants/me/email-settings"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_email_settings_domain_register = {
+      route_key    = "PUT /tenants/me/email-settings/domain"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_email_settings_domain_verify = {
+      route_key    = "POST /tenants/me/email-settings/domain/verify"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_email_settings_domain_delete = {
+      route_key    = "DELETE /tenants/me/email-settings/domain"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
     bots_calling_settings_get = {
       route_key    = "GET /bots/{botId}/calling/settings"
       slug         = "calling"
