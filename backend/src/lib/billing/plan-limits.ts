@@ -229,7 +229,10 @@ function emptyNumericLimits(canCustomizeBranding: boolean): PlanLimits {
 export function getEffectivePlanLimits(tenant: Tenant): PlanLimits {
   const base = getPlanLimits(tenant.plan);
   if (tenant.plan === "reseller" && tenant.resellerConfig?.limitsOverride) {
-    return applyLimitsOverride(base, tenant.resellerConfig.limitsOverride);
+    return {
+      ...applyLimitsOverride(base, tenant.resellerConfig.limitsOverride),
+      canCustomizeBranding: true,
+    };
   }
 
   const isSubaccount = tenant.tenantKind === "subaccount" || Boolean(tenant.parentTenantId);

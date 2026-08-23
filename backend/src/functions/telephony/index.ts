@@ -120,6 +120,16 @@ function readTelephonyToolSecretName(
   return match?.[1];
 }
 
+function readTelephonyWebhookTenantId(
+  pathParameters: APIGatewayProxyEventV2["pathParameters"],
+  rawPath: string
+): string | undefined {
+  const fromParam = pathParameters?.credentialTenantId;
+  if (fromParam) return fromParam;
+  const match = rawPath.match(/^\/telephony\/webhook\/([^/]+)$/);
+  return match?.[1];
+}
+
 const VOICE_AGENT_WEBHOOK_EVENTS: IntegrationEvent[] = [
   "call.connect",
   "call.status",
@@ -423,7 +433,7 @@ export async function handler(
       return handleGatewayInvoke(event);
     }
 
-    const credentialTenantId = event.pathParameters?.credentialTenantId;
+    const credentialTenantId = readTelephonyWebhookTenantId(event.pathParameters, rawPath);
     const rawPath = event.rawPath ?? event.requestContext.http.path;
 
     if (rawPath.includes("/contact-center")) {

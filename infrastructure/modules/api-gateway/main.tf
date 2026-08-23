@@ -178,7 +178,7 @@ locals {
       methods      = ["GET", "POST"]
       invoke_arn   = var.telephony_invoke_arn
       function_arn = var.telephony_function_arn
-      protected    = true
+      protected    = false
     }
     mailrelay = {
       path         = "/email-marketing/{proxy+}"
@@ -1321,34 +1321,6 @@ locals {
       slug         = "calling"
       invoke_arn   = var.calling_invoke_arn
       function_arn = var.calling_function_arn
-      protected    = true
-    }
-    telephony_webhook = {
-      route_key    = "POST /telephony/webhook"
-      slug         = "telephony"
-      invoke_arn   = var.telephony_invoke_arn
-      function_arn = var.telephony_function_arn
-      protected    = false
-    }
-    telephony_webhook_tenant = {
-      route_key    = "POST /telephony/webhook/{credentialTenantId}"
-      slug         = "telephony"
-      invoke_arn   = var.telephony_invoke_arn
-      function_arn = var.telephony_function_arn
-      protected    = false
-    }
-    telephony_numbers = {
-      route_key    = "GET /telephony/numbers"
-      slug         = "telephony"
-      invoke_arn   = var.telephony_invoke_arn
-      function_arn = var.telephony_function_arn
-      protected    = true
-    }
-    telephony_voices = {
-      route_key    = "GET /telephony/voices"
-      slug         = "telephony"
-      invoke_arn   = var.telephony_invoke_arn
-      function_arn = var.telephony_function_arn
       protected    = true
     }
     api_keys_list = {
