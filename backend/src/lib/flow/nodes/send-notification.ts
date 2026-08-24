@@ -112,8 +112,7 @@ export async function executeSendNotificationNode(
     }
   }
 
-  const participantId =
-    channel === "email" ? recipient.trim().toLowerCase() : normalizePhone(recipient);
+  const participantId = normalizePhone(recipient);
   const conversation = buildSyntheticConversation({
     tenantId: ctx.tenantId,
     botId: ctx.botId,
