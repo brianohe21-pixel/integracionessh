@@ -1,5 +1,6 @@
 import { buildOutboundContext, sendChannelText } from "../../channels/router.js";
 import { sendEmail } from "../../email/client.js";
+import { sanitizeEmailHtml, stripHtmlToText } from "../../email/sanitize.js";
 import { sendTemplateMessage } from "../../whatsapp/client.js";
 import type { FlowNode, FlowRun } from "../../../types/index.js";
 import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
@@ -50,40 +51,54 @@ export async function executeSendNotificationNode(
   );
   if (!recipient) throw new Error("notificationRecipientBinding is required");
 
-  const message =
-    resolveBindingValue(node.data.notificationMessageBinding, bindingContext) ||
-    resolveLocalizedText(
-      node.data.notificationMessageText,
-      getBotLocale({}, ctx.bot)
-    );
-  if (!message) throw new Error("Notification message is required");
+  const locale = getBotLocale({}, ctx.bot);
+  const messageTemplate =
+    resolveLocalizedText(node.data.notificationMessageText, locale) ||
+    node.data.notificationMessageBinding?.trim() ||
+    "";
+  const bindingMessage = resolveBindingValue(messageTemplate, bindingContext);
 
   if (channel === "email") {
-    const tenantFrom = await resolveTenantOutboundFrom(ctx.tenantId);
-    if (tenantFrom) {
-      const subject =
-        node.data.notificationEmailSubject?.trim() || "Notification";
-      await sendEmail({
-        to: [recipient.trim().toLowerCase()],
-        subject,
-        text: message,
-        from: tenantFrom,
-      });
-      return {
-        nextNodeId: getNextNodeId(ctx.flow, node.id),
-        halt: false,
-        wait: false,
-        output: recipient,
-      };
+    const htmlTemplate =
+      resolveLocalizedText(node.data.notificationMessageHtml, locale) ||
+      node.data.notificationMessageBinding?.trim() ||
+      "";
+    const htmlRaw = resolveBindingValue(htmlTemplate, bindingContext) || htmlTemplate;
+
+    let html: string | undefined;
+    let text = "";
+
+    if (htmlRaw.trim()) {
+      html = sanitizeEmailHtml(htmlRaw);
+      text = stripHtmlToText(html);
     }
+    if (!text && messageTemplate) {
+      text = bindingMessage || messageTemplate.trim();
+    }
+    if (!text) throw new Error("Notification message is required");
+
+    const tenantFrom = await resolveTenantOutboundFrom(ctx.tenantId);
+    const subject = node.data.notificationEmailSubject?.trim() || "Notification";
+    await sendEmail({
+      to: [recipient.trim().toLowerCase()],
+      subject,
+      text,
+      ...(html ? { html } : {}),
+      ...(tenantFrom ? { from: tenantFrom } : {}),
+    });
+    return {
+      nextNodeId: getNextNodeId(ctx.flow, node.id),
+      halt: false,
+      wait: false,
+      output: recipient,
+    };
   }
 
+  const message = bindingMessage || messageTemplate;
+  if (!message) throw new Error("Notification message is required");
+
   if (!ctx.botId || !ctx.bot) {
-    throw new Error(
-      channel === "email"
-        ? "Configure tenant email settings with a verified domain, or add an assign bot node"
-        : "Add an assign bot node before sending notifications"
-    );
+    throw new Error("Add an assign bot node before sending notifications");
   }
 
   if (channel === "whatsapp" || channel === "sms") {

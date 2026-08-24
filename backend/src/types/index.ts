@@ -2469,6 +2469,7 @@ export interface FlowNodeData {
   notificationRecipientBinding?: string;
   notificationMessageBinding?: string;
   notificationMessageText?: LocalizedText;
+  notificationMessageHtml?: LocalizedText;
   notificationEmailSubject?: string;
   notificationTemplateName?: string;
   notificationTemplateLanguage?: string;

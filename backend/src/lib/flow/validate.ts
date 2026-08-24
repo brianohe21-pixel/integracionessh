@@ -1,4 +1,4 @@
-import type { FlowDefinition, FlowNode } from "../../types/index.js";
+import type { FlowDefinition, FlowNode, LocalizedText } from "../../types/index.js";
 import { getFlowSecretNamesSet } from "./flow-secrets.repository.js";
 import { isVoiceAiFlow } from "./voice-flow-compiler.js";
 import { isWebhookReceivingFlow } from "./webhook-flow.js";
@@ -21,6 +21,12 @@ const CONVERSATION_ONLY_NODES = [
 ] as const;
 
 const BRANCHING_NODES = ["condition", "buttons"] as const;
+
+function hasLocalizedText(value: LocalizedText | undefined): boolean {
+  if (!value) return false;
+  if (typeof value === "string") return value.trim().length > 0;
+  return Boolean(value.es?.trim() || value.en?.trim());
+}
 
 function isFormFlow(flow: FlowDefinition): boolean {
   return isWebhookReceivingFlow(flow.nodes);
@@ -311,7 +317,11 @@ export function validateFlowDefinition(flow: FlowDefinition): FlowValidationIssu
           nodeId: node.id,
         });
       }
-      if (!node.data.notificationMessageBinding && !node.data.notificationMessageText) {
+      if (
+        !node.data.notificationMessageBinding?.trim() &&
+        !hasLocalizedText(node.data.notificationMessageText) &&
+        !(node.data.notificationChannel === "email" && hasLocalizedText(node.data.notificationMessageHtml))
+      ) {
         issues.push({
           code: "missing_message",
           message: "Notification requires message binding or localized text",
