@@ -98,7 +98,9 @@ export async function executeSendNotificationNode(
   if (!message) throw new Error("Notification message is required");
 
   if (!ctx.botId || !ctx.bot) {
-    throw new Error("Add an assign bot node before sending notifications");
+    throw new Error(
+      "WhatsApp and SMS notifications require an assign bot node with an agent configured"
+    );
   }
 
   if (channel === "whatsapp" || channel === "sms") {

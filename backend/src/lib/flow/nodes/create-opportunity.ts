@@ -20,7 +20,6 @@ export async function executeCreateOpportunityNode(
 
   const phone = normalizePhone(resolveBindingValue(node.data.opportunityPhoneBinding, bindingContext));
   if (!phone) throw new Error("Valid phone binding is required");
-  if (!ctx.botId) throw new Error("Add an assign bot node before creating opportunities");
 
   const name = resolveBindingValue(node.data.opportunityNameBinding, bindingContext) || undefined;
   const email = resolveBindingValue(node.data.opportunityEmailBinding, bindingContext) || undefined;
@@ -30,7 +29,7 @@ export async function executeCreateOpportunityNode(
 
   const opportunity = await createOpportunityFromFormData({
     tenantId: ctx.tenantId,
-    botId: ctx.botId,
+    ...(ctx.botId ? { botId: ctx.botId } : {}),
     title,
     phone,
     ...(amount ? { amount } : {}),
