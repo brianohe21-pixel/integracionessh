@@ -799,8 +799,9 @@ locals {
       timeout     = 120
       memory      = 256
       environment = {
-        TABLE_NAME  = var.dynamodb_table_name
-        ENVIRONMENT = var.environment
+        TABLE_NAME     = var.dynamodb_table_name
+        ENVIRONMENT    = var.environment
+        SES_FROM_EMAIL = var.ses_from_email
       }
     }
     process_flow_event = {
@@ -815,6 +816,7 @@ locals {
         SCHEDULER_ROLE_ARN       = var.scheduler_role_arn
         FLOWS_FUNCTION_ARN       = local.flows_function_arn
         ENVIRONMENT              = var.environment
+        SES_FROM_EMAIL           = var.ses_from_email
       }
     }
     process_call = {

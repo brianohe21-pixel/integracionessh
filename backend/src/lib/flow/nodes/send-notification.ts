@@ -79,13 +79,18 @@ export async function executeSendNotificationNode(
 
     const tenantFrom = await resolveTenantOutboundFrom(ctx.tenantId);
     const subject = node.data.notificationEmailSubject?.trim() || "Notification";
-    await sendEmail({
+    const emailResult = await sendEmail({
       to: [recipient.trim().toLowerCase()],
       subject,
       text,
       ...(html ? { html } : {}),
       ...(tenantFrom ? { from: tenantFrom } : {}),
     });
+    if (emailResult.messageId.startsWith("skipped-")) {
+      throw new Error(
+        "Email could not be sent: configure SES_FROM_EMAIL or tenant email settings with a verified domain"
+      );
+    }
     return {
       nextNodeId: getNextNodeId(ctx.flow, node.id),
       halt: false,
