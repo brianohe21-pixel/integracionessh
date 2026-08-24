@@ -9,6 +9,15 @@ export interface FlowValidationIssue {
   nodeId?: string;
 }
 
+const DRAFT_SAVE_BLOCKING_CODES = new Set([
+  "trigger_count",
+  "unsupported_node",
+  "unsupported_voice_node",
+  "invalid_voice_trigger",
+  "invalid_entry",
+  "duplicate_voice_tool_name",
+]);
+
 const CONVERSATION_ONLY_NODES = [
   "buttons",
   "meta_flow",
@@ -370,4 +379,8 @@ export function assertValidFlowDefinition(flow: FlowDefinition): void {
   if (issues.length > 0) {
     throw new Error(issues.map((issue) => issue.message).join("; "));
   }
+}
+
+export function issuesBlockingDraftSave(issues: FlowValidationIssue[]): FlowValidationIssue[] {
+  return issues.filter((issue) => DRAFT_SAVE_BLOCKING_CODES.has(issue.code));
 }

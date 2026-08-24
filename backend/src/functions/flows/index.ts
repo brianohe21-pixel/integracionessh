@@ -32,7 +32,7 @@ import {
   generateFlowHookSecret,
   hashFlowHookSecret,
 } from "../../lib/flow/hook-credentials.js";
-import { validateFlowDefinition, validateFlowDefinitionWithSecrets } from "../../lib/flow/validate.js";
+import { validateFlowDefinition, validateFlowDefinitionWithSecrets, issuesBlockingDraftSave } from "../../lib/flow/validate.js";
 import {
   deleteFlowSecret,
   getFlowSecret,
@@ -430,8 +430,9 @@ export async function handler(
         (node) => node.type === "trigger" && node.data.triggerType === "web_form_submitted"
       );
       const isVoiceFlow = isVoiceAiFlow(candidate);
-      if ((isFormFlow || isVoiceFlow) && issues.length > 0) {
-        return badRequest(issues.map((issue) => issue.message).join("; "));
+      const draftBlockingIssues = issuesBlockingDraftSave(issues);
+      if ((isFormFlow || isVoiceFlow) && draftBlockingIssues.length > 0) {
+        return badRequest(draftBlockingIssues.map((issue) => issue.message).join("; "));
       }
 
       const updated = await updateFlowDefinition(auth.tenantId, flowId, candidate);
