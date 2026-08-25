@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowUp,
@@ -259,7 +260,14 @@ export function WebchatTestChat({
                 style={{ backgroundColor: primaryColor }}
               >
                 {branding?.logoUrl ? (
-                  <img src={branding.logoUrl} alt="" className="h-7 w-7 rounded-md object-cover" />
+                  <Image
+                    src={branding.logoUrl}
+                    alt=""
+                    width={28}
+                    height={28}
+                    unoptimized
+                    className="h-7 w-7 rounded-md object-cover"
+                  />
                 ) : (
                   <div className="flex h-7 w-7 items-center justify-center rounded-md bg-white/15 text-xs font-bold">
                     {brandName.charAt(0).toUpperCase()}

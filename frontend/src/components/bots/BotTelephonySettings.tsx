@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PhoneCall } from "lucide-react";
 import { api } from "@/lib/api";
@@ -132,7 +132,7 @@ export function BotTelephonySettings({ botId }: BotTelephonySettingsProps) {
     },
   });
 
-  const numbers = numbersData?.numbers ?? [];
+  const numbers = useMemo(() => numbersData?.numbers ?? [], [numbersData?.numbers]);
   const enabled = Boolean(data?.telephonyEnabled);
   const hasPhoneNumber = phoneNumber.trim().length > 0;
   const systemPromptTooLong = systemPrompt.length > TELEPHONY_SYSTEM_PROMPT_MAX_LENGTH;

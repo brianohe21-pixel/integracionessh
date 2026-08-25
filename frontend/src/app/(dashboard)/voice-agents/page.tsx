@@ -69,7 +69,7 @@ export default function VoiceAgentsPage() {
   const searchParams = useSearchParams();
   const { data: botsData, isLoading } = useBots();
   const [search, setSearch] = useState("");
-  const bots = botsData ?? [];
+  const bots = useMemo(() => botsData ?? [], [botsData]);
 
   const tab = useMemo<TabId>(() => {
     const value = searchParams.get("tab");

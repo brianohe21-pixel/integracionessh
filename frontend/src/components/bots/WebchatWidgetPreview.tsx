@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { Monitor } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { DEFAULT_PRIMARY_COLOR } from "@/lib/brand-colors";
@@ -70,9 +71,12 @@ export function WebchatWidgetPreview({
                   style={{ backgroundColor: primaryColor }}
                 >
                   {logoUrl ? (
-                    <img
+                    <Image
                       src={logoUrl}
                       alt=""
+                      width={24}
+                      height={24}
+                      unoptimized
                       className="h-6 w-6 rounded-md object-cover"
                     />
                   ) : null}

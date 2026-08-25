@@ -84,7 +84,7 @@ export function MailrelayDashboard() {
         />
 
         <div className="min-w-0 space-y-4">
-          {tab === "connection" ? <MailrelayConnectionTab connected={connected} /> : null}
+          {tab === "connection" ? <MailrelayConnectionTab /> : null}
           {tab === "audience" ? <MailrelayAudienceTab connected={connected} /> : null}
           {tab === "campaigns" ? <MailrelayCampaignsTab connected={connected} /> : null}
           {tab === "analytics" ? <MailrelayAnalyticsTab connected={connected} /> : null}

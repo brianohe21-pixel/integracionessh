@@ -9,7 +9,6 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { StatCard } from "@/components/ui/StatCard";
-import { useFormatters } from "@/hooks/useFormatters";
 import { formatCallDuration } from "@/hooks/useCallingMetrics";
 import { useTelephonyCalls } from "@/hooks/useTelephony";
 import { useLocale, useT } from "@/i18n/context";
@@ -57,7 +56,7 @@ export function VoiceAgentSummary({ botId }: VoiceAgentSummaryProps) {
   const locale = useLocale();
   const intlLocale = locale === "en" ? "en-US" : "es-ES";
   const { data, isLoading } = useTelephonyCalls(botId);
-  const calls = data?.items ?? [];
+  const calls = useMemo(() => data?.items ?? [], [data?.items]);
 
   const statusLabels = useMemo(
     () =>

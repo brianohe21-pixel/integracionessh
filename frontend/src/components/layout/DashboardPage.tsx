@@ -1,6 +1,14 @@
 import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
 
+const maxWidthClasses: Record<NonNullable<DashboardPageProps["maxWidth"]>, string> = {
+  none: "max-w-none",
+  "3xl": "max-w-3xl",
+  "4xl": "max-w-4xl",
+  "5xl": "max-w-5xl",
+  "6xl": "max-w-6xl",
+};
+
 type DashboardPageProps = {
   children: ReactNode;
   maxWidth?: "none" | "3xl" | "4xl" | "5xl" | "6xl";
@@ -9,13 +17,14 @@ type DashboardPageProps = {
 
 export function DashboardPage({
   children,
-  maxWidth: _maxWidth,
+  maxWidth = "none",
   className,
 }: DashboardPageProps) {
   return (
     <div
       className={cn(
-        "page-enter flex h-full min-h-full w-full max-w-none flex-1 flex-col px-5 py-5 lg:px-6 lg:py-6",
+        "page-enter flex h-full min-h-full w-full flex-1 flex-col px-5 py-5 lg:px-6 lg:py-6",
+        maxWidthClasses[maxWidth],
         className
       )}
     >

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useT } from "@/i18n/context";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
-import { Input, Select, Textarea } from "@/components/ui/Input";
+import { Select, Textarea } from "@/components/ui/Input";
 import { X } from "lucide-react";
 import type { OpportunityLossReason } from "@/types";
 

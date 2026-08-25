@@ -4,6 +4,7 @@ import type React from "react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { signOutUser } from "@/lib/auth-session";
 import { cn } from "@/lib/utils";
@@ -892,7 +893,15 @@ function SidebarBrand({
             title={displayName}
           >
             {logoUrl ? (
-              <img src={logoUrl} alt="" className="max-h-full max-w-full object-contain" key={logoUrl} />
+              <Image
+                src={logoUrl}
+                alt=""
+                width={40}
+                height={40}
+                unoptimized
+                className="max-h-full max-w-full object-contain"
+                key={logoUrl}
+              />
             ) : (
               <BotMessageSquare className="h-5 w-5 text-[var(--sidebar-icon-active)]" />
             )}
@@ -930,7 +939,15 @@ function SidebarBrand({
           )}
         >
           {logoUrl ? (
-            <img src={logoUrl} alt="" className="max-h-full max-w-full object-contain" key={logoUrl} />
+            <Image
+              src={logoUrl}
+              alt=""
+              width={40}
+              height={40}
+              unoptimized
+              className="max-h-full max-w-full object-contain"
+              key={logoUrl}
+            />
           ) : (
             <BotMessageSquare className="h-5 w-5 text-[var(--sidebar-icon-active)]" />
           )}

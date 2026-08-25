@@ -86,6 +86,20 @@ export function MailrelayCampaignsTab({ connected }: { connected: boolean }) {
     setSuccess("");
   }, [draft, testEmails]);
 
+  const campaigns = useMemo(
+    () => campaignsQuery.data?.campaigns ?? [],
+    [campaignsQuery.data?.campaigns]
+  );
+  const filteredCampaigns = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return campaigns;
+    return campaigns.filter(
+      (campaign) =>
+        campaign.name.toLowerCase().includes(query) ||
+        campaign.subject.toLowerCase().includes(query)
+    );
+  }, [campaigns, search]);
+
   if (!connected) {
     return (
       <EmptyState
@@ -96,17 +110,7 @@ export function MailrelayCampaignsTab({ connected }: { connected: boolean }) {
     );
   }
 
-  const campaigns = campaignsQuery.data?.campaigns ?? [];
   const pagination = campaignsQuery.data?.pagination;
-  const filteredCampaigns = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return campaigns;
-    return campaigns.filter(
-      (campaign) =>
-        campaign.name.toLowerCase().includes(query) ||
-        campaign.subject.toLowerCase().includes(query)
-    );
-  }, [campaigns, search]);
   const groups = groupsQuery.data?.groups ?? [];
   const segments = segmentsQuery.data?.segments ?? [];
   const folders = foldersQuery.data?.folders ?? [];

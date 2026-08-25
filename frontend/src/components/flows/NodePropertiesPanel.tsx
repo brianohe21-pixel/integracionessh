@@ -85,6 +85,11 @@ export function NodePropertiesPanel({
   const { data: bots } = useBots();
   const [metaFlowsModalOpen, setMetaFlowsModalOpen] = useState(false);
 
+  const isEmailNotification =
+    selected?.type === "send_notification" &&
+    (selected.data.notificationChannel ?? "whatsapp") === "email";
+  const { data: tenantEmailSettings } = useTenantEmailSettings(isEmailNotification);
+
   if (!selected) {
     return (
       <div className="pt-2">
@@ -97,9 +102,6 @@ export function NodePropertiesPanel({
   const type = selected.type as FlowNodeType;
   const d = selected.data;
   const sampleFields = extractSampleFields(samplePayload);
-  const isEmailNotification =
-    type === "send_notification" && (d.notificationChannel ?? "whatsapp") === "email";
-  const { data: tenantEmailSettings } = useTenantEmailSettings(isEmailNotification);
 
   const localizedField = (
     value: LocalizedText | undefined,

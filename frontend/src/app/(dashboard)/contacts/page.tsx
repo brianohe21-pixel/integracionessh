@@ -1,8 +1,19 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Plus, Upload, Download, BookUser } from "lucide-react";
+import {
+  Plus,
+  Upload,
+  Download,
+  BookUser,
+  ChevronRight,
+  ShieldCheck,
+  UserCheck,
+  UserX,
+  Ban,
+  FilterX,
+} from "lucide-react";
 import {
   useContacts,
   useCreateContact,
@@ -11,15 +22,24 @@ import {
   useDeleteContact,
   downloadContactsExport,
 } from "@/hooks/useContacts";
+import { ContactDetailPanel } from "@/components/contacts/ContactDetailPanel";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Alert } from "@/components/ui/Alert";
+import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { SearchInput } from "@/components/ui/SearchInput";
+import { Input, Select } from "@/components/ui/Input";
+import { StatCard } from "@/components/ui/StatCard";
+import { SkeletonTable } from "@/components/ui/Skeleton";
+import { DataTable, DataTableBody, DataTableCell, DataTableHead, DataTableRow } from "@/components/ui/DataTable";
+import { WhatsAppRiskBadge } from "@/components/whatsapp/WhatsAppRiskBadge";
 import { useT } from "@/i18n/context";
 import type { Contact, MarketingConsent } from "@/types";
 import { decodeCsvBytes } from "@/lib/csv";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { TableContainer } from "@/components/ui/TableContainer";
-import { WhatsAppRiskBadge } from "@/components/whatsapp/WhatsAppRiskBadge";
 import { useWhatsAppRisk, resolveWhatsAppRisk } from "@/hooks/useWhatsAppRisk";
 
 function consentVariant(c: MarketingConsent): "success" | "warning" | "danger" | "default" {
@@ -34,6 +54,15 @@ function csatVariant(score: number): "success" | "warning" | "danger" {
   return "danger";
 }
 
+function contactInitials(name?: string, phone?: string): string {
+  if (name?.trim()) {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return name.slice(0, 2).toUpperCase();
+  }
+  return phone?.slice(-2) ?? "?";
+}
+
 export default function ContactsPage() {
   const t = useT();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -44,10 +73,12 @@ export default function ContactsPage() {
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
   const [tagFilter, setTagFilter] = useState("");
-  const [editingPhone, setEditingPhone] = useState<string | null>(null);
-  const [editTags, setEditTags] = useState("");
-
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Contact | null>(null);
+  const [showCompliance, setShowCompliance] = useState(true);
   const [error, setError] = useState("");
+
+  const hasFilters = consentFilter || suppressedFilter || tagFilter || q;
 
   const { data, isLoading } = useContacts({
     tag: tagFilter || undefined,
@@ -62,7 +93,18 @@ export default function ContactsPage() {
   const importContacts = useImportContacts();
   const deleteContact = useDeleteContact();
 
-  const contacts = data?.items ?? [];
+  const contacts = useMemo(() => data?.items ?? [], [data?.items]);
+
+  const activeContact = selectedContact
+    ? contacts.find((c) => c.phoneNumber === selectedContact.phoneNumber) ?? selectedContact
+    : null;
+
+  const metrics = useMemo(() => {
+    const optIn = contacts.filter((c) => c.marketingConsent === "opt_in").length;
+    const optOut = contacts.filter((c) => c.marketingConsent === "opt_out").length;
+    const suppressed = contacts.filter((c) => c.suppressed).length;
+    return { total: contacts.length, optIn, optOut, suppressed };
+  }, [contacts]);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -101,12 +143,34 @@ export default function ContactsPage() {
     } catch (err) {
       setError((err as Error).message);
     }
+    if (fileRef.current) fileRef.current.value = "";
   }
 
   async function bulkConsent(phones: string[], consent: MarketingConsent) {
     await Promise.all(
       phones.map((p) => updateContact.mutateAsync({ phone: p, marketingConsent: consent }))
     );
+  }
+
+  function clearFilters() {
+    setQ("");
+    setConsentFilter("");
+    setSuppressedFilter("");
+    setTagFilter("");
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setError("");
+    try {
+      await deleteContact.mutateAsync(deleteTarget.phoneNumber);
+      if (selectedContact?.phoneNumber === deleteTarget.phoneNumber) {
+        setSelectedContact(null);
+      }
+      setDeleteTarget(null);
+    } catch (err) {
+      setError((err as Error).message);
+    }
   }
 
   return (
@@ -116,256 +180,321 @@ export default function ContactsPage() {
         subtitle={t("contacts.subtitle")}
         actions={
           <>
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            className="flex items-center gap-2 px-3 py-2 text-sm border border-default rounded-lg hover:bg-surface"
-          >
-            <Upload className="w-4 h-4" />
-            {t("contacts.import")}
-          </button>
-          <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleImport} />
-          <button
-            type="button"
-            onClick={() => downloadContactsExport("opt_out")}
-            className="flex items-center gap-2 px-3 py-2 text-sm border border-default rounded-lg hover:bg-surface"
-          >
-            <Download className="w-4 h-4" />
-            {t("contacts.export")}
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-hover"
-          >
-            <Plus className="w-4 h-4" />
-            {t("contacts.new")}
-          </button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => fileRef.current?.click()}
+            >
+              <Upload className="h-4 w-4" />
+              {t("contacts.import")}
+            </Button>
+            <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleImport} />
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => downloadContactsExport("opt_out")}
+            >
+              <Download className="h-4 w-4" />
+              {t("contacts.export")}
+            </Button>
+            <Button type="button" size="sm" onClick={() => setShowCreate(true)}>
+              <Plus className="h-4 w-4" />
+              {t("contacts.new")}
+            </Button>
           </>
         }
       />
 
-      <div className="mb-4 p-4 bg-accent-muted border border-accent/20 rounded-xl text-sm text-accent">
-        {t("contacts.complianceBanner")}{" "}
-        <Link href="/legal/privacy" className="underline font-medium">
-          {t("contacts.privacyLink")}
-        </Link>
-      </div>
+      {showCompliance && (
+        <Alert
+          variant="info"
+          className="mb-6"
+          onDismiss={() => setShowCompliance(false)}
+        >
+          {t("contacts.complianceBanner")}{" "}
+          <Link href="/legal/privacy" className="font-medium underline">
+            {t("contacts.privacyLink")}
+          </Link>
+        </Alert>
+      )}
 
-      <div className="flex flex-wrap gap-3 mb-4">
-        <input
-          type="search"
+      {!isLoading && contacts.length > 0 && (
+        <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+          <StatCard
+            label={t("contacts.metricsTotal")}
+            value={String(metrics.total)}
+            icon={<BookUser className="h-5 w-5 text-accent" />}
+          />
+          <StatCard
+            label={t("contacts.metricsOptIn")}
+            value={String(metrics.optIn)}
+            icon={<UserCheck className="h-5 w-5 text-success" />}
+          />
+          <StatCard
+            label={t("contacts.metricsOptOut")}
+            value={String(metrics.optOut)}
+            icon={<UserX className="h-5 w-5 text-danger" />}
+          />
+          <StatCard
+            label={t("contacts.metricsSuppressed")}
+            value={String(metrics.suppressed)}
+            icon={<Ban className="h-5 w-5 text-warning" />}
+          />
+        </div>
+      )}
+
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <SearchInput
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder={t("contacts.searchPlaceholder")}
-          className="px-3 py-2 border border-default rounded-lg text-sm flex-1 min-w-[200px]"
+          onClear={() => setQ("")}
+          className="sm:min-w-[240px] sm:flex-1"
         />
-        <select
+        <Select
           value={consentFilter}
           onChange={(e) => setConsentFilter(e.target.value as "" | MarketingConsent)}
-          className="px-3 py-2 border border-default rounded-lg text-sm bg-surface-elevated"
+          className="sm:w-auto sm:min-w-[160px]"
         >
           <option value="">{t("contacts.filterAllConsent")}</option>
           <option value="opt_in">{t("contacts.consentOptIn")}</option>
           <option value="opt_out">{t("contacts.consentOptOut")}</option>
           <option value="unknown">{t("contacts.consentUnknown")}</option>
-        </select>
-        <select
+        </Select>
+        <Select
           value={suppressedFilter}
           onChange={(e) => setSuppressedFilter(e.target.value as "" | "true" | "false")}
-          className="px-3 py-2 border border-default rounded-lg text-sm bg-surface-elevated"
+          className="sm:w-auto sm:min-w-[140px]"
         >
           <option value="">{t("contacts.filterAllSuppressed")}</option>
           <option value="false">{t("contacts.notSuppressed")}</option>
           <option value="true">{t("contacts.suppressed")}</option>
-        </select>
-        <select
+        </Select>
+        <Select
           value={tagFilter}
           onChange={(e) => setTagFilter(e.target.value)}
-          className="px-3 py-2 border border-default rounded-lg text-sm bg-surface-elevated"
+          className="sm:w-auto sm:min-w-[160px]"
         >
           <option value="">{t("contacts.colTags")}</option>
           <option value="lead">{t("contacts.filterTagLead")}</option>
           <option value="converted">{t("contacts.filterTagConverted")}</option>
-        </select>
+        </Select>
+        {hasFilters && (
+          <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
+            <FilterX className="h-4 w-4" />
+            {t("common.clearFilters")}
+          </Button>
+        )}
       </div>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+        <Alert variant="danger" className="mb-4" onDismiss={() => setError("")}>
           {error}
-        </div>
+        </Alert>
       )}
 
-      {showCreate && (
-        <form onSubmit={handleCreate} className="mb-6 p-4 bg-surface-elevated border border-default rounded-xl space-y-3">
-          <input
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder={t("contacts.phonePlaceholder")}
-            required
-            className="w-full px-3 py-2 border border-default rounded-lg text-sm"
-          />
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder={t("contacts.namePlaceholder")}
-            className="w-full px-3 py-2 border border-default rounded-lg text-sm"
-          />
-          <div className="flex gap-2">
-            <button type="submit" className="px-4 py-2 bg-accent text-white text-sm rounded-lg">
-              {t("common.save")}
-            </button>
-            <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-secondary">
-              {t("common.cancel")}
-            </button>
-          </div>
-        </form>
-      )}
-
-      {isLoading && <p className="text-sm text-secondary">{t("common.loading")}</p>}
+      {isLoading && <SkeletonTable rows={6} cols={5} className="mb-4" />}
 
       {!isLoading && contacts.length === 0 && (
         <EmptyState
           icon={<BookUser className="w-6 h-6" />}
-          title={t("contacts.emptyTitle")}
-          description={t("contacts.emptyDescription")}
+          title={hasFilters ? t("contacts.noResultsTitle") : t("contacts.emptyTitle")}
+          description={hasFilters ? t("contacts.noResultsDescription") : t("contacts.emptyDescription")}
+          action={
+            hasFilters ? (
+              <Button type="button" variant="secondary" size="sm" onClick={clearFilters}>
+                {t("common.clearFilters")}
+              </Button>
+            ) : (
+              <Button type="button" size="sm" onClick={() => setShowCreate(true)}>
+                <Plus className="h-4 w-4" />
+                {t("contacts.new")}
+              </Button>
+            )
+          }
         />
       )}
 
-      {contacts.length > 0 && (
-        <TableContainer className="rounded-xl border border-default bg-surface-elevated">
-          <table className="w-full min-w-[640px] text-sm">
-            <thead>
-              <tr className="bg-surface text-left text-xs text-secondary uppercase">
-                <th className="px-4 py-3">{t("common.phone")}</th>
-                <th className="px-4 py-3">{t("contacts.colName")}</th>
-                <th className="px-4 py-3">{t("contacts.colCsat")}</th>
-                <th className="px-4 py-3">{t("contacts.colEmail")}</th>
-                <th className="px-4 py-3">{t("contacts.colConsent")}</th>
-                <th className="px-4 py-3">{t("contacts.colWhatsAppRisk")}</th>
-                <th className="px-4 py-3">{t("contacts.colTags")}</th>
-                <th className="px-4 py-3 text-right">{t("contacts.colActions")}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {contacts.map((c: Contact) => (
-                <tr key={c.phoneNumber} className="hover:bg-surface/50">
-                  <td className="px-4 py-3 font-mono text-primary">{c.phoneNumber}</td>
-                  <td className="px-4 py-3">{c.displayName ?? "—"}</td>
-                  <td className="px-4 py-3">
-                    {c.csatAverage !== undefined && c.csatRatingCount !== undefined ? (
-                      <Badge variant={csatVariant(c.csatAverage)}>
-                        {c.csatAverage}/5 ({c.csatRatingCount})
-                      </Badge>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-secondary">{c.email ?? "—"}</td>
-                  <td className="px-4 py-3">
-                    <Badge variant={consentVariant(c.marketingConsent)}>
-                      {t(`contacts.consent_${c.marketingConsent}`)}
-                    </Badge>
-                    {c.suppressed && (
-                      <Badge variant="danger" className="ml-1">
-                        {t("contacts.suppressed")}
-                      </Badge>
-                    )}
-                    {c.leadId && (
-                      <Badge variant="info" className="ml-1">
-                        {c.tags.includes("converted") ? t("contacts.tagConverted") : t("contacts.tagLead")}
-                      </Badge>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <WhatsAppRiskBadge
-                      risk={resolveWhatsAppRisk(whatsappRisk, c.lastBotId)}
-                      compact
-                    />
-                  </td>
-                  <td className="px-4 py-3 text-secondary">
-                    {editingPhone === c.phoneNumber ? (
-                      <div className="flex gap-1">
-                        <input
-                          value={editTags}
-                          onChange={(e) => setEditTags(e.target.value)}
-                          placeholder={t("contacts.tagsPlaceholder")}
-                          className="px-2 py-1 border border-default rounded text-xs flex-1"
-                        />
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            await updateContact.mutateAsync({
-                              phone: c.phoneNumber,
-                              tags: editTags.split(",").map((t) => t.trim()).filter(Boolean),
-                            });
-                            setEditingPhone(null);
-                          }}
-                          className="text-xs text-accent"
-                        >
-                          {t("common.save")}
-                        </button>
+      {!isLoading && contacts.length > 0 && (
+        <>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-secondary">
+              {t("contacts.shownCount", { count: contacts.length })}
+            </p>
+            {contacts.length > 1 && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => bulkConsent(contacts.map((c) => c.phoneNumber), "opt_in")}
+              >
+                <ShieldCheck className="h-4 w-4" />
+                {t("contacts.bulkOptIn")}
+              </Button>
+            )}
+          </div>
+
+          <DataTable minWidth="720px">
+            <DataTableHead>
+              <DataTableRow className="border-b border-default bg-surface-muted/60 text-xs uppercase tracking-wide text-secondary">
+                <DataTableCell header>{t("contacts.colContact")}</DataTableCell>
+                <DataTableCell header>{t("contacts.colConsent")}</DataTableCell>
+                <DataTableCell header>{t("contacts.colCsat")}</DataTableCell>
+                <DataTableCell header>{t("contacts.colTags")}</DataTableCell>
+                <DataTableCell header>{t("contacts.colWhatsAppRisk")}</DataTableCell>
+                <DataTableCell header className="w-10">
+                  <span className="sr-only">{t("contacts.colActions")}</span>
+                </DataTableCell>
+              </DataTableRow>
+            </DataTableHead>
+            <DataTableBody className="divide-y divide-subtle">
+              {contacts.map((c: Contact) => {
+                const initials = contactInitials(c.displayName, c.phoneNumber);
+                return (
+                  <DataTableRow
+                    key={c.phoneNumber}
+                    className="group cursor-pointer transition-colors hover:bg-surface-muted/50"
+                    onClick={() => setSelectedContact(c)}
+                  >
+                    <DataTableCell>
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent-muted text-xs font-semibold text-accent">
+                          {initials}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-primary">
+                            {c.displayName ?? t("contacts.unnamed")}
+                          </p>
+                          <p className="truncate font-mono text-xs text-secondary">{c.phoneNumber}</p>
+                          {c.email && (
+                            <p className="truncate text-xs text-muted">{c.email}</p>
+                          )}
+                        </div>
                       </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditingPhone(c.phoneNumber);
-                          setEditTags(c.tags.join(", "));
-                        }}
-                        className="text-left hover:text-accent"
-                      >
-                        {c.tags.join(", ") || "—"}
-                      </button>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right space-x-2">
-                    {c.marketingConsent !== "opt_in" && (
-                      <button
-                        type="button"
-                        onClick={() => updateContact.mutate({ phone: c.phoneNumber, marketingConsent: "opt_in" })}
-                        className="text-xs text-accent hover:underline"
-                      >
-                        {t("contacts.markOptIn")}
-                      </button>
-                    )}
-                    {c.marketingConsent !== "opt_out" && (
-                      <button
-                        type="button"
-                        onClick={() => updateContact.mutate({ phone: c.phoneNumber, marketingConsent: "opt_out", suppressed: true })}
-                        className="text-xs text-red-600 hover:underline"
-                      >
-                        {t("contacts.markOptOut")}
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => deleteContact.mutate(c.phoneNumber)}
-                      className="text-xs text-secondary hover:underline"
-                    >
-                      {t("common.delete")}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </TableContainer>
+                    </DataTableCell>
+                    <DataTableCell>
+                      <div className="flex flex-wrap gap-1">
+                        <Badge variant={consentVariant(c.marketingConsent)}>
+                          {t(`contacts.consent_${c.marketingConsent}`)}
+                        </Badge>
+                        {c.suppressed && (
+                          <Badge variant="danger">{t("contacts.suppressed")}</Badge>
+                        )}
+                        {c.leadId && (
+                          <Badge variant="info">
+                            {c.tags.includes("converted") ? t("contacts.tagConverted") : t("contacts.tagLead")}
+                          </Badge>
+                        )}
+                      </div>
+                    </DataTableCell>
+                    <DataTableCell>
+                      {c.csatAverage !== undefined && c.csatRatingCount !== undefined ? (
+                        <Badge variant={csatVariant(c.csatAverage)}>
+                          {c.csatAverage}/5 ({c.csatRatingCount})
+                        </Badge>
+                      ) : (
+                        <span className="text-muted">—</span>
+                      )}
+                    </DataTableCell>
+                    <DataTableCell>
+                      {c.tags.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {c.tags.slice(0, 3).map((tag) => (
+                            <Badge key={tag} variant="default">{tag}</Badge>
+                          ))}
+                          {c.tags.length > 3 && (
+                            <Badge variant="default">+{c.tags.length - 3}</Badge>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted">—</span>
+                      )}
+                    </DataTableCell>
+                    <DataTableCell>
+                      <WhatsAppRiskBadge
+                        risk={resolveWhatsAppRisk(whatsappRisk, c.lastBotId)}
+                        compact
+                      />
+                    </DataTableCell>
+                    <DataTableCell className="text-right">
+                      <ChevronRight className="h-4 w-4 text-muted transition-transform group-hover:translate-x-0.5 group-hover:text-accent" />
+                    </DataTableCell>
+                  </DataTableRow>
+                );
+              })}
+            </DataTableBody>
+          </DataTable>
+        </>
       )}
 
-      {contacts.length > 1 && (
-        <div className="mt-4 flex gap-2">
-          <button
-            type="button"
-            onClick={() => bulkConsent(contacts.map((c) => c.phoneNumber), "opt_in")}
-            className="text-xs px-3 py-1.5 bg-green-100 text-green-800 rounded-lg"
-          >
-            {t("contacts.bulkOptIn")}
-          </button>
-        </div>
+      {showCreate && (
+        <Modal>
+          <div className="w-full max-w-md rounded-2xl border border-default bg-surface-elevated shadow-xl">
+            <div className="border-b border-default px-6 py-4">
+              <h2 className="text-lg font-semibold text-primary">{t("contacts.createTitle")}</h2>
+              <p className="mt-1 text-sm text-secondary">{t("contacts.createDescription")}</p>
+            </div>
+            <form onSubmit={handleCreate} className="space-y-4 px-6 py-5">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-secondary">
+                  {t("common.phone")}
+                </label>
+                <Input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder={t("contacts.phonePlaceholder")}
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-secondary">
+                  {t("contacts.colName")}
+                </label>
+                <Input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder={t("contacts.namePlaceholder")}
+                />
+              </div>
+              <div className="flex justify-end gap-2 border-t border-default pt-4">
+                <Button type="button" variant="ghost" onClick={() => setShowCreate(false)}>
+                  {t("common.cancel")}
+                </Button>
+                <Button type="submit" disabled={createContact.isPending}>
+                  {t("common.save")}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </Modal>
       )}
+
+      {activeContact && (
+        <ContactDetailPanel
+          key={activeContact.phoneNumber + activeContact.updatedAt}
+          contact={activeContact}
+          whatsappRisk={whatsappRisk}
+          onClose={() => setSelectedContact(null)}
+          onDelete={() => setDeleteTarget(activeContact)}
+        />
+      )}
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title={t("contacts.deleteConfirmTitle")}
+        description={t("contacts.deleteConfirmDescription", {
+          phone: deleteTarget?.phoneNumber ?? "",
+        })}
+        confirmLabel={t("common.delete")}
+        tone="danger"
+        loading={deleteContact.isPending}
+        onConfirm={() => void confirmDelete()}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </DashboardPage>
   );
 }

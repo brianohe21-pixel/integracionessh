@@ -73,7 +73,7 @@ export function VoiceAgentToolsPanel({ botId }: VoiceAgentToolsPanelProps) {
 
   const [secretValues, setSecretValues] = useState<Record<string, string>>({});
 
-  const tools = data?.tools ?? [];
+  const tools = useMemo(() => data?.tools ?? [], [data?.tools]);
   const configuredSecrets = new Set((secretsData?.secrets ?? []).map((item) => item.name));
 
   const requiredSecrets = useMemo(

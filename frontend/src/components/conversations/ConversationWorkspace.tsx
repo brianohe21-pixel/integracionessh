@@ -186,8 +186,10 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     hasNextPage,
     fetchNextPage,
   } = useConversations(conversationQueryOptions);
-  const conversations =
-    conversationsData?.pages.flatMap((page) => page.items).filter((c) => c != null) ?? [];
+  const conversations = useMemo(
+    () => conversationsData?.pages.flatMap((page) => page.items).filter((c) => c != null) ?? [],
+    [conversationsData?.pages]
+  );
 
   const conversationSlaStatuses = useMemo(
     () =>

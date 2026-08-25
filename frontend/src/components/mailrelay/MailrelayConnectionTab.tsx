@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 
-export function MailrelayConnectionTab({ connected }: { connected: boolean }) {
+export function MailrelayConnectionTab() {
   const t = useT();
   const credentials = useMailrelayCredentials();
   const test = useTestMailrelayConnection();

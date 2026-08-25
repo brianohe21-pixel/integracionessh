@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { Palette, Upload, Trash2 } from "lucide-react";
@@ -125,12 +126,13 @@ export function BrandingSettingsCard() {
         style={{ backgroundColor: primaryColor }}
       >
         {data?.logoUrl ? (
-          <img
+          <Image
             key={data.logoUrl}
             src={data.logoUrl}
             alt=""
             width={32}
             height={32}
+            unoptimized
             className="h-8 w-8 rounded-lg object-cover bg-surface-elevated/20"
           />
         ) : (

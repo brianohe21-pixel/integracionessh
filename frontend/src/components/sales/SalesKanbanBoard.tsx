@@ -3,7 +3,7 @@
 import { GripVertical, Mail, Phone, User } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/lib/utils";
-import type { Opportunity, OpportunityEnriched, PipelineStage, SalesFunnelMetrics } from "@/types";
+import type { OpportunityEnriched, PipelineStage, SalesFunnelMetrics } from "@/types";
 import {
   contactInitials,
   formatSalesMoney,
