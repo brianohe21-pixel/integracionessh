@@ -63,6 +63,7 @@ import { resolveInboxSlaSettings } from "../../lib/advisor/inbox-sla.js";
 import { resolveMetricsReportSchedule } from "../../lib/reports/resolve-schedule.js";
 import { syncReportSchedule } from "../../lib/reports/report-schedule.js";
 import { sendScheduledReport } from "../../lib/reports/send-scheduled-report.js";
+import { getTenantWhatsAppRiskByBot } from "../../lib/whatsapp/tenant-risk.js";
 import { addCustomDomainToCognitoClient } from "../../lib/cognito/custom-domain-callbacks.js";
 import { handleProviderCredentialRoutes } from "./provider-credentials.routes.js";
 import { handleMemberRoutes } from "./members.routes.js";
@@ -414,6 +415,11 @@ export async function handler(
       }
       const tenants = await listTenants();
       return ok(tenants);
+    }
+
+    if (method === "GET" && rawPath.endsWith("/tenants/me/whatsapp-risk")) {
+      const risk = await getTenantWhatsAppRiskByBot(auth.tenantId, ENVIRONMENT);
+      return ok(risk);
     }
 
     if (method === "PATCH" && event.rawPath?.endsWith("/onboarding")) {

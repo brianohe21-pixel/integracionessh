@@ -25,6 +25,7 @@ import {
   normalizeServiceLimits,
   trimServiceLimitsForEnabled,
 } from "../../lib/billing/subaccount-services.js";
+import { getTenantWhatsAppRisk } from "../../lib/whatsapp/tenant-risk.js";
 import {
   ensureResellerDomainInAmplify,
   getResellerDomainDnsInfo,
@@ -185,9 +186,18 @@ export async function handler(
 
     if (method === "GET" && path.endsWith("/reseller/subaccounts")) {
       const items = await listSubaccounts(parentId);
+      const itemsWithRisk = await Promise.all(
+        items.map(async (item) => ({
+          ...item,
+          whatsappRisk: await getTenantWhatsAppRisk(
+            item.tenantId,
+            process.env.ENVIRONMENT ?? "dev"
+          ),
+        }))
+      );
       const bag = buildResellerBag(getEffectivePlanLimits(reseller), items);
       return ok({
-        items,
+        items: itemsWithRisk,
         maxSubaccounts: reseller.resellerConfig?.maxSubaccounts ?? 25,
         count: items.length,
         bag,
