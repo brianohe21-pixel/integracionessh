@@ -11,6 +11,11 @@ const taskKeys = (tenantId: string, taskId: string) => ({
   SK: `SALESTASK#${taskId}`,
 });
 
+const oppTaskKeys = (tenantId: string, opportunityId: string, taskId: string) => ({
+  PK: `TENANT#${tenantId}`,
+  SK: `OPPTASK#${opportunityId}#${taskId}`,
+});
+
 function gsi1Keys(tenantId: string, status: SalesTaskStatus, dueAt: string, taskId: string) {
   return {
     GSI1PK: `TENANT#${tenantId}#TASKS`,
@@ -32,6 +37,7 @@ export interface ListSalesTasksOptions {
   cursor?: string;
   status?: SalesTaskStatus;
   advisorId?: string;
+  opportunityId?: string;
 }
 
 export interface ListSalesTasksResult {
@@ -57,6 +63,10 @@ export async function listSalesTasks(
   tenantId: string,
   options: ListSalesTasksOptions = {}
 ): Promise<ListSalesTasksResult> {
+  if (options.opportunityId) {
+    return listSalesTasksByOpportunity(tenantId, options.opportunityId, options);
+  }
+
   const limit = Math.min(Math.max(options.limit ?? 50, 1), 100);
   const items: SalesTask[] = [];
   let lastKey: Record<string, unknown> | undefined;
@@ -116,6 +126,38 @@ export async function listSalesTasks(
   return { items: items.slice(0, limit), ...(nextCursor ? { nextCursor } : {}) };
 }
 
+export async function listSalesTasksByOpportunity(
+  tenantId: string,
+  opportunityId: string,
+  options: ListSalesTasksOptions = {}
+): Promise<ListSalesTasksResult> {
+  const limit = Math.min(Math.max(options.limit ?? 50, 1), 100);
+  const result = await docClient.send(
+    new QueryCommand({
+      TableName: TABLE_NAME,
+      KeyConditionExpression: "PK = :pk AND begins_with(SK, :skPrefix)",
+      ExpressionAttributeValues: {
+        ":pk": `TENANT#${tenantId}`,
+        ":skPrefix": `OPPTASK#${opportunityId}#`,
+      },
+      ScanIndexForward: false,
+      Limit: limit,
+    })
+  );
+
+  const taskIds = (result.Items ?? []).map((item) => String(item.taskId ?? ""));
+  const tasks: SalesTask[] = [];
+  for (const taskId of taskIds) {
+    const task = await getSalesTaskById(tenantId, taskId);
+    if (!task) continue;
+    if (options.status && task.status !== options.status) continue;
+    if (options.advisorId && task.advisorId !== options.advisorId) continue;
+    tasks.push(task);
+  }
+
+  return { items: tasks.slice(0, limit) };
+}
+
 export async function createSalesTask(task: SalesTask): Promise<SalesTask> {
   const dueAt = task.dueAt ?? task.createdAt;
   await docClient.send(
@@ -128,6 +170,22 @@ export async function createSalesTask(task: SalesTask): Promise<SalesTask> {
       },
     })
   );
+
+  if (task.opportunityId) {
+    await docClient.send(
+      new PutCommand({
+        TableName: TABLE_NAME,
+        Item: {
+          ...oppTaskKeys(task.tenantId, task.opportunityId, task.taskId),
+          tenantId: task.tenantId,
+          opportunityId: task.opportunityId,
+          taskId: task.taskId,
+          createdAt: task.createdAt,
+        },
+      })
+    );
+  }
+
   return task;
 }
 

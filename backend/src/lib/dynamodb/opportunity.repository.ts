@@ -56,6 +56,9 @@ export interface ListOpportunitiesOptions {
   pipelineId?: string;
   stageId?: string;
   q?: string;
+  assignedAdvisorId?: string;
+  companyId?: string;
+  conversationId?: string;
 }
 
 export interface ListOpportunitiesResult {
@@ -64,6 +67,15 @@ export interface ListOpportunitiesResult {
 }
 
 function matchesFilters(opportunity: Opportunity, options: ListOpportunitiesOptions): boolean {
+  if (options.assignedAdvisorId && opportunity.assignedAdvisorId !== options.assignedAdvisorId) {
+    return false;
+  }
+  if (options.companyId && opportunity.companyId !== options.companyId) {
+    return false;
+  }
+  if (options.conversationId && opportunity.conversationId !== options.conversationId) {
+    return false;
+  }
   if (options.q) {
     const q = options.q.toLowerCase();
     const inTitle = opportunity.title.toLowerCase().includes(q);
@@ -239,6 +251,14 @@ export type OpportunityUpdateInput = Partial<
     | "assignedAdvisorId"
     | "quotationId"
     | "paymentId"
+    | "companyId"
+    | "companyName"
+    | "expectedCloseDate"
+    | "stageEnteredAt"
+    | "lastActivityAt"
+    | "lossReason"
+    | "attribution"
+    | "sourceId"
     | "closedAt"
     | "closeReason"
     | "stage"

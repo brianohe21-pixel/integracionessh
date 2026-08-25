@@ -175,6 +175,16 @@ export async function processSequenceStep(
     });
   }
 
+  const { recordOpportunityActivity } = await import("../opportunities/activity.js");
+  await recordOpportunityActivity({
+    tenantId,
+    opportunityId: enrollment.opportunityId,
+    type: "sequence_step",
+    message: step.channel,
+    metadata: { stepIndex, sequenceId: enrollment.sequenceId },
+    touchLastActivity: true,
+  }).catch(() => undefined);
+
   const now = new Date().toISOString();
   const nextIndex = stepIndex + 1;
   const nextStep = steps[nextIndex];

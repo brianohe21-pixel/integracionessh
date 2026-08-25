@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import { z } from "zod";
 import {
   resolveRequestAuth,
-  assertMemberRole,
+  assertAdvisorOrMember,
   assertTenantManagerRole,
 } from "../../lib/auth/cognito.js";
 import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
@@ -17,6 +17,16 @@ import {
 } from "../../lib/http.js";
 import { ensureDefaultPipeline } from "../../lib/sales/pipeline-bootstrap.js";
 import {
+  createCompany,
+  deleteCompany,
+  getCompanyById,
+  listCompanies,
+  updateCompany,
+} from "../../lib/dynamodb/company.repository.js";
+import {
+  listOpportunityActivities,
+} from "../../lib/dynamodb/opportunity-activity.repository.js";
+import {
   createPipeline,
   deletePipeline,
   getPipelineById,
@@ -24,12 +34,10 @@ import {
   updatePipeline,
 } from "../../lib/dynamodb/pipeline.repository.js";
 import {
-  createOpportunity,
   deleteOpportunity,
   getOpportunityById,
   listOpportunities,
   listStageHistory,
-  updateOpportunity,
 } from "../../lib/dynamodb/opportunity.repository.js";
 import {
   createSequence,
@@ -41,6 +49,7 @@ import {
 import {
   listActiveEnrollmentsByOpportunity,
   listEnrollmentsByOpportunity,
+  getEnrollmentById,
 } from "../../lib/dynamodb/sequence-enrollment.repository.js";
 import {
   createSalesTask,
@@ -50,6 +59,19 @@ import {
 } from "../../lib/dynamodb/sales-task.repository.js";
 import { getSalesFunnelMetrics } from "../../lib/dynamodb/sales-funnel-metrics.repository.js";
 import { moveOpportunityStage } from "../../lib/sales/opportunities/stage.js";
+import { getOpportunityDetail } from "../../lib/sales/opportunities/detail.js";
+import {
+  applyOpportunityPatch,
+  persistNewOpportunity,
+} from "../../lib/sales/opportunities/create.js";
+import {
+  canAdvisorAccessOpportunity,
+  canAdvisorAccessTask,
+  canAdvisorAccessEnrollment,
+  resolveAdvisorIdForAuth,
+} from "../../lib/sales/opportunities/access.js";
+import { enrichOpportunity } from "../../lib/sales/opportunities/forecast.js";
+import { recordOpportunityActivity } from "../../lib/sales/opportunities/activity.js";
 import {
   cancelEnrollment,
   enrollOpportunityInSequence,
@@ -61,7 +83,9 @@ import { findStageById } from "../../lib/dynamodb/pipeline.repository.js";
 import { buildDefaultPipeline, findStageByKey } from "../../lib/sales/default-pipeline.js";
 import { normalizePhone } from "../../lib/dynamodb/contact.repository.js";
 import type {
+  Company,
   Opportunity,
+  OpportunityLossReason,
   OpportunityStage,
   PipelineStage,
   SalesPipeline,
@@ -69,6 +93,31 @@ import type {
   SalesSequenceStep,
   SalesTask,
 } from "../../types/index.js";
+
+const AttributionSchema = z.object({
+  source: z.string().max(64).optional(),
+  campaignId: z.string().max(128).optional(),
+  flowId: z.string().max(128).optional(),
+  submissionId: z.string().max(128).optional(),
+  utmSource: z.string().max(128).optional(),
+  utmMedium: z.string().max(128).optional(),
+  utmCampaign: z.string().max(128).optional(),
+  utmContent: z.string().max(128).optional(),
+  utmTerm: z.string().max(128).optional(),
+  referrer: z.string().max(512).optional(),
+  landingPage: z.string().max(512).optional(),
+});
+
+const CreateCompanySchema = z.object({
+  name: z.string().min(1).max(200),
+  email: z.string().email().max(256).optional(),
+  phone: z.string().max(32).optional(),
+  website: z.string().max(256).optional(),
+  industry: z.string().max(120).optional(),
+  notes: z.string().max(2000).optional(),
+});
+
+const UpdateCompanySchema = CreateCompanySchema.partial();
 
 const PipelineStageSchema = z.object({
   stageId: z.string().uuid().optional(),
@@ -105,6 +154,11 @@ const CreateOpportunitySchema = z.object({
   conversationId: z.string().uuid().optional(),
   botId: z.string().uuid().optional(),
   assignedAdvisorId: z.string().uuid().optional(),
+  companyId: z.string().uuid().optional(),
+  companyName: z.string().max(200).optional(),
+  expectedCloseDate: z.string().datetime().optional(),
+  sourceId: z.string().max(128).optional(),
+  attribution: AttributionSchema.optional(),
 });
 
 const UpdateOpportunitySchema = CreateOpportunitySchema.partial().extend({
@@ -115,6 +169,9 @@ const UpdateOpportunitySchema = CreateOpportunitySchema.partial().extend({
 const MoveStageSchema = z.object({
   stageId: z.string().uuid(),
   closeReason: z.string().max(500).optional(),
+  lossReason: z
+    .enum(["price", "competition", "no_response", "timing", "not_qualified", "other"])
+    .optional(),
 });
 
 const SequenceStepSchema = z.object({
@@ -215,7 +272,7 @@ async function buildOpportunity(
   if (!stage) return null;
 
   const now = new Date().toISOString();
-  return {
+  const opportunity: Opportunity = {
     opportunityId: randomUUID(),
     tenantId,
     pipelineId: pipeline.pipelineId,
@@ -226,6 +283,8 @@ async function buildOpportunity(
     tags: data.tags ?? [],
     createdAt: now,
     updatedAt: now,
+    stageEnteredAt: now,
+    lastActivityAt: now,
     ...(data.amount !== undefined ? { amount: data.amount } : {}),
     ...(data.phone ? { phone: normalizePhone(data.phone) } : {}),
     ...(data.name ? { name: data.name } : {}),
@@ -235,6 +294,21 @@ async function buildOpportunity(
     ...(data.conversationId ? { conversationId: data.conversationId } : {}),
     ...(data.botId ? { botId: data.botId } : {}),
     ...(data.assignedAdvisorId ? { assignedAdvisorId: data.assignedAdvisorId } : {}),
+    ...(data.companyId ? { companyId: data.companyId } : {}),
+    ...(data.companyName ? { companyName: data.companyName } : {}),
+    ...(data.expectedCloseDate ? { expectedCloseDate: data.expectedCloseDate } : {}),
+    ...(data.sourceId ? { sourceId: data.sourceId } : {}),
+  };
+  if (data.attribution) {
+    opportunity.attribution = data.attribution as NonNullable<Opportunity["attribution"]>;
+  }
+  return opportunity;
+}
+
+function forbidden(message = "Access denied"): APIGatewayProxyResultV2 {
+  return {
+    statusCode: 403,
+    body: JSON.stringify({ error: message }),
   };
 }
 
@@ -250,8 +324,9 @@ export async function handler(
 
     const apiEvent = event as APIGatewayProxyEventV2WithJWTAuthorizer;
     const auth = await resolveRequestAuth(apiEvent);
-    assertMemberRole(auth);
+    assertAdvisorOrMember(auth);
     await assertAssignedServices(auth.tenantId, "sales");
+    const advisorId = await resolveAdvisorIdForAuth(auth);
 
     const method = apiEvent.requestContext.http.method;
     const rawPath = apiEvent.rawPath ?? apiEvent.requestContext.http.path;
@@ -322,6 +397,64 @@ export async function handler(
       }
     }
 
+    if (method === "GET" && segments[0] === "companies" && segments.length === 1) {
+      const limit = params.limit ? parseInt(params.limit, 10) : 50;
+      if (isNaN(limit) || limit < 1 || limit > 100) return badRequest("Invalid limit (1-100)");
+      const listOpts: Parameters<typeof listCompanies>[1] = { limit };
+      if (params.cursor) listOpts.cursor = params.cursor;
+      if (params.q) listOpts.q = params.q;
+      const result = await listCompanies(auth.tenantId, listOpts);
+      return ok(result);
+    }
+
+    if (method === "POST" && segments[0] === "companies" && segments.length === 1) {
+      const parsed = CreateCompanySchema.safeParse(JSON.parse(apiEvent.body ?? "{}"));
+      if (!parsed.success) return badRequest(parsed.error.message);
+      const now = new Date().toISOString();
+      const company: Company = {
+        companyId: randomUUID(),
+        tenantId: auth.tenantId,
+        name: parsed.data.name.trim(),
+        createdAt: now,
+        updatedAt: now,
+        ...(parsed.data.email ? { email: parsed.data.email } : {}),
+        ...(parsed.data.phone ? { phone: parsed.data.phone } : {}),
+        ...(parsed.data.website ? { website: parsed.data.website } : {}),
+        ...(parsed.data.industry ? { industry: parsed.data.industry } : {}),
+        ...(parsed.data.notes ? { notes: parsed.data.notes } : {}),
+      };
+      await createCompany(company);
+      return created(company);
+    }
+
+    if (segments[0] === "companies" && segments[1]) {
+      const companyId = segments[1];
+      if (method === "GET" && segments.length === 2) {
+        const company = await getCompanyById(auth.tenantId, companyId);
+        if (!company) return notFound("Company not found");
+        return ok(company);
+      }
+      if (method === "PATCH" && segments.length === 2) {
+        const parsed = UpdateCompanySchema.safeParse(JSON.parse(apiEvent.body ?? "{}"));
+        if (!parsed.success) return badRequest(parsed.error.message);
+        const updates: Parameters<typeof updateCompany>[2] = {};
+        if (parsed.data.name !== undefined) updates.name = parsed.data.name.trim();
+        if (parsed.data.email !== undefined) updates.email = parsed.data.email;
+        if (parsed.data.phone !== undefined) updates.phone = parsed.data.phone;
+        if (parsed.data.website !== undefined) updates.website = parsed.data.website;
+        if (parsed.data.industry !== undefined) updates.industry = parsed.data.industry;
+        if (parsed.data.notes !== undefined) updates.notes = parsed.data.notes;
+        const updated = await updateCompany(auth.tenantId, companyId, updates);
+        if (!updated) return notFound("Company not found");
+        return ok(updated);
+      }
+      if (method === "DELETE" && segments.length === 2) {
+        const deleted = await deleteCompany(auth.tenantId, companyId);
+        if (!deleted) return notFound("Company not found");
+        return noContent();
+      }
+    }
+
     if (method === "GET" && segments[0] === "opportunities" && segments.length === 1) {
       const limit = params.limit ? parseInt(params.limit, 10) : 50;
       if (isNaN(limit) || limit < 1 || limit > 100) return badRequest("Invalid limit (1-100)");
@@ -335,9 +468,18 @@ export async function handler(
       }
       if (params.stageId) listOpts.stageId = params.stageId;
       if (params.q) listOpts.q = params.q;
+      if (params.companyId) listOpts.companyId = params.companyId;
+      if (params.conversationId) listOpts.conversationId = params.conversationId;
+      if (advisorId) listOpts.assignedAdvisorId = advisorId;
+      else if (params.assignedAdvisorId) listOpts.assignedAdvisorId = params.assignedAdvisorId;
 
       const result = await listOpportunities(auth.tenantId, listOpts);
-      return ok(result);
+      const pipeline = await getPipelineById(auth.tenantId, listOpts.pipelineId!);
+      const enrichedItems = result.items.map((item) => {
+        const stage = pipeline ? findStageById(pipeline, item.stageId) : undefined;
+        return enrichOpportunity(item, stage);
+      });
+      return ok({ ...result, items: enrichedItems });
     }
 
     if (method === "POST" && segments[0] === "opportunities" && segments.length === 1) {
@@ -346,19 +488,48 @@ export async function handler(
 
       const opportunity = await buildOpportunity(auth.tenantId, parsed.data);
       if (!opportunity) return badRequest("Invalid pipeline or stage");
-      await createOpportunity(opportunity);
-      return created(opportunity);
+      if (advisorId) opportunity.assignedAdvisorId = advisorId;
+      const createdOpportunity = await persistNewOpportunity(opportunity);
+      return created(createdOpportunity);
     }
 
     if (segments[0] === "opportunities" && segments[1]) {
       const opportunityId = segments[1];
 
+      if (method === "GET" && segments[2] === "detail") {
+        const existing = await getOpportunityById(auth.tenantId, opportunityId);
+        if (!existing) return notFound("Opportunity not found");
+        if (!canAdvisorAccessOpportunity(advisorId, existing)) return forbidden();
+        const detail = await getOpportunityDetail(auth.tenantId, opportunityId);
+        if (!detail) return notFound("Opportunity not found");
+        return ok(detail);
+      }
+
+      if (method === "GET" && segments[2] === "timeline") {
+        const existing = await getOpportunityById(auth.tenantId, opportunityId);
+        if (!existing) return notFound("Opportunity not found");
+        if (!canAdvisorAccessOpportunity(advisorId, existing)) return forbidden();
+        const limit = params.limit ? parseInt(params.limit, 10) : 50;
+        if (isNaN(limit) || limit < 1 || limit > 100) return badRequest("Invalid limit (1-100)");
+        const timeline = await listOpportunityActivities(auth.tenantId, opportunityId, {
+          limit,
+          ...(params.cursor ? { cursor: params.cursor } : {}),
+        });
+        return ok(timeline);
+      }
+
       if (method === "GET" && segments[2] === "history") {
+        const existing = await getOpportunityById(auth.tenantId, opportunityId);
+        if (!existing) return notFound("Opportunity not found");
+        if (!canAdvisorAccessOpportunity(advisorId, existing)) return forbidden();
         const history = await listStageHistory(auth.tenantId, opportunityId);
         return ok({ items: history });
       }
 
       if (method === "GET" && segments[2] === "enrollments") {
+        const existing = await getOpportunityById(auth.tenantId, opportunityId);
+        if (!existing) return notFound("Opportunity not found");
+        if (!canAdvisorAccessOpportunity(advisorId, existing)) return forbidden();
         const enrollments = await listEnrollmentsByOpportunity(auth.tenantId, opportunityId);
         return ok({ items: enrollments });
       }
@@ -366,14 +537,21 @@ export async function handler(
       if (method === "GET" && segments.length === 2) {
         const opportunity = await getOpportunityById(auth.tenantId, opportunityId);
         if (!opportunity) return notFound("Opportunity not found");
-        return ok(opportunity);
+        if (!canAdvisorAccessOpportunity(advisorId, opportunity)) return forbidden();
+        const pipeline = await getPipelineById(auth.tenantId, opportunity.pipelineId);
+        const stage = pipeline ? findStageById(pipeline, opportunity.stageId) : undefined;
+        return ok(enrichOpportunity(opportunity, stage));
       }
 
       if (method === "PATCH" && segments.length === 2) {
         const parsed = UpdateOpportunitySchema.safeParse(JSON.parse(apiEvent.body ?? "{}"));
         if (!parsed.success) return badRequest(parsed.error.message);
 
-        const patch: Parameters<typeof updateOpportunity>[2] = {};
+        const existing = await getOpportunityById(auth.tenantId, opportunityId);
+        if (!existing) return notFound("Opportunity not found");
+        if (!canAdvisorAccessOpportunity(advisorId, existing)) return forbidden();
+
+        const patch: Parameters<typeof applyOpportunityPatch>[3] = {};
         if (parsed.data.title !== undefined) patch.title = parsed.data.title.trim();
         if (parsed.data.amount !== undefined) patch.amount = parsed.data.amount;
         if (parsed.data.currency !== undefined) patch.currency = parsed.data.currency.toUpperCase();
@@ -388,15 +566,40 @@ export async function handler(
         if (parsed.data.assignedAdvisorId !== undefined) patch.assignedAdvisorId = parsed.data.assignedAdvisorId;
         if (parsed.data.quotationId !== undefined) patch.quotationId = parsed.data.quotationId;
         if (parsed.data.paymentId !== undefined) patch.paymentId = parsed.data.paymentId;
+        if (parsed.data.companyId !== undefined) patch.companyId = parsed.data.companyId;
+        if (parsed.data.companyName !== undefined) patch.companyName = parsed.data.companyName;
+        if (parsed.data.expectedCloseDate !== undefined) patch.expectedCloseDate = parsed.data.expectedCloseDate;
+        if (parsed.data.sourceId !== undefined) patch.sourceId = parsed.data.sourceId;
+        if (parsed.data.attribution !== undefined && parsed.data.attribution) {
+          patch.attribution = parsed.data.attribution as NonNullable<Opportunity["attribution"]>;
+        }
 
-        const updated = await updateOpportunity(auth.tenantId, opportunityId, patch);
+        const updated = await applyOpportunityPatch(
+          auth.tenantId,
+          opportunityId,
+          existing,
+          patch,
+          auth.userId
+        );
         if (!updated) return notFound("Opportunity not found");
-        return ok(updated);
+        const pipeline = await getPipelineById(auth.tenantId, updated.pipelineId);
+        const stage = pipeline ? findStageById(pipeline, updated.stageId) : undefined;
+        return ok(enrichOpportunity(updated, stage));
       }
 
       if (method === "POST" && segments[2] === "stage") {
         const parsed = MoveStageSchema.safeParse(JSON.parse(apiEvent.body ?? "{}"));
         if (!parsed.success) return badRequest(parsed.error.message);
+
+        const existing = await getOpportunityById(auth.tenantId, opportunityId);
+        if (!existing) return notFound("Opportunity not found");
+        if (!canAdvisorAccessOpportunity(advisorId, existing)) return forbidden();
+
+        const pipeline = await getPipelineById(auth.tenantId, existing.pipelineId);
+        const targetStage = pipeline ? findStageById(pipeline, parsed.data.stageId) : undefined;
+        if (targetStage?.outcome === "lost" && !parsed.data.lossReason) {
+          return badRequest("lossReason is required when closing as lost");
+        }
 
         const updated = await moveOpportunityStage({
           tenantId: auth.tenantId,
@@ -404,14 +607,22 @@ export async function handler(
           stageId: parsed.data.stageId,
           changedBy: auth.userId,
           ...(parsed.data.closeReason ? { closeReason: parsed.data.closeReason } : {}),
+          ...(parsed.data.lossReason
+            ? { lossReason: parsed.data.lossReason as OpportunityLossReason }
+            : {}),
         });
         if (!updated) return notFound("Opportunity not found");
-        return ok(updated);
+        const stage = pipeline ? findStageById(pipeline, updated.stageId) : undefined;
+        return ok(enrichOpportunity(updated, stage));
       }
 
       if (method === "POST" && segments[2] === "enroll" && segments[3]) {
         const parsed = EnrollSchema.safeParse(JSON.parse(apiEvent.body ?? "{}"));
         if (!parsed.success) return badRequest(parsed.error.message);
+
+        const existing = await getOpportunityById(auth.tenantId, opportunityId);
+        if (!existing) return notFound("Opportunity not found");
+        if (!canAdvisorAccessOpportunity(advisorId, existing)) return forbidden();
 
         const active = await listActiveEnrollmentsByOpportunity(auth.tenantId, opportunityId);
         if (active.length > 0) return badRequest("Opportunity already has an active sequence");
@@ -428,6 +639,9 @@ export async function handler(
       }
 
       if (method === "DELETE" && segments.length === 2) {
+        const existing = await getOpportunityById(auth.tenantId, opportunityId);
+        if (!existing) return notFound("Opportunity not found");
+        if (!canAdvisorAccessOpportunity(advisorId, existing)) return forbidden();
         const deleted = await deleteOpportunity(auth.tenantId, opportunityId);
         if (!deleted) return notFound("Opportunity not found");
         return noContent();
@@ -501,18 +715,30 @@ export async function handler(
       const action = segments[2];
 
       if (method === "POST" && action === "pause") {
+        const enrollment = await getEnrollmentById(auth.tenantId, enrollmentId);
+        if (!enrollment) return notFound("Enrollment not found");
+        const opp = await getOpportunityById(auth.tenantId, enrollment.opportunityId);
+        if (!canAdvisorAccessEnrollment(advisorId, enrollment, opp)) return forbidden();
         const updated = await pauseEnrollment(auth.tenantId, enrollmentId);
         if (!updated) return badRequest("Enrollment cannot be paused");
         return ok(updated);
       }
 
       if (method === "POST" && action === "resume") {
+        const enrollment = await getEnrollmentById(auth.tenantId, enrollmentId);
+        if (!enrollment) return notFound("Enrollment not found");
+        const opp = await getOpportunityById(auth.tenantId, enrollment.opportunityId);
+        if (!canAdvisorAccessEnrollment(advisorId, enrollment, opp)) return forbidden();
         const updated = await resumeEnrollment(auth.tenantId, enrollmentId);
         if (!updated) return badRequest("Enrollment cannot be resumed");
         return ok(updated);
       }
 
       if (method === "POST" && action === "cancel") {
+        const enrollment = await getEnrollmentById(auth.tenantId, enrollmentId);
+        if (!enrollment) return notFound("Enrollment not found");
+        const opp = await getOpportunityById(auth.tenantId, enrollment.opportunityId);
+        if (!canAdvisorAccessEnrollment(advisorId, enrollment, opp)) return forbidden();
         const updated = await cancelEnrollment(auth.tenantId, enrollmentId);
         if (!updated) return notFound("Enrollment not found");
         return ok(updated);
@@ -526,7 +752,9 @@ export async function handler(
       const listOpts: Parameters<typeof listSalesTasks>[1] = { limit };
       if (params.cursor) listOpts.cursor = params.cursor;
       if (params.status) listOpts.status = params.status as SalesTask["status"];
-      if (params.advisorId) listOpts.advisorId = params.advisorId;
+      if (advisorId) listOpts.advisorId = advisorId;
+      else if (params.advisorId) listOpts.advisorId = params.advisorId;
+      if (params.opportunityId) listOpts.opportunityId = params.opportunityId;
 
       const result = await listSalesTasks(auth.tenantId, listOpts);
       return ok(result);
@@ -546,10 +774,25 @@ export async function handler(
         updatedAt: now,
         ...(parsed.data.description ? { description: parsed.data.description } : {}),
         ...(parsed.data.opportunityId ? { opportunityId: parsed.data.opportunityId } : {}),
-        ...(parsed.data.advisorId ? { advisorId: parsed.data.advisorId } : {}),
+        ...(parsed.data.advisorId ? { advisorId: parsed.data.advisorId } : advisorId ? { advisorId } : {}),
         ...(parsed.data.dueAt ? { dueAt: parsed.data.dueAt } : {}),
       };
+      if (task.opportunityId) {
+        const opp = await getOpportunityById(auth.tenantId, task.opportunityId);
+        if (!opp) return badRequest("Opportunity not found");
+        if (!canAdvisorAccessOpportunity(advisorId, opp)) return forbidden();
+      }
       await createSalesTask(task);
+      if (task.opportunityId) {
+        await recordOpportunityActivity({
+          tenantId: auth.tenantId,
+          opportunityId: task.opportunityId,
+          type: "task_created",
+          message: task.title,
+          actorId: auth.userId,
+          touchLastActivity: true,
+        });
+      }
       return created(task);
     }
 
@@ -559,12 +802,17 @@ export async function handler(
       if (method === "GET" && segments.length === 2) {
         const task = await getSalesTaskById(auth.tenantId, taskId);
         if (!task) return notFound("Task not found");
+        if (!canAdvisorAccessTask(advisorId, task)) return forbidden();
         return ok(task);
       }
 
       if (method === "PATCH" && segments.length === 2) {
         const parsed = UpdateTaskSchema.safeParse(JSON.parse(apiEvent.body ?? "{}"));
         if (!parsed.success) return badRequest(parsed.error.message);
+
+        const existingTask = await getSalesTaskById(auth.tenantId, taskId);
+        if (!existingTask) return notFound("Task not found");
+        if (!canAdvisorAccessTask(advisorId, existingTask)) return forbidden();
 
         const updates: Parameters<typeof updateSalesTask>[2] = {};
         if (parsed.data.title !== undefined) updates.title = parsed.data.title.trim();
@@ -575,6 +823,16 @@ export async function handler(
 
         const updated = await updateSalesTask(auth.tenantId, taskId, updates);
         if (!updated) return notFound("Task not found");
+        if (updated.opportunityId && parsed.data.status === "done") {
+          await recordOpportunityActivity({
+            tenantId: auth.tenantId,
+            opportunityId: updated.opportunityId,
+            type: "task_done",
+            message: updated.title,
+            actorId: auth.userId,
+            touchLastActivity: true,
+          });
+        }
         return ok(updated);
       }
     }

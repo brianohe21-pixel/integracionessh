@@ -1,10 +1,10 @@
 import { randomUUID } from "crypto";
 import { normalizePhone } from "../dynamodb/contact.repository.js";
-import { createOpportunity } from "../dynamodb/opportunity.repository.js";
-import { emitIntegrationEvent } from "../integrations/emit.js";
-import { buildOpportunityCreatedPayload } from "../integrations/payloads.js";
 import { ensureDefaultPipeline } from "../sales/pipeline-bootstrap.js";
 import { findStageByKey } from "../sales/default-pipeline.js";
+import { emitIntegrationEvent } from "../integrations/emit.js";
+import { buildOpportunityCreatedPayload } from "../integrations/payloads.js";
+import { persistNewOpportunity } from "../sales/opportunities/create.js";
 import type { Opportunity, OpportunityStage } from "../../types/index.js";
 
 const STAGES: OpportunityStage[] = ["new", "quoted", "negotiation", "won", "lost"];
@@ -37,6 +37,10 @@ export async function createOpportunityFromFormData(params: {
   tags?: string[];
   leadId?: string;
   sourceId?: string;
+  conversationId?: string;
+  companyId?: string;
+  companyName?: string;
+  attribution?: Opportunity["attribution"];
 }): Promise<Opportunity> {
   const title = params.title.trim();
   if (!title) throw new Error("Opportunity title is required");
@@ -62,6 +66,8 @@ export async function createOpportunityFromFormData(params: {
     tags: params.tags ?? [],
     createdAt: now,
     updatedAt: now,
+    stageEnteredAt: now,
+    lastActivityAt: now,
     ...(params.botId ? { botId: params.botId } : {}),
     ...(amount !== undefined ? { amount } : {}),
     ...(phone ? { phone } : {}),
@@ -70,9 +76,13 @@ export async function createOpportunityFromFormData(params: {
     ...(params.description ? { description: params.description } : {}),
     ...(params.leadId ? { leadId: params.leadId } : {}),
     ...(params.sourceId ? { sourceId: params.sourceId } : {}),
+    ...(params.conversationId ? { conversationId: params.conversationId } : {}),
+    ...(params.companyId ? { companyId: params.companyId } : {}),
+    ...(params.companyName ? { companyName: params.companyName } : {}),
+    ...(params.attribution ? { attribution: params.attribution } : {}),
   };
 
-  await createOpportunity(opportunity);
+  const created = await persistNewOpportunity(opportunity);
 
   await emitIntegrationEvent(
     params.tenantId,
@@ -91,5 +101,5 @@ export async function createOpportunityFromFormData(params: {
     })
   ).catch((err) => console.error("Failed to emit opportunity.created:", err));
 
-  return opportunity;
+  return created;
 }

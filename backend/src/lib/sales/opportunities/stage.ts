@@ -6,7 +6,9 @@ import {
 } from "../../dynamodb/opportunity.repository.js";
 import { cancelEnrollmentsForOpportunity } from "../../dynamodb/sequence-enrollment.repository.js";
 import { findStageById, getPipelineById } from "../../dynamodb/pipeline.repository.js";
-import type { Opportunity, OpportunityStage } from "../../../types/index.js";
+import type { Opportunity, OpportunityLossReason, OpportunityStage } from "../../../types/index.js";
+import { recordOpportunityActivity } from "./activity.js";
+import { triggerSequencesForOpportunity } from "../sequences/triggers.js";
 
 export async function moveOpportunityStage(params: {
   tenantId: string;
@@ -14,6 +16,7 @@ export async function moveOpportunityStage(params: {
   stageId: string;
   changedBy?: string;
   closeReason?: string;
+  lossReason?: OpportunityLossReason;
 }): Promise<Opportunity | null> {
   const existing = await getOpportunityById(params.tenantId, params.opportunityId);
   if (!existing) return null;
@@ -28,11 +31,14 @@ export async function moveOpportunityStage(params: {
   const updates: Parameters<typeof updateOpportunity>[2] = {
     stageId: targetStage.stageId,
     stage: targetStage.key as OpportunityStage,
+    stageEnteredAt: now,
+    lastActivityAt: now,
   };
 
   if (targetStage.isClosed) {
     updates.closedAt = now;
     if (params.closeReason) updates.closeReason = params.closeReason;
+    if (params.lossReason) updates.lossReason = params.lossReason;
     await cancelEnrollmentsForOpportunity(params.tenantId, params.opportunityId);
   }
 
@@ -50,6 +56,31 @@ export async function moveOpportunityStage(params: {
     ...(params.changedBy ? { changedBy: params.changedBy } : {}),
     changedAt: now,
   });
+
+  await recordOpportunityActivity({
+    tenantId: params.tenantId,
+    opportunityId: params.opportunityId,
+    type: targetStage.isClosed ? "closed" : "stage_changed",
+    message: `${existing.stage} → ${targetStage.key}`,
+    ...(params.changedBy ? { actorId: params.changedBy } : {}),
+    metadata: {
+      fromStageId: existing.stageId,
+      toStageId: targetStage.stageId,
+      ...(params.closeReason ? { closeReason: params.closeReason } : {}),
+      ...(params.lossReason ? { lossReason: params.lossReason } : {}),
+    },
+    touchLastActivity: false,
+  });
+
+  if (!targetStage.isClosed) {
+    await triggerSequencesForOpportunity({
+      tenantId: params.tenantId,
+      opportunityId: params.opportunityId,
+      trigger: "stage_entered",
+      stageId: targetStage.stageId,
+      pipelineId: updated.pipelineId,
+    });
+  }
 
   return updated;
 }

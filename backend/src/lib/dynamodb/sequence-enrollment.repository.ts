@@ -11,6 +11,15 @@ const enrollmentKeys = (tenantId: string, enrollmentId: string) => ({
   SK: `ENROLLMENT#${enrollmentId}`,
 });
 
+const oppEnrollmentKeys = (
+  tenantId: string,
+  opportunityId: string,
+  enrollmentId: string
+) => ({
+  PK: `TENANT#${tenantId}`,
+  SK: `OPPENR#${opportunityId}#${enrollmentId}`,
+});
+
 function gsi1Keys(tenantId: string, nextRunAt: string, enrollmentId: string) {
   return {
     GSI1PK: `TENANT#${tenantId}#SEQRUN`,
@@ -48,19 +57,40 @@ export async function listEnrollmentsByOpportunity(
   const result = await docClient.send(
     new QueryCommand({
       TableName: TABLE_NAME,
-      IndexName: "GSI1",
-      KeyConditionExpression: "GSI1PK = :gsi1pk",
+      KeyConditionExpression: "PK = :pk AND begins_with(SK, :skPrefix)",
       ExpressionAttributeValues: {
-        ":gsi1pk": `TENANT#${tenantId}#SEQRUN`,
+        ":pk": `TENANT#${tenantId}`,
+        ":skPrefix": `OPPENR#${opportunityId}#`,
       },
-      ScanIndexForward: true,
+      ScanIndexForward: false,
     })
   );
 
-  return (result.Items ?? [])
-    .filter((item) => String(item.SK ?? "").startsWith("ENROLLMENT#"))
-    .map(stripItem)
-    .filter((enrollment) => enrollment.opportunityId === opportunityId);
+  const enrollmentIds = (result.Items ?? []).map((item) => String(item.enrollmentId ?? ""));
+  if (enrollmentIds.length === 0) {
+    const legacyResult = await docClient.send(
+      new QueryCommand({
+        TableName: TABLE_NAME,
+        IndexName: "GSI1",
+        KeyConditionExpression: "GSI1PK = :gsi1pk",
+        ExpressionAttributeValues: {
+          ":gsi1pk": `TENANT#${tenantId}#SEQRUN`,
+        },
+        ScanIndexForward: true,
+      })
+    );
+    return (legacyResult.Items ?? [])
+      .filter((item) => String(item.SK ?? "").startsWith("ENROLLMENT#"))
+      .map(stripItem)
+      .filter((enrollment) => enrollment.opportunityId === opportunityId);
+  }
+
+  const enrollments: SequenceEnrollment[] = [];
+  for (const enrollmentId of enrollmentIds) {
+    const enrollment = await getEnrollmentById(tenantId, enrollmentId);
+    if (enrollment) enrollments.push(enrollment);
+  }
+  return enrollments;
 }
 
 export async function listActiveEnrollmentsByOpportunity(
@@ -85,6 +115,24 @@ export async function createEnrollment(
       },
     })
   );
+
+  await docClient.send(
+    new PutCommand({
+      TableName: TABLE_NAME,
+      Item: {
+        ...oppEnrollmentKeys(
+          enrollment.tenantId,
+          enrollment.opportunityId,
+          enrollment.enrollmentId
+        ),
+        tenantId: enrollment.tenantId,
+        opportunityId: enrollment.opportunityId,
+        enrollmentId: enrollment.enrollmentId,
+        createdAt: enrollment.createdAt,
+      },
+    })
+  );
+
   return enrollment;
 }
 
