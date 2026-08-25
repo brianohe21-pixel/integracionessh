@@ -1528,12 +1528,16 @@ export interface InboundQueueMessage {
     | EmailInboundPayload;
 }
 
+export type WebChatSessionStatus = "active" | "ended";
+
 export interface WebChatSession {
   sessionId: string;
   tenantId: string;
   botId: string;
   conversationId: string;
   visitorName?: string;
+  status?: WebChatSessionStatus;
+  endedAt?: string;
   createdAt: string;
   lastActivityAt: string;
   ttl: number;

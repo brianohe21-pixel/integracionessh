@@ -10,9 +10,14 @@ import {
   createSessionToken,
   createWebChatSession,
   getWebChatSession,
+  isWebChatSessionEnded,
   touchWebChatSession,
   verifySessionToken,
 } from "../../lib/webchat/session.repository.js";
+import {
+  endVisitorWebchatSession,
+  requestVisitorWebchatHandoff,
+} from "../../lib/webchat/visitor-actions.js";
 import { assertCanUseWebChat } from "../../lib/billing/assert-plan.js";
 import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
 import { getResolvedBrandingWithInheritance } from "../../lib/branding/inherit.js";
@@ -52,13 +57,54 @@ function parseSubPath(rawPath: string, sessionId: string): string[] {
   return suffix.replace(/^\//, "").split("/").filter(Boolean);
 }
 
+function resolveSessionId(
+  rawPath: string,
+  pathParams: { sessionId?: string } | undefined
+): string | undefined {
+  if (pathParams?.sessionId) return pathParams.sessionId;
+  const match = rawPath.match(/^\/webchat\/sessions\/([^/]+)/);
+  return match?.[1];
+}
+
+function isCreateSessionRoute(method: string, rawPath: string): boolean {
+  if (method !== "POST") return false;
+  return rawPath.replace(/\/$/, "") === "/webchat/sessions";
+}
+
+async function authenticateSession(
+  event: APIGatewayProxyEventV2,
+  sessionId: string
+): Promise<
+  | { ok: true; session: NonNullable<Awaited<ReturnType<typeof getWebChatSession>>> }
+  | { ok: false; response: APIGatewayProxyResultV2 }
+> {
+  const token = getSessionAuth(event);
+  if (!token) return { ok: false, response: unauthorized("Missing session token") };
+
+  const verifiedSessionId = verifySessionToken(token, SESSION_SECRET);
+  if (!verifiedSessionId || verifiedSessionId !== sessionId) {
+    return { ok: false, response: unauthorized("Invalid session token") };
+  }
+
+  const session = await getWebChatSession(sessionId);
+  if (!session) return { ok: false, response: notFound("Session not found") };
+
+  return { ok: true, session };
+}
+
+function sessionPayload(session: NonNullable<Awaited<ReturnType<typeof getWebChatSession>>>) {
+  return {
+    sessionStatus: isWebChatSessionEnded(session) ? ("ended" as const) : ("active" as const),
+  };
+}
+
 export async function handler(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
   try {
     const method = event.requestContext.http.method;
     const rawPath = event.rawPath ?? event.requestContext.http.path;
-    const sessionId = event.pathParameters?.sessionId;
+    const sessionId = resolveSessionId(rawPath, event.pathParameters);
 
-    if (method === "POST" && rawPath.endsWith("/webchat/sessions") && !sessionId) {
+    if (isCreateSessionRoute(method, rawPath)) {
       return handleCreateSession(event);
     }
 
@@ -84,6 +130,14 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
 
     if (method === "POST" && sub[0] === "calls" && sub[2] === "accept" && sub[1]) {
       return handleVisitorCallToken(event, sessionId, sub[1]);
+    }
+
+    if (method === "POST" && sub[0] === "end") {
+      return handleEndSession(event, sessionId);
+    }
+
+    if (method === "POST" && sub[0] === "handoff") {
+      return handleRequestHandoff(event, sessionId);
     }
 
     return badRequest("Route not found");
@@ -142,6 +196,7 @@ async function handleCreateSession(
     sessionId,
     sessionToken,
     conversationId: conversation.conversationId,
+    sessionStatus: "active",
     ...(branding ? { branding } : {}),
   });
 }
@@ -150,16 +205,13 @@ async function handleSendMessage(
   event: APIGatewayProxyEventV2,
   sessionId: string
 ): Promise<APIGatewayProxyResultV2> {
-  const token = getSessionAuth(event);
-  if (!token) return unauthorized("Missing session token");
+  const auth = await authenticateSession(event, sessionId);
+  if (!auth.ok) return auth.response;
+  const { session } = auth;
 
-  const verifiedSessionId = verifySessionToken(token, SESSION_SECRET);
-  if (!verifiedSessionId || verifiedSessionId !== sessionId) {
-    return unauthorized("Invalid session token");
+  if (isWebChatSessionEnded(session)) {
+    return badRequest("Session ended");
   }
-
-  const session = await getWebChatSession(sessionId);
-  if (!session) return notFound("Session not found");
 
   const body = JSON.parse(event.body ?? "{}");
   const parsed = SendMessageSchema.safeParse(body);
@@ -199,16 +251,9 @@ async function handlePollMessages(
   event: APIGatewayProxyEventV2,
   sessionId: string
 ): Promise<APIGatewayProxyResultV2> {
-  const token = getSessionAuth(event);
-  if (!token) return unauthorized("Missing session token");
-
-  const verifiedSessionId = verifySessionToken(token, SESSION_SECRET);
-  if (!verifiedSessionId || verifiedSessionId !== sessionId) {
-    return unauthorized("Invalid session token");
-  }
-
-  const session = await getWebChatSession(sessionId);
-  if (!session) return notFound("Session not found");
+  const auth = await authenticateSession(event, sessionId);
+  if (!auth.ok) return auth.response;
+  const { session } = auth;
 
   const params = event.queryStringParameters ?? {};
   const limit = params.limit ? Math.min(parseInt(params.limit, 10) || 50, 100) : 50;
@@ -217,6 +262,7 @@ async function handlePollMessages(
   await touchWebChatSession(sessionId);
 
   return ok({
+    ...sessionPayload(session),
     items: messages.map((m) => ({
       messageId: m.messageId,
       role: m.role,
@@ -332,4 +378,48 @@ async function handleVisitorCallDecline(
   await touchWebChatSession(sessionId);
 
   return ok({ callId, status: "declined" });
+}
+
+async function handleEndSession(
+  event: APIGatewayProxyEventV2,
+  sessionId: string
+): Promise<APIGatewayProxyResultV2> {
+  const auth = await authenticateSession(event, sessionId);
+  if (!auth.ok) return auth.response;
+  const { session } = auth;
+
+  try {
+    const result = await endVisitorWebchatSession(session);
+    return ok({
+      sessionStatus: result.status,
+      ...(result.farewellMessage ? { farewellMessage: result.farewellMessage } : {}),
+    });
+  } catch (err) {
+    return handleError(err);
+  }
+}
+
+async function handleRequestHandoff(
+  event: APIGatewayProxyEventV2,
+  sessionId: string
+): Promise<APIGatewayProxyResultV2> {
+  const auth = await authenticateSession(event, sessionId);
+  if (!auth.ok) return auth.response;
+  const { session } = auth;
+
+  if (isWebChatSessionEnded(session)) {
+    return badRequest("Session ended");
+  }
+
+  try {
+    const result = await requestVisitorWebchatHandoff(session);
+    await touchWebChatSession(sessionId);
+    return ok({
+      sessionStatus: "active",
+      message: result.message,
+      handoffMode: result.handoffMode,
+    });
+  } catch (err) {
+    return handleError(err);
+  }
 }

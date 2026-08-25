@@ -228,6 +228,14 @@ locals {
       function_arn = var.flows_function_arn
       protected    = true
     }
+    webchat = {
+      path         = "/webchat/{proxy+}"
+      slug         = "webchat"
+      methods      = ["GET", "POST"]
+      invoke_arn   = var.webchat_invoke_arn
+      function_arn = var.webchat_function_arn
+      protected    = false
+    }
   }
 
   http_proxy_routes = {
@@ -671,48 +679,6 @@ locals {
       invoke_arn   = var.email_imap_connect_invoke_arn
       function_arn = var.email_imap_connect_function_arn
       protected    = true
-    }
-    webchat_sessions_create = {
-      route_key    = "POST /webchat/sessions"
-      slug         = "webchat"
-      invoke_arn   = var.webchat_invoke_arn
-      function_arn = var.webchat_function_arn
-      protected    = false
-    }
-    webchat_messages_send = {
-      route_key    = "POST /webchat/sessions/{sessionId}/messages"
-      slug         = "webchat"
-      invoke_arn   = var.webchat_invoke_arn
-      function_arn = var.webchat_function_arn
-      protected    = false
-    }
-    webchat_messages_poll = {
-      route_key    = "GET /webchat/sessions/{sessionId}/messages"
-      slug         = "webchat"
-      invoke_arn   = var.webchat_invoke_arn
-      function_arn = var.webchat_function_arn
-      protected    = false
-    }
-    webchat_call_token = {
-      route_key    = "POST /webchat/sessions/{sessionId}/calls/{callId}/token"
-      slug         = "webchat"
-      invoke_arn   = var.webchat_invoke_arn
-      function_arn = var.webchat_function_arn
-      protected    = false
-    }
-    webchat_call_decline = {
-      route_key    = "POST /webchat/sessions/{sessionId}/calls/{callId}/decline"
-      slug         = "webchat"
-      invoke_arn   = var.webchat_invoke_arn
-      function_arn = var.webchat_function_arn
-      protected    = false
-    }
-    webchat_call_accept = {
-      route_key    = "POST /webchat/sessions/{sessionId}/calls/{callId}/accept"
-      slug         = "webchat"
-      invoke_arn   = var.webchat_invoke_arn
-      function_arn = var.webchat_function_arn
-      protected    = false
     }
     bots_webchat_put = {
       route_key    = "PUT /bots/{botId}/webchat"

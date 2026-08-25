@@ -1,7 +1,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 import { GetCommand, PutCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { docClient, TABLE_NAME } from "../dynamodb/client.js";
-import type { WebChatSession } from "../../types/index.js";
+import type { WebChatSession, WebChatSessionStatus } from "../../types/index.js";
 
 const SESSION_TTL_SECONDS = 24 * 60 * 60;
 
@@ -50,6 +50,7 @@ export async function createWebChatSession(params: {
     botId: params.botId,
     conversationId: params.conversationId,
     ...(params.visitorName ? { visitorName: params.visitorName } : {}),
+    status: "active",
     createdAt: now,
     lastActivityAt: now,
     ttl,
@@ -91,4 +92,27 @@ export async function touchWebChatSession(sessionId: string): Promise<void> {
       },
     })
   );
+}
+
+export function isWebChatSessionEnded(session: WebChatSession): boolean {
+  return session.status === "ended";
+}
+
+export async function endWebChatSession(sessionId: string): Promise<WebChatSessionStatus> {
+  const now = new Date().toISOString();
+  const ttl = Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS;
+  await docClient.send(
+    new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: sessionKey(sessionId),
+      UpdateExpression: "SET #status = :ended, endedAt = :now, lastActivityAt = :now, #ttl = :ttl",
+      ExpressionAttributeNames: { "#status": "status", "#ttl": "ttl" },
+      ExpressionAttributeValues: {
+        ":ended": "ended",
+        ":now": now,
+        ":ttl": ttl,
+      },
+    })
+  );
+  return "ended";
 }
