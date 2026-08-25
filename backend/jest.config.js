@@ -8,6 +8,7 @@ module.exports = {
   moduleNameMapper: {
     "^(\\.{1,2}/.*)\\.js$": "$1",
     "^sanitize-html$": "<rootDir>/src/test/mocks/sanitize-html.ts",
+    "\\.(jpg|jpeg|png)$": "<rootDir>/src/test/mocks/file-dataurl.ts",
   },
   transformIgnorePatterns: [
     "/node_modules/(?!(sanitize-html|htmlparser2|dom-serializer|domhandler|domutils|entities)/)",

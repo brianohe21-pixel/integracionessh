@@ -107,6 +107,19 @@ async function build() {
       await esbuild.build(buildOptions);
       console.log("Build complete.");
 
+      const emailAssetsSrc = path.join(__dirname, "../src/lib/email/assets");
+      const emailAssetsDestDir = path.join(distDir, "email/assets");
+      fs.mkdirSync(emailAssetsDestDir, { recursive: true });
+      for (const entry of fs.readdirSync(emailAssetsSrc, { withFileTypes: true })) {
+        const sourcePath = path.join(emailAssetsSrc, entry.name);
+        const destPath = path.join(emailAssetsDestDir, entry.name);
+        if (entry.isDirectory()) {
+          fs.cpSync(sourcePath, destPath, { recursive: true });
+        } else {
+          fs.copyFileSync(sourcePath, destPath);
+        }
+      }
+
       if (!fs.existsSync(distDir)) {
         fs.mkdirSync(distDir, { recursive: true });
       }

@@ -26,6 +26,7 @@ export const emailAdapter: ChannelAdapter = {
       subject: subject.startsWith("Re:") ? subject : `Re: ${subject}`,
       text,
       from,
+      skipPlatformTemplate: true,
       ...(threadId
         ? { inReplyTo: threadId, references: threadId }
         : {}),

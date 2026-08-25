@@ -1,6 +1,33 @@
 import { SESClient } from "@aws-sdk/client-ses";
+import {
+  applyPlatformEmailTemplate,
+  isPlatformEmailSender,
+  resolvePlatformFromAddress,
+} from "./platform-template.js";
 
 const ses = new SESClient({});
+
+function prepareOutboundEmail(params: {
+  text: string;
+  html?: string;
+  from: string;
+  skipPlatformTemplate?: boolean;
+}): { text: string; html?: string; from: string } {
+  if (params.skipPlatformTemplate || !isPlatformEmailSender(params.from)) {
+    return params;
+  }
+
+  const templated = applyPlatformEmailTemplate({
+    text: params.text,
+    html: params.html,
+  });
+
+  return {
+    from: resolvePlatformFromAddress(params.from),
+    text: templated.text,
+    html: templated.html,
+  };
+}
 
 export async function sendEmail(params: {
   to: string[];
@@ -10,9 +37,10 @@ export async function sendEmail(params: {
   from?: string;
   inReplyTo?: string;
   references?: string;
+  skipPlatformTemplate?: boolean;
 }): Promise<{ messageId: string }> {
-  const from = params.from?.trim() || process.env.SES_FROM_EMAIL?.trim();
-  if (!from) {
+  const resolvedFrom = params.from?.trim() || process.env.SES_FROM_EMAIL?.trim();
+  if (!resolvedFrom) {
     console.warn("SES_FROM_EMAIL is not configured; skipping email send");
     return { messageId: `skipped-${Date.now()}` };
   }
@@ -23,13 +51,20 @@ export async function sendEmail(params: {
     return { messageId: `skipped-${Date.now()}` };
   }
 
+  const prepared = prepareOutboundEmail({
+    text: params.text,
+    html: params.html,
+    from: resolvedFrom,
+    skipPlatformTemplate: params.skipPlatformTemplate,
+  });
+
   const headers: string[] = [];
   if (params.inReplyTo) headers.push(`In-Reply-To: ${params.inReplyTo}`);
   if (params.references) headers.push(`References: ${params.references}`);
 
   const boundary = `boundary-${Date.now()}`;
   const rawMessage = [
-    `From: ${from}`,
+    `From: ${prepared.from}`,
     `To: ${recipients.join(", ")}`,
     `Subject: ${params.subject}`,
     ...headers,
@@ -39,13 +74,13 @@ export async function sendEmail(params: {
     `--${boundary}`,
     "Content-Type: text/plain; charset=UTF-8",
     "",
-    params.text,
-    ...(params.html
+    prepared.text,
+    ...(prepared.html
       ? [
           `--${boundary}`,
           "Content-Type: text/html; charset=UTF-8",
           "",
-          params.html,
+          prepared.html,
         ]
       : []),
     `--${boundary}--`,
@@ -54,7 +89,7 @@ export async function sendEmail(params: {
   const { SendRawEmailCommand } = await import("@aws-sdk/client-ses");
   const result = await ses.send(
     new SendRawEmailCommand({
-      Source: from,
+      Source: prepared.from,
       Destinations: recipients,
       RawMessage: { Data: Buffer.from(rawMessage) },
     })
@@ -76,9 +111,10 @@ export async function sendEmailWithAttachment(params: {
   html?: string;
   from?: string;
   attachments: EmailAttachment[];
+  skipPlatformTemplate?: boolean;
 }): Promise<{ messageId: string }> {
-  const from = params.from?.trim() || process.env.SES_FROM_EMAIL?.trim();
-  if (!from) {
+  const resolvedFrom = params.from?.trim() || process.env.SES_FROM_EMAIL?.trim();
+  if (!resolvedFrom) {
     console.warn("SES_FROM_EMAIL is not configured; skipping email send");
     return { messageId: `skipped-${Date.now()}` };
   }
@@ -89,10 +125,17 @@ export async function sendEmailWithAttachment(params: {
     return { messageId: `skipped-${Date.now()}` };
   }
 
+  const prepared = prepareOutboundEmail({
+    text: params.text,
+    html: params.html,
+    from: resolvedFrom,
+    skipPlatformTemplate: params.skipPlatformTemplate,
+  });
+
   const mixedBoundary = `mixed-${Date.now()}`;
   const altBoundary = `alt-${Date.now() + 1}`;
   const parts: string[] = [
-    `From: ${from}`,
+    `From: ${prepared.from}`,
     `To: ${recipients.join(", ")}`,
     `Subject: ${params.subject}`,
     "MIME-Version: 1.0",
@@ -104,15 +147,15 @@ export async function sendEmailWithAttachment(params: {
     `--${altBoundary}`,
     "Content-Type: text/plain; charset=UTF-8",
     "",
-    params.text,
+    prepared.text,
   ];
 
-  if (params.html) {
+  if (prepared.html) {
     parts.push(
       `--${altBoundary}`,
       "Content-Type: text/html; charset=UTF-8",
       "",
-      params.html
+      prepared.html
     );
   }
 
@@ -136,7 +179,7 @@ export async function sendEmailWithAttachment(params: {
   const { SendRawEmailCommand } = await import("@aws-sdk/client-ses");
   const result = await ses.send(
     new SendRawEmailCommand({
-      Source: from,
+      Source: prepared.from,
       Destinations: recipients,
       RawMessage: { Data: Buffer.from(rawMessage) },
     })

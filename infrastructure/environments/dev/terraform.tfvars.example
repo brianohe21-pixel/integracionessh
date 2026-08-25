@@ -45,4 +45,4 @@ demo_account_password = "DemoAccess2026!"
 enable_monitoring = false
 ops_alert_email   = "ops@example.com"
 # ops_alert_emails = ["ops@example.com", "oncall@example.com"]
-ses_from_email    = "ops@example.com"
+ses_from_email    = "ops@integracionessh.lat"
