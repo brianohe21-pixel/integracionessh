@@ -2576,6 +2576,8 @@ export interface FlowNodeData {
   notificationEmailSubject?: string;
   notificationTemplateName?: string;
   notificationTemplateLanguage?: string;
+  notificationTemplateVariables?: Record<string, string>;
+  notificationBotId?: string;
   botId?: string;
   webhookUrl?: string;
   webhookBody?: string;
