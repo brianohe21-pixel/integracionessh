@@ -27,6 +27,11 @@ import {
 } from "../../lib/billing/subaccount-services.js";
 import { getTenantWhatsAppRisk } from "../../lib/whatsapp/tenant-risk.js";
 import {
+  currentUsagePeriod,
+  getMonthlyUsage,
+} from "../../lib/dynamodb/usage.repository.js";
+import type { MonthlyUsage } from "../../types/index.js";
+import {
   ensureResellerDomainInAmplify,
   getResellerDomainDnsInfo,
   isReservedPlatformDomain,
@@ -90,6 +95,33 @@ const RegisterDomainSchema = z.object({
 
 function homeTenantId(auth: { tenantId: string; homeTenantId?: string }): string {
   return auth.homeTenantId ?? auth.tenantId;
+}
+
+function emptyUsage(tenantId: string, period: string): MonthlyUsage {
+  return {
+    tenantId,
+    period,
+    messagesCount: 0,
+    bulkRecipientsCount: 0,
+    campaignsStarted: 0,
+    voicebotMinutesCount: 0,
+  };
+}
+
+function sumUsageTotals(
+  period: string,
+  items: MonthlyUsage[]
+): Omit<MonthlyUsage, "tenantId"> {
+  return {
+    period,
+    messagesCount: items.reduce((sum, item) => sum + item.messagesCount, 0),
+    bulkRecipientsCount: items.reduce((sum, item) => sum + item.bulkRecipientsCount, 0),
+    campaignsStarted: items.reduce((sum, item) => sum + item.campaignsStarted, 0),
+    voicebotMinutesCount: items.reduce(
+      (sum, item) => sum + (item.voicebotMinutesCount ?? 0),
+      0
+    ),
+  };
 }
 
 function resolveSubaccountServices(
@@ -186,21 +218,32 @@ export async function handler(
 
     if (method === "GET" && path.endsWith("/reseller/subaccounts")) {
       const items = await listSubaccounts(parentId);
-      const itemsWithRisk = await Promise.all(
-        items.map(async (item) => ({
-          ...item,
-          whatsappRisk: await getTenantWhatsAppRisk(
-            item.tenantId,
-            process.env.ENVIRONMENT ?? "dev"
-          ),
-        }))
+      const period = currentUsagePeriod();
+      const itemsWithDetails = await Promise.all(
+        items.map(async (item) => {
+          const usage = await getMonthlyUsage(item.tenantId, period);
+          return {
+            ...item,
+            usage,
+            whatsappRisk: await getTenantWhatsAppRisk(
+              item.tenantId,
+              process.env.ENVIRONMENT ?? "dev"
+            ),
+          };
+        })
       );
       const bag = buildResellerBag(getEffectivePlanLimits(reseller), items);
+      const usageTotals = sumUsageTotals(
+        period,
+        itemsWithDetails.map((item) => item.usage ?? emptyUsage(item.tenantId, period))
+      );
       return ok({
-        items: itemsWithRisk,
+        items: itemsWithDetails,
         maxSubaccounts: reseller.resellerConfig?.maxSubaccounts ?? 25,
         count: items.length,
         bag,
+        usagePeriod: period,
+        usageTotals,
       });
     }
 
