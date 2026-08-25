@@ -6,12 +6,6 @@ export function platformEmailAssetsBaseUrl(): string {
   const configured = process.env.PLATFORM_EMAIL_ASSETS_BASE_URL?.trim();
   if (configured) return configured.replace(/\/$/, "");
 
-  const bucket = process.env.MEDIA_BUCKET?.trim();
-  const region = process.env.AWS_REGION ?? "us-east-1";
-  if (bucket) {
-    return `https://${bucket}.s3.${region}.amazonaws.com/platform/email`;
-  }
-
   return `${platformWebsiteUrl()}/brand`;
 }
 

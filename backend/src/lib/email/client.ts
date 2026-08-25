@@ -14,12 +14,16 @@ function prepareOutboundEmail(params: {
   skipPlatformTemplate?: boolean;
 }): { text: string; html?: string; from: string } {
   if (params.skipPlatformTemplate || !isPlatformEmailSender(params.from)) {
-    return params;
+    return {
+      from: params.from,
+      text: params.text,
+      ...(params.html !== undefined ? { html: params.html } : {}),
+    };
   }
 
   const templated = applyPlatformEmailTemplate({
     text: params.text,
-    html: params.html,
+    ...(params.html !== undefined ? { html: params.html } : {}),
   });
 
   return {
@@ -53,9 +57,11 @@ export async function sendEmail(params: {
 
   const prepared = prepareOutboundEmail({
     text: params.text,
-    html: params.html,
     from: resolvedFrom,
-    skipPlatformTemplate: params.skipPlatformTemplate,
+    ...(params.html !== undefined ? { html: params.html } : {}),
+    ...(params.skipPlatformTemplate !== undefined
+      ? { skipPlatformTemplate: params.skipPlatformTemplate }
+      : {}),
   });
 
   const headers: string[] = [];
@@ -127,9 +133,11 @@ export async function sendEmailWithAttachment(params: {
 
   const prepared = prepareOutboundEmail({
     text: params.text,
-    html: params.html,
     from: resolvedFrom,
-    skipPlatformTemplate: params.skipPlatformTemplate,
+    ...(params.html !== undefined ? { html: params.html } : {}),
+    ...(params.skipPlatformTemplate !== undefined
+      ? { skipPlatformTemplate: params.skipPlatformTemplate }
+      : {}),
   });
 
   const mixedBoundary = `mixed-${Date.now()}`;
