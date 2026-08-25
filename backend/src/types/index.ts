@@ -2569,6 +2569,7 @@ export interface FlowNodeData {
   opportunityDescriptionBinding?: string;
   opportunityTags?: string[];
   notificationChannel?: Channel;
+  notificationMessageType?: "text" | "template";
   notificationRecipientBinding?: string;
   notificationMessageBinding?: string;
   notificationMessageText?: LocalizedText;
