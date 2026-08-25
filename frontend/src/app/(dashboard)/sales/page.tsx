@@ -15,10 +15,8 @@ import {
   useOpportunities,
   useCreateOpportunity,
   useMoveOpportunityStage,
-  useUpdateOpportunity,
   useSalesSequences,
   useCreateSequence,
-  useEnrollOpportunity,
   useSalesTasks,
   useUpdateSalesTask,
   useCreateSalesTask,
@@ -38,11 +36,9 @@ import { SalesMetricsGrid } from "@/components/sales/SalesMetricsGrid";
 import { SalesKanbanBoard } from "@/components/sales/SalesKanbanBoard";
 import { SalesSequencesList } from "@/components/sales/SalesSequencesList";
 import { SalesTasksList } from "@/components/sales/SalesTasksList";
-import type {
-  Opportunity,
-  SalesSequence,
-  SalesSequenceStep,
-} from "@/types";
+import { OpportunityDrawer } from "@/components/sales/OpportunityDrawer";
+import { OpportunityCloseDialog } from "@/components/sales/OpportunityCloseDialog";
+import type { SalesSequenceStep } from "@/types";
 
 type TabId = "funnel" | "sequences" | "tasks";
 
@@ -54,7 +50,12 @@ export default function SalesPage() {
   const [selectedPipelineId, setSelectedPipelineId] = useState("");
   const [q, setQ] = useState("");
   const [dragOverStageId, setDragOverStageId] = useState<string | null>(null);
-  const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
+  const [selectedOpportunityId, setSelectedOpportunityId] = useState<string | null>(null);
+  const [pendingClose, setPendingClose] = useState<{
+    opportunityId: string;
+    stageId: string;
+    outcome: "won" | "lost";
+  } | null>(null);
   const [showCreateOpportunity, setShowCreateOpportunity] = useState(false);
   const [showCreateSequence, setShowCreateSequence] = useState(false);
   const [showCreateTask, setShowCreateTask] = useState(false);
@@ -82,10 +83,8 @@ export default function SalesPage() {
   const { data: tasksData } = useSalesTasks({ status: "open" });
 
   const createOpportunity = useCreateOpportunity();
-  const updateOpportunity = useUpdateOpportunity();
   const moveStage = useMoveOpportunityStage();
   const createSequence = useCreateSequence();
-  const enrollOpportunity = useEnrollOpportunity();
   const updateTask = useUpdateSalesTask();
   const createTask = useCreateSalesTask();
 
@@ -111,6 +110,15 @@ export default function SalesPage() {
   async function handleKanbanDrop(opportunityId: string, stageId: string) {
     const opportunity = opportunities.find((item) => item.opportunityId === opportunityId);
     if (!opportunity || opportunity.stageId === stageId) return;
+    const targetStage = stages.find((s) => s.stageId === stageId);
+    if (targetStage?.outcome === "won" || targetStage?.outcome === "lost") {
+      setPendingClose({
+        opportunityId,
+        stageId,
+        outcome: targetStage.outcome as "won" | "lost",
+      });
+      return;
+    }
     await moveStage.mutateAsync({ opportunityId, stageId });
   }
 
@@ -126,10 +134,12 @@ export default function SalesPage() {
               {t("sales.newOpportunity")}
             </Button>
           ) : tab === "sequences" ? (
-            <Button onClick={() => setShowCreateSequence(true)}>
-              <Plus className="h-4 w-4" />
-              {t("sales.newSequence")}
-            </Button>
+            isMember ? (
+              <Button onClick={() => setShowCreateSequence(true)}>
+                <Plus className="h-4 w-4" />
+                {t("sales.newSequence")}
+              </Button>
+            ) : null
           ) : (
             <Button onClick={() => setShowCreateTask(true)}>
               <Plus className="h-4 w-4" />
@@ -225,7 +235,7 @@ export default function SalesPage() {
               emptyDescription={t("sales.emptyDescription")}
               onDragOverStage={setDragOverStageId}
               onDrop={(opportunityId, stageId) => void handleKanbanDrop(opportunityId, stageId)}
-              onSelectOpportunity={setSelectedOpportunity}
+              onSelectOpportunity={(opp) => setSelectedOpportunityId(opp.opportunityId)}
             />
           )}
         </>
@@ -253,26 +263,28 @@ export default function SalesPage() {
         />
       )}
 
-      {selectedOpportunity && (
-        <OpportunityModal
-          opportunity={selectedOpportunity}
-          sequences={sequences}
-          onClose={() => setSelectedOpportunity(null)}
-          onSave={async (data) => {
-            await updateOpportunity.mutateAsync({
-              opportunityId: selectedOpportunity.opportunityId,
+      {selectedOpportunityId ? (
+        <OpportunityDrawer
+          opportunityId={selectedOpportunityId}
+          locale={locale}
+          onClose={() => setSelectedOpportunityId(null)}
+        />
+      ) : null}
+
+      {pendingClose ? (
+        <OpportunityCloseDialog
+          outcome={pendingClose.outcome}
+          onClose={() => setPendingClose(null)}
+          onConfirm={async (data) => {
+            await moveStage.mutateAsync({
+              opportunityId: pendingClose.opportunityId,
+              stageId: pendingClose.stageId,
               ...data,
             });
-            setSelectedOpportunity(null);
-          }}
-          onEnroll={async (sequenceId) => {
-            await enrollOpportunity.mutateAsync({
-              opportunityId: selectedOpportunity.opportunityId,
-              sequenceId,
-            });
+            setPendingClose(null);
           }}
         />
-      )}
+      ) : null}
 
       {showCreateOpportunity && (
         <CreateOpportunityModal
@@ -339,113 +351,6 @@ function ModalShell({
         <div className="px-6 py-5">{children}</div>
       </div>
     </Modal>
-  );
-}
-
-function OpportunityModal({
-  opportunity,
-  sequences,
-  onClose,
-  onSave,
-  onEnroll,
-}: {
-  opportunity: Opportunity;
-  sequences: SalesSequence[];
-  onClose: () => void;
-  onSave: (data: {
-    title: string;
-    amount?: number;
-    name?: string;
-    email?: string;
-    phone?: string;
-    description?: string;
-  }) => Promise<void>;
-  onEnroll: (sequenceId: string) => Promise<void>;
-}) {
-  const t = useT();
-  const [title, setTitle] = useState(opportunity.title);
-  const [amount, setAmount] = useState(opportunity.amount?.toString() ?? "");
-  const [name, setName] = useState(opportunity.name ?? "");
-  const [email, setEmail] = useState(opportunity.email ?? "");
-  const [phone, setPhone] = useState(opportunity.phone ?? "");
-  const [description, setDescription] = useState(opportunity.description ?? "");
-  const [sequenceId, setSequenceId] = useState(sequences[0]?.sequenceId ?? "");
-
-  return (
-    <ModalShell title={t("sales.opportunityDetail")} onClose={onClose}>
-      <div className="space-y-3">
-        <Input value={title} onChange={(e) => setTitle(e.target.value)} />
-        <Input
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          placeholder={t("sales.amount")}
-          type="number"
-        />
-        <Input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder={t("sales.contactName")}
-        />
-        <Input
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder={t("common.email")}
-          type="email"
-        />
-        <Input
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          placeholder={t("common.phone")}
-        />
-        <Textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder={t("sales.notes")}
-          className="min-h-[90px]"
-        />
-        {sequences.length > 0 && (
-          <div className="flex gap-2">
-            <Select
-              value={sequenceId}
-              onChange={(e) => setSequenceId(e.target.value)}
-              className="flex-1"
-            >
-              {sequences.map((sequence) => (
-                <option key={sequence.sequenceId} value={sequence.sequenceId}>
-                  {sequence.name}
-                </option>
-              ))}
-            </Select>
-            <Button
-              variant="secondary"
-              disabled={!sequenceId}
-              onClick={() => void onEnroll(sequenceId)}
-            >
-              {t("sales.startSequence")}
-            </Button>
-          </div>
-        )}
-        <div className="flex justify-end gap-2 pt-2">
-          <Button variant="secondary" onClick={onClose}>
-            {t("common.cancel")}
-          </Button>
-          <Button
-            onClick={() =>
-              void onSave({
-                title,
-                ...(amount ? { amount: Number(amount) } : {}),
-                ...(name ? { name } : {}),
-                ...(email ? { email } : {}),
-                ...(phone ? { phone } : {}),
-                ...(description ? { description } : {}),
-              })
-            }
-          >
-            {t("common.save")}
-          </Button>
-        </div>
-      </div>
-    </ModalShell>
   );
 }
 

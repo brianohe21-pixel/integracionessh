@@ -3,7 +3,7 @@
 import { GripVertical, Mail, Phone, User } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/lib/utils";
-import type { Opportunity, PipelineStage, SalesFunnelMetrics } from "@/types";
+import type { Opportunity, OpportunityEnriched, PipelineStage, SalesFunnelMetrics } from "@/types";
 import {
   contactInitials,
   formatSalesMoney,
@@ -13,14 +13,14 @@ import {
 
 interface SalesKanbanBoardProps {
   stages: PipelineStage[];
-  opportunities: Opportunity[];
+  opportunities: OpportunityEnriched[];
   metricsByStage?: SalesFunnelMetrics["byStage"];
   locale: string;
   dragOverStageId: string | null;
   emptyDescription: string;
   onDragOverStage: (stageId: string | null) => void;
   onDrop: (opportunityId: string, stageId: string) => void;
-  onSelectOpportunity: (opportunity: Opportunity) => void;
+  onSelectOpportunity: (opportunity: OpportunityEnriched) => void;
 }
 
 export function SalesKanbanBoard({
@@ -113,6 +113,16 @@ export function SalesKanbanBoard({
                         {opportunity.amount !== undefined ? (
                           <p className="mt-1 text-sm font-bold text-accent">
                             {formatSalesMoney(opportunity.amount, opportunity.currency, locale)}
+                          </p>
+                        ) : null}
+                        {opportunity.companyName ? (
+                          <p className="mt-1 text-xs text-secondary truncate">
+                            {opportunity.companyName}
+                          </p>
+                        ) : null}
+                        {opportunity.daysInStage > 0 ? (
+                          <p className="mt-0.5 text-xs text-muted">
+                            {opportunity.daysInStage}d
                           </p>
                         ) : null}
                       </div>

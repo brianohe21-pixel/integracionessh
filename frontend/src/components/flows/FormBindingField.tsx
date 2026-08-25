@@ -22,7 +22,7 @@ export function FormBindingField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder ?? "{{form.field}}"}
-        className="w-full text-sm border border-default rounded-lg p-2"
+        className="w-full text-sm border border-field-border rounded-lg p-2 bg-surface-elevated shadow-sm focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none"
       />
       {sampleFields.length > 0 && (
         <div className="mt-1.5 flex flex-wrap gap-1">
@@ -31,7 +31,7 @@ export function FormBindingField({
               key={field}
               type="button"
               onClick={() => onChange(`{{form.${field}}}`)}
-              className="rounded-md border border-default px-2 py-0.5 text-[10px] text-secondary hover:border-accent/40 hover:text-primary"
+              className="rounded-md border border-field-border px-2 py-0.5 text-[10px] text-secondary hover:border-accent/40 hover:text-primary"
             >
               {field}
             </button>

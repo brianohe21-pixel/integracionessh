@@ -62,12 +62,18 @@ export function useOpportunities(options?: {
   stageId?: string;
   q?: string;
   cursor?: string;
+  conversationId?: string;
+  assignedAdvisorId?: string;
+  companyId?: string;
 }) {
   const params = new URLSearchParams();
   if (options?.pipelineId) params.set("pipelineId", options.pipelineId);
   if (options?.stageId) params.set("stageId", options.stageId);
   if (options?.q) params.set("q", options.q);
   if (options?.cursor) params.set("cursor", options.cursor);
+  if (options?.conversationId) params.set("conversationId", options.conversationId);
+  if (options?.assignedAdvisorId) params.set("assignedAdvisorId", options.assignedAdvisorId);
+  if (options?.companyId) params.set("companyId", options.companyId);
   const qs = params.toString() ? `?${params.toString()}` : "";
 
   return useQuery({
@@ -112,10 +118,15 @@ export function useCreateOpportunity() {
       email?: string;
       description?: string;
       assignedAdvisorId?: string;
+      conversationId?: string;
+      leadId?: string;
+      botId?: string;
+      companyId?: string;
     }) => api.post<Opportunity>("/sales/opportunities", body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sales", "opportunities"] });
       qc.invalidateQueries({ queryKey: ["sales", "metrics"] });
+      qc.invalidateQueries({ queryKey: ["sales", "conversation-opportunity"] });
     },
   });
 }
@@ -130,15 +141,25 @@ export function useUpdateOpportunity() {
       opportunityId: string;
       title?: string;
       amount?: number;
+      currency?: string;
       phone?: string;
       name?: string;
       email?: string;
       description?: string;
       assignedAdvisorId?: string;
+      companyId?: string;
+      companyName?: string;
+      expectedCloseDate?: string;
+      leadId?: string;
+      conversationId?: string;
+      quotationId?: string;
+      paymentId?: string;
+      tags?: string[];
     }) => api.patch<Opportunity>(`/sales/opportunities/${opportunityId}`, body),
-    onSuccess: () => {
+    onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["sales", "opportunities"] });
       qc.invalidateQueries({ queryKey: ["sales", "metrics"] });
+      qc.invalidateQueries({ queryKey: ["sales", "opportunity", vars.opportunityId] });
     },
   });
 }
@@ -150,14 +171,17 @@ export function useMoveOpportunityStage() {
       opportunityId,
       stageId,
       closeReason,
+      lossReason,
     }: {
       opportunityId: string;
       stageId: string;
       closeReason?: string;
+      lossReason?: string;
     }) =>
       api.post<Opportunity>(`/sales/opportunities/${opportunityId}/stage`, {
         stageId,
         ...(closeReason ? { closeReason } : {}),
+        ...(lossReason ? { lossReason } : {}),
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sales", "opportunities"] });

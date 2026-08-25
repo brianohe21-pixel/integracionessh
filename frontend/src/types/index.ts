@@ -209,6 +209,8 @@ export interface Tenant {
   createdAt: string;
   updatedAt: string;
   resolvedBranding?: ResolvedTenantBranding & { canCustomize?: boolean };
+  whatsappRisk?: TenantWhatsAppRiskSummary;
+  usage?: MonthlyUsage;
 }
 
 export interface MonthlyUsage {
@@ -217,6 +219,7 @@ export interface MonthlyUsage {
   messagesCount: number;
   bulkRecipientsCount: number;
   campaignsStarted: number;
+  voicebotMinutesCount?: number;
 }
 
 export interface PlanLimits {
@@ -242,6 +245,16 @@ export interface WhatsAppPhoneInfo {
   displayPhoneNumber?: string;
   verifiedName?: string;
   messagingLimit?: string;
+}
+
+export type TenantWhatsAppRiskLevel = "ok" | "warn" | "block" | "none";
+
+export interface TenantWhatsAppRiskSummary {
+  risk: TenantWhatsAppRiskLevel;
+  score: number | null;
+  connectedNumbers: number;
+  qualityRating: WhatsAppQualityRating | null;
+  phoneStatus: string | null;
 }
 
 export type Channel =
@@ -474,6 +487,41 @@ export interface SalesPipeline {
   updatedAt: string;
 }
 
+export type OpportunityLossReason =
+  | "price"
+  | "competition"
+  | "no_response"
+  | "timing"
+  | "not_qualified"
+  | "other";
+
+export interface OpportunityAttribution {
+  source?: string;
+  campaignId?: string;
+  flowId?: string;
+  submissionId?: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  utmContent?: string;
+  utmTerm?: string;
+  referrer?: string;
+  landingPage?: string;
+}
+
+export interface Company {
+  companyId: string;
+  tenantId: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  website?: string;
+  industry?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Opportunity {
   opportunityId: string;
   tenantId: string;
@@ -495,10 +543,96 @@ export interface Opportunity {
   assignedAdvisorId?: string;
   quotationId?: string;
   paymentId?: string;
+  companyId?: string;
+  companyName?: string;
+  expectedCloseDate?: string;
+  stageEnteredAt?: string;
+  lastActivityAt?: string;
+  lossReason?: OpportunityLossReason;
+  attribution?: OpportunityAttribution;
   closedAt?: string;
   closeReason?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface OpportunityStageHistoryEntry {
+  historyId: string;
+  opportunityId: string;
+  tenantId: string;
+  fromStageId?: string;
+  toStageId: string;
+  fromStageKey?: string;
+  toStageKey: string;
+  changedBy?: string;
+  changedAt: string;
+}
+
+export type OpportunityActivityType =
+  | "created"
+  | "stage_changed"
+  | "assigned"
+  | "note_updated"
+  | "task_created"
+  | "task_done"
+  | "sequence_step"
+  | "quotation_sent"
+  | "payment_paid"
+  | "message"
+  | "closed";
+
+export interface OpportunityActivityEvent {
+  activityId: string;
+  opportunityId: string;
+  tenantId: string;
+  type: OpportunityActivityType;
+  message?: string;
+  actorId?: string;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface OpportunityEnriched extends Opportunity {
+  daysInStage: number;
+  forecastAmount: number;
+}
+
+export interface OpportunityDetail {
+  opportunity: OpportunityEnriched;
+  pipeline?: Pick<SalesPipeline, "pipelineId" | "name" | "stages">;
+  company?: Company;
+  advisor?: { advisorId: string; name: string };
+  lead?: Lead;
+  contact?: Contact;
+  conversation?: Pick<
+    Conversation,
+    | "conversationId"
+    | "botId"
+    | "channel"
+    | "phoneNumber"
+    | "contactName"
+    | "status"
+    | "lastMessageAt"
+    | "workflowStatus"
+    | "assignedAdvisorId"
+  >;
+  quotation?: Quotation;
+  payment?: PaymentRequest;
+  quotations?: Quotation[];
+  payments?: PaymentRequest[];
+  tasks: SalesTask[];
+  enrollments: SequenceEnrollment[];
+  stageHistory: OpportunityStageHistoryEntry[];
+}
+
+export interface CompaniesListResponse {
+  items: Company[];
+  nextCursor?: string;
+}
+
+export interface OpportunityTimelineResponse {
+  items: OpportunityActivityEvent[];
+  nextCursor?: string;
 }
 
 export type SequenceStepChannel = "whatsapp" | "email" | "task";
@@ -588,7 +722,7 @@ export interface SalesFunnelMetrics {
 }
 
 export interface OpportunitiesListResponse {
-  items: Opportunity[];
+  items: OpportunityEnriched[];
   nextCursor?: string;
 }
 
@@ -1387,9 +1521,11 @@ export interface FlowNodeData {
   notificationEmailSubject?: string;
   notificationMessageBinding?: string;
   notificationMessageText?: LocalizedText;
+  notificationMessageHtml?: LocalizedText;
   notificationTemplateName?: string;
   notificationTemplateLanguage?: string;
   notificationTemplateVariables?: Record<string, string>;
+  notificationBotId?: string;
   botId?: string;
   webhookUrl?: string;
   webhookBody?: string;

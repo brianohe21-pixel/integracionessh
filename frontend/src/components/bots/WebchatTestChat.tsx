@@ -8,6 +8,7 @@ import {
   ExternalLink,
   MessageSquare,
   Monitor,
+  MoreVertical,
   RotateCcw,
   Sparkles,
   UserRound,
@@ -95,8 +96,22 @@ export function WebchatTestChat({
   const t = useT();
   const locale = useLocale();
   const [draft, setDraft] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmEndOpen, setConfirmEndOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
-  const { messages, conversationId, status, error, send, reset } = useWebchatTest({
+  const {
+    messages,
+    conversationId,
+    status,
+    error,
+    sessionEnded,
+    actionPending,
+    send,
+    reset,
+    endConversation,
+    requestHandoff,
+    startNewConversation,
+  } = useWebchatTest({
     botId,
     widgetKey,
     enabled,
@@ -238,7 +253,7 @@ export function WebchatTestChat({
           </div>
 
           <div className="absolute bottom-5 right-5 flex w-[min(100%,22rem)] flex-col items-end gap-2">
-            <div className="flex h-[420px] w-full flex-col overflow-hidden rounded-2xl border border-default bg-white shadow-2xl">
+            <div className="relative flex h-[420px] w-full flex-col overflow-hidden rounded-2xl border border-default bg-white shadow-2xl">
               <div
                 className="flex items-center gap-2 px-4 py-3 text-sm font-semibold text-white"
                 style={{ backgroundColor: primaryColor }}
@@ -250,9 +265,46 @@ export function WebchatTestChat({
                     {brandName.charAt(0).toUpperCase()}
                   </div>
                 )}
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="truncate">{brandName}</p>
                   <p className="text-[11px] font-normal opacity-90">{t("webchat.testVisitorMode")}</p>
+                </div>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setMenuOpen((value) => !value)}
+                    disabled={sessionEnded || actionPending}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-white/90 transition-colors hover:bg-white/10 disabled:opacity-40"
+                    aria-label={t("webchat.visitorMenu")}
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </button>
+                  {menuOpen ? (
+                    <div className="absolute right-0 top-10 z-20 min-w-[190px] overflow-hidden rounded-xl border border-default bg-white text-primary shadow-xl">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          void requestHandoff();
+                        }}
+                        disabled={actionPending}
+                        className="block w-full px-3 py-2.5 text-left text-sm hover:bg-surface-muted disabled:opacity-50"
+                      >
+                        {t("webchat.talkToAdvisor")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          setConfirmEndOpen(true);
+                        }}
+                        disabled={actionPending}
+                        className="block w-full border-t border-default px-3 py-2.5 text-left text-sm text-danger hover:bg-danger/5 disabled:opacity-50"
+                      >
+                        {t("webchat.endConversation")}
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               </div>
 
@@ -356,50 +408,91 @@ export function WebchatTestChat({
                   </div>
                 ) : null}
 
-                <form
-                  onSubmit={(event) => void handleSubmit(event)}
-                  className="border-t border-default bg-white p-3"
-                >
-                  <div className="flex items-end gap-2">
-                    <textarea
-                      value={draft}
-                      onChange={(event) => setDraft(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" && !event.shiftKey) {
-                          event.preventDefault();
-                          if (!draft.trim() || status === "connecting" || status === "sending") return;
-                          void handleSubmit(event);
-                        }
-                      }}
-                      placeholder={t("webchat.testPlaceholder")}
-                      disabled={status === "connecting"}
-                      rows={2}
-                      className="max-h-24 min-h-[2.75rem] flex-1 resize-none rounded-xl border border-default px-3 py-2 text-sm"
-                    />
-                    <button
-                      type="submit"
-                      disabled={!draft.trim() || status === "connecting" || status === "sending"}
-                      className="flex h-10 w-10 items-center justify-center rounded-full text-white transition-opacity disabled:opacity-40"
+                {sessionEnded ? (
+                  <div className="border-t border-default bg-surface-muted px-4 py-4 text-center">
+                    <p className="text-sm font-medium text-primary">{t("webchat.conversationEnded")}</p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="mt-3"
+                      onClick={startNewConversation}
                       style={{ backgroundColor: primaryColor }}
-                      aria-label={t("webchat.testSend")}
                     >
-                      <ArrowUp className="h-4 w-4" />
-                    </button>
+                      {t("webchat.startNewConversation")}
+                    </Button>
                   </div>
-                  <p className="mt-2 text-[11px] text-secondary">{t("webchat.testInputHint")}</p>
-                </form>
+                ) : (
+                  <form
+                    onSubmit={(event) => void handleSubmit(event)}
+                    className="border-t border-default bg-white p-3"
+                  >
+                    <div className="flex items-end gap-2">
+                      <textarea
+                        value={draft}
+                        onChange={(event) => setDraft(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" && !event.shiftKey) {
+                            event.preventDefault();
+                            if (!draft.trim() || status === "connecting" || status === "sending") return;
+                            void handleSubmit(event);
+                          }
+                        }}
+                        placeholder={t("webchat.testPlaceholder")}
+                        disabled={status === "connecting" || actionPending}
+                        rows={2}
+                        className="max-h-24 min-h-[2.75rem] flex-1 resize-none rounded-xl border border-default px-3 py-2 text-sm"
+                      />
+                      <button
+                        type="submit"
+                        disabled={!draft.trim() || status === "connecting" || status === "sending" || actionPending}
+                        className="flex h-10 w-10 items-center justify-center rounded-full text-white transition-opacity disabled:opacity-40"
+                        style={{ backgroundColor: primaryColor }}
+                        aria-label={t("webchat.testSend")}
+                      >
+                        <ArrowUp className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <p className="mt-2 text-[11px] text-secondary">{t("webchat.testInputHint")}</p>
+                  </form>
+                )}
               </div>
             </div>
 
+            {confirmEndOpen ? (
+              <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/40 p-4">
+                <div className="w-full max-w-xs rounded-xl border border-default bg-white p-4 shadow-xl">
+                  <h3 className="text-sm font-semibold text-primary">{t("webchat.endConfirmTitle")}</h3>
+                  <p className="mt-2 text-sm text-secondary">{t("webchat.endConfirmBody")}</p>
+                  <div className="mt-4 flex justify-end gap-2">
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setConfirmEndOpen(false)}>
+                      {t("common.cancel")}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => {
+                        setConfirmEndOpen(false);
+                        void endConversation();
+                      }}
+                      disabled={actionPending}
+                    >
+                      {t("webchat.endConfirmYes")}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
             <button
               type="button"
-              className="rounded-full px-4 py-2.5 text-sm font-medium text-white shadow-lg"
+              className="flex h-14 w-14 items-center justify-center rounded-full text-white shadow-lg"
               style={{
                 backgroundColor: primaryColor,
                 boxShadow: `0 4px 14px ${primaryColor}66`,
               }}
+              aria-label={brandName}
             >
-              {brandName}
+              <MessageSquare className="h-6 w-6" />
             </button>
           </div>
         </div>

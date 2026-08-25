@@ -9,9 +9,11 @@ import { Select } from "@/components/ui/Input";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { Tabs } from "@/components/ui/Tabs";
 import { ConversationListItem } from "@/components/conversations/ConversationListItem";
+import { resolveWhatsAppRisk } from "@/hooks/useWhatsAppRisk";
 import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 import type { Bot, Advisor, Channel, Conversation, InboxSlaStatus, WorkflowStatus } from "@/types";
+import type { WhatsAppRiskResponse } from "@/hooks/useWhatsAppRisk";
 
 type ListTab = "all" | "unread" | "mine" | "sla_breached" | "queue";
 
@@ -61,6 +63,7 @@ type Props = {
   onClaimFromQueue: (conv: Conversation) => Promise<void>;
   claimPending: boolean;
   showOnMobile: boolean;
+  whatsappRisk?: WhatsAppRiskResponse;
 };
 
 export function ConversationListSidebar({
@@ -108,6 +111,7 @@ export function ConversationListSidebar({
   onClaimFromQueue,
   claimPending,
   showOnMobile,
+  whatsappRisk,
 }: Props) {
   const t = useT();
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -358,6 +362,11 @@ export function ConversationListSidebar({
               modeHumanLabel={t("conversations.modeHuman")}
               modeBotLabel={t("conversations.modeBot")}
               takeConversationLabel={t("conversations.takeConversation")}
+              whatsappRisk={
+                (conv.channel ?? "whatsapp") === "whatsapp"
+                  ? resolveWhatsAppRisk(whatsappRisk, conv.botId)
+                  : null
+              }
             />
           );
         })}

@@ -3,7 +3,7 @@
 import { useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, setTenantContext } from "@/lib/api";
-import type { Tenant, ResellerLimitsOverride, SubaccountServiceId } from "@/types";
+import type { Tenant, ResellerLimitsOverride, SubaccountServiceId, MonthlyUsage } from "@/types";
 import type { ResellerBag } from "@/lib/subaccount-services";
 
 export interface SubaccountsResponse {
@@ -11,6 +11,8 @@ export interface SubaccountsResponse {
   maxSubaccounts: number;
   count: number;
   bag?: ResellerBag;
+  usagePeriod?: string;
+  usageTotals?: Omit<MonthlyUsage, "tenantId">;
 }
 
 export interface ResellerDomainDnsRecord {

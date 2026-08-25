@@ -5,13 +5,17 @@ import { ExternalLink } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { useMetaFlows } from "@/hooks/useMetaFlows";
 import { useBots } from "@/hooks/useBots";
+import { useTenantEmailSettings } from "@/hooks/useTenantEmailSettings";
 import { MetaFlowsModal } from "@/components/meta-flows/MetaFlowsModal";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Input";
 import { LocalizedTextField } from "@/components/ui/LocalizedTextField";
+import { LocalizedHtmlField } from "@/components/ui/LocalizedHtmlField";
 import type { FlowNode, FlowNodeType, LocalizedText } from "@/types";
 import { extractSampleFields, FormBindingField } from "./FormBindingField";
 import { FlowWebhookPanel } from "./FlowWebhookPanel";
+import { TemplatePicker } from "@/components/templates/TemplatePicker";
+import type { OutreachChannel } from "@/types";
 
 interface NodePropertiesPanelProps {
   selected: FlowNode | undefined;
@@ -40,7 +44,7 @@ function textInput(
     <input
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full text-sm border border-default rounded-lg px-3 py-2.5 bg-surface-elevated transition-all focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none"
+      className="w-full text-sm border border-field-border rounded-lg px-3 py-2.5 bg-surface-elevated shadow-sm transition-all focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none"
       {...props}
     />
   );
@@ -58,7 +62,7 @@ function textArea(
       onChange={(e) => onChange(e.target.value)}
       rows={rows}
       placeholder={placeholder}
-      className="w-full text-sm border border-default rounded-lg px-3 py-2.5 bg-surface-elevated transition-all focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none resize-y"
+      className="w-full text-sm border border-field-border rounded-lg px-3 py-2.5 bg-surface-elevated shadow-sm transition-all focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none resize-y"
     />
   );
 }
@@ -93,12 +97,39 @@ export function NodePropertiesPanel({
   const type = selected.type as FlowNodeType;
   const d = selected.data;
   const sampleFields = extractSampleFields(samplePayload);
+  const isEmailNotification =
+    type === "send_notification" && (d.notificationChannel ?? "whatsapp") === "email";
+  const { data: tenantEmailSettings } = useTenantEmailSettings(isEmailNotification);
 
   const localizedField = (
     value: LocalizedText | undefined,
     onChange: (v: LocalizedText) => void,
-    rows = 3
-  ) => <LocalizedTextField value={value} onChange={onChange} rows={rows} />;
+    rows = 3,
+    sampleFieldsForField?: string[],
+    hint?: string
+  ) => (
+    <LocalizedTextField
+      value={value}
+      onChange={onChange}
+      rows={rows}
+      sampleFields={sampleFieldsForField}
+      hint={hint}
+    />
+  );
+
+  const localizedHtmlField = (
+    value: LocalizedText | undefined,
+    onChange: (v: LocalizedText) => void,
+    sampleFieldsForField?: string[],
+    hint?: string
+  ) => (
+    <LocalizedHtmlField
+      value={value}
+      onChange={onChange}
+      sampleFields={sampleFieldsForField}
+      hint={hint}
+    />
+  );
 
   return (
     <div className="space-y-6">
@@ -120,7 +151,7 @@ export function NodePropertiesPanel({
       </div>
       )}
 
-      <div className="rounded-xl border border-default bg-surface-muted/30 p-4">
+      <div className="rounded-xl border border-field-border bg-surface-muted/30 p-4">
         <FieldLabel>{t("flows.fields.label")}</FieldLabel>
         {textInput(d.label ?? "", (v) => onUpdate({ label: v }))}
       </div>
@@ -173,7 +204,7 @@ export function NodePropertiesPanel({
                   <select
                     value={d.matchMode ?? "contains"}
                     onChange={(e) => onUpdate({ matchMode: e.target.value })}
-                    className="w-full text-sm border border-default rounded-lg p-2 bg-surface-elevated"
+                    className="w-full text-sm border border-field-border rounded-lg p-2 bg-surface-elevated shadow-sm"
                   >
                     <option value="contains">{t("flows.fields.matchContains")}</option>
                     <option value="exact">{t("flows.fields.matchExact")}</option>
@@ -236,7 +267,7 @@ export function NodePropertiesPanel({
             <select
               value={d.conditionOperator ?? "contains"}
               onChange={(e) => onUpdate({ conditionOperator: e.target.value })}
-              className="w-full text-sm border border-default rounded-lg p-2 bg-surface-elevated"
+              className="w-full text-sm border border-field-border rounded-lg p-2 bg-surface-elevated shadow-sm"
             >
               <option value="contains">{t("flows.fields.opContains")}</option>
               <option value="equals">{t("flows.fields.opEquals")}</option>
@@ -313,7 +344,7 @@ export function NodePropertiesPanel({
             <select
               value={d.metaFlowId ?? ""}
               onChange={(e) => onUpdate({ metaFlowId: e.target.value })}
-              className="w-full text-sm border border-default rounded-lg p-2 bg-surface-elevated"
+              className="w-full text-sm border border-field-border rounded-lg p-2 bg-surface-elevated shadow-sm"
             >
               <option value="">—</option>
               {metaFlows?.map((mf) => (
@@ -391,7 +422,7 @@ export function NodePropertiesPanel({
             <select
               value={d.httpMethod ?? "GET"}
               onChange={(e) => onUpdate({ httpMethod: e.target.value })}
-              className="w-full text-sm border border-default rounded-lg p-2 bg-surface-elevated"
+              className="w-full text-sm border border-field-border rounded-lg p-2 bg-surface-elevated shadow-sm"
             >
               <option value="GET">GET</option>
               <option value="POST">POST</option>
@@ -680,7 +711,7 @@ export function NodePropertiesPanel({
                     className={`rounded-lg border px-2 py-1.5 text-xs font-semibold transition-all ${
                       active
                         ? "border-accent bg-accent text-white"
-                        : "border-default bg-surface-elevated text-secondary hover:border-accent/50"
+                        : "border-field-border bg-surface-elevated text-secondary hover:border-accent/50"
                     }`}
                   >
                     {labels[ch]}
@@ -690,6 +721,33 @@ export function NodePropertiesPanel({
             </div>
           </div>
 
+          {(d.notificationChannel ?? "whatsapp") !== "email" && (
+            <div>
+              <FieldLabel>{t("flows.fields.notificationBot")}</FieldLabel>
+              <Select
+                value={d.notificationBotId ?? ""}
+                onChange={(e) =>
+                  onUpdate({
+                    notificationBotId: e.target.value,
+                    notificationTemplateName: "",
+                    notificationTemplateLanguage: "es",
+                  })
+                }
+              >
+                <option value="">{t("flows.fields.notificationBotPlaceholder")}</option>
+                {(bots ?? [])
+                  .filter((bot) =>
+                    (d.notificationChannel ?? "whatsapp") === "sms" ? bot.smsEnabled : true
+                  )
+                  .map((bot) => (
+                    <option key={bot.botId} value={bot.botId}>
+                      {bot.name}
+                    </option>
+                  ))}
+              </Select>
+            </div>
+          )}
+
           <FormBindingField
             label={t("flows.fields.notificationRecipientBinding")}
             value={d.notificationRecipientBinding ?? ""}
@@ -698,14 +756,27 @@ export function NodePropertiesPanel({
           />
 
           {(d.notificationChannel ?? "whatsapp") === "email" && (
-            <div>
-              <FieldLabel>{t("flows.fields.notificationEmailSubject")}</FieldLabel>
-              {textInput(d.notificationEmailSubject ?? "", (v) => onUpdate({ notificationEmailSubject: v }), {
-                placeholder: "Asunto del correo",
-              })}
-            </div>
+            <>
+              <p className="text-xs text-secondary rounded-lg bg-surface-muted/60 px-3 py-2">
+                {tenantEmailSettings?.canSend
+                  ? t("flows.fields.notificationEmailSenderTenant", {
+                      sender:
+                        tenantEmailSettings.settings.fromName && tenantEmailSettings.settings.fromEmail
+                          ? `${tenantEmailSettings.settings.fromName} (${tenantEmailSettings.settings.fromEmail})`
+                          : tenantEmailSettings.settings.fromEmail ?? "",
+                    })
+                  : t("flows.fields.notificationEmailSenderPlatform")}
+              </p>
+              <div>
+                <FieldLabel>{t("flows.fields.notificationEmailSubject")}</FieldLabel>
+                {textInput(d.notificationEmailSubject ?? "", (v) => onUpdate({ notificationEmailSubject: v }), {
+                  placeholder: "Asunto del correo",
+                })}
+              </div>
+            </>
           )}
 
+          {(d.notificationChannel ?? "whatsapp") !== "email" && (
           <div>
             <FieldLabel>{t("flows.fields.notificationMessageType")}</FieldLabel>
             <div className="flex gap-2">
@@ -719,7 +790,7 @@ export function NodePropertiesPanel({
                     className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-all ${
                       active
                         ? "border-accent bg-accent/10 text-accent"
-                        : "border-default bg-surface-elevated text-secondary hover:border-accent/40"
+                        : "border-field-border bg-surface-elevated text-secondary hover:border-accent/40"
                     }`}
                   >
                     {mt === "text"
@@ -730,34 +801,73 @@ export function NodePropertiesPanel({
               })}
             </div>
           </div>
+          )}
 
-          {(d.notificationMessageType ?? "text") === "text" ? (
+          {(d.notificationChannel ?? "whatsapp") === "email" ||
+          (d.notificationMessageType ?? "text") === "text" ? (
             <>
               <div>
-                <FieldLabel>{t("flows.fields.notificationMessageText")}</FieldLabel>
-                {localizedField(d.notificationMessageText, (v) => onUpdate({ notificationMessageText: v }), 4)}
+                <FieldLabel>
+                  {(d.notificationChannel ?? "whatsapp") === "email"
+                    ? t("flows.fields.notificationEmailBody")
+                    : t("flows.fields.notificationMessage")}
+                </FieldLabel>
+                {(d.notificationChannel ?? "whatsapp") === "email"
+                  ? localizedHtmlField(
+                      d.notificationMessageHtml || d.notificationMessageBinding || "",
+                      (v) => onUpdate({ notificationMessageHtml: v, notificationMessageBinding: "" }),
+                      sampleFields,
+                      t("flows.fields.notificationMessageHint")
+                    )
+                  : localizedField(
+                      d.notificationMessageText || d.notificationMessageBinding || "",
+                      (v) => onUpdate({ notificationMessageText: v, notificationMessageBinding: "" }),
+                      4,
+                      sampleFields,
+                      t("flows.fields.notificationMessageHint")
+                    )}
               </div>
-              <FormBindingField
-                label={t("flows.fields.notificationMessageBinding")}
-                value={d.notificationMessageBinding ?? ""}
-                onChange={(v) => onUpdate({ notificationMessageBinding: v })}
-                sampleFields={sampleFields}
-              />
             </>
           ) : (
             <>
-              <div>
-                <FieldLabel>{t("flows.fields.notificationTemplateName")}</FieldLabel>
-                {textInput(d.notificationTemplateName ?? "", (v) => onUpdate({ notificationTemplateName: v }), {
-                  placeholder: "nombre_de_la_plantilla",
-                })}
-              </div>
-              <div>
-                <FieldLabel>{t("flows.fields.notificationTemplateLanguage")}</FieldLabel>
-                {textInput(d.notificationTemplateLanguage ?? "es", (v) =>
-                  onUpdate({ notificationTemplateLanguage: v })
-                )}
-              </div>
+              {(d.notificationChannel ?? "whatsapp") !== "email" ? (
+                <div>
+                  <FieldLabel>{t("flows.fields.notificationTemplateName")}</FieldLabel>
+                  <TemplatePicker
+                    botId={d.notificationBotId ?? ""}
+                    channel={(d.notificationChannel ?? "whatsapp") as OutreachChannel}
+                    value={
+                      d.notificationTemplateName
+                        ? {
+                            name: d.notificationTemplateName,
+                            language: d.notificationTemplateLanguage ?? "es",
+                          }
+                        : null
+                    }
+                    onChange={(picked) =>
+                      onUpdate({
+                        notificationTemplateName: picked.name,
+                        notificationTemplateLanguage: picked.language,
+                      })
+                    }
+                  />
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <FieldLabel>{t("flows.fields.notificationTemplateName")}</FieldLabel>
+                    {textInput(d.notificationTemplateName ?? "", (v) => onUpdate({ notificationTemplateName: v }), {
+                      placeholder: "nombre_de_la_plantilla",
+                    })}
+                  </div>
+                  <div>
+                    <FieldLabel>{t("flows.fields.notificationTemplateLanguage")}</FieldLabel>
+                    {textInput(d.notificationTemplateLanguage ?? "es", (v) =>
+                      onUpdate({ notificationTemplateLanguage: v })
+                    )}
+                  </div>
+                </>
+              )}
               <div>
                 <FieldLabel>{t("flows.fields.notificationTemplateVariables")}</FieldLabel>
                 {textArea(

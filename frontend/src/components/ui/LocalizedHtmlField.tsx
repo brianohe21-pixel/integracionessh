@@ -4,30 +4,29 @@ import { useState } from "react";
 import type { BotLocale, LocalizedText } from "@/types";
 import { fromLocalizedRecord, toLocalizedRecord } from "@/lib/localized-text";
 import { useT } from "@/i18n/context";
+import { MailrelayHtmlEditor } from "@/components/mailrelay/MailrelayHtmlEditor";
 
-interface LocalizedTextFieldProps {
+interface LocalizedHtmlFieldProps {
   value: LocalizedText | undefined;
   onChange: (value: LocalizedText) => void;
-  rows?: number;
   placeholder?: string;
   sampleFields?: string[];
   hint?: string;
 }
 
-export function LocalizedTextField({
+export function LocalizedHtmlField({
   value,
   onChange,
-  rows = 3,
   placeholder,
   sampleFields = [],
   hint,
-}: LocalizedTextFieldProps) {
+}: LocalizedHtmlFieldProps) {
   const t = useT();
   const [activeTab, setActiveTab] = useState<BotLocale>("es");
   const record = toLocalizedRecord(value);
 
-  function updateLocale(locale: BotLocale, text: string) {
-    onChange(fromLocalizedRecord({ ...record, [locale]: text }));
+  function updateLocale(locale: BotLocale, html: string) {
+    onChange(fromLocalizedRecord({ ...record, [locale]: html }));
   }
 
   function appendField(locale: BotLocale, field: string) {
@@ -54,13 +53,13 @@ export function LocalizedTextField({
           </button>
         ))}
       </div>
-      <textarea
-        value={record[activeTab]}
-        onChange={(e) => updateLocale(activeTab, e.target.value)}
-        placeholder={placeholder ?? t("flows.fields.localizedPlaceholder")}
-        rows={rows}
-        className="w-full rounded-lg border border-field-border bg-surface-elevated px-3 py-2 text-sm shadow-sm focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none"
-      />
+      <div className="[&_.mailrelay-html-editor]:!border-field-border">
+        <MailrelayHtmlEditor
+          value={record[activeTab]}
+          onChange={(html) => updateLocale(activeTab, html)}
+          placeholder={placeholder ?? t("flows.fields.localizedPlaceholder")}
+        />
+      </div>
       {sampleFields.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {sampleFields.map((field) => (
@@ -75,11 +74,10 @@ export function LocalizedTextField({
           ))}
         </div>
       )}
-      {hint ? (
-        <p className="text-xs text-secondary">{hint}</p>
-      ) : activeTab === "es" && record.en.trim() ? (
+      {hint ? <p className="text-xs text-secondary">{hint}</p> : null}
+      {!hint && activeTab === "es" && record.en.trim() && (
         <p className="text-xs text-secondary">{t("flows.fields.localizedHint")}</p>
-      ) : null}
+      )}
     </div>
   );
 }

@@ -5,6 +5,8 @@ import Link from "next/link";
 import { History, Headphones, Lock, Mail, Phone, User } from "lucide-react";
 import { ChannelAvatar } from "@/components/conversations/conversation-ui";
 import { ConversationQuotationsPanel } from "@/components/conversations/ConversationQuotationsPanel";
+import { ConversationOpportunityPanel } from "@/components/conversations/ConversationOpportunityPanel";
+import { WhatsAppRiskBadge } from "@/components/whatsapp/WhatsAppRiskBadge";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
@@ -12,6 +14,7 @@ import { useAdvisors } from "@/hooks/useAdvisors";
 import { useClickToCall } from "@/hooks/useContactCenter";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useT } from "@/i18n/context";
+import { resolveWhatsAppRisk, type WhatsAppRiskResponse } from "@/hooks/useWhatsAppRisk";
 import type { Channel, Conversation, Lead } from "@/types";
 
 type PanelTab = "contact" | "details";
@@ -21,6 +24,9 @@ type Props = {
   activeLead?: Lead | null;
   onAssignAdvisor: () => void;
   channelLabel: (channel?: Channel) => string;
+  locale: string;
+  onOpenOpportunity: (opportunityId: string) => void;
+  whatsappRisk?: WhatsAppRiskResponse;
 };
 
 export function ConversationContactPanel({
@@ -28,6 +34,9 @@ export function ConversationContactPanel({
   activeLead,
   onAssignAdvisor,
   channelLabel,
+  locale,
+  onOpenOpportunity,
+  whatsappRisk,
 }: Props) {
   const t = useT();
   const { formatDate, formatRelativeTime } = useFormatters();
@@ -55,6 +64,10 @@ export function ConversationContactPanel({
     conversation.channel === "email"
       ? conversation.participantId
       : activeLead?.email;
+  const isWhatsApp = (conversation.channel ?? "whatsapp") === "whatsapp";
+  const botWhatsAppRisk = isWhatsApp
+    ? resolveWhatsAppRisk(whatsappRisk, conversation.botId)
+    : null;
 
   return (
     <aside className="conversations-sidebar-bg hidden w-80 flex-shrink-0 flex-col border-l border-default xl:flex">
@@ -130,6 +143,16 @@ export function ConversationContactPanel({
                 ) : null}
               </div>
             </section>
+
+            {isWhatsApp ? (
+              <section className="content-card p-4">
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
+                  {t("whatsapp.riskTitle")}
+                </h3>
+                <WhatsAppRiskBadge risk={botWhatsAppRisk} />
+                <p className="mt-2 text-xs text-secondary">{t("whatsapp.riskHint")}</p>
+              </section>
+            ) : null}
 
             {activeLead ? (
               <section className="content-card p-4">
@@ -208,6 +231,13 @@ export function ConversationContactPanel({
                 botId={conversation.botId}
               />
             </section>
+
+            <ConversationOpportunityPanel
+              conversation={conversation}
+              activeLead={activeLead}
+              locale={locale}
+              onOpenOpportunity={onOpenOpportunity}
+            />
           </>
         )}
       </div>

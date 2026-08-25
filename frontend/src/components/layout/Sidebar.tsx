@@ -147,7 +147,10 @@ const advisorNavCategories: NavCategory[] = [
     id: "inbox",
     labelKey: "nav.categoryMessaging",
     icon: MessageSquare,
-    items: [{ href: "/inbox", labelKey: "nav.inbox", icon: MessageSquare }],
+    items: [
+      { href: "/inbox", labelKey: "nav.inbox", icon: MessageSquare },
+      { href: "/sales", labelKey: "nav.sales", icon: TrendingUp },
+    ],
   },
 ];
 

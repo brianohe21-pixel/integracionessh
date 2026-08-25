@@ -8,6 +8,7 @@ export interface WebchatSession {
   sessionId: string;
   sessionToken: string;
   conversationId: string;
+  sessionStatus?: "active" | "ended";
   branding?: WebchatBranding;
 }
 
@@ -82,12 +83,35 @@ export async function sendWebchatMessage(params: {
 export async function pollWebchatMessages(params: {
   sessionId: string;
   sessionToken: string;
-}): Promise<WebchatMessage[]> {
-  const data = await webchatRequest<{ items: WebchatMessage[] }>(
+}): Promise<{ items: WebchatMessage[]; sessionStatus?: "active" | "ended" }> {
+  const data = await webchatRequest<{ items: WebchatMessage[]; sessionStatus?: "active" | "ended" }>(
     `/webchat/sessions/${encodeURIComponent(params.sessionId)}/messages`,
     {
       headers: { Authorization: `Bearer ${params.sessionToken}` },
     }
   );
-  return data.items ?? [];
+  return {
+    items: data.items ?? [],
+    sessionStatus: data.sessionStatus,
+  };
+}
+
+export async function endWebchatSession(params: {
+  sessionId: string;
+  sessionToken: string;
+}): Promise<{ sessionStatus: "ended"; farewellMessage?: string }> {
+  return webchatRequest(`/webchat/sessions/${encodeURIComponent(params.sessionId)}/end`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${params.sessionToken}` },
+  });
+}
+
+export async function requestWebchatHandoff(params: {
+  sessionId: string;
+  sessionToken: string;
+}): Promise<{ message: string; handoffMode: "bot" | "human"; sessionStatus?: "active" | "ended" }> {
+  return webchatRequest(`/webchat/sessions/${encodeURIComponent(params.sessionId)}/handoff`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${params.sessionToken}` },
+  });
 }

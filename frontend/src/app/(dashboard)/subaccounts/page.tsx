@@ -27,7 +27,9 @@ import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
 import { Modal } from "@/components/ui/Modal";
 import { ResellerBagPanel } from "@/components/reseller/ResellerBagPanel";
+import { SubaccountBillingPanel } from "@/components/reseller/SubaccountBillingPanel";
 import { SubaccountServicesFields } from "@/components/reseller/SubaccountServicesFields";
+import { WhatsAppRiskBadge } from "@/components/whatsapp/WhatsAppRiskBadge";
 import {
   SERVICE_NAV_KEYS,
   defaultEnabledServices,
@@ -266,7 +268,7 @@ export default function SubaccountsPage() {
   const [domainHydrated, setDomainHydrated] = useState(false);
   const [inviteInfo, setInviteInfo] = useState<string | null>(null);
   const [assumed, setAssumed] = useState<string | null>(null);
-  const [pageTab, setPageTab] = useState<"accounts" | "create" | "bag" | "domain">(
+  const [pageTab, setPageTab] = useState<"accounts" | "create" | "bag" | "billing" | "domain">(
     "accounts"
   );
 
@@ -371,6 +373,7 @@ export default function SubaccountsPage() {
           },
           { id: "create", label: t("reseller.tabCreate") },
           { id: "bag", label: t("reseller.tabBag") },
+          { id: "billing", label: t("reseller.tabBilling") },
           { id: "domain", label: t("reseller.tabDomain") },
         ]}
         value={pageTab}
@@ -387,6 +390,15 @@ export default function SubaccountsPage() {
       ) : null}
 
       {pageTab === "bag" ? <ResellerBagPanel bag={subaccounts.data?.bag} /> : null}
+
+      {pageTab === "billing" ? (
+        <SubaccountBillingPanel
+          items={subaccounts.data?.items}
+          usagePeriod={subaccounts.data?.usagePeriod}
+          usageTotals={subaccounts.data?.usageTotals}
+          bagTotal={subaccounts.data?.bag?.total}
+        />
+      ) : null}
 
       {pageTab === "create" ? (
       <form
@@ -460,6 +472,7 @@ export default function SubaccountsPage() {
                 <th className="px-4 py-3 font-medium">{t("common.email")}</th>
                 <th className="px-4 py-3 font-medium">{t("admin.users.plan")}</th>
                 <th className="px-4 py-3 font-medium">{t("reseller.services")}</th>
+                <th className="px-4 py-3 font-medium">{t("reseller.whatsappRiskTitle")}</th>
                 <th className="px-4 py-3 font-medium">{t("common.status")}</th>
                 <th className="px-4 py-3 font-medium" />
               </tr>
@@ -472,6 +485,9 @@ export default function SubaccountsPage() {
                   <td className="px-4 py-3 text-secondary">{item.plan}</td>
                   <td className="px-4 py-3">
                     <SubaccountServiceChips services={item.enabledServices} t={t} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <WhatsAppRiskBadge risk={item.whatsappRisk} compact />
                   </td>
                   <td className="px-4 py-3">
                     <Badge variant={item.status === "active" ? "success" : "default"}>

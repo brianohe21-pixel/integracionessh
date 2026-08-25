@@ -13,11 +13,11 @@ import type {
 export function useTemplates(botId?: string, channel: OutreachChannel = "whatsapp") {
   return useQuery({
     queryKey: ["templates", { botId, channel }],
-    queryFn: () =>
-      api.get<MessageTemplate[]>(
-        `/templates?botId=${encodeURIComponent(botId ?? "")}&channel=${channel}`
-      ),
-    enabled: !!botId,
+    queryFn: () => {
+      const params = new URLSearchParams({ channel });
+      if (botId) params.set("botId", botId);
+      return api.get<MessageTemplate[]>(`/templates?${params.toString()}`);
+    },
   });
 }
 

@@ -19,6 +19,8 @@ import { decodeCsvBytes } from "@/lib/csv";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { TableContainer } from "@/components/ui/TableContainer";
+import { WhatsAppRiskBadge } from "@/components/whatsapp/WhatsAppRiskBadge";
+import { useWhatsAppRisk, resolveWhatsAppRisk } from "@/hooks/useWhatsAppRisk";
 
 function consentVariant(c: MarketingConsent): "success" | "warning" | "danger" | "default" {
   if (c === "opt_in") return "success";
@@ -53,6 +55,7 @@ export default function ContactsPage() {
     suppressed: suppressedFilter === "" ? undefined : suppressedFilter === "true",
     q: q || undefined,
   });
+  const { data: whatsappRisk } = useWhatsAppRisk();
 
   const createContact = useCreateContact();
   const updateContact = useUpdateContact();
@@ -241,6 +244,7 @@ export default function ContactsPage() {
                 <th className="px-4 py-3">{t("contacts.colCsat")}</th>
                 <th className="px-4 py-3">{t("contacts.colEmail")}</th>
                 <th className="px-4 py-3">{t("contacts.colConsent")}</th>
+                <th className="px-4 py-3">{t("contacts.colWhatsAppRisk")}</th>
                 <th className="px-4 py-3">{t("contacts.colTags")}</th>
                 <th className="px-4 py-3 text-right">{t("contacts.colActions")}</th>
               </tr>
@@ -274,6 +278,12 @@ export default function ContactsPage() {
                         {c.tags.includes("converted") ? t("contacts.tagConverted") : t("contacts.tagLead")}
                       </Badge>
                     )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <WhatsAppRiskBadge
+                      risk={resolveWhatsAppRisk(whatsappRisk, c.lastBotId)}
+                      compact
+                    />
                   </td>
                   <td className="px-4 py-3 text-secondary">
                     {editingPhone === c.phoneNumber ? (

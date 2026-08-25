@@ -13,10 +13,19 @@ import {
 import { useBots } from "@/hooks/useBots";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
-import type { MessageTemplate, TemplateComponent, OutreachChannel } from "@/types";
+import type { MessageTemplate, OutreachChannel } from "@/types";
 import { isSmsTemplate } from "@/types";
 import { OutreachChannelSelect } from "@/components/outreach/OutreachChannelSelect";
 import { SmsTemplatePreview } from "@/components/templates/SmsTemplatePreview";
+import { TemplateChannelForm } from "@/components/templates/channel/TemplateChannelForm";
+import {
+  buildWhatsAppComponents,
+  EMPTY_SMS_FORM,
+  EMPTY_WHATSAPP_FORM,
+  isWhatsAppFormValid,
+  whatsAppFormFromComponents,
+} from "@/components/templates/channel/types";
+import { extractBodyVariables } from "@/lib/templates/variables";
 import {
   LayoutTemplate,
   Plus,
@@ -37,13 +46,9 @@ import { TableContainer } from "@/components/ui/TableContainer";
 import { ContextualHint } from "@/components/help-center/ContextualHint";
 import { TourPageSuggestion } from "@/components/help-center/TourList";
 import { Modal } from "@/components/ui/Modal";
+import { Input, Select } from "@/components/ui/Input";
 
 type DialogMode = "create" | "edit" | null;
-
-function extractBodyVariables(text: string): string[] {
-  const matches = text.match(/\{\{\d+\}\}/g);
-  return matches ? [...new Set(matches)] : [];
-}
 
 export default function TemplatesPage() {
   const t = useT();
@@ -93,19 +98,22 @@ export default function TemplatesPage() {
     botFilter || undefined,
     channelFilter
   );
-  const createMutation = useCreateTemplate(channelFilter);
-  const updateMutation = useUpdateTemplate(channelFilter);
-  const deleteMutation = useDeleteTemplate(channelFilter);
-  const sendMutation = useSendTemplate(channelFilter);
+  const createWhatsappMutation = useCreateTemplate("whatsapp");
+  const createSmsMutation = useCreateTemplate("sms");
+  const updateWhatsappMutation = useUpdateTemplate("whatsapp");
+  const updateSmsMutation = useUpdateTemplate("sms");
+  const deleteWhatsappMutation = useDeleteTemplate("whatsapp");
+  const deleteSmsMutation = useDeleteTemplate("sms");
+  const sendWhatsappMutation = useSendTemplate("whatsapp");
+  const sendSmsMutation = useSendTemplate("sms");
 
+  const [formBotId, setFormBotId] = useState("");
+  const [dialogChannel, setDialogChannel] = useState<OutreachChannel>("whatsapp");
   const [formName, setFormName] = useState("");
   const [formLanguage, setFormLanguage] = useState("es");
   const [formCategory, setFormCategory] = useState<"MARKETING" | "UTILITY" | "AUTHENTICATION">("UTILITY");
-  const [formHeaderText, setFormHeaderText] = useState("");
-  const [formBodyText, setFormBodyText] = useState("");
-  const [formSmsBodyText, setFormSmsBodyText] = useState("");
-  const [formFooterText, setFormFooterText] = useState("");
-  const [formBodyExamples, setFormBodyExamples] = useState<Record<string, string>>({});
+  const [whatsappForm, setWhatsappForm] = useState(EMPTY_WHATSAPP_FORM);
+  const [smsForm, setSmsForm] = useState(EMPTY_SMS_FORM);
 
   const [sendTo, setSendTo] = useState("");
   const [sendParams, setSendParams] = useState<Record<string, string>>({});
@@ -118,11 +126,10 @@ export default function TemplatesPage() {
     setFormName("");
     setFormLanguage("es");
     setFormCategory("UTILITY");
-    setFormHeaderText("");
-    setFormBodyText("");
-    setFormSmsBodyText("");
-    setFormFooterText("");
-    setFormBodyExamples({});
+    setDialogChannel(channelFilter);
+    setFormBotId(botFilter);
+    setWhatsappForm(EMPTY_WHATSAPP_FORM);
+    setSmsForm(EMPTY_SMS_FORM);
     setEditingTemplate(null);
     setDialogMode("create");
   }
@@ -133,7 +140,8 @@ export default function TemplatesPage() {
       setFormName(template.name);
       setFormLanguage(template.language);
       setFormCategory(template.category);
-      setFormSmsBodyText(template.body);
+      setDialogChannel("sms");
+      setSmsForm({ body: template.body });
       setEditingTemplate(template);
       setDialogMode("edit");
       return;
@@ -143,19 +151,8 @@ export default function TemplatesPage() {
     setFormName(template.name);
     setFormLanguage(template.language);
     setFormCategory(template.category);
-    setFormHeaderText(template.components.find((c) => c.type === "HEADER")?.text ?? "");
-    const bodyComp = template.components.find((c) => c.type === "BODY");
-    const bodyText = bodyComp?.text ?? "";
-    setFormBodyText(bodyText);
-    setFormFooterText(template.components.find((c) => c.type === "FOOTER")?.text ?? "");
-    const vars = extractBodyVariables(bodyText).sort(
-      (a, b) => parseInt(a.replace(/\D/g, "")) - parseInt(b.replace(/\D/g, ""))
-    );
-    const examples: Record<string, string> = {};
-    if (bodyComp?.example?.body_text?.[0]) {
-      vars.forEach((v, i) => { examples[v] = bodyComp.example!.body_text![0][i] ?? ""; });
-    }
-    setFormBodyExamples(examples);
+    setDialogChannel("whatsapp");
+    setWhatsappForm(whatsAppFormFromComponents(template.components));
     setEditingTemplate(template);
     setDialogMode("edit");
   }
@@ -173,68 +170,53 @@ export default function TemplatesPage() {
     setSendTarget(template);
   }
 
-  function buildComponents(): TemplateComponent[] {
-    const components: TemplateComponent[] = [];
-    if (formHeaderText.trim()) {
-      components.push({ type: "HEADER", format: "TEXT", text: formHeaderText.trim() });
-    }
-    const bodyVars = extractBodyVariables(formBodyText).sort(
-      (a, b) => parseInt(a.replace(/\D/g, "")) - parseInt(b.replace(/\D/g, ""))
-    );
-    const bodyComp: TemplateComponent = { type: "BODY", text: formBodyText.trim() };
-    if (bodyVars.length > 0) {
-      bodyComp.example = {
-        body_text: [bodyVars.map((v) => formBodyExamples[v]?.trim() || v)],
-      };
-    }
-    components.push(bodyComp);
-    if (formFooterText.trim()) {
-      components.push({ type: "FOOTER", text: formFooterText.trim() });
-    }
-    return components;
-  }
-
   async function handleCreateOrUpdate() {
-    if (!botFilter) return;
-    if (channelFilter === "sms" && !formSmsBodyText.trim()) return;
-    if (channelFilter === "whatsapp" && !formBodyText.trim()) return;
+    const activeChannel = dialogMode === "create" ? dialogChannel : channelFilter;
+    const targetBotId =
+      dialogMode === "create" ? formBotId : editingTemplate?.botId ?? botFilter;
+    if (!targetBotId) return;
+    if (activeChannel === "sms" && !smsForm.body.trim()) return;
+    if (activeChannel === "whatsapp" && !isWhatsAppFormValid(whatsappForm)) return;
 
     setFormError("");
     try {
-      if (channelFilter === "sms") {
+      if (activeChannel === "sms") {
         if (dialogMode === "create") {
-          await createMutation.mutateAsync({
-            botId: botFilter,
+          await createSmsMutation.mutateAsync({
+            botId: targetBotId,
             name: formName,
             language: formLanguage,
             category: formCategory,
-            body: formSmsBodyText.trim(),
+            body: smsForm.body.trim(),
           });
         } else if (dialogMode === "edit" && editingTemplate) {
-          await updateMutation.mutateAsync({
+          await updateSmsMutation.mutateAsync({
             name: editingTemplate.name,
-            botId: botFilter,
+            botId: targetBotId,
             language: editingTemplate.language,
-            body: formSmsBodyText.trim(),
+            body: smsForm.body.trim(),
           });
         }
       } else if (dialogMode === "create") {
-        await createMutation.mutateAsync({
-          botId: botFilter,
+        await createWhatsappMutation.mutateAsync({
+          botId: targetBotId,
           name: formName,
           language: formLanguage,
           category: formCategory,
-          components: buildComponents(),
+          components: buildWhatsAppComponents(whatsappForm),
         });
       } else if (dialogMode === "edit" && editingTemplate) {
-        await updateMutation.mutateAsync({
+        await updateWhatsappMutation.mutateAsync({
           name: editingTemplate.name,
-          botId: botFilter,
+          botId: targetBotId,
           language: editingTemplate.language,
-          components: buildComponents(),
+          components: buildWhatsAppComponents(whatsappForm),
         });
       }
 
+      if (dialogMode === "create" && dialogChannel !== channelFilter) {
+        setChannelFilter(dialogChannel);
+      }
       setDialogMode(null);
       refetch();
     } catch (err) {
@@ -243,10 +225,11 @@ export default function TemplatesPage() {
   }
 
   async function handleDelete() {
-    if (!deleteConfirm || !botFilter) return;
+    if (!deleteConfirm) return;
+    const deleteMutation = isSmsTemplate(deleteConfirm) ? deleteSmsMutation : deleteWhatsappMutation;
     await deleteMutation.mutateAsync({
       name: deleteConfirm.name,
-      botId: botFilter,
+      botId: deleteConfirm.botId,
       language: deleteConfirm.language,
     });
     setDeleteConfirm(null);
@@ -254,7 +237,7 @@ export default function TemplatesPage() {
   }
 
   async function handleSend() {
-    if (!sendTarget || !sendTo.trim() || !botFilter) return;
+    if (!sendTarget || !sendTo.trim()) return;
 
     const bodyVarKeys = Object.keys(sendParams);
     const bodyParams = bodyVarKeys.length
@@ -264,14 +247,16 @@ export default function TemplatesPage() {
         }]
       : undefined;
 
+    const sendMutation = isSmsTemplate(sendTarget) ? sendSmsMutation : sendWhatsappMutation;
+
     setSendError("");
     try {
       await sendMutation.mutateAsync({
         name: sendTarget.name,
-        botId: botFilter,
+        botId: sendTarget.botId,
         to: sendTo,
         language: sendTarget.language,
-        ...(channelFilter === "sms" && sendRequestDlr ? { requestDlr: true } : {}),
+        ...(isSmsTemplate(sendTarget) && sendRequestDlr ? { requestDlr: true } : {}),
         components: bodyParams,
       });
       setSendTarget(null);
@@ -281,7 +266,25 @@ export default function TemplatesPage() {
     }
   }
 
-  const isSubmitting = createMutation.isPending || updateMutation.isPending;
+  const activeDialogChannel = dialogMode === "create" ? dialogChannel : channelFilter;
+  const dialogBots =
+    activeDialogChannel === "sms"
+      ? bots?.filter((bot) => bot.smsEnabled) ?? []
+      : bots ?? [];
+  const botNameById = useMemo(
+    () => new Map((bots ?? []).map((bot) => [bot.botId, bot.name])),
+    [bots]
+  );
+  const isSubmitting =
+    createWhatsappMutation.isPending ||
+    createSmsMutation.isPending ||
+    updateWhatsappMutation.isPending ||
+    updateSmsMutation.isPending;
+  const canSubmitForm =
+    (dialogMode !== "create" || !!formBotId) &&
+    (activeDialogChannel === "sms"
+      ? !!smsForm.body.trim()
+      : isWhatsAppFormValid(whatsappForm));
 
   return (
     <DashboardPage>
@@ -294,8 +297,7 @@ export default function TemplatesPage() {
               type="button"
               data-tour="templates-create"
               onClick={openCreate}
-              disabled={!botFilter}
-              className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover"
             >
               <Plus className="h-4 w-4" />
               {t("templates.createTemplate")}
@@ -312,9 +314,9 @@ export default function TemplatesPage() {
             data-tour="templates-filter"
             value={botFilter}
             onChange={(e) => setBotFilter(e.target.value)}
-            className="w-full rounded-lg border border-default bg-surface-elevated px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent sm:w-72"
+            className="w-full rounded-lg border border-field-border bg-surface-elevated px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-accent sm:w-72"
           >
-          <option value="">{t("templates.selectBotTitle")}</option>
+          <option value="">{t("templates.allBots")}</option>
           {availableBots.map((bot) => (
             <option key={bot.botId} value={bot.botId}>
               {bot.name}
@@ -326,10 +328,9 @@ export default function TemplatesPage() {
           value={channelFilter}
           onChange={(value) => {
             setChannelFilter(value);
-            setBotFilter("");
             setDialogMode(null);
           }}
-          className="w-full rounded-lg border border-default bg-surface-elevated px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent sm:w-56"
+          className="w-full rounded-lg border border-field-border bg-surface-elevated px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-accent sm:w-56"
         />
       </div>
 
@@ -364,21 +365,13 @@ export default function TemplatesPage() {
       </div>
       )}
 
-      {channelFilter === "sms" && botFilter && (
+      {channelFilter === "sms" && (
         <div className="mb-6 bg-surface border border-default rounded-xl p-4">
           <p className="text-sm text-secondary">{t("templates.smsLifecycleNote")}</p>
         </div>
       )}
 
-      {!botFilter && (
-        <EmptyState
-          icon={<LayoutTemplate className="w-6 h-6" />}
-          title={t("templates.selectBotTitle")}
-          description={t("templates.selectBotDescription")}
-        />
-      )}
-
-      {botFilter && isLoading && (
+      {isLoading && (
         <div className="space-y-3">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="bg-surface-elevated rounded-xl border border-default p-5 animate-pulse">
@@ -394,13 +387,13 @@ export default function TemplatesPage() {
         </div>
       )}
 
-      {botFilter && error && (
+      {error && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4">
           <p className="text-sm text-red-600">{t("templates.loadErrorRetry")}</p>
         </div>
       )}
 
-      {botFilter && !isLoading && !error && templates?.length === 0 && (
+      {!isLoading && !error && templates?.length === 0 && (
         <EmptyState
           icon={<LayoutTemplate className="w-6 h-6" />}
           title={t("templates.emptyTitle")}
@@ -417,7 +410,7 @@ export default function TemplatesPage() {
         />
       )}
 
-      {botFilter && !isLoading && templates && templates.length > 0 && (
+      {!isLoading && templates && templates.length > 0 && (
         <div data-tour="templates-table">
         <TableContainer className="overflow-hidden rounded-xl border border-default bg-surface-elevated">
           <table className="w-full min-w-[720px]">
@@ -426,6 +419,11 @@ export default function TemplatesPage() {
                 <th className="text-left text-xs font-medium text-secondary uppercase tracking-wider px-5 py-3">
                   {t("templates.colName")}
                 </th>
+                {!botFilter && (
+                  <th className="text-left text-xs font-medium text-secondary uppercase tracking-wider px-5 py-3">
+                    {t("templates.colBot")}
+                  </th>
+                )}
                 <th className="text-left text-xs font-medium text-secondary uppercase tracking-wider px-5 py-3">
                   {t("templates.language")}
                 </th>
@@ -450,13 +448,18 @@ export default function TemplatesPage() {
                 const canSend = tpl.status === "APPROVED";
                 const canEdit = sms || tpl.status === "REJECTED";
                 return (
-                  <tr key={`${tpl.name}-${tpl.language}`} className="hover:bg-surface transition-colors">
+                  <tr key={`${tpl.botId}-${tpl.name}-${tpl.language}`} className="hover:bg-surface transition-colors">
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2">
                         <LayoutTemplate className="w-4 h-4 text-muted" />
                         <span className="text-sm font-medium text-primary">{tpl.name}</span>
                       </div>
                     </td>
+                    {!botFilter && (
+                      <td className="px-5 py-4 text-sm text-secondary">
+                        {botNameById.get(tpl.botId) ?? tpl.botId}
+                      </td>
+                    )}
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-1.5">
                         <Languages className="w-3.5 h-3.5 text-muted" />
@@ -558,132 +561,72 @@ export default function TemplatesPage() {
               )}
               <div>
                 <label className="block text-sm font-medium text-secondary mb-1">{t("templates.name")}</label>
-                <input
+                <Input
                   type="text"
                   value={formName}
                   onChange={(e) => setFormName(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_"))}
                   disabled={dialogMode === "edit"}
                   placeholder={t("templates.namePlaceholder")}
-                  className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent disabled:bg-surface disabled:text-secondary"
                 />
                 <p className="text-xs text-muted mt-1">{t("templates.nameHint")}</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-secondary mb-1">{t("templates.language")}</label>
-                  <select
+                  <Select
                     value={formLanguage}
                     onChange={(e) => setFormLanguage(e.target.value)}
                     disabled={dialogMode === "edit"}
-                    className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent disabled:bg-surface"
                   >
                     {LANGUAGES.map((l) => (
                       <option key={l.code} value={l.code}>{l.label}</option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-secondary mb-1">{t("templates.category")}</label>
-                  <select
+                  <Select
                     value={formCategory}
                     onChange={(e) => setFormCategory(e.target.value as typeof formCategory)}
                     disabled={dialogMode === "edit"}
-                    className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent disabled:bg-surface"
                   >
                     <option value="UTILITY">{t("templates.categoryUtility")}</option>
                     <option value="MARKETING">{t("templates.categoryMarketing")}</option>
                     <option value="AUTHENTICATION">{t("templates.categoryAuth")}</option>
-                  </select>
+                  </Select>
                 </div>
               </div>
-              {channelFilter === "sms" ? (
+              {dialogMode === "create" && (
                 <div>
-                  <label className="block text-sm font-medium text-secondary mb-1">{t("templates.body")}</label>
-                  <textarea
-                    value={formSmsBodyText}
-                    onChange={(e) => setFormSmsBodyText(e.target.value)}
-                    rows={6}
-                    placeholder={t("templates.smsBodyPlaceholder")}
-                    className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent resize-none"
-                  />
-                  <p className="text-xs text-muted mt-1">{t("templates.bodyVarsHint")}</p>
-                </div>
-              ) : (
-              <>
-              <div>
-                <label className="block text-sm font-medium text-secondary mb-1">
-                  {t("templates.header")} <span className="text-muted font-normal">{t("templates.optional")}</span>
-                </label>
-                <input
-                  type="text"
-                  value={formHeaderText}
-                  onChange={(e) => setFormHeaderText(e.target.value)}
-                  placeholder={t("templates.headerPlaceholder")}
-                  className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-secondary mb-1">{t("templates.body")}</label>
-                <textarea
-                  value={formBodyText}
-                  onChange={(e) => {
-                    setFormBodyText(e.target.value);
-                    const newVars = extractBodyVariables(e.target.value);
-                    setFormBodyExamples((prev) => {
-                      const next: Record<string, string> = {};
-                      newVars.forEach((v) => { next[v] = prev[v] ?? ""; });
-                      return next;
-                    });
-                  }}
-                  rows={4}
-                  placeholder={t("templates.bodyPlaceholder")}
-                  className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent resize-none"
-                />
-                <p className="text-xs text-muted mt-1">{t("templates.bodyVarsHint")}</p>
-              </div>
-
-              {extractBodyVariables(formBodyText).length > 0 && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-3">
-                  <div>
-                    <p className="text-sm font-medium text-amber-800">{t("templates.examplesTitle")}</p>
-                    <p className="text-xs text-amber-600 mt-0.5">{t("templates.examplesRequired")}</p>
-                  </div>
-                  {extractBodyVariables(formBodyText)
-                    .sort((a, b) => parseInt(a.replace(/\D/g, "")) - parseInt(b.replace(/\D/g, "")))
-                    .map((v) => (
-                      <div key={v} className="flex items-center gap-3">
-                        <span className="text-xs font-mono bg-amber-100 text-amber-700 px-2 py-1 rounded w-12 text-center shrink-0">{v}</span>
-                        <input
-                          type="text"
-                          value={formBodyExamples[v] ?? ""}
-                          onChange={(e) => setFormBodyExamples((prev) => ({ ...prev, [v]: e.target.value }))}
-                          placeholder={t("templates.exampleVar", { var: "Juan" })}
-                          className="flex-1 px-3 py-1.5 border border-amber-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-surface-elevated"
-                        />
-                      </div>
+                  <label className="block text-sm font-medium text-secondary mb-1">{t("templates.colBot")}</label>
+                  <Select
+                    value={formBotId}
+                    onChange={(e) => setFormBotId(e.target.value)}
+                  >
+                    <option value="">{t("templates.selectBotTitle")}</option>
+                    {dialogBots.map((bot) => (
+                      <option key={bot.botId} value={bot.botId}>
+                        {bot.name}
+                      </option>
                     ))}
+                  </Select>
                 </div>
               )}
-
-              <div>
-                <label className="block text-sm font-medium text-secondary mb-1">
-                  {t("templates.footer")} <span className="text-muted font-normal">{t("templates.optional")}</span>
-                </label>
-                <input
-                  type="text"
-                  value={formFooterText}
-                  onChange={(e) => setFormFooterText(e.target.value)}
-                  placeholder={t("templates.footerPlaceholder")}
-                  className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
-                />
-              </div>
-              </>
-              )}
+              <TemplateChannelForm
+                channel={activeDialogChannel}
+                onChannelChange={dialogMode === "create" ? setDialogChannel : undefined}
+                showChannelSelect={dialogMode === "create"}
+                whatsapp={whatsappForm}
+                onWhatsappChange={setWhatsappForm}
+                sms={smsForm}
+                onSmsChange={setSmsForm}
+                previewName={formName || "preview"}
+              />
             </div>
             <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-default">
               <button
                 onClick={() => setDialogMode(null)}
-                className="px-4 py-2 text-sm font-medium text-secondary bg-surface-elevated border border-default rounded-lg hover:bg-surface transition-colors"
+                className="px-4 py-2 text-sm font-medium text-secondary bg-surface-elevated border border-field-border rounded-lg hover:bg-surface transition-colors"
               >
                 {t("templates.cancelDialog")}
               </button>
@@ -691,10 +634,7 @@ export default function TemplatesPage() {
                 onClick={handleCreateOrUpdate}
                 disabled={
                   isSubmitting ||
-                  (channelFilter === "sms"
-                    ? !formSmsBodyText.trim()
-                    : !formBodyText.trim() ||
-                      extractBodyVariables(formBodyText).some((v) => !formBodyExamples[v]?.trim())) ||
+                  !canSubmitForm ||
                   (dialogMode === "create" && !formName.trim())
                 }
                 className="px-4 py-2 text-sm font-medium text-white bg-accent rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -725,12 +665,11 @@ export default function TemplatesPage() {
                 <label className="block text-sm font-medium text-secondary mb-1">
                   {t("templates.sendTo")}
                 </label>
-                <input
+                <Input
                   type="tel"
                   value={sendTo}
                   onChange={(e) => setSendTo(e.target.value.replace(/\D/g, ""))}
                   placeholder={t("templates.sendToPlaceholder")}
-                  className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
                 />
                 <p className="text-xs text-muted mt-1">{t("templates.sendToHint")}</p>
               </div>
@@ -741,7 +680,7 @@ export default function TemplatesPage() {
                     type="checkbox"
                     checked={sendRequestDlr}
                     onChange={(e) => setSendRequestDlr(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 rounded border-default text-accent focus:ring-accent"
+                    className="mt-0.5 h-4 w-4 rounded border-field-border text-accent focus:ring-accent"
                   />
                   <span className="text-sm text-secondary">
                     <span className="font-medium">{t("campaigns.requestDlr")}</span>
@@ -756,14 +695,13 @@ export default function TemplatesPage() {
                   {Object.keys(sendParams).map((key) => (
                     <div key={key}>
                       <label className="block text-xs text-secondary mb-1">{key}</label>
-                      <input
+                      <Input
                         type="text"
                         value={sendParams[key]}
                         onChange={(e) =>
                           setSendParams((prev) => ({ ...prev, [key]: e.target.value }))
                         }
                         placeholder={t("templates.valueFor", { key })}
-                        className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
                       />
                     </div>
                   ))}
@@ -808,17 +746,17 @@ export default function TemplatesPage() {
             <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-default">
               <button
                 onClick={() => setSendTarget(null)}
-                className="px-4 py-2 text-sm font-medium text-secondary bg-surface-elevated border border-default rounded-lg hover:bg-surface transition-colors"
+                className="px-4 py-2 text-sm font-medium text-secondary bg-surface-elevated border border-field-border rounded-lg hover:bg-surface transition-colors"
               >
                 {t("templates.cancelDialog")}
               </button>
               <button
                 onClick={handleSend}
-                disabled={sendMutation.isPending || !sendTo.trim()}
+                disabled={sendWhatsappMutation.isPending || sendSmsMutation.isPending || !sendTo.trim()}
                 className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-accent rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Send className="w-4 h-4" />
-                {sendMutation.isPending ? t("templates.sending") : t("templates.send")}
+                {sendWhatsappMutation.isPending || sendSmsMutation.isPending ? t("templates.sending") : t("templates.send")}
               </button>
             </div>
           </div>
@@ -837,16 +775,16 @@ export default function TemplatesPage() {
             <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-default">
               <button
                 onClick={() => setDeleteConfirm(null)}
-                className="px-4 py-2 text-sm font-medium text-secondary bg-surface-elevated border border-default rounded-lg hover:bg-surface transition-colors"
+                className="px-4 py-2 text-sm font-medium text-secondary bg-surface-elevated border border-field-border rounded-lg hover:bg-surface transition-colors"
               >
                 {t("templates.cancelDialog")}
               </button>
               <button
                 onClick={handleDelete}
-                disabled={deleteMutation.isPending}
+                disabled={deleteWhatsappMutation.isPending || deleteSmsMutation.isPending}
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
               >
-                {deleteMutation.isPending ? t("templates.deleting") : t("common.delete")}
+                {deleteWhatsappMutation.isPending || deleteSmsMutation.isPending ? t("templates.deleting") : t("common.delete")}
               </button>
             </div>
           </div>

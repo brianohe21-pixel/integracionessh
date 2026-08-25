@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   createWebchatSession,
+  endWebchatSession,
   pollWebchatMessages,
+  requestWebchatHandoff,
   sendWebchatMessage,
   type WebchatMessage,
 } from "@/lib/webchat-client";
@@ -55,6 +57,8 @@ export function useWebchatTest(params: {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "connecting" | "ready" | "sending" | "error">("idle");
   const [error, setError] = useState("");
+  const [sessionEnded, setSessionEnded] = useState(false);
+  const [actionPending, setActionPending] = useState(false);
   const [sessionVersion, setSessionVersion] = useState(0);
   const sessionRef = useRef<{ sessionId: string; sessionToken: string } | null>(null);
   const seenRef = useRef<Set<string>>(new Set());
@@ -75,7 +79,7 @@ export function useWebchatTest(params: {
   }, []);
 
   const ensureSession = useCallback(async () => {
-    if (sessionRef.current) return sessionRef.current;
+    if (sessionRef.current && !sessionEnded) return sessionRef.current;
     if (!params.widgetKey) {
       throw new Error("Missing widget key");
     }
@@ -90,16 +94,20 @@ export function useWebchatTest(params: {
       sessionToken: session.sessionToken,
     };
     setConversationId(session.conversationId);
+    setSessionEnded(false);
     setStatus("ready");
     return sessionRef.current;
-  }, [params.botId, params.widgetKey]);
+  }, [params.botId, params.widgetKey, sessionEnded]);
 
   const poll = useCallback(async () => {
     const session = sessionRef.current;
-    if (!session) return;
-    const items = await pollWebchatMessages(session);
-    mergeMessages(items);
-  }, [mergeMessages]);
+    if (!session || sessionEnded) return;
+    const result = await pollWebchatMessages(session);
+    if (result.sessionStatus === "ended") {
+      setSessionEnded(true);
+    }
+    mergeMessages(result.items);
+  }, [mergeMessages, sessionEnded]);
 
   useEffect(() => {
     if (!params.enabled || !params.widgetKey) return;
@@ -128,7 +136,7 @@ export function useWebchatTest(params: {
 
   async function send(content: string) {
     const trimmed = content.trim();
-    if (!trimmed) return;
+    if (!trimmed || sessionEnded) return;
     setError("");
     try {
       const session = await ensureSession();
@@ -157,14 +165,76 @@ export function useWebchatTest(params: {
     }
   }
 
+  async function endConversation() {
+    const session = sessionRef.current;
+    if (!session || sessionEnded || actionPending) return;
+    setActionPending(true);
+    setError("");
+    try {
+      const result = await endWebchatSession(session);
+      if (result.farewellMessage) {
+        const farewellId = `farewell-${Date.now()}`;
+        seenRef.current.add(`${farewellId}:${new Date().toISOString()}`);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: farewellId,
+            role: "assistant",
+            content: result.farewellMessage ?? "",
+            timestamp: new Date().toISOString(),
+          },
+        ]);
+      }
+      setSessionEnded(true);
+      setStatus("ready");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to end conversation");
+    } finally {
+      setActionPending(false);
+    }
+  }
+
+  async function requestHandoff() {
+    const session = sessionRef.current;
+    if (!session || sessionEnded || actionPending) return;
+    setActionPending(true);
+    setError("");
+    try {
+      const result = await requestWebchatHandoff(session);
+      const messageId = `handoff-${Date.now()}`;
+      seenRef.current.add(`${messageId}:${new Date().toISOString()}`);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: messageId,
+          role: "assistant",
+          content: result.message,
+          timestamp: new Date().toISOString(),
+        },
+      ]);
+      await poll();
+      setStatus("ready");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to request handoff");
+    } finally {
+      setActionPending(false);
+    }
+  }
+
   function reset() {
     sessionRef.current = null;
     seenRef.current.clear();
     setMessages([]);
     setConversationId(null);
     setError("");
+    setSessionEnded(false);
+    setActionPending(false);
     setStatus("idle");
     setSessionVersion((value) => value + 1);
+  }
+
+  function startNewConversation() {
+    reset();
   }
 
   return {
@@ -172,8 +242,13 @@ export function useWebchatTest(params: {
     conversationId,
     status,
     error,
+    sessionEnded,
+    actionPending,
     send,
     reset,
     poll,
+    endConversation,
+    requestHandoff,
+    startNewConversation,
   };
 }

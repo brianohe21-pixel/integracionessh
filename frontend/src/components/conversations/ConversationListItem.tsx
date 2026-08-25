@@ -2,8 +2,9 @@
 
 import { Button } from "@/components/ui/Button";
 import { ChannelAvatar } from "@/components/conversations/conversation-ui";
+import { WhatsAppRiskBadge } from "@/components/whatsapp/WhatsAppRiskBadge";
 import { cn } from "@/lib/utils";
-import type { Conversation, InboxSlaStatus } from "@/types";
+import type { Conversation, InboxSlaStatus, TenantWhatsAppRiskSummary } from "@/types";
 
 type Props = {
   conversation: Conversation;
@@ -27,6 +28,7 @@ type Props = {
   modeHumanLabel: string;
   modeBotLabel: string;
   takeConversationLabel: string;
+  whatsappRisk?: TenantWhatsAppRiskSummary | null;
 };
 
 export function ConversationListItem({
@@ -51,6 +53,7 @@ export function ConversationListItem({
   modeHumanLabel,
   modeBotLabel,
   takeConversationLabel,
+  whatsappRisk,
 }: Props) {
   const isHuman = (conversation.handoffMode ?? "bot") === "human";
   const isUnread = conversation.workflowStatus === "new";
@@ -117,6 +120,11 @@ export function ConversationListItem({
             <p className="truncate text-xs text-secondary">
               {previewParts.join(" · ")}
             </p>
+            {whatsappRisk && whatsappRisk.risk !== "none" && whatsappRisk.risk !== "ok" ? (
+              <div className="mt-1">
+                <WhatsAppRiskBadge risk={whatsappRisk} compact />
+              </div>
+            ) : null}
             {elapsedSeconds !== null && elapsedLabel ? (
               <p className="mt-0.5 truncate text-[11px] font-medium text-warning">
                 {elapsedLabel}

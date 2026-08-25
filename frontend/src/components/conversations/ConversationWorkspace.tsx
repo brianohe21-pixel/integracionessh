@@ -25,7 +25,7 @@ import { Select } from "@/components/ui/Input";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Textarea } from "@/components/ui/Input";
 import { useFormatters } from "@/hooks/useFormatters";
-import { useT } from "@/i18n/context";
+import { useT, useLocale } from "@/i18n/context";
 import { buildWaMeLink, normalizeWhatsAppPhone } from "@/lib/wa-link";
 import {
   MessageSquare,
@@ -48,8 +48,11 @@ import { ChannelAvatar } from "@/components/conversations/conversation-ui";
 import { MacroPicker } from "@/components/conversations/MacroPicker";
 import { AdvisorCopilotPanel } from "@/components/conversations/AdvisorCopilotPanel";
 import { QuotationDrawer } from "@/components/conversations/QuotationDrawer";
+import { OpportunityDrawer } from "@/components/sales/OpportunityDrawer";
+import { useOpportunityByConversation } from "@/hooks/useSalesOpportunity";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useInboxSlaSettings } from "@/hooks/useInboxSla";
+import { useWhatsAppRisk } from "@/hooks/useWhatsAppRisk";
 import {
   formatElapsedDuration,
   getConversationSlaStatus,
@@ -81,6 +84,7 @@ type Props = {
 
 export function ConversationWorkspace({ advisorMode = false }: Props) {
   const t = useT();
+  const locale = useLocale();
   const searchParams = useSearchParams();
   const { formatRelativeTime } = useFormatters();
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -93,6 +97,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   const [draft, setDraft] = useState("");
   const [internalNote, setInternalNote] = useState("");
   const [showQuotationDrawer, setShowQuotationDrawer] = useState(false);
+  const [selectedOpportunityId, setSelectedOpportunityId] = useState<string | null>(null);
   const [showHandoffModal, setShowHandoffModal] = useState(false);
   const [showBulkReassignModal, setShowBulkReassignModal] = useState(false);
   const [showResolveModal, setShowResolveModal] = useState(false);
@@ -111,6 +116,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   const { data: bots } = useBots();
   const { data: advisors } = useAdvisors();
   const { data: inboxSlaSettings } = useInboxSlaSettings();
+  const { data: whatsappRisk } = useWhatsAppRisk();
   const resolvedSlaSettings = useMemo(
     () => resolveInboxSlaSettings(inboxSlaSettings),
     [inboxSlaSettings]
@@ -272,6 +278,9 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   const selectedContactPhone =
     selectedConversation?.phoneNumber || selectedConversation?.participantId;
   const { data: activeLead } = useActiveLeadByPhone(selectedContactPhone);
+  const { data: activeOpportunity } = useOpportunityByConversation(
+    selectedConversation?.conversationId
+  );
   const convertLead = useConvertLead();
   const selectedBot = bots?.find((b) => b.botId === selectedConversation?.botId);
   const isImapReadOnly =
@@ -519,6 +528,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
         }}
         claimPending={claim.isPending}
         showOnMobile={showListOnMobile}
+        whatsappRisk={whatsappRisk}
       />
 
       <div
@@ -668,6 +678,23 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
               </p>
             )}
 
+            {selectedConversation && activeOpportunity && (
+              <div className="relative z-10 mx-4 mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-accent/30 bg-accent-muted/20 p-3 text-sm text-primary shadow-sm">
+                <div>
+                  <span className="font-semibold">{t("sales.title")}: </span>
+                  <span>{activeOpportunity.title}</span>
+                  <span className="ml-2 text-xs text-secondary">({activeOpportunity.stage})</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedOpportunityId(activeOpportunity.opportunityId)}
+                  className="text-xs font-medium text-accent hover:text-accent"
+                >
+                  {t("sales.openOpportunity")}
+                </button>
+              </div>
+            )}
+
             {selectedConversation && activeLead && (
               <div className="relative z-10 mx-4 mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-warning/30 bg-warning/10 p-3 text-sm text-primary shadow-sm">
                 <div>
@@ -805,8 +832,19 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
           activeLead={activeLead}
           onAssignAdvisor={() => setShowHandoffModal(true)}
           channelLabel={channelLabel}
+          locale={locale}
+          onOpenOpportunity={setSelectedOpportunityId}
+          whatsappRisk={whatsappRisk}
         />
       )}
+
+      {selectedOpportunityId ? (
+        <OpportunityDrawer
+          opportunityId={selectedOpportunityId}
+          locale={locale}
+          onClose={() => setSelectedOpportunityId(null)}
+        />
+      ) : null}
 
       {showResolveModal && selectedConversation && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">

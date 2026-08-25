@@ -152,6 +152,13 @@ export function LeadDetailPanel({
             {t("leads.openConversation")}
           </Link>
 
+          <Link
+            href="/sales"
+            className="inline-block text-accent hover:text-accent ml-4"
+          >
+            {t("sales.title")}
+          </Link>
+
           {lead.status === "converted" && (
             <Link
               href={`/contacts?q=${encodeURIComponent(lead.phone)}`}
