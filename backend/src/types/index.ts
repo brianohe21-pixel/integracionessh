@@ -21,6 +21,7 @@ export const SUBACCOUNT_SERVICES = [
   "metrics",
   "apps",
   "developer",
+  "integrations",
 ] as const;
 
 export type SubaccountServiceId = (typeof SUBACCOUNT_SERVICES)[number];

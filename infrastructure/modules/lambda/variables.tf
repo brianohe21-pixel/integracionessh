@@ -159,6 +159,10 @@ variable "cognito_issuer_url" {
   type = string
 }
 
+variable "cognito_hosted_ui_domain" {
+  type = string
+}
+
 variable "whatsapp_verify_token" {
   type      = string
   sensitive = true

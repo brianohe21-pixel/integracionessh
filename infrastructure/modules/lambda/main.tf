@@ -115,6 +115,10 @@ resource "aws_iam_role_policy" "lambda_permissions" {
           "cognito-idp:AdminDeleteUser",
           "cognito-idp:DescribeUserPoolClient",
           "cognito-idp:UpdateUserPoolClient",
+          "cognito-idp:CreateIdentityProvider",
+          "cognito-idp:UpdateIdentityProvider",
+          "cognito-idp:DeleteIdentityProvider",
+          "cognito-idp:DescribeIdentityProvider",
         ]
         Resource = var.cognito_user_pool_arn
       },
@@ -265,6 +269,7 @@ locals {
         REPORTS_FUNCTION_ARN      = local.reports_function_arn
         COGNITO_USER_POOL_ID      = var.cognito_user_pool_id
         COGNITO_CLIENT_ID         = var.cognito_client_id
+        COGNITO_HOSTED_UI_DOMAIN  = var.cognito_hosted_ui_domain
         MEDIA_BUCKET              = var.media_bucket_name
         API_PUBLIC_URL            = var.api_public_url
       }

@@ -44,6 +44,7 @@ export const SERVICE_LIMIT_KEYS: Record<SubaccountServiceId, readonly BagLimitKe
     "maxOrdersPerMonth",
   ],
   developer: ["apiRateLimitPerMinute", "apiRateLimitPerDay"],
+  integrations: [],
 };
 
 export const BAG_LIMIT_KEYS = Array.from(

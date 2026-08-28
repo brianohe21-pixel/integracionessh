@@ -74,6 +74,8 @@ import { addCustomDomainToCognitoClient } from "../../lib/cognito/custom-domain-
 import { handleProviderCredentialRoutes } from "./provider-credentials.routes.js";
 import { handleMemberRoutes } from "./members.routes.js";
 import { handleEmailSettingsRoutes } from "./email-settings.routes.js";
+import { handleIntegrationRoutes } from "./integrations.routes.js";
+import { getPublicAuthMethodsByHost } from "../../lib/integrations/microsoft-sso.service.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 
@@ -465,6 +467,13 @@ export async function handler(
       });
     }
 
+    if (method === "GET" && rawPath.includes("/public/auth-methods")) {
+      const host = normalizeDomain(event.queryStringParameters?.host ?? "");
+      if (!host) return badRequest("host query parameter is required");
+      const methods = await getPublicAuthMethodsByHost(host);
+      return ok(methods);
+    }
+
     if (method === "GET" && rawPath.endsWith("/auth/portal-access")) {
       const host = normalizeDomain(event.queryStringParameters?.host ?? "");
       if (!host) return badRequest("host query parameter is required");
@@ -559,6 +568,14 @@ export async function handler(
 
     const emailSettingsResponse = await handleEmailSettingsRoutes(event, method, auth);
     if (emailSettingsResponse) return emailSettingsResponse;
+
+    const integrationRoutesResponse = await handleIntegrationRoutes(
+      event,
+      method,
+      auth,
+      ENVIRONMENT
+    );
+    if (integrationRoutesResponse) return integrationRoutesResponse;
 
     if (event.rawPath?.endsWith("/openai-key")) {
       if (method === "GET") {
