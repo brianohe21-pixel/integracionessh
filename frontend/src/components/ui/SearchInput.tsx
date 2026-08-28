@@ -19,7 +19,7 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
           ref={ref}
           type="search"
           value={value}
-          className="w-full rounded-xl border border-default bg-surface-elevated py-2.5 pl-10 pr-10 text-sm text-primary shadow-sm transition-shadow placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:shadow-md"
+          className="w-full rounded-xl border border-field-border bg-surface-elevated py-2.5 pl-10 pr-10 text-sm text-primary shadow-sm transition-shadow placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:shadow-md"
           {...props}
         />
         {hasValue && onClear ? (

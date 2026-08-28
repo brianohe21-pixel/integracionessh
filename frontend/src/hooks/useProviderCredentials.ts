@@ -52,6 +52,9 @@ export function useSaveProviderCredential(provider: ProviderId) {
       );
       queryClient.invalidateQueries({ queryKey: ["provider-credentials"] });
       queryClient.invalidateQueries({ queryKey: ["openai-key-status"] });
+      if (provider === "elevenlabs") {
+        queryClient.invalidateQueries({ queryKey: ["telephony-voices"] });
+      }
     },
   });
 }

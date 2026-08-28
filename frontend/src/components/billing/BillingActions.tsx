@@ -14,7 +14,7 @@ import type { PaidBillingPlan } from "@/lib/plan-config";
 import { useT } from "@/i18n/context";
 import type { Tenant } from "@/types";
 
-const UPGRADE_PLANS: PaidBillingPlan[] = ["starter", "pro", "enterprise"];
+const UPGRADE_PLANS: PaidBillingPlan[] = ["starter", "pro", "scale"];
 
 export function BillingActions() {
   const t = useT();
@@ -63,7 +63,7 @@ export function BillingActions() {
   }
 
   function formatPlanPrice(plan: PaidBillingPlan): string | null {
-    const price = providers?.plans?.[plan];
+    const price = providers?.plans?.[plan] ?? (plan === "scale" ? providers?.plans?.enterprise : undefined);
     if (!price) return null;
     return `${formatUsdPrice(price.listPriceUsd)} · ${formatCopPrice(price.amountCents)}`;
   }

@@ -28,9 +28,9 @@ export function MetricsChartCard({
 
   return (
     <div className={cn("content-card overflow-hidden", className)}>
-      <div className="border-b border-subtle px-4 py-4 sm:px-6">
-        <h3 className="text-sm font-semibold text-primary">{title}</h3>
-        {subtitle ? <p className="mt-0.5 text-xs text-secondary">{subtitle}</p> : null}
+      <div className="section-header">
+        <h3 className="section-header-title">{title}</h3>
+        {subtitle ? <p className="section-header-subtitle">{subtitle}</p> : null}
       </div>
       <div className="p-4 sm:p-6">
         {isEmpty ? (

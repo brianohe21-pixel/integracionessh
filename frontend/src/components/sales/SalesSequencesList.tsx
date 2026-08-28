@@ -50,14 +50,14 @@ export function SalesSequencesList({
           key={sequence.sequenceId}
           className="content-card overflow-hidden transition-transform duration-150 hover:-translate-y-0.5"
         >
-          <div className="border-b border-subtle bg-gradient-to-r from-accent-muted/40 to-surface-elevated px-5 py-4">
+          <div className="card-header px-5 py-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-accent-muted px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-accent">
+                <div className="card-header-chip mb-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide">
                   <Zap className="h-3 w-3" />
                   {stepsLabel(sequence.steps.length)}
                 </div>
-                <h3 className="truncate text-base font-semibold text-primary">{sequence.name}</h3>
+                <h3 className="truncate text-base font-semibold text-[var(--card-header-title)]">{sequence.name}</h3>
               </div>
               <Badge variant={sequence.enabled ? "success" : "default"} dot>
                 {sequence.enabled ? activeLabel : inactiveLabel}
@@ -65,7 +65,7 @@ export function SalesSequencesList({
             </div>
           </div>
 
-          <div className="space-y-2 px-5 py-4">
+          <div className="space-y-2 card-body">
             {sequence.steps.slice(0, 4).map((step, index) => {
               const meta = channelMeta(step.channel);
               const Icon = meta.icon;

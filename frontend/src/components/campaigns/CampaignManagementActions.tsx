@@ -25,6 +25,7 @@ import {
 } from "@/hooks/useCampaigns";
 import { CampaignQualityConfirmModal } from "@/components/campaigns/CampaignQualityConfirmModal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { useDialog } from "@/components/ui/DialogProvider";
 import { useWhatsAppQualityGuard } from "@/hooks/useWhatsAppQualityGuard";
 import type { Campaign } from "@/types";
 
@@ -44,6 +45,7 @@ export function CampaignManagementActions({
   onCloned,
 }: CampaignManagementActionsProps) {
   const t = useT();
+  const { alert } = useDialog();
   const router = useRouter();
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
   const [actionError, setActionError] = useState("");
@@ -93,7 +95,11 @@ export function CampaignManagementActions({
 
   async function handleStart() {
     if (startBlocked) {
-      window.alert(t("campaigns.qualityStartBlocked"));
+      await alert({
+        title: t("campaigns.qualityWarnTitle"),
+        message: t("campaigns.qualityStartBlocked"),
+        tone: "warning",
+      });
       return;
     }
     if (isWhatsApp) {
@@ -105,7 +111,11 @@ export function CampaignManagementActions({
 
   async function handleResume() {
     if (startBlocked) {
-      window.alert(t("campaigns.qualityStartBlocked"));
+      await alert({
+        title: t("campaigns.qualityWarnTitle"),
+        message: t("campaigns.qualityStartBlocked"),
+        tone: "warning",
+      });
       return;
     }
     if (isWhatsApp) {

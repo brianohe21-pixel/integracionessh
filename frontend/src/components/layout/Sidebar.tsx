@@ -5,7 +5,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { signOutUser } from "@/lib/auth-session";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/context";
@@ -39,6 +39,7 @@ import {
   Headphones,
   Building2,
   TrendingUp,
+  Hash,
 } from "lucide-react";
 import { useAdminRole } from "@/hooks/useAdminRole";
 import { useTenantRole } from "@/hooks/useTenantRole";
@@ -60,6 +61,7 @@ type NavItem = {
   href: string;
   labelKey: string;
   icon: React.ComponentType<{ className?: string }>;
+  items?: NavItem[];
 };
 
 type NavCategory = {
@@ -80,7 +82,19 @@ const memberNavCategories: NavCategory[] = [
     icon: LayoutGrid,
     items: [
       { href: "/bots", labelKey: "nav.bots", icon: BotMessageSquare },
-      { href: "/voice-agents", labelKey: "nav.voiceAgents", icon: PhoneCall },
+      {
+        href: "/voice-agents",
+        labelKey: "nav.voiceAgents",
+        icon: PhoneCall,
+        items: [
+          { href: "/voice-agents", labelKey: "voiceAgents.tab.agents", icon: Users },
+          {
+            href: "/voice-agents?tab=phoneNumbers",
+            labelKey: "voiceAgents.tab.phoneNumbers",
+            icon: Hash,
+          },
+        ],
+      },
       { href: "/contact-center", labelKey: "nav.contactCenter", icon: Headphones },
       { href: "/conversations", labelKey: "nav.conversations", icon: MessageSquare },
       { href: "/supervisor", labelKey: "nav.supervisor", icon: LayoutGrid },
@@ -174,14 +188,62 @@ function roleLabel(role: string, t: ReturnType<typeof useT>): string {
   return t("nav.roleMember");
 }
 
-function getActiveCategoryIds(pathname: string, categories: NavCategory[]): Set<string> {
+function isNavItemActive(
+  pathname: string,
+  searchParams: URLSearchParams,
+  href: string
+): boolean {
+  const [path, queryString] = href.split("?");
+  if (!pathname.startsWith(path)) return false;
+  if (!queryString) {
+    if (path === "/voice-agents") {
+      return searchParams.get("tab") !== "phoneNumbers";
+    }
+    return pathname === path || pathname.startsWith(`${path}/`);
+  }
+  const expected = new URLSearchParams(queryString);
+  for (const [key, value] of expected.entries()) {
+    if (searchParams.get(key) !== value) return false;
+  }
+  return true;
+}
+
+function navItemMatchesPath(
+  item: NavItem,
+  pathname: string,
+  searchParams: URLSearchParams
+): boolean {
+  if (item.items?.length) {
+    return item.items.some((child) => isNavItemActive(pathname, searchParams, child.href));
+  }
+  return isNavItemActive(pathname, searchParams, item.href);
+}
+
+function getActiveCategoryIds(
+  pathname: string,
+  searchParams: URLSearchParams,
+  categories: NavCategory[]
+): Set<string> {
   const active = new Set<string>();
   for (const category of categories) {
-    if (category.items.some((item) => pathname.startsWith(item.href))) {
+    if (category.items.some((item) => navItemMatchesPath(item, pathname, searchParams))) {
       active.add(category.id);
     }
   }
   return active;
+}
+
+function filterNavItem(item: NavItem, tenant: Tenant | undefined): NavItem | null {
+  const service = serviceForNavHref(item.href);
+  if (service && !isSubaccountServiceEnabled(tenant, service)) return null;
+  if (item.items?.length) {
+    const filteredChildren = item.items
+      .map((child) => filterNavItem(child, tenant))
+      .filter((child): child is NavItem => child !== null);
+    if (filteredChildren.length === 0) return null;
+    return { ...item, items: filteredChildren };
+  }
+  return item;
 }
 
 function NavPrimaryLink({
@@ -240,6 +302,93 @@ function NavSubLink({
       <Icon className="nav-sub-icon" />
       <span className="min-w-0 flex-1 truncate">{label}</span>
     </Link>
+  );
+}
+
+function NavItemGroupSection({
+  item,
+  pathname,
+  searchParams,
+  onNavigate,
+}: {
+  item: NavItem & { items: NavItem[] };
+  pathname: string;
+  searchParams: URLSearchParams;
+  onNavigate?: () => void;
+}) {
+  const t = useT();
+  const Icon = item.icon;
+  const hasActiveChild = item.items.some((child) =>
+    isNavItemActive(pathname, searchParams, child.href)
+  );
+  const [open, setOpen] = useState(hasActiveChild);
+
+  useEffect(() => {
+    if (hasActiveChild) setOpen(true);
+  }, [hasActiveChild]);
+
+  return (
+    <div className="space-y-0.5">
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        className={cn("nav-sub-item w-full", (open || hasActiveChild) && "nav-sub-item-active")}
+      >
+        <Icon className="nav-sub-icon" />
+        <span className="min-w-0 flex-1 truncate text-left">{t(item.labelKey)}</span>
+        <ChevronDown
+          className={cn(
+            "h-3.5 w-3.5 shrink-0 opacity-50 transition-transform duration-200",
+            open && "rotate-180"
+          )}
+        />
+      </button>
+      <div
+        className={cn(
+          "overflow-hidden transition-all duration-200",
+          open ? "max-h-48 opacity-100" : "max-h-0 opacity-0"
+        )}
+      >
+        <div className="nav-sub-list ml-3 space-y-0.5 border-l border-[var(--sidebar-border)] pl-2">
+          {item.items.map((child) => (
+            <NavSubLink
+              key={child.href}
+              item={child}
+              active={isNavItemActive(pathname, searchParams, child.href)}
+              onNavigate={onNavigate}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function renderCategoryNavItem(
+  item: NavItem,
+  pathname: string,
+  searchParams: URLSearchParams,
+  onNavigate?: () => void
+) {
+  if (item.items?.length) {
+    return (
+      <NavItemGroupSection
+        key={item.href}
+        item={{ ...item, items: item.items }}
+        pathname={pathname}
+        searchParams={searchParams}
+        onNavigate={onNavigate}
+      />
+    );
+  }
+
+  return (
+    <NavSubLink
+      key={item.href}
+      item={item}
+      active={isNavItemActive(pathname, searchParams, item.href)}
+      onNavigate={onNavigate}
+    />
   );
 }
 
@@ -319,12 +468,14 @@ function SidebarFlyout({
 function CollapsedCategoryFlyout({
   category,
   pathname,
+  searchParams,
   open,
   onOpenChange,
   onNavigate,
 }: {
   category: NavCategory;
   pathname: string;
+  searchParams: URLSearchParams;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onNavigate?: () => void;
@@ -332,7 +483,9 @@ function CollapsedCategoryFlyout({
   const t = useT();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const Icon = category.icon;
-  const hasActiveItem = category.items.some((item) => pathname.startsWith(item.href));
+  const hasActiveItem = category.items.some((item) =>
+    navItemMatchesPath(item, pathname, searchParams)
+  );
 
   return (
     <>
@@ -355,17 +508,36 @@ function CollapsedCategoryFlyout({
           {t(category.labelKey)}
         </p>
         <div className="nav-sub-list mx-3 mb-1.5 max-h-[min(24rem,calc(100vh-2rem))] space-y-0.5 overflow-y-auto">
-          {category.items.map((item) => (
-            <NavSubLink
-              key={item.href}
-              item={item}
-              active={pathname.startsWith(item.href)}
-              onNavigate={() => {
-                onOpenChange(false);
-                onNavigate?.();
-              }}
-            />
-          ))}
+          {category.items.map((item) =>
+            item.items?.length ? (
+              <div key={item.href} className="space-y-0.5">
+                <p className="px-3 pt-1 text-[10px] font-medium uppercase tracking-wide text-[var(--sidebar-text-muted)]">
+                  {t(item.labelKey)}
+                </p>
+                {item.items.map((child) => (
+                  <NavSubLink
+                    key={child.href}
+                    item={child}
+                    active={isNavItemActive(pathname, searchParams, child.href)}
+                    onNavigate={() => {
+                      onOpenChange(false);
+                      onNavigate?.();
+                    }}
+                  />
+                ))}
+              </div>
+            ) : (
+              <NavSubLink
+                key={item.href}
+                item={item}
+                active={isNavItemActive(pathname, searchParams, item.href)}
+                onNavigate={() => {
+                  onOpenChange(false);
+                  onNavigate?.();
+                }}
+              />
+            )
+          )}
         </div>
       </SidebarFlyout>
     </>
@@ -377,6 +549,7 @@ function NavCategorySection({
   isOpen,
   hasActiveItem,
   pathname,
+  searchParams,
   onToggle,
   onNavigate,
 }: {
@@ -384,6 +557,7 @@ function NavCategorySection({
   isOpen: boolean;
   hasActiveItem: boolean;
   pathname: string;
+  searchParams: URLSearchParams;
   onToggle: () => void;
   onNavigate?: () => void;
 }) {
@@ -416,14 +590,9 @@ function NavCategorySection({
         )}
       >
         <div className="nav-sub-list space-y-0.5 pb-1">
-          {category.items.map((item) => (
-            <NavSubLink
-              key={item.href}
-              item={item}
-              active={pathname.startsWith(item.href)}
-              onNavigate={onNavigate}
-            />
-          ))}
+          {category.items.map((item) =>
+            renderCategoryNavItem(item, pathname, searchParams, onNavigate)
+          )}
         </div>
       </div>
     </div>
@@ -467,14 +636,15 @@ function SidebarNav({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const t = useT();
   const [openCategories, setOpenCategories] = useState<Set<string>>(() =>
-    getActiveCategoryIds(pathname, navCategories)
+    getActiveCategoryIds(pathname, searchParams, navCategories)
   );
   const [openFlyoutId, setOpenFlyoutId] = useState<string | null>(null);
   const activeCategoryId = navCategories.find((category) =>
-    category.items.some((item) => pathname.startsWith(item.href))
+    category.items.some((item) => navItemMatchesPath(item, pathname, searchParams))
   )?.id;
 
   useEffect(() => {
@@ -530,7 +700,7 @@ function SidebarNav({
         {navCategories.map((category) => {
           const isOpen = openCategories.has(category.id);
           const hasActiveItem = category.items.some((item) =>
-            pathname.startsWith(item.href)
+            navItemMatchesPath(item, pathname, searchParams)
           );
           const isSingleItem = category.items.length === 1;
 
@@ -540,7 +710,7 @@ function SidebarNav({
               <NavPrimaryLink
                 key={category.id}
                 item={item}
-                active={pathname.startsWith(item.href)}
+                active={isNavItemActive(pathname, searchParams, item.href)}
                 collapsed={collapsed}
                 onNavigate={onNavigate}
               />
@@ -553,6 +723,7 @@ function SidebarNav({
                 key={category.id}
                 category={category}
                 pathname={pathname}
+                searchParams={searchParams}
                 open={openFlyoutId === category.id}
                 onOpenChange={(nextOpen) => setOpenFlyoutId(nextOpen ? category.id : null)}
                 onNavigate={onNavigate}
@@ -567,6 +738,7 @@ function SidebarNav({
               isOpen={isOpen}
               hasActiveItem={hasActiveItem}
               pathname={pathname}
+              searchParams={searchParams}
               onToggle={() => toggleCategory(category.id)}
               onNavigate={onNavigate}
             />
@@ -1067,11 +1239,9 @@ export function Sidebar() {
   const filteredNavCategories = navCategories
     .map((category) => ({
       ...category,
-      items: category.items.filter((item) => {
-        const service = serviceForNavHref(item.href);
-        if (!service) return true;
-        return isSubaccountServiceEnabled(me, service);
-      }),
+      items: category.items
+        .map((item) => filterNavItem(item, me))
+        .filter((item): item is NavItem => item !== null),
     }))
     .filter((category) => category.items.length > 0);
 

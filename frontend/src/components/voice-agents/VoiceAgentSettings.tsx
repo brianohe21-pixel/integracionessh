@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Eye, PhoneCall, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
@@ -119,9 +119,10 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
   const [configDrawerOpen, setConfigDrawerOpen] = useState(false);
   const [configDrawerSection, setConfigDrawerSection] =
     useState<VoiceAgentConfigSection>("assistant");
+  const configSnapshotRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!data) return;
+    if (!data || configDrawerOpen) return;
     setVoiceId(data.telephonyVoiceId ?? "");
     setModel(data.telephonyModel ?? DEFAULT_REALTIME_MODEL_ID);
     setTranscriptionModel(
@@ -143,7 +144,7 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
     setVadThreshold(data.telephonyTranscriptionVadThreshold ?? DEFAULT_VAD_THRESHOLD);
     setSilenceMs(data.telephonyTranscriptionSilenceMs ?? DEFAULT_SILENCE_MS);
     setBargeIn(Boolean(data.telephonyTranscriptionBargeIn));
-  }, [data]);
+  }, [data, configDrawerOpen]);
 
   const voices = voicesData?.voices ?? [];
   const isFreeTier = voicesData?.tier === "free";
@@ -154,7 +155,39 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
 
   function openConfigDrawer(section: VoiceAgentConfigSection) {
     setConfigDrawerSection(section);
+    configSnapshotRef.current = JSON.stringify(buildPayload());
     setConfigDrawerOpen(true);
+  }
+
+  function hasUnsavedAudioConfig(): boolean {
+    return configSnapshotRef.current !== JSON.stringify(buildPayload());
+  }
+
+  function saveAudioConfig(options?: { closeDrawer?: boolean; onError?: (message: string) => void }) {
+    if (!validateSystemPrompt()) return;
+    setError("");
+    save.mutate(buildPayload(), {
+      onSuccess: () => {
+        configSnapshotRef.current = JSON.stringify(buildPayload());
+        setSuccess(t("telephony.saved"));
+        setTimeout(() => setSuccess(""), 3000);
+        if (options?.closeDrawer) setConfigDrawerOpen(false);
+      },
+      onError: (err) => {
+        const message = err.message;
+        setError(message);
+        options?.onError?.(message);
+      },
+    });
+  }
+
+  function closeConfigDrawer() {
+    if (hasUnsavedAudioConfig()) {
+      saveAudioConfig({ closeDrawer: true });
+      return;
+    }
+    setConfigDrawerOpen(false);
+    configSnapshotRef.current = null;
   }
 
   function validateSystemPrompt(): boolean {
@@ -191,15 +224,7 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
   }
 
   function handleSave() {
-    if (!validateSystemPrompt()) return;
-    setError("");
-    save.mutate(buildPayload(), {
-      onSuccess: () => {
-        setSuccess(t("telephony.saved"));
-        setTimeout(() => setSuccess(""), 3000);
-      },
-      onError: (err) => setError(err.message),
-    });
+    saveAudioConfig();
   }
 
   return (
@@ -386,7 +411,9 @@ export function VoiceAgentSettings({ botId }: VoiceAgentSettingsProps) {
           voiceId={voiceId}
           voices={voices}
           isFreeTier={isFreeTier}
-          onClose={() => setConfigDrawerOpen(false)}
+          onClose={closeConfigDrawer}
+          onSave={() => saveAudioConfig({ closeDrawer: true })}
+          isSaving={save.isPending}
           onAssistantModelChange={setModel}
           onTranscriptionModelChange={setTranscriptionModel}
           onVoiceIdChange={setVoiceId}

@@ -15,6 +15,7 @@ import type {
 export interface TelephonySettings {
   telephonyEnabled?: boolean;
   telephonyPhoneNumber?: string;
+  reassignPhoneNumber?: boolean;
   telephonyVoiceId?: string;
   telephonyModel?: string;
   telephonyTranscriptionModel?: string;
@@ -258,7 +259,11 @@ export function useSaveTelephonySettings(botId: string) {
         `/bots/${encodeURIComponent(botId)}/telephony/settings`,
         payload
       ),
-    onSuccess: () => {
+    onSuccess: (result) => {
+      qc.setQueryData(["telephony-settings", botId], (current: TelephonySettings | undefined) => ({
+        ...(current ?? {}),
+        ...result,
+      }));
       void qc.invalidateQueries({ queryKey: ["telephony-settings", botId] });
       void qc.invalidateQueries({ queryKey: ["bots"] });
       void qc.invalidateQueries({ queryKey: ["telephony-numbers"] });

@@ -1,4 +1,4 @@
-export type TenantPlan = "free" | "starter" | "pro" | "enterprise" | "reseller";
+export type TenantPlan = "free" | "starter" | "pro" | "scale" | "reseller";
 
 export type TenantKind = "standard" | "reseller" | "subaccount";
 
@@ -102,7 +102,7 @@ export interface ResellerLimitsOverride {
 
 export interface ResellerConfig {
   maxSubaccounts: number;
-  defaultSubaccountPlan: "free" | "starter" | "pro" | "enterprise";
+  defaultSubaccountPlan: "free" | "starter" | "pro" | "scale";
   customDomain?: string;
   customDomainStatus?: CustomDomainStatus;
   allowSubaccountBranding: boolean;
@@ -111,7 +111,7 @@ export interface ResellerConfig {
 
 export interface ResellerPlanDefaults {
   maxSubaccounts: number;
-  defaultSubaccountPlan: "free" | "starter" | "pro" | "enterprise";
+  defaultSubaccountPlan: "free" | "starter" | "pro" | "scale";
   allowSubaccountBranding: boolean;
   limitsOverride?: ResellerLimitsOverride;
 }
@@ -131,6 +131,11 @@ export interface MetricsReportSchedule {
   dayOfWeek?: number;
   timezone: string;
   lastSentAt?: string;
+}
+
+export interface WebsiteAnalyticsSettings {
+  enabled: boolean;
+  googleAnalyticsMeasurementId?: string;
 }
 
 export type InboxSlaStatus = "disabled" | "ok" | "at_risk" | "breached" | "met" | "missed";
@@ -198,6 +203,7 @@ export interface Tenant {
   resellerConfig?: ResellerConfig;
   branding?: TenantBranding;
   inboxSla?: InboxSlaSettings;
+  websiteAnalytics?: WebsiteAnalyticsSettings;
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   subscriptionStatus?: SubscriptionStatus;
@@ -235,6 +241,39 @@ export interface BillingUsageResponse {
   limits: PlanLimits;
   plan: TenantPlan;
   subscription?: SubscriptionStatus;
+}
+
+export type WhatsAppChannelStatus = "active" | "pending_registration" | "disconnected";
+
+export interface WhatsAppAccount {
+  accountId: string;
+  tenantId: string;
+  wabaId: string;
+  label?: string;
+  status: "active" | "inactive";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WhatsAppChannel {
+  channelId: string;
+  tenantId: string;
+  botId: string;
+  accountId: string;
+  phoneNumberId: string;
+  whatsappBusinessAccountId: string;
+  displayPhoneNumber?: string;
+  label?: string;
+  status: WhatsAppChannelStatus;
+  isDefault: boolean;
+  whatsappOnboardingMode?: "cloud_api" | "coexistence";
+  isOnBizApp?: boolean;
+  platformType?: string;
+  whatsappSyncStatus?: WhatsAppSyncStatus;
+  whatsappDisconnectedAt?: string;
+  whatsappDisconnectionReason?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export type WhatsAppQualityRating = "GREEN" | "YELLOW" | "RED" | "NA";
@@ -769,6 +808,9 @@ export interface Conversation {
   tenantId: string;
   botId: string;
   channel?: Channel;
+  whatsappChannelId?: string;
+  businessPhoneNumberId?: string;
+  whatsappDisplayNumber?: string;
   participantId?: string;
   phoneNumber: string;
   contactName?: string;
@@ -1977,6 +2019,42 @@ export interface SalesMetrics {
   byBot: SalesMetricsByBot[];
   topProducts: SalesMetricsTopProduct[];
   topCustomersByCsat: CustomerCsatMetrics[];
+}
+
+export interface WebsiteMetricsSummary {
+  pageviews: number;
+  uniqueVisitors: number;
+  sessions: number;
+}
+
+export interface WebsiteMetricsDailyRow {
+  date: string;
+  pageviews: number;
+  uniqueVisitors: number;
+  sessions: number;
+}
+
+export interface WebsiteMetricsTopRow {
+  key: string;
+  label: string;
+  count: number;
+}
+
+export interface WebsiteMetricsBotRow {
+  botId: string;
+  botName: string;
+  pageviews: number;
+}
+
+export interface WebsiteMetrics {
+  from: string;
+  to: string;
+  windowDays: number;
+  summary: WebsiteMetricsSummary;
+  dailyTrend: WebsiteMetricsDailyRow[];
+  topPages: WebsiteMetricsTopRow[];
+  topReferrers: WebsiteMetricsTopRow[];
+  byBot: WebsiteMetricsBotRow[];
 }
 
 export type QuotationStatus = "sent" | "paid" | "expired" | "cancelled";

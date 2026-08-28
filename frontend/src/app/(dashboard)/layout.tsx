@@ -22,12 +22,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="flex h-screen overflow-x-clip">
             <TermsAcceptanceSync />
             <Sidebar />
-            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-canvas">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden platform-canvas-bg">
               <MobileTopBar />
-              <div className="px-4 py-2">
-                <SoftphoneBar />
-              </div>
-              <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto bg-canvas">
+              <SoftphoneBar />
+              <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto platform-canvas-bg">
                 <div className="flex min-h-full flex-1 flex-col">
                   <OnboardingGate>
                     <HelpCenterMount>

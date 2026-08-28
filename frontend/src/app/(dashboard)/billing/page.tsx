@@ -16,11 +16,12 @@ function parsePlanParam(value: string | null): TenantPlan | null {
   if (
     value === "starter" ||
     value === "pro" ||
+    value === "scale" ||
     value === "enterprise" ||
     value === "free" ||
     value === "reseller"
   ) {
-    return value;
+    return value === "enterprise" ? "scale" : value;
   }
   return null;
 }

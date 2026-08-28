@@ -146,8 +146,9 @@ function resolveVoiceId(bot: Bot): string {
 
 function resolveModel(bot: Bot): string {
   const model = bot.telephonyModel ?? bot.voicebotModel;
-  if (model?.startsWith("gpt-realtime")) return model;
-  return "gpt-realtime-2.1-mini";
+  if (!model?.trim()) return "gpt-realtime-2.1-mini";
+  if (model.startsWith("gpt-realtime")) return model;
+  return model.trim();
 }
 
 function resolveTranscriptionModel(bot: Bot) {

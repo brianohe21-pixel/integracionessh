@@ -22,7 +22,6 @@ export function FlowDeletableEdge({
   style,
   markerEnd,
   selected,
-  className,
 }: EdgeProps) {
   const t = useT();
   const { deleteElements } = useReactFlow();
@@ -71,7 +70,6 @@ export function FlowDeletableEdge({
           path={edgePath}
           markerEnd={markerEnd}
           style={style}
-          className={className}
           interactionWidth={32}
         />
       </g>

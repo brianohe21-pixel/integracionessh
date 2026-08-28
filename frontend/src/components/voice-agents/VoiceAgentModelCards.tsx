@@ -4,8 +4,8 @@ import { ChevronRight, Mic, Sparkles, Volume2 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { useT } from "@/i18n/context";
 import type { TelnyxVoice } from "@/hooks/useTelephony";
+import { getAssistantModelLabel, getAssistantModelOption } from "@/lib/assistant-models";
 import { cn } from "@/lib/utils";
-import { getRealtimeModel } from "@/lib/realtime-models";
 import { getTranscriptionModel } from "@/lib/transcription-models";
 import {
   BACKGROUND_SOUND_NONE,
@@ -34,7 +34,7 @@ export function VoiceAgentModelCards({
 }: VoiceAgentModelCardsProps) {
   const t = useT();
 
-  const assistant = getRealtimeModel(assistantModel);
+  const assistant = getAssistantModelOption(assistantModel);
   const transcription = getTranscriptionModel(transcriptionModel);
   const trimmedVoiceId = voiceId.trim();
   const matchedVoice = trimmedVoiceId
@@ -80,9 +80,13 @@ export function VoiceAgentModelCards({
       section: "assistant",
       icon: Sparkles,
       title: t("voiceAgents.modelSection_assistant"),
-      label: assistant?.label ?? assistantModel,
+      label: assistant?.label ?? getAssistantModelLabel(assistantModel),
       subtitle: assistant?.description ?? t("voiceAgents.modelCardAssistantSubtitle"),
-      badge: assistant ? t(`voiceAgents.modelTier_${assistant.tier}`) : undefined,
+      badge: assistant?.tier
+        ? t(`voiceAgents.modelTier_${assistant.tier}`)
+        : assistant?.category
+          ? t(`bots.modelCategory.${assistant.category}`)
+          : undefined,
     },
   ];
 

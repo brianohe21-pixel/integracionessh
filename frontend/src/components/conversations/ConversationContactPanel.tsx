@@ -9,6 +9,7 @@ import { ConversationOpportunityPanel } from "@/components/conversations/Convers
 import { WhatsAppRiskBadge } from "@/components/whatsapp/WhatsAppRiskBadge";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { ContentCardSection } from "@/components/ui/Card";
 import { Tabs } from "@/components/ui/Tabs";
 import { useAdvisors } from "@/hooks/useAdvisors";
 import { useClickToCall } from "@/hooks/useContactCenter";
@@ -118,10 +119,7 @@ export function ConversationContactPanel({
       <div className="sidebar-scroll flex-1 space-y-4 overflow-y-auto p-4">
         {panelTab === "contact" ? (
           <>
-            <section className="content-card p-4">
-              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
-                {t("conversations.contactInfo")}
-              </h3>
+            <ContentCardSection title={t("conversations.contactInfo")}>
               <div className="space-y-2.5 text-sm">
                 {phone ? (
                   <div className="flex items-center gap-3 rounded-lg bg-surface-muted px-3 py-2.5 text-secondary">
@@ -142,52 +140,40 @@ export function ConversationContactPanel({
                   </div>
                 ) : null}
               </div>
-            </section>
+            </ContentCardSection>
 
             {isWhatsApp ? (
-              <section className="content-card p-4">
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
-                  {t("whatsapp.riskTitle")}
-                </h3>
+              <ContentCardSection title={t("whatsapp.riskTitle")}>
                 <WhatsAppRiskBadge risk={botWhatsAppRisk} />
                 <p className="mt-2 text-xs text-secondary">{t("whatsapp.riskHint")}</p>
-              </section>
+              </ContentCardSection>
             ) : null}
 
             {activeLead ? (
-              <section className="content-card p-4">
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
-                  {t("leads.leadStatus")}
-                </h3>
+              <ContentCardSection title={t("leads.leadStatus")}>
                 <Badge variant="accent">{t(`leads.status_${activeLead.status}`)}</Badge>
-              </section>
+              </ContentCardSection>
             ) : null}
 
             {tags.length > 0 ? (
-              <section className="content-card p-4">
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
-                  {t("conversations.tags")}
-                </h3>
+              <ContentCardSection title={t("conversations.tags")}>
                 <div className="flex flex-wrap gap-1.5">
                   {tags.map((tag) => (
                     <Badge key={tag} variant="default">{tag}</Badge>
                   ))}
                 </div>
-              </section>
+              </ContentCardSection>
             ) : null}
 
             {assignedAdvisor ? (
-              <section className="content-card p-4">
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
-                  {t("conversations.assignedAdvisor")}
-                </h3>
+              <ContentCardSection title={t("conversations.assignedAdvisor")}>
                 <div className="flex items-center gap-3">
                   <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-surface-muted">
                     <User className="h-4 w-4 text-muted" />
                   </div>
                   <p className="text-sm font-medium text-primary">{assignedAdvisor.name}</p>
                 </div>
-              </section>
+              </ContentCardSection>
             ) : null}
 
             {conversation.internalNote ? (
@@ -202,10 +188,7 @@ export function ConversationContactPanel({
           </>
         ) : (
           <>
-            <section className="content-card p-4">
-              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
-                {t("conversations.history")}
-              </h3>
+            <ContentCardSection title={t("conversations.history")}>
               <div className="space-y-3 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-secondary">{t("conversations.messageCount", { count: conversation.messageCount })}</span>
@@ -223,13 +206,15 @@ export function ConversationContactPanel({
                   <span className="font-medium text-primary">{channelLabel(conversation.channel)}</span>
                 </div>
               </div>
-            </section>
+            </ContentCardSection>
 
-            <section className="content-card p-4">
+            <section className="content-card overflow-hidden">
+              <div className="card-body !py-4">
               <ConversationQuotationsPanel
                 conversationId={conversation.conversationId}
                 botId={conversation.botId}
               />
+              </div>
             </section>
 
             <ConversationOpportunityPanel

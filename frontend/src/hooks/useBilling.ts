@@ -38,7 +38,8 @@ export interface BillingProvidersResponse {
   plans?: {
     starter: BillingPlanPrice;
     pro: BillingPlanPrice;
-    enterprise: BillingPlanPrice;
+    scale: BillingPlanPrice;
+    enterprise?: BillingPlanPrice;
   };
 }
 

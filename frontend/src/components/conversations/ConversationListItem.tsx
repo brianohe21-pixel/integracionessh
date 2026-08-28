@@ -60,6 +60,9 @@ export function ConversationListItem({
 
   const previewParts = [
     channelLabel,
+    conversation.channel === "whatsapp" && conversation.whatsappDisplayNumber
+      ? conversation.whatsappDisplayNumber
+      : null,
     isHuman ? modeHumanLabel : modeBotLabel,
     isHuman ? workflowLabel : null,
     conversation.emailSubject,

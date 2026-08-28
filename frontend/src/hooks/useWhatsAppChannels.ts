@@ -1,0 +1,78 @@
+"use client";
+
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import type { WhatsAppChannel } from "@/types";
+
+function whatsAppChannelsQueryKey(botId: string) {
+  return ["bots", botId, "whatsapp-channels"] as const;
+}
+
+export function useWhatsAppChannels(botId: string, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: whatsAppChannelsQueryKey(botId),
+    queryFn: async () => {
+      const response = await api.get<{ channels: WhatsAppChannel[] }>(
+        `/bots/${encodeURIComponent(botId)}/whatsapp-channels`
+      );
+      return response.channels ?? [];
+    },
+    enabled: Boolean(botId) && (options?.enabled ?? true),
+  });
+}
+
+export function useUpdateWhatsAppChannel(botId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: {
+      channelId: string;
+      label?: string;
+      isDefault?: boolean;
+    }) =>
+      api.patch<{ channel: WhatsAppChannel }>(
+        `/bots/${encodeURIComponent(botId)}/whatsapp-channels/${encodeURIComponent(input.channelId)}`,
+        {
+          ...(input.label !== undefined ? { label: input.label } : {}),
+          ...(input.isDefault !== undefined ? { isDefault: input.isDefault } : {}),
+        }
+      ),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: whatsAppChannelsQueryKey(botId) });
+      await queryClient.invalidateQueries({ queryKey: ["bots", "detail", botId] });
+      await queryClient.invalidateQueries({ queryKey: ["bots", "list"] });
+    },
+  });
+}
+
+export function useDeleteWhatsAppChannel(botId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (channelId: string) =>
+      api.delete(
+        `/bots/${encodeURIComponent(botId)}/whatsapp-channels/${encodeURIComponent(channelId)}`
+      ),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: whatsAppChannelsQueryKey(botId) });
+      await queryClient.invalidateQueries({ queryKey: ["bots", "detail", botId] });
+      await queryClient.invalidateQueries({ queryKey: ["bots", "list"] });
+    },
+  });
+}
+
+export function useRegisterWhatsAppChannel(botId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: { channelId: string; pin: string }) =>
+      api.post<{ registered: boolean; channelId: string }>(
+        `/bots/${encodeURIComponent(botId)}/whatsapp-channels/${encodeURIComponent(input.channelId)}/register`,
+        { pin: input.pin }
+      ),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: whatsAppChannelsQueryKey(botId) });
+      await queryClient.invalidateQueries({ queryKey: ["bots", "detail", botId] });
+    },
+  });
+}

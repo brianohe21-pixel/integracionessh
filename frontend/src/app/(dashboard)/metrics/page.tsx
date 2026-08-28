@@ -11,12 +11,14 @@ import {
   AlertTriangle,
   Download,
   Banknote,
+  Globe,
 } from "lucide-react";
 import { useCallingMetrics } from "@/hooks/useCallingMetrics";
 import { useMarketingMetrics } from "@/hooks/useMarketingMetrics";
 import { useInboxSlaMetrics } from "@/hooks/useInboxSlaMetrics";
 import { useMetrics } from "@/hooks/useMetrics";
 import { useSalesMetrics } from "@/hooks/useSalesMetrics";
+import { useWebsiteMetrics } from "@/hooks/useWebsiteMetrics";
 import {
   MetricsFiltersBar,
   useFilteredUsageMetrics,
@@ -44,6 +46,8 @@ import { MetricsSalesByBotChart } from "@/components/metrics/MetricsSalesByBotCh
 import { MetricsTopProductsChart } from "@/components/metrics/MetricsTopProductsChart";
 import { MetricsCallingByBotChart } from "@/components/metrics/MetricsCallingByBotChart";
 import { MetricsCallingSummaryChart } from "@/components/metrics/MetricsCallingSummaryChart";
+import { MetricsWebsiteTrendChart } from "@/components/metrics/MetricsWebsiteTrendChart";
+import { MetricsWebsiteTopListChart } from "@/components/metrics/MetricsWebsiteTopListChart";
 
 function KpiCard({
   label,
@@ -94,6 +98,10 @@ export default function MetricsPage() {
     dateRange,
     filters.botId || undefined
   );
+  const { data: website, isLoading: websiteLoading } = useWebsiteMetrics(
+    dateRange,
+    filters.botId || undefined
+  );
 
   const botOptions = useMemo(
     () =>
@@ -108,6 +116,7 @@ export default function MetricsPage() {
   const showMarketing = filters.section === "all" || filters.section === "marketing";
   const showCalling = filters.section === "all" || filters.section === "calling";
   const showSales = filters.section === "all" || filters.section === "sales";
+  const showWebsite = filters.section === "all" || filters.section === "website";
 
   function callingHealthVariant(
     health: CallingMetricsHealth
@@ -364,6 +373,56 @@ export default function MetricsPage() {
                   </TableContainer>
                 </div>
               )}
+            </div>
+          )}
+
+          {showWebsite && !websiteLoading && website && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="font-semibold text-primary">{t("metrics.websiteTitle")}</h2>
+                <p className="text-sm text-secondary">
+                  {t("metrics.websiteSubtitle", {
+                    from: formatRangeDate(website.from),
+                    to: formatRangeDate(website.to),
+                  })}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <KpiCard
+                  label={t("metrics.websitePageviews")}
+                  value={formatNumber(website.summary.pageviews)}
+                  icon={<Globe className="w-5 h-5" />}
+                />
+                <KpiCard
+                  label={t("metrics.websiteVisitors")}
+                  value={formatNumber(website.summary.uniqueVisitors)}
+                  icon={<Activity className="w-5 h-5" />}
+                />
+                <KpiCard
+                  label={t("metrics.websiteSessions")}
+                  value={formatNumber(website.summary.sessions)}
+                  icon={<BarChart3 className="w-5 h-5" />}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <MetricsWebsiteTrendChart website={website} />
+                <MetricsWebsiteTopListChart
+                  title={t("metrics.websiteTopPages")}
+                  subtitle={t("metrics.websiteTopPagesSubtitle")}
+                  rows={website.topPages}
+                  emptyTitle={t("metrics.websiteEmptyTitle")}
+                  emptyDescription={t("metrics.websiteEmptyDescription")}
+                />
+                <MetricsWebsiteTopListChart
+                  title={t("metrics.websiteTopReferrers")}
+                  subtitle={t("metrics.websiteTopReferrersSubtitle")}
+                  rows={website.topReferrers}
+                  emptyTitle={t("metrics.websiteEmptyTitle")}
+                  emptyDescription={t("metrics.websiteEmptyDescription")}
+                />
+              </div>
             </div>
           )}
 

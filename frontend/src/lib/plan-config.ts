@@ -3,15 +3,31 @@ import {
   getModelsForPlan,
   type AiModelDefinition,
 } from "@/lib/ai-models";
+import type { BillingPlanPrice } from "@/hooks/useBilling";
 
 export type AllowedModel = string;
-export type PaidBillingPlan = "starter" | "pro" | "enterprise";
+export type PaidBillingPlan = "starter" | "pro" | "scale";
 
 export const PLAN_LIST_PRICE_USD: Record<PaidBillingPlan, number> = {
   starter: 59,
   pro: 199,
-  enterprise: 699,
+  scale: 699,
 };
+
+export function resolveBillingPlanPrice(
+  plans:
+    | {
+        starter?: BillingPlanPrice;
+        pro?: BillingPlanPrice;
+        scale?: BillingPlanPrice;
+        enterprise?: BillingPlanPrice;
+      }
+    | undefined,
+  plan: PaidBillingPlan
+): BillingPlanPrice | undefined {
+  if (!plans) return undefined;
+  return plans[plan] ?? (plan === "scale" ? plans.enterprise : undefined);
+}
 
 export function getAllowedModelsForPlan(plan: TenantPlan | string | undefined): AllowedModel[] {
   return getModelsForPlan(plan).map((model) => model.id);

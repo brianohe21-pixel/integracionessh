@@ -7,6 +7,89 @@
   var widgetKey = script.getAttribute("data-widget-key");
   if (!apiUrl || !botId || !widgetKey) return;
 
+  function randomId() {
+    if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+    return "v_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+  }
+
+  function getVisitorId() {
+    var key = "wb_visitor_id";
+    try {
+      var existing = localStorage.getItem(key);
+      if (existing) return existing;
+      var id = randomId();
+      localStorage.setItem(key, id);
+      return id;
+    } catch (e) {
+      return randomId();
+    }
+  }
+
+  function getSessionId() {
+    var key = "wb_session_id";
+    try {
+      var existing = sessionStorage.getItem(key);
+      if (existing) return existing;
+      var id = randomId();
+      sessionStorage.setItem(key, id);
+      return id;
+    } catch (e) {
+      return randomId();
+    }
+  }
+
+  function trackPageview() {
+    fetch(apiUrl.replace(/\/$/, "") + "/webchat/analytics/pageview", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Widget-Key": widgetKey,
+      },
+      body: JSON.stringify({
+        path: typeof location !== "undefined" ? location.pathname + location.search : "/",
+        referrer: typeof document !== "undefined" ? document.referrer || undefined : undefined,
+        visitorId: getVisitorId(),
+        sessionId: getSessionId(),
+      }),
+    }).catch(function () {});
+  }
+
+  function loadGoogleAnalytics(measurementId) {
+    if (!measurementId || window.__wbGaLoaded === measurementId) return;
+    window.__wbGaLoaded = measurementId;
+    window.dataLayer = window.dataLayer || [];
+    function gtag() {
+      window.dataLayer.push(arguments);
+    }
+    window.gtag = gtag;
+    gtag("js", new Date());
+    gtag("config", measurementId, { send_page_view: true });
+    var gaScript = document.createElement("script");
+    gaScript.async = true;
+    gaScript.src =
+      "https://www.googletagmanager.com/gtag/js?id=" + encodeURIComponent(measurementId);
+    document.head.appendChild(gaScript);
+  }
+
+  function loadAnalyticsIntegrations() {
+    fetch(apiUrl.replace(/\/$/, "") + "/webchat/analytics/config", {
+      headers: { "X-Widget-Key": widgetKey },
+    })
+      .then(function (res) {
+        return res.ok ? res.json() : null;
+      })
+      .then(function (data) {
+        var ga = data && data.googleAnalytics;
+        if (ga && ga.enabled && ga.measurementId) {
+          loadGoogleAnalytics(ga.measurementId);
+        }
+      })
+      .catch(function () {});
+  }
+
+  trackPageview();
+  loadAnalyticsIntegrations();
+
   var sessionToken = null;
   var sessionId = null;
   var pollTimer = null;

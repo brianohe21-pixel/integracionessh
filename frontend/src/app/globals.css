@@ -9,8 +9,8 @@
 
   --surface: #ffffff;
   --surface-elevated: #ffffff;
-  --surface-muted: #eef2f6;
-  --canvas: #f3f4f6;
+  --surface-muted: #e8ecf4;
+  --canvas: #edf0f7;
   --sidebar: #ffffff;
   --sidebar-elevated: #f8fafc;
   --sidebar-muted: #f1f5f9;
@@ -80,6 +80,20 @@
   --note-border: rgba(251, 191, 36, 0.35);
   --note-text: #92400e;
 
+  --card-header-bg: color-mix(in srgb, var(--brand-primary) 72%, #1e293b);
+  --card-header-gradient: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--brand-primary) 78%, #1e293b) 0%,
+    color-mix(in srgb, var(--brand-primary) 62%, #0f172a) 100%
+  );
+  --card-header-title: #f8fafc;
+  --card-header-subtitle: rgba(255, 255, 255, 0.72);
+  --card-header-border: color-mix(in srgb, var(--brand-primary) 28%, transparent);
+  --card-header-link: color-mix(in srgb, var(--brand-primary) 38%, #ffffff);
+  --card-header-link-hover: color-mix(in srgb, var(--brand-primary) 22%, #ffffff);
+  --card-header-icon-bg: color-mix(in srgb, var(--brand-primary) 18%, rgba(255, 255, 255, 0.08));
+  --card-header-icon-border: color-mix(in srgb, var(--brand-primary) 28%, rgba(255, 255, 255, 0.12));
+
   --background: var(--canvas);
   --foreground: var(--text-primary);
 }
@@ -90,7 +104,7 @@
   --surface: #161a2e;
   --surface-elevated: #1c2138;
   --surface-muted: #222845;
-  --canvas: #0d0f1c;
+  --canvas: #090b14;
   --sidebar: #131316;
   --sidebar-elevated: #1c1c1f;
   --sidebar-muted: #232326;
@@ -135,6 +149,20 @@
   --note-bg: rgba(251, 191, 36, 0.1);
   --note-border: rgba(251, 191, 36, 0.25);
   --note-text: #fcd34d;
+
+  --card-header-bg: color-mix(in srgb, var(--brand-primary) 58%, #020617);
+  --card-header-gradient: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--brand-primary) 68%, #020617) 0%,
+    color-mix(in srgb, var(--brand-primary) 48%, #000000) 100%
+  );
+  --card-header-title: #f8fafc;
+  --card-header-subtitle: rgba(255, 255, 255, 0.72);
+  --card-header-border: color-mix(in srgb, var(--brand-primary) 24%, transparent);
+  --card-header-link: color-mix(in srgb, var(--brand-primary) 38%, #ffffff);
+  --card-header-link-hover: color-mix(in srgb, var(--brand-primary) 22%, #ffffff);
+  --card-header-icon-bg: color-mix(in srgb, var(--brand-primary) 18%, rgba(255, 255, 255, 0.06));
+  --card-header-icon-border: color-mix(in srgb, var(--brand-primary) 28%, rgba(255, 255, 255, 0.1));
 
   --background: var(--canvas);
   --foreground: var(--text-primary);
@@ -184,9 +212,27 @@
 }
 
 body {
-  background: var(--background);
+  background-color: var(--canvas);
+  background-image:
+    radial-gradient(ellipse 85% 55% at 50% -15%, var(--glow-accent), transparent 58%),
+    linear-gradient(to bottom, var(--surface), var(--canvas));
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+[data-theme="dark"] body {
+  background-image:
+    radial-gradient(ellipse 85% 55% at 50% -15%, color-mix(in srgb, var(--brand-primary) 14%, transparent), transparent 58%),
+    radial-gradient(ellipse 40% 35% at 100% 0%, color-mix(in srgb, var(--brand-primary) 6%, transparent), transparent 50%),
+    linear-gradient(180deg, #141628 0%, var(--canvas) 100%);
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="image"]):not([type="range"]):not([type="color"]),
+select,
+textarea {
+  border-width: var(--border-width);
+  border-style: solid;
+  border-color: var(--field-border);
 }
 
 .react-flow-dark .react-flow__controls {
@@ -298,6 +344,20 @@ body {
 
 .canvas-bg {
   background-color: var(--canvas);
+}
+
+.platform-canvas-bg {
+  background-color: var(--canvas);
+  background-image:
+    radial-gradient(ellipse 85% 55% at 50% -15%, var(--glow-accent), transparent 58%),
+    linear-gradient(to bottom, var(--surface), var(--canvas));
+}
+
+[data-theme="dark"] .platform-canvas-bg {
+  background-image:
+    radial-gradient(ellipse 85% 55% at 50% -15%, color-mix(in srgb, var(--brand-primary) 14%, transparent), transparent 58%),
+    radial-gradient(ellipse 40% 35% at 100% 0%, color-mix(in srgb, var(--brand-primary) 6%, transparent), transparent 50%),
+    linear-gradient(180deg, #141628 0%, var(--canvas) 100%);
 }
 
 .conversations-sidebar-bg {
@@ -441,6 +501,8 @@ body {
   flex-direction: column;
   gap: 0.25rem;
   padding: 1rem 1.25rem;
+  background: var(--card-header-gradient);
+  border-bottom: 1px solid var(--card-header-border);
 }
 
 @media (min-width: 640px) {
@@ -452,12 +514,87 @@ body {
 .section-header-title {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--card-header-title);
 }
 
 .section-header-subtitle {
   font-size: 0.75rem;
-  color: var(--text-secondary);
+  color: var(--card-header-subtitle);
+}
+
+.section-header a {
+  color: var(--card-header-link);
+}
+
+.section-header a:hover {
+  color: var(--card-header-link-hover);
+}
+
+.card-header {
+  background: var(--card-header-gradient);
+  border-bottom: 1px solid var(--card-header-border);
+}
+
+.card-body {
+  padding: 1rem 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .card-body {
+    padding: 1.25rem 1.5rem;
+  }
+}
+
+.card-icon-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  background: var(--card-header-gradient);
+  border-bottom: 1px solid var(--card-header-border);
+}
+
+@media (min-width: 640px) {
+  .card-icon-header {
+    padding: 1rem 1.5rem;
+  }
+}
+
+.card-icon-header-icon {
+  display: flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  border: 1px solid var(--card-header-icon-border);
+  background: var(--card-header-icon-bg);
+  color: var(--card-header-link);
+}
+
+.card-icon-header-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--card-header-title);
+}
+
+.card-icon-header-subtitle {
+  margin-top: 0.125rem;
+  font-size: 0.75rem;
+  color: var(--card-header-subtitle);
+}
+
+.card-header-chip {
+  border: 1px solid var(--card-header-icon-border);
+  background: var(--card-header-icon-bg);
+  color: var(--card-header-link);
+}
+
+.card-header-surface {
+  border: 1px solid var(--card-header-icon-border);
+  background: var(--card-header-icon-bg);
+  color: var(--card-header-title);
 }
 
 .nav-item-active {

@@ -9,7 +9,7 @@ import { useT } from "@/i18n/context";
 import type { PaidBillingPlan } from "@/lib/plan-config";
 import type { TenantPlan } from "@/types";
 
-const PAID_PLANS: PaidBillingPlan[] = ["starter", "pro", "enterprise"];
+const PAID_PLANS: PaidBillingPlan[] = ["starter", "pro", "scale"];
 
 export function BillingPlanCards({ autoCheckoutPlan }: { autoCheckoutPlan?: TenantPlan | null }) {
   const t = useT();
@@ -56,7 +56,7 @@ export function BillingPlanCards({ autoCheckoutPlan }: { autoCheckoutPlan?: Tena
   function planDescription(plan: PaidBillingPlan): string {
     if (plan === "starter") return t("billing.starterDescription");
     if (plan === "pro") return t("billing.proDescription");
-    return t("billing.enterpriseDescription");
+    return t("billing.scaleDescription");
   }
 
   return (
@@ -74,7 +74,8 @@ export function BillingPlanCards({ autoCheckoutPlan }: { autoCheckoutPlan?: Tena
         </div>
 
         {PAID_PLANS.map((plan) => {
-          const price = providers?.plans?.[plan];
+          const price =
+            providers?.plans?.[plan] ?? (plan === "scale" ? providers?.plans?.enterprise : undefined);
           const isCurrent = currentPlan === plan && !status?.isExpired;
 
           return (

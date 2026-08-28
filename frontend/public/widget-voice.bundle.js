@@ -28,6 +28,82 @@ var VoicebotWidgetBundle = (() => {
   function apiBase(apiUrl) {
     return apiUrl.replace(/\/$/, "");
   }
+  function randomId() {
+    if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+    return `v_${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+  }
+  function getVisitorId() {
+    const key = "wb_visitor_id";
+    try {
+      const existing = localStorage.getItem(key);
+      if (existing) return existing;
+      const id = randomId();
+      localStorage.setItem(key, id);
+      return id;
+    } catch {
+      return randomId();
+    }
+  }
+  function getSessionId() {
+    const key = "wb_session_id";
+    try {
+      const existing = sessionStorage.getItem(key);
+      if (existing) return existing;
+      const id = randomId();
+      sessionStorage.setItem(key, id);
+      return id;
+    } catch {
+      return randomId();
+    }
+  }
+  function trackPageview(params) {
+    void fetch(`${apiBase(params.apiUrl)}/webchat/analytics/pageview`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Widget-Key": params.widgetKey
+      },
+      body: JSON.stringify({
+        path: typeof location !== "undefined" ? `${location.pathname}${location.search}` : "/",
+        referrer: typeof document !== "undefined" ? document.referrer || void 0 : void 0,
+        visitorId: getVisitorId(),
+        sessionId: getSessionId()
+      })
+    }).catch(() => void 0);
+  }
+  function loadGoogleAnalytics(measurementId) {
+    if (typeof window === "undefined" || !measurementId) return;
+    const loadedKey = "__wbGaLoaded";
+    const win = window;
+    if (win.__wbGaLoaded === measurementId) return;
+    win.__wbGaLoaded = measurementId;
+    win.dataLayer = win.dataLayer ?? [];
+    function gtag(...args) {
+      win.dataLayer?.push(args);
+    }
+    win.gtag = gtag;
+    gtag("js", /* @__PURE__ */ new Date());
+    gtag("config", measurementId, { send_page_view: true });
+    const gaScript = document.createElement("script");
+    gaScript.async = true;
+    gaScript.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(measurementId)}`;
+    document.head.appendChild(gaScript);
+  }
+  async function loadAnalyticsIntegrations(params) {
+    try {
+      const res = await fetch(`${apiBase(params.apiUrl)}/webchat/analytics/config`, {
+        headers: { "X-Widget-Key": params.widgetKey }
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const ga = data.googleAnalytics;
+      if (ga?.enabled && ga.measurementId) {
+        loadGoogleAnalytics(ga.measurementId);
+      }
+    } catch {
+      return;
+    }
+  }
   async function createSession(params, sdpOffer) {
     const res = await fetch(`${apiBase(params.apiUrl)}/voicebot/sessions`, {
       method: "POST",
@@ -115,6 +191,15 @@ var VoicebotWidgetBundle = (() => {
       start: startVoicebot,
       stop: stopVoicebot
     };
+    const script = document.currentScript;
+    if (script) {
+      const apiUrl = script.getAttribute("data-api-url");
+      const widgetKey = script.getAttribute("data-widget-key");
+      if (apiUrl && widgetKey) {
+        trackPageview({ apiUrl, widgetKey });
+        void loadAnalyticsIntegrations({ apiUrl, widgetKey });
+      }
+    }
   }
   return __toCommonJS(widget_voice_entry_exports);
 })();

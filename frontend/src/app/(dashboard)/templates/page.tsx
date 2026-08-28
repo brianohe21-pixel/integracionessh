@@ -390,6 +390,9 @@ export default function TemplatesPage() {
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4">
           <p className="text-sm text-red-600">{t("templates.loadErrorRetry")}</p>
+          {error instanceof Error && error.message && (
+            <p className="mt-2 text-xs text-red-700">{error.message}</p>
+          )}
         </div>
       )}
 

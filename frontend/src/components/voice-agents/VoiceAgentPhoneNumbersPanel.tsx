@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Input, Select } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
+import { useDialog } from "@/components/ui/DialogProvider";
 import { useProviderCredentials } from "@/hooks/useProviderCredentials";
 import {
   usePurchaseTelephonyNumber,
@@ -19,6 +20,8 @@ import {
   type TelnyxAvailableNumber,
 } from "@/hooks/useTelephony";
 import { useT } from "@/i18n/context";
+import { formatTelephonyError } from "@/lib/telnyx-errors";
+import { getTelephonyNumberAssignment } from "@/lib/telephony-number-assignment";
 import type { Bot } from "@/types";
 
 function SettingsSwitch({
@@ -72,6 +75,7 @@ export function VoiceAgentPhoneNumbersPanel({
   onBotChange,
 }: VoiceAgentPhoneNumbersPanelProps) {
   const t = useT();
+  const dialog = useDialog();
   const activeBotId = botId;
   const { data: credentials } = useProviderCredentials();
   const telnyxStatus = credentials?.items.find((item) => item.provider === "telnyx");
@@ -121,42 +125,71 @@ export function VoiceAgentPhoneNumbersPanel({
     }
   }, [orderQuery.data, t]);
 
-  function handleAssign(assignAndEnable = false) {
+  async function handleAssign(assignAndEnable = false) {
     if (!selectedNumber.trim()) {
       setError(t("telephony.phoneNumberRequired"));
       return;
+    }
+    const conflict = getTelephonyNumberAssignment(numbers, selectedNumber.trim(), activeBotId);
+    if (conflict) {
+      const confirmed = await dialog.confirm({
+        title: t("telephony.reassignNumberTitle"),
+        description: t("telephony.reassignNumberConfirm", {
+          number: selectedNumber.trim(),
+          name: conflict.botName ?? conflict.botId,
+        }),
+        tone: "warning",
+      });
+      if (!confirmed) return;
     }
     setError("");
     save.mutate(
       {
         telephonyPhoneNumber: selectedNumber.trim(),
         ...(assignAndEnable ? { enabled: true } : {}),
+        ...(conflict ? { reassignPhoneNumber: true } : {}),
       },
       {
         onSuccess: () => {
           setSuccess(t("telephony.saved"));
           setTimeout(() => setSuccess(""), 3000);
         },
-        onError: (err) => setError(err.message),
+        onError: (err) => setError(formatTelephonyError(err.message, t)),
       }
     );
   }
 
-  function handleEnabledChange(next: boolean) {
+  async function handleEnabledChange(next: boolean) {
     if (next) {
       if (!selectedNumber.trim()) {
         setError(t("telephony.phoneNumberRequired"));
         return;
       }
+      const conflict = getTelephonyNumberAssignment(numbers, selectedNumber.trim(), activeBotId);
+      if (conflict) {
+        const confirmed = await dialog.confirm({
+          title: t("telephony.reassignNumberTitle"),
+          description: t("telephony.reassignNumberConfirm", {
+            number: selectedNumber.trim(),
+            name: conflict.botName ?? conflict.botId,
+          }),
+          tone: "warning",
+        });
+        if (!confirmed) return;
+      }
       setError("");
       save.mutate(
-        { telephonyPhoneNumber: selectedNumber.trim(), enabled: true },
+        {
+          telephonyPhoneNumber: selectedNumber.trim(),
+          enabled: true,
+          ...(conflict ? { reassignPhoneNumber: true } : {}),
+        },
         {
           onSuccess: () => {
             setSuccess(t("telephony.saved"));
             setTimeout(() => setSuccess(""), 3000);
           },
-          onError: (err) => setError(err.message),
+          onError: (err) => setError(formatTelephonyError(err.message, t)),
         }
       );
       return;
@@ -169,7 +202,7 @@ export function VoiceAgentPhoneNumbersPanel({
           setSuccess(t("telephony.saved"));
           setTimeout(() => setSuccess(""), 3000);
         },
-        onError: (err) => setError(err.message),
+        onError: (err) => setError(formatTelephonyError(err.message, t)),
       }
     );
   }
@@ -309,13 +342,15 @@ export function VoiceAgentPhoneNumbersPanel({
                             <Button
                               size="sm"
                               variant="outline"
-                              disabled={Boolean(isAssignedElsewhere) || save.isPending}
+                              disabled={save.isPending}
                               onClick={() => {
                                 setSelectedNumber(item.phoneNumber);
-                                handleAssign(false);
+                                void handleAssign(false);
                               }}
                             >
-                              {t("telephonyNumbers.assign")}
+                              {isAssignedElsewhere
+                                ? t("telephony.reassignNumberAction")
+                                : t("telephonyNumbers.assign")}
                             </Button>
                           )}
                         </div>
@@ -347,13 +382,13 @@ export function VoiceAgentPhoneNumbersPanel({
                 />
               )}
               <div className="flex flex-wrap gap-2">
-                <Button disabled={save.isPending} onClick={() => handleAssign(false)}>
+                <Button disabled={save.isPending} onClick={() => void handleAssign(false)}>
                   {t("telephonyNumbers.saveAssignment")}
                 </Button>
                 <Button
                   variant="outline"
                   disabled={save.isPending || !selectedNumber.trim()}
-                  onClick={() => handleAssign(true)}
+                  onClick={() => void handleAssign(true)}
                 >
                   {t("telephonyNumbers.assignAndEnable")}
                 </Button>

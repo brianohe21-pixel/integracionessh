@@ -17,7 +17,8 @@ import { useT } from "@/i18n/context";
 import type { WompiCheckoutParams } from "@/hooks/useBilling";
 
 function parsePlan(value: string | null): PaidBillingPlan | null {
-  if (value === "starter" || value === "pro" || value === "enterprise") return value;
+  if (value === "starter" || value === "pro" || value === "scale") return value;
+  if (value === "enterprise") return "scale";
   return null;
 }
 
@@ -106,7 +107,9 @@ function BillingCheckoutPageContent() {
     setPaymentOpen(false);
   }, []);
 
-  const price = plan ? providers?.plans?.[plan] : null;
+  const price = plan
+    ? providers?.plans?.[plan] ?? (plan === "scale" ? providers?.plans?.enterprise : undefined)
+    : null;
 
   if (!plan) {
     return (

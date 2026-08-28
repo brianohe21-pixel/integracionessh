@@ -1,3 +1,5 @@
+import { isValidModelId } from "../ai/models.js";
+
 export type RealtimeModelTier = "economy" | "balanced" | "flagship" | "legacy";
 
 export interface RealtimeModelDefinition {
@@ -54,8 +56,12 @@ export function isValidRealtimeModelId(modelId: string): boolean {
   return REALTIME_MODEL_IDS.has(modelId) || modelId.startsWith("gpt-realtime");
 }
 
+export function isValidTelephonyAssistantModelId(modelId: string): boolean {
+  return isValidRealtimeModelId(modelId) || isValidModelId(modelId);
+}
+
 export function resolveRealtimeModelId(modelId?: string): string {
-  if (modelId && isValidRealtimeModelId(modelId)) return modelId;
+  if (modelId && isValidTelephonyAssistantModelId(modelId)) return modelId;
   return DEFAULT_REALTIME_MODEL_ID;
 }
 

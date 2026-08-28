@@ -21,10 +21,12 @@ interface EmbeddedSignupLauncherProps {
     onboardingMode?: WhatsAppOnboardingMode;
     isOnBizApp?: boolean;
     platformType?: string;
+    channelId?: string;
   }) => void;
   alreadyConnected?: boolean;
   className?: string;
   onboardingMode?: WhatsAppOnboardingMode;
+  botId?: string;
 }
 
 interface FBLoginResponse {
@@ -56,9 +58,10 @@ export function EmbeddedSignupLauncher({
   alreadyConnected = false,
   className,
   onboardingMode = "cloud_api",
+  botId,
 }: EmbeddedSignupLauncherProps) {
   const t = useT();
-  const { status, error, connect, connectCoexistence, reset } = useWhatsAppConnect();
+  const { status, error, connect, connectCoexistence, reset } = useWhatsAppConnect(botId);
   const [sdkReady, setSdkReady] = useState(false);
   const [localConnected, setLocalConnected] = useState(alreadyConnected);
   const [pin, setPin] = useState("");
@@ -95,6 +98,9 @@ export function EmbeddedSignupLauncher({
           onboardingMode: "coexistence",
           ...(result.isOnBizApp !== undefined ? { isOnBizApp: result.isOnBizApp } : {}),
           ...(result.platformType ? { platformType: result.platformType } : {}),
+          ...("channel" in result && result.channel
+            ? { channelId: result.channel.channelId }
+            : {}),
         });
         return;
       }
@@ -111,6 +117,9 @@ export function EmbeddedSignupLauncher({
         phoneNumberId: result.phoneNumberId,
         whatsappBusinessAccountId: result.whatsappBusinessAccountId,
         onboardingMode: "cloud_api",
+        ...("channel" in result && result.channel
+          ? { channelId: result.channel.channelId }
+          : {}),
       });
     } catch {
       pendingRef.current = {};

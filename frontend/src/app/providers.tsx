@@ -9,6 +9,7 @@ import { AuthSessionProvider } from "@/components/auth/AuthSessionProvider";
 import { TenantBrandingProvider } from "@/components/branding/TenantBrandingProvider";
 import { BrandDocumentTitle } from "@/components/branding/BrandDocumentTitle";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import { DialogProvider } from "@/components/ui/DialogProvider";
 
 if (typeof window !== "undefined") {
   configureAmplify();
@@ -33,10 +34,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <HtmlLang />
         <QueryClientProvider client={queryClient}>
           <AuthSessionProvider>
-            <TenantBrandingProvider>
-              <BrandDocumentTitle />
-              {children}
-            </TenantBrandingProvider>
+            <DialogProvider>
+              <TenantBrandingProvider>
+                <BrandDocumentTitle />
+                {children}
+              </TenantBrandingProvider>
+            </DialogProvider>
           </AuthSessionProvider>
         </QueryClientProvider>
       </I18nProvider>

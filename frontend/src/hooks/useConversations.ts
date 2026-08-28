@@ -44,6 +44,7 @@ function normalizeConversationsPage(raw: unknown): ConversationsListResponse {
 function conversationsListQueryKey(options?: {
   botId?: string;
   channel?: Channel;
+  whatsappChannelId?: string;
   handoffMode?: HandoffMode;
   workflowStatus?: WorkflowStatus;
   status?: "active" | "closed";
@@ -55,6 +56,7 @@ function conversationsListQueryKey(options?: {
     "list",
     options?.botId ?? "all",
     options?.channel ?? "all",
+    options?.whatsappChannelId ?? "all",
     options?.handoffMode ?? "all",
     options?.workflowStatus ?? "all",
     options?.status ?? "all",
@@ -68,6 +70,7 @@ function fetchConversationsPage(
   options?: {
     botId?: string;
     channel?: Channel;
+    whatsappChannelId?: string;
     handoffMode?: HandoffMode;
     workflowStatus?: WorkflowStatus;
     status?: "active" | "closed";
@@ -79,6 +82,7 @@ function fetchConversationsPage(
   if (pageParam) params.set("cursor", pageParam);
   if (options?.botId) params.set("botId", options.botId);
   if (options?.channel) params.set("channel", options.channel);
+  if (options?.whatsappChannelId) params.set("whatsappChannelId", options.whatsappChannelId);
   if (options?.handoffMode) params.set("handoffMode", options.handoffMode);
   if (options?.workflowStatus) params.set("workflowStatus", options.workflowStatus);
   if (options?.status) params.set("status", options.status);
@@ -90,6 +94,7 @@ function fetchConversationsPage(
 export function useConversations(options?: {
   botId?: string;
   channel?: Channel;
+  whatsappChannelId?: string;
   handoffMode?: HandoffMode;
   workflowStatus?: WorkflowStatus;
   status?: "active" | "closed";

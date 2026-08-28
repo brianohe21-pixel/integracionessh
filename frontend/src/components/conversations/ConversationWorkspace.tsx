@@ -26,6 +26,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Textarea } from "@/components/ui/Input";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useT, useLocale } from "@/i18n/context";
+import { useDialog } from "@/components/ui/DialogProvider";
 import { buildWaMeLink, normalizeWhatsAppPhone } from "@/lib/wa-link";
 import {
   MessageSquare,
@@ -84,6 +85,7 @@ type Props = {
 
 export function ConversationWorkspace({ advisorMode = false }: Props) {
   const t = useT();
+  const { alert } = useDialog();
   const locale = useLocale();
   const searchParams = useSearchParams();
   const { formatRelativeTime } = useFormatters();
@@ -91,6 +93,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   const [botFilter, setBotFilter] = useState<string>("");
   const [handoffFilter, setHandoffFilter] = useState<"" | "human" | "bot">("");
   const [channelFilter, setChannelFilter] = useState<"" | Channel>("");
+  const [whatsappChannelFilter, setWhatsappChannelFilter] = useState("");
   const [workflowFilter, setWorkflowFilter] = useState<"" | WorkflowStatus>("");
   const [advisorFilter, setAdvisorFilter] = useState("");
   const [assignmentFilter, setAssignmentFilter] = useState<"" | "unassigned">("");
@@ -144,6 +147,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     const base = {
       botId: botFilter || undefined,
       channel: channelFilter || undefined,
+      whatsappChannelId: whatsappChannelFilter || undefined,
       workflowStatus: workflowFilter || undefined,
     };
 
@@ -174,6 +178,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     assignmentFilter,
     botFilter,
     channelFilter,
+    whatsappChannelFilter,
     workflowFilter,
     handoffFilter,
     advisorFilter,
@@ -383,14 +388,20 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     setSelectedConversationIds(new Set());
 
     if (result.failed.length === 0) {
-      window.alert(t("conversations.bulkReassignSuccess", { count: result.succeeded.length }));
+      await alert({
+        title: t("conversations.bulkReassignTitle"),
+        message: t("conversations.bulkReassignSuccess", { count: result.succeeded.length }),
+        tone: "success",
+      });
     } else {
-      window.alert(
-        t("conversations.bulkReassignPartial", {
+      await alert({
+        title: t("conversations.bulkReassignTitle"),
+        message: t("conversations.bulkReassignPartial", {
           succeeded: result.succeeded.length,
           failed: result.failed.length,
-        })
-      );
+        }),
+        tone: "warning",
+      });
     }
   }
 
@@ -489,7 +500,14 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
         botFilter={botFilter}
         onBotFilterChange={setBotFilter}
         channelFilter={channelFilter}
-        onChannelFilterChange={setChannelFilter}
+        onChannelFilterChange={(value) => {
+          setChannelFilter(value);
+          if (value !== "whatsapp") {
+            setWhatsappChannelFilter("");
+          }
+        }}
+        whatsappChannelFilter={whatsappChannelFilter}
+        onWhatsappChannelFilterChange={setWhatsappChannelFilter}
         handoffFilter={handoffFilter}
         onHandoffFilterChange={setHandoffFilter}
         workflowFilter={workflowFilter}
@@ -584,6 +602,14 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                         ? selectedConversation.participantId
                         : selectedConversation.participantId}
                   </p>
+                  {(selectedConversation.channel ?? "whatsapp") === "whatsapp" &&
+                  selectedConversation.whatsappDisplayNumber ? (
+                    <p className="truncate text-xs text-muted">
+                      {t("conversations.replyingFrom", {
+                        number: selectedConversation.whatsappDisplayNumber,
+                      })}
+                    </p>
+                  ) : null}
                 </div>
               </div>
               <div className="flex flex-shrink-0 items-center gap-2">

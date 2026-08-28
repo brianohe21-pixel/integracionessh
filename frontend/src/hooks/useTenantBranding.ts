@@ -128,3 +128,16 @@ export function useDeleteTenantLogo() {
     },
   });
 }
+
+export function useResetTenantBranding() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.delete<TenantBrandingResponse>("/tenants/me/branding"),
+    onSuccess: (data) => {
+      queryClient.setQueryData<TenantBrandingResponse>(TENANT_BRANDING_QUERY_KEY, (previous) =>
+        mergeBrandingCache(previous, data, { clearLogo: true })
+      );
+      void queryClient.invalidateQueries({ queryKey: ["tenants", "me"] });
+    },
+  });
+}

@@ -37,8 +37,11 @@ export function formatNumber(n: number): string {
 export function planLabel(plan: string): string {
   const labels: Record<string, string> = {
     free: "Gratuito",
-    pro: "Pro",
-    enterprise: "Enterprise",
+    starter: "Starter",
+    pro: "Growth",
+    scale: "Scale",
+    enterprise: "Scale",
+    reseller: "Reseller",
   };
   return labels[plan] ?? plan;
 }

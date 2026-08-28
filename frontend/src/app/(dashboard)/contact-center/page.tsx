@@ -13,6 +13,7 @@ import { ContactCenterDialpad } from "@/components/contact-center/ContactCenterD
 import { ContactCenterPhoneNumbersTab } from "@/components/contact-center/ContactCenterPhoneNumbersTab";
 import { ContactCenterWallboard } from "@/components/contact-center/ContactCenterWallboard";
 import { useBots } from "@/hooks/useBots";
+import { getOutboundCallableBots } from "@/lib/voice-bots";
 import { useAdvisors } from "@/hooks/useAdvisors";
 import {
   useAssignAdvisorVoice,
@@ -38,7 +39,7 @@ export default function ContactCenterPage() {
   const t = useT();
   const [tab, setTab] = useState<TabId>("dial");
   const { data: bots = [] } = useBots();
-  const voiceBots = bots.filter((bot) => bot.telephonyEnabled);
+  const voiceBots = getOutboundCallableBots(bots);
   const [numbersBotId, setNumbersBotId] = useState(bots[0]?.botId ?? "");
   const [botId, setBotId] = useState(voiceBots[0]?.botId ?? "");
   const selectedBotId = botId || voiceBots[0]?.botId || "";

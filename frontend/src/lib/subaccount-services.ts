@@ -177,7 +177,8 @@ export function serviceForPath(pathname: string): SubaccountServiceId | null {
 }
 
 export function serviceForNavHref(href: string): SubaccountServiceId | null {
-  return serviceForPath(href);
+  const path = href.split("?")[0] ?? href;
+  return serviceForPath(path);
 }
 
 export function defaultEnabledServices(): SubaccountServiceId[] {
