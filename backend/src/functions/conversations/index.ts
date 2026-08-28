@@ -34,6 +34,11 @@ import {
   getWhatsAppAccessToken,
   truncateWhatsAppText,
 } from "../../lib/whatsapp/client.js";
+import { getWhatsAppAccessTokenForAccount } from "../../lib/whatsapp/secrets.js";
+import {
+  phoneNumberIdForOutbound,
+  resolveWhatsAppChannelForConversation,
+} from "../../lib/whatsapp/channel-context.js";
 import { getInstagramAccessToken } from "../../lib/instagram/secrets.js";
 import { getTelegramBotToken } from "../../lib/telegram/secrets.js";
 import { getMessengerAccessToken } from "../../lib/messenger/secrets.js";
@@ -59,12 +64,16 @@ const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 async function resolveAccessTokenForChannel(
   tenantId: string,
   channel: Channel,
-  botId?: string
+  botId?: string,
+  accountId?: string
 ): Promise<string | undefined> {
   if (channel === "instagram") {
     return getInstagramAccessToken(tenantId, ENVIRONMENT);
   }
   if (channel === "whatsapp") {
+    if (accountId) {
+      return getWhatsAppAccessTokenForAccount(tenantId, accountId, ENVIRONMENT);
+    }
     return getWhatsAppAccessToken(tenantId, ENVIRONMENT);
   }
   if (channel === "telegram" && botId) {
@@ -265,6 +274,7 @@ export async function handler(
       if (workflowStatus) listOptions.workflowStatus = workflowStatus;
       if (status) listOptions.status = status;
       if (channel) listOptions.channel = channel;
+      if (params.whatsappChannelId) listOptions.whatsappChannelId = params.whatsappChannelId;
       if (assignedAdvisorId) listOptions.assignedAdvisorId = assignedAdvisorId;
       if (assignment) listOptions.assignment = assignment;
       if (params.cursor) listOptions.cursor = params.cursor;
@@ -605,10 +615,21 @@ export async function handler(
         }
       }
 
+      const resolvedChannel =
+        channel === "whatsapp"
+          ? await resolveWhatsAppChannelForConversation(conversation, bot)
+          : null;
+
       const accessToken = await resolveAccessTokenForChannel(
         auth.tenantId,
         channel,
-        parsed.data.botId
+        parsed.data.botId,
+        resolvedChannel?.channel.accountId
+      );
+      const outboundPhoneNumberId = phoneNumberIdForOutbound(
+        conversation,
+        bot,
+        resolvedChannel?.channel
       );
       const text =
         channel === "whatsapp" ? truncateWhatsAppText(parsed.data.content) : parsed.data.content;
@@ -647,6 +668,7 @@ export async function handler(
             conversation,
             accessToken,
             environment: ENVIRONMENT,
+            phoneNumberId: outboundPhoneNumberId,
           }),
           text
         );

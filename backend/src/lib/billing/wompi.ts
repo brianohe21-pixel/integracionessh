@@ -41,12 +41,12 @@ export function amountInCentsForPlan(plan: PaidTenantPlan): number {
   const envByPlan: Record<PaidTenantPlan, string | undefined> = {
     starter: process.env.WOMPI_AMOUNT_STARTER_CENTS,
     pro: process.env.WOMPI_AMOUNT_PRO_CENTS,
-    enterprise: process.env.WOMPI_AMOUNT_ENTERPRISE_CENTS,
+    scale: process.env.WOMPI_AMOUNT_ENTERPRISE_CENTS,
   };
   const defaultByPlan: Record<PaidTenantPlan, number> = {
     starter: WOMPI_AMOUNT_STARTER_CENTS_DEFAULT,
     pro: WOMPI_AMOUNT_PRO_CENTS_DEFAULT,
-    enterprise: WOMPI_AMOUNT_ENTERPRISE_CENTS_DEFAULT,
+    scale: WOMPI_AMOUNT_ENTERPRISE_CENTS_DEFAULT,
   };
   const parsed = Number(envByPlan[plan]);
   if (!parsed || parsed < 100000) {
@@ -212,9 +212,9 @@ export function parsePaymentReference(
   if (parts.length < 4 || parts[0] !== "wompi") return null;
   const tenantId = parts[1] ?? "";
   const plan = parts[2];
-  if (plan !== "starter" && plan !== "pro" && plan !== "enterprise") return null;
+  if (plan !== "starter" && plan !== "pro" && plan !== "scale" && plan !== "enterprise") return null;
   if (!tenantId) return null;
-  return { tenantId, plan };
+  return { tenantId, plan: plan === "enterprise" ? "scale" : (plan as PaidTenantPlan) };
 }
 
 export const FRONTEND_URL = (process.env.FRONTEND_URL ?? "http://localhost:3000").replace(

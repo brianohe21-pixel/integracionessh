@@ -10,7 +10,8 @@
     "test:watch": "jest --watch",
     "lint": "eslint src --ext .ts",
     "seed:demo": "tsx scripts/seed-demo-account.ts",
-    "seed:demo:reset": "tsx scripts/seed-demo-account.ts --reset"
+    "seed:demo:reset": "tsx scripts/seed-demo-account.ts --reset",
+    "backfill:whatsapp-channels": "tsx scripts/backfill-whatsapp-channels.ts"
   },
   "dependencies": {
     "@aws-sdk/client-amplify": "^3.600.0",

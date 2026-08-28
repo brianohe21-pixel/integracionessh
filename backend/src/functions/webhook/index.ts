@@ -8,6 +8,7 @@ import { normalizeWhatsAppContact } from "../../lib/whatsapp/contact.js";
 import { enqueueWhatsAppSync } from "../../lib/whatsapp/coexistence/sync-queue.js";
 import { isProcessableInstagramMessage } from "../../lib/instagram/inbound.js";
 import { isProcessableMessengerMessage } from "../../lib/messenger/inbound.js";
+import { resolveWhatsAppChannelByPhoneNumberId } from "../../lib/whatsapp/channel-context.js";
 import { getBotByPhoneNumberId } from "../../lib/dynamodb/bot.repository.js";
 import { getBotByInstagramPageId, getBotByMessengerPageId } from "../../lib/dynamodb/bot-lookup.repository.js";
 import {
@@ -476,13 +477,16 @@ async function handleWhatsAppWebhook(payload: WhatsAppWebhookEvent): Promise<voi
           contacts.find((c) => c.wa_id === message.from) ?? { wa_id: message.from }
         );
 
-        const bot = await getBotByPhoneNumberId(phoneNumberId);
+        const resolved = await resolveWhatsAppChannelByPhoneNumberId(phoneNumberId);
+        const bot = resolved?.bot ?? (await getBotByPhoneNumberId(phoneNumberId));
         if (!bot || bot.status !== "active") {
           console.log(`No active bot found for phoneNumberId: ${phoneNumberId}`);
           continue;
         }
 
-        const conversationKey = `${bot.tenantId}-${bot.botId}-${message.from}`;
+        const conversationKey = resolved
+          ? `${bot.tenantId}-${bot.botId}-${phoneNumberId}-${message.from}`
+          : `${bot.tenantId}-${bot.botId}-${message.from}`;
         const sqsBody: InboundQueueMessage = {
           channel: "whatsapp",
           tenantId: bot.tenantId,
@@ -493,6 +497,12 @@ async function handleWhatsAppWebhook(payload: WhatsAppWebhookEvent): Promise<voi
           replyToExternalId: message.id,
           payload: {
             phoneNumberId,
+            ...(resolved?.channel.channelId
+              ? { whatsappChannelId: resolved.channel.channelId }
+              : {}),
+            ...(resolved?.channel.accountId
+              ? { whatsappAccountId: resolved.channel.accountId }
+              : {}),
             message,
             contact,
           },

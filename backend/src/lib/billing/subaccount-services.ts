@@ -15,6 +15,7 @@ export const SERVICE_LIMIT_KEYS: Record<SubaccountServiceId, readonly BagLimitKe
   bots: [
     "maxActiveBots",
     "maxChannelsPerBot",
+    "maxWhatsAppChannelsPerBot",
     "maxDocumentsPerBot",
     "maxKnowledgeStorageMb",
     "maxMetaFlowsPerBot",

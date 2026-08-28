@@ -1,4 +1,4 @@
-export type TenantPlan = "free" | "starter" | "pro" | "enterprise" | "reseller";
+export type TenantPlan = "free" | "starter" | "pro" | "scale" | "reseller";
 
 export type TenantKind = "standard" | "reseller" | "subaccount";
 
@@ -61,6 +61,7 @@ export interface ResellerLimitsOverride {
   maxFlowNodes?: number;
   maxActiveFlowRuns?: number;
   maxChannelsPerBot?: number;
+  maxWhatsAppChannelsPerBot?: number;
   maxActiveWebChatSessions?: number;
   maxConcurrentLiveKitCalls?: number;
   maxVoicebotMinutesPerMonth?: number;
@@ -76,7 +77,7 @@ export interface ResellerLimitsOverride {
 
 export interface ResellerConfig {
   maxSubaccounts: number;
-  defaultSubaccountPlan: "free" | "starter" | "pro" | "enterprise";
+  defaultSubaccountPlan: "free" | "starter" | "pro" | "scale";
   customDomain?: string;
   customDomainStatus?: CustomDomainStatus;
   allowSubaccountBranding: boolean;
@@ -85,7 +86,7 @@ export interface ResellerConfig {
 
 export interface ResellerPlanDefaults {
   maxSubaccounts: number;
-  defaultSubaccountPlan: "free" | "starter" | "pro" | "enterprise";
+  defaultSubaccountPlan: "free" | "starter" | "pro" | "scale";
   allowSubaccountBranding: boolean;
   limitsOverride?: ResellerLimitsOverride;
 }
@@ -335,6 +336,39 @@ export interface Bot {
   updatedAt: string;
 }
 
+export type WhatsAppChannelStatus = "active" | "pending_registration" | "disconnected";
+
+export interface WhatsAppAccount {
+  accountId: string;
+  tenantId: string;
+  wabaId: string;
+  label?: string;
+  status: "active" | "inactive";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WhatsAppChannel {
+  channelId: string;
+  tenantId: string;
+  botId: string;
+  accountId: string;
+  phoneNumberId: string;
+  whatsappBusinessAccountId: string;
+  displayPhoneNumber?: string;
+  label?: string;
+  status: WhatsAppChannelStatus;
+  isDefault: boolean;
+  whatsappOnboardingMode?: "cloud_api" | "coexistence";
+  isOnBizApp?: boolean;
+  platformType?: string;
+  whatsappSyncStatus?: WhatsAppSyncStatus;
+  whatsappDisconnectedAt?: string;
+  whatsappDisconnectionReason?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type WhatsAppSyncPhaseStatus =
   | "pending"
   | "in_progress"
@@ -401,6 +435,9 @@ export interface Conversation {
   metaFlowToken?: string;
   emailSubject?: string;
   emailThreadMessageId?: string;
+  whatsappChannelId?: string;
+  businessPhoneNumberId?: string;
+  whatsappDisplayNumber?: string;
   locale?: BotLocale;
   createdAt: string;
 }
@@ -1434,6 +1471,8 @@ export interface WebChatInboundPayload {
 
 export interface WhatsAppInboundPayload {
   phoneNumberId: string;
+  whatsappChannelId?: string;
+  whatsappAccountId?: string;
   message: WhatsAppMessage;
   contact: WhatsAppContact;
 }

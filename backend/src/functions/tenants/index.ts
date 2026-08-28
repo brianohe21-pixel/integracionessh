@@ -80,17 +80,17 @@ const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 const CreateTenantSchema = z.object({
   name: z.string().min(1).max(128),
   email: z.string().email(),
-  plan: z.enum(["free", "starter", "pro", "enterprise", "reseller"]).default("free"),
+  plan: z.enum(["free", "starter", "pro", "scale", "reseller"]).default("free"),
 });
 
 const UpdateTenantSchema = z.object({
   name: z.string().min(1).max(128).optional(),
-  plan: z.enum(["free", "starter", "pro", "enterprise", "reseller"]).optional(),
+  plan: z.enum(["free", "starter", "pro", "scale", "reseller"]).optional(),
   status: z.enum(["active", "suspended"]).optional(),
   resellerConfig: z
     .object({
       maxSubaccounts: z.number().int().min(1).max(10_000).optional(),
-      defaultSubaccountPlan: z.enum(["free", "starter", "pro", "enterprise"]).optional(),
+      defaultSubaccountPlan: z.enum(["free", "starter", "pro", "scale"]).optional(),
       customDomain: z.string().min(3).max(253).optional(),
       customDomainStatus: z
         .enum(["none", "pending_dns", "active", "error"])
@@ -405,6 +405,19 @@ async function handleBrandingRoutes(
     delete branding.logoS3Key;
     const updated = await updateTenant(auth.tenantId, { branding });
     const resolved = await getResolvedTenantBranding(updated);
+    return ok({
+      ...resolved,
+      canCustomize: getEffectivePlanLimits(updated).canCustomizeBranding,
+    });
+  }
+
+  if (method === "DELETE" && rawPath.endsWith("/tenants/me/branding")) {
+    await assertCanCustomizeBrandingAsync(tenant);
+    if (tenant.branding?.logoS3Key) {
+      await deleteObject(tenant.branding.logoS3Key);
+    }
+    const updated = await updateTenant(auth.tenantId, { branding: {} });
+    const resolved = await getResolvedBrandingWithInheritance(updated);
     return ok({
       ...resolved,
       canCustomize: getEffectivePlanLimits(updated).canCustomizeBranding,

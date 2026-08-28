@@ -49,7 +49,7 @@ import {
 import type { SubscriptionStatus, TenantPlan } from "../../types/index.js";
 
 const CheckoutSchema = z.object({
-  plan: z.enum(["starter", "pro", "enterprise"]),
+  plan: z.enum(["starter", "pro", "scale"]),
   provider: z.enum(["wompi", "stripe"]).optional(),
 });
 
@@ -323,9 +323,9 @@ export async function handler(
             currency: "COP",
             periodDays: 30,
           },
-          enterprise: {
-            amountCents: amountInCentsForPlan("enterprise"),
-            listPriceUsd: PLAN_LIST_PRICE_USD.enterprise,
+          scale: {
+            amountCents: amountInCentsForPlan("scale"),
+            listPriceUsd: PLAN_LIST_PRICE_USD.scale,
             currency: "COP",
             periodDays: 30,
           },

@@ -172,6 +172,14 @@ locals {
       function_arn = var.telephony_function_arn
       protected    = true
     }
+    bots_whatsapp_channels = {
+      path         = "/bots/{botId}/whatsapp-channels/{proxy+}"
+      slug         = "whatsapp_connect"
+      methods      = ["GET", "POST", "PUT", "PATCH", "DELETE"]
+      invoke_arn   = var.whatsapp_connect_invoke_arn
+      function_arn = var.whatsapp_connect_function_arn
+      protected    = true
+    }
     telephony = {
       path         = "/telephony/{proxy+}"
       slug         = "telephony"
@@ -605,6 +613,48 @@ locals {
     }
     whatsapp_connect_coexistence = {
       route_key    = "POST /whatsapp/connect-coexistence"
+      slug         = "whatsapp_connect"
+      invoke_arn   = var.whatsapp_connect_invoke_arn
+      function_arn = var.whatsapp_connect_function_arn
+      protected    = true
+    }
+    bots_whatsapp_channels_list = {
+      route_key    = "GET /bots/{botId}/whatsapp-channels"
+      slug         = "whatsapp_connect"
+      invoke_arn   = var.whatsapp_connect_invoke_arn
+      function_arn = var.whatsapp_connect_function_arn
+      protected    = true
+    }
+    bots_whatsapp_channels_connect = {
+      route_key    = "POST /bots/{botId}/whatsapp-channels/connect"
+      slug         = "whatsapp_connect"
+      invoke_arn   = var.whatsapp_connect_invoke_arn
+      function_arn = var.whatsapp_connect_function_arn
+      protected    = true
+    }
+    bots_whatsapp_channels_connect_manual = {
+      route_key    = "POST /bots/{botId}/whatsapp-channels/connect-manual"
+      slug         = "whatsapp_connect"
+      invoke_arn   = var.whatsapp_connect_invoke_arn
+      function_arn = var.whatsapp_connect_function_arn
+      protected    = true
+    }
+    bots_whatsapp_channels_update = {
+      route_key    = "PATCH /bots/{botId}/whatsapp-channels/{channelId}"
+      slug         = "whatsapp_connect"
+      invoke_arn   = var.whatsapp_connect_invoke_arn
+      function_arn = var.whatsapp_connect_function_arn
+      protected    = true
+    }
+    bots_whatsapp_channels_delete = {
+      route_key    = "DELETE /bots/{botId}/whatsapp-channels/{channelId}"
+      slug         = "whatsapp_connect"
+      invoke_arn   = var.whatsapp_connect_invoke_arn
+      function_arn = var.whatsapp_connect_function_arn
+      protected    = true
+    }
+    bots_whatsapp_channels_register = {
+      route_key    = "POST /bots/{botId}/whatsapp-channels/{channelId}/register"
       slug         = "whatsapp_connect"
       invoke_arn   = var.whatsapp_connect_invoke_arn
       function_arn = var.whatsapp_connect_function_arn

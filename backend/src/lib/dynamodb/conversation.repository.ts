@@ -9,7 +9,11 @@ import {
 import { docClient, TABLE_NAME } from "./client.js";
 import { listBots } from "./bot.repository.js";
 import type { Conversation, HandoffMode, Message, WorkflowStatus, Channel } from "../../types/index.js";
-import { conversationLookupGsi1pk, legacyPhoneGsi1pk } from "../channels/keys.js";
+import {
+  conversationLookupGsi1pk,
+  whatsappConversationLookupGsi1pk,
+  legacyPhoneGsi1pk,
+} from "../channels/keys.js";
 import { upsertFromConversation } from "./contact.repository.js";
 import { publishRealtimeEventSafe } from "../realtime/publish.js";
 
@@ -35,6 +39,7 @@ export function normalizeConversation(conv: Conversation): Conversation {
 export interface ListConversationsOptions {
   botId?: string;
   channel?: Channel;
+  whatsappChannelId?: string;
   handoffMode?: HandoffMode;
   workflowStatus?: WorkflowStatus;
   status?: Conversation["status"];
@@ -378,9 +383,22 @@ export async function getOrCreateConversation(
   botId: string,
   channel: Channel,
   participantId: string,
-  contactName?: string
+  contactName?: string,
+  whatsappContext?: {
+    channelId?: string;
+    businessPhoneNumberId?: string;
+    whatsappDisplayNumber?: string;
+  }
 ): Promise<Conversation> {
-  const gsi1pk = conversationLookupGsi1pk(tenantId, botId, channel, participantId);
+  const gsi1pk =
+    channel === "whatsapp" && whatsappContext?.businessPhoneNumberId
+      ? whatsappConversationLookupGsi1pk(
+          tenantId,
+          botId,
+          whatsappContext.businessPhoneNumberId,
+          participantId
+        )
+      : conversationLookupGsi1pk(tenantId, botId, channel, participantId);
 
   const existing = await docClient.send(
     new QueryCommand({
@@ -463,6 +481,13 @@ export async function getOrCreateConversation(
     createdAt: now,
     ...(contactName !== undefined && contactName !== ""
       ? { contactName }
+      : {}),
+    ...(whatsappContext?.channelId ? { whatsappChannelId: whatsappContext.channelId } : {}),
+    ...(whatsappContext?.businessPhoneNumberId
+      ? { businessPhoneNumberId: whatsappContext.businessPhoneNumberId }
+      : {}),
+    ...(whatsappContext?.whatsappDisplayNumber
+      ? { whatsappDisplayNumber: whatsappContext.whatsappDisplayNumber }
       : {}),
   };
 
@@ -673,6 +698,10 @@ export async function listConversations(
 
   if (options.channel) {
     merged = merged.filter((c) => (c.channel ?? "whatsapp") === options.channel);
+  }
+
+  if (options.whatsappChannelId) {
+    merged = merged.filter((c) => c.whatsappChannelId === options.whatsappChannelId);
   }
 
   if (options.handoffMode) {

@@ -18,6 +18,7 @@ import {
   countOrdersThisMonth,
   countProducts,
 } from "../catalog/catalog.service.js";
+import { countWhatsAppChannels } from "../dynamodb/whatsapp-channel.repository.js";
 import { countActiveLiveKitCallsForTenant } from "../dynamodb/livekit-call.repository.js";
 import { getTenant } from "../dynamodb/tenant.repository.js";
 import type { Tenant, Channel } from "../../types/index.js";
@@ -404,6 +405,22 @@ export async function assertCanCreateOrder(tenant: Tenant): Promise<void> {
     throw new PlanLimitError(
       "PLAN_LIMIT_ORDERS",
       `Plan limit: maximum ${limits.maxOrdersPerMonth} orders per month`
+    );
+  }
+}
+
+export async function assertCanAddWhatsAppChannel(
+  tenant: Tenant,
+  botId: string
+): Promise<void> {
+  const limits = getEffectivePlanLimits(tenant);
+  if (isUnlimited(limits.maxWhatsAppChannelsPerBot)) return;
+
+  const count = await countWhatsAppChannels(tenant.tenantId, botId);
+  if (count >= limits.maxWhatsAppChannelsPerBot) {
+    throw new PlanLimitError(
+      "PLAN_LIMIT_WHATSAPP_CHANNELS",
+      `Plan limit reached: maximum ${limits.maxWhatsAppChannelsPerBot} WhatsApp channel(s) per bot`
     );
   }
 }

@@ -9,14 +9,14 @@ import {
 } from "../ai/models.js";
 
 export type AllowedModel = string;
-export type PaidTenantPlan = "starter" | "pro" | "enterprise";
+export type PaidTenantPlan = "starter" | "pro" | "scale";
 
 export const BILLING_USD_TO_COP_RATE = 4100;
 
 export const PLAN_LIST_PRICE_USD: Record<PaidTenantPlan, number> = {
   starter: 59,
   pro: 199,
-  enterprise: 699,
+  scale: 699,
 };
 
 export const WOMPI_AMOUNT_STARTER_CENTS_DEFAULT = 24_190_000;

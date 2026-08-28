@@ -19,6 +19,7 @@ export interface PlanLimits {
   maxFlowNodes: number;
   maxActiveFlowRuns: number;
   maxChannelsPerBot: number;
+  maxWhatsAppChannelsPerBot: number;
   maxActiveWebChatSessions: number;
   maxConcurrentLiveKitCalls: number;
   maxVoicebotMinutesPerMonth: number;
@@ -48,6 +49,7 @@ const LIMITS: Record<TenantPlan, PlanLimits> = {
     maxFlowNodes: 10,
     maxActiveFlowRuns: 3,
     maxChannelsPerBot: 1,
+    maxWhatsAppChannelsPerBot: 1,
     maxActiveWebChatSessions: 0,
     maxConcurrentLiveKitCalls: 0,
     maxVoicebotMinutesPerMonth: 0,
@@ -75,6 +77,7 @@ const LIMITS: Record<TenantPlan, PlanLimits> = {
     maxFlowNodes: 20,
     maxActiveFlowRuns: 15,
     maxChannelsPerBot: 2,
+    maxWhatsAppChannelsPerBot: 1,
     maxActiveWebChatSessions: 25,
     maxConcurrentLiveKitCalls: 1,
     maxVoicebotMinutesPerMonth: 60,
@@ -102,6 +105,7 @@ const LIMITS: Record<TenantPlan, PlanLimits> = {
     maxFlowNodes: 40,
     maxActiveFlowRuns: 50,
     maxChannelsPerBot: 5,
+    maxWhatsAppChannelsPerBot: 1,
     maxActiveWebChatSessions: 200,
     maxConcurrentLiveKitCalls: 3,
     maxVoicebotMinutesPerMonth: 300,
@@ -114,7 +118,7 @@ const LIMITS: Record<TenantPlan, PlanLimits> = {
     apiRateLimitPerMinute: 120,
     apiRateLimitPerDay: 50_000,
   },
-  enterprise: {
+  scale: {
     maxActiveBots: 15,
     maxMessagesPerMonth: 40_000,
     maxBulkRecipientsPerJob: 10_000,
@@ -129,6 +133,7 @@ const LIMITS: Record<TenantPlan, PlanLimits> = {
     maxFlowNodes: 100,
     maxActiveFlowRuns: 500,
     maxChannelsPerBot: 8,
+    maxWhatsAppChannelsPerBot: 60,
     maxActiveWebChatSessions: 1_000,
     maxConcurrentLiveKitCalls: 10,
     maxVoicebotMinutesPerMonth: 1_000,
@@ -156,6 +161,7 @@ const LIMITS: Record<TenantPlan, PlanLimits> = {
     maxFlowNodes: 100,
     maxActiveFlowRuns: Number.MAX_SAFE_INTEGER,
     maxChannelsPerBot: 8,
+    maxWhatsAppChannelsPerBot: Number.MAX_SAFE_INTEGER,
     maxActiveWebChatSessions: 500,
     maxConcurrentLiveKitCalls: 10,
     maxVoicebotMinutesPerMonth: 2000,
@@ -183,15 +189,18 @@ function applyLimitsOverride(
   } as PlanLimits;
 }
 
+import { normalizeTenantPlan } from "./normalize-plan.js";
+
 export function getPlanLimits(plan: TenantPlan | string | undefined): PlanLimits {
+  const normalized = normalizeTenantPlan(plan);
   if (
-    plan === "starter" ||
-    plan === "pro" ||
-    plan === "enterprise" ||
-    plan === "free" ||
-    plan === "reseller"
+    normalized === "starter" ||
+    normalized === "pro" ||
+    normalized === "scale" ||
+    normalized === "free" ||
+    normalized === "reseller"
   ) {
-    return LIMITS[plan];
+    return LIMITS[normalized];
   }
   return LIMITS.free;
 }
@@ -212,6 +221,7 @@ function emptyNumericLimits(canCustomizeBranding: boolean): PlanLimits {
     maxFlowNodes: 0,
     maxActiveFlowRuns: 0,
     maxChannelsPerBot: 0,
+    maxWhatsAppChannelsPerBot: 0,
     maxActiveWebChatSessions: 0,
     maxConcurrentLiveKitCalls: 0,
     maxVoicebotMinutesPerMonth: 0,
@@ -227,7 +237,7 @@ function emptyNumericLimits(canCustomizeBranding: boolean): PlanLimits {
 }
 
 export function getEffectivePlanLimits(tenant: Tenant): PlanLimits {
-  const base = getPlanLimits(tenant.plan);
+  const base = getPlanLimits(normalizeTenantPlan(tenant.plan));
   if (tenant.plan === "reseller" && tenant.resellerConfig?.limitsOverride) {
     return {
       ...applyLimitsOverride(base, tenant.resellerConfig.limitsOverride),

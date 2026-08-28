@@ -125,7 +125,7 @@ export async function seedTenantRecord(now: string, email: string): Promise<void
     tenantId: DEMO_TENANT_ID,
     name: DEMO_TENANT_NAME,
     email,
-    plan: "enterprise",
+    plan: "scale",
     tenantKind: "standard",
     status: "active",
     subscriptionStatus: "active",

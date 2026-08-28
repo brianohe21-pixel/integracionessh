@@ -31,7 +31,7 @@ describe("wompi billing", () => {
 
     expect(amountInCentsForPlan("starter")).toBe(WOMPI_AMOUNT_STARTER_CENTS_DEFAULT);
     expect(amountInCentsForPlan("pro")).toBe(WOMPI_AMOUNT_PRO_CENTS_DEFAULT);
-    expect(amountInCentsForPlan("enterprise")).toBe(
+    expect(amountInCentsForPlan("scale")).toBe(
       WOMPI_AMOUNT_ENTERPRISE_CENTS_DEFAULT
     );
   });

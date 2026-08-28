@@ -9,6 +9,7 @@ import type { ChannelAdapter, OutboundContext, OutboundDocument, OutboundResult 
 import { webchatAdapter } from "./webchat.adapter.js";
 import { voicebotAdapter } from "./voicebot.adapter.js";
 import { whatsappAdapter } from "./whatsapp.adapter.js";
+import { phoneNumberIdForOutbound } from "../whatsapp/channel-context.js";
 
 const adapters: Record<Channel, ChannelAdapter> = {
   whatsapp: whatsappAdapter,
@@ -64,10 +65,15 @@ export function buildOutboundContext(params: {
   accessToken?: string | undefined;
   environment: string;
   replyToExternalId?: string | undefined;
+  phoneNumberId?: string | undefined;
 }): OutboundContext {
   const channel = params.conversation.channel ?? "whatsapp";
   const participantId =
     params.conversation.participantId ?? params.conversation.phoneNumber;
+
+  const resolvedPhoneNumberId =
+    params.phoneNumberId ??
+    phoneNumberIdForOutbound(params.conversation, params.bot);
 
   return {
     tenantId: params.tenantId,
@@ -76,7 +82,7 @@ export function buildOutboundContext(params: {
     conversation: params.conversation,
     channel,
     participantId,
-    phoneNumberId: params.bot.phoneNumberId,
+    phoneNumberId: resolvedPhoneNumberId,
     ...(params.bot.instagramPageId ? { instagramPageId: params.bot.instagramPageId } : {}),
     ...(params.bot.messengerPageId ? { messengerPageId: params.bot.messengerPageId } : {}),
     ...(channel === "telegram" ? { telegramChatId: participantId } : {}),

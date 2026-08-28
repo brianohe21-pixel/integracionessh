@@ -15,23 +15,50 @@ function reseller(overrides: Partial<Tenant> = {}): Tenant {
   };
 }
 
+function tenant(plan: Tenant["plan"], overrides: Partial<Tenant> = {}): Tenant {
+  return {
+    tenantId: `${plan}-tenant`,
+    name: "Tenant",
+    email: "tenant@example.com",
+    plan,
+    status: "active",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
 describe("getEffectivePlanLimits", () => {
   it("keeps branding enabled for resellers when overrides disable it", () => {
-    const tenant = reseller({
-      resellerConfig: {
-        maxSubaccounts: 25,
-        defaultSubaccountPlan: "pro",
-        allowSubaccountBranding: false,
-        limitsOverride: {
-          canCustomizeBranding: false,
-          maxActiveBots: 10,
+    const limits = getEffectivePlanLimits(
+      reseller({
+        resellerConfig: {
+          maxSubaccounts: 25,
+          defaultSubaccountPlan: "pro",
+          allowSubaccountBranding: false,
+          limitsOverride: {
+            canCustomizeBranding: false,
+            maxActiveBots: 10,
+          },
         },
-      },
-    });
-
-    const limits = getEffectivePlanLimits(tenant);
+      })
+    );
 
     expect(limits.canCustomizeBranding).toBe(true);
     expect(limits.maxActiveBots).toBe(10);
+  });
+
+  it("limits WhatsApp channels to one for free, starter and pro", () => {
+    expect(getEffectivePlanLimits(tenant("free")).maxWhatsAppChannelsPerBot).toBe(1);
+    expect(getEffectivePlanLimits(tenant("starter")).maxWhatsAppChannelsPerBot).toBe(1);
+    expect(getEffectivePlanLimits(tenant("pro")).maxWhatsAppChannelsPerBot).toBe(1);
+  });
+
+  it("allows 60 WhatsApp channels on scale", () => {
+    expect(getEffectivePlanLimits(tenant("scale")).maxWhatsAppChannelsPerBot).toBe(60);
+  });
+
+  it("allows unlimited WhatsApp channels for reseller", () => {
+    expect(getEffectivePlanLimits(reseller()).maxWhatsAppChannelsPerBot).toBe(Number.MAX_SAFE_INTEGER);
   });
 });

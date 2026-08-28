@@ -16,7 +16,7 @@ function tenant(plan: Tenant["plan"]): Tenant {
 
 describe("assertCanCustomizeBranding", () => {
   it("allows enterprise tenants", () => {
-    expect(() => assertCanCustomizeBranding(tenant("enterprise"))).not.toThrow();
+    expect(() => assertCanCustomizeBranding(tenant("scale"))).not.toThrow();
   });
 
   it("allows pro tenants", () => {
