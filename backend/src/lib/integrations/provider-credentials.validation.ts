@@ -16,16 +16,58 @@ async function assertOpenAIKey(apiKey: string): Promise<void> {
   }
 }
 
-async function assertTelnyxApiKey(apiKey: string): Promise<void> {
-  const response = await fetch("https://api.telnyx.com/v2/phone_numbers?page[size]=1", {
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      Accept: "application/json",
-    },
-  });
-  if (!response.ok) {
-    throw Object.assign(new Error("Invalid Telnyx API key"), { statusCode: 400 });
+function sanitizeTelnyxApiKey(apiKey: string): string {
+  let key = apiKey.trim();
+  if (/^bearer\s+/i.test(key)) {
+    key = key.replace(/^bearer\s+/i, "").trim();
   }
+  return key;
+}
+
+async function readTelnyxError(response: Response): Promise<string | undefined> {
+  try {
+    const body = (await response.json()) as {
+      errors?: Array<{ title?: string; detail?: string; code?: string }>;
+    };
+    const first = body.errors?.[0];
+    if (!first) return undefined;
+    return [first.title, first.detail].filter(Boolean).join(": ") || first.code;
+  } catch {
+    return undefined;
+  }
+}
+
+async function assertTelnyxApiKey(apiKey: string): Promise<void> {
+  const probes = ["/balance", "/phone_numbers?page[size]=1"];
+  let sawForbidden = false;
+  let lastDetail: string | undefined;
+
+  for (const path of probes) {
+    const response = await fetch(`https://api.telnyx.com/v2${path}`, {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        Accept: "application/json",
+      },
+    });
+
+    if (response.ok) return;
+
+    if (response.status === 401) {
+      throw Object.assign(new Error("Invalid Telnyx API key"), { statusCode: 400 });
+    }
+
+    if (response.status === 403) {
+      sawForbidden = true;
+      lastDetail = (await readTelnyxError(response)) ?? lastDetail;
+      continue;
+    }
+
+    lastDetail = (await readTelnyxError(response)) ?? `HTTP ${response.status}`;
+  }
+
+  if (sawForbidden) return;
+
+  throw Object.assign(new Error(lastDetail ?? "Invalid Telnyx API key"), { statusCode: 400 });
 }
 
 export async function assertTelnyxApiKeyValid(apiKey: string): Promise<void> {
@@ -113,7 +155,7 @@ export function normalizeTelnyxPayload(body: {
   credentialConnectionId?: string;
   publicKey?: string;
 }): Pick<TelnyxCredentialPayload, "apiKey"> & Partial<TelnyxCredentialPayload> {
-  const apiKey = (body.apiKey ?? "").trim();
+  const apiKey = sanitizeTelnyxApiKey(body.apiKey ?? "");
   const connectionId = (body.connectionId ?? "").trim();
   const credentialConnectionId = (body.credentialConnectionId ?? "").trim();
   const publicKey = (body.publicKey ?? "").trim();

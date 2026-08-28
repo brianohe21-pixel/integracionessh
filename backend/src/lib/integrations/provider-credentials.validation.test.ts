@@ -114,4 +114,74 @@ describe("provider credential validation", () => {
       message: expect.stringContaining("IP allowlist"),
     });
   });
+
+  it("accepts Telnyx key when balance endpoint succeeds", async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ data: { balance: "1.00", currency: "USD" } }),
+    }) as unknown as typeof fetch;
+
+    await expect(
+      validateProviderCredential("telnyx", {
+        apiKey: "KEY1234567890",
+        connectionId: "conn-1",
+      })
+    ).resolves.toBeUndefined();
+    expect(global.fetch).toHaveBeenCalledWith(
+      "https://api.telnyx.com/v2/balance",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: "Bearer KEY1234567890",
+        }),
+      })
+    );
+  });
+
+  it("accepts Telnyx key when endpoints return forbidden but not unauthorized", async () => {
+    global.fetch = jest
+      .fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        json: async () => ({ errors: [{ title: "Forbidden" }] }),
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        json: async () => ({ errors: [{ title: "Forbidden" }] }),
+      }) as unknown as typeof fetch;
+
+    await expect(
+      validateProviderCredential("telnyx", {
+        apiKey: "KEY1234567890",
+        connectionId: "conn-1",
+      })
+    ).resolves.toBeUndefined();
+  });
+
+  it("rejects Telnyx key when Telnyx returns unauthorized", async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: async () => ({ errors: [{ title: "Unauthorized" }] }),
+    }) as unknown as typeof fetch;
+
+    await expect(
+      validateProviderCredential("telnyx", {
+        apiKey: "bad-key",
+        connectionId: "conn-1",
+      })
+    ).rejects.toMatchObject({
+      message: "Invalid Telnyx API key",
+    });
+  });
+
+  it("strips Bearer prefix from Telnyx payload", () => {
+    expect(
+      normalizeTelnyxPayload({ apiKey: "Bearer KEY1234567890" })
+    ).toEqual({
+      apiKey: "KEY1234567890",
+    });
+  });
 });
