@@ -2,6 +2,7 @@ import {
   getPhoneNumberInfo,
   listWabaPhoneNumbers,
   registerPhoneNumber,
+  type WhatsAppPhoneInfo,
   type WabaPhoneNumberEntry,
 } from "./client.js";
 import { saveTenantWhatsAppSecret } from "./secrets.js";
@@ -223,9 +224,12 @@ export async function completeCoexistenceSignup(params: {
   };
 }
 
-async function validateTokenForPhone(phoneNumberId: string, accessToken: string): Promise<void> {
+async function validateTokenForPhone(
+  phoneNumberId: string,
+  accessToken: string
+): Promise<WhatsAppPhoneInfo> {
   try {
-    await getPhoneNumberInfo(phoneNumberId, accessToken);
+    return await getPhoneNumberInfo(phoneNumberId, accessToken);
   } catch (error) {
     const statusCode = (error as Error & { statusCode?: number }).statusCode;
     if (statusCode === 401 || statusCode === 403 || statusCode === 404) {
@@ -237,6 +241,11 @@ async function validateTokenForPhone(phoneNumberId: string, accessToken: string)
     }
     throw error;
   }
+}
+
+function isPhoneAlreadyRegisteredForCloudApi(phoneInfo: WhatsAppPhoneInfo): boolean {
+  if (phoneInfo.isOnBizApp === true) return true;
+  return phoneInfo.status?.toUpperCase() === "CONNECTED";
 }
 
 export async function completeManualConnect(params: {
@@ -252,7 +261,7 @@ export async function completeManualConnect(params: {
     params;
 
   assertDistinctWabaAndPhone(wabaId, phoneNumberId);
-  await validateTokenForPhone(phoneNumberId, accessToken);
+  const phoneInfo = await validateTokenForPhone(phoneNumberId, accessToken);
 
   await saveTenantWhatsAppSecret(tenantId, environment, {
     accessToken,
@@ -260,7 +269,9 @@ export async function completeManualConnect(params: {
   });
 
   await subscribeWabaWebhooks(wabaId, accessToken);
-  await registerPhoneNumber(phoneNumberId, accessToken, pin);
+  if (!isPhoneAlreadyRegisteredForCloudApi(phoneInfo)) {
+    await registerPhoneNumber(phoneNumberId, accessToken, pin);
+  }
 
   return {
     phoneNumberId,

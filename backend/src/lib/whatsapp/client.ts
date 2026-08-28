@@ -447,12 +447,14 @@ export interface WhatsAppPhoneInfo {
   platformType?: string;
 }
 
-function isAlreadyRegisteredError(body: string): boolean {
+function isRegisterSkippedError(body: string): boolean {
   const normalized = body.toLowerCase();
   return (
     normalized.includes("already registered") ||
     normalized.includes("ya está registrado") ||
-    normalized.includes("phone number is registered")
+    normalized.includes("phone number is registered") ||
+    normalized.includes("not available for smb") ||
+    normalized.includes("register endpoint is not available")
   );
 }
 
@@ -475,7 +477,7 @@ export async function registerPhoneNumber(
 
   if (!response.ok) {
     const error = await response.text();
-    if (isAlreadyRegisteredError(error)) {
+    if (isRegisterSkippedError(error)) {
       return { success: true };
     }
     throwGraphApiError(response.status, error);
