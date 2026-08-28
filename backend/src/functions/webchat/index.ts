@@ -3,7 +3,7 @@ import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
 import { randomUUID } from "crypto";
 import { z } from "zod";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
-import { getBotByWidgetKey } from "../../lib/dynamodb/bot-lookup.repository.js";
+import { getBotByWidgetKey, getBotByVoicebotWidgetKey } from "../../lib/dynamodb/bot-lookup.repository.js";
 import { getOrCreateConversation } from "../../lib/dynamodb/conversation.repository.js";
 import { getConversationMessages } from "../../lib/dynamodb/conversation.repository.js";
 import {
@@ -28,6 +28,8 @@ import { getLiveKitConfig } from "../../lib/livekit/config.js";
 import { createParticipantToken } from "../../lib/livekit/tokens.js";
 import { deleteLiveKitRoom } from "../../lib/livekit/rooms.js";
 import { addMessage } from "../../lib/dynamodb/conversation.repository.js";
+import { recordWebsitePageview } from "../../lib/dynamodb/website-metrics.repository.js";
+import { resolvePublicGoogleAnalytics } from "../../lib/website-analytics/settings.js";
 
 const sqs = new SQSClient({});
 const QUEUE_URL = process.env.SQS_QUEUE_URL ?? "";
@@ -40,6 +42,13 @@ const CreateSessionSchema = z.object({
 
 const SendMessageSchema = z.object({
   content: z.string().min(1).max(2048),
+});
+
+const PageviewSchema = z.object({
+  path: z.string().max(512),
+  referrer: z.string().max(1024).optional(),
+  visitorId: z.string().min(8).max(128),
+  sessionId: z.string().min(8).max(128),
 });
 
 function getWidgetKey(event: APIGatewayProxyEventV2): string | undefined {
@@ -69,6 +78,16 @@ function resolveSessionId(
 function isCreateSessionRoute(method: string, rawPath: string): boolean {
   if (method !== "POST") return false;
   return rawPath.replace(/\/$/, "") === "/webchat/sessions";
+}
+
+function isPageviewRoute(method: string, rawPath: string): boolean {
+  if (method !== "POST") return false;
+  return rawPath.replace(/\/$/, "") === "/webchat/analytics/pageview";
+}
+
+function isAnalyticsConfigRoute(method: string, rawPath: string): boolean {
+  if (method !== "GET") return false;
+  return rawPath.replace(/\/$/, "") === "/webchat/analytics/config";
 }
 
 async function authenticateSession(
@@ -106,6 +125,14 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
 
     if (isCreateSessionRoute(method, rawPath)) {
       return handleCreateSession(event);
+    }
+
+    if (isPageviewRoute(method, rawPath)) {
+      return handlePageview(event);
+    }
+
+    if (isAnalyticsConfigRoute(method, rawPath)) {
+      return handleAnalyticsConfig(event);
     }
 
     if (!sessionId) return badRequest("Route not found");
@@ -199,6 +226,50 @@ async function handleCreateSession(
     sessionStatus: "active",
     ...(branding ? { branding } : {}),
   });
+}
+
+async function resolveWidgetLookup(
+  widgetKey: string
+): Promise<{ tenantId: string; botId: string } | null> {
+  const webchatLookup = await getBotByWidgetKey(widgetKey);
+  if (webchatLookup) return webchatLookup;
+  return getBotByVoicebotWidgetKey(widgetKey);
+}
+
+async function handlePageview(
+  event: APIGatewayProxyEventV2
+): Promise<APIGatewayProxyResultV2> {
+  const widgetKey = getWidgetKey(event);
+  if (!widgetKey) return unauthorized("Missing X-Widget-Key");
+
+  const lookup = await resolveWidgetLookup(widgetKey);
+  if (!lookup) return unauthorized("Invalid widget key");
+
+  const body = JSON.parse(event.body ?? "{}");
+  const parsed = PageviewSchema.safeParse(body);
+  if (!parsed.success) return badRequest(parsed.error.message);
+
+  await recordWebsitePageview(lookup.tenantId, lookup.botId, {
+    path: parsed.data.path,
+    visitorId: parsed.data.visitorId,
+    sessionId: parsed.data.sessionId,
+    ...(parsed.data.referrer ? { referrer: parsed.data.referrer } : {}),
+  });
+  return ok({ recorded: true });
+}
+
+async function handleAnalyticsConfig(
+  event: APIGatewayProxyEventV2
+): Promise<APIGatewayProxyResultV2> {
+  const widgetKey = getWidgetKey(event);
+  if (!widgetKey) return unauthorized("Missing X-Widget-Key");
+
+  const lookup = await resolveWidgetLookup(widgetKey);
+  if (!lookup) return unauthorized("Invalid widget key");
+
+  const tenant = await getTenant(lookup.tenantId);
+  const googleAnalytics = resolvePublicGoogleAnalytics(tenant?.websiteAnalytics);
+  return ok({ googleAnalytics });
 }
 
 async function handleSendMessage(

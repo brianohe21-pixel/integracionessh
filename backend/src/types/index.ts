@@ -107,6 +107,11 @@ export interface MetricsReportSchedule {
   lastSentAt?: string;
 }
 
+export interface WebsiteAnalyticsSettings {
+  enabled: boolean;
+  googleAnalyticsMeasurementId?: string;
+}
+
 export type InboxSlaStatus = "disabled" | "ok" | "at_risk" | "breached" | "met" | "missed";
 
 export interface InboxSlaAdvisorMetric {
@@ -178,6 +183,7 @@ export interface Tenant {
   branding?: TenantBranding;
   inboxSla?: InboxSlaSettings;
   metricsReportSchedule?: MetricsReportSchedule;
+  websiteAnalytics?: WebsiteAnalyticsSettings;
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   subscriptionStatus?: SubscriptionStatus;
@@ -2002,6 +2008,42 @@ export interface CallingMetrics {
   metaPickupThreshold: number;
   summary: CallingMetricsSummary;
   byBot: CallingMetricsBotRow[];
+}
+
+export interface WebsiteMetricsSummary {
+  pageviews: number;
+  uniqueVisitors: number;
+  sessions: number;
+}
+
+export interface WebsiteMetricsDailyRow {
+  date: string;
+  pageviews: number;
+  uniqueVisitors: number;
+  sessions: number;
+}
+
+export interface WebsiteMetricsTopRow {
+  key: string;
+  label: string;
+  count: number;
+}
+
+export interface WebsiteMetricsBotRow {
+  botId: string;
+  botName: string;
+  pageviews: number;
+}
+
+export interface WebsiteMetrics {
+  from: string;
+  to: string;
+  windowDays: number;
+  summary: WebsiteMetricsSummary;
+  dailyTrend: WebsiteMetricsDailyRow[];
+  topPages: WebsiteMetricsTopRow[];
+  topReferrers: WebsiteMetricsTopRow[];
+  byBot: WebsiteMetricsBotRow[];
 }
 
 export interface ApiKey {

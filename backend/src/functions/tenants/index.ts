@@ -28,6 +28,7 @@ import type {
   TenantBranding,
   InboxSlaSettings,
   MetricsReportSchedule,
+  WebsiteAnalyticsSettings,
 } from "../../types/index.js";
 import { recordLegalAcceptance, getLegalAcceptance } from "../../lib/dynamodb/legal.repository.js";
 import {
@@ -61,6 +62,11 @@ import {
 } from "../../lib/http.js";
 import { resolveInboxSlaSettings } from "../../lib/advisor/inbox-sla.js";
 import { resolveMetricsReportSchedule } from "../../lib/reports/resolve-schedule.js";
+import {
+  isValidGaMeasurementId,
+  normalizeGaMeasurementId,
+  resolveWebsiteAnalyticsSettings,
+} from "../../lib/website-analytics/settings.js";
 import { syncReportSchedule } from "../../lib/reports/report-schedule.js";
 import { sendScheduledReport } from "../../lib/reports/send-scheduled-report.js";
 import { getTenantWhatsAppRiskByBot } from "../../lib/whatsapp/tenant-risk.js";
@@ -145,6 +151,23 @@ const UpdateReportScheduleSchema = z
         code: z.ZodIssueCode.custom,
         message: "dayOfWeek is required for weekly schedules",
         path: ["dayOfWeek"],
+      });
+    }
+  });
+
+const UpdateWebsiteAnalyticsSchema = z
+  .object({
+    enabled: z.boolean(),
+    googleAnalyticsMeasurementId: z.string().trim().max(32).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.enabled) return;
+    const measurementId = data.googleAnalyticsMeasurementId?.trim();
+    if (!measurementId || !isValidGaMeasurementId(measurementId)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Invalid Google Analytics measurement ID (expected format G-XXXXXXXXXX)",
+        path: ["googleAnalyticsMeasurementId"],
       });
     }
   });
@@ -240,6 +263,47 @@ async function handleReportScheduleRoutes(
     await sendScheduledReport(auth.tenantId, { force: true });
     const refreshed = await getTenant(auth.tenantId);
     return ok(resolveMetricsReportSchedule(refreshed?.metricsReportSchedule));
+  }
+
+  return badRequest("Route not found");
+}
+
+async function handleWebsiteAnalyticsRoutes(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer,
+  auth: AuthContext
+): Promise<APIGatewayProxyResultV2 | null> {
+  const rawPath = event.rawPath ?? event.requestContext.http.path ?? "";
+  const isWebsiteAnalyticsRoute = rawPath.includes("/tenants/me/website-analytics");
+  if (!isWebsiteAnalyticsRoute) return null;
+
+  const method = (event.requestContext.http.method ?? "").toUpperCase();
+
+  assertMemberRole(auth);
+  await ensureTenant(auth.tenantId, auth.email, auth.name);
+
+  if (method === "GET") {
+    const tenant = await getTenant(auth.tenantId);
+    return ok(resolveWebsiteAnalyticsSettings(tenant?.websiteAnalytics));
+  }
+
+  if (method === "PUT") {
+    const body = parseJsonBody(event);
+    const parsed = UpdateWebsiteAnalyticsSchema.safeParse(body);
+    if (!parsed.success) {
+      return badRequest(formatZodError(parsed.error));
+    }
+
+    const websiteAnalytics: WebsiteAnalyticsSettings = parsed.data.enabled
+      ? {
+          enabled: true,
+          googleAnalyticsMeasurementId: normalizeGaMeasurementId(
+            parsed.data.googleAnalyticsMeasurementId ?? ""
+          ),
+        }
+      : { enabled: false };
+
+    const updated = await updateTenant(auth.tenantId, { websiteAnalytics });
+    return ok(resolveWebsiteAnalyticsSettings(updated.websiteAnalytics));
   }
 
   return badRequest("Route not found");
@@ -465,6 +529,9 @@ export async function handler(
 
     const reportScheduleResponse = await handleReportScheduleRoutes(event, auth);
     if (reportScheduleResponse) return reportScheduleResponse;
+
+    const websiteAnalyticsResponse = await handleWebsiteAnalyticsRoutes(event, auth);
+    if (websiteAnalyticsResponse) return websiteAnalyticsResponse;
 
     const providerCredentialsResponse = await handleProviderCredentialRoutes(
       event,
