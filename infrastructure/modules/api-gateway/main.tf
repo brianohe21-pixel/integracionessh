@@ -1017,6 +1017,13 @@ locals {
       function_arn = var.tenants_function_arn
       protected    = false
     }
+    public_auth_methods = {
+      route_key    = "GET /public/auth-methods"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = false
+    }
     auth_portal_access = {
       route_key    = "GET /auth/portal-access"
       slug         = "tenants"
@@ -1257,6 +1264,48 @@ locals {
     }
     tenants_email_settings_domain_delete = {
       route_key    = "DELETE /tenants/me/email-settings/domain"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_integrations_catalog = {
+      route_key    = "GET /tenants/me/integrations"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_integrations_microsoft_sso_get = {
+      route_key    = "GET /tenants/me/integrations/microsoft-sso"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_integrations_microsoft_sso_put = {
+      route_key    = "PUT /tenants/me/integrations/microsoft-sso"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_integrations_microsoft_sso_patch = {
+      route_key    = "PATCH /tenants/me/integrations/microsoft-sso"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_integrations_microsoft_sso_test = {
+      route_key    = "POST /tenants/me/integrations/microsoft-sso/test"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_integrations_microsoft_sso_delete = {
+      route_key    = "DELETE /tenants/me/integrations/microsoft-sso"
       slug         = "tenants"
       invoke_arn   = var.tenants_invoke_arn
       function_arn = var.tenants_function_arn
