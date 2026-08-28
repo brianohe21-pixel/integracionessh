@@ -1,4 +1,4 @@
-import { listBots, updateBot } from "../dynamodb/bot.repository.js";
+import { getBot, listBots, updateBot } from "../dynamodb/bot.repository.js";
 import {
   deleteTelephonyNumberLookup,
   getBotByTelephonyNumber,
@@ -8,6 +8,24 @@ import type { Bot } from "../../types/index.js";
 
 type BotUpdates = Partial<Omit<Bot, "tenantId" | "botId" | "createdAt">>;
 
+export async function clearStaleTelephonyNumberLookup(
+  tenantId: string,
+  phoneNumber: string
+): Promise<boolean> {
+  const normalized = normalizeE164(phoneNumber);
+  if (!normalized) return false;
+
+  const lookup = await getBotByTelephonyNumber(normalized);
+  if (!lookup || lookup.tenantId !== tenantId) return false;
+
+  const tenantBots = await listBots(tenantId);
+  const botExists = tenantBots.some((bot) => bot.botId === lookup.botId);
+  if (botExists) return false;
+
+  await deleteTelephonyNumberLookup(normalized);
+  return true;
+}
+
 export async function releaseTelephonyNumberFromBot(
   tenantId: string,
   botId: string,
@@ -15,6 +33,10 @@ export async function releaseTelephonyNumberFromBot(
 ): Promise<void> {
   const normalized = normalizeE164(phoneNumber);
   await deleteTelephonyNumberLookup(normalized);
+
+  const existing = await getBot(tenantId, botId);
+  if (!existing) return;
+
   const updates = {
     telephonyPhoneNumber: undefined,
     telephonyEnabled: false,
@@ -29,6 +51,8 @@ export async function reassignTelephonyNumber(params: {
 }): Promise<void> {
   const normalized = normalizeE164(params.phoneNumber);
   if (!normalized) return;
+
+  await clearStaleTelephonyNumberLookup(params.tenantId, normalized);
 
   const lookup = await getBotByTelephonyNumber(normalized);
   if (

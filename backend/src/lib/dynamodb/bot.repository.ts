@@ -8,8 +8,10 @@ import {
 import {
   putWabaLookup,
   deleteWabaLookup,
+  deleteTelephonyNumberLookup,
 } from "./bot-lookup.repository.js";
 import { docClient, TABLE_NAME } from "./client.js";
+import { normalizeE164 } from "../telnyx/phone.js";
 import type { Bot } from "../../types/index.js";
 
 const keys = (tenantId: string, botId: string) => ({
@@ -154,6 +156,9 @@ export async function deleteBot(tenantId: string, botId: string): Promise<void> 
   );
   if (existing?.whatsappBusinessAccountId?.trim()) {
     await deleteWabaLookup(existing.whatsappBusinessAccountId);
+  }
+  if (existing?.telephonyPhoneNumber?.trim()) {
+    await deleteTelephonyNumberLookup(normalizeE164(existing.telephonyPhoneNumber));
   }
 }
 

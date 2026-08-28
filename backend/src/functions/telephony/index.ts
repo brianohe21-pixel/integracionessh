@@ -22,7 +22,7 @@ import { getTelnyxSecrets } from "../../lib/telnyx/secrets.js";
 import { resolveProviderCredential, assertOwnTelnyxCredential } from "../../lib/integrations/provider-credentials.js";
 import { normalizeE164 } from "../../lib/telnyx/phone.js";
 import { getBotByTelephonyNumber } from "../../lib/dynamodb/bot-lookup.repository.js";
-import { reassignTelephonyNumber } from "../../lib/telephony/number-assignment.js";
+import { reassignTelephonyNumber, clearStaleTelephonyNumberLookup } from "../../lib/telephony/number-assignment.js";
 import {
   handleCallAnswered,
   handleCallHangup,
@@ -738,6 +738,8 @@ export async function handler(
         if (!ownsNumber) {
           return badRequest("Phone number is not in your Telnyx account");
         }
+
+        await clearStaleTelephonyNumberLookup(auth.tenantId, nextNumber);
 
         const lookup = await getBotByTelephonyNumber(nextNumber);
         const conflictingBotFromLookup =
