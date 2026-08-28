@@ -22,6 +22,7 @@ import { getTelnyxSecrets } from "../../lib/telnyx/secrets.js";
 import { resolveProviderCredential, assertOwnTelnyxCredential } from "../../lib/integrations/provider-credentials.js";
 import { normalizeE164 } from "../../lib/telnyx/phone.js";
 import { getBotByTelephonyNumber } from "../../lib/dynamodb/bot-lookup.repository.js";
+import { reassignTelephonyNumber } from "../../lib/telephony/number-assignment.js";
 import {
   handleCallAnswered,
   handleCallHangup,
@@ -626,6 +627,7 @@ export async function handler(
       const parsed = z
         .object({
           enabled: z.boolean().optional(),
+          reassignPhoneNumber: z.boolean().optional(),
           telephonyPhoneNumber: z.string().min(7).max(20).optional(),
           telephonyVoiceId: optionalNonEmptyString(64),
           telephonyModel: z.string().min(3).max(64).optional(),
@@ -738,19 +740,36 @@ export async function handler(
         }
 
         const lookup = await getBotByTelephonyNumber(nextNumber);
-        if (lookup && lookup.tenantId === auth.tenantId && lookup.botId !== botId) {
-          return conflict("Phone number is already assigned to another agent");
-        }
+        const conflictingBotFromLookup =
+          lookup && lookup.tenantId === auth.tenantId && lookup.botId !== botId
+            ? lookup.botId
+            : null;
 
         const tenantBots = await listBots(auth.tenantId);
-        const conflictingBot = tenantBots.find(
+        const conflictingBotFromRecord = tenantBots.find(
           (entry) =>
             entry.botId !== botId &&
             entry.telephonyPhoneNumber &&
             normalizeE164(entry.telephonyPhoneNumber) === nextNumber
         );
-        if (conflictingBot) {
-          return conflict("Phone number is already assigned to another agent");
+
+        if (conflictingBotFromLookup || conflictingBotFromRecord) {
+          if (!parsed.data.reassignPhoneNumber) {
+            const conflictingName =
+              conflictingBotFromRecord?.name ??
+              tenantBots.find((entry) => entry.botId === conflictingBotFromLookup)?.name;
+            return conflict(
+              conflictingName
+                ? `Phone number is already assigned to agent ${conflictingName}`
+                : "Phone number is already assigned to another agent"
+            );
+          }
+
+          await reassignTelephonyNumber({
+            tenantId: auth.tenantId,
+            targetBotId: botId,
+            phoneNumber: nextNumber,
+          });
         }
       }
 

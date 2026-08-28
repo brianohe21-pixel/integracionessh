@@ -34,7 +34,7 @@ describe("ai models registry", () => {
   it("restricts economy models to free and pro plans", () => {
     const freeModels = getModelsForPlan("free").map((model) => model.id);
     const proModels = getModelsForPlan("pro").map((model) => model.id);
-    const enterpriseModels = getModelsForPlan("enterprise").map((model) => model.id);
+    const scaleModels = getModelsForPlan("scale").map((model) => model.id);
 
     expect(freeModels).toEqual(
       expect.arrayContaining(["gpt-4.1-mini", "gpt-4o-mini", "gpt-4.1-nano", "gpt-5-nano"])
@@ -42,7 +42,7 @@ describe("ai models registry", () => {
     expect(proModels).toEqual(
       expect.arrayContaining(["gpt-4.1-mini", "gpt-5-mini", "gpt-5.6-luna"])
     );
-    expect(enterpriseModels).toEqual(
+    expect(scaleModels).toEqual(
       expect.arrayContaining([
         "gpt-4.1",
         "gpt-4o",
@@ -60,10 +60,12 @@ describe("ai models registry", () => {
         "gpt-4-turbo",
       ])
     );
+    expect(getModelsForPlan("enterprise").map((model) => model.id)).toEqual(scaleModels);
     expect(isModelAllowedForPlan("free", "gpt-4.1-mini")).toBe(true);
     expect(isModelAllowedForPlan("free", "gpt-5-mini")).toBe(false);
     expect(isModelAllowedForPlan("pro", "gpt-5-mini")).toBe(true);
     expect(isModelAllowedForPlan("free", "gpt-4.1")).toBe(false);
+    expect(isModelAllowedForPlan("scale", "gpt-5.6-sol")).toBe(true);
     expect(isModelAllowedForPlan("enterprise", "gpt-5.6-sol")).toBe(true);
   });
 });

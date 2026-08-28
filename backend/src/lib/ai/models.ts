@@ -1,4 +1,5 @@
 import type { TenantPlan } from "../../types/index.js";
+import { normalizeTenantPlan } from "../billing/normalize-plan.js";
 
 export type AiProvider = "openai" | "anthropic";
 
@@ -252,10 +253,7 @@ function planMeetsRequirement(plan: TenantPlan, minPlan: TenantPlan): boolean {
 }
 
 function resolvePlan(plan: TenantPlan | string | undefined): TenantPlan {
-  if (plan === "pro" || plan === "scale" || plan === "free" || plan === "reseller") {
-    return plan;
-  }
-  return "free";
+  return normalizeTenantPlan(plan);
 }
 
 export function getModelsForPlan(plan: TenantPlan | string | undefined): AiModelDefinition[] {
