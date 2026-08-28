@@ -1177,6 +1177,20 @@ locals {
       function_arn = var.tenants_function_arn
       protected    = true
     }
+    tenants_website_analytics_get = {
+      route_key    = "GET /tenants/me/website-analytics"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_website_analytics_update = {
+      route_key    = "PUT /tenants/me/website-analytics"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
     tenants_members_list = {
       route_key    = "GET /tenants/me/members"
       slug         = "tenants"
