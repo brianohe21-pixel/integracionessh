@@ -366,6 +366,14 @@ variable "mailrelay_webhook_function_arn" {
   type = string
 }
 
+variable "google_business_invoke_arn" {
+  type = string
+}
+
+variable "google_business_function_arn" {
+  type = string
+}
+
 variable "allowed_origins" {
   type    = list(string)
   default = ["*"]

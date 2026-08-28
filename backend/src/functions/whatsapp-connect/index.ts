@@ -6,8 +6,9 @@ import { getBot } from "../../lib/dynamodb/bot.repository.js";
 import {
   completeCoexistenceSignup,
 } from "../../lib/whatsapp/embedded-signup.js";
-import { registerPhoneNumber } from "../../lib/whatsapp/client.js";
-import { getWhatsAppAccessToken } from "../../lib/whatsapp/secrets.js";
+import { registerPhoneNumber, sendTemplateMessage } from "../../lib/whatsapp/client.js";
+import { buildWhatsAppCloudApiTemplateCurl } from "../../lib/whatsapp/cloud-api-curl.js";
+import { getWhatsAppAccessToken, getWhatsAppAccessTokenForAccount } from "../../lib/whatsapp/secrets.js";
 import {
   connectWhatsAppChannelEmbedded,
   connectWhatsAppChannelManual,
@@ -15,6 +16,7 @@ import {
 } from "../../lib/whatsapp/channel-service.js";
 import {
   deleteWhatsAppChannel,
+  getDefaultWhatsAppChannel,
   getWhatsAppChannel,
   listWhatsAppChannels,
   updateWhatsAppChannel,
@@ -78,6 +80,16 @@ const UpdateChannelSchema = z.object({
   label: z.string().max(128).optional(),
   isDefault: z.boolean().optional(),
 });
+
+const TestSendSchema = z.object({
+  to: z.string().min(8).max(20),
+  templateName: z.string().min(1).max(128).optional().default("hello_world"),
+  language: z.string().min(2).max(16).optional().default("en_US"),
+});
+
+function normalizeRecipientPhone(value: string): string {
+  return value.replace(/\D/g, "");
+}
 
 function extractBotId(path: string): string | null {
   const match = path.match(/\/bots\/([^/]+)\/whatsapp-channels/);
@@ -407,6 +419,89 @@ async function handleRegister(
   });
 }
 
+async function handleTestSend(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer,
+  botId: string,
+  channelId: string | null
+): Promise<APIGatewayProxyResultV2> {
+  const auth = await resolveRequestAuth(event);
+  assertMemberRole(auth);
+  await assertAssignedServices(auth.tenantId, "bots");
+  await assertBotAccess(auth.tenantId, botId);
+
+  const body = JSON.parse(event.body ?? "{}");
+  const parsed = TestSendSchema.safeParse(body);
+  if (!parsed.success) {
+    return badRequest(parsed.error.errors[0]?.message ?? "Invalid request body");
+  }
+
+  const to = normalizeRecipientPhone(parsed.data.to);
+  if (to.length < 10) {
+    return badRequest("Recipient phone number is invalid");
+  }
+
+  let phoneNumberId = "";
+  let accessToken = "";
+
+  if (channelId) {
+    const channel = await getWhatsAppChannel(auth.tenantId, botId, channelId);
+    if (!channel) return notFound("WhatsApp channel not found");
+    if (channel.status !== "active") {
+      return badRequest("WhatsApp channel is not active");
+    }
+    phoneNumberId = channel.phoneNumberId;
+    accessToken = await getWhatsAppAccessTokenForAccount(
+      auth.tenantId,
+      channel.accountId,
+      ENVIRONMENT
+    );
+  } else {
+    const bot = await getBot(auth.tenantId, botId);
+    const defaultChannel = await getDefaultWhatsAppChannel(auth.tenantId, botId);
+    if (defaultChannel?.status === "active") {
+      phoneNumberId = defaultChannel.phoneNumberId;
+      accessToken = await getWhatsAppAccessTokenForAccount(
+        auth.tenantId,
+        defaultChannel.accountId,
+        ENVIRONMENT
+      );
+    } else if (bot?.phoneNumberId?.trim()) {
+      phoneNumberId = bot.phoneNumberId.trim();
+      accessToken = await getWhatsAppAccessToken(auth.tenantId, ENVIRONMENT);
+    } else {
+      return badRequest("No active WhatsApp number is connected to this bot");
+    }
+  }
+
+  const templateName = parsed.data.templateName;
+  const language = parsed.data.language;
+
+  const result = await sendTemplateMessage({
+    phoneNumberId,
+    to,
+    templateName,
+    language,
+    accessToken,
+  });
+
+  const messageId = result.messages?.[0]?.id ?? null;
+
+  return ok({
+    messageId,
+    status: "accepted",
+    to,
+    phoneNumberId,
+    templateName,
+    language,
+    curl: buildWhatsAppCloudApiTemplateCurl({
+      phoneNumberId,
+      to,
+      templateName,
+      language,
+    }),
+  });
+}
+
 async function handleStatus(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): Promise<APIGatewayProxyResultV2> {
@@ -470,6 +565,11 @@ export async function handler(
       }
       if (method === "POST" && path.endsWith("/connect")) {
         return await handleConnectChannel(event, botId);
+      }
+      if (method === "POST" && path.endsWith("/test-send")) {
+        const effectiveChannelId =
+          channelId && channelId !== "test-send" ? channelId : null;
+        return await handleTestSend(event, botId, effectiveChannelId);
       }
       if (method === "POST" && channelId && path.endsWith("/register")) {
         return await handleRegisterChannel(event, botId, channelId);

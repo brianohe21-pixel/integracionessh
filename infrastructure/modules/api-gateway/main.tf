@@ -98,6 +98,7 @@ locals {
     catalog            = var.catalog_function_arn
     mailrelay          = var.mailrelay_function_arn
     mailrelay_webhook  = var.mailrelay_webhook_function_arn
+    google_business    = var.google_business_function_arn
   }
 
   lambda_invoke_arns = {
@@ -145,6 +146,7 @@ locals {
     catalog            = var.catalog_invoke_arn
     mailrelay          = var.mailrelay_invoke_arn
     mailrelay_webhook  = var.mailrelay_webhook_invoke_arn
+    google_business    = var.google_business_invoke_arn
   }
 
   http_proxy_groups = {
@@ -194,6 +196,14 @@ locals {
       methods      = ["GET", "POST", "PUT", "PATCH", "DELETE"]
       invoke_arn   = var.mailrelay_invoke_arn
       function_arn = var.mailrelay_function_arn
+      protected    = true
+    }
+    google_business = {
+      path         = "/google-business/{proxy+}"
+      slug         = "google_business"
+      methods      = ["GET", "PUT", "DELETE"]
+      invoke_arn   = var.google_business_invoke_arn
+      function_arn = var.google_business_function_arn
       protected    = true
     }
     sales = {
@@ -1019,6 +1029,13 @@ locals {
     }
     public_auth_methods = {
       route_key    = "GET /public/auth-methods"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = false
+    }
+    public_google_business_oauth_callback = {
+      route_key    = "GET /public/integrations/google-business/oauth/callback"
       slug         = "tenants"
       invoke_arn   = var.tenants_invoke_arn
       function_arn = var.tenants_function_arn

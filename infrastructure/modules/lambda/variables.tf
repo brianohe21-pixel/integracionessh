@@ -271,6 +271,19 @@ variable "api_public_url" {
   description = "Public API base URL for channel webhooks (e.g. Telegram registration)"
 }
 
+variable "google_business_client_id" {
+  type        = string
+  default     = ""
+  description = "Google OAuth client ID for Business Profile integration"
+}
+
+variable "google_business_client_secret" {
+  type        = string
+  default     = ""
+  sensitive   = true
+  description = "Google OAuth client secret for Business Profile integration"
+}
+
 variable "ses_from_email" {
   type        = string
   default     = ""
@@ -377,6 +390,7 @@ variable "cloudwatch_log_group_import_exclude" {
     "process_mailrelay_sync",
     "mailrelay_webhook",
     "process_whatsapp_sync",
+    "google_business",
     "sales",
     "process_sequence",
   ]

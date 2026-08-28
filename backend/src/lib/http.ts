@@ -127,6 +127,17 @@ export function notFound(message = "Not found"): APIGatewayProxyResultV2 {
   };
 }
 
+export function redirect(location: string, statusCode: 301 | 302 | 303 | 307 | 308 = 302): APIGatewayProxyResultV2 {
+  return {
+    statusCode,
+    headers: {
+      Location: location,
+      "Access-Control-Allow-Origin": "*",
+    },
+    body: "",
+  };
+}
+
 export function internalError(message = "Internal server error"): APIGatewayProxyResultV2 {
   return {
     statusCode: 500,

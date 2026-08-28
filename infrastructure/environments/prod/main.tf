@@ -252,6 +252,8 @@ module "lambda" {
   ses_from_email                = var.ses_from_email
   admin_notification_emails     = local.ops_alert_emails
   api_public_url                = local.api_public_url
+  google_business_client_id     = var.google_business_client_id
+  google_business_client_secret = var.google_business_client_secret
   tags                          = local.tags
 }
 
@@ -349,6 +351,8 @@ module "api_gateway" {
   mailrelay_function_arn          = module.lambda.mailrelay_function_arn
   mailrelay_webhook_invoke_arn    = module.lambda.mailrelay_webhook_invoke_arn
   mailrelay_webhook_function_arn  = module.lambda.mailrelay_webhook_function_arn
+  google_business_invoke_arn      = module.lambda.google_business_invoke_arn
+  google_business_function_arn    = module.lambda.google_business_function_arn
   allowed_origins                 = ["*"]
   api_custom_domain               = var.api_custom_domain
   tags                            = local.tags

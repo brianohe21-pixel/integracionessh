@@ -272,6 +272,9 @@ locals {
         COGNITO_HOSTED_UI_DOMAIN  = var.cognito_hosted_ui_domain
         MEDIA_BUCKET              = var.media_bucket_name
         API_PUBLIC_URL            = var.api_public_url
+        GOOGLE_BUSINESS_CLIENT_ID     = var.google_business_client_id
+        GOOGLE_BUSINESS_CLIENT_SECRET = var.google_business_client_secret
+        GOOGLE_BUSINESS_REDIRECT_URI  = trimspace(var.api_public_url) != "" ? "${trimsuffix(trimspace(var.api_public_url), "/")}/public/integrations/google-business/oauth/callback" : ""
       }
     }
     reseller = {
@@ -967,6 +970,20 @@ locals {
         TABLE_NAME   = var.dynamodb_table_name
         ENVIRONMENT  = var.environment
         MEDIA_BUCKET = var.media_bucket_name
+      }
+    }
+    google_business = {
+      handler     = "google-business/index.handler"
+      description = "Google Business Profile reviews API"
+      timeout     = 60
+      memory      = 256
+      environment = {
+        TABLE_NAME                    = var.dynamodb_table_name
+        ENVIRONMENT                   = var.environment
+        GOOGLE_BUSINESS_CLIENT_ID     = var.google_business_client_id
+        GOOGLE_BUSINESS_CLIENT_SECRET = var.google_business_client_secret
+        GOOGLE_BUSINESS_REDIRECT_URI  = trimspace(var.api_public_url) != "" ? "${trimsuffix(trimspace(var.api_public_url), "/")}/public/integrations/google-business/oauth/callback" : ""
+        API_PUBLIC_URL                = var.api_public_url
       }
     }
   }

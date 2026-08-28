@@ -223,6 +223,17 @@ variable "google_client_secret" {
   sensitive = true
 }
 
+variable "google_business_client_id" {
+  type    = string
+  default = ""
+}
+
+variable "google_business_client_secret" {
+  type      = string
+  default   = ""
+  sensitive = true
+}
+
 variable "mailrelay_event_types" {
   type        = string
   default     = ""

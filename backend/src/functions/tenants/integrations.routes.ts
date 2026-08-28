@@ -11,7 +11,15 @@ import {
   testMicrosoftSsoConfiguration,
   updateMicrosoftSsoEnabled,
 } from "../../lib/integrations/microsoft-sso.service.js";
-import { badRequest, handleError, ok, parseJsonBody } from "../../lib/http.js";
+import {
+  disconnectGoogleBusiness,
+  getGoogleBusinessView,
+  handleGoogleBusinessOAuthCallback,
+  refreshGoogleBusinessLocations,
+  startGoogleBusinessOAuth,
+  updateGoogleBusinessSettings,
+} from "../../lib/google-business/service.js";
+import { badRequest, handleError, ok, parseJsonBody, redirect } from "../../lib/http.js";
 
 const SaveMicrosoftSsoSchema = z.object({
   protocol: z.enum(["oidc", "saml"]),
@@ -26,6 +34,11 @@ const SaveMicrosoftSsoSchema = z.object({
 
 const EnableSchema = z.object({
   enabled: z.boolean(),
+});
+
+const GoogleBusinessPatchSchema = z.object({
+  enabled: z.boolean().optional(),
+  selectedLocationIds: z.array(z.string().min(1).max(256)).max(100).optional(),
 });
 
 function formatZodError(error: z.ZodError): string {
@@ -109,7 +122,87 @@ export async function handleIntegrationRoutes(
         return ok(view);
       }
     }
+
+    if (rawPath.includes("/integrations/google-business-profile")) {
+      if (method === "GET" && rawPath.endsWith("/oauth/start")) {
+        try {
+          const result = await startGoogleBusinessOAuth(auth.tenantId);
+          return ok(result);
+        } catch (error) {
+          return handleError(error);
+        }
+      }
+
+      if (method === "GET" && rawPath.endsWith("/google-business-profile")) {
+        const view = await getGoogleBusinessView(auth.tenantId);
+        return ok(view);
+      }
+
+      if (method === "POST" && rawPath.endsWith("/locations/refresh")) {
+        try {
+          const view = await refreshGoogleBusinessLocations(auth.tenantId, environment);
+          return ok(view);
+        } catch (error) {
+          return handleError(error);
+        }
+      }
+
+      if (method === "PATCH" && rawPath.endsWith("/google-business-profile")) {
+        const body = parseJsonBody(event);
+        const parsed = GoogleBusinessPatchSchema.safeParse(body);
+        if (!parsed.success) return badRequest(formatZodError(parsed.error));
+        try {
+          const view = await updateGoogleBusinessSettings(auth.tenantId, {
+            ...(parsed.data.enabled !== undefined ? { enabled: parsed.data.enabled } : {}),
+            ...(parsed.data.selectedLocationIds
+              ? { selectedLocationIds: parsed.data.selectedLocationIds }
+              : {}),
+          });
+          return ok(view);
+        } catch (error) {
+          return handleError(error);
+        }
+      }
+
+      if (method === "DELETE" && rawPath.endsWith("/google-business-profile")) {
+        try {
+          const view = await disconnectGoogleBusiness(auth.tenantId, environment);
+          return ok(view);
+        } catch (error) {
+          return handleError(error);
+        }
+      }
+    }
   }
 
   return null;
+}
+
+export async function handleGoogleBusinessOAuthCallbackRoute(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer,
+  environment: string
+): Promise<APIGatewayProxyResultV2 | null> {
+  const rawPath = event.rawPath ?? event.requestContext.http.path ?? "";
+  const method = event.requestContext.http.method;
+  if (method !== "GET" || !rawPath.includes("/public/integrations/google-business/oauth/callback")) {
+    return null;
+  }
+
+  const code = event.queryStringParameters?.code?.trim() ?? "";
+  const state = event.queryStringParameters?.state?.trim() ?? "";
+  const oauthError = event.queryStringParameters?.error?.trim() ?? "";
+
+  if (oauthError) {
+    const frontendUrl = (process.env.FRONTEND_URL ?? "http://localhost:3000").replace(/\/$/, "");
+    return redirect(
+      `${frontendUrl}/integrations/google-business?error=${encodeURIComponent(oauthError)}`
+    );
+  }
+
+  if (!code || !state) {
+    return badRequest("code and state are required");
+  }
+
+  const redirectUrl = await handleGoogleBusinessOAuthCallback(code, state, environment);
+  return redirect(redirectUrl);
 }

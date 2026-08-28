@@ -23,6 +23,7 @@ import {
   provisionMicrosoftSsoProvider,
   removeMicrosoftSsoProvider,
 } from "../cognito/entra-sso.service.js";
+import { getGoogleBusinessCatalogItem } from "../google-business/service.js";
 
 export interface MicrosoftSsoPublicView {
   id: "microsoft-sso";
@@ -47,10 +48,10 @@ export interface MicrosoftSsoPublicView {
 }
 
 export interface IntegrationCatalogItem {
-  id: "microsoft-sso";
+  id: "microsoft-sso" | "google-business-profile";
   configured: boolean;
   enabled: boolean;
-  status?: MicrosoftSsoConfig["status"];
+  status?: MicrosoftSsoConfig["status"] | "pending" | "active" | "error";
 }
 
 function normalizeDomains(domains: string[] | undefined): string[] {
@@ -116,7 +117,10 @@ function toPublicView(
 export async function getIntegrationCatalog(
   tenantId: string
 ): Promise<{ items: IntegrationCatalogItem[] }> {
-  const config = await getMicrosoftSsoConfig(tenantId);
+  const [config, googleBusiness] = await Promise.all([
+    getMicrosoftSsoConfig(tenantId),
+    getGoogleBusinessCatalogItem(tenantId),
+  ]);
   return {
     items: [
       {
@@ -125,6 +129,7 @@ export async function getIntegrationCatalog(
         enabled: Boolean(config?.enabled),
         ...(config?.status ? { status: config.status } : {}),
       },
+      googleBusiness,
     ],
   };
 }

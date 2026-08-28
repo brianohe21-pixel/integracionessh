@@ -378,6 +378,14 @@ output "mailrelay_webhook_function_arn" {
   value = aws_lambda_function.functions["mailrelay_webhook"].arn
 }
 
+output "google_business_invoke_arn" {
+  value = aws_lambda_function.functions["google_business"].invoke_arn
+}
+
+output "google_business_function_arn" {
+  value = aws_lambda_function.functions["google_business"].arn
+}
+
 output "lambda_log_group_ids" {
   value = {
     for k, _ in local.functions : k => "/aws/lambda/${var.project}-${var.environment}-${replace(k, "_", "-")}"
