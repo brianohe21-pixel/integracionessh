@@ -99,30 +99,30 @@ export function BotCard({ bot }: BotCardProps) {
   return (
     <div className="content-card content-card-interactive group flex flex-col overflow-hidden">
       <div className="card-header px-5 py-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="card-header-chip flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105">
-              <BotMessageSquare className="h-5 w-5" />
-            </div>
-            <div className="min-w-0">
-              <h3 className="truncate text-base font-semibold text-[var(--card-header-title)]">{bot.name}</h3>
-              {bot.responseMode === "webhook" ? (
-                <p className="mt-0.5 flex items-center gap-1 text-xs text-[var(--card-header-link)]">
-                  <Webhook className="h-3 w-3" />
-                  {t("bots.webhookOwn")}
-                </p>
-              ) : (
-                <p className="mt-0.5 text-xs text-[var(--card-header-subtitle)]">{getModelLabel(bot.model ?? "")}</p>
-              )}
-            </div>
+        <div className="flex items-start gap-3">
+          <div className="card-header-chip flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105">
+            <BotMessageSquare className="h-5 w-5" />
           </div>
-          <Badge variant={bot.status === "active" ? "success" : "default"} dot>
-            {bot.status === "active" ? t("common.active") : t("common.inactive")}
-          </Badge>
+          <div className="min-w-0">
+            <h3 className="truncate text-base font-semibold text-[var(--card-header-title)]">{bot.name}</h3>
+            {bot.responseMode === "webhook" ? (
+              <p className="mt-0.5 flex items-center gap-1 text-xs text-[var(--card-header-link)]">
+                <Webhook className="h-3 w-3" />
+                {t("bots.webhookOwn")}
+              </p>
+            ) : (
+              <p className="mt-0.5 text-xs text-[var(--card-header-subtitle)]">{getModelLabel(bot.model ?? "")}</p>
+            )}
+          </div>
         </div>
       </div>
 
       <div className="flex flex-1 flex-col card-body">
+        <div className="mb-4">
+          <Badge variant={bot.status === "active" ? "success" : "default"} dot>
+            {bot.status === "active" ? t("common.active") : t("common.inactive")}
+          </Badge>
+        </div>
         <p className="mb-4 line-clamp-2 text-sm leading-relaxed text-secondary">
           {bot.responseMode === "webhook" ? bot.webhookUrl : bot.systemPrompt}
         </p>
