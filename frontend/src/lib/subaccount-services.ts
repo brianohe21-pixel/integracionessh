@@ -41,6 +41,7 @@ export const SERVICE_LIMIT_KEYS: Record<SubaccountServiceId, readonly BagLimitKe
     "maxOrdersPerMonth",
   ],
   developer: ["apiRateLimitPerMinute", "apiRateLimitPerDay"],
+  integrations: [],
 };
 
 export const BAG_LIMIT_KEYS = Array.from(
@@ -85,7 +86,7 @@ export const SERVICE_CATEGORIES: Array<{
   {
     id: "integrations",
     labelKey: "nav.categoryIntegrations",
-    services: ["apps", "developer"],
+    services: ["apps", "developer", "integrations"],
   },
 ];
 
@@ -107,6 +108,8 @@ const SERVICE_PATHS: Array<{ prefix: string; service: SubaccountServiceId }> = [
   { prefix: "/metrics", service: "metrics" },
   { prefix: "/apps", service: "apps" },
   { prefix: "/developer", service: "developer" },
+  { prefix: "/integrations", service: "integrations" },
+  { prefix: "/reviews", service: "integrations" },
   { prefix: "/bots", service: "bots" },
 ];
 
@@ -140,6 +143,7 @@ export const SERVICE_NAV_KEYS: Record<SubaccountServiceId, string> = {
   metrics: "nav.metrics",
   apps: "nav.apps",
   developer: "nav.developer",
+  integrations: "nav.integrations",
 };
 
 export type ResellerBag = {

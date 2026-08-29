@@ -25,6 +25,7 @@ import {
   Mail,
   Zap,
   GitBranch,
+  Link2,
   LifeBuoy,
   Users,
   CreditCard,
@@ -39,6 +40,7 @@ import {
   Headphones,
   Building2,
   TrendingUp,
+  Star,
   Hash,
 } from "lucide-react";
 import { useAdminRole } from "@/hooks/useAdminRole";
@@ -97,6 +99,7 @@ const memberNavCategories: NavCategory[] = [
       },
       { href: "/contact-center", labelKey: "nav.contactCenter", icon: Headphones },
       { href: "/conversations", labelKey: "nav.conversations", icon: MessageSquare },
+      { href: "/reviews", labelKey: "nav.reviews", icon: Star },
       { href: "/supervisor", labelKey: "nav.supervisor", icon: LayoutGrid },
       { href: "/contacts", labelKey: "nav.contacts", icon: BookUser },
       { href: "/leads", labelKey: "nav.leads", icon: UserPlus },
@@ -135,6 +138,7 @@ const memberNavCategories: NavCategory[] = [
     labelKey: "nav.categoryIntegrations",
     icon: KeyRound,
     items: [
+      { href: "/integrations", labelKey: "nav.integrations", icon: Link2 },
       { href: "/apps", labelKey: "nav.apps", icon: LayoutGrid },
       { href: "/developer", labelKey: "nav.developer", icon: KeyRound },
     ],

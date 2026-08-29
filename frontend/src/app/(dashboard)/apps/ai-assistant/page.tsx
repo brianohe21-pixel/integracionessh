@@ -64,7 +64,7 @@ export default function AiAssistantAppsPage() {
               >
                 <span className="font-medium text-primary">{bot.botName}</span>
                 <Link
-                  href={`/apps/ai-assistant/${bot.botId}`}
+                  href={`/bots/${bot.botId}/edit?tab=aiAssistant`}
                   className="inline-flex items-center gap-1.5 rounded-lg border border-accent/30 px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent-muted"
                 >
                   <Settings2 className="h-4 w-4" />
@@ -117,7 +117,7 @@ export default function AiAssistantAppsPage() {
             </button>
             {enabled && (
               <Link
-                href={`/apps/ai-assistant/${botId}`}
+                href={`/bots/${botId}/edit?tab=aiAssistant`}
                 className="text-sm font-medium text-accent hover:underline"
               >
                 {t("aiAssistant.configure")}

@@ -85,6 +85,7 @@ const TestSendSchema = z.object({
   to: z.string().min(8).max(20),
   templateName: z.string().min(1).max(128).optional().default("hello_world"),
   language: z.string().min(2).max(16).optional().default("en_US"),
+  phoneNumberId: z.string().min(1).optional(),
 });
 
 function normalizeRecipientPhone(value: string): string {
@@ -449,7 +450,7 @@ async function handleTestSend(
     if (channel.status !== "active") {
       return badRequest("WhatsApp channel is not active");
     }
-    phoneNumberId = channel.phoneNumberId;
+    phoneNumberId = parsed.data.phoneNumberId?.trim() || channel.phoneNumberId;
     accessToken = await getWhatsAppAccessTokenForAccount(
       auth.tenantId,
       channel.accountId,
@@ -459,14 +460,14 @@ async function handleTestSend(
     const bot = await getBot(auth.tenantId, botId);
     const defaultChannel = await getDefaultWhatsAppChannel(auth.tenantId, botId);
     if (defaultChannel?.status === "active") {
-      phoneNumberId = defaultChannel.phoneNumberId;
+      phoneNumberId = parsed.data.phoneNumberId?.trim() || defaultChannel.phoneNumberId;
       accessToken = await getWhatsAppAccessTokenForAccount(
         auth.tenantId,
         defaultChannel.accountId,
         ENVIRONMENT
       );
     } else if (bot?.phoneNumberId?.trim()) {
-      phoneNumberId = bot.phoneNumberId.trim();
+      phoneNumberId = parsed.data.phoneNumberId?.trim() || bot.phoneNumberId.trim();
       accessToken = await getWhatsAppAccessToken(auth.tenantId, ENVIRONMENT);
     } else {
       return badRequest("No active WhatsApp number is connected to this bot");

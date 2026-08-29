@@ -22,7 +22,10 @@ import {
 import { signOutUser, ensureAuthSession } from "@/lib/auth-session";
 import { useAuthSession } from "@/hooks/useAuthSession";
 import { AuthDivider, GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+import { MicrosoftSignInButton } from "@/components/auth/MicrosoftSignInButton";
 import { validatePortalSession, getBrowserPortalHost, isRestrictedPortalHost } from "@/lib/host-portal";
+import { usePublicAuthMethods } from "@/hooks/useMicrosoftSso";
+import { isGoogleAuthConfigured } from "@/lib/amplify";
 import { getDemoCredentials, isDemoLoginEnabled } from "@/lib/demo-access";
 
 function isUserAlreadyAuthenticatedError(err: unknown): boolean {
@@ -68,6 +71,12 @@ export default function LoginPage() {
   const [sessionRedirecting, setSessionRedirecting] = useState(false);
   const demoLoginEnabled = isDemoLoginEnabled();
   const { isAuthenticated, loading: authLoading } = useAuthSession();
+  const portalHost = getBrowserPortalHost();
+  const { data: authMethods } = usePublicAuthMethods(portalHost);
+  const microsoftAuth = authMethods?.microsoft;
+  const showPasswordLogin = authMethods?.password !== false;
+  const showSocialLogin =
+    isGoogleAuthConfigured() || Boolean(microsoftAuth?.enabled && microsoftAuth.providerName);
 
   useEffect(() => {
     if (pendingPlan) storePendingBillingPlan(pendingPlan);
@@ -599,9 +608,16 @@ export default function LoginPage() {
     <div className="bg-surface-elevated rounded-2xl shadow-xl p-8 border border-subtle">
       <h2 className="text-xl font-semibold text-primary mb-6">{t("auth.signIn")}</h2>
 
+      {microsoftAuth?.enabled && microsoftAuth.providerName ? (
+        <MicrosoftSignInButton
+          providerName={microsoftAuth.providerName}
+          onError={setError}
+        />
+      ) : null}
       <GoogleSignInButton onError={setError} />
-      <AuthDivider />
+      {showSocialLogin ? <AuthDivider /> : null}
 
+      {showPasswordLogin ? (
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-secondary mb-1">
@@ -671,6 +687,7 @@ export default function LoginPage() {
           {loading ? t("auth.signingIn") : t("auth.signIn")}
         </button>
       </form>
+      ) : null}
 
       {demoLoginEnabled ? (
         <div className="mt-6 space-y-3">

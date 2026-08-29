@@ -76,3 +76,37 @@ export function useRegisterWhatsAppChannel(botId: string) {
     },
   });
 }
+
+export interface WhatsAppTestSendInput {
+  channelId?: string;
+  to: string;
+  templateName?: string;
+  language?: string;
+  phoneNumberId?: string;
+}
+
+export interface WhatsAppTestSendResponse {
+  messageId: string | null;
+  status: string;
+  to: string;
+  phoneNumberId: string;
+  templateName: string;
+  language: string;
+  curl: string;
+}
+
+export function useWhatsAppTestSend(botId: string) {
+  return useMutation({
+    mutationFn: (input: WhatsAppTestSendInput) => {
+      const path = input.channelId
+        ? `/bots/${encodeURIComponent(botId)}/whatsapp-channels/${encodeURIComponent(input.channelId)}/test-send`
+        : `/bots/${encodeURIComponent(botId)}/whatsapp-channels/test-send`;
+      return api.post<WhatsAppTestSendResponse>(path, {
+        to: input.to,
+        ...(input.templateName ? { templateName: input.templateName } : {}),
+        ...(input.language ? { language: input.language } : {}),
+        ...(input.phoneNumberId ? { phoneNumberId: input.phoneNumberId } : {}),
+      });
+    },
+  });
+}

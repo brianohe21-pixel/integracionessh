@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { ChevronLeft, MessageCircle, Sparkles } from "lucide-react";
+import { ChevronLeft, MessageCircle } from "lucide-react";
+import { AiAssistantSettings } from "@/components/ai-assistant/AiAssistantSettings";
 import { useBot } from "@/hooks/useBots";
 import { useWhatsAppChannels } from "@/hooks/useWhatsAppChannels";
 import { useAiAssistant } from "@/hooks/useAiAssistant";
@@ -86,36 +87,16 @@ export default function EditBotPage() {
 
         <div className="min-w-0">
           {bot && activeTab === "general" && (
-            <div className="space-y-4">
-              <div className="content-card p-4 sm:p-5">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-5 w-5 text-accent" />
-                    <div>
-                      <p className="text-sm font-medium text-primary">{t("aiAssistant.title")}</p>
-                      <p className="text-xs text-secondary">
-                        {aiActive ? t("aiAssistant.statusActive") : t("aiAssistant.statusInactive")}
-                      </p>
-                    </div>
-                  </div>
-                  <Link
-                    href={`/apps/ai-assistant/${bot.botId}`}
-                    className="text-sm font-medium text-accent hover:underline"
-                  >
-                    {t("aiAssistant.configure")}
-                  </Link>
-                </div>
+            <div className="content-card p-5 sm:p-6">
+              <div className="mb-6 flex items-center gap-2">
+                <MessageCircle className="h-5 w-5 text-accent" />
+                <h2 className="text-lg font-semibold text-primary">{t("bots.tabGeneral")}</h2>
               </div>
-
-              <div className="content-card p-5 sm:p-6">
-                <div className="mb-6 flex items-center gap-2">
-                  <MessageCircle className="h-5 w-5 text-accent" />
-                  <h2 className="text-lg font-semibold text-primary">{t("bots.tabGeneral")}</h2>
-                </div>
-                <BotForm bot={bot} wide />
-              </div>
+              <BotForm bot={bot} wide />
             </div>
           )}
+
+          {bot && activeTab === "aiAssistant" && <AiAssistantSettings bot={bot} />}
 
           {bot && activeTab === "whatsapp" && (
             <div className="space-y-4">

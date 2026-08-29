@@ -12,8 +12,10 @@ import {
   useWhatsAppChannels,
 } from "@/hooks/useWhatsAppChannels";
 import { useT } from "@/i18n/context";
+import { useDialog } from "@/components/ui/DialogProvider";
 import { EmbeddedSignupLauncher } from "@/components/whatsapp/EmbeddedSignupLauncher";
 import { BotWhatsAppCoexistenceStatus } from "@/components/bots/BotWhatsAppCoexistenceStatus";
+import { BotWhatsAppCloudApiTest } from "@/components/bots/BotWhatsAppCloudApiTest";
 import { Button } from "@/components/ui/Button";
 import { api } from "@/lib/api";
 import { isScaleOrResellerPlan } from "@/lib/normalize-plan";
@@ -21,6 +23,10 @@ import type { Bot, Tenant, WhatsAppChannel } from "@/types";
 
 interface BotWhatsAppConnectProps {
   bot: Bot;
+}
+
+function legacyDisplayNumber(bot: Bot): string {
+  return bot.whatsappPhone?.displayPhoneNumber?.trim() || bot.phoneNumberId?.trim() || "";
 }
 
 function channelDisplayNumber(channel: WhatsAppChannel): string {
@@ -38,6 +44,7 @@ function channelStatusLabel(
 
 export function BotWhatsAppConnect({ bot }: BotWhatsAppConnectProps) {
   const t = useT();
+  const { confirm } = useDialog();
   const queryClient = useQueryClient();
   const { data: tenant } = useQuery({
     queryKey: ["tenants", "me"],
@@ -156,9 +163,15 @@ export function BotWhatsAppConnect({ bot }: BotWhatsAppConnectProps) {
   }
 
   async function handleDelete(channel: WhatsAppChannel) {
-    if (!confirm(t("whatsapp.channels.deleteConfirm", { number: channelDisplayNumber(channel) }))) {
-      return;
-    }
+    const confirmed = await confirm({
+      title: t("whatsapp.channels.deleteConfirmTitle"),
+      description: t("whatsapp.channels.deleteConfirmDescription", {
+        number: channelDisplayNumber(channel),
+      }),
+      confirmLabel: t("whatsapp.channels.deleteConfirmAction"),
+      tone: "danger",
+    });
+    if (!confirmed) return;
     setError("");
     try {
       await deleteChannel.mutateAsync(channel.channelId);
@@ -470,9 +483,25 @@ export function BotWhatsAppConnect({ bot }: BotWhatsAppConnectProps) {
           ))}
         </div>
       ) : legacyConnected ? (
-        <div className="rounded-lg border border-default bg-surface-muted/40 p-4">
-          <p className="text-sm font-medium text-primary">{bot.whatsappPhone?.displayPhoneNumber || bot.phoneNumberId}</p>
-          <p className="mt-1 text-xs text-secondary">{t("whatsapp.channels.legacyHint")}</p>
+        <div className="rounded-lg border border-[var(--alert-warning-border)] bg-[var(--alert-warning-bg)] p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-primary">
+                {t("whatsapp.channels.legacyTitle")}
+              </p>
+              <p className="mt-1 text-sm font-medium text-primary">{legacyDisplayNumber(bot)}</p>
+              <p className="mt-2 text-sm text-secondary">
+                {t("whatsapp.channels.legacyHint", { number: legacyDisplayNumber(bot) })}
+              </p>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setShowAddPanel(true)}
+            >
+              {t("whatsapp.channels.legacyAction")}
+            </Button>
+          </div>
         </div>
       ) : (
         <p className="text-sm text-secondary">{t("whatsapp.channels.empty")}</p>
@@ -481,6 +510,10 @@ export function BotWhatsAppConnect({ bot }: BotWhatsAppConnectProps) {
       {showAddPanel && canAddChannel ? renderAddPanel() : null}
 
       {!hasChannels && !showAddPanel && !legacyConnected ? renderAddPanel() : null}
+
+      {hasChannels || legacyConnected ? (
+        <BotWhatsAppCloudApiTest bot={bot} channels={sortedChannels} />
+      ) : null}
 
       <BotWhatsAppCoexistenceStatus bot={bot} />
       <p className="text-xs text-secondary">{t("bots.sharedTokenNote")}</p>

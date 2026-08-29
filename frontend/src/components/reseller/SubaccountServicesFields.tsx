@@ -23,6 +23,7 @@ import {
   KeyRound,
   LayoutGrid,
   LayoutTemplate,
+  Link2,
   Mail,
   Megaphone,
   MessageSquare,
@@ -53,6 +54,7 @@ const SERVICE_ICONS: Record<SubaccountServiceId, ComponentType<{ className?: str
   metrics: BarChart3,
   apps: LayoutGrid,
   developer: KeyRound,
+  integrations: Link2,
 };
 
 const SUBACCOUNT_ORDER: SubaccountServiceId[] = SERVICE_CATEGORIES.flatMap(
