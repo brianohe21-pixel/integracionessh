@@ -154,11 +154,12 @@ export async function handleGoogleBusinessOAuthCallback(
         : Date.now() + 3_600_000,
     });
 
+    const googleAccountEmail = email ?? existing?.googleAccountEmail;
     const config: GoogleBusinessConfig = {
       tenantId,
       enabled: existing?.enabled ?? true,
       status: "active",
-      googleAccountEmail: email || existing?.googleAccountEmail,
+      ...(googleAccountEmail ? { googleAccountEmail } : {}),
       googleAccountId: primaryAccount.id,
       selectedLocationIds,
       locations,

@@ -218,16 +218,29 @@ function starRatingToNumber(rating?: string): number {
 function normalizeReview(raw: Record<string, unknown>): GoogleReview {
   const name = String(raw.name ?? "");
   const reviewId = name.split("/").pop() ?? name;
-  return {
+  const review: GoogleReview = {
     reviewId,
     name,
-    ...(raw.reviewer ? { reviewer: raw.reviewer as GoogleReview["reviewer"] } : {}),
-    ...(raw.starRating ? { starRating: String(raw.starRating) } : {}),
-    ...(raw.comment ? { comment: String(raw.comment) } : {}),
-    ...(raw.createTime ? { createTime: String(raw.createTime) } : {}),
-    ...(raw.updateTime ? { updateTime: String(raw.updateTime) } : {}),
-    ...(raw.reviewReply ? { reviewReply: raw.reviewReply as GoogleReview["reviewReply"] } : {}),
   };
+  if (raw.reviewer) {
+    review.reviewer = raw.reviewer as NonNullable<GoogleReview["reviewer"]>;
+  }
+  if (raw.starRating) {
+    review.starRating = String(raw.starRating);
+  }
+  if (raw.comment) {
+    review.comment = String(raw.comment);
+  }
+  if (raw.createTime) {
+    review.createTime = String(raw.createTime);
+  }
+  if (raw.updateTime) {
+    review.updateTime = String(raw.updateTime);
+  }
+  if (raw.reviewReply) {
+    review.reviewReply = raw.reviewReply as NonNullable<GoogleReview["reviewReply"]>;
+  }
+  return review;
 }
 
 export async function listGoogleReviews(
