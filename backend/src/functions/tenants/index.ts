@@ -74,7 +74,7 @@ import { addCustomDomainToCognitoClient } from "../../lib/cognito/custom-domain-
 import { handleProviderCredentialRoutes } from "./provider-credentials.routes.js";
 import { handleMemberRoutes } from "./members.routes.js";
 import { handleEmailSettingsRoutes } from "./email-settings.routes.js";
-import { handleGoogleBusinessOAuthCallbackRoute, handleIntegrationRoutes } from "./integrations.routes.js";
+import { handleGoogleBusinessOAuthCallbackRoute, handleGoogleCalendarOAuthCallbackRoute, handleIntegrationRoutes } from "./integrations.routes.js";
 import { getPublicAuthMethodsByHost } from "../../lib/integrations/microsoft-sso.service.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
@@ -479,6 +479,12 @@ export async function handler(
       ENVIRONMENT
     );
     if (googleOAuthCallbackResponse) return googleOAuthCallbackResponse;
+
+    const googleCalendarOAuthCallbackResponse = await handleGoogleCalendarOAuthCallbackRoute(
+      event,
+      ENVIRONMENT
+    );
+    if (googleCalendarOAuthCallbackResponse) return googleCalendarOAuthCallbackResponse;
 
     if (method === "GET" && rawPath.endsWith("/auth/portal-access")) {
       const host = normalizeDomain(event.queryStringParameters?.host ?? "");

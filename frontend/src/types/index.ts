@@ -94,6 +94,7 @@ export interface ResellerLimitsOverride {
   maxCalendarAppsPerTenant?: number;
   maxPaymentsAppsPerTenant?: number;
   maxCatalogAppsPerTenant?: number;
+  maxHostedFormsPerTenant?: number;
   maxProductsPerBot?: number;
   maxOrdersPerMonth?: number;
   canCustomizeBranding?: boolean;
@@ -1669,6 +1670,91 @@ export interface FlowEventSubmission {
   updatedAt: string;
 }
 
+export const HOSTED_FORM_FIELD_TYPES = [
+  "text",
+  "email",
+  "phone",
+  "textarea",
+  "number",
+  "select",
+  "checkbox",
+  "radio",
+  "date",
+  "hidden",
+] as const;
+
+export type HostedFormFieldType = (typeof HOSTED_FORM_FIELD_TYPES)[number];
+
+export interface HostedFormFieldOption {
+  value: string;
+  label: string;
+}
+
+export interface HostedFormField {
+  id: string;
+  type: HostedFormFieldType;
+  name: string;
+  label: string;
+  placeholder?: string;
+  helperText?: string;
+  required: boolean;
+  options?: HostedFormFieldOption[];
+  defaultValue?: string;
+}
+
+export interface HostedFormCrmMapping {
+  name?: string;
+  email?: string;
+  phone?: string;
+}
+
+export interface HostedForm {
+  formId: string;
+  tenantId: string;
+  botId?: string;
+  name: string;
+  description?: string;
+  published: boolean;
+  publicKey: string;
+  publicUrl?: string;
+  embedSnippet?: string;
+  fields: HostedFormField[];
+  submitLabel: string;
+  successTitle: string;
+  successMessage: string;
+  redirectUrl?: string;
+  flowId?: string;
+  crmMapping: HostedFormCrmMapping;
+  createLeadOnSubmit: boolean;
+  tags?: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HostedFormSubmission {
+  submissionId: string;
+  tenantId: string;
+  formId: string;
+  payload: Record<string, unknown>;
+  leadId?: string;
+  flowSubmissionId?: string;
+  createdAt: string;
+}
+
+export interface PublicHostedForm {
+  name: string;
+  description?: string;
+  fields: HostedFormField[];
+  submitLabel: string;
+  successTitle: string;
+  successMessage: string;
+  branding?: {
+    brandName?: string;
+    primaryColor?: string;
+    logoUrl?: string;
+  };
+}
+
 export interface TenantIntegration {
   integrationId: string;
   tenantId: string;
@@ -1755,6 +1841,10 @@ export type WeeklySchedule = Record<Weekday, TimeRange[]>;
 export type CalendarReminderChannel = "whatsapp_text" | "whatsapp_template";
 export type BookingReminderStatus = "scheduled" | "sent" | "skipped" | "cancelled";
 
+export type CalendarProviderType = "native" | "google";
+export type GoogleCalendarStatus = "pending" | "active" | "error";
+export type ExternalSyncStatus = "pending" | "synced" | "failed";
+
 export interface CalendarConfig {
   tenantId: string;
   botId: string;
@@ -1765,7 +1855,13 @@ export interface CalendarConfig {
   maxAdvanceDays: number;
   minNoticeHours: number;
   weeklySchedule: WeeklySchedule;
-  provider: "native";
+  provider: CalendarProviderType;
+  googleAccountEmail?: string;
+  googleCalendarId?: string;
+  googleCalendarName?: string;
+  googleStatus?: GoogleCalendarStatus;
+  googleConnectedAt?: string;
+  blockExternalEvents?: boolean;
   calendarPublicKey?: string;
   publicLinkEnabled?: boolean;
   reminderEnabled?: boolean;
@@ -1816,6 +1912,9 @@ export interface Booking {
   status: BookingStatus;
   source: "flow" | "openai" | "manual" | "public_link";
   notes?: string;
+  externalEventId?: string;
+  externalSyncStatus?: ExternalSyncStatus;
+  externalSyncedAt?: string;
   paymentId?: string;
   amountInCents?: number;
   paymentStatus?: BookingPaymentStatus;

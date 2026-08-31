@@ -108,6 +108,7 @@ export async function handler(
             tenantId: ctx.tenantId,
             botId: ctx.botId,
             maxDays: ctx.config.maxAdvanceDays,
+            environment: ENVIRONMENT,
           });
       return ok({ dates });
     }
@@ -122,6 +123,7 @@ export async function handler(
         tenantId: ctx.tenantId,
         botId: ctx.botId,
         isoDate: date,
+        environment: ENVIRONMENT,
       });
       return ok({ slots });
     }

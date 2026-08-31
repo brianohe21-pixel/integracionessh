@@ -1059,6 +1059,13 @@ locals {
       function_arn = var.tenants_function_arn
       protected    = false
     }
+    public_google_calendar_oauth_callback = {
+      route_key    = "GET /public/integrations/google-calendar/oauth/callback"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = false
+    }
     auth_portal_access = {
       route_key    = "GET /auth/portal-access"
       slug         = "tenants"
@@ -1628,6 +1635,48 @@ locals {
     }
     calendar_waitlist_convert = {
       route_key    = "POST /calendar/{botId}/waitlist/{waitlistId}/convert"
+      slug         = "calendar"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_google_status = {
+      route_key    = "GET /calendar/{botId}/google"
+      slug         = "calendar"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_google_oauth_start = {
+      route_key    = "GET /calendar/{botId}/google/oauth/start"
+      slug         = "calendar"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_google_calendars_refresh = {
+      route_key    = "POST /calendar/{botId}/google/calendars/refresh"
+      slug         = "calendar"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_google_patch = {
+      route_key    = "PATCH /calendar/{botId}/google"
+      slug         = "calendar"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_google_delete = {
+      route_key    = "DELETE /calendar/{botId}/google"
+      slug         = "calendar"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_booking_retry_sync = {
+      route_key    = "POST /calendar/{botId}/bookings/{bookingId}/retry-sync"
       slug         = "calendar"
       invoke_arn   = var.calendar_invoke_arn
       function_arn = var.calendar_function_arn

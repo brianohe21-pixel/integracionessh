@@ -225,6 +225,8 @@ locals {
   voicebot_session_function_name = "${var.project}-${var.environment}-voicebot-session"
   voicebot_session_function_arn  = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.voicebot_session_function_name}"
 
+  google_calendar_redirect_uri = trimspace(var.api_public_url) != "" ? "${trimsuffix(trimspace(var.api_public_url), "/")}/public/integrations/google-calendar/oauth/callback" : ""
+
   functions = {
     webhook = {
       handler     = "webhook/index.handler"
@@ -252,6 +254,9 @@ locals {
         INTEGRATION_SQS_QUEUE_URL = var.integration_sqs_queue_url
         MEDIA_BUCKET              = var.media_bucket_name
         WEBSOCKET_API_ENDPOINT    = local.websocket_management_endpoint
+        GOOGLE_CALENDAR_CLIENT_ID     = var.google_calendar_client_id
+        GOOGLE_CALENDAR_CLIENT_SECRET = var.google_calendar_client_secret
+        GOOGLE_CALENDAR_REDIRECT_URI  = local.google_calendar_redirect_uri
       }
     }
     tenants = {
@@ -275,6 +280,9 @@ locals {
         GOOGLE_BUSINESS_CLIENT_ID     = var.google_business_client_id
         GOOGLE_BUSINESS_CLIENT_SECRET = var.google_business_client_secret
         GOOGLE_BUSINESS_REDIRECT_URI  = trimspace(var.api_public_url) != "" ? "${trimsuffix(trimspace(var.api_public_url), "/")}/public/integrations/google-business/oauth/callback" : ""
+        GOOGLE_CALENDAR_CLIENT_ID     = var.google_calendar_client_id
+        GOOGLE_CALENDAR_CLIENT_SECRET = var.google_calendar_client_secret
+        GOOGLE_CALENDAR_REDIRECT_URI  = local.google_calendar_redirect_uri
       }
     }
     reseller = {
@@ -810,6 +818,9 @@ locals {
         TABLE_NAME     = var.dynamodb_table_name
         ENVIRONMENT    = var.environment
         SES_FROM_EMAIL = var.ses_from_email
+        GOOGLE_CALENDAR_CLIENT_ID     = var.google_calendar_client_id
+        GOOGLE_CALENDAR_CLIENT_SECRET = var.google_calendar_client_secret
+        GOOGLE_CALENDAR_REDIRECT_URI  = local.google_calendar_redirect_uri
       }
     }
     process_flow_event = {
@@ -861,6 +872,9 @@ locals {
         TELEPHONY_CDR_SQS_QUEUE_URL = var.telephony_cdr_sqs_queue_url
         MEDIA_BUCKET                = var.media_bucket_name
         API_PUBLIC_URL              = var.api_public_url
+        GOOGLE_CALENDAR_CLIENT_ID     = var.google_calendar_client_id
+        GOOGLE_CALENDAR_CLIENT_SECRET = var.google_calendar_client_secret
+        GOOGLE_CALENDAR_REDIRECT_URI  = local.google_calendar_redirect_uri
       }
     }
     process_telephony_cdr = {
@@ -887,6 +901,9 @@ locals {
         FRONTEND_URL              = var.frontend_url
         SCHEDULER_ROLE_ARN        = var.scheduler_role_arn
         CALENDAR_FUNCTION_ARN     = local.calendar_function_arn
+        GOOGLE_CALENDAR_CLIENT_ID     = var.google_calendar_client_id
+        GOOGLE_CALENDAR_CLIENT_SECRET = var.google_calendar_client_secret
+        GOOGLE_CALENDAR_REDIRECT_URI  = local.google_calendar_redirect_uri
       }
     }
     public_calendar = {
@@ -900,6 +917,9 @@ locals {
         INTEGRATION_SQS_QUEUE_URL = var.integration_sqs_queue_url
         FRONTEND_URL              = var.frontend_url
         MEDIA_BUCKET              = var.media_bucket_name
+        GOOGLE_CALENDAR_CLIENT_ID     = var.google_calendar_client_id
+        GOOGLE_CALENDAR_CLIENT_SECRET = var.google_calendar_client_secret
+        GOOGLE_CALENDAR_REDIRECT_URI  = local.google_calendar_redirect_uri
       }
     }
     payments = {
@@ -912,6 +932,9 @@ locals {
         ENVIRONMENT               = var.environment
         INTEGRATION_SQS_QUEUE_URL = var.integration_sqs_queue_url
         FRONTEND_URL              = var.frontend_url
+        GOOGLE_CALENDAR_CLIENT_ID     = var.google_calendar_client_id
+        GOOGLE_CALENDAR_CLIENT_SECRET = var.google_calendar_client_secret
+        GOOGLE_CALENDAR_REDIRECT_URI  = local.google_calendar_redirect_uri
       }
     }
     catalog = {

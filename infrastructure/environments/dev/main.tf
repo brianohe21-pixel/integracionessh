@@ -251,6 +251,8 @@ module "lambda" {
   api_public_url                = local.api_public_url
   google_business_client_id     = var.google_business_client_id
   google_business_client_secret = var.google_business_client_secret
+  google_calendar_client_id     = var.google_calendar_client_id
+  google_calendar_client_secret = var.google_calendar_client_secret
   tags                          = local.tags
 }
 

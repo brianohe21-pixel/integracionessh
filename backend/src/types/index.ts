@@ -2194,7 +2194,9 @@ export interface TimeRange {
 
 export type WeeklySchedule = Record<Weekday, TimeRange[]>;
 
-export type CalendarProviderType = "native";
+export type CalendarProviderType = "native" | "google";
+export type GoogleCalendarStatus = "pending" | "active" | "error";
+export type ExternalSyncStatus = "pending" | "synced" | "failed";
 
 export type CalendarReminderChannel = "whatsapp_text" | "whatsapp_template";
 export type BookingReminderStatus = "scheduled" | "sent" | "skipped" | "cancelled";
@@ -2210,6 +2212,12 @@ export interface CalendarConfig {
   minNoticeHours: number;
   weeklySchedule: WeeklySchedule;
   provider: CalendarProviderType;
+  googleAccountEmail?: string;
+  googleCalendarId?: string;
+  googleCalendarName?: string;
+  googleStatus?: GoogleCalendarStatus;
+  googleConnectedAt?: string;
+  blockExternalEvents?: boolean;
   calendarPublicKey?: string;
   publicLinkEnabled?: boolean;
   reminderEnabled?: boolean;
@@ -2262,6 +2270,8 @@ export interface Booking {
   source: BookingSource;
   notes?: string;
   externalEventId?: string;
+  externalSyncStatus?: ExternalSyncStatus;
+  externalSyncedAt?: string;
   paymentId?: string;
   amountInCents?: number;
   paymentStatus?: BookingPaymentStatus;

@@ -19,6 +19,7 @@ import {
   startGoogleBusinessOAuth,
   updateGoogleBusinessSettings,
 } from "../../lib/google-business/service.js";
+import { handleGoogleCalendarOAuthCallback } from "../../lib/google-calendar/service.js";
 import { badRequest, handleError, ok, parseJsonBody, redirect } from "../../lib/http.js";
 
 const SaveMicrosoftSsoSchema = z.object({
@@ -204,5 +205,34 @@ export async function handleGoogleBusinessOAuthCallbackRoute(
   }
 
   const redirectUrl = await handleGoogleBusinessOAuthCallback(code, state, environment);
+  return redirect(redirectUrl);
+}
+
+export async function handleGoogleCalendarOAuthCallbackRoute(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer,
+  environment: string
+): Promise<APIGatewayProxyResultV2 | null> {
+  const rawPath = event.rawPath ?? event.requestContext.http.path ?? "";
+  const method = event.requestContext.http.method;
+  if (method !== "GET" || !rawPath.includes("/public/integrations/google-calendar/oauth/callback")) {
+    return null;
+  }
+
+  const code = event.queryStringParameters?.code?.trim() ?? "";
+  const state = event.queryStringParameters?.state?.trim() ?? "";
+  const oauthError = event.queryStringParameters?.error?.trim() ?? "";
+
+  if (oauthError) {
+    const frontendUrl = (process.env.FRONTEND_URL ?? "http://localhost:3000").replace(/\/$/, "");
+    return redirect(
+      `${frontendUrl}/apps/calendar?error=${encodeURIComponent(oauthError)}`
+    );
+  }
+
+  if (!code || !state) {
+    return badRequest("code and state are required");
+  }
+
+  const redirectUrl = await handleGoogleCalendarOAuthCallback(code, state, environment);
   return redirect(redirectUrl);
 }

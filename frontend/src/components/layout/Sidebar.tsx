@@ -42,6 +42,7 @@ import {
   TrendingUp,
   Star,
   Hash,
+  ClipboardList,
 } from "lucide-react";
 import { useAdminRole } from "@/hooks/useAdminRole";
 import { useTenantRole } from "@/hooks/useTenantRole";
@@ -114,6 +115,7 @@ const memberNavCategories: NavCategory[] = [
     items: [
       { href: "/automations", labelKey: "nav.automations", icon: Zap },
       { href: "/flows", labelKey: "nav.flows", icon: GitBranch },
+      { href: "/forms", labelKey: "nav.forms", icon: ClipboardList },
     ],
   },
   {

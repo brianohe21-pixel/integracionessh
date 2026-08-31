@@ -6,6 +6,7 @@ import {
   getAvailableDates,
   getSlotsForDate,
   hasBookingOverlap,
+  hasExternalBlockOverlap,
   localDateTimeToUtc,
 } from "./slot-engine.js";
 
@@ -124,5 +125,41 @@ describe("hasBookingOverlap", () => {
     const probeEnd = new Date("2026-07-01T15:45:00.000Z");
     expect(hasBookingOverlap(bookings, probeStart, probeEnd, 15)).toBe(true);
     expect(hasBookingOverlap(bookings, probeStart, probeEnd, 0)).toBe(true);
+  });
+});
+
+describe("external busy blocks", () => {
+  it("excludes slots blocked by external Google events", () => {
+    const now = localDateTimeToUtc("2026-07-01", "08:00", "America/Bogota");
+    const slotStart = localDateTimeToUtc("2026-07-01", "10:00", "America/Bogota");
+    const slotEnd = new Date(slotStart.getTime() + 30 * 60 * 1000);
+    const slots = getSlotsForDate({
+      config: baseConfig,
+      bookings: [],
+      externalBlocks: [
+        {
+          startAt: slotStart.toISOString(),
+          endAt: slotEnd.toISOString(),
+        },
+      ],
+      isoDate: "2026-07-01",
+      now,
+    });
+    expect(slots.some((s) => s.startAt === slotStart.toISOString())).toBe(false);
+  });
+
+  it("detects overlap with external blocks and buffer", () => {
+    const start = new Date("2026-07-01T15:00:00.000Z");
+    const end = new Date("2026-07-01T15:30:00.000Z");
+    const probeStart = new Date("2026-07-01T15:15:00.000Z");
+    const probeEnd = new Date("2026-07-01T15:45:00.000Z");
+    expect(
+      hasExternalBlockOverlap(
+        [{ startAt: start.toISOString(), endAt: end.toISOString() }],
+        probeStart,
+        probeEnd,
+        15
+      )
+    ).toBe(true);
   });
 });
