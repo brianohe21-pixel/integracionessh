@@ -96,6 +96,7 @@ locals {
     public_calendar    = var.public_calendar_function_arn
     payments           = var.payments_function_arn
     catalog            = var.catalog_function_arn
+    hosted_forms       = var.hosted_forms_function_arn
     mailrelay          = var.mailrelay_function_arn
     mailrelay_webhook  = var.mailrelay_webhook_function_arn
     google_business    = var.google_business_function_arn
@@ -144,6 +145,7 @@ locals {
     public_calendar    = var.public_calendar_invoke_arn
     payments           = var.payments_invoke_arn
     catalog            = var.catalog_invoke_arn
+    hosted_forms       = var.hosted_forms_invoke_arn
     mailrelay          = var.mailrelay_invoke_arn
     mailrelay_webhook  = var.mailrelay_webhook_invoke_arn
     google_business    = var.google_business_invoke_arn
@@ -221,6 +223,22 @@ locals {
       invoke_arn   = var.catalog_invoke_arn
       function_arn = var.catalog_function_arn
       protected    = true
+    }
+    hosted_forms = {
+      path         = "/forms/{proxy+}"
+      slug         = "hosted_forms"
+      methods      = ["GET", "POST", "PUT", "DELETE"]
+      invoke_arn   = var.hosted_forms_invoke_arn
+      function_arn = var.hosted_forms_function_arn
+      protected    = true
+    }
+    public_hosted_forms = {
+      path         = "/public/forms/{proxy+}"
+      slug         = "hosted_forms"
+      methods      = ["GET", "POST"]
+      invoke_arn   = var.hosted_forms_invoke_arn
+      function_arn = var.hosted_forms_function_arn
+      protected    = false
     }
     metrics = {
       path         = "/metrics/{proxy+}"
@@ -1865,6 +1883,20 @@ locals {
       slug         = "flows"
       invoke_arn   = var.flows_invoke_arn
       function_arn = var.flows_function_arn
+      protected    = true
+    }
+    hosted_forms_list = {
+      route_key    = "GET /forms"
+      slug         = "hosted_forms"
+      invoke_arn   = var.hosted_forms_invoke_arn
+      function_arn = var.hosted_forms_function_arn
+      protected    = true
+    }
+    hosted_forms_create = {
+      route_key    = "POST /forms"
+      slug         = "hosted_forms"
+      invoke_arn   = var.hosted_forms_invoke_arn
+      function_arn = var.hosted_forms_function_arn
       protected    = true
     }
     flow_runs_get = {

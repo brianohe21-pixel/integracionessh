@@ -347,6 +347,8 @@ module "api_gateway" {
   payments_function_arn           = module.lambda.payments_function_arn
   catalog_invoke_arn              = module.lambda.catalog_invoke_arn
   catalog_function_arn            = module.lambda.catalog_function_arn
+  hosted_forms_invoke_arn         = module.lambda.hosted_forms_invoke_arn
+  hosted_forms_function_arn       = module.lambda.hosted_forms_function_arn
   mailrelay_invoke_arn            = module.lambda.mailrelay_invoke_arn
   mailrelay_function_arn          = module.lambda.mailrelay_function_arn
   mailrelay_webhook_invoke_arn    = module.lambda.mailrelay_webhook_invoke_arn

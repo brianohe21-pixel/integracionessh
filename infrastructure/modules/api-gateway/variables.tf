@@ -350,6 +350,14 @@ variable "catalog_function_arn" {
   type = string
 }
 
+variable "hosted_forms_invoke_arn" {
+  type = string
+}
+
+variable "hosted_forms_function_arn" {
+  type = string
+}
+
 variable "mailrelay_invoke_arn" {
   type = string
 }

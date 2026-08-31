@@ -927,6 +927,19 @@ locals {
         MEDIA_BUCKET              = var.media_bucket_name
       }
     }
+    hosted_forms = {
+      handler     = "hosted-forms/index.handler"
+      description = "Hosted form builder CRUD and public submissions"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME                = var.dynamodb_table_name
+        ENVIRONMENT               = var.environment
+        FLOW_EVENT_SQS_QUEUE_URL  = var.flow_event_sqs_queue_url
+        INTEGRATION_SQS_QUEUE_URL = var.integration_sqs_queue_url
+        FRONTEND_URL              = var.frontend_url
+      }
+    }
     mailrelay = {
       handler     = "mailrelay/index.handler"
       description = "Mailrelay integration configuration, synchronization, and campaigns API"

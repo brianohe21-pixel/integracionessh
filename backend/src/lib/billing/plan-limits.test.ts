@@ -61,4 +61,10 @@ describe("getEffectivePlanLimits", () => {
   it("allows unlimited WhatsApp channels for reseller", () => {
     expect(getEffectivePlanLimits(reseller()).maxWhatsAppChannelsPerBot).toBe(Number.MAX_SAFE_INTEGER);
   });
+
+  it("limits hosted forms by plan", () => {
+    expect(getEffectivePlanLimits(tenant("free")).maxHostedFormsPerTenant).toBe(1);
+    expect(getEffectivePlanLimits(tenant("starter")).maxHostedFormsPerTenant).toBe(3);
+    expect(getEffectivePlanLimits(tenant("pro")).maxHostedFormsPerTenant).toBe(10);
+  });
 });

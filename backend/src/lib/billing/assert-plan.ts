@@ -19,6 +19,7 @@ import {
   countProducts,
 } from "../catalog/catalog.service.js";
 import { countWhatsAppChannels } from "../dynamodb/whatsapp-channel.repository.js";
+import { countHostedForms } from "../dynamodb/hosted-form.repository.js";
 import { countActiveLiveKitCallsForTenant } from "../dynamodb/livekit-call.repository.js";
 import { getTenant } from "../dynamodb/tenant.repository.js";
 import type { Tenant, Channel } from "../../types/index.js";
@@ -405,6 +406,19 @@ export async function assertCanCreateOrder(tenant: Tenant): Promise<void> {
     throw new PlanLimitError(
       "PLAN_LIMIT_ORDERS",
       `Plan limit: maximum ${limits.maxOrdersPerMonth} orders per month`
+    );
+  }
+}
+
+export async function assertCanCreateHostedForm(tenant: Tenant): Promise<void> {
+  const limits = getEffectivePlanLimits(tenant);
+  if (isUnlimited(limits.maxHostedFormsPerTenant)) return;
+
+  const count = await countHostedForms(tenant.tenantId);
+  if (count >= limits.maxHostedFormsPerTenant) {
+    throw new PlanLimitError(
+      "PLAN_LIMIT_HOSTED_FORMS",
+      `Plan limit: maximum ${limits.maxHostedFormsPerTenant} hosted form(s)`
     );
   }
 }

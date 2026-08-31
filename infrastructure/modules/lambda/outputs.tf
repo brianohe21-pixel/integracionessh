@@ -362,6 +362,14 @@ output "catalog_function_arn" {
   value = try(aws_lambda_function.functions["catalog"].arn, null)
 }
 
+output "hosted_forms_invoke_arn" {
+  value = aws_lambda_function.functions["hosted_forms"].invoke_arn
+}
+
+output "hosted_forms_function_arn" {
+  value = aws_lambda_function.functions["hosted_forms"].arn
+}
+
 output "mailrelay_invoke_arn" {
   value = aws_lambda_function.functions["mailrelay"].invoke_arn
 }

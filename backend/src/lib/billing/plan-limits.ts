@@ -26,6 +26,7 @@ export interface PlanLimits {
   maxCalendarAppsPerTenant: number;
   maxPaymentsAppsPerTenant: number;
   maxCatalogAppsPerTenant: number;
+  maxHostedFormsPerTenant: number;
   maxProductsPerBot: number;
   maxOrdersPerMonth: number;
   canCustomizeBranding: boolean;
@@ -56,6 +57,7 @@ const LIMITS: Record<TenantPlan, PlanLimits> = {
     maxCalendarAppsPerTenant: 1,
     maxPaymentsAppsPerTenant: 1,
     maxCatalogAppsPerTenant: 1,
+    maxHostedFormsPerTenant: 1,
     maxProductsPerBot: 20,
     maxOrdersPerMonth: 50,
     canCustomizeBranding: false,
@@ -84,6 +86,7 @@ const LIMITS: Record<TenantPlan, PlanLimits> = {
     maxCalendarAppsPerTenant: 2,
     maxPaymentsAppsPerTenant: 2,
     maxCatalogAppsPerTenant: 2,
+    maxHostedFormsPerTenant: 3,
     maxProductsPerBot: 50,
     maxOrdersPerMonth: 500,
     canCustomizeBranding: false,
@@ -112,6 +115,7 @@ const LIMITS: Record<TenantPlan, PlanLimits> = {
     maxCalendarAppsPerTenant: 5,
     maxPaymentsAppsPerTenant: 5,
     maxCatalogAppsPerTenant: 5,
+    maxHostedFormsPerTenant: 10,
     maxProductsPerBot: 200,
     maxOrdersPerMonth: 2_000,
     canCustomizeBranding: true,
@@ -140,6 +144,7 @@ const LIMITS: Record<TenantPlan, PlanLimits> = {
     maxCalendarAppsPerTenant: 10,
     maxPaymentsAppsPerTenant: 10,
     maxCatalogAppsPerTenant: 10,
+    maxHostedFormsPerTenant: 50,
     maxProductsPerBot: 1_000,
     maxOrdersPerMonth: 10_000,
     canCustomizeBranding: true,
@@ -168,6 +173,7 @@ const LIMITS: Record<TenantPlan, PlanLimits> = {
     maxCalendarAppsPerTenant: Number.MAX_SAFE_INTEGER,
     maxPaymentsAppsPerTenant: Number.MAX_SAFE_INTEGER,
     maxCatalogAppsPerTenant: Number.MAX_SAFE_INTEGER,
+    maxHostedFormsPerTenant: Number.MAX_SAFE_INTEGER,
     maxProductsPerBot: Number.MAX_SAFE_INTEGER,
     maxOrdersPerMonth: Number.MAX_SAFE_INTEGER,
     canCustomizeBranding: true,
@@ -228,6 +234,7 @@ function emptyNumericLimits(canCustomizeBranding: boolean): PlanLimits {
     maxCalendarAppsPerTenant: 0,
     maxPaymentsAppsPerTenant: 0,
     maxCatalogAppsPerTenant: 0,
+    maxHostedFormsPerTenant: 0,
     maxProductsPerBot: 0,
     maxOrdersPerMonth: 0,
     canCustomizeBranding,

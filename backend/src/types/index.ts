@@ -69,6 +69,7 @@ export interface ResellerLimitsOverride {
   maxCalendarAppsPerTenant?: number;
   maxPaymentsAppsPerTenant?: number;
   maxCatalogAppsPerTenant?: number;
+  maxHostedFormsPerTenant?: number;
   maxProductsPerBot?: number;
   maxOrdersPerMonth?: number;
   canCustomizeBranding?: boolean;
@@ -2760,6 +2761,75 @@ export interface FlowEventSubmission {
   errorMessage?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export const HOSTED_FORM_FIELD_TYPES = [
+  "text",
+  "email",
+  "phone",
+  "textarea",
+  "number",
+  "select",
+  "checkbox",
+  "radio",
+  "date",
+  "hidden",
+] as const;
+
+export type HostedFormFieldType = (typeof HOSTED_FORM_FIELD_TYPES)[number];
+
+export interface HostedFormFieldOption {
+  value: string;
+  label: string;
+}
+
+export interface HostedFormField {
+  id: string;
+  type: HostedFormFieldType;
+  name: string;
+  label: string;
+  placeholder?: string;
+  helperText?: string;
+  required: boolean;
+  options?: HostedFormFieldOption[];
+  defaultValue?: string;
+}
+
+export interface HostedFormCrmMapping {
+  name?: string;
+  email?: string;
+  phone?: string;
+}
+
+export interface HostedForm {
+  formId: string;
+  tenantId: string;
+  botId?: string;
+  name: string;
+  description?: string;
+  published: boolean;
+  publicKey: string;
+  fields: HostedFormField[];
+  submitLabel: string;
+  successTitle: string;
+  successMessage: string;
+  redirectUrl?: string;
+  flowId?: string;
+  crmMapping: HostedFormCrmMapping;
+  createLeadOnSubmit: boolean;
+  tags?: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HostedFormSubmission {
+  submissionId: string;
+  tenantId: string;
+  formId: string;
+  payload: Record<string, unknown>;
+  leadId?: string;
+  flowSubmissionId?: string;
+  createdAt: string;
 }
 
 export type TenantEmailDomainStatus = "none" | "pending" | "verified" | "failed";

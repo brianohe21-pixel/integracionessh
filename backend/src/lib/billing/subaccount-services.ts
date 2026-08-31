@@ -30,7 +30,7 @@ export const SERVICE_LIMIT_KEYS: Record<SubaccountServiceId, readonly BagLimitKe
   sales: [],
   advisors: [],
   automations: ["maxAutomationsPerBot", "maxScheduledAutomations"],
-  flows: ["maxVisualFlowsPerBot", "maxFlowNodes", "maxActiveFlowRuns"],
+  flows: ["maxVisualFlowsPerBot", "maxFlowNodes", "maxActiveFlowRuns", "maxHostedFormsPerTenant"],
   templates: [],
   bulkSend: ["maxBulkRecipientsPerJob"],
   campaigns: ["maxActiveCampaigns", "maxMessagesPerMonth"],
