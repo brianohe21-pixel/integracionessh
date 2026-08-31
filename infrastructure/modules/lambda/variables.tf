@@ -391,6 +391,7 @@ variable "cloudwatch_log_group_import_exclude" {
     "mailrelay_webhook",
     "process_whatsapp_sync",
     "google_business",
+    "hosted_forms",
     "sales",
     "process_sequence",
   ]

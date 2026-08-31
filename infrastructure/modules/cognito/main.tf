@@ -171,6 +171,10 @@ resource "aws_cognito_identity_provider" "google" {
     name     = "name"
     username = "sub"
   }
+
+  lifecycle {
+    ignore_changes = [provider_details]
+  }
 }
 
 resource "aws_cognito_user_pool_client" "web" {
