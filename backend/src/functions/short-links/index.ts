@@ -147,6 +147,121 @@ async function handleRedirect(
   return redirect(destination);
 }
 
+function parseShortLinksPath(rawPath: string): string[] {
+  const normalized = rawPath.replace(/\/+$/, "");
+  if (!normalized.startsWith("/short-links/")) return [];
+  return normalized.slice("/short-links/".length).split("/").filter(Boolean);
+}
+
+async function handleCreateShortLink(
+  event: APIGatewayProxyEventV2,
+  tenantId: string
+): Promise<APIGatewayProxyResultV2> {
+  const body = JSON.parse(event.body ?? "{}");
+  const parsed = CreateShortLinkSchema.safeParse(body);
+  if (!parsed.success) return badRequest(parsed.error.message);
+
+  const now = new Date().toISOString();
+  const slug = await resolveUniqueSlug(parsed.data.slug);
+  const link: ShortLink = {
+    linkId: makeShortLinkId(),
+    tenantId,
+    name: parsed.data.name,
+    slug,
+    destinationUrl: parsed.data.destinationUrl,
+    enabled: parsed.data.enabled ?? true,
+    utm: normalizeUtm(parsed.data.utm as ShortLinkUtm | undefined),
+    clickCount: 0,
+    createdAt: now,
+    updatedAt: now,
+    ...(parsed.data.campaignId ? { campaignId: parsed.data.campaignId } : {}),
+    ...(parsed.data.expiresAt ? { expiresAt: parsed.data.expiresAt } : {}),
+  };
+
+  await createShortLink(link);
+  return created(withPublicMeta(link));
+}
+
+async function handleProtected(
+  event: APIGatewayProxyEventV2,
+  method: string,
+  tenantId: string
+): Promise<APIGatewayProxyResultV2> {
+  const rawPath = event.rawPath ?? event.requestContext.http.path;
+  const segments = parseShortLinksPath(rawPath);
+
+  if (method === "GET" && segments.length === 1 && segments[0] === "list") {
+    const links = await listShortLinks(tenantId);
+    return ok({ items: links.map(withPublicMeta) });
+  }
+
+  if (method === "POST" && segments.length === 1 && segments[0] === "create") {
+    return handleCreateShortLink(event, tenantId);
+  }
+
+  const linkId = segments[0];
+  if (!linkId || linkId === "list" || linkId === "create") {
+    return badRequest("Invalid short link path");
+  }
+
+  const isClicksRoute = segments.length === 2 && segments[1] === "clicks";
+
+  if (method === "GET" && isClicksRoute) {
+    const link = await getShortLink(tenantId, linkId);
+    if (!link) return notFound("Link not found");
+    const clicks = await listShortLinkClicks(tenantId, linkId);
+    return ok({ items: clicks });
+  }
+
+  if (method === "GET" && segments.length === 1) {
+    const link = await getShortLink(tenantId, linkId);
+    if (!link) return notFound("Link not found");
+    return ok(withPublicMeta(link));
+  }
+
+  if (method === "PATCH" && segments.length === 1) {
+    const body = JSON.parse(event.body ?? "{}");
+    const parsed = UpdateShortLinkSchema.safeParse(body);
+    if (!parsed.success) return badRequest(parsed.error.message);
+
+    const existing = await getShortLink(tenantId, linkId);
+    if (!existing) return notFound("Link not found");
+
+    if (parsed.data.slug && parsed.data.slug.toLowerCase() !== existing.slug.toLowerCase()) {
+      const taken = await getShortLinkBySlug(parsed.data.slug);
+      if (taken && taken.linkId !== linkId) {
+        const error = new Error("Slug already in use") as Error & { statusCode?: number };
+        error.statusCode = 409;
+        throw error;
+      }
+    }
+
+    const updated = await updateShortLink(tenantId, linkId, {
+      ...(parsed.data.name !== undefined ? { name: parsed.data.name } : {}),
+      ...(parsed.data.destinationUrl !== undefined
+        ? { destinationUrl: parsed.data.destinationUrl }
+        : {}),
+      ...(parsed.data.slug !== undefined ? { slug: parsed.data.slug } : {}),
+      ...(parsed.data.enabled !== undefined ? { enabled: parsed.data.enabled } : {}),
+      ...(parsed.data.campaignId !== undefined ? { campaignId: parsed.data.campaignId } : {}),
+      ...(parsed.data.expiresAt !== undefined ? { expiresAt: parsed.data.expiresAt } : {}),
+      ...(parsed.data.utm !== undefined
+        ? { utm: normalizeUtm(parsed.data.utm as ShortLinkUtm) }
+        : {}),
+    });
+    if (!updated) return notFound("Link not found");
+    return ok(withPublicMeta(updated));
+  }
+
+  if (method === "DELETE" && segments.length === 1) {
+    const deleted = await deleteShortLink(tenantId, linkId);
+    if (!deleted) return notFound("Link not found");
+    return noContent();
+  }
+
+  return badRequest("Method not allowed");
+}
+
 export async function handler(
   event: APIGatewayProxyEventV2
 ): Promise<APIGatewayProxyResultV2> {
@@ -165,96 +280,11 @@ export async function handler(
     const auth = await resolveRequestAuth(event as APIGatewayProxyEventV2WithJWTAuthorizer);
     assertMemberRole(auth);
 
-    const linkId = event.pathParameters?.linkId;
-    const isClicksRoute = rawPath.endsWith("/clicks");
-
-    if (method === "GET" && !linkId) {
-      const links = await listShortLinks(auth.tenantId);
-      return ok({ items: links.map(withPublicMeta) });
+    if (rawPath.startsWith("/short-links/")) {
+      return handleProtected(event, method, auth.tenantId);
     }
 
-    if (method === "POST" && !linkId) {
-      const body = JSON.parse(event.body ?? "{}");
-      const parsed = CreateShortLinkSchema.safeParse(body);
-      if (!parsed.success) return badRequest(parsed.error.message);
-
-      const now = new Date().toISOString();
-      const slug = await resolveUniqueSlug(parsed.data.slug);
-      const link: ShortLink = {
-        linkId: makeShortLinkId(),
-        tenantId: auth.tenantId,
-        name: parsed.data.name,
-        slug,
-        destinationUrl: parsed.data.destinationUrl,
-        enabled: parsed.data.enabled ?? true,
-        utm: normalizeUtm(parsed.data.utm as ShortLinkUtm | undefined),
-        clickCount: 0,
-        createdAt: now,
-        updatedAt: now,
-        ...(parsed.data.campaignId ? { campaignId: parsed.data.campaignId } : {}),
-        ...(parsed.data.expiresAt ? { expiresAt: parsed.data.expiresAt } : {}),
-      };
-
-      await createShortLink(link);
-      return created(withPublicMeta(link));
-    }
-
-    if (!linkId) return badRequest("linkId required");
-
-    if (method === "GET" && isClicksRoute) {
-      const link = await getShortLink(auth.tenantId, linkId);
-      if (!link) return notFound("Link not found");
-      const clicks = await listShortLinkClicks(auth.tenantId, linkId);
-      return ok({ items: clicks });
-    }
-
-    if (method === "GET") {
-      const link = await getShortLink(auth.tenantId, linkId);
-      if (!link) return notFound("Link not found");
-      return ok(withPublicMeta(link));
-    }
-
-    if (method === "PATCH") {
-      const body = JSON.parse(event.body ?? "{}");
-      const parsed = UpdateShortLinkSchema.safeParse(body);
-      if (!parsed.success) return badRequest(parsed.error.message);
-
-      const existing = await getShortLink(auth.tenantId, linkId);
-      if (!existing) return notFound("Link not found");
-
-      if (parsed.data.slug && parsed.data.slug.toLowerCase() !== existing.slug.toLowerCase()) {
-        const taken = await getShortLinkBySlug(parsed.data.slug);
-        if (taken && taken.linkId !== linkId) {
-          const error = new Error("Slug already in use") as Error & { statusCode?: number };
-          error.statusCode = 409;
-          throw error;
-        }
-      }
-
-      const updated = await updateShortLink(auth.tenantId, linkId, {
-        ...(parsed.data.name !== undefined ? { name: parsed.data.name } : {}),
-        ...(parsed.data.destinationUrl !== undefined
-          ? { destinationUrl: parsed.data.destinationUrl }
-          : {}),
-        ...(parsed.data.slug !== undefined ? { slug: parsed.data.slug } : {}),
-        ...(parsed.data.enabled !== undefined ? { enabled: parsed.data.enabled } : {}),
-        ...(parsed.data.campaignId !== undefined ? { campaignId: parsed.data.campaignId } : {}),
-        ...(parsed.data.expiresAt !== undefined ? { expiresAt: parsed.data.expiresAt } : {}),
-        ...(parsed.data.utm !== undefined
-          ? { utm: normalizeUtm(parsed.data.utm as ShortLinkUtm) }
-          : {}),
-      });
-      if (!updated) return notFound("Link not found");
-      return ok(withPublicMeta(updated));
-    }
-
-    if (method === "DELETE") {
-      const deleted = await deleteShortLink(auth.tenantId, linkId);
-      if (!deleted) return notFound("Link not found");
-      return noContent();
-    }
-
-    return badRequest("Method not allowed");
+    return notFound();
   } catch (error) {
     return handleError(error);
   }

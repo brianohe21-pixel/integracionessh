@@ -274,6 +274,14 @@ locals {
       function_arn = var.webchat_function_arn
       protected    = false
     }
+    short_links = {
+      path         = "/short-links/{proxy+}"
+      slug         = "short_links"
+      methods      = ["GET", "POST", "PATCH", "DELETE"]
+      invoke_arn   = var.short_links_invoke_arn
+      function_arn = var.short_links_function_arn
+      protected    = true
+    }
   }
 
   http_proxy_routes = {
@@ -1970,48 +1978,6 @@ locals {
       invoke_arn   = var.short_links_invoke_arn
       function_arn = var.short_links_function_arn
       protected    = false
-    }
-    short_links_list = {
-      route_key    = "GET /short-links"
-      slug         = "short_links"
-      invoke_arn   = var.short_links_invoke_arn
-      function_arn = var.short_links_function_arn
-      protected    = true
-    }
-    short_links_create = {
-      route_key    = "POST /short-links"
-      slug         = "short_links"
-      invoke_arn   = var.short_links_invoke_arn
-      function_arn = var.short_links_function_arn
-      protected    = true
-    }
-    short_links_get = {
-      route_key    = "GET /short-links/{linkId}"
-      slug         = "short_links"
-      invoke_arn   = var.short_links_invoke_arn
-      function_arn = var.short_links_function_arn
-      protected    = true
-    }
-    short_links_update = {
-      route_key    = "PATCH /short-links/{linkId}"
-      slug         = "short_links"
-      invoke_arn   = var.short_links_invoke_arn
-      function_arn = var.short_links_function_arn
-      protected    = true
-    }
-    short_links_delete = {
-      route_key    = "DELETE /short-links/{linkId}"
-      slug         = "short_links"
-      invoke_arn   = var.short_links_invoke_arn
-      function_arn = var.short_links_function_arn
-      protected    = true
-    }
-    short_links_clicks = {
-      route_key    = "GET /short-links/{linkId}/clicks"
-      slug         = "short_links"
-      invoke_arn   = var.short_links_invoke_arn
-      function_arn = var.short_links_function_arn
-      protected    = true
     }
     mailrelay_webhook = {
       route_key    = "POST /email-marketing/webhook"
