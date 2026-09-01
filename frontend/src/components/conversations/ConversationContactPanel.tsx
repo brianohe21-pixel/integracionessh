@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { History, Headphones, Lock, Mail, Phone, User } from "lucide-react";
 import { ChannelAvatar } from "@/components/conversations/conversation-ui";
-import { ConversationQuotationsPanel } from "@/components/conversations/ConversationQuotationsPanel";
 import { ConversationOpportunityPanel } from "@/components/conversations/ConversationOpportunityPanel";
+import { useOpportunityByConversation } from "@/hooks/useSalesOpportunity";
 import { WhatsAppRiskBadge } from "@/components/whatsapp/WhatsAppRiskBadge";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -18,7 +18,7 @@ import { useT } from "@/i18n/context";
 import { resolveWhatsAppRisk, type WhatsAppRiskResponse } from "@/hooks/useWhatsAppRisk";
 import type { Channel, Conversation, Lead } from "@/types";
 
-type PanelTab = "contact" | "details";
+type PanelTab = "contact" | "sales" | "details";
 
 type Props = {
   conversation: Conversation;
@@ -26,7 +26,7 @@ type Props = {
   onAssignAdvisor: () => void;
   channelLabel: (channel?: Channel) => string;
   locale: string;
-  onOpenOpportunity: (opportunityId: string) => void;
+  onCreateQuotation?: () => void;
   whatsappRisk?: WhatsAppRiskResponse;
 };
 
@@ -36,14 +36,19 @@ export function ConversationContactPanel({
   onAssignAdvisor,
   channelLabel,
   locale,
-  onOpenOpportunity,
+  onCreateQuotation,
   whatsappRisk,
 }: Props) {
   const t = useT();
   const { formatDate, formatRelativeTime } = useFormatters();
   const { data: advisors } = useAdvisors();
+  const { data: opportunity } = useOpportunityByConversation(conversation.conversationId);
   const clickToCall = useClickToCall();
-  const [panelTab, setPanelTab] = useState<PanelTab>("contact");
+  const [panelTab, setPanelTab] = useState<PanelTab>("sales");
+
+  useEffect(() => {
+    setPanelTab(opportunity ? "sales" : "contact");
+  }, [conversation.conversationId, opportunity?.opportunityId]);
   const assignedAdvisor = advisors?.find((a) => a.advisorId === conversation.assignedAdvisorId);
   const displayName =
     conversation.contactName ??
@@ -75,6 +80,7 @@ export function ConversationContactPanel({
       <div className="border-b border-default px-4 pt-4">
         <Tabs<PanelTab>
           items={[
+            { id: "sales", label: t("conversations.tabSales") },
             { id: "contact", label: t("conversations.tabContact") },
             { id: "details", label: t("conversations.tabDetails") },
           ]}
@@ -117,7 +123,14 @@ export function ConversationContactPanel({
       </div>
 
       <div className="sidebar-scroll flex-1 space-y-4 overflow-y-auto p-4">
-        {panelTab === "contact" ? (
+        {panelTab === "sales" ? (
+          <ConversationOpportunityPanel
+            conversation={conversation}
+            activeLead={activeLead}
+            locale={locale}
+            onCreateQuotation={onCreateQuotation}
+          />
+        ) : panelTab === "contact" ? (
           <>
             <ContentCardSection title={t("conversations.contactInfo")}>
               <div className="space-y-2.5 text-sm">
@@ -207,22 +220,6 @@ export function ConversationContactPanel({
                 </div>
               </div>
             </ContentCardSection>
-
-            <section className="content-card overflow-hidden">
-              <div className="card-body !py-4">
-              <ConversationQuotationsPanel
-                conversationId={conversation.conversationId}
-                botId={conversation.botId}
-              />
-              </div>
-            </section>
-
-            <ConversationOpportunityPanel
-              conversation={conversation}
-              activeLead={activeLead}
-              locale={locale}
-              onOpenOpportunity={onOpenOpportunity}
-            />
           </>
         )}
       </div>

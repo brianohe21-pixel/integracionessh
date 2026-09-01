@@ -151,7 +151,7 @@ const CreateOpportunitySchema = z.object({
   description: z.string().max(2000).optional(),
   tags: z.array(z.string().max(50)).max(20).optional(),
   leadId: z.string().uuid().optional(),
-  conversationId: z.string().uuid().optional(),
+  conversationId: z.string().min(1).max(256).optional(),
   botId: z.string().uuid().optional(),
   assignedAdvisorId: z.string().uuid().optional(),
   companyId: z.string().uuid().optional(),

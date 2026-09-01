@@ -545,6 +545,7 @@ export const en: Messages = {
     saveNote: "Save note",
     send: "Send",
     tabContact: "Contact",
+    tabSales: "Sales",
     tabDetails: "Details",
     language: "Language",
     history: "History",
@@ -1419,6 +1420,9 @@ export const en: Messages = {
     createFromConversation: "Create opportunity",
     noOpportunityForConversation: "No opportunity linked to this conversation.",
     closedLabel: "Closed",
+    workspaceStage: "Stage",
+    workspaceResponsible: "Owner",
+    workspaceBilling: "Billing",
   },
   advisors: {
     title: "Advisors",

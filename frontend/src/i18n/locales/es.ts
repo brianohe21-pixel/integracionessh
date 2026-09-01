@@ -545,6 +545,7 @@ export const es = {
     saveNote: "Guardar nota",
     send: "Enviar",
     tabContact: "Contacto",
+    tabSales: "Venta",
     tabDetails: "Detalles",
     language: "Idioma",
     history: "Historial",
@@ -1421,6 +1422,9 @@ export const es = {
     createFromConversation: "Crear oportunidad",
     noOpportunityForConversation: "No hay oportunidad vinculada a esta conversación.",
     closedLabel: "Cerrada",
+    workspaceStage: "Etapa",
+    workspaceResponsible: "Responsable",
+    workspaceBilling: "Cobro",
   },
   advisors: {
     title: "Asesores",
