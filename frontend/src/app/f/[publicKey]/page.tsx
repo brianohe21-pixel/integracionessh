@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useParams } from "next/navigation";
 import { useT } from "@/i18n/context";
 import { publicFormApi } from "@/lib/public-form-api";
+import { captureAttributionFromUrl, getStoredAttribution } from "@/lib/utm";
 import type { PublicHostedForm } from "@/types";
 import { FormRenderer } from "@/components/forms/FormRenderer";
 
@@ -37,6 +38,7 @@ export default function PublicFormPage() {
 
   useEffect(() => {
     setEmbed(new URLSearchParams(window.location.search).get("embed") === "1");
+    captureAttributionFromUrl();
   }, []);
 
   useEffect(() => {
@@ -60,7 +62,12 @@ export default function PublicFormPage() {
       for (const [key, value] of Object.entries(values)) {
         payload[key] = value;
       }
-      const result = await publicFormApi.submit(publicKey, payload);
+      const attribution = getStoredAttribution();
+      const result = await publicFormApi.submit(
+        publicKey,
+        payload,
+        attribution ?? undefined
+      );
       if (result.redirectUrl) {
         window.location.assign(result.redirectUrl);
         return;

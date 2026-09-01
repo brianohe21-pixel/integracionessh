@@ -126,6 +126,7 @@ const memberNavCategories: NavCategory[] = [
       { href: "/templates", labelKey: "nav.templates", icon: LayoutTemplate },
       { href: "/bulk-send", labelKey: "nav.bulkSend", icon: SendHorizonal },
       { href: "/campaigns", labelKey: "nav.campaigns", icon: Megaphone },
+      { href: "/short-links", labelKey: "nav.shortLinks", icon: Link2 },
       { href: "/email-marketing", labelKey: "nav.emailMarketing", icon: Mail },
     ],
   },

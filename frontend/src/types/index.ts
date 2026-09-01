@@ -1738,7 +1738,56 @@ export interface HostedFormSubmission {
   payload: Record<string, unknown>;
   leadId?: string;
   flowSubmissionId?: string;
+  attribution?: FormAttribution;
   createdAt: string;
+}
+
+export interface FormAttribution {
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  utmContent?: string;
+  utmTerm?: string;
+  referrer?: string;
+  landingPage?: string;
+  shortLinkId?: string;
+  shortLinkSlug?: string;
+}
+
+export interface ShortLinkUtm {
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  utmContent?: string;
+  utmTerm?: string;
+}
+
+export interface ShortLink {
+  linkId: string;
+  tenantId: string;
+  name: string;
+  slug: string;
+  destinationUrl: string;
+  enabled: boolean;
+  campaignId?: string;
+  utm: ShortLinkUtm;
+  clickCount: number;
+  lastClickedAt?: string;
+  expiresAt?: string;
+  shortUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ShortLinkClick {
+  clickId: string;
+  linkId: string;
+  tenantId: string;
+  slug: string;
+  clickedAt: string;
+  userAgent?: string;
+  referer?: string;
+  ip?: string;
 }
 
 export interface PublicHostedForm {

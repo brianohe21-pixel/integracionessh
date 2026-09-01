@@ -1,4 +1,4 @@
-import type { PublicHostedForm } from "@/types";
+import type { PublicHostedForm, FormAttribution } from "@/types";
 
 const BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
@@ -31,9 +31,19 @@ export const publicFormApi = {
   getForm: (publicKey: string) =>
     publicRequest<PublicHostedForm>(`/public/forms/${encodeURIComponent(publicKey)}`),
 
-  submit: (publicKey: string, payload: Record<string, unknown>) =>
+  submit: (
+    publicKey: string,
+    payload: Record<string, unknown>,
+    attribution?: FormAttribution
+  ) =>
     publicRequest<{ submissionId: string; redirectUrl?: string }>(
       `/public/forms/${encodeURIComponent(publicKey)}/submit`,
-      { method: "POST", body: JSON.stringify(payload) }
+      {
+        method: "POST",
+        body: JSON.stringify({
+          ...payload,
+          ...(attribution ? { _attribution: attribution } : {}),
+        }),
+      }
     ),
 };
