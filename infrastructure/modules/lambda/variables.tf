@@ -405,6 +405,7 @@ variable "cloudwatch_log_group_import_exclude" {
     "process_whatsapp_sync",
     "google_business",
     "hosted_forms",
+    "short_links",
     "sales",
     "process_sequence",
   ]
