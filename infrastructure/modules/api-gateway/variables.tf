@@ -358,6 +358,14 @@ variable "hosted_forms_function_arn" {
   type = string
 }
 
+variable "short_links_invoke_arn" {
+  type = string
+}
+
+variable "short_links_function_arn" {
+  type = string
+}
+
 variable "mailrelay_invoke_arn" {
   type = string
 }

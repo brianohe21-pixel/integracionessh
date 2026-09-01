@@ -37,7 +37,12 @@ import {
   toPublicForm,
   validateFormDefinition,
 } from "../../lib/hosted-forms/validate.js";
-import type { HostedForm, HostedFormCrmMapping, HostedFormField } from "../../types/index.js";
+import type {
+  FormAttribution,
+  HostedForm,
+  HostedFormCrmMapping,
+  HostedFormField,
+} from "../../types/index.js";
 import { checkAndIncrement } from "../../lib/rate-limiter/index.js";
 import {
   ok,
@@ -166,6 +171,36 @@ function normalizeFields(fields: HostedFormField[]): HostedFormField[] {
   });
 }
 
+function extractSubmitPayload(body: Record<string, unknown>): {
+  rawPayload: Record<string, unknown>;
+  attribution?: FormAttribution;
+} {
+  const attributionRaw = body._attribution;
+  const rawPayload = { ...body };
+  delete rawPayload._attribution;
+
+  if (!attributionRaw || typeof attributionRaw !== "object" || Array.isArray(attributionRaw)) {
+    return { rawPayload };
+  }
+
+  const source = attributionRaw as Record<string, unknown>;
+  const attribution: FormAttribution = {};
+  if (typeof source.utmSource === "string") attribution.utmSource = source.utmSource;
+  if (typeof source.utmMedium === "string") attribution.utmMedium = source.utmMedium;
+  if (typeof source.utmCampaign === "string") attribution.utmCampaign = source.utmCampaign;
+  if (typeof source.utmContent === "string") attribution.utmContent = source.utmContent;
+  if (typeof source.utmTerm === "string") attribution.utmTerm = source.utmTerm;
+  if (typeof source.referrer === "string") attribution.referrer = source.referrer;
+  if (typeof source.landingPage === "string") attribution.landingPage = source.landingPage;
+  if (typeof source.shortLinkId === "string") attribution.shortLinkId = source.shortLinkId;
+  if (typeof source.shortLinkSlug === "string") attribution.shortLinkSlug = source.shortLinkSlug;
+
+  return {
+    rawPayload,
+    ...(Object.keys(attribution).length ? { attribution } : {}),
+  };
+}
+
 function normalizeMapping(mapping?: {
   name?: string;
   email?: string;
@@ -237,14 +272,16 @@ async function handlePublic(
       };
     }
 
-    const body = parseJsonBody(event);
+    const body = parseJsonBody(event) as Record<string, unknown>;
     if (!body || typeof body !== "object" || Array.isArray(body)) {
       return badRequest("Payload must be a JSON object");
     }
 
+    const { rawPayload, attribution } = extractSubmitPayload(body);
     const submission = await submitHostedForm({
       form,
-      rawPayload: body as Record<string, unknown>,
+      rawPayload,
+      ...(attribution ? { attribution } : {}),
     });
     return created({
       submissionId: submission.submissionId,

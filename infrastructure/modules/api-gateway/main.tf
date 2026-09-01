@@ -97,6 +97,7 @@ locals {
     payments           = var.payments_function_arn
     catalog            = var.catalog_function_arn
     hosted_forms       = var.hosted_forms_function_arn
+    short_links        = var.short_links_function_arn
     mailrelay          = var.mailrelay_function_arn
     mailrelay_webhook  = var.mailrelay_webhook_function_arn
     google_business    = var.google_business_function_arn
@@ -146,6 +147,7 @@ locals {
     payments           = var.payments_invoke_arn
     catalog            = var.catalog_invoke_arn
     hosted_forms       = var.hosted_forms_invoke_arn
+    short_links        = var.short_links_invoke_arn
     mailrelay          = var.mailrelay_invoke_arn
     mailrelay_webhook  = var.mailrelay_webhook_invoke_arn
     google_business    = var.google_business_invoke_arn
@@ -1961,6 +1963,55 @@ locals {
       invoke_arn   = var.flow_hooks_invoke_arn
       function_arn = var.flow_hooks_function_arn
       protected    = false
+    }
+    short_link_redirect = {
+      route_key    = "GET /l/{slug}"
+      slug         = "short_links"
+      invoke_arn   = var.short_links_invoke_arn
+      function_arn = var.short_links_function_arn
+      protected    = false
+    }
+    short_links_list = {
+      route_key    = "GET /short-links"
+      slug         = "short_links"
+      invoke_arn   = var.short_links_invoke_arn
+      function_arn = var.short_links_function_arn
+      protected    = true
+    }
+    short_links_create = {
+      route_key    = "POST /short-links"
+      slug         = "short_links"
+      invoke_arn   = var.short_links_invoke_arn
+      function_arn = var.short_links_function_arn
+      protected    = true
+    }
+    short_links_get = {
+      route_key    = "GET /short-links/{linkId}"
+      slug         = "short_links"
+      invoke_arn   = var.short_links_invoke_arn
+      function_arn = var.short_links_function_arn
+      protected    = true
+    }
+    short_links_update = {
+      route_key    = "PATCH /short-links/{linkId}"
+      slug         = "short_links"
+      invoke_arn   = var.short_links_invoke_arn
+      function_arn = var.short_links_function_arn
+      protected    = true
+    }
+    short_links_delete = {
+      route_key    = "DELETE /short-links/{linkId}"
+      slug         = "short_links"
+      invoke_arn   = var.short_links_invoke_arn
+      function_arn = var.short_links_function_arn
+      protected    = true
+    }
+    short_links_clicks = {
+      route_key    = "GET /short-links/{linkId}/clicks"
+      slug         = "short_links"
+      invoke_arn   = var.short_links_invoke_arn
+      function_arn = var.short_links_function_arn
+      protected    = true
     }
     mailrelay_webhook = {
       route_key    = "POST /email-marketing/webhook"

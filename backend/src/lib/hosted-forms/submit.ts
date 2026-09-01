@@ -10,12 +10,13 @@ import { enqueueFlowEventSubmission, makeSubmissionId } from "../flow/enqueue-ev
 import { isWebhookReceivingFlow } from "../flow/webhook-flow.js";
 import { emitIntegrationEvent } from "../integrations/emit.js";
 import { createLeadFromFormData } from "../leads/form-lead.js";
-import type { HostedForm, HostedFormSubmission } from "../../types/index.js";
+import type { FormAttribution, HostedForm, HostedFormSubmission } from "../../types/index.js";
 import { mappedCrmValues, validateAndNormalizeSubmission } from "./validate.js";
 
 export async function submitHostedForm(params: {
   form: HostedForm;
   rawPayload: Record<string, unknown>;
+  attribution?: FormAttribution;
 }): Promise<HostedFormSubmission> {
   const payload = validateAndNormalizeSubmission(params.form.fields, params.rawPayload);
   const now = new Date().toISOString();
@@ -63,6 +64,7 @@ export async function submitHostedForm(params: {
     createdAt: now,
     ...(leadId ? { leadId } : {}),
     ...(flowSubmissionId ? { flowSubmissionId } : {}),
+    ...(params.attribution ? { attribution: params.attribution } : {}),
   });
 
   await emitIntegrationEvent(params.form.tenantId, "form.submitted", {
@@ -76,6 +78,7 @@ export async function submitHostedForm(params: {
       payload,
       ...(leadId ? { leadId } : {}),
       ...(flowSubmissionId ? { flowSubmissionId } : {}),
+      ...(params.attribution ? { attribution: params.attribution } : {}),
     },
   }).catch((err) => console.error("Failed to emit form.submitted:", err));
 

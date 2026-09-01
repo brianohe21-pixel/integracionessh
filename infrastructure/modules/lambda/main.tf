@@ -963,6 +963,18 @@ locals {
         FRONTEND_URL              = var.frontend_url
       }
     }
+    short_links = {
+      handler     = "short-links/index.handler"
+      description = "Short links CRUD and tracked redirects with UTM injection"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME     = var.dynamodb_table_name
+        ENVIRONMENT    = var.environment
+        API_PUBLIC_URL = var.api_public_url
+        FRONTEND_URL   = var.frontend_url
+      }
+    }
     mailrelay = {
       handler     = "mailrelay/index.handler"
       description = "Mailrelay integration configuration, synchronization, and campaigns API"

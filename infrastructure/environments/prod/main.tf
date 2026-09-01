@@ -351,6 +351,8 @@ module "api_gateway" {
   catalog_function_arn            = module.lambda.catalog_function_arn
   hosted_forms_invoke_arn         = module.lambda.hosted_forms_invoke_arn
   hosted_forms_function_arn       = module.lambda.hosted_forms_function_arn
+  short_links_invoke_arn          = module.lambda.short_links_invoke_arn
+  short_links_function_arn        = module.lambda.short_links_function_arn
   mailrelay_invoke_arn            = module.lambda.mailrelay_invoke_arn
   mailrelay_function_arn          = module.lambda.mailrelay_function_arn
   mailrelay_webhook_invoke_arn    = module.lambda.mailrelay_webhook_invoke_arn

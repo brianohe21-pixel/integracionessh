@@ -370,6 +370,14 @@ output "hosted_forms_function_arn" {
   value = aws_lambda_function.functions["hosted_forms"].arn
 }
 
+output "short_links_invoke_arn" {
+  value = aws_lambda_function.functions["short_links"].invoke_arn
+}
+
+output "short_links_function_arn" {
+  value = aws_lambda_function.functions["short_links"].arn
+}
+
 output "mailrelay_invoke_arn" {
   value = aws_lambda_function.functions["mailrelay"].invoke_arn
 }
