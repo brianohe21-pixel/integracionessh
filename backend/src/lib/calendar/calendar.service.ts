@@ -516,8 +516,8 @@ export async function createBookingForBot(params: {
     updatedAt: nowIso,
   };
 
-  if (!requiresPayment) {
-    booking.externalSyncStatus = config.provider === "google" ? "pending" : undefined;
+  if (!requiresPayment && config.provider === "google") {
+    booking.externalSyncStatus = "pending";
   }
 
   const created = await createBooking(booking);
@@ -527,6 +527,10 @@ export async function createBookingForBot(params: {
     const withReminder = await scheduleBookingReminder(synced, config);
     await emitBookingCreated(withReminder, params.tenantId);
     return { booking: withReminder };
+  }
+
+  if (!amountInCents) {
+    throw new Error("Payment amount is required");
   }
 
   const label = formatBookingConfirmation(created, config);

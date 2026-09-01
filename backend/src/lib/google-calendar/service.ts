@@ -148,9 +148,10 @@ export async function handleGoogleCalendarOAuthCallback(
         : Date.now() + 3_600_000,
     });
 
+    const googleAccountEmail = email ?? existing.googleAccountEmail;
     await upsertCalendarConfig({
       ...existing,
-      googleAccountEmail: email ?? existing.googleAccountEmail,
+      ...(googleAccountEmail ? { googleAccountEmail } : {}),
       googleStatus: "pending",
       googleConnectedAt: existing.googleConnectedAt ?? now,
       blockExternalEvents: existing.blockExternalEvents ?? true,
