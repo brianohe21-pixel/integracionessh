@@ -4,6 +4,8 @@ import {
   isPlatformEmailSender,
   resolvePlatformFromAddress,
 } from "./platform-template.js";
+import { loadPlatformInlineAttachments, usesInlinePlatformAssets } from "./platform-assets.js";
+import { buildRawEmailMessage } from "./platform-email-mime.js";
 
 const ses = new SESClient({});
 
@@ -68,29 +70,23 @@ export async function sendEmail(params: {
   if (params.inReplyTo) headers.push(`In-Reply-To: ${params.inReplyTo}`);
   if (params.references) headers.push(`References: ${params.references}`);
 
-  const boundary = `boundary-${Date.now()}`;
-  const rawMessage = [
-    `From: ${prepared.from}`,
-    `To: ${recipients.join(", ")}`,
-    `Subject: ${params.subject}`,
-    ...headers,
-    "MIME-Version: 1.0",
-    `Content-Type: multipart/alternative; boundary="${boundary}"`,
-    "",
-    `--${boundary}`,
-    "Content-Type: text/plain; charset=UTF-8",
-    "",
-    prepared.text,
-    ...(prepared.html
-      ? [
-          `--${boundary}`,
-          "Content-Type: text/html; charset=UTF-8",
-          "",
-          prepared.html,
-        ]
-      : []),
-    `--${boundary}--`,
-  ].join("\r\n");
+  const inlineAttachments =
+    !params.skipPlatformTemplate &&
+    isPlatformEmailSender(resolvedFrom) &&
+    usesInlinePlatformAssets() &&
+    prepared.html
+      ? loadPlatformInlineAttachments()
+      : undefined;
+
+  const rawMessage = buildRawEmailMessage({
+    from: prepared.from,
+    to: recipients,
+    subject: params.subject,
+    text: prepared.text,
+    ...(prepared.html !== undefined ? { html: prepared.html } : {}),
+    headers,
+    ...(inlineAttachments ? { inlineAttachments } : {}),
+  });
 
   const { SendRawEmailCommand } = await import("@aws-sdk/client-ses");
   const result = await ses.send(
@@ -142,6 +138,14 @@ export async function sendEmailWithAttachment(params: {
 
   const mixedBoundary = `mixed-${Date.now()}`;
   const altBoundary = `alt-${Date.now() + 1}`;
+  const inlineAttachments =
+    !params.skipPlatformTemplate &&
+    isPlatformEmailSender(resolvedFrom) &&
+    usesInlinePlatformAssets() &&
+    prepared.html
+      ? loadPlatformInlineAttachments()
+      : undefined;
+  const relatedBoundary = inlineAttachments ? `related-${Date.now() + 2}` : undefined;
   const parts: string[] = [
     `From: ${prepared.from}`,
     `To: ${recipients.join(", ")}`,
@@ -150,6 +154,13 @@ export async function sendEmailWithAttachment(params: {
     `Content-Type: multipart/mixed; boundary="${mixedBoundary}"`,
     "",
     `--${mixedBoundary}`,
+    ...(relatedBoundary
+      ? [
+          `Content-Type: multipart/related; boundary="${relatedBoundary}"`,
+          "",
+          `--${relatedBoundary}`,
+        ]
+      : []),
     `Content-Type: multipart/alternative; boundary="${altBoundary}"`,
     "",
     `--${altBoundary}`,
@@ -168,6 +179,21 @@ export async function sendEmailWithAttachment(params: {
   }
 
   parts.push(`--${altBoundary}--`);
+
+  if (inlineAttachments && relatedBoundary) {
+    for (const attachment of inlineAttachments) {
+      parts.push(
+        `--${relatedBoundary}`,
+        `Content-Type: ${attachment.contentType}; name="${attachment.filename}"`,
+        "Content-Transfer-Encoding: base64",
+        `Content-Disposition: inline; filename="${attachment.filename}"`,
+        `Content-ID: <${attachment.cid}>`,
+        "",
+        attachment.data.toString("base64")
+      );
+    }
+    parts.push(`--${relatedBoundary}--`);
+  }
 
   for (const attachment of params.attachments) {
     parts.push(

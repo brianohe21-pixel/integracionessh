@@ -3,7 +3,7 @@ import { platformLogoSrc, platformSocialIconSrc } from "./platform-assets.js";
 
 const DEFAULT_BRAND_NAME = "Integraciones SSH";
 const DEFAULT_PLATFORM_DOMAIN = "integracionessh.lat";
-const DEFAULT_PRIMARY_COLOR = "#128C7E";
+const DEFAULT_PRIMARY_COLOR = "#000000";
 const DEFAULT_FACEBOOK_URL = "https://www.facebook.com/integracionessh";
 const DEFAULT_INSTAGRAM_URL = "https://www.instagram.com/integracionessh";
 const DEFAULT_TIKTOK_URL = "https://www.tiktok.com/@integracionessh";
