@@ -1,1 +1,1 @@
-export { SoftphoneShell as SoftphoneBar } from "@/components/contact-center/SoftphoneShell";
+export { SoftphonePanels as SoftphoneBar } from "@/components/contact-center/SoftphoneShell";

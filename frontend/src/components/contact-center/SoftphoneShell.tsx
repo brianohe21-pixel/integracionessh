@@ -5,14 +5,13 @@ import { createPortal } from "react-dom";
 import {
   GripVertical,
   PanelRightClose,
-  Phone,
   Pin,
   PinOff,
   X,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useSoftphone } from "@/components/contact-center/SoftphoneProvider";
-import { SoftphoneUIProvider, useSoftphoneUI } from "@/components/contact-center/SoftphoneUIProvider";
+import { useSoftphoneUI } from "@/components/contact-center/SoftphoneUIProvider";
 import { SoftphonePanel } from "@/components/contact-center/SoftphonePanel";
 import { useAdminRole } from "@/hooks/useAdminRole";
 import { useT } from "@/i18n/context";
@@ -23,45 +22,6 @@ import { cn } from "@/lib/utils";
 
 const FLOATING_WIDTH = 320;
 const FLOATING_MIN_HEIGHT = 520;
-
-function statusDotClass(status: ReturnType<typeof useSoftphone>["status"]) {
-  if (status === "ready" || status === "active") return "bg-emerald-500";
-  if (status === "ringing" || status === "dialing") return "bg-amber-500 animate-pulse";
-  if (status === "connecting") return "bg-sky-500 animate-pulse";
-  if (status === "error") return "bg-red-500";
-  return "bg-muted";
-}
-
-function SoftphoneTrigger() {
-  const t = useT();
-  const phone = useSoftphone();
-  const { open, toggleOpen } = useSoftphoneUI();
-
-  return (
-    <button
-      type="button"
-      onClick={toggleOpen}
-      aria-label={t("contactCenter.openSoftphone")}
-      aria-expanded={open}
-      className={cn(
-        "relative inline-flex h-10 w-10 items-center justify-center rounded-xl border shadow-sm transition-colors",
-        phone.status === "ringing"
-          ? "border-amber-400 bg-amber-50 text-amber-700 dark:bg-amber-950/40"
-          : phone.status === "dialing"
-            ? "border-sky-400 bg-sky-50 text-sky-700 dark:bg-sky-950/40"
-            : "border-default bg-surface-elevated text-accent hover:bg-surface-muted"
-      )}
-    >
-      <Phone className="h-4 w-4" />
-      <span
-        className={cn(
-          "absolute right-1.5 top-1.5 h-2 w-2 rounded-full ring-2 ring-surface-elevated",
-          statusDotClass(phone.status)
-        )}
-      />
-    </button>
-  );
-}
 
 function SoftphonePanelChrome({
   children,
@@ -258,7 +218,7 @@ function SoftphoneFloatingPanel() {
   );
 }
 
-function SoftphoneShellInner() {
+function SoftphonePanelsInner() {
   const phone = useSoftphone();
   const { open, setOpen } = useSoftphoneUI();
   const { isAdmin } = useAdminRole();
@@ -278,21 +238,16 @@ function SoftphoneShellInner() {
 
   return (
     <>
-      <div className="pointer-events-none fixed right-4 top-4 z-50 max-lg:top-[3.25rem]">
-        <div className="pointer-events-auto">
-          <SoftphoneTrigger />
-        </div>
-      </div>
       <SoftphoneDockedDrawer />
       <SoftphoneFloatingPanel />
     </>
   );
 }
 
+export function SoftphonePanels() {
+  return <SoftphonePanelsInner />;
+}
+
 export function SoftphoneShell() {
-  return (
-    <SoftphoneUIProvider>
-      <SoftphoneShellInner />
-    </SoftphoneUIProvider>
-  );
+  return <SoftphonePanels />;
 }

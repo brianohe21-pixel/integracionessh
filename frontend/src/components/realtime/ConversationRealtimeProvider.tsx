@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import { fetchAuthSession } from "aws-amplify/auth";
 import type { Conversation, ConversationsListResponse, Message } from "@/types";
+import { emitRealtimeEvent } from "@/lib/notifications/bridge";
 import { parseRealtimeEvent } from "@/lib/realtime/events";
 import { RealtimeProvider } from "@/components/realtime/RealtimeProvider";
 
@@ -96,6 +97,8 @@ function ConversationRealtimeInner({ children }: { children: React.ReactNode }) 
         socket.onmessage = (event) => {
           const parsed = parseRealtimeEvent(String(event.data));
           if (!parsed) return;
+
+          emitRealtimeEvent(parsed);
 
           if (parsed.type === "message.created") {
             queryClient.setQueryData<Message[]>(

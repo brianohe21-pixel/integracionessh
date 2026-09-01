@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, CreditCard, FileText, ListTodo, TrendingUp, User } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { useDialog } from "@/components/ui/DialogProvider";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { ConversationQuotationsPanel } from "@/components/conversations/ConversationQuotationsPanel";
 import { OpportunityCloseDialog } from "@/components/sales/OpportunityCloseDialog";
@@ -53,6 +54,7 @@ export function ConversationOpportunityPanel({
   onCreateQuotation,
 }: Props) {
   const t = useT();
+  const { alert } = useDialog();
   const qc = useQueryClient();
   const { isMember } = useTenantRole();
   const { data: opportunity, isLoading } = useOpportunityByConversation(conversation.conversationId);
@@ -74,6 +76,20 @@ export function ConversationOpportunityPanel({
   } | null>(null);
   const [savingNotes, setSavingNotes] = useState(false);
   const [savingAdvisor, setSavingAdvisor] = useState(false);
+  const [inlineSuccess, setInlineSuccess] = useState(false);
+  const inlineSuccessTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function showInlineSuccess() {
+    setInlineSuccess(true);
+    if (inlineSuccessTimer.current) clearTimeout(inlineSuccessTimer.current);
+    inlineSuccessTimer.current = setTimeout(() => setInlineSuccess(false), 3000);
+  }
+
+  useEffect(() => {
+    return () => {
+      if (inlineSuccessTimer.current) clearTimeout(inlineSuccessTimer.current);
+    };
+  }, []);
 
   const opp = detail?.opportunity ?? opportunity;
   const stages: PipelineStage[] =
@@ -98,18 +114,32 @@ export function ConversationOpportunityPanel({
     t("sales.newOpportunity");
 
   async function handleCreate() {
-    await createOpportunity.mutateAsync({
-      title: defaultTitle,
-      conversationId: conversation.conversationId,
-      botId: conversation.botId,
-      ...(phone ? { phone } : {}),
-      ...(conversation.contactName ? { name: conversation.contactName } : {}),
-      ...(email ? { email } : {}),
-      ...(activeLead?.leadId ? { leadId: activeLead.leadId } : {}),
-      ...(conversation.assignedAdvisorId
-        ? { assignedAdvisorId: conversation.assignedAdvisorId }
-        : {}),
-    });
+    try {
+      await createOpportunity.mutateAsync({
+        title: defaultTitle,
+        conversationId: conversation.conversationId,
+        botId: conversation.botId,
+        ...(phone ? { phone } : {}),
+        ...(conversation.contactName ? { name: conversation.contactName } : {}),
+        ...(email ? { email } : {}),
+        ...(activeLead?.leadId ? { leadId: activeLead.leadId } : {}),
+        ...(conversation.assignedAdvisorId
+          ? { assignedAdvisorId: conversation.assignedAdvisorId }
+          : {}),
+      });
+      await invalidateOpportunity();
+      await alert({
+        title: t("sales.title"),
+        message: t("sales.opportunityCreated"),
+        tone: "success",
+      });
+    } catch (err) {
+      await alert({
+        title: t("sales.title"),
+        message: (err as Error).message || t("sales.saveError"),
+        tone: "danger",
+      });
+    }
   }
 
   async function invalidateOpportunity() {
@@ -128,6 +158,7 @@ export function ConversationOpportunityPanel({
     }
     await moveStage.mutateAsync({ opportunityId: opp.opportunityId, stageId });
     await invalidateOpportunity();
+    showInlineSuccess();
   }
 
   async function handleSaveNotes() {
@@ -139,6 +170,13 @@ export function ConversationOpportunityPanel({
         description,
       });
       await invalidateOpportunity();
+      showInlineSuccess();
+    } catch (err) {
+      await alert({
+        title: t("sales.title"),
+        message: (err as Error).message || t("sales.saveError"),
+        tone: "danger",
+      });
     } finally {
       setSavingNotes(false);
     }
@@ -153,6 +191,13 @@ export function ConversationOpportunityPanel({
         ...(assignedAdvisorId ? { assignedAdvisorId } : { assignedAdvisorId: "" }),
       });
       await invalidateOpportunity();
+      showInlineSuccess();
+    } catch (err) {
+      await alert({
+        title: t("sales.title"),
+        message: (err as Error).message || t("sales.saveError"),
+        tone: "danger",
+      });
     } finally {
       setSavingAdvisor(false);
     }
@@ -160,18 +205,46 @@ export function ConversationOpportunityPanel({
 
   async function handleCreateTask() {
     if (!opp || !taskTitle.trim()) return;
-    await createTask.mutateAsync({
-      title: taskTitle.trim(),
-      opportunityId: opp.opportunityId,
-      ...(assignedAdvisorId ? { advisorId: assignedAdvisorId } : {}),
-    });
-    setTaskTitle("");
-    await invalidateOpportunity();
+    try {
+      await createTask.mutateAsync({
+        title: taskTitle.trim(),
+        opportunityId: opp.opportunityId,
+        ...(assignedAdvisorId ? { advisorId: assignedAdvisorId } : {}),
+      });
+      setTaskTitle("");
+      await invalidateOpportunity();
+      showInlineSuccess();
+    } catch (err) {
+      await alert({
+        title: t("sales.title"),
+        message: (err as Error).message || t("sales.saveError"),
+        tone: "danger",
+      });
+    }
   }
 
   async function handleCompleteTask(taskId: string) {
-    await updateTask.mutateAsync({ taskId, status: "done" });
-    await invalidateOpportunity();
+    try {
+      await updateTask.mutateAsync({ taskId, status: "done" });
+      await invalidateOpportunity();
+      showInlineSuccess();
+    } catch (err) {
+      await alert({
+        title: t("sales.title"),
+        message: (err as Error).message || t("sales.saveError"),
+        tone: "danger",
+      });
+    }
+  }
+
+  function SuccessBanner() {
+    if (!inlineSuccess) return null;
+    return (
+      <div className="flex items-center gap-2 rounded-lg border border-[var(--alert-success-border)] bg-[var(--alert-success-bg)] px-3 py-2 text-sm text-success">
+        <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+        {t("sales.opportunitySaved")}
+      </div>
+    );
   }
 
   if (isLoading) {
@@ -205,6 +278,7 @@ export function ConversationOpportunityPanel({
 
   return (
     <div className="space-y-4">
+      <SuccessBanner />
       <section className="content-card p-4">
         <div className="mb-3 flex items-start justify-between gap-2">
           <div className="min-w-0">
@@ -430,6 +504,7 @@ export function ConversationOpportunityPanel({
             });
             setPendingClose(null);
             await invalidateOpportunity();
+            showInlineSuccess();
           }}
         />
       ) : null}
