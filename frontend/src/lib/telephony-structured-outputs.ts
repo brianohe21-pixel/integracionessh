@@ -4,8 +4,40 @@ import type {
 } from "@/types";
 
 export type StructuredOutputExtractionMethod = "ai" | "regex";
+export type StructuredOutputEditorMode = "form" | "json";
+
+export const STRUCTURED_OUTPUT_FIELD_TYPES: TelephonyStructuredOutputType[] = [
+  "string",
+  "number",
+  "integer",
+  "boolean",
+];
+
+export interface StructuredOutputFormField {
+  id: string;
+  name: string;
+  type: TelephonyStructuredOutputType;
+  description: string;
+  required: boolean;
+  pattern?: string;
+}
+
+export interface StructuredOutputFormState {
+  schemaName: string;
+  description: string;
+  fields: StructuredOutputFormField[];
+}
 
 const SCHEMA_NAME_PATTERN = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+
+function makeFieldId(): string {
+  return `field_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function normalizeFieldType(value: unknown): TelephonyStructuredOutputType {
+  if (value === "number" || value === "integer" || value === "boolean") return value;
+  return "string";
+}
 
 function humanizeFieldName(name: string): string {
   return name.replace(/_/g, " ").trim();
@@ -120,6 +152,226 @@ export function getStructuredOutputMethod(
   definition: TelephonyStructuredOutputDefinition | null | undefined
 ): StructuredOutputExtractionMethod {
   return definition?.type === "regex" ? "regex" : "ai";
+}
+
+export function createStructuredOutputField(
+  type: TelephonyStructuredOutputType = "string"
+): StructuredOutputFormField {
+  return {
+    id: makeFieldId(),
+    name: "",
+    type,
+    description: "",
+    required: false,
+    pattern: "",
+  };
+}
+
+export function definitionToFormState(
+  definition: TelephonyStructuredOutputDefinition | null | undefined,
+  method: StructuredOutputExtractionMethod
+): StructuredOutputFormState {
+  if (!definition?.name?.trim()) {
+    return { schemaName: "", description: "", fields: [] };
+  }
+
+  if (method === "regex" && definition.patterns) {
+    return {
+      schemaName: definition.name,
+      description: definition.description ?? "",
+      fields: Object.entries(definition.patterns).map(([name, pattern]) => ({
+        id: makeFieldId(),
+        name,
+        type: "string",
+        description: humanizeFieldName(name),
+        required: false,
+        pattern,
+      })),
+    };
+  }
+
+  const schema = definition.schema;
+  const properties = schema?.properties as
+    | Record<string, { type?: string; description?: string }>
+    | undefined;
+  const required = new Set(
+    Array.isArray(schema?.required) ? (schema.required as string[]) : []
+  );
+
+  if (!properties) {
+    return {
+      schemaName: definition.name,
+      description: definition.description ?? "",
+      fields: [],
+    };
+  }
+
+  return {
+    schemaName: definition.name,
+    description: definition.description ?? "",
+    fields: Object.entries(properties).map(([name, property]) => ({
+      id: makeFieldId(),
+      name,
+      type: normalizeFieldType(property.type),
+      description:
+        typeof property.description === "string"
+          ? property.description
+          : humanizeFieldName(name),
+      required: required.has(name),
+    })),
+  };
+}
+
+export function formStateToDefinition(
+  state: StructuredOutputFormState,
+  method: StructuredOutputExtractionMethod
+): TelephonyStructuredOutputDefinition | null {
+  const schemaName = state.schemaName.trim();
+  const hasContent =
+    schemaName.length > 0 ||
+    state.description.trim().length > 0 ||
+    state.fields.some((field) => field.name.trim().length > 0);
+
+  if (!hasContent) return null;
+  if (!schemaName) throw new Error("Schema name is required");
+
+  const description = state.description.trim() || undefined;
+
+  if (method === "regex") {
+    const patterns: Record<string, string> = {};
+    for (const field of state.fields) {
+      const name = field.name.trim();
+      const pattern = field.pattern?.trim();
+      if (name && pattern) patterns[name] = pattern;
+    }
+    return {
+      name: schemaName,
+      type: "regex",
+      ...(description ? { description } : {}),
+      patterns,
+    };
+  }
+
+  const properties: Record<string, unknown> = {};
+  const required: string[] = [];
+  for (const field of state.fields) {
+    const name = field.name.trim();
+    if (!name) continue;
+    properties[name] = {
+      type: field.type,
+      ...(field.description.trim() ? { description: field.description.trim() } : {}),
+    };
+    if (field.required) required.push(name);
+  }
+
+  return {
+    name: schemaName,
+    type: "ai",
+    ...(description ? { description } : {}),
+    schema: {
+      type: "object",
+      properties,
+      ...(required.length > 0 ? { required } : {}),
+      additionalProperties: false,
+    },
+  };
+}
+
+export function getStructuredOutputExampleFormState(
+  method: StructuredOutputExtractionMethod
+): StructuredOutputFormState {
+  if (method === "regex") {
+    return {
+      schemaName: "order_codes",
+      description: "",
+      fields: [
+        {
+          id: makeFieldId(),
+          name: "order_id",
+          type: "string",
+          description: "Order ID",
+          required: false,
+          pattern: "ORD-[A-Z0-9]+",
+        },
+        {
+          id: makeFieldId(),
+          name: "phone_number",
+          type: "string",
+          description: "Phone number",
+          required: false,
+          pattern: "\\+?\\d{10,15}",
+        },
+      ],
+    };
+  }
+
+  return {
+    schemaName: "customer_order",
+    description: "Extract order details from the call",
+    fields: [
+      {
+        id: makeFieldId(),
+        name: "customer_name",
+        type: "string",
+        description: "Customer full name",
+        required: true,
+      },
+      {
+        id: makeFieldId(),
+        name: "phone_number",
+        type: "string",
+        description: "Customer phone number",
+        required: false,
+      },
+      {
+        id: makeFieldId(),
+        name: "subtotal",
+        type: "number",
+        description: "Order subtotal",
+        required: false,
+      },
+      {
+        id: makeFieldId(),
+        name: "resolved",
+        type: "boolean",
+        description: "Whether the issue was resolved",
+        required: false,
+      },
+    ],
+  };
+}
+
+export function validateStructuredOutputForm(
+  state: StructuredOutputFormState,
+  method: StructuredOutputExtractionMethod,
+  t: (key: string) => string
+): string | null {
+  const schemaName = state.schemaName.trim();
+  const hasFields = state.fields.some((field) => field.name.trim().length > 0);
+
+  if (!schemaName && !hasFields) return null;
+  if (!schemaName) return t("voiceAgents.structuredOutputsSchemaNameRequired");
+  if (!SCHEMA_NAME_PATTERN.test(schemaName)) {
+    return t("voiceAgents.structuredOutputsSchemaInvalid");
+  }
+
+  const names = state.fields.map((field) => field.name.trim()).filter(Boolean);
+  if (names.length !== new Set(names).size) {
+    return t("voiceAgents.structuredOutputsDuplicateField");
+  }
+
+  for (const field of state.fields) {
+    const name = field.name.trim();
+    if (!name) continue;
+    if (!SCHEMA_NAME_PATTERN.test(name)) {
+      return t("voiceAgents.structuredOutputsFieldNameInvalid");
+    }
+    if (method === "regex" && !field.pattern?.trim()) {
+      return t("voiceAgents.structuredOutputsPatternRequired");
+    }
+  }
+
+  return null;
 }
 
 export function validateStructuredOutputJson(

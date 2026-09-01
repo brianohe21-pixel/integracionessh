@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { History, Headphones, Lock, Mail, Phone, User } from "lucide-react";
+import { Check, ChevronDown, History, Headphones, Lock, Mail, Phone, StickyNote, User } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { ChannelAvatar } from "@/components/conversations/conversation-ui";
 import { ConversationOpportunityPanel } from "@/components/conversations/ConversationOpportunityPanel";
 import { useOpportunityByConversation } from "@/hooks/useSalesOpportunity";
@@ -10,9 +11,11 @@ import { WhatsAppRiskBadge } from "@/components/whatsapp/WhatsAppRiskBadge";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { ContentCardSection } from "@/components/ui/Card";
+import { Textarea } from "@/components/ui/Input";
 import { Tabs } from "@/components/ui/Tabs";
 import { useAdvisors } from "@/hooks/useAdvisors";
 import { useClickToCall } from "@/hooks/useContactCenter";
+import { useUpdateConversationNote } from "@/hooks/useConversations";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useT } from "@/i18n/context";
 import { resolveWhatsAppRisk, type WhatsAppRiskResponse } from "@/hooks/useWhatsAppRisk";
@@ -44,11 +47,33 @@ export function ConversationContactPanel({
   const { data: advisors } = useAdvisors();
   const { data: opportunity } = useOpportunityByConversation(conversation.conversationId);
   const clickToCall = useClickToCall();
+  const updateNote = useUpdateConversationNote();
   const [panelTab, setPanelTab] = useState<PanelTab>("sales");
+  const [noteExpanded, setNoteExpanded] = useState(false);
+  const [internalNote, setInternalNote] = useState(conversation.internalNote ?? "");
 
   useEffect(() => {
     setPanelTab(opportunity ? "sales" : "contact");
+    setInternalNote(conversation.internalNote ?? "");
+    setNoteExpanded(!(conversation.internalNote ?? "").trim());
   }, [conversation.conversationId, opportunity?.opportunityId]);
+
+  useEffect(() => {
+    setInternalNote(conversation.internalNote ?? "");
+  }, [conversation.internalNote]);
+
+  const noteDirty = internalNote.trim() !== (conversation.internalNote ?? "").trim();
+
+  async function handleSaveNote() {
+    const nextNote = internalNote.trim();
+    if (!nextNote && !(conversation.internalNote ?? "").trim()) return;
+    await updateNote.mutateAsync({
+      conversationId: conversation.conversationId,
+      botId: conversation.botId,
+      internalNote: nextNote,
+    });
+    setInternalNote(nextNote);
+  }
   const assignedAdvisor = advisors?.find((a) => a.advisorId === conversation.assignedAdvisorId);
   const displayName =
     conversation.contactName ??
@@ -90,35 +115,41 @@ export function ConversationContactPanel({
         />
       </div>
 
-      <div className="conversations-sidebar-header border-b border-default p-5 text-center">
-        <div className="relative mx-auto mb-4">
-          <ChannelAvatar channel={conversation.channel} size="lg" className="mx-auto" />
-        </div>
-        <h2 className="text-lg font-semibold tracking-tight text-primary">{displayName}</h2>
-        {phone ? (
-          <p className="mt-1 text-sm text-secondary">{phone}</p>
-        ) : null}
-        {phone ? (
-          <Button
-            size="sm"
-            className="mt-2"
-            onClick={() =>
-              void clickToCall.mutateAsync({ botId: conversation.botId, to: phone })
-            }
-            disabled={clickToCall.isPending}
-          >
-            <Phone className="h-4 w-4" />
-            {t("contactCenter.clickToCall")}
-          </Button>
-        ) : null}
-        <p className="mt-0.5 text-xs text-muted">{channelLabel(conversation.channel)}</p>
-        <div className="mt-3 flex flex-wrap justify-center gap-1.5">
-          <Badge variant={isHuman ? "warning" : "default"}>
-            {isHuman ? t("conversations.modeHuman") : t("conversations.modeBot")}
-          </Badge>
-          {conversation.locale ? (
-            <Badge variant="default" className="uppercase">{conversation.locale}</Badge>
-          ) : null}
+      <div className="conversations-sidebar-header border-b border-default px-4 py-4">
+        <div className="flex items-start gap-3">
+          <ChannelAvatar channel={conversation.channel} size="md" className="shrink-0" />
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate text-base font-semibold tracking-tight text-primary">
+              {displayName}
+            </h2>
+            {phone ? <p className="mt-0.5 truncate text-sm text-secondary">{phone}</p> : null}
+            <p className="mt-0.5 text-xs text-muted">{channelLabel(conversation.channel)}</p>
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              <Badge variant={isHuman ? "warning" : "default"}>
+                {isHuman ? t("conversations.modeHuman") : t("conversations.modeBot")}
+              </Badge>
+              {conversation.locale ? (
+                <Badge variant="default" className="uppercase">
+                  {conversation.locale}
+                </Badge>
+              ) : null}
+              {isWhatsApp ? <WhatsAppRiskBadge risk={botWhatsAppRisk} iconOnly /> : null}
+            </div>
+            {phone ? (
+              <Button
+                size="sm"
+                variant="secondary"
+                className="mt-2.5"
+                onClick={() =>
+                  void clickToCall.mutateAsync({ botId: conversation.botId, to: phone })
+                }
+                disabled={clickToCall.isPending}
+              >
+                <Phone className="h-3.5 w-3.5" />
+                {t("contactCenter.clickToCall")}
+              </Button>
+            ) : null}
+          </div>
         </div>
       </div>
 
@@ -155,13 +186,6 @@ export function ConversationContactPanel({
               </div>
             </ContentCardSection>
 
-            {isWhatsApp ? (
-              <ContentCardSection title={t("whatsapp.riskTitle")}>
-                <WhatsAppRiskBadge risk={botWhatsAppRisk} />
-                <p className="mt-2 text-xs text-secondary">{t("whatsapp.riskHint")}</p>
-              </ContentCardSection>
-            ) : null}
-
             {activeLead ? (
               <ContentCardSection title={t("leads.leadStatus")}>
                 <Badge variant="accent">{t(`leads.status_${activeLead.status}`)}</Badge>
@@ -189,15 +213,85 @@ export function ConversationContactPanel({
               </ContentCardSection>
             ) : null}
 
-            {conversation.internalNote ? (
-              <section className="conversations-internal-note p-4">
-                <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide">
-                  <Lock className="h-3.5 w-3.5" />
-                  {t("conversations.internalNote")}
+            <section
+              className={cn(
+                "conversations-internal-note p-4",
+                noteExpanded ? "space-y-3" : "space-y-0"
+              )}
+            >
+              <button
+                type="button"
+                onClick={() => setNoteExpanded((open) => !open)}
+                aria-expanded={noteExpanded}
+                className="conversations-internal-note-header w-full text-left"
+              >
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <span className="conversations-internal-note-icon">
+                    <StickyNote className="h-3.5 w-3.5" />
+                  </span>
+                  <span className="block text-sm font-semibold tracking-tight">
+                    {t("conversations.internalNote")}
+                  </span>
                 </div>
-                <p className="text-sm leading-relaxed">{conversation.internalNote}</p>
-              </section>
-            ) : null}
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="conversations-internal-note-badge">
+                    <Lock className="h-3 w-3" />
+                    {noteDirty
+                      ? t("conversations.noteUnsaved")
+                      : internalNote.trim()
+                        ? t("conversations.noteSaved")
+                        : t("conversations.internalNoteEmpty")}
+                  </span>
+                  <ChevronDown
+                    className={cn(
+                      "h-4 w-4 opacity-70 transition-transform duration-200",
+                      noteExpanded && "rotate-180"
+                    )}
+                  />
+                </div>
+              </button>
+
+              {!noteExpanded && internalNote.trim() ? (
+                <p className="conversations-internal-note-preview mt-2.5">
+                  {internalNote.trim()}
+                </p>
+              ) : null}
+
+              {noteExpanded ? (
+                <>
+                  <Textarea
+                    id="contact-internal-note"
+                    value={internalNote}
+                    onChange={(e) => setInternalNote(e.target.value)}
+                    rows={3}
+                    placeholder={t("conversations.internalNotePlaceholder")}
+                    className="conversations-internal-note-textarea border-none bg-transparent shadow-none focus:ring-0"
+                  />
+                  <div className="conversations-internal-note-footer">
+                    <p className="flex items-center gap-1.5 text-[11px] opacity-70">
+                      <Lock className="h-3 w-3 shrink-0" />
+                      {t("conversations.internalNoteHint")}
+                    </p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleSaveNote}
+                      disabled={updateNote.isPending || !noteDirty}
+                      className="conversations-internal-note-save shrink-0"
+                    >
+                      {noteDirty || updateNote.isPending ? (
+                        t("conversations.saveNote")
+                      ) : (
+                        <>
+                          <Check className="h-3.5 w-3.5" />
+                          {t("conversations.noteSaved")}
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </>
+              ) : null}
+            </section>
           </>
         ) : (
           <>

@@ -7,12 +7,12 @@ import { api } from "@/lib/api";
 import {
   useConversations,
   useConversationMessages,
+  useCrossChannelHistory,
   useHandoffConversation,
   useBulkHandoffConversation,
   useClaimConversation,
   useReleaseConversation,
   useSendConversationMessage,
-  useUpdateConversationNote,
   useResolveConversation,
   useDeleteConversation,
 } from "@/hooks/useConversations";
@@ -33,7 +33,6 @@ import {
   Send,
   ChevronLeft,
   FileText,
-  Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { WorkflowStatus, Channel } from "@/types";
@@ -96,7 +95,6 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   const [advisorFilter, setAdvisorFilter] = useState("");
   const [assignmentFilter, setAssignmentFilter] = useState<"" | "unassigned">("");
   const [draft, setDraft] = useState("");
-  const [internalNote, setInternalNote] = useState("");
   const [showQuotationDrawer, setShowQuotationDrawer] = useState(false);
   const [showHandoffModal, setShowHandoffModal] = useState(false);
   const [showBulkReassignModal, setShowBulkReassignModal] = useState(false);
@@ -232,6 +230,11 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     selectedId ?? "",
     messagesEnabled
   );
+  const isHumanPreview = (selectedConversationPreview?.handoffMode ?? "bot") === "human";
+  const { data: crossChannelMessages, isLoading: loadingCrossChannel } = useCrossChannelHistory(
+    selectedId ?? "",
+    messagesEnabled && isHumanPreview
+  );
 
   useEffect(() => {
     const root = listScrollRef.current;
@@ -274,7 +277,6 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   });
   const release = useReleaseConversation();
   const sendMessage = useSendConversationMessage();
-  const updateNote = useUpdateConversationNote();
   const resolveConv = useResolveConversation();
   const deleteConv = useDeleteConversation();
 
@@ -430,15 +432,6 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     await release.mutateAsync({
       conversationId: selectedConversation.conversationId,
       botId: selectedConversation.botId,
-    });
-  }
-
-  async function handleSaveNote() {
-    if (!selectedConversation || !internalNote.trim()) return;
-    await updateNote.mutateAsync({
-      conversationId: selectedConversation.conversationId,
-      botId: selectedConversation.botId,
-      internalNote: internalNote.trim(),
     });
   }
 
@@ -634,7 +627,6 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                     });
                   }}
                   onResolve={() => {
-                    setInternalNote(selectedConversation.internalNote ?? "");
                     setShowResolveModal(true);
                   }}
                   onOpenWhatsApp={
@@ -661,7 +653,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
             ) : null}
 
             {isHuman && (selectedConversation.channel ?? "whatsapp") === "whatsapp" && (
-              <p className="border-b border-warning/30 bg-warning/10 px-6 py-2.5 text-xs font-medium text-primary">
+              <p className="border-b border-warning/30 bg-warning/10 px-4 py-2 text-xs leading-relaxed text-primary sm:px-6">
                 {t("conversations.personalChannelHint")}
               </p>
             )}
@@ -733,33 +725,6 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
               </>
             )}
 
-            {isHuman && selectedConversation.workflowStatus !== "resolved" && (
-              <div className="relative z-10 border-b border-default px-4 py-3 sm:px-6">
-                <div className="conversations-internal-note space-y-2 p-4">
-                  <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide">
-                    <Lock className="h-3.5 w-3.5" />
-                    {t("conversations.internalNote")}
-                  </label>
-                  <Textarea
-                    value={internalNote || selectedConversation.internalNote || ""}
-                    onChange={(e) => setInternalNote(e.target.value)}
-                    rows={2}
-                    className="border-none bg-transparent shadow-none focus:ring-0"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleSaveNote}
-                    disabled={updateNote.isPending}
-                    className="text-accent hover:text-accent-hover"
-                  >
-                    {t("conversations.saveNote")}
-                  </Button>
-                </div>
-              </div>
-            )}
-
             {needsClaim ? (
               <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-3 p-6">
                 <p className="max-w-sm text-center text-sm text-secondary">
@@ -772,9 +737,11 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
             ) : (
               <ConversationMessageThread
                 messages={messages}
+                crossChannelMessages={crossChannelMessages}
                 conversation={selectedConversation}
-                loading={loadingMessages}
+                loading={loadingMessages || loadingCrossChannel}
                 loadingLabel={t("common.loading")}
+                channelLabel={channelLabel}
               />
             )}
 

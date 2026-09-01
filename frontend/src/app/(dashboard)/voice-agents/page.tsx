@@ -15,6 +15,7 @@ import {
   isVoiceAgentDetailTab,
   type VoiceAgentDetailTabId,
 } from "@/lib/voice-agent-sections";
+import { cn } from "@/lib/utils";
 
 const PAGE_TABS = ["agents", "phoneNumbers"] as const;
 type PageTabId = (typeof PAGE_TABS)[number];
@@ -105,13 +106,17 @@ export default function VoiceAgentsPage() {
   const showWorkspace = pageTab === "agents" && Boolean(selectedAgentId);
 
   return (
-    <DashboardPage className="space-y-6">
-      <PageHeader title={t("voiceAgents.title")} subtitle={t("voiceAgents.subtitle")} />
+    <DashboardPage className="flex min-h-0 flex-1 flex-col gap-3">
+      <PageHeader
+        title={t("voiceAgents.title")}
+        subtitle={showWorkspace ? undefined : t("voiceAgents.subtitle")}
+        className="mb-0 shrink-0"
+      />
 
-      <div className="min-w-0">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {pageTab === "agents" ? (
-          <div className="grid min-h-[calc(100vh-12rem)] gap-4 xl:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
-            <div className={showWorkspace ? "hidden xl:block" : "block"}>
+          <div className="grid h-full min-h-[calc(100vh-9.5rem)] gap-3 xl:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]">
+            <div className={cn("min-h-0", showWorkspace ? "hidden xl:flex xl:flex-col" : "flex flex-col")}>
               <VoiceAgentListPanel
                 bots={filteredBots}
                 selectedBotId={selectedAgentId || null}
@@ -122,7 +127,7 @@ export default function VoiceAgentsPage() {
               />
             </div>
 
-            <div className={showWorkspace ? "block min-h-0" : "hidden xl:block"}>
+            <div className={cn("min-h-0", showWorkspace ? "flex flex-col" : "hidden xl:flex xl:flex-col")}>
               {showWorkspace ? (
                 <VoiceAgentWorkspace
                   botId={selectedAgentId}

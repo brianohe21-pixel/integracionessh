@@ -16,6 +16,8 @@ import {
 } from "../channels/keys.js";
 import { upsertFromConversation } from "./contact.repository.js";
 import { publishRealtimeEventSafe } from "../realtime/publish.js";
+import { resolveContactIdFromConversation } from "../contacts/resolve-contact-id.js";
+import { indexContactConversation } from "../contacts/contact-conversation-index.js";
 
 const REALTIME_CONVERSATION_FIELDS = new Set([
   "handoffMode",
@@ -174,6 +176,8 @@ export async function updateConversation(
       | "handoffReason"
       | "lastAdvisorNotifiedAt"
       | "contactName"
+      | "contactId"
+      | "phoneNumber"
       | "workflowStatus"
       | "resolvedAt"
       | "firstHumanResponseAt"
@@ -378,6 +382,37 @@ export async function setMetaFlowSession(
   });
 }
 
+export async function ensureConversationContactId(
+  conversation: Conversation
+): Promise<Conversation> {
+  const channel = conversation.channel ?? "whatsapp";
+  const contactId =
+    conversation.contactId ??
+    (await resolveContactIdFromConversation(conversation.tenantId, conversation));
+
+  let result = conversation;
+  if (!conversation.contactId) {
+    const updated = await updateConversation(
+      conversation.tenantId,
+      conversation.botId,
+      conversation.conversationId,
+      { contactId }
+    );
+    result = updated ?? { ...conversation, contactId };
+  }
+
+  await indexContactConversation({
+    tenantId: result.tenantId,
+    contactId,
+    botId: result.botId,
+    conversationId: result.conversationId,
+    channel,
+    lastMessageAt: result.lastMessageAt,
+  });
+
+  return result;
+}
+
 export async function getOrCreateConversation(
   tenantId: string,
   botId: string,
@@ -414,7 +449,7 @@ export async function getOrCreateConversation(
 
   if (existing.Items?.length) {
     const { PK, SK, GSI1PK, GSI1SK, ...rest } = existing.Items[0];
-    return normalizeConversation(rest as Conversation);
+    return ensureConversationContactId(normalizeConversation(rest as Conversation));
   }
 
   if (channel === "whatsapp") {
@@ -448,13 +483,15 @@ export async function getOrCreateConversation(
             },
           })
         );
-        return normalizeConversation({
-          ...conv,
-          channel: "whatsapp",
-          participantId,
-        });
+        return ensureConversationContactId(
+          normalizeConversation({
+            ...conv,
+            channel: "whatsapp",
+            participantId,
+          })
+        );
       }
-      return conv;
+      return ensureConversationContactId(conv);
     }
   }
 
@@ -513,7 +550,7 @@ export async function getOrCreateConversation(
     }).catch((err) => console.warn("Contact sync failed:", err));
   }
 
-  return normalizeConversation(conversation);
+  return ensureConversationContactId(normalizeConversation(conversation));
 }
 
 export async function addMessage(message: Message, botId: string): Promise<void> {

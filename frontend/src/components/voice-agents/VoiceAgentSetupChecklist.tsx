@@ -8,6 +8,7 @@ import { useT } from "@/i18n/context";
 
 interface VoiceAgentSetupChecklistProps {
   botId: string;
+  compact?: boolean;
 }
 
 function StepRow({
@@ -37,7 +38,7 @@ function StepRow({
   );
 }
 
-export function VoiceAgentSetupChecklist({ botId }: VoiceAgentSetupChecklistProps) {
+export function VoiceAgentSetupChecklist({ botId, compact = false }: VoiceAgentSetupChecklistProps) {
   const t = useT();
   const { data: credentials } = useProviderCredentials();
   const { data: numbersData } = useTelephonyNumbers();
@@ -59,16 +60,18 @@ export function VoiceAgentSetupChecklist({ botId }: VoiceAgentSetupChecklistProp
   if (allDone) return null;
 
   return (
-    <div className="content-card space-y-4 p-6">
+    <div className={compact ? "mb-4 space-y-3 rounded-xl border border-default bg-surface p-4" : "content-card mb-4 space-y-4 p-6"}>
       <div className="flex items-center gap-2">
         <Sparkles className="h-5 w-5 text-accent" />
         <div>
-          <h2 className="text-lg font-semibold text-primary">{t("voiceAgents.setupTitle")}</h2>
-          <p className="text-sm text-secondary">{t("voiceAgents.setupSubtitle")}</p>
+          <h2 className={compact ? "text-base font-semibold text-primary" : "text-lg font-semibold text-primary"}>
+            {t("voiceAgents.setupTitle")}
+          </h2>
+          {!compact ? <p className="text-sm text-secondary">{t("voiceAgents.setupSubtitle")}</p> : null}
         </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         <StepRow
           done={Boolean(telnyxConfigured)}
           title={t("voiceAgents.setupTelnyxTitle")}

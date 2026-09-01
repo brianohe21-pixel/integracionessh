@@ -20,10 +20,12 @@ import {
   buildVoiceAgentSummaryStats,
 } from "@/lib/voice-agent-summary-metrics";
 import type { CallRecord } from "@/types";
+import { cn } from "@/lib/utils";
 import { VoiceAgentSummaryCharts } from "./VoiceAgentSummaryCharts";
 
 interface VoiceAgentSummaryProps {
   botId: string;
+  compact?: boolean;
 }
 
 function formatUsd(value: number): string {
@@ -51,7 +53,7 @@ function SummarySkeleton() {
   );
 }
 
-export function VoiceAgentSummary({ botId }: VoiceAgentSummaryProps) {
+export function VoiceAgentSummary({ botId, compact = false }: VoiceAgentSummaryProps) {
   const t = useT();
   const locale = useLocale();
   const intlLocale = locale === "en" ? "en-US" : "es-ES";
@@ -107,9 +109,10 @@ export function VoiceAgentSummary({ botId }: VoiceAgentSummaryProps) {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <div className={compact ? "space-y-4" : "space-y-6"}>
+      <div className={cn("grid gap-3", compact ? "grid-cols-2 xl:grid-cols-4" : "grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4")}>
         <StatCard
+          compact={compact}
           label={t("voiceAgents.summaryCalls")}
           value={String(stats.totalCalls)}
           sub={t("voiceAgents.summaryCallsSub", {
@@ -119,12 +122,14 @@ export function VoiceAgentSummary({ botId }: VoiceAgentSummaryProps) {
           icon={<PhoneCall className="h-5 w-5 text-accent" />}
         />
         <StatCard
+          compact={compact}
           label={t("voiceAgents.summaryCompleted")}
           value={String(stats.completedCalls)}
           sub={t("voiceAgents.summaryCompletionRate", { rate: stats.completionRate })}
           icon={<CheckCircle2 className="h-5 w-5 text-success" />}
         />
         <StatCard
+          compact={compact}
           label={t("voiceAgents.summaryMinutes")}
           value={String(stats.totalMinutes)}
           sub={
@@ -137,6 +142,7 @@ export function VoiceAgentSummary({ botId }: VoiceAgentSummaryProps) {
           icon={<Clock3 className="h-5 w-5 text-info" />}
         />
         <StatCard
+          compact={compact}
           label={t("voiceAgents.summaryCost")}
           value={formatUsd(stats.totalCost)}
           sub={t("voiceAgents.summaryRecordings", { count: stats.recordingsReady })}

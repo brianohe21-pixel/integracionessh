@@ -277,9 +277,9 @@ export function ConversationOpportunityPanel({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <SuccessBanner />
-      <section className="content-card p-4">
+      <section className="content-card p-3.5">
         <div className="mb-3 flex items-start justify-between gap-2">
           <div className="min-w-0">
             <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted">
@@ -413,26 +413,36 @@ export function ConversationOpportunityPanel({
         </div>
       </section>
 
-      <section className="content-card p-4">
-        <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
-          {t("sales.notes")}
-        </h4>
+      <section className="content-card space-y-2.5 p-4">
+        <div className="flex items-center justify-between gap-2">
+          <h4 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted">
+            <FileText className="h-3.5 w-3.5" />
+            {t("sales.notes")}
+          </h4>
+          {description.trim() !== (opp.description ?? "").trim() ? (
+            <span className="text-[11px] font-medium text-warning">{t("conversations.noteUnsaved")}</span>
+          ) : null}
+        </div>
         <Textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={3}
+          placeholder={t("sales.notesPlaceholder")}
           className="min-h-[72px]"
         />
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          className="mt-2"
-          onClick={() => void handleSaveNotes()}
-          disabled={savingNotes}
-        >
-          {t("common.save")}
-        </Button>
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => void handleSaveNotes()}
+            disabled={
+              savingNotes || description.trim() === (opp.description ?? "").trim()
+            }
+          >
+            {t("common.save")}
+          </Button>
+        </div>
       </section>
 
       <section className="content-card p-4">

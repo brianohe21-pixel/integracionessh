@@ -815,6 +815,7 @@ export interface Conversation {
   whatsappDisplayNumber?: string;
   participantId?: string;
   phoneNumber: string;
+  contactId?: string;
   contactName?: string;
   status: "active" | "closed";
   handoffMode?: HandoffMode;
@@ -951,6 +952,17 @@ export interface Message {
   externalMessageId?: string;
   callId?: string;
   timestamp: string;
+}
+
+export interface CrossChannelMessage extends Message {
+  originConversationId: string;
+  originChannel: Channel;
+  isCurrentConversation: boolean;
+}
+
+export interface CrossChannelHistoryResponse {
+  contactId?: string;
+  messages: CrossChannelMessage[];
 }
 
 export interface Advisor {

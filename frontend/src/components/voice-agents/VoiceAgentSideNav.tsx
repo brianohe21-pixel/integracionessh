@@ -16,6 +16,7 @@ interface VoiceAgentSideNavProps<T extends string> {
   onSelect: (tab: T) => void;
   sectionTitle?: string;
   sectionSubtitle?: string;
+  variant?: "vertical" | "horizontal";
 }
 
 export function VoiceAgentSideNav<T extends string>({
@@ -24,10 +25,55 @@ export function VoiceAgentSideNav<T extends string>({
   onSelect,
   sectionTitle,
   sectionSubtitle,
+  variant = "vertical",
 }: VoiceAgentSideNavProps<T>) {
   const t = useT();
   const title = sectionTitle ?? t("voiceAgents.navSectionTitle");
   const subtitle = sectionSubtitle ?? t("voiceAgents.navSectionSubtitle");
+
+  if (variant === "horizontal") {
+    return (
+      <>
+        <div className="md:hidden">
+          <select
+            value={activeTab}
+            onChange={(event) => onSelect(event.target.value as T)}
+            className="w-full rounded-lg border border-default bg-surface-elevated px-3 py-2 text-sm text-primary focus:outline-none focus:ring-2 focus:ring-accent"
+          >
+            {tabs.map((tab) => (
+              <option key={tab.id} value={tab.id}>
+                {tab.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="hidden md:block overflow-x-auto">
+          <div className="flex min-w-max gap-1">
+            {tabs.map((tab) => {
+              const active = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => onSelect(tab.id)}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm transition-colors",
+                    active
+                      ? "bg-accent-muted font-semibold text-accent"
+                      : "text-secondary hover:bg-surface-muted hover:text-primary"
+                  )}
+                >
+                  <span className="shrink-0 [&>svg]:h-4 [&>svg]:w-4">{tab.icon}</span>
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <div className="space-y-5">

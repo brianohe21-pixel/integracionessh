@@ -15,6 +15,7 @@ import { VoiceAgentPhoneNumbersPanel } from "@/components/voice-agents/VoiceAgen
 import { VoiceAgentSideNav } from "@/components/voice-agents/VoiceAgentSideNav";
 import { useBot } from "@/hooks/useBots";
 import { useT } from "@/i18n/context";
+import { cn } from "@/lib/utils";
 import type { VoiceAgentDetailTabId } from "@/lib/voice-agent-sections";
 import { useVoiceAgentDetailTabs } from "@/lib/voice-agent-sections";
 import type { Bot } from "@/types";
@@ -39,52 +40,63 @@ export function VoiceAgentWorkspace({
   const { data: bot, isLoading } = useBot(botId);
 
   if (isLoading) {
-    return <div className="h-56 animate-pulse rounded-xl bg-surface-muted" />;
+    return <div className="h-full min-h-[20rem] animate-pulse rounded-xl bg-surface-muted" />;
   }
 
   if (!bot) {
     return <p className="text-sm text-secondary">{t("bots.loadError")}</p>;
   }
 
+  const active = Boolean(bot.telephonyEnabled);
+
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4">
-      <div className="content-card overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-default px-4 py-3">
-          <div className="flex min-w-0 items-center gap-2">
-            {onBack ? (
-              <button
-                type="button"
-                onClick={onBack}
-                className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-sm text-secondary hover:bg-surface-muted hover:text-primary lg:hidden"
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="content-card flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-default px-3 py-2.5 sm:px-4">
+          {onBack ? (
+            <button
+              type="button"
+              onClick={onBack}
+              className="inline-flex items-center gap-1 rounded-lg p-1.5 text-secondary hover:bg-surface-muted hover:text-primary xl:hidden"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              <span className="text-sm">{t("voiceAgents.backToList")}</span>
+            </button>
+          ) : null}
+
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="truncate text-sm font-semibold text-primary sm:text-base">{bot.name}</h2>
+              <span
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase",
+                  active ? "bg-emerald-500/15 text-emerald-700" : "bg-surface-muted text-secondary"
+                )}
               >
-                <ChevronLeft className="h-4 w-4" />
-                {t("voiceAgents.backToList")}
-              </button>
-            ) : null}
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-primary">{bot.name}</p>
-              <p className="truncate text-xs text-secondary">{t("voiceAgents.manageSubtitle")}</p>
+                {active ? t("common.active") : t("common.inactive")}
+              </span>
+              {bot.telephonyPhoneNumber ? (
+                <span className="truncate text-xs text-secondary">{bot.telephonyPhoneNumber}</span>
+              ) : null}
             </div>
           </div>
-          <div className="lg:hidden">
-            <VoiceAgentBotIdCopy botId={botId} compact />
-          </div>
+
+          <VoiceAgentBotIdCopy botId={botId} compact />
         </div>
-      </div>
 
-      <VoiceAgentSetupChecklist botId={botId} />
+        <div className="shrink-0 border-b border-default px-3 py-2 sm:px-4">
+          <VoiceAgentSideNav
+            tabs={tabs}
+            activeTab={section}
+            onSelect={onSectionChange}
+            variant="horizontal"
+          />
+        </div>
 
-      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[15rem_minmax(0,1fr)]">
-        <VoiceAgentSideNav
-          tabs={tabs}
-          activeTab={section}
-          onSelect={onSectionChange}
-          sectionTitle={bot.name}
-          sectionSubtitle={t("voiceAgents.workspaceNavSubtitle")}
-        />
+        <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4">
+          <VoiceAgentSetupChecklist botId={botId} compact />
 
-        <div className="min-h-0 min-w-0 overflow-y-auto pb-6">
-          {section === "overview" ? <VoiceAgentSummary botId={botId} /> : null}
+          {section === "overview" ? <VoiceAgentSummary botId={botId} compact /> : null}
           {section === "flow" ? <VoiceAgentFlowPanel botId={botId} /> : null}
           {section === "config" ? <VoiceAgentSettings botId={botId} /> : null}
           {section === "numbers" ? (

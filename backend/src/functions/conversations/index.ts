@@ -1,12 +1,14 @@
 import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
 import { z } from "zod";
 import { randomUUID } from "crypto";
+import { getCrossChannelHistory, getContactTimelineMessages } from "../../lib/contacts/contact-timeline.js";
 import {
   listConversations,
   getConversationMessages,
   findConversationById,
   addMessage,
   deleteConversation,
+  ensureConversationContactId,
 } from "../../lib/dynamodb/conversation.repository.js";
 import { getAdvisorByCognitoUserId } from "../../lib/dynamodb/advisor.repository.js";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
@@ -290,6 +292,27 @@ export async function handler(
 
     const subPath = parseSubPath(rawPath, conversationId);
 
+    if (method === "GET" && subPath === "cross-channel-history") {
+      const conversation = await findConversationById(auth.tenantId, conversationId);
+      if (!conversation) return notFound("Conversation not found");
+
+      await assertCanAccessConversation(auth, conversation);
+
+      const limit = params.limit ? parseInt(params.limit, 10) : 50;
+      if (isNaN(limit) || limit < 1 || limit > 100) {
+        return badRequest("Invalid limit parameter (1-100)");
+      }
+
+      const resolved = await ensureConversationContactId(conversation);
+      const messages = await getCrossChannelHistory({
+        tenantId: auth.tenantId,
+        conversation: resolved,
+        limit,
+      });
+
+      return ok({ contactId: resolved.contactId, messages });
+    }
+
     if (method === "GET" && !subPath) {
       const conversation = await findConversationById(auth.tenantId, conversationId);
       if (!conversation) return notFound("Conversation not found");
@@ -514,7 +537,12 @@ export async function handler(
       const bot = await getBot(auth.tenantId, parsed.data.botId);
       if (!bot) return notFound("Bot not found");
 
-      const messages = await getConversationMessages(auth.tenantId, conversationId, 50);
+      const resolved = await ensureConversationContactId(conversation);
+      const messages = await getContactTimelineMessages({
+        tenantId: auth.tenantId,
+        conversation: resolved,
+        limit: 50,
+      });
       const copilotParams = {
         bot,
         messages,

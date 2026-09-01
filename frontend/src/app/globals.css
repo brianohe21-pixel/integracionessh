@@ -415,6 +415,14 @@ textarea {
   border-top: var(--border-width) solid var(--border);
 }
 
+.conversations-copilot {
+  background: color-mix(in srgb, var(--accent-muted) 55%, var(--surface-elevated));
+}
+
+.conversations-softphone {
+  background: color-mix(in srgb, var(--accent-muted) 40%, var(--surface-elevated));
+}
+
 .conversations-compose-input {
   background: var(--surface-muted);
   border: var(--border-width) solid var(--border);
@@ -455,10 +463,137 @@ textarea {
 }
 
 .conversations-internal-note {
-  background: var(--note-bg);
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--note-bg) 100%, transparent) 0%,
+      color-mix(in srgb, var(--note-bg) 70%, var(--surface-elevated)) 100%
+    );
   border: var(--border-width) solid var(--note-border);
-  border-radius: 12px;
+  border-radius: 14px;
   color: var(--note-text);
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--warning) 8%, transparent),
+    0 8px 20px color-mix(in srgb, var(--warning) 6%, transparent);
+}
+
+.conversations-internal-note::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--warning) 85%, #fbbf24),
+    color-mix(in srgb, var(--warning) 55%, transparent)
+  );
+  pointer-events: none;
+}
+
+.conversations-internal-note-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  color: inherit;
+  padding: 0;
+}
+
+.conversations-internal-note-header:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: 0.5rem;
+}
+
+.conversations-internal-note-preview {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  opacity: 0.88;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.conversations-internal-note-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  background: color-mix(in srgb, var(--warning) 12%, transparent);
+  border: var(--border-width) solid color-mix(in srgb, var(--warning) 22%, transparent);
+  color: var(--note-text);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.conversations-internal-note-icon {
+  display: inline-flex;
+  height: 1.75rem;
+  width: 1.75rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.55rem;
+  background: color-mix(in srgb, var(--warning) 16%, var(--surface-elevated));
+  border: var(--border-width) solid color-mix(in srgb, var(--warning) 24%, transparent);
+  color: var(--note-text);
+}
+
+.conversations-internal-note-textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 4.5rem;
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  box-shadow: none;
+}
+
+.conversations-internal-note-textarea::placeholder {
+  color: color-mix(in srgb, var(--note-text) 55%, transparent);
+}
+
+.conversations-internal-note-textarea:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.conversations-internal-note-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: var(--border-width) solid color-mix(in srgb, var(--note-border) 70%, transparent);
+}
+
+.conversations-internal-note-save {
+  background: color-mix(in srgb, var(--warning) 88%, #92400e) !important;
+  color: #fffbeb !important;
+  border: none !important;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--warning) 25%, transparent);
+}
+
+.conversations-internal-note-save:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--warning) 78%, #78350f) !important;
+}
+
+.conversations-internal-note-save:disabled {
+  opacity: 0.55;
 }
 
 @keyframes page-enter {

@@ -29,7 +29,7 @@ import { createParticipantToken } from "../../lib/livekit/tokens.js";
 import { deleteLiveKitRoom } from "../../lib/livekit/rooms.js";
 import { addMessage } from "../../lib/dynamodb/conversation.repository.js";
 import { recordWebsitePageview } from "../../lib/dynamodb/website-metrics.repository.js";
-import { resolvePublicGoogleAnalytics } from "../../lib/website-analytics/settings.js";
+import { linkConversationToContact } from "../../lib/contacts/link-conversation-to-contact.js";
 
 const sqs = new SQSClient({});
 const QUEUE_URL = process.env.SQS_QUEUE_URL ?? "";
@@ -43,6 +43,16 @@ const CreateSessionSchema = z.object({
 const SendMessageSchema = z.object({
   content: z.string().min(1).max(2048),
 });
+
+const IdentitySchema = z
+  .object({
+    phone: z.string().min(7).max(30).optional(),
+    email: z.string().email().max(254).optional(),
+    name: z.string().max(120).optional(),
+  })
+  .refine((data) => data.phone || data.email || data.name, {
+    message: "At least one identity field is required",
+  });
 
 const PageviewSchema = z.object({
   path: z.string().max(512),
@@ -165,6 +175,10 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
 
     if (method === "POST" && sub[0] === "handoff") {
       return handleRequestHandoff(event, sessionId);
+    }
+
+    if (method === "POST" && sub[0] === "identity") {
+      return handleUpdateIdentity(event, sessionId);
     }
 
     return badRequest("Route not found");
@@ -493,4 +507,40 @@ async function handleRequestHandoff(
   } catch (err) {
     return handleError(err);
   }
+}
+
+async function handleUpdateIdentity(
+  event: APIGatewayProxyEventV2,
+  sessionId: string
+): Promise<APIGatewayProxyResultV2> {
+  const auth = await authenticateSession(event, sessionId);
+  if (!auth.ok) return auth.response;
+  const { session } = auth;
+
+  if (isWebChatSessionEnded(session)) {
+    return badRequest("Session ended");
+  }
+
+  const body = JSON.parse(event.body ?? "{}");
+  const parsed = IdentitySchema.safeParse(body);
+  if (!parsed.success) return badRequest(parsed.error.message);
+
+  const conversation = await linkConversationToContact({
+    tenantId: session.tenantId,
+    botId: session.botId,
+    conversationId: session.conversationId,
+    ...(parsed.data.phone ? { phone: parsed.data.phone } : {}),
+    ...(parsed.data.email ? { email: parsed.data.email } : {}),
+    ...(parsed.data.name ? { displayName: parsed.data.name } : {}),
+  });
+
+  if (!conversation) return notFound("Conversation not found");
+
+  await touchWebChatSession(sessionId);
+
+  return ok({
+    ...sessionPayload(session),
+    contactId: conversation.contactId,
+    linked: true,
+  });
 }

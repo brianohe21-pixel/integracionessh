@@ -4,7 +4,6 @@ import {
   clearConversationHandoff,
   claimConversationAssignment,
   getConversation,
-  getConversationMessages,
   updateConversation,
 } from "../dynamodb/conversation.repository.js";
 import { getAdvisor, touchAdvisorAssignment } from "../dynamodb/advisor.repository.js";
@@ -16,6 +15,7 @@ import { assertCanUseCopilot } from "../billing/assert-plan.js";
 import { emitIntegrationEvent } from "../integrations/emit.js";
 import { buildConversationHandoffPayload } from "../integrations/payloads.js";
 import { publishRealtimeEventSafe } from "../realtime/publish.js";
+import { getContactTimelineMessages } from "../contacts/contact-timeline.js";
 import type { BulkHandoffResult, Conversation, HandoffReason, Message } from "../../types/index.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
@@ -34,11 +34,18 @@ function scheduleCopilotInsights(params: {
       const bot = await getBot(params.tenantId, params.botId);
       if (!bot) return;
 
-      const messages = await getConversationMessages(
+      const conversation = await getConversation(
         params.tenantId,
-        params.conversationId,
-        50
+        params.botId,
+        params.conversationId
       );
+      if (!conversation) return;
+
+      const messages = await getContactTimelineMessages({
+        tenantId: params.tenantId,
+        conversation,
+        limit: 50,
+      });
       const insights = await generateCopilotInsights({
         bot,
         messages,

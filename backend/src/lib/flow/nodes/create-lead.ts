@@ -4,6 +4,7 @@ import { buildBindingContext, resolveBindingValue } from "../binding.js";
 import { getNextNodeId } from "../graph.js";
 import { normalizePhone } from "../../dynamodb/contact.repository.js";
 import { createLeadFromFormData } from "../../leads/form-lead.js";
+import { requireConversation } from "../types.js";
 
 export async function executeCreateLeadNode(
   node: FlowNode,
@@ -30,6 +31,9 @@ export async function executeCreateLeadNode(
     ...(email ? { email } : {}),
     ...(node.data.leadTags?.length ? { tags: node.data.leadTags } : {}),
     ...(run.eventSubmissionId ? { sourceId: run.eventSubmissionId } : {}),
+    ...(ctx.conversation
+      ? { linkConversationId: requireConversation(ctx).conversationId }
+      : {}),
   });
 
   return {

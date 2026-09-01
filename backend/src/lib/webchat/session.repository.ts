@@ -94,6 +94,53 @@ export async function touchWebChatSession(sessionId: string): Promise<void> {
   );
 }
 
+export async function updateWebChatSessionIdentity(
+  sessionId: string,
+  updates: {
+    visitorName?: string;
+    visitorPhone?: string;
+    visitorEmail?: string;
+  }
+): Promise<WebChatSession | null> {
+  const parts: string[] = ["lastActivityAt = :now"];
+  const values: Record<string, unknown> = {
+    ":now": new Date().toISOString(),
+  };
+  const names: Record<string, string> = {};
+
+  if (updates.visitorName) {
+    parts.push("visitorName = :visitorName");
+    values[":visitorName"] = updates.visitorName;
+  }
+  if (updates.visitorPhone) {
+    parts.push("visitorPhone = :visitorPhone");
+    values[":visitorPhone"] = updates.visitorPhone;
+  }
+  if (updates.visitorEmail) {
+    parts.push("visitorEmail = :visitorEmail");
+    values[":visitorEmail"] = updates.visitorEmail;
+  }
+
+  if (parts.length === 1) {
+    return getWebChatSession(sessionId);
+  }
+
+  const result = await docClient.send(
+    new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: sessionKey(sessionId),
+      UpdateExpression: `SET ${parts.join(", ")}`,
+      ...(Object.keys(names).length ? { ExpressionAttributeNames: names } : {}),
+      ExpressionAttributeValues: values,
+      ReturnValues: "ALL_NEW",
+    })
+  );
+
+  if (!result.Attributes) return null;
+  const { PK, SK, ...rest } = result.Attributes;
+  return rest as WebChatSession;
+}
+
 export function isWebChatSessionEnded(session: WebChatSession): boolean {
   return session.status === "ended";
 }

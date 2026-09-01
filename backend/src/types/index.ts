@@ -413,6 +413,7 @@ export interface Conversation {
   channel: Channel;
   participantId: string;
   phoneNumber: string;
+  contactId?: string;
   contactName?: string;
   status: "active" | "closed";
   handoffMode?: HandoffMode;
@@ -1583,6 +1584,8 @@ export interface WebChatSession {
   botId: string;
   conversationId: string;
   visitorName?: string;
+  visitorPhone?: string;
+  visitorEmail?: string;
   status?: WebChatSessionStatus;
   endedAt?: string;
   createdAt: string;
@@ -1602,6 +1605,8 @@ export interface VoicebotSession {
   status: VoicebotSessionStatus;
   ephemeralKey?: string;
   visitorName?: string;
+  visitorPhone?: string;
+  visitorEmail?: string;
   startedAt: string;
   endedAt?: string;
   durationSeconds?: number;

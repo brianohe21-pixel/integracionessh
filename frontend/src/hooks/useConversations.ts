@@ -8,6 +8,7 @@ import type {
   Channel,
   Conversation,
   ConversationsListResponse,
+  CrossChannelHistoryResponse,
   HandoffMode,
   Message,
   WorkflowStatus,
@@ -126,6 +127,23 @@ export function useConversationMessages(conversationId: string, enabled = true) 
   });
 }
 
+export function useCrossChannelHistory(conversationId: string, enabled = true) {
+  const { connected } = useRealtimeConnection();
+
+  return useQuery({
+    queryKey: ["conversation-cross-channel-history", conversationId],
+    queryFn: async () => {
+      const raw = await api.get<CrossChannelHistoryResponse>(
+        `/conversations/${encodeURIComponent(conversationId)}/cross-channel-history?limit=50`
+      );
+      return raw.messages ?? [];
+    },
+    enabled: !!conversationId && enabled,
+    refetchInterval: connected ? false : 60_000,
+    refetchIntervalInBackground: false,
+  });
+}
+
 export function useHandoffConversation() {
   const qc = useQueryClient();
   return useMutation({
@@ -137,6 +155,9 @@ export function useHandoffConversation() {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["conversations"] });
       qc.invalidateQueries({ queryKey: ["conversation-messages", vars.conversationId] });
+      qc.invalidateQueries({
+        queryKey: ["conversation-cross-channel-history", vars.conversationId],
+      });
       qc.invalidateQueries({ queryKey: ["metrics", "advisor-workload"] });
       qc.invalidateQueries({ queryKey: ["metrics", "marketing"] });
     },
