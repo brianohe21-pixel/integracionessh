@@ -1,39 +1,42 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import QRCode from "qrcode";
-
 interface ShortLinkQrProps {
   url: string;
   label: string;
 }
 
-export function ShortLinkQr({ url, label }: ShortLinkQrProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [error, setError] = useState("");
+function buildQrImageUrl(url: string, size = 200): string {
+  const params = new URLSearchParams({
+    size: `${size}x${size}`,
+    data: url,
+  });
+  return `https://api.qrserver.com/v1/create-qr-code/?${params.toString()}`;
+}
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !url) return;
-    QRCode.toCanvas(canvas, url, { width: 160, margin: 1 }).catch((err: Error) => {
-      setError(err.message);
-    });
-  }, [url]);
+export function ShortLinkQr({ url, label }: ShortLinkQrProps) {
+  const qrUrl = buildQrImageUrl(url);
 
   async function handleDownload() {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    const response = await fetch(qrUrl);
+    if (!response.ok) return;
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
-    anchor.href = canvas.toDataURL("image/png");
+    anchor.href = objectUrl;
     anchor.download = `${label.replace(/\s+/g, "-").toLowerCase()}-qr.png`;
     anchor.click();
+    URL.revokeObjectURL(objectUrl);
   }
-
-  if (error) return null;
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <canvas ref={canvasRef} className="rounded-lg border border-default bg-white p-2" />
+      <img
+        src={qrUrl}
+        alt={label}
+        width={160}
+        height={160}
+        className="rounded-lg border border-default bg-white p-2"
+      />
       <button
         type="button"
         onClick={() => void handleDownload()}
