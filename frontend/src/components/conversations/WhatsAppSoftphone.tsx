@@ -119,6 +119,26 @@ export function WhatsAppSoftphone({ conversation, advisorMode = false }: Props) 
   if (conversation.handoffMode !== "human") return null;
 
   const inCall = status === "in_call" || status === "calling";
+  const showFullBar = inCall || status === "ended" || Boolean(error);
+
+  if (!showFullBar) {
+    return (
+      <div className="flex items-center justify-end gap-2 border-b border-default px-4 py-1.5 sm:px-6">
+        <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={() => initiate.mutate()}
+          disabled={!advisorMode || initiate.isPending}
+          className="text-accent hover:bg-accent-muted hover:text-accent"
+        >
+          <Phone className="h-3.5 w-3.5" />
+          {t("softphone.call")}
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="conversations-softphone border-b border-default px-4 py-2.5 sm:px-6">
@@ -131,7 +151,6 @@ export function WhatsAppSoftphone({ conversation, advisorMode = false }: Props) 
           <div className="min-w-0">
             <p className="text-sm font-semibold text-primary">{t("softphone.title")}</p>
             <p className="text-xs text-secondary">
-              {status === "idle" && t("softphone.stateIdle")}
               {status === "calling" && t("softphone.stateCalling")}
               {status === "in_call" && t("softphone.stateInCall")}
               {status === "ended" && t("softphone.stateEnded")}
@@ -140,18 +159,7 @@ export function WhatsAppSoftphone({ conversation, advisorMode = false }: Props) 
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {!inCall && (
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => initiate.mutate()}
-              disabled={!advisorMode || initiate.isPending}
-            >
-              <Phone className="h-3.5 w-3.5" />
-              {t("softphone.call")}
-            </Button>
-          )}
-          {status === "calling" && callId && (
+          {status === "calling" && callId ? (
             <Button
               type="button"
               size="sm"
@@ -160,8 +168,8 @@ export function WhatsAppSoftphone({ conversation, advisorMode = false }: Props) 
             >
               {t("softphone.connect")}
             </Button>
-          )}
-          {inCall && (
+          ) : null}
+          {inCall ? (
             <Button
               type="button"
               size="sm"
@@ -172,7 +180,7 @@ export function WhatsAppSoftphone({ conversation, advisorMode = false }: Props) 
               <PhoneOff className="h-3.5 w-3.5" />
               {t("softphone.hangUp")}
             </Button>
-          )}
+          ) : null}
         </div>
       </div>
     </div>

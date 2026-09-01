@@ -55,6 +55,7 @@ export function decodeTelnyxClientState(payload: Record<string, unknown>): {
   sessionId?: string;
   callId?: string;
   leg?: string;
+  role?: string;
 } {
   const raw = String(payload.client_state ?? "");
   if (!raw) return {};
@@ -63,11 +64,13 @@ export function decodeTelnyxClientState(payload: Record<string, unknown>): {
       sessionId?: string;
       callId?: string;
       leg?: string;
+      role?: string;
     };
     return {
       ...(parsed.sessionId ? { sessionId: parsed.sessionId } : {}),
       ...(parsed.callId ? { callId: parsed.callId } : {}),
       ...(parsed.leg ? { leg: parsed.leg } : {}),
+      ...(parsed.role ? { role: parsed.role } : {}),
     };
   } catch {
     return {};

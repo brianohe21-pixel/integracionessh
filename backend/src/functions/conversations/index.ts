@@ -119,6 +119,19 @@ const WorkflowStatusSchema = z.object({
   workflowStatus: z.enum(["new", "open", "pending", "resolved"]),
 });
 
+const InteractionCategorySchema = z.object({
+  botId: z.string().uuid(),
+  interactionCategory: z.enum([
+    "sale",
+    "complaint",
+    "callback",
+    "support",
+    "inquiry",
+    "billing",
+    "other",
+  ]),
+});
+
 const NoteSchema = z.object({
   botId: z.string().uuid(),
   internalNote: z.string().max(2000),
@@ -128,6 +141,9 @@ const ResolveSchema = z.object({
   botId: z.string().uuid(),
   csatScore: z.number().int().min(1).max(5).optional(),
   releaseToBot: z.boolean().optional(),
+  interactionCategory: z
+    .enum(["sale", "complaint", "callback", "support", "inquiry", "billing", "other"])
+    .optional(),
 });
 
 const CopilotSchema = z.object({
@@ -257,6 +273,16 @@ export async function handler(
         params.assignment === "assigned" || params.assignment === "unassigned"
           ? params.assignment
           : undefined;
+      const interactionCategory =
+        params.interactionCategory === "sale" ||
+        params.interactionCategory === "complaint" ||
+        params.interactionCategory === "callback" ||
+        params.interactionCategory === "support" ||
+        params.interactionCategory === "inquiry" ||
+        params.interactionCategory === "billing" ||
+        params.interactionCategory === "other"
+          ? params.interactionCategory
+          : undefined;
 
       let assignedAdvisorId = params.assignedAdvisorId;
 
@@ -279,6 +305,7 @@ export async function handler(
       if (params.whatsappChannelId) listOptions.whatsappChannelId = params.whatsappChannelId;
       if (assignedAdvisorId) listOptions.assignedAdvisorId = assignedAdvisorId;
       if (assignment) listOptions.assignment = assignment;
+      if (interactionCategory) listOptions.interactionCategory = interactionCategory;
       if (params.cursor) listOptions.cursor = params.cursor;
 
       const result = await listConversations(auth.tenantId, listOptions);
@@ -349,6 +376,30 @@ export async function handler(
       return ok(updated);
     }
 
+    if (method === "PATCH" && subPath === "category") {
+      const body = JSON.parse(event.body ?? "{}");
+      const parsed = InteractionCategorySchema.safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const conversation = await findConversationById(auth.tenantId, conversationId);
+      if (!conversation || conversation.botId !== parsed.data.botId) {
+        return notFound("Conversation not found");
+      }
+
+      await assertCanAccessConversation(auth, conversation);
+
+      const updated = await updateConversation(
+        auth.tenantId,
+        parsed.data.botId,
+        conversationId,
+        {
+          interactionCategory: parsed.data.interactionCategory,
+          interactionCategoryAt: new Date().toISOString(),
+        }
+      );
+      return ok(updated);
+    }
+
     if (method === "PATCH" && subPath === "note") {
       assertTenantManagerRole(auth);
       const body = JSON.parse(event.body ?? "{}");
@@ -387,6 +438,9 @@ export async function handler(
         conversationId,
         ...(parsed.data.csatScore !== undefined ? { csatScore: parsed.data.csatScore } : {}),
         ...(parsed.data.releaseToBot ? { releaseToBot: true } : {}),
+        ...(parsed.data.interactionCategory
+          ? { interactionCategory: parsed.data.interactionCategory }
+          : {}),
       });
 
       return ok(updated);

@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
 import { ChannelAvatar } from "@/components/conversations/conversation-ui";
 import { WhatsAppRiskBadge } from "@/components/whatsapp/WhatsAppRiskBadge";
 import { cn } from "@/lib/utils";
@@ -16,6 +17,7 @@ type Props = {
   contactName: string;
   channelLabel: string;
   workflowLabel: string;
+  categoryLabel?: string;
   relativeTime: string;
   advisorMode: boolean;
   showQueueClaim: boolean;
@@ -41,6 +43,7 @@ export function ConversationListItem({
   contactName,
   channelLabel,
   workflowLabel,
+  categoryLabel,
   relativeTime,
   advisorMode,
   showQueueClaim,
@@ -65,6 +68,7 @@ export function ConversationListItem({
       : null,
     isHuman ? modeHumanLabel : modeBotLabel,
     isHuman ? workflowLabel : null,
+    conversation.interactionCategory ? categoryLabel : null,
     conversation.emailSubject,
     slaText,
   ].filter(Boolean);
@@ -123,6 +127,13 @@ export function ConversationListItem({
             <p className="truncate text-xs text-secondary">
               {previewParts.join(" · ")}
             </p>
+            {conversation.interactionCategory && categoryLabel ? (
+              <div className="mt-1">
+                <Badge variant="info" className="text-[10px]">
+                  {categoryLabel}
+                </Badge>
+              </div>
+            ) : null}
             {whatsappRisk && whatsappRisk.risk !== "none" && whatsappRisk.risk !== "ok" ? (
               <div className="mt-1">
                 <WhatsAppRiskBadge risk={whatsappRisk} compact />

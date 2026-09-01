@@ -10,6 +10,7 @@ import type {
   ConversationsListResponse,
   CrossChannelHistoryResponse,
   HandoffMode,
+  InteractionCategory,
   Message,
   WorkflowStatus,
 } from "@/types";
@@ -48,6 +49,7 @@ function conversationsListQueryKey(options?: {
   whatsappChannelId?: string;
   handoffMode?: HandoffMode;
   workflowStatus?: WorkflowStatus;
+  interactionCategory?: InteractionCategory;
   status?: "active" | "closed";
   assignedAdvisorId?: string;
   assignment?: "assigned" | "unassigned";
@@ -60,6 +62,7 @@ function conversationsListQueryKey(options?: {
     options?.whatsappChannelId ?? "all",
     options?.handoffMode ?? "all",
     options?.workflowStatus ?? "all",
+    options?.interactionCategory ?? "all",
     options?.status ?? "all",
     options?.assignedAdvisorId ?? "all",
     options?.assignment ?? "all",
@@ -74,6 +77,7 @@ function fetchConversationsPage(
     whatsappChannelId?: string;
     handoffMode?: HandoffMode;
     workflowStatus?: WorkflowStatus;
+    interactionCategory?: InteractionCategory;
     status?: "active" | "closed";
     assignedAdvisorId?: string;
     assignment?: "assigned" | "unassigned";
@@ -86,6 +90,7 @@ function fetchConversationsPage(
   if (options?.whatsappChannelId) params.set("whatsappChannelId", options.whatsappChannelId);
   if (options?.handoffMode) params.set("handoffMode", options.handoffMode);
   if (options?.workflowStatus) params.set("workflowStatus", options.workflowStatus);
+  if (options?.interactionCategory) params.set("interactionCategory", options.interactionCategory);
   if (options?.status) params.set("status", options.status);
   if (options?.assignedAdvisorId) params.set("assignedAdvisorId", options.assignedAdvisorId);
   if (options?.assignment) params.set("assignment", options.assignment);
@@ -98,6 +103,7 @@ export function useConversations(options?: {
   whatsappChannelId?: string;
   handoffMode?: HandoffMode;
   workflowStatus?: WorkflowStatus;
+  interactionCategory?: InteractionCategory;
   status?: "active" | "closed";
   assignedAdvisorId?: string;
   assignment?: "assigned" | "unassigned";
@@ -264,6 +270,26 @@ export function useUpdateConversationNote() {
   });
 }
 
+export function useUpdateConversationCategory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: {
+      conversationId: string;
+      botId: string;
+      interactionCategory: InteractionCategory;
+    }) =>
+      api.patch<Conversation>(
+        `/conversations/${encodeURIComponent(body.conversationId)}/category`,
+        { botId: body.botId, interactionCategory: body.interactionCategory }
+      ),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["conversations"] });
+      qc.invalidateQueries({ queryKey: ["conversation-messages", vars.conversationId] });
+      qc.invalidateQueries({ queryKey: ["metrics", "conversation-categories"] });
+    },
+  });
+}
+
 export function useResolveConversation() {
   const qc = useQueryClient();
   return useMutation({
@@ -272,6 +298,7 @@ export function useResolveConversation() {
       botId: string;
       csatScore?: number;
       releaseToBot?: boolean;
+      interactionCategory?: InteractionCategory;
     }) =>
       api.post<Conversation>(
         `/conversations/${encodeURIComponent(body.conversationId)}/resolve`,
@@ -279,12 +306,14 @@ export function useResolveConversation() {
           botId: body.botId,
           ...(body.csatScore !== undefined ? { csatScore: body.csatScore } : {}),
           ...(body.releaseToBot ? { releaseToBot: true } : {}),
+          ...(body.interactionCategory ? { interactionCategory: body.interactionCategory } : {}),
         }
       ),
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["conversations"] });
       qc.invalidateQueries({ queryKey: ["conversation-messages", vars.conversationId] });
       qc.invalidateQueries({ queryKey: ["metrics", "marketing"] });
+      qc.invalidateQueries({ queryKey: ["metrics", "conversation-categories"] });
     },
   });
 }

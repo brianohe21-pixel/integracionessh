@@ -13,7 +13,9 @@ import { resolveWhatsAppRisk } from "@/hooks/useWhatsAppRisk";
 import { useWhatsAppChannels } from "@/hooks/useWhatsAppChannels";
 import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
-import type { Bot, Advisor, Channel, Conversation, InboxSlaStatus, WorkflowStatus } from "@/types";
+import type { Bot, Advisor, Channel, Conversation, InboxSlaStatus, WorkflowStatus, InteractionCategory } from "@/types";
+import { INTERACTION_CATEGORIES } from "@/types";
+import { interactionCategoryLabelKey } from "@/lib/interaction-categories";
 import type { WhatsAppRiskResponse } from "@/hooks/useWhatsAppRisk";
 
 type ListTab = "all" | "unread" | "mine" | "sla_breached" | "queue";
@@ -37,6 +39,9 @@ type Props = {
   onHandoffFilterChange: (v: "" | "human" | "bot") => void;
   workflowFilter: "" | WorkflowStatus;
   onWorkflowFilterChange: (v: "" | WorkflowStatus) => void;
+  categoryFilter: "" | InteractionCategory;
+  onCategoryFilterChange: (v: "" | InteractionCategory) => void;
+  categoryLabel: (category?: InteractionCategory) => string;
   advisorFilter: string;
   onAdvisorFilterChange: (v: string) => void;
   assignmentFilter: "" | "unassigned";
@@ -88,6 +93,9 @@ export function ConversationListSidebar({
   onHandoffFilterChange,
   workflowFilter,
   onWorkflowFilterChange,
+  categoryFilter,
+  onCategoryFilterChange,
+  categoryLabel,
   advisorFilter,
   onAdvisorFilterChange,
   assignmentFilter,
@@ -131,6 +139,7 @@ export function ConversationListSidebar({
     whatsappChannelFilter,
     handoffFilter,
     workflowFilter,
+    categoryFilter,
     advisorFilter,
     assignmentFilter,
   ].filter(Boolean).length;
@@ -274,6 +283,17 @@ export function ConversationListSidebar({
               <option value="resolved">{t("conversations.filterWorkflowResolved")}</option>
             </Select>
           )}
+          <Select
+            value={categoryFilter}
+            onChange={(e) => onCategoryFilterChange(e.target.value as "" | InteractionCategory)}
+          >
+            <option value="">{t("conversations.filterCategoryAll")}</option>
+            {INTERACTION_CATEGORIES.map((category) => (
+              <option key={category} value={category}>
+                {t(interactionCategoryLabelKey(category))}
+              </option>
+            ))}
+          </Select>
           {!advisorMode && (
             <Select value={advisorFilter} onChange={(e) => onAdvisorFilterChange(e.target.value)}>
               <option value="">{t("conversations.filterAdvisorAll")}</option>
@@ -302,6 +322,7 @@ export function ConversationListSidebar({
                 onWhatsappChannelFilterChange("");
                 onHandoffFilterChange("");
                 onWorkflowFilterChange("");
+                onCategoryFilterChange("");
                 onAdvisorFilterChange("");
                 onAssignmentFilterChange("");
               }}
@@ -383,6 +404,7 @@ export function ConversationListSidebar({
               contactName={contactDisplay(conv) ?? conv.phoneNumber}
               channelLabel={channelLabel(conv.channel)}
               workflowLabel={workflowLabel(conv.workflowStatus)}
+              categoryLabel={categoryLabel(conv.interactionCategory)}
               relativeTime={formatRelativeTime(conv.lastMessageAt)}
               advisorMode={advisorMode}
               showQueueClaim={listTab === "queue"}

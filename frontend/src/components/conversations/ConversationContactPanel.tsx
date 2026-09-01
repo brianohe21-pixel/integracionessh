@@ -13,13 +13,15 @@ import { Button } from "@/components/ui/Button";
 import { ContentCardSection } from "@/components/ui/Card";
 import { Textarea } from "@/components/ui/Input";
 import { Tabs } from "@/components/ui/Tabs";
+import { Select } from "@/components/ui/Input";
 import { useAdvisors } from "@/hooks/useAdvisors";
 import { useClickToCall } from "@/hooks/useContactCenter";
-import { useUpdateConversationNote } from "@/hooks/useConversations";
+import { useUpdateConversationCategory, useUpdateConversationNote } from "@/hooks/useConversations";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useT } from "@/i18n/context";
+import { interactionCategoryLabelKey } from "@/lib/interaction-categories";
 import { resolveWhatsAppRisk, type WhatsAppRiskResponse } from "@/hooks/useWhatsAppRisk";
-import type { Channel, Conversation, Lead } from "@/types";
+import { INTERACTION_CATEGORIES, type Channel, Conversation, InteractionCategory, Lead } from "@/types";
 
 type PanelTab = "contact" | "sales" | "details";
 
@@ -48,9 +50,13 @@ export function ConversationContactPanel({
   const { data: opportunity } = useOpportunityByConversation(conversation.conversationId);
   const clickToCall = useClickToCall();
   const updateNote = useUpdateConversationNote();
+  const updateCategory = useUpdateConversationCategory();
   const [panelTab, setPanelTab] = useState<PanelTab>("sales");
   const [noteExpanded, setNoteExpanded] = useState(false);
   const [internalNote, setInternalNote] = useState(conversation.internalNote ?? "");
+  const [interactionCategory, setInteractionCategory] = useState<InteractionCategory | "">(
+    conversation.interactionCategory ?? ""
+  );
 
   useEffect(() => {
     setPanelTab(opportunity ? "sales" : "contact");
@@ -60,7 +66,8 @@ export function ConversationContactPanel({
 
   useEffect(() => {
     setInternalNote(conversation.internalNote ?? "");
-  }, [conversation.internalNote]);
+    setInteractionCategory(conversation.interactionCategory ?? "");
+  }, [conversation.internalNote, conversation.interactionCategory]);
 
   const noteDirty = internalNote.trim() !== (conversation.internalNote ?? "").trim();
 
@@ -73,6 +80,16 @@ export function ConversationContactPanel({
       internalNote: nextNote,
     });
     setInternalNote(nextNote);
+  }
+
+  async function handleCategoryChange(value: InteractionCategory | "") {
+    setInteractionCategory(value);
+    if (!value || value === conversation.interactionCategory) return;
+    await updateCategory.mutateAsync({
+      conversationId: conversation.conversationId,
+      botId: conversation.botId,
+      interactionCategory: value,
+    });
   }
   const assignedAdvisor = advisors?.find((a) => a.advisorId === conversation.assignedAdvisorId);
   const displayName =
@@ -154,6 +171,86 @@ export function ConversationContactPanel({
       </div>
 
       <div className="sidebar-scroll flex-1 space-y-4 overflow-y-auto p-4">
+        <section
+          className={cn(
+            "conversations-internal-note sticky top-0 z-10 p-3.5",
+            noteExpanded ? "space-y-3" : "space-y-0"
+          )}
+        >
+          <button
+            type="button"
+            onClick={() => setNoteExpanded((open) => !open)}
+            aria-expanded={noteExpanded}
+            className="conversations-internal-note-header w-full text-left"
+          >
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span className="conversations-internal-note-icon">
+                <StickyNote className="h-3.5 w-3.5" />
+              </span>
+              <span className="block text-sm font-semibold tracking-tight">
+                {t("conversations.internalNote")}
+              </span>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <span className="conversations-internal-note-badge">
+                <Lock className="h-3 w-3" />
+                {noteDirty
+                  ? t("conversations.noteUnsaved")
+                  : internalNote.trim()
+                    ? t("conversations.noteSaved")
+                    : t("conversations.internalNoteEmpty")}
+              </span>
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 opacity-70 transition-transform duration-200",
+                  noteExpanded && "rotate-180"
+                )}
+              />
+            </div>
+          </button>
+
+          {!noteExpanded && internalNote.trim() ? (
+            <p className="conversations-internal-note-preview mt-2.5">
+              {internalNote.trim()}
+            </p>
+          ) : null}
+
+          {noteExpanded ? (
+            <>
+              <Textarea
+                id="contact-internal-note"
+                value={internalNote}
+                onChange={(e) => setInternalNote(e.target.value)}
+                rows={3}
+                placeholder={t("conversations.internalNotePlaceholder")}
+                className="conversations-internal-note-textarea border-none bg-transparent shadow-none focus:ring-0"
+              />
+              <div className="conversations-internal-note-footer">
+                <p className="flex items-center gap-1.5 text-[11px] opacity-70">
+                  <Lock className="h-3 w-3 shrink-0" />
+                  {t("conversations.internalNoteHint")}
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleSaveNote}
+                  disabled={updateNote.isPending || !noteDirty}
+                  className="conversations-internal-note-save shrink-0"
+                >
+                  {noteDirty || updateNote.isPending ? (
+                    t("conversations.saveNote")
+                  ) : (
+                    <>
+                      <Check className="h-3.5 w-3.5" />
+                      {t("conversations.noteSaved")}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </>
+          ) : null}
+        </section>
+
         {panelTab === "sales" ? (
           <ConversationOpportunityPanel
             conversation={conversation}
@@ -212,89 +309,24 @@ export function ConversationContactPanel({
                 </div>
               </ContentCardSection>
             ) : null}
-
-            <section
-              className={cn(
-                "conversations-internal-note p-4",
-                noteExpanded ? "space-y-3" : "space-y-0"
-              )}
-            >
-              <button
-                type="button"
-                onClick={() => setNoteExpanded((open) => !open)}
-                aria-expanded={noteExpanded}
-                className="conversations-internal-note-header w-full text-left"
-              >
-                <div className="flex min-w-0 items-center gap-2.5">
-                  <span className="conversations-internal-note-icon">
-                    <StickyNote className="h-3.5 w-3.5" />
-                  </span>
-                  <span className="block text-sm font-semibold tracking-tight">
-                    {t("conversations.internalNote")}
-                  </span>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <span className="conversations-internal-note-badge">
-                    <Lock className="h-3 w-3" />
-                    {noteDirty
-                      ? t("conversations.noteUnsaved")
-                      : internalNote.trim()
-                        ? t("conversations.noteSaved")
-                        : t("conversations.internalNoteEmpty")}
-                  </span>
-                  <ChevronDown
-                    className={cn(
-                      "h-4 w-4 opacity-70 transition-transform duration-200",
-                      noteExpanded && "rotate-180"
-                    )}
-                  />
-                </div>
-              </button>
-
-              {!noteExpanded && internalNote.trim() ? (
-                <p className="conversations-internal-note-preview mt-2.5">
-                  {internalNote.trim()}
-                </p>
-              ) : null}
-
-              {noteExpanded ? (
-                <>
-                  <Textarea
-                    id="contact-internal-note"
-                    value={internalNote}
-                    onChange={(e) => setInternalNote(e.target.value)}
-                    rows={3}
-                    placeholder={t("conversations.internalNotePlaceholder")}
-                    className="conversations-internal-note-textarea border-none bg-transparent shadow-none focus:ring-0"
-                  />
-                  <div className="conversations-internal-note-footer">
-                    <p className="flex items-center gap-1.5 text-[11px] opacity-70">
-                      <Lock className="h-3 w-3 shrink-0" />
-                      {t("conversations.internalNoteHint")}
-                    </p>
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={handleSaveNote}
-                      disabled={updateNote.isPending || !noteDirty}
-                      className="conversations-internal-note-save shrink-0"
-                    >
-                      {noteDirty || updateNote.isPending ? (
-                        t("conversations.saveNote")
-                      ) : (
-                        <>
-                          <Check className="h-3.5 w-3.5" />
-                          {t("conversations.noteSaved")}
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </>
-              ) : null}
-            </section>
           </>
         ) : (
           <>
+            <ContentCardSection title={t("conversations.categoryLabel")}>
+              <Select
+                value={interactionCategory}
+                onChange={(e) => void handleCategoryChange(e.target.value as InteractionCategory | "")}
+                disabled={updateCategory.isPending}
+              >
+                <option value="">{t("conversations.categorySelectPlaceholder")}</option>
+                {INTERACTION_CATEGORIES.map((category) => (
+                  <option key={category} value={category}>
+                    {t(interactionCategoryLabelKey(category))}
+                  </option>
+                ))}
+              </Select>
+            </ContentCardSection>
+
             <ContentCardSection title={t("conversations.history")}>
               <div className="space-y-3 text-sm">
                 <div className="flex items-center justify-between">

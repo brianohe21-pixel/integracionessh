@@ -13,6 +13,7 @@ export async function resolveConversation(params: {
   conversationId: string;
   csatScore?: number;
   releaseToBot?: boolean;
+  interactionCategory?: Conversation["interactionCategory"];
 }): Promise<Conversation | null> {
   const existing = await getConversation(
     params.tenantId,
@@ -33,6 +34,12 @@ export async function resolveConversation(params: {
     resolvedAt: now,
     ...(params.csatScore !== undefined
       ? { csatScore: params.csatScore, csatSubmittedAt: now }
+      : {}),
+    ...(params.interactionCategory
+      ? {
+          interactionCategory: params.interactionCategory,
+          interactionCategoryAt: now,
+        }
       : {}),
   };
 

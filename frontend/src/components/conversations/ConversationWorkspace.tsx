@@ -35,7 +35,9 @@ import {
   FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { WorkflowStatus, Channel } from "@/types";
+import type { WorkflowStatus, Channel, InteractionCategory } from "@/types";
+import { INTERACTION_CATEGORIES } from "@/types";
+import { interactionCategoryLabelKey } from "@/lib/interaction-categories";
 import { useActiveLeadByPhone, useConvertLead } from "@/hooks/useLeads";
 import Link from "next/link";
 import { AdvisorCallPanel } from "@/components/conversations/AdvisorCallPanel";
@@ -92,6 +94,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   const [channelFilter, setChannelFilter] = useState<"" | Channel>("");
   const [whatsappChannelFilter, setWhatsappChannelFilter] = useState("");
   const [workflowFilter, setWorkflowFilter] = useState<"" | WorkflowStatus>("");
+  const [categoryFilter, setCategoryFilter] = useState<"" | InteractionCategory>("");
   const [advisorFilter, setAdvisorFilter] = useState("");
   const [assignmentFilter, setAssignmentFilter] = useState<"" | "unassigned">("");
   const [draft, setDraft] = useState("");
@@ -101,6 +104,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   const [showResolveModal, setShowResolveModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [csatScore, setCsatScore] = useState<number | "">("");
+  const [resolveCategory, setResolveCategory] = useState<InteractionCategory | "">("");
   const [callPermissionFeedback, setCallPermissionFeedback] = useState<{
     type: "success" | "error";
     message: string;
@@ -144,6 +148,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
       channel: channelFilter || undefined,
       whatsappChannelId: whatsappChannelFilter || undefined,
       workflowStatus: workflowFilter || undefined,
+      interactionCategory: categoryFilter || undefined,
     };
 
     if (advisorMode && listTab === "queue") {
@@ -175,6 +180,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     channelFilter,
     whatsappChannelFilter,
     workflowFilter,
+    categoryFilter,
     handoffFilter,
     advisorFilter,
   ]);
@@ -330,6 +336,11 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     };
     return map[key] ?? map.open;
   }
+
+  function categoryLabel(category?: InteractionCategory): string {
+    if (!category) return t("conversations.categoryUncategorized");
+    return t(interactionCategoryLabelKey(category));
+  }
   const isHuman = (selectedConversation?.handoffMode ?? "bot") === "human";
   const needsClaim =
     advisorMode &&
@@ -441,9 +452,11 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
       conversationId: selectedConversation.conversationId,
       botId: selectedConversation.botId,
       ...(csatScore !== "" ? { csatScore: Number(csatScore) } : {}),
+      ...(resolveCategory ? { interactionCategory: resolveCategory } : {}),
     });
     setShowResolveModal(false);
     setCsatScore("");
+    setResolveCategory("");
     setSelectedId(null);
   }
 
@@ -499,6 +512,9 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
         onHandoffFilterChange={setHandoffFilter}
         workflowFilter={workflowFilter}
         onWorkflowFilterChange={setWorkflowFilter}
+        categoryFilter={categoryFilter}
+        onCategoryFilterChange={setCategoryFilter}
+        categoryLabel={categoryLabel}
         advisorFilter={advisorFilter}
         onAdvisorFilterChange={setAdvisorFilter}
         assignmentFilter={assignmentFilter}
@@ -823,6 +839,18 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
               {[1, 2, 3, 4, 5].map((n) => (
                 <option key={n} value={n}>
                   {n}
+                </option>
+              ))}
+            </Select>
+            <label className="block text-sm text-secondary">{t("conversations.categoryLabel")}</label>
+            <Select
+              value={resolveCategory}
+              onChange={(e) => setResolveCategory(e.target.value as InteractionCategory | "")}
+            >
+              <option value="">{t("conversations.categorySelectPlaceholder")}</option>
+              {INTERACTION_CATEGORIES.map((category) => (
+                <option key={category} value={category}>
+                  {t(interactionCategoryLabelKey(category))}
                 </option>
               ))}
             </Select>

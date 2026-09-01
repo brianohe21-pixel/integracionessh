@@ -877,6 +877,8 @@ export async function handleCallHangup(payload: Record<string, unknown>): Promis
   const session = await resolveTelephonySessionFromPayload(payload);
   if (!session) return;
 
+  if (session.supervisorCallControlId === callControlId) return;
+
   const call = await getCallRecord(session.tenantId, session.callId);
   if (call?.status === "voicemail") return;
 

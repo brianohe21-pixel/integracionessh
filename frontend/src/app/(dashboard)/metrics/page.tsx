@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useCallingMetrics } from "@/hooks/useCallingMetrics";
 import { useMarketingMetrics } from "@/hooks/useMarketingMetrics";
+import { useConversationCategoryMetrics } from "@/hooks/useConversationCategoryMetrics";
 import { useInboxSlaMetrics } from "@/hooks/useInboxSlaMetrics";
 import { useMetrics } from "@/hooks/useMetrics";
 import { useSalesMetrics } from "@/hooks/useSalesMetrics";
@@ -40,6 +41,7 @@ import { MetricsUsageByBotChart } from "@/components/metrics/MetricsUsageByBotCh
 import { MetricsCampaignFunnelChart } from "@/components/metrics/MetricsCampaignFunnelChart";
 import { MetricsTopCampaignsChart } from "@/components/metrics/MetricsTopCampaignsChart";
 import { MetricsInboxStatusChart } from "@/components/metrics/MetricsInboxStatusChart";
+import { MetricsConversationCategoriesChart } from "@/components/metrics/MetricsConversationCategoriesChart";
 import { MetricsSlaByAdvisorChart } from "@/components/metrics/MetricsSlaByAdvisorChart";
 import { MetricsSalesBySourceChart } from "@/components/metrics/MetricsSalesBySourceChart";
 import { MetricsSalesByBotChart } from "@/components/metrics/MetricsSalesByBotChart";
@@ -89,6 +91,11 @@ export default function MetricsPage() {
   );
   const filteredUsage = useFilteredUsageMetrics(metrics, filters.botId, dateRange);
   const { data: marketing, isLoading: marketingLoading } = useMarketingMetrics();
+  const { data: categoryMetrics, isLoading: categoryMetricsLoading } = useConversationCategoryMetrics(
+    dateRange.from,
+    dateRange.to,
+    filters.botId || undefined
+  );
   const { data: inboxSlaMetrics, isLoading: inboxSlaLoading } = useInboxSlaMetrics();
   const { data: calling, isLoading: callingLoading } = useCallingMetrics(
     dateRange,
@@ -253,6 +260,9 @@ export default function MetricsPage() {
                 <MetricsCampaignFunnelChart marketing={marketing} />
                 <MetricsInboxStatusChart marketing={marketing} />
                 <MetricsTopCampaignsChart marketing={marketing} />
+                {!categoryMetricsLoading && categoryMetrics ? (
+                  <MetricsConversationCategoriesChart metrics={categoryMetrics} />
+                ) : null}
               </div>
 
               {!inboxSlaLoading && inboxSlaMetrics?.enabled && (

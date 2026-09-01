@@ -8,7 +8,7 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 import { docClient, TABLE_NAME } from "./client.js";
 import { listBots } from "./bot.repository.js";
-import type { Conversation, HandoffMode, Message, WorkflowStatus, Channel } from "../../types/index.js";
+import type { Conversation, HandoffMode, Message, WorkflowStatus, Channel, InteractionCategory } from "../../types/index.js";
 import {
   conversationLookupGsi1pk,
   whatsappConversationLookupGsi1pk,
@@ -24,6 +24,7 @@ const REALTIME_CONVERSATION_FIELDS = new Set([
   "assignedAdvisorId",
   "workflowStatus",
   "status",
+  "interactionCategory",
 ]);
 
 export function normalizeConversation(conv: Conversation): Conversation {
@@ -44,6 +45,7 @@ export interface ListConversationsOptions {
   whatsappChannelId?: string;
   handoffMode?: HandoffMode;
   workflowStatus?: WorkflowStatus;
+  interactionCategory?: InteractionCategory;
   status?: Conversation["status"];
   assignedAdvisorId?: string;
   assignment?: "assigned" | "unassigned";
@@ -187,6 +189,8 @@ export async function updateConversation(
       | "copilotSummary"
       | "detectedIntent"
       | "copilotGeneratedAt"
+      | "interactionCategory"
+      | "interactionCategoryAt"
       | "status"
       | "welcomeSentAt"
       | "activeFlowRunId"
@@ -749,6 +753,10 @@ export async function listConversations(
     merged = merged.filter(
       (c) => (c.workflowStatus ?? "open") === options.workflowStatus
     );
+  }
+
+  if (options.interactionCategory) {
+    merged = merged.filter((c) => c.interactionCategory === options.interactionCategory);
   }
 
   if (options.status) {

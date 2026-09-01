@@ -173,6 +173,7 @@ export async function patchTelephonySession(
       | "advisorId"
       | "agentCallControlId"
       | "supervisorCallControlId"
+      | "supervisorRole"
       | "ivrFlowId"
       | "ivrNodeId"
       | "campaignId"
@@ -207,6 +208,16 @@ export async function patchTelephonySession(
   void PK;
   void SK;
   return rest as TelephonySession;
+}
+
+export async function clearTelephonySupervisor(sessionId: string): Promise<void> {
+  await docClient.send(
+    new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: sessionKey(sessionId),
+      UpdateExpression: "REMOVE supervisorCallControlId, supervisorRole",
+    })
+  );
 }
 
 export async function indexTelephonyCallControlId(

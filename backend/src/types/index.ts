@@ -406,6 +406,25 @@ export interface AiAssistantConfig {
 
 export type WorkflowStatus = "new" | "open" | "pending" | "resolved";
 
+export type InteractionCategory =
+  | "sale"
+  | "complaint"
+  | "callback"
+  | "support"
+  | "inquiry"
+  | "billing"
+  | "other";
+
+export const INTERACTION_CATEGORIES: InteractionCategory[] = [
+  "sale",
+  "complaint",
+  "callback",
+  "support",
+  "inquiry",
+  "billing",
+  "other",
+];
+
 export interface Conversation {
   conversationId: string;
   tenantId: string;
@@ -430,6 +449,8 @@ export interface Conversation {
   copilotSummary?: string;
   detectedIntent?: string;
   copilotGeneratedAt?: string;
+  interactionCategory?: InteractionCategory;
+  interactionCategoryAt?: string;
   messageCount: number;
   lastMessageAt: string;
   welcomeSentAt?: string;
@@ -1181,6 +1202,7 @@ export interface TelephonySession {
   advisorId?: string;
   agentCallControlId?: string;
   supervisorCallControlId?: string;
+  supervisorRole?: SupervisorRole;
   ivrFlowId?: string;
   ivrNodeId?: string;
   campaignId?: string;
@@ -2025,6 +2047,20 @@ export interface MarketingMetrics {
     pending: number;
     resolvedToday: number;
   };
+}
+
+export interface ConversationCategoryMetricRow {
+  category: InteractionCategory | "uncategorized";
+  count: number;
+}
+
+export interface ConversationCategoryMetrics {
+  from: string;
+  to: string;
+  total: number;
+  categorized: number;
+  uncategorized: number;
+  byCategory: ConversationCategoryMetricRow[];
 }
 
 export type CallingMetricsHealth = "healthy" | "at_risk" | "insufficient_data";
