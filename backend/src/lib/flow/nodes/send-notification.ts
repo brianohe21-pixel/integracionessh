@@ -1,7 +1,9 @@
 import { buildOutboundContext, sendChannelText } from "../../channels/router.js";
 import { sendEmail } from "../../email/client.js";
+import { shouldSkipPlatformEmailTemplate } from "../../email/platform-template.js";
 import { sanitizeEmailHtml, stripHtmlToText } from "../../email/sanitize.js";
 import { getBot } from "../../dynamodb/bot.repository.js";
+import { getTenant } from "../../dynamodb/tenant.repository.js";
 import { sendSmsFromTemplate } from "../../sms/send-outbound.js";
 import { sendTemplateMessage, getWhatsAppAccessToken } from "../../whatsapp/client.js";
 import type { Bot, Channel, Conversation, FlowNode, FlowRun } from "../../../types/index.js";
@@ -102,6 +104,8 @@ export async function executeSendNotificationNode(
     if (!text) throw new Error("Notification message is required");
 
     const tenantFrom = await resolveTenantOutboundFrom(ctx.tenantId);
+    const tenant = await getTenant(ctx.tenantId);
+    const skipPlatformTemplate = shouldSkipPlatformEmailTemplate(tenant);
     const subject = node.data.notificationEmailSubject?.trim() || "Notification";
     const emailResult = await sendEmail({
       to: [recipient.trim().toLowerCase()],
@@ -109,6 +113,7 @@ export async function executeSendNotificationNode(
       text,
       ...(html ? { html } : {}),
       ...(tenantFrom ? { from: tenantFrom } : {}),
+      ...(skipPlatformTemplate ? { skipPlatformTemplate: true } : {}),
     });
     if (emailResult.messageId.startsWith("skipped-")) {
       throw new Error(
