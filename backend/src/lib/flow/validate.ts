@@ -1,12 +1,22 @@
-import type { FlowDefinition, FlowNode } from "../../types/index.js";
+import type { FlowDefinition, FlowNode, LocalizedText } from "../../types/index.js";
 import { getFlowSecretNamesSet } from "./flow-secrets.repository.js";
 import { isVoiceAiFlow } from "./voice-flow-compiler.js";
+import { isWebhookReceivingFlow } from "./webhook-flow.js";
 
 export interface FlowValidationIssue {
   code: string;
   message: string;
   nodeId?: string;
 }
+
+const DRAFT_SAVE_BLOCKING_CODES = new Set([
+  "trigger_count",
+  "unsupported_node",
+  "unsupported_voice_node",
+  "invalid_voice_trigger",
+  "invalid_entry",
+  "duplicate_voice_tool_name",
+]);
 
 const CONVERSATION_ONLY_NODES = [
   "buttons",
@@ -21,9 +31,14 @@ const CONVERSATION_ONLY_NODES = [
 
 const BRANCHING_NODES = ["condition", "buttons"] as const;
 
+function hasLocalizedText(value: LocalizedText | undefined): boolean {
+  if (!value) return false;
+  if (typeof value === "string") return value.trim().length > 0;
+  return Boolean(value.es?.trim() || value.en?.trim());
+}
+
 function isFormFlow(flow: FlowDefinition): boolean {
-  const trigger = flow.nodes.find((node) => node.type === "trigger");
-  return trigger?.data.triggerType === "web_form_submitted";
+  return isWebhookReceivingFlow(flow.nodes);
 }
 
 function getTriggerNode(flow: FlowDefinition): FlowNode | undefined {
@@ -86,6 +101,29 @@ function validateBindings(node: FlowNode, issues: FlowValidationIssue[]): void {
         : []),
       ...(node.data.leadEmailBinding
         ? [{ field: "leadEmailBinding", value: node.data.leadEmailBinding }]
+        : [])
+    );
+  }
+
+  if (node.type === "create_opportunity") {
+    bindingFields.push(
+      ...(node.data.opportunityTitleBinding
+        ? [{ field: "opportunityTitleBinding", value: node.data.opportunityTitleBinding, required: true as const }]
+        : [{ field: "opportunityTitleBinding", required: true as const }]),
+      ...(node.data.opportunityPhoneBinding
+        ? [{ field: "opportunityPhoneBinding", value: node.data.opportunityPhoneBinding, required: true as const }]
+        : [{ field: "opportunityPhoneBinding", required: true as const }]),
+      ...(node.data.opportunityAmountBinding
+        ? [{ field: "opportunityAmountBinding", value: node.data.opportunityAmountBinding }]
+        : []),
+      ...(node.data.opportunityNameBinding
+        ? [{ field: "opportunityNameBinding", value: node.data.opportunityNameBinding }]
+        : []),
+      ...(node.data.opportunityEmailBinding
+        ? [{ field: "opportunityEmailBinding", value: node.data.opportunityEmailBinding }]
+        : []),
+      ...(node.data.opportunityDescriptionBinding
+        ? [{ field: "opportunityDescriptionBinding", value: node.data.opportunityDescriptionBinding }]
         : [])
     );
   }
@@ -231,14 +269,6 @@ export function validateFlowDefinition(flow: FlowDefinition): FlowValidationIssu
   }
 
   const trigger = getTriggerNode(flow);
-  if (trigger && formFlow && trigger.data.triggerType !== "web_form_submitted") {
-    issues.push({
-      code: "invalid_trigger",
-      message: "Form flows must use web_form_submitted trigger",
-      nodeId: trigger.id,
-    });
-  }
-
   if (voiceFlow) {
     validateVoiceFlow(flow, issues);
   }
@@ -274,7 +304,17 @@ export function validateFlowDefinition(flow: FlowDefinition): FlowValidationIssu
       });
     }
 
-    if (node.type === "save_contact" || node.type === "create_lead" || node.type === "send_notification") {
+    if (node.type === "assign_bot") {
+      if (!node.data.botId?.trim()) {
+        issues.push({
+          code: "missing_bot",
+          message: "Select a bot in the assign bot node",
+          nodeId: node.id,
+        });
+      }
+    }
+
+    if (node.type === "save_contact" || node.type === "create_lead" || node.type === "create_opportunity" || node.type === "send_notification") {
       validateBindings(node, issues);
     }
 
@@ -286,7 +326,11 @@ export function validateFlowDefinition(flow: FlowDefinition): FlowValidationIssu
           nodeId: node.id,
         });
       }
-      if (!node.data.notificationMessageBinding && !node.data.notificationMessageText) {
+      if (
+        !node.data.notificationMessageBinding?.trim() &&
+        !hasLocalizedText(node.data.notificationMessageText) &&
+        !(node.data.notificationChannel === "email" && hasLocalizedText(node.data.notificationMessageHtml))
+      ) {
         issues.push({
           code: "missing_message",
           message: "Notification requires message binding or localized text",
@@ -335,4 +379,8 @@ export function assertValidFlowDefinition(flow: FlowDefinition): void {
   if (issues.length > 0) {
     throw new Error(issues.map((issue) => issue.message).join("; "));
   }
+}
+
+export function issuesBlockingDraftSave(issues: FlowValidationIssue[]): FlowValidationIssue[] {
+  return issues.filter((issue) => DRAFT_SAVE_BLOCKING_CODES.has(issue.code));
 }

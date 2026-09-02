@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -9,37 +10,47 @@ import { Card } from "@/components/ui/Card";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ContactCenterDialpad } from "@/components/contact-center/ContactCenterDialpad";
+import { ContactCenterPhoneNumbersTab } from "@/components/contact-center/ContactCenterPhoneNumbersTab";
 import { ContactCenterWallboard } from "@/components/contact-center/ContactCenterWallboard";
 import { useBots } from "@/hooks/useBots";
+import { getOutboundCallableBots } from "@/lib/voice-bots";
 import { useAdvisors } from "@/hooks/useAdvisors";
 import {
   useAssignAdvisorVoice,
   useContactCenterCampaigns,
   useContactCenterIvr,
   useContactCenterQueues,
+  useContactCenterWallboard,
   useCreateIvr,
   useCreateQueue,
   useCreateVoiceCampaign,
+  useMyPresence,
   usePauseVoiceCampaign,
   useSaveRouting,
   useStartVoiceCampaign,
+  useUpdatePresence,
 } from "@/hooks/useContactCenter";
 import { useT } from "@/i18n/context";
-import { PhoneCall } from "lucide-react";
+import { Headphones, PhoneCall, Users } from "lucide-react";
 
-type TabId = "dial" | "queues" | "ivr" | "routing" | "agents" | "campaigns" | "wallboard";
+type TabId = "dial" | "numbers" | "queues" | "ivr" | "routing" | "agents" | "campaigns" | "wallboard";
 
 export default function ContactCenterPage() {
   const t = useT();
   const [tab, setTab] = useState<TabId>("dial");
   const { data: bots = [] } = useBots();
-  const voiceBots = bots.filter((bot) => bot.telephonyEnabled);
+  const voiceBots = getOutboundCallableBots(bots);
+  const [numbersBotId, setNumbersBotId] = useState(bots[0]?.botId ?? "");
   const [botId, setBotId] = useState(voiceBots[0]?.botId ?? "");
   const selectedBotId = botId || voiceBots[0]?.botId || "";
+  const numbersSelectedBotId = numbersBotId || bots[0]?.botId || "";
   const queuesQuery = useContactCenterQueues(selectedBotId || undefined);
   const ivrQuery = useContactCenterIvr(selectedBotId || undefined);
   const campaignsQuery = useContactCenterCampaigns(selectedBotId || undefined);
-  const { data: advisors = [] } = useAdvisors();
+  const { data: advisors = [], isLoading: advisorsLoading } = useAdvisors();
+  const { data: myPresence } = useMyPresence();
+  const { data: wallboard } = useContactCenterWallboard(tab === "agents");
+  const updatePresence = useUpdatePresence();
   const createQueue = useCreateQueue();
   const createIvr = useCreateIvr();
   const saveRouting = useSaveRouting();
@@ -62,10 +73,35 @@ export default function ContactCenterPage() {
   const ivrs = ivrQuery.data?.items ?? [];
   const campaigns = campaignsQuery.data?.items ?? [];
   const firstQueueId = queues[0]?.queueId ?? "";
+  const queueIds = queues.map((queue) => queue.queueId);
+  const myQueueCount = myPresence?.queueIds?.length ?? 0;
+  const mySoftphoneReady =
+    myPresence?.state === "available" &&
+    myPresence.webrtcConnected &&
+    myQueueCount > 0;
+  const presenceByAdvisorId = useMemo(
+    () => new Map((wallboard?.agents ?? []).map((agent) => [agent.advisorId, agent])),
+    [wallboard?.agents]
+  );
+
+  function agentStateLabel(advisorId: string) {
+    const presence = presenceByAdvisorId.get(advisorId);
+    if (!presence) return t("contactCenter.agentNeverConnected");
+    if (presence.state === "available" && presence.webrtcConnected) {
+      return t("contactCenter.agentReady");
+    }
+    return presence.state;
+  }
+
+  async function assignQueuesToMe() {
+    if (queueIds.length === 0) return;
+    await updatePresence.mutateAsync({ queueIds });
+  }
 
   const tabs = useMemo(
     () => [
       { id: "dial" as const, label: t("contactCenter.tabDial") },
+      { id: "numbers" as const, label: t("contactCenter.tabNumbers") },
       { id: "queues" as const, label: t("contactCenter.tabQueues") },
       { id: "ivr" as const, label: t("contactCenter.tabIvr") },
       { id: "routing" as const, label: t("contactCenter.tabRouting") },
@@ -102,6 +138,14 @@ export default function ContactCenterPage() {
             title={t("contactCenter.dialNoBot")}
           />
         )
+      ) : null}
+
+      {tab === "numbers" ? (
+        <ContactCenterPhoneNumbersTab
+          bots={bots}
+          selectedBotId={numbersSelectedBotId}
+          onBotChange={setNumbersBotId}
+        />
       ) : null}
 
       {tab === "queues" ? (
@@ -230,26 +274,99 @@ export default function ContactCenterPage() {
       ) : null}
 
       {tab === "agents" ? (
-        <Card padding="md" className="space-y-3">
-          {advisors.map((advisor) => (
-            <div key={advisor.advisorId} className="flex flex-wrap items-center justify-between gap-2 text-sm">
-              <span>{advisor.name}</span>
+        <div className="space-y-4">
+          <Card padding="md" className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+              <div className="flex items-center gap-2">
+                <Headphones className="h-4 w-4 text-accent" />
+                <span className="font-medium">{t("contactCenter.mySoftphone")}</span>
+                {myPresence?.state ? (
+                  <span className="text-secondary">· {myPresence.state}</span>
+                ) : null}
+              </div>
               <Button
                 size="sm"
                 variant="secondary"
-                onClick={() =>
-                  void assignVoice.mutateAsync({
-                    advisorId: advisor.advisorId,
-                    queueIds: queues.map((queue) => queue.queueId),
-                    voiceEnabled: true,
-                  })
-                }
+                disabled={queueIds.length === 0 || updatePresence.isPending}
+                onClick={() => void assignQueuesToMe()}
               >
                 {t("contactCenter.assignQueues")}
               </Button>
             </div>
-          ))}
-        </Card>
+            <p className="text-xs text-secondary">
+              {queueIds.length === 0
+                ? t("contactCenter.noQueues")
+                : mySoftphoneReady
+                  ? t("contactCenter.mySoftphoneReady")
+                  : myQueueCount > 0
+                    ? t("contactCenter.myQueuesAssigned", { count: myQueueCount })
+                    : t("contactCenter.myQueuesEmpty")}
+            </p>
+          </Card>
+
+          {!mySoftphoneReady &&
+          advisors.every((advisor) => {
+            const presence = presenceByAdvisorId.get(advisor.advisorId);
+            return !(
+              presence?.state === "available" &&
+              presence.webrtcConnected &&
+              (presence.queueIds?.length ?? 0) > 0
+            );
+          }) ? (
+            <Card padding="md" className="border-amber-300 bg-amber-50 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100">
+              {t("contactCenter.noReadyAgents")}
+            </Card>
+          ) : null}
+
+          <Card padding="md" className="space-y-3">
+            <h3 className="text-sm font-semibold">{t("contactCenter.advisorsSection")}</h3>
+            {advisorsLoading ? (
+              <p className="text-sm text-secondary">{t("common.loading")}</p>
+            ) : advisors.length === 0 ? (
+              <EmptyState
+                icon={<Users className="h-5 w-5" />}
+                title={t("contactCenter.noAdvisorsTitle")}
+                description={t("contactCenter.noAdvisorsDescription")}
+                action={
+                  <Link
+                    href="/advisors"
+                    className="inline-flex items-center rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover"
+                  >
+                    {t("contactCenter.createAdvisor")}
+                  </Link>
+                }
+              />
+            ) : (
+              advisors.map((advisor) => (
+                <div
+                  key={advisor.advisorId}
+                  className="flex flex-wrap items-center justify-between gap-2 text-sm"
+                >
+                  <div>
+                    <span>{advisor.name}</span>
+                    <span className="ml-2 text-xs text-secondary">
+                      · {agentStateLabel(advisor.advisorId)}
+                    </span>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={queueIds.length === 0}
+                    onClick={() =>
+                      void assignVoice.mutateAsync({
+                        advisorId: advisor.advisorId,
+                        queueIds,
+                        voiceEnabled: true,
+                      })
+                    }
+                  >
+                    {t("contactCenter.assignQueues")}
+                  </Button>
+                </div>
+              ))
+            )}
+          </Card>
+        </div>
       ) : null}
 
       {tab === "campaigns" ? (

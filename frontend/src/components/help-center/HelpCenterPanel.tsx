@@ -68,6 +68,13 @@ export function HelpCenterPanel() {
                 <FaqAccordion />
               </div>
               <Link
+                href="/docs/manual"
+                onClick={close}
+                className="inline-flex w-full items-center justify-center rounded-lg border border-default bg-surface px-4 py-2.5 text-sm font-medium text-primary hover:bg-surface-muted"
+              >
+                {t("helpCenter.viewManuals")}
+              </Link>
+              <Link
                 href="/support"
                 onClick={close}
                 className="inline-flex w-full items-center justify-center rounded-lg border border-default bg-surface px-4 py-2.5 text-sm font-medium text-primary hover:bg-surface-muted"

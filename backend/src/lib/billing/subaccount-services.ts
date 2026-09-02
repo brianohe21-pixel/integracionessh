@@ -15,6 +15,7 @@ export const SERVICE_LIMIT_KEYS: Record<SubaccountServiceId, readonly BagLimitKe
   bots: [
     "maxActiveBots",
     "maxChannelsPerBot",
+    "maxWhatsAppChannelsPerBot",
     "maxDocumentsPerBot",
     "maxKnowledgeStorageMb",
     "maxMetaFlowsPerBot",
@@ -26,9 +27,10 @@ export const SERVICE_LIMIT_KEYS: Record<SubaccountServiceId, readonly BagLimitKe
   supervisor: [],
   contacts: ["maxContacts"],
   leads: [],
+  sales: [],
   advisors: [],
   automations: ["maxAutomationsPerBot", "maxScheduledAutomations"],
-  flows: ["maxVisualFlowsPerBot", "maxFlowNodes", "maxActiveFlowRuns"],
+  flows: ["maxVisualFlowsPerBot", "maxFlowNodes", "maxActiveFlowRuns", "maxHostedFormsPerTenant"],
   templates: [],
   bulkSend: ["maxBulkRecipientsPerJob"],
   campaigns: ["maxActiveCampaigns", "maxMessagesPerMonth"],
@@ -42,6 +44,7 @@ export const SERVICE_LIMIT_KEYS: Record<SubaccountServiceId, readonly BagLimitKe
     "maxOrdersPerMonth",
   ],
   developer: ["apiRateLimitPerMinute", "apiRateLimitPerDay"],
+  integrations: [],
 };
 
 export const BAG_LIMIT_KEYS = Array.from(

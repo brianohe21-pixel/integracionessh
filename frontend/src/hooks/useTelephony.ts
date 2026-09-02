@@ -15,6 +15,7 @@ import type {
 export interface TelephonySettings {
   telephonyEnabled?: boolean;
   telephonyPhoneNumber?: string;
+  reassignPhoneNumber?: boolean;
   telephonyVoiceId?: string;
   telephonyModel?: string;
   telephonyTranscriptionModel?: string;
@@ -47,6 +48,44 @@ export interface TelnyxNumber {
   id: string;
   phoneNumber: string;
   status: string;
+  assignedBotId?: string;
+  assignedBotName?: string;
+}
+
+export interface TelnyxAvailableNumberCost {
+  upfrontCost: string;
+  monthlyCost: string;
+  currency: string;
+}
+
+export interface TelnyxAvailableNumber {
+  phoneNumber: string;
+  phoneNumberType: string;
+  quickship: boolean;
+  features: string[];
+  regionName?: string;
+  cost: TelnyxAvailableNumberCost;
+}
+
+export interface TelnyxAvailableNumberSearchFilters {
+  countryCode: string;
+  phoneNumberType?: "local" | "toll_free" | "mobile" | "national";
+  locality?: string;
+  nationalDestinationCode?: string;
+  limit?: number;
+}
+
+export type TelnyxNumberOrderStatus = "pending" | "success" | "failure";
+
+export interface TelnyxNumberOrderPhoneNumber {
+  phoneNumber: string;
+  status: TelnyxNumberOrderStatus;
+}
+
+export interface TelnyxNumberOrder {
+  id: string;
+  status: TelnyxNumberOrderStatus;
+  phoneNumbers: TelnyxNumberOrderPhoneNumber[];
 }
 
 export interface TelnyxVoice {
@@ -69,6 +108,54 @@ export function useTelephonyNumbers() {
   return useQuery({
     queryKey: ["telephony-numbers"],
     queryFn: () => api.get<{ numbers: TelnyxNumber[] }>("/telephony/numbers"),
+  });
+}
+
+function buildAvailableNumbersQuery(filters: TelnyxAvailableNumberSearchFilters): string {
+  const params = new URLSearchParams();
+  params.set("countryCode", filters.countryCode);
+  if (filters.phoneNumberType) params.set("phoneNumberType", filters.phoneNumberType);
+  if (filters.locality?.trim()) params.set("locality", filters.locality.trim());
+  if (filters.nationalDestinationCode?.trim()) {
+    params.set("nationalDestinationCode", filters.nationalDestinationCode.trim());
+  }
+  if (filters.limit) params.set("limit", String(filters.limit));
+  return `/telephony/numbers/available?${params.toString()}`;
+}
+
+export function useSearchAvailableTelephonyNumbers() {
+  return useMutation({
+    mutationFn: (filters: TelnyxAvailableNumberSearchFilters) =>
+      api.get<{ numbers: TelnyxAvailableNumber[]; totalResults: number }>(
+        buildAvailableNumbersQuery(filters)
+      ),
+  });
+}
+
+export function usePurchaseTelephonyNumber() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (phoneNumber: string) =>
+      api.post<TelnyxNumberOrder>("/telephony/numbers/orders", { phoneNumber }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["telephony-numbers"] });
+    },
+  });
+}
+
+export function useTelephonyNumberOrder(orderId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["telephony-number-order", orderId],
+    queryFn: () =>
+      api.get<TelnyxNumberOrder>(
+        `/telephony/numbers/orders/${encodeURIComponent(orderId!)}`
+      ),
+    enabled: Boolean(orderId),
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      if (status === "pending") return 2000;
+      return false;
+    },
   });
 }
 
@@ -172,9 +259,14 @@ export function useSaveTelephonySettings(botId: string) {
         `/bots/${encodeURIComponent(botId)}/telephony/settings`,
         payload
       ),
-    onSuccess: () => {
+    onSuccess: (result) => {
+      qc.setQueryData(["telephony-settings", botId], (current: TelephonySettings | undefined) => ({
+        ...(current ?? {}),
+        ...result,
+      }));
       void qc.invalidateQueries({ queryKey: ["telephony-settings", botId] });
       void qc.invalidateQueries({ queryKey: ["bots"] });
+      void qc.invalidateQueries({ queryKey: ["telephony-numbers"] });
     },
   });
 }

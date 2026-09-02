@@ -112,6 +112,16 @@ variable "whatsapp_sync_sqs_queue_arn" {
   default = ""
 }
 
+variable "sequence_sqs_queue_url" {
+  type    = string
+  default = ""
+}
+
+variable "sequence_sqs_queue_arn" {
+  type    = string
+  default = ""
+}
+
 variable "mailrelay_event_types" {
   type        = string
   default     = ""
@@ -146,6 +156,10 @@ variable "cognito_client_id" {
 }
 
 variable "cognito_issuer_url" {
+  type = string
+}
+
+variable "cognito_hosted_ui_domain" {
   type = string
 }
 
@@ -257,6 +271,32 @@ variable "api_public_url" {
   description = "Public API base URL for channel webhooks (e.g. Telegram registration)"
 }
 
+variable "google_business_client_id" {
+  type        = string
+  default     = ""
+  description = "Google OAuth client ID for Business Profile integration"
+}
+
+variable "google_business_client_secret" {
+  type        = string
+  default     = ""
+  sensitive   = true
+  description = "Google OAuth client secret for Business Profile integration"
+}
+
+variable "google_calendar_client_id" {
+  type        = string
+  default     = ""
+  description = "Google OAuth client ID for Calendar integration"
+}
+
+variable "google_calendar_client_secret" {
+  type        = string
+  default     = ""
+  sensitive   = true
+  description = "Google OAuth client secret for Calendar integration"
+}
+
 variable "ses_from_email" {
   type        = string
   default     = ""
@@ -296,16 +336,22 @@ variable "wompi_events_secret" {
   description = "Wompi events secret for webhook verification"
 }
 
+variable "wompi_amount_starter_cents" {
+  type        = string
+  default     = "24190000"
+  description = "Starter plan price in COP cents (default 241900 COP)"
+}
+
 variable "wompi_amount_pro_cents" {
   type        = string
-  default     = "17990000"
-  description = "Pro plan price in COP cents (default 179900 COP)"
+  default     = "81590000"
+  description = "Growth plan price in COP cents (default 815900 COP)"
 }
 
 variable "wompi_amount_enterprise_cents" {
   type        = string
-  default     = "74990000"
-  description = "Enterprise plan price in COP cents (default 749900 COP)"
+  default     = "286590000"
+  description = "Scale plan price in COP cents (default 2865900 COP)"
 }
 
 variable "wompi_api_base" {
@@ -357,6 +403,11 @@ variable "cloudwatch_log_group_import_exclude" {
     "process_mailrelay_sync",
     "mailrelay_webhook",
     "process_whatsapp_sync",
+    "google_business",
+    "hosted_forms",
+    "short_links",
+    "sales",
+    "process_sequence",
   ]
   description = "Lambda keys whose log groups are created by Terraform instead of imported (new functions without pre-existing log groups in AWS)"
 }

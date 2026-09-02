@@ -8,6 +8,7 @@ import { useSalesMetrics } from "@/hooks/useSalesMetrics";
 import { useApps } from "@/hooks/useApps";
 import { useFormatters } from "@/hooks/useFormatters";
 import { dateRangeFromDays } from "@/lib/metrics-date-range";
+import { CardContent, CardIconHeader } from "@/components/ui/Card";
 
 export function SalesSummaryCard() {
   const t = useT();
@@ -32,17 +33,15 @@ export function SalesSummaryCard() {
   if (!sales) return null;
 
   return (
-    <div className="content-card mb-6 p-5">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-4">
-          <div className="icon-badge h-11 w-11">
-            <Banknote className="h-5 w-5" />
-          </div>
+    <div className="content-card mb-6 overflow-hidden">
+      <CardIconHeader
+        icon={<Banknote className="h-4 w-4" />}
+        title={t("bots.salesSummaryTitle")}
+      />
+      <CardContent>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-secondary">
-              {t("bots.salesSummaryTitle")}
-            </p>
-            <p className="mt-1 text-2xl font-bold text-primary">
+            <p className="text-2xl font-bold text-primary">
               {formatCurrency(sales.totalRevenueInCents)}
             </p>
             <p className="mt-1 text-sm text-secondary">
@@ -52,15 +51,15 @@ export function SalesSummaryCard() {
               })}
             </p>
           </div>
+          <Link
+            href="/metrics?section=sales"
+            className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:underline"
+          >
+            {t("bots.salesSummaryViewDetail")}
+            <ArrowRight className="h-4 w-4" />
+          </Link>
         </div>
-        <Link
-          href="/metrics?section=sales"
-          className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:underline"
-        >
-          {t("bots.salesSummaryViewDetail")}
-          <ArrowRight className="h-4 w-4" />
-        </Link>
-      </div>
+      </CardContent>
     </div>
   );
 }

@@ -8,12 +8,12 @@ interface BadgeProps {
 }
 
 const variants = {
-  default: "bg-surface-muted text-secondary ring-1 ring-default",
-  success: "bg-success/15 text-success ring-1 ring-success/25",
-  warning: "bg-warning/15 text-warning ring-1 ring-warning/25",
-  danger: "bg-danger/15 text-danger ring-1 ring-danger/25",
-  info: "bg-info/15 text-info ring-1 ring-info/25",
-  accent: "bg-accent-muted text-accent ring-1 ring-accent/30",
+  default: "bg-surface-muted text-secondary ring-2 ring-default",
+  success: "bg-success/15 text-success ring-2 ring-success/25",
+  warning: "bg-warning/15 text-warning ring-2 ring-warning/25",
+  danger: "bg-danger/15 text-danger ring-2 ring-danger/25",
+  info: "bg-info/15 text-info ring-2 ring-info/25",
+  accent: "bg-accent-muted text-accent ring-2 ring-accent/30",
 };
 
 export function Badge({ children, variant = "default", className, dot }: BadgeProps) {

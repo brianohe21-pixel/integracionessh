@@ -48,7 +48,7 @@ interface SkeletonTableProps {
 export function SkeletonTable({ rows = 5, cols = 4, className }: SkeletonTableProps) {
   return (
     <div className={cn("content-card overflow-hidden", className)}>
-      <div className="border-b border-subtle bg-surface-muted px-4 py-3">
+      <div className="section-header px-4 py-3">
         <div className="flex gap-4">
           {Array.from({ length: cols }).map((_, i) => (
             <Skeleton key={i} className="h-3 flex-1" />

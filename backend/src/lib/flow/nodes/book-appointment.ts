@@ -2,7 +2,7 @@ import { buildOutboundContext, sendChannelText } from "../../channels/router.js"
 import { sendInteractiveButtons } from "../../whatsapp/flows.js";
 import type { FlowNode, FlowRun } from "../../../types/index.js";
 import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
-import { requireMessagingContext } from "../types.js";
+import { requireBotContext, requireMessagingContext } from "../types.js";
 import { getNextNodeId } from "../graph.js";
 import {
   createBookingForBot,
@@ -58,10 +58,11 @@ async function sendOptions(
   options: Array<{ id: string; label: string }>
 ): Promise<void> {
   const { conversation, phoneNumberId, accessToken, customerPhone } = requireMessagingContext(ctx);
+  const { botId, bot } = requireBotContext(ctx);
   const outbound = buildOutboundContext({
     tenantId: ctx.tenantId,
-    botId: ctx.botId,
-    bot: ctx.bot,
+    botId,
+    bot,
     conversation,
     accessToken,
     environment: ctx.environment,
@@ -90,16 +91,17 @@ export async function executeBookAppointmentNode(
   run: FlowRun
 ): Promise<NodeExecutionResult> {
   const { conversation, phoneNumberId, accessToken, customerPhone } = requireMessagingContext(ctx);
-  const locale = getBotLocale(conversation, ctx.bot);
+  const { botId, bot } = requireBotContext(ctx);
+  const locale = getBotLocale(conversation, bot);
   let config;
   try {
-    config = await requireEnabledCalendar(ctx.tenantId, ctx.botId);
+    config = await requireEnabledCalendar(ctx.tenantId, botId);
   } catch {
     await sendChannelText(
       buildOutboundContext({
         tenantId: ctx.tenantId,
-        botId: ctx.botId,
-        bot: ctx.bot,
+        botId: botId,
+        bot,
         conversation,
         accessToken,
         environment: ctx.environment,
@@ -131,7 +133,7 @@ export async function executeBookAppointmentNode(
       try {
         const result = await createBookingForBot({
           tenantId: ctx.tenantId,
-          botId: ctx.botId,
+          botId: botId,
           startAt,
           contactPhone: customerPhone,
           conversationId: conversation.conversationId,
@@ -152,8 +154,8 @@ export async function executeBookAppointmentNode(
         await sendChannelText(
           buildOutboundContext({
             tenantId: ctx.tenantId,
-            botId: ctx.botId,
-            bot: ctx.bot,
+            botId: botId,
+            bot,
             conversation,
             accessToken,
             environment: ctx.environment,
@@ -177,8 +179,8 @@ export async function executeBookAppointmentNode(
         await sendChannelText(
           buildOutboundContext({
             tenantId: ctx.tenantId,
-            botId: ctx.botId,
-            bot: ctx.bot,
+            botId: botId,
+            bot,
             conversation,
             accessToken,
             environment: ctx.environment,
@@ -197,8 +199,8 @@ export async function executeBookAppointmentNode(
       await sendChannelText(
         buildOutboundContext({
           tenantId: ctx.tenantId,
-          botId: ctx.botId,
-          bot: ctx.bot,
+          botId: botId,
+          bot,
           conversation,
           accessToken,
           environment: ctx.environment,
@@ -217,15 +219,15 @@ export async function executeBookAppointmentNode(
   if (step === "pick_date") {
     const dates = await getBookingDates({
       tenantId: ctx.tenantId,
-      botId: ctx.botId,
+      botId: botId,
       maxDays,
     });
     if (dates.length === 0) {
       await sendChannelText(
         buildOutboundContext({
           tenantId: ctx.tenantId,
-          botId: ctx.botId,
-          bot: ctx.bot,
+          botId: botId,
+          bot,
           conversation,
           accessToken,
           environment: ctx.environment,
@@ -278,15 +280,15 @@ export async function executeBookAppointmentNode(
     }
     const slots = await getBookingSlotsForDate({
       tenantId: ctx.tenantId,
-      botId: ctx.botId,
+      botId: botId,
       isoDate,
     });
     if (slots.length === 0) {
       await sendChannelText(
         buildOutboundContext({
           tenantId: ctx.tenantId,
-          botId: ctx.botId,
-          bot: ctx.bot,
+          botId: botId,
+          bot,
           conversation,
           accessToken,
           environment: ctx.environment,

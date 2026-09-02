@@ -9,6 +9,7 @@ import {
   type ProviderId,
 } from "../../lib/integrations/provider-credentials.js";
 import {
+  normalizeDeepgramPayload,
   normalizeElevenLabsPayload,
   normalizeOpenAIPayload,
   normalizeTelnyxPayload,
@@ -19,7 +20,7 @@ import { resolveApiBaseUrl } from "../../lib/api-base-url.js";
 import { prepareTelnyxCredentialPayload } from "../../lib/telnyx/provision.js";
 import { badRequest, handleError, ok, parseJsonBody } from "../../lib/http.js";
 
-const ProviderSchema = z.enum(["openai", "telnyx", "elevenlabs"]);
+const ProviderSchema = z.enum(["openai", "telnyx", "elevenlabs", "deepgram"]);
 
 export async function handleProviderCredentialRoutes(
   event: APIGatewayProxyEventV2WithJWTAuthorizer,
@@ -67,8 +68,12 @@ export async function handleProviderCredentialRoutes(
           existing,
         });
         await saveTenantProviderCredential(auth.tenantId, environment, provider, payload);
-      } else {
+      } else if (provider === "elevenlabs") {
         const payload = normalizeElevenLabsPayload(body as { apiKey?: string });
+        await validateProviderCredential(provider, payload);
+        await saveTenantProviderCredential(auth.tenantId, environment, provider, payload);
+      } else {
+        const payload = normalizeDeepgramPayload(body as { apiKey?: string });
         await validateProviderCredential(provider, payload);
         await saveTenantProviderCredential(auth.tenantId, environment, provider, payload);
       }

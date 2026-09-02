@@ -32,7 +32,7 @@ import {
   generateFlowHookSecret,
   hashFlowHookSecret,
 } from "../../lib/flow/hook-credentials.js";
-import { validateFlowDefinition, validateFlowDefinitionWithSecrets } from "../../lib/flow/validate.js";
+import { validateFlowDefinition, validateFlowDefinitionWithSecrets, issuesBlockingDraftSave } from "../../lib/flow/validate.js";
 import {
   deleteFlowSecret,
   getFlowSecret,
@@ -41,8 +41,10 @@ import {
 } from "../../lib/flow/flow-secrets.repository.js";
 import { buildTaxi355SatelitalVoiceFlow } from "../../lib/flow/voice-flow-template.js";
 import { isVoiceAiFlow } from "../../lib/flow/voice-flow-compiler.js";
+import { resolveFlowBotId, withBotFromNodes } from "../../lib/flow/resolve-flow-bot.js";
 import { ok, created, badRequest, notFound, noContent, handleError } from "../../lib/http.js";
 import type { FlowDefinition, FlowEdge, FlowHookConfig, FlowNode, FlowKind } from "../../types/index.js";
+import { isWebhookReceivingFlow } from "../../lib/flow/webhook-flow.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 
@@ -66,7 +68,10 @@ const FlowNodeSchema = z.object({
     "await_order",
     "save_contact",
     "create_lead",
+    "create_opportunity",
     "send_notification",
+    "assign_bot",
+    "webhook",
     "end",
   ]),
   position: z.object({ x: z.number(), y: z.number() }),
@@ -82,7 +87,7 @@ const FlowEdgeSchema = z.object({
 
 const FlowSchema = z.object({
   name: z.string().min(1).max(120),
-  botId: z.string().uuid(),
+  botId: z.string().uuid().optional(),
   flowKind: z.enum(["messaging", "voice_ai"]).optional(),
   enabled: z.boolean().default(false),
   nodes: z.array(FlowNodeSchema).min(1),
@@ -99,9 +104,54 @@ const TaxiTemplateSchema = z.object({
   botId: z.string().uuid(),
 });
 
+function resolveFlowId(
+  rawPath: string,
+  pathParams: { flowId?: string } | undefined
+): string | undefined {
+  if (pathParams?.flowId) return pathParams.flowId;
+  if (rawPath === "/flows" || rawPath.includes("/flows/templates/")) return undefined;
+  const match = rawPath.match(/^\/flows\/([^/]+)/);
+  return match?.[1];
+}
+
+function resolveRunId(
+  rawPath: string,
+  pathParams: { runId?: string } | undefined
+): string | undefined {
+  if (pathParams?.runId) return pathParams.runId;
+  const match = rawPath.match(/^\/flow-runs\/([^/]+)/);
+  return match?.[1];
+}
+
+function resolveSecretName(
+  rawPath: string,
+  pathParams: { secretName?: string } | undefined
+): string | undefined {
+  if (pathParams?.secretName) return pathParams.secretName;
+  const match = rawPath.match(/\/secrets\/([^/]+)$/);
+  return match?.[1];
+}
+
+function isFormFlowDefinition(nodes: FlowNode[]): boolean {
+  return nodes.some(
+    (node) => node.type === "trigger" && node.data.triggerType === "web_form_submitted"
+  );
+}
+
 function resolveEntryNodeId(nodes: FlowNode[]): string {
   const trigger = nodes.find((n) => n.type === "trigger");
   return trigger?.id ?? nodes[0]?.id ?? "";
+}
+
+function assertBotForEnable(flow: FlowDefinition): string | null {
+  const botId = resolveFlowBotId(flow);
+  const formFlow = isFormFlowDefinition(flow.nodes);
+  const webhookFlow = isWebhookReceivingFlow(flow.nodes);
+  const voiceFlow = isVoiceAiFlow(flow);
+  if (!botId && (voiceFlow || (!formFlow && !webhookFlow))) {
+    return "Add an assign bot node before enabling this flow";
+  }
+  return null;
 }
 
 async function ensureFlowHook(
@@ -115,11 +165,12 @@ async function ensureFlowHook(
 
   const secret = generateFlowHookSecret();
   const now = new Date().toISOString();
+  const botId = resolveFlowBotId(flow);
   const config: FlowHookConfig = {
     hookKey: generateFlowHookKey(),
     tenantId,
     flowId: flow.flowId,
-    botId: flow.botId,
+    ...(botId ? { botId } : {}),
     secretHash: hashFlowHookSecret(secret),
     enabled: true,
     createdAt: now,
@@ -150,9 +201,10 @@ export async function handler(
     assertMemberRole(auth);
     await assertAssignedServices(auth.tenantId, "flows");
     const method = apiEvent.requestContext.http.method;
-    const flowId = apiEvent.pathParameters?.flowId;
-    const runId = apiEvent.pathParameters?.runId;
-    const path = apiEvent.rawPath;
+    const path = apiEvent.rawPath ?? apiEvent.requestContext.http.path;
+    const flowId = resolveFlowId(path, apiEvent.pathParameters);
+    const runId = resolveRunId(path, apiEvent.pathParameters);
+    const secretName = resolveSecretName(path, apiEvent.pathParameters);
 
     if (method === "GET" && runId && path.includes("/flow-runs/")) {
       const run = await getFlowRun(auth.tenantId, runId);
@@ -254,10 +306,9 @@ export async function handler(
       return ok({ name: body.data.name, configured: true });
     }
 
-    if (method === "DELETE" && flowId && apiEvent.pathParameters?.secretName) {
+    if (method === "DELETE" && flowId && secretName) {
       const flow = await getFlowDefinition(auth.tenantId, flowId);
       if (!flow) return notFound("Flow not found");
-      const secretName = apiEvent.pathParameters.secretName;
       const existing = await getFlowSecret(auth.tenantId, ENVIRONMENT, flowId, secretName);
       if (!existing) return notFound("Secret not found");
       await deleteFlowSecret(auth.tenantId, ENVIRONMENT, flowId, secretName);
@@ -295,24 +346,11 @@ export async function handler(
       const body = FlowSchema.safeParse(JSON.parse(apiEvent.body ?? "{}"));
       if (!body.success) return badRequest(body.error.message);
 
-      const bot = await getBot(auth.tenantId, body.data.botId);
-      if (!bot) return notFound("Bot not found");
-
-      const tenant = await getTenant(auth.tenantId);
-      if (tenant) {
-        await assertCanCreateVisualFlow(tenant, body.data.botId, body.data.nodes.length);
-        if (body.data.enabled) {
-          await assertCanEnableVisualFlow(tenant);
-        }
-      }
-
       const nodes = body.data.nodes as FlowNode[];
       const edges = body.data.edges as FlowEdge[];
-      const now = new Date().toISOString();
-      const flow: FlowDefinition = {
+      const draftFlow: FlowDefinition = {
         flowId: makeFlowId(),
         tenantId: auth.tenantId,
-        botId: body.data.botId,
         name: body.data.name,
         ...(body.data.flowKind ? { flowKind: body.data.flowKind as FlowKind } : {}),
         enabled: body.data.enabled,
@@ -320,11 +358,32 @@ export async function handler(
         nodes,
         edges,
         entryNodeId: body.data.entryNodeId ?? resolveEntryNodeId(nodes),
-        createdAt: now,
-        updatedAt: now,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
-      await createFlowDefinition(flow);
-      return created(flow);
+      const flow = withBotFromNodes(draftFlow);
+
+      if (flow.botId) {
+        const bot = await getBot(auth.tenantId, flow.botId);
+        if (!bot) return notFound("Bot not found");
+      }
+
+      if (body.data.enabled) {
+        const botError = assertBotForEnable(flow);
+        if (botError) return badRequest(botError);
+      }
+
+      const tenant = await getTenant(auth.tenantId);
+      if (tenant) {
+        await assertCanCreateVisualFlow(tenant, flow.botId, nodes.length);
+        if (body.data.enabled) {
+          await assertCanEnableVisualFlow(tenant);
+        }
+      }
+
+      const now = new Date().toISOString();
+      await createFlowDefinition({ ...flow, createdAt: now, updatedAt: now });
+      return created({ ...flow, createdAt: now, updatedAt: now });
     }
 
     if (method === "PUT" && flowId) {
@@ -334,13 +393,8 @@ export async function handler(
       const body = FlowSchema.partial().safeParse(JSON.parse(apiEvent.body ?? "{}"));
       if (!body.success) return badRequest(body.error.message);
 
-      const tenant = await getTenant(auth.tenantId);
-      if (tenant && body.data.nodes) {
-        await assertCanCreateVisualFlow(tenant, existing.botId, body.data.nodes.length);
-      }
-
       const nodes = (body.data.nodes ?? existing.nodes) as FlowNode[];
-      const candidate: FlowDefinition = {
+      const candidate = withBotFromNodes({
         ...existing,
         ...(body.data.name !== undefined ? { name: body.data.name } : {}),
         ...(body.data.flowKind !== undefined ? { flowKind: body.data.flowKind as FlowKind } : {}),
@@ -351,7 +405,23 @@ export async function handler(
           body.data.entryNodeId ??
           (body.data.nodes ? resolveEntryNodeId(nodes) : existing.entryNodeId),
         ...(body.data.enabled ? { publishedAt: new Date().toISOString() } : {}),
-      };
+      });
+
+      if (candidate.botId) {
+        const bot = await getBot(auth.tenantId, candidate.botId);
+        if (!bot) return notFound("Bot not found");
+      }
+
+      if (body.data.enabled) {
+        const botError = assertBotForEnable(candidate);
+        if (botError) return badRequest(botError);
+      }
+
+      const tenant = await getTenant(auth.tenantId);
+      const nodeCount = nodes.length;
+      if (tenant && body.data.nodes) {
+        await assertCanCreateVisualFlow(tenant, candidate.botId, nodeCount);
+      }
 
       const issues = isVoiceAiFlow(candidate)
         ? await validateFlowDefinitionWithSecrets(candidate, ENVIRONMENT)
@@ -360,8 +430,9 @@ export async function handler(
         (node) => node.type === "trigger" && node.data.triggerType === "web_form_submitted"
       );
       const isVoiceFlow = isVoiceAiFlow(candidate);
-      if ((isFormFlow || isVoiceFlow) && issues.length > 0) {
-        return badRequest(issues.map((issue) => issue.message).join("; "));
+      const draftBlockingIssues = issuesBlockingDraftSave(issues);
+      if ((isFormFlow || isVoiceFlow) && draftBlockingIssues.length > 0) {
+        return badRequest(draftBlockingIssues.map((issue) => issue.message).join("; "));
       }
 
       const updated = await updateFlowDefinition(auth.tenantId, flowId, candidate);
@@ -374,6 +445,9 @@ export async function handler(
       const existing = await getFlowDefinition(auth.tenantId, flowId);
       if (!existing) return notFound("Flow not found");
 
+      const botError = assertBotForEnable(existing);
+      if (botError) return badRequest(botError);
+
       const issues = isVoiceAiFlow(existing)
         ? await validateFlowDefinitionWithSecrets(existing, ENVIRONMENT)
         : validateFlowDefinition(existing);
@@ -385,8 +459,9 @@ export async function handler(
         return badRequest(issues.map((issue) => issue.message).join("; "));
       }
 
-      if (isVoiceFlow) {
-        const siblingFlows = await listFlowDefinitions(auth.tenantId, existing.botId);
+      const flowBotId = resolveFlowBotId(existing);
+      if (isVoiceFlow && flowBotId) {
+        const siblingFlows = await listFlowDefinitions(auth.tenantId, flowBotId);
         const otherEnabled = siblingFlows.find(
           (item) => item.flowId !== existing.flowId && item.enabled && isVoiceAiFlow(item)
         );
@@ -402,7 +477,7 @@ export async function handler(
       if (!updated) return notFound("Flow not found");
 
       let hookResponse: Record<string, unknown> = {};
-      if (isFormFlow) {
+      if (isWebhookReceivingFlow(updated.nodes)) {
         const { config, secret } = await ensureFlowHook(auth.tenantId, updated);
         hookResponse = {
           hook: {

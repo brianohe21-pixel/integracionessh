@@ -487,3 +487,42 @@ resource "aws_sqs_queue_policy" "whatsapp_sync" {
     ]
   })
 }
+
+resource "aws_sqs_queue" "sequence_dlq" {
+  name                        = "${var.project}-${var.environment}-sequence-dlq.fifo"
+  fifo_queue                  = true
+  content_based_deduplication = true
+  message_retention_seconds   = 1209600
+  tags                        = var.tags
+}
+
+resource "aws_sqs_queue" "sequence_run" {
+  name                        = "${var.project}-${var.environment}-sequence-run.fifo"
+  fifo_queue                  = true
+  content_based_deduplication = true
+  visibility_timeout_seconds  = 120
+  message_retention_seconds   = 86400
+
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.sequence_dlq.arn
+    maxReceiveCount     = 3
+  })
+
+  tags = var.tags
+}
+
+resource "aws_sqs_queue_policy" "sequence_run" {
+  queue_url = aws_sqs_queue.sequence_run.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect    = "Allow"
+        Principal = { AWS = var.lambda_role_arns }
+        Action    = ["sqs:SendMessage", "sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes"]
+        Resource  = aws_sqs_queue.sequence_run.arn
+      }
+    ]
+  })
+}

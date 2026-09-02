@@ -2,9 +2,13 @@
 
 import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
+import { Trash2 } from "lucide-react";
 import type { FlowNodeType } from "@/types";
+import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 import { CATEGORY_STYLES, FLOW_NODE_META } from "./nodeConfig";
+import { useFlowNodeActions } from "./FlowNodeActionsContext";
+import { NodeHelpPopover } from "./NodeHelpPopover";
 
 export interface FlowNodeCardData {
   flowType: FlowNodeType;
@@ -16,7 +20,9 @@ export interface FlowNodeCardData {
   [key: string]: unknown;
 }
 
-function FlowNodeCardComponent({ data, selected }: NodeProps) {
+function FlowNodeCardComponent({ id, data, selected }: NodeProps) {
+  const t = useT();
+  const actions = useFlowNodeActions();
   const nodeData = data as FlowNodeCardData;
   const meta = FLOW_NODE_META[nodeData.flowType];
   const styles = CATEGORY_STYLES[meta.category];
@@ -28,15 +34,34 @@ function FlowNodeCardComponent({ data, selected }: NodeProps) {
         : [{ id: "btn-1", title: "…" }]
       : [];
 
+  const canDelete = actions?.canDeleteNode(id) ?? false;
+
   return (
+    <NodeHelpPopover type={nodeData.flowType} side="top" className="max-w-[280px]">
     <div
       className={cn(
-        "min-w-[220px] max-w-[280px] rounded-xl border px-4 py-3 shadow-lg shadow-black/25",
+        "group relative min-w-[220px] max-w-[280px] rounded-xl border px-4 py-3 shadow-lg shadow-black/25",
         styles.border,
         styles.bg,
         selected && "ring-2 ring-accent ring-offset-2 ring-offset-canvas"
       )}
     >
+      {canDelete ? (
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            actions?.deleteNode(id);
+          }}
+          className={cn(
+            "nodrag nopan absolute -right-2 -top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-default bg-surface-elevated text-danger shadow-sm transition-opacity hover:bg-danger/10",
+            selected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          )}
+          aria-label={t("flows.deleteNode")}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      ) : null}
       {meta.hasInput && (
         <Handle
           type="target"
@@ -122,6 +147,7 @@ function FlowNodeCardComponent({ data, selected }: NodeProps) {
         />
       )}
     </div>
+    </NodeHelpPopover>
   );
 }
 

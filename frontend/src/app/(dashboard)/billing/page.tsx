@@ -13,8 +13,15 @@ import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
 
 function parsePlanParam(value: string | null): TenantPlan | null {
-  if (value === "pro" || value === "enterprise" || value === "free" || value === "reseller") {
-    return value;
+  if (
+    value === "starter" ||
+    value === "pro" ||
+    value === "scale" ||
+    value === "enterprise" ||
+    value === "free" ||
+    value === "reseller"
+  ) {
+    return value === "enterprise" ? "scale" : value;
   }
   return null;
 }

@@ -1,63 +1,56 @@
 "use client";
 
-import Link from "next/link";
-import { useMemo, useState } from "react";
-import { PhoneCall, Settings2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { PhoneCall } from "lucide-react";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { SearchInput } from "@/components/ui/SearchInput";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { VoiceAgentListPanel } from "@/components/voice-agents/VoiceAgentListPanel";
+import { VoiceAgentPhoneNumbersPanel } from "@/components/voice-agents/VoiceAgentPhoneNumbersPanel";
+import { VoiceAgentWorkspace } from "@/components/voice-agents/VoiceAgentWorkspace";
 import { useBots } from "@/hooks/useBots";
-import { useTelephonyCalls } from "@/hooks/useTelephony";
-import { VoiceAgentBotIdCopy } from "@/components/voice-agents/VoiceAgentBotIdCopy";
 import { useT } from "@/i18n/context";
-import type { Bot } from "@/types";
+import {
+  isVoiceAgentDetailTab,
+  type VoiceAgentDetailTabId,
+} from "@/lib/voice-agent-sections";
+import { cn } from "@/lib/utils";
 
-function VoiceAgentListItem({ bot }: { bot: Bot }) {
-  const t = useT();
-  const { data } = useTelephonyCalls(bot.botId);
-  const recentCalls = data?.items?.length ?? 0;
-  const lastCost = data?.items?.[0]?.costBreakdown?.totalUsd;
+const PAGE_TABS = ["agents", "phoneNumbers"] as const;
+type PageTabId = (typeof PAGE_TABS)[number];
 
-  return (
-    <li className="flex flex-wrap items-center justify-between gap-3 px-4 py-4">
-      <div className="min-w-0">
-        <div className="flex flex-wrap items-center gap-2">
-          <PhoneCall className="h-4 w-4 text-accent" />
-          <p className="font-medium text-primary">{bot.name}</p>
-          <VoiceAgentBotIdCopy botId={bot.botId} compact />
-          {bot.telephonyEnabled ? (
-            <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
-              {t("common.active")}
-            </span>
-          ) : (
-            <span className="rounded-full bg-surface-muted px-2 py-0.5 text-xs text-secondary">
-              {t("common.inactive")}
-            </span>
-          )}
-        </div>
-        <p className="mt-1 text-sm text-secondary">
-          {bot.telephonyPhoneNumber || t("voiceAgents.noNumber")}
-          {recentCalls > 0 && ` · ${recentCalls} ${t("voiceAgents.recentCalls")}`}
-          {lastCost !== undefined &&
-            ` · ${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(lastCost)}`}
-        </p>
-      </div>
-      <Link
-        href={`/voice-agents/${bot.botId}`}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-accent/30 px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent-muted"
-      >
-        <Settings2 className="h-4 w-4" />
-        {t("voiceAgents.manage")}
-      </Link>
-    </li>
-  );
+function isPageTabId(value: string | null): value is PageTabId {
+  return PAGE_TABS.includes(value as PageTabId);
 }
 
 export default function VoiceAgentsPage() {
   const t = useT();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: botsData, isLoading } = useBots();
   const [search, setSearch] = useState("");
-  const bots = botsData ?? [];
+  const bots = useMemo(() => botsData ?? [], [botsData]);
+
+  const pageTab = useMemo<PageTabId>(() => {
+    const value = searchParams.get("tab");
+    return isPageTabId(value) ? value : "agents";
+  }, [searchParams]);
+
+  const selectedAgentId = searchParams.get("agent") ?? "";
+  const section = useMemo<VoiceAgentDetailTabId>(() => {
+    const value = searchParams.get("section");
+    return isVoiceAgentDetailTab(value) ? value : "overview";
+  }, [searchParams]);
+
+  const urlBotId = searchParams.get("botId") ?? "";
+  const [numbersBotId, setNumbersBotId] = useState("");
+
+  useEffect(() => {
+    if (urlBotId) setNumbersBotId(urlBotId);
+  }, [urlBotId]);
+
+  const effectiveNumbersBotId = numbersBotId || urlBotId || selectedAgentId || bots[0]?.botId || "";
 
   const filteredBots = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -69,32 +62,99 @@ export default function VoiceAgentsPage() {
     );
   }, [bots, search]);
 
+  function replaceParams(mutator: (params: URLSearchParams) => void) {
+    const params = new URLSearchParams(searchParams.toString());
+    mutator(params);
+    const query = params.toString();
+    router.replace(query ? `/voice-agents?${query}` : "/voice-agents");
+  }
+
+  function selectAgent(botId: string) {
+    replaceParams((params) => {
+      params.delete("tab");
+      params.delete("botId");
+      params.set("agent", botId);
+      if (!params.get("section")) params.set("section", "overview");
+    });
+  }
+
+  function clearAgent() {
+    replaceParams((params) => {
+      params.delete("agent");
+      params.delete("section");
+    });
+  }
+
+  function setSection(next: VoiceAgentDetailTabId) {
+    if (!selectedAgentId) return;
+    replaceParams((params) => {
+      params.set("agent", selectedAgentId);
+      params.set("section", next);
+    });
+  }
+
+  function handleNumbersBotChange(botId: string) {
+    setNumbersBotId(botId);
+    replaceParams((params) => {
+      params.set("tab", "phoneNumbers");
+      params.set("botId", botId);
+      params.delete("agent");
+      params.delete("section");
+    });
+  }
+
+  const showWorkspace = pageTab === "agents" && Boolean(selectedAgentId);
+
   return (
-    <DashboardPage maxWidth="6xl">
-      <PageHeader title={t("voiceAgents.title")} subtitle={t("voiceAgents.subtitle")} />
+    <DashboardPage className="flex min-h-0 flex-1 flex-col gap-3">
+      <PageHeader
+        title={t("voiceAgents.title")}
+        subtitle={showWorkspace ? undefined : t("voiceAgents.subtitle")}
+        className="mb-0 shrink-0"
+      />
 
-      <div className="mb-4">
-        <SearchInput
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          onClear={() => setSearch("")}
-          placeholder={t("voiceAgents.searchPlaceholder")}
-        />
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        {pageTab === "agents" ? (
+          <div className="grid h-full min-h-[calc(100vh-9.5rem)] gap-3 xl:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]">
+            <div className={cn("min-h-0", showWorkspace ? "hidden xl:flex xl:flex-col" : "flex flex-col")}>
+              <VoiceAgentListPanel
+                bots={filteredBots}
+                selectedBotId={selectedAgentId || null}
+                onSelect={selectAgent}
+                search={search}
+                onSearchChange={setSearch}
+                isLoading={isLoading}
+              />
+            </div>
+
+            <div className={cn("min-h-0", showWorkspace ? "flex flex-col" : "hidden xl:flex xl:flex-col")}>
+              {showWorkspace ? (
+                <VoiceAgentWorkspace
+                  botId={selectedAgentId}
+                  section={section}
+                  onSectionChange={setSection}
+                  onBack={clearAgent}
+                  bots={bots}
+                />
+              ) : (
+                <EmptyState
+                  icon={<PhoneCall className="h-5 w-5" />}
+                  title={t("voiceAgents.selectAgentTitle")}
+                  description={t("voiceAgents.selectAgentPrompt")}
+                />
+              )}
+            </div>
+          </div>
+        ) : null}
+
+        {pageTab === "phoneNumbers" ? (
+          <VoiceAgentPhoneNumbersPanel
+            botId={effectiveNumbersBotId}
+            bots={bots}
+            onBotChange={handleNumbersBotChange}
+          />
+        ) : null}
       </div>
-
-      <section className="rounded-xl border border-default bg-surface-elevated">
-        {isLoading ? (
-          <div className="h-40 animate-pulse rounded-xl bg-surface-muted" />
-        ) : filteredBots.length === 0 ? (
-          <p className="p-6 text-sm text-secondary">{t("voiceAgents.empty")}</p>
-        ) : (
-          <ul className="divide-y divide-gray-100">
-            {filteredBots.map((bot) => (
-              <VoiceAgentListItem key={bot.botId} bot={bot} />
-            ))}
-          </ul>
-        )}
-      </section>
     </DashboardPage>
   );
 }

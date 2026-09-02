@@ -9,9 +9,12 @@ import {
   useBillingPortal,
   useBillingProviders,
 } from "@/hooks/useBilling";
-import { formatCopPrice } from "@/lib/plan-config";
+import { formatCopPrice, formatUsdPrice } from "@/lib/plan-config";
+import type { PaidBillingPlan } from "@/lib/plan-config";
 import { useT } from "@/i18n/context";
 import type { Tenant } from "@/types";
+
+const UPGRADE_PLANS: PaidBillingPlan[] = ["starter", "pro", "scale"];
 
 export function BillingActions() {
   const t = useT();
@@ -30,7 +33,7 @@ export function BillingActions() {
     (providers?.wompi ? "wompi" : providers?.stripe ? "stripe" : null);
   const canCheckout = Boolean(defaultProvider);
 
-  function goToCheckout(plan: "pro" | "enterprise") {
+  function goToCheckout(plan: PaidBillingPlan) {
     setError("");
     if (!defaultProvider) {
       setError(t("billing.noProviderConfigured"));
@@ -51,12 +54,19 @@ export function BillingActions() {
 
   const hasStripePortal = Boolean(tenant?.stripeCustomerId);
   const showWompiNote = defaultProvider === "wompi";
-  const proPrice = providers?.plans?.pro
-    ? formatCopPrice(providers.plans.pro.amountCents)
-    : null;
-  const enterprisePrice = providers?.plans?.enterprise
-    ? formatCopPrice(providers.plans.enterprise.amountCents)
-    : null;
+  const currentPlan = tenant?.plan ?? "free";
+
+  function upgradeLabel(plan: PaidBillingPlan): string {
+    if (plan === "starter") return t("billing.upgradeStarter");
+    if (plan === "pro") return t("billing.upgradePro");
+    return t("billing.upgradeEnterprise");
+  }
+
+  function formatPlanPrice(plan: PaidBillingPlan): string | null {
+    const price = providers?.plans?.[plan] ?? (plan === "scale" ? providers?.plans?.enterprise : undefined);
+    if (!price) return null;
+    return `${formatUsdPrice(price.listPriceUsd)} · ${formatCopPrice(price.amountCents)}`;
+  }
 
   return (
     <div className="flex flex-col gap-3 mt-4">
@@ -64,28 +74,27 @@ export function BillingActions() {
         <p className="text-xs text-secondary">{t("billing.wompiNote")}</p>
       )}
       <div className="flex flex-wrap gap-2">
-        {tenant?.plan !== "pro" && (
-          <button
-            type="button"
-            onClick={() => goToCheckout("pro")}
-            disabled={!canCheckout}
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50"
-          >
-            {t("billing.upgradePro")}
-            {proPrice ? ` · ${proPrice}` : ""}
-          </button>
-        )}
-        {tenant?.plan !== "enterprise" && (
-          <button
-            type="button"
-            onClick={() => goToCheckout("enterprise")}
-            disabled={!canCheckout}
-            className="rounded-lg border border-accent px-4 py-2 text-sm font-medium text-accent hover:bg-accent-muted disabled:opacity-50"
-          >
-            {t("billing.upgradeEnterprise")}
-            {enterprisePrice ? ` · ${enterprisePrice}` : ""}
-          </button>
-        )}
+        {UPGRADE_PLANS.filter((plan) => currentPlan !== plan).map((plan) => {
+          const price = formatPlanPrice(plan);
+          const isPrimary = plan === "pro";
+
+          return (
+            <button
+              key={plan}
+              type="button"
+              onClick={() => goToCheckout(plan)}
+              disabled={!canCheckout}
+              className={
+                isPrimary
+                  ? "rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50"
+                  : "rounded-lg border border-accent px-4 py-2 text-sm font-medium text-accent hover:bg-accent-muted disabled:opacity-50"
+              }
+            >
+              {upgradeLabel(plan)}
+              {price ? ` · ${price}` : ""}
+            </button>
+          );
+        })}
         {hasStripePortal && (
           <button
             type="button"

@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+import Image from "next/image";
 import { useT } from "@/i18n/context";
 import { DEFAULT_PRIMARY_COLOR, hexToRgba } from "@/lib/brand-colors";
 import { api } from "@/lib/api";
@@ -84,11 +85,13 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             style={{ backgroundColor: primaryColor }}
           >
             {logoUrl ? (
-              <img
+              <Image
                 key={logoUrl}
                 src={logoUrl}
                 alt=""
-                className="absolute inset-0 h-full w-full object-cover"
+                fill
+                unoptimized
+                className="object-cover"
               />
             ) : (
               <svg className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -108,6 +111,10 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <p className="mt-6 text-center text-xs text-muted">
           <a href="/docs/api" className="hover:text-secondary">
             {t("apiDocs.navLink")}
+          </a>
+          {" · "}
+          <a href="/docs/manual" className="hover:text-secondary">
+            {t("userManual.navLink")}
           </a>
           {" · "}
           <a href="/legal/terms" className="hover:text-secondary">

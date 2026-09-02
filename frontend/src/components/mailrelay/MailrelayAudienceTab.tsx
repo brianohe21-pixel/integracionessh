@@ -24,6 +24,7 @@ const emptyConfig: MailrelayConfig = {
   senderId: "",
   defaultGroupId: "",
   tagGroupMappings: [],
+  enabled: true,
 };
 
 export function MailrelayAudienceTab({ connected }: { connected: boolean }) {
@@ -107,12 +108,31 @@ export function MailrelayAudienceTab({ connected }: { connected: boolean }) {
   return (
     <div className="space-y-6">
       <Card padding="lg" className="space-y-5">
-        <div>
-          <h2 className="font-semibold text-primary">{t("mailrelay.audience.settingsTitle")}</h2>
-          <p className="mt-1 text-sm text-secondary">
-            {t("mailrelay.audience.settingsDescription")}
-          </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-semibold text-primary">{t("mailrelay.audience.settingsTitle")}</h2>
+            <p className="mt-1 text-sm text-secondary">
+              {t("mailrelay.audience.settingsDescription")}
+            </p>
+          </div>
+          <label className="flex items-center gap-2 text-sm font-medium text-primary">
+            <input
+              type="checkbox"
+              checked={config.enabled !== false}
+              onChange={(event) => {
+                setConfig((current) => ({ ...current, enabled: event.target.checked }));
+                setSaved(false);
+              }}
+            />
+            {t("mailrelay.audience.enabled")}
+          </label>
         </div>
+
+        {config.enabled === false ? (
+          <p className="rounded-lg bg-surface-muted p-3 text-sm text-secondary">
+            {t("mailrelay.audience.disabledHint")}
+          </p>
+        ) : null}
 
         <div className="grid gap-4 md:grid-cols-2">
           <label className="space-y-2 text-sm font-medium text-primary">
@@ -235,7 +255,7 @@ export function MailrelayAudienceTab({ connected }: { connected: boolean }) {
           </div>
           <Button
             onClick={() => void handleSync()}
-            disabled={startSync.isPending || Boolean(activeSync)}
+            disabled={startSync.isPending || Boolean(activeSync) || config.enabled === false}
           >
             <RefreshCw className={`h-4 w-4 ${activeSync ? "animate-spin" : ""}`} />
             {activeSync ? t("mailrelay.audience.syncing") : t("mailrelay.audience.sync")}

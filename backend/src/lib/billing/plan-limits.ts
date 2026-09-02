@@ -19,12 +19,14 @@ export interface PlanLimits {
   maxFlowNodes: number;
   maxActiveFlowRuns: number;
   maxChannelsPerBot: number;
+  maxWhatsAppChannelsPerBot: number;
   maxActiveWebChatSessions: number;
   maxConcurrentLiveKitCalls: number;
   maxVoicebotMinutesPerMonth: number;
   maxCalendarAppsPerTenant: number;
   maxPaymentsAppsPerTenant: number;
   maxCatalogAppsPerTenant: number;
+  maxHostedFormsPerTenant: number;
   maxProductsPerBot: number;
   maxOrdersPerMonth: number;
   canCustomizeBranding: boolean;
@@ -48,71 +50,106 @@ const LIMITS: Record<TenantPlan, PlanLimits> = {
     maxFlowNodes: 10,
     maxActiveFlowRuns: 3,
     maxChannelsPerBot: 1,
+    maxWhatsAppChannelsPerBot: 1,
     maxActiveWebChatSessions: 0,
     maxConcurrentLiveKitCalls: 0,
     maxVoicebotMinutesPerMonth: 0,
     maxCalendarAppsPerTenant: 1,
     maxPaymentsAppsPerTenant: 1,
     maxCatalogAppsPerTenant: 1,
+    maxHostedFormsPerTenant: 1,
     maxProductsPerBot: 20,
     maxOrdersPerMonth: 50,
     canCustomizeBranding: false,
     apiRateLimitPerMinute: 20,
     apiRateLimitPerDay: 250,
   },
+  starter: {
+    maxActiveBots: 2,
+    maxMessagesPerMonth: 2_000,
+    maxBulkRecipientsPerJob: 500,
+    maxActiveCampaigns: 2,
+    maxContacts: 2_000,
+    maxAutomationsPerBot: 5,
+    maxScheduledAutomations: 2,
+    maxDocumentsPerBot: 5,
+    maxKnowledgeStorageMb: 25,
+    maxMetaFlowsPerBot: 2,
+    maxVisualFlowsPerBot: 2,
+    maxFlowNodes: 20,
+    maxActiveFlowRuns: 15,
+    maxChannelsPerBot: 2,
+    maxWhatsAppChannelsPerBot: 1,
+    maxActiveWebChatSessions: 25,
+    maxConcurrentLiveKitCalls: 1,
+    maxVoicebotMinutesPerMonth: 60,
+    maxCalendarAppsPerTenant: 2,
+    maxPaymentsAppsPerTenant: 2,
+    maxCatalogAppsPerTenant: 2,
+    maxHostedFormsPerTenant: 3,
+    maxProductsPerBot: 50,
+    maxOrdersPerMonth: 500,
+    canCustomizeBranding: false,
+    apiRateLimitPerMinute: 30,
+    apiRateLimitPerDay: 2_500,
+  },
   pro: {
     maxActiveBots: 5,
-    maxMessagesPerMonth: 4_000,
+    maxMessagesPerMonth: 10_000,
     maxBulkRecipientsPerJob: 2_000,
-    maxActiveCampaigns: 5,
-    maxContacts: 5_000,
-    maxAutomationsPerBot: 15,
-    maxScheduledAutomations: 5,
-    maxDocumentsPerBot: 10,
-    maxKnowledgeStorageMb: 25,
-    maxMetaFlowsPerBot: 5,
-    maxVisualFlowsPerBot: 5,
+    maxActiveCampaigns: 10,
+    maxContacts: 10_000,
+    maxAutomationsPerBot: 20,
+    maxScheduledAutomations: 10,
+    maxDocumentsPerBot: 25,
+    maxKnowledgeStorageMb: 150,
+    maxMetaFlowsPerBot: 10,
+    maxVisualFlowsPerBot: 10,
     maxFlowNodes: 40,
     maxActiveFlowRuns: 50,
-    maxChannelsPerBot: 4,
-    maxActiveWebChatSessions: 50,
-    maxConcurrentLiveKitCalls: 2,
-    maxVoicebotMinutesPerMonth: 100,
+    maxChannelsPerBot: 5,
+    maxWhatsAppChannelsPerBot: 1,
+    maxActiveWebChatSessions: 200,
+    maxConcurrentLiveKitCalls: 3,
+    maxVoicebotMinutesPerMonth: 300,
     maxCalendarAppsPerTenant: 5,
     maxPaymentsAppsPerTenant: 5,
     maxCatalogAppsPerTenant: 5,
+    maxHostedFormsPerTenant: 10,
     maxProductsPerBot: 200,
     maxOrdersPerMonth: 2_000,
-    canCustomizeBranding: false,
-    apiRateLimitPerMinute: 60,
-    apiRateLimitPerDay: 5_000,
-  },
-  enterprise: {
-    maxActiveBots: Number.MAX_SAFE_INTEGER,
-    maxMessagesPerMonth: 15_000,
-    maxBulkRecipientsPerJob: 10_000,
-    maxActiveCampaigns: Number.MAX_SAFE_INTEGER,
-    maxContacts: Number.MAX_SAFE_INTEGER,
-    maxAutomationsPerBot: Number.MAX_SAFE_INTEGER,
-    maxScheduledAutomations: Number.MAX_SAFE_INTEGER,
-    maxDocumentsPerBot: 50,
-    maxKnowledgeStorageMb: 100,
-    maxMetaFlowsPerBot: Number.MAX_SAFE_INTEGER,
-    maxVisualFlowsPerBot: Number.MAX_SAFE_INTEGER,
-    maxFlowNodes: 100,
-    maxActiveFlowRuns: Number.MAX_SAFE_INTEGER,
-    maxChannelsPerBot: 8,
-    maxActiveWebChatSessions: 500,
-    maxConcurrentLiveKitCalls: 10,
-    maxVoicebotMinutesPerMonth: 1000,
-    maxCalendarAppsPerTenant: Number.MAX_SAFE_INTEGER,
-    maxPaymentsAppsPerTenant: Number.MAX_SAFE_INTEGER,
-    maxCatalogAppsPerTenant: Number.MAX_SAFE_INTEGER,
-    maxProductsPerBot: Number.MAX_SAFE_INTEGER,
-    maxOrdersPerMonth: Number.MAX_SAFE_INTEGER,
     canCustomizeBranding: true,
     apiRateLimitPerMinute: 120,
     apiRateLimitPerDay: 50_000,
+  },
+  scale: {
+    maxActiveBots: 15,
+    maxMessagesPerMonth: 40_000,
+    maxBulkRecipientsPerJob: 10_000,
+    maxActiveCampaigns: 50,
+    maxContacts: 50_000,
+    maxAutomationsPerBot: 100,
+    maxScheduledAutomations: 50,
+    maxDocumentsPerBot: 100,
+    maxKnowledgeStorageMb: 1024,
+    maxMetaFlowsPerBot: 50,
+    maxVisualFlowsPerBot: 50,
+    maxFlowNodes: 100,
+    maxActiveFlowRuns: 500,
+    maxChannelsPerBot: 8,
+    maxWhatsAppChannelsPerBot: 60,
+    maxActiveWebChatSessions: 1_000,
+    maxConcurrentLiveKitCalls: 10,
+    maxVoicebotMinutesPerMonth: 1_000,
+    maxCalendarAppsPerTenant: 10,
+    maxPaymentsAppsPerTenant: 10,
+    maxCatalogAppsPerTenant: 10,
+    maxHostedFormsPerTenant: 50,
+    maxProductsPerBot: 1_000,
+    maxOrdersPerMonth: 10_000,
+    canCustomizeBranding: true,
+    apiRateLimitPerMinute: 300,
+    apiRateLimitPerDay: 250_000,
   },
   reseller: {
     maxActiveBots: Number.MAX_SAFE_INTEGER,
@@ -129,12 +166,14 @@ const LIMITS: Record<TenantPlan, PlanLimits> = {
     maxFlowNodes: 100,
     maxActiveFlowRuns: Number.MAX_SAFE_INTEGER,
     maxChannelsPerBot: 8,
+    maxWhatsAppChannelsPerBot: Number.MAX_SAFE_INTEGER,
     maxActiveWebChatSessions: 500,
     maxConcurrentLiveKitCalls: 10,
     maxVoicebotMinutesPerMonth: 2000,
     maxCalendarAppsPerTenant: Number.MAX_SAFE_INTEGER,
     maxPaymentsAppsPerTenant: Number.MAX_SAFE_INTEGER,
     maxCatalogAppsPerTenant: Number.MAX_SAFE_INTEGER,
+    maxHostedFormsPerTenant: Number.MAX_SAFE_INTEGER,
     maxProductsPerBot: Number.MAX_SAFE_INTEGER,
     maxOrdersPerMonth: Number.MAX_SAFE_INTEGER,
     canCustomizeBranding: true,
@@ -156,14 +195,18 @@ function applyLimitsOverride(
   } as PlanLimits;
 }
 
+import { normalizeTenantPlan } from "./normalize-plan.js";
+
 export function getPlanLimits(plan: TenantPlan | string | undefined): PlanLimits {
+  const normalized = normalizeTenantPlan(plan);
   if (
-    plan === "pro" ||
-    plan === "enterprise" ||
-    plan === "free" ||
-    plan === "reseller"
+    normalized === "starter" ||
+    normalized === "pro" ||
+    normalized === "scale" ||
+    normalized === "free" ||
+    normalized === "reseller"
   ) {
-    return LIMITS[plan];
+    return LIMITS[normalized];
   }
   return LIMITS.free;
 }
@@ -184,12 +227,14 @@ function emptyNumericLimits(canCustomizeBranding: boolean): PlanLimits {
     maxFlowNodes: 0,
     maxActiveFlowRuns: 0,
     maxChannelsPerBot: 0,
+    maxWhatsAppChannelsPerBot: 0,
     maxActiveWebChatSessions: 0,
     maxConcurrentLiveKitCalls: 0,
     maxVoicebotMinutesPerMonth: 0,
     maxCalendarAppsPerTenant: 0,
     maxPaymentsAppsPerTenant: 0,
     maxCatalogAppsPerTenant: 0,
+    maxHostedFormsPerTenant: 0,
     maxProductsPerBot: 0,
     maxOrdersPerMonth: 0,
     canCustomizeBranding,
@@ -199,9 +244,12 @@ function emptyNumericLimits(canCustomizeBranding: boolean): PlanLimits {
 }
 
 export function getEffectivePlanLimits(tenant: Tenant): PlanLimits {
-  const base = getPlanLimits(tenant.plan);
+  const base = getPlanLimits(normalizeTenantPlan(tenant.plan));
   if (tenant.plan === "reseller" && tenant.resellerConfig?.limitsOverride) {
-    return applyLimitsOverride(base, tenant.resellerConfig.limitsOverride);
+    return {
+      ...applyLimitsOverride(base, tenant.resellerConfig.limitsOverride),
+      canCustomizeBranding: true,
+    };
   }
 
   const isSubaccount = tenant.tenantKind === "subaccount" || Boolean(tenant.parentTenantId);

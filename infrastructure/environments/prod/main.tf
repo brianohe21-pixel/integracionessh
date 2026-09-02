@@ -112,6 +112,7 @@ module "cognito" {
   google_client_id     = var.google_client_id
   google_client_secret = var.google_client_secret
   lambda_zip_path      = local.lambda_zip_path_absolute
+  dynamodb_table_arn   = module.dynamodb.table_arn
   tags                 = local.tags
 }
 
@@ -162,6 +163,7 @@ resource "aws_iam_role_policy" "scheduler_invoke" {
         module.lambda.flows_function_arn,
         module.lambda.calendar_function_arn,
         module.lambda.reports_function_arn,
+        module.lambda.sales_function_arn,
       ]
     }]
   })
@@ -212,6 +214,8 @@ module "lambda" {
   mailrelay_sync_sqs_queue_arn  = module.sqs.mailrelay_sync_queue_arn
   whatsapp_sync_sqs_queue_url   = module.sqs.whatsapp_sync_queue_url
   whatsapp_sync_sqs_queue_arn   = module.sqs.whatsapp_sync_queue_arn
+  sequence_sqs_queue_url        = module.sqs.sequence_queue_url
+  sequence_sqs_queue_arn        = module.sqs.sequence_queue_arn
   mailrelay_event_types         = var.mailrelay_event_types
   scheduler_role_arn            = aws_iam_role.scheduler.arn
   media_bucket_arn              = module.s3.media_bucket_arn
@@ -220,6 +224,7 @@ module "lambda" {
   cognito_user_pool_arn         = module.cognito.user_pool_arn
   cognito_client_id             = module.cognito.client_id
   cognito_issuer_url            = module.cognito.endpoint
+  cognito_hosted_ui_domain      = module.cognito.hosted_ui_domain
   whatsapp_verify_token         = var.whatsapp_verify_token
   meta_app_id                   = var.meta_app_id
   meta_app_secret               = var.meta_app_secret
@@ -235,6 +240,7 @@ module "lambda" {
   wompi_private_key             = var.wompi_private_key
   wompi_integrity_secret        = var.wompi_integrity_secret
   wompi_events_secret           = var.wompi_events_secret
+  wompi_amount_starter_cents    = var.wompi_amount_starter_cents
   wompi_amount_pro_cents        = var.wompi_amount_pro_cents
   wompi_amount_enterprise_cents = var.wompi_amount_enterprise_cents
   wompi_api_base                = var.wompi_api_base
@@ -246,6 +252,10 @@ module "lambda" {
   ses_from_email                = var.ses_from_email
   admin_notification_emails     = local.ops_alert_emails
   api_public_url                = local.api_public_url
+  google_business_client_id     = var.google_business_client_id
+  google_business_client_secret = var.google_business_client_secret
+  google_calendar_client_id     = var.google_calendar_client_id
+  google_calendar_client_secret = var.google_calendar_client_secret
   tags                          = local.tags
 }
 
@@ -271,6 +281,8 @@ module "api_gateway" {
   contacts_function_arn           = module.lambda.contacts_function_arn
   leads_invoke_arn                = module.lambda.leads_invoke_arn
   leads_function_arn              = module.lambda.leads_function_arn
+  sales_invoke_arn                = module.lambda.sales_invoke_arn
+  sales_function_arn              = module.lambda.sales_function_arn
   templates_invoke_arn            = module.lambda.templates_invoke_arn
   templates_function_arn          = module.lambda.function_arns["templates"]
   bulk_send_invoke_arn            = module.lambda.bulk_send_invoke_arn
@@ -337,10 +349,16 @@ module "api_gateway" {
   payments_function_arn           = module.lambda.payments_function_arn
   catalog_invoke_arn              = module.lambda.catalog_invoke_arn
   catalog_function_arn            = module.lambda.catalog_function_arn
+  hosted_forms_invoke_arn         = module.lambda.hosted_forms_invoke_arn
+  hosted_forms_function_arn       = module.lambda.hosted_forms_function_arn
+  short_links_invoke_arn          = module.lambda.short_links_invoke_arn
+  short_links_function_arn        = module.lambda.short_links_function_arn
   mailrelay_invoke_arn            = module.lambda.mailrelay_invoke_arn
   mailrelay_function_arn          = module.lambda.mailrelay_function_arn
   mailrelay_webhook_invoke_arn    = module.lambda.mailrelay_webhook_invoke_arn
   mailrelay_webhook_function_arn  = module.lambda.mailrelay_webhook_function_arn
+  google_business_invoke_arn      = module.lambda.google_business_invoke_arn
+  google_business_function_arn    = module.lambda.google_business_function_arn
   allowed_origins                 = ["*"]
   api_custom_domain               = var.api_custom_domain
   tags                            = local.tags

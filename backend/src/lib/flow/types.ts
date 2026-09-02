@@ -9,6 +9,20 @@ export function requireConversation(ctx: FlowExecutionContext): Conversation {
   return ctx.conversation;
 }
 
+export function requireBotId(ctx: FlowExecutionContext): string {
+  if (!ctx.botId) {
+    throw new Error("Bot context is required");
+  }
+  return ctx.botId;
+}
+
+export function requireBotContext(ctx: FlowExecutionContext): { botId: string; bot: Bot } {
+  if (!ctx.botId || !ctx.bot) {
+    throw new Error("Bot context is required");
+  }
+  return { botId: ctx.botId, bot: ctx.bot };
+}
+
 export function requireMessagingContext(ctx: FlowExecutionContext): {
   conversation: Conversation;
   phoneNumberId: string;
@@ -30,8 +44,8 @@ export function requireMessagingContext(ctx: FlowExecutionContext): {
 export interface FlowExecutionContext {
   mode: FlowExecutionMode;
   tenantId: string;
-  botId: string;
-  bot: Bot;
+  botId?: string;
+  bot?: Bot;
   flow: FlowDefinition;
   environment: string;
   formPayload?: Record<string, unknown>;

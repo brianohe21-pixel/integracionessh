@@ -96,6 +96,49 @@ export async function getVoicebotSessionByCallId(callId: string): Promise<Voiceb
   return getVoicebotSession(sessionId);
 }
 
+export async function updateVoicebotSessionIdentity(
+  sessionId: string,
+  updates: {
+    visitorName?: string;
+    visitorPhone?: string;
+    visitorEmail?: string;
+  }
+): Promise<VoicebotSession | null> {
+  const parts: string[] = [];
+  const values: Record<string, unknown> = {};
+
+  if (updates.visitorName) {
+    parts.push("visitorName = :visitorName");
+    values[":visitorName"] = updates.visitorName;
+  }
+  if (updates.visitorPhone) {
+    parts.push("visitorPhone = :visitorPhone");
+    values[":visitorPhone"] = updates.visitorPhone;
+  }
+  if (updates.visitorEmail) {
+    parts.push("visitorEmail = :visitorEmail");
+    values[":visitorEmail"] = updates.visitorEmail;
+  }
+
+  if (!parts.length) {
+    return getVoicebotSession(sessionId);
+  }
+
+  const result = await docClient.send(
+    new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: sessionKey(sessionId),
+      UpdateExpression: `SET ${parts.join(", ")}`,
+      ExpressionAttributeValues: values,
+      ReturnValues: "ALL_NEW",
+    })
+  );
+
+  if (!result.Attributes) return null;
+  const { PK, SK, ...rest } = result.Attributes;
+  return rest as VoicebotSession;
+}
+
 export async function endVoicebotSession(
   sessionId: string,
   durationSeconds: number

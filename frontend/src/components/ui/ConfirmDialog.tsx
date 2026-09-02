@@ -32,15 +32,15 @@ const toneStyles: Record<
     Icon: Info,
   },
   warning: {
-    border: "border-amber-200",
-    iconBg: "bg-amber-50",
-    icon: "text-amber-600",
+    border: "border-[var(--alert-warning-border)]",
+    iconBg: "bg-[var(--alert-warning-bg)]",
+    icon: "text-warning",
     Icon: AlertTriangle,
   },
   danger: {
-    border: "border-red-200",
-    iconBg: "bg-red-50",
-    icon: "text-red-600",
+    border: "border-[var(--alert-danger-border)]",
+    iconBg: "bg-[var(--alert-danger-bg)]",
+    icon: "text-danger",
     Icon: AlertTriangle,
   },
 };

@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
-export type ProviderId = "openai" | "telnyx" | "elevenlabs";
+export type ProviderId = "openai" | "telnyx" | "elevenlabs" | "deepgram";
 export type CredentialSource = "own" | "reseller" | "platform" | "none";
 
 export interface ProviderCredentialStatus {
@@ -52,6 +52,9 @@ export function useSaveProviderCredential(provider: ProviderId) {
       );
       queryClient.invalidateQueries({ queryKey: ["provider-credentials"] });
       queryClient.invalidateQueries({ queryKey: ["openai-key-status"] });
+      if (provider === "elevenlabs") {
+        queryClient.invalidateQueries({ queryKey: ["telephony-voices"] });
+      }
     },
   });
 }

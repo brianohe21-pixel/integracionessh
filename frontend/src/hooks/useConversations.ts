@@ -8,7 +8,9 @@ import type {
   Channel,
   Conversation,
   ConversationsListResponse,
+  CrossChannelHistoryResponse,
   HandoffMode,
+  InteractionCategory,
   Message,
   WorkflowStatus,
 } from "@/types";
@@ -44,8 +46,10 @@ function normalizeConversationsPage(raw: unknown): ConversationsListResponse {
 function conversationsListQueryKey(options?: {
   botId?: string;
   channel?: Channel;
+  whatsappChannelId?: string;
   handoffMode?: HandoffMode;
   workflowStatus?: WorkflowStatus;
+  interactionCategory?: InteractionCategory;
   status?: "active" | "closed";
   assignedAdvisorId?: string;
   assignment?: "assigned" | "unassigned";
@@ -55,8 +59,10 @@ function conversationsListQueryKey(options?: {
     "list",
     options?.botId ?? "all",
     options?.channel ?? "all",
+    options?.whatsappChannelId ?? "all",
     options?.handoffMode ?? "all",
     options?.workflowStatus ?? "all",
+    options?.interactionCategory ?? "all",
     options?.status ?? "all",
     options?.assignedAdvisorId ?? "all",
     options?.assignment ?? "all",
@@ -68,8 +74,10 @@ function fetchConversationsPage(
   options?: {
     botId?: string;
     channel?: Channel;
+    whatsappChannelId?: string;
     handoffMode?: HandoffMode;
     workflowStatus?: WorkflowStatus;
+    interactionCategory?: InteractionCategory;
     status?: "active" | "closed";
     assignedAdvisorId?: string;
     assignment?: "assigned" | "unassigned";
@@ -79,8 +87,10 @@ function fetchConversationsPage(
   if (pageParam) params.set("cursor", pageParam);
   if (options?.botId) params.set("botId", options.botId);
   if (options?.channel) params.set("channel", options.channel);
+  if (options?.whatsappChannelId) params.set("whatsappChannelId", options.whatsappChannelId);
   if (options?.handoffMode) params.set("handoffMode", options.handoffMode);
   if (options?.workflowStatus) params.set("workflowStatus", options.workflowStatus);
+  if (options?.interactionCategory) params.set("interactionCategory", options.interactionCategory);
   if (options?.status) params.set("status", options.status);
   if (options?.assignedAdvisorId) params.set("assignedAdvisorId", options.assignedAdvisorId);
   if (options?.assignment) params.set("assignment", options.assignment);
@@ -90,8 +100,10 @@ function fetchConversationsPage(
 export function useConversations(options?: {
   botId?: string;
   channel?: Channel;
+  whatsappChannelId?: string;
   handoffMode?: HandoffMode;
   workflowStatus?: WorkflowStatus;
+  interactionCategory?: InteractionCategory;
   status?: "active" | "closed";
   assignedAdvisorId?: string;
   assignment?: "assigned" | "unassigned";
@@ -121,6 +133,23 @@ export function useConversationMessages(conversationId: string, enabled = true) 
   });
 }
 
+export function useCrossChannelHistory(conversationId: string, enabled = true) {
+  const { connected } = useRealtimeConnection();
+
+  return useQuery({
+    queryKey: ["conversation-cross-channel-history", conversationId],
+    queryFn: async () => {
+      const raw = await api.get<CrossChannelHistoryResponse>(
+        `/conversations/${encodeURIComponent(conversationId)}/cross-channel-history?limit=50`
+      );
+      return raw.messages ?? [];
+    },
+    enabled: !!conversationId && enabled,
+    refetchInterval: connected ? false : 60_000,
+    refetchIntervalInBackground: false,
+  });
+}
+
 export function useHandoffConversation() {
   const qc = useQueryClient();
   return useMutation({
@@ -132,6 +161,9 @@ export function useHandoffConversation() {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["conversations"] });
       qc.invalidateQueries({ queryKey: ["conversation-messages", vars.conversationId] });
+      qc.invalidateQueries({
+        queryKey: ["conversation-cross-channel-history", vars.conversationId],
+      });
       qc.invalidateQueries({ queryKey: ["metrics", "advisor-workload"] });
       qc.invalidateQueries({ queryKey: ["metrics", "marketing"] });
     },
@@ -238,6 +270,26 @@ export function useUpdateConversationNote() {
   });
 }
 
+export function useUpdateConversationCategory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: {
+      conversationId: string;
+      botId: string;
+      interactionCategory: InteractionCategory;
+    }) =>
+      api.patch<Conversation>(
+        `/conversations/${encodeURIComponent(body.conversationId)}/category`,
+        { botId: body.botId, interactionCategory: body.interactionCategory }
+      ),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["conversations"] });
+      qc.invalidateQueries({ queryKey: ["conversation-messages", vars.conversationId] });
+      qc.invalidateQueries({ queryKey: ["metrics", "conversation-categories"] });
+    },
+  });
+}
+
 export function useResolveConversation() {
   const qc = useQueryClient();
   return useMutation({
@@ -246,6 +298,7 @@ export function useResolveConversation() {
       botId: string;
       csatScore?: number;
       releaseToBot?: boolean;
+      interactionCategory?: InteractionCategory;
     }) =>
       api.post<Conversation>(
         `/conversations/${encodeURIComponent(body.conversationId)}/resolve`,
@@ -253,12 +306,14 @@ export function useResolveConversation() {
           botId: body.botId,
           ...(body.csatScore !== undefined ? { csatScore: body.csatScore } : {}),
           ...(body.releaseToBot ? { releaseToBot: true } : {}),
+          ...(body.interactionCategory ? { interactionCategory: body.interactionCategory } : {}),
         }
       ),
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["conversations"] });
       qc.invalidateQueries({ queryKey: ["conversation-messages", vars.conversationId] });
       qc.invalidateQueries({ queryKey: ["metrics", "marketing"] });
+      qc.invalidateQueries({ queryKey: ["metrics", "conversation-categories"] });
     },
   });
 }

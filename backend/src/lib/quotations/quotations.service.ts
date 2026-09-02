@@ -34,6 +34,7 @@ import {
   computeQuotationTotals,
   renderQuotationPdf,
 } from "./pdf.js";
+import { syncOpportunityFromQuotation } from "../sales/opportunities/link-opportunity.js";
 
 export type CreateQuotationInput = {
   tenantId: string;
@@ -243,8 +244,20 @@ export async function createAndSendQuotation(
     input.botId
   );
 
+  const finalQuotation =
+    updatedQuotation ?? { ...quotation, paymentId: payment.paymentId, pdfS3Key, pdfDownloadUrl };
+
+  await syncOpportunityFromQuotation({
+    tenantId: input.tenantId,
+    conversationId: input.conversation.conversationId,
+    quotationId: finalQuotation.quotationId,
+    paymentId: payment.paymentId,
+    totalInCents: totalInCents,
+    quotationNumber: finalQuotation.number,
+  }).catch(() => null);
+
   return {
-    quotation: updatedQuotation ?? { ...quotation, paymentId: payment.paymentId, pdfS3Key, pdfDownloadUrl },
+    quotation: finalQuotation,
     payment,
   };
 }

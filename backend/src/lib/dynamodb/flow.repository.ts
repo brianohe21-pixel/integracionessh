@@ -13,10 +13,21 @@ const definitionKeys = (tenantId: string, flowId: string) => ({
   SK: `FLOW#${flowId}`,
 });
 
-const definitionGsi1 = (tenantId: string, botId: string, enabled: boolean, name: string) => ({
-  GSI1PK: `TENANT#${tenantId}#BOT#${botId}#FLOWS`,
-  GSI1SK: `ENABLED#${enabled ? "1" : "0"}#${name}`,
-});
+const definitionGsi1 = (
+  tenantId: string,
+  botId: string | undefined,
+  enabled: boolean,
+  name: string
+) =>
+  botId
+    ? {
+        GSI1PK: `TENANT#${tenantId}#BOT#${botId}#FLOWS`,
+        GSI1SK: `ENABLED#${enabled ? "1" : "0"}#${name}`,
+      }
+    : {
+        GSI1PK: `TENANT#${tenantId}#FLOW#UNASSIGNED`,
+        GSI1SK: `ENABLED#${enabled ? "1" : "0"}#${name}`,
+      };
 
 const runKeys = (tenantId: string, runId: string) => ({
   PK: `TENANT#${tenantId}`,

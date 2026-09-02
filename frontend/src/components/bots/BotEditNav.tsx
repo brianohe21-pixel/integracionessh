@@ -20,6 +20,7 @@ import { useT } from "@/i18n/context";
 
 export const BOT_EDIT_TAB_IDS = [
   "general",
+  "aiAssistant",
   "whatsapp",
   "instagram",
   "webchat",
@@ -59,6 +60,11 @@ export function useBotEditNavGroups(): BotEditNavGroup[] {
           id: "general",
           labelKey: "bots.tabGeneral",
           icon: <Settings className="h-4 w-4" />,
+        },
+        {
+          id: "aiAssistant",
+          labelKey: "bots.tabAiAssistant",
+          icon: <Sparkles className="h-4 w-4" />,
         },
       ],
     },
@@ -130,7 +136,16 @@ export function BotEditNav({ activeTab, onSelect, aiActive }: BotEditNavProps) {
 
       <div className="hidden lg:block">
         <div className="content-card overflow-hidden p-3">
-          <div className="mb-3 rounded-xl bg-accent-muted/50 px-3 py-3">
+          <button
+            type="button"
+            onClick={() => onSelect("aiAssistant")}
+            className={cn(
+              "mb-3 w-full rounded-xl px-3 py-3 text-left transition-colors",
+              activeTab === "aiAssistant"
+                ? "bg-accent-muted"
+                : "bg-accent-muted/50 hover:bg-accent-muted/70"
+            )}
+          >
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-accent" />
               <div>
@@ -140,7 +155,7 @@ export function BotEditNav({ activeTab, onSelect, aiActive }: BotEditNavProps) {
                 </p>
               </div>
             </div>
-          </div>
+          </button>
 
           {groups.map((group) => (
             <div key={group.id} className="mb-4 last:mb-0">

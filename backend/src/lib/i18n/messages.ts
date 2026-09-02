@@ -19,6 +19,8 @@ const messages = {
   paymentDefault: "Pago",
   noAdvisorsAvailable:
     "En este momento no tenemos asesores disponibles. ¿Puedo ayudarte con algo más?",
+  webchatConversationEnded: "Conversación finalizada. Gracias por escribirnos.",
+  webchatAlreadyWithAdvisor: "Un asesor ya está atendiendo tu conversación.",
   handoffRequestedReason: "El cliente solicitó un asesor",
   respondInSpanish: "Responde siempre en español.",
   respondInEnglish: "Always respond in English.",
@@ -63,6 +65,8 @@ const enMessages: Record<keyof typeof messages, string> = {
   paymentDefault: "Payment",
   noAdvisorsAvailable:
     "We don't have advisors available right now. Can I help you with anything else?",
+  webchatConversationEnded: "Conversation ended. Thank you for contacting us.",
+  webchatAlreadyWithAdvisor: "An advisor is already handling your conversation.",
   handoffRequestedReason: "The customer requested an advisor",
   respondInSpanish: "Responde siempre en español.",
   respondInEnglish: "Always respond in English.",

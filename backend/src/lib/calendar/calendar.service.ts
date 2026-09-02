@@ -27,6 +27,7 @@ import { getPaymentsConfig } from "../dynamodb/payments-config.repository.js";
 import { createPaymentRequest } from "../payments/payments.service.js";
 import { resolveBookingAmountInCents } from "./payment.js";
 import { getCalendarProvider } from "./provider.js";
+import { fetchGoogleBusyBlocks } from "../google-calendar/busy-blocks.js";
 import {
   formatDateLabel,
   formatSlotLabel,
@@ -35,6 +36,7 @@ import {
   getSchedulableDates,
   getSlotsForDate,
   hasBookingOverlap,
+  hasExternalBlockOverlap,
 } from "./slot-engine.js";
 import { cancelBookingReminder,
   scheduleBookingReminder,
@@ -141,6 +143,59 @@ async function loadSlotBlockingBookings(
   return bookings.filter((booking) => bookingBlocksSlot(booking));
 }
 
+async function loadExternalBusyBlocks(
+  tenantId: string,
+  botId: string,
+  config: CalendarConfig,
+  from: string,
+  to: string,
+  environment?: string
+) {
+  return fetchGoogleBusyBlocks({
+    tenantId,
+    botId,
+    config,
+    from,
+    to,
+    ...(environment ? { environment } : {}),
+  });
+}
+
+async function syncBookingToExternalCalendar(
+  tenantId: string,
+  booking: Booking,
+  config: CalendarConfig
+): Promise<Booking> {
+  if (config.provider !== "google") return booking;
+  const provider = getCalendarProvider(config.provider);
+  if (!provider.createExternalEvent) return booking;
+  if (booking.externalEventId && booking.externalSyncStatus === "synced") return booking;
+
+  try {
+    const externalEventId = await provider.createExternalEvent(booking, config);
+    if (!externalEventId) {
+      return (
+        (await updateBooking(tenantId, booking.bookingId, {
+          externalSyncStatus: "failed",
+        })) ?? booking
+      );
+    }
+    return (
+      (await updateBooking(tenantId, booking.bookingId, {
+        externalEventId,
+        externalSyncStatus: "synced",
+        externalSyncedAt: new Date().toISOString(),
+      })) ?? booking
+    );
+  } catch {
+    return (
+      (await updateBooking(tenantId, booking.bookingId, {
+        externalSyncStatus: "failed",
+      })) ?? booking
+    );
+  }
+}
+
 function bookingBlocksSlot(booking: Booking): boolean {
   if (booking.status !== "confirmed") return false;
   if (!booking.paymentStatus || booking.paymentStatus === "pending") return true;
@@ -185,16 +240,11 @@ export async function finalizeBookingAfterPayment(params: {
 
   const provider = getCalendarProvider(config.provider);
   if (provider.createExternalEvent && !updated.externalEventId) {
-    const externalEventId = await provider.createExternalEvent(updated, config);
-    if (externalEventId) {
-      const withExternal = await updateBooking(params.tenantId, params.bookingId, {
-        externalEventId,
-      });
-      if (withExternal) {
-        const withReminder = await scheduleBookingReminder(withExternal, config);
-        await emitBookingCreated(withReminder, params.tenantId);
-        return withReminder;
-      }
+    const synced = await syncBookingToExternalCalendar(params.tenantId, updated, config);
+    if (synced.externalEventId) {
+      const withReminder = await scheduleBookingReminder(synced, config);
+      await emitBookingCreated(withReminder, params.tenantId);
+      return withReminder;
     }
   }
 
@@ -253,6 +303,7 @@ export async function getAvailableSlots(params: {
   botId: string;
   from?: string;
   to?: string;
+  environment?: string;
 }): Promise<AvailableSlot[]> {
   const config = await requireEnabledCalendar(params.tenantId, params.botId);
   const now = new Date();
@@ -266,13 +317,29 @@ export async function getAvailableSlots(params: {
     from.toISOString(),
     to.toISOString()
   );
-  return generateAvailableSlots({ config, bookings, from, to, now });
+  const externalBlocks = await loadExternalBusyBlocks(
+    params.tenantId,
+    params.botId,
+    config,
+    from.toISOString(),
+    to.toISOString(),
+    params.environment
+  );
+  return generateAvailableSlots({
+    config,
+    bookings,
+    externalBlocks,
+    from,
+    to,
+    now,
+  });
 }
 
 export async function getBookingDates(params: {
   tenantId: string;
   botId: string;
   maxDays: number;
+  environment?: string;
 }) {
   const config = await requireEnabledCalendar(params.tenantId, params.botId);
   const now = new Date();
@@ -283,9 +350,18 @@ export async function getBookingDates(params: {
     now.toISOString(),
     to.toISOString()
   );
+  const externalBlocks = await loadExternalBusyBlocks(
+    params.tenantId,
+    params.botId,
+    config,
+    now.toISOString(),
+    to.toISOString(),
+    params.environment
+  );
   return getAvailableDates({
     config,
     bookings,
+    externalBlocks,
     maxDays: params.maxDays,
     now,
   });
@@ -309,6 +385,7 @@ export async function getBookingSlotsForDate(params: {
   tenantId: string;
   botId: string;
   isoDate: string;
+  environment?: string;
 }) {
   const config = await requireEnabledCalendar(params.tenantId, params.botId);
   const now = new Date();
@@ -320,9 +397,18 @@ export async function getBookingSlotsForDate(params: {
     dayStart.toISOString(),
     dayEnd.toISOString()
   );
+  const externalBlocks = await loadExternalBusyBlocks(
+    params.tenantId,
+    params.botId,
+    config,
+    dayStart.toISOString(),
+    dayEnd.toISOString(),
+    params.environment
+  );
   return getSlotsForDate({
     config,
     bookings,
+    externalBlocks,
     isoDate: params.isoDate,
     now,
   });
@@ -379,14 +465,26 @@ export async function createBookingForBot(params: {
     rangeStart.toISOString(),
     rangeEnd.toISOString()
   );
+  const externalBlocks = await loadExternalBusyBlocks(
+    params.tenantId,
+    params.botId,
+    config,
+    rangeStart.toISOString(),
+    rangeEnd.toISOString(),
+    environment
+  );
 
   if (hasBookingOverlap(bookings, startAt, endAt, config.bufferMinutes)) {
+    throw new Error("Selected slot is no longer available");
+  }
+  if (hasExternalBlockOverlap(externalBlocks, startAt, endAt, config.bufferMinutes)) {
     throw new Error("Selected slot is no longer available");
   }
 
   const available = getSlotsForDate({
     config,
     bookings,
+    externalBlocks,
     isoDate: params.startAt.slice(0, 10),
     now,
   });
@@ -418,20 +516,21 @@ export async function createBookingForBot(params: {
     updatedAt: nowIso,
   };
 
-  if (!requiresPayment) {
-    const provider = getCalendarProvider(config.provider);
-    if (provider.createExternalEvent) {
-      const externalEventId = await provider.createExternalEvent(booking, config);
-      if (externalEventId) booking.externalEventId = externalEventId;
-    }
+  if (!requiresPayment && config.provider === "google") {
+    booking.externalSyncStatus = "pending";
   }
 
   const created = await createBooking(booking);
 
-  if (!requiresPayment || !amountInCents) {
-    const withReminder = await scheduleBookingReminder(created, config);
+  if (!requiresPayment) {
+    const synced = await syncBookingToExternalCalendar(params.tenantId, created, config);
+    const withReminder = await scheduleBookingReminder(synced, config);
     await emitBookingCreated(withReminder, params.tenantId);
     return { booking: withReminder };
+  }
+
+  if (!amountInCents) {
+    throw new Error("Payment amount is required");
   }
 
   const label = formatBookingConfirmation(created, config);
@@ -509,6 +608,34 @@ export async function updateBookingStatus(params: {
   }
 
   return bookingAfterReminder;
+}
+
+export async function retryBookingExternalSync(params: {
+  tenantId: string;
+  botId: string;
+  bookingId: string;
+}): Promise<Booking> {
+  const existing = await getBooking(params.tenantId, params.bookingId);
+  if (!existing || existing.botId !== params.botId) {
+    throw new Error("Booking not found");
+  }
+  if (existing.status !== "confirmed") {
+    throw new Error("Only confirmed bookings can be synced");
+  }
+  if (existing.paymentStatus === "pending") {
+    throw new Error("Booking payment is still pending");
+  }
+
+  const config = await getConfigOrDefault(params.tenantId, params.botId);
+  if (config.provider !== "google") {
+    throw new Error("Google Calendar is not connected for this bot");
+  }
+
+  const synced = await syncBookingToExternalCalendar(params.tenantId, existing, config);
+  if (synced.externalSyncStatus === "failed") {
+    throw new Error("Failed to sync booking with Google Calendar");
+  }
+  return synced;
 }
 
 export async function countEnabledCalendarApps(tenantId: string): Promise<number> {

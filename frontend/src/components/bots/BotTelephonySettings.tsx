@@ -1,10 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PhoneCall } from "lucide-react";
+import { TelnyxConnectPanel } from "@/components/telephony/TelnyxConnectPanel";
+import { useDialog } from "@/components/ui/DialogProvider";
 import { api } from "@/lib/api";
+import { useProviderCredentials } from "@/hooks/useProviderCredentials";
 import { useT } from "@/i18n/context";
+import { formatTelephonyError } from "@/lib/telnyx-errors";
+import { getTelephonyNumberAssignment } from "@/lib/telephony-number-assignment";
 import {
   DEFAULT_REALTIME_MODEL_ID,
   REALTIME_MODELS,
@@ -24,7 +29,14 @@ interface TelnyxNumber {
   id: string;
   phoneNumber: string;
   status: string;
+  assignedBotId?: string;
+  assignedBotName?: string;
 }
+
+type SaveTelephonyPayload = TelephonySettingsResponse & {
+  enabled?: boolean;
+  reassignPhoneNumber?: boolean;
+};
 
 interface BotTelephonySettingsProps {
   botId: string;
@@ -63,7 +75,11 @@ function SettingsSwitch({
 
 export function BotTelephonySettings({ botId }: BotTelephonySettingsProps) {
   const t = useT();
+  const dialog = useDialog();
   const qc = useQueryClient();
+  const { data: credentials } = useProviderCredentials();
+  const telnyxStatus = credentials?.items.find((item) => item.provider === "telnyx");
+  const telnyxConfigured = Boolean(telnyxStatus?.configured);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -92,10 +108,11 @@ export function BotTelephonySettings({ botId }: BotTelephonySettingsProps) {
   const { data: numbersData, isLoading: numbersLoading } = useQuery({
     queryKey: ["telephony-numbers"],
     queryFn: () => api.get<{ numbers: TelnyxNumber[] }>("/telephony/numbers"),
+    enabled: telnyxConfigured,
   });
 
   const save = useMutation({
-    mutationFn: (payload: TelephonySettingsResponse & { enabled?: boolean }) =>
+    mutationFn: (payload: SaveTelephonyPayload) =>
       api.put<TelephonySettingsResponse>(
         `/bots/${encodeURIComponent(botId)}/telephony/settings`,
         payload
@@ -103,12 +120,14 @@ export function BotTelephonySettings({ botId }: BotTelephonySettingsProps) {
     onSuccess: () => {
       setError("");
       setSuccess(t("telephony.saved"));
-      void qc.invalidateQueries({ queryKey: ["telephony-settings", botId] });
+      void qc.invalidateQueries({ queryKey: ["telephony-settings"] });
+      void qc.invalidateQueries({ queryKey: ["telephony-numbers"] });
+      void qc.invalidateQueries({ queryKey: ["bots"] });
       setTimeout(() => setSuccess(""), 3000);
     },
     onError: (err: Error) => {
       setSuccess("");
-      setError(err.message);
+      setError(formatTelephonyError(err.message, t));
     },
   });
 
@@ -132,7 +151,7 @@ export function BotTelephonySettings({ botId }: BotTelephonySettingsProps) {
     },
   });
 
-  const numbers = numbersData?.numbers ?? [];
+  const numbers = useMemo(() => numbersData?.numbers ?? [], [numbersData?.numbers]);
   const enabled = Boolean(data?.telephonyEnabled);
   const hasPhoneNumber = phoneNumber.trim().length > 0;
   const systemPromptTooLong = systemPrompt.length > TELEPHONY_SYSTEM_PROMPT_MAX_LENGTH;
@@ -152,8 +171,8 @@ export function BotTelephonySettings({ botId }: BotTelephonySettingsProps) {
     }
   }, [numbers, phoneNumber]);
 
-  function buildSettingsPayload(includeEnabled?: boolean): TelephonySettingsResponse & { enabled?: boolean } {
-    const payload: TelephonySettingsResponse & { enabled?: boolean } = {
+  function buildSettingsPayload(includeEnabled?: boolean): SaveTelephonyPayload {
+    const payload: SaveTelephonyPayload = {
       telephonyPhoneNumber: phoneNumber.trim(),
       telephonyModel: model,
     };
@@ -181,11 +200,28 @@ export function BotTelephonySettings({ botId }: BotTelephonySettingsProps) {
     return false;
   }
 
+  async function submitSettings(payload: SaveTelephonyPayload) {
+    const conflict = getTelephonyNumberAssignment(numbers, phoneNumber.trim(), botId);
+    if (conflict) {
+      const confirmed = await dialog.confirm({
+        title: t("telephony.reassignNumberTitle"),
+        description: t("telephony.reassignNumberConfirm", {
+          number: phoneNumber.trim(),
+          name: conflict.botName ?? conflict.botId,
+        }),
+      });
+      if (!confirmed) return;
+      save.mutate({ ...payload, reassignPhoneNumber: true });
+      return;
+    }
+    save.mutate(payload);
+  }
+
   function handleEnabledChange(next: boolean) {
     if (next) {
       if (!validatePhoneNumber() || !validateSystemPrompt()) return;
       setError("");
-      save.mutate(buildSettingsPayload(true));
+      void submitSettings(buildSettingsPayload(true));
       return;
     }
     setError("");
@@ -195,8 +231,10 @@ export function BotTelephonySettings({ botId }: BotTelephonySettingsProps) {
   function handleSaveSettings() {
     if (!validatePhoneNumber() || !validateSystemPrompt()) return;
     setError("");
-    save.mutate(buildSettingsPayload());
+    void submitSettings(buildSettingsPayload());
   }
+
+  const selectedAssignment = getTelephonyNumberAssignment(numbers, phoneNumber.trim(), botId);
 
   return (
     <div className="bg-surface-elevated rounded-xl border border-default p-6 space-y-4">
@@ -223,26 +261,41 @@ export function BotTelephonySettings({ botId }: BotTelephonySettingsProps) {
         <div className="h-24 bg-surface-muted rounded animate-pulse" />
       ) : (
         <>
+          <TelnyxConnectPanel />
+
+          {telnyxConfigured ? (
           <div className="space-y-4 rounded-xl border border-default bg-surface p-4">
             <label className="block space-y-1">
               <span className="text-sm font-medium text-secondary">{t("telephony.phoneNumber")}</span>
               {numbersLoading ? (
                 <div className="h-10 rounded-lg bg-surface-muted animate-pulse" />
               ) : numbers.length > 0 ? (
-                <select
-                  value={phoneNumber}
-                  onChange={(e) => {
-                    setPhoneNumber(e.target.value);
-                    if (error) setError("");
-                  }}
-                  className="w-full rounded-lg border border-default px-3 py-2 text-sm"
-                >
-                  {numbers.map((item) => (
-                    <option key={item.id} value={item.phoneNumber}>
-                      {item.phoneNumber}
-                    </option>
-                  ))}
-                </select>
+                <>
+                  <select
+                    value={phoneNumber}
+                    onChange={(e) => {
+                      setPhoneNumber(e.target.value);
+                      if (error) setError("");
+                    }}
+                    className="w-full rounded-lg border border-default px-3 py-2 text-sm"
+                  >
+                    {numbers.map((item) => (
+                      <option key={item.id} value={item.phoneNumber}>
+                        {item.phoneNumber}
+                        {item.assignedBotId && item.assignedBotId !== botId && item.assignedBotName
+                          ? ` · ${t("telephonyNumbers.assignedTo", { name: item.assignedBotName })}`
+                          : ""}
+                      </option>
+                    ))}
+                  </select>
+                  {selectedAssignment ? (
+                    <p className="mt-1 text-xs text-amber-700">
+                      {t("telephony.phoneNumberAssignedToAgent", {
+                        name: selectedAssignment.botName ?? selectedAssignment.botId,
+                      })}
+                    </p>
+                  ) : null}
+                </>
               ) : (
                 <>
                   <input
@@ -259,7 +312,9 @@ export function BotTelephonySettings({ botId }: BotTelephonySettingsProps) {
               )}
             </label>
           </div>
+          ) : null}
 
+          {telnyxConfigured ? (
           <label className="flex items-center justify-between gap-4">
             <div>
               <p className="font-medium text-primary">{t("telephony.enableLabel")}</p>
@@ -273,8 +328,9 @@ export function BotTelephonySettings({ botId }: BotTelephonySettingsProps) {
               onChange={handleEnabledChange}
             />
           </label>
+          ) : null}
 
-          {enabled && (
+          {telnyxConfigured && enabled && (
             <>
               <div className="grid grid-cols-1 gap-4 border-t border-subtle pt-4 md:grid-cols-2">
                 <label className="space-y-1">

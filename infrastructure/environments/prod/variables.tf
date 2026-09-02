@@ -152,14 +152,19 @@ variable "wompi_events_secret" {
   sensitive = true
 }
 
+variable "wompi_amount_starter_cents" {
+  type    = string
+  default = "24190000"
+}
+
 variable "wompi_amount_pro_cents" {
   type    = string
-  default = "17990000"
+  default = "81590000"
 }
 
 variable "wompi_amount_enterprise_cents" {
   type    = string
-  default = "74990000"
+  default = "286590000"
 }
 
 variable "wompi_api_base" {
@@ -216,6 +221,28 @@ variable "google_client_id" {
 }
 
 variable "google_client_secret" {
+  type      = string
+  default   = ""
+  sensitive = true
+}
+
+variable "google_business_client_id" {
+  type    = string
+  default = ""
+}
+
+variable "google_business_client_secret" {
+  type      = string
+  default   = ""
+  sensitive = true
+}
+
+variable "google_calendar_client_id" {
+  type    = string
+  default = ""
+}
+
+variable "google_calendar_client_secret" {
   type      = string
   default   = ""
   sensitive = true

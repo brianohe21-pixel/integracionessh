@@ -2,7 +2,7 @@ import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 }
 import { ResourceNotFoundException } from "@aws-sdk/client-secrets-manager";
 import { z } from "zod";
 import { randomUUID } from "crypto";
-import { getBot } from "../../lib/dynamodb/bot.repository.js";
+import { getBot, listBots } from "../../lib/dynamodb/bot.repository.js";
 import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
 import {
   listCachedTemplates,
@@ -141,6 +141,27 @@ function parseChannel(
   return raw === "sms" ? "sms" : "whatsapp";
 }
 
+async function listTemplatesForTenant(
+  tenantId: string,
+  channel: OutreachChannel
+): Promise<Array<WhatsAppTemplate | SmsTemplate>> {
+  const bots = await listBots(tenantId);
+  const eligible =
+    channel === "sms"
+      ? bots.filter((bot) => bot.smsEnabled)
+      : bots.filter((bot) => bot.phoneNumberId && bot.whatsappBusinessAccountId);
+
+  const templates: Array<WhatsAppTemplate | SmsTemplate> = [];
+  for (const bot of eligible) {
+    if (channel === "sms") {
+      templates.push(...(await listSmsTemplates(tenantId, bot.botId)));
+    } else {
+      templates.push(...(await listCachedTemplates(tenantId, bot.botId)));
+    }
+  }
+  return templates;
+}
+
 async function loadBotAndToken(tenantId: string, botId: string) {
   const bot = await getBot(tenantId, botId);
   if (!bot) throw Object.assign(new Error("Bot not found"), { statusCode: 404 });
@@ -225,9 +246,14 @@ export async function handler(
 
     if (method === "GET" && !templateName) {
       const botId = params.botId;
-      if (!botId) return badRequest("botId query parameter is required");
+      const channel = parseChannel(params);
 
-      if (parseChannel(params) === "sms") {
+      if (!botId) {
+        const templates = await listTemplatesForTenant(auth.tenantId, channel);
+        return ok(templates);
+      }
+
+      if (channel === "sms") {
         const bot = await getBot(auth.tenantId, botId);
         if (!bot) return notFound("Bot not found");
         const templates = await listSmsTemplates(auth.tenantId, botId);

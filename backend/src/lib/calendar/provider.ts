@@ -1,4 +1,5 @@
 import type { Booking, CalendarConfig } from "../../types/index.js";
+import { GoogleCalendarProvider } from "../google-calendar/provider.js";
 
 export interface CalendarProvider {
   createExternalEvent?(booking: Booking, config: CalendarConfig): Promise<string | undefined>;
@@ -8,6 +9,6 @@ export interface CalendarProvider {
 export class NativeCalendarProvider implements CalendarProvider {}
 
 export function getCalendarProvider(provider: CalendarConfig["provider"]): CalendarProvider {
-  if (provider === "native") return new NativeCalendarProvider();
+  if (provider === "google") return new GoogleCalendarProvider();
   return new NativeCalendarProvider();
 }

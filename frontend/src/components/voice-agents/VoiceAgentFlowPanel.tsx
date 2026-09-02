@@ -1,15 +1,21 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ExternalLink, Workflow } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Input";
 import {
+  useCreateFlow,
   useCreateTaxiVoiceFlow,
   useFlows,
   useToggleFlow,
 } from "@/hooks/useFlows";
+import {
+  createDefaultFlowEdges,
+  createDefaultFlowNodes,
+} from "@/components/flows/FlowCanvas";
 import { useSaveTelephonySettings, useTelephonySettings } from "@/hooks/useTelephony";
 import { useT } from "@/i18n/context";
 import type { FlowDefinition } from "@/types";
@@ -27,9 +33,11 @@ function isVoiceFlow(flow: FlowDefinition): boolean {
 
 export function VoiceAgentFlowPanel({ botId }: VoiceAgentFlowPanelProps) {
   const t = useT();
+  const router = useRouter();
   const { data: flows = [], isLoading: flowsLoading } = useFlows(botId);
   const { data: settings, isLoading: settingsLoading } = useTelephonySettings(botId);
   const saveSettings = useSaveTelephonySettings(botId);
+  const createFlow = useCreateFlow();
   const createTemplate = useCreateTaxiVoiceFlow();
   const toggleFlow = useToggleFlow();
 
@@ -59,6 +67,19 @@ export function VoiceAgentFlowPanel({ botId }: VoiceAgentFlowPanelProps) {
     await saveSettings.mutateAsync({ telephonyVoiceFlowId: flow.flowId });
   }
 
+  async function handleCreateFlow() {
+    const nodes = createDefaultFlowNodes();
+    const edges = createDefaultFlowEdges();
+    const flow = await createFlow.mutateAsync({
+      name: t("voiceAgents.flowNewDefaultName"),
+      enabled: false,
+      nodes,
+      edges,
+      entryNodeId: nodes[0]?.id ?? "",
+    });
+    router.push(`/flows/${flow.flowId}/edit?botId=${encodeURIComponent(botId)}`);
+  }
+
   if (flowsLoading || settingsLoading) {
     return <div className="h-32 animate-pulse rounded-xl bg-surface-muted" />;
   }
@@ -77,11 +98,14 @@ export function VoiceAgentFlowPanel({ botId }: VoiceAgentFlowPanelProps) {
         <div className="space-y-3">
           <p className="text-sm text-secondary">{t("voiceAgents.flowNoVoiceFlows")}</p>
           <div className="flex flex-wrap gap-2">
-            <Link href="/flows/new">
-              <Button type="button" variant="secondary">
-                {t("voiceAgents.flowCreateNew")}
-              </Button>
-            </Link>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => void handleCreateFlow()}
+              disabled={createFlow.isPending}
+            >
+              {t("voiceAgents.flowCreateNew")}
+            </Button>
             <Button
               type="button"
               variant="ghost"
@@ -163,11 +187,14 @@ export function VoiceAgentFlowPanel({ botId }: VoiceAgentFlowPanelProps) {
           )}
 
           <div className="flex flex-wrap gap-2 border-t border-default pt-4">
-            <Link href="/flows/new">
-              <Button type="button" variant="ghost">
-                {t("voiceAgents.flowCreateNew")}
-              </Button>
-            </Link>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => void handleCreateFlow()}
+              disabled={createFlow.isPending}
+            >
+              {t("voiceAgents.flowCreateNew")}
+            </Button>
             <Button
               type="button"
               variant="ghost"

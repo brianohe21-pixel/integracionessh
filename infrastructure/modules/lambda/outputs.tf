@@ -58,6 +58,14 @@ output "leads_function_arn" {
   value = aws_lambda_function.functions["leads"].arn
 }
 
+output "sales_invoke_arn" {
+  value = aws_lambda_function.functions["sales"].invoke_arn
+}
+
+output "sales_function_arn" {
+  value = aws_lambda_function.functions["sales"].arn
+}
+
 output "templates_invoke_arn" {
   value = aws_lambda_function.functions["templates"].invoke_arn
 }
@@ -354,6 +362,22 @@ output "catalog_function_arn" {
   value = try(aws_lambda_function.functions["catalog"].arn, null)
 }
 
+output "hosted_forms_invoke_arn" {
+  value = aws_lambda_function.functions["hosted_forms"].invoke_arn
+}
+
+output "hosted_forms_function_arn" {
+  value = aws_lambda_function.functions["hosted_forms"].arn
+}
+
+output "short_links_invoke_arn" {
+  value = aws_lambda_function.functions["short_links"].invoke_arn
+}
+
+output "short_links_function_arn" {
+  value = aws_lambda_function.functions["short_links"].arn
+}
+
 output "mailrelay_invoke_arn" {
   value = aws_lambda_function.functions["mailrelay"].invoke_arn
 }
@@ -368,6 +392,14 @@ output "mailrelay_webhook_invoke_arn" {
 
 output "mailrelay_webhook_function_arn" {
   value = aws_lambda_function.functions["mailrelay_webhook"].arn
+}
+
+output "google_business_invoke_arn" {
+  value = aws_lambda_function.functions["google_business"].invoke_arn
+}
+
+output "google_business_function_arn" {
+  value = aws_lambda_function.functions["google_business"].arn
 }
 
 output "lambda_log_group_ids" {

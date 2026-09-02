@@ -51,7 +51,7 @@ moved {
 }
 
 moved {
-  from = aws_apigatewayv2_integration.integrations["catalog_config_get"]
+  from = aws_apigatewayv2_integration.integrations["catalog_proxy_delete"]
   to   = aws_apigatewayv2_integration.integrations["catalog"]
 }
 
@@ -61,7 +61,7 @@ moved {
 }
 
 moved {
-  from = aws_apigatewayv2_integration.integrations["conversations_bulk_handoff"]
+  from = aws_apigatewayv2_integration.integrations["conversations_list"]
   to   = aws_apigatewayv2_integration.integrations["conversations"]
 }
 
@@ -106,7 +106,7 @@ moved {
 }
 
 moved {
-  from = aws_apigatewayv2_integration.integrations["metrics_advisor_workload"]
+  from = aws_apigatewayv2_integration.integrations["metrics_get"]
   to   = aws_apigatewayv2_integration.integrations["metrics"]
 }
 
@@ -116,7 +116,7 @@ moved {
 }
 
 moved {
-  from = aws_apigatewayv2_integration.integrations["public_api_calls_action"]
+  from = aws_apigatewayv2_integration.integrations["public_api_proxy_delete"]
   to   = aws_apigatewayv2_integration.integrations["public_api"]
 }
 
@@ -131,8 +131,13 @@ moved {
 }
 
 moved {
-  from = aws_apigatewayv2_integration.integrations["reseller_domain_get"]
+  from = aws_apigatewayv2_integration.integrations["reseller_domain_delete"]
   to   = aws_apigatewayv2_integration.integrations["reseller"]
+}
+
+moved {
+  from = aws_apigatewayv2_integration.integrations["sales_proxy_delete"]
+  to   = aws_apigatewayv2_integration.integrations["sales"]
 }
 
 moved {
@@ -146,7 +151,7 @@ moved {
 }
 
 moved {
-  from = aws_apigatewayv2_integration.integrations["bots_telephony_calls_create"]
+  from = aws_apigatewayv2_integration.integrations["bots_telephony_proxy_delete"]
   to   = aws_apigatewayv2_integration.integrations["telephony"]
 }
 

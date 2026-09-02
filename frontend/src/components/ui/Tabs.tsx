@@ -45,7 +45,7 @@ export function Tabs<T extends string>({
             value === item.id
               ? isVibrant
                 ? "bg-gradient-to-br from-brand-primary to-accent text-white shadow-md shadow-brand-primary/25"
-                : "bg-surface-elevated text-primary shadow-sm ring-1 ring-default"
+                : "bg-surface-elevated text-primary shadow-sm ring-2 ring-default"
               : isVibrant
                 ? "text-secondary hover:bg-brand-primary/10 hover:text-accent"
                 : "text-secondary hover:text-primary"

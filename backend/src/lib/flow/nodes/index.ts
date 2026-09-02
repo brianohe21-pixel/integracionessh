@@ -17,7 +17,10 @@ import { executeSetVariableNode } from "./set-variable.js";
 import { executeTemplateNode } from "./template.js";
 import { executeSaveContactNode } from "./save-contact.js";
 import { executeCreateLeadNode } from "./create-lead.js";
+import { executeCreateOpportunityNode } from "./create-opportunity.js";
 import { executeSendNotificationNode } from "./send-notification.js";
+import { executeAssignBotNode } from "./assign-bot.js";
+import { executeWebhookNode } from "./webhook.js";
 import { executeTriggerNode } from "./trigger.js";
 
 export async function executeNode(
@@ -60,8 +63,14 @@ export async function executeNode(
       return executeSaveContactNode(node, ctx, run);
     case "create_lead":
       return executeCreateLeadNode(node, ctx, run);
+    case "create_opportunity":
+      return executeCreateOpportunityNode(node, ctx, run);
     case "send_notification":
       return executeSendNotificationNode(node, ctx, run);
+    case "assign_bot":
+      return executeAssignBotNode(node, ctx, run);
+    case "webhook":
+      return executeWebhookNode(node, ctx, run);
     case "end":
       return executeEndNode(node, ctx, run);
     default:

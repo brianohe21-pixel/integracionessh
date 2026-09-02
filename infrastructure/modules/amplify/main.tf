@@ -46,6 +46,8 @@ resource "aws_amplify_app" "frontend" {
     NEXT_PUBLIC_COGNITO_DOMAIN                 = var.cognito_hosted_ui_domain
     NEXT_PUBLIC_GOOGLE_AUTH_ENABLED            = var.google_auth_enabled ? "true" : "false"
     NEXT_PUBLIC_ENV                            = var.environment
+    NEXT_PUBLIC_DEMO_EMAIL                     = var.demo_account_email
+    NEXT_PUBLIC_DEMO_PASSWORD                  = var.demo_account_password
     NEXT_PUBLIC_META_APP_ID                    = var.meta_app_id
     NEXT_PUBLIC_META_EMBEDDED_SIGNUP_CONFIG_ID = var.meta_embedded_signup_config_id
     NODE_VERSION                               = "20"
@@ -66,6 +68,8 @@ resource "aws_amplify_branch" "main" {
 
   environment_variables = {
     NEXT_PUBLIC_ENV                            = var.environment
+    NEXT_PUBLIC_DEMO_EMAIL                     = var.demo_account_email
+    NEXT_PUBLIC_DEMO_PASSWORD                  = var.demo_account_password
     NEXT_PUBLIC_META_APP_ID                    = var.meta_app_id
     NEXT_PUBLIC_META_EMBEDDED_SIGNUP_CONFIG_ID = var.meta_embedded_signup_config_id
   }

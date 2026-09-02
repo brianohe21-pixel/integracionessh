@@ -1,12 +1,14 @@
 import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
 import { z } from "zod";
 import { randomUUID } from "crypto";
+import { getCrossChannelHistory, getContactTimelineMessages } from "../../lib/contacts/contact-timeline.js";
 import {
   listConversations,
   getConversationMessages,
   findConversationById,
   addMessage,
   deleteConversation,
+  ensureConversationContactId,
 } from "../../lib/dynamodb/conversation.repository.js";
 import { getAdvisorByCognitoUserId } from "../../lib/dynamodb/advisor.repository.js";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
@@ -34,6 +36,11 @@ import {
   getWhatsAppAccessToken,
   truncateWhatsAppText,
 } from "../../lib/whatsapp/client.js";
+import { getWhatsAppAccessTokenForAccount } from "../../lib/whatsapp/secrets.js";
+import {
+  phoneNumberIdForOutbound,
+  resolveWhatsAppChannelForConversation,
+} from "../../lib/whatsapp/channel-context.js";
 import { getInstagramAccessToken } from "../../lib/instagram/secrets.js";
 import { getTelegramBotToken } from "../../lib/telegram/secrets.js";
 import { getMessengerAccessToken } from "../../lib/messenger/secrets.js";
@@ -59,12 +66,16 @@ const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 async function resolveAccessTokenForChannel(
   tenantId: string,
   channel: Channel,
-  botId?: string
+  botId?: string,
+  accountId?: string
 ): Promise<string | undefined> {
   if (channel === "instagram") {
     return getInstagramAccessToken(tenantId, ENVIRONMENT);
   }
   if (channel === "whatsapp") {
+    if (accountId) {
+      return getWhatsAppAccessTokenForAccount(tenantId, accountId, ENVIRONMENT);
+    }
     return getWhatsAppAccessToken(tenantId, ENVIRONMENT);
   }
   if (channel === "telegram" && botId) {
@@ -108,6 +119,19 @@ const WorkflowStatusSchema = z.object({
   workflowStatus: z.enum(["new", "open", "pending", "resolved"]),
 });
 
+const InteractionCategorySchema = z.object({
+  botId: z.string().uuid(),
+  interactionCategory: z.enum([
+    "sale",
+    "complaint",
+    "callback",
+    "support",
+    "inquiry",
+    "billing",
+    "other",
+  ]),
+});
+
 const NoteSchema = z.object({
   botId: z.string().uuid(),
   internalNote: z.string().max(2000),
@@ -117,6 +141,9 @@ const ResolveSchema = z.object({
   botId: z.string().uuid(),
   csatScore: z.number().int().min(1).max(5).optional(),
   releaseToBot: z.boolean().optional(),
+  interactionCategory: z
+    .enum(["sale", "complaint", "callback", "support", "inquiry", "billing", "other"])
+    .optional(),
 });
 
 const CopilotSchema = z.object({
@@ -163,6 +190,18 @@ function parseSubPath(rawPath: string, conversationId: string): string | null {
   return suffix.replace(/^\//, "").split("/")[0] ?? null;
 }
 
+function resolveConversationId(
+  rawPath: string,
+  pathParams: { conversationId?: string } | undefined
+): string | undefined {
+  if (pathParams?.conversationId) return pathParams.conversationId;
+  if (rawPath === "/conversations" || rawPath.endsWith("/conversations/bulk-handoff")) {
+    return undefined;
+  }
+  const match = rawPath.match(/^\/conversations\/([^/]+)/);
+  return match?.[1];
+}
+
 export async function handler(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): Promise<APIGatewayProxyResultV2> {
@@ -174,9 +213,9 @@ export async function handler(
     }
 
     const method = event.requestContext.http.method;
-    const conversationId = event.pathParameters?.conversationId;
-    const params = event.queryStringParameters ?? {};
     const rawPath = event.rawPath ?? event.requestContext.http.path;
+    const conversationId = resolveConversationId(rawPath, event.pathParameters);
+    const params = event.queryStringParameters ?? {};
 
     if (method === "POST" && rawPath.endsWith("/conversations/bulk-handoff")) {
       assertTenantManagerRole(auth);
@@ -234,6 +273,16 @@ export async function handler(
         params.assignment === "assigned" || params.assignment === "unassigned"
           ? params.assignment
           : undefined;
+      const interactionCategory =
+        params.interactionCategory === "sale" ||
+        params.interactionCategory === "complaint" ||
+        params.interactionCategory === "callback" ||
+        params.interactionCategory === "support" ||
+        params.interactionCategory === "inquiry" ||
+        params.interactionCategory === "billing" ||
+        params.interactionCategory === "other"
+          ? params.interactionCategory
+          : undefined;
 
       let assignedAdvisorId = params.assignedAdvisorId;
 
@@ -253,8 +302,10 @@ export async function handler(
       if (workflowStatus) listOptions.workflowStatus = workflowStatus;
       if (status) listOptions.status = status;
       if (channel) listOptions.channel = channel;
+      if (params.whatsappChannelId) listOptions.whatsappChannelId = params.whatsappChannelId;
       if (assignedAdvisorId) listOptions.assignedAdvisorId = assignedAdvisorId;
       if (assignment) listOptions.assignment = assignment;
+      if (interactionCategory) listOptions.interactionCategory = interactionCategory;
       if (params.cursor) listOptions.cursor = params.cursor;
 
       const result = await listConversations(auth.tenantId, listOptions);
@@ -267,6 +318,27 @@ export async function handler(
     }
 
     const subPath = parseSubPath(rawPath, conversationId);
+
+    if (method === "GET" && subPath === "cross-channel-history") {
+      const conversation = await findConversationById(auth.tenantId, conversationId);
+      if (!conversation) return notFound("Conversation not found");
+
+      await assertCanAccessConversation(auth, conversation);
+
+      const limit = params.limit ? parseInt(params.limit, 10) : 50;
+      if (isNaN(limit) || limit < 1 || limit > 100) {
+        return badRequest("Invalid limit parameter (1-100)");
+      }
+
+      const resolved = await ensureConversationContactId(conversation);
+      const messages = await getCrossChannelHistory({
+        tenantId: auth.tenantId,
+        conversation: resolved,
+        limit,
+      });
+
+      return ok({ contactId: resolved.contactId, messages });
+    }
 
     if (method === "GET" && !subPath) {
       const conversation = await findConversationById(auth.tenantId, conversationId);
@@ -300,6 +372,30 @@ export async function handler(
         parsed.data.botId,
         conversationId,
         { workflowStatus: parsed.data.workflowStatus }
+      );
+      return ok(updated);
+    }
+
+    if (method === "PATCH" && subPath === "category") {
+      const body = JSON.parse(event.body ?? "{}");
+      const parsed = InteractionCategorySchema.safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const conversation = await findConversationById(auth.tenantId, conversationId);
+      if (!conversation || conversation.botId !== parsed.data.botId) {
+        return notFound("Conversation not found");
+      }
+
+      await assertCanAccessConversation(auth, conversation);
+
+      const updated = await updateConversation(
+        auth.tenantId,
+        parsed.data.botId,
+        conversationId,
+        {
+          interactionCategory: parsed.data.interactionCategory,
+          interactionCategoryAt: new Date().toISOString(),
+        }
       );
       return ok(updated);
     }
@@ -342,6 +438,9 @@ export async function handler(
         conversationId,
         ...(parsed.data.csatScore !== undefined ? { csatScore: parsed.data.csatScore } : {}),
         ...(parsed.data.releaseToBot ? { releaseToBot: true } : {}),
+        ...(parsed.data.interactionCategory
+          ? { interactionCategory: parsed.data.interactionCategory }
+          : {}),
       });
 
       return ok(updated);
@@ -492,7 +591,12 @@ export async function handler(
       const bot = await getBot(auth.tenantId, parsed.data.botId);
       if (!bot) return notFound("Bot not found");
 
-      const messages = await getConversationMessages(auth.tenantId, conversationId, 50);
+      const resolved = await ensureConversationContactId(conversation);
+      const messages = await getContactTimelineMessages({
+        tenantId: auth.tenantId,
+        conversation: resolved,
+        limit: 50,
+      });
       const copilotParams = {
         bot,
         messages,
@@ -593,10 +697,21 @@ export async function handler(
         }
       }
 
+      const resolvedChannel =
+        channel === "whatsapp"
+          ? await resolveWhatsAppChannelForConversation(conversation, bot)
+          : null;
+
       const accessToken = await resolveAccessTokenForChannel(
         auth.tenantId,
         channel,
-        parsed.data.botId
+        parsed.data.botId,
+        resolvedChannel?.channel.accountId
+      );
+      const outboundPhoneNumberId = phoneNumberIdForOutbound(
+        conversation,
+        bot,
+        resolvedChannel?.channel
       );
       const text =
         channel === "whatsapp" ? truncateWhatsAppText(parsed.data.content) : parsed.data.content;
@@ -635,6 +750,7 @@ export async function handler(
             conversation,
             accessToken,
             environment: ENVIRONMENT,
+            phoneNumberId: outboundPhoneNumberId,
           }),
           text
         );

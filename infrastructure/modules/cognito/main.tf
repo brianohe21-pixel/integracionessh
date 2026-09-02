@@ -55,6 +55,13 @@ resource "aws_iam_role_policy" "cognito_trigger" {
         ]
         Resource = aws_cognito_user_pool.main.arn
       },
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:GetItem",
+        ]
+        Resource = var.dynamodb_table_arn
+      },
     ]
   })
 }
@@ -163,6 +170,10 @@ resource "aws_cognito_identity_provider" "google" {
     email    = "email"
     name     = "name"
     username = "sub"
+  }
+
+  lifecycle {
+    ignore_changes = [provider_details]
   }
 }
 

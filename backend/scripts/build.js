@@ -19,6 +19,8 @@ const entryPoints = [
   "src/functions/advisors/index.ts",
   "src/functions/contacts/index.ts",
   "src/functions/leads/index.ts",
+  "src/functions/sales/index.ts",
+  "src/functions/process-sequence/index.ts",
   "src/functions/templates/index.ts",
   "src/functions/bulk-send/index.ts",
   "src/functions/process-bulk-send/index.ts",
@@ -64,6 +66,8 @@ const entryPoints = [
   "src/functions/realtime-ws/index.ts",
   "src/functions/calendar/index.ts",
   "src/functions/public-calendar/index.ts",
+  "src/functions/hosted-forms/index.ts",
+  "src/functions/short-links/index.ts",
   "src/functions/payments/index.ts",
   "src/functions/catalog/index.ts",
   "src/functions/cognito-pre-signup/index.ts",
@@ -71,6 +75,7 @@ const entryPoints = [
   "src/functions/process-mailrelay-sync/index.ts",
   "src/functions/process-whatsapp-sync/index.ts",
   "src/functions/mailrelay-webhook/index.ts",
+  "src/functions/google-business/index.ts",
 ];
 
 const buildOptions = {
@@ -104,6 +109,19 @@ async function build() {
     } else {
       await esbuild.build(buildOptions);
       console.log("Build complete.");
+
+      const emailAssetsSrc = path.join(__dirname, "../src/lib/email/assets");
+      const emailAssetsDestDir = path.join(distDir, "email/assets");
+      fs.mkdirSync(emailAssetsDestDir, { recursive: true });
+      for (const entry of fs.readdirSync(emailAssetsSrc, { withFileTypes: true })) {
+        const sourcePath = path.join(emailAssetsSrc, entry.name);
+        const destPath = path.join(emailAssetsDestDir, entry.name);
+        if (entry.isDirectory()) {
+          fs.cpSync(sourcePath, destPath, { recursive: true });
+        } else {
+          fs.copyFileSync(sourcePath, destPath);
+        }
+      }
 
       if (!fs.existsSync(distDir)) {
         fs.mkdirSync(distDir, { recursive: true });

@@ -10,13 +10,15 @@ import {
 } from "@/components/billing/WompiCheckoutWidget";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { useCheckout, useBillingProviders } from "@/hooks/useBilling";
-import { formatCopPrice } from "@/lib/plan-config";
+import { formatCopPrice, formatUsdPrice } from "@/lib/plan-config";
+import type { PaidBillingPlan } from "@/lib/plan-config";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useT } from "@/i18n/context";
 import type { WompiCheckoutParams } from "@/hooks/useBilling";
 
-function parsePlan(value: string | null): "pro" | "enterprise" | null {
-  if (value === "pro" || value === "enterprise") return value;
+function parsePlan(value: string | null): PaidBillingPlan | null {
+  if (value === "starter" || value === "pro" || value === "scale") return value;
+  if (value === "enterprise") return "scale";
   return null;
 }
 
@@ -105,7 +107,9 @@ function BillingCheckoutPageContent() {
     setPaymentOpen(false);
   }, []);
 
-  const price = plan ? providers?.plans?.[plan] : null;
+  const price = plan
+    ? providers?.plans?.[plan] ?? (plan === "scale" ? providers?.plans?.enterprise : undefined)
+    : null;
 
   if (!plan) {
     return (
@@ -138,7 +142,9 @@ function BillingCheckoutPageContent() {
             <h1 className="text-xl font-semibold text-primary">{t("billing.checkoutTitle")}</h1>
             <p className="mt-2 text-sm text-secondary">
               {planLabel(plan)}
-              {price ? ` · ${formatCopPrice(price.amountCents)}` : ""}
+              {price
+                ? ` · ${formatUsdPrice(price.listPriceUsd)} · ${formatCopPrice(price.amountCents)}`
+                : ""}
             </p>
             <p className="mt-2 text-sm text-secondary">{t("billing.checkoutWidgetHint")}</p>
           </>

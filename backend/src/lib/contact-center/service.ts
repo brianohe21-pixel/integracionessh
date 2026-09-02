@@ -56,6 +56,7 @@ import { normalizeE164 } from "../telnyx/phone.js";
 import { decodeTelnyxClientState } from "../telnyx/webhook.js";
 import {
   attachTelephonyCallControlId,
+  clearTelephonySupervisor,
   indexTelephonyCallControlId,
   createTelephonySession,
   getTelephonySession,
@@ -80,6 +81,19 @@ const GATEWAY_WS_URL = process.env.TELEPHONY_GATEWAY_WS_URL ?? "";
 
 function encodeClientState(value: Record<string, string>): string {
   return Buffer.from(JSON.stringify(value)).toString("base64");
+}
+
+const SUPERVISOR_ROLES = new Set<SupervisorRole>(["monitor", "whisper", "barge"]);
+
+function resolveSupervisorRole(
+  sessionRole?: SupervisorRole,
+  clientStateRole?: string
+): SupervisorRole {
+  if (sessionRole && SUPERVISOR_ROLES.has(sessionRole)) return sessionRole;
+  if (clientStateRole && SUPERVISOR_ROLES.has(clientStateRole as SupervisorRole)) {
+    return clientStateRole as SupervisorRole;
+  }
+  return "monitor";
 }
 
 function gatewayStreamUrl(streamToken: string): string {
@@ -582,8 +596,10 @@ export async function handleAgentLegAnswered(payload: Record<string, unknown>): 
     return false;
   }
 
-  const supervisorRole =
-    session.supervisorCallControlId === callControlId ? "monitor" : "none";
+  const isSupervisorLeg = session.supervisorCallControlId === callControlId;
+  const supervisorRole = isSupervisorLeg
+    ? resolveSupervisorRole(session.supervisorRole, decodeTelnyxClientState(payload).role)
+    : "none";
   await joinConference({
     environment: ENVIRONMENT,
     tenantId: session.tenantId,
@@ -612,6 +628,11 @@ export async function handleContactCenterHangup(payload: Record<string, unknown>
   if (!callControlId) return false;
   const session = await resolveContactCenterSession(payload);
   if (!session?.mode || session.mode === "ai") return false;
+
+  if (session.supervisorCallControlId === callControlId) {
+    await clearTelephonySupervisor(session.sessionId);
+    return true;
+  }
 
   const membership = await getQueueMembershipByCallId(session.callId);
   if (membership) await deleteQueueMembership(membership);
@@ -743,7 +764,11 @@ export async function superviseCall(params: {
       role: params.role,
     }),
   });
-  await patchTelephonySession(session.sessionId, { supervisorCallControlId: dial.callControlId });
+  await patchTelephonySession(session.sessionId, {
+    supervisorCallControlId: dial.callControlId,
+    supervisorRole: params.role,
+  });
+  await indexTelephonyCallControlId(session.sessionId, dial.callControlId).catch(() => undefined);
   await logEvent(params.tenantId, session.botId, params.callId, "supervised", params.role, {
     supervisorId: params.supervisorId,
   });

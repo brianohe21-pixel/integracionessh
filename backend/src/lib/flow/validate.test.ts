@@ -1,4 +1,4 @@
-import { validateFlowDefinition } from "./validate.js";
+import { validateFlowDefinition, issuesBlockingDraftSave } from "./validate.js";
 import type { FlowDefinition } from "../../types/index.js";
 
 function baseFlow(overrides: Partial<FlowDefinition> = {}): FlowDefinition {
@@ -58,6 +58,28 @@ describe("validateFlowDefinition", () => {
     expect(issues.some((issue) => issue.code === "missing_binding")).toBe(true);
   });
 
+  it("requires title and phone bindings for create_opportunity", () => {
+    const issues = validateFlowDefinition(
+      baseFlow({
+        nodes: [
+          {
+            id: "trigger-1",
+            type: "trigger",
+            position: { x: 0, y: 0 },
+            data: { triggerType: "web_form_submitted" },
+          },
+          { id: "opp-1", type: "create_opportunity", position: { x: 0, y: 100 }, data: {} },
+          { id: "end-1", type: "end", position: { x: 0, y: 200 }, data: {} },
+        ],
+        edges: [
+          { id: "e1", source: "trigger-1", target: "opp-1" },
+          { id: "e2", source: "opp-1", target: "end-1" },
+        ],
+      })
+    );
+    expect(issues.some((issue) => issue.code === "missing_binding")).toBe(true);
+  });
+
   it("rejects conversation-only nodes in form flows", () => {
     const issues = validateFlowDefinition(
       baseFlow({
@@ -106,5 +128,34 @@ describe("validateFlowDefinition", () => {
       })
     );
     expect(issues.some((issue) => issue.code === "missing_voice_tool_name")).toBe(true);
+  });
+
+  it("allows draft save when a node is not yet connected", () => {
+    const issues = validateFlowDefinition(
+      baseFlow({
+        nodes: [
+          {
+            id: "trigger-1",
+            type: "trigger",
+            position: { x: 0, y: 0 },
+            data: { triggerType: "web_form_submitted" },
+          },
+          {
+            id: "save-1",
+            type: "save_contact",
+            position: { x: 0, y: 100 },
+            data: { contactPhoneBinding: "{{form.phone}}" },
+          },
+          { id: "end-1", type: "end", position: { x: 0, y: 200 }, data: {} },
+          { id: "orphan-1", type: "message", position: { x: 200, y: 0 }, data: {} },
+        ],
+        edges: [
+          { id: "e1", source: "trigger-1", target: "save-1" },
+          { id: "e2", source: "save-1", target: "end-1" },
+        ],
+      })
+    );
+    expect(issues.some((issue) => issue.code === "orphan_node")).toBe(true);
+    expect(issuesBlockingDraftSave(issues)).toEqual([]);
   });
 });

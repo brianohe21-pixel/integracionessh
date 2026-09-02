@@ -68,7 +68,7 @@ export function FlowSecretsPanel({ flowId, isVoiceFlow, nodes }: FlowSecretsPane
                     [name]: e.target.value,
                   }))
                 }
-                className="w-full rounded-lg border border-default bg-surface-elevated p-2 text-sm"
+                className="w-full rounded-lg border border-field-border bg-surface-elevated p-2 text-sm shadow-sm focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none"
                 placeholder={t("flows.secrets.placeholder")}
                 autoComplete="off"
               />

@@ -4,24 +4,35 @@ import { useState } from "react";
 import { ExternalLink } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { useMetaFlows } from "@/hooks/useMetaFlows";
+import { useBots } from "@/hooks/useBots";
+import { useTenantEmailSettings } from "@/hooks/useTenantEmailSettings";
 import { MetaFlowsModal } from "@/components/meta-flows/MetaFlowsModal";
 import { Button } from "@/components/ui/Button";
+import { Select } from "@/components/ui/Input";
 import { LocalizedTextField } from "@/components/ui/LocalizedTextField";
+import { LocalizedHtmlField } from "@/components/ui/LocalizedHtmlField";
 import type { FlowNode, FlowNodeType, LocalizedText } from "@/types";
 import { extractSampleFields, FormBindingField } from "./FormBindingField";
+import { FlowWebhookPanel } from "./FlowWebhookPanel";
+import { TemplatePicker } from "@/components/templates/TemplatePicker";
+import type { OutreachChannel } from "@/types";
 
 interface NodePropertiesPanelProps {
   selected: FlowNode | undefined;
+  flowId: string;
+  hasWebhookNode?: boolean;
+  isMessagingFlow?: boolean;
   botId: string;
   isVoiceFlow?: boolean;
   samplePayload?: Record<string, unknown>;
   onUpdate: (patch: Record<string, unknown>) => void;
   onDelete: () => void;
   canDelete: boolean;
+  hideHeader?: boolean;
 }
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
-  return <label className="block text-xs font-medium text-secondary mb-1">{children}</label>;
+  return <label className="block text-sm font-medium text-primary mb-2">{children}</label>;
 }
 
 function textInput(
@@ -33,7 +44,7 @@ function textInput(
     <input
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full text-sm border border-default rounded-lg p-2"
+      className="w-full text-sm border border-field-border rounded-lg px-3 py-2.5 bg-surface-elevated shadow-sm transition-all focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none"
       {...props}
     />
   );
@@ -51,23 +62,33 @@ function textArea(
       onChange={(e) => onChange(e.target.value)}
       rows={rows}
       placeholder={placeholder}
-      className="w-full text-sm border border-default rounded-lg p-2"
+      className="w-full text-sm border border-field-border rounded-lg px-3 py-2.5 bg-surface-elevated shadow-sm transition-all focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none resize-y"
     />
   );
 }
 
 export function NodePropertiesPanel({
   selected,
+  flowId,
+  hasWebhookNode = false,
+  isMessagingFlow = false,
   botId,
   isVoiceFlow = false,
   samplePayload,
   onUpdate,
   onDelete,
   canDelete,
+  hideHeader = false,
 }: NodePropertiesPanelProps) {
   const t = useT();
   const { data: metaFlows } = useMetaFlows(botId);
+  const { data: bots } = useBots();
   const [metaFlowsModalOpen, setMetaFlowsModalOpen] = useState(false);
+
+  const isEmailNotification =
+    selected?.type === "send_notification" &&
+    (selected.data.notificationChannel ?? "whatsapp") === "email";
+  const { data: tenantEmailSettings } = useTenantEmailSettings(isEmailNotification);
 
   if (!selected) {
     return (
@@ -85,11 +106,36 @@ export function NodePropertiesPanel({
   const localizedField = (
     value: LocalizedText | undefined,
     onChange: (v: LocalizedText) => void,
-    rows = 3
-  ) => <LocalizedTextField value={value} onChange={onChange} rows={rows} />;
+    rows = 3,
+    sampleFieldsForField?: string[],
+    hint?: string
+  ) => (
+    <LocalizedTextField
+      value={value}
+      onChange={onChange}
+      rows={rows}
+      sampleFields={sampleFieldsForField}
+      hint={hint}
+    />
+  );
+
+  const localizedHtmlField = (
+    value: LocalizedText | undefined,
+    onChange: (v: LocalizedText) => void,
+    sampleFieldsForField?: string[],
+    hint?: string
+  ) => (
+    <LocalizedHtmlField
+      value={value}
+      onChange={onChange}
+      sampleFields={sampleFieldsForField}
+      hint={hint}
+    />
+  );
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-6">
+      {hideHeader ? null : (
       <div className="flex items-center justify-between gap-2">
         <div>
           <p className="text-sm font-semibold text-primary">{t("flows.nodePanel")}</p>
@@ -105,31 +151,16 @@ export function NodePropertiesPanel({
           </button>
         )}
       </div>
+      )}
 
-      <div>
+      <div className="rounded-xl border border-field-border bg-surface-muted/30 p-4">
         <FieldLabel>{t("flows.fields.label")}</FieldLabel>
         {textInput(d.label ?? "", (v) => onUpdate({ label: v }))}
       </div>
 
       {type === "trigger" && (
         <>
-          <div>
-            <FieldLabel>{t("flows.fields.triggerType")}</FieldLabel>
-            <select
-              value={d.triggerType ?? "any_message"}
-              onChange={(e) => onUpdate({ triggerType: e.target.value })}
-              className="w-full text-sm border border-default rounded-lg p-2 bg-surface-elevated"
-            >
-              <option value="any_message">{t("flows.fields.triggerAnyMessage")}</option>
-              <option value="first_message">{t("flows.fields.triggerFirstMessage")}</option>
-              <option value="keyword">{t("flows.fields.triggerKeyword")}</option>
-              <option value="web_form_submitted">{t("flows.fields.triggerWebForm")}</option>
-              {isVoiceFlow ? (
-                <option value="voice_call">{t("flows.fields.triggerVoiceCall")}</option>
-              ) : null}
-            </select>
-          </div>
-          {isVoiceFlow && (d.triggerType ?? "any_message") === "voice_call" && (
+          {isVoiceFlow && (
             <div>
               <FieldLabel>{t("flows.fields.flowVariables")}</FieldLabel>
               {textArea(
@@ -146,24 +177,18 @@ export function NodePropertiesPanel({
               )}
             </div>
           )}
-          {(d.triggerType ?? "any_message") === "web_form_submitted" && (
-            <div>
-              <FieldLabel>{t("flows.fields.samplePayload")}</FieldLabel>
-              {textArea(
-                d.formSamplePayload ? JSON.stringify(d.formSamplePayload, null, 2) : "{\n  \"phone\": \"\",\n  \"name\": \"\",\n  \"email\": \"\"\n}",
-                (v) => {
-                  try {
-                    onUpdate({ formSamplePayload: JSON.parse(v || "{}") });
-                  } catch {
-                    /* ignore invalid json while typing */
-                  }
-                },
-                6
-              )}
-            </div>
-          )}
-          {(d.triggerType ?? "any_message") === "keyword" && (
+          {isMessagingFlow && (
             <>
+              <label className="flex items-center gap-2 text-sm text-secondary">
+                <input
+                  type="checkbox"
+                  checked={(d.triggerType ?? "any_message") === "first_message"}
+                  onChange={(e) =>
+                    onUpdate({ triggerType: e.target.checked ? "first_message" : "any_message" })
+                  }
+                />
+                {t("flows.fields.triggerFirstMessage")}
+              </label>
               <div>
                 <FieldLabel>{t("flows.fields.keywords")}</FieldLabel>
                 {textInput((d.keywords ?? []).join(", "), (v) =>
@@ -175,18 +200,23 @@ export function NodePropertiesPanel({
                   })
                 )}
               </div>
-              <div>
-                <FieldLabel>{t("flows.fields.matchMode")}</FieldLabel>
-                <select
-                  value={d.matchMode ?? "contains"}
-                  onChange={(e) => onUpdate({ matchMode: e.target.value })}
-                  className="w-full text-sm border border-default rounded-lg p-2 bg-surface-elevated"
-                >
-                  <option value="contains">{t("flows.fields.matchContains")}</option>
-                  <option value="exact">{t("flows.fields.matchExact")}</option>
-                </select>
-              </div>
+              {(d.keywords ?? []).length > 0 && (
+                <div>
+                  <FieldLabel>{t("flows.fields.matchMode")}</FieldLabel>
+                  <select
+                    value={d.matchMode ?? "contains"}
+                    onChange={(e) => onUpdate({ matchMode: e.target.value })}
+                    className="w-full text-sm border border-field-border rounded-lg p-2 bg-surface-elevated shadow-sm"
+                  >
+                    <option value="contains">{t("flows.fields.matchContains")}</option>
+                    <option value="exact">{t("flows.fields.matchExact")}</option>
+                  </select>
+                </div>
+              )}
             </>
+          )}
+          {hasWebhookNode && (
+            <p className="text-xs text-secondary">{t("flows.fields.triggerWebhookHint")}</p>
           )}
         </>
       )}
@@ -239,7 +269,7 @@ export function NodePropertiesPanel({
             <select
               value={d.conditionOperator ?? "contains"}
               onChange={(e) => onUpdate({ conditionOperator: e.target.value })}
-              className="w-full text-sm border border-default rounded-lg p-2 bg-surface-elevated"
+              className="w-full text-sm border border-field-border rounded-lg p-2 bg-surface-elevated shadow-sm"
             >
               <option value="contains">{t("flows.fields.opContains")}</option>
               <option value="equals">{t("flows.fields.opEquals")}</option>
@@ -298,6 +328,10 @@ export function NodePropertiesPanel({
 
       {type === "meta_flow" && (
         <>
+          {!botId ? (
+            <p className="text-xs text-warning">{t("flows.bot.requiredHint")}</p>
+          ) : (
+            <>
           <Button
             variant="secondary"
             size="sm"
@@ -312,7 +346,7 @@ export function NodePropertiesPanel({
             <select
               value={d.metaFlowId ?? ""}
               onChange={(e) => onUpdate({ metaFlowId: e.target.value })}
-              className="w-full text-sm border border-default rounded-lg p-2 bg-surface-elevated"
+              className="w-full text-sm border border-field-border rounded-lg p-2 bg-surface-elevated shadow-sm"
             >
               <option value="">—</option>
               {metaFlows?.map((mf) => (
@@ -337,6 +371,8 @@ export function NodePropertiesPanel({
                 if (d.metaFlowId === metaFlowId) onUpdate({ metaFlowId: "" });
               }}
             />
+          )}
+            </>
           )}
         </>
       )}
@@ -388,7 +424,7 @@ export function NodePropertiesPanel({
             <select
               value={d.httpMethod ?? "GET"}
               onChange={(e) => onUpdate({ httpMethod: e.target.value })}
-              className="w-full text-sm border border-default rounded-lg p-2 bg-surface-elevated"
+              className="w-full text-sm border border-field-border rounded-lg p-2 bg-surface-elevated shadow-sm"
             >
               <option value="GET">GET</option>
               <option value="POST">POST</option>
@@ -583,35 +619,312 @@ export function NodePropertiesPanel({
         </>
       )}
 
+      {type === "create_opportunity" && (
+        <>
+          <FormBindingField
+            label={t("flows.fields.opportunityTitleBinding")}
+            value={d.opportunityTitleBinding ?? ""}
+            onChange={(v) => onUpdate({ opportunityTitleBinding: v })}
+            sampleFields={sampleFields}
+          />
+          <FormBindingField
+            label={t("flows.fields.opportunityAmountBinding")}
+            value={d.opportunityAmountBinding ?? ""}
+            onChange={(v) => onUpdate({ opportunityAmountBinding: v })}
+            sampleFields={sampleFields}
+          />
+          <div>
+            <FieldLabel>{t("flows.fields.opportunityCurrency")}</FieldLabel>
+            <Select
+              value={d.opportunityCurrency ?? "USD"}
+              onChange={(e) => onUpdate({ opportunityCurrency: e.target.value })}
+            >
+              {["USD", "EUR", "GBP", "PEN", "COP", "MXN"].map((currency) => (
+                <option key={currency} value={currency}>
+                  {currency}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <FieldLabel>{t("flows.fields.opportunityStage")}</FieldLabel>
+            <Select
+              value={d.opportunityStage ?? "new"}
+              onChange={(e) => onUpdate({ opportunityStage: e.target.value })}
+            >
+              <option value="new">{t("flows.fields.opportunityStageNew")}</option>
+              <option value="quoted">{t("flows.fields.opportunityStageQuoted")}</option>
+              <option value="negotiation">{t("flows.fields.opportunityStageNegotiation")}</option>
+              <option value="won">{t("flows.fields.opportunityStageWon")}</option>
+              <option value="lost">{t("flows.fields.opportunityStageLost")}</option>
+            </Select>
+          </div>
+          <FormBindingField
+            label={t("flows.fields.opportunityPhoneBinding")}
+            value={d.opportunityPhoneBinding ?? ""}
+            onChange={(v) => onUpdate({ opportunityPhoneBinding: v })}
+            sampleFields={sampleFields}
+          />
+          <FormBindingField
+            label={t("flows.fields.opportunityNameBinding")}
+            value={d.opportunityNameBinding ?? ""}
+            onChange={(v) => onUpdate({ opportunityNameBinding: v })}
+            sampleFields={sampleFields}
+          />
+          <FormBindingField
+            label={t("flows.fields.opportunityEmailBinding")}
+            value={d.opportunityEmailBinding ?? ""}
+            onChange={(v) => onUpdate({ opportunityEmailBinding: v })}
+            sampleFields={sampleFields}
+          />
+          <FormBindingField
+            label={t("flows.fields.opportunityDescriptionBinding")}
+            value={d.opportunityDescriptionBinding ?? ""}
+            onChange={(v) => onUpdate({ opportunityDescriptionBinding: v })}
+            sampleFields={sampleFields}
+          />
+          <div>
+            <FieldLabel>{t("flows.fields.opportunityTags")}</FieldLabel>
+            {textInput((d.opportunityTags ?? []).join(", "), (v) =>
+              onUpdate({
+                opportunityTags: v
+                  .split(",")
+                  .map((s) => s.trim())
+                  .filter(Boolean),
+              })
+            )}
+          </div>
+        </>
+      )}
+
       {type === "send_notification" && (
         <>
           <div>
             <FieldLabel>{t("flows.fields.notificationChannel")}</FieldLabel>
-            <select
-              value={d.notificationChannel ?? "whatsapp"}
-              onChange={(e) => onUpdate({ notificationChannel: e.target.value })}
-              className="w-full text-sm border border-default rounded-lg p-2 bg-surface-elevated"
-            >
-              <option value="whatsapp">WhatsApp</option>
-              <option value="sms">SMS</option>
-              <option value="email">Email</option>
-            </select>
+            <div className="grid grid-cols-3 gap-1.5">
+              {(["whatsapp", "sms", "email"] as const).map((ch) => {
+                const active = (d.notificationChannel ?? "whatsapp") === ch;
+                const labels: Record<string, string> = { whatsapp: "WhatsApp", sms: "SMS", email: "Email" };
+                return (
+                  <button
+                    key={ch}
+                    type="button"
+                    onClick={() => onUpdate({ notificationChannel: ch })}
+                    className={`rounded-lg border px-2 py-1.5 text-xs font-semibold transition-all ${
+                      active
+                        ? "border-accent bg-accent text-white"
+                        : "border-field-border bg-surface-elevated text-secondary hover:border-accent/50"
+                    }`}
+                  >
+                    {labels[ch]}
+                  </button>
+                );
+              })}
+            </div>
           </div>
+
+          {(d.notificationChannel ?? "whatsapp") !== "email" && (
+            <div>
+              <FieldLabel>{t("flows.fields.notificationBot")}</FieldLabel>
+              <Select
+                value={d.notificationBotId ?? ""}
+                onChange={(e) =>
+                  onUpdate({
+                    notificationBotId: e.target.value,
+                    notificationTemplateName: "",
+                    notificationTemplateLanguage: "es",
+                  })
+                }
+              >
+                <option value="">{t("flows.fields.notificationBotPlaceholder")}</option>
+                {(bots ?? [])
+                  .filter((bot) =>
+                    (d.notificationChannel ?? "whatsapp") === "sms" ? bot.smsEnabled : true
+                  )
+                  .map((bot) => (
+                    <option key={bot.botId} value={bot.botId}>
+                      {bot.name}
+                    </option>
+                  ))}
+              </Select>
+            </div>
+          )}
+
           <FormBindingField
             label={t("flows.fields.notificationRecipientBinding")}
             value={d.notificationRecipientBinding ?? ""}
             onChange={(v) => onUpdate({ notificationRecipientBinding: v })}
             sampleFields={sampleFields}
           />
-          <FormBindingField
-            label={t("flows.fields.notificationMessageBinding")}
-            value={d.notificationMessageBinding ?? ""}
-            onChange={(v) => onUpdate({ notificationMessageBinding: v })}
-            sampleFields={sampleFields}
-          />
+
+          {(d.notificationChannel ?? "whatsapp") === "email" && (
+            <>
+              <p className="text-xs text-secondary rounded-lg bg-surface-muted/60 px-3 py-2">
+                {tenantEmailSettings?.canSend
+                  ? t("flows.fields.notificationEmailSenderTenant", {
+                      sender:
+                        tenantEmailSettings.settings.fromName && tenantEmailSettings.settings.fromEmail
+                          ? `${tenantEmailSettings.settings.fromName} (${tenantEmailSettings.settings.fromEmail})`
+                          : tenantEmailSettings.settings.fromEmail ?? "",
+                    })
+                  : t("flows.fields.notificationEmailSenderPlatform")}
+              </p>
+              <div>
+                <FieldLabel>{t("flows.fields.notificationEmailSubject")}</FieldLabel>
+                {textInput(d.notificationEmailSubject ?? "", (v) => onUpdate({ notificationEmailSubject: v }), {
+                  placeholder: "Asunto del correo",
+                })}
+              </div>
+            </>
+          )}
+
+          {(d.notificationChannel ?? "whatsapp") !== "email" && (
           <div>
-            <FieldLabel>{t("flows.fields.notificationMessageText")}</FieldLabel>
-            {localizedField(d.notificationMessageText, (v) => onUpdate({ notificationMessageText: v }), 3)}
+            <FieldLabel>{t("flows.fields.notificationMessageType")}</FieldLabel>
+            <div className="flex gap-2">
+              {(["text", "template"] as const).map((mt) => {
+                const active = (d.notificationMessageType ?? "text") === mt;
+                return (
+                  <button
+                    key={mt}
+                    type="button"
+                    onClick={() => onUpdate({ notificationMessageType: mt })}
+                    className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-all ${
+                      active
+                        ? "border-accent bg-accent/10 text-accent"
+                        : "border-field-border bg-surface-elevated text-secondary hover:border-accent/40"
+                    }`}
+                  >
+                    {mt === "text"
+                      ? t("flows.fields.notificationMessageTypeText")
+                      : t("flows.fields.notificationMessageTypeTemplate")}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          )}
+
+          {(d.notificationChannel ?? "whatsapp") === "email" ||
+          (d.notificationMessageType ?? "text") === "text" ? (
+            <>
+              <div>
+                <FieldLabel>
+                  {(d.notificationChannel ?? "whatsapp") === "email"
+                    ? t("flows.fields.notificationEmailBody")
+                    : t("flows.fields.notificationMessage")}
+                </FieldLabel>
+                {(d.notificationChannel ?? "whatsapp") === "email"
+                  ? localizedHtmlField(
+                      d.notificationMessageHtml || d.notificationMessageBinding || "",
+                      (v) => onUpdate({ notificationMessageHtml: v, notificationMessageBinding: "" }),
+                      sampleFields,
+                      t("flows.fields.notificationMessageHint")
+                    )
+                  : localizedField(
+                      d.notificationMessageText || d.notificationMessageBinding || "",
+                      (v) => onUpdate({ notificationMessageText: v, notificationMessageBinding: "" }),
+                      4,
+                      sampleFields,
+                      t("flows.fields.notificationMessageHint")
+                    )}
+              </div>
+            </>
+          ) : (
+            <>
+              {(d.notificationChannel ?? "whatsapp") !== "email" ? (
+                <div>
+                  <FieldLabel>{t("flows.fields.notificationTemplateName")}</FieldLabel>
+                  <TemplatePicker
+                    botId={d.notificationBotId ?? ""}
+                    channel={(d.notificationChannel ?? "whatsapp") as OutreachChannel}
+                    value={
+                      d.notificationTemplateName
+                        ? {
+                            name: d.notificationTemplateName,
+                            language: d.notificationTemplateLanguage ?? "es",
+                          }
+                        : null
+                    }
+                    onChange={(picked) =>
+                      onUpdate({
+                        notificationTemplateName: picked.name,
+                        notificationTemplateLanguage: picked.language,
+                      })
+                    }
+                  />
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <FieldLabel>{t("flows.fields.notificationTemplateName")}</FieldLabel>
+                    {textInput(d.notificationTemplateName ?? "", (v) => onUpdate({ notificationTemplateName: v }), {
+                      placeholder: "nombre_de_la_plantilla",
+                    })}
+                  </div>
+                  <div>
+                    <FieldLabel>{t("flows.fields.notificationTemplateLanguage")}</FieldLabel>
+                    {textInput(d.notificationTemplateLanguage ?? "es", (v) =>
+                      onUpdate({ notificationTemplateLanguage: v })
+                    )}
+                  </div>
+                </>
+              )}
+              <div>
+                <FieldLabel>{t("flows.fields.notificationTemplateVariables")}</FieldLabel>
+                {textArea(
+                  d.notificationTemplateVariables
+                    ? JSON.stringify(d.notificationTemplateVariables, null, 2)
+                    : "{}",
+                  (v) => {
+                    try {
+                      onUpdate({ notificationTemplateVariables: JSON.parse(v || "{}") });
+                    } catch {
+                      /* ignore invalid json while typing */
+                    }
+                  },
+                  4,
+                  '{ "1": "{{form.name}}", "2": "{{form.value}}" }'
+                )}
+              </div>
+            </>
+          )}
+        </>
+      )}
+
+      {type === "assign_bot" && (
+        <div>
+          <FieldLabel>{t("flows.selectBot")}</FieldLabel>
+          <Select value={d.botId ?? ""} onChange={(e) => onUpdate({ botId: e.target.value })}>
+            <option value="">{t("flows.bot.placeholder")}</option>
+            {bots?.map((bot) => (
+              <option key={bot.botId} value={bot.botId}>
+                {bot.name}
+              </option>
+            ))}
+          </Select>
+          <p className="mt-1 text-xs text-secondary">{t("flows.fields.assignBotHint")}</p>
+        </div>
+      )}
+
+      {type === "webhook" && (
+        <>
+          <FlowWebhookPanel flowId={flowId} />
+          <div>
+            <FieldLabel>{t("flows.fields.samplePayload")}</FieldLabel>
+            {textArea(
+              d.formSamplePayload
+                ? JSON.stringify(d.formSamplePayload, null, 2)
+                : '{\n  "phone": "",\n  "name": "",\n  "email": ""\n}',
+              (v) => {
+                try {
+                  onUpdate({ formSamplePayload: JSON.parse(v || "{}") });
+                } catch {
+                  /* ignore invalid json while typing */
+                }
+              },
+              6
+            )}
           </div>
         </>
       )}

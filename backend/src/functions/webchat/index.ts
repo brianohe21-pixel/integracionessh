@@ -3,16 +3,21 @@ import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
 import { randomUUID } from "crypto";
 import { z } from "zod";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
-import { getBotByWidgetKey } from "../../lib/dynamodb/bot-lookup.repository.js";
+import { getBotByWidgetKey, getBotByVoicebotWidgetKey } from "../../lib/dynamodb/bot-lookup.repository.js";
 import { getOrCreateConversation } from "../../lib/dynamodb/conversation.repository.js";
 import { getConversationMessages } from "../../lib/dynamodb/conversation.repository.js";
 import {
   createSessionToken,
   createWebChatSession,
   getWebChatSession,
+  isWebChatSessionEnded,
   touchWebChatSession,
   verifySessionToken,
 } from "../../lib/webchat/session.repository.js";
+import {
+  endVisitorWebchatSession,
+  requestVisitorWebchatHandoff,
+} from "../../lib/webchat/visitor-actions.js";
 import { assertCanUseWebChat } from "../../lib/billing/assert-plan.js";
 import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
 import { getResolvedBrandingWithInheritance } from "../../lib/branding/inherit.js";
@@ -23,6 +28,9 @@ import { getLiveKitConfig } from "../../lib/livekit/config.js";
 import { createParticipantToken } from "../../lib/livekit/tokens.js";
 import { deleteLiveKitRoom } from "../../lib/livekit/rooms.js";
 import { addMessage } from "../../lib/dynamodb/conversation.repository.js";
+import { recordWebsitePageview } from "../../lib/dynamodb/website-metrics.repository.js";
+import { resolvePublicGoogleAnalytics } from "../../lib/website-analytics/settings.js";
+import { linkConversationToContact } from "../../lib/contacts/link-conversation-to-contact.js";
 
 const sqs = new SQSClient({});
 const QUEUE_URL = process.env.SQS_QUEUE_URL ?? "";
@@ -35,6 +43,23 @@ const CreateSessionSchema = z.object({
 
 const SendMessageSchema = z.object({
   content: z.string().min(1).max(2048),
+});
+
+const IdentitySchema = z
+  .object({
+    phone: z.string().min(7).max(30).optional(),
+    email: z.string().email().max(254).optional(),
+    name: z.string().max(120).optional(),
+  })
+  .refine((data) => data.phone || data.email || data.name, {
+    message: "At least one identity field is required",
+  });
+
+const PageviewSchema = z.object({
+  path: z.string().max(512),
+  referrer: z.string().max(1024).optional(),
+  visitorId: z.string().min(8).max(128),
+  sessionId: z.string().min(8).max(128),
 });
 
 function getWidgetKey(event: APIGatewayProxyEventV2): string | undefined {
@@ -52,14 +77,73 @@ function parseSubPath(rawPath: string, sessionId: string): string[] {
   return suffix.replace(/^\//, "").split("/").filter(Boolean);
 }
 
+function resolveSessionId(
+  rawPath: string,
+  pathParams: { sessionId?: string } | undefined
+): string | undefined {
+  if (pathParams?.sessionId) return pathParams.sessionId;
+  const match = rawPath.match(/^\/webchat\/sessions\/([^/]+)/);
+  return match?.[1];
+}
+
+function isCreateSessionRoute(method: string, rawPath: string): boolean {
+  if (method !== "POST") return false;
+  return rawPath.replace(/\/$/, "") === "/webchat/sessions";
+}
+
+function isPageviewRoute(method: string, rawPath: string): boolean {
+  if (method !== "POST") return false;
+  return rawPath.replace(/\/$/, "") === "/webchat/analytics/pageview";
+}
+
+function isAnalyticsConfigRoute(method: string, rawPath: string): boolean {
+  if (method !== "GET") return false;
+  return rawPath.replace(/\/$/, "") === "/webchat/analytics/config";
+}
+
+async function authenticateSession(
+  event: APIGatewayProxyEventV2,
+  sessionId: string
+): Promise<
+  | { ok: true; session: NonNullable<Awaited<ReturnType<typeof getWebChatSession>>> }
+  | { ok: false; response: APIGatewayProxyResultV2 }
+> {
+  const token = getSessionAuth(event);
+  if (!token) return { ok: false, response: unauthorized("Missing session token") };
+
+  const verifiedSessionId = verifySessionToken(token, SESSION_SECRET);
+  if (!verifiedSessionId || verifiedSessionId !== sessionId) {
+    return { ok: false, response: unauthorized("Invalid session token") };
+  }
+
+  const session = await getWebChatSession(sessionId);
+  if (!session) return { ok: false, response: notFound("Session not found") };
+
+  return { ok: true, session };
+}
+
+function sessionPayload(session: NonNullable<Awaited<ReturnType<typeof getWebChatSession>>>) {
+  return {
+    sessionStatus: isWebChatSessionEnded(session) ? ("ended" as const) : ("active" as const),
+  };
+}
+
 export async function handler(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
   try {
     const method = event.requestContext.http.method;
     const rawPath = event.rawPath ?? event.requestContext.http.path;
-    const sessionId = event.pathParameters?.sessionId;
+    const sessionId = resolveSessionId(rawPath, event.pathParameters);
 
-    if (method === "POST" && rawPath.endsWith("/webchat/sessions") && !sessionId) {
+    if (isCreateSessionRoute(method, rawPath)) {
       return handleCreateSession(event);
+    }
+
+    if (isPageviewRoute(method, rawPath)) {
+      return handlePageview(event);
+    }
+
+    if (isAnalyticsConfigRoute(method, rawPath)) {
+      return handleAnalyticsConfig(event);
     }
 
     if (!sessionId) return badRequest("Route not found");
@@ -84,6 +168,18 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
 
     if (method === "POST" && sub[0] === "calls" && sub[2] === "accept" && sub[1]) {
       return handleVisitorCallToken(event, sessionId, sub[1]);
+    }
+
+    if (method === "POST" && sub[0] === "end") {
+      return handleEndSession(event, sessionId);
+    }
+
+    if (method === "POST" && sub[0] === "handoff") {
+      return handleRequestHandoff(event, sessionId);
+    }
+
+    if (method === "POST" && sub[0] === "identity") {
+      return handleUpdateIdentity(event, sessionId);
     }
 
     return badRequest("Route not found");
@@ -142,24 +238,66 @@ async function handleCreateSession(
     sessionId,
     sessionToken,
     conversationId: conversation.conversationId,
+    sessionStatus: "active",
     ...(branding ? { branding } : {}),
   });
+}
+
+async function resolveWidgetLookup(
+  widgetKey: string
+): Promise<{ tenantId: string; botId: string } | null> {
+  const webchatLookup = await getBotByWidgetKey(widgetKey);
+  if (webchatLookup) return webchatLookup;
+  return getBotByVoicebotWidgetKey(widgetKey);
+}
+
+async function handlePageview(
+  event: APIGatewayProxyEventV2
+): Promise<APIGatewayProxyResultV2> {
+  const widgetKey = getWidgetKey(event);
+  if (!widgetKey) return unauthorized("Missing X-Widget-Key");
+
+  const lookup = await resolveWidgetLookup(widgetKey);
+  if (!lookup) return unauthorized("Invalid widget key");
+
+  const body = JSON.parse(event.body ?? "{}");
+  const parsed = PageviewSchema.safeParse(body);
+  if (!parsed.success) return badRequest(parsed.error.message);
+
+  await recordWebsitePageview(lookup.tenantId, lookup.botId, {
+    path: parsed.data.path,
+    visitorId: parsed.data.visitorId,
+    sessionId: parsed.data.sessionId,
+    ...(parsed.data.referrer ? { referrer: parsed.data.referrer } : {}),
+  });
+  return ok({ recorded: true });
+}
+
+async function handleAnalyticsConfig(
+  event: APIGatewayProxyEventV2
+): Promise<APIGatewayProxyResultV2> {
+  const widgetKey = getWidgetKey(event);
+  if (!widgetKey) return unauthorized("Missing X-Widget-Key");
+
+  const lookup = await resolveWidgetLookup(widgetKey);
+  if (!lookup) return unauthorized("Invalid widget key");
+
+  const tenant = await getTenant(lookup.tenantId);
+  const googleAnalytics = resolvePublicGoogleAnalytics(tenant?.websiteAnalytics);
+  return ok({ googleAnalytics });
 }
 
 async function handleSendMessage(
   event: APIGatewayProxyEventV2,
   sessionId: string
 ): Promise<APIGatewayProxyResultV2> {
-  const token = getSessionAuth(event);
-  if (!token) return unauthorized("Missing session token");
+  const auth = await authenticateSession(event, sessionId);
+  if (!auth.ok) return auth.response;
+  const { session } = auth;
 
-  const verifiedSessionId = verifySessionToken(token, SESSION_SECRET);
-  if (!verifiedSessionId || verifiedSessionId !== sessionId) {
-    return unauthorized("Invalid session token");
+  if (isWebChatSessionEnded(session)) {
+    return badRequest("Session ended");
   }
-
-  const session = await getWebChatSession(sessionId);
-  if (!session) return notFound("Session not found");
 
   const body = JSON.parse(event.body ?? "{}");
   const parsed = SendMessageSchema.safeParse(body);
@@ -199,16 +337,9 @@ async function handlePollMessages(
   event: APIGatewayProxyEventV2,
   sessionId: string
 ): Promise<APIGatewayProxyResultV2> {
-  const token = getSessionAuth(event);
-  if (!token) return unauthorized("Missing session token");
-
-  const verifiedSessionId = verifySessionToken(token, SESSION_SECRET);
-  if (!verifiedSessionId || verifiedSessionId !== sessionId) {
-    return unauthorized("Invalid session token");
-  }
-
-  const session = await getWebChatSession(sessionId);
-  if (!session) return notFound("Session not found");
+  const auth = await authenticateSession(event, sessionId);
+  if (!auth.ok) return auth.response;
+  const { session } = auth;
 
   const params = event.queryStringParameters ?? {};
   const limit = params.limit ? Math.min(parseInt(params.limit, 10) || 50, 100) : 50;
@@ -217,6 +348,7 @@ async function handlePollMessages(
   await touchWebChatSession(sessionId);
 
   return ok({
+    ...sessionPayload(session),
     items: messages.map((m) => ({
       messageId: m.messageId,
       role: m.role,
@@ -332,4 +464,84 @@ async function handleVisitorCallDecline(
   await touchWebChatSession(sessionId);
 
   return ok({ callId, status: "declined" });
+}
+
+async function handleEndSession(
+  event: APIGatewayProxyEventV2,
+  sessionId: string
+): Promise<APIGatewayProxyResultV2> {
+  const auth = await authenticateSession(event, sessionId);
+  if (!auth.ok) return auth.response;
+  const { session } = auth;
+
+  try {
+    const result = await endVisitorWebchatSession(session);
+    return ok({
+      sessionStatus: result.status,
+      ...(result.farewellMessage ? { farewellMessage: result.farewellMessage } : {}),
+    });
+  } catch (err) {
+    return handleError(err);
+  }
+}
+
+async function handleRequestHandoff(
+  event: APIGatewayProxyEventV2,
+  sessionId: string
+): Promise<APIGatewayProxyResultV2> {
+  const auth = await authenticateSession(event, sessionId);
+  if (!auth.ok) return auth.response;
+  const { session } = auth;
+
+  if (isWebChatSessionEnded(session)) {
+    return badRequest("Session ended");
+  }
+
+  try {
+    const result = await requestVisitorWebchatHandoff(session);
+    await touchWebChatSession(sessionId);
+    return ok({
+      sessionStatus: "active",
+      message: result.message,
+      handoffMode: result.handoffMode,
+    });
+  } catch (err) {
+    return handleError(err);
+  }
+}
+
+async function handleUpdateIdentity(
+  event: APIGatewayProxyEventV2,
+  sessionId: string
+): Promise<APIGatewayProxyResultV2> {
+  const auth = await authenticateSession(event, sessionId);
+  if (!auth.ok) return auth.response;
+  const { session } = auth;
+
+  if (isWebChatSessionEnded(session)) {
+    return badRequest("Session ended");
+  }
+
+  const body = JSON.parse(event.body ?? "{}");
+  const parsed = IdentitySchema.safeParse(body);
+  if (!parsed.success) return badRequest(parsed.error.message);
+
+  const conversation = await linkConversationToContact({
+    tenantId: session.tenantId,
+    botId: session.botId,
+    conversationId: session.conversationId,
+    ...(parsed.data.phone ? { phone: parsed.data.phone } : {}),
+    ...(parsed.data.email ? { email: parsed.data.email } : {}),
+    ...(parsed.data.name ? { displayName: parsed.data.name } : {}),
+  });
+
+  if (!conversation) return notFound("Conversation not found");
+
+  await touchWebChatSession(sessionId);
+
+  return ok({
+    ...sessionPayload(session),
+    contactId: conversation.contactId,
+    linked: true,
+  });
 }

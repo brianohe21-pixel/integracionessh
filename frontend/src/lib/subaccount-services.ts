@@ -24,9 +24,10 @@ export const SERVICE_LIMIT_KEYS: Record<SubaccountServiceId, readonly BagLimitKe
   supervisor: [],
   contacts: ["maxContacts"],
   leads: [],
+  sales: [],
   advisors: [],
   automations: ["maxAutomationsPerBot", "maxScheduledAutomations"],
-  flows: ["maxVisualFlowsPerBot", "maxFlowNodes", "maxActiveFlowRuns"],
+  flows: ["maxVisualFlowsPerBot", "maxFlowNodes", "maxActiveFlowRuns", "maxHostedFormsPerTenant"],
   templates: [],
   bulkSend: ["maxBulkRecipientsPerJob"],
   campaigns: ["maxActiveCampaigns", "maxMessagesPerMonth"],
@@ -40,6 +41,7 @@ export const SERVICE_LIMIT_KEYS: Record<SubaccountServiceId, readonly BagLimitKe
     "maxOrdersPerMonth",
   ],
   developer: ["apiRateLimitPerMinute", "apiRateLimitPerDay"],
+  integrations: [],
 };
 
 export const BAG_LIMIT_KEYS = Array.from(
@@ -62,6 +64,7 @@ export const SERVICE_CATEGORIES: Array<{
       "supervisor",
       "contacts",
       "leads",
+      "sales",
       "advisors",
     ],
   },
@@ -83,7 +86,7 @@ export const SERVICE_CATEGORIES: Array<{
   {
     id: "integrations",
     labelKey: "nav.categoryIntegrations",
-    services: ["apps", "developer"],
+    services: ["apps", "developer", "integrations"],
   },
 ];
 
@@ -94,9 +97,11 @@ const SERVICE_PATHS: Array<{ prefix: string; service: SubaccountServiceId }> = [
   { prefix: "/supervisor", service: "supervisor" },
   { prefix: "/contacts", service: "contacts" },
   { prefix: "/leads", service: "leads" },
+  { prefix: "/sales", service: "sales" },
   { prefix: "/advisors", service: "advisors" },
   { prefix: "/automations", service: "automations" },
   { prefix: "/flows", service: "flows" },
+  { prefix: "/forms", service: "flows" },
   { prefix: "/templates", service: "templates" },
   { prefix: "/bulk-send", service: "bulkSend" },
   { prefix: "/campaigns", service: "campaigns" },
@@ -104,6 +109,8 @@ const SERVICE_PATHS: Array<{ prefix: string; service: SubaccountServiceId }> = [
   { prefix: "/metrics", service: "metrics" },
   { prefix: "/apps", service: "apps" },
   { prefix: "/developer", service: "developer" },
+  { prefix: "/integrations", service: "integrations" },
+  { prefix: "/reviews", service: "integrations" },
   { prefix: "/bots", service: "bots" },
 ];
 
@@ -126,6 +133,7 @@ export const SERVICE_NAV_KEYS: Record<SubaccountServiceId, string> = {
   supervisor: "nav.supervisor",
   contacts: "nav.contacts",
   leads: "nav.leads",
+  sales: "nav.sales",
   advisors: "nav.advisors",
   automations: "nav.automations",
   flows: "nav.flows",
@@ -136,6 +144,7 @@ export const SERVICE_NAV_KEYS: Record<SubaccountServiceId, string> = {
   metrics: "nav.metrics",
   apps: "nav.apps",
   developer: "nav.developer",
+  integrations: "nav.integrations",
 };
 
 export type ResellerBag = {
@@ -173,7 +182,8 @@ export function serviceForPath(pathname: string): SubaccountServiceId | null {
 }
 
 export function serviceForNavHref(href: string): SubaccountServiceId | null {
-  return serviceForPath(href);
+  const path = href.split("?")[0] ?? href;
+  return serviceForPath(path);
 }
 
 export function defaultEnabledServices(): SubaccountServiceId[] {

@@ -8,7 +8,8 @@
     "build:widget-call": "node scripts/build-widget-call.js",
     "build:widget-voice": "node scripts/build-widget-voice.js",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@aws-amplify/ui-react": "^6.15.3",

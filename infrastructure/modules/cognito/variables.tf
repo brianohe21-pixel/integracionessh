@@ -32,6 +32,10 @@ variable "lambda_zip_path" {
   default = ""
 }
 
+variable "dynamodb_table_arn" {
+  type = string
+}
+
 variable "tags" {
   type    = map(string)
   default = {}

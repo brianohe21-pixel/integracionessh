@@ -18,6 +18,7 @@ import { CalendarSettingsForm } from "@/components/calendar/CalendarSettingsForm
 import { CalendarBookingsTable } from "@/components/calendar/CalendarBookingsTable";
 import { CalendarSlotsPreview } from "@/components/calendar/CalendarSlotsPreview";
 import { CalendarPublicLinkPanel } from "@/components/calendar/CalendarPublicLinkPanel";
+import { CalendarGoogleConnectionPanel } from "@/components/calendar/CalendarGoogleConnectionPanel";
 import { CalendarReminderSettings } from "@/components/calendar/CalendarReminderSettings";
 import { CalendarPaymentSettings } from "@/components/calendar/CalendarPaymentSettings";
 import { CalendarWaitlistSettings } from "@/components/calendar/CalendarWaitlistSettings";
@@ -128,6 +129,7 @@ export default function CalendarBotPage() {
 
       {tab === "availability" ? (
         <div className="space-y-6">
+          <CalendarGoogleConnectionPanel botId={botId} />
           <CalendarPublicLinkPanel botId={botId} calendarEnabled={draft.enabled} />
           <CalendarReminderSettings
             botId={botId}

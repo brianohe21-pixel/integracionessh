@@ -2,24 +2,38 @@
 
 import { useEffect, useState } from "react";
 import { Braces, Brain } from "lucide-react";
+import { StructuredOutputFieldListEditor } from "@/components/voice-agents/StructuredOutputFieldListEditor";
+import { Input } from "@/components/ui/Input";
 import {
   useSaveTelephonySettings,
   useTelephonySettings,
 } from "@/hooks/useTelephony";
 import { useT } from "@/i18n/context";
 import {
+  definitionToFormState,
+  formStateToDefinition,
+  getStructuredOutputExampleFormState,
   getStructuredOutputMethod,
   parseStructuredOutputJson,
   serializeStructuredOutputForEditor,
   STRUCTURED_OUTPUT_AI_EXAMPLE,
   STRUCTURED_OUTPUT_REGEX_EXAMPLE,
+  validateStructuredOutputForm,
   validateStructuredOutputJson,
+  type StructuredOutputEditorMode,
   type StructuredOutputExtractionMethod,
+  type StructuredOutputFormState,
 } from "@/lib/telephony-structured-outputs";
 
 interface VoiceAgentStructuredOutputsPanelProps {
   botId: string;
 }
+
+const EMPTY_FORM_STATE: StructuredOutputFormState = {
+  schemaName: "",
+  description: "",
+  fields: [],
+};
 
 export function VoiceAgentStructuredOutputsPanel({ botId }: VoiceAgentStructuredOutputsPanelProps) {
   const t = useT();
@@ -27,6 +41,8 @@ export function VoiceAgentStructuredOutputsPanel({ botId }: VoiceAgentStructured
   const save = useSaveTelephonySettings(botId);
 
   const [method, setMethod] = useState<StructuredOutputExtractionMethod>("ai");
+  const [editorMode, setEditorMode] = useState<StructuredOutputEditorMode>("form");
+  const [formState, setFormState] = useState<StructuredOutputFormState>(EMPTY_FORM_STATE);
   const [jsonConfig, setJsonConfig] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -34,7 +50,9 @@ export function VoiceAgentStructuredOutputsPanel({ botId }: VoiceAgentStructured
   useEffect(() => {
     if (!data) return;
     const definition = data.telephonyStructuredOutput;
-    setMethod(getStructuredOutputMethod(definition));
+    const nextMethod = getStructuredOutputMethod(definition);
+    setMethod(nextMethod);
+    setFormState(definitionToFormState(definition, nextMethod));
     setJsonConfig(serializeStructuredOutputForEditor(definition));
   }, [data]);
 
@@ -42,32 +60,86 @@ export function VoiceAgentStructuredOutputsPanel({ botId }: VoiceAgentStructured
     setMethod(next);
     setError("");
     setSuccess("");
-    if (!jsonConfig.trim()) {
-      setJsonConfig(next === "regex" ? STRUCTURED_OUTPUT_REGEX_EXAMPLE : STRUCTURED_OUTPUT_AI_EXAMPLE);
+    const isEmpty =
+      !formState.schemaName.trim() &&
+      formState.fields.length === 0 &&
+      !jsonConfig.trim();
+    if (isEmpty) {
+      const example = getStructuredOutputExampleFormState(next);
+      setFormState(example);
+      setJsonConfig(
+        serializeStructuredOutputForEditor(formStateToDefinition(example, next))
+      );
     }
   }
 
+  function handleEditorModeChange(next: StructuredOutputEditorMode) {
+    setError("");
+    setSuccess("");
+    if (next === editorMode) return;
+
+    if (next === "json") {
+      try {
+        const definition = formStateToDefinition(formState, method);
+        setJsonConfig(serializeStructuredOutputForEditor(definition));
+      } catch {
+        setJsonConfig(
+          method === "regex" ? STRUCTURED_OUTPUT_REGEX_EXAMPLE : STRUCTURED_OUTPUT_AI_EXAMPLE
+        );
+      }
+    } else {
+      try {
+        const definition = jsonConfig.trim() ? parseStructuredOutputJson(jsonConfig) : null;
+        setFormState(definitionToFormState(definition, method));
+      } catch {
+        setFormState(getStructuredOutputExampleFormState(method));
+      }
+    }
+
+    setEditorMode(next);
+  }
+
   function handleLoadExample() {
-    setJsonConfig(method === "regex" ? STRUCTURED_OUTPUT_REGEX_EXAMPLE : STRUCTURED_OUTPUT_AI_EXAMPLE);
+    const example = getStructuredOutputExampleFormState(method);
+    setFormState(example);
+    setJsonConfig(
+      serializeStructuredOutputForEditor(formStateToDefinition(example, method))
+    );
     setError("");
     setSuccess("");
   }
 
   function handleSave() {
-    const validationError = validateStructuredOutputJson(jsonConfig, t);
-    if (validationError) {
-      setSuccess("");
-      setError(validationError);
-      return;
-    }
-
     let definition = null;
-    try {
-      definition = parseStructuredOutputJson(jsonConfig);
-    } catch {
-      setSuccess("");
-      setError(t("voiceAgents.structuredOutputsJsonInvalid"));
-      return;
+
+    if (editorMode === "form") {
+      const validationError = validateStructuredOutputForm(formState, method, t);
+      if (validationError) {
+        setSuccess("");
+        setError(validationError);
+        return;
+      }
+      try {
+        definition = formStateToDefinition(formState, method);
+      } catch {
+        setSuccess("");
+        setError(t("voiceAgents.structuredOutputsSchemaNameRequired"));
+        return;
+      }
+    } else {
+      const validationError = validateStructuredOutputJson(jsonConfig, t);
+      if (validationError) {
+        setSuccess("");
+        setError(validationError);
+        return;
+      }
+      try {
+        definition = parseStructuredOutputJson(jsonConfig);
+      } catch {
+        setSuccess("");
+        setError(t("voiceAgents.structuredOutputsJsonInvalid"));
+        return;
+      }
     }
 
     setError("");
@@ -169,7 +241,30 @@ export function VoiceAgentStructuredOutputsPanel({ botId }: VoiceAgentStructured
       ) : (
         <>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm font-medium text-primary">{t("voiceAgents.structuredOutputsJsonLabel")}</p>
+            <div className="inline-flex rounded-lg border border-default p-1">
+              <button
+                type="button"
+                onClick={() => handleEditorModeChange("form")}
+                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                  editorMode === "form"
+                    ? "bg-accent text-white"
+                    : "text-secondary hover:text-primary"
+                }`}
+              >
+                {t("voiceAgents.structuredOutputsEditorForm")}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleEditorModeChange("json")}
+                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                  editorMode === "json"
+                    ? "bg-accent text-white"
+                    : "text-secondary hover:text-primary"
+                }`}
+              >
+                {t("voiceAgents.structuredOutputsEditorJson")}
+              </button>
+            </div>
             <button
               type="button"
               onClick={handleLoadExample}
@@ -179,22 +274,74 @@ export function VoiceAgentStructuredOutputsPanel({ botId }: VoiceAgentStructured
             </button>
           </div>
 
-          <textarea
-            value={jsonConfig}
-            onChange={(e) => setJsonConfig(e.target.value)}
-            rows={14}
-            spellCheck={false}
-            placeholder={
-              method === "regex" ? STRUCTURED_OUTPUT_REGEX_EXAMPLE : STRUCTURED_OUTPUT_AI_EXAMPLE
-            }
-            className="w-full rounded-lg border border-default px-3 py-2 text-xs font-mono"
-          />
+          {editorMode === "form" ? (
+            <div className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs text-secondary">
+                    {t("voiceAgents.structuredOutputsSchemaName")}
+                  </label>
+                  <Input
+                    value={formState.schemaName}
+                    onChange={(e) =>
+                      setFormState((prev) => ({
+                        ...prev,
+                        schemaName: e.target.value.replace(/[^a-zA-Z0-9_]/g, ""),
+                      }))
+                    }
+                    placeholder="customer_order"
+                  />
+                </div>
+                {method === "ai" ? (
+                  <div>
+                    <label className="mb-1 block text-xs text-secondary">
+                      {t("voiceAgents.structuredOutputsSchemaDescription")}
+                    </label>
+                    <Input
+                      value={formState.description}
+                      onChange={(e) =>
+                        setFormState((prev) => ({ ...prev, description: e.target.value }))
+                      }
+                      placeholder={t("voiceAgents.structuredOutputsSchemaDescriptionPlaceholder")}
+                    />
+                  </div>
+                ) : null}
+              </div>
 
-          <p className="text-xs text-secondary">
-            {method === "regex"
-              ? t("voiceAgents.structuredOutputsRegexFormatHint")
-              : t("voiceAgents.structuredOutputsFormatHint")}
-          </p>
+              <StructuredOutputFieldListEditor
+                method={method}
+                fields={formState.fields}
+                onChange={(fields) => setFormState((prev) => ({ ...prev, fields }))}
+              />
+
+              <p className="text-xs text-secondary">
+                {method === "regex"
+                  ? t("voiceAgents.structuredOutputsRegexFormatHint")
+                  : t("voiceAgents.structuredOutputsFormHint")}
+              </p>
+            </div>
+          ) : (
+            <>
+              <p className="text-sm font-medium text-primary">
+                {t("voiceAgents.structuredOutputsJsonLabel")}
+              </p>
+              <textarea
+                value={jsonConfig}
+                onChange={(e) => setJsonConfig(e.target.value)}
+                rows={14}
+                spellCheck={false}
+                placeholder={
+                  method === "regex" ? STRUCTURED_OUTPUT_REGEX_EXAMPLE : STRUCTURED_OUTPUT_AI_EXAMPLE
+                }
+                className="w-full rounded-lg border border-default px-3 py-2 text-xs font-mono"
+              />
+              <p className="text-xs text-secondary">
+                {method === "regex"
+                  ? t("voiceAgents.structuredOutputsRegexFormatHint")
+                  : t("voiceAgents.structuredOutputsFormatHint")}
+              </p>
+            </>
+          )}
 
           <button
             type="button"

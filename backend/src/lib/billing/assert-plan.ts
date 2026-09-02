@@ -18,6 +18,8 @@ import {
   countOrdersThisMonth,
   countProducts,
 } from "../catalog/catalog.service.js";
+import { countWhatsAppChannels } from "../dynamodb/whatsapp-channel.repository.js";
+import { countHostedForms } from "../dynamodb/hosted-form.repository.js";
 import { countActiveLiveKitCallsForTenant } from "../dynamodb/livekit-call.repository.js";
 import { getTenant } from "../dynamodb/tenant.repository.js";
 import type { Tenant, Channel } from "../../types/index.js";
@@ -159,7 +161,7 @@ export async function assertCanCreateMetaFlow(tenant: Tenant, botId: string): Pr
 
 export async function assertCanCreateVisualFlow(
   tenant: Tenant,
-  botId: string,
+  botId: string | undefined,
   nodeCount: number
 ): Promise<void> {
   const limits = getEffectivePlanLimits(tenant);
@@ -169,7 +171,7 @@ export async function assertCanCreateVisualFlow(
       `Plan limit: maximum ${limits.maxFlowNodes} nodes per flow`
     );
   }
-  if (isUnlimited(limits.maxVisualFlowsPerBot)) return;
+  if (!botId || isUnlimited(limits.maxVisualFlowsPerBot)) return;
 
   const count = await countFlowsForBot(tenant.tenantId, botId);
   if (count >= limits.maxVisualFlowsPerBot) {
@@ -236,7 +238,7 @@ export function assertCanCustomizeBranding(tenant: Tenant): void {
   if (!limits.canCustomizeBranding) {
     throw new PlanLimitError(
       "PLAN_LIMIT_BRANDING",
-      "Custom branding requires Enterprise or Reseller plan"
+      "Custom branding requires Pro plan or higher"
     );
   }
 }
@@ -404,6 +406,35 @@ export async function assertCanCreateOrder(tenant: Tenant): Promise<void> {
     throw new PlanLimitError(
       "PLAN_LIMIT_ORDERS",
       `Plan limit: maximum ${limits.maxOrdersPerMonth} orders per month`
+    );
+  }
+}
+
+export async function assertCanCreateHostedForm(tenant: Tenant): Promise<void> {
+  const limits = getEffectivePlanLimits(tenant);
+  if (isUnlimited(limits.maxHostedFormsPerTenant)) return;
+
+  const count = await countHostedForms(tenant.tenantId);
+  if (count >= limits.maxHostedFormsPerTenant) {
+    throw new PlanLimitError(
+      "PLAN_LIMIT_HOSTED_FORMS",
+      `Plan limit: maximum ${limits.maxHostedFormsPerTenant} hosted form(s)`
+    );
+  }
+}
+
+export async function assertCanAddWhatsAppChannel(
+  tenant: Tenant,
+  botId: string
+): Promise<void> {
+  const limits = getEffectivePlanLimits(tenant);
+  if (isUnlimited(limits.maxWhatsAppChannelsPerBot)) return;
+
+  const count = await countWhatsAppChannels(tenant.tenantId, botId);
+  if (count >= limits.maxWhatsAppChannelsPerBot) {
+    throw new PlanLimitError(
+      "PLAN_LIMIT_WHATSAPP_CHANNELS",
+      `Plan limit reached: maximum ${limits.maxWhatsAppChannelsPerBot} WhatsApp channel(s) per bot`
     );
   }
 }

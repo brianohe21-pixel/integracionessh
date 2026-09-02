@@ -16,15 +16,23 @@ import {
   type Edge,
   type NodeChange,
   type NodeTypes,
+  type EdgeTypes,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import type { FlowDefinition, FlowEdge, FlowNode, FlowNodeType } from "@/types";
 import { FlowNodeCard } from "./FlowNodeCard";
+import { FlowDeletableEdge } from "./FlowDeletableEdge";
+import { FlowNodeActionsContext } from "./FlowNodeActionsContext";
 import { buildNodePreview } from "./nodeConfig";
+import { FLOW_NODE_DRAG_MIME } from "@/lib/flow-node-factory";
 import { useLocale } from "@/i18n/context";
 
 const nodeTypes: NodeTypes = {
   flowNode: FlowNodeCard,
+};
+
+const edgeTypes: EdgeTypes = {
+  default: FlowDeletableEdge,
 };
 
 function fingerprint(nodes: FlowNode[], edges: FlowEdge[]): string {
@@ -70,6 +78,8 @@ function toReactFlowEdges(edges: FlowEdge[], nodes: FlowNode[]): Edge[] {
       source: e.source,
       target: e.target,
       sourceHandle: e.sourceHandle,
+      deletable: true,
+      selectable: true,
       style: isHumanEdge
         ? { stroke: "var(--human)", strokeDasharray: "6 4" }
         : { stroke: "var(--accent)" },
@@ -106,6 +116,7 @@ interface FlowCanvasProps {
   selectedNodeId: string | null;
   onSelectNode: (nodeId: string | null) => void;
   onChange: (nodes: FlowNode[], edges: FlowEdge[]) => void;
+  onAddNode: (type: FlowNodeType, position: { x: number; y: number }) => void;
   getTypeLabel: (type: FlowNodeType) => string;
   getBranchLabel: (key: "true" | "false") => string;
   onCannotDeleteTrigger?: () => void;
@@ -116,6 +127,7 @@ function FlowCanvasInner({
   selectedNodeId,
   onSelectNode,
   onChange,
+  onAddNode,
   getTypeLabel,
   getBranchLabel,
   onCannotDeleteTrigger,
@@ -125,10 +137,14 @@ function FlowCanvasInner({
   flowRef.current = flow;
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
+  const onAddNodeRef = useRef(onAddNode);
+  onAddNodeRef.current = onAddNode;
   const onSelectNodeRef = useRef(onSelectNode);
   onSelectNodeRef.current = onSelectNode;
   const onCannotDeleteTriggerRef = useRef(onCannotDeleteTrigger);
   onCannotDeleteTriggerRef.current = onCannotDeleteTrigger;
+  const selectedNodeIdRef = useRef(selectedNodeId);
+  selectedNodeIdRef.current = selectedNodeId;
   const getTypeLabelRef = useRef(getTypeLabel);
   getTypeLabelRef.current = getTypeLabel;
   const getBranchLabelRef = useRef(getBranchLabel);
@@ -153,14 +169,29 @@ function FlowCanvasInner({
     setNodes(
       toReactFlowNodes(
         flow.nodes,
-        selectedNodeId,
+        selectedNodeIdRef.current,
         getTypeLabelRef.current,
         getBranchLabelRef.current,
         locale
       )
     );
     setEdges(toReactFlowEdges(flow.edges, flow.nodes));
-  }, [flow.nodes, flow.edges, selectedNodeId, locale, setNodes, setEdges]);
+  }, [flow.nodes, flow.edges, locale, setNodes, setEdges]);
+
+  useEffect(() => {
+    setNodes((current) => {
+      let changed = false;
+      const next = current.map((node) => {
+        const selected = node.id === selectedNodeId;
+        if (Boolean(node.selected) === selected) return node;
+        changed = true;
+        return { ...node, selected };
+      });
+      if (!changed) return current;
+      skipNextNotifyRef.current = true;
+      return next;
+    });
+  }, [selectedNodeId, setNodes]);
 
   useEffect(() => {
     if (skipNextNotifyRef.current) {
@@ -176,7 +207,9 @@ function FlowCanvasInner({
     (connection: Connection) => {
       const handle = connection.sourceHandle ?? undefined;
       const id = `e-${connection.source}-${handle ?? "default"}-${connection.target}-${Date.now()}`;
-      setEdges((eds) => addEdge({ ...connection, id }, eds));
+      setEdges((eds) =>
+        addEdge({ ...connection, id, deletable: true, selectable: true }, eds)
+      );
     },
     [setEdges]
   );
@@ -188,11 +221,15 @@ function FlowCanvasInner({
     []
   );
 
+  const onEdgeClick = useCallback(() => {
+    onSelectNodeRef.current(null);
+  }, []);
+
   const onPaneClick = useCallback(() => {
     onSelectNodeRef.current(null);
   }, []);
 
-  const { fitView } = useReactFlow();
+  const { fitView, screenToFlowPosition } = useReactFlow();
 
   const initialFitDoneRef = useRef(false);
 
@@ -204,6 +241,54 @@ function FlowCanvasInner({
     });
     return () => cancelAnimationFrame(frame);
   }, [fitView]);
+
+  const deleteNode = useCallback(
+    (nodeId: string) => {
+      const flowNode = flowRef.current.nodes.find((node) => node.id === nodeId);
+      if (flowNode?.type === "trigger") {
+        const triggers = flowRef.current.nodes.filter((node) => node.type === "trigger").length;
+        if (triggers <= 1) {
+          onCannotDeleteTriggerRef.current?.();
+          return;
+        }
+      }
+      if (nodeId === selectedNodeId) {
+        onSelectNodeRef.current(null);
+      }
+      setNodes((current) => current.filter((node) => node.id !== nodeId));
+      setEdges((current) =>
+        current.filter((edge) => edge.source !== nodeId && edge.target !== nodeId)
+      );
+    },
+    [selectedNodeId, setEdges, setNodes]
+  );
+
+  const canDeleteNode = useCallback((nodeId: string) => {
+    const flowNode = flowRef.current.nodes.find((node) => node.id === nodeId);
+    if (!flowNode || flowNode.type !== "trigger") return true;
+    return flowRef.current.nodes.filter((node) => node.type === "trigger").length > 1;
+  }, []);
+
+  const onDragOver = useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  }, []);
+
+  const onDrop = useCallback(
+    (event: React.DragEvent) => {
+      event.preventDefault();
+      const type = event.dataTransfer.getData(FLOW_NODE_DRAG_MIME) as FlowNodeType;
+      if (!type) return;
+      const position = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+      onAddNodeRef.current(type, position);
+    },
+    [screenToFlowPosition]
+  );
+
+  const nodeActions = useMemo(
+    () => ({ deleteNode, canDeleteNode }),
+    [canDeleteNode, deleteNode]
+  );
 
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
@@ -227,35 +312,43 @@ function FlowCanvasInner({
   );
 
   return (
-    <div className="react-flow-dark h-full min-h-0 overflow-hidden bg-canvas">
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={nodeTypes}
-        onNodesChange={handleNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        onNodeClick={onNodeClick}
-        onPaneClick={onPaneClick}
-        deleteKeyCode={["Backspace", "Delete"]}
-        defaultViewport={{ x: 0, y: 0, zoom: 1 }}
-        minZoom={0.5}
-        maxZoom={2}
-        proOptions={{ hideAttribution: true }}
-      >
-        <Background color="var(--text-muted)" gap={24} size={1} />
-        <Controls position="bottom-left" showInteractive={false} />
-        <MiniMap
-          position="bottom-right"
-          pannable
-          zoomable
-          maskColor="var(--surface)"
-          nodeColor="var(--accent)"
-          className="!m-3"
-          style={{ background: "var(--surface-elevated)", width: 140, height: 90 }}
-        />
-      </ReactFlow>
-    </div>
+    <FlowNodeActionsContext.Provider value={nodeActions}>
+      <div className="react-flow-dark h-full min-h-0 overflow-hidden bg-canvas">
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          defaultEdgeOptions={{ deletable: true, selectable: true }}
+          onNodesChange={handleNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          onNodeClick={onNodeClick}
+          onEdgeClick={onEdgeClick}
+          onPaneClick={onPaneClick}
+          onDragOver={onDragOver}
+          onDrop={onDrop}
+          deleteKeyCode={["Backspace", "Delete"]}
+          elevateEdgesOnSelect
+          defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+          minZoom={0.5}
+          maxZoom={2}
+          proOptions={{ hideAttribution: true }}
+        >
+          <Background color="var(--text-muted)" gap={24} size={1} />
+          <Controls position="bottom-left" showInteractive={false} />
+          <MiniMap
+            position="bottom-right"
+            pannable
+            zoomable
+            maskColor="var(--surface)"
+            nodeColor="var(--accent)"
+            className="!m-3"
+            style={{ background: "var(--surface-elevated)", width: 140, height: 90 }}
+          />
+        </ReactFlow>
+      </div>
+    </FlowNodeActionsContext.Provider>
   );
 }
 

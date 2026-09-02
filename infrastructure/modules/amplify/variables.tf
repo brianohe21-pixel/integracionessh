@@ -60,6 +60,17 @@ variable "meta_embedded_signup_config_id" {
   default = ""
 }
 
+variable "demo_account_email" {
+  type    = string
+  default = ""
+}
+
+variable "demo_account_password" {
+  type      = string
+  default   = ""
+  sensitive = true
+}
+
 variable "custom_domain" {
   type        = string
   default     = ""

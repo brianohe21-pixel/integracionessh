@@ -1,7 +1,7 @@
 import { buildOutboundContext, sendChannelText } from "../../channels/router.js";
 import type { FlowNode, FlowRun } from "../../../types/index.js";
 import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
-import { requireMessagingContext } from "../types.js";
+import { requireBotContext, requireMessagingContext } from "../types.js";
 import { getNextNodeId } from "../graph.js";
 import { createPaymentRequest } from "../../payments/payments.service.js";
 import { formatPaymentMessage } from "../../payments/checkout.js";
@@ -14,7 +14,8 @@ export async function executeRequestPaymentNode(
 ): Promise<NodeExecutionResult> {
   const { conversation, phoneNumberId: _phoneNumberId, accessToken, customerPhone } =
     requireMessagingContext(ctx);
-  const locale = getBotLocale(conversation, ctx.bot);
+  const { botId, bot } = requireBotContext(ctx);
+  const locale = getBotLocale(conversation, bot);
   const amountInCents = node.data.amountInCents;
   const description =
     resolveLocalizedText(node.data.paymentDescription, locale) ||
@@ -25,8 +26,8 @@ export async function executeRequestPaymentNode(
     await sendChannelText(
       buildOutboundContext({
         tenantId: ctx.tenantId,
-        botId: ctx.botId,
-        bot: ctx.bot,
+        botId,
+        bot,
         conversation,
         accessToken,
         environment: ctx.environment,
@@ -40,7 +41,7 @@ export async function executeRequestPaymentNode(
     const waitForPayment = node.data.waitForPayment ?? false;
     const request = await createPaymentRequest({
       tenantId: ctx.tenantId,
-      botId: ctx.botId,
+      botId,
       amountInCents,
       description,
       contactPhone: customerPhone,
@@ -62,8 +63,8 @@ export async function executeRequestPaymentNode(
     await sendChannelText(
       buildOutboundContext({
         tenantId: ctx.tenantId,
-        botId: ctx.botId,
-        bot: ctx.bot,
+        botId,
+        bot,
         conversation,
         accessToken,
         environment: ctx.environment,
@@ -99,8 +100,8 @@ export async function executeRequestPaymentNode(
     await sendChannelText(
       buildOutboundContext({
         tenantId: ctx.tenantId,
-        botId: ctx.botId,
-        bot: ctx.bot,
+        botId,
+        bot,
         conversation,
         accessToken,
         environment: ctx.environment,

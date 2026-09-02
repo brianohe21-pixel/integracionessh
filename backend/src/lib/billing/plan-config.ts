@@ -9,9 +9,19 @@ import {
 } from "../ai/models.js";
 
 export type AllowedModel = string;
+export type PaidTenantPlan = "starter" | "pro" | "scale";
 
-export const WOMPI_AMOUNT_PRO_CENTS_DEFAULT = 17_990_000;
-export const WOMPI_AMOUNT_ENTERPRISE_CENTS_DEFAULT = 74_990_000;
+export const BILLING_USD_TO_COP_RATE = 4100;
+
+export const PLAN_LIST_PRICE_USD: Record<PaidTenantPlan, number> = {
+  starter: 59,
+  pro: 199,
+  scale: 699,
+};
+
+export const WOMPI_AMOUNT_STARTER_CENTS_DEFAULT = 24_190_000;
+export const WOMPI_AMOUNT_PRO_CENTS_DEFAULT = 81_590_000;
+export const WOMPI_AMOUNT_ENTERPRISE_CENTS_DEFAULT = 286_590_000;
 
 export function getAllowedModelsForPlan(plan: TenantPlan | string | undefined): AllowedModel[] {
   return getModelsForPlan(plan).map((model) => model.id);

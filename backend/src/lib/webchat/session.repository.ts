@@ -1,7 +1,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 import { GetCommand, PutCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { docClient, TABLE_NAME } from "../dynamodb/client.js";
-import type { WebChatSession } from "../../types/index.js";
+import type { WebChatSession, WebChatSessionStatus } from "../../types/index.js";
 
 const SESSION_TTL_SECONDS = 24 * 60 * 60;
 
@@ -50,6 +50,7 @@ export async function createWebChatSession(params: {
     botId: params.botId,
     conversationId: params.conversationId,
     ...(params.visitorName ? { visitorName: params.visitorName } : {}),
+    status: "active",
     createdAt: now,
     lastActivityAt: now,
     ttl,
@@ -91,4 +92,74 @@ export async function touchWebChatSession(sessionId: string): Promise<void> {
       },
     })
   );
+}
+
+export async function updateWebChatSessionIdentity(
+  sessionId: string,
+  updates: {
+    visitorName?: string;
+    visitorPhone?: string;
+    visitorEmail?: string;
+  }
+): Promise<WebChatSession | null> {
+  const parts: string[] = ["lastActivityAt = :now"];
+  const values: Record<string, unknown> = {
+    ":now": new Date().toISOString(),
+  };
+  const names: Record<string, string> = {};
+
+  if (updates.visitorName) {
+    parts.push("visitorName = :visitorName");
+    values[":visitorName"] = updates.visitorName;
+  }
+  if (updates.visitorPhone) {
+    parts.push("visitorPhone = :visitorPhone");
+    values[":visitorPhone"] = updates.visitorPhone;
+  }
+  if (updates.visitorEmail) {
+    parts.push("visitorEmail = :visitorEmail");
+    values[":visitorEmail"] = updates.visitorEmail;
+  }
+
+  if (parts.length === 1) {
+    return getWebChatSession(sessionId);
+  }
+
+  const result = await docClient.send(
+    new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: sessionKey(sessionId),
+      UpdateExpression: `SET ${parts.join(", ")}`,
+      ...(Object.keys(names).length ? { ExpressionAttributeNames: names } : {}),
+      ExpressionAttributeValues: values,
+      ReturnValues: "ALL_NEW",
+    })
+  );
+
+  if (!result.Attributes) return null;
+  const { PK, SK, ...rest } = result.Attributes;
+  return rest as WebChatSession;
+}
+
+export function isWebChatSessionEnded(session: WebChatSession): boolean {
+  return session.status === "ended";
+}
+
+export async function endWebChatSession(sessionId: string): Promise<WebChatSessionStatus> {
+  const now = new Date().toISOString();
+  const ttl = Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS;
+  await docClient.send(
+    new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: sessionKey(sessionId),
+      UpdateExpression: "SET #status = :ended, endedAt = :now, lastActivityAt = :now, #ttl = :ttl",
+      ExpressionAttributeNames: { "#status": "status", "#ttl": "ttl" },
+      ExpressionAttributeValues: {
+        ":ended": "ended",
+        ":now": now,
+        ":ttl": ttl,
+      },
+    })
+  );
+  return "ended";
 }

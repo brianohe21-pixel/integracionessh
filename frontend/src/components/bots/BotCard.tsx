@@ -24,17 +24,24 @@ import { useT } from "@/i18n/context";
 import { getModelLabel } from "@/lib/ai-models";
 import type { Bot } from "@/types";
 import { useDeleteBot, useUpdateBot } from "@/hooks/useBots";
+import { useWhatsAppChannels } from "@/hooks/useWhatsAppChannels";
+import { useDialog } from "@/components/ui/DialogProvider";
 import { cn } from "@/lib/utils";
 
 interface BotCardProps {
   bot: Bot;
 }
 
-function getConnectedChannels(bot: Bot) {
+function getConnectedChannels(bot: Bot, whatsappChannelCount?: number) {
   const channels: { key: string; icon: typeof Phone; label: string }[] = [];
 
-  if (bot.phoneNumberId || bot.whatsappPhone) {
-    channels.push({ key: "whatsapp", icon: Phone, label: "WhatsApp" });
+  if (bot.phoneNumberId || bot.whatsappPhone || (whatsappChannelCount ?? 0) > 0) {
+    const count = whatsappChannelCount ?? (bot.phoneNumberId || bot.whatsappPhone ? 1 : 0);
+    channels.push({
+      key: "whatsapp",
+      icon: Phone,
+      label: count > 1 ? `WhatsApp (${count})` : "WhatsApp",
+    });
   }
   if (bot.instagramPageId || bot.instagramAccountId) {
     channels.push({ key: "instagram", icon: Camera, label: "Instagram" });
@@ -69,12 +76,20 @@ export function BotCard({ bot }: BotCardProps) {
   const { formatDate } = useFormatters();
   const deleteBot = useDeleteBot();
   const updateBot = useUpdateBot(bot.botId);
-  const channels = getConnectedChannels(bot);
+  const { confirm } = useDialog();
+  const hasWhatsApp = Boolean(bot.phoneNumberId || bot.whatsappPhone);
+  const { data: whatsappChannels } = useWhatsAppChannels(bot.botId, { enabled: hasWhatsApp });
+  const channels = getConnectedChannels(bot, whatsappChannels?.length);
 
-  function handleDelete() {
-    if (confirm(t("common.confirmDelete", { name: bot.name }))) {
-      deleteBot.mutate(bot.botId);
-    }
+  async function handleDelete() {
+    const confirmed = await confirm({
+      title: t("common.delete"),
+      description: t("common.confirmDelete", { name: bot.name }),
+      confirmLabel: t("common.delete"),
+      tone: "danger",
+    });
+    if (!confirmed) return;
+    deleteBot.mutate(bot.botId);
   }
 
   function handleToggleStatus() {
@@ -83,31 +98,31 @@ export function BotCard({ bot }: BotCardProps) {
 
   return (
     <div className="content-card content-card-interactive group flex flex-col overflow-hidden">
-      <div className="border-b border-subtle bg-gradient-to-br from-accent-muted/30 to-transparent p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="icon-badge h-12 w-12 transition-transform duration-200 group-hover:scale-105">
-              <BotMessageSquare className="h-5 w-5" />
-            </div>
-            <div className="min-w-0">
-              <h3 className="truncate text-base font-semibold text-primary">{bot.name}</h3>
-              {bot.responseMode === "webhook" ? (
-                <p className="mt-0.5 flex items-center gap-1 text-xs text-accent">
-                  <Webhook className="h-3 w-3" />
-                  {t("bots.webhookOwn")}
-                </p>
-              ) : (
-                <p className="mt-0.5 text-xs text-muted">{getModelLabel(bot.model ?? "")}</p>
-              )}
-            </div>
+      <div className="card-header px-5 py-5">
+        <div className="flex items-start gap-3">
+          <div className="card-header-chip flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105">
+            <BotMessageSquare className="h-5 w-5" />
           </div>
+          <div className="min-w-0">
+            <h3 className="truncate text-base font-semibold text-[var(--card-header-title)]">{bot.name}</h3>
+            {bot.responseMode === "webhook" ? (
+              <p className="mt-0.5 flex items-center gap-1 text-xs text-[var(--card-header-link)]">
+                <Webhook className="h-3 w-3" />
+                {t("bots.webhookOwn")}
+              </p>
+            ) : (
+              <p className="mt-0.5 text-xs text-[var(--card-header-subtitle)]">{getModelLabel(bot.model ?? "")}</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-1 flex-col card-body">
+        <div className="mb-4">
           <Badge variant={bot.status === "active" ? "success" : "default"} dot>
             {bot.status === "active" ? t("common.active") : t("common.inactive")}
           </Badge>
         </div>
-      </div>
-
-      <div className="flex flex-1 flex-col p-5">
         <p className="mb-4 line-clamp-2 text-sm leading-relaxed text-secondary">
           {bot.responseMode === "webhook" ? bot.webhookUrl : bot.systemPrompt}
         </p>

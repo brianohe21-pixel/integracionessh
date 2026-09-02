@@ -704,9 +704,9 @@ var WebchatCallBundle = (() => {
     WireType2[WireType2["Bit32"] = 5] = "Bit32";
   })(WireType || (WireType = {}));
   var BinaryWriter = class {
-    constructor(textEncoder) {
+    constructor(textEncoder2) {
       this.stack = [];
-      this.textEncoder = textEncoder !== null && textEncoder !== void 0 ? textEncoder : new TextEncoder();
+      this.textEncoder = textEncoder2 !== null && textEncoder2 !== void 0 ? textEncoder2 : new TextEncoder();
       this.chunks = [];
       this.buf = [];
     }
@@ -3106,6 +3106,9 @@ var WebchatCallBundle = (() => {
   }, {
     no: 1,
     name: "PTF_FRAME_ID"
+  }, {
+    no: 2,
+    name: "PTF_USER_DATA"
   }]);
   var Room$1 = /* @__PURE__ */ proto3.makeMessageType("livekit.Room", () => [{
     no: 1,
@@ -3373,6 +3376,12 @@ var WebchatCallBundle = (() => {
     kind: "scalar",
     T: 5
     /* ScalarType.INT32 */
+  }, {
+    no: 21,
+    name: "capabilities",
+    kind: "enum",
+    T: proto3.getEnumType(ClientInfo_Capability),
+    repeated: true
   }]);
   var ParticipantInfo_State = /* @__PURE__ */ proto3.makeEnum("livekit.ParticipantInfo.State", [{
     no: 0,
@@ -3424,6 +3433,9 @@ var WebchatCallBundle = (() => {
   }, {
     no: 4,
     name: "BRIDGE_RTSP"
+  }, {
+    no: 5,
+    name: "SIMULATION"
   }]);
   var Encryption_Type = /* @__PURE__ */ proto3.makeEnum("livekit.Encryption.Type", [{
     no: 0,
@@ -3616,6 +3628,122 @@ var WebchatCallBundle = (() => {
     name: "encryption",
     kind: "enum",
     T: proto3.getEnumType(Encryption_Type)
+  }, {
+    no: 5,
+    name: "frame_encoding",
+    kind: "message",
+    T: DataTrackFrameEncoding,
+    opt: true
+  }, {
+    no: 6,
+    name: "schema",
+    kind: "message",
+    T: DataTrackSchemaId,
+    opt: true
+  }]);
+  var DataTrackFrameEncoding = /* @__PURE__ */ proto3.makeMessageType("livekit.DataTrackFrameEncoding", () => [{
+    no: 1,
+    name: "well_known",
+    kind: "enum",
+    T: proto3.getEnumType(DataTrackFrameEncoding_WellKnownFrameEncoding),
+    oneof: "value"
+  }, {
+    no: 2,
+    name: "custom",
+    kind: "scalar",
+    T: 9,
+    oneof: "value"
+  }]);
+  var DataTrackFrameEncoding_WellKnownFrameEncoding = /* @__PURE__ */ proto3.makeEnum("livekit.DataTrackFrameEncoding.WellKnownFrameEncoding", [{
+    no: 0,
+    name: "WELL_KNOWN_FRAME_ENCODING_UNSPECIFIED",
+    localName: "UNSPECIFIED"
+  }, {
+    no: 1,
+    name: "WELL_KNOWN_FRAME_ENCODING_ROS1",
+    localName: "ROS1"
+  }, {
+    no: 2,
+    name: "WELL_KNOWN_FRAME_ENCODING_CDR",
+    localName: "CDR"
+  }, {
+    no: 3,
+    name: "WELL_KNOWN_FRAME_ENCODING_PROTOBUF",
+    localName: "PROTOBUF"
+  }, {
+    no: 4,
+    name: "WELL_KNOWN_FRAME_ENCODING_FLATBUFFER",
+    localName: "FLATBUFFER"
+  }, {
+    no: 5,
+    name: "WELL_KNOWN_FRAME_ENCODING_CBOR",
+    localName: "CBOR"
+  }, {
+    no: 6,
+    name: "WELL_KNOWN_FRAME_ENCODING_MSGPACK",
+    localName: "MSGPACK"
+  }, {
+    no: 7,
+    name: "WELL_KNOWN_FRAME_ENCODING_JSON",
+    localName: "JSON"
+  }]);
+  var DataTrackSchemaEncoding = /* @__PURE__ */ proto3.makeMessageType("livekit.DataTrackSchemaEncoding", () => [{
+    no: 1,
+    name: "well_known",
+    kind: "enum",
+    T: proto3.getEnumType(DataTrackSchemaEncoding_WellKnownSchemaEncoding),
+    oneof: "value"
+  }, {
+    no: 2,
+    name: "custom",
+    kind: "scalar",
+    T: 9,
+    oneof: "value"
+  }]);
+  var DataTrackSchemaEncoding_WellKnownSchemaEncoding = /* @__PURE__ */ proto3.makeEnum("livekit.DataTrackSchemaEncoding.WellKnownSchemaEncoding", [{
+    no: 0,
+    name: "WELL_KNOWN_SCHEMA_ENCODING_UNSPECIFIED",
+    localName: "UNSPECIFIED"
+  }, {
+    no: 1,
+    name: "WELL_KNOWN_SCHEMA_ENCODING_PROTOBUF",
+    localName: "PROTOBUF"
+  }, {
+    no: 2,
+    name: "WELL_KNOWN_SCHEMA_ENCODING_FLATBUFFER",
+    localName: "FLATBUFFER"
+  }, {
+    no: 3,
+    name: "WELL_KNOWN_SCHEMA_ENCODING_ROS1_MSG",
+    localName: "ROS1_MSG"
+  }, {
+    no: 4,
+    name: "WELL_KNOWN_SCHEMA_ENCODING_ROS2_MSG",
+    localName: "ROS2_MSG"
+  }, {
+    no: 5,
+    name: "WELL_KNOWN_SCHEMA_ENCODING_ROS2_IDL",
+    localName: "ROS2_IDL"
+  }, {
+    no: 6,
+    name: "WELL_KNOWN_SCHEMA_ENCODING_OMG_IDL",
+    localName: "OMG_IDL"
+  }, {
+    no: 7,
+    name: "WELL_KNOWN_SCHEMA_ENCODING_JSON_SCHEMA",
+    localName: "JSON_SCHEMA"
+  }]);
+  var DataTrackSchemaId = /* @__PURE__ */ proto3.makeMessageType("livekit.DataTrackSchemaId", () => [{
+    no: 1,
+    name: "name",
+    kind: "scalar",
+    T: 9
+    /* ScalarType.STRING */
+  }, {
+    no: 2,
+    name: "encoding",
+    kind: "message",
+    T: DataTrackSchemaEncoding
   }]);
   var DataTrackSubscriptionOptions = /* @__PURE__ */ proto3.makeMessageType("livekit.DataTrackSubscriptionOptions", () => [{
     no: 1,
@@ -3623,6 +3751,31 @@ var WebchatCallBundle = (() => {
     kind: "scalar",
     T: 13,
     opt: true
+  }]);
+  var DataBlobKey = /* @__PURE__ */ proto3.makeMessageType("livekit.DataBlobKey", () => [{
+    no: 1,
+    name: "generic",
+    kind: "scalar",
+    T: 9,
+    oneof: "key"
+  }, {
+    no: 2,
+    name: "schema_id",
+    kind: "message",
+    T: DataTrackSchemaId,
+    oneof: "key"
+  }]);
+  var DataBlob = /* @__PURE__ */ proto3.makeMessageType("livekit.DataBlob", () => [{
+    no: 1,
+    name: "key",
+    kind: "message",
+    T: DataBlobKey
+  }, {
+    no: 2,
+    name: "contents",
+    kind: "scalar",
+    T: 12
+    /* ScalarType.BYTES */
   }]);
   var VideoLayer = /* @__PURE__ */ proto3.makeMessageType("livekit.VideoLayer", () => [{
     no: 1,
@@ -4346,6 +4499,9 @@ var WebchatCallBundle = (() => {
   }, {
     no: 1,
     name: "CAP_PACKET_TRAILER"
+  }, {
+    no: 2,
+    name: "CAP_COMPRESSION_DEFLATE_RAW"
   }]);
   var ClientConfiguration = /* @__PURE__ */ proto3.makeMessageType("livekit.ClientConfiguration", () => [{
     no: 1,
@@ -4417,6 +4573,13 @@ var WebchatCallBundle = (() => {
   }, {
     no: 3,
     name: "REACTION"
+  }]);
+  var DataStream_CompressionType = /* @__PURE__ */ proto3.makeEnum("livekit.DataStream.CompressionType", [{
+    no: 0,
+    name: "NONE"
+  }, {
+    no: 1,
+    name: "DEFLATE_RAW"
   }]);
   var DataStream_TextHeader = /* @__PURE__ */ proto3.makeMessageType("livekit.DataStream.TextHeader", () => [{
     no: 1,
@@ -4516,6 +4679,17 @@ var WebchatCallBundle = (() => {
     kind: "message",
     T: DataStream_ByteHeader,
     oneof: "content_header"
+  }, {
+    no: 11,
+    name: "inline_content",
+    kind: "scalar",
+    T: 12,
+    opt: true
+  }, {
+    no: 12,
+    name: "compression",
+    kind: "enum",
+    T: proto3.getEnumType(DataStream_CompressionType)
   }], {
     localName: "DataStream_Header"
   });
@@ -4734,6 +4908,18 @@ var WebchatCallBundle = (() => {
     kind: "message",
     T: UpdateDataSubscription,
     oneof: "message"
+  }, {
+    no: 22,
+    name: "store_data_blob_request",
+    kind: "message",
+    T: StoreDataBlobRequest,
+    oneof: "message"
+  }, {
+    no: 23,
+    name: "get_data_blob_request",
+    kind: "message",
+    T: GetDataBlobRequest,
+    oneof: "message"
   }]);
   var SignalResponse = /* @__PURE__ */ proto3.makeMessageType("livekit.SignalResponse", () => [{
     no: 1,
@@ -4903,6 +5089,18 @@ var WebchatCallBundle = (() => {
     kind: "message",
     T: DataTrackSubscriberHandles,
     oneof: "message"
+  }, {
+    no: 30,
+    name: "store_data_blob_response",
+    kind: "message",
+    T: StoreDataBlobResponse,
+    oneof: "message"
+  }, {
+    no: 31,
+    name: "get_data_blob_response",
+    kind: "message",
+    T: GetDataBlobResponse,
+    oneof: "message"
   }]);
   var SimulcastCodec = /* @__PURE__ */ proto3.makeMessageType("livekit.SimulcastCodec", () => [{
     no: 1,
@@ -5050,6 +5248,18 @@ var WebchatCallBundle = (() => {
     name: "encryption",
     kind: "enum",
     T: proto3.getEnumType(Encryption_Type)
+  }, {
+    no: 4,
+    name: "frame_encoding",
+    kind: "message",
+    T: DataTrackFrameEncoding,
+    opt: true
+  }, {
+    no: 5,
+    name: "schema",
+    kind: "message",
+    T: DataTrackSchemaId,
+    opt: true
   }]);
   var PublishDataTrackResponse = /* @__PURE__ */ proto3.makeMessageType("livekit.PublishDataTrackResponse", () => [{
     no: 1,
@@ -5343,6 +5553,60 @@ var WebchatCallBundle = (() => {
   }], {
     localName: "UpdateDataSubscription_Update"
   });
+  var StoreDataBlobRequest = /* @__PURE__ */ proto3.makeMessageType("livekit.StoreDataBlobRequest", () => [{
+    no: 1,
+    name: "request_id",
+    kind: "scalar",
+    T: 13
+    /* ScalarType.UINT32 */
+  }, {
+    no: 2,
+    name: "blob",
+    kind: "message",
+    T: DataBlob
+  }]);
+  var StoreDataBlobResponse = /* @__PURE__ */ proto3.makeMessageType("livekit.StoreDataBlobResponse", () => [{
+    no: 1,
+    name: "request_id",
+    kind: "scalar",
+    T: 13
+    /* ScalarType.UINT32 */
+  }, {
+    no: 2,
+    name: "key",
+    kind: "message",
+    T: DataBlobKey
+  }]);
+  var GetDataBlobRequest = /* @__PURE__ */ proto3.makeMessageType("livekit.GetDataBlobRequest", () => [{
+    no: 1,
+    name: "request_id",
+    kind: "scalar",
+    T: 13
+    /* ScalarType.UINT32 */
+  }, {
+    no: 2,
+    name: "participant_identity",
+    kind: "scalar",
+    T: 9
+    /* ScalarType.STRING */
+  }, {
+    no: 3,
+    name: "key",
+    kind: "message",
+    T: DataBlobKey
+  }]);
+  var GetDataBlobResponse = /* @__PURE__ */ proto3.makeMessageType("livekit.GetDataBlobResponse", () => [{
+    no: 1,
+    name: "request_id",
+    kind: "scalar",
+    T: 13
+    /* ScalarType.UINT32 */
+  }, {
+    no: 2,
+    name: "blob",
+    kind: "message",
+    T: DataBlob
+  }]);
   var UpdateTrackSettings = /* @__PURE__ */ proto3.makeMessageType("livekit.UpdateTrackSettings", () => [{
     no: 1,
     name: "track_sids",
@@ -6005,6 +6269,9 @@ var WebchatCallBundle = (() => {
   }, {
     no: 10,
     name: "DUPLICATE_NAME"
+  }, {
+    no: 11,
+    name: "INVALID_REQUEST"
   }]);
   var TrackSubscribed = /* @__PURE__ */ proto3.makeMessageType("livekit.TrackSubscribed", () => [{
     no: 1,
@@ -6403,6 +6670,8 @@ var WebchatCallBundle = (() => {
     LoggerNames2["PCTransport"] = "livekit-pc-transport";
     LoggerNames2["E2EE"] = "lk-e2ee";
     LoggerNames2["DataTracks"] = "livekit-data-tracks";
+    LoggerNames2["Region"] = "livekit-region";
+    LoggerNames2["ICE"] = "livekit-ice";
   })(LoggerNames || (LoggerNames = {}));
   var livekitLogger = loglevelExports.getLogger(LoggerNames.Default);
   var livekitLoggers = Object.values(LoggerNames).map((name) => loglevelExports.getLogger(name));
@@ -6595,22 +6864,22 @@ var WebchatCallBundle = (() => {
     var NumberIsNaN = Number.isNaN || function NumberIsNaN2(value) {
       return value !== value;
     };
-    function EventEmitter2() {
-      EventEmitter2.init.call(this);
+    function EventEmitter() {
+      EventEmitter.init.call(this);
     }
-    events.exports = EventEmitter2;
+    events.exports = EventEmitter;
     events.exports.once = once;
-    EventEmitter2.EventEmitter = EventEmitter2;
-    EventEmitter2.prototype._events = void 0;
-    EventEmitter2.prototype._eventsCount = 0;
-    EventEmitter2.prototype._maxListeners = void 0;
+    EventEmitter.EventEmitter = EventEmitter;
+    EventEmitter.prototype._events = void 0;
+    EventEmitter.prototype._eventsCount = 0;
+    EventEmitter.prototype._maxListeners = void 0;
     var defaultMaxListeners = 10;
     function checkListener(listener) {
       if (typeof listener !== "function") {
         throw new TypeError('The "listener" argument must be of type Function. Received type ' + typeof listener);
       }
     }
-    Object.defineProperty(EventEmitter2, "defaultMaxListeners", {
+    Object.defineProperty(EventEmitter, "defaultMaxListeners", {
       enumerable: true,
       get: function() {
         return defaultMaxListeners;
@@ -6622,14 +6891,14 @@ var WebchatCallBundle = (() => {
         defaultMaxListeners = arg;
       }
     });
-    EventEmitter2.init = function() {
+    EventEmitter.init = function() {
       if (this._events === void 0 || this._events === Object.getPrototypeOf(this)._events) {
         this._events = /* @__PURE__ */ Object.create(null);
         this._eventsCount = 0;
       }
       this._maxListeners = this._maxListeners || void 0;
     };
-    EventEmitter2.prototype.setMaxListeners = function setMaxListeners(n) {
+    EventEmitter.prototype.setMaxListeners = function setMaxListeners(n) {
       if (typeof n !== "number" || n < 0 || NumberIsNaN(n)) {
         throw new RangeError('The value of "n" is out of range. It must be a non-negative number. Received ' + n + ".");
       }
@@ -6637,13 +6906,13 @@ var WebchatCallBundle = (() => {
       return this;
     };
     function _getMaxListeners(that) {
-      if (that._maxListeners === void 0) return EventEmitter2.defaultMaxListeners;
+      if (that._maxListeners === void 0) return EventEmitter.defaultMaxListeners;
       return that._maxListeners;
     }
-    EventEmitter2.prototype.getMaxListeners = function getMaxListeners() {
+    EventEmitter.prototype.getMaxListeners = function getMaxListeners() {
       return _getMaxListeners(this);
     };
-    EventEmitter2.prototype.emit = function emit(type) {
+    EventEmitter.prototype.emit = function emit(type) {
       var args = [];
       for (var i = 1; i < arguments.length; i++) args.push(arguments[i]);
       var doError = type === "error";
@@ -6711,11 +6980,11 @@ var WebchatCallBundle = (() => {
       }
       return target;
     }
-    EventEmitter2.prototype.addListener = function addListener(type, listener) {
+    EventEmitter.prototype.addListener = function addListener(type, listener) {
       return _addListener(this, type, listener, false);
     };
-    EventEmitter2.prototype.on = EventEmitter2.prototype.addListener;
-    EventEmitter2.prototype.prependListener = function prependListener(type, listener) {
+    EventEmitter.prototype.on = EventEmitter.prototype.addListener;
+    EventEmitter.prototype.prependListener = function prependListener(type, listener) {
       return _addListener(this, type, listener, true);
     };
     function onceWrapper() {
@@ -6739,17 +7008,17 @@ var WebchatCallBundle = (() => {
       state.wrapFn = wrapped;
       return wrapped;
     }
-    EventEmitter2.prototype.once = function once2(type, listener) {
+    EventEmitter.prototype.once = function once2(type, listener) {
       checkListener(listener);
       this.on(type, _onceWrap(this, type, listener));
       return this;
     };
-    EventEmitter2.prototype.prependOnceListener = function prependOnceListener(type, listener) {
+    EventEmitter.prototype.prependOnceListener = function prependOnceListener(type, listener) {
       checkListener(listener);
       this.prependListener(type, _onceWrap(this, type, listener));
       return this;
     };
-    EventEmitter2.prototype.removeListener = function removeListener(type, listener) {
+    EventEmitter.prototype.removeListener = function removeListener(type, listener) {
       var list, events2, position, i, originalListener;
       checkListener(listener);
       events2 = this._events;
@@ -6781,8 +7050,8 @@ var WebchatCallBundle = (() => {
       }
       return this;
     };
-    EventEmitter2.prototype.off = EventEmitter2.prototype.removeListener;
-    EventEmitter2.prototype.removeAllListeners = function removeAllListeners(type) {
+    EventEmitter.prototype.off = EventEmitter.prototype.removeListener;
+    EventEmitter.prototype.removeAllListeners = function removeAllListeners(type) {
       var listeners, events2, i;
       events2 = this._events;
       if (events2 === void 0) return this;
@@ -6827,20 +7096,20 @@ var WebchatCallBundle = (() => {
       if (typeof evlistener === "function") return unwrap ? [evlistener.listener || evlistener] : [evlistener];
       return unwrap ? unwrapListeners(evlistener) : arrayClone(evlistener, evlistener.length);
     }
-    EventEmitter2.prototype.listeners = function listeners(type) {
+    EventEmitter.prototype.listeners = function listeners(type) {
       return _listeners(this, type, true);
     };
-    EventEmitter2.prototype.rawListeners = function rawListeners(type) {
+    EventEmitter.prototype.rawListeners = function rawListeners(type) {
       return _listeners(this, type, false);
     };
-    EventEmitter2.listenerCount = function(emitter, type) {
+    EventEmitter.listenerCount = function(emitter, type) {
       if (typeof emitter.listenerCount === "function") {
         return emitter.listenerCount(type);
       } else {
         return listenerCount.call(emitter, type);
       }
     };
-    EventEmitter2.prototype.listenerCount = listenerCount;
+    EventEmitter.prototype.listenerCount = listenerCount;
     function listenerCount(type) {
       var events2 = this._events;
       if (events2 !== void 0) {
@@ -6853,7 +7122,7 @@ var WebchatCallBundle = (() => {
       }
       return 0;
     }
-    EventEmitter2.prototype.eventNames = function eventNames() {
+    EventEmitter.prototype.eventNames = function eventNames() {
       return this._eventsCount > 0 ? ReflectOwnKeys(this._events) : [];
     };
     function arrayClone(arr, n) {
@@ -6920,7 +7189,6 @@ var WebchatCallBundle = (() => {
     return events.exports;
   }
   var eventsExports = requireEvents();
-  var EventEmitter = /* @__PURE__ */ getDefaultExportFromCjs(eventsExports);
   var logDisabled_ = true;
   var deprecationWarnings_ = true;
   function extractVersion(uastring, expr, pos) {
@@ -6933,7 +7201,7 @@ var WebchatCallBundle = (() => {
     }
     const addEventListener = Object.getOwnPropertyDescriptor(EventTarget.prototype, "addEventListener");
     if (!addEventListener.writable) {
-      log$4("Unable to polyfill events");
+      log$5("Unable to polyfill events");
       return;
     }
     const proto = window2.RTCPeerConnection.prototype;
@@ -7008,7 +7276,7 @@ var WebchatCallBundle = (() => {
     deprecationWarnings_ = !bool;
     return "adapter.js deprecation warnings " + (bool ? "disabled" : "enabled");
   }
-  function log$4() {
+  function log$5() {
     if (typeof window === "object") {
       if (logDisabled_) {
         return;
@@ -7039,10 +7307,13 @@ var WebchatCallBundle = (() => {
         return brand.brand === "Chromium";
       });
       if (chromium) {
-        return {
-          browser: "chrome",
-          version: parseInt(chromium.version, 10)
-        };
+        const version2 = parseInt(chromium.version, 10);
+        if (version2 >= 90) {
+          return {
+            browser: "chrome",
+            version: version2
+          };
+        }
       }
     }
     if (navigator2.mozGetUserMedia) {
@@ -7117,8 +7388,11 @@ var WebchatCallBundle = (() => {
     });
     return filteredResult;
   }
-  var logging = log$4;
+  var logging = log$5;
   function shimGetUserMedia$2(window2, browserDetails2) {
+    if (browserDetails2.version >= 64) {
+      return;
+    }
     const navigator2 = window2 && window2.navigator;
     if (!navigator2.mediaDevices) {
       return;
@@ -7787,6 +8061,9 @@ var WebchatCallBundle = (() => {
   var chromeShim = /* @__PURE__ */ Object.freeze({ __proto__: null, fixNegotiationNeeded, shimAddTrackRemoveTrack, shimAddTrackRemoveTrackWithNative, shimGetSendersWithDtmf, shimGetUserMedia: shimGetUserMedia$2, shimMediaStream, shimOnTrack: shimOnTrack$1, shimPeerConnection: shimPeerConnection$1, shimSenderReceiverGetStats });
   function shimGetUserMedia$1(window2, browserDetails2) {
     const navigator2 = window2 && window2.navigator;
+    if (!navigator2.mediaDevices) {
+      return;
+    }
     const MediaStreamTrack2 = window2 && window2.MediaStreamTrack;
     navigator2.getUserMedia = function(constraints, onSuccess, onError) {
       deprecated("navigator.getUserMedia", "navigator.mediaDevices.getUserMedia");
@@ -7831,10 +8108,10 @@ var WebchatCallBundle = (() => {
     }
   }
   function shimGetDisplayMedia(window2, preferredMediaSource) {
-    if (window2.navigator.mediaDevices && "getDisplayMedia" in window2.navigator.mediaDevices) {
+    if (!window2.navigator.mediaDevices) {
       return;
     }
-    if (!window2.navigator.mediaDevices) {
+    if (window2.navigator.mediaDevices && "getDisplayMedia" in window2.navigator.mediaDevices) {
       return;
     }
     window2.navigator.mediaDevices.getDisplayMedia = function getDisplayMedia(constraints) {
@@ -7994,8 +8271,11 @@ var WebchatCallBundle = (() => {
       window2.RTCDataChannel = window2.DataChannel;
     }
   }
-  function shimAddTransceiver(window2) {
+  function shimAddTransceiver(window2, browserDetails2) {
     if (!(typeof window2 === "object" && window2.RTCPeerConnection)) {
+      return;
+    }
+    if (browserDetails2.version >= 110) {
       return;
     }
     const origAddTransceiver = window2.RTCPeerConnection.prototype.addTransceiver;
@@ -8047,8 +8327,11 @@ var WebchatCallBundle = (() => {
       };
     }
   }
-  function shimGetParameters(window2) {
+  function shimGetParameters(window2, browserDetails2) {
     if (!(typeof window2 === "object" && window2.RTCRtpSender)) {
+      return;
+    }
+    if (browserDetails2.version >= 110) {
       return;
     }
     const origGetParameters = window2.RTCRtpSender.prototype.getParameters;
@@ -8062,8 +8345,11 @@ var WebchatCallBundle = (() => {
       };
     }
   }
-  function shimCreateOffer(window2) {
+  function shimCreateOffer(window2, browserDetails2) {
     if (!(typeof window2 === "object" && window2.RTCPeerConnection)) {
+      return;
+    }
+    if (browserDetails2.version >= 110) {
       return;
     }
     const origCreateOffer = window2.RTCPeerConnection.prototype.createOffer;
@@ -8078,8 +8364,11 @@ var WebchatCallBundle = (() => {
       return origCreateOffer.apply(this, arguments);
     };
   }
-  function shimCreateAnswer(window2) {
+  function shimCreateAnswer(window2, browserDetails2) {
     if (!(typeof window2 === "object" && window2.RTCPeerConnection)) {
+      return;
+    }
+    if (browserDetails2.version >= 110) {
       return;
     }
     const origCreateAnswer = window2.RTCPeerConnection.prototype.createAnswer;
@@ -9058,6 +9347,12 @@ var WebchatCallBundle = (() => {
     if (!window2.RTCPeerConnection) {
       return;
     }
+    if (browserDetails2.browser === "chrome" && browserDetails2.version > 102) {
+      return;
+    }
+    if (browserDetails2.browser === "firefox" && browserDetails2.version >= 113) {
+      return;
+    }
     if (!("sctp" in window2.RTCPeerConnection.prototype)) {
       Object.defineProperty(window2.RTCPeerConnection.prototype, "sctp", {
         get() {
@@ -9156,7 +9451,7 @@ var WebchatCallBundle = (() => {
     if (!(window2.RTCPeerConnection && "createDataChannel" in window2.RTCPeerConnection.prototype)) {
       return;
     }
-    if (browserDetails2.browser === "chrome" && browserDetails2.version > 149) {
+    if (browserDetails2.browser === "chrome" && browserDetails2.version >= 149) {
       return;
     }
     if (browserDetails2.browser === "firefox" && browserDetails2.version > 60) {
@@ -9327,7 +9622,7 @@ var WebchatCallBundle = (() => {
       shimFirefox: true,
       shimSafari: true
     };
-    const logging2 = log$4;
+    const logging2 = log$5;
     const browserDetails2 = detectBrowser(window2);
     const adapter = {
       browserDetails: browserDetails2,
@@ -9384,10 +9679,10 @@ var WebchatCallBundle = (() => {
         shimSenderGetStats(window2);
         shimReceiverGetStats(window2);
         shimRTCDataChannel(window2);
-        shimAddTransceiver(window2);
-        shimGetParameters(window2);
-        shimCreateOffer(window2);
-        shimCreateAnswer(window2);
+        shimAddTransceiver(window2, browserDetails2);
+        shimGetParameters(window2, browserDetails2);
+        shimCreateOffer(window2, browserDetails2);
+        shimCreateAnswer(window2, browserDetails2);
         shimRTCIceCandidate(window2);
         shimConnectionState(window2);
         shimMaxMessageSize(window2, browserDetails2);
@@ -9513,12 +9808,13 @@ var WebchatCallBundle = (() => {
   function getOSVersion(ua) {
     return ua.includes("mac os") ? getMatch(/\(.+?(\d+_\d+(:?_\d+)?)/, ua, 1).replace(/_/g, ".") : void 0;
   }
-  var version$1 = "2.19.2";
+  var version$1 = "2.22.0";
   var version = version$1;
   var protocolVersion = 17;
   var CLIENT_PROTOCOL_DEFAULT = 0;
   var CLIENT_PROTOCOL_DATA_STREAM_RPC = 1;
-  var clientProtocol = CLIENT_PROTOCOL_DATA_STREAM_RPC;
+  var CLIENT_PROTOCOL_DATA_STREAM_V2 = 2;
+  var clientProtocol = CLIENT_PROTOCOL_DATA_STREAM_V2;
   var LivekitError = class extends Error {
     constructor(code, message, options) {
       super(message || "an error has occurred");
@@ -9590,20 +9886,26 @@ var WebchatCallBundle = (() => {
   };
   var UnsupportedServer = class extends LivekitError {
     constructor(message) {
-      super(10, message !== null && message !== void 0 ? message : "unsupported server");
+      super(10, message || "unsupported server");
       this.name = "UnsupportedServer";
     }
   };
   var UnexpectedConnectionState = class extends LivekitError {
     constructor(message) {
-      super(12, message !== null && message !== void 0 ? message : "unexpected connection state");
+      super(12, message || "unexpected connection state");
       this.name = "UnexpectedConnectionState";
     }
   };
   var NegotiationError = class extends LivekitError {
     constructor(message) {
-      super(13, message !== null && message !== void 0 ? message : "unable to negotiate");
+      super(13, message || "unable to negotiate");
       this.name = "NegotiationError";
+    }
+  };
+  var PublishDataError = class extends LivekitError {
+    constructor(message) {
+      super(14, message || "unable to publish data");
+      this.name = "PublishDataError";
     }
   };
   var PublishTrackError = class extends LivekitError {
@@ -9630,6 +9932,8 @@ var WebchatCallBundle = (() => {
     DataStreamErrorReason2[DataStreamErrorReason2["Incomplete"] = 4] = "Incomplete";
     DataStreamErrorReason2[DataStreamErrorReason2["HandlerAlreadyRegistered"] = 7] = "HandlerAlreadyRegistered";
     DataStreamErrorReason2[DataStreamErrorReason2["EncryptionTypeMismatch"] = 8] = "EncryptionTypeMismatch";
+    DataStreamErrorReason2[DataStreamErrorReason2["HeaderTooLarge"] = 9] = "HeaderTooLarge";
+    DataStreamErrorReason2[DataStreamErrorReason2["PayloadTooLarge"] = 10] = "PayloadTooLarge";
   })(DataStreamErrorReason || (DataStreamErrorReason = {}));
   var DataStreamError = class extends LivekitReasonedError {
     constructor(message, reason) {
@@ -10273,6 +10577,9 @@ var WebchatCallBundle = (() => {
     }
     /** @internal */
     setStreamState(value) {
+      if (this._streamState !== value) {
+        this.log.debug("stream state changed: ".concat(this._streamState, " -> ").concat(value));
+      }
       this._streamState = value;
     }
     constructor(mediaTrack, kind) {
@@ -10295,8 +10602,8 @@ var WebchatCallBundle = (() => {
           this.handleAppVisibilityChanged();
         }
       };
-      this.log = getLogger((_a2 = loggerOptions.loggerName) !== null && _a2 !== void 0 ? _a2 : LoggerNames.Track);
       this.loggerContextCb = loggerOptions.loggerContextCb;
+      this.log = getLogger((_a2 = loggerOptions.loggerName) !== null && _a2 !== void 0 ? _a2 : LoggerNames.Track, () => this.logContext);
       this.setMaxListeners(100);
       this.kind = kind;
       this._mediaStreamTrack = mediaTrack;
@@ -10357,9 +10664,11 @@ var WebchatCallBundle = (() => {
         if (e2.name === "NotAllowedError") {
           this.emit(hasAudio ? TrackEvent.AudioPlaybackFailed : TrackEvent.VideoPlaybackFailed, e2);
         } else if (e2.name === "AbortError") {
-          livekitLogger.debug("".concat(hasAudio ? "audio" : "video", " playback aborted, likely due to new play request"));
+          this.log.debug("".concat(hasAudio ? "audio" : "video", " playback aborted, likely due to new play request"));
         } else {
-          livekitLogger.warn("could not playback ".concat(hasAudio ? "audio" : "video"), e2);
+          this.log.warn("could not playback ".concat(hasAudio ? "audio" : "video"), {
+            error: e2
+          });
         }
         if (hasAudio && element && allMediaStreamTracks.some((tr) => tr.kind === "video") && e2.name === "NotAllowedError") {
           element.muted = true;
@@ -10398,6 +10707,7 @@ var WebchatCallBundle = (() => {
       }
     }
     stop() {
+      this.log.debug("stopping track");
       this.stopMonitor();
       this._mediaStreamTrack.stop();
     }
@@ -10412,17 +10722,18 @@ var WebchatCallBundle = (() => {
       if (this.monitorInterval) {
         clearInterval(this.monitorInterval);
       }
-      if (this.timeSyncHandle) {
+      if (this.timeSyncHandle !== void 0) {
         cancelAnimationFrame(this.timeSyncHandle);
+        this.timeSyncHandle = void 0;
       }
     }
     /** @internal */
     updateLoggerOptions(loggerOptions) {
-      if (loggerOptions.loggerName) {
-        this.log = getLogger(loggerOptions.loggerName);
-      }
       if (loggerOptions.loggerContextCb) {
         this.loggerContextCb = loggerOptions.loggerContextCb;
+      }
+      if (loggerOptions.loggerName) {
+        this.log = getLogger(loggerOptions.loggerName, () => this.logContext);
       }
     }
     recycleElement(element) {
@@ -10662,6 +10973,27 @@ var WebchatCallBundle = (() => {
   }
   function isSVCCodec(codec) {
     return codec === "av1" || codec === "vp9";
+  }
+  function negotiateDependencyDescriptor(transceiver) {
+    var _a2;
+    const extensions = (_a2 = transceiver.getHeaderExtensionsToNegotiate) === null || _a2 === void 0 ? void 0 : _a2.call(transceiver);
+    if (!extensions || !transceiver.setHeaderExtensionsToNegotiate) {
+      return false;
+    }
+    const dd = extensions.find((ext) => ext.uri === ddExtensionURI);
+    if (!dd) {
+      return false;
+    }
+    if (dd.direction !== "stopped") {
+      return true;
+    }
+    dd.direction = "sendrecv";
+    try {
+      transceiver.setHeaderExtensionsToNegotiate(extensions);
+      return true;
+    } catch (e2) {
+      return false;
+    }
   }
   function supportsSetSinkId(elm) {
     if (!document || isSafariBased()) {
@@ -11032,6 +11364,44 @@ var WebchatCallBundle = (() => {
     }
     return result;
   }
+  function readableFromBytes(bytes) {
+    return new ReadableStream({
+      start(controller) {
+        controller.enqueue(bytes);
+        controller.close();
+      }
+    });
+  }
+  function readBytesInChunks(source, chunkSize) {
+    return __asyncGenerator(this, arguments, function* readBytesInChunks_1() {
+      const reader = source.getReader();
+      let buffer = new Uint8Array(0);
+      try {
+        while (true) {
+          const _yield$__await = yield __await(reader.read()), done = _yield$__await.done, value = _yield$__await.value;
+          if (done) {
+            break;
+          }
+          if (value.byteLength === 0) {
+            continue;
+          }
+          const merged = new Uint8Array(buffer.byteLength + value.byteLength);
+          merged.set(buffer);
+          merged.set(value, buffer.byteLength);
+          buffer = merged;
+          while (buffer.byteLength >= chunkSize) {
+            yield yield __await(buffer.slice(0, chunkSize));
+            buffer = buffer.slice(chunkSize);
+          }
+        }
+        if (buffer.byteLength > 0) {
+          yield yield __await(buffer);
+        }
+      } finally {
+        reader.releaseLock();
+      }
+    });
+  }
   function extractMaxAgeFromRequestHeaders(headers) {
     var _a2;
     const cacheControl = headers.get("Cache-Control");
@@ -11048,6 +11418,15 @@ var WebchatCallBundle = (() => {
   }
   function isPublisherOfferWithJoinSupported() {
     return isCompressionStreamSupported() && !isFireFox();
+  }
+  function extractTrackSid(mediaTrack, stream) {
+    const _unpackStreamId = unpackStreamId(stream.id), _unpackStreamId2 = _slicedToArray(_unpackStreamId, 2), streamId = _unpackStreamId2[1];
+    if (streamId === null || streamId === void 0 ? void 0 : streamId.startsWith("TR")) {
+      return streamId;
+    }
+    if (mediaTrack.id.startsWith("TR")) {
+      return mediaTrack.id;
+    }
   }
   function createRtcUrl(url, searchParams) {
     let useV0Path = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : false;
@@ -11206,16 +11585,16 @@ var WebchatCallBundle = (() => {
     CryptorErrorReason2[CryptorErrorReason2["MissingKey"] = 1] = "MissingKey";
     CryptorErrorReason2[CryptorErrorReason2["InternalError"] = 2] = "InternalError";
   })(CryptorErrorReason || (CryptorErrorReason = {}));
-  function shouldUsePacketTrailerScriptTransform() {
+  function shouldUseFrameMetadataScriptTransform() {
     return isScriptTransformSupportedForWorker();
   }
-  function isPacketTrailerSupported(options) {
-    return !!(options === null || options === void 0 ? void 0 : options.worker) && (isInsertableStreamSupported() || shouldUsePacketTrailerScriptTransform());
+  function isFrameMetadataSupported(options) {
+    return !!(options === null || options === void 0 ? void 0 : options.worker) && (isInsertableStreamSupported() || shouldUseFrameMetadataScriptTransform());
   }
-  function hasPacketTrailerPublishOptions(options) {
+  function hasFrameMetadataPublishOptions(options) {
     return !!((options === null || options === void 0 ? void 0 : options.timestamp) || (options === null || options === void 0 ? void 0 : options.frameId));
   }
-  function getPacketTrailerFeatures(options) {
+  function getFrameMetadataFeatures(options) {
     const features = [];
     if (options === null || options === void 0 ? void 0 : options.timestamp) {
       features.push(PacketTrailerFeature.PTF_USER_TIMESTAMP);
@@ -11225,7 +11604,7 @@ var WebchatCallBundle = (() => {
     }
     return features;
   }
-  function getPacketTrailerPublishOptions(features) {
+  function getFrameMetadataPublishOptions(features) {
     if (!features || features.length === 0) {
       return void 0;
     }
@@ -11326,6 +11705,30 @@ var WebchatCallBundle = (() => {
   var RemoteTrack = class extends Track {
     constructor(mediaTrack, sid, kind, receiver, loggerOptions) {
       super(mediaTrack, kind, loggerOptions);
+      this.timeSyncLoop = () => {
+        var _a2;
+        if (this.listenerCount(TrackEvent.TimeSyncUpdate) === 0) {
+          this.timeSyncHandle = void 0;
+          return;
+        }
+        this.timeSyncHandle = requestAnimationFrame(this.timeSyncLoop);
+        const sources = (_a2 = this.receiver) === null || _a2 === void 0 ? void 0 : _a2.getSynchronizationSources()[0];
+        if (sources) {
+          const timestamp = sources.timestamp, rtpTimestamp = sources.rtpTimestamp;
+          if (rtpTimestamp && this.rtpTimestamp !== rtpTimestamp) {
+            this.emit(TrackEvent.TimeSyncUpdate, {
+              timestamp,
+              rtpTimestamp
+            });
+            this.rtpTimestamp = rtpTimestamp;
+          }
+        }
+      };
+      this.onTimeSyncListenerAdded = (event) => {
+        if (event === TrackEvent.TimeSyncUpdate && this.timeSyncHandle === void 0) {
+          this.timeSyncHandle = requestAnimationFrame(this.timeSyncLoop);
+        }
+      };
       this.sid = sid;
       this.receiver = receiver;
     }
@@ -11420,23 +11823,18 @@ var WebchatCallBundle = (() => {
         this.registerTimeSyncUpdate();
       }
     }
+    /* @internal */
+    stopMonitor() {
+      super.stopMonitor();
+      this.off("newListener", this.onTimeSyncListenerAdded);
+    }
     registerTimeSyncUpdate() {
-      const loop = () => {
-        var _a2;
-        this.timeSyncHandle = requestAnimationFrame(() => loop());
-        const sources = (_a2 = this.receiver) === null || _a2 === void 0 ? void 0 : _a2.getSynchronizationSources()[0];
-        if (sources) {
-          const timestamp = sources.timestamp, rtpTimestamp = sources.rtpTimestamp;
-          if (rtpTimestamp && this.rtpTimestamp !== rtpTimestamp) {
-            this.emit(TrackEvent.TimeSyncUpdate, {
-              timestamp,
-              rtpTimestamp
-            });
-            this.rtpTimestamp = rtpTimestamp;
-          }
-        }
-      };
-      loop();
+      const emitter = this;
+      emitter.off("newListener", this.onTimeSyncListenerAdded);
+      emitter.on("newListener", this.onTimeSyncListenerAdded);
+      if (this.timeSyncHandle === void 0) {
+        this.timeSyncLoop();
+      }
     }
   };
   var REACTION_DELAY = 100;
@@ -11468,14 +11866,14 @@ var WebchatCallBundle = (() => {
      * Use with the `TrackEvent.TimeSyncUpdate` event to correlate displayed frames
      * with their capture-time metadata.
      *
-     * Requires the room to be configured with the `packetTrailer` worker option
-     * and the publishing track to have packet trailer features enabled.
+     * Requires the room to be configured with the `frameMetadata` worker option
+     * and the publishing track to have frame metadata features enabled.
      *
      */
     lookupFrameMetadata(_ref) {
       let rtpTimestamp = _ref.rtpTimestamp;
       var _a2;
-      return (_a2 = this.packetTrailerExtractor) === null || _a2 === void 0 ? void 0 : _a2.lookupMetadata(rtpTimestamp);
+      return (_a2 = this.frameMetadataExtractor) === null || _a2 === void 0 ? void 0 : _a2.lookupMetadata(rtpTimestamp);
     }
     setStreamState(value) {
       super.setStreamState(value);
@@ -11839,7 +12237,7 @@ var WebchatCallBundle = (() => {
             }
             break;
           case "packetTrailerMetadata":
-            this.handlePacketTrailerMetadata(data.trackId, data.rtpTimestamp, data.ssrc, data.metadata);
+            this.handleFrameMetadata(data.trackId, data.rtpTimestamp, data.ssrc, data.metadata);
             break;
         }
       };
@@ -11905,14 +12303,14 @@ var WebchatCallBundle = (() => {
         this.postSifTrailer(trailer);
       }
     }
-    handlePacketTrailerMetadata(trackId, rtpTimestamp, ssrc, metadata) {
+    handleFrameMetadata(trackId, rtpTimestamp, ssrc, metadata) {
       if (!this.room) {
         return;
       }
       for (const participant of [this.room.localParticipant, ...this.room.remoteParticipants.values()]) {
         for (const pub of participant.trackPublications.values()) {
-          if (pub.track && pub.track.mediaStreamID === trackId && pub.track instanceof RemoteVideoTrack && pub.track.packetTrailerExtractor) {
-            pub.track.packetTrailerExtractor.storeMetadata(rtpTimestamp, ssrc, metadata);
+          if (pub.track && pub.track.mediaStreamID === trackId && pub.track instanceof RemoteVideoTrack && pub.track.frameMetadataExtractor) {
+            pub.track.frameMetadataExtractor.storeMetadata(rtpTimestamp, ssrc, metadata);
             return;
           }
         }
@@ -12107,12 +12505,12 @@ var WebchatCallBundle = (() => {
       this.handleReceiver(track.receiver, track.mediaStreamID, remoteId, track.kind === "video" ? mimeTypeToVideoCodecString(trackInfo.mimeType) : void 0, hasPacketTrailer);
     }
     setupE2EESender(track, sender) {
-      var _a2;
+      var _a2, _b2, _c;
       if (!isLocalTrack(track) || !sender) {
         if (!sender) livekitLogger.warn("early return because sender is not ready");
         return;
       }
-      this.handleSender(sender, track.mediaStreamID, void 0, isVideoTrack(track) ? (_a2 = track.publishOptions) === null || _a2 === void 0 ? void 0 : _a2.packetTrailer : void 0);
+      this.handleSender(sender, track.mediaStreamID, void 0, isVideoTrack(track) ? (_b2 = (_a2 = track.publishOptions) === null || _a2 === void 0 ? void 0 : _a2.frameMetadata) !== null && _b2 !== void 0 ? _b2 : (_c = track.publishOptions) === null || _c === void 0 ? void 0 : _c.packetTrailer : void 0);
     }
     /**
      * Handles the given {@code RTCRtpReceiver} by creating a {@code TransformStream} which will inject
@@ -12178,7 +12576,7 @@ var WebchatCallBundle = (() => {
      * a frame encoder.
      *
      */
-    handleSender(sender, trackId, codec, packetTrailer) {
+    handleSender(sender, trackId, codec, frameMetadata) {
       var _a2;
       if (E2EE_FLAG in sender || !this.worker) {
         return;
@@ -12193,8 +12591,8 @@ var WebchatCallBundle = (() => {
           participantIdentity: this.room.localParticipant.identity,
           trackId,
           codec,
-          hasPacketTrailer: hasPacketTrailerPublishOptions(packetTrailer),
-          packetTrailer
+          hasPacketTrailer: hasFrameMetadataPublishOptions(frameMetadata),
+          packetTrailer: frameMetadata
         };
         sender.transform = new RTCRtpScriptTransform(this.worker, options);
       } else {
@@ -12209,8 +12607,8 @@ var WebchatCallBundle = (() => {
             trackId,
             participantIdentity: this.room.localParticipant.identity,
             isReuse: false,
-            hasPacketTrailer: hasPacketTrailerPublishOptions(packetTrailer),
-            packetTrailer
+            hasPacketTrailer: hasFrameMetadataPublishOptions(frameMetadata),
+            packetTrailer: frameMetadata
           }
         };
         this.worker.postMessage(msg, [senderStreams.readable, senderStreams.writable]);
@@ -12219,7 +12617,7 @@ var WebchatCallBundle = (() => {
     }
   };
   var MAX_ENTRIES = 300;
-  var PacketTrailerExtractor = class {
+  var FrameMetadataExtractor = class {
     constructor() {
       this.metadataMap = /* @__PURE__ */ new Map();
       this.activeSsrc = 0;
@@ -12243,7 +12641,7 @@ var WebchatCallBundle = (() => {
       this.activeSsrc = 0;
     }
   };
-  var PacketTrailerManager = class {
+  var FrameMetadataManager = class {
     constructor(options) {
       this.extractors = /* @__PURE__ */ new Map();
       this.workerPipelines = /* @__PURE__ */ new Map();
@@ -12257,7 +12655,7 @@ var WebchatCallBundle = (() => {
         }
       };
       this.onWorkerError = (ev) => {
-        livekitLogger.error("packet trailer worker encountered an error:", {
+        livekitLogger.error("frame metadata worker encountered an error:", {
           error: ev.error
         });
       };
@@ -12300,29 +12698,29 @@ var WebchatCallBundle = (() => {
         }
         return;
       }
-      if (!isPacketTrailerSupported(this.worker ? {
+      if (!isFrameMetadataSupported(this.worker ? {
         worker: this.worker
       } : void 0) && !((_b2 = this.room) === null || _b2 === void 0 ? void 0 : _b2.hasE2EESetup)) {
-        livekitLogger.warn("packet trailer transform not supported; skipping extraction");
+        livekitLogger.warn("frame metadata transform not supported; skipping extraction");
         return;
       }
-      const extractor = new PacketTrailerExtractor();
+      const extractor = new FrameMetadataExtractor();
       const trackId = track.mediaStreamID;
       this.extractors.set(trackId, extractor);
-      track.packetTrailerExtractor = extractor;
+      track.frameMetadataExtractor = extractor;
       if ((_c = this.room) === null || _c === void 0 ? void 0 : _c.hasE2EESetup) {
         return;
       }
       this.setupWorkerReceiver(receiver, trackId, true);
     }
     setupPassthroughReceiver(receiver, trackId) {
-      if (shouldUsePacketTrailerScriptTransform()) {
+      if (shouldUseFrameMetadataScriptTransform()) {
         if ("transform" in receiver) {
           receiver.transform = null;
         }
         return;
       }
-      if (this.worker && isPacketTrailerSupported({
+      if (this.worker && isFrameMetadataSupported({
         worker: this.worker
       }) && !this.workerPipelines.has(receiver)) {
         this.setupWorkerReceiver(receiver, trackId, false);
@@ -12338,7 +12736,7 @@ var WebchatCallBundle = (() => {
       if (!worker) {
         return;
       }
-      if (shouldUsePacketTrailerScriptTransform()) {
+      if (shouldUseFrameMetadataScriptTransform()) {
         receiver.transform = new RTCRtpScriptTransform(worker, {
           kind: "decode",
           trackId: newTrackId
@@ -12392,7 +12790,7 @@ var WebchatCallBundle = (() => {
         this.extractors.delete(trackId);
       }
       if (track instanceof RemoteVideoTrack) {
-        track.packetTrailerExtractor = void 0;
+        track.frameMetadataExtractor = void 0;
       }
     }
     cleanup() {
@@ -12892,6 +13290,7 @@ var WebchatCallBundle = (() => {
     SignalConnectionState2[SignalConnectionState2["DISCONNECTED"] = 4] = "DISCONNECTED";
   })(SignalConnectionState || (SignalConnectionState = {}));
   var MAX_WS_CLOSE_TIME = 250;
+  var JOIN_RESPONSE_TIMEOUT = 5e3;
   var SignalClient = class {
     get currentState() {
       return this.state;
@@ -13021,17 +13420,18 @@ var WebchatCallBundle = (() => {
               if (redactedUrl.searchParams.has("access_token")) {
                 redactedUrl.searchParams.set("access_token", "<redacted>");
               }
+              if (this.ws) {
+                const startClose = performance.now();
+                yield this.close(false);
+                this.log.debug("closed previous ws connection in ".concat(performance.now() - startClose, "ms"));
+              }
               this.log.info("signal connecting to ".concat(redactedUrl), {
                 reconnect: opts.reconnect,
                 reconnectReason: opts.reconnectReason
               });
-              if (this.ws) {
-                yield this.close(false);
-              }
               this.ws = new WebSocketStream(rtcUrl);
               try {
                 this.ws.closed.then((closeInfo) => {
-                  var _a3;
                   if (this.isEstablishingConnection) {
                     reject(ConnectionError.internal("Websocket got closed during a (re)connection attempt: ".concat(closeInfo.reason)));
                   }
@@ -13043,7 +13443,7 @@ var WebchatCallBundle = (() => {
                       state: this.state
                     });
                     if (this.state === SignalConnectionState.CONNECTED) {
-                      this.handleOnClose((_a3 = closeInfo.reason) !== null && _a3 !== void 0 ? _a3 : "Unexpected WS error");
+                      this.handleOnClose(closeInfo.reason || "Unexpected WS error");
                     }
                   }
                   return;
@@ -13070,7 +13470,22 @@ var WebchatCallBundle = (() => {
                 }
                 const signalReader = connection.readable.getReader();
                 this.streamWriter = connection.writable.getWriter();
-                const firstMessage = yield signalReader.read();
+                let firstMessage;
+                let firstMessageTimeout;
+                try {
+                  firstMessage = yield Promise.race([signalReader.read(), new Promise((_2, rejectRead) => {
+                    firstMessageTimeout = setTimeout(() => {
+                      rejectRead(ConnectionError.timeout("signal connection timed out while waiting for the first message"));
+                    }, JOIN_RESPONSE_TIMEOUT);
+                  })]);
+                } catch (e2) {
+                  signalReader.releaseLock();
+                  reject(e2);
+                  this.close();
+                  return;
+                } finally {
+                  clearTimeout(firstMessageTimeout);
+                }
                 signalReader.releaseLock();
                 if (!firstMessage.value) {
                   throw ConnectionError.internal("no message received as first message");
@@ -13785,48 +14200,6 @@ var WebchatCallBundle = (() => {
       return params;
     });
   }
-  var DataPacketBuffer = class {
-    constructor() {
-      this.buffer = [];
-      this._totalSize = 0;
-    }
-    push(item) {
-      this.buffer.push(item);
-      this._totalSize += item.data.byteLength;
-    }
-    pop() {
-      const item = this.buffer.shift();
-      if (item) {
-        this._totalSize -= item.data.byteLength;
-      }
-      return item;
-    }
-    getAll() {
-      return this.buffer.slice();
-    }
-    popToSequence(sequence) {
-      while (this.buffer.length > 0) {
-        const first = this.buffer[0];
-        if (first.sequence <= sequence) {
-          this.pop();
-        } else {
-          break;
-        }
-      }
-    }
-    alignBufferedAmount(bufferedAmount) {
-      while (this.buffer.length > 0) {
-        const first = this.buffer[0];
-        if (this._totalSize - first.data.byteLength <= bufferedAmount) {
-          break;
-        }
-        this.pop();
-      }
-    }
-    get length() {
-      return this.buffer.length;
-    }
-  };
   var TTLMap = class {
     /**
      * @param ttl ttl of the key (ms)
@@ -14633,8 +15006,34 @@ var WebchatCallBundle = (() => {
     return lib;
   }
   var libExports = requireLib();
-  var startBitrateForSVC = 0.7;
+  var startBitrateMultiplier = 0.9;
+  var maxStartBitrateKbps = 1e3;
   var debounceInterval = 20;
+  function applyVideoStartBitrate(media, cid, codec, maxbr) {
+    let isScreenShare = arguments.length > 4 && arguments[4] !== void 0 ? arguments[4] : false;
+    var _a2, _b2, _c;
+    if (!((_a2 = media.msid) === null || _a2 === void 0 ? void 0 : _a2.includes(cid))) {
+      return void 0;
+    }
+    const codecPayload = (_c = (_b2 = media.rtp.find((rtp) => rtp.codec.toUpperCase() === codec.toUpperCase())) === null || _b2 === void 0 ? void 0 : _b2.payload) !== null && _c !== void 0 ? _c : 0;
+    if (codecPayload === 0) {
+      return 0;
+    }
+    const calculatedStartBitrate = Math.round(maxbr * startBitrateMultiplier);
+    const startBitrate = isScreenShare ? calculatedStartBitrate : Math.min(calculatedStartBitrate, maxStartBitrateKbps);
+    const fmtp = media.fmtp.find((entry) => entry.payload === codecPayload);
+    if (fmtp) {
+      if (!fmtp.config.includes("x-google-start-bitrate")) {
+        fmtp.config += ";x-google-start-bitrate=".concat(startBitrate);
+      }
+    } else {
+      media.fmtp.push({
+        payload: codecPayload,
+        config: "x-google-start-bitrate=".concat(startBitrate)
+      });
+    }
+    return codecPayload;
+  }
   var PCEvents = {
     NegotiationStarted: "negotiationStarted",
     NegotiationComplete: "negotiationComplete",
@@ -14657,6 +15056,7 @@ var WebchatCallBundle = (() => {
       var _a2;
       super();
       this.log = livekitLogger;
+      this.iceLog = livekitLogger;
       this.ddExtID = 0;
       this.latestOfferId = 0;
       this.latestAcknowledgedOfferId = 0;
@@ -14682,6 +15082,7 @@ var WebchatCallBundle = (() => {
         if (!this._pc) {
           return;
         }
+        this.log.debug("closing peer connection");
         this.pendingInitialOffer = void 0;
         this._pc.close();
         this._pc.onconnectionstatechange = null;
@@ -14697,8 +15098,9 @@ var WebchatCallBundle = (() => {
         this._pc.oniceconnectionstatechange = null;
         this._pc = null;
       };
-      this.log = getLogger((_a2 = loggerOptions.loggerName) !== null && _a2 !== void 0 ? _a2 : LoggerNames.PCTransport);
       this.loggerOptions = loggerOptions;
+      this.log = getLogger((_a2 = loggerOptions.loggerName) !== null && _a2 !== void 0 ? _a2 : LoggerNames.PCTransport, () => this.logContext);
+      this.iceLog = getLogger(LoggerNames.ICE, () => this.logContext);
       this.config = config;
       this._pc = this.createPC();
       this.offerLock = new _();
@@ -14708,26 +15110,39 @@ var WebchatCallBundle = (() => {
       pc.onicecandidate = (ev) => {
         var _a2;
         if (!ev.candidate) return;
+        this.iceLog.debug("local ICE candidate gathered", {
+          candidate: ev.candidate.candidate
+        });
         (_a2 = this.onIceCandidate) === null || _a2 === void 0 ? void 0 : _a2.call(this, ev.candidate);
       };
       pc.onicecandidateerror = (ev) => {
         var _a2;
+        this.iceLog.debug("ICE candidate error", {
+          event: ev
+        });
         (_a2 = this.onIceCandidateError) === null || _a2 === void 0 ? void 0 : _a2.call(this, ev);
       };
       pc.oniceconnectionstatechange = () => {
         var _a2;
+        this.iceLog.debug("ICE connection state: ".concat(pc.iceConnectionState));
         (_a2 = this.onIceConnectionStateChange) === null || _a2 === void 0 ? void 0 : _a2.call(this, pc.iceConnectionState);
       };
       pc.onsignalingstatechange = () => {
         var _a2;
+        this.log.debug("signaling state: ".concat(pc.signalingState));
         (_a2 = this.onSignalingStatechange) === null || _a2 === void 0 ? void 0 : _a2.call(this, pc.signalingState);
       };
       pc.onconnectionstatechange = () => {
         var _a2;
+        this.log.debug("connection state: ".concat(pc.connectionState));
         (_a2 = this.onConnectionStateChange) === null || _a2 === void 0 ? void 0 : _a2.call(this, pc.connectionState);
       };
       pc.ondatachannel = (ev) => {
         var _a2;
+        this.log.debug("data channel opened by peer", {
+          label: ev.channel.label,
+          id: ev.channel.id
+        });
         (_a2 = this.onDataChannel) === null || _a2 === void 0 ? void 0 : _a2.call(this, ev);
       };
       pc.ontrack = (ev) => {
@@ -14748,6 +15163,9 @@ var WebchatCallBundle = (() => {
         if (this.pc.remoteDescription && !this.restartingIce) {
           return this.pc.addIceCandidate(candidate);
         }
+        this.iceLog.debug("queuing remote ICE candidate until remote description applied", {
+          pendingCount: this.pendingCandidates.length + 1
+        });
         this.pendingCandidates.push(candidate);
       });
     }
@@ -14755,10 +15173,10 @@ var WebchatCallBundle = (() => {
       return __awaiter(this, void 0, void 0, function* () {
         var _a2, _b2;
         if (sd.type === "answer" && this.latestOfferId > 0 && offerId > 0 && offerId !== this.latestOfferId) {
-          this.log.warn("ignoring answer for old offer", Object.assign(Object.assign({}, this.logContext), {
+          this.log.warn("ignoring answer for old offer", {
             offerId,
             latestOfferId: this.latestOfferId
-          }));
+          });
           return false;
         }
         let mungedSDP = void 0;
@@ -14774,7 +15192,7 @@ var WebchatCallBundle = (() => {
             sdpParsed2.media.forEach((media) => {
               ensureIPAddrMatchVersion(media);
             });
-            this.log.debug("setting pending initial offer before processing answer", this.logContext);
+            this.log.debug("setting pending initial offer before processing answer");
             yield this.setMungedSDP(initialOffer, libExports.write(sdpParsed2));
           }
           const sdpParsed = libExports.parse((_b2 = sd.sdp) !== null && _b2 !== void 0 ? _b2 : "");
@@ -14819,9 +15237,18 @@ var WebchatCallBundle = (() => {
               });
             }
           });
+          const placeholderMids = this.getPlaceholderMids();
+          if (placeholderMids.size > 0) {
+            conformBundledCodecFmtp(sdpParsed.media, (media) => placeholderMids.has(getMidString(media.mid)));
+          }
           mungedSDP = libExports.write(sdpParsed);
         }
         yield this.setMungedSDP(sd, mungedSDP, true);
+        if (this.pendingCandidates.length > 0) {
+          this.iceLog.debug("flushing queued ICE candidates", {
+            count: this.pendingCandidates.length
+          });
+        }
         this.pendingCandidates.forEach((candidate) => {
           this.pc.addIceCandidate(candidate);
         });
@@ -14854,7 +15281,7 @@ var WebchatCallBundle = (() => {
         const unlock = yield this.offerLock.lock();
         try {
           if (this.pc.signalingState !== "stable") {
-            this.log.warn("signaling state is not stable, cannot create initial offer", this.logContext);
+            this.log.warn("signaling state is not stable, cannot create initial offer");
             return;
           }
           const offerId = this.latestOfferId + 1;
@@ -14887,29 +15314,31 @@ var WebchatCallBundle = (() => {
             return;
           }
           if (options === null || options === void 0 ? void 0 : options.iceRestart) {
-            this.log.debug("restarting ICE", this.logContext);
+            this.iceLog.debug("restarting ICE");
             this.restartingIce = true;
           }
           if (this._pc && (this._pc.signalingState === "have-local-offer" || this.pendingInitialOffer)) {
             const currentSD = this._pc.remoteDescription;
             if ((options === null || options === void 0 ? void 0 : options.iceRestart) && currentSD) {
               yield this._pc.setRemoteDescription(currentSD);
+            } else if (options === null || options === void 0 ? void 0 : options.iceRestart) {
+              throw new NegotiationError("ICE restart requested without a remote description, peer connection must be recreated");
             } else {
               this.renegotiate = true;
-              this.log.debug("requesting renegotiation", Object.assign({}, this.logContext));
+              this.log.debug("requesting renegotiation");
               return;
             }
           } else if (!this._pc || this._pc.signalingState === "closed") {
-            this.log.warn("could not createOffer with closed peer connection", this.logContext);
+            this.log.warn("could not createOffer with closed peer connection");
             return;
           }
-          this.log.debug("starting to negotiate", this.logContext);
+          this.log.debug("starting to negotiate");
           const offerId = this.latestOfferId + 1;
           this.latestOfferId = offerId;
           const offer = yield this.pc.createOffer(options);
-          this.log.debug("original offer", Object.assign({
+          this.log.debug("original offer", {
             sdp: offer.sdp
-          }, this.logContext));
+          });
           const sdpParsed = libExports.parse((_a2 = offer.sdp) !== null && _a2 !== void 0 ? _a2 : "");
           sdpParsed.media.forEach((media) => {
             ensureIPAddrMatchVersion(media);
@@ -14917,44 +15346,29 @@ var WebchatCallBundle = (() => {
               ensureAudioNackAndStereo(media, ["all"], []);
             } else if (media.type === "video") {
               this.trackBitrates.some((trackbr) => {
-                if (!media.msid || !trackbr.cid || !media.msid.includes(trackbr.cid)) {
+                if (!trackbr.cid) {
                   return false;
                 }
-                let codecPayload = 0;
-                media.rtp.some((rtp) => {
-                  if (rtp.codec.toUpperCase() === trackbr.codec.toUpperCase()) {
-                    codecPayload = rtp.payload;
-                    return true;
-                  }
+                const codecPayload = applyVideoStartBitrate(media, trackbr.cid, trackbr.codec, trackbr.maxbr, trackbr.isScreenShare);
+                if (codecPayload === void 0) {
                   return false;
-                });
-                if (codecPayload === 0) {
-                  return true;
                 }
-                if (isSVCCodec(trackbr.codec) && !isSafari()) {
-                  this.ensureVideoDDExtensionForSVC(media, sdpParsed);
-                }
-                if (!isSVCCodec(trackbr.codec)) {
-                  return true;
-                }
-                const startBitrate = Math.round(trackbr.maxbr * startBitrateForSVC);
-                for (const fmtp of media.fmtp) {
-                  if (fmtp.payload === codecPayload) {
-                    if (!fmtp.config.includes("x-google-start-bitrate")) {
-                      fmtp.config += ";x-google-start-bitrate=".concat(startBitrate);
-                    }
-                    break;
-                  }
+                if (codecPayload > 0 && isSVCCodec(trackbr.codec) && !isSafari()) {
+                  this.ddExtID = ensureVideoDDExtension(media, sdpParsed, this.ddExtID);
                 }
                 return true;
               });
             }
           });
+          const placeholderMids = this.getPlaceholderMids();
+          if (placeholderMids.size > 0) {
+            conformBundledCodecFmtp(sdpParsed.media, (media) => placeholderMids.has(getMidString(media.mid)));
+          }
           if (this.latestOfferId > offerId) {
-            this.log.warn("latestOfferId mismatch", Object.assign(Object.assign({}, this.logContext), {
+            this.log.warn("latestOfferId mismatch", {
               latestOfferId: this.latestOfferId,
               offerId
-            }));
+            });
             return;
           }
           yield this.setMungedSDP(offer, libExports.write(sdpParsed));
@@ -14978,6 +15392,17 @@ var WebchatCallBundle = (() => {
         yield this.setMungedSDP(answer, libExports.write(sdpParsed));
         return answer;
       });
+    }
+    /**
+     * Returns the mids of transceivers that carry no outgoing track on this
+     * (publisher) connection: the pre-populated placeholders added by
+     * `RTCEngine.applyInitialPublisherLayout`, plus any transceiver that was used
+     * for a track and reverted on unpublish. Their codec fmtp is conformed to the
+     * published tracks so a shared payload type stays consistent across the bundle.
+     */
+    getPlaceholderMids() {
+      var _a2, _b2;
+      return placeholderMidsFromTransceivers((_b2 = (_a2 = this._pc) === null || _a2 === void 0 ? void 0 : _a2.getTransceivers()) !== null && _b2 !== void 0 ? _b2 : []);
     }
     createDataChannel(label, dataChannelDict) {
       return this.pc.createDataChannel(label, dataChannelDict);
@@ -15043,6 +15468,10 @@ var WebchatCallBundle = (() => {
     getStats() {
       return this.pc.getStats();
     }
+    getMaxMessageSize() {
+      var _a2, _b2;
+      return (_b2 = (_a2 = this._pc) === null || _a2 === void 0 ? void 0 : _a2.sctp) === null || _b2 === void 0 ? void 0 : _b2.maxMessageSize;
+    }
     getConnectedAddress() {
       return __awaiter(this, void 0, void 0, function* () {
         var _a2;
@@ -15086,7 +15515,7 @@ var WebchatCallBundle = (() => {
         if (munged) {
           sd.sdp = munged;
           try {
-            this.log.debug("setting munged ".concat(remote ? "remote" : "local", " description"), this.logContext);
+            this.log.debug("setting munged ".concat(remote ? "remote" : "local", " description"));
             if (remote) {
               yield this.pc.setRemoteDescription(sd);
             } else {
@@ -15094,11 +15523,11 @@ var WebchatCallBundle = (() => {
             }
             return;
           } catch (e2) {
-            this.log.warn("not able to set ".concat(sd.type, ", falling back to unmodified sdp"), Object.assign(Object.assign({}, this.logContext), {
+            this.log.warn("not able to set ".concat(sd.type, ", falling back to unmodified sdp"), {
               error: e2,
               mungedSdp: munged,
               originalSdp
-            }));
+            });
             sd.sdp = originalSdp;
           }
         }
@@ -15125,46 +15554,75 @@ var WebchatCallBundle = (() => {
           if (!remote && this.pc.remoteDescription) {
             fields.remoteSdp = this.pc.remoteDescription;
           }
-          this.log.error("unable to set ".concat(sd.type), Object.assign(Object.assign({}, this.logContext), {
+          this.log.error("unable to set ".concat(sd.type), {
             fields
-          }));
+          });
           throw new NegotiationError(msg);
         }
       });
     }
-    ensureVideoDDExtensionForSVC(media, sdp2) {
-      var _a2, _b2;
-      const ddFound = (_a2 = media.ext) === null || _a2 === void 0 ? void 0 : _a2.some((ext) => {
-        if (ext.uri === ddExtensionURI) {
-          return true;
-        }
-        return false;
+  };
+  function ensureVideoDDExtension(media, sdp2, ddExtID) {
+    var _a2, _b2;
+    const id = ddExtensionIDFor(sdp2, ddExtID);
+    if (id === void 0) {
+      return ddExtID;
+    }
+    if (!((_a2 = media.ext) === null || _a2 === void 0 ? void 0 : _a2.some((ext) => ext.uri === ddExtensionURI))) {
+      (_b2 = media.ext) !== null && _b2 !== void 0 ? _b2 : media.ext = [];
+      media.ext.push({
+        value: id,
+        uri: ddExtensionURI
       });
-      if (!ddFound) {
-        if (this.ddExtID === 0) {
-          let maxID = 0;
-          sdp2.media.forEach((m) => {
-            var _a3;
-            (_a3 = m.ext) === null || _a3 === void 0 ? void 0 : _a3.forEach((ext) => {
-              if (ext.value > maxID) {
-                maxID = ext.value;
-              }
-            });
-          });
-          this.ddExtID = maxID + 1;
-        }
-        (_b2 = media.ext) === null || _b2 === void 0 ? void 0 : _b2.push({
-          value: this.ddExtID,
-          uri: ddExtensionURI
-        });
+    }
+    return id;
+  }
+  function ddExtensionIDFor(sdp2, cachedID) {
+    const mapped = mappedExtensionID(sdp2, ddExtensionURI);
+    if (mapped !== void 0) {
+      return usedForOtherURI(sdp2, mapped, ddExtensionURI) ? void 0 : mapped;
+    }
+    if (cachedID !== 0 && !usedForOtherURI(sdp2, cachedID, ddExtensionURI)) {
+      return cachedID;
+    }
+    return unusedExtensionID(sdp2);
+  }
+  function mappedExtensionID(sdp2, uri) {
+    var _a2;
+    for (const media of sdp2.media) {
+      const ext = (_a2 = media.ext) === null || _a2 === void 0 ? void 0 : _a2.find((candidate) => candidate.uri === uri);
+      if (ext) {
+        return ext.value;
       }
     }
-  };
+    return void 0;
+  }
+  function usedForOtherURI(sdp2, id, uri) {
+    return sdp2.media.some((media) => {
+      var _a2;
+      return (_a2 = media.ext) === null || _a2 === void 0 ? void 0 : _a2.some((ext) => ext.value === id && ext.uri !== uri);
+    });
+  }
+  function unusedExtensionID(sdp2) {
+    let maxID = 0;
+    sdp2.media.forEach((media) => {
+      var _a2;
+      (_a2 = media.ext) === null || _a2 === void 0 ? void 0 : _a2.forEach((ext) => {
+        if (ext.value > maxID) {
+          maxID = ext.value;
+        }
+      });
+    });
+    return maxID + 1 === 15 ? 16 : maxID + 1;
+  }
+  function fmtpConfigHasParam(config, param) {
+    return config.split(";").some((entry) => entry.trim() === param);
+  }
   function ensureAudioNackAndStereo(media, stereoMids, nackMids) {
     const mid = getMidString(media.mid);
     let opusPayload = 0;
     media.rtp.some((rtp) => {
-      if (rtp.codec === "opus") {
+      if (rtp.codec.toLowerCase() === "opus") {
         opusPayload = rtp.payload;
         return true;
       }
@@ -15183,13 +15641,52 @@ var WebchatCallBundle = (() => {
       if (stereoMids.includes(mid) || stereoMids.length === 1 && stereoMids[0] === "all") {
         media.fmtp.some((fmtp) => {
           if (fmtp.payload === opusPayload) {
-            if (!fmtp.config.includes("stereo=1")) {
+            if (!fmtpConfigHasParam(fmtp.config, "stereo=1")) {
               fmtp.config += ";stereo=1";
             }
             return true;
           }
           return false;
         });
+      }
+    }
+  }
+  function placeholderMidsFromTransceivers(transceivers) {
+    const mids = /* @__PURE__ */ new Set();
+    for (const transceiver of transceivers) {
+      if (transceiver.mid && !transceiver.sender.track) {
+        mids.add(transceiver.mid);
+      }
+    }
+    return mids;
+  }
+  function conformBundledCodecFmtp(media, isPlaceholder) {
+    var _a2, _b2;
+    const canonicalByPayload = /* @__PURE__ */ new Map();
+    const fromRealSection = /* @__PURE__ */ new Set();
+    for (const m of media) {
+      const placeholder = isPlaceholder(m);
+      for (const fmtp of (_a2 = m.fmtp) !== null && _a2 !== void 0 ? _a2 : []) {
+        if (!placeholder) {
+          canonicalByPayload.set(fmtp.payload, fmtp.config);
+          fromRealSection.add(fmtp.payload);
+        } else if (!canonicalByPayload.has(fmtp.payload)) {
+          canonicalByPayload.set(fmtp.payload, fmtp.config);
+        }
+      }
+    }
+    if (canonicalByPayload.size === 0) {
+      return;
+    }
+    for (const m of media) {
+      if (!isPlaceholder(m)) {
+        continue;
+      }
+      for (const fmtp of (_b2 = m.fmtp) !== null && _b2 !== void 0 ? _b2 : []) {
+        const config = canonicalByPayload.get(fmtp.payload);
+        if (config !== void 0 && fmtp.config !== config) {
+          fmtp.config = config;
+        }
       }
     }
   }
@@ -15204,7 +15701,7 @@ var WebchatCallBundle = (() => {
       const mid = getMidString(media.mid);
       if (media.type === "audio") {
         media.rtp.some((rtp) => {
-          if (rtp.codec === "opus") {
+          if (rtp.codec.toLowerCase() === "opus") {
             opusPayload = rtp.payload;
             return true;
           }
@@ -15215,7 +15712,7 @@ var WebchatCallBundle = (() => {
         }
         media.fmtp.some((fmtp) => {
           if (fmtp.payload === opusPayload) {
-            if (fmtp.config.includes("sprop-stereo=1")) {
+            if (fmtpConfigHasParam(fmtp.config, "sprop-stereo=1")) {
               stereoMids.push(mid);
             }
             return true;
@@ -15310,6 +15807,7 @@ var WebchatCallBundle = (() => {
       var _a2;
       this.peerConnectionTimeout = roomConnectOptionDefaults.peerConnectionTimeout;
       this.log = livekitLogger;
+      this.iceLog = livekitLogger;
       this.updateState = () => {
         var _a3, _b2;
         const previousState = this.state;
@@ -15328,12 +15826,13 @@ var WebchatCallBundle = (() => {
           this.state = PCTransportState.NEW;
         }
         if (previousState !== this.state) {
-          this.log.debug("pc state change: from ".concat(PCTransportState[previousState], " to ").concat(PCTransportState[this.state]), this.logContext);
+          this.log.debug("pc state change: from ".concat(PCTransportState[previousState], " to ").concat(PCTransportState[this.state]));
           (_a3 = this.onStateChange) === null || _a3 === void 0 ? void 0 : _a3.call(this, this.state, this.publisher.getConnectionState(), (_b2 = this.subscriber) === null || _b2 === void 0 ? void 0 : _b2.getConnectionState());
         }
       };
-      this.log = getLogger((_a2 = loggerOptions.loggerName) !== null && _a2 !== void 0 ? _a2 : LoggerNames.PCManager);
       this.loggerOptions = loggerOptions;
+      this.log = getLogger((_a2 = loggerOptions.loggerName) !== null && _a2 !== void 0 ? _a2 : LoggerNames.PCManager, () => this.logContext);
+      this.iceLog = getLogger(LoggerNames.ICE, () => this.logContext);
       this.isPublisherConnectionRequired = mode !== "subscriber-primary";
       this.isSubscriberConnectionRequired = mode === "subscriber-primary";
       this.publisher = new PCTransport(rtcConfig, loggerOptions);
@@ -15404,9 +15903,9 @@ var WebchatCallBundle = (() => {
                 publisher.removeTrack(sender);
               }
             } catch (e2) {
-              this.log.warn("could not removeTrack", Object.assign(Object.assign({}, this.logContext), {
+              this.log.warn("could not removeTrack", {
                 error: e2
-              }));
+              });
             }
           }
         }
@@ -15416,6 +15915,7 @@ var WebchatCallBundle = (() => {
     }
     triggerIceRestart() {
       return __awaiter(this, void 0, void 0, function* () {
+        this.iceLog.warn("triggering ICE restart");
         if (this.subscriber) {
           this.subscriber.restartingIce = true;
         }
@@ -15429,6 +15929,10 @@ var WebchatCallBundle = (() => {
     addIceCandidate(candidate, target) {
       return __awaiter(this, void 0, void 0, function* () {
         var _a2;
+        this.iceLog.debug("adding remote ICE candidate", {
+          target,
+          candidate
+        });
         if (target === SignalTarget.PUBLISHER) {
           yield this.publisher.addIceCandidate(candidate);
         } else {
@@ -15439,11 +15943,11 @@ var WebchatCallBundle = (() => {
     createSubscriberAnswerFromOffer(sd, offerId) {
       return __awaiter(this, void 0, void 0, function* () {
         var _a2, _b2, _c;
-        this.log.debug("received server offer", Object.assign(Object.assign({}, this.logContext), {
+        this.log.debug("received server offer", {
           RTCSdpType: sd.type,
           sdp: sd.sdp,
           signalingState: (_a2 = this.subscriber) === null || _a2 === void 0 ? void 0 : _a2.getSignallingState().toString()
-        }));
+        });
         const unlock = yield this.remoteOfferLock.lock();
         try {
           const success = yield (_b2 = this.subscriber) === null || _b2 === void 0 ? void 0 : _b2.setRemoteDescription(sd, offerId);
@@ -15459,6 +15963,9 @@ var WebchatCallBundle = (() => {
     }
     updateConfiguration(config, iceRestart) {
       var _a2;
+      this.log.debug("updating rtc configuration", {
+        iceRestart
+      });
       this.publisher.setConfiguration(config);
       (_a2 = this.subscriber) === null || _a2 === void 0 ? void 0 : _a2.setConfiguration(config);
       if (iceRestart) {
@@ -15471,7 +15978,7 @@ var WebchatCallBundle = (() => {
         const unlock = yield this.connectionLock.lock();
         try {
           if (this.isPublisherConnectionRequired && this.publisher.getConnectionState() !== "connected" && this.publisher.getConnectionState() !== "connecting") {
-            this.log.debug("negotiation required, start negotiating", this.logContext);
+            this.log.debug("negotiation required, start negotiating");
             this.publisher.negotiate();
           }
           yield Promise.all((_a2 = this.requiredTransports) === null || _a2 === void 0 ? void 0 : _a2.map((transport) => this.ensureTransportConnected(transport, abortController, timeout)));
@@ -15535,6 +16042,9 @@ var WebchatCallBundle = (() => {
       const matchingTransceiver = transceivers.find((transceiver) => transceiver.receiver === receiver);
       return matchingTransceiver === null || matchingTransceiver === void 0 ? void 0 : matchingTransceiver.mid;
     }
+    getMaxPublisherMessageSize() {
+      return this.publisher.getMaxMessageSize();
+    }
     addPublisherTrack(track) {
       return this.publisher.addTrack(track);
     }
@@ -15573,7 +16083,7 @@ var WebchatCallBundle = (() => {
           }
           return new Promise((resolve, reject) => __awaiter(_this, void 0, void 0, function* () {
             const abortHandler = () => {
-              this.log.warn("abort transport connection", this.logContext);
+              this.log.warn("abort transport connection");
               CriticalTimers.clearTimeout(connectTimeout);
               reject(ConnectionError.cancelled("room connection has been cancelled"));
             };
@@ -15598,6 +16108,579 @@ var WebchatCallBundle = (() => {
           }));
         }();
       });
+    }
+  };
+  var FlowControlledDataChannel = class {
+    constructor(opts) {
+      this.bufferStatusLow = true;
+      this.headroomLock = new _();
+      this.waiterAbortController = new AbortController();
+      this.kind = opts.kind;
+      this.lowWaterMark = opts.lowWaterMark;
+      this.highWaterMark = opts.highWaterMark;
+      this.isEngineClosed = opts.isEngineClosed;
+      this.onBufferStatusChanged = opts.onBufferStatusChanged;
+    }
+    /** The currently attached RTCDataChannel handle, if any. */
+    get channelHandle() {
+      return this.handle;
+    }
+    /**
+     * Attaches the channel handle this wrapper controls. Replacing an existing handle rejects
+     * parked waiters — their events would never fire again on the abandoned object — and installs a
+     * fresh controller, so queued senders re-check against the new channel. Wrappers outlive their
+     * handles: this is the one place handle turnover happens, which is what makes stranding a
+     * waiter structurally impossible.
+     */
+    attach(dc) {
+      if (this.handle && this.handle !== dc) {
+        this.invalidateWaiters("data channel replaced");
+      }
+      this.handle = dc;
+    }
+    /** Detaches the handle on teardown, rejecting parked waiters. */
+    detach() {
+      let reason = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : "data channel torn down";
+      if (this.handle) {
+        this.invalidateWaiters(reason);
+      }
+      this.handle = void 0;
+    }
+    getChannel() {
+      return this.handle;
+    }
+    /**
+     * Whether the send buffer has room to accept more data (the send gate). Senders proceed while
+     * this is true and block once it goes false. Callers resolve the handle (and decide what an
+     * absent one means) before asking.
+     */
+    isBelowHighWaterMark(dc) {
+      return dc.bufferedAmount <= this.highWaterMark;
+    }
+    /**
+     * Whether the send buffer has drained to its low-water mark. Drives the engine's public
+     * DCBufferStatusChanged event.
+     */
+    isBelowLowWaterMark(dc) {
+      return dc.bufferedAmount <= dc.bufferedAmountLowThreshold;
+    }
+    /**
+     * Acquires the headroom lock, resolving with the unlock function. Batch senders (the resume
+     * replay) hold it across all of their sends so no other sender can interleave, calling
+     * {@link waitForHeadroomWithoutLock} per message to respect flow control within the batch.
+     */
+    lockHeadroom() {
+      return this.headroomLock.lock();
+    }
+    /**
+     * Resolves once the caller may send on this channel: immediately while the send buffer is at or
+     * below its high-water mark, otherwise once the buffer has drained to the low-water mark (the
+     * `bufferedamountlow` event). Callers are serialized through the headroom lock so that, when
+     * the buffer drains, they refill it one at a time (up to the high-water mark) rather than all
+     * sending at once and overflowing the SCTP send buffer (see livekit/client-sdk-js#1995). The
+     * closed/buffer checks run inside the lock so queued callers proceed in FIFO order.
+     */
+    waitForHeadroomWithLock() {
+      return __awaiter(this, void 0, void 0, function* () {
+        const unlock = yield this.lockHeadroom();
+        try {
+          yield this.waitForHeadroomWithoutLock();
+        } finally {
+          unlock();
+        }
+      });
+    }
+    /** Core wait of {@link waitForHeadroomWithLock}. The caller must hold the headroom lock. */
+    waitForHeadroomWithoutLock() {
+      return __awaiter(this, void 0, void 0, function* () {
+        if (this.isEngineClosed()) {
+          throw new UnexpectedConnectionState("engine closed");
+        }
+        const dc = this.getChannel();
+        if (!dc) {
+          throw new UnexpectedConnectionState("DataChannel not found, kind: ".concat(this.kind));
+        }
+        if (this.isBelowHighWaterMark(dc)) {
+          return;
+        }
+        const abortSignal = this.waiterAbortController.signal;
+        yield new TypedPromise((resolve, reject) => {
+          const onBufferedAmountLow = () => {
+            cleanup();
+            resolve();
+          };
+          const onDCClose = () => {
+            cleanup();
+            reject(new UnexpectedConnectionState("DataChannel ".concat(this.kind, " closed while draining the buffer")));
+          };
+          const onAbort = () => {
+            cleanup();
+            reject(new UnexpectedConnectionState("DataChannel ".concat(this.kind, " was replaced or torn down while waiting for headroom")));
+          };
+          const cleanup = () => {
+            dc.removeEventListener("bufferedamountlow", onBufferedAmountLow);
+            dc.removeEventListener("close", onDCClose);
+            abortSignal.removeEventListener("abort", onAbort);
+          };
+          if (abortSignal.aborted) {
+            onAbort();
+            return;
+          }
+          dc.addEventListener("bufferedamountlow", onBufferedAmountLow);
+          dc.addEventListener("close", onDCClose);
+          abortSignal.addEventListener("abort", onAbort);
+        });
+      });
+    }
+    /** Rejects all parked headroom waiters; the next waiter gets a fresh controller. */
+    invalidateWaiters(reason) {
+      this.waiterAbortController.abort(reason);
+      this.waiterAbortController = new AbortController();
+    }
+    /**
+     * Recomputes whether the buffer has drained to the low-water mark and, if that changed since the
+     * last check, notifies the status listener. Two independent triggers land here: a send (which
+     * raises the buffer) and the `bufferedamountlow` drain event (which lowers it) — the latter has
+     * no send to hang the work off, which is why this is a shared entry point rather than a tail of
+     * `send`.
+     */
+    refreshBufferStatus() {
+      var _a2;
+      const dc = this.getChannel();
+      if (!dc) {
+        return;
+      }
+      const isLow = this.isBelowLowWaterMark(dc);
+      if (isLow !== this.bufferStatusLow) {
+        this.bufferStatusLow = isLow;
+        (_a2 = this.onBufferStatusChanged) === null || _a2 === void 0 ? void 0 : _a2.call(this, isLow);
+      }
+    }
+  };
+  var LossyDataChannel = class extends FlowControlledDataChannel {
+    constructor(opts) {
+      super(opts);
+      this.statCurrentBytes = 0;
+      this.statByterate = 0;
+      this.dropCount = 0;
+      this.bufferFullBehavior = opts.bufferFullBehavior;
+      this.shouldSkipSends = opts.shouldSkipSends;
+    }
+    /** Sends prepared bytes with this channel's full-buffer policy (drop or wait). */
+    send(msg) {
+      return __awaiter(this, void 0, void 0, function* () {
+        const dc = this.getChannel();
+        if (!dc) {
+          return;
+        }
+        switch (this.bufferFullBehavior) {
+          case "wait":
+            if (!this.isBelowHighWaterMark(dc)) {
+              yield this.waitForHeadroomWithLock();
+            }
+            break;
+          case "drop":
+            if (!this.isBelowLowWaterMark(dc)) {
+              this.dropCount += 1;
+              if (this.dropCount % 100 === 0) {
+                livekitLogger.warn("dropping lossy data channel messages, total dropped: ".concat(this.dropCount));
+              }
+              return;
+            }
+        }
+        this.statCurrentBytes += msg.byteLength;
+        if (this.shouldSkipSends()) {
+          return;
+        }
+        try {
+          dc.send(msg);
+          this.refreshBufferStatus();
+        } catch (error) {
+          if (error instanceof TypeError) {
+            livekitLogger.error(error);
+          } else {
+            throw error;
+          }
+        }
+      });
+    }
+    /**
+     * Starts the once-per-second adjustment of the channel's `bufferedAmountLowThreshold` to the
+     * observed byterate, keeping the drop gate at roughly 100ms of buffered latency (clamped to
+     * the watermarks). Restarts cleanly if already running.
+     */
+    startThresholdTuning() {
+      this.stopThresholdTuning();
+      this.statInterval = CriticalTimers.setInterval(() => {
+        this.statByterate = this.statCurrentBytes;
+        this.statCurrentBytes = 0;
+        const dc = this.getChannel();
+        if (dc) {
+          const threshold = this.statByterate / 10;
+          dc.bufferedAmountLowThreshold = Math.min(Math.max(threshold, this.lowWaterMark), this.highWaterMark);
+        }
+      }, 1e3);
+    }
+    /** Stops the threshold tuning and resets the stats and drop counter. */
+    stopThresholdTuning() {
+      this.statByterate = 0;
+      this.statCurrentBytes = 0;
+      if (this.statInterval) {
+        CriticalTimers.clearInterval(this.statInterval);
+        this.statInterval = void 0;
+      }
+      this.dropCount = 0;
+    }
+  };
+  var DataPacketBuffer = class {
+    constructor() {
+      this.buffer = [];
+      this._totalSize = 0;
+      this._sentSize = 0;
+    }
+    push(item) {
+      this.buffer.push(item);
+      this._totalSize += item.data.byteLength;
+      if (item.sent) {
+        this._sentSize += item.data.byteLength;
+      }
+    }
+    pop() {
+      const item = this.buffer.shift();
+      if (item) {
+        this._totalSize -= item.data.byteLength;
+        if (item.sent) {
+          this._sentSize -= item.data.byteLength;
+        }
+      }
+      return item;
+    }
+    getAll() {
+      return this.buffer.slice();
+    }
+    /** Every queued packet not yet handed to the channel, in sequence order. */
+    getUnsent() {
+      return this.buffer.filter((item) => !item.sent);
+    }
+    /** Marks a single queued packet as handed to the channel. */
+    markSent(item) {
+      if (!item.sent) {
+        item.sent = true;
+        this._sentSize += item.data.byteLength;
+      }
+    }
+    /**
+     * Marks every queued packet as not-yet-sent. Used at the start of a resume replay: whatever is
+     * still buffered was sent on the previous channel (or deferred) and must be re-handed to the
+     * current one, so none of it counts as sent until the replay actually transmits it.
+     */
+    markAllUnsent() {
+      for (const item of this.buffer) {
+        item.sent = false;
+      }
+      this._sentSize = 0;
+    }
+    popToSequence(sequence) {
+      while (this.buffer.length > 0) {
+        const first = this.buffer[0];
+        if (first.sequence <= sequence) {
+          this.pop();
+        } else {
+          break;
+        }
+      }
+    }
+    alignBufferedAmount(bufferedAmount) {
+      while (this.buffer.length > 0) {
+        const first = this.buffer[0];
+        if (!first.sent) {
+          break;
+        }
+        if (this._sentSize - first.data.byteLength <= bufferedAmount) {
+          break;
+        }
+        this.pop();
+      }
+    }
+    get length() {
+      return this.buffer.length;
+    }
+  };
+  var ReliableDataChannel = class extends FlowControlledDataChannel {
+    constructor(opts) {
+      super(opts);
+      this.messageBuffer = new DataPacketBuffer();
+      this.sequence = 1;
+      this.isDeferringSends = opts.isDeferringSends;
+    }
+    /**
+     * Claims the next packet sequence. The caller stamps it into the packet before serialization,
+     * then passes it back to {@link send} so the replay buffer stays keyed by wire sequence.
+     */
+    nextSequence() {
+      const sequence = this.sequence;
+      this.sequence += 1;
+      return sequence;
+    }
+    /**
+     * Sends prepared bytes with reliable semantics. Resolves once the packet has either been handed
+     * to the channel or queued for the resume replay; throws only when the engine is closed.
+     */
+    send(msg, sequence) {
+      return __awaiter(this, void 0, void 0, function* () {
+        if (this.isDeferringSends()) {
+          this.messageBuffer.push({
+            data: msg,
+            sequence,
+            sent: false
+          });
+          return;
+        }
+        const dc = this.getChannel();
+        if (!dc) {
+          return;
+        }
+        try {
+          yield this.waitForHeadroomWithLock();
+        } catch (error) {
+          if (this.isEngineClosed()) {
+            throw error;
+          }
+          this.messageBuffer.push({
+            data: msg,
+            sequence,
+            sent: false
+          });
+          return;
+        }
+        if (this.isDeferringSends()) {
+          this.messageBuffer.push({
+            data: msg,
+            sequence,
+            sent: false
+          });
+          return;
+        }
+        this.messageBuffer.push({
+          data: msg,
+          sequence,
+          sent: true
+        });
+        dc.send(msg);
+        this.refreshBufferStatus();
+      });
+    }
+    /**
+     * Replays the buffered backlog after a resume: drops everything the server acked
+     * (`lastMessageSeq`), then re-sends the rest in order. The headroom lock is held across the
+     * whole replay — releasing it between messages would let a concurrent send (whose newer
+     * sequence was already assigned before it queued on the lock) hit the wire mid-replay, and
+     * receivers would then discard the remaining lower-sequence resent messages as duplicates.
+     */
+    replay(lastMessageSeq) {
+      return __awaiter(this, void 0, void 0, function* () {
+        const dc = this.getChannel();
+        if (!dc) {
+          return;
+        }
+        this.messageBuffer.popToSequence(lastMessageSeq);
+        const unlock = yield this.lockHeadroom();
+        try {
+          this.messageBuffer.markAllUnsent();
+          for (let batch = this.messageBuffer.getUnsent(); batch.length > 0; batch = this.messageBuffer.getUnsent()) {
+            for (const item of batch) {
+              yield this.waitForHeadroomWithoutLock();
+              dc.send(item.data);
+              this.messageBuffer.markSent(item);
+            }
+          }
+        } finally {
+          unlock();
+        }
+        this.refreshBufferStatus();
+      });
+    }
+    /**
+     * Before recomputing status, trim packets the transport has now delivered — a send or a drain
+     * may have acked buffered packets, and the replay buffer is keyed off the channel's buffered
+     * bytes.
+     */
+    refreshBufferStatus() {
+      const dc = this.channelHandle;
+      if (dc) {
+        this.messageBuffer.alignBufferedAmount(dc.bufferedAmount);
+      }
+      super.refreshBufferStatus();
+    }
+    /**
+     * Drops all replay state and restarts sequencing. Only valid on a full reconnect, where the
+     * session (and the receivers' sequence tracking) starts over.
+     */
+    reset() {
+      this.messageBuffer = new DataPacketBuffer();
+      this.sequence = 1;
+    }
+  };
+  var DataChannelKind;
+  (function(DataChannelKind2) {
+    DataChannelKind2[DataChannelKind2["RELIABLE"] = 0] = "RELIABLE";
+    DataChannelKind2[DataChannelKind2["LOSSY"] = 1] = "LOSSY";
+    DataChannelKind2[DataChannelKind2["DATA_TRACK_LOSSY"] = 2] = "DATA_TRACK_LOSSY";
+  })(DataChannelKind || (DataChannelKind = {}));
+  var reliableDataChannelWaterMarkLow = 64 * 1024;
+  var reliableDataChannelWaterMarkHigh = 1024 * 1024;
+  var lossyDataChannelWaterMarkLow = 8 * 1024;
+  var lossyDataChannelWaterMarkHigh = 256 * 1024;
+  function dataChannelLowWaterMark(kind) {
+    return kind === DataChannelKind.RELIABLE ? reliableDataChannelWaterMarkLow : lossyDataChannelWaterMarkLow;
+  }
+  function dataChannelHighWaterMark(kind) {
+    return kind === DataChannelKind.RELIABLE ? reliableDataChannelWaterMarkHigh : lossyDataChannelWaterMarkHigh;
+  }
+  var lossyDataChannelLabel = "_lossy";
+  var reliableDataChannelLabel = "_reliable";
+  var dataTrackDataChannelLabel = "_data_track";
+  var DataChannelManager = class {
+    constructor(opts) {
+      this.opts = opts;
+      const flowControlOptions = (kind) => ({
+        kind,
+        lowWaterMark: dataChannelLowWaterMark(kind),
+        highWaterMark: dataChannelHighWaterMark(kind),
+        isEngineClosed: opts.isEngineClosed,
+        onBufferStatusChanged: (isLow) => opts.onBufferStatusChanged(kind, isLow)
+      });
+      this.reliable = new ReliableDataChannel(Object.assign(Object.assign({}, flowControlOptions(DataChannelKind.RELIABLE)), {
+        isDeferringSends: opts.isReconnecting
+      }));
+      this.lossy = new LossyDataChannel(Object.assign(Object.assign({}, flowControlOptions(DataChannelKind.LOSSY)), {
+        // Classic lossy user data: a stale packet is worthless, so drop instead of queueing.
+        bufferFullBehavior: "drop",
+        shouldSkipSends: opts.isReconnecting
+      }));
+      this.dataTrack = new LossyDataChannel(Object.assign(Object.assign({}, flowControlOptions(DataChannelKind.DATA_TRACK_LOSSY)), {
+        // Data tracks backpressure the producer instead — it decides what to skip at frame
+        // granularity rather than the engine dropping arbitrary chunks out of frames.
+        bufferFullBehavior: "wait",
+        shouldSkipSends: opts.isReconnecting
+      }));
+    }
+    /** The flow-control wrapper for `kind`. */
+    channelFor(kind) {
+      switch (kind) {
+        case DataChannelKind.RELIABLE:
+          return this.reliable;
+        case DataChannelKind.LOSSY:
+          return this.lossy;
+        case DataChannelKind.DATA_TRACK_LOSSY:
+          return this.dataTrack;
+      }
+    }
+    /** The raw RTCDataChannel handle for `kind`, publisher side by default. */
+    getHandle(kind) {
+      let subscriber = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : false;
+      if (!subscriber) {
+        return this.channelFor(kind).channelHandle;
+      }
+      switch (kind) {
+        case DataChannelKind.RELIABLE:
+          return this.reliableSub;
+        case DataChannelKind.LOSSY:
+          return this.lossySub;
+        case DataChannelKind.DATA_TRACK_LOSSY:
+          return this.dataTrackSub;
+      }
+    }
+    get hasPublisherChannels() {
+      return Boolean(this.reliable.channelHandle || this.lossy.channelHandle || this.dataTrack.channelHandle);
+    }
+    /**
+     * Creates the three publisher data channels on the given transport, wires their handlers, and
+     * attaches them to the wrappers — attaching rejects any waiters still parked on replaced
+     * channel objects.
+     */
+    createPublisherChannels(pcManager) {
+      for (const channel of [this.lossy, this.reliable, this.dataTrack]) {
+        const old = channel.channelHandle;
+        if (old) {
+          old.onmessage = null;
+          old.onerror = null;
+          old.onclose = null;
+        }
+      }
+      const wire = (channel, dc, onMessage) => {
+        dc.onmessage = onMessage;
+        dc.onerror = this.opts.onDataError;
+        dc.onclose = () => this.opts.onChannelClose(channel.kind);
+        dc.bufferedAmountLowThreshold = channel.lowWaterMark;
+        dc.onbufferedamountlow = () => channel.refreshBufferStatus();
+        channel.attach(dc);
+      };
+      wire(this.lossy, pcManager.createPublisherDataChannel(lossyDataChannelLabel, {
+        ordered: false,
+        maxRetransmits: 0
+      }), this.opts.onDataMessage);
+      wire(this.reliable, pcManager.createPublisherDataChannel(reliableDataChannelLabel, {
+        ordered: true
+      }), this.opts.onDataMessage);
+      wire(this.dataTrack, pcManager.createPublisherDataChannel(dataTrackDataChannelLabel, {
+        ordered: false,
+        maxRetransmits: 0
+      }), this.opts.onDataTrackMessage);
+      this.lossy.startThresholdTuning();
+    }
+    /**
+     * Adopts a subscriber-side data channel by label, wiring the matching receive handler.
+     * Returns false for labels this manager doesn't own.
+     */
+    adoptSubscriberChannel(channel) {
+      let handler;
+      if (channel.label === reliableDataChannelLabel) {
+        this.reliableSub = channel;
+        handler = this.opts.onDataMessage;
+      } else if (channel.label === lossyDataChannelLabel) {
+        this.lossySub = channel;
+        handler = this.opts.onDataMessage;
+      } else if (channel.label === dataTrackDataChannelLabel) {
+        this.dataTrackSub = channel;
+        handler = this.opts.onDataTrackMessage;
+      } else {
+        return false;
+      }
+      channel.onmessage = handler;
+      return true;
+    }
+    /**
+     * Tears down all channels for a peer-connection cleanup: rejects parked waiters (detach — the
+     * spec allows `pc.close()` to transition channels to 'closed' without firing events, so waiting
+     * for browser close events is not an option), strips handlers, closes the handles, and resets
+     * the reliable session state.
+     */
+    teardown() {
+      const dcCleanup = (dc) => {
+        if (!dc) {
+          return;
+        }
+        dc.onbufferedamountlow = null;
+        dc.onclose = null;
+        dc.onclosing = null;
+        dc.onerror = null;
+        dc.onmessage = null;
+        dc.onopen = null;
+        dc.close();
+      };
+      for (const channel of [this.lossy, this.reliable, this.dataTrack]) {
+        const dc = channel.channelHandle;
+        channel.detach("peer connections cleaned up");
+        dcCleanup(dc);
+      }
+      dcCleanup(this.lossySub);
+      dcCleanup(this.reliableSub);
+      dcCleanup(this.dataTrackSub);
+      this.lossySub = void 0;
+      this.reliableSub = void 0;
+      this.dataTrackSub = void 0;
+      this.reliable.reset();
     }
   };
   var isMediaRecorderAvailable = typeof MediaRecorder !== "undefined";
@@ -16361,6 +17444,18 @@ var WebchatCallBundle = (() => {
         yield this.restart(constraints);
       });
     }
+    applyConstraints(constraints) {
+      return __awaiter(this, void 0, void 0, function* () {
+        const unlock = yield this.trackChangeLock.lock();
+        try {
+          const res = yield this._mediaStreamTrack.applyConstraints(constraints);
+          this._constraints = Object.assign(Object.assign({}, this._constraints), constraints);
+          return res;
+        } finally {
+          unlock();
+        }
+      });
+    }
     restart(constraints, isUnmuting) {
       const _super = Object.create(null, {
         restart: {
@@ -16692,7 +17787,7 @@ var WebchatCallBundle = (() => {
   }
   function sortPresets(presets) {
     if (!presets) return;
-    return presets.sort((a, b) => {
+    return presets.slice().sort((a, b) => {
       const aEnc = a.encoding;
       const bEnc = b.encoding;
       if (aEnc.maxBitrate > bEnc.maxBitrate) {
@@ -16728,10 +17823,13 @@ var WebchatCallBundle = (() => {
     }
   };
   function getDefaultDegradationPreference(track) {
-    if (track.source === Track.Source.ScreenShare || track.constraints.height && unwrapConstraint(track.constraints.height) >= 1080) {
-      return "maintain-resolution";
-    } else {
-      return "balanced";
+    switch (track.source) {
+      case Track.Source.Camera:
+        return "maintain-framerate";
+      case Track.Source.ScreenShare:
+        return "maintain-resolution";
+      default:
+        return "balanced";
     }
   }
   var refreshSubscribedCodecAfterNewCodec = 5e3;
@@ -17169,17 +18267,36 @@ var WebchatCallBundle = (() => {
     setDegradationPreference(preference) {
       return __awaiter(this, void 0, void 0, function* () {
         this.degradationPreference = preference;
-        if (this.sender) {
-          try {
-            this.log.debug("setting degradationPreference to ".concat(preference), this.logContext);
-            const params = this.sender.getParameters();
-            params.degradationPreference = preference;
-            this.sender.setParameters(params);
-          } catch (e2) {
-            this.log.warn("failed to set degradationPreference", Object.assign({
-              error: e2
-            }, this.logContext));
-          }
+        yield this.applyDegradationPreference(this.sender);
+        for (const sc of this.simulcastCodecs.values()) {
+          yield this.applyDegradationPreference(sc.sender);
+        }
+      });
+    }
+    /**
+     * Degradation preference is a property of the sender, not of the track, so every sender
+     * publishing this track needs it applied separately. A backup codec publishes over its
+     * own sender, which would otherwise let the browser resolve a preference implicitly and
+     * diverge from the primary encoder.
+     *
+     * Callers apply this sequentially rather than concurrently: `setParameters` is only valid
+     * against the parameters most recently returned by `getParameters`, which is why this file
+     * serializes other sender parameter updates through `senderLock`.
+     */
+    applyDegradationPreference(sender) {
+      return __awaiter(this, void 0, void 0, function* () {
+        if (!sender) {
+          return;
+        }
+        try {
+          this.log.debug("setting degradationPreference to ".concat(this.degradationPreference), this.logContext);
+          const params = sender.getParameters();
+          params.degradationPreference = this.degradationPreference;
+          yield sender.setParameters(params);
+        } catch (e2) {
+          this.log.warn("failed to set degradationPreference", Object.assign({
+            error: e2
+          }, this.logContext));
         }
       });
     }
@@ -17198,16 +18315,19 @@ var WebchatCallBundle = (() => {
       return simulcastCodecInfo;
     }
     setSimulcastTrackSender(codec, sender) {
-      const simulcastCodecInfo = this.simulcastCodecs.get(codec);
-      if (!simulcastCodecInfo) {
-        return;
-      }
-      simulcastCodecInfo.sender = sender;
-      setTimeout(() => {
-        if (this.subscribedCodecs) {
-          this.setPublishingCodecs(this.subscribedCodecs);
+      return __awaiter(this, void 0, void 0, function* () {
+        const simulcastCodecInfo = this.simulcastCodecs.get(codec);
+        if (!simulcastCodecInfo) {
+          return;
         }
-      }, refreshSubscribedCodecAfterNewCodec);
+        simulcastCodecInfo.sender = sender;
+        yield this.applyDegradationPreference(sender);
+        setTimeout(() => {
+          if (this.subscribedCodecs) {
+            this.setPublishingCodecs(this.subscribedCodecs);
+          }
+        }, refreshSubscribedCodecAfterNewCodec);
+      });
     }
     /**
      * @internal
@@ -17465,14 +18585,10 @@ var WebchatCallBundle = (() => {
       });
     });
   }
-  var lossyDataChannel = "_lossy";
-  var reliableDataChannel = "_reliable";
-  var dataTrackDataChannel = "_data_track";
   var minReconnectWait = 2 * 1e3;
   var leaveReconnect = "leave-reconnect";
+  var connectionQualityLostTimeout = 10 * 1e3;
   var reliabeReceiveStateTTL = 3e4;
-  var lossyDataChannelBufferThresholdMin = 8 * 1024;
-  var lossyDataChannelBufferThresholdMax = 256 * 1024;
   var initialMediaSectionsAudio = 3;
   var initialMediaSectionsVideo = 3;
   var PCState;
@@ -17483,12 +18599,7 @@ var WebchatCallBundle = (() => {
     PCState2[PCState2["Reconnecting"] = 3] = "Reconnecting";
     PCState2[PCState2["Closed"] = 4] = "Closed";
   })(PCState || (PCState = {}));
-  var DataChannelKind;
-  (function(DataChannelKind2) {
-    DataChannelKind2[DataChannelKind2["RELIABLE"] = 0] = "RELIABLE";
-    DataChannelKind2[DataChannelKind2["LOSSY"] = 1] = "LOSSY";
-    DataChannelKind2[DataChannelKind2["DATA_TRACK_LOSSY"] = 2] = "DATA_TRACK_LOSSY";
-  })(DataChannelKind || (DataChannelKind = {}));
+  var DEFAULT_MAX_MESSAGE_SIZE = 64e3;
   var RTCEngine = class extends eventsExports.EventEmitter {
     get isClosed() {
       return this._isClosed;
@@ -17498,6 +18609,15 @@ var WebchatCallBundle = (() => {
     }
     get pendingReconnect() {
       return !!this.reconnectTimeout;
+    }
+    get reliableChannel() {
+      return this.dataChannels.reliable;
+    }
+    get lossyChannel() {
+      return this.dataChannels.lossy;
+    }
+    get dataTrackChannel() {
+      return this.dataChannels.dataTrack;
     }
     constructor(options) {
       var _a2;
@@ -17520,15 +18640,9 @@ var WebchatCallBundle = (() => {
       this.shouldFailNext = false;
       this.shouldFailOnV1Path = false;
       this.log = livekitLogger;
-      this.reliableDataSequence = 1;
-      this.reliableMessageBuffer = new DataPacketBuffer();
       this.reliableReceivedState = new TTLMap(reliabeReceiveStateTTL);
-      this.lossyDataStatCurrentBytes = 0;
-      this.lossyDataStatByterate = 0;
-      this.lossyDataDropCount = 0;
       this.midToTrackId = {};
       this.isWaitingForNetworkReconnect = false;
-      this.bufferStatusLowClosingFuture = new Future();
       this.handleDataChannel = (_a3) => __awaiter(this, [_a3], void 0, function(_ref) {
         var _this = this;
         let channel = _ref.channel;
@@ -17536,39 +18650,20 @@ var WebchatCallBundle = (() => {
           if (!channel) {
             return;
           }
-          let handler;
-          if (channel.label === reliableDataChannel) {
-            _this.reliableDCSub = channel;
-            handler = _this.handleDataMessage;
-          } else if (channel.label === lossyDataChannel) {
-            _this.lossyDCSub = channel;
-            handler = _this.handleDataMessage;
-          } else if (channel.label === dataTrackDataChannel) {
-            _this.dataTrackDCSub = channel;
-            handler = _this.handleDataTrackMessage;
-          } else {
-            return;
+          if (_this.dataChannels.adoptSubscriberChannel(channel)) {
+            _this.log.debug("on data channel ".concat(channel.id, ", ").concat(channel.label));
           }
-          _this.log.debug("on data channel ".concat(channel.id, ", ").concat(channel.label));
-          channel.onmessage = handler;
         }();
       });
       this.handleDataMessage = (message) => __awaiter(this, void 0, void 0, function* () {
         var _a3, _b2, _c, _d, _e;
         const unlock = yield this.dataProcessLock.lock();
         try {
-          let buffer;
-          if (message.data instanceof ArrayBuffer) {
-            buffer = message.data;
-          } else if (message.data instanceof Blob) {
-            buffer = yield message.data.arrayBuffer();
-          } else {
-            this.log.error("unsupported data type", {
-              data: message.data
-            });
+          const bytes = yield this.decodeDataMessage(message);
+          if (!bytes) {
             return;
           }
-          const dp = DataPacket.fromBinary(new Uint8Array(buffer));
+          const dp = DataPacket.fromBinary(bytes);
           if (dp.sequence > 0 && dp.participantSid !== "") {
             const lastSeq = this.reliableReceivedState.get(dp.participantSid);
             if (lastSeq && dp.sequence <= lastSeq) {
@@ -17605,26 +18700,24 @@ var WebchatCallBundle = (() => {
         }
       });
       this.handleDataTrackMessage = (message) => __awaiter(this, void 0, void 0, function* () {
-        let buffer;
-        if (message.data instanceof ArrayBuffer) {
-          buffer = message.data;
-        } else if (message.data instanceof Blob) {
-          buffer = yield message.data.arrayBuffer();
-        } else {
-          this.log.error("unsupported data type", {
-            data: message.data
-          });
+        const bytes = yield this.decodeDataMessage(message);
+        if (!bytes) {
           return;
         }
-        this.emit("dataTrackPacketReceived", new Uint8Array(buffer));
+        this.emit("dataTrackPacketReceived", bytes);
       });
       this.handleDataError = (event) => {
+        if (this._isClosed) {
+          return;
+        }
         const channel = event.currentTarget;
         const channelKind = channel.maxRetransmits === 0 ? "lossy" : "reliable";
-        if (event instanceof ErrorEvent && event.error) {
-          const error = event.error.error;
-          this.log.error("DataChannel error on ".concat(channelKind, ": ").concat(event.message), {
-            error
+        if (typeof RTCErrorEvent !== "undefined" && event instanceof RTCErrorEvent && event.error) {
+          const error = event.error;
+          this.log.error("DataChannel error on ".concat(channelKind, ": ").concat(error.message), {
+            error,
+            errorDetail: error.errorDetail,
+            sctpCauseCode: error.sctpCauseCode
           });
         } else {
           this.log.error("Unknown DataChannel error on ".concat(channelKind), {
@@ -17632,8 +18725,11 @@ var WebchatCallBundle = (() => {
           });
         }
       };
-      this.handleBufferedAmountLow = (channelKind) => {
-        this.updateAndEmitDCBufferStatus(channelKind);
+      this.handleDataChannelClose = (kind) => () => {
+        var _a3;
+        if (!this._isClosed && ((_a3 = this.pcManager) === null || _a3 === void 0 ? void 0 : _a3.publisher.getConnectionState()) === "connected") {
+          this.log.error("publisher data channel '".concat(DataChannelKind[kind], "' closed unexpectedly"), this.logContext);
+        }
       };
       this.handleDisconnect = (connection, disconnectReason) => {
         if (this._isClosed) {
@@ -17683,25 +18779,6 @@ var WebchatCallBundle = (() => {
           this.once(EngineEvent.Restarted, onRestarted);
           this.once(EngineEvent.Disconnected, onDisconnected);
         });
-      };
-      this.updateAndEmitDCBufferStatus = (kind) => {
-        if (kind === DataChannelKind.RELIABLE) {
-          const dc = this.dataChannelForKind(kind);
-          if (dc) {
-            this.reliableMessageBuffer.alignBufferedAmount(dc.bufferedAmount);
-          }
-        }
-        const status = this.isBufferStatusLow(kind);
-        if (typeof status !== "undefined" && status !== this.dcBufferStatus.get(kind)) {
-          this.dcBufferStatus.set(kind, status);
-          this.emit(EngineEvent.DCBufferStatusChanged, status, kind);
-        }
-      };
-      this.isBufferStatusLow = (kind) => {
-        const dc = this.dataChannelForKind(kind);
-        if (dc) {
-          return dc.bufferedAmount <= dc.bufferedAmountLowThreshold;
-        }
       };
       this.onRtpMapAvailable = (rtpTypes) => {
         const rtpMap = /* @__PURE__ */ new Map();
@@ -17763,9 +18840,20 @@ var WebchatCallBundle = (() => {
       this.reconnectPolicy = this.options.reconnectPolicy;
       this.closingLock = new _();
       this.dataProcessLock = new _();
-      this.dcBufferStatus = /* @__PURE__ */ new Map([[DataChannelKind.RELIABLE, true], [DataChannelKind.LOSSY, true], [DataChannelKind.DATA_TRACK_LOSSY, true]]);
+      this.dataChannels = new DataChannelManager({
+        isEngineClosed: () => this.isClosed,
+        isReconnecting: () => this.attemptingReconnect,
+        onDataMessage: (message) => this.handleDataMessage(message),
+        onDataTrackMessage: (message) => this.handleDataTrackMessage(message),
+        onDataError: (event) => this.handleDataError(event),
+        onChannelClose: (kind) => this.handleDataChannelClose(kind)(),
+        onBufferStatusChanged: (kind, isLow) => this.emit(EngineEvent.DCBufferStatusChanged, isLow, kind)
+      });
       this.client.onParticipantUpdate = (updates) => this.emit(EngineEvent.ParticipantUpdate, updates);
-      this.client.onConnectionQuality = (update) => this.emit(EngineEvent.ConnectionQualityUpdate, update);
+      this.client.onConnectionQuality = (update) => {
+        this.handleLocalConnectionQuality(update);
+        this.emit(EngineEvent.ConnectionQualityUpdate, update);
+      };
       this.client.onRoomUpdate = (update) => this.emit(EngineEvent.RoomUpdate, update);
       this.client.onSubscriptionError = (resp) => this.emit(EngineEvent.SubscriptionError, resp);
       this.client.onSubscriptionPermissionUpdate = (update) => this.emit(EngineEvent.SubscriptionPermissionUpdate, update);
@@ -17774,12 +18862,6 @@ var WebchatCallBundle = (() => {
       this.client.onRequestResponse = (response) => this.emit(EngineEvent.SignalRequestResponse, response);
       this.client.onParticipantUpdate = (updates) => this.emit(EngineEvent.ParticipantUpdate, updates);
       this.client.onJoined = (joinResponse) => this.emit(EngineEvent.Joined, joinResponse);
-      this.on(EngineEvent.Closing, () => {
-        var _a3, _b2;
-        (_b2 = (_a3 = this.bufferStatusLowClosingFuture).reject) === null || _b2 === void 0 ? void 0 : _b2.call(_a3, new UnexpectedConnectionState("engine closed"));
-      });
-      this.bufferStatusLowClosingFuture.promise.catch(() => {
-      });
     }
     /** @internal */
     get logContext() {
@@ -17897,6 +18979,7 @@ var WebchatCallBundle = (() => {
           this.removeAllListeners();
           this.deregisterOnLineListener();
           this.clearPendingReconnect();
+          this.clearLostQualityTimeout();
           this.cleanupLossyDataStats();
           yield this.cleanupPeerConnections();
           yield this.cleanupClient();
@@ -17908,43 +18991,15 @@ var WebchatCallBundle = (() => {
     cleanupPeerConnections() {
       return __awaiter(this, void 0, void 0, function* () {
         var _a2;
+        this.dataChannels.teardown();
         yield (_a2 = this.pcManager) === null || _a2 === void 0 ? void 0 : _a2.close();
         this.pcManager = void 0;
-        const dcCleanup = (dc) => {
-          if (!dc) return;
-          dc.close();
-          dc.onbufferedamountlow = null;
-          dc.onclose = null;
-          dc.onclosing = null;
-          dc.onerror = null;
-          dc.onmessage = null;
-          dc.onopen = null;
-        };
-        dcCleanup(this.lossyDC);
-        dcCleanup(this.lossyDCSub);
-        dcCleanup(this.reliableDC);
-        dcCleanup(this.reliableDCSub);
-        dcCleanup(this.dataTrackDC);
-        dcCleanup(this.dataTrackDCSub);
-        this.lossyDC = void 0;
-        this.lossyDCSub = void 0;
-        this.reliableDC = void 0;
-        this.reliableDCSub = void 0;
-        this.dataTrackDC = void 0;
-        this.dataTrackDCSub = void 0;
-        this.reliableMessageBuffer = new DataPacketBuffer();
-        this.reliableDataSequence = 1;
+        this.transportConnectingSince = void 0;
         this.reliableReceivedState.clear();
       });
     }
     cleanupLossyDataStats() {
-      this.lossyDataStatByterate = 0;
-      this.lossyDataStatCurrentBytes = 0;
-      if (this.lossyDataStatInterval) {
-        clearInterval(this.lossyDataStatInterval);
-        this.lossyDataStatInterval = void 0;
-      }
-      this.lossyDataDropCount = 0;
+      this.lossyChannel.stopThresholdTuning();
     }
     cleanupClient() {
       return __awaiter(this, void 0, void 0, function* () {
@@ -17961,17 +19016,17 @@ var WebchatCallBundle = (() => {
         throw new TrackInvalidError("a track with the same ID has already been published");
       }
       return new Promise((resolve, reject) => {
-        const publicationTimeout = setTimeout(() => {
+        const publicationTimeout = CriticalTimers.setTimeout(() => {
           delete this.pendingTrackResolvers[req.cid];
           reject(ConnectionError.timeout("publication of local track timed out, no response from server"));
         }, 1e4);
         this.pendingTrackResolvers[req.cid] = {
           resolve: (info) => {
-            clearTimeout(publicationTimeout);
+            CriticalTimers.clearTimeout(publicationTimeout);
             resolve(info);
           },
           reject: () => {
-            clearTimeout(publicationTimeout);
+            CriticalTimers.clearTimeout(publicationTimeout);
             reject(new Error("Cancelled publication by calling unpublish"));
           }
         };
@@ -18007,7 +19062,7 @@ var WebchatCallBundle = (() => {
     }
     get dataSubscriberReadyState() {
       var _a2;
-      return (_a2 = this.reliableDCSub) === null || _a2 === void 0 ? void 0 : _a2.readyState;
+      return (_a2 = this.dataChannelForKind(DataChannelKind.RELIABLE, true)) === null || _a2 === void 0 ? void 0 : _a2.readyState;
     }
     getConnectedServerAddress() {
       return __awaiter(this, void 0, void 0, function* () {
@@ -18043,6 +19098,11 @@ var WebchatCallBundle = (() => {
         this.pcManager.onDataChannel = this.handleDataChannel;
         this.pcManager.onStateChange = (connectionState, publisherState, subscriberState) => __awaiter(this, void 0, void 0, function* () {
           this.log.debug("primary PC state changed ".concat(connectionState));
+          if (connectionState === PCTransportState.CONNECTING) {
+            this.transportConnectingSince = Date.now();
+          } else {
+            this.transportConnectingSince = void 0;
+          }
           if (["closed", "disconnected", "failed"].includes(publisherState)) {
             this.publisherConnectionPromise = void 0;
           }
@@ -18183,9 +19243,9 @@ var WebchatCallBundle = (() => {
       };
     }
     makeRTCConfiguration(serverResponse) {
-      var _a2, _b2;
+      var _a2;
       const rtcConfig = Object.assign({}, this.rtcConfig);
-      const needsInsertableStreams = ((_a2 = this.signalOpts) === null || _a2 === void 0 ? void 0 : _a2.e2eeEnabled) || ((_b2 = this.options.packetTrailer) === null || _b2 === void 0 ? void 0 : _b2.worker) && !shouldUsePacketTrailerScriptTransform();
+      const needsInsertableStreams = ((_a2 = this.signalOpts) === null || _a2 === void 0 ? void 0 : _a2.e2eeEnabled) || this.frameMetadataWorker && !shouldUseFrameMetadataScriptTransform();
       if (needsInsertableStreams && isInsertableStreamSupported()) {
         this.log.debug("E2EE - setting up transports with insertable streams");
         rtcConfig.encodedInsertableStreams = true;
@@ -18222,69 +19282,49 @@ var WebchatCallBundle = (() => {
      */
     applyInitialPublisherLayout() {
       this.createDataChannels();
-      this.addMediaSections(initialMediaSectionsAudio, initialMediaSectionsVideo);
+      if (!isReactNative()) {
+        this.addMediaSections(initialMediaSectionsAudio, initialMediaSectionsVideo);
+      }
     }
     addMediaSections(numAudios, numVideos) {
-      var _a2, _b2;
+      var _a2, _b2, _c;
       const transceiverInit = {
         direction: "recvonly"
       };
       for (let i = 0; i < numAudios; i++) {
         (_a2 = this.pcManager) === null || _a2 === void 0 ? void 0 : _a2.addPublisherTransceiverOfKind("audio", transceiverInit);
       }
+      const receivesMedia = ((_b2 = this.pcManager) === null || _b2 === void 0 ? void 0 : _b2.mode) === "publisher-only";
       for (let i = 0; i < numVideos; i++) {
-        (_b2 = this.pcManager) === null || _b2 === void 0 ? void 0 : _b2.addPublisherTransceiverOfKind("video", transceiverInit);
+        const transceiver = (_c = this.pcManager) === null || _c === void 0 ? void 0 : _c.addPublisherTransceiverOfKind("video", transceiverInit);
+        if (receivesMedia && transceiver) {
+          const negotiated = negotiateDependencyDescriptor(transceiver);
+          this.log.debug("dependency descriptor negotiated for received video", {
+            negotiated
+          });
+        }
       }
     }
     createDataChannels() {
       if (!this.pcManager) {
         return;
       }
-      if (this.lossyDC) {
-        this.lossyDC.onmessage = null;
-        this.lossyDC.onerror = null;
-      }
-      if (this.reliableDC) {
-        this.reliableDC.onmessage = null;
-        this.reliableDC.onerror = null;
-      }
-      if (this.dataTrackDC) {
-        this.dataTrackDC.onmessage = null;
-        this.dataTrackDC.onerror = null;
-      }
-      this.lossyDC = this.pcManager.createPublisherDataChannel(lossyDataChannel, {
-        ordered: false,
-        maxRetransmits: 0
-      });
-      this.reliableDC = this.pcManager.createPublisherDataChannel(reliableDataChannel, {
-        ordered: true
-      });
-      this.dataTrackDC = this.pcManager.createPublisherDataChannel(dataTrackDataChannel, {
-        ordered: false,
-        maxRetransmits: 0
-      });
-      this.lossyDC.onmessage = this.handleDataMessage;
-      this.reliableDC.onmessage = this.handleDataMessage;
-      this.dataTrackDC.onmessage = this.handleDataTrackMessage;
-      this.lossyDC.onerror = this.handleDataError;
-      this.reliableDC.onerror = this.handleDataError;
-      this.dataTrackDC.onerror = this.handleDataError;
-      this.lossyDC.bufferedAmountLowThreshold = 65535;
-      this.reliableDC.bufferedAmountLowThreshold = 65535;
-      this.dataTrackDC.bufferedAmountLowThreshold = 65535;
-      this.lossyDC.onbufferedamountlow = () => this.handleBufferedAmountLow(DataChannelKind.LOSSY);
-      this.reliableDC.onbufferedamountlow = () => this.handleBufferedAmountLow(DataChannelKind.RELIABLE);
-      this.dataTrackDC.onbufferedamountlow = () => this.handleBufferedAmountLow(DataChannelKind.DATA_TRACK_LOSSY);
-      this.cleanupLossyDataStats();
-      this.lossyDataStatInterval = setInterval(() => {
-        this.lossyDataStatByterate = this.lossyDataStatCurrentBytes;
-        this.lossyDataStatCurrentBytes = 0;
-        const dc = this.dataChannelForKind(DataChannelKind.LOSSY);
-        if (dc) {
-          const threshold = this.lossyDataStatByterate / 10;
-          dc.bufferedAmountLowThreshold = Math.min(Math.max(threshold, lossyDataChannelBufferThresholdMin), lossyDataChannelBufferThresholdMax);
+      this.dataChannels.createPublisherChannels(this.pcManager);
+    }
+    /** Normalizes an incoming data-channel message into bytes, or logs and returns undefined. */
+    decodeDataMessage(message) {
+      return __awaiter(this, void 0, void 0, function* () {
+        if (message.data instanceof ArrayBuffer) {
+          return new Uint8Array(message.data);
         }
-      }, 1e3);
+        if (message.data instanceof Blob) {
+          return new Uint8Array(yield message.data.arrayBuffer());
+        }
+        this.log.error("unsupported data type", {
+          data: message.data
+        });
+        return void 0;
+      });
     }
     createSender(track, opts, encodings) {
       return __awaiter(this, void 0, void 0, function* () {
@@ -18297,7 +19337,7 @@ var WebchatCallBundle = (() => {
         } else {
           throw new UnexpectedConnectionState("Required webRTC APIs not supported on this device");
         }
-        this.setupPacketTrailerSender(sender, opts);
+        this.setupFrameMetadataSender(sender, opts);
         return sender;
       });
     }
@@ -18313,42 +19353,47 @@ var WebchatCallBundle = (() => {
           throw new UnexpectedConnectionState("Cannot stream on this device");
         }
         if (sender) {
-          this.setupPacketTrailerSender(sender, opts);
+          this.setupFrameMetadataSender(sender, opts);
         }
         return sender;
       });
     }
-    setupPacketTrailerSender(sender) {
-      let opts = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : {};
+    get frameMetadataWorker() {
       var _a2, _b2;
-      if (!((_a2 = this.options.packetTrailer) === null || _a2 === void 0 ? void 0 : _a2.worker) || ((_b2 = this.signalOpts) === null || _b2 === void 0 ? void 0 : _b2.e2eeEnabled)) {
+      return (_b2 = (_a2 = this.options.frameMetadata) !== null && _a2 !== void 0 ? _a2 : this.options.packetTrailer) === null || _b2 === void 0 ? void 0 : _b2.worker;
+    }
+    setupFrameMetadataSender(sender) {
+      let opts = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : {};
+      var _a2, _b2, _c;
+      const worker = this.frameMetadataWorker;
+      if (!worker || ((_a2 = this.signalOpts) === null || _a2 === void 0 ? void 0 : _a2.e2eeEnabled)) {
         return;
       }
-      const packetTrailer = opts.packetTrailer;
-      const hasPacketTrailer = hasPacketTrailerPublishOptions(packetTrailer);
-      if (shouldUsePacketTrailerScriptTransform()) {
-        if (hasPacketTrailer) {
-          sender.transform = new RTCRtpScriptTransform(this.options.packetTrailer.worker, {
+      const frameMetadata = (_b2 = opts.frameMetadata) !== null && _b2 !== void 0 ? _b2 : opts.packetTrailer;
+      const hasMetadata = hasFrameMetadataPublishOptions(frameMetadata);
+      if (shouldUseFrameMetadataScriptTransform()) {
+        if (hasMetadata) {
+          sender.transform = new RTCRtpScriptTransform(worker, {
             kind: "encode",
-            packetTrailer
+            packetTrailer: frameMetadata
           });
         }
         return;
       }
-      if (!isPacketTrailerSupported(this.options.packetTrailer) || !("createEncodedStreams" in sender)) {
-        if (hasPacketTrailer) {
-          this.log.warn("packet trailer transform not supported; skipping write", this.logContext);
+      if (!isFrameMetadataSupported((_c = this.options.frameMetadata) !== null && _c !== void 0 ? _c : this.options.packetTrailer) || !("createEncodedStreams" in sender)) {
+        if (hasMetadata) {
+          this.log.warn("frame metadata transform not supported; skipping write", this.logContext);
         }
         return;
       }
       const _sender$createEncoded = sender.createEncodedStreams(), readable = _sender$createEncoded.readable, writable = _sender$createEncoded.writable;
-      if (hasPacketTrailer) {
-        this.options.packetTrailer.worker.postMessage({
+      if (hasMetadata) {
+        worker.postMessage({
           kind: "encode",
           data: {
             readableStream: readable,
             writableStream: writable,
-            packetTrailer
+            packetTrailer: frameMetadata
           }
         }, [readable, writable]);
       } else {
@@ -18393,7 +19438,7 @@ var WebchatCallBundle = (() => {
         if (!opts.videoCodec) {
           return;
         }
-        track.setSimulcastTrackSender(opts.videoCodec, transceiver.sender);
+        yield track.setSimulcastTrackSender(opts.videoCodec, transceiver.sender);
         return transceiver.sender;
       });
     }
@@ -18405,6 +19450,62 @@ var WebchatCallBundle = (() => {
         return this.pcManager.addPublisherTrack(track);
       });
     }
+    /**
+     * A sustained local `LOST` while connected and publishing means the server isn't receiving
+     * our media, so force a full reconnect; any non-`LOST` value cancels a pending trigger.
+     */
+    handleLocalConnectionQuality(update) {
+      if (!this.participantSid) {
+        return;
+      }
+      const localUpdate = update.updates.find((u) => u.participantSid === this.participantSid);
+      if (!localUpdate) {
+        return;
+      }
+      if (localUpdate.quality === ConnectionQuality$1.LOST) {
+        this.scheduleLostQualityReconnect();
+      } else {
+        this.clearLostQualityTimeout();
+      }
+    }
+    scheduleLostQualityReconnect() {
+      if (this.lostQualityTimeout) {
+        return;
+      }
+      this.lostQualityTimeout = CriticalTimers.setTimeout(() => {
+        this.lostQualityTimeout = void 0;
+        if (this._isClosed || this.pcState !== PCState.Connected || this.attemptingReconnect) {
+          return;
+        }
+        if (!this.hasActivePublisherSenders()) {
+          return;
+        }
+        this.log.warn("local connection quality lost while publishing, triggering full reconnect", this.logContext);
+        this.fullReconnectOnNext = true;
+        this.handleDisconnect("connection quality lost", ReconnectReason.RR_PUBLISHER_FAILED);
+      }, connectionQualityLostTimeout);
+    }
+    clearLostQualityTimeout() {
+      if (this.lostQualityTimeout) {
+        CriticalTimers.clearTimeout(this.lostQualityTimeout);
+        this.lostQualityTimeout = void 0;
+      }
+    }
+    /** Whether the publisher currently has any sender with a live track. */
+    hasActivePublisherSenders() {
+      var _a2, _b2;
+      return (_b2 = (_a2 = this.pcManager) === null || _a2 === void 0 ? void 0 : _a2.publisher.getSenders().some((sender) => !!sender.track && sender.track.readyState === "live")) !== null && _b2 !== void 0 ? _b2 : false;
+    }
+    /**
+     * Forces a full reconnect while keeping the engine (and its saved credentials) alive. Used by
+     * Room's connection-reconcile safety net when the transport silently died but we looked connected.
+     * @internal
+     */
+    reconnect() {
+      let reason = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : ReconnectReason.RR_UNKNOWN;
+      this.fullReconnectOnNext = true;
+      this.handleDisconnect("reconcile", reason);
+    }
     attemptReconnect(reason) {
       return __awaiter(this, void 0, void 0, function* () {
         var _a2, _b2, _c;
@@ -18415,20 +19516,24 @@ var WebchatCallBundle = (() => {
           this.log.warn("already attempting reconnect, returning early");
           return;
         }
+        this.clearLostQualityTimeout();
         if (((_a2 = this.clientConfiguration) === null || _a2 === void 0 ? void 0 : _a2.resumeConnection) === ClientConfigSetting.DISABLED || // signaling state could change to closed due to hardware sleep
         // those connections cannot be resumed
         ((_c = (_b2 = this.pcManager) === null || _b2 === void 0 ? void 0 : _b2.currentState) !== null && _c !== void 0 ? _c : PCTransportState.NEW) === PCTransportState.NEW) {
           this.fullReconnectOnNext = true;
         }
+        const fullReconnect = this.fullReconnectOnNext;
+        this.fullReconnectOnNext = false;
+        let succeeded = false;
         try {
           this.attemptingReconnect = true;
-          if (this.fullReconnectOnNext) {
+          if (fullReconnect) {
             yield this.restartConnection();
           } else {
             yield this.resumeConnection(reason);
           }
           this.clearPendingReconnect();
-          this.fullReconnectOnNext = false;
+          succeeded = true;
         } catch (e2) {
           this.reconnectAttempts += 1;
           let recoverable = true;
@@ -18437,7 +19542,7 @@ var WebchatCallBundle = (() => {
               error: e2
             });
             recoverable = false;
-          } else if (!(e2 instanceof SignalReconnectError)) {
+          } else if (fullReconnect || !(e2 instanceof SignalReconnectError)) {
             this.fullReconnectOnNext = true;
           }
           if (recoverable) {
@@ -18449,6 +19554,10 @@ var WebchatCallBundle = (() => {
           }
         } finally {
           this.attemptingReconnect = false;
+          if (succeeded && this.fullReconnectOnNext && !this._isClosed) {
+            this.log.debug("full reconnect requested during in-progress attempt, dispatching");
+            this.handleDisconnect("reconnect");
+          }
         }
       });
     }
@@ -18515,7 +19624,6 @@ var WebchatCallBundle = (() => {
     }
     resumeConnection(reason) {
       return __awaiter(this, void 0, void 0, function* () {
-        var _a2;
         if (!this.url || !this.token) {
           throw new UnexpectedConnectionState("could not reconnect, url or token not saved");
         }
@@ -18564,11 +19672,16 @@ var WebchatCallBundle = (() => {
           throw new SignalReconnectError("Signal connection got severed during reconnect");
         }
         this.client.setReconnected();
-        if (((_a2 = this.reliableDC) === null || _a2 === void 0 ? void 0 : _a2.readyState) === "open" && this.reliableDC.id === null) {
+        const reliableDC = this.dataChannelForKind(DataChannelKind.RELIABLE);
+        if ((reliableDC === null || reliableDC === void 0 ? void 0 : reliableDC.readyState) === "open" && reliableDC.id === null) {
           this.createDataChannels();
         }
         if (res === null || res === void 0 ? void 0 : res.lastMessageSeq) {
-          this.resendReliableMessagesForResume(res.lastMessageSeq);
+          this.resendReliableMessagesForResume(res.lastMessageSeq).catch((error) => {
+            this.log.warn("failed to resend reliable messages after resume", Object.assign(Object.assign({}, this.logContext), {
+              error
+            }));
+          });
         }
         this.emit(EngineEvent.Resumed);
       });
@@ -18617,6 +19730,7 @@ var WebchatCallBundle = (() => {
     /* @internal */
     sendDataPacket(packet, kind) {
       return __awaiter(this, void 0, void 0, function* () {
+        var _a2, _b2;
         yield this.ensurePublisherConnected(kind);
         if (this.e2eeManager && this.e2eeManager.isDataChannelEncryptionEnabled) {
           const encryptablePacket = asEncryptablePacket(packet);
@@ -18633,97 +19747,50 @@ var WebchatCallBundle = (() => {
           }
         }
         if (kind === DataChannelKind.RELIABLE) {
-          packet.sequence = this.reliableDataSequence;
-          this.reliableDataSequence += 1;
+          packet.sequence = this.reliableChannel.nextSequence();
         }
         const msg = packet.toBinary();
-        switch (kind) {
-          case DataChannelKind.LOSSY:
-          case DataChannelKind.DATA_TRACK_LOSSY:
-            return this.sendLossyBytes(msg, kind);
-          case DataChannelKind.RELIABLE:
-            const dc = this.dataChannelForKind(kind);
-            if (dc) {
-              yield this.waitForBufferStatusLow(kind);
-              this.reliableMessageBuffer.push({
-                data: msg,
-                sequence: packet.sequence
-              });
-              if (this.attemptingReconnect) {
-                return;
-              }
-              dc.send(msg);
-            }
-            this.updateAndEmitDCBufferStatus(kind);
-            break;
+        const maxPublisherMessageSizeBytes = Math.min((_b2 = (_a2 = this.pcManager) === null || _a2 === void 0 ? void 0 : _a2.getMaxPublisherMessageSize()) !== null && _b2 !== void 0 ? _b2 : DEFAULT_MAX_MESSAGE_SIZE, DEFAULT_MAX_MESSAGE_SIZE);
+        if (typeof maxPublisherMessageSizeBytes !== "undefined" && maxPublisherMessageSizeBytes !== 0 && msg.byteLength > maxPublisherMessageSizeBytes) {
+          throw new PublishDataError("cannot publish data packet larger than ".concat(maxPublisherMessageSizeBytes, " bytes (got ").concat(msg.byteLength, ")"));
+        }
+        if (kind === DataChannelKind.RELIABLE) {
+          yield this.reliableChannel.send(msg, packet.sequence);
+        } else {
+          yield this.lossyChannel.send(msg);
         }
       });
     }
-    /* @internal */
-    sendLossyBytes(bytes_1, kind_1) {
-      return __awaiter(this, arguments, void 0, function(bytes, kind) {
-        var _this3 = this;
-        let bufferStatusLowBehavior = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : "drop";
-        return function* () {
-          yield _this3.ensurePublisherConnected(kind);
-          const dc = _this3.dataChannelForKind(kind);
-          if (dc) {
-            if (!_this3.isBufferStatusLow(kind)) {
-              switch (bufferStatusLowBehavior) {
-                case "wait":
-                  yield _this3.waitForBufferStatusLow(kind);
-                  break;
-                case "drop":
-                  _this3.lossyDataDropCount += 1;
-                  if (_this3.lossyDataDropCount % 100 === 0) {
-                    _this3.log.warn("dropping lossy data channel messages, total dropped: ".concat(_this3.lossyDataDropCount));
-                  }
-                  return;
-              }
-            }
-            _this3.lossyDataStatCurrentBytes += bytes.byteLength;
-            if (_this3.attemptingReconnect) {
-              return;
-            }
-            dc.send(bytes);
-          }
-          _this3.updateAndEmitDCBufferStatus(kind);
-        }();
+    /**
+     * Sends pre-serialized bytes on the data-track channel. This is the one send path that doesn't
+     * go through {@link sendDataPacket} — Room's `packetAvailable` handler calls it directly with
+     * bytes the data-track pipeline already serialized.
+     *
+     * @internal
+     */
+    sendDataTrackFrame(bytes) {
+      return __awaiter(this, void 0, void 0, function* () {
+        yield this.ensurePublisherConnected(DataChannelKind.DATA_TRACK_LOSSY);
+        yield this.dataTrackChannel.send(bytes);
       });
     }
     resendReliableMessagesForResume(lastMessageSeq) {
       return __awaiter(this, void 0, void 0, function* () {
         yield this.ensurePublisherConnected(DataChannelKind.RELIABLE);
-        const dc = this.dataChannelForKind(DataChannelKind.RELIABLE);
-        if (dc) {
-          this.reliableMessageBuffer.popToSequence(lastMessageSeq);
-          this.reliableMessageBuffer.getAll().forEach((msg) => {
-            dc.send(msg.data);
-          });
-        }
-        this.updateAndEmitDCBufferStatus(DataChannelKind.RELIABLE);
+        yield this.reliableChannel.replay(lastMessageSeq);
       });
     }
-    waitForBufferStatusLow(kind) {
+    /** The flow-control gate for `kind` — see {@link FlowControlledDataChannel}. */
+    flowControlFor(kind) {
+      return this.dataChannels.channelFor(kind);
+    }
+    /**
+     * Resolves once the caller may send on the `kind` channel — see
+     * {@link FlowControlledDataChannel.waitForHeadroomWithLock}.
+     */
+    waitForBufferHeadroom(kind) {
       return __awaiter(this, void 0, void 0, function* () {
-        return new TypedPromise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
-          if (this.isClosed) {
-            reject(new UnexpectedConnectionState("engine closed"));
-          }
-          if (this.isBufferStatusLow(kind)) {
-            resolve();
-          } else {
-            const dc = this.dataChannelForKind(kind);
-            if (!dc) {
-              reject(new UnexpectedConnectionState("DataChannel not found, kind: ".concat(kind)));
-              return;
-            }
-            this.bufferStatusLowClosingFuture.promise.catch((e2) => reject(e2));
-            dc.addEventListener("bufferedamountlow", () => resolve(), {
-              once: true
-            });
-          }
-        }));
+        return this.flowControlFor(kind).waitForHeadroomWithLock();
       });
     }
     /**
@@ -18731,38 +19798,38 @@ var WebchatCallBundle = (() => {
      */
     ensureDataTransportConnected(kind_1) {
       return __awaiter(this, arguments, void 0, function(kind) {
-        var _this4 = this;
+        var _this3 = this;
         let subscriber = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : this.subscriberPrimary;
         return function* () {
           var _a2;
-          if (!_this4.pcManager) {
+          if (!_this3.pcManager) {
             throw new UnexpectedConnectionState("PC manager is closed");
           }
-          const transport = subscriber ? _this4.pcManager.subscriber : _this4.pcManager.publisher;
+          const transport = subscriber ? _this3.pcManager.subscriber : _this3.pcManager.publisher;
           const transportName = subscriber ? "Subscriber" : "Publisher";
           if (!transport) {
             throw ConnectionError.internal("".concat(transportName, " connection not set"));
           }
           let needNegotiation = false;
-          if (!subscriber && !_this4.dataChannelForKind(kind, subscriber)) {
-            _this4.createDataChannels();
+          if (!subscriber && !_this3.dataChannelForKind(kind, subscriber)) {
+            _this3.createDataChannels();
             needNegotiation = true;
           }
-          if (!needNegotiation && !subscriber && !_this4.pcManager.publisher.isICEConnected && _this4.pcManager.publisher.getICEConnectionState() !== "checking") {
+          if (!needNegotiation && !subscriber && !_this3.pcManager.publisher.isICEConnected && _this3.pcManager.publisher.getICEConnectionState() !== "checking") {
             needNegotiation = true;
           }
           if (needNegotiation) {
-            _this4.negotiate().catch((err) => {
-              _this4.log.error(err);
+            _this3.negotiate().catch((err) => {
+              _this3.log.error(err);
             });
           }
-          const targetChannel = _this4.dataChannelForKind(kind, subscriber);
+          const targetChannel = _this3.dataChannelForKind(kind, subscriber);
           if ((targetChannel === null || targetChannel === void 0 ? void 0 : targetChannel.readyState) === "open") {
             return;
           }
-          const endTime = (/* @__PURE__ */ new Date()).getTime() + _this4.peerConnectionTimeout;
+          const endTime = (/* @__PURE__ */ new Date()).getTime() + _this3.peerConnectionTimeout;
           while ((/* @__PURE__ */ new Date()).getTime() < endTime) {
-            if (transport.isICEConnected && ((_a2 = _this4.dataChannelForKind(kind, subscriber)) === null || _a2 === void 0 ? void 0 : _a2.readyState) === "open") {
+            if (transport.isICEConnected && ((_a2 = _this3.dataChannelForKind(kind, subscriber)) === null || _a2 === void 0 ? void 0 : _a2.readyState) === "open") {
               return;
             }
             yield sleep(50);
@@ -18784,11 +19851,16 @@ var WebchatCallBundle = (() => {
       if (!this.pcManager) {
         return false;
       }
+      const state = this.pcManager.currentState;
       const allowedConnectionStates = [PCTransportState.CONNECTING, PCTransportState.CONNECTED];
-      if (!allowedConnectionStates.includes(this.pcManager.currentState)) {
+      if (!allowedConnectionStates.includes(state)) {
         return false;
       }
       if (!this.client.ws || this.client.ws.readyState === WebSocket.CLOSED) {
+        return false;
+      }
+      if (state === PCTransportState.CONNECTING && this.transportConnectingSince !== void 0 && Date.now() - this.transportConnectingSince > this.peerConnectionTimeout) {
+        this.log.warn("transport stuck in connecting state", this.logContext);
         return false;
       }
       return true;
@@ -18802,7 +19874,7 @@ var WebchatCallBundle = (() => {
             return;
           }
           this.pcManager.requirePublisher();
-          if (this.pcManager.publisher.getTransceivers().length == 0 && !this.lossyDC && !this.reliableDC && !this.dataTrackDC) {
+          if (this.pcManager.publisher.getTransceivers().length == 0 && !this.dataChannels.hasPublisherChannels) {
             this.createDataChannels();
           }
           const abortController = new AbortController();
@@ -18844,26 +19916,7 @@ var WebchatCallBundle = (() => {
       });
     }
     dataChannelForKind(kind, sub) {
-      switch (kind) {
-        case DataChannelKind.RELIABLE:
-          if (!sub) {
-            return this.reliableDC;
-          } else {
-            return this.reliableDCSub;
-          }
-        case DataChannelKind.LOSSY:
-          if (!sub) {
-            return this.lossyDC;
-          } else {
-            return this.lossyDCSub;
-          }
-        case DataChannelKind.DATA_TRACK_LOSSY:
-          if (!sub) {
-            return this.dataTrackDC;
-          } else {
-            return this.dataTrackDCSub;
-          }
-      }
+      return this.dataChannels.getHandle(kind, sub);
     }
     /** @internal */
     sendSyncState(remoteTracks, localTracks, localDataTrackInfos) {
@@ -18991,6 +20044,7 @@ var WebchatCallBundle = (() => {
     newObj.destinationIdentities = destinationIdentities;
     oldObj.destinationIdentities = destinationIdentities;
   }
+  var log$4 = getLogger(LoggerNames.Region);
   var DEFAULT_MAX_AGE_MS = 5e3;
   var STOP_REFETCH_DELAY_MS = 3e4;
   var RegionUrlProvider = class _RegionUrlProvider {
@@ -19043,10 +20097,10 @@ var WebchatCallBundle = (() => {
             _RegionUrlProvider.updateCachedRegionSettings(url, token, newSettings);
           } catch (error) {
             if (error instanceof ConnectionError && error.reason === ConnectionErrorReason.NotAllowed) {
-              livekitLogger.debug("token is not valid, cancelling auto region refresh");
+              log$4.debug("token is not valid, cancelling auto region refresh");
               return;
             }
-            livekitLogger.debug("auto refetching of region settings failed", {
+            log$4.debug("auto refetching of region settings failed", {
               error
             });
             _RegionUrlProvider.scheduleRefetch(url, token, maxAgeInMs);
@@ -19076,7 +20130,7 @@ var WebchatCallBundle = (() => {
       tracker.cleanupTimeout = setTimeout(() => {
         const currentTracker = _RegionUrlProvider.connectionTrackers.get(hostname);
         if (currentTracker && currentTracker.connectionCount === 0) {
-          livekitLogger.debug("stopping region refetch after disconnect delay", {
+          log$4.debug("stopping region refetch after disconnect delay", {
             hostname
           });
           _RegionUrlProvider.stopRefetch(hostname);
@@ -19154,7 +20208,9 @@ var WebchatCallBundle = (() => {
         if (regionsLeft.length > 0) {
           const nextRegion = regionsLeft[0];
           this.attemptedRegions.push(nextRegion);
-          livekitLogger.debug("next region: ".concat(nextRegion.region));
+          log$4.info("switching to region: ".concat(nextRegion.region), {
+            region: nextRegion.region
+          });
           return nextRegion.url;
         } else {
           return null;
@@ -19175,6 +20231,51 @@ var WebchatCallBundle = (() => {
   function getCloudConfigUrl(serverUrl) {
     return "".concat(serverUrl.protocol.replace("ws", "http"), "//").concat(serverUrl.host, "/settings");
   }
+  function deflateRawTransform() {
+    return new CompressionStream("deflate-raw");
+  }
+  function inflateRawTransform() {
+    return new DecompressionStream("deflate-raw");
+  }
+  function deflateRawDecompress(data, maxByteLength) {
+    return __awaiter(this, void 0, void 0, function* () {
+      const ds = new DecompressionStream("deflate-raw");
+      const writer2 = ds.writable.getWriter();
+      writer2.write(data).catch(() => {
+      });
+      writer2.close().catch(() => {
+      });
+      return collect(ds.readable, maxByteLength);
+    });
+  }
+  function collect(stream, maxByteLength) {
+    return __awaiter(this, void 0, void 0, function* () {
+      const reader = stream.getReader();
+      const chunks = [];
+      let total = 0;
+      while (true) {
+        const _yield$reader$read = yield reader.read(), done = _yield$reader$read.done, value = _yield$reader$read.value;
+        if (done) {
+          break;
+        }
+        chunks.push(value);
+        total += value.byteLength;
+        if (typeof maxByteLength === "number" && total > maxByteLength) {
+          yield reader.cancel();
+          throw new DataStreamError("Decompressed payload exceeds the maximum payload size of ".concat(maxByteLength, " bytes"), DataStreamErrorReason.PayloadTooLarge);
+        }
+      }
+      const result = new Uint8Array(total);
+      let offset = 0;
+      for (const chunk of chunks) {
+        result.set(chunk, offset);
+        offset += chunk.byteLength;
+      }
+      return result;
+    });
+  }
+  var STREAM_CHUNK_SIZE_BYTES = 15e3;
+  var DEFAULT_MAX_PAYLOAD_BYTE_LENGTH = 5e9;
   var BaseStreamReader = class {
     get info() {
       return this._info;
@@ -19216,6 +20317,7 @@ var WebchatCallBundle = (() => {
       };
       return {
         next: () => __awaiter(this, void 0, void 0, function* () {
+          var _a2;
           try {
             const signal = this.signal;
             if (signal === null || signal === void 0 ? void 0 : signal.aborted) {
@@ -19236,6 +20338,9 @@ var WebchatCallBundle = (() => {
             });
             if (result.done) {
               this.validateBytesReceived(true);
+              if (typeof this.totalByteSize === "number") {
+                (_a2 = this.onProgress) === null || _a2 === void 0 ? void 0 : _a2.call(this, 1);
+              }
               return {
                 done: true,
                 value: void 0
@@ -19338,9 +20443,7 @@ var WebchatCallBundle = (() => {
       const reader = this.reader.getReader();
       reader.closed.catch(() => {
       });
-      const decoder2 = new TextDecoder("utf-8", {
-        fatal: true
-      });
+      const decoder2 = new TextDecoder("utf-8");
       const signal = this.signal;
       const cleanup = () => {
         reader.releaseLock();
@@ -19348,6 +20451,7 @@ var WebchatCallBundle = (() => {
       };
       return {
         next: () => __awaiter(this, void 0, void 0, function* () {
+          var _a2;
           try {
             if (signal === null || signal === void 0 ? void 0 : signal.aborted) {
               throw signal.reason;
@@ -19367,6 +20471,9 @@ var WebchatCallBundle = (() => {
             });
             if (result.done) {
               this.validateBytesReceived(true);
+              if (typeof this.totalByteSize === "number") {
+                (_a2 = this.onProgress) === null || _a2 === void 0 ? void 0 : _a2.call(this, 1);
+              }
               return {
                 done: true,
                 value: void 0
@@ -19446,6 +20553,7 @@ var WebchatCallBundle = (() => {
   };
   var IncomingDataStreamManager = class {
     constructor() {
+      let maxPayloadByteLength = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : DEFAULT_MAX_PAYLOAD_BYTE_LENGTH;
       this.log = livekitLogger;
       this.byteStreamControllers = /* @__PURE__ */ new Map();
       this.textStreamControllers = /* @__PURE__ */ new Map();
@@ -19453,6 +20561,7 @@ var WebchatCallBundle = (() => {
       this.textStreamHandlers = /* @__PURE__ */ new Map();
       this.isConnected = false;
       this.bufferedPackets = [];
+      this.maxPayloadByteLength = maxPayloadByteLength;
     }
     setConnected(connected) {
       this.isConnected = connected;
@@ -19534,74 +20643,138 @@ var WebchatCallBundle = (() => {
     }
     handleStreamHeader(streamHeader, participantIdentity, encryptionType) {
       var _a2;
-      if (streamHeader.contentHeader.case === "byteHeader") {
-        const streamHandlerCallback = this.byteStreamHandlers.get(streamHeader.topic);
-        if (!streamHandlerCallback) {
-          this.log.debug("ignoring incoming byte stream due to no handler for topic", streamHeader.topic);
+      switch (streamHeader.contentHeader.case) {
+        case "byteHeader": {
+          const streamHandlerCallback = this.byteStreamHandlers.get(streamHeader.topic);
+          if (!streamHandlerCallback) {
+            this.log.debug("ignoring incoming byte stream due to no handler for topic", streamHeader.topic);
+            return;
+          }
+          let streamController;
+          const info = {
+            id: streamHeader.streamId,
+            name: (_a2 = streamHeader.contentHeader.value.name) !== null && _a2 !== void 0 ? _a2 : "unknown",
+            mimeType: streamHeader.mimeType,
+            size: streamHeader.totalLength ? Number(streamHeader.totalLength) : void 0,
+            topic: streamHeader.topic,
+            timestamp: bigIntToNumber(streamHeader.timestamp),
+            attributes: streamHeader.attributes,
+            encryptionType
+          };
+          let compressed;
+          switch (streamHeader.compression) {
+            case DataStream_CompressionType.DEFLATE_RAW:
+              if (!isCompressionStreamSupported()) {
+                livekitLogger.warn("Data stream ".concat(streamHeader.streamId, " received with deflate-raw compression, but this browser does not have support for DecompressionStream. Dropping..."));
+                return;
+              }
+              compressed = true;
+              break;
+            case DataStream_CompressionType.NONE:
+              compressed = false;
+              break;
+            default:
+              livekitLogger.warn("Data stream ".concat(streamHeader.streamId, " received with unknown compression type ").concat(streamHeader.compression, ", dropping..."));
+              return;
+          }
+          const inlineContent = streamHeader.inlineContent;
+          if (typeof inlineContent !== "undefined") {
+            streamHandlerCallback(new ByteStreamReader(info, createInlineStream(streamHeader.streamId, compressed ? deflateRawDecompress(inlineContent, this.maxPayloadByteLength) : inlineContent), bigIntToNumber(streamHeader.totalLength)), {
+              identity: participantIdentity
+            });
+            return;
+          }
+          const stream = new ReadableStream({
+            start: (controller) => {
+              streamController = controller;
+              if (this.byteStreamControllers.has(streamHeader.streamId)) {
+                throw new DataStreamError("A data stream read is already in progress for a stream with id ".concat(streamHeader.streamId, "."), DataStreamErrorReason.AlreadyOpened);
+              }
+              this.byteStreamControllers.set(streamHeader.streamId, {
+                info,
+                controller: streamController,
+                startTime: Date.now(),
+                sendingParticipantIdentity: participantIdentity
+              });
+            }
+          });
+          streamHandlerCallback(new ByteStreamReader(
+            info,
+            compressed ? inflateRawByteChunkStream(stream, streamHeader.streamId, this.maxPayloadByteLength) : stream,
+            // `totalLength` is the pre-compression size, and the reader counts decompressed bytes,
+            // so it applies to both paths (mirrors text).
+            bigIntToNumber(streamHeader.totalLength)
+          ), {
+            identity: participantIdentity
+          });
           return;
         }
-        let streamController;
-        const info = {
-          id: streamHeader.streamId,
-          name: (_a2 = streamHeader.contentHeader.value.name) !== null && _a2 !== void 0 ? _a2 : "unknown",
-          mimeType: streamHeader.mimeType,
-          size: streamHeader.totalLength ? Number(streamHeader.totalLength) : void 0,
-          topic: streamHeader.topic,
-          timestamp: bigIntToNumber(streamHeader.timestamp),
-          attributes: streamHeader.attributes,
-          encryptionType
-        };
-        const stream = new ReadableStream({
-          start: (controller) => {
-            streamController = controller;
-            if (this.textStreamControllers.has(streamHeader.streamId)) {
-              throw new DataStreamError("A data stream read is already in progress for a stream with id ".concat(streamHeader.streamId, "."), DataStreamErrorReason.AlreadyOpened);
-            }
-            this.byteStreamControllers.set(streamHeader.streamId, {
-              info,
-              controller: streamController,
-              startTime: Date.now(),
-              sendingParticipantIdentity: participantIdentity
-            });
+        case "textHeader": {
+          const streamHandlerCallback = this.textStreamHandlers.get(streamHeader.topic);
+          if (!streamHandlerCallback) {
+            this.log.debug("ignoring incoming text stream due to no handler for topic", streamHeader.topic);
+            return;
           }
-        });
-        streamHandlerCallback(new ByteStreamReader(info, stream, bigIntToNumber(streamHeader.totalLength)), {
-          identity: participantIdentity
-        });
-      } else if (streamHeader.contentHeader.case === "textHeader") {
-        const streamHandlerCallback = this.textStreamHandlers.get(streamHeader.topic);
-        if (!streamHandlerCallback) {
-          this.log.debug("ignoring incoming text stream due to no handler for topic", streamHeader.topic);
+          let streamController;
+          const info = {
+            id: streamHeader.streamId,
+            mimeType: streamHeader.mimeType,
+            size: streamHeader.totalLength ? Number(streamHeader.totalLength) : void 0,
+            topic: streamHeader.topic,
+            timestamp: Number(streamHeader.timestamp),
+            attributes: streamHeader.attributes,
+            encryptionType,
+            attachedStreamIds: streamHeader.contentHeader.value.attachedStreamIds
+          };
+          let compressed;
+          switch (streamHeader.compression) {
+            case DataStream_CompressionType.DEFLATE_RAW:
+              if (!isCompressionStreamSupported()) {
+                livekitLogger.warn("Data stream ".concat(streamHeader.streamId, " received with deflate-raw compression, but this browser does not have support for DecompressionStream. Dropping..."));
+                return;
+              }
+              compressed = true;
+              break;
+            case DataStream_CompressionType.NONE:
+              compressed = false;
+              break;
+            default:
+              livekitLogger.warn("Data stream ".concat(streamHeader.streamId, " received with unknown compression type ").concat(streamHeader.compression, ", dropping..."));
+              return;
+          }
+          const inlineContent = streamHeader.inlineContent;
+          if (typeof inlineContent !== "undefined") {
+            const content = compressed ? deflateRawDecompress(inlineContent, this.maxPayloadByteLength) : inlineContent;
+            streamHandlerCallback(new TextStreamReader(info, createInlineStream(streamHeader.streamId, content), bigIntToNumber(streamHeader.totalLength)), {
+              identity: participantIdentity
+            });
+            return;
+          }
+          const stream = new ReadableStream({
+            start: (controller) => {
+              streamController = controller;
+              if (this.textStreamControllers.has(streamHeader.streamId)) {
+                throw new DataStreamError("A data stream read is already in progress for a stream with id ".concat(streamHeader.streamId, "."), DataStreamErrorReason.AlreadyOpened);
+              }
+              this.textStreamControllers.set(streamHeader.streamId, {
+                info,
+                controller: streamController,
+                startTime: Date.now(),
+                sendingParticipantIdentity: participantIdentity
+              });
+            }
+          });
+          streamHandlerCallback(new TextStreamReader(
+            info,
+            compressed ? inflateRawChunkStream(stream, streamHeader.streamId, this.maxPayloadByteLength) : stream,
+            // `totalLength` is the pre-compression size, and the reader sees decompressed bytes, so
+            // it applies to both paths.
+            bigIntToNumber(streamHeader.totalLength)
+          ), {
+            identity: participantIdentity
+          });
           return;
         }
-        let streamController;
-        const info = {
-          id: streamHeader.streamId,
-          mimeType: streamHeader.mimeType,
-          size: streamHeader.totalLength ? Number(streamHeader.totalLength) : void 0,
-          topic: streamHeader.topic,
-          timestamp: Number(streamHeader.timestamp),
-          attributes: streamHeader.attributes,
-          encryptionType,
-          attachedStreamIds: streamHeader.contentHeader.value.attachedStreamIds
-        };
-        const stream = new ReadableStream({
-          start: (controller) => {
-            streamController = controller;
-            if (this.textStreamControllers.has(streamHeader.streamId)) {
-              throw new DataStreamError("A data stream read is already in progress for a stream with id ".concat(streamHeader.streamId, "."), DataStreamErrorReason.AlreadyOpened);
-            }
-            this.textStreamControllers.set(streamHeader.streamId, {
-              info,
-              controller: streamController,
-              startTime: Date.now(),
-              sendingParticipantIdentity: participantIdentity
-            });
-          }
-        });
-        streamHandlerCallback(new TextStreamReader(info, stream, bigIntToNumber(streamHeader.totalLength)), {
-          identity: participantIdentity
-        });
       }
     }
     handleStreamChunk(chunk, encryptionType) {
@@ -19631,9 +20804,13 @@ var WebchatCallBundle = (() => {
           textBuffer.controller.error(new DataStreamError("Encryption type mismatch for stream ".concat(trailer.streamId, ". Expected ").concat(encryptionType, ", got ").concat(textBuffer.info.encryptionType), DataStreamErrorReason.EncryptionTypeMismatch));
         } else {
           textBuffer.info.attributes = Object.assign(Object.assign({}, textBuffer.info.attributes), trailer.attributes);
-          textBuffer.controller.close();
-          this.textStreamControllers.delete(trailer.streamId);
+          if (trailer.reason) {
+            textBuffer.controller.error(new DataStreamError("Data stream ".concat(trailer.streamId, " closed abnormally: ").concat(trailer.reason), DataStreamErrorReason.AbnormalEnd));
+          } else {
+            textBuffer.controller.close();
+          }
         }
+        this.textStreamControllers.delete(trailer.streamId);
       }
       const fileBuffer = this.byteStreamControllers.get(trailer.streamId);
       if (fileBuffer) {
@@ -19641,12 +20818,128 @@ var WebchatCallBundle = (() => {
           fileBuffer.controller.error(new DataStreamError("Encryption type mismatch for stream ".concat(trailer.streamId, ". Expected ").concat(encryptionType, ", got ").concat(fileBuffer.info.encryptionType), DataStreamErrorReason.EncryptionTypeMismatch));
         } else {
           fileBuffer.info.attributes = Object.assign(Object.assign({}, fileBuffer.info.attributes), trailer.attributes);
-          fileBuffer.controller.close();
+          if (trailer.reason) {
+            fileBuffer.controller.error(new DataStreamError("Data stream ".concat(trailer.streamId, " closed abnormally: ").concat(trailer.reason), DataStreamErrorReason.AbnormalEnd));
+          } else {
+            fileBuffer.controller.close();
+          }
         }
         this.byteStreamControllers.delete(trailer.streamId);
       }
     }
   };
+  function createInlineStream(streamId, content) {
+    return new ReadableStream({
+      start: (controller) => __awaiter(this, void 0, void 0, function* () {
+        try {
+          const bytes = yield content;
+          controller.enqueue(new DataStream_Chunk({
+            streamId,
+            chunkIndex: BigInt(0),
+            content: bytes
+          }));
+          controller.close();
+        } catch (err) {
+          controller.error(err);
+        }
+      })
+    });
+  }
+  function ensureOrderedChunks(streamId) {
+    let lastChunkIndex = -1;
+    return new TransformStream({
+      transform: (value, controller) => {
+        const index = bigIntToNumber(value.chunkIndex);
+        if (index <= lastChunkIndex) {
+          livekitLogger.warn("ignoring duplicate chunk ".concat(index, " for compressed data stream ").concat(streamId, " (last processed: ").concat(lastChunkIndex, ")"));
+          return;
+        }
+        if (index > lastChunkIndex + 1) {
+          throw new DataStreamError("Missing chunk(s) ".concat(lastChunkIndex + 1, "..").concat(index - 1, " for compressed data stream ").concat(streamId, " - cannot continue decompressing"), DataStreamErrorReason.Incomplete);
+        }
+        lastChunkIndex = index;
+        controller.enqueue(value);
+      }
+    });
+  }
+  function chunksToBytes() {
+    return new TransformStream({
+      transform: (value, controller) => {
+        controller.enqueue(value.content);
+      }
+    });
+  }
+  function bytesToChunks(streamId) {
+    let outIndex = 0;
+    return new TransformStream({
+      transform: (value, controller) => {
+        if (value.byteLength > 0) {
+          controller.enqueue(new DataStream_Chunk({
+            streamId,
+            chunkIndex: numberToBigInt(outIndex),
+            content: value
+          }));
+          outIndex += 1;
+        }
+      }
+    });
+  }
+  function bytesToDecodedUtf8(streamId) {
+    const decoder2 = new TextDecoder("utf-8");
+    const encoder = new TextEncoder();
+    let outIndex = 0;
+    const decodeOrThrow = (bytes) => {
+      try {
+        return bytes ? decoder2.decode(bytes, {
+          stream: true
+        }) : decoder2.decode();
+      } catch (err) {
+        throw new DataStreamError("Cannot decode compressed data stream ".concat(streamId, " as text: ").concat(err), DataStreamErrorReason.DecodeFailed);
+      }
+    };
+    return new TransformStream({
+      transform: (value, controller) => {
+        const text = decodeOrThrow(value);
+        if (text.length > 0) {
+          controller.enqueue(new DataStream_Chunk({
+            streamId,
+            chunkIndex: numberToBigInt(outIndex),
+            content: encoder.encode(text)
+          }));
+          outIndex += 1;
+        }
+      },
+      flush: (controller) => {
+        const tail = decodeOrThrow();
+        if (tail.length > 0) {
+          controller.enqueue(new DataStream_Chunk({
+            streamId,
+            chunkIndex: numberToBigInt(outIndex),
+            content: encoder.encode(tail)
+          }));
+          outIndex += 1;
+        }
+      }
+    });
+  }
+  function inflateRawByteChunkStream(raw, streamId, maxPayloadByteLength) {
+    return raw.pipeThrough(ensureOrderedChunks(streamId)).pipeThrough(chunksToBytes()).pipeThrough(inflateRawTransform()).pipeThrough(maxDecompressedLengthGuard(streamId, maxPayloadByteLength)).pipeThrough(bytesToChunks(streamId));
+  }
+  function inflateRawChunkStream(raw, streamId, maxPayloadByteLength) {
+    return raw.pipeThrough(ensureOrderedChunks(streamId)).pipeThrough(chunksToBytes()).pipeThrough(inflateRawTransform()).pipeThrough(maxDecompressedLengthGuard(streamId, maxPayloadByteLength)).pipeThrough(bytesToDecodedUtf8(streamId));
+  }
+  function maxDecompressedLengthGuard(streamId, maxByteLength) {
+    let total = 0;
+    return new TransformStream({
+      transform: (value, controller) => {
+        total += value.byteLength;
+        if (total > maxByteLength) {
+          throw new DataStreamError("Data stream ".concat(streamId, " exceeds the maximum payload size of ").concat(maxByteLength, " bytes"), DataStreamErrorReason.PayloadTooLarge);
+        }
+        controller.enqueue(value);
+      }
+    });
+  }
   var BaseStreamWriter = class {
     constructor(writableStream, info, onClose) {
       this.writableStream = writableStream;
@@ -19670,11 +20963,64 @@ var WebchatCallBundle = (() => {
   };
   var ByteStreamWriter = class extends BaseStreamWriter {
   };
-  var STREAM_CHUNK_SIZE = 15e3;
+  function buildTextStreamHeader(info, options, v2) {
+    var _a2;
+    return new DataStream_Header({
+      streamId: info.id,
+      mimeType: info.mimeType,
+      topic: info.topic,
+      timestamp: numberToBigInt(info.timestamp),
+      totalLength: numberToBigInt(info.size),
+      attributes: info.attributes,
+      compression: (_a2 = v2 === null || v2 === void 0 ? void 0 : v2.compression) !== null && _a2 !== void 0 ? _a2 : DataStream_CompressionType.NONE,
+      inlineContent: v2 === null || v2 === void 0 ? void 0 : v2.inlineContent,
+      contentHeader: {
+        case: "textHeader",
+        value: new DataStream_TextHeader({
+          version: options === null || options === void 0 ? void 0 : options.version,
+          attachedStreamIds: info.attachedStreamIds,
+          replyToStreamId: options === null || options === void 0 ? void 0 : options.replyToStreamId,
+          operationType: (options === null || options === void 0 ? void 0 : options.type) === "update" ? DataStream_OperationType.UPDATE : DataStream_OperationType.CREATE
+        })
+      }
+    });
+  }
+  function buildByteStreamHeader(info, v2) {
+    var _a2;
+    return new DataStream_Header({
+      streamId: info.id,
+      mimeType: info.mimeType,
+      topic: info.topic,
+      timestamp: numberToBigInt(info.timestamp),
+      totalLength: numberToBigInt(info.size),
+      attributes: info.attributes,
+      compression: (_a2 = v2 === null || v2 === void 0 ? void 0 : v2.compression) !== null && _a2 !== void 0 ? _a2 : DataStream_CompressionType.NONE,
+      inlineContent: v2 === null || v2 === void 0 ? void 0 : v2.inlineContent,
+      contentHeader: {
+        case: "byteHeader",
+        value: new DataStream_ByteHeader({
+          name: info.name
+        })
+      }
+    });
+  }
+  function createStreamHeaderPacket(header, destinationIdentities) {
+    return new DataPacket({
+      destinationIdentities,
+      value: {
+        case: "streamHeader",
+        value: header
+      }
+    });
+  }
+  var textEncoder = new TextEncoder();
   var OutgoingDataStreamManager = class {
-    constructor(engine, log2) {
+    constructor(engine, log2, getRemoteParticipantClientProtocol, getRemoteParticipantCapabilities, getAllRemoteParticipantIdentities) {
       this.engine = engine;
       this.log = log2;
+      this.getRemoteParticipantClientProtocol = getRemoteParticipantClientProtocol;
+      this.getRemoteParticipantCapabilities = getRemoteParticipantCapabilities;
+      this.getAllRemoteParticipantIdentities = getAllRemoteParticipantIdentities;
     }
     setupEngine(engine) {
       this.engine = engine;
@@ -19682,41 +21028,217 @@ var WebchatCallBundle = (() => {
     /** {@inheritDoc LocalParticipant.sendText} */
     sendText(text, options) {
       return __awaiter(this, void 0, void 0, function* () {
-        var _a2;
+        var _a2, _b2, _c, _d, _e;
         const streamId = crypto.randomUUID();
-        const textInBytes = new TextEncoder().encode(text);
+        const textInBytes = textEncoder.encode(text);
         const totalTextLength = textInBytes.byteLength;
-        const fileIds = (_a2 = options === null || options === void 0 ? void 0 : options.attachments) === null || _a2 === void 0 ? void 0 : _a2.map(() => crypto.randomUUID());
-        const progresses = new Array(fileIds ? fileIds.length + 1 : 1).fill(0);
+        const compress = (_a2 = options === null || options === void 0 ? void 0 : options.compress) !== null && _a2 !== void 0 ? _a2 : true;
+        let info = {
+          id: streamId,
+          mimeType: "text/plain",
+          timestamp: Date.now(),
+          topic: (_b2 = options === null || options === void 0 ? void 0 : options.topic) !== null && _b2 !== void 0 ? _b2 : "",
+          size: totalTextLength,
+          // NOTE: size is always the pre-compression byte length
+          attributes: options === null || options === void 0 ? void 0 : options.attributes,
+          encryptionType: ((_c = this.engine.e2eeManager) === null || _c === void 0 ? void 0 : _c.isDataChannelEncryptionEnabled) ? Encryption_Type.GCM : Encryption_Type.NONE
+        };
+        const compressEligible = compress && isCompressionStreamSupported() && this.allRecipientsSupportV2(options === null || options === void 0 ? void 0 : options.destinationIdentities) && this.allRecipientsSupportCompression(options === null || options === void 0 ? void 0 : options.destinationIdentities);
+        let compressedStream = compressEligible ? MaybeCollectedStream.fromStream(readableFromBytes(textInBytes).pipeThrough(deflateRawTransform())) : null;
+        const noAttachments = !(options === null || options === void 0 ? void 0 : options.attachments) || options.attachments.length === 0;
+        if (noAttachments && this.allRecipientsSupportV2(options === null || options === void 0 ? void 0 : options.destinationIdentities)) {
+          let inlineContent = textInBytes;
+          let compression = DataStream_CompressionType.NONE;
+          if (compressedStream) {
+            const collectedBytes = yield compressedStream.collect();
+            if (collectedBytes.byteLength < textInBytes.byteLength) {
+              inlineContent = collectedBytes;
+              compression = DataStream_CompressionType.DEFLATE_RAW;
+            }
+          }
+          const header = buildTextStreamHeader(info, void 0, {
+            compression,
+            inlineContent
+          });
+          const packet = createStreamHeaderPacket(header, options === null || options === void 0 ? void 0 : options.destinationIdentities);
+          if (packet.toBinary().byteLength <= STREAM_CHUNK_SIZE_BYTES) {
+            yield this.engine.sendDataPacket(packet, DataChannelKind.RELIABLE);
+            (_d = options === null || options === void 0 ? void 0 : options.onProgress) === null || _d === void 0 ? void 0 : _d.call(options, 1);
+            return info;
+          }
+        }
+        const fileIds = (_e = options === null || options === void 0 ? void 0 : options.attachments) === null || _e === void 0 ? void 0 : _e.map(() => crypto.randomUUID());
+        const parts = fileIds ? fileIds.length + 1 : 1;
+        const progresses = new Array(parts).fill(0);
         const handleProgress = (progress, idx) => {
           var _a3;
           progresses[idx] = progress;
-          const totalProgress = progresses.reduce((acc, val) => acc + val, 0);
-          (_a3 = options === null || options === void 0 ? void 0 : options.onProgress) === null || _a3 === void 0 ? void 0 : _a3.call(options, totalProgress);
+          (_a3 = options === null || options === void 0 ? void 0 : options.onProgress) === null || _a3 === void 0 ? void 0 : _a3.call(options, progresses.reduce((acc, val) => acc + val, 0) / parts);
         };
-        const writer2 = yield this.streamText({
-          streamId,
-          totalSize: totalTextLength,
-          destinationIdentities: options === null || options === void 0 ? void 0 : options.destinationIdentities,
-          topic: options === null || options === void 0 ? void 0 : options.topic,
-          attachedStreamIds: fileIds,
-          attributes: options === null || options === void 0 ? void 0 : options.attributes
-        });
-        yield writer2.write(text);
-        handleProgress(1, 0);
-        yield writer2.close();
+        if (compressedStream) {
+          info.attachedStreamIds = fileIds;
+          const header = buildTextStreamHeader(info, void 0, {
+            compression: DataStream_CompressionType.DEFLATE_RAW
+          });
+          const packet = createStreamHeaderPacket(header, options === null || options === void 0 ? void 0 : options.destinationIdentities);
+          yield this.sendChunkedByteStream(packet, streamId, options === null || options === void 0 ? void 0 : options.destinationIdentities, compressedStream.stream().pipeThrough(progressReportingStream(textInBytes.length, (progress) => handleProgress(progress, 0))));
+          if (textInBytes.length === 0) {
+            handleProgress(1, 0);
+          }
+        } else {
+          const writer2 = yield this.streamText({
+            streamId,
+            totalSize: totalTextLength,
+            destinationIdentities: options === null || options === void 0 ? void 0 : options.destinationIdentities,
+            topic: options === null || options === void 0 ? void 0 : options.topic,
+            attachedStreamIds: fileIds,
+            attributes: options === null || options === void 0 ? void 0 : options.attributes
+          });
+          yield writer2.write(text);
+          handleProgress(1, 0);
+          yield writer2.close();
+          info = writer2.info;
+        }
         if ((options === null || options === void 0 ? void 0 : options.attachments) && fileIds) {
           yield Promise.all(options.attachments.map((file, idx) => __awaiter(this, void 0, void 0, function* () {
             return this._sendFile(fileIds[idx], file, {
               topic: options.topic,
               mimeType: file.type,
+              destinationIdentities: options.destinationIdentities,
+              compress: options.compress,
               onProgress: (progress) => {
                 handleProgress(progress, idx + 1);
               }
             });
           })));
         }
-        return writer2.info;
+        return info;
+      });
+    }
+    /**
+     * Sends a complete in-memory byte payload. Mirrors {@link sendText}'s semantics: when every
+     * recipient supports data streams v2 the payload rides inline in a single header packet
+     * (optionally deflate-raw compressed), otherwise it is sent as a (optionally compressed)
+     * chunked byte stream. Unlike {@link sendFile}, the whole payload is already in memory, so the
+     * inline single-packet fast path applies.
+     */
+    sendBytes(bytes, options) {
+      return __awaiter(this, void 0, void 0, function* () {
+        var _a2, _b2, _c, _d, _e, _f, _g;
+        const streamId = crypto.randomUUID();
+        const destinationIdentities = options === null || options === void 0 ? void 0 : options.destinationIdentities;
+        const compress = (_a2 = options === null || options === void 0 ? void 0 : options.compress) !== null && _a2 !== void 0 ? _a2 : true;
+        const info = {
+          id: streamId,
+          name: (_b2 = options === null || options === void 0 ? void 0 : options.name) !== null && _b2 !== void 0 ? _b2 : "unknown",
+          mimeType: (_c = options === null || options === void 0 ? void 0 : options.mimeType) !== null && _c !== void 0 ? _c : "application/octet-stream",
+          timestamp: Date.now(),
+          topic: (_d = options === null || options === void 0 ? void 0 : options.topic) !== null && _d !== void 0 ? _d : "",
+          size: bytes.byteLength,
+          // NOTE: size is always the pre-compression byte length
+          attributes: options === null || options === void 0 ? void 0 : options.attributes,
+          encryptionType: ((_e = this.engine.e2eeManager) === null || _e === void 0 ? void 0 : _e.isDataChannelEncryptionEnabled) ? Encryption_Type.GCM : Encryption_Type.NONE
+        };
+        const progressMonitorTap = progressReportingStream(bytes.length, options === null || options === void 0 ? void 0 : options.onProgress);
+        const compressEligible = compress && isCompressionStreamSupported() && this.allRecipientsSupportV2(destinationIdentities) && this.allRecipientsSupportCompression(destinationIdentities);
+        let compressedStream = compressEligible ? MaybeCollectedStream.fromStream(readableFromBytes(bytes).pipeThrough(progressMonitorTap).pipeThrough(deflateRawTransform())) : null;
+        if (this.allRecipientsSupportV2(destinationIdentities)) {
+          let inlineContent = bytes;
+          let compression = DataStream_CompressionType.NONE;
+          if (compressedStream) {
+            const collectedBytes = yield compressedStream.collect();
+            if (collectedBytes.byteLength < bytes.byteLength) {
+              inlineContent = collectedBytes;
+              compression = DataStream_CompressionType.DEFLATE_RAW;
+            }
+          }
+          const header2 = buildByteStreamHeader(info, {
+            compression,
+            inlineContent
+          });
+          const packet2 = createStreamHeaderPacket(header2, destinationIdentities);
+          if (packet2.toBinary().byteLength <= STREAM_CHUNK_SIZE_BYTES) {
+            yield this.engine.sendDataPacket(packet2, DataChannelKind.RELIABLE);
+            (_f = options === null || options === void 0 ? void 0 : options.onProgress) === null || _f === void 0 ? void 0 : _f.call(options, 1);
+            return info;
+          }
+        }
+        const header = buildByteStreamHeader(info, {
+          compression: compressedStream ? DataStream_CompressionType.DEFLATE_RAW : DataStream_CompressionType.NONE
+        });
+        const packet = createStreamHeaderPacket(header, destinationIdentities);
+        const source = compressedStream ? compressedStream.stream() : readableFromBytes(bytes).pipeThrough(progressMonitorTap);
+        yield this.sendChunkedByteStream(packet, streamId, destinationIdentities, source);
+        if (bytes.length === 0) {
+          (_g = options === null || options === void 0 ? void 0 : options.onProgress) === null || _g === void 0 ? void 0 : _g.call(options, 1);
+        }
+        return info;
+      });
+    }
+    /**
+     * Returns true only if every recipient is known to support data streams v2 (single-packet inline
+     * streams and compression). For a targeted send this checks the named destination identities; for
+     * a broadcast (no explicit destinations) it checks every remote participant currently in the room.
+     * An empty room (nobody to receive) is considered eligible.
+     */
+    allRecipientsSupportV2(destinationIdentities) {
+      const identities = destinationIdentities && destinationIdentities.length > 0 ? destinationIdentities : this.getAllRemoteParticipantIdentities();
+      return identities.every((identity) => this.getRemoteParticipantClientProtocol(identity) >= CLIENT_PROTOCOL_DATA_STREAM_V2);
+    }
+    /**
+     * Returns true only if every recipient advertises the deflate-raw compression capability (so it
+     * can decompress a compressed stream). Resolved the same way as {@link allRecipientsSupportV2}:
+     * named destinations, or every remote participant for a broadcast; an empty room is eligible.
+     */
+    allRecipientsSupportCompression(destinationIdentities) {
+      const identities = destinationIdentities && destinationIdentities.length > 0 ? destinationIdentities : this.getAllRemoteParticipantIdentities();
+      return identities.every((identity) => this.getRemoteParticipantCapabilities(identity).includes(ClientInfo_Capability.CAP_COMPRESSION_DEFLATE_RAW));
+    }
+    /**
+     * Shared chunked-stream send for `sendText`/`sendFile`: sends the prebuilt header packet, then
+     * forwards `source` (optionally deflate-raw compressed) as `streamChunk` packets re-chunked to
+     * the MTU budget with contiguous indices, then sends the trailer. The source is consumed
+     * incrementally, so a `file.stream()` is never buffered in full. The platform compressor can't
+     * flush mid-stream, so compression is only used when the whole payload is available as a stream
+     * up front (not for incremental writers like `streamText`/`streamBytes`).
+     */
+    sendChunkedByteStream(headerPacket, streamId, destinationIdentities, source) {
+      return __awaiter(this, void 0, void 0, function* () {
+        var _a2, e_1, _b2, _c;
+        const engine = this.engine;
+        yield sendHeaderPacket(engine, headerPacket);
+        let chunkId = 0;
+        try {
+          for (var _d = true, _e = __asyncValues(readBytesInChunks(source, STREAM_CHUNK_SIZE_BYTES)), _f; _f = yield _e.next(), _a2 = _f.done, !_a2; _d = true) {
+            _c = _f.value;
+            _d = false;
+            const chunk = _c;
+            const chunkPacket = new DataPacket({
+              destinationIdentities,
+              value: {
+                case: "streamChunk",
+                value: new DataStream_Chunk({
+                  content: chunk,
+                  streamId,
+                  chunkIndex: numberToBigInt(chunkId)
+                })
+              }
+            });
+            yield engine.sendDataPacket(chunkPacket, DataChannelKind.RELIABLE);
+            chunkId += 1;
+          }
+        } catch (e_1_1) {
+          e_1 = {
+            error: e_1_1
+          };
+        } finally {
+          try {
+            if (!_d && !_a2 && (_b2 = _e.return)) yield _b2.call(_e);
+          } finally {
+            if (e_1) throw e_1.error;
+          }
+        }
+        yield sendStreamTrailer(streamId, destinationIdentities, engine);
       });
     }
     /**
@@ -19726,6 +21248,7 @@ var WebchatCallBundle = (() => {
       return __awaiter(this, void 0, void 0, function* () {
         var _a2, _b2, _c;
         const streamId = (_a2 = options === null || options === void 0 ? void 0 : options.streamId) !== null && _a2 !== void 0 ? _a2 : crypto.randomUUID();
+        const destinationIdentities = options === null || options === void 0 ? void 0 : options.destinationIdentities;
         const info = {
           id: streamId,
           mimeType: "text/plain",
@@ -19736,39 +21259,15 @@ var WebchatCallBundle = (() => {
           encryptionType: ((_c = this.engine.e2eeManager) === null || _c === void 0 ? void 0 : _c.isDataChannelEncryptionEnabled) ? Encryption_Type.GCM : Encryption_Type.NONE,
           attachedStreamIds: options === null || options === void 0 ? void 0 : options.attachedStreamIds
         };
-        const header = new DataStream_Header({
-          streamId,
-          mimeType: info.mimeType,
-          topic: info.topic,
-          timestamp: numberToBigInt(info.timestamp),
-          totalLength: numberToBigInt(info.size),
-          attributes: info.attributes,
-          contentHeader: {
-            case: "textHeader",
-            value: new DataStream_TextHeader({
-              version: options === null || options === void 0 ? void 0 : options.version,
-              attachedStreamIds: info.attachedStreamIds,
-              replyToStreamId: options === null || options === void 0 ? void 0 : options.replyToStreamId,
-              operationType: (options === null || options === void 0 ? void 0 : options.type) === "update" ? DataStream_OperationType.UPDATE : DataStream_OperationType.CREATE
-            })
-          }
-        });
-        const destinationIdentities = options === null || options === void 0 ? void 0 : options.destinationIdentities;
-        const packet = new DataPacket({
-          destinationIdentities,
-          value: {
-            case: "streamHeader",
-            value: header
-          }
-        });
-        yield this.engine.sendDataPacket(packet, DataChannelKind.RELIABLE);
+        const header = buildTextStreamHeader(info, options);
+        const packet = createStreamHeaderPacket(header, destinationIdentities);
+        yield sendHeaderPacket(this.engine, packet);
         let chunkId = 0;
         const engine = this.engine;
         const writableStream = new WritableStream({
-          // Implement the sink
           write(text) {
             return __awaiter(this, void 0, void 0, function* () {
-              for (const textByteChunk of splitUtf8(text, STREAM_CHUNK_SIZE)) {
+              for (const textByteChunk of splitUtf8(text, STREAM_CHUNK_SIZE_BYTES)) {
                 const chunk = new DataStream_Chunk({
                   content: textByteChunk,
                   streamId,
@@ -19788,17 +21287,7 @@ var WebchatCallBundle = (() => {
           },
           close() {
             return __awaiter(this, void 0, void 0, function* () {
-              const trailer = new DataStream_Trailer({
-                streamId
-              });
-              const trailerPacket = new DataPacket({
-                destinationIdentities,
-                value: {
-                  case: "streamTrailer",
-                  value: trailer
-                }
-              });
-              yield engine.sendDataPacket(trailerPacket, DataChannelKind.RELIABLE);
+              yield sendStreamTrailer(streamId, destinationIdentities, engine);
             });
           },
           abort(err) {
@@ -19822,27 +21311,38 @@ var WebchatCallBundle = (() => {
         };
       });
     }
+    /**
+     * Streams a file as a chunked byte stream, compressed (deflate-raw) when the runtime supports it
+     * and every recipient is on data streams v2. The file is piped `file.stream()` →
+     * (`CompressionStream`) → chunk packets via {@link sendChunkedByteStream}, so it is never fully
+     * buffered in memory — unlike {@link sendBytes}, there is no inline single-packet fast path for
+     * files (the compressed size can't be known up front without buffering the whole file).
+     */
     _sendFile(streamId, file, options) {
       return __awaiter(this, void 0, void 0, function* () {
-        var _a2;
-        const writer2 = yield this.streamBytes({
-          streamId,
-          totalSize: file.size,
+        var _a2, _b2, _c, _d, _e;
+        const destinationIdentities = options === null || options === void 0 ? void 0 : options.destinationIdentities;
+        const compress = ((_a2 = options === null || options === void 0 ? void 0 : options.compress) !== null && _a2 !== void 0 ? _a2 : true) && isCompressionStreamSupported() && this.allRecipientsSupportV2(destinationIdentities) && this.allRecipientsSupportCompression(destinationIdentities);
+        const info = {
+          id: streamId,
           name: file.name,
-          mimeType: (_a2 = options === null || options === void 0 ? void 0 : options.mimeType) !== null && _a2 !== void 0 ? _a2 : file.type,
-          topic: options === null || options === void 0 ? void 0 : options.topic,
-          destinationIdentities: options === null || options === void 0 ? void 0 : options.destinationIdentities
+          mimeType: (_b2 = options === null || options === void 0 ? void 0 : options.mimeType) !== null && _b2 !== void 0 ? _b2 : file.type,
+          topic: (_c = options === null || options === void 0 ? void 0 : options.topic) !== null && _c !== void 0 ? _c : "",
+          timestamp: Date.now(),
+          size: file.size,
+          encryptionType: ((_d = this.engine.e2eeManager) === null || _d === void 0 ? void 0 : _d.isDataChannelEncryptionEnabled) ? Encryption_Type.GCM : Encryption_Type.NONE
+        };
+        const header = buildByteStreamHeader(info, {
+          compression: compress ? DataStream_CompressionType.DEFLATE_RAW : DataStream_CompressionType.NONE
         });
-        const reader = file.stream().getReader();
-        while (true) {
-          const _yield$reader$read = yield reader.read(), done = _yield$reader$read.done, value = _yield$reader$read.value;
-          if (done) {
-            break;
-          }
-          yield writer2.write(value);
+        const packet = createStreamHeaderPacket(header, destinationIdentities);
+        const tapped = file.stream().pipeThrough(progressReportingStream(file.size, options === null || options === void 0 ? void 0 : options.onProgress));
+        const source = compress ? tapped.pipeThrough(deflateRawTransform()) : tapped;
+        yield this.sendChunkedByteStream(packet, streamId, destinationIdentities, source);
+        if (file.size === 0) {
+          (_e = options === null || options === void 0 ? void 0 : options.onProgress) === null || _e === void 0 ? void 0 : _e.call(options, 1);
         }
-        yield writer2.close();
-        return writer2.info;
+        return info;
       });
     }
     streamBytes(options) {
@@ -19860,28 +21360,9 @@ var WebchatCallBundle = (() => {
           name: (_d = options === null || options === void 0 ? void 0 : options.name) !== null && _d !== void 0 ? _d : "unknown",
           encryptionType: ((_e = this.engine.e2eeManager) === null || _e === void 0 ? void 0 : _e.isDataChannelEncryptionEnabled) ? Encryption_Type.GCM : Encryption_Type.NONE
         };
-        const header = new DataStream_Header({
-          totalLength: numberToBigInt(info.size),
-          mimeType: info.mimeType,
-          streamId,
-          topic: info.topic,
-          timestamp: numberToBigInt(Date.now()),
-          attributes: info.attributes,
-          contentHeader: {
-            case: "byteHeader",
-            value: new DataStream_ByteHeader({
-              name: info.name
-            })
-          }
-        });
-        const packet = new DataPacket({
-          destinationIdentities,
-          value: {
-            case: "streamHeader",
-            value: header
-          }
-        });
-        yield this.engine.sendDataPacket(packet, DataChannelKind.RELIABLE);
+        const header = buildByteStreamHeader(info);
+        const packet = createStreamHeaderPacket(header, destinationIdentities);
+        yield sendHeaderPacket(this.engine, packet);
         let chunkId = 0;
         const writeMutex = new _();
         const engine = this.engine;
@@ -19893,7 +21374,7 @@ var WebchatCallBundle = (() => {
               let byteOffset = 0;
               try {
                 while (byteOffset < chunk.byteLength) {
-                  const subChunk = chunk.slice(byteOffset, byteOffset + STREAM_CHUNK_SIZE);
+                  const subChunk = chunk.slice(byteOffset, byteOffset + STREAM_CHUNK_SIZE_BYTES);
                   const chunkPacket = new DataPacket({
                     destinationIdentities,
                     value: {
@@ -19916,17 +21397,7 @@ var WebchatCallBundle = (() => {
           },
           close() {
             return __awaiter(this, void 0, void 0, function* () {
-              const trailer = new DataStream_Trailer({
-                streamId
-              });
-              const trailerPacket = new DataPacket({
-                destinationIdentities,
-                value: {
-                  case: "streamTrailer",
-                  value: trailer
-                }
-              });
-              yield engine.sendDataPacket(trailerPacket, DataChannelKind.RELIABLE);
+              yield sendStreamTrailer(streamId, destinationIdentities, engine);
             });
           },
           abort(err) {
@@ -19938,6 +21409,76 @@ var WebchatCallBundle = (() => {
       });
     }
   };
+  var MaybeCollectedStream = class _MaybeCollectedStream {
+    constructor(state) {
+      this.state = state;
+    }
+    static fromStream(stream) {
+      return new _MaybeCollectedStream({
+        type: "stream",
+        stream
+      });
+    }
+    /** Collect data from the stream into memory and return as a Uint8Array. */
+    collect() {
+      return __awaiter(this, void 0, void 0, function* () {
+        switch (this.state.type) {
+          case "stream":
+            const bytes = yield collect(this.state.stream);
+            this.state = {
+              type: "collected",
+              bytes
+            };
+            return bytes;
+          case "collected":
+            return this.state.bytes;
+        }
+      });
+    }
+    /** Pass wrapped stream through to downstream consumer. */
+    stream() {
+      switch (this.state.type) {
+        case "stream":
+          return this.state.stream;
+        case "collected":
+          return readableFromBytes(this.state.bytes);
+      }
+    }
+  };
+  function progressReportingStream(totalPreCompressionLength, onProgress) {
+    let sent = 0;
+    return new TransformStream({
+      transform(chunk, controller) {
+        sent += chunk.byteLength;
+        if (onProgress && typeof totalPreCompressionLength === "number" && totalPreCompressionLength > 0) {
+          onProgress(Math.min(sent / totalPreCompressionLength, 1));
+        }
+        controller.enqueue(chunk);
+      }
+    });
+  }
+  function sendHeaderPacket(engine, packet) {
+    return __awaiter(this, void 0, void 0, function* () {
+      if (packet.toBinary().byteLength > STREAM_CHUNK_SIZE_BYTES) {
+        throw new DataStreamError("data stream header exceeds the ".concat(STREAM_CHUNK_SIZE_BYTES, "-byte limit; reduce attribute size"), DataStreamErrorReason.HeaderTooLarge);
+      }
+      yield engine.sendDataPacket(packet, DataChannelKind.RELIABLE);
+    });
+  }
+  function sendStreamTrailer(streamId, destinationIdentities, engine) {
+    return __awaiter(this, void 0, void 0, function* () {
+      const trailerPacket = new DataPacket({
+        destinationIdentities,
+        value: {
+          case: "streamTrailer",
+          value: new DataStream_Trailer({
+            streamId
+          })
+        }
+      });
+      yield engine.sendDataPacket(trailerPacket, DataChannelKind.RELIABLE);
+    });
+  }
   function abortSignalAny(signals) {
     if (signals.length === 0) {
       const controller2 = new AbortController();
@@ -20828,6 +22369,7 @@ var WebchatCallBundle = (() => {
       let bufferSize = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : READABLE_STREAM_DEFAULT_BUFFER_SIZE;
       let streamController = null;
       const sfuSubscriptionComplete = new Future();
+      const descriptor = this.descriptors.get(sid);
       const detachSignal = () => {
         signal === null || signal === void 0 ? void 0 : signal.removeEventListener("abort", onAbort);
       };
@@ -20837,8 +22379,7 @@ var WebchatCallBundle = (() => {
           log$1.warn("ReadableStream subscribed to ".concat(sid, " was not started."));
           return;
         }
-        const descriptor = this.descriptors.get(sid);
-        if (!descriptor) {
+        if (!descriptor || this.descriptors.get(descriptor.info.sid) !== descriptor) {
           log$1.warn("Unknown track ".concat(sid, ", skipping cancel..."));
           return;
         }
@@ -20856,9 +22397,8 @@ var WebchatCallBundle = (() => {
         if (!streamController) {
           return;
         }
-        const currentDescriptor = this.descriptors.get(sid);
-        if ((currentDescriptor === null || currentDescriptor === void 0 ? void 0 : currentDescriptor.subscription.type) === "active") {
-          currentDescriptor.subscription.streamControllers.delete(streamController);
+        if ((descriptor === null || descriptor === void 0 ? void 0 : descriptor.subscription.type) === "active") {
+          descriptor.subscription.streamControllers.delete(streamController);
         }
         streamController.error(DataTrackSubscribeError.cancelled());
         (_a2 = sfuSubscriptionComplete.reject) === null || _a2 === void 0 ? void 0 : _a2.call(sfuSubscriptionComplete, DataTrackSubscribeError.cancelled());
@@ -20869,8 +22409,7 @@ var WebchatCallBundle = (() => {
           streamController = controller;
           this.subscribeRequest(sid, signal).then(() => __awaiter(this, void 0, void 0, function* () {
             var _a2, _b2, _c;
-            const descriptor = this.descriptors.get(sid);
-            if (!descriptor) {
+            if (!descriptor || this.descriptors.get(descriptor.info.sid) !== descriptor) {
               log$1.error("Unknown track ".concat(sid));
               const err = DataTrackSubscribeError.disconnected();
               controller.error(err);
@@ -20971,7 +22510,7 @@ var WebchatCallBundle = (() => {
                   type: "none"
                 };
                 this.emit("sfuUpdateSubscription", {
-                  sid,
+                  sid: descriptor.info.sid,
                   subscribe: false
                 });
                 if (previousDescriptorSubscription.type === "pending") {
@@ -21073,6 +22612,9 @@ var WebchatCallBundle = (() => {
             if (this.descriptors.has(info.sid)) {
               continue;
             }
+            if (this.handleSidReassigned(publisherIdentity, info)) {
+              continue;
+            }
             yield this.handleTrackPublished(publisherIdentity, info);
           }
           publisherParticipantToSidsInUpdate.set(publisherIdentity, sidsInUpdate);
@@ -21128,6 +22670,51 @@ var WebchatCallBundle = (() => {
         });
       });
     }
+    /**
+     * Detects and handles SID reassignment, which occurs when the publisher
+     * republishes its tracks after a full reconnect.
+     *
+     * Returns `true` if an SID reassignment occurred, `false` otherwise.
+     */
+    handleSidReassigned(publisherIdentity, info) {
+      const existingEntry = Array.from(this.descriptors.entries()).find((_ref1) => {
+        let _ref10 = _slicedToArray(_ref1, 2);
+        _ref10[0];
+        let descriptor2 = _ref10[1];
+        return descriptor2.publisherIdentity === publisherIdentity && descriptor2.info.pubHandle === info.pubHandle;
+      });
+      if (!existingEntry) {
+        return false;
+      }
+      const _existingEntry = _slicedToArray(existingEntry, 2), oldSid = _existingEntry[0], descriptor = _existingEntry[1];
+      const _descriptor$info = descriptor.info, name = _descriptor$info.name, usesE2ee = _descriptor$info.usesE2ee;
+      if (name !== info.name || usesE2ee !== info.usesE2ee) {
+        log$1.warn("Info mismatch for ".concat(oldSid, ", treating as new publication"));
+        return false;
+      }
+      const newSid = info.sid;
+      log$1.debug("SID reassigned: ".concat(oldSid, " -> ").concat(newSid));
+      if (!this.descriptors.delete(oldSid)) {
+        return false;
+      }
+      descriptor.info.sid = newSid;
+      switch (descriptor.subscription.type) {
+        case "none":
+          break;
+        case "pending":
+        case "active":
+          this.emit("sfuUpdateSubscription", {
+            sid: newSid,
+            subscribe: true
+          });
+          break;
+      }
+      if (descriptor.subscription.type === "active") {
+        this.subscriptionHandles.set(descriptor.subscription.subcriptionHandle, newSid);
+      }
+      this.descriptors.set(newSid, descriptor);
+      return true;
+    }
     handleTrackUnpublished(sid) {
       const descriptor = this.descriptors.get(sid);
       if (!descriptor) {
@@ -21146,10 +22733,10 @@ var WebchatCallBundle = (() => {
     }
     /** SFU notification that handles have been assigned for requested subscriptions. */
     receivedSfuSubscriberHandles(mapping) {
-      for (const _ref1 of mapping.entries()) {
-        var _ref10 = _slicedToArray(_ref1, 2);
-        const handle = _ref10[0];
-        const sid = _ref10[1];
+      for (const _ref11 of mapping.entries()) {
+        var _ref12 = _slicedToArray(_ref11, 2);
+        const handle = _ref12[0];
+        const sid = _ref12[1];
         this.registerSubscriberHandle(handle, sid);
       }
     }
@@ -21166,11 +22753,16 @@ var WebchatCallBundle = (() => {
           return;
         }
         case "active": {
+          this.subscriptionHandles.delete(descriptor.subscription.subcriptionHandle);
           descriptor.subscription.subcriptionHandle = assignedHandle;
           this.subscriptionHandles.set(assignedHandle, sid);
           return;
         }
         case "pending": {
+          log$1.debug("data track subscription activated", {
+            sid,
+            handle: assignedHandle
+          });
           const pipeline = new IncomingDataTrackPipeline({
             info: descriptor.info,
             publisherIdentity: descriptor.publisherIdentity,
@@ -21235,10 +22827,10 @@ var WebchatCallBundle = (() => {
      * tracks are subscribed to locally.
      */
     resendSubscriptionUpdates() {
-      for (const _ref11 of this.descriptors) {
-        var _ref12 = _slicedToArray(_ref11, 2);
-        const sid = _ref12[0];
-        const descriptor = _ref12[1];
+      for (const _ref13 of this.descriptors) {
+        var _ref14 = _slicedToArray(_ref13, 2);
+        const sid = _ref14[0];
+        const descriptor = _ref14[1];
         if (descriptor.subscription.type === "none") {
           continue;
         }
@@ -21870,10 +23462,16 @@ var WebchatCallBundle = (() => {
         case "pending": {
           if (result.type === "ok") {
             const info = result.data;
+            log.debug("SFU accepted publish request for handle ".concat(handle), {
+              sid: info.sid
+            });
             const e2eeManager = info.usesE2ee ? this.e2eeManager : null;
             this.descriptors.set(info.pubHandle, Descriptor.active(info, e2eeManager));
             (_b2 = (_a2 = descriptor.completionFuture).resolve) === null || _b2 === void 0 ? void 0 : _b2.call(_a2);
           } else {
+            log.debug("SFU rejected publish request for handle ".concat(handle), {
+              error: result.error
+            });
             (_d = (_c = descriptor.completionFuture).reject) === null || _d === void 0 ? void 0 : _d.call(_c, result.error);
           }
           return;
@@ -22069,7 +23667,7 @@ var WebchatCallBundle = (() => {
     }
     return str.slice(0, low);
   }
-  var RpcClientManager = class extends EventEmitter {
+  var RpcClientManager = class extends eventsExports.EventEmitter {
     constructor(log2, outgoingDataStreamManager, getRemoteParticipantClientProtocol, getServerVersion) {
       super();
       this.pendingAcks = /* @__PURE__ */ new Map();
@@ -22139,7 +23737,7 @@ var WebchatCallBundle = (() => {
     publishRpcRequest(destinationIdentity, requestId, method, payload, responseTimeout, remoteClientProtocol) {
       return __awaiter(this, void 0, void 0, function* () {
         if (remoteClientProtocol >= CLIENT_PROTOCOL_DATA_STREAM_RPC) {
-          const writer2 = yield this.outgoingDataStreamManager.streamText({
+          yield this.outgoingDataStreamManager.sendText(payload, {
             topic: RPC_REQUEST_DATA_STREAM_TOPIC,
             destinationIdentities: [destinationIdentity],
             attributes: {
@@ -22149,8 +23747,6 @@ var WebchatCallBundle = (() => {
               [RpcRequestAttrs.RPC_REQUEST_VERSION]: "".concat(RPC_VERSION_V2)
             }
           });
-          yield writer2.write(payload);
-          yield writer2.close();
           return;
         }
         this.emit("sendDataPacket", {
@@ -22256,7 +23852,7 @@ var WebchatCallBundle = (() => {
       }
     }
   };
-  var RpcServerManager = class extends EventEmitter {
+  var RpcServerManager = class extends eventsExports.EventEmitter {
     constructor(log2, outgoingDataStreamManager, getRemoteParticipantClientProtocol) {
       super();
       this.rpcHandlers = /* @__PURE__ */ new Map();
@@ -22416,15 +24012,13 @@ var WebchatCallBundle = (() => {
       return __awaiter(this, void 0, void 0, function* () {
         const callerClientProtocol = this.getRemoteParticipantClientProtocol(destinationIdentity);
         if (callerClientProtocol >= CLIENT_PROTOCOL_DATA_STREAM_RPC) {
-          const writer2 = yield this.outgoingDataStreamManager.streamText({
+          yield this.outgoingDataStreamManager.sendText(payload, {
             topic: RPC_RESPONSE_DATA_STREAM_TOPIC,
             destinationIdentities: [destinationIdentity],
             attributes: {
               [RpcRequestAttrs.RPC_REQUEST_ID]: requestId
             }
           });
-          yield writer2.write(payload);
-          yield writer2.close();
           return;
         }
         const responseBytes = byteLength(payload);
@@ -23200,6 +24794,11 @@ var WebchatCallBundle = (() => {
       this.audioTrackPublications.forEach((track) => isAudioTrack(track.track) && track.track.setAudioContext(ctx));
     }
     addTrackPublication(publication) {
+      this.log.debug("adding track publication", {
+        trackSid: publication.trackSid,
+        source: publication.source,
+        kind: publication.kind
+      });
       publication.on(TrackEvent.Muted, () => {
         this.emit(ParticipantEvent.TrackMuted, publication);
       });
@@ -24113,7 +25712,7 @@ var WebchatCallBundle = (() => {
         if (isLocalAudioTrack(track) && track.hasPreConnectBuffer) {
           audioFeatures.push(AudioTrackFeature.TF_PRECONNECT_BUFFER);
         }
-        const packetTrailerFeatures = this.normalizeRequestedPacketTrailerOptions(track, opts);
+        const packetTrailerFeatures = this.normalizeRequestedFrameMetadataOptions(track, opts);
         const req = new AddTrackRequest({
           // get local track id for use during publishing
           cid: track.mediaStreamTrack.id,
@@ -24191,7 +25790,7 @@ var WebchatCallBundle = (() => {
           throw new UnexpectedConnectionState("cannot publish track when not connected");
         }
         const negotiate = () => __awaiter(this, void 0, void 0, function* () {
-          var _a3, _b3, _c2;
+          var _a3, _b3, _c2, _d2;
           if (!this.engine.pcManager) {
             throw new UnexpectedConnectionState("pcManager is not ready");
           }
@@ -24220,12 +25819,19 @@ var WebchatCallBundle = (() => {
                   maxbr: ((_b3 = encodings[0]) === null || _b3 === void 0 ? void 0 : _b3.maxBitrate) ? encodings[0].maxBitrate / 1e3 : 0
                 });
               }
-            } else if (track.codec && isSVCCodec(track.codec) && ((_c2 = encodings[0]) === null || _c2 === void 0 ? void 0 : _c2.maxBitrate)) {
-              this.engine.pcManager.publisher.setTrackCodecBitrate({
-                cid: req.cid,
-                codec: track.codec,
-                maxbr: encodings[0].maxBitrate / 1e3
-              });
+            } else if (track.codec && isVideoCodec(track.codec)) {
+              const targetBitrate = isSVCCodec(track.codec) ? (_d2 = (_c2 = encodings[0]) === null || _c2 === void 0 ? void 0 : _c2.maxBitrate) !== null && _d2 !== void 0 ? _d2 : 0 : encodings.reduce((sum, enc) => {
+                var _a4;
+                return sum + ((_a4 = enc.maxBitrate) !== null && _a4 !== void 0 ? _a4 : 0);
+              }, 0);
+              if (targetBitrate > 0) {
+                this.engine.pcManager.publisher.setTrackCodecBitrate({
+                  cid: req.cid,
+                  codec: track.codec,
+                  maxbr: targetBitrate / 1e3,
+                  isScreenShare: track.source === Track.Source.ScreenShare
+                });
+              }
             }
           }
           yield this.engine.negotiate();
@@ -24374,21 +25980,28 @@ var WebchatCallBundle = (() => {
         return publication;
       });
     }
-    canPublishPacketTrailer() {
-      return !!(this.roomOptions.e2ee || this.roomOptions.encryption || isPacketTrailerSupported(this.roomOptions.packetTrailer));
+    canPublishFrameMetadata() {
+      var _a2;
+      return !!(this.roomOptions.e2ee || this.roomOptions.encryption || isFrameMetadataSupported((_a2 = this.roomOptions.frameMetadata) !== null && _a2 !== void 0 ? _a2 : this.roomOptions.packetTrailer));
     }
-    normalizeRequestedPacketTrailerOptions(track, opts) {
-      if (track.kind !== Track.Kind.Video || !hasPacketTrailerPublishOptions(opts.packetTrailer)) {
+    normalizeRequestedFrameMetadataOptions(track, opts) {
+      var _a2;
+      const fmOpts = (_a2 = opts.frameMetadata) !== null && _a2 !== void 0 ? _a2 : opts.packetTrailer;
+      if (track.kind !== Track.Kind.Video || !hasFrameMetadataPublishOptions(fmOpts)) {
+        opts.frameMetadata = void 0;
         opts.packetTrailer = void 0;
         return [];
       }
-      if (!this.canPublishPacketTrailer()) {
-        this.log.warn("packet trailer transform not supported; not advertising features", Object.assign(Object.assign({}, this.logContext), getLogContextFromTrack(track)));
+      if (!this.canPublishFrameMetadata()) {
+        this.log.warn("frame metadata transform not supported; not advertising features", Object.assign(Object.assign({}, this.logContext), getLogContextFromTrack(track)));
+        opts.frameMetadata = void 0;
         opts.packetTrailer = void 0;
         return [];
       }
-      const features = getPacketTrailerFeatures(opts.packetTrailer);
-      opts.packetTrailer = getPacketTrailerPublishOptions(features);
+      const features = getFrameMetadataFeatures(fmOpts);
+      const normalized = getFrameMetadataPublishOptions(features);
+      opts.frameMetadata = normalized;
+      opts.packetTrailer = normalized;
       return features;
     }
     get isLocal() {
@@ -24428,7 +26041,7 @@ var WebchatCallBundle = (() => {
         if (!simulcastTrack) {
           return;
         }
-        const packetTrailerFeatures = this.normalizeRequestedPacketTrailerOptions(track, opts);
+        const packetTrailerFeatures = this.normalizeRequestedFrameMetadataOptions(track, opts);
         const req = new AddTrackRequest({
           cid: simulcastTrack.mediaStreamTrack.id,
           type: Track.kindToProto(track.kind),
@@ -24727,6 +26340,18 @@ var WebchatCallBundle = (() => {
     sendFile(file, options) {
       return __awaiter(this, void 0, void 0, function* () {
         return this.roomOutgoingDataStreamManager.sendFile(file, options);
+      });
+    }
+    /**
+     * Sends the given bytes to participants in the room via the data channel.
+     * For files, consider using {@link sendFile}; for longer/incremental payloads, {@link streamBytes}.
+     *
+     * @param bytes The byte payload
+     * @param options.topic Topic identifier used to route the stream to appropriate handlers.
+     */
+    sendBytes(bytes, options) {
+      return __awaiter(this, void 0, void 0, function* () {
+        return this.roomOutgoingDataStreamManager.sendBytes(bytes, options);
       });
     }
     /**
@@ -25232,7 +26857,7 @@ var WebchatCallBundle = (() => {
         return new RemoteDataTrack(info, manager, {
           publisherIdentity: pi.identity
         });
-      }), pi.clientProtocol);
+      }), pi.clientProtocol, pi.capabilities);
     }
     get logContext() {
       return Object.assign(Object.assign({}, super.logContext), {
@@ -25245,6 +26870,7 @@ var WebchatCallBundle = (() => {
       let kind = arguments.length > 7 && arguments[7] !== void 0 ? arguments[7] : ParticipantInfo_Kind.STANDARD;
       let remoteDataTracks = arguments.length > 8 && arguments[8] !== void 0 ? arguments[8] : [];
       let clientProtocol2 = arguments.length > 9 && arguments[9] !== void 0 ? arguments[9] : CLIENT_PROTOCOL_DEFAULT;
+      let capabilities = arguments.length > 10 && arguments[10] !== void 0 ? arguments[10] : [];
       super(sid, identity || "", name, metadata, attributes, loggerOptions, kind);
       this.signalClient = signalClient;
       this.trackPublications = /* @__PURE__ */ new Map();
@@ -25255,6 +26881,7 @@ var WebchatCallBundle = (() => {
       }));
       this.volumeMap = /* @__PURE__ */ new Map();
       this.clientProtocol = clientProtocol2;
+      this.capabilities = capabilities;
     }
     addTrackPublication(publication) {
       super.addTrackPublication(publication);
@@ -25524,6 +27151,7 @@ var WebchatCallBundle = (() => {
       this.log = livekitLogger;
       this.bufferedEvents = [];
       this.isResuming = false;
+      this.pendingTrackAddedCallbacks = /* @__PURE__ */ new Map();
       this.connect = (url, token, opts) => __awaiter(this, void 0, void 0, function* () {
         var _a3;
         if (!isBrowserSupported()) {
@@ -25630,7 +27258,7 @@ var WebchatCallBundle = (() => {
         const _yield$engine$join = yield engine.join(url, token, {
           autoSubscribe: connectOptions.autoSubscribe,
           adaptiveStream: typeof roomOptions.adaptiveStream === "object" ? true : roomOptions.adaptiveStream,
-          clientInfoCapabilities: isPacketTrailerSupported(roomOptions.packetTrailer) || !!this.e2eeManager ? [ClientInfo_Capability.CAP_PACKET_TRAILER] : void 0,
+          clientInfoCapabilities: this.getClientInfoCapabilities(roomOptions),
           maxRetries: connectOptions.maxRetries,
           e2eeEnabled: !!this.e2eeManager,
           websocketTimeout: connectOptions.websocketTimeout
@@ -25816,7 +27444,9 @@ var WebchatCallBundle = (() => {
         });
         try {
           yield Promise.all([this.acquireAudioContext(), ...elements.map((e2) => {
-            e2.muted = false;
+            if (!this.options.webAudioMix) {
+              e2.muted = false;
+            }
             return e2.play();
           })]);
           this.handleAudioPlaybackStarted();
@@ -25981,8 +27611,9 @@ var WebchatCallBundle = (() => {
             return;
           }
           const newStreamState = Track.streamStateFromProto(streamState.state);
+          const prevStreamState = pub.track.streamState;
           pub.track.setStreamState(newStreamState);
-          if (newStreamState !== pub.track.streamState) {
+          if (newStreamState !== prevStreamState) {
             participant.emit(ParticipantEvent.TrackStreamStateChanged, pub, pub.track.streamState);
             this.emitWhenConnected(RoomEvent.TrackStreamStateChanged, pub, pub.track.streamState, participant);
           }
@@ -26000,6 +27631,7 @@ var WebchatCallBundle = (() => {
         pub.setAllowed(update.allowed);
       };
       this.handleSubscriptionError = (update) => {
+        this.cancelPendingTrackAdded(update.trackSid);
         const participant = Array.from(this.remoteParticipants.values()).find((p) => p.trackPublications.has(update.trackSid));
         if (!participant) {
           return;
@@ -26133,6 +27765,13 @@ var WebchatCallBundle = (() => {
         var _a3, _b3;
         return (_b3 = (_a3 = this.remoteParticipants.get(identity)) === null || _a3 === void 0 ? void 0 : _a3.clientProtocol) !== null && _b3 !== void 0 ? _b3 : CLIENT_PROTOCOL_DEFAULT;
       };
+      this.getRemoteParticipantCapabilities = (identity) => {
+        var _a3, _b3;
+        return (_b3 = (_a3 = this.remoteParticipants.get(identity)) === null || _a3 === void 0 ? void 0 : _a3.capabilities) !== null && _b3 !== void 0 ? _b3 : [];
+      };
+      this.getAllRemoteParticipantIdentities = () => {
+        return Array.from(this.remoteParticipants.keys());
+      };
       this.onLocalParticipantMetadataChanged = (metadata) => {
         this.emit(RoomEvent.ParticipantMetadataChanged, metadata, this.localParticipant);
       };
@@ -26209,7 +27848,7 @@ var WebchatCallBundle = (() => {
       this.options.publishDefaults = Object.assign(Object.assign({}, publishDefaults), options === null || options === void 0 ? void 0 : options.publishDefaults);
       this.maybeCreateEngine();
       this.incomingDataStreamManager = new IncomingDataStreamManager();
-      this.outgoingDataStreamManager = new OutgoingDataStreamManager(this.engine, this.log);
+      this.outgoingDataStreamManager = new OutgoingDataStreamManager(this.engine, this.log, this.getRemoteParticipantClientProtocol, this.getRemoteParticipantCapabilities, this.getAllRemoteParticipantIdentities);
       this.incomingDataTrackManager = new IncomingDataTrackManager({
         e2eeManager: this.e2eeManager
       });
@@ -26243,7 +27882,7 @@ var WebchatCallBundle = (() => {
         this.emit(RoomEvent.LocalDataTrackUnpublished, event.sid);
       }).on("packetAvailable", (_ref) => {
         let handle = _ref.handle, bytes = _ref.bytes;
-        this.engine.sendLossyBytes(bytes, DataChannelKind.DATA_TRACK_LOSSY, "wait").finally(() => this.outgoingDataTrackManager.handlePacketSendComplete(handle));
+        this.engine.sendDataTrackFrame(bytes).finally(() => this.outgoingDataTrackManager.handlePacketSendComplete(handle));
       });
       this.registerRpcDataStreamHandler();
       this.rpcClientManager = new RpcClientManager(this.log, this.outgoingDataStreamManager, this.getRemoteParticipantClientProtocol, () => {
@@ -26263,7 +27902,7 @@ var WebchatCallBundle = (() => {
       });
       this.disconnectLock = new _();
       this.localParticipant = new LocalParticipant("", "", this.engine, this.options, this.outgoingDataStreamManager, this.outgoingDataTrackManager, this.rpcClientManager, this.rpcServerManager);
-      this.setupPacketTrailer();
+      this.setupFrameMetadata();
       if (this.options.e2ee || this.options.encryption) {
         this.setupE2EE();
       }
@@ -26398,9 +28037,11 @@ var WebchatCallBundle = (() => {
         (_b2 = this.e2eeManager) === null || _b2 === void 0 ? void 0 : _b2.setupEngine(this.engine);
       }
     }
-    setupPacketTrailer() {
-      this.packetTrailerManager = new PacketTrailerManager(this.options.packetTrailer);
-      this.packetTrailerManager.setup(this);
+    setupFrameMetadata() {
+      var _a2;
+      const opts = (_a2 = this.options.frameMetadata) !== null && _a2 !== void 0 ? _a2 : this.options.packetTrailer;
+      this.frameMetadataManager = new FrameMetadataManager(opts);
+      this.frameMetadataManager.setup(this);
     }
     get logContext() {
       var _a2, _b2, _c;
@@ -26483,15 +28124,15 @@ var WebchatCallBundle = (() => {
         this.isResuming = false;
         this.log.debug("Resumed signal connection");
         this.updateSubscriptions();
-        this.emitBufferedEvents();
         if (this.setAndEmitConnectionState(ConnectionState.Connected)) {
           this.emit(RoomEvent.Reconnected);
         }
+        this.emitBufferedEvents();
       }).on(EngineEvent.SignalResumed, () => {
-        this.bufferedEvents = [];
         if (this.state === ConnectionState.Reconnecting || this.isResuming) {
           this.sendSyncState();
         }
+        this.emitBufferedEvents();
       }).on(EngineEvent.Restarting, this.handleRestarting).on(EngineEvent.Restarted, this.handleRestarted).on(EngineEvent.SignalRestarted, this.handleSignalRestarted).on(EngineEvent.Offline, () => {
         if (this.setAndEmitConnectionState(ConnectionState.Reconnecting)) {
           this.emit(RoomEvent.Reconnecting);
@@ -26890,24 +28531,38 @@ var WebchatCallBundle = (() => {
       this.maybeCreateEngine();
     }
     onTrackAdded(mediaTrack, stream, receiver) {
-      if (this.state === ConnectionState.Connecting || this.state === ConnectionState.Reconnecting) {
+      var _a2, _b2;
+      if ([ConnectionState.Connecting, ConnectionState.Reconnecting].includes(this.state)) {
+        const pendingTrackSid = extractTrackSid(mediaTrack, stream);
+        this.log.debug("deferring on track for later", {
+          mediaTrackId: mediaTrack.id,
+          mediaStreamId: stream.id,
+          tracksInStream: stream.getTracks().map((track) => track.id)
+        });
         const reconnectedHandler = () => {
-          this.log.debug("deferring on track for later", {
-            mediaTrackId: mediaTrack.id,
-            mediaStreamId: stream.id,
-            tracksInStream: stream.getTracks().map((track) => track.id)
-          });
-          this.onTrackAdded(mediaTrack, stream, receiver);
           cleanup();
+          this.onTrackAdded(mediaTrack, stream, receiver);
         };
         const cleanup = () => {
           this.off(RoomEvent.Reconnected, reconnectedHandler);
           this.off(RoomEvent.Connected, reconnectedHandler);
           this.off(RoomEvent.Disconnected, cleanup);
+          if (pendingTrackSid) {
+            const pendingCallbacks = this.pendingTrackAddedCallbacks.get(pendingTrackSid);
+            pendingCallbacks === null || pendingCallbacks === void 0 ? void 0 : pendingCallbacks.delete(cleanup);
+            if ((pendingCallbacks === null || pendingCallbacks === void 0 ? void 0 : pendingCallbacks.size) === 0) {
+              this.pendingTrackAddedCallbacks.delete(pendingTrackSid);
+            }
+          }
         };
         this.once(RoomEvent.Reconnected, reconnectedHandler);
         this.once(RoomEvent.Connected, reconnectedHandler);
         this.once(RoomEvent.Disconnected, cleanup);
+        if (pendingTrackSid) {
+          const pendingCallbacks = (_a2 = this.pendingTrackAddedCallbacks.get(pendingTrackSid)) !== null && _a2 !== void 0 ? _a2 : /* @__PURE__ */ new Set();
+          pendingCallbacks.add(cleanup);
+          this.pendingTrackAddedCallbacks.set(pendingTrackSid, pendingCallbacks);
+        }
         return;
       }
       if (this.state === ConnectionState.Disconnected) {
@@ -26920,9 +28575,8 @@ var WebchatCallBundle = (() => {
       }
       const parts = unpackStreamId(stream.id);
       const participantSid = parts[0];
-      let streamId = parts[1];
-      let trackId = mediaTrack.id;
-      if (streamId && streamId.startsWith("TR")) trackId = streamId;
+      const streamId = parts[1];
+      let trackId = (_b2 = extractTrackSid(mediaTrack, stream)) !== null && _b2 !== void 0 ? _b2 : mediaTrack.id;
       if (participantSid === this.localParticipant.sid) {
         this.log.warn("tried to create RemoteParticipant for local participant");
         return;
@@ -26961,6 +28615,10 @@ var WebchatCallBundle = (() => {
       if ((publication === null || publication === void 0 ? void 0 : publication.isEncrypted) && !this.e2eeManager) {
         this.emit(RoomEvent.EncryptionError, new Error("Encrypted ".concat(publication.source, " track received from participant ").concat(participant.sid, ", but room does not have encryption enabled!")));
       }
+    }
+    cancelPendingTrackAdded(trackSid) {
+      var _a2;
+      (_a2 = this.pendingTrackAddedCallbacks.get(trackSid)) === null || _a2 === void 0 ? void 0 : _a2.forEach((cleanup) => cleanup());
     }
     handleLocalTrackSubscribed(subscribedSid) {
       const findPublication = () => this.localParticipant.getTrackPublications().find((_ref6) => {
@@ -27199,6 +28857,7 @@ var WebchatCallBundle = (() => {
         }
         this.emitWhenConnected(RoomEvent.TrackSubscribed, track, publication, participant);
       }).on(ParticipantEvent.TrackUnpublished, (publication) => {
+        this.cancelPendingTrackAdded(publication.trackSid);
         this.emit(RoomEvent.TrackUnpublished, publication, participant);
       }).on(ParticipantEvent.TrackUnsubscribed, (track, publication) => {
         this.emit(RoomEvent.TrackUnsubscribed, track, publication, participant);
@@ -27261,6 +28920,18 @@ var WebchatCallBundle = (() => {
         return this.remoteParticipants.get(identity);
       }
     }
+    /** The client capabilities this SDK advertises to other participants in its `ClientInfo`. */
+    getClientInfoCapabilities(roomOptions) {
+      var _a2;
+      const capabilities = [];
+      if (isFrameMetadataSupported((_a2 = roomOptions.frameMetadata) !== null && _a2 !== void 0 ? _a2 : roomOptions.packetTrailer) || !!this.e2eeManager) {
+        capabilities.push(ClientInfo_Capability.CAP_PACKET_TRAILER);
+      }
+      if (isCompressionStreamSupported()) {
+        capabilities.push(ClientInfo_Capability.CAP_COMPRESSION_DEFLATE_RAW);
+      }
+      return capabilities;
+    }
     registerRpcDataStreamHandler() {
       this.incomingDataStreamManager.registerTextStreamHandler(RPC_REQUEST_DATA_STREAM_TOPIC, (reader_1, _a2) => __awaiter(this, [reader_1, _a2], void 0, function(reader, _ref7) {
         var _this4 = this;
@@ -27300,8 +28971,14 @@ var WebchatCallBundle = (() => {
             } : void 0
           });
           if (consecutiveFailures >= 3) {
-            this.recreateEngine();
-            this.handleDisconnect(this.options.stopLocalTrackOnUnpublish, DisconnectReason.STATE_MISMATCH);
+            this.clearConnectionReconcile();
+            if (this.engine && !this.engine.isClosed) {
+              this.log.warn("detected connection state mismatch, attempting full reconnect");
+              this.engine.reconnect();
+            } else {
+              this.recreateEngine();
+              this.handleDisconnect(this.options.stopLocalTrackOnUnpublish, DisconnectReason.STATE_MISMATCH);
+            }
           }
         } else {
           consecutiveFailures = 0;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -15,6 +15,9 @@ import { ChangePasswordCard } from "@/components/settings/ChangePasswordCard";
 import { InboxSlaCard } from "@/components/settings/InboxSlaCard";
 import { ScheduledReportsCard } from "@/components/settings/ScheduledReportsCard";
 import { BrandingSettingsCard } from "@/components/branding/BrandingSettingsCard";
+import { TeamMembersCard } from "@/components/settings/TeamMembersCard";
+import { TenantEmailSettingsCard } from "@/components/settings/TenantEmailSettingsCard";
+import { WebsiteAnalyticsCard } from "@/components/settings/WebsiteAnalyticsCard";
 import {
   Building2,
   Key,
@@ -25,16 +28,18 @@ import {
   Settings2,
   Plug,
   SunMoon,
+  Users,
 } from "lucide-react";
 import { PlanUsageCard } from "@/components/billing/PlanUsageCard";
 import type { Tenant } from "@/types";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
 
-type SettingsTab = "general" | "branding" | "integrations" | "apiKeys";
+type SettingsTab = "general" | "team" | "branding" | "integrations" | "apiKeys";
 
 export default function SettingsPage() {
   const t = useT();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const { formatDate, planLabel } = useFormatters();
   const [tab, setTab] = useState<SettingsTab>("general");
@@ -46,6 +51,7 @@ export default function SettingsPage() {
     const requested = searchParams.get("tab");
     if (
       requested === "general" ||
+      requested === "team" ||
       requested === "branding" ||
       requested === "integrations" ||
       requested === "apiKeys"
@@ -65,8 +71,18 @@ export default function SettingsPage() {
     setTimeout(() => setWebhookCopied(false), 2000);
   }
 
+  function selectTab(nextTab: SettingsTab) {
+    setTab(nextTab);
+    const params = new URLSearchParams(searchParams.toString());
+    if (nextTab === "general") params.delete("tab");
+    else params.set("tab", nextTab);
+    const query = params.toString();
+    router.replace(query ? `/settings?${query}` : "/settings", { scroll: false });
+  }
+
   const tabs: { id: SettingsTab; label: string; icon: ReactNode }[] = [
     { id: "general", label: t("settings.tabGeneral"), icon: <Settings2 className="w-4 h-4" /> },
+    { id: "team", label: t("settings.tabTeam"), icon: <Users className="w-4 h-4" /> },
     { id: "branding", label: t("settings.tabBranding"), icon: <Palette className="w-4 h-4" /> },
     {
       id: "integrations",
@@ -80,29 +96,37 @@ export default function SettingsPage() {
     <DashboardPage maxWidth="5xl">
       <PageHeader title={t("settings.title")} subtitle={t("settings.subtitle")} />
 
-      <nav className="content-card mb-6 overflow-hidden" aria-label={t("settings.title")}>
-        <div className="flex flex-wrap gap-1 p-1.5">
-          {tabs.map((tabItem) => {
-            const active = tab === tabItem.id;
-            return (
-              <button
-                key={tabItem.id}
-                type="button"
-                onClick={() => setTab(tabItem.id)}
-                className={cn(
-                  "flex shrink-0 items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-150",
-                  active
-                    ? "bg-accent-muted text-accent shadow-sm ring-1 ring-accent/20"
-                    : "text-secondary hover:bg-surface-muted hover:text-primary"
-                )}
-              >
-                {tabItem.icon}
-                {tabItem.label}
-              </button>
-            );
-          })}
-        </div>
-      </nav>
+      <div className="mb-6 space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-secondary">
+          {t("settings.sectionsLabel")}
+        </p>
+        <nav
+          className="rounded-xl border border-default bg-surface-elevated shadow-sm"
+          aria-label={t("settings.title")}
+        >
+          <div className="flex gap-1 overflow-x-auto p-1.5">
+            {tabs.map((tabItem) => {
+              const active = tab === tabItem.id;
+              return (
+                <button
+                  key={tabItem.id}
+                  type="button"
+                  onClick={() => selectTab(tabItem.id)}
+                  className={cn(
+                    "flex shrink-0 items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-150",
+                    active
+                      ? "bg-accent text-white shadow-sm"
+                      : "text-secondary hover:bg-surface-muted hover:text-primary"
+                  )}
+                >
+                  {tabItem.icon}
+                  {tabItem.label}
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+      </div>
 
       <div className="space-y-6">
         {tab === "general" && (
@@ -130,6 +154,8 @@ export default function SettingsPage() {
             <InboxSlaCard />
 
             <ScheduledReportsCard />
+
+            <WebsiteAnalyticsCard />
 
             <div className="bg-surface-elevated rounded-xl border border-default p-6">
               <div className="flex items-center gap-2 mb-4">
@@ -178,10 +204,15 @@ export default function SettingsPage() {
           </>
         )}
 
+        {tab === "team" && <TeamMembersCard />}
+
         {tab === "branding" && <BrandingSettingsCard />}
 
         {tab === "integrations" && (
-          <div className="bg-surface-elevated rounded-xl border border-default p-6">
+          <div className="space-y-6">
+            <WebsiteAnalyticsCard />
+            <TenantEmailSettingsCard />
+            <div className="bg-surface-elevated rounded-xl border border-default p-6">
             <div className="flex items-center gap-2 mb-4">
               <Webhook className="w-4 h-4 text-secondary" />
               <h2 className="font-semibold text-primary text-sm">{t("settings.webhookTitle")}</h2>
@@ -233,6 +264,7 @@ export default function SettingsPage() {
               </code>
               <p className="text-xs text-secondary">{t("settings.emailWebhookUrl")}</p>
             </div>
+          </div>
           </div>
         )}
 

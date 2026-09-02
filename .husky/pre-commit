@@ -3,22 +3,36 @@ set -e
 ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
 
-STAGED="$(git diff --cached --name-only)"
-
 has_backend=false
 has_frontend=false
+has_telephony=false
 
-for path in $STAGED; do
+while IFS= read -r path; do
+  [ -z "$path" ] && continue
   case "$path" in
     backend/*) has_backend=true ;;
     frontend/*) has_frontend=true ;;
+    telephony-gateway/*) has_telephony=true ;;
   esac
-done
+done <<EOF
+$(git diff --cached --name-only --diff-filter=ACMR)
+EOF
 
 if [ "$has_backend" = true ]; then
+  echo "pre-commit: backend type-check"
   pnpm --filter chatbot-platform-backend run type-check
+  echo "pre-commit: backend lint"
+  pnpm --filter chatbot-platform-backend run lint
 fi
 
 if [ "$has_frontend" = true ]; then
+  echo "pre-commit: frontend type-check"
+  pnpm --filter frontend run type-check
+  echo "pre-commit: frontend lint"
   pnpm --filter frontend run lint
+fi
+
+if [ "$has_telephony" = true ]; then
+  echo "pre-commit: telephony-gateway type-check"
+  pnpm --filter telephony-gateway run type-check
 fi

@@ -28,6 +28,7 @@ import type {
   TenantBranding,
   InboxSlaSettings,
   MetricsReportSchedule,
+  WebsiteAnalyticsSettings,
 } from "../../types/index.js";
 import { recordLegalAcceptance, getLegalAcceptance } from "../../lib/dynamodb/legal.repository.js";
 import {
@@ -61,27 +62,37 @@ import {
 } from "../../lib/http.js";
 import { resolveInboxSlaSettings } from "../../lib/advisor/inbox-sla.js";
 import { resolveMetricsReportSchedule } from "../../lib/reports/resolve-schedule.js";
+import {
+  isValidGaMeasurementId,
+  normalizeGaMeasurementId,
+  resolveWebsiteAnalyticsSettings,
+} from "../../lib/website-analytics/settings.js";
 import { syncReportSchedule } from "../../lib/reports/report-schedule.js";
 import { sendScheduledReport } from "../../lib/reports/send-scheduled-report.js";
+import { getTenantWhatsAppRiskByBot } from "../../lib/whatsapp/tenant-risk.js";
 import { addCustomDomainToCognitoClient } from "../../lib/cognito/custom-domain-callbacks.js";
 import { handleProviderCredentialRoutes } from "./provider-credentials.routes.js";
+import { handleMemberRoutes } from "./members.routes.js";
+import { handleEmailSettingsRoutes } from "./email-settings.routes.js";
+import { handleGoogleBusinessOAuthCallbackRoute, handleGoogleCalendarOAuthCallbackRoute, handleIntegrationRoutes } from "./integrations.routes.js";
+import { getPublicAuthMethodsByHost } from "../../lib/integrations/microsoft-sso.service.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 
 const CreateTenantSchema = z.object({
   name: z.string().min(1).max(128),
   email: z.string().email(),
-  plan: z.enum(["free", "pro", "enterprise", "reseller"]).default("free"),
+  plan: z.enum(["free", "starter", "pro", "scale", "reseller"]).default("free"),
 });
 
 const UpdateTenantSchema = z.object({
   name: z.string().min(1).max(128).optional(),
-  plan: z.enum(["free", "pro", "enterprise", "reseller"]).optional(),
+  plan: z.enum(["free", "starter", "pro", "scale", "reseller"]).optional(),
   status: z.enum(["active", "suspended"]).optional(),
   resellerConfig: z
     .object({
       maxSubaccounts: z.number().int().min(1).max(10_000).optional(),
-      defaultSubaccountPlan: z.enum(["free", "pro", "enterprise"]).optional(),
+      defaultSubaccountPlan: z.enum(["free", "starter", "pro", "scale"]).optional(),
       customDomain: z.string().min(3).max(253).optional(),
       customDomainStatus: z
         .enum(["none", "pending_dns", "active", "error"])
@@ -142,6 +153,23 @@ const UpdateReportScheduleSchema = z
         code: z.ZodIssueCode.custom,
         message: "dayOfWeek is required for weekly schedules",
         path: ["dayOfWeek"],
+      });
+    }
+  });
+
+const UpdateWebsiteAnalyticsSchema = z
+  .object({
+    enabled: z.boolean(),
+    googleAnalyticsMeasurementId: z.string().trim().max(32).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.enabled) return;
+    const measurementId = data.googleAnalyticsMeasurementId?.trim();
+    if (!measurementId || !isValidGaMeasurementId(measurementId)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Invalid Google Analytics measurement ID (expected format G-XXXXXXXXXX)",
+        path: ["googleAnalyticsMeasurementId"],
       });
     }
   });
@@ -237,6 +265,47 @@ async function handleReportScheduleRoutes(
     await sendScheduledReport(auth.tenantId, { force: true });
     const refreshed = await getTenant(auth.tenantId);
     return ok(resolveMetricsReportSchedule(refreshed?.metricsReportSchedule));
+  }
+
+  return badRequest("Route not found");
+}
+
+async function handleWebsiteAnalyticsRoutes(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer,
+  auth: AuthContext
+): Promise<APIGatewayProxyResultV2 | null> {
+  const rawPath = event.rawPath ?? event.requestContext.http.path ?? "";
+  const isWebsiteAnalyticsRoute = rawPath.includes("/tenants/me/website-analytics");
+  if (!isWebsiteAnalyticsRoute) return null;
+
+  const method = (event.requestContext.http.method ?? "").toUpperCase();
+
+  assertMemberRole(auth);
+  await ensureTenant(auth.tenantId, auth.email, auth.name);
+
+  if (method === "GET") {
+    const tenant = await getTenant(auth.tenantId);
+    return ok(resolveWebsiteAnalyticsSettings(tenant?.websiteAnalytics));
+  }
+
+  if (method === "PUT") {
+    const body = parseJsonBody(event);
+    const parsed = UpdateWebsiteAnalyticsSchema.safeParse(body);
+    if (!parsed.success) {
+      return badRequest(formatZodError(parsed.error));
+    }
+
+    const websiteAnalytics: WebsiteAnalyticsSettings = parsed.data.enabled
+      ? {
+          enabled: true,
+          googleAnalyticsMeasurementId: normalizeGaMeasurementId(
+            parsed.data.googleAnalyticsMeasurementId ?? ""
+          ),
+        }
+      : { enabled: false };
+
+    const updated = await updateTenant(auth.tenantId, { websiteAnalytics });
+    return ok(resolveWebsiteAnalyticsSettings(updated.websiteAnalytics));
   }
 
   return badRequest("Route not found");
@@ -344,6 +413,19 @@ async function handleBrandingRoutes(
     });
   }
 
+  if (method === "DELETE" && rawPath.endsWith("/tenants/me/branding")) {
+    await assertCanCustomizeBrandingAsync(tenant);
+    if (tenant.branding?.logoS3Key) {
+      await deleteObject(tenant.branding.logoS3Key);
+    }
+    const updated = await updateTenant(auth.tenantId, { branding: {} });
+    const resolved = await getResolvedBrandingWithInheritance(updated);
+    return ok({
+      ...resolved,
+      canCustomize: getEffectivePlanLimits(updated).canCustomizeBranding,
+    });
+  }
+
   return badRequest("Route not found");
 }
 
@@ -385,6 +467,25 @@ export async function handler(
       });
     }
 
+    if (method === "GET" && rawPath.includes("/public/auth-methods")) {
+      const host = normalizeDomain(event.queryStringParameters?.host ?? "");
+      if (!host) return badRequest("host query parameter is required");
+      const methods = await getPublicAuthMethodsByHost(host);
+      return ok(methods);
+    }
+
+    const googleOAuthCallbackResponse = await handleGoogleBusinessOAuthCallbackRoute(
+      event,
+      ENVIRONMENT
+    );
+    if (googleOAuthCallbackResponse) return googleOAuthCallbackResponse;
+
+    const googleCalendarOAuthCallbackResponse = await handleGoogleCalendarOAuthCallbackRoute(
+      event,
+      ENVIRONMENT
+    );
+    if (googleCalendarOAuthCallbackResponse) return googleCalendarOAuthCallbackResponse;
+
     if (method === "GET" && rawPath.endsWith("/auth/portal-access")) {
       const host = normalizeDomain(event.queryStringParameters?.host ?? "");
       if (!host) return badRequest("host query parameter is required");
@@ -412,6 +513,11 @@ export async function handler(
       }
       const tenants = await listTenants();
       return ok(tenants);
+    }
+
+    if (method === "GET" && rawPath.endsWith("/tenants/me/whatsapp-risk")) {
+      const risk = await getTenantWhatsAppRiskByBot(auth.tenantId, ENVIRONMENT);
+      return ok(risk);
     }
 
     if (method === "PATCH" && event.rawPath?.endsWith("/onboarding")) {
@@ -458,6 +564,9 @@ export async function handler(
     const reportScheduleResponse = await handleReportScheduleRoutes(event, auth);
     if (reportScheduleResponse) return reportScheduleResponse;
 
+    const websiteAnalyticsResponse = await handleWebsiteAnalyticsRoutes(event, auth);
+    if (websiteAnalyticsResponse) return websiteAnalyticsResponse;
+
     const providerCredentialsResponse = await handleProviderCredentialRoutes(
       event,
       method,
@@ -465,6 +574,20 @@ export async function handler(
       ENVIRONMENT
     );
     if (providerCredentialsResponse) return providerCredentialsResponse;
+
+    const memberRoutesResponse = await handleMemberRoutes(event, method, auth);
+    if (memberRoutesResponse) return memberRoutesResponse;
+
+    const emailSettingsResponse = await handleEmailSettingsRoutes(event, method, auth);
+    if (emailSettingsResponse) return emailSettingsResponse;
+
+    const integrationRoutesResponse = await handleIntegrationRoutes(
+      event,
+      method,
+      auth,
+      ENVIRONMENT
+    );
+    if (integrationRoutesResponse) return integrationRoutesResponse;
 
     if (event.rawPath?.endsWith("/openai-key")) {
       if (method === "GET") {

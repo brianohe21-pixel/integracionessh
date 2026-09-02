@@ -12,7 +12,7 @@ HTTP APIs have a 300-route quota. `ANY` intercepts CORS `OPTIONS` and JWT return
 
 Do **not** add a Terraform route. Handle it in the Lambda with `rawPath` + HTTP method.
 
-Existing prefixes: `/contact-center/{proxy+}`, `/bots/{botId}/telephony/{proxy+}`, `/v1/{proxy+}`, `/email-marketing/{proxy+}`.
+Existing prefixes: `/contact-center/{proxy+}`, `/bots/{botId}/telephony/{proxy+}`, `/telephony/{proxy+}`, `/v1/{proxy+}`, `/email-marketing/{proxy+}`, `/short-links/{proxy+}`.
 
 ```typescript
 // GET /contact-center/queues/stats → already covered

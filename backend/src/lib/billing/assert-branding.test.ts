@@ -16,11 +16,15 @@ function tenant(plan: Tenant["plan"]): Tenant {
 
 describe("assertCanCustomizeBranding", () => {
   it("allows enterprise tenants", () => {
-    expect(() => assertCanCustomizeBranding(tenant("enterprise"))).not.toThrow();
+    expect(() => assertCanCustomizeBranding(tenant("scale"))).not.toThrow();
   });
 
-  it("blocks free and pro tenants", () => {
+  it("allows pro tenants", () => {
+    expect(() => assertCanCustomizeBranding(tenant("pro"))).not.toThrow();
+  });
+
+  it("blocks free and starter tenants", () => {
     expect(() => assertCanCustomizeBranding(tenant("free"))).toThrow(PlanLimitError);
-    expect(() => assertCanCustomizeBranding(tenant("pro"))).toThrow(PlanLimitError);
+    expect(() => assertCanCustomizeBranding(tenant("starter"))).toThrow(PlanLimitError);
   });
 });

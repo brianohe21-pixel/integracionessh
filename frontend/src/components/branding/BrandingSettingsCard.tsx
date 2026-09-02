@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Palette, Upload, Trash2 } from "lucide-react";
+import { Palette, Upload, Trash2, RotateCcw } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { useAuthSession } from "@/hooks/useAuthSession";
 import { api } from "@/lib/api";
@@ -12,12 +13,14 @@ import {
   useUpdateTenantBranding,
   useUploadTenantLogo,
   useDeleteTenantLogo,
+  useResetTenantBranding,
 } from "@/hooks/useTenantBranding";
+import { useDialog } from "@/components/ui/DialogProvider";
 import { DEFAULT_PRIMARY_COLOR } from "@/lib/brand-colors";
 import type { Tenant } from "@/types";
 
 function planAllowsBranding(plan: string | undefined): boolean {
-  return plan === "enterprise" || plan === "reseller";
+  return plan === "scale" || plan === "enterprise" || plan === "reseller";
 }
 
 export function BrandingSettingsCard() {
@@ -33,12 +36,15 @@ export function BrandingSettingsCard() {
   const updateBranding = useUpdateTenantBranding();
   const uploadLogo = useUploadTenantLogo();
   const deleteLogo = useDeleteTenantLogo();
+  const resetBranding = useResetTenantBranding();
+  const { confirm } = useDialog();
 
   const [brandName, setBrandName] = useState("");
   const [primaryColor, setPrimaryColor] = useState(DEFAULT_PRIMARY_COLOR);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [logoSaved, setLogoSaved] = useState(false);
+  const [resetSaved, setResetSaved] = useState(false);
 
   useEffect(() => {
     if (!data) return;
@@ -56,6 +62,12 @@ export function BrandingSettingsCard() {
 
   const canCustomize =
     data?.canCustomize === true || planAllowsBranding(tenant?.plan);
+
+  const hasCustomBranding = Boolean(
+    tenant?.branding?.brandName ||
+      tenant?.branding?.primaryColor ||
+      tenant?.branding?.logoS3Key
+  );
 
   async function handleSave() {
     setError(null);
@@ -97,6 +109,29 @@ export function BrandingSettingsCard() {
     }
   }
 
+  async function handleResetBranding() {
+    const confirmed = await confirm({
+      title: t("settings.brandingReset"),
+      description: t("settings.brandingResetConfirm"),
+      confirmLabel: t("settings.brandingReset"),
+      tone: "warning",
+    });
+    if (!confirmed) return;
+    setError(null);
+    setSaved(false);
+    setLogoSaved(false);
+    setResetSaved(false);
+    try {
+      const result = await resetBranding.mutateAsync();
+      setBrandName(result.brandName ?? tenant?.name ?? "");
+      setPrimaryColor(result.primaryColor ?? DEFAULT_PRIMARY_COLOR);
+      setResetSaved(true);
+      setTimeout(() => setResetSaved(false), 2500);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("settings.brandingResetError"));
+    }
+  }
+
   return (
     <div className="bg-surface-elevated rounded-xl border border-default p-6">
       <div className="flex items-center gap-2 mb-2">
@@ -125,12 +160,13 @@ export function BrandingSettingsCard() {
         style={{ backgroundColor: primaryColor }}
       >
         {data?.logoUrl ? (
-          <img
+          <Image
             key={data.logoUrl}
             src={data.logoUrl}
             alt=""
             width={32}
             height={32}
+            unoptimized
             className="h-8 w-8 rounded-lg object-cover bg-surface-elevated/20"
           />
         ) : (
@@ -225,18 +261,29 @@ export function BrandingSettingsCard() {
         {error && <p className="text-sm text-red-600">{error}</p>}
         {logoSaved && <p className="text-sm text-green-600">{t("settings.brandingLogoSaved")}</p>}
         {saved && <p className="text-sm text-green-600">{t("settings.brandingSaved")}</p>}
+        {resetSaved && <p className="text-sm text-green-600">{t("settings.brandingResetSaved")}</p>}
 
         {canCustomize && (
-          <button
-            type="button"
-            onClick={() => void handleSave()}
-            disabled={updateBranding.isPending}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-            style={{ backgroundColor: "var(--brand-primary, #128C7E)" }}
-
-          >
-            {updateBranding.isPending ? t("auth.saving") : t("settings.brandingSave")}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void handleSave()}
+              disabled={updateBranding.isPending || resetBranding.isPending}
+              className="rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+              style={{ backgroundColor: "var(--brand-primary, #128C7E)" }}
+            >
+              {updateBranding.isPending ? t("auth.saving") : t("settings.brandingSave")}
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleResetBranding()}
+              disabled={!hasCustomBranding || resetBranding.isPending || updateBranding.isPending}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-default px-4 py-2 text-sm font-medium text-secondary hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <RotateCcw className="h-4 w-4" />
+              {resetBranding.isPending ? t("auth.saving") : t("settings.brandingReset")}
+            </button>
+          </div>
         )}
       </div>
     </div>

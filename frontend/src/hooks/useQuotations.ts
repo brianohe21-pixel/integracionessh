@@ -39,6 +39,12 @@ export function useCreateQuotation(conversationId: string) {
       void queryClient.invalidateQueries({
         queryKey: ["payments", variables.botId, "requests"],
       });
+      void queryClient.invalidateQueries({
+        queryKey: ["sales", "conversation-opportunity", conversationId],
+      });
+      void queryClient.invalidateQueries({ queryKey: ["sales", "opportunities"] });
+      void queryClient.invalidateQueries({ queryKey: ["sales", "opportunity"] });
+      void queryClient.invalidateQueries({ queryKey: ["sales", "metrics"] });
     },
   });
 }

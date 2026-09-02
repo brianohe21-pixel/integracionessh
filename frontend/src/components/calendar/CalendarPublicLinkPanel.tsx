@@ -8,6 +8,7 @@ import {
   useEnablePublicLink,
   useRotatePublicLink,
 } from "@/hooks/useCalendar";
+import { useDialog } from "@/components/ui/DialogProvider";
 
 interface CalendarPublicLinkPanelProps {
   botId: string;
@@ -23,6 +24,7 @@ export function CalendarPublicLinkPanel({
   const enable = useEnablePublicLink(botId);
   const disable = useDisablePublicLink(botId);
   const rotate = useRotatePublicLink(botId);
+  const { confirm } = useDialog();
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
 
@@ -53,7 +55,13 @@ export function CalendarPublicLinkPanel({
   }
 
   async function handleRotate() {
-    if (!window.confirm(t("calendar.publicLink.rotateConfirm"))) return;
+    const confirmed = await confirm({
+      title: t("calendar.publicLink.rotate"),
+      description: t("calendar.publicLink.rotateConfirm"),
+      confirmLabel: t("common.confirm"),
+      tone: "warning",
+    });
+    if (!confirmed) return;
     setError("");
     try {
       await rotate.mutateAsync();

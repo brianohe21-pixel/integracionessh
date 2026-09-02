@@ -40,6 +40,7 @@ import {
 } from "../channels/router.js";
 import { inboundSourceForChannel } from "../channels/types.js";
 import { getWhatsAppAccessToken } from "../whatsapp/client.js";
+import { getWhatsAppAccessTokenForAccount } from "../whatsapp/secrets.js";
 import { getInstagramAccessToken } from "../instagram/secrets.js";
 import { getTelegramBotToken } from "../telegram/secrets.js";
 import { getMessengerAccessToken } from "../messenger/secrets.js";
@@ -64,9 +65,13 @@ async function resolveAccessToken(
   tenantId: string,
   environment: string,
   channel: InboundQueueMessage["channel"],
-  botId?: string
+  botId?: string,
+  accountId?: string
 ): Promise<string | undefined> {
   if (channel === "whatsapp") {
+    if (accountId) {
+      return getWhatsAppAccessTokenForAccount(tenantId, accountId, environment);
+    }
     return getWhatsAppAccessToken(tenantId, environment);
   }
   if (channel === "instagram") {
@@ -203,14 +208,33 @@ export async function processInboundMessage(
     return;
   }
 
-  const accessToken = await resolveAccessToken(tenantId, environment, channel, botId);
+  const whatsappPayload =
+    channel === "whatsapp"
+      ? (body.payload as import("../../types/index.js").WhatsAppInboundPayload)
+      : undefined;
+
+  const accessToken = await resolveAccessToken(
+    tenantId,
+    environment,
+    channel,
+    botId,
+    whatsappPayload?.whatsappAccountId
+  );
 
   let conversation = await getOrCreateConversation(
     tenantId,
     botId,
     channel,
     participantId,
-    displayName
+    displayName,
+    whatsappPayload
+      ? {
+          ...(whatsappPayload.whatsappChannelId
+            ? { channelId: whatsappPayload.whatsappChannelId }
+            : {}),
+          businessPhoneNumberId: whatsappPayload.phoneNumberId,
+        }
+      : undefined
   );
 
   if (channel === "email") {

@@ -1,4 +1,4 @@
-export type TenantPlan = "free" | "pro" | "enterprise" | "reseller";
+export type TenantPlan = "free" | "starter" | "pro" | "scale" | "reseller";
 
 export type TenantKind = "standard" | "reseller" | "subaccount";
 
@@ -10,6 +10,7 @@ export const SUBACCOUNT_SERVICES = [
   "supervisor",
   "contacts",
   "leads",
+  "sales",
   "advisors",
   "automations",
   "flows",
@@ -20,6 +21,7 @@ export const SUBACCOUNT_SERVICES = [
   "metrics",
   "apps",
   "developer",
+  "integrations",
 ] as const;
 
 export type SubaccountServiceId = (typeof SUBACCOUNT_SERVICES)[number];
@@ -45,6 +47,32 @@ export interface ResolvedTenantBranding {
   logoUrl?: string;
 }
 
+export type TenantEmailDomainStatus = "none" | "pending" | "verified" | "failed";
+
+export interface TenantEmailDnsRecord {
+  type: string;
+  name: string;
+  value: string;
+  purpose: "verification" | "dkim";
+}
+
+export interface TenantEmailSettings {
+  tenantId: string;
+  enabled: boolean;
+  domain?: string;
+  domainStatus?: TenantEmailDomainStatus;
+  fromEmail?: string;
+  fromName?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TenantEmailSettingsResponse {
+  settings: TenantEmailSettings;
+  dnsRecords?: TenantEmailDnsRecord[];
+  canSend: boolean;
+}
+
 export interface ResellerLimitsOverride {
   maxActiveBots?: number;
   maxMessagesPerMonth?: number;
@@ -66,6 +94,7 @@ export interface ResellerLimitsOverride {
   maxCalendarAppsPerTenant?: number;
   maxPaymentsAppsPerTenant?: number;
   maxCatalogAppsPerTenant?: number;
+  maxHostedFormsPerTenant?: number;
   maxProductsPerBot?: number;
   maxOrdersPerMonth?: number;
   canCustomizeBranding?: boolean;
@@ -75,7 +104,7 @@ export interface ResellerLimitsOverride {
 
 export interface ResellerConfig {
   maxSubaccounts: number;
-  defaultSubaccountPlan: "free" | "pro" | "enterprise";
+  defaultSubaccountPlan: "free" | "starter" | "pro" | "scale";
   customDomain?: string;
   customDomainStatus?: CustomDomainStatus;
   allowSubaccountBranding: boolean;
@@ -84,7 +113,7 @@ export interface ResellerConfig {
 
 export interface ResellerPlanDefaults {
   maxSubaccounts: number;
-  defaultSubaccountPlan: "free" | "pro" | "enterprise";
+  defaultSubaccountPlan: "free" | "starter" | "pro" | "scale";
   allowSubaccountBranding: boolean;
   limitsOverride?: ResellerLimitsOverride;
 }
@@ -104,6 +133,11 @@ export interface MetricsReportSchedule {
   dayOfWeek?: number;
   timezone: string;
   lastSentAt?: string;
+}
+
+export interface WebsiteAnalyticsSettings {
+  enabled: boolean;
+  googleAnalyticsMeasurementId?: string;
 }
 
 export type InboxSlaStatus = "disabled" | "ok" | "at_risk" | "breached" | "met" | "missed";
@@ -171,6 +205,7 @@ export interface Tenant {
   resellerConfig?: ResellerConfig;
   branding?: TenantBranding;
   inboxSla?: InboxSlaSettings;
+  websiteAnalytics?: WebsiteAnalyticsSettings;
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   subscriptionStatus?: SubscriptionStatus;
@@ -182,6 +217,8 @@ export interface Tenant {
   createdAt: string;
   updatedAt: string;
   resolvedBranding?: ResolvedTenantBranding & { canCustomize?: boolean };
+  whatsappRisk?: TenantWhatsAppRiskSummary;
+  usage?: MonthlyUsage;
 }
 
 export interface MonthlyUsage {
@@ -190,6 +227,7 @@ export interface MonthlyUsage {
   messagesCount: number;
   bulkRecipientsCount: number;
   campaignsStarted: number;
+  voicebotMinutesCount?: number;
 }
 
 export interface PlanLimits {
@@ -207,6 +245,39 @@ export interface BillingUsageResponse {
   subscription?: SubscriptionStatus;
 }
 
+export type WhatsAppChannelStatus = "active" | "pending_registration" | "disconnected";
+
+export interface WhatsAppAccount {
+  accountId: string;
+  tenantId: string;
+  wabaId: string;
+  label?: string;
+  status: "active" | "inactive";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WhatsAppChannel {
+  channelId: string;
+  tenantId: string;
+  botId: string;
+  accountId: string;
+  phoneNumberId: string;
+  whatsappBusinessAccountId: string;
+  displayPhoneNumber?: string;
+  label?: string;
+  status: WhatsAppChannelStatus;
+  isDefault: boolean;
+  whatsappOnboardingMode?: "cloud_api" | "coexistence";
+  isOnBizApp?: boolean;
+  platformType?: string;
+  whatsappSyncStatus?: WhatsAppSyncStatus;
+  whatsappDisconnectedAt?: string;
+  whatsappDisconnectionReason?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type WhatsAppQualityRating = "GREEN" | "YELLOW" | "RED" | "NA";
 
 export interface WhatsAppPhoneInfo {
@@ -215,6 +286,16 @@ export interface WhatsAppPhoneInfo {
   displayPhoneNumber?: string;
   verifiedName?: string;
   messagingLimit?: string;
+}
+
+export type TenantWhatsAppRiskLevel = "ok" | "warn" | "block" | "none";
+
+export interface TenantWhatsAppRiskSummary {
+  risk: TenantWhatsAppRiskLevel;
+  score: number | null;
+  connectedNumbers: number;
+  qualityRating: WhatsAppQualityRating | null;
+  phoneStatus: string | null;
 }
 
 export type Channel =
@@ -379,6 +460,25 @@ export interface AiAssistantConfig {
 
 export type WorkflowStatus = "new" | "open" | "pending" | "resolved";
 
+export type InteractionCategory =
+  | "sale"
+  | "complaint"
+  | "callback"
+  | "support"
+  | "inquiry"
+  | "billing"
+  | "other";
+
+export const INTERACTION_CATEGORIES: InteractionCategory[] = [
+  "sale",
+  "complaint",
+  "callback",
+  "support",
+  "inquiry",
+  "billing",
+  "other",
+];
+
 export type MarketingConsent = "unknown" | "opt_in" | "opt_out";
 
 export type ContactSource = "sync" | "manual" | "import" | "lead_capture";
@@ -425,6 +525,272 @@ export interface Lead {
   updatedAt: string;
 }
 
+export type OpportunityStage = "new" | "quoted" | "negotiation" | "won" | "lost";
+
+export interface PipelineStage {
+  stageId: string;
+  key: string;
+  label: string;
+  sortOrder: number;
+  probability?: number;
+  isClosed?: boolean;
+  outcome?: "won" | "lost";
+}
+
+export interface SalesPipeline {
+  pipelineId: string;
+  tenantId: string;
+  name: string;
+  isDefault: boolean;
+  stages: PipelineStage[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type OpportunityLossReason =
+  | "price"
+  | "competition"
+  | "no_response"
+  | "timing"
+  | "not_qualified"
+  | "other";
+
+export interface OpportunityAttribution {
+  source?: string;
+  campaignId?: string;
+  flowId?: string;
+  submissionId?: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  utmContent?: string;
+  utmTerm?: string;
+  referrer?: string;
+  landingPage?: string;
+}
+
+export interface Company {
+  companyId: string;
+  tenantId: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  website?: string;
+  industry?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Opportunity {
+  opportunityId: string;
+  tenantId: string;
+  pipelineId: string;
+  stageId: string;
+  botId?: string;
+  title: string;
+  amount?: number;
+  currency: string;
+  stage: OpportunityStage;
+  phone?: string;
+  name?: string;
+  email?: string;
+  description?: string;
+  tags: string[];
+  leadId?: string;
+  conversationId?: string;
+  sourceId?: string;
+  assignedAdvisorId?: string;
+  quotationId?: string;
+  paymentId?: string;
+  companyId?: string;
+  companyName?: string;
+  expectedCloseDate?: string;
+  stageEnteredAt?: string;
+  lastActivityAt?: string;
+  lossReason?: OpportunityLossReason;
+  attribution?: OpportunityAttribution;
+  closedAt?: string;
+  closeReason?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OpportunityStageHistoryEntry {
+  historyId: string;
+  opportunityId: string;
+  tenantId: string;
+  fromStageId?: string;
+  toStageId: string;
+  fromStageKey?: string;
+  toStageKey: string;
+  changedBy?: string;
+  changedAt: string;
+}
+
+export type OpportunityActivityType =
+  | "created"
+  | "stage_changed"
+  | "assigned"
+  | "note_updated"
+  | "task_created"
+  | "task_done"
+  | "sequence_step"
+  | "quotation_sent"
+  | "payment_paid"
+  | "message"
+  | "closed";
+
+export interface OpportunityActivityEvent {
+  activityId: string;
+  opportunityId: string;
+  tenantId: string;
+  type: OpportunityActivityType;
+  message?: string;
+  actorId?: string;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface OpportunityEnriched extends Opportunity {
+  daysInStage: number;
+  forecastAmount: number;
+}
+
+export interface OpportunityDetail {
+  opportunity: OpportunityEnriched;
+  pipeline?: Pick<SalesPipeline, "pipelineId" | "name" | "stages">;
+  company?: Company;
+  advisor?: { advisorId: string; name: string };
+  lead?: Lead;
+  contact?: Contact;
+  conversation?: Pick<
+    Conversation,
+    | "conversationId"
+    | "botId"
+    | "channel"
+    | "phoneNumber"
+    | "contactName"
+    | "status"
+    | "lastMessageAt"
+    | "workflowStatus"
+    | "assignedAdvisorId"
+  >;
+  quotation?: Quotation;
+  payment?: PaymentRequest;
+  quotations?: Quotation[];
+  payments?: PaymentRequest[];
+  tasks: SalesTask[];
+  enrollments: SequenceEnrollment[];
+  stageHistory: OpportunityStageHistoryEntry[];
+}
+
+export interface CompaniesListResponse {
+  items: Company[];
+  nextCursor?: string;
+}
+
+export interface OpportunityTimelineResponse {
+  items: OpportunityActivityEvent[];
+  nextCursor?: string;
+}
+
+export type SequenceStepChannel = "whatsapp" | "email" | "task";
+
+export interface SalesSequenceStep {
+  stepId: string;
+  order: number;
+  delayMinutes: number;
+  channel: SequenceStepChannel;
+  messageText?: string;
+  templateName?: string;
+  templateLanguage?: string;
+  emailSubject?: string;
+  taskTitle?: string;
+  taskDescription?: string;
+  taskDueMinutes?: number;
+  assignToAdvisor?: boolean;
+}
+
+export type SalesSequenceTrigger = "manual" | "stage_entered" | "opportunity_created";
+
+export interface SalesSequence {
+  sequenceId: string;
+  tenantId: string;
+  name: string;
+  enabled: boolean;
+  trigger: SalesSequenceTrigger;
+  triggerStageId?: string;
+  pipelineId?: string;
+  steps: SalesSequenceStep[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type SequenceEnrollmentStatus = "active" | "paused" | "completed" | "cancelled";
+
+export interface SequenceEnrollment {
+  enrollmentId: string;
+  tenantId: string;
+  sequenceId: string;
+  opportunityId: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  currentStepIndex: number;
+  status: SequenceEnrollmentStatus;
+  nextRunAt?: string;
+  scheduleName?: string;
+  botId?: string;
+  assignedAdvisorId?: string;
+  lastRunAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type SalesTaskStatus = "open" | "done" | "cancelled";
+
+export interface SalesTask {
+  taskId: string;
+  tenantId: string;
+  opportunityId?: string;
+  enrollmentId?: string;
+  advisorId?: string;
+  title: string;
+  description?: string;
+  dueAt?: string;
+  status: SalesTaskStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SalesFunnelMetrics {
+  pipelineId: string;
+  total: number;
+  totalValue: number;
+  wonValue: number;
+  forecastValue: number;
+  conversionRate: number;
+  byStage: Array<{
+    stageId: string;
+    key: string;
+    label: string;
+    count: number;
+    value: number;
+    probability?: number;
+  }>;
+  funnel: Record<string, number>;
+}
+
+export interface OpportunitiesListResponse {
+  items: OpportunityEnriched[];
+  nextCursor?: string;
+}
+
+export interface SalesTasksListResponse {
+  items: SalesTask[];
+  nextCursor?: string;
+}
+
 export interface LeadsListResponse {
   items: Lead[];
   nextCursor?: string;
@@ -463,8 +829,12 @@ export interface Conversation {
   tenantId: string;
   botId: string;
   channel?: Channel;
+  whatsappChannelId?: string;
+  businessPhoneNumberId?: string;
+  whatsappDisplayNumber?: string;
   participantId?: string;
   phoneNumber: string;
+  contactId?: string;
   contactName?: string;
   status: "active" | "closed";
   handoffMode?: HandoffMode;
@@ -480,6 +850,8 @@ export interface Conversation {
   copilotSummary?: string;
   detectedIntent?: string;
   copilotGeneratedAt?: string;
+  interactionCategory?: InteractionCategory;
+  interactionCategoryAt?: string;
   messageCount: number;
   lastMessageAt: string;
   emailSubject?: string;
@@ -527,6 +899,20 @@ export interface MarketingMetrics {
     pending: number;
     resolvedToday: number;
   };
+}
+
+export interface ConversationCategoryMetricRow {
+  category: InteractionCategory | "uncategorized";
+  count: number;
+}
+
+export interface ConversationCategoryMetrics {
+  from: string;
+  to: string;
+  total: number;
+  categorized: number;
+  uncategorized: number;
+  byCategory: ConversationCategoryMetricRow[];
 }
 
 export type CallingMetricsHealth = "healthy" | "at_risk" | "insufficient_data";
@@ -603,6 +989,17 @@ export interface Message {
   timestamp: string;
 }
 
+export interface CrossChannelMessage extends Message {
+  originConversationId: string;
+  originChannel: Channel;
+  isCurrentConversation: boolean;
+}
+
+export interface CrossChannelHistoryResponse {
+  contactId?: string;
+  messages: CrossChannelMessage[];
+}
+
 export interface Advisor {
   advisorId: string;
   tenantId: string;
@@ -626,6 +1023,33 @@ export interface AdvisorInviteResponse {
     email: string;
     emailSent?: boolean;
     emailFailureReason?: "not_configured" | "recipient_not_verified" | "send_failed";
+  };
+}
+
+export interface TenantMember {
+  userId: string;
+  username: string;
+  email: string;
+  name: string;
+  role: "member" | "advisor";
+  enabled: boolean;
+  createdAt: string;
+  advisorId?: string;
+}
+
+export interface TenantMembersResponse {
+  members: TenantMember[];
+  currentUserId: string;
+}
+
+export interface TenantMemberInviteResponse {
+  member: TenantMember;
+  advisor?: Advisor;
+  invite?: {
+    email: string;
+    emailSent: boolean;
+    emailFailureReason?: "not_configured" | "recipient_not_verified" | "send_failed";
+    temporaryPassword?: string;
   };
 }
 
@@ -907,6 +1331,7 @@ export type IntegrationEvent =
   | "flow.completed"
   | "lead.created"
   | "lead.converted"
+  | "opportunity.created"
   | "call.connect"
   | "call.status"
   | "call.terminated"
@@ -932,6 +1357,7 @@ export interface CallCostBreakdown {
   platformUsd?: number;
   openaiUsd?: number;
   elevenlabsUsd?: number;
+  sttUsd?: number;
   recordingUsd?: number;
   totalUsd: number;
   currency: "USD";
@@ -942,6 +1368,10 @@ export interface CallUsageMetrics {
   openaiInputTokens?: number;
   openaiOutputTokens?: number;
   elevenlabsCharacters?: number;
+  elevenlabsModelId?: string;
+  sttProvider?: string;
+  sttModelId?: string;
+  sttAudioSeconds?: number;
 }
 
 export interface CallRecord {
@@ -1070,7 +1500,10 @@ export type FlowNodeType =
   | "await_order"
   | "save_contact"
   | "create_lead"
+  | "create_opportunity"
   | "send_notification"
+  | "assign_bot"
+  | "webhook"
   | "end";
 
 export type FlowTriggerType =
@@ -1164,12 +1597,31 @@ export interface FlowNodeData {
   leadNameBinding?: string;
   leadEmailBinding?: string;
   leadTags?: string[];
-  notificationChannel?: Channel;
+  opportunityTitleBinding?: string;
+  opportunityAmountBinding?: string;
+  opportunityCurrency?: string;
+  opportunityStage?: OpportunityStage;
+  opportunityPhoneBinding?: string;
+  opportunityNameBinding?: string;
+  opportunityEmailBinding?: string;
+  opportunityDescriptionBinding?: string;
+  opportunityTags?: string[];
+  notificationChannel?: "whatsapp" | "sms" | "email";
+  notificationMessageType?: "text" | "template";
   notificationRecipientBinding?: string;
+  notificationEmailSubject?: string;
   notificationMessageBinding?: string;
   notificationMessageText?: LocalizedText;
+  notificationMessageHtml?: LocalizedText;
   notificationTemplateName?: string;
   notificationTemplateLanguage?: string;
+  notificationTemplateVariables?: Record<string, string>;
+  notificationBotId?: string;
+  botId?: string;
+  webhookUrl?: string;
+  webhookBody?: string;
+  webhookHeaders?: FlowHttpHeader[];
+  webhookResponseVariable?: string;
 }
 
 export interface FlowNode {
@@ -1189,7 +1641,7 @@ export interface FlowEdge {
 export interface FlowDefinition {
   flowId: string;
   tenantId: string;
-  botId: string;
+  botId?: string;
   name: string;
   flowKind?: FlowKind;
   enabled: boolean;
@@ -1263,6 +1715,140 @@ export interface FlowEventSubmission {
   errorMessage?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export const HOSTED_FORM_FIELD_TYPES = [
+  "text",
+  "email",
+  "phone",
+  "textarea",
+  "number",
+  "select",
+  "checkbox",
+  "radio",
+  "date",
+  "hidden",
+] as const;
+
+export type HostedFormFieldType = (typeof HOSTED_FORM_FIELD_TYPES)[number];
+
+export interface HostedFormFieldOption {
+  value: string;
+  label: string;
+}
+
+export interface HostedFormField {
+  id: string;
+  type: HostedFormFieldType;
+  name: string;
+  label: string;
+  placeholder?: string;
+  helperText?: string;
+  required: boolean;
+  options?: HostedFormFieldOption[];
+  defaultValue?: string;
+}
+
+export interface HostedFormCrmMapping {
+  name?: string;
+  email?: string;
+  phone?: string;
+}
+
+export interface HostedForm {
+  formId: string;
+  tenantId: string;
+  botId?: string;
+  name: string;
+  description?: string;
+  published: boolean;
+  publicKey: string;
+  publicUrl?: string;
+  embedSnippet?: string;
+  fields: HostedFormField[];
+  submitLabel: string;
+  successTitle: string;
+  successMessage: string;
+  redirectUrl?: string;
+  flowId?: string;
+  crmMapping: HostedFormCrmMapping;
+  createLeadOnSubmit: boolean;
+  tags?: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HostedFormSubmission {
+  submissionId: string;
+  tenantId: string;
+  formId: string;
+  payload: Record<string, unknown>;
+  leadId?: string;
+  flowSubmissionId?: string;
+  attribution?: FormAttribution;
+  createdAt: string;
+}
+
+export interface FormAttribution {
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  utmContent?: string;
+  utmTerm?: string;
+  referrer?: string;
+  landingPage?: string;
+  shortLinkId?: string;
+  shortLinkSlug?: string;
+}
+
+export interface ShortLinkUtm {
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  utmContent?: string;
+  utmTerm?: string;
+}
+
+export interface ShortLink {
+  linkId: string;
+  tenantId: string;
+  name: string;
+  slug: string;
+  destinationUrl: string;
+  enabled: boolean;
+  campaignId?: string;
+  utm: ShortLinkUtm;
+  clickCount: number;
+  lastClickedAt?: string;
+  expiresAt?: string;
+  shortUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ShortLinkClick {
+  clickId: string;
+  linkId: string;
+  tenantId: string;
+  slug: string;
+  clickedAt: string;
+  userAgent?: string;
+  referer?: string;
+  ip?: string;
+}
+
+export interface PublicHostedForm {
+  name: string;
+  description?: string;
+  fields: HostedFormField[];
+  submitLabel: string;
+  successTitle: string;
+  successMessage: string;
+  branding?: {
+    brandName?: string;
+    primaryColor?: string;
+    logoUrl?: string;
+  };
 }
 
 export interface TenantIntegration {
@@ -1351,6 +1937,10 @@ export type WeeklySchedule = Record<Weekday, TimeRange[]>;
 export type CalendarReminderChannel = "whatsapp_text" | "whatsapp_template";
 export type BookingReminderStatus = "scheduled" | "sent" | "skipped" | "cancelled";
 
+export type CalendarProviderType = "native" | "google";
+export type GoogleCalendarStatus = "pending" | "active" | "error";
+export type ExternalSyncStatus = "pending" | "synced" | "failed";
+
 export interface CalendarConfig {
   tenantId: string;
   botId: string;
@@ -1361,7 +1951,13 @@ export interface CalendarConfig {
   maxAdvanceDays: number;
   minNoticeHours: number;
   weeklySchedule: WeeklySchedule;
-  provider: "native";
+  provider: CalendarProviderType;
+  googleAccountEmail?: string;
+  googleCalendarId?: string;
+  googleCalendarName?: string;
+  googleStatus?: GoogleCalendarStatus;
+  googleConnectedAt?: string;
+  blockExternalEvents?: boolean;
   calendarPublicKey?: string;
   publicLinkEnabled?: boolean;
   reminderEnabled?: boolean;
@@ -1412,6 +2008,9 @@ export interface Booking {
   status: BookingStatus;
   source: "flow" | "openai" | "manual" | "public_link";
   notes?: string;
+  externalEventId?: string;
+  externalSyncStatus?: ExternalSyncStatus;
+  externalSyncedAt?: string;
   paymentId?: string;
   amountInCents?: number;
   paymentStatus?: BookingPaymentStatus;
@@ -1472,6 +2071,18 @@ export interface MailrelaySender {
   email: string;
 }
 
+export interface MailrelaySegment {
+  id: string;
+  name: string;
+}
+
+export interface MailrelayCampaignFolder {
+  id: string;
+  name: string;
+}
+
+export type MailrelayCampaignTarget = "groups" | "segment";
+
 export type MailrelaySyncStatus = "pending" | "running" | "completed" | "failed";
 
 export interface MailrelaySync {
@@ -1491,7 +2102,13 @@ export interface MailrelayCampaignInput {
   previewText: string;
   html: string;
   senderId: string;
+  target: MailrelayCampaignTarget;
   groupIds: string[];
+  segmentId: string;
+  campaignFolderId: string;
+  replyTo: string;
+  analyticsUtmCampaign: string;
+  usePremailer: boolean;
   trackOpens: boolean;
   trackClicks: boolean;
 }
@@ -1512,6 +2129,44 @@ export interface MailrelayCampaignMetrics {
   clicks: number;
   bounces: number;
   unsubscribes: number;
+  complaints: number;
+}
+
+export interface MailrelayPagination {
+  page: number;
+  perPage: number;
+  hasMore: boolean;
+  totalPages?: number;
+}
+
+export interface MailrelayEmailTemplate {
+  templateId: string;
+  name: string;
+  subject: string;
+  previewText?: string;
+  html: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MailrelayEvent {
+  eventId: string;
+  type: string;
+  campaignId?: number;
+  subscriberId?: number;
+  email?: string;
+  occurredAt: string;
+}
+
+export interface MailrelayOverview {
+  subscriberCount: number;
+  draftCampaigns: number;
+  sentCampaigns: number;
+  templateCount: number;
+  averageOpenRate: number;
+  averageClickRate: number;
+  lastSyncAt?: string;
+  lastSyncStatus?: MailrelaySyncStatus;
 }
 
 export type PaymentRequestStatus = "pending" | "paid" | "declined" | "expired";
@@ -1560,6 +2215,42 @@ export interface SalesMetrics {
   byBot: SalesMetricsByBot[];
   topProducts: SalesMetricsTopProduct[];
   topCustomersByCsat: CustomerCsatMetrics[];
+}
+
+export interface WebsiteMetricsSummary {
+  pageviews: number;
+  uniqueVisitors: number;
+  sessions: number;
+}
+
+export interface WebsiteMetricsDailyRow {
+  date: string;
+  pageviews: number;
+  uniqueVisitors: number;
+  sessions: number;
+}
+
+export interface WebsiteMetricsTopRow {
+  key: string;
+  label: string;
+  count: number;
+}
+
+export interface WebsiteMetricsBotRow {
+  botId: string;
+  botName: string;
+  pageviews: number;
+}
+
+export interface WebsiteMetrics {
+  from: string;
+  to: string;
+  windowDays: number;
+  summary: WebsiteMetricsSummary;
+  dailyTrend: WebsiteMetricsDailyRow[];
+  topPages: WebsiteMetricsTopRow[];
+  topReferrers: WebsiteMetricsTopRow[];
+  byBot: WebsiteMetricsBotRow[];
 }
 
 export type QuotationStatus = "sent" | "paid" | "expired" | "cancelled";

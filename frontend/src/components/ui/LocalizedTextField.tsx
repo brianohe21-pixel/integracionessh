@@ -10,6 +10,8 @@ interface LocalizedTextFieldProps {
   onChange: (value: LocalizedText) => void;
   rows?: number;
   placeholder?: string;
+  sampleFields?: string[];
+  hint?: string;
 }
 
 export function LocalizedTextField({
@@ -17,6 +19,8 @@ export function LocalizedTextField({
   onChange,
   rows = 3,
   placeholder,
+  sampleFields = [],
+  hint,
 }: LocalizedTextFieldProps) {
   const t = useT();
   const [activeTab, setActiveTab] = useState<BotLocale>("es");
@@ -24,6 +28,12 @@ export function LocalizedTextField({
 
   function updateLocale(locale: BotLocale, text: string) {
     onChange(fromLocalizedRecord({ ...record, [locale]: text }));
+  }
+
+  function appendField(locale: BotLocale, field: string) {
+    const token = `{{form.${field}}}`;
+    const current = record[locale];
+    updateLocale(locale, current.trim() ? `${current} ${token}` : token);
   }
 
   return (
@@ -37,7 +47,7 @@ export function LocalizedTextField({
             className={`rounded-md px-2.5 py-1 text-xs font-medium ${
               activeTab === locale
                 ? "bg-accent text-white"
-                : "bg-surface text-secondary border border-default"
+                : "bg-surface text-secondary border border-field-border"
             }`}
           >
             {locale.toUpperCase()}
@@ -49,11 +59,27 @@ export function LocalizedTextField({
         onChange={(e) => updateLocale(activeTab, e.target.value)}
         placeholder={placeholder ?? t("flows.fields.localizedPlaceholder")}
         rows={rows}
-        className="w-full rounded-lg border border-default px-3 py-2 text-sm"
+        className="w-full rounded-lg border border-field-border bg-surface-elevated px-3 py-2 text-sm shadow-sm focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none"
       />
-      {activeTab === "es" && record.en.trim() && (
-        <p className="text-xs text-secondary">{t("flows.fields.localizedHint")}</p>
+      {sampleFields.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {sampleFields.map((field) => (
+            <button
+              key={field}
+              type="button"
+              onClick={() => appendField(activeTab, field)}
+              className="rounded-md border border-field-border px-2 py-0.5 text-[10px] text-secondary hover:border-accent/40 hover:text-primary"
+            >
+              {field}
+            </button>
+          ))}
+        </div>
       )}
+      {hint ? (
+        <p className="text-xs text-secondary">{hint}</p>
+      ) : activeTab === "es" && record.en.trim() ? (
+        <p className="text-xs text-secondary">{t("flows.fields.localizedHint")}</p>
+      ) : null}
     </div>
   );
 }

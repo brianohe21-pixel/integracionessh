@@ -78,6 +78,14 @@ variable "leads_function_arn" {
   type = string
 }
 
+variable "sales_invoke_arn" {
+  type = string
+}
+
+variable "sales_function_arn" {
+  type = string
+}
+
 variable "templates_invoke_arn" {
   type = string
 }
@@ -342,6 +350,22 @@ variable "catalog_function_arn" {
   type = string
 }
 
+variable "hosted_forms_invoke_arn" {
+  type = string
+}
+
+variable "hosted_forms_function_arn" {
+  type = string
+}
+
+variable "short_links_invoke_arn" {
+  type = string
+}
+
+variable "short_links_function_arn" {
+  type = string
+}
+
 variable "mailrelay_invoke_arn" {
   type = string
 }
@@ -355,6 +379,14 @@ variable "mailrelay_webhook_invoke_arn" {
 }
 
 variable "mailrelay_webhook_function_arn" {
+  type = string
+}
+
+variable "google_business_invoke_arn" {
+  type = string
+}
+
+variable "google_business_function_arn" {
   type = string
 }
 

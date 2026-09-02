@@ -5,6 +5,7 @@ import type {
   TimeRange,
   Weekday,
 } from "../../types/index.js";
+import type { ExternalTimeBlock } from "../google-calendar/busy-blocks.js";
 
 function parseTimeToMinutes(time: string): number {
   const [h, m] = time.split(":").map(Number);
@@ -116,12 +117,20 @@ function isSlotBlocked(
   slotStart: Date,
   slotEnd: Date,
   bookings: Booking[],
+  externalBlocks: ExternalTimeBlock[],
   bufferMinutes: number
 ): boolean {
-  return bookings.some(
-    (b) =>
-      b.status === "confirmed" &&
-      rangesOverlap(slotStart, slotEnd, new Date(b.startAt), new Date(b.endAt), bufferMinutes)
+  if (
+    bookings.some(
+      (b) =>
+        b.status === "confirmed" &&
+        rangesOverlap(slotStart, slotEnd, new Date(b.startAt), new Date(b.endAt), bufferMinutes)
+    )
+  ) {
+    return true;
+  }
+  return externalBlocks.some((block) =>
+    rangesOverlap(slotStart, slotEnd, new Date(block.startAt), new Date(block.endAt), bufferMinutes)
   );
 }
 
@@ -130,6 +139,7 @@ function generateSlotsForDay(
   ranges: TimeRange[],
   config: CalendarConfig,
   bookings: Booking[],
+  externalBlocks: ExternalTimeBlock[],
   now: Date
 ): AvailableSlot[] {
   const slots: AvailableSlot[] = [];
@@ -148,7 +158,7 @@ function generateSlotsForDay(
       const slotStart = localDateTimeToUtc(isoDate, startHhmm, config.timezone);
       const slotEnd = localDateTimeToUtc(isoDate, endHhmm, config.timezone);
       if (slotStart < minStart) continue;
-      if (isSlotBlocked(slotStart, slotEnd, bookings, config.bufferMinutes)) continue;
+      if (isSlotBlocked(slotStart, slotEnd, bookings, externalBlocks, config.bufferMinutes)) continue;
       slots.push({
         startAt: slotStart.toISOString(),
         endAt: slotEnd.toISOString(),
@@ -163,11 +173,13 @@ function generateSlotsForDay(
 export function generateAvailableSlots(params: {
   config: CalendarConfig;
   bookings: Booking[];
+  externalBlocks?: ExternalTimeBlock[];
   from: Date;
   to: Date;
   now?: Date;
 }): AvailableSlot[] {
   const now = params.now ?? new Date();
+  const externalBlocks = params.externalBlocks ?? [];
   const allSlots: AvailableSlot[] = [];
   const cursor = new Date(params.from);
   cursor.setUTCHours(0, 0, 0, 0);
@@ -181,7 +193,7 @@ export function generateAvailableSlots(params: {
     const ranges = params.config.weeklySchedule[weekday] ?? [];
     if (ranges.length > 0) {
       allSlots.push(
-        ...generateSlotsForDay(parts.isoDate, ranges, params.config, params.bookings, now)
+        ...generateSlotsForDay(parts.isoDate, ranges, params.config, params.bookings, externalBlocks, now)
       );
     }
     cursor.setUTCDate(cursor.getUTCDate() + 1);
@@ -193,6 +205,7 @@ export function generateAvailableSlots(params: {
 export function getAvailableDates(params: {
   config: CalendarConfig;
   bookings: Booking[];
+  externalBlocks?: ExternalTimeBlock[];
   maxDays: number;
   now?: Date;
 }): Array<{ isoDate: string; label: string }> {
@@ -202,6 +215,7 @@ export function getAvailableDates(params: {
   const slots = generateAvailableSlots({
     config: params.config,
     bookings: params.bookings,
+    externalBlocks: params.externalBlocks ?? [],
     from: now,
     to,
     now,
@@ -250,6 +264,7 @@ export function getSchedulableDates(params: {
 export function getSlotsForDate(params: {
   config: CalendarConfig;
   bookings: Booking[];
+  externalBlocks?: ExternalTimeBlock[];
   isoDate: string;
   now?: Date;
 }): AvailableSlot[] {
@@ -262,6 +277,7 @@ export function getSlotsForDate(params: {
     ranges,
     params.config,
     params.bookings,
+    params.externalBlocks ?? [],
     now
   );
 }
@@ -278,5 +294,16 @@ export function hasBookingOverlap(
       b.status === "confirmed" &&
       b.bookingId !== excludeBookingId &&
       rangesOverlap(startAt, endAt, new Date(b.startAt), new Date(b.endAt), bufferMinutes)
+  );
+}
+
+export function hasExternalBlockOverlap(
+  externalBlocks: ExternalTimeBlock[],
+  startAt: Date,
+  endAt: Date,
+  bufferMinutes: number
+): boolean {
+  return externalBlocks.some((block) =>
+    rangesOverlap(startAt, endAt, new Date(block.startAt), new Date(block.endAt), bufferMinutes)
   );
 }

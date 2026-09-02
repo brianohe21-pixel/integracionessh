@@ -8,12 +8,18 @@ import { assertTenantManagerRole, resolveRequestAuth } from "../../lib/auth/cogn
 import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import {
   createMailrelaySyncJob,
+  deleteMailrelayEmailTemplate,
   getMailrelayCampaignMetrics,
   getMailrelayConfig,
+  getMailrelayEmailTemplate,
   getMailrelaySyncJob,
+  listMailrelayCampaignMetrics,
+  listMailrelayEmailTemplates,
+  listMailrelayEvents,
   listMailrelaySyncJobs,
   saveMailrelayCampaignSnapshot,
   saveMailrelayConfig,
+  saveMailrelayEmailTemplate,
   updateMailrelaySyncJob,
 } from "../../lib/dynamodb/mailrelay.repository.js";
 import {
@@ -39,6 +45,7 @@ import { enqueueMailrelaySync } from "../../lib/mailrelay/sync-queue.js";
 import type {
   MailrelayConfig,
   MailrelayGroup,
+  MailrelayOverview,
   MailrelaySender,
   MailrelaySyncQueueMessage,
 } from "../../types/index.js";
@@ -95,6 +102,15 @@ const SendCampaignSchema = z
   })
   .optional();
 
+const TemplateSchema = z.object({
+  name: z.string().trim().min(1).max(200),
+  subject: z.string().trim().min(1).max(500),
+  previewText: z.string().trim().max(500).optional(),
+  html: z.string().min(1),
+});
+
+const UpdateTemplateSchema = TemplateSchema.partial();
+
 function defaultConfig(tenantId: string): MailrelayConfig {
   const now = new Date().toISOString();
   return {
@@ -141,6 +157,97 @@ async function authenticatedClient(): Promise<{
 async function registerPlatformSubscription(): Promise<void> {
   const { client, credentials } = await authenticatedClient();
   await ensureMailrelayEventSubscription({ credentials, client });
+}
+
+function groupSubscriberCount(group: MailrelayGroup): number {
+  const count = group.subscriber_count ?? group.subscriberCount ?? group.subscribers_count;
+  return typeof count === "number" && Number.isFinite(count) ? count : 0;
+}
+
+async function buildMailrelayOverview(
+  tenantId: string,
+  client: MailrelayClient
+): Promise<MailrelayOverview> {
+  const [groups, syncJobs, draftPage, sentPage, metricsList, templates] = await Promise.all([
+    client.all<MailrelayGroup>("/groups"),
+    listMailrelaySyncJobs(tenantId, 1),
+    client.page<Record<string, unknown>>("/campaigns", { page: 1, per_page: 100 }),
+    client.page<Record<string, unknown>>("/sent_campaigns", { page: 1, per_page: 100 }),
+    listMailrelayCampaignMetrics(tenantId),
+    listMailrelayEmailTemplates(tenantId),
+  ]);
+
+  const subscriberCount = groups.reduce((sum, group) => sum + groupSubscriberCount(group), 0);
+  const draftCampaigns = draftPage.items.filter((campaign) => {
+    const status = String(campaign.status ?? "draft").toLowerCase();
+    return status !== "sent" && status !== "sending";
+  }).length;
+  const sentCampaigns = sentPage.items.length;
+  const deliveredTotal = metricsList.reduce((sum, metrics) => sum + metrics.delivered, 0);
+  const openedTotal = metricsList.reduce((sum, metrics) => sum + metrics.opened, 0);
+  const clickedTotal = metricsList.reduce((sum, metrics) => sum + metrics.clicked, 0);
+  const lastSync = syncJobs[0];
+
+  return {
+    subscriberCount,
+    draftCampaigns,
+    sentCampaigns,
+    templateCount: templates.length,
+    averageOpenRate: deliveredTotal > 0 ? openedTotal / deliveredTotal : 0,
+    averageClickRate: deliveredTotal > 0 ? clickedTotal / deliveredTotal : 0,
+    ...(lastSync?.createdAt ? { lastSyncAt: lastSync.createdAt } : {}),
+    ...(lastSync?.status ? { lastSyncStatus: lastSync.status } : {}),
+  };
+}
+
+async function handleTemplateRoutes(
+  method: string,
+  segments: string[],
+  tenantId: string,
+  event: APIGatewayProxyEventV2WithJWTAuthorizer
+): Promise<APIGatewayProxyResultV2 | null> {
+  if (segments[0] !== "templates") return null;
+  const templateId = segments[1];
+
+  if (method === "GET" && !templateId) {
+    const templates = await listMailrelayEmailTemplates(tenantId);
+    return ok({ templates });
+  }
+  if (method === "POST" && !templateId) {
+    const body = TemplateSchema.parse(parseJsonBody(event));
+    const id = randomUUID();
+    const template = await saveMailrelayEmailTemplate(tenantId, id, {
+      name: body.name,
+      subject: body.subject,
+      html: ensureMailrelayCampaignHtml(body.html),
+      ...(body.previewText ? { previewText: body.previewText } : {}),
+    });
+    return created({ template });
+  }
+  if (!templateId) return badRequest("Invalid template id");
+
+  if (method === "GET") {
+    const template = await getMailrelayEmailTemplate(tenantId, templateId);
+    return template ? ok({ template }) : notFound("Template not found");
+  }
+  if (method === "PUT" || method === "PATCH") {
+    const existing = await getMailrelayEmailTemplate(tenantId, templateId);
+    if (!existing) return notFound("Template not found");
+    const body = UpdateTemplateSchema.parse(parseJsonBody(event));
+    const previewText = body.previewText ?? existing.previewText;
+    const template = await saveMailrelayEmailTemplate(tenantId, templateId, {
+      name: body.name ?? existing.name,
+      subject: body.subject ?? existing.subject,
+      html: ensureMailrelayCampaignHtml(body.html ?? existing.html),
+      ...(previewText ? { previewText } : {}),
+    });
+    return ok({ template });
+  }
+  if (method === "DELETE") {
+    await deleteMailrelayEmailTemplate(tenantId, templateId);
+    return ok({ template: { templateId, deleted: true } });
+  }
+  return badRequest("Not found");
 }
 
 function resourceSegments(event: APIGatewayProxyEventV2WithJWTAuthorizer): string[] {
@@ -307,6 +414,33 @@ export async function handler(
       return ok({ senders });
     }
 
+    if (segments[0] === "segments" && method === "GET") {
+      const { client } = await authenticatedClient();
+      const segmentsList = await client.all<Record<string, unknown>>("/segments");
+      return ok({ segments: segmentsList });
+    }
+
+    if (segments[0] === "campaign-folders" && method === "GET") {
+      const { client } = await authenticatedClient();
+      const folders = await client.all<Record<string, unknown>>("/campaign_folders");
+      return ok({ folders });
+    }
+
+    if (segments[0] === "overview" && method === "GET") {
+      const { client } = await authenticatedClient();
+      return ok({ overview: await buildMailrelayOverview(auth.tenantId, client) });
+    }
+
+    if (segments[0] === "events" && method === "GET") {
+      const campaignId = positiveId(event.queryStringParameters?.campaignId);
+      const limit = Number(event.queryStringParameters?.limit ?? 50);
+      const events = await listMailrelayEvents(auth.tenantId, {
+        limit,
+        ...(campaignId ? { campaignId } : {}),
+      });
+      return ok({ events });
+    }
+
     if (segments[0] === "sync" && method === "POST") {
       await authenticatedClient();
       const jobId = randomUUID();
@@ -355,6 +489,8 @@ export async function handler(
       event
     );
     if (sentCampaignResult) return sentCampaignResult;
+    const templateResult = await handleTemplateRoutes(method, segments, auth.tenantId, event);
+    if (templateResult) return templateResult;
     return badRequest("Not found");
   } catch (error) {
     return handleError(error);

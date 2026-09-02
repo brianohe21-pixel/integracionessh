@@ -11,6 +11,7 @@ import { getWhatsAppAccessToken } from "../whatsapp/client.js";
 import type { FlowDefinition, FlowRun } from "../../types/index.js";
 import { executeNode } from "./nodes/index.js";
 import { flattenFormPayload } from "./binding.js";
+import { resolveFlowBotId } from "./resolve-flow-bot.js";
 import { scheduleFlowResume } from "./schedule.js";
 import type { FlowExecutionContext } from "./types.js";
 import type { FlowPipelineResult } from "./event-types.js";
@@ -21,33 +22,46 @@ const MAX_STEPS_PER_RUN = 50;
 
 async function buildEventContext(params: {
   tenantId: string;
-  botId: string;
+  botId?: string;
   flow: FlowDefinition;
   formPayload: Record<string, unknown>;
 }): Promise<FlowExecutionContext> {
-  const bot = await getBot(params.tenantId, params.botId);
-  if (!bot) throw new Error("Bot not found");
-
   let accessToken = "";
-  try {
-    accessToken = await getWhatsAppAccessToken(
-      params.tenantId,
-      process.env.ENVIRONMENT ?? "dev"
-    );
-  } catch {
-    accessToken = "";
+  let phoneNumberId: string | undefined;
+
+  if (params.botId) {
+    const bot = await getBot(params.tenantId, params.botId);
+    if (!bot) throw new Error("Bot not found");
+    phoneNumberId = bot.phoneNumberId;
+    try {
+      accessToken = await getWhatsAppAccessToken(
+        params.tenantId,
+        process.env.ENVIRONMENT ?? "dev"
+      );
+    } catch {
+      accessToken = "";
+    }
+
+    return {
+      mode: "event",
+      tenantId: params.tenantId,
+      botId: params.botId,
+      bot,
+      flow: params.flow,
+      environment: process.env.ENVIRONMENT ?? "dev",
+      formPayload: params.formPayload,
+      phoneNumberId,
+      accessToken,
+      channel: "whatsapp",
+    };
   }
 
   return {
     mode: "event",
     tenantId: params.tenantId,
-    botId: params.botId,
-    bot,
     flow: params.flow,
     environment: process.env.ENVIRONMENT ?? "dev",
     formPayload: params.formPayload,
-    phoneNumberId: bot.phoneNumberId,
-    accessToken,
     channel: "whatsapp",
   };
 }
@@ -163,6 +177,7 @@ export async function startEventFlowRun(params: {
   if (!flow || !flow.enabled) {
     throw new Error("Flow not found or disabled");
   }
+  const resolvedBotId = resolveFlowBotId(flow);
 
   const entryId =
     flow.entryNodeId || flow.nodes.find((n) => n.type === "trigger")?.id || flow.nodes[0]?.id;
@@ -176,7 +191,7 @@ export async function startEventFlowRun(params: {
     runId: randomUUID(),
     flowId: flow.flowId,
     tenantId: params.tenantId,
-    botId: flow.botId,
+    ...(resolvedBotId ? { botId: resolvedBotId } : {}),
     source: "event",
     eventSubmissionId: params.submissionId,
     flowVersion: flow.version,
@@ -198,7 +213,7 @@ export async function startEventFlowRun(params: {
 
   const ctx = await buildEventContext({
     tenantId: params.tenantId,
-    botId: flow.botId,
+    ...(resolvedBotId ? { botId: resolvedBotId } : {}),
     flow,
     formPayload: params.payload,
   });
@@ -233,7 +248,7 @@ export async function resumeEventFlowRun(
 
   const ctx = await buildEventContext({
     tenantId,
-    botId: run.botId,
+    ...(run.botId ? { botId: run.botId } : {}),
     flow,
     formPayload: run.formPayload ?? {},
   });

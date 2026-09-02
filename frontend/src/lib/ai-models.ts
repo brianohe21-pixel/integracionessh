@@ -1,4 +1,5 @@
 import type { TenantPlan } from "@/types";
+import { normalizeTenantPlan } from "@/lib/normalize-plan";
 
 export type AiProvider = "openai";
 
@@ -16,9 +17,10 @@ export const DEFAULT_MODEL_ID = "gpt-4.1-mini";
 
 const PLAN_RANK: Record<TenantPlan, number> = {
   free: 0,
-  pro: 1,
-  enterprise: 2,
-  reseller: 2,
+  starter: 1,
+  pro: 2,
+  scale: 3,
+  reseller: 3,
 };
 
 export const AI_MODELS: AiModelDefinition[] = [
@@ -62,28 +64,28 @@ export const AI_MODELS: AiModelDefinition[] = [
     provider: "openai",
     label: "GPT-5",
     category: "flagship",
-    minPlan: "enterprise",
+    minPlan: "scale",
   },
   {
     id: "gpt-5.1",
     provider: "openai",
     label: "GPT-5.1",
     category: "flagship",
-    minPlan: "enterprise",
+    minPlan: "scale",
   },
   {
     id: "gpt-5.2",
     provider: "openai",
     label: "GPT-5.2",
     category: "flagship",
-    minPlan: "enterprise",
+    minPlan: "scale",
   },
   {
     id: "gpt-5.2-pro",
     provider: "openai",
     label: "GPT-5.2 Pro",
     category: "reasoning",
-    minPlan: "enterprise",
+    minPlan: "scale",
   },
   {
     id: "gpt-5.6-luna",
@@ -97,70 +99,70 @@ export const AI_MODELS: AiModelDefinition[] = [
     provider: "openai",
     label: "GPT-4.1",
     category: "flagship",
-    minPlan: "enterprise",
+    minPlan: "scale",
   },
   {
     id: "gpt-4o",
     provider: "openai",
     label: "GPT-4o",
     category: "flagship",
-    minPlan: "enterprise",
+    minPlan: "scale",
   },
   {
     id: "gpt-5.6-terra",
     provider: "openai",
     label: "GPT-5.6 Terra",
     category: "flagship",
-    minPlan: "enterprise",
+    minPlan: "scale",
   },
   {
     id: "gpt-5.6-sol",
     provider: "openai",
     label: "GPT-5.6 Sol",
     category: "flagship",
-    minPlan: "enterprise",
+    minPlan: "scale",
   },
   {
     id: "gpt-5.6",
     provider: "openai",
     label: "GPT-5.6",
     category: "flagship",
-    minPlan: "enterprise",
+    minPlan: "scale",
   },
   {
     id: "o4-mini",
     provider: "openai",
     label: "o4-mini",
     category: "reasoning",
-    minPlan: "enterprise",
+    minPlan: "scale",
   },
   {
     id: "o3-mini",
     provider: "openai",
     label: "o3-mini",
     category: "reasoning",
-    minPlan: "enterprise",
+    minPlan: "scale",
   },
   {
     id: "o3",
     provider: "openai",
     label: "o3",
     category: "reasoning",
-    minPlan: "enterprise",
+    minPlan: "scale",
   },
   {
     id: "o4",
     provider: "openai",
     label: "o4",
     category: "reasoning",
-    minPlan: "enterprise",
+    minPlan: "scale",
   },
   {
     id: "gpt-4-turbo",
     provider: "openai",
     label: "GPT-4 Turbo",
     category: "legacy",
-    minPlan: "enterprise",
+    minPlan: "scale",
   },
 ];
 
@@ -169,10 +171,7 @@ function planMeetsRequirement(plan: TenantPlan, minPlan: TenantPlan): boolean {
 }
 
 export function getModelsForPlan(plan: TenantPlan | string | undefined): AiModelDefinition[] {
-  const resolvedPlan: TenantPlan =
-    plan === "pro" || plan === "enterprise" || plan === "free" || plan === "reseller"
-      ? plan
-      : "free";
+  const resolvedPlan = normalizeTenantPlan(plan);
   return AI_MODELS.filter((model) => planMeetsRequirement(resolvedPlan, model.minPlan));
 }
 

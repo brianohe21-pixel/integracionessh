@@ -1,6 +1,7 @@
 import {
   DEFAULT_REALTIME_MODEL_ID,
   isValidRealtimeModelId,
+  isValidTelephonyAssistantModelId,
   REALTIME_MODELS,
   resolveRealtimeModelId,
 } from "./realtime-models.js";
@@ -25,8 +26,10 @@ describe("realtime models registry", () => {
     expect(resolveRealtimeModelId("gpt-realtime-2.1-2026-02-01")).toBe(
       "gpt-realtime-2.1-2026-02-01"
     );
+    expect(resolveRealtimeModelId("gpt-4.1-mini")).toBe("gpt-4.1-mini");
     expect(resolveRealtimeModelId("invalid")).toBe(DEFAULT_REALTIME_MODEL_ID);
     expect(isValidRealtimeModelId("gpt-realtime-2.1")).toBe(true);
     expect(isValidRealtimeModelId("gpt-4o")).toBe(false);
+    expect(isValidTelephonyAssistantModelId("gpt-4o")).toBe(true);
   });
 });

@@ -8,16 +8,23 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 import { docClient, TABLE_NAME } from "./client.js";
 import { listBots } from "./bot.repository.js";
-import type { Conversation, HandoffMode, Message, WorkflowStatus, Channel } from "../../types/index.js";
-import { conversationLookupGsi1pk, legacyPhoneGsi1pk } from "../channels/keys.js";
+import type { Conversation, HandoffMode, Message, WorkflowStatus, Channel, InteractionCategory } from "../../types/index.js";
+import {
+  conversationLookupGsi1pk,
+  whatsappConversationLookupGsi1pk,
+  legacyPhoneGsi1pk,
+} from "../channels/keys.js";
 import { upsertFromConversation } from "./contact.repository.js";
 import { publishRealtimeEventSafe } from "../realtime/publish.js";
+import { resolveContactIdFromConversation } from "../contacts/resolve-contact-id.js";
+import { indexContactConversation } from "../contacts/contact-conversation-index.js";
 
 const REALTIME_CONVERSATION_FIELDS = new Set([
   "handoffMode",
   "assignedAdvisorId",
   "workflowStatus",
   "status",
+  "interactionCategory",
 ]);
 
 export function normalizeConversation(conv: Conversation): Conversation {
@@ -35,8 +42,10 @@ export function normalizeConversation(conv: Conversation): Conversation {
 export interface ListConversationsOptions {
   botId?: string;
   channel?: Channel;
+  whatsappChannelId?: string;
   handoffMode?: HandoffMode;
   workflowStatus?: WorkflowStatus;
+  interactionCategory?: InteractionCategory;
   status?: Conversation["status"];
   assignedAdvisorId?: string;
   assignment?: "assigned" | "unassigned";
@@ -169,6 +178,8 @@ export async function updateConversation(
       | "handoffReason"
       | "lastAdvisorNotifiedAt"
       | "contactName"
+      | "contactId"
+      | "phoneNumber"
       | "workflowStatus"
       | "resolvedAt"
       | "firstHumanResponseAt"
@@ -178,6 +189,8 @@ export async function updateConversation(
       | "copilotSummary"
       | "detectedIntent"
       | "copilotGeneratedAt"
+      | "interactionCategory"
+      | "interactionCategoryAt"
       | "status"
       | "welcomeSentAt"
       | "activeFlowRunId"
@@ -373,14 +386,58 @@ export async function setMetaFlowSession(
   });
 }
 
+export async function ensureConversationContactId(
+  conversation: Conversation
+): Promise<Conversation> {
+  const channel = conversation.channel ?? "whatsapp";
+  const contactId =
+    conversation.contactId ??
+    (await resolveContactIdFromConversation(conversation.tenantId, conversation));
+
+  let result = conversation;
+  if (!conversation.contactId) {
+    const updated = await updateConversation(
+      conversation.tenantId,
+      conversation.botId,
+      conversation.conversationId,
+      { contactId }
+    );
+    result = updated ?? { ...conversation, contactId };
+  }
+
+  await indexContactConversation({
+    tenantId: result.tenantId,
+    contactId,
+    botId: result.botId,
+    conversationId: result.conversationId,
+    channel,
+    lastMessageAt: result.lastMessageAt,
+  });
+
+  return result;
+}
+
 export async function getOrCreateConversation(
   tenantId: string,
   botId: string,
   channel: Channel,
   participantId: string,
-  contactName?: string
+  contactName?: string,
+  whatsappContext?: {
+    channelId?: string;
+    businessPhoneNumberId?: string;
+    whatsappDisplayNumber?: string;
+  }
 ): Promise<Conversation> {
-  const gsi1pk = conversationLookupGsi1pk(tenantId, botId, channel, participantId);
+  const gsi1pk =
+    channel === "whatsapp" && whatsappContext?.businessPhoneNumberId
+      ? whatsappConversationLookupGsi1pk(
+          tenantId,
+          botId,
+          whatsappContext.businessPhoneNumberId,
+          participantId
+        )
+      : conversationLookupGsi1pk(tenantId, botId, channel, participantId);
 
   const existing = await docClient.send(
     new QueryCommand({
@@ -396,7 +453,7 @@ export async function getOrCreateConversation(
 
   if (existing.Items?.length) {
     const { PK, SK, GSI1PK, GSI1SK, ...rest } = existing.Items[0];
-    return normalizeConversation(rest as Conversation);
+    return ensureConversationContactId(normalizeConversation(rest as Conversation));
   }
 
   if (channel === "whatsapp") {
@@ -430,13 +487,15 @@ export async function getOrCreateConversation(
             },
           })
         );
-        return normalizeConversation({
-          ...conv,
-          channel: "whatsapp",
-          participantId,
-        });
+        return ensureConversationContactId(
+          normalizeConversation({
+            ...conv,
+            channel: "whatsapp",
+            participantId,
+          })
+        );
       }
-      return conv;
+      return ensureConversationContactId(conv);
     }
   }
 
@@ -464,6 +523,13 @@ export async function getOrCreateConversation(
     ...(contactName !== undefined && contactName !== ""
       ? { contactName }
       : {}),
+    ...(whatsappContext?.channelId ? { whatsappChannelId: whatsappContext.channelId } : {}),
+    ...(whatsappContext?.businessPhoneNumberId
+      ? { businessPhoneNumberId: whatsappContext.businessPhoneNumberId }
+      : {}),
+    ...(whatsappContext?.whatsappDisplayNumber
+      ? { whatsappDisplayNumber: whatsappContext.whatsappDisplayNumber }
+      : {}),
   };
 
   await docClient.send(
@@ -488,7 +554,7 @@ export async function getOrCreateConversation(
     }).catch((err) => console.warn("Contact sync failed:", err));
   }
 
-  return normalizeConversation(conversation);
+  return ensureConversationContactId(normalizeConversation(conversation));
 }
 
 export async function addMessage(message: Message, botId: string): Promise<void> {
@@ -675,6 +741,10 @@ export async function listConversations(
     merged = merged.filter((c) => (c.channel ?? "whatsapp") === options.channel);
   }
 
+  if (options.whatsappChannelId) {
+    merged = merged.filter((c) => c.whatsappChannelId === options.whatsappChannelId);
+  }
+
   if (options.handoffMode) {
     merged = merged.filter((c) => (c.handoffMode ?? "bot") === options.handoffMode);
   }
@@ -683,6 +753,10 @@ export async function listConversations(
     merged = merged.filter(
       (c) => (c.workflowStatus ?? "open") === options.workflowStatus
     );
+  }
+
+  if (options.interactionCategory) {
+    merged = merged.filter((c) => c.interactionCategory === options.interactionCategory);
   }
 
   if (options.status) {

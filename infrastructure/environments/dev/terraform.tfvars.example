@@ -16,8 +16,9 @@ wompi_public_key        = "pub_test_..."
 wompi_private_key       = "prv_test_..."
 wompi_integrity_secret  = "prod_integrity_..."
 wompi_events_secret     = "prod_events_..."
-wompi_amount_pro_cents          = "17990000"
-wompi_amount_enterprise_cents   = "74990000"
+wompi_amount_starter_cents      = "24190000"
+wompi_amount_pro_cents          = "81590000"
+wompi_amount_enterprise_cents   = "286590000"
 wompi_api_base                  = "https://sandbox.wompi.co/v1"
 wompi_checkout_url              = "https://checkout.wompi.co/p/"
 
@@ -38,7 +39,10 @@ telephony_gateway_public_subnet_ids  = ["subnet-xxxxxxxx", "subnet-yyyyyyyy"]
 telephony_gateway_domain             = ""
 telephony_gateway_certificate_arn    = "arn:aws:acm:us-east-1:123456789012:certificate/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 
+demo_account_email    = "demo@integracionessh.dev"
+demo_account_password = "DemoAccess2026!"
+
 enable_monitoring = false
 ops_alert_email   = "ops@example.com"
 # ops_alert_emails = ["ops@example.com", "oncall@example.com"]
-ses_from_email    = "ops@example.com"
+ses_from_email    = "ops@integracionessh.lat"

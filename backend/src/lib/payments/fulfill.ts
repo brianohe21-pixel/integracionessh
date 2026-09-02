@@ -14,6 +14,7 @@ import {
   finalizeBookingAfterPayment,
 } from "../calendar/calendar.service.js";
 import { markQuotationPaid } from "../quotations/quotations.service.js";
+import { syncOpportunityFromPayment } from "../sales/opportunities/link-opportunity.js";
 import type { PaymentRequest } from "../../types/index.js";
 
 export async function fulfillTenantPayment(params: {
@@ -98,6 +99,14 @@ export async function fulfillTenantPayment(params: {
   if (updated.source === "quotation" && updated.quotationId) {
     await markQuotationPaid(params.tenantId, updated.quotationId);
   }
+
+  await syncOpportunityFromPayment({
+    tenantId: params.tenantId,
+    paymentId: updated.paymentId,
+    ...(updated.quotationId ? { quotationId: updated.quotationId } : {}),
+    ...(updated.conversationId ? { conversationId: updated.conversationId } : {}),
+    amountInCents: updated.amountInCents,
+  }).catch(() => null);
 
   return updated;
 }

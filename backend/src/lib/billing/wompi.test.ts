@@ -10,6 +10,7 @@ import {
 import {
   WOMPI_AMOUNT_ENTERPRISE_CENTS_DEFAULT,
   WOMPI_AMOUNT_PRO_CENTS_DEFAULT,
+  WOMPI_AMOUNT_STARTER_CENTS_DEFAULT,
 } from "./plan-config.js";
 
 describe("wompi billing", () => {
@@ -24,11 +25,13 @@ describe("wompi billing", () => {
   });
 
   it("uses default plan amounts when env is missing", () => {
+    delete process.env.WOMPI_AMOUNT_STARTER_CENTS;
     delete process.env.WOMPI_AMOUNT_PRO_CENTS;
     delete process.env.WOMPI_AMOUNT_ENTERPRISE_CENTS;
 
+    expect(amountInCentsForPlan("starter")).toBe(WOMPI_AMOUNT_STARTER_CENTS_DEFAULT);
     expect(amountInCentsForPlan("pro")).toBe(WOMPI_AMOUNT_PRO_CENTS_DEFAULT);
-    expect(amountInCentsForPlan("enterprise")).toBe(
+    expect(amountInCentsForPlan("scale")).toBe(
       WOMPI_AMOUNT_ENTERPRISE_CENTS_DEFAULT
     );
   });
@@ -39,7 +42,7 @@ describe("wompi billing", () => {
       integritySecret: "test_secret",
     };
     const reference = "wompi|tenant-1|pro|abc123";
-    const amount = 17_990_000;
+    const amount = 81_590_000;
 
     const params = buildWompiCheckoutParams(creds, {
       reference,
@@ -58,7 +61,7 @@ describe("wompi billing", () => {
   it("builds integrity signature for checkout", () => {
     const creds = { integritySecret: "test_secret" };
     const reference = "wompi|tenant-1|pro|abc123";
-    const amount = 17_990_000;
+    const amount = 81_590_000;
 
     const signature = buildIntegritySignature(creds, reference, amount);
     const expected = createHash("sha256")

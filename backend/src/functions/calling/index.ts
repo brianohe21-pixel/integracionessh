@@ -9,12 +9,14 @@ import {
 import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import { loadBotAndToken } from "../../lib/whatsapp/bot-context.js";
 import {
-  getCallSettings,
+  getCallSettingsForBot,
   updateCallSettings,
   sendCallPermissionRequest,
   getCallPermissionStatus,
   initiateCall,
   performCallAction,
+  isCoexistenceCallingBot,
+  CALLING_SETTINGS_UNAVAILABLE_MESSAGE,
   type WhatsAppCallingSettings,
 } from "../../lib/whatsapp/calls.js";
 import { getCallRecord, listCallsByBot, upsertCallRecord } from "../../lib/dynamodb/call.repository.js";
@@ -98,7 +100,7 @@ export async function handler(
 
     if (method === "GET" && subPath === "settings") {
       const { accessToken } = await loadBotAndToken(auth.tenantId, botId, ENVIRONMENT);
-      const settings = await getCallSettings(bot.phoneNumberId, accessToken);
+      const settings = await getCallSettingsForBot(bot, accessToken);
       return ok(settings);
     }
 
@@ -106,6 +108,9 @@ export async function handler(
       const parsed = UpdateSettingsSchema.safeParse(JSON.parse(event.body ?? "{}"));
       if (!parsed.success) {
         return badRequest(parsed.error.errors[0]?.message ?? "Invalid input");
+      }
+      if (isCoexistenceCallingBot(bot)) {
+        return badRequest(CALLING_SETTINGS_UNAVAILABLE_MESSAGE);
       }
       const { accessToken } = await loadBotAndToken(auth.tenantId, botId, ENVIRONMENT);
       const settings = await updateCallSettings(

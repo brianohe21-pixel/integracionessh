@@ -13,9 +13,17 @@ import {
   getConfigOrDefault,
   listBookings,
   createBookingForBot,
+  retryBookingExternalSync,
   saveCalendarConfig,
   updateBookingStatus,
 } from "../../lib/calendar/calendar.service.js";
+import {
+  disconnectGoogleCalendar,
+  getGoogleCalendarConnectionView,
+  refreshGoogleCalendarList,
+  startGoogleCalendarOAuth,
+  updateGoogleCalendarSettings,
+} from "../../lib/google-calendar/service.js";
 import {
   disablePublicCalendarLink,
   enablePublicCalendarLink,
@@ -111,6 +119,11 @@ const ConvertWaitlistSchema = z.object({
   startAt: z.string().datetime().optional(),
 });
 
+const GoogleCalendarPatchSchema = z.object({
+  googleCalendarId: z.string().min(1).max(256).optional(),
+  blockExternalEvents: z.boolean().optional(),
+});
+
 async function assertBotBelongsToTenant(tenantId: string, botId: string): Promise<void> {
   const bot = await getBot(tenantId, botId);
   if (!bot) throw new Error("Bot not found");
@@ -144,6 +157,7 @@ export async function handler(
     const botId = event.pathParameters?.botId;
     const bookingId = event.pathParameters?.bookingId;
     const waitlistId = event.pathParameters?.waitlistId;
+    const environment = process.env.ENVIRONMENT ?? "dev";
 
     if (method === "GET" && rawPath === "/apps") {
       return ok(await listAppsCatalog(auth.tenantId));
@@ -154,6 +168,46 @@ export async function handler(
     }
 
     await assertBotBelongsToTenant(auth.tenantId, botId);
+
+    if (method === "GET" && rawPath === `/calendar/${botId}/google`) {
+      return ok(await getGoogleCalendarConnectionView(auth.tenantId, botId, environment));
+    }
+
+    if (method === "GET" && rawPath === `/calendar/${botId}/google/oauth/start`) {
+      return ok(await startGoogleCalendarOAuth(auth.tenantId, botId));
+    }
+
+    if (method === "POST" && rawPath === `/calendar/${botId}/google/calendars/refresh`) {
+      return ok(await refreshGoogleCalendarList(auth.tenantId, botId, environment));
+    }
+
+    if (method === "PATCH" && rawPath === `/calendar/${botId}/google`) {
+      const body = GoogleCalendarPatchSchema.parse(JSON.parse(event.body ?? "{}"));
+      const view = await updateGoogleCalendarSettings(auth.tenantId, botId, environment, {
+        ...(body.googleCalendarId ? { googleCalendarId: body.googleCalendarId } : {}),
+        ...(body.blockExternalEvents !== undefined
+          ? { blockExternalEvents: body.blockExternalEvents }
+          : {}),
+      });
+      return ok(view);
+    }
+
+    if (method === "DELETE" && rawPath === `/calendar/${botId}/google`) {
+      return ok(await disconnectGoogleCalendar(auth.tenantId, botId, environment));
+    }
+
+    if (
+      method === "POST" &&
+      bookingId &&
+      rawPath === `/calendar/${botId}/bookings/${bookingId}/retry-sync`
+    ) {
+      const booking = await retryBookingExternalSync({
+        tenantId: auth.tenantId,
+        botId,
+        bookingId,
+      });
+      return ok({ booking });
+    }
 
     if (method === "GET" && rawPath === `/calendar/${botId}/config`) {
       return ok({ config: await getConfigOrDefault(auth.tenantId, botId) });

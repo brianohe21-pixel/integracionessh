@@ -4,6 +4,7 @@ import { buildBindingContext, resolveBindingValue } from "../binding.js";
 import { getNextNodeId } from "../graph.js";
 import { normalizePhone } from "../../dynamodb/contact.repository.js";
 import { saveContactFromFormData } from "../../leads/form-lead.js";
+import { requireConversation } from "../types.js";
 
 export async function executeSaveContactNode(
   node: FlowNode,
@@ -25,11 +26,14 @@ export async function executeSaveContactNode(
 
   await saveContactFromFormData({
     tenantId: ctx.tenantId,
-    botId: ctx.botId,
+    ...(ctx.botId ? { botId: ctx.botId } : {}),
     phone,
     ...(name ? { name } : {}),
     ...(email ? { email } : {}),
     ...(node.data.contactTags?.length ? { tags: node.data.contactTags } : {}),
+    ...(ctx.conversation
+      ? { linkConversationId: requireConversation(ctx).conversationId }
+      : {}),
   });
 
   return {

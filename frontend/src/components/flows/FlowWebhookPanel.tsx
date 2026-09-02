@@ -8,16 +8,13 @@ import { Button } from "@/components/ui/Button";
 
 interface FlowWebhookPanelProps {
   flowId: string;
-  isFormFlow: boolean;
 }
 
-export function FlowWebhookPanel({ flowId, isFormFlow }: FlowWebhookPanelProps) {
+export function FlowWebhookPanel({ flowId }: FlowWebhookPanelProps) {
   const t = useT();
-  const { data, refetch, isLoading } = useFlowHook(flowId, isFormFlow);
+  const { data, refetch, isLoading } = useFlowHook(flowId);
   const rotate = useRotateFlowHook(flowId);
   const [revealedSecret, setRevealedSecret] = useState<string | null>(null);
-
-  if (!isFormFlow) return null;
 
   async function handleRotate() {
     const result = await rotate.mutateAsync();

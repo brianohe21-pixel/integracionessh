@@ -107,6 +107,35 @@ export function buildLeadCreatedPayload(params: {
   });
 }
 
+export function buildOpportunityCreatedPayload(params: {
+  tenantId: string;
+  botId?: string;
+  opportunityId: string;
+  title: string;
+  amount?: number;
+  currency: string;
+  stage: string;
+  phone?: string;
+  name?: string;
+  email?: string;
+}): IntegrationEventPayload {
+  return buildIntegrationPayload({
+    event: "opportunity.created",
+    tenantId: params.tenantId,
+    data: {
+      opportunityId: params.opportunityId,
+      title: params.title,
+      currency: params.currency,
+      stage: params.stage,
+      ...(params.botId ? { botId: params.botId } : {}),
+      ...(params.amount !== undefined ? { amount: params.amount } : {}),
+      ...(params.phone ? { phone: params.phone } : {}),
+      ...(params.name ? { name: params.name } : {}),
+      ...(params.email ? { email: params.email } : {}),
+    },
+  });
+}
+
 export function buildLeadConvertedPayload(params: {
   tenantId: string;
   botId: string;

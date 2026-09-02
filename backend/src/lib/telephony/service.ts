@@ -495,6 +495,7 @@ async function finalizeTelephonyCallSession(
     durationSeconds,
     ...(call?.usageMetrics ? { usage: call.usageMetrics } : {}),
     recordingEnabled: Boolean(bot?.telephonyRecordingEnabled),
+    ...(bot?.telephonyTtsModel ? { elevenlabsModelId: bot.telephonyTtsModel } : {}),
   });
 
   let extractedFields: TelephonyStructuredOutputPayload | null = null;
@@ -876,6 +877,8 @@ export async function handleCallHangup(payload: Record<string, unknown>): Promis
   const session = await resolveTelephonySessionFromPayload(payload);
   if (!session) return;
 
+  if (session.supervisorCallControlId === callControlId) return;
+
   const call = await getCallRecord(session.tenantId, session.callId);
   if (call?.status === "voicemail") return;
 
@@ -897,6 +900,7 @@ export async function reportCallUsage(params: {
     durationSeconds: call.duration ?? 1,
     usage: params.usage,
     recordingEnabled: Boolean(bot?.telephonyRecordingEnabled),
+    ...(bot?.telephonyTtsModel ? { elevenlabsModelId: bot.telephonyTtsModel } : {}),
     ...(call.costBreakdown?.telnyxUsd !== undefined
       ? { telnyxCostUsd: call.costBreakdown.telnyxUsd }
       : {}),
@@ -960,6 +964,7 @@ export async function reconcileCallCost(params: {
     durationSeconds: call.duration ?? telnyxRecord?.durationSecs ?? 1,
     ...(call.usageMetrics ? { usage: call.usageMetrics } : {}),
     recordingEnabled: Boolean(bot?.telephonyRecordingEnabled),
+    ...(bot?.telephonyTtsModel ? { elevenlabsModelId: bot.telephonyTtsModel } : {}),
     ...(resolvedTelnyxCost !== undefined ? { telnyxCostUsd: resolvedTelnyxCost } : {}),
   });
 
@@ -1044,6 +1049,7 @@ export async function terminateTelephonyCall(
     durationSeconds,
     ...(record.usageMetrics ? { usage: record.usageMetrics } : {}),
     recordingEnabled: Boolean(bot?.telephonyRecordingEnabled),
+    ...(bot?.telephonyTtsModel ? { elevenlabsModelId: bot.telephonyTtsModel } : {}),
   });
 
   await updateCallRecord(tenantId, callId, {

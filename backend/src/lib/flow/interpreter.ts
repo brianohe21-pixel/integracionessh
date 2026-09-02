@@ -20,7 +20,7 @@ import type {
 } from "../../types/index.js";
 import { executeNode } from "./nodes/index.js";
 import { scheduleFlowResume } from "./schedule.js";
-import { requireConversation, type FlowExecutionContext } from "./types.js";
+import { requireBotId, requireConversation, type FlowExecutionContext } from "./types.js";
 
 const MAX_STEPS_PER_RUN = 50;
 
@@ -57,6 +57,7 @@ async function runFromNode(
   ctx: FlowExecutionContext
 ): Promise<FlowPipelineResult> {
   const conversation = requireConversation(ctx);
+  const botId = requireBotId(ctx);
   let currentNodeId: string | null = run.currentNodeId;
   let stepCount = run.stepCount;
   let variables = { ...run.variables };
@@ -68,7 +69,7 @@ async function runFromNode(
         stepCount,
         variables,
       });
-      await clearActiveFlowRun(ctx.tenantId, ctx.botId, conversation.conversationId);
+      await clearActiveFlowRun(ctx.tenantId, botId, conversation.conversationId);
       return { handled: true, halt: true };
     }
 
@@ -112,7 +113,7 @@ async function runFromNode(
         stepCount,
       });
       if (completed) {
-        await clearActiveFlowRun(ctx.tenantId, ctx.botId, conversation.conversationId);
+        await clearActiveFlowRun(ctx.tenantId, botId, conversation.conversationId);
       }
       return { handled: true, halt: result.halt };
     }
@@ -128,7 +129,7 @@ async function runFromNode(
     stepCount,
     variables,
   });
-  await clearActiveFlowRun(ctx.tenantId, ctx.botId, conversation.conversationId);
+  await clearActiveFlowRun(ctx.tenantId, botId, conversation.conversationId);
   return { handled: true, halt: true };
 }
 
@@ -353,13 +354,14 @@ export async function resumeFlowRunById(
   });
   if (!resumed) return;
 
+  if (!run.botId || !run.conversationId) return;
+
   const { getBot } = await import("../dynamodb/bot.repository.js");
   const { getConversation } = await import("../dynamodb/conversation.repository.js");
   const { getWhatsAppAccessToken } = await import("../whatsapp/client.js");
 
   const bot = await getBot(tenantId, run.botId);
   if (!bot) return;
-  if (!run.conversationId) return;
   const conversation = await getConversation(tenantId, run.botId, run.conversationId);
   if (!conversation) return;
   const accessToken = await getWhatsAppAccessToken(tenantId, process.env.ENVIRONMENT ?? "dev");

@@ -6,12 +6,12 @@ import type {
 import { z } from "zod";
 import { resolveRequestAuth, assertTenantAccess, assertMemberRole } from "../../lib/auth/cognito.js";
 import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
-import { getBot } from "../../lib/dynamodb/bot.repository.js";
+import { getBot, listBots } from "../../lib/dynamodb/bot.repository.js";
 import { listCallsByBot, getCallRecord } from "../../lib/dynamodb/call.repository.js";
 import { appendCallEvent, listCallEvents } from "../../lib/dynamodb/call-event.repository.js";
 import { listVoiceAgentWebhookDeliveries } from "../../lib/dynamodb/voice-agent-webhook.repository.js";
 import { hasTelnyxCredentials } from "../../lib/telnyx/secrets.js";
-import { listOwnedPhoneNumbers } from "../../lib/telnyx/client.js";
+import { listOwnedPhoneNumbers, searchAvailablePhoneNumbers, createPhoneNumberOrder, getPhoneNumberOrder } from "../../lib/telnyx/client.js";
 import {
   getElevenLabsAccountTier,
   listElevenLabsVoices,
@@ -19,9 +19,10 @@ import {
 import { parseTelnyxWebhookBody, verifyTelnyxWebhookSignature } from "../../lib/telnyx/webhook.js";
 import { markTelnyxEventProcessed } from "../../lib/telnyx/idempotency.js";
 import { getTelnyxSecrets } from "../../lib/telnyx/secrets.js";
-import { resolveProviderCredential } from "../../lib/integrations/provider-credentials.js";
+import { resolveProviderCredential, assertOwnTelnyxCredential } from "../../lib/integrations/provider-credentials.js";
 import { normalizeE164 } from "../../lib/telnyx/phone.js";
 import { getBotByTelephonyNumber } from "../../lib/dynamodb/bot-lookup.repository.js";
+import { reassignTelephonyNumber, clearStaleTelephonyNumberLookup } from "../../lib/telephony/number-assignment.js";
 import {
   handleCallAnswered,
   handleCallHangup,
@@ -62,6 +63,7 @@ import type { BotLocale, IntegrationEvent } from "../../types/index.js";
 import {
   accepted,
   badRequest,
+  conflict,
   created,
   handleError,
   noContent,
@@ -116,6 +118,16 @@ function readTelephonyToolSecretName(
   const fromParam = pathParameters?.secretName;
   if (fromParam) return fromParam;
   const match = rawPath.match(/\/telephony\/tools\/secrets\/([^/]+)$/);
+  return match?.[1];
+}
+
+function readTelephonyWebhookTenantId(
+  pathParameters: APIGatewayProxyEventV2["pathParameters"],
+  rawPath: string
+): string | undefined {
+  const fromParam = pathParameters?.credentialTenantId;
+  if (fromParam) return fromParam;
+  const match = rawPath.match(/^\/telephony\/webhook\/([^/]+)$/);
   return match?.[1];
 }
 
@@ -176,6 +188,10 @@ interface TelephonyGatewayInvokeEvent {
     openaiInputTokens?: number;
     openaiOutputTokens?: number;
     elevenlabsCharacters?: number;
+    elevenlabsModelId?: string;
+    sttProvider?: string;
+    sttModelId?: string;
+    sttAudioSeconds?: number;
   };
   toolName?: string;
   latencyMs?: number;
@@ -418,8 +434,8 @@ export async function handler(
       return handleGatewayInvoke(event);
     }
 
-    const credentialTenantId = event.pathParameters?.credentialTenantId;
     const rawPath = event.rawPath ?? event.requestContext.http.path;
+    const credentialTenantId = readTelephonyWebhookTenantId(event.pathParameters, rawPath);
 
     if (rawPath.includes("/contact-center")) {
       return handleContactCenterHttp(event as APIGatewayProxyEventV2WithJWTAuthorizer);
@@ -448,7 +464,99 @@ export async function handler(
       const configured = await hasTelnyxCredentials(ENVIRONMENT, auth.tenantId);
       if (!configured) return ok({ numbers: [] });
       const numbers = await listOwnedPhoneNumbers(ENVIRONMENT, auth.tenantId);
-      return ok({ numbers });
+      const bots = await listBots(auth.tenantId);
+      const assignmentByNumber = new Map<string, { botId: string; name: string }>();
+      for (const entry of bots) {
+        if (!entry.telephonyPhoneNumber) continue;
+        assignmentByNumber.set(normalizeE164(entry.telephonyPhoneNumber), {
+          botId: entry.botId,
+          name: entry.name,
+        });
+      }
+      const enriched = numbers.map((item) => {
+        const assignment = assignmentByNumber.get(normalizeE164(item.phoneNumber));
+        return {
+          ...item,
+          ...(assignment
+            ? { assignedBotId: assignment.botId, assignedBotName: assignment.name }
+            : {}),
+        };
+      });
+      return ok({ numbers: enriched });
+    }
+
+    if (method === "GET" && rawPath === "/telephony/numbers/available") {
+      const ownCredential = await assertOwnTelnyxCredential(auth.tenantId, ENVIRONMENT);
+      const query = event.queryStringParameters ?? {};
+      const parsed = z
+        .object({
+          countryCode: z.string().length(2).optional(),
+          phoneNumberType: z.enum(["local", "toll_free", "mobile", "national"]).optional(),
+          locality: z.string().max(64).optional(),
+          nationalDestinationCode: z.string().max(8).optional(),
+          limit: z.coerce.number().int().min(1).max(50).optional(),
+        })
+        .safeParse({
+          countryCode: query.countryCode ?? query.country_code,
+          phoneNumberType: query.phoneNumberType ?? query.phone_number_type,
+          locality: query.locality,
+          nationalDestinationCode: query.nationalDestinationCode ?? query.national_destination_code,
+          limit: query.limit,
+        });
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const result = await searchAvailablePhoneNumbers(
+        ENVIRONMENT,
+        auth.tenantId,
+        ownCredential.apiKey,
+        {
+          countryCode: parsed.data.countryCode ?? "US",
+          ...(parsed.data.phoneNumberType ? { phoneNumberType: parsed.data.phoneNumberType } : {}),
+          ...(parsed.data.locality ? { locality: parsed.data.locality } : {}),
+          ...(parsed.data.nationalDestinationCode
+            ? { nationalDestinationCode: parsed.data.nationalDestinationCode }
+            : {}),
+          ...(parsed.data.limit ? { limit: parsed.data.limit } : {}),
+        }
+      );
+      return ok(result);
+    }
+
+    if (method === "POST" && rawPath === "/telephony/numbers/orders") {
+      const ownCredential = await assertOwnTelnyxCredential(auth.tenantId, ENVIRONMENT);
+      const body = parseJsonBody(event);
+      const parsed = z
+        .object({
+          phoneNumber: z.string().min(7).max(20),
+        })
+        .safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const phoneNumber = normalizeE164(parsed.data.phoneNumber);
+      const order = await createPhoneNumberOrder(
+        ENVIRONMENT,
+        auth.tenantId,
+        ownCredential.apiKey,
+        {
+          phoneNumber,
+          connectionId: ownCredential.connectionId,
+          customerReference: `tenant:${auth.tenantId}`,
+        }
+      );
+      return created(order);
+    }
+
+    const numberOrderMatch = rawPath.match(/^\/telephony\/numbers\/orders\/([^/]+)$/);
+    if (method === "GET" && numberOrderMatch) {
+      const ownCredential = await assertOwnTelnyxCredential(auth.tenantId, ENVIRONMENT);
+      const orderId = numberOrderMatch[1]!;
+      const order = await getPhoneNumberOrder(
+        ENVIRONMENT,
+        auth.tenantId,
+        ownCredential.apiKey,
+        orderId
+      );
+      return ok(order);
     }
 
     if (method === "GET" && rawPath === "/telephony/voices") {
@@ -519,6 +627,7 @@ export async function handler(
       const parsed = z
         .object({
           enabled: z.boolean().optional(),
+          reassignPhoneNumber: z.boolean().optional(),
           telephonyPhoneNumber: z.string().min(7).max(20).optional(),
           telephonyVoiceId: optionalNonEmptyString(64),
           telephonyModel: z.string().min(3).max(64).optional(),
@@ -576,6 +685,15 @@ export async function handler(
         }
       }
 
+      if (parsed.data.telephonyTranscriptionModel !== undefined) {
+        const { isValidTelephonyTranscriptionModelId } = await import(
+          "../../lib/voicebot/transcription-models.js"
+        );
+        if (!isValidTelephonyTranscriptionModelId(parsed.data.telephonyTranscriptionModel)) {
+          return badRequest("Invalid transcription model");
+        }
+      }
+
       const { ensureTenant } = await import("../../lib/dynamodb/tenant.repository.js");
       const { updateBot } = await import("../../lib/dynamodb/bot.repository.js");
       const {
@@ -610,6 +728,51 @@ export async function handler(
           : "";
       if (parsed.data.enabled === true && !nextNumber) {
         return badRequest("telephonyPhoneNumber is required");
+      }
+
+      if (nextNumber && (parsed.data.telephonyPhoneNumber || parsed.data.enabled === true)) {
+        const ownedNumbers = await listOwnedPhoneNumbers(ENVIRONMENT, auth.tenantId);
+        const ownsNumber = ownedNumbers.some(
+          (item) => normalizeE164(item.phoneNumber) === nextNumber
+        );
+        if (!ownsNumber) {
+          return badRequest("Phone number is not in your Telnyx account");
+        }
+
+        await clearStaleTelephonyNumberLookup(auth.tenantId, nextNumber);
+
+        const lookup = await getBotByTelephonyNumber(nextNumber);
+        const conflictingBotFromLookup =
+          lookup && lookup.tenantId === auth.tenantId && lookup.botId !== botId
+            ? lookup.botId
+            : null;
+
+        const tenantBots = await listBots(auth.tenantId);
+        const conflictingBotFromRecord = tenantBots.find(
+          (entry) =>
+            entry.botId !== botId &&
+            entry.telephonyPhoneNumber &&
+            normalizeE164(entry.telephonyPhoneNumber) === nextNumber
+        );
+
+        if (conflictingBotFromLookup || conflictingBotFromRecord) {
+          if (!parsed.data.reassignPhoneNumber) {
+            const conflictingName =
+              conflictingBotFromRecord?.name ??
+              tenantBots.find((entry) => entry.botId === conflictingBotFromLookup)?.name;
+            return conflict(
+              conflictingName
+                ? `Phone number is already assigned to agent ${conflictingName}`
+                : "Phone number is already assigned to another agent"
+            );
+          }
+
+          await reassignTelephonyNumber({
+            tenantId: auth.tenantId,
+            targetBotId: botId,
+            phoneNumber: nextNumber,
+          });
+        }
       }
 
       if (

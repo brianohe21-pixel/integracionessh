@@ -69,6 +69,7 @@ resource "aws_iam_role_policy" "lambda_permissions" {
           var.call_events_sqs_queue_arn,
           var.mailrelay_sync_sqs_queue_arn,
           var.whatsapp_sync_sqs_queue_arn,
+          var.sequence_sqs_queue_arn,
         ]
       },
       {
@@ -114,6 +115,10 @@ resource "aws_iam_role_policy" "lambda_permissions" {
           "cognito-idp:AdminDeleteUser",
           "cognito-idp:DescribeUserPoolClient",
           "cognito-idp:UpdateUserPoolClient",
+          "cognito-idp:CreateIdentityProvider",
+          "cognito-idp:UpdateIdentityProvider",
+          "cognito-idp:DeleteIdentityProvider",
+          "cognito-idp:DescribeIdentityProvider",
         ]
         Resource = var.cognito_user_pool_arn
       },
@@ -175,6 +180,10 @@ resource "aws_iam_role_policy" "lambda_permissions" {
         Action = [
           "ses:SendEmail",
           "ses:SendRawEmail",
+          "ses:VerifyDomainIdentity",
+          "ses:VerifyDomainDkim",
+          "ses:GetIdentityVerificationAttributes",
+          "ses:GetIdentityDkimAttributes",
         ]
         Resource = "*"
       },
@@ -211,8 +220,12 @@ locals {
   calendar_function_arn          = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.calendar_function_name}"
   reports_function_name          = "${var.project}-${var.environment}-reports"
   reports_function_arn           = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.reports_function_name}"
+  sales_function_name            = "${var.project}-${var.environment}-sales"
+  sales_function_arn             = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.sales_function_name}"
   voicebot_session_function_name = "${var.project}-${var.environment}-voicebot-session"
   voicebot_session_function_arn  = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.voicebot_session_function_name}"
+
+  google_calendar_redirect_uri = trimspace(var.api_public_url) != "" ? "${trimsuffix(trimspace(var.api_public_url), "/")}/public/integrations/google-calendar/oauth/callback" : ""
 
   functions = {
     webhook = {
@@ -221,13 +234,13 @@ locals {
       timeout     = 30
       memory      = 256
       environment = {
-        WHATSAPP_VERIFY_TOKEN    = var.whatsapp_verify_token
-        WHATSAPP_APP_SECRET      = var.whatsapp_app_secret != "" ? var.whatsapp_app_secret : var.meta_app_secret
-        SQS_QUEUE_URL            = var.sqs_queue_url
-        CALL_EVENTS_QUEUE_URL    = var.call_events_sqs_queue_url
-        WHATSAPP_SYNC_QUEUE_URL  = var.whatsapp_sync_sqs_queue_url
-        MEDIA_BUCKET             = var.media_bucket_name
-        TABLE_NAME               = var.dynamodb_table_name
+        WHATSAPP_VERIFY_TOKEN   = var.whatsapp_verify_token
+        WHATSAPP_APP_SECRET     = var.whatsapp_app_secret != "" ? var.whatsapp_app_secret : var.meta_app_secret
+        SQS_QUEUE_URL           = var.sqs_queue_url
+        CALL_EVENTS_QUEUE_URL   = var.call_events_sqs_queue_url
+        WHATSAPP_SYNC_QUEUE_URL = var.whatsapp_sync_sqs_queue_url
+        MEDIA_BUCKET            = var.media_bucket_name
+        TABLE_NAME              = var.dynamodb_table_name
       }
     }
     process_message = {
@@ -241,6 +254,9 @@ locals {
         INTEGRATION_SQS_QUEUE_URL = var.integration_sqs_queue_url
         MEDIA_BUCKET              = var.media_bucket_name
         WEBSOCKET_API_ENDPOINT    = local.websocket_management_endpoint
+        GOOGLE_CALENDAR_CLIENT_ID     = var.google_calendar_client_id
+        GOOGLE_CALENDAR_CLIENT_SECRET = var.google_calendar_client_secret
+        GOOGLE_CALENDAR_REDIRECT_URI  = local.google_calendar_redirect_uri
       }
     }
     tenants = {
@@ -258,8 +274,15 @@ locals {
         REPORTS_FUNCTION_ARN      = local.reports_function_arn
         COGNITO_USER_POOL_ID      = var.cognito_user_pool_id
         COGNITO_CLIENT_ID         = var.cognito_client_id
+        COGNITO_HOSTED_UI_DOMAIN  = var.cognito_hosted_ui_domain
         MEDIA_BUCKET              = var.media_bucket_name
         API_PUBLIC_URL            = var.api_public_url
+        GOOGLE_BUSINESS_CLIENT_ID     = var.google_business_client_id
+        GOOGLE_BUSINESS_CLIENT_SECRET = var.google_business_client_secret
+        GOOGLE_BUSINESS_REDIRECT_URI  = trimspace(var.api_public_url) != "" ? "${trimsuffix(trimspace(var.api_public_url), "/")}/public/integrations/google-business/oauth/callback" : ""
+        GOOGLE_CALENDAR_CLIENT_ID     = var.google_calendar_client_id
+        GOOGLE_CALENDAR_CLIENT_SECRET = var.google_calendar_client_secret
+        GOOGLE_CALENDAR_REDIRECT_URI  = local.google_calendar_redirect_uri
       }
     }
     reseller = {
@@ -284,9 +307,9 @@ locals {
       timeout     = 30
       memory      = 256
       environment = {
-        TABLE_NAME               = var.dynamodb_table_name
-        ENVIRONMENT              = var.environment
-        WHATSAPP_SYNC_QUEUE_URL  = var.whatsapp_sync_sqs_queue_url
+        TABLE_NAME              = var.dynamodb_table_name
+        ENVIRONMENT             = var.environment
+        WHATSAPP_SYNC_QUEUE_URL = var.whatsapp_sync_sqs_queue_url
       }
     }
     conversations = {
@@ -328,6 +351,29 @@ locals {
       handler     = "leads/index.handler"
       description = "CRUD API for lead pipeline and conversion"
       timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME  = var.dynamodb_table_name
+        ENVIRONMENT = var.environment
+      }
+    }
+    sales = {
+      handler     = "sales/index.handler"
+      description = "CRUD API for sales pipelines, opportunities and sequences"
+      timeout     = 60
+      memory      = 256
+      environment = {
+        TABLE_NAME             = var.dynamodb_table_name
+        ENVIRONMENT            = var.environment
+        SCHEDULER_ROLE_ARN     = var.scheduler_role_arn
+        SALES_FUNCTION_ARN     = local.sales_function_arn
+        SEQUENCE_SQS_QUEUE_URL = var.sequence_sqs_queue_url
+      }
+    }
+    process_sequence = {
+      handler     = "process-sequence/index.handler"
+      description = "Processes scheduled sales sequence steps from SQS"
+      timeout     = 120
       memory      = 256
       environment = {
         TABLE_NAME  = var.dynamodb_table_name
@@ -425,6 +471,7 @@ locals {
         WOMPI_PRIVATE_KEY             = var.wompi_private_key
         WOMPI_INTEGRITY_SECRET        = var.wompi_integrity_secret
         WOMPI_EVENTS_SECRET           = var.wompi_events_secret
+        WOMPI_AMOUNT_STARTER_CENTS    = var.wompi_amount_starter_cents
         WOMPI_AMOUNT_PRO_CENTS        = var.wompi_amount_pro_cents
         WOMPI_AMOUNT_ENTERPRISE_CENTS = var.wompi_amount_enterprise_cents
         WOMPI_API_BASE                = var.wompi_api_base
@@ -768,8 +815,12 @@ locals {
       timeout     = 120
       memory      = 256
       environment = {
-        TABLE_NAME  = var.dynamodb_table_name
-        ENVIRONMENT = var.environment
+        TABLE_NAME     = var.dynamodb_table_name
+        ENVIRONMENT    = var.environment
+        SES_FROM_EMAIL = var.ses_from_email
+        GOOGLE_CALENDAR_CLIENT_ID     = var.google_calendar_client_id
+        GOOGLE_CALENDAR_CLIENT_SECRET = var.google_calendar_client_secret
+        GOOGLE_CALENDAR_REDIRECT_URI  = local.google_calendar_redirect_uri
       }
     }
     process_flow_event = {
@@ -784,6 +835,7 @@ locals {
         SCHEDULER_ROLE_ARN       = var.scheduler_role_arn
         FLOWS_FUNCTION_ARN       = local.flows_function_arn
         ENVIRONMENT              = var.environment
+        SES_FROM_EMAIL           = var.ses_from_email
       }
     }
     process_call = {
@@ -820,6 +872,9 @@ locals {
         TELEPHONY_CDR_SQS_QUEUE_URL = var.telephony_cdr_sqs_queue_url
         MEDIA_BUCKET                = var.media_bucket_name
         API_PUBLIC_URL              = var.api_public_url
+        GOOGLE_CALENDAR_CLIENT_ID     = var.google_calendar_client_id
+        GOOGLE_CALENDAR_CLIENT_SECRET = var.google_calendar_client_secret
+        GOOGLE_CALENDAR_REDIRECT_URI  = local.google_calendar_redirect_uri
       }
     }
     process_telephony_cdr = {
@@ -846,6 +901,9 @@ locals {
         FRONTEND_URL              = var.frontend_url
         SCHEDULER_ROLE_ARN        = var.scheduler_role_arn
         CALENDAR_FUNCTION_ARN     = local.calendar_function_arn
+        GOOGLE_CALENDAR_CLIENT_ID     = var.google_calendar_client_id
+        GOOGLE_CALENDAR_CLIENT_SECRET = var.google_calendar_client_secret
+        GOOGLE_CALENDAR_REDIRECT_URI  = local.google_calendar_redirect_uri
       }
     }
     public_calendar = {
@@ -859,6 +917,9 @@ locals {
         INTEGRATION_SQS_QUEUE_URL = var.integration_sqs_queue_url
         FRONTEND_URL              = var.frontend_url
         MEDIA_BUCKET              = var.media_bucket_name
+        GOOGLE_CALENDAR_CLIENT_ID     = var.google_calendar_client_id
+        GOOGLE_CALENDAR_CLIENT_SECRET = var.google_calendar_client_secret
+        GOOGLE_CALENDAR_REDIRECT_URI  = local.google_calendar_redirect_uri
       }
     }
     payments = {
@@ -871,6 +932,9 @@ locals {
         ENVIRONMENT               = var.environment
         INTEGRATION_SQS_QUEUE_URL = var.integration_sqs_queue_url
         FRONTEND_URL              = var.frontend_url
+        GOOGLE_CALENDAR_CLIENT_ID     = var.google_calendar_client_id
+        GOOGLE_CALENDAR_CLIENT_SECRET = var.google_calendar_client_secret
+        GOOGLE_CALENDAR_REDIRECT_URI  = local.google_calendar_redirect_uri
       }
     }
     catalog = {
@@ -884,6 +948,31 @@ locals {
         INTEGRATION_SQS_QUEUE_URL = var.integration_sqs_queue_url
         FRONTEND_URL              = var.frontend_url
         MEDIA_BUCKET              = var.media_bucket_name
+      }
+    }
+    hosted_forms = {
+      handler     = "hosted-forms/index.handler"
+      description = "Hosted form builder CRUD and public submissions"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME                = var.dynamodb_table_name
+        ENVIRONMENT               = var.environment
+        FLOW_EVENT_SQS_QUEUE_URL  = var.flow_event_sqs_queue_url
+        INTEGRATION_SQS_QUEUE_URL = var.integration_sqs_queue_url
+        FRONTEND_URL              = var.frontend_url
+      }
+    }
+    short_links = {
+      handler     = "short-links/index.handler"
+      description = "Short links CRUD and tracked redirects with UTM injection"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME     = var.dynamodb_table_name
+        ENVIRONMENT    = var.environment
+        API_PUBLIC_URL = var.api_public_url
+        FRONTEND_URL   = var.frontend_url
       }
     }
     mailrelay = {
@@ -929,6 +1018,20 @@ locals {
         TABLE_NAME   = var.dynamodb_table_name
         ENVIRONMENT  = var.environment
         MEDIA_BUCKET = var.media_bucket_name
+      }
+    }
+    google_business = {
+      handler     = "google-business/index.handler"
+      description = "Google Business Profile reviews API"
+      timeout     = 60
+      memory      = 256
+      environment = {
+        TABLE_NAME                    = var.dynamodb_table_name
+        ENVIRONMENT                   = var.environment
+        GOOGLE_BUSINESS_CLIENT_ID     = var.google_business_client_id
+        GOOGLE_BUSINESS_CLIENT_SECRET = var.google_business_client_secret
+        GOOGLE_BUSINESS_REDIRECT_URI  = trimspace(var.api_public_url) != "" ? "${trimsuffix(trimspace(var.api_public_url), "/")}/public/integrations/google-business/oauth/callback" : ""
+        API_PUBLIC_URL                = var.api_public_url
       }
     }
   }
@@ -998,6 +1101,14 @@ resource "aws_lambda_event_source_mapping" "integration_sqs_trigger" {
 resource "aws_lambda_event_source_mapping" "automation_sqs_trigger" {
   event_source_arn                   = var.automation_sqs_queue_arn
   function_name                      = aws_lambda_function.functions["process_automation"].arn
+  batch_size                         = 1
+  enabled                            = true
+  maximum_batching_window_in_seconds = 0
+}
+
+resource "aws_lambda_event_source_mapping" "sequence_sqs_trigger" {
+  event_source_arn                   = var.sequence_sqs_queue_arn
+  function_name                      = aws_lambda_function.functions["process_sequence"].arn
   batch_size                         = 1
   enabled                            = true
   maximum_batching_window_in_seconds = 0

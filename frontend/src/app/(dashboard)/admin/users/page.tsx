@@ -152,8 +152,9 @@ export default function AdminUsersPage() {
   }
 
   function tenantPlanLabel(plan: TenantPlan) {
+    if (plan === "starter") return t("common.planStarter");
     if (plan === "pro") return t("common.planPro");
-    if (plan === "enterprise") return t("common.planEnterprise");
+    if (plan === "scale" || (plan as string) === "enterprise") return t("common.planScale");
     if (plan === "reseller") return t("common.planReseller");
     return t("common.planFree");
   }
@@ -335,8 +336,9 @@ export default function AdminUsersPage() {
                             className="rounded-lg border border-default px-2 py-1 text-sm"
                           >
                             <option value="free">{t("common.planFree")}</option>
+                            <option value="starter">{t("common.planStarter")}</option>
                             <option value="pro">{t("common.planPro")}</option>
-                            <option value="enterprise">{t("common.planEnterprise")}</option>
+                            <option value="scale">{t("common.planScale")}</option>
                             <option value="reseller">{t("common.planReseller")}</option>
                           </select>
                           {tenantFeedback?.tenantId === tenant.tenantId && (
@@ -425,14 +427,15 @@ export default function AdminUsersPage() {
                     onChange={(e) =>
                       setDefaultsForm({
                         ...defaultsForm,
-                        defaultSubaccountPlan: e.target.value as "free" | "pro" | "enterprise",
+                        defaultSubaccountPlan: e.target.value as "free" | "starter" | "pro" | "scale",
                       })
                     }
                     className="w-full rounded-lg border border-default px-3 py-2"
                   >
                     <option value="free">{t("common.planFree")}</option>
+                    <option value="starter">{t("common.planStarter")}</option>
                     <option value="pro">{t("common.planPro")}</option>
-                    <option value="enterprise">{t("common.planEnterprise")}</option>
+                    <option value="scale">{t("common.planScale")}</option>
                   </select>
                 </label>
                 <label className="flex items-center gap-2 text-sm text-secondary sm:col-span-2">

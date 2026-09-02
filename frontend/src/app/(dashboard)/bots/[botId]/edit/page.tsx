@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { ChevronLeft, MessageCircle, Sparkles } from "lucide-react";
+import { ChevronLeft, MessageCircle } from "lucide-react";
+import { AiAssistantSettings } from "@/components/ai-assistant/AiAssistantSettings";
 import { useBot } from "@/hooks/useBots";
+import { useWhatsAppChannels } from "@/hooks/useWhatsAppChannels";
 import { useAiAssistant } from "@/hooks/useAiAssistant";
 import { BotForm } from "@/components/bots/BotForm";
 import { BotWhatsAppConnect } from "@/components/bots/BotWhatsAppConnect";
@@ -31,6 +33,13 @@ export default function EditBotPage() {
   const { botId } = useParams<{ botId: string }>();
   const { data: bot, isLoading } = useBot(botId);
   const { data: aiAssistant } = useAiAssistant(botId);
+  const { data: whatsappChannels = [] } = useWhatsAppChannels(botId, {
+    enabled: Boolean(botId),
+  });
+  const defaultWhatsAppChannel =
+    whatsappChannels.find((channel) => channel.isDefault) ?? whatsappChannels[0];
+  const whatsappPhoneNumberId = defaultWhatsAppChannel?.phoneNumberId ?? bot?.phoneNumberId;
+  const whatsappConnected = Boolean(whatsappPhoneNumberId?.trim());
 
   const tabParam = searchParams.get("tab");
   const activeTab: BotEditTab = isBotEditTab(tabParam) ? tabParam : "general";
@@ -78,50 +87,33 @@ export default function EditBotPage() {
 
         <div className="min-w-0">
           {bot && activeTab === "general" && (
-            <div className="space-y-4">
-              <div className="content-card p-4 sm:p-5">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-5 w-5 text-accent" />
-                    <div>
-                      <p className="text-sm font-medium text-primary">{t("aiAssistant.title")}</p>
-                      <p className="text-xs text-secondary">
-                        {aiActive ? t("aiAssistant.statusActive") : t("aiAssistant.statusInactive")}
-                      </p>
-                    </div>
-                  </div>
-                  <Link
-                    href={`/apps/ai-assistant/${bot.botId}`}
-                    className="text-sm font-medium text-accent hover:underline"
-                  >
-                    {t("aiAssistant.configure")}
-                  </Link>
-                </div>
+            <div className="content-card p-5 sm:p-6">
+              <div className="mb-6 flex items-center gap-2">
+                <MessageCircle className="h-5 w-5 text-accent" />
+                <h2 className="text-lg font-semibold text-primary">{t("bots.tabGeneral")}</h2>
               </div>
-
-              <div className="content-card p-5 sm:p-6">
-                <div className="mb-6 flex items-center gap-2">
-                  <MessageCircle className="h-5 w-5 text-accent" />
-                  <h2 className="text-lg font-semibold text-primary">{t("bots.tabGeneral")}</h2>
-                </div>
-                <BotForm bot={bot} wide />
-              </div>
+              <BotForm bot={bot} wide />
             </div>
           )}
+
+          {bot && activeTab === "aiAssistant" && <AiAssistantSettings bot={bot} />}
 
           {bot && activeTab === "whatsapp" && (
             <div className="space-y-4">
               <BotWhatsAppConnect bot={bot} />
-              {bot.phoneNumberId?.trim() ? (
+              {whatsappConnected ? (
                 <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-2">
                   <BotWhatsAppQuality
                     botId={bot.botId}
-                    phoneNumberId={bot.phoneNumberId}
+                    phoneNumberId={whatsappPhoneNumberId!}
                     whatsappPhone={bot.whatsappPhone}
                   />
                   <BotCallingSettings
                     botId={bot.botId}
-                    coexistence={bot.whatsappOnboardingMode === "coexistence"}
+                    coexistence={
+                      (defaultWhatsAppChannel?.whatsappOnboardingMode ??
+                        bot.whatsappOnboardingMode) === "coexistence"
+                    }
                   />
                 </div>
               ) : null}

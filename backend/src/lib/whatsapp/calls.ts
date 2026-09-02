@@ -36,6 +36,43 @@ export interface WhatsAppCallingSettings {
     call_hours?: Record<string, unknown>;
     sip?: Record<string, unknown>;
   };
+  available?: boolean;
+}
+
+export const DISABLED_CALLING_SETTINGS: WhatsAppCallingSettings = {
+  calling: { status: "DISABLED" },
+  available: false,
+};
+
+export const CALLING_SETTINGS_UNAVAILABLE_MESSAGE =
+  "WhatsApp Calling settings are not available for this number. Use a Cloud API Phone Number ID (not the WABA ID). Calling is not supported on WhatsApp Business app coexistence numbers.";
+
+export class CallingSettingsUnavailableError extends Error {
+  readonly statusCode = 400;
+
+  constructor(message = CALLING_SETTINGS_UNAVAILABLE_MESSAGE) {
+    super(message);
+    this.name = "CallingSettingsUnavailableError";
+  }
+}
+
+export function isCoexistenceCallingBot(bot: {
+  whatsappOnboardingMode?: string;
+}): boolean {
+  return bot.whatsappOnboardingMode === "coexistence";
+}
+
+function throwCallSettingsGraphError(status: number, body: string): never {
+  try {
+    const parsed = JSON.parse(body) as { error?: { code?: number; message?: string } };
+    const message = parsed.error?.message ?? "";
+    if (parsed.error?.code === 100 && /nonexisting field \(settings\)/i.test(message)) {
+      throw new CallingSettingsUnavailableError();
+    }
+  } catch (error) {
+    if (error instanceof CallingSettingsUnavailableError) throw error;
+  }
+  throwGraphApiError(status, body);
 }
 
 export async function initiateCall(
@@ -105,15 +142,37 @@ export async function getCallSettings(
   phoneNumberId: string,
   accessToken: string
 ): Promise<WhatsAppCallingSettings> {
+  if (!phoneNumberId.trim()) {
+    throw new CallingSettingsUnavailableError();
+  }
+
   const response = await fetch(`${GRAPH_API_URL}/${phoneNumberId}/settings`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
 
   if (!response.ok) {
-    throwGraphApiError(response.status, await response.text());
+    throwCallSettingsGraphError(response.status, await response.text());
   }
 
   return response.json() as Promise<WhatsAppCallingSettings>;
+}
+
+export async function getCallSettingsForBot(
+  bot: { phoneNumberId: string; whatsappOnboardingMode?: string },
+  accessToken: string
+): Promise<WhatsAppCallingSettings> {
+  if (isCoexistenceCallingBot(bot)) {
+    return DISABLED_CALLING_SETTINGS;
+  }
+
+  try {
+    return await getCallSettings(bot.phoneNumberId, accessToken);
+  } catch (error) {
+    if (error instanceof CallingSettingsUnavailableError) {
+      return DISABLED_CALLING_SETTINGS;
+    }
+    throw error;
+  }
 }
 
 export async function updateCallSettings(
@@ -121,6 +180,10 @@ export async function updateCallSettings(
   accessToken: string,
   settings: WhatsAppCallingSettings
 ): Promise<WhatsAppCallingSettings> {
+  if (!phoneNumberId.trim()) {
+    throw new CallingSettingsUnavailableError();
+  }
+
   const response = await fetch(`${GRAPH_API_URL}/${phoneNumberId}/settings`, {
     method: "POST",
     headers: {
@@ -131,7 +194,7 @@ export async function updateCallSettings(
   });
 
   if (!response.ok) {
-    throwGraphApiError(response.status, await response.text());
+    throwCallSettingsGraphError(response.status, await response.text());
   }
 
   return response.json() as Promise<WhatsAppCallingSettings>;

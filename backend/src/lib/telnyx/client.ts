@@ -237,6 +237,226 @@ export interface TelnyxPhoneNumber {
   id: string;
   phoneNumber: string;
   status: string;
+  assignedBotId?: string;
+  assignedBotName?: string;
+}
+
+export interface TelnyxAvailableNumberCost {
+  upfrontCost: string;
+  monthlyCost: string;
+  currency: string;
+}
+
+export interface TelnyxAvailableNumber {
+  phoneNumber: string;
+  phoneNumberType: string;
+  quickship: boolean;
+  features: string[];
+  regionName?: string;
+  cost: TelnyxAvailableNumberCost;
+}
+
+export interface TelnyxAvailableNumberSearchFilters {
+  countryCode: string;
+  phoneNumberType?: "local" | "toll_free" | "mobile" | "national";
+  locality?: string;
+  nationalDestinationCode?: string;
+  limit?: number;
+}
+
+export type TelnyxNumberOrderStatus = "pending" | "success" | "failure";
+
+export interface TelnyxNumberOrderPhoneNumber {
+  phoneNumber: string;
+  status: TelnyxNumberOrderStatus;
+}
+
+export interface TelnyxNumberOrder {
+  id: string;
+  status: TelnyxNumberOrderStatus;
+  phoneNumbers: TelnyxNumberOrderPhoneNumber[];
+}
+
+async function telnyxRequestWithApiKey<T>(
+  apiKey: string,
+  path: string,
+  init: RequestInit
+): Promise<T> {
+  const response = await fetch(`${TELNYX_API_BASE}${path}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...(init.headers ?? {}),
+    },
+  });
+
+  const text = await response.text();
+  let data: unknown = {};
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { raw: text };
+    }
+  }
+
+  if (!response.ok) {
+    const detail =
+      typeof data === "object" && data && "errors" in data
+        ? JSON.stringify((data as { errors: unknown }).errors)
+        : text;
+    throw Object.assign(new Error(`Telnyx API error (${response.status}): ${detail}`), {
+      statusCode: response.status >= 500 ? 502 : 400,
+      telnyxStatus: response.status,
+      telnyxErrors:
+        typeof data === "object" && data && "errors" in data
+          ? (data as { errors: unknown }).errors
+          : undefined,
+    });
+  }
+
+  return data as T;
+}
+
+export function buildAvailablePhoneNumbersPath(filters: TelnyxAvailableNumberSearchFilters): string {
+  const params = new URLSearchParams();
+  params.set("filter[country_code]", filters.countryCode);
+  params.set("filter[features][]", "voice");
+  if (filters.phoneNumberType) {
+    params.set("filter[phone_number_type]", filters.phoneNumberType);
+  }
+  if (filters.locality?.trim()) {
+    params.set("filter[locality]", filters.locality.trim());
+  }
+  if (filters.nationalDestinationCode?.trim()) {
+    params.set("filter[national_destination_code]", filters.nationalDestinationCode.trim());
+  }
+  params.set("page[size]", String(Math.min(filters.limit ?? 20, 50)));
+  return `/available_phone_numbers?${params.toString()}`;
+}
+
+function mapAvailablePhoneNumber(
+  item: {
+    phone_number: string;
+    phone_number_type?: string;
+    quickship?: boolean;
+    features?: Array<{ name: string }>;
+    region_information?: Array<{ region_type: string; region_name: string }>;
+    cost_information?: {
+      upfront_cost?: string;
+      monthly_cost?: string;
+      currency?: string;
+    };
+  }
+): TelnyxAvailableNumber {
+  const region = item.region_information?.find((entry) => entry.region_type === "location");
+  return {
+    phoneNumber: item.phone_number,
+    phoneNumberType: item.phone_number_type ?? "local",
+    quickship: Boolean(item.quickship),
+    features: (item.features ?? []).map((feature) => feature.name).filter(Boolean),
+    ...(region?.region_name ? { regionName: region.region_name } : {}),
+    cost: {
+      upfrontCost: item.cost_information?.upfront_cost ?? "0",
+      monthlyCost: item.cost_information?.monthly_cost ?? "0",
+      currency: item.cost_information?.currency ?? "USD",
+    },
+  };
+}
+
+export async function searchAvailablePhoneNumbers(
+  _environment: string,
+  _tenantId: string,
+  apiKey: string,
+  filters: TelnyxAvailableNumberSearchFilters
+): Promise<{ numbers: TelnyxAvailableNumber[]; totalResults: number }> {
+  const data = await telnyxRequestWithApiKey<{
+    data: Array<{
+      phone_number: string;
+      phone_number_type?: string;
+      quickship?: boolean;
+      features?: Array<{ name: string }>;
+      region_information?: Array<{ region_type: string; region_name: string }>;
+      cost_information?: {
+        upfront_cost?: string;
+        monthly_cost?: string;
+        currency?: string;
+      };
+    }>;
+    meta?: { total_results?: number };
+    metadata?: { total_results?: number };
+  }>(apiKey, buildAvailablePhoneNumbersPath(filters), { method: "GET" });
+
+  const meta = data.meta ?? data.metadata;
+  return {
+    numbers: (data.data ?? []).map(mapAvailablePhoneNumber),
+    totalResults: meta?.total_results ?? data.data?.length ?? 0,
+  };
+}
+
+export async function createPhoneNumberOrder(
+  _environment: string,
+  _tenantId: string,
+  apiKey: string,
+  params: {
+    phoneNumber: string;
+    connectionId: string;
+    customerReference?: string;
+  }
+): Promise<TelnyxNumberOrder> {
+  const data = await telnyxRequestWithApiKey<{
+    data: {
+      id: string;
+      status: TelnyxNumberOrderStatus;
+      phone_numbers?: Array<{ phone_number: string; status: TelnyxNumberOrderStatus }>;
+    };
+  }>(apiKey, "/number_orders", {
+    method: "POST",
+    body: JSON.stringify({
+      phone_numbers: [{ phone_number: params.phoneNumber }],
+      connection_id: params.connectionId,
+      ...(params.customerReference ? { customer_reference: params.customerReference } : {}),
+    }),
+  });
+
+  return {
+    id: data.data.id,
+    status: data.data.status,
+    phoneNumbers: (data.data.phone_numbers ?? []).map((item) => ({
+      phoneNumber: item.phone_number,
+      status: item.status,
+    })),
+  };
+}
+
+export async function getPhoneNumberOrder(
+  _environment: string,
+  _tenantId: string,
+  apiKey: string,
+  orderId: string
+): Promise<TelnyxNumberOrder> {
+  const data = await telnyxRequestWithApiKey<{
+    data: {
+      id: string;
+      status: TelnyxNumberOrderStatus;
+      phone_numbers?: Array<{ phone_number: string; status: TelnyxNumberOrderStatus }>;
+    };
+  }>(
+    apiKey,
+    `/number_orders/${encodeURIComponent(orderId)}`,
+    { method: "GET" }
+  );
+
+  return {
+    id: data.data.id,
+    status: data.data.status,
+    phoneNumbers: (data.data.phone_numbers ?? []).map((item) => ({
+      phoneNumber: item.phone_number,
+      status: item.status,
+    })),
+  };
 }
 
 export async function listOwnedPhoneNumbers(

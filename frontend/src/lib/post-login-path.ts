@@ -1,4 +1,5 @@
 import { fetchAuthSession } from "aws-amplify/auth";
+import type { PaidBillingPlan } from "@/lib/plan-config";
 
 export const ADMIN_HOME = "/admin/users";
 export const MEMBER_HOME = "/dashboard";
@@ -6,16 +7,17 @@ export const ADVISOR_HOME = "/inbox";
 
 const PENDING_BILLING_PLAN_KEY = "pendingBillingPlan";
 
-export type PaidBillingPlan = "pro" | "enterprise";
+export type { PaidBillingPlan };
 
 export function isPaidBillingPlan(value: string | null | undefined): value is PaidBillingPlan {
-  return value === "pro" || value === "enterprise";
+  return value === "starter" || value === "pro" || value === "scale" || value === "enterprise";
 }
 
 export function billingPlanFromRedirect(redirect: string | null | undefined): PaidBillingPlan | null {
   if (!redirect) return null;
-  if (redirect.includes("plan=enterprise")) return "enterprise";
+  if (redirect.includes("plan=scale") || redirect.includes("plan=enterprise")) return "scale";
   if (redirect.includes("plan=pro")) return "pro";
+  if (redirect.includes("plan=starter")) return "starter";
   return null;
 }
 

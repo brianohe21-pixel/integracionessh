@@ -9,6 +9,7 @@ import {
   listAdvisors,
   updateAdvisor,
 } from "../../lib/dynamodb/advisor.repository.js";
+import { deleteMember } from "../../lib/dynamodb/member.repository.js";
 import {
   resolveRequestAuth,
   assertTenantManagerRole,
@@ -19,6 +20,7 @@ import { deleteCognitoUserBySub } from "../../lib/cognito/admin-users.js";
 import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
 import { resolveBranding } from "../../lib/branding/resolve.js";
 import { sendAdvisorInviteEmail } from "../../lib/email/advisor-invite.js";
+import { syncAdvisorMemberRecord } from "../../lib/members/sync-advisor-member.js";
 import { ok, created, noContent, badRequest, notFound, handleError } from "../../lib/http.js";
 import type { Advisor } from "../../types/index.js";
 
@@ -87,6 +89,15 @@ export async function handler(
         advisor.cognitoUserId = invited.cognitoUserId;
         await createAdvisor(advisor);
 
+        await syncAdvisorMemberRecord({
+          tenantId: auth.tenantId,
+          cognitoUserId: invited.cognitoUserId,
+          username: invited.username,
+          email: parsed.data.inviteEmail,
+          name: parsed.data.name,
+          advisorId: advisor.advisorId,
+        });
+
         const tenant = await getTenant(auth.tenantId);
         const tenantName = tenant ? resolveBranding(tenant).brandName : "la plataforma";
         let emailSent = false;
@@ -154,6 +165,11 @@ export async function handler(
           await deleteCognitoUserBySub(existing.cognitoUserId);
         } catch {
           // Advisor record is still removed even if Cognito delete fails.
+        }
+        try {
+          await deleteMember(auth.tenantId, existing.cognitoUserId);
+        } catch {
+          // Advisor record is still removed even if member delete fails.
         }
       }
 

@@ -32,10 +32,12 @@ import {
 import {
   initiateCall,
   performCallAction,
-  getCallSettings,
+  getCallSettingsForBot,
   updateCallSettings,
   sendCallPermissionRequest,
   getCallPermissionStatus,
+  isCoexistenceCallingBot,
+  CallingSettingsUnavailableError,
   type WhatsAppCallingSettings,
 } from "../../lib/whatsapp/calls.js";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
@@ -779,7 +781,7 @@ async function handleGetCallSettings(
   assertApiKeyScope(apiKey, API_KEY_SCOPES.callsSettings);
 
   const { bot, accessToken } = await loadActiveBot(apiKey);
-  const settings = await getCallSettings(bot.phoneNumberId, accessToken);
+  const settings = await getCallSettingsForBot(bot, accessToken);
 
   return {
     statusCode: 200,
@@ -803,6 +805,9 @@ async function handleUpdateCallSettings(
   }
 
   const { bot, accessToken } = await loadActiveBot(apiKey);
+  if (isCoexistenceCallingBot(bot)) {
+    throw new CallingSettingsUnavailableError();
+  }
   const settings = await updateCallSettings(
     bot.phoneNumberId,
     accessToken,

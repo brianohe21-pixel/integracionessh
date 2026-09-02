@@ -52,10 +52,11 @@ export default function DashboardPageRoute() {
   const controlLoading = usageLoading || marketingLoading || slaLoading;
 
   return (
-    <DashboardPage maxWidth="6xl" className="space-y-6">
+    <DashboardPage className="gap-6">
       <PageHeader
         title={t("dashboard.title")}
         subtitle={t("dashboard.subtitle")}
+        className="mb-0 sm:mb-0"
         actions={
           <Link
             href="/metrics"
@@ -118,11 +119,12 @@ export default function DashboardPageRoute() {
             isLoadingSla={slaLoading}
           />
           <DashboardQuickActions />
-          <div className="content-card p-4 sm:p-5">
-            <p className="text-xs font-semibold uppercase tracking-wider text-secondary">
-              {t("dashboard.dataScopeTitle")}
-            </p>
-            <ul className="mt-3 space-y-2 text-xs text-muted">
+          <div className="content-card overflow-hidden">
+            <div className="section-header">
+              <h2 className="section-header-title">{t("dashboard.dataScopeTitle")}</h2>
+            </div>
+            <div className="p-4 sm:p-5">
+            <ul className="space-y-2 text-xs text-muted">
               <li>{t("dashboard.dataScopeSales")}</li>
               <li>{t("dashboard.dataScopeUsage")}</li>
               <li>{t("dashboard.dataScopeMarketing")}</li>
@@ -134,6 +136,7 @@ export default function DashboardPageRoute() {
               {t("dashboard.viewDetail")}
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
+            </div>
           </div>
         </div>
       </div>

@@ -62,6 +62,7 @@ locals {
     advisors           = var.advisors_function_arn
     contacts           = var.contacts_function_arn
     leads              = var.leads_function_arn
+    sales              = var.sales_function_arn
     templates          = var.templates_function_arn
     bulk_send          = var.bulk_send_function_arn
     metrics            = var.metrics_function_arn
@@ -95,8 +96,11 @@ locals {
     public_calendar    = var.public_calendar_function_arn
     payments           = var.payments_function_arn
     catalog            = var.catalog_function_arn
+    hosted_forms       = var.hosted_forms_function_arn
+    short_links        = var.short_links_function_arn
     mailrelay          = var.mailrelay_function_arn
     mailrelay_webhook  = var.mailrelay_webhook_function_arn
+    google_business    = var.google_business_function_arn
   }
 
   lambda_invoke_arns = {
@@ -108,6 +112,7 @@ locals {
     advisors           = var.advisors_invoke_arn
     contacts           = var.contacts_invoke_arn
     leads              = var.leads_invoke_arn
+    sales              = var.sales_invoke_arn
     templates          = var.templates_invoke_arn
     bulk_send          = var.bulk_send_invoke_arn
     metrics            = var.metrics_invoke_arn
@@ -141,8 +146,11 @@ locals {
     public_calendar    = var.public_calendar_invoke_arn
     payments           = var.payments_invoke_arn
     catalog            = var.catalog_invoke_arn
+    hosted_forms       = var.hosted_forms_invoke_arn
+    short_links        = var.short_links_invoke_arn
     mailrelay          = var.mailrelay_invoke_arn
     mailrelay_webhook  = var.mailrelay_webhook_invoke_arn
+    google_business    = var.google_business_invoke_arn
   }
 
   http_proxy_groups = {
@@ -170,12 +178,108 @@ locals {
       function_arn = var.telephony_function_arn
       protected    = true
     }
+    bots_whatsapp_channels = {
+      path         = "/bots/{botId}/whatsapp-channels/{proxy+}"
+      slug         = "whatsapp_connect"
+      methods      = ["GET", "POST", "PUT", "PATCH", "DELETE"]
+      invoke_arn   = var.whatsapp_connect_invoke_arn
+      function_arn = var.whatsapp_connect_function_arn
+      protected    = true
+    }
+    telephony = {
+      path         = "/telephony/{proxy+}"
+      slug         = "telephony"
+      methods      = ["GET", "POST"]
+      invoke_arn   = var.telephony_invoke_arn
+      function_arn = var.telephony_function_arn
+      protected    = false
+    }
     mailrelay = {
       path         = "/email-marketing/{proxy+}"
       slug         = "mailrelay"
       methods      = ["GET", "POST", "PUT", "PATCH", "DELETE"]
       invoke_arn   = var.mailrelay_invoke_arn
       function_arn = var.mailrelay_function_arn
+      protected    = true
+    }
+    google_business = {
+      path         = "/google-business/{proxy+}"
+      slug         = "google_business"
+      methods      = ["GET", "PUT", "DELETE"]
+      invoke_arn   = var.google_business_invoke_arn
+      function_arn = var.google_business_function_arn
+      protected    = true
+    }
+    sales = {
+      path         = "/sales/{proxy+}"
+      slug         = "sales"
+      methods      = ["GET", "POST", "PUT", "PATCH", "DELETE"]
+      invoke_arn   = var.sales_invoke_arn
+      function_arn = var.sales_function_arn
+      protected    = true
+    }
+    catalog = {
+      path         = "/catalog/{proxy+}"
+      slug         = "catalog"
+      methods      = ["GET", "POST", "PUT", "PATCH", "DELETE"]
+      invoke_arn   = var.catalog_invoke_arn
+      function_arn = var.catalog_function_arn
+      protected    = true
+    }
+    hosted_forms = {
+      path         = "/forms/{proxy+}"
+      slug         = "hosted_forms"
+      methods      = ["GET", "POST", "PUT", "DELETE"]
+      invoke_arn   = var.hosted_forms_invoke_arn
+      function_arn = var.hosted_forms_function_arn
+      protected    = true
+    }
+    public_hosted_forms = {
+      path         = "/public/forms/{proxy+}"
+      slug         = "hosted_forms"
+      methods      = ["GET", "POST"]
+      invoke_arn   = var.hosted_forms_invoke_arn
+      function_arn = var.hosted_forms_function_arn
+      protected    = false
+    }
+    metrics = {
+      path         = "/metrics/{proxy+}"
+      slug         = "metrics"
+      methods      = ["GET"]
+      invoke_arn   = var.metrics_invoke_arn
+      function_arn = var.metrics_function_arn
+      protected    = true
+    }
+    conversations = {
+      path         = "/conversations/{proxy+}"
+      slug         = "conversations"
+      methods      = ["GET", "POST", "PATCH", "DELETE"]
+      invoke_arn   = var.conversations_invoke_arn
+      function_arn = var.conversations_function_arn
+      protected    = true
+    }
+    flows = {
+      path         = "/flows/{proxy+}"
+      slug         = "flows"
+      methods      = ["GET", "POST", "PUT", "DELETE"]
+      invoke_arn   = var.flows_invoke_arn
+      function_arn = var.flows_function_arn
+      protected    = true
+    }
+    webchat = {
+      path         = "/webchat/{proxy+}"
+      slug         = "webchat"
+      methods      = ["GET", "POST"]
+      invoke_arn   = var.webchat_invoke_arn
+      function_arn = var.webchat_function_arn
+      protected    = false
+    }
+    short_links = {
+      path         = "/short-links/{proxy+}"
+      slug         = "short_links"
+      methods      = ["GET", "POST", "PATCH", "DELETE"]
+      invoke_arn   = var.short_links_invoke_arn
+      function_arn = var.short_links_function_arn
       protected    = true
     }
   }
@@ -288,76 +392,6 @@ locals {
     }
     conversations_list = {
       route_key    = "GET /conversations"
-      slug         = "conversations"
-      invoke_arn   = var.conversations_invoke_arn
-      function_arn = var.conversations_function_arn
-      protected    = true
-    }
-    conversations_bulk_handoff = {
-      route_key    = "POST /conversations/bulk-handoff"
-      slug         = "conversations"
-      invoke_arn   = var.conversations_invoke_arn
-      function_arn = var.conversations_function_arn
-      protected    = true
-    }
-    conversations_get = {
-      route_key    = "GET /conversations/{conversationId}"
-      slug         = "conversations"
-      invoke_arn   = var.conversations_invoke_arn
-      function_arn = var.conversations_function_arn
-      protected    = true
-    }
-    conversations_handoff = {
-      route_key    = "POST /conversations/{conversationId}/handoff"
-      slug         = "conversations"
-      invoke_arn   = var.conversations_invoke_arn
-      function_arn = var.conversations_function_arn
-      protected    = true
-    }
-    conversations_claim = {
-      route_key    = "POST /conversations/{conversationId}/claim"
-      slug         = "conversations"
-      invoke_arn   = var.conversations_invoke_arn
-      function_arn = var.conversations_function_arn
-      protected    = true
-    }
-    conversations_release = {
-      route_key    = "POST /conversations/{conversationId}/release"
-      slug         = "conversations"
-      invoke_arn   = var.conversations_invoke_arn
-      function_arn = var.conversations_function_arn
-      protected    = true
-    }
-    conversations_send_message = {
-      route_key    = "POST /conversations/{conversationId}/messages"
-      slug         = "conversations"
-      invoke_arn   = var.conversations_invoke_arn
-      function_arn = var.conversations_function_arn
-      protected    = true
-    }
-    conversations_copilot = {
-      route_key    = "POST /conversations/{conversationId}/copilot"
-      slug         = "conversations"
-      invoke_arn   = var.conversations_invoke_arn
-      function_arn = var.conversations_function_arn
-      protected    = true
-    }
-    conversations_quotations_list = {
-      route_key    = "GET /conversations/{conversationId}/quotations"
-      slug         = "conversations"
-      invoke_arn   = var.conversations_invoke_arn
-      function_arn = var.conversations_function_arn
-      protected    = true
-    }
-    conversations_quotations_create = {
-      route_key    = "POST /conversations/{conversationId}/quotations"
-      slug         = "conversations"
-      invoke_arn   = var.conversations_invoke_arn
-      function_arn = var.conversations_function_arn
-      protected    = true
-    }
-    conversations_wa_link = {
-      route_key    = "GET /conversations/{conversationId}/wa-link"
       slug         = "conversations"
       invoke_arn   = var.conversations_invoke_arn
       function_arn = var.conversations_function_arn
@@ -552,102 +586,11 @@ locals {
       function_arn = var.bulk_send_function_arn
       protected    = true
     }
-    metrics_leads = {
-      route_key    = "GET /metrics/leads"
-      slug         = "metrics"
-      invoke_arn   = var.metrics_invoke_arn
-      function_arn = var.metrics_function_arn
-      protected    = true
-    }
-    metrics_marketing = {
-      route_key    = "GET /metrics/marketing"
-      slug         = "metrics"
-      invoke_arn   = var.metrics_invoke_arn
-      function_arn = var.metrics_function_arn
-      protected    = true
-    }
-    metrics_calling = {
-      route_key    = "GET /metrics/calling"
-      slug         = "metrics"
-      invoke_arn   = var.metrics_invoke_arn
-      function_arn = var.metrics_function_arn
-      protected    = true
-    }
-    metrics_sales = {
-      route_key    = "GET /metrics/sales"
-      slug         = "metrics"
-      invoke_arn   = var.metrics_invoke_arn
-      function_arn = var.metrics_function_arn
-      protected    = true
-    }
-    metrics_inbox_sla = {
-      route_key    = "GET /metrics/inbox-sla"
-      slug         = "metrics"
-      invoke_arn   = var.metrics_invoke_arn
-      function_arn = var.metrics_function_arn
-      protected    = true
-    }
-    metrics_advisor_workload = {
-      route_key    = "GET /metrics/advisor-workload"
-      slug         = "metrics"
-      invoke_arn   = var.metrics_invoke_arn
-      function_arn = var.metrics_function_arn
-      protected    = true
-    }
     metrics_get = {
       route_key    = "GET /metrics"
       slug         = "metrics"
       invoke_arn   = var.metrics_invoke_arn
       function_arn = var.metrics_function_arn
-      protected    = true
-    }
-    metrics_export = {
-      route_key    = "GET /metrics/export"
-      slug         = "metrics"
-      invoke_arn   = var.metrics_invoke_arn
-      function_arn = var.metrics_function_arn
-      protected    = true
-    }
-    conversations_status = {
-      route_key    = "PATCH /conversations/{conversationId}/status"
-      slug         = "conversations"
-      invoke_arn   = var.conversations_invoke_arn
-      function_arn = var.conversations_function_arn
-      protected    = true
-    }
-    conversations_note = {
-      route_key    = "PATCH /conversations/{conversationId}/note"
-      slug         = "conversations"
-      invoke_arn   = var.conversations_invoke_arn
-      function_arn = var.conversations_function_arn
-      protected    = true
-    }
-    conversations_resolve = {
-      route_key    = "POST /conversations/{conversationId}/resolve"
-      slug         = "conversations"
-      invoke_arn   = var.conversations_invoke_arn
-      function_arn = var.conversations_function_arn
-      protected    = true
-    }
-    conversations_delete = {
-      route_key    = "DELETE /conversations/{conversationId}"
-      slug         = "conversations"
-      invoke_arn   = var.conversations_invoke_arn
-      function_arn = var.conversations_function_arn
-      protected    = true
-    }
-    conversations_message_attachment = {
-      route_key    = "GET /conversations/{conversationId}/messages/{messageId}/attachments/{attachmentId}"
-      slug         = "conversations"
-      invoke_arn   = var.conversations_invoke_arn
-      function_arn = var.conversations_function_arn
-      protected    = true
-    }
-    conversations_message_html = {
-      route_key    = "GET /conversations/{conversationId}/messages/{messageId}/html"
-      slug         = "conversations"
-      invoke_arn   = var.conversations_invoke_arn
-      function_arn = var.conversations_function_arn
       protected    = true
     }
     conversations_calls_create = {
@@ -708,6 +651,13 @@ locals {
     }
     whatsapp_connect_coexistence = {
       route_key    = "POST /whatsapp/connect-coexistence"
+      slug         = "whatsapp_connect"
+      invoke_arn   = var.whatsapp_connect_invoke_arn
+      function_arn = var.whatsapp_connect_function_arn
+      protected    = true
+    }
+    bots_whatsapp_channels_list = {
+      route_key    = "GET /bots/{botId}/whatsapp-channels"
       slug         = "whatsapp_connect"
       invoke_arn   = var.whatsapp_connect_invoke_arn
       function_arn = var.whatsapp_connect_function_arn
@@ -782,48 +732,6 @@ locals {
       invoke_arn   = var.email_imap_connect_invoke_arn
       function_arn = var.email_imap_connect_function_arn
       protected    = true
-    }
-    webchat_sessions_create = {
-      route_key    = "POST /webchat/sessions"
-      slug         = "webchat"
-      invoke_arn   = var.webchat_invoke_arn
-      function_arn = var.webchat_function_arn
-      protected    = false
-    }
-    webchat_messages_send = {
-      route_key    = "POST /webchat/sessions/{sessionId}/messages"
-      slug         = "webchat"
-      invoke_arn   = var.webchat_invoke_arn
-      function_arn = var.webchat_function_arn
-      protected    = false
-    }
-    webchat_messages_poll = {
-      route_key    = "GET /webchat/sessions/{sessionId}/messages"
-      slug         = "webchat"
-      invoke_arn   = var.webchat_invoke_arn
-      function_arn = var.webchat_function_arn
-      protected    = false
-    }
-    webchat_call_token = {
-      route_key    = "POST /webchat/sessions/{sessionId}/calls/{callId}/token"
-      slug         = "webchat"
-      invoke_arn   = var.webchat_invoke_arn
-      function_arn = var.webchat_function_arn
-      protected    = false
-    }
-    webchat_call_decline = {
-      route_key    = "POST /webchat/sessions/{sessionId}/calls/{callId}/decline"
-      slug         = "webchat"
-      invoke_arn   = var.webchat_invoke_arn
-      function_arn = var.webchat_function_arn
-      protected    = false
-    }
-    webchat_call_accept = {
-      route_key    = "POST /webchat/sessions/{sessionId}/calls/{callId}/accept"
-      slug         = "webchat"
-      invoke_arn   = var.webchat_invoke_arn
-      function_arn = var.webchat_function_arn
-      protected    = false
     }
     bots_webchat_put = {
       route_key    = "PUT /bots/{botId}/webchat"
@@ -1147,6 +1055,27 @@ locals {
       function_arn = var.tenants_function_arn
       protected    = false
     }
+    public_auth_methods = {
+      route_key    = "GET /public/auth-methods"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = false
+    }
+    public_google_business_oauth_callback = {
+      route_key    = "GET /public/integrations/google-business/oauth/callback"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = false
+    }
+    public_google_calendar_oauth_callback = {
+      route_key    = "GET /public/integrations/google-calendar/oauth/callback"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = false
+    }
     auth_portal_access = {
       route_key    = "GET /auth/portal-access"
       slug         = "tenants"
@@ -1322,6 +1251,118 @@ locals {
       function_arn = var.tenants_function_arn
       protected    = true
     }
+    tenants_website_analytics_get = {
+      route_key    = "GET /tenants/me/website-analytics"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_website_analytics_update = {
+      route_key    = "PUT /tenants/me/website-analytics"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_members_list = {
+      route_key    = "GET /tenants/me/members"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_members_create = {
+      route_key    = "POST /tenants/me/members"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_members_delete = {
+      route_key    = "DELETE /tenants/me/members/{userId}"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_email_settings_get = {
+      route_key    = "GET /tenants/me/email-settings"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_email_settings_update = {
+      route_key    = "PUT /tenants/me/email-settings"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_email_settings_domain_register = {
+      route_key    = "PUT /tenants/me/email-settings/domain"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_email_settings_domain_verify = {
+      route_key    = "POST /tenants/me/email-settings/domain/verify"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_email_settings_domain_delete = {
+      route_key    = "DELETE /tenants/me/email-settings/domain"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_integrations_catalog = {
+      route_key    = "GET /tenants/me/integrations"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_integrations_microsoft_sso_get = {
+      route_key    = "GET /tenants/me/integrations/microsoft-sso"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_integrations_microsoft_sso_put = {
+      route_key    = "PUT /tenants/me/integrations/microsoft-sso"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_integrations_microsoft_sso_patch = {
+      route_key    = "PATCH /tenants/me/integrations/microsoft-sso"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_integrations_microsoft_sso_test = {
+      route_key    = "POST /tenants/me/integrations/microsoft-sso/test"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_integrations_microsoft_sso_delete = {
+      route_key    = "DELETE /tenants/me/integrations/microsoft-sso"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
     bots_calling_settings_get = {
       route_key    = "GET /bots/{botId}/calling/settings"
       slug         = "calling"
@@ -1376,34 +1417,6 @@ locals {
       slug         = "calling"
       invoke_arn   = var.calling_invoke_arn
       function_arn = var.calling_function_arn
-      protected    = true
-    }
-    telephony_webhook = {
-      route_key    = "POST /telephony/webhook"
-      slug         = "telephony"
-      invoke_arn   = var.telephony_invoke_arn
-      function_arn = var.telephony_function_arn
-      protected    = false
-    }
-    telephony_webhook_tenant = {
-      route_key    = "POST /telephony/webhook/{credentialTenantId}"
-      slug         = "telephony"
-      invoke_arn   = var.telephony_invoke_arn
-      function_arn = var.telephony_function_arn
-      protected    = false
-    }
-    telephony_numbers = {
-      route_key    = "GET /telephony/numbers"
-      slug         = "telephony"
-      invoke_arn   = var.telephony_invoke_arn
-      function_arn = var.telephony_function_arn
-      protected    = true
-    }
-    telephony_voices = {
-      route_key    = "GET /telephony/voices"
-      slug         = "telephony"
-      invoke_arn   = var.telephony_invoke_arn
-      function_arn = var.telephony_function_arn
       protected    = true
     }
     api_keys_list = {
@@ -1637,6 +1650,48 @@ locals {
       function_arn = var.calendar_function_arn
       protected    = true
     }
+    calendar_google_status = {
+      route_key    = "GET /calendar/{botId}/google"
+      slug         = "calendar"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_google_oauth_start = {
+      route_key    = "GET /calendar/{botId}/google/oauth/start"
+      slug         = "calendar"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_google_calendars_refresh = {
+      route_key    = "POST /calendar/{botId}/google/calendars/refresh"
+      slug         = "calendar"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_google_patch = {
+      route_key    = "PATCH /calendar/{botId}/google"
+      slug         = "calendar"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_google_delete = {
+      route_key    = "DELETE /calendar/{botId}/google"
+      slug         = "calendar"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
+    calendar_booking_retry_sync = {
+      route_key    = "POST /calendar/{botId}/bookings/{bookingId}/retry-sync"
+      slug         = "calendar"
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
     public_calendar_info = {
       route_key    = "GET /public/calendar/{publicKey}"
       slug         = "public_calendar"
@@ -1748,125 +1803,6 @@ locals {
       invoke_arn   = var.payments_invoke_arn
       function_arn = var.payments_function_arn
       protected    = false
-    }
-    catalog_config_get = {
-      route_key    = "GET /catalog/{botId}/config"
-      slug         = "catalog"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_config_put = {
-      route_key    = "PUT /catalog/{botId}/config"
-      slug         = "catalog"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_enable = {
-      route_key    = "POST /catalog/{botId}/enable"
-      slug         = "catalog"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_disable = {
-      route_key    = "POST /catalog/{botId}/disable"
-      slug         = "catalog"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_meta_catalogs = {
-      route_key    = "GET /catalog/{botId}/meta-catalogs"
-      slug         = "catalog"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_link = {
-      route_key    = "POST /catalog/{botId}/link-catalog"
-      slug         = "catalog"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_sync = {
-      route_key    = "POST /catalog/{botId}/sync"
-      slug         = "catalog"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_products_list = {
-      route_key    = "GET /catalog/{botId}/products"
-      slug         = "catalog"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_products_create = {
-      route_key    = "POST /catalog/{botId}/products"
-      slug         = "catalog"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_products_get = {
-      route_key    = "GET /catalog/{botId}/products/{productId}"
-      slug         = "catalog"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_products_put = {
-      route_key    = "PUT /catalog/{botId}/products/{productId}"
-      slug         = "catalog"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_products_delete = {
-      route_key    = "DELETE /catalog/{botId}/products/{productId}"
-      slug         = "catalog"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_products_image = {
-      route_key    = "POST /catalog/{botId}/products/{productId}/image"
-      slug         = "catalog"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_products_image_finalize = {
-      route_key    = "POST /catalog/{botId}/products/{productId}/image/finalize"
-      slug         = "catalog"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_orders_list = {
-      route_key    = "GET /catalog/{botId}/orders"
-      slug         = "catalog"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_orders_get = {
-      route_key    = "GET /catalog/{botId}/orders/{orderId}"
-      slug         = "catalog"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
-    }
-    catalog_orders_patch = {
-      route_key    = "PATCH /catalog/{botId}/orders/{orderId}"
-      slug         = "catalog"
-      invoke_arn   = var.catalog_invoke_arn
-      function_arn = var.catalog_function_arn
-      protected    = true
     }
     knowledge_list = {
       route_key    = "GET /bots/{botId}/knowledge"
@@ -2008,102 +1944,18 @@ locals {
       function_arn = var.flows_function_arn
       protected    = true
     }
-    flows_get = {
-      route_key    = "GET /flows/{flowId}"
-      slug         = "flows"
-      invoke_arn   = var.flows_invoke_arn
-      function_arn = var.flows_function_arn
+    hosted_forms_list = {
+      route_key    = "GET /forms"
+      slug         = "hosted_forms"
+      invoke_arn   = var.hosted_forms_invoke_arn
+      function_arn = var.hosted_forms_function_arn
       protected    = true
     }
-    flows_update = {
-      route_key    = "PUT /flows/{flowId}"
-      slug         = "flows"
-      invoke_arn   = var.flows_invoke_arn
-      function_arn = var.flows_function_arn
-      protected    = true
-    }
-    flows_delete = {
-      route_key    = "DELETE /flows/{flowId}"
-      slug         = "flows"
-      invoke_arn   = var.flows_invoke_arn
-      function_arn = var.flows_function_arn
-      protected    = true
-    }
-    flows_enable = {
-      route_key    = "POST /flows/{flowId}/enable"
-      slug         = "flows"
-      invoke_arn   = var.flows_invoke_arn
-      function_arn = var.flows_function_arn
-      protected    = true
-    }
-    flows_disable = {
-      route_key    = "POST /flows/{flowId}/disable"
-      slug         = "flows"
-      invoke_arn   = var.flows_invoke_arn
-      function_arn = var.flows_function_arn
-      protected    = true
-    }
-    flows_validate = {
-      route_key    = "POST /flows/{flowId}/validate"
-      slug         = "flows"
-      invoke_arn   = var.flows_invoke_arn
-      function_arn = var.flows_function_arn
-      protected    = true
-    }
-    flows_hook_get = {
-      route_key    = "GET /flows/{flowId}/hook"
-      slug         = "flows"
-      invoke_arn   = var.flows_invoke_arn
-      function_arn = var.flows_function_arn
-      protected    = true
-    }
-    flows_hook_rotate = {
-      route_key    = "POST /flows/{flowId}/hook/rotate"
-      slug         = "flows"
-      invoke_arn   = var.flows_invoke_arn
-      function_arn = var.flows_function_arn
-      protected    = true
-    }
-    flows_runs = {
-      route_key    = "GET /flows/{flowId}/runs"
-      slug         = "flows"
-      invoke_arn   = var.flows_invoke_arn
-      function_arn = var.flows_function_arn
-      protected    = true
-    }
-    flows_events = {
-      route_key    = "GET /flows/{flowId}/events"
-      slug         = "flows"
-      invoke_arn   = var.flows_invoke_arn
-      function_arn = var.flows_function_arn
-      protected    = true
-    }
-    flows_template_taxi = {
-      route_key    = "POST /flows/templates/taxi-355-satelital"
-      slug         = "flows"
-      invoke_arn   = var.flows_invoke_arn
-      function_arn = var.flows_function_arn
-      protected    = true
-    }
-    flows_secrets_get = {
-      route_key    = "GET /flows/{flowId}/secrets"
-      slug         = "flows"
-      invoke_arn   = var.flows_invoke_arn
-      function_arn = var.flows_function_arn
-      protected    = true
-    }
-    flows_secrets_put = {
-      route_key    = "PUT /flows/{flowId}/secrets"
-      slug         = "flows"
-      invoke_arn   = var.flows_invoke_arn
-      function_arn = var.flows_function_arn
-      protected    = true
-    }
-    flows_secrets_delete = {
-      route_key    = "DELETE /flows/{flowId}/secrets/{secretName}"
-      slug         = "flows"
-      invoke_arn   = var.flows_invoke_arn
-      function_arn = var.flows_function_arn
+    hosted_forms_create = {
+      route_key    = "POST /forms"
+      slug         = "hosted_forms"
+      invoke_arn   = var.hosted_forms_invoke_arn
+      function_arn = var.hosted_forms_function_arn
       protected    = true
     }
     flow_runs_get = {
@@ -2118,6 +1970,13 @@ locals {
       slug         = "flow_hooks"
       invoke_arn   = var.flow_hooks_invoke_arn
       function_arn = var.flow_hooks_function_arn
+      protected    = false
+    }
+    short_link_redirect = {
+      route_key    = "GET /l/{slug}"
+      slug         = "short_links"
+      invoke_arn   = var.short_links_invoke_arn
+      function_arn = var.short_links_function_arn
       protected    = false
     }
     mailrelay_webhook = {

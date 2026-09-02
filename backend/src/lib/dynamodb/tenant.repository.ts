@@ -9,6 +9,7 @@ import { ConditionalCheckFailedException } from "@aws-sdk/client-dynamodb";
 import { docClient, TABLE_NAME } from "./client.js";
 import type { Tenant } from "../../types/index.js";
 import { notifyAdminsOfNewRegistration } from "../email/registration-admin-notify.js";
+import { sendWelcomeEmail } from "../email/welcome.js";
 
 const keys = (tenantId: string) => ({
   PK: `TENANT#${tenantId}`,
@@ -180,6 +181,15 @@ export async function ensureTenant(
   await createTenant(tenant);
   void notifyAdminsOfNewRegistration(tenant).catch((error) => {
     console.error("Failed to notify admins of new registration", {
+      tenantId: tenant.tenantId,
+      error,
+    });
+  });
+  void sendWelcomeEmail({
+    to: email,
+    userName: tenant.name,
+  }).catch((error) => {
+    console.error("Failed to send welcome email", {
       tenantId: tenant.tenantId,
       error,
     });

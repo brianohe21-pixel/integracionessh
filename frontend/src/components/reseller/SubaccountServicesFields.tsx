@@ -23,6 +23,7 @@ import {
   KeyRound,
   LayoutGrid,
   LayoutTemplate,
+  Link2,
   Mail,
   Megaphone,
   MessageSquare,
@@ -30,6 +31,7 @@ import {
   SendHorizonal,
   UserPlus,
   Users,
+  TrendingUp,
   Zap,
 } from "lucide-react";
 
@@ -41,6 +43,7 @@ const SERVICE_ICONS: Record<SubaccountServiceId, ComponentType<{ className?: str
   supervisor: LayoutGrid,
   contacts: BookUser,
   leads: UserPlus,
+  sales: TrendingUp,
   advisors: Users,
   automations: Zap,
   flows: GitBranch,
@@ -51,6 +54,7 @@ const SERVICE_ICONS: Record<SubaccountServiceId, ComponentType<{ className?: str
   metrics: BarChart3,
   apps: LayoutGrid,
   developer: KeyRound,
+  integrations: Link2,
 };
 
 const SUBACCOUNT_ORDER: SubaccountServiceId[] = SERVICE_CATEGORIES.flatMap(

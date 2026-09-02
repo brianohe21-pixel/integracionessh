@@ -49,6 +49,13 @@ if ((${#missing[@]} > 0)); then
   exit 1
 fi
 
+ACCOUNT_ID="${ACCOUNT_ID:-$(aws sts get-caller-identity --query Account --output text)}"
+ARTIFACTS_BUCKET="${ARTIFACTS_BUCKET:-${PROJECT}-${ENV}-artifacts-${ACCOUNT_ID}}"
+S3_KEY="${S3_KEY:-lambda/functions-$(date +%s).zip}"
+
+echo "Uploading ${ZIP} to s3://${ARTIFACTS_BUCKET}/${S3_KEY}..."
+aws s3 cp "$ZIP" "s3://${ARTIFACTS_BUCKET}/${S3_KEY}" --region "$AWS_REGION" --no-cli-pager
+
 deploy_one() {
   local fn="$1"
   local function_name="${PROJECT}-${ENV}-${fn//_/-}"
@@ -59,7 +66,8 @@ deploy_one() {
     output=$(aws lambda update-function-code \
       --region "$AWS_REGION" \
       --function-name "$function_name" \
-      --zip-file "fileb://${ZIP}" \
+      --s3-bucket "$ARTIFACTS_BUCKET" \
+      --s3-key "$S3_KEY" \
       --no-cli-pager 2>&1)
     status=$?
     set -e
@@ -87,15 +95,16 @@ deploy_one() {
 }
 
 export -f deploy_one
-export PROJECT ENV ZIP AWS_REGION MAX_RETRIES RETRY_DELAY
+export PROJECT ENV AWS_REGION MAX_RETRIES RETRY_DELAY ARTIFACTS_BUCKET S3_KEY
 
 echo "Deploying ${#functions[@]} Lambda function(s) to ${ENV}..."
 
+failures=0
 running=0
 for fn in "${functions[@]}"; do
   while (( running >= PARALLEL )); do
-    if ! wait -n 2>/dev/null; then
-      wait || true
+    if ! wait -n; then
+      failures=$((failures + 1))
     fi
     running=$((running - 1))
   done
@@ -104,10 +113,15 @@ for fn in "${functions[@]}"; do
 done
 
 while (( running > 0 )); do
-  if ! wait -n 2>/dev/null; then
-    wait || true
+  if ! wait -n; then
+    failures=$((failures + 1))
   fi
   running=$((running - 1))
 done
+
+if (( failures > 0 )); then
+  echo "Failed to deploy ${failures} Lambda function(s) to ${ENV}." >&2
+  exit 1
+fi
 
 echo "Deployed ${#functions[@]} Lambda function(s) to ${ENV}."
