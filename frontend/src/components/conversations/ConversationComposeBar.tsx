@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FileText, Loader2, Send } from "lucide-react";
 import { Textarea } from "@/components/ui/Input";
+import { EmojiPicker } from "@/components/conversations/EmojiPicker";
 import { MacroPicker } from "@/components/conversations/MacroPicker";
 import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
@@ -68,8 +69,26 @@ export function ConversationComposeBar({
     void handleSubmit(e);
   }
 
+  function insertEmoji(emoji: string) {
+    const el = textareaRef.current;
+    if (!el) {
+      onDraftChange(`${draft}${emoji}`);
+      return;
+    }
+    const start = el.selectionStart ?? draft.length;
+    const end = el.selectionEnd ?? draft.length;
+    const next = `${draft.slice(0, start)}${emoji}${draft.slice(end)}`;
+    onDraftChange(next);
+    const cursor = start + emoji.length;
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(cursor, cursor);
+      adjustTextareaHeight();
+    });
+  }
+
   return (
-    <form onSubmit={handleSubmit} className="conversations-compose-bar relative z-10 px-4 py-3 sm:px-6">
+    <form onSubmit={handleSubmit} className="conversations-compose-bar relative py-3">
       <div className="conversations-compose-input overflow-hidden">
         <Textarea
           ref={textareaRef}
@@ -80,12 +99,14 @@ export function ConversationComposeBar({
           placeholder={t("conversations.messagePlaceholderShort")}
           aria-label={t("conversations.messagePlaceholderShort")}
           className={cn(
-            "conversations-compose-textarea min-h-[44px] resize-none border-0 bg-transparent px-3.5 py-3 shadow-none focus:ring-0",
+            "conversations-compose-textarea emoji-text min-h-[44px] resize-none border-0 bg-transparent px-3.5 py-3 shadow-none focus:ring-0",
             scrollable ? "overflow-y-auto" : "overflow-hidden"
           )}
         />
 
         <div className="flex items-center gap-1 border-t border-default/60 px-2 py-1.5">
+          {conversation ? <EmojiPicker onInsert={insertEmoji} /> : null}
+
           {conversation ? (
             <MacroPicker
               botId={conversation.botId}

@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { PanelLeft } from "lucide-react";
 import { SoftphoneMobileTrigger } from "@/components/contact-center/SoftphoneMobileTrigger";
+import { HelpCenterToolbarTrigger } from "@/components/help-center/HelpCenterToolbarTrigger";
 import { NotificationsMobileTrigger } from "@/components/notifications/NotificationsMobileTrigger";
 import { useT } from "@/i18n/context";
 import { useSidebar } from "@/components/layout/SidebarContext";
@@ -69,6 +70,7 @@ export function MobileTopBar() {
         <p className="truncate text-sm font-semibold text-primary">{resolveTitle(pathname, t)}</p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
+        <HelpCenterToolbarTrigger />
         <NotificationsMobileTrigger />
         <SoftphoneMobileTrigger />
       </div>

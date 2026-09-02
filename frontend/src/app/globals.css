@@ -220,6 +220,17 @@ body {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 
+.emoji-text {
+  font-family:
+    var(--font-geist-sans),
+    system-ui,
+    "Apple Color Emoji",
+    "Segoe UI Emoji",
+    "Segoe UI Symbol",
+    "Noto Color Emoji",
+    sans-serif;
+}
+
 [data-theme="dark"] body {
   background-image:
     radial-gradient(ellipse 85% 55% at 50% -15%, color-mix(in srgb, var(--brand-primary) 14%, transparent), transparent 58%),
@@ -412,6 +423,57 @@ textarea {
 
 .conversations-compose-bar {
   background: transparent;
+}
+
+.conversations-chat-footer {
+  background: linear-gradient(
+    to top,
+    var(--canvas) 72%,
+    color-mix(in srgb, var(--canvas) 88%, transparent)
+  );
+}
+
+.conversations-thread,
+.conversations-chat-footer-inner {
+  margin-inline: auto;
+  max-width: 56rem;
+  width: 100%;
+  padding-inline: 1.5rem;
+}
+
+.conversations-thread {
+  padding-block: 1rem;
+}
+
+.conversations-chat-footer-inner {
+  padding-bottom: 1rem;
+}
+
+@media (min-width: 640px) {
+  .conversations-thread,
+  .conversations-chat-footer-inner {
+    padding-inline: 2.5rem;
+  }
+
+  .conversations-thread {
+    padding-block: 1.25rem;
+  }
+
+  .conversations-chat-footer-inner {
+    padding-bottom: 1.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .conversations-thread,
+  .conversations-chat-footer-inner {
+    padding-inline: 3rem;
+  }
+}
+
+[data-contact-panel-collapsed] .conversations-thread,
+[data-contact-panel-collapsed] .conversations-chat-footer-inner {
+  max-width: none;
 }
 
 .conversations-copilot {

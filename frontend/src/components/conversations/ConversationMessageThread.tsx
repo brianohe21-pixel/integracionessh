@@ -36,7 +36,7 @@ function renderMessageBubble(params: {
 
   if (isSystem) {
     return (
-      <p key={listKey} className="py-2 text-center text-xs text-muted">
+      <p key={listKey} className="py-3 text-center text-xs text-muted">
         {msg.content}
       </p>
     );
@@ -44,11 +44,11 @@ function renderMessageBubble(params: {
 
   return (
     <div
-      className={cn("flex py-1", isInbound ? "justify-start" : "justify-end")}
+      className={cn("flex w-full", isInbound ? "justify-start pr-2 sm:pr-4" : "justify-end pl-2 sm:pl-4")}
     >
       <div
         className={cn(
-          "max-w-[min(85%,28rem)] px-3 py-2 text-sm leading-relaxed sm:max-w-md",
+          "max-w-[min(82%,30rem)] px-3.5 py-2 text-sm leading-snug sm:max-w-[min(76%,34rem)]",
           isInbound
             ? "conversations-wa-bubble-in text-primary"
             : isAdvisor
@@ -66,7 +66,7 @@ function renderMessageBubble(params: {
         ) : msg.channel === "email" && isInbound ? (
           <EmailMessageBubble message={msg} botId={conversation.botId} />
         ) : (
-          <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+          <p className="emoji-text whitespace-pre-wrap break-words">{msg.content}</p>
         )}
         <div
           className={cn(
@@ -128,7 +128,7 @@ export function ConversationMessageThread({
         : undefined;
 
       return (
-        <div key={listKey}>
+        <div key={listKey} className="py-1.5">
           {showDateDivider ? (
             <ConversationDateDivider label={formatDate(msg.timestamp)} />
           ) : null}
@@ -150,7 +150,7 @@ export function ConversationMessageThread({
 
   return (
     <div className="relative flex min-h-0 flex-1 overflow-y-auto overscroll-contain conversations-pane-scroll">
-      <div className="relative z-0 space-y-1 px-4 py-4 sm:px-6">
+      <div className="conversations-thread relative z-0 w-full space-y-0">
         {loading && <p className="text-sm text-secondary">{loadingLabel}</p>}
 
         {hasCrossChannel ? (

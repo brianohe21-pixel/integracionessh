@@ -42,6 +42,7 @@ import {
 import { buildTaxi355SatelitalVoiceFlow } from "../../lib/flow/voice-flow-template.js";
 import { isVoiceAiFlow } from "../../lib/flow/voice-flow-compiler.js";
 import { resolveFlowBotId, withBotFromNodes } from "../../lib/flow/resolve-flow-bot.js";
+import { sanitizeFlowEdges } from "../../lib/flow/graph.js";
 import { ok, created, badRequest, notFound, noContent, handleError } from "../../lib/http.js";
 import type { FlowDefinition, FlowEdge, FlowHookConfig, FlowNode, FlowKind } from "../../types/index.js";
 import { isWebhookReceivingFlow } from "../../lib/flow/webhook-flow.js";
@@ -361,7 +362,7 @@ export async function handler(
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
-      const flow = withBotFromNodes(draftFlow);
+      const flow = sanitizeFlowEdges(withBotFromNodes(draftFlow));
 
       if (flow.botId) {
         const bot = await getBot(auth.tenantId, flow.botId);
@@ -394,7 +395,7 @@ export async function handler(
       if (!body.success) return badRequest(body.error.message);
 
       const nodes = (body.data.nodes ?? existing.nodes) as FlowNode[];
-      const candidate = withBotFromNodes({
+      const candidate = sanitizeFlowEdges(withBotFromNodes({
         ...existing,
         ...(body.data.name !== undefined ? { name: body.data.name } : {}),
         ...(body.data.flowKind !== undefined ? { flowKind: body.data.flowKind as FlowKind } : {}),
@@ -405,7 +406,7 @@ export async function handler(
           body.data.entryNodeId ??
           (body.data.nodes ? resolveEntryNodeId(nodes) : existing.entryNodeId),
         ...(body.data.enabled ? { publishedAt: new Date().toISOString() } : {}),
-      });
+      }));
 
       if (candidate.botId) {
         const bot = await getBot(auth.tenantId, candidate.botId);

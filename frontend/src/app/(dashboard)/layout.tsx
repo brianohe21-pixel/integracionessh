@@ -28,20 +28,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Sidebar />
             <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden platform-canvas-bg">
               <NotificationsMount>
-                <MobileTopBar />
-                <PlatformToolbar />
-                <SoftphoneBar />
-                <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto platform-canvas-bg">
-                  <div className="flex min-h-full flex-1 flex-col">
-                    <OnboardingGate>
-                      <HelpCenterMount>
+                <HelpCenterMount>
+                  <MobileTopBar />
+                  <PlatformToolbar />
+                  <SoftphoneBar />
+                  <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto platform-canvas-bg">
+                    <div className="flex min-h-full flex-1 flex-col">
+                      <OnboardingGate>
                         <DashboardRoleGuard>
                           <SubaccountServiceGuard>{children}</SubaccountServiceGuard>
                         </DashboardRoleGuard>
-                      </HelpCenterMount>
-                    </OnboardingGate>
-                  </div>
-                </main>
+                      </OnboardingGate>
+                    </div>
+                  </main>
+                </HelpCenterMount>
               </NotificationsMount>
             </div>
             </div>

@@ -558,6 +558,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
           "relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden",
           showDetailOnMobile ? "flex" : "hidden lg:flex"
         )}
+        data-contact-panel-collapsed={contactPanelCollapsed || undefined}
       >
         {!selectedConversation ? (
           <div className="conversations-chat-bg hidden flex-1 items-center justify-center p-6 lg:flex">
@@ -782,24 +783,27 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                 />
               )}
 
-              {canCompose && selectedConversation && (
-                <AdvisorCopilotPanel
-                  conversation={selectedConversation}
-                  onInsertSuggestion={setDraft}
-                />
-              )}
-
-              {canCompose && (
-                <ConversationComposeBar
-                  draft={draft}
-                  onDraftChange={setDraft}
-                  onSubmit={handleSend}
-                  sending={sendMessage.isPending}
-                  conversation={selectedConversation}
-                  macroPlaceholderContext={macroPlaceholderContext}
-                  onOpenQuotation={() => setShowQuotationDrawer(true)}
-                />
-              )}
+              {canCompose ? (
+                <div className="conversations-chat-footer relative z-20 flex-shrink-0">
+                  <div className="conversations-chat-footer-inner w-full">
+                    {selectedConversation ? (
+                      <AdvisorCopilotPanel
+                        conversation={selectedConversation}
+                        onInsertSuggestion={setDraft}
+                      />
+                    ) : null}
+                    <ConversationComposeBar
+                      draft={draft}
+                      onDraftChange={setDraft}
+                      onSubmit={handleSend}
+                      sending={sendMessage.isPending}
+                      conversation={selectedConversation}
+                      macroPlaceholderContext={macroPlaceholderContext}
+                      onOpenQuotation={() => setShowQuotationDrawer(true)}
+                    />
+                  </div>
+                </div>
+              ) : null}
             </div>
           </>
         )}
