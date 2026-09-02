@@ -438,6 +438,9 @@ export default function EditFlowPage() {
         onDelete={deleteSelectedNode}
         canDelete={canDeleteSelected}
         onClose={() => setSelectedNodeId(null)}
+        isSaving={update.isPending}
+        isDirty={isDirty}
+        justSaved={savedMessage}
       />
     </div>
   );

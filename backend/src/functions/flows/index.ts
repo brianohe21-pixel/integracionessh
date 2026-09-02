@@ -44,6 +44,7 @@ import { buildTaxi355SatelitalVoiceFlow } from "../../lib/flow/voice-flow-templa
 import { isVoiceAiFlow } from "../../lib/flow/voice-flow-compiler.js";
 import { resolveFlowBotId, withBotFromNodes } from "../../lib/flow/resolve-flow-bot.js";
 import { sanitizeFlowEdges } from "../../lib/flow/graph.js";
+import { isWebhookReceivingFlow } from "../../lib/flow/webhook-flow.js";
 import { ok, created, badRequest, notFound, noContent, handleError } from "../../lib/http.js";
 import type { FlowDefinition, FlowEdge, FlowHookConfig, FlowNode, FlowKind } from "../../types/index.js";
 import {
@@ -119,11 +120,16 @@ const TaxiTemplateSchema = z.object({
 
 function resolveFlowId(
   rawPath: string,
-  pathParams: { flowId?: string } | undefined
+  pathParams: { flowId?: string; proxy?: string } | undefined
 ): string | undefined {
   if (pathParams?.flowId) return pathParams.flowId;
+  const proxy = pathParams?.proxy;
+  if (proxy) {
+    const [segment] = proxy.split("/");
+    if (segment) return segment;
+  }
   if (rawPath === "/flows" || rawPath.includes("/flows/templates/")) return undefined;
-  const match = rawPath.match(/^\/flows\/([^/]+)/);
+  const match = rawPath.match(/\/flows\/([^/]+)/);
   return match?.[1];
 }
 

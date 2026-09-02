@@ -1609,6 +1609,7 @@ export interface FlowNodeData {
   notificationChannel?: "whatsapp" | "sms" | "email";
   notificationMessageType?: "text" | "template";
   notificationRecipientBinding?: string;
+  notificationRecipientBindings?: string[];
   notificationEmailSubject?: string;
   notificationMessageBinding?: string;
   notificationMessageText?: LocalizedText;

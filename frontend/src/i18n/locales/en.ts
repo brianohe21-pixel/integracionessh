@@ -3064,6 +3064,7 @@ export const en: Messages = {
     nodePanel: "Node properties",
     addNode: "Add node",
     selectNode: "Click a node on the canvas to edit it.",
+    nodeSaved: "Node changes saved",
     deleteNode: "Delete node",
     deleteEdge: "Delete connection",
     cannotDeleteTrigger: "You cannot delete the only start node in the flow.",
@@ -3214,6 +3215,11 @@ export const en: Messages = {
       notificationMessageTypeText: "Free text",
       notificationMessageTypeTemplate: "Template",
       notificationRecipientBinding: "Recipient",
+      notificationRecipients: "Recipients",
+      notificationAddRecipient: "Add recipient",
+      notificationRemoveRecipient: "Remove recipient",
+      notificationRecipientsHint:
+        "One variable per recipient. You can also separate multiple emails with commas in one variable.",
       notificationEmailSubject: "Email subject",
       notificationEmailSenderTenant: "Emails will be sent from {{sender}}.",
       notificationEmailSenderPlatform:

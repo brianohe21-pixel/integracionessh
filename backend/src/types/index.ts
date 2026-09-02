@@ -2717,6 +2717,7 @@ export interface FlowNodeData {
   notificationChannel?: Channel;
   notificationMessageType?: "text" | "template";
   notificationRecipientBinding?: string;
+  notificationRecipientBindings?: string[];
   notificationMessageBinding?: string;
   notificationMessageText?: LocalizedText;
   notificationMessageHtml?: LocalizedText;

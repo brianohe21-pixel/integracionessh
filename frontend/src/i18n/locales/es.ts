@@ -3066,6 +3066,7 @@ export const es = {
     nodePanel: "Propiedades del nodo",
     addNode: "Añadir nodo",
     selectNode: "Haz clic en un nodo del canvas para editarlo.",
+    nodeSaved: "Cambios del nodo guardados",
     deleteNode: "Eliminar nodo",
     deleteEdge: "Eliminar conexión",
     cannotDeleteTrigger: "No puedes eliminar el único nodo de inicio del flujo.",
@@ -3216,6 +3217,11 @@ export const es = {
       notificationMessageTypeText: "Texto libre",
       notificationMessageTypeTemplate: "Plantilla",
       notificationRecipientBinding: "Destinatario",
+      notificationRecipients: "Destinatarios",
+      notificationAddRecipient: "Añadir destinatario",
+      notificationRemoveRecipient: "Quitar destinatario",
+      notificationRecipientsHint:
+        "Un variable por destinatario. En una variable también puedes separar varios correos con coma.",
       notificationEmailSubject: "Asunto del email",
       notificationEmailSenderTenant: "Los correos se enviarán desde {{sender}}.",
       notificationEmailSenderPlatform:

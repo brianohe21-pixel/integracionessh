@@ -93,11 +93,19 @@ export function usePublishFlow(flowId: string) {
   });
 }
 
+function normalizeFlowVersions(data: unknown): FlowVersionSnapshot[] {
+  return Array.isArray(data) ? data : [];
+}
+
 export function useFlowVersions(flowId: string, enabled = true) {
   return useQuery<FlowVersionSnapshot[]>({
     queryKey: ["flows", flowId, "versions"],
-    queryFn: () =>
-      api.get<FlowVersionSnapshot[]>(`/flows/${encodeURIComponent(flowId)}/versions`),
+    queryFn: async () => {
+      const data = await api.get<unknown>(
+        `/flows/${encodeURIComponent(flowId)}/versions`
+      );
+      return normalizeFlowVersions(data);
+    },
     enabled: !!flowId && enabled,
   });
 }

@@ -129,14 +129,28 @@ function validateBindings(node: FlowNode, issues: FlowValidationIssue[]): void {
   }
 
   if (node.type === "send_notification") {
+    const isEmail = node.data.notificationChannel === "email";
+    const emailBindings = node.data.notificationRecipientBindings?.filter((item) => item.trim());
+    if (isEmail && emailBindings && emailBindings.length > 0) {
+      for (const binding of emailBindings) {
+        bindingFields.push({
+          field: "notificationRecipientBindings",
+          value: binding,
+          required: true as const,
+        });
+      }
+    } else {
+      bindingFields.push(
+        ...(node.data.notificationRecipientBinding
+          ? [{
+              field: "notificationRecipientBinding",
+              value: node.data.notificationRecipientBinding,
+              required: true as const,
+            }]
+          : [{ field: "notificationRecipientBinding", required: true as const }])
+      );
+    }
     bindingFields.push(
-      ...(node.data.notificationRecipientBinding
-        ? [{
-            field: "notificationRecipientBinding",
-            value: node.data.notificationRecipientBinding,
-            required: true as const,
-          }]
-        : [{ field: "notificationRecipientBinding", required: true as const }]),
       ...(node.data.notificationMessageBinding
         ? [{ field: "notificationMessageBinding", value: node.data.notificationMessageBinding }]
         : [])

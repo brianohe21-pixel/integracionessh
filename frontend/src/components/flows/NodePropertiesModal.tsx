@@ -19,6 +19,9 @@ interface NodePropertiesModalProps {
   onDelete: () => void;
   canDelete: boolean;
   onClose: () => void;
+  isSaving?: boolean;
+  isDirty?: boolean;
+  justSaved?: boolean;
 }
 
 export function NodePropertiesModal({
@@ -33,6 +36,9 @@ export function NodePropertiesModal({
   onDelete,
   canDelete,
   onClose,
+  isSaving = false,
+  isDirty = false,
+  justSaved = false,
 }: NodePropertiesModalProps) {
   const t = useT();
 
@@ -78,6 +84,17 @@ export function NodePropertiesModal({
             <p className="mt-0.5 text-sm text-secondary">
               {t("flows.nodePanel")}
             </p>
+            {(isSaving || isDirty || justSaved) && (
+              <p className="mt-1 text-xs font-medium leading-5">
+                {isSaving ? (
+                  <span className="text-secondary">{t("common.saving")}</span>
+                ) : isDirty ? (
+                  <span className="text-warning">{t("flows.unsaved")}</span>
+                ) : (
+                  <span className="text-success">{t("flows.nodeSaved")}</span>
+                )}
+              </p>
+            )}
           </div>
           <button
             type="button"

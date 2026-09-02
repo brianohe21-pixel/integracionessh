@@ -14,7 +14,8 @@ interface FlowVersionsPanelProps {
 export function FlowVersionsPanel({ flowId, onRestored }: FlowVersionsPanelProps) {
   const t = useT();
   const { formatDate } = useFormatters();
-  const { data: versions = [], isLoading } = useFlowVersions(flowId);
+  const { data, isLoading } = useFlowVersions(flowId);
+  const versions = Array.isArray(data) ? data : [];
   const restore = useRestoreFlowVersion(flowId);
 
   return (

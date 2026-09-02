@@ -51,8 +51,13 @@ function buildStepDetail(node: FlowNode, locale: BotLocale, botName?: string): s
       return [d.leadPhoneBinding, d.leadNameBinding, d.leadEmailBinding].filter(Boolean).join(" · ");
     case "create_opportunity":
       return [d.opportunityTitleBinding, d.opportunityAmountBinding, d.opportunityPhoneBinding].filter(Boolean).join(" · ");
-    case "send_notification":
-      return [d.notificationChannel, d.notificationRecipientBinding].filter(Boolean).join(" → ");
+    case "send_notification": {
+      const recipients =
+        d.notificationRecipientBindings?.filter((item) => item.trim()).join(", ") ||
+        d.notificationRecipientBinding ||
+        "";
+      return [d.notificationChannel, recipients].filter(Boolean).join(" → ");
+    }
     case "http_request":
       return `${d.httpMethod ?? "GET"} ${d.httpUrl ?? ""}`.trim();
     case "webhook":
