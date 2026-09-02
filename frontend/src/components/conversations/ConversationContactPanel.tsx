@@ -62,7 +62,7 @@ export function ConversationContactPanel({
     setPanelTab(opportunity ? "sales" : "contact");
     setInternalNote(conversation.internalNote ?? "");
     setNoteExpanded(!(conversation.internalNote ?? "").trim());
-  }, [conversation.conversationId, opportunity?.opportunityId]);
+  }, [conversation.conversationId, conversation.internalNote, opportunity]);
 
   useEffect(() => {
     setInternalNote(conversation.internalNote ?? "");

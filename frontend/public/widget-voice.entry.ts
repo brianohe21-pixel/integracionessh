@@ -73,7 +73,6 @@ function trackPageview(params: { apiUrl: string; widgetKey: string }): void {
 
 function loadGoogleAnalytics(measurementId: string): void {
   if (typeof window === "undefined" || !measurementId) return;
-  const loadedKey = "__wbGaLoaded";
   const win = window as Window & {
     __wbGaLoaded?: string;
     dataLayer?: unknown[];

@@ -143,7 +143,7 @@ function SoftphonePanelChrome({
 }
 
 function SoftphoneDockedDrawer() {
-  const { open, viewMode, setOpen, dock, undock } = useSoftphoneUI();
+  const { open, viewMode, setOpen, undock } = useSoftphoneUI();
 
   if (!open || viewMode !== "docked") return null;
 

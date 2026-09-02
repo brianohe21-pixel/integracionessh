@@ -103,7 +103,7 @@ export function ConversationOpportunityPanel({
     if (!opp) return;
     setDescription(opp.description ?? "");
     setAssignedAdvisorId(opp.assignedAdvisorId ?? "");
-  }, [opp?.opportunityId, opp?.description, opp?.assignedAdvisorId]);
+  }, [opp]);
 
   const phone = contactPhone(conversation);
   const email = contactEmail(conversation, activeLead);
@@ -237,16 +237,6 @@ export function ConversationOpportunityPanel({
     }
   }
 
-  function SuccessBanner() {
-    if (!inlineSuccess) return null;
-    return (
-      <div className="flex items-center gap-2 rounded-lg border border-[var(--alert-success-border)] bg-[var(--alert-success-bg)] px-3 py-2 text-sm text-success">
-        <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
-        {t("sales.opportunitySaved")}
-      </div>
-    );
-  }
-
   if (isLoading) {
     return (
       <section className="content-card p-4">
@@ -278,7 +268,12 @@ export function ConversationOpportunityPanel({
 
   return (
     <div className="space-y-3">
-      <SuccessBanner />
+      {inlineSuccess ? (
+        <div className="flex items-center gap-2 rounded-lg border border-[var(--alert-success-border)] bg-[var(--alert-success-bg)] px-3 py-2 text-sm text-success">
+          <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+          {t("sales.opportunitySaved")}
+        </div>
+      ) : null}
       <section className="content-card p-3.5">
         <div className="mb-3 flex items-start justify-between gap-2">
           <div className="min-w-0">

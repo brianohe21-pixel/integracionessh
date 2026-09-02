@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 interface ShortLinkQrProps {
   url: string;
   label: string;
@@ -30,11 +32,12 @@ export function ShortLinkQr({ url, label }: ShortLinkQrProps) {
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <img
+      <Image
         src={qrUrl}
         alt={label}
         width={160}
         height={160}
+        unoptimized
         className="rounded-lg border border-default bg-white p-2"
       />
       <button
