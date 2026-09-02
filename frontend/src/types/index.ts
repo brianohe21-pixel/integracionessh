@@ -1649,9 +1649,22 @@ export interface FlowDefinition {
   nodes: FlowNode[];
   edges: FlowEdge[];
   entryNodeId: string;
+  draftNodes?: FlowNode[];
+  draftEdges?: FlowEdge[];
+  draftEntryNodeId?: string;
   publishedAt?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface FlowVersionSnapshot {
+  flowId: string;
+  tenantId: string;
+  version: number;
+  nodes: FlowNode[];
+  edges: FlowEdge[];
+  entryNodeId: string;
+  publishedAt: string;
 }
 
 export type FlowRunStatus = "active" | "waiting" | "completed" | "failed";

@@ -3044,6 +3044,11 @@ export const es = {
     exitFullscreen: "Salir de pantalla completa",
     preview: "Vista previa",
     publishChanges: "Publicar cambios",
+    publishing: "Publicando…",
+    publishedSuccess: "Cambios publicados",
+    unpublishedChanges: "Cambios sin publicar",
+    versionLabel: "v{{version}}",
+    noPublishChanges: "No hay cambios para publicar",
     components: "Componentes",
     paletteDragHint: "Arrastra un componente al tablero o haz clic para añadirlo.",
     resizePalette: "Redimensionar panel de componentes",
@@ -3233,7 +3238,27 @@ export const es = {
       url: "URL del webhook",
       secret: "Secreto",
       rotate: "Rotar secreto",
-      notConfigured: "Publica el flujo para generar el webhook.",
+      notConfigured: "Activa el flujo para generar la URL y el secreto del webhook.",
+      secretOnceHint: "Copia el secreto ahora. Solo se muestra al activar o al rotar.",
+      copy: "Copiar",
+      guide: {
+        title: "Guía de uso del webhook",
+        subtitle: "Recibe datos desde tu sistema y ejecuta el flujo automáticamente.",
+        headers: "Encabezados",
+        requestExample: "Ejemplo de petición",
+        responseExample: "Respuesta (202 Accepted)",
+        bindingsHint:
+          "En nodos siguientes (notificación, CRM, HTTP) usa {{form.campo}} para cada clave del JSON enviado (ej. {{form.email}}).",
+        idempotencyHint:
+          "Opcional: envía Idempotency-Key con un valor único para evitar procesar el mismo envío dos veces.",
+        steps: {
+          "0": "Añade el nodo Webhook como inicio del flujo y conecta las acciones que quieres ejecutar.",
+          "1": "Opcional: define un JSON de ejemplo en las propiedades del nodo para documentar los campos.",
+          "2": "Activa el flujo. Se generan la URL pública y el secreto (visible al activar o al rotar).",
+          "3": "Desde tu sistema, envía un POST JSON a la URL con el encabezado X-Flow-Secret.",
+          "4": "Revisa el historial de envíos y ejecuciones en el panel lateral del editor.",
+        },
+      },
     },
     secrets: {
       title: "Secretos",
@@ -3249,6 +3274,13 @@ export const es = {
       runs: "Ejecuciones",
       emptyEvents: "Sin envíos todavía.",
       emptyRuns: "Sin ejecuciones todavía.",
+    },
+    versions: {
+      title: "Versiones",
+      subtitle: "Historial de publicaciones del flujo.",
+      empty: "Sin versiones publicadas todavía.",
+      restore: "Restaurar borrador",
+      restoring: "Restaurando…",
     },
     hints: {
       conditionBranches: "Conecta cada salida (Sí / No) al siguiente nodo correspondiente.",
@@ -4088,9 +4120,10 @@ export const es = {
           "Los flujos visuales (/flows) automatizan respuestas con nodos de mensaje, botones y ramificaciones. Deben estar activos para ejecutarse.",
         steps: {
           "0": "Ve a Flujos y crea uno nuevo con el editor visual.",
-          "1": "Define el trigger (cualquier mensaje, primer mensaje, palabra clave, etc.).",
+          "1": "Define el trigger (mensaje, palabra clave o nodo Webhook para datos externos).",
           "2": "Conecta nodos de mensaje, botones y acciones en el canvas.",
-          "3": "Guarda y activa el flujo con el interruptor de la tabla. Para reglas por horario o keyword, revisa Automatizaciones.",
+          "3": "Guarda y activa el flujo. Con Webhook, copia la URL y el secreto desde la guía del editor.",
+          "4": "Para reglas por horario o keyword sin canvas, revisa Automatizaciones.",
         },
         troubleshooting: {
           title: "Si el flujo no se ejecuta",

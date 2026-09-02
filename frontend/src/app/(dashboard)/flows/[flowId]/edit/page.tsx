@@ -4,31 +4,33 @@ import dynamic from "next/dynamic";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useT } from "@/i18n/context";
-import { useFlow, useToggleFlow, useUpdateFlow, useDuplicateFlow } from "@/hooks/useFlows";
+import { useFlow, useToggleFlow, useUpdateFlow, useDuplicateFlow, usePublishFlow } from "@/hooks/useFlows";
 import { useFullscreen } from "@/hooks/useFullscreen";
 import { useFlowEditorHistory } from "@/hooks/useFlowEditorHistory";
 import { useResizablePanel } from "@/hooks/useResizablePanel";
-import type { FlowEdge, FlowNode, FlowNodeType } from "@/types";
+import type { FlowEdge, FlowNode, FlowNodeType, FlowDefinition } from "@/types";
 import { NodePalette } from "@/components/flows/NodePalette";
 import { NodePropertiesModal } from "@/components/flows/NodePropertiesModal";
 import { FlowEditorToolbar } from "@/components/flows/FlowEditorToolbar";
 import { IntegrationErrorSupport } from "@/components/support/IntegrationErrorSupport";
 import { FlowSecretsPanel } from "@/components/flows/FlowSecretsPanel";
 import { FlowRunsPanel } from "@/components/flows/FlowRunsPanel";
+import { FlowVersionsPanel } from "@/components/flows/FlowVersionsPanel";
 import { FlowPreviewModal } from "@/components/flows/FlowPreviewModal";
 import { resolveFlowBotIdFromNodes } from "@/lib/resolve-flow-bot";
 import { createFlowNode, defaultPalettePosition } from "@/lib/flow-node-factory";
 import { isWebhookReceivingFlow } from "@/lib/flow-webhook";
 import { applyResolvedTriggerType, resolveFlowSamplePayload } from "@/lib/resolve-flow-trigger";
+import {
+  flowGraphSnapshotKey,
+  resolveDraftEdges,
+  resolveDraftNodes,
+} from "@/lib/flow-draft";
 
 const FlowCanvas = dynamic(
   () => import("@/components/flows/FlowCanvas").then((m) => m.FlowCanvas),
   { ssr: false, loading: () => <div className="h-[520px] animate-pulse rounded-xl bg-surface-muted" /> }
 );
-
-function flowSnapshotKey(nodes: FlowNode[], edges: FlowEdge[]): string {
-  return JSON.stringify({ nodes, edges });
-}
 
 export default function EditFlowPage() {
   const t = useT();
@@ -38,6 +40,7 @@ export default function EditFlowPage() {
   const suggestedBotId = searchParams.get("botId") ?? "";
   const { data: flow, isLoading } = useFlow(flowId);
   const update = useUpdateFlow(flowId);
+  const publishFlow = usePublishFlow(flowId);
   const toggleFlow = useToggleFlow();
   const duplicateFlow = useDuplicateFlow();
   const editorRef = useRef<HTMLDivElement>(null);
@@ -62,21 +65,30 @@ export default function EditFlowPage() {
   const [triggerWarning, setTriggerWarning] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [savedMessage, setSavedMessage] = useState(false);
+  const [publishedMessage, setPublishedMessage] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [publishError, setPublishError] = useState("");
   const [duplicateError, setDuplicateError] = useState("");
   const [savedKey, setSavedKey] = useState("");
+  const [publishedKey, setPublishedKey] = useState("");
   const initializedFlowKeyRef = useRef<string | null>(null);
   const handleSaveRef = useRef<() => Promise<void>>(async () => {});
+  const handlePublishRef = useRef<() => Promise<void>>(async () => {});
 
   useEffect(() => {
     if (!flow) return;
-    const key = `${flow.flowId}:${flow.version}`;
+    const draftNodes = resolveDraftNodes(flow);
+    const draftEdges = resolveDraftEdges(flow);
+    const key = `${flow.flowId}:${flow.version}:${flowGraphSnapshotKey(draftNodes, draftEdges)}`;
     if (initializedFlowKeyRef.current === key) return;
     initializedFlowKeyRef.current = key;
-    resetHistory({ nodes: flow.nodes, edges: flow.edges });
-    setSavedKey(flowSnapshotKey(flow.nodes, flow.edges));
+    resetHistory({ nodes: draftNodes, edges: draftEdges });
+    setSavedKey(flowGraphSnapshotKey(draftNodes, draftEdges));
+    setPublishedKey(flowGraphSnapshotKey(flow.nodes, flow.edges));
     setSavedMessage(false);
+    setPublishedMessage(false);
     setSaveError("");
+    setPublishError("");
   }, [flow, resetHistory]);
 
   useEffect(() => {
@@ -200,11 +212,11 @@ export default function EditFlowPage() {
     setTimeout(() => setTriggerWarning(false), 3000);
   }
 
-  async function handleSave() {
-    if (!flow || update.isPending) return;
-    const nodesToSave = localNodes.length > 0 ? localNodes : flow.nodes;
-    const edgesToSave = localNodes.length > 0 ? localEdges : flow.edges;
-    if (flowSnapshotKey(nodesToSave, edgesToSave) === savedKey) return;
+  async function handleSave(): Promise<boolean> {
+    if (!flow || update.isPending) return !isDirty;
+    const nodesToSave = localNodes.length > 0 ? localNodes : resolveDraftNodes(flow);
+    const edgesToSave = localNodes.length > 0 ? localEdges : resolveDraftEdges(flow);
+    if (flowGraphSnapshotKey(nodesToSave, edgesToSave) === savedKey) return true;
     const nodes = applyResolvedTriggerType(nodesToSave, isVoiceFlow);
     setSaveError("");
     setSavedMessage(false);
@@ -215,21 +227,53 @@ export default function EditFlowPage() {
         edges: edgesToSave,
         entryNodeId: nodes.find((n) => n.type === "trigger")?.id ?? flow.entryNodeId,
       });
-      setSavedKey(flowSnapshotKey(nodesToSave, edgesToSave));
+      setSavedKey(flowGraphSnapshotKey(nodesToSave, edgesToSave));
       setSavedMessage(true);
       window.setTimeout(() => setSavedMessage(false), 2500);
+      return true;
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : t("flows.unsaved"));
+      return false;
+    }
+  }
+
+  async function handlePublish() {
+    if (!flow || publishFlow.isPending) return;
+    if (isDirty && !(await handleSave())) return;
+    if (savedKey === publishedKey) {
+      setPublishError(t("flows.noPublishChanges"));
+      return;
+    }
+    setPublishError("");
+    setPublishedMessage(false);
+    try {
+      const updated = await publishFlow.mutateAsync();
+      setPublishedKey(flowGraphSnapshotKey(updated.nodes, updated.edges));
+      setSavedKey(flowGraphSnapshotKey(resolveDraftNodes(updated), resolveDraftEdges(updated)));
+      setPublishedMessage(true);
+      window.setTimeout(() => setPublishedMessage(false), 2500);
+    } catch (err) {
+      setPublishError(err instanceof Error ? err.message : t("flows.noPublishChanges"));
     }
   }
 
   handleSaveRef.current = handleSave;
+  handlePublishRef.current = handlePublish;
 
-  const isDirty = flowSnapshotKey(localNodes, localEdges) !== savedKey && localNodes.length > 0;
+  const isDirty = flowGraphSnapshotKey(localNodes, localEdges) !== savedKey && localNodes.length > 0;
+  const hasUnpublishedChanges = savedKey !== publishedKey;
+
+  function handleVersionRestored(updated: FlowDefinition) {
+    const draftNodes = resolveDraftNodes(updated);
+    const draftEdges = resolveDraftEdges(updated);
+    resetHistory({ nodes: draftNodes, edges: draftEdges });
+    setSavedKey(flowGraphSnapshotKey(draftNodes, draftEdges));
+    setSavedMessage(false);
+    setPublishedMessage(false);
+  }
 
   useEffect(() => {
     if (!isDirty || !flow || update.isPending) return;
-
     const timer = window.setTimeout(() => {
       void handleSaveRef.current();
     }, 1200);
@@ -251,12 +295,18 @@ export default function EditFlowPage() {
       <FlowEditorToolbar
         flowName={flow.name}
         isPublished={flow.enabled}
+        version={flow.version}
+        hasUnpublishedChanges={hasUnpublishedChanges}
         isSaving={update.isPending}
+        isPublishing={publishFlow.isPending}
         isToggling={toggleFlow.isPending}
         isDuplicating={duplicateFlow.isPending}
         isDirty={isDirty}
         justSaved={savedMessage}
+        justPublished={publishedMessage}
         onSave={() => void handleSave()}
+        onPublish={() => void handlePublish()}
+        publishDisabled={!hasUnpublishedChanges || update.isPending}
         onToggleEnabled={() => {
           toggleFlow.reset();
           toggleFlow.mutate({ flowId: flow.flowId, enabled: !flow.enabled });
@@ -289,6 +339,12 @@ export default function EditFlowPage() {
       {saveError ? (
         <p className="border-b border-danger/30 bg-danger/10 px-4 py-2 text-sm text-danger">
           {saveError}
+        </p>
+      ) : null}
+
+      {publishError ? (
+        <p className="border-b border-danger/30 bg-danger/10 px-4 py-2 text-sm text-danger">
+          {publishError}
         </p>
       ) : null}
 
@@ -365,6 +421,7 @@ export default function EditFlowPage() {
             isVoiceFlow={isVoiceFlow}
             nodes={localNodes.length > 0 ? localNodes : flow.nodes}
           />
+          <FlowVersionsPanel flowId={flow.flowId} onRestored={handleVersionRestored} />
           <FlowRunsPanel flowId={flow.flowId} isFormFlow={isFormFlow} />
         </aside>
       </div>

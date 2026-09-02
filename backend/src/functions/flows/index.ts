@@ -46,7 +46,18 @@ import { resolveFlowBotId, withBotFromNodes } from "../../lib/flow/resolve-flow-
 import { sanitizeFlowEdges } from "../../lib/flow/graph.js";
 import { ok, created, badRequest, notFound, noContent, handleError } from "../../lib/http.js";
 import type { FlowDefinition, FlowEdge, FlowHookConfig, FlowNode, FlowKind } from "../../types/index.js";
-import { isWebhookReceivingFlow } from "../../lib/flow/webhook-flow.js";
+import {
+  createFlowVersionSnapshot,
+  getFlowVersionSnapshot,
+  listFlowVersionSnapshots,
+} from "../../lib/dynamodb/flow-version.repository.js";
+import {
+  hasUnpublishedChanges,
+  nextPublishedVersion,
+  resolveDraftEdges,
+  resolveDraftEntryNodeId,
+  resolveDraftNodes,
+} from "../../lib/flow/draft.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 
@@ -132,6 +143,36 @@ function resolveSecretName(
   if (pathParams?.secretName) return pathParams.secretName;
   const match = rawPath.match(/\/secrets\/([^/]+)$/);
   return match?.[1];
+}
+
+function resolveVersionNumber(
+  rawPath: string,
+  pathParams: { version?: string } | undefined
+): number | undefined {
+  if (pathParams?.version) {
+    const parsed = Number(pathParams.version);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  const match = rawPath.match(/\/versions\/(\d+)/);
+  return match ? Number(match[1]) : undefined;
+}
+
+async function validateFlowCandidate(
+  candidate: FlowDefinition,
+  nodes: FlowNode[]
+): Promise<Array<{ code: string; message: string; nodeId?: string }>> {
+  const issues = isVoiceAiFlow(candidate)
+    ? await validateFlowDefinitionWithSecrets(candidate, ENVIRONMENT)
+    : validateFlowDefinition(candidate);
+  const isFormFlow = nodes.some(
+    (node) => node.type === "trigger" && node.data.triggerType === "web_form_submitted"
+  );
+  const isVoiceFlow = isVoiceAiFlow(candidate);
+  const draftBlockingIssues = issuesBlockingDraftSave(issues);
+  if ((isFormFlow || isVoiceFlow) && draftBlockingIssues.length > 0) {
+    throw new Error(draftBlockingIssues.map((issue) => issue.message).join("; "));
+  }
+  return issues;
 }
 
 function isFormFlowDefinition(nodes: FlowNode[]): boolean {
@@ -360,6 +401,11 @@ export async function handler(
       return ok({ issues });
     }
 
+    if (method === "GET" && flowId && path.endsWith("/versions")) {
+      const versions = await listFlowVersionSnapshots(auth.tenantId, flowId);
+      return ok(versions);
+    }
+
     if (method === "GET" && flowId) {
       const flow = await getFlowDefinition(auth.tenantId, flowId);
       if (!flow) return notFound("Flow not found");
@@ -378,10 +424,13 @@ export async function handler(
         name: body.data.name,
         ...(body.data.flowKind ? { flowKind: body.data.flowKind as FlowKind } : {}),
         enabled: body.data.enabled,
-        version: 1,
+        version: 0,
         nodes,
         edges,
+        draftNodes: nodes,
+        draftEdges: edges,
         entryNodeId: body.data.entryNodeId ?? resolveEntryNodeId(nodes),
+        draftEntryNodeId: body.data.entryNodeId ?? resolveEntryNodeId(nodes),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -417,19 +466,27 @@ export async function handler(
       const body = FlowSchema.partial().safeParse(JSON.parse(apiEvent.body ?? "{}"));
       if (!body.success) return badRequest(body.error.message);
 
-      const nodes = (body.data.nodes ?? existing.nodes) as FlowNode[];
-      const candidate = sanitizeFlowEdges(withBotFromNodes({
-        ...existing,
-        ...(body.data.name !== undefined ? { name: body.data.name } : {}),
-        ...(body.data.flowKind !== undefined ? { flowKind: body.data.flowKind as FlowKind } : {}),
-        ...(body.data.enabled !== undefined ? { enabled: body.data.enabled } : {}),
-        ...(body.data.nodes ? { nodes, version: existing.version + 1 } : {}),
-        ...(body.data.edges ? { edges: body.data.edges as FlowEdge[] } : {}),
-        entryNodeId:
-          body.data.entryNodeId ??
-          (body.data.nodes ? resolveEntryNodeId(nodes) : existing.entryNodeId),
-        ...(body.data.enabled ? { publishedAt: new Date().toISOString() } : {}),
-      }));
+      const draftNodes = (body.data.nodes ?? resolveDraftNodes(existing)) as FlowNode[];
+      const draftEdges = (body.data.edges ?? resolveDraftEdges(existing)) as FlowEdge[];
+      const draftEntryNodeId =
+        body.data.entryNodeId ??
+        (body.data.nodes ? resolveEntryNodeId(draftNodes) : resolveDraftEntryNodeId(existing));
+
+      const candidate = sanitizeFlowEdges(
+        withBotFromNodes({
+          ...existing,
+          ...(body.data.name !== undefined ? { name: body.data.name } : {}),
+          ...(body.data.flowKind !== undefined ? { flowKind: body.data.flowKind as FlowKind } : {}),
+          ...(body.data.enabled !== undefined ? { enabled: body.data.enabled } : {}),
+          ...(body.data.nodes || body.data.edges || body.data.entryNodeId !== undefined
+            ? {
+                draftNodes,
+                draftEdges,
+                draftEntryNodeId,
+              }
+            : {}),
+        })
+      );
 
       if (candidate.botId) {
         const bot = await getBot(auth.tenantId, candidate.botId);
@@ -442,24 +499,107 @@ export async function handler(
       }
 
       const tenant = await getTenant(auth.tenantId);
-      const nodeCount = nodes.length;
       if (tenant && body.data.nodes) {
-        await assertCanCreateVisualFlow(tenant, candidate.botId, nodeCount);
+        await assertCanCreateVisualFlow(tenant, candidate.botId, draftNodes.length);
       }
 
-      const issues = isVoiceAiFlow(candidate)
-        ? await validateFlowDefinitionWithSecrets(candidate, ENVIRONMENT)
-        : validateFlowDefinition(candidate);
-      const isFormFlow = nodes.some(
-        (node) => node.type === "trigger" && node.data.triggerType === "web_form_submitted"
-      );
-      const isVoiceFlow = isVoiceAiFlow(candidate);
-      const draftBlockingIssues = issuesBlockingDraftSave(issues);
-      if ((isFormFlow || isVoiceFlow) && draftBlockingIssues.length > 0) {
-        return badRequest(draftBlockingIssues.map((issue) => issue.message).join("; "));
+      if (body.data.nodes || body.data.edges || body.data.entryNodeId !== undefined) {
+        const validationCandidate = sanitizeFlowEdges(
+          withBotFromNodes({
+            ...existing,
+            nodes: draftNodes,
+            edges: draftEdges,
+            entryNodeId: draftEntryNodeId,
+          })
+        );
+        try {
+          await validateFlowCandidate(validationCandidate, draftNodes);
+        } catch (err) {
+          return badRequest(err instanceof Error ? err.message : "Invalid flow");
+        }
       }
 
       const updated = await updateFlowDefinition(auth.tenantId, flowId, candidate);
+      return ok(updated);
+    }
+
+    if (method === "POST" && flowId && path.endsWith("/publish")) {
+      const existing = await getFlowDefinition(auth.tenantId, flowId);
+      if (!existing) return notFound("Flow not found");
+
+      if (!hasUnpublishedChanges(existing)) {
+        return badRequest("No changes to publish");
+      }
+
+      const draftNodes = resolveDraftNodes(existing);
+      const draftEdges = resolveDraftEdges(existing);
+      const draftEntryNodeId = resolveDraftEntryNodeId(existing);
+      const candidate = sanitizeFlowEdges(
+        withBotFromNodes({
+          ...existing,
+          nodes: draftNodes,
+          edges: draftEdges,
+          entryNodeId: draftEntryNodeId,
+          draftNodes,
+          draftEdges,
+          draftEntryNodeId,
+        })
+      );
+
+      try {
+        await validateFlowCandidate(candidate, draftNodes);
+      } catch (err) {
+        return badRequest(err instanceof Error ? err.message : "Invalid flow");
+      }
+
+      const newVersion = nextPublishedVersion(existing);
+      const publishedAt = new Date().toISOString();
+      const updated = await updateFlowDefinition(auth.tenantId, flowId, {
+        nodes: draftNodes,
+        edges: draftEdges,
+        entryNodeId: draftEntryNodeId,
+        draftNodes,
+        draftEdges,
+        draftEntryNodeId,
+        version: newVersion,
+        publishedAt,
+      });
+      if (!updated) return notFound("Flow not found");
+
+      await createFlowVersionSnapshot({
+        flowId,
+        tenantId: auth.tenantId,
+        version: newVersion,
+        nodes: draftNodes,
+        edges: draftEdges,
+        entryNodeId: draftEntryNodeId,
+        publishedAt,
+      });
+
+      return ok(updated);
+    }
+
+    if (
+      method === "POST" &&
+      flowId &&
+      path.includes("/versions/") &&
+      path.endsWith("/restore")
+    ) {
+      const version = resolveVersionNumber(path, apiEvent.pathParameters);
+      if (!version || version < 1) return badRequest("version is required");
+
+      const existing = await getFlowDefinition(auth.tenantId, flowId);
+      if (!existing) return notFound("Flow not found");
+
+      const snapshot = await getFlowVersionSnapshot(auth.tenantId, flowId, version);
+      if (!snapshot) return notFound("Flow version not found");
+
+      const updated = await updateFlowDefinition(auth.tenantId, flowId, {
+        draftNodes: structuredClone(snapshot.nodes),
+        draftEdges: structuredClone(snapshot.edges),
+        draftEntryNodeId: snapshot.entryNodeId,
+      });
+      if (!updated) return notFound("Flow not found");
       return ok(updated);
     }
 
@@ -496,7 +636,6 @@ export async function handler(
 
       const updated = await updateFlowDefinition(auth.tenantId, flowId, {
         enabled: true,
-        publishedAt: new Date().toISOString(),
       });
       if (!updated) return notFound("Flow not found");
 
@@ -526,6 +665,9 @@ export async function handler(
 
       const now = new Date().toISOString();
       const newFlowId = makeFlowId();
+      const sourceNodes = structuredClone(resolveDraftNodes(source));
+      const sourceEdges = structuredClone(resolveDraftEdges(source));
+      const sourceEntryNodeId = resolveDraftEntryNodeId(source);
       const duplicate = sanitizeFlowEdges(
         withBotFromNodes({
           flowId: newFlowId,
@@ -533,10 +675,14 @@ export async function handler(
           name: buildDuplicateFlowName(source.name),
           ...(source.flowKind ? { flowKind: source.flowKind } : {}),
           enabled: false,
-          version: 1,
+          version: source.publishedAt ? source.version : 0,
           nodes: structuredClone(source.nodes),
           edges: structuredClone(source.edges),
           entryNodeId: source.entryNodeId,
+          draftNodes: sourceNodes,
+          draftEdges: sourceEdges,
+          draftEntryNodeId: sourceEntryNodeId,
+          ...(source.publishedAt ? { publishedAt: source.publishedAt } : {}),
           createdAt: now,
           updatedAt: now,
         })

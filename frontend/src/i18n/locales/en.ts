@@ -3042,6 +3042,11 @@ export const en: Messages = {
     exitFullscreen: "Exit fullscreen",
     preview: "Preview",
     publishChanges: "Publish changes",
+    publishing: "Publishing…",
+    publishedSuccess: "Changes published",
+    unpublishedChanges: "Unpublished changes",
+    versionLabel: "v{{version}}",
+    noPublishChanges: "No changes to publish",
     components: "Components",
     paletteDragHint: "Drag a component onto the canvas or click to add it.",
     resizePalette: "Resize components panel",
@@ -3227,11 +3232,31 @@ export const en: Messages = {
     },
     webhook: {
       title: "Incoming webhook",
-      subtitle: "Exposes a URL to receive JSON submissions. Include the X-Flow-Secret header after publishing the flow.",
+      subtitle: "Exposes a URL to receive JSON submissions. Include the X-Flow-Secret header after enabling the flow.",
       url: "Webhook URL",
       secret: "Secret",
       rotate: "Rotate secret",
-      notConfigured: "Publish the flow to generate the webhook.",
+      notConfigured: "Enable the flow to generate the webhook URL and secret.",
+      secretOnceHint: "Copy the secret now. It is only shown when you enable or rotate.",
+      copy: "Copy",
+      guide: {
+        title: "Webhook usage guide",
+        subtitle: "Receive data from your system and run the flow automatically.",
+        headers: "Headers",
+        requestExample: "Sample request",
+        responseExample: "Response (202 Accepted)",
+        bindingsHint:
+          "In downstream nodes (notification, CRM, HTTP) use {{form.field}} for each JSON key you send (e.g. {{form.email}}).",
+        idempotencyHint:
+          "Optional: send Idempotency-Key with a unique value to avoid processing the same submission twice.",
+        steps: {
+          "0": "Add the Webhook node as the flow entry and connect the actions you want to run.",
+          "1": "Optional: define a sample JSON in the node properties to document your fields.",
+          "2": "Enable the flow. The public URL and secret are generated (secret is shown on enable or rotate).",
+          "3": "From your system, send a JSON POST to the URL with the X-Flow-Secret header.",
+          "4": "Review submissions and runs in the editor sidebar history panel.",
+        },
+      },
     },
     secrets: {
       title: "Secrets",
@@ -3247,6 +3272,13 @@ export const en: Messages = {
       runs: "Runs",
       emptyEvents: "No submissions yet.",
       emptyRuns: "No runs yet.",
+    },
+    versions: {
+      title: "Versions",
+      subtitle: "Published flow version history.",
+      empty: "No published versions yet.",
+      restore: "Restore to draft",
+      restoring: "Restoring…",
     },
     hints: {
       conditionBranches: "Connect each output (Yes / No) to the corresponding next node.",
@@ -4083,9 +4115,10 @@ export const en: Messages = {
           "Visual flows (/flows) automate replies with message, button, and branch nodes. They must be enabled to run.",
         steps: {
           "0": "Go to Flows and create a new one in the visual editor.",
-          "1": "Set the trigger (any message, first message, keyword, etc.).",
+          "1": "Set the trigger (message, keyword, or Webhook node for external data).",
           "2": "Connect message, button, and action nodes on the canvas.",
-          "3": "Save and enable the flow with the table toggle. For schedules or keywords, see Automations.",
+          "3": "Save and enable the flow. For Webhook flows, copy the URL and secret from the editor guide.",
+          "4": "For schedules or keywords without the canvas, see Automations.",
         },
         troubleshooting: {
           title: "If the flow does not run",

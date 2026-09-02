@@ -14,6 +14,7 @@ import { LocalizedHtmlField } from "@/components/ui/LocalizedHtmlField";
 import type { FlowNode, FlowNodeType, LocalizedText } from "@/types";
 import { extractSampleFields, FormBindingField } from "./FormBindingField";
 import { FlowWebhookPanel } from "./FlowWebhookPanel";
+import { FlowWebhookGuideAccordion } from "./FlowWebhookGuideAccordion";
 import { TemplatePicker } from "@/components/templates/TemplatePicker";
 import type { OutreachChannel } from "@/types";
 
@@ -909,7 +910,23 @@ export function NodePropertiesPanel({
 
       {type === "webhook" && (
         <>
-          <FlowWebhookPanel flowId={flowId} />
+          <FlowWebhookGuideAccordion
+            flowId={flowId}
+            samplePayload={
+              d.formSamplePayload && typeof d.formSamplePayload === "object"
+                ? (d.formSamplePayload as Record<string, unknown>)
+                : undefined
+            }
+          />
+          <FlowWebhookPanel
+            flowId={flowId}
+            samplePayload={
+              d.formSamplePayload && typeof d.formSamplePayload === "object"
+                ? (d.formSamplePayload as Record<string, unknown>)
+                : undefined
+            }
+            showGuide={false}
+          />
           <div>
             <FieldLabel>{t("flows.fields.samplePayload")}</FieldLabel>
             {textArea(

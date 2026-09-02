@@ -8,7 +8,6 @@ import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 import { CATEGORY_STYLES, FLOW_NODE_META } from "./nodeConfig";
 import { useFlowNodeActions } from "./FlowNodeActionsContext";
-import { NodeHelpPopover } from "./NodeHelpPopover";
 
 export interface FlowNodeCardData {
   flowType: FlowNodeType;
@@ -37,7 +36,6 @@ function FlowNodeCardComponent({ id, data, selected }: NodeProps) {
   const canDelete = actions?.canDeleteNode(id) ?? false;
 
   return (
-    <NodeHelpPopover type={nodeData.flowType} side="top" className="max-w-[280px]">
     <div
       className={cn(
         "group relative min-w-[220px] max-w-[280px] rounded-xl border px-4 py-3 shadow-lg shadow-black/25",
@@ -147,7 +145,6 @@ function FlowNodeCardComponent({ id, data, selected }: NodeProps) {
         />
       )}
     </div>
-    </NodeHelpPopover>
   );
 }
 

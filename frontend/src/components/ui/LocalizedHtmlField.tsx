@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { BotLocale, LocalizedText } from "@/types";
 import { fromLocalizedRecord, toLocalizedRecord } from "@/lib/localized-text";
 import { useT } from "@/i18n/context";
-import { MailrelayHtmlEditor } from "@/components/mailrelay/MailrelayHtmlEditor";
+import {
+  MailrelayHtmlEditor,
+  type MailrelayHtmlEditorHandle,
+} from "@/components/mailrelay/MailrelayHtmlEditor";
 
 interface LocalizedHtmlFieldProps {
   value: LocalizedText | undefined;
@@ -23,16 +26,16 @@ export function LocalizedHtmlField({
 }: LocalizedHtmlFieldProps) {
   const t = useT();
   const [activeTab, setActiveTab] = useState<BotLocale>("es");
+  const editorRef = useRef<MailrelayHtmlEditorHandle>(null);
   const record = toLocalizedRecord(value);
 
   function updateLocale(locale: BotLocale, html: string) {
     onChange(fromLocalizedRecord({ ...record, [locale]: html }));
   }
 
-  function appendField(locale: BotLocale, field: string) {
+  function insertField(field: string) {
     const token = `{{form.${field}}}`;
-    const current = record[locale];
-    updateLocale(locale, current.trim() ? `${current} ${token}` : token);
+    editorRef.current?.insertAtCursor(token);
   }
 
   return (
@@ -55,6 +58,7 @@ export function LocalizedHtmlField({
       </div>
       <div className="[&_.mailrelay-html-editor]:!border-field-border">
         <MailrelayHtmlEditor
+          ref={editorRef}
           value={record[activeTab]}
           onChange={(html) => updateLocale(activeTab, html)}
           placeholder={placeholder ?? t("flows.fields.localizedPlaceholder")}
@@ -66,7 +70,7 @@ export function LocalizedHtmlField({
             <button
               key={field}
               type="button"
-              onClick={() => appendField(activeTab, field)}
+              onClick={() => insertField(field)}
               className="rounded-md border border-field-border px-2 py-0.5 text-[10px] text-secondary hover:border-accent/40 hover:text-primary"
             >
               {field}

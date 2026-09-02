@@ -2757,6 +2757,9 @@ export interface FlowDefinition {
   nodes: FlowNode[];
   edges: FlowEdge[];
   entryNodeId: string;
+  draftNodes?: FlowNode[];
+  draftEdges?: FlowEdge[];
+  draftEntryNodeId?: string;
   publishedAt?: string;
   createdAt: string;
   updatedAt: string;
