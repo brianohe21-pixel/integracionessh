@@ -239,7 +239,7 @@ export async function handler(
     if (method === "GET" && !flowId) {
       const botId = apiEvent.queryStringParameters?.botId;
       const flows = await listFlowDefinitions(auth.tenantId, botId);
-      return ok(flows);
+      return ok(flows.map((item) => sanitizeFlowEdges(item)));
     }
 
     if (method === "GET" && flowId && path.endsWith("/runs")) {
@@ -344,7 +344,7 @@ export async function handler(
       if (!flow) return notFound("Flow not found");
       const body = FlowSchema.partial().safeParse(JSON.parse(apiEvent.body ?? "{}"));
       if (!body.success) return badRequest(body.error.message);
-      const candidate: FlowDefinition = {
+      const candidate = sanitizeFlowEdges({
         ...flow,
         ...(body.data.nodes ? { nodes: body.data.nodes as FlowNode[] } : {}),
         ...(body.data.edges ? { edges: body.data.edges as FlowEdge[] } : {}),
@@ -353,7 +353,7 @@ export async function handler(
           (body.data.nodes
             ? resolveEntryNodeId(body.data.nodes as FlowNode[])
             : flow.entryNodeId),
-      };
+      });
       const issues = isVoiceAiFlow(candidate)
         ? await validateFlowDefinitionWithSecrets(candidate, ENVIRONMENT)
         : validateFlowDefinition(candidate);
@@ -363,7 +363,7 @@ export async function handler(
     if (method === "GET" && flowId) {
       const flow = await getFlowDefinition(auth.tenantId, flowId);
       if (!flow) return notFound("Flow not found");
-      return ok(flow);
+      return ok(sanitizeFlowEdges(flow));
     }
 
     if (method === "POST" && !flowId) {

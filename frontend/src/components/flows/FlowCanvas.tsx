@@ -69,8 +69,11 @@ function toReactFlowNodes(
 }
 
 function toReactFlowEdges(edges: FlowEdge[], nodes: FlowNode[]): Edge[] {
+  const nodeIds = new Set(nodes.map((node) => node.id));
   const nodeTypeById = new Map(nodes.map((n) => [n.id, n.type]));
-  return edges.map((e) => {
+  return edges
+    .filter((edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target))
+    .map((e) => {
     const sourceType = nodeTypeById.get(e.source);
     const isHumanEdge = sourceType === "handoff";
     return {
