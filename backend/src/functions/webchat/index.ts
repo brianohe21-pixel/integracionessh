@@ -29,6 +29,7 @@ import { createParticipantToken } from "../../lib/livekit/tokens.js";
 import { deleteLiveKitRoom } from "../../lib/livekit/rooms.js";
 import { addMessage } from "../../lib/dynamodb/conversation.repository.js";
 import { recordWebsitePageview } from "../../lib/dynamodb/website-metrics.repository.js";
+import { resolvePublicGoogleAnalytics } from "../../lib/website-analytics/settings.js";
 import { linkConversationToContact } from "../../lib/contacts/link-conversation-to-contact.js";
 
 const sqs = new SQSClient({});
