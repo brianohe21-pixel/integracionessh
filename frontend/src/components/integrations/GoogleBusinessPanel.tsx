@@ -15,6 +15,7 @@ import {
   useStartGoogleBusinessOAuth,
   useUpdateGoogleBusiness,
 } from "@/hooks/useGoogleBusiness";
+import { IntegrationErrorSupport } from "@/components/support/IntegrationErrorSupport";
 
 export function GoogleBusinessPanel() {
   const t = useT();
@@ -54,9 +55,11 @@ export function GoogleBusinessPanel() {
 
   if (isError) {
     return (
-      <Alert variant="danger">
-        {error instanceof Error ? error.message : t("integrationsPage.googleBusiness.loadError")}
-      </Alert>
+      <IntegrationErrorSupport
+        integration="google"
+        error={error instanceof Error ? error.message : t("integrationsPage.googleBusiness.loadError")}
+        context={{ flow: "google_business_load" }}
+      />
     );
   }
 
@@ -130,7 +133,13 @@ export function GoogleBusinessPanel() {
         <Alert variant="success">{t("integrationsPage.googleBusiness.configuredAlert")}</Alert>
       )}
 
-      {formError ? <Alert variant="danger">{formError}</Alert> : null}
+      {formError ? (
+        <IntegrationErrorSupport
+          integration="google"
+          error={formError}
+          context={{ flow: "google_business_connect" }}
+        />
+      ) : null}
       {saved ? <Alert variant="success">{t("integrationsPage.googleBusiness.saved")}</Alert> : null}
 
       <div className="rounded-xl border border-default bg-surface-elevated p-6 shadow-sm">

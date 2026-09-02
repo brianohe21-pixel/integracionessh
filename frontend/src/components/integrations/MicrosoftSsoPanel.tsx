@@ -16,6 +16,7 @@ import {
   useToggleMicrosoftSso,
   type MicrosoftSsoProtocol,
 } from "@/hooks/useMicrosoftSso";
+import { IntegrationErrorSupport } from "@/components/support/IntegrationErrorSupport";
 
 function CopyField({ label, value }: { label: string; value: string }) {
   const t = useT();
@@ -83,9 +84,11 @@ export function MicrosoftSsoPanel() {
 
   if (isError) {
     return (
-      <Alert variant="danger">
-        {(error as Error)?.message ?? t("common.error")}
-      </Alert>
+      <IntegrationErrorSupport
+        integration="microsoft"
+        error={(error as Error)?.message ?? t("common.error")}
+        context={{ flow: "microsoft_sso_load" }}
+      />
     );
   }
 
@@ -332,7 +335,13 @@ export function MicrosoftSsoPanel() {
           </span>
         </label>
 
-        {formError ? <Alert variant="danger">{formError}</Alert> : null}
+        {formError ? (
+          <IntegrationErrorSupport
+            integration="microsoft"
+            error={formError}
+            context={{ flow: "microsoft_sso_save" }}
+          />
+        ) : null}
         {saved ? <Alert variant="success">{t("integrationsPage.microsoft.saved")}</Alert> : null}
         {testMutation.isSuccess ? (
           <Alert variant="success">{t("integrationsPage.microsoft.testSuccess")}</Alert>

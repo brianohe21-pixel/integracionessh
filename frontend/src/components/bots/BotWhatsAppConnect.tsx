@@ -14,6 +14,7 @@ import {
 import { useT } from "@/i18n/context";
 import { useDialog } from "@/components/ui/DialogProvider";
 import { EmbeddedSignupLauncher } from "@/components/whatsapp/EmbeddedSignupLauncher";
+import { IntegrationErrorSupport } from "@/components/support/IntegrationErrorSupport";
 import { BotWhatsAppCoexistenceStatus } from "@/components/bots/BotWhatsAppCoexistenceStatus";
 import { BotWhatsAppCloudApiTest } from "@/components/bots/BotWhatsAppCloudApiTest";
 import { Button } from "@/components/ui/Button";
@@ -519,9 +520,11 @@ export function BotWhatsAppConnect({ bot }: BotWhatsAppConnectProps) {
       <p className="text-xs text-secondary">{t("bots.sharedTokenNote")}</p>
 
       {error ? (
-        <div className="rounded-lg border border-danger/20 bg-[var(--alert-danger-bg)] p-3">
-          <p className="text-sm text-danger">{error}</p>
-        </div>
+        <IntegrationErrorSupport
+          integration="whatsapp"
+          error={error}
+          context={{ botId: bot.botId, flow: "bot_whatsapp_connect" }}
+        />
       ) : null}
     </div>
   );

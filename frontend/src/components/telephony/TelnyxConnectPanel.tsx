@@ -9,6 +9,7 @@ import {
 } from "@/hooks/useProviderCredentials";
 import { useT } from "@/i18n/context";
 import { formatTelnyxConnectError } from "@/lib/telnyx-errors";
+import { IntegrationErrorSupport } from "@/components/support/IntegrationErrorSupport";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface TelnyxConnectPanelProps {
@@ -113,7 +114,14 @@ export function TelnyxConnectPanel({ className }: TelnyxConnectPanelProps) {
               </button>
             </div>
           </label>
-          {error ? <p className="text-xs text-red-600">{error}</p> : null}
+          {error ? (
+            <IntegrationErrorSupport
+              integration="telnyx"
+              error={error}
+              context={{ flow: "telnyx_connect" }}
+              className="border-default bg-surface"
+            />
+          ) : null}
           <div className="flex flex-wrap gap-2">
             <Button type="submit" size="sm" disabled={save.isPending}>
               {save.isPending ? t("settings.openaiKeySaving") : t("telephony.connectTelnyx")}

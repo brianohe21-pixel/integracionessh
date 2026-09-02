@@ -5,6 +5,7 @@ import Script from "next/script";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/context";
 import { useWhatsAppConnect } from "@/hooks/useWhatsAppConnect";
+import { IntegrationErrorSupport } from "@/components/support/IntegrationErrorSupport";
 import { MessageCircle, Loader2, CheckCircle } from "lucide-react";
 
 const META_APP_ID = process.env.NEXT_PUBLIC_META_APP_ID ?? "";
@@ -224,7 +225,7 @@ export function EmbeddedSignupLauncher({
       if (eventName === "ERROR") {
         pendingRef.current = {};
         clearGraceTimer();
-        setSignupError(payload.data?.error_message ?? t("whatsapp.signupError"));
+        setSignupError(t("whatsapp.signupError"));
         reset();
         return;
       }
@@ -279,7 +280,7 @@ export function EmbeddedSignupLauncher({
 
   const isConnecting = status === "connecting";
   const showConnected = localConnected || status === "connected";
-  const displayError = signupError || error;
+  const integrationError = signupError || error;
 
   if (!isConfigured) {
     return (
@@ -403,11 +404,17 @@ export function EmbeddedSignupLauncher({
         )}
       </div>
 
-      {displayError && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3">
-          <p className="text-sm text-red-600">{displayError}</p>
-        </div>
-      )}
+      {integrationError ? (
+        <IntegrationErrorSupport
+          integration="whatsapp"
+          error={integrationError}
+          context={{
+            flow: "embedded_signup",
+            onboardingMode,
+            ...(botId ? { botId } : {}),
+          }}
+        />
+      ) : null}
     </div>
   );
 }

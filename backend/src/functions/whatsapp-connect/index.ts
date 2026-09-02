@@ -23,7 +23,8 @@ import {
   updateWhatsAppChannel,
 } from "../../lib/dynamodb/whatsapp-channel.repository.js";
 import { listBots } from "../../lib/dynamodb/bot.repository.js";
-import { ok, badRequest, notFound, noContent, handleError } from "../../lib/http.js";
+import { ok, badRequest, notFound, noContent } from "../../lib/http.js";
+import { handleIntegrationError } from "../../lib/integration-errors.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 const META_APP_ID = process.env.META_APP_ID ?? "";
@@ -626,6 +627,6 @@ export async function handler(
 
     return await handleConnect(event);
   } catch (error) {
-    return handleError(error);
+    return handleIntegrationError(error, "whatsapp");
   }
 }
