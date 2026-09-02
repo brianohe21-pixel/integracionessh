@@ -3260,9 +3260,11 @@ export const es = {
         steps: {
           "0": "Añade el nodo Webhook como inicio del flujo y conecta las acciones que quieres ejecutar.",
           "1": "Opcional: define un JSON de ejemplo en las propiedades del nodo para documentar los campos.",
-          "2": "Activa el flujo. Se generan la URL pública y el secreto (visible al activar o al rotar).",
+          "2": "Activa el flujo. Se generan la URL pública y el secreto (visible solo al activar).",
           "3": "Desde tu sistema, envía un POST JSON a la URL con el encabezado X-Flow-Secret.",
-          "4": "Revisa el historial de envíos y ejecuciones en el panel lateral del editor.",
+          "4":
+            "Para rotar el secreto, pulsa «Rotar secreto» en el panel del webhook (debajo de esta guía). Se generan una nueva URL y un nuevo secreto; la URL y el secreto anteriores dejan de funcionar de inmediato. Copia el nuevo secreto al mostrarlo y actualiza tu integración.",
+          "5": "Revisa el historial de envíos y ejecuciones en el panel lateral del editor.",
         },
       },
     },

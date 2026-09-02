@@ -72,7 +72,7 @@ export default function EditFlowPage() {
   const [savedKey, setSavedKey] = useState("");
   const [publishedKey, setPublishedKey] = useState("");
   const initializedFlowKeyRef = useRef<string | null>(null);
-  const handleSaveRef = useRef<() => Promise<void>>(async () => {});
+  const handleSaveRef = useRef<() => Promise<boolean>>(async () => true);
   const handlePublishRef = useRef<() => Promise<void>>(async () => {});
 
   useEffect(() => {

@@ -3258,9 +3258,11 @@ export const en: Messages = {
         steps: {
           "0": "Add the Webhook node as the flow entry and connect the actions you want to run.",
           "1": "Optional: define a sample JSON in the node properties to document your fields.",
-          "2": "Enable the flow. The public URL and secret are generated (secret is shown on enable or rotate).",
+          "2": "Enable the flow. The public URL and secret are generated (secret is shown only on enable).",
           "3": "From your system, send a JSON POST to the URL with the X-Flow-Secret header.",
-          "4": "Review submissions and runs in the editor sidebar history panel.",
+          "4":
+            "To rotate the secret, click «Rotate secret» in the webhook panel (below this guide). A new URL and secret are generated; the previous URL and secret stop working immediately. Copy the new secret when shown and update your integration.",
+          "5": "Review submissions and runs in the editor sidebar history panel.",
         },
       },
     },

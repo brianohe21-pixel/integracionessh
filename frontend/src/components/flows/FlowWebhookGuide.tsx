@@ -24,6 +24,7 @@ const GUIDE_STEP_KEYS = [
   "flows.webhook.guide.steps.2",
   "flows.webhook.guide.steps.3",
   "flows.webhook.guide.steps.4",
+  "flows.webhook.guide.steps.5",
 ] as const;
 
 export function FlowWebhookGuide({

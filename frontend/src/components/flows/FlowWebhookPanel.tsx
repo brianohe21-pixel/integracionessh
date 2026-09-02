@@ -99,7 +99,7 @@ export function FlowWebhookPanel({
       {showGuide ? (
         <FlowWebhookGuide
           webhookUrl={data?.webhookUrl}
-          secret={revealedSecret}
+          secret={revealedSecret ?? undefined}
           samplePayload={samplePayload}
         />
       ) : null}
