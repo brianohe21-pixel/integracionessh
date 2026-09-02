@@ -174,7 +174,7 @@ export default function ContactsPage() {
   }
 
   return (
-    <DashboardPage maxWidth="6xl">
+    <DashboardPage>
       <PageHeader
         title={t("contacts.title")}
         subtitle={t("contacts.subtitle")}
