@@ -1,3 +1,4 @@
+import type { Tenant } from "../../types/index.js";
 import { extractEmailDomain, formatEmailFromAddress } from "./ses-domain.js";
 import { platformLogoSrc, platformSocialIconSrc } from "./platform-assets.js";
 
@@ -87,6 +88,13 @@ function platformSupportEmail(): string {
   const from = process.env.SES_FROM_EMAIL?.trim();
   const domain = from ? extractEmailDomain(from) : DEFAULT_PLATFORM_DOMAIN;
   return domain ? `ops@${domain}` : `ops@${DEFAULT_PLATFORM_DOMAIN}`;
+}
+
+export function shouldSkipPlatformEmailTemplate(tenant: Tenant | null | undefined): boolean {
+  if (!tenant) return false;
+  if (tenant.plan === "reseller" || tenant.tenantKind === "reseller") return true;
+  if (tenant.tenantKind === "subaccount" || tenant.parentTenantId) return true;
+  return false;
 }
 
 export function isPlatformEmailSender(from: string): boolean {

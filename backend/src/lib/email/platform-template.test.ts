@@ -2,6 +2,7 @@ import {
   applyPlatformEmailTemplate,
   isPlatformEmailSender,
   resolvePlatformFromAddress,
+  shouldSkipPlatformEmailTemplate,
   wrapPlatformEmailHtml,
 } from "./platform-template.js";
 
@@ -20,6 +21,46 @@ describe("platform email template", () => {
     } else {
       process.env.FRONTEND_URL = originalFrontendUrl;
     }
+  });
+
+  it("skips platform template for reseller and subaccount tenants", () => {
+    expect(
+      shouldSkipPlatformEmailTemplate({
+        tenantId: "r1",
+        name: "Reseller",
+        email: "reseller@example.com",
+        status: "active",
+        plan: "reseller",
+        tenantKind: "reseller",
+        createdAt: "",
+        updatedAt: "",
+      })
+    ).toBe(true);
+    expect(
+      shouldSkipPlatformEmailTemplate({
+        tenantId: "s1",
+        name: "Sub",
+        email: "sub@example.com",
+        status: "active",
+        plan: "pro",
+        tenantKind: "subaccount",
+        parentTenantId: "r1",
+        createdAt: "",
+        updatedAt: "",
+      })
+    ).toBe(true);
+    expect(
+      shouldSkipPlatformEmailTemplate({
+        tenantId: "t1",
+        name: "Standard",
+        email: "user@example.com",
+        status: "active",
+        plan: "pro",
+        tenantKind: "standard",
+        createdAt: "",
+        updatedAt: "",
+      })
+    ).toBe(false);
   });
 
   it("detects platform sender from SES_FROM_EMAIL", () => {
