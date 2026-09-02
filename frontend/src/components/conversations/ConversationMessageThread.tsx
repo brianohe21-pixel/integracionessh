@@ -149,8 +149,7 @@ export function ConversationMessageThread({
   const hasCrossChannel = (crossChannelMessages?.length ?? 0) > 0;
 
   return (
-    <div className="relative flex-1 overflow-y-auto sidebar-scroll">
-      <div className="conversations-chat-bg absolute inset-0" aria-hidden />
+    <div className="relative flex min-h-0 flex-1 overflow-y-auto overscroll-contain conversations-pane-scroll">
       <div className="relative z-0 space-y-1 px-4 py-4 sm:px-6">
         {loading && <p className="text-sm text-secondary">{loadingLabel}</p>}
 
