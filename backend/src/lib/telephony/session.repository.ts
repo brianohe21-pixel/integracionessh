@@ -179,6 +179,8 @@ export async function patchTelephonySession(
       | "campaignId"
       | "consultCallControlId"
       | "callControlId"
+      | "contactCenterPhase"
+      | "direction"
     >
   >
 ): Promise<TelephonySession | null> {
@@ -216,6 +218,16 @@ export async function clearTelephonySupervisor(sessionId: string): Promise<void>
       TableName: TABLE_NAME,
       Key: sessionKey(sessionId),
       UpdateExpression: "REMOVE supervisorCallControlId, supervisorRole",
+    })
+  );
+}
+
+export async function clearContactCenterPhase(sessionId: string): Promise<void> {
+  await docClient.send(
+    new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: sessionKey(sessionId),
+      UpdateExpression: "REMOVE contactCenterPhase",
     })
   );
 }

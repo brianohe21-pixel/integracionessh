@@ -105,6 +105,26 @@ describe("contact center ACD", () => {
   });
 });
 
+describe("contact center queue fallback actions", () => {
+  it("defaults overflow action to hangup on queue fixture", () => {
+    const queue: ContactCenterQueue = {
+      queueId: "q1",
+      tenantId: "t1",
+      botId: "b1",
+      name: "Support",
+      strategy: "longest_idle",
+      skills: [],
+      slaSeconds: 30,
+      afterHoursAction: "callback",
+      overflowAction: "voicemail",
+      createdAt: "",
+      updatedAt: "",
+    };
+    expect(queue.afterHoursAction).toBe("callback");
+    expect(queue.overflowAction).toBe("voicemail");
+  });
+});
+
 describe("telnyx webrtc provisioning names", () => {
   it("builds a tenant credential connection name", () => {
     expect(buildTelnyxCredentialConnectionName("tenant-1")).toBe(

@@ -1207,7 +1207,14 @@ export interface TelephonySession {
   ivrNodeId?: string;
   campaignId?: string;
   consultCallControlId?: string;
+  contactCenterPhase?: ContactCenterPhase;
 }
+
+export type ContactCenterPhase =
+  | "voicemail_prompt"
+  | "voicemail_recording"
+  | "callback_offer"
+  | "callback_queued";
 
 export type TelephonyRoutingMode = "ai" | "ivr" | "queue";
 
@@ -1223,7 +1230,11 @@ export type AgentPresenceState =
 
 export type QueueStrategy = "longest_idle" | "round_robin" | "fewest_calls";
 
-export type AfterHoursAction = "ai" | "voicemail" | "hangup";
+export type QueueFallbackAction = "ai" | "voicemail" | "hangup" | "callback";
+
+export type AfterHoursAction = QueueFallbackAction;
+
+export type OverflowAction = QueueFallbackAction;
 
 export type IvrNodeType = "menu" | "queue" | "ai" | "hangup" | "voicemail";
 
@@ -1255,6 +1266,7 @@ export interface ContactCenterQueue {
   holdAudioUrl?: string;
   overflowQueueId?: string;
   afterHoursAction: AfterHoursAction;
+  overflowAction?: OverflowAction;
   announcePosition?: boolean;
   callbackEnabled?: boolean;
   hours?: QueueBusinessHours;
