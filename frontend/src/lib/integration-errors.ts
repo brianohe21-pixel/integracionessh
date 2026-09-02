@@ -1,6 +1,12 @@
 import type { SupportTicketCategory } from "@/types";
 
-export type IntegrationKind = "whatsapp" | "telnyx" | "google" | "microsoft" | "generic";
+export type IntegrationKind =
+  | "whatsapp"
+  | "telnyx"
+  | "google"
+  | "microsoft"
+  | "flow"
+  | "generic";
 
 export interface IntegrationErrorContext {
   botId?: string;
@@ -30,6 +36,12 @@ const SAFE_ERROR_PATTERNS = [
   /invalid telnyx api key/i,
   /telnyx apikey is required/i,
   /phone number is already assigned/i,
+  /plan limit/i,
+  /add an assign bot node/i,
+  /only one voice flow can be enabled/i,
+  /flow not found/i,
+  /bot not found/i,
+  /integration error\. reference/i,
 ];
 
 function createReferenceId(): string {
@@ -44,12 +56,6 @@ function integrationCategory(kind: IntegrationKind): SupportTicketCategory {
   if (kind === "telnyx") return "technical";
   if (kind === "google" || kind === "microsoft") return "technical";
   return "technical";
-}
-
-function isSafeUserMessage(message: string): boolean {
-  const trimmed = message.trim();
-  if (!trimmed) return false;
-  return SAFE_ERROR_PATTERNS.some((pattern) => pattern.test(trimmed));
 }
 
 function shouldMask(message: string): boolean {
@@ -75,6 +81,64 @@ function shouldMask(message: string): boolean {
   );
 }
 
+function isSafeUserMessage(message: string): boolean {
+  const trimmed = message.trim();
+  if (!trimmed) return false;
+  return SAFE_ERROR_PATTERNS.some((pattern) => pattern.test(trimmed));
+}
+
+function localizeFlowErrorPart(
+  message: string,
+  t: (key: string, vars?: Record<string, string | number>) => string
+): string {
+  const trimmed = message.trim();
+  if (!trimmed) return trimmed;
+
+  if (/^add an assign bot node before enabling this flow$/i.test(trimmed)) {
+    return t("flows.errors.assignBotBeforeEnable");
+  }
+  if (/^only one voice flow can be enabled per bot$/i.test(trimmed)) {
+    return t("flows.errors.onlyOneVoiceFlow");
+  }
+  if (/^flow not found$/i.test(trimmed)) {
+    return t("flows.errors.flowNotFound");
+  }
+  if (/^bot not found$/i.test(trimmed)) {
+    return t("flows.errors.botNotFound");
+  }
+
+  const visualFlowsMatch = trimmed.match(
+    /^plan limit: maximum (\d+) visual flow\(s\) per bot$/i
+  );
+  if (visualFlowsMatch) {
+    return t("flows.errors.planLimitVisualFlows", { limit: visualFlowsMatch[1] });
+  }
+
+  const flowNodesMatch = trimmed.match(/^plan limit: maximum (\d+) nodes per flow$/i);
+  if (flowNodesMatch) {
+    return t("flows.errors.planLimitFlowNodes", { limit: flowNodesMatch[1] });
+  }
+
+  const activeRunsMatch = trimmed.match(
+    /^plan limit: maximum (\d+) active flow run\(s\)$/i
+  );
+  if (activeRunsMatch) {
+    return t("flows.errors.planLimitActiveRuns", { limit: activeRunsMatch[1] });
+  }
+
+  return trimmed;
+}
+
+export function localizeFlowError(
+  message: string,
+  t: (key: string, vars?: Record<string, string | number>) => string
+): string {
+  return message
+    .split("; ")
+    .map((part) => localizeFlowErrorPart(part, t))
+    .join("; ");
+}
+
 export function maskIntegrationError(
   rawError: string,
   t: (key: string, vars?: Record<string, string | number>) => string,
@@ -85,10 +149,19 @@ export function maskIntegrationError(
   const referenceId = createReferenceId();
   const category = integrationCategory(kind);
   const integrationLabel = t(`integrations.errors.kinds.${kind}`);
+  const localizedMessage =
+    kind === "flow" ? localizeFlowError(rawMessage, t) : rawMessage;
 
-  const userMessage = shouldMask(rawMessage)
-    ? t("integrations.errors.masked", { integration: integrationLabel, reference: referenceId })
-    : rawMessage;
+  const masked = shouldMask(rawMessage);
+  const userMessage =
+    masked
+      ? kind === "flow"
+        ? t("integrations.errors.maskedFlow", { reference: referenceId })
+        : t("integrations.errors.masked", {
+            integration: integrationLabel,
+            reference: referenceId,
+          })
+      : localizedMessage;
 
   const contextLines = [
     context.flow ? `Flow: ${context.flow}` : null,
@@ -97,8 +170,13 @@ export function maskIntegrationError(
     context.page ? `Page: ${context.page}` : null,
   ].filter(Boolean);
 
+  const supportIntro =
+    kind === "flow"
+      ? t("integrations.errors.supportIntroFlow")
+      : t("integrations.errors.supportIntro", { integration: integrationLabel });
+
   const supportMessage = [
-    t("integrations.errors.supportIntro", { integration: integrationLabel }),
+    supportIntro,
     "",
     `Reference: ${referenceId}`,
     ...contextLines,
@@ -107,13 +185,18 @@ export function maskIntegrationError(
     rawMessage,
   ].join("\n");
 
+  const defaultSubject =
+    kind === "flow"
+      ? t("integrations.errors.defaultSubjectFlow")
+      : t("integrations.errors.defaultSubject", { integration: integrationLabel });
+
   return {
     userMessage,
     rawMessage,
     referenceId,
     category,
-    defaultSubject: t("integrations.errors.defaultSubject", { integration: integrationLabel }),
+    defaultSubject,
     supportMessage,
-    showSupport: shouldMask(rawMessage),
+    showSupport: masked,
   };
 }

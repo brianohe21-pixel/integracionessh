@@ -1,10 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useT } from "@/i18n/context";
-import { useFlow, useToggleFlow, useUpdateFlow } from "@/hooks/useFlows";
+import { useFlow, useToggleFlow, useUpdateFlow, useDuplicateFlow } from "@/hooks/useFlows";
 import { useFullscreen } from "@/hooks/useFullscreen";
 import { useFlowEditorHistory } from "@/hooks/useFlowEditorHistory";
 import { useResizablePanel } from "@/hooks/useResizablePanel";
@@ -12,6 +12,7 @@ import type { FlowEdge, FlowNode, FlowNodeType } from "@/types";
 import { NodePalette } from "@/components/flows/NodePalette";
 import { NodePropertiesModal } from "@/components/flows/NodePropertiesModal";
 import { FlowEditorToolbar } from "@/components/flows/FlowEditorToolbar";
+import { IntegrationErrorSupport } from "@/components/support/IntegrationErrorSupport";
 import { FlowSecretsPanel } from "@/components/flows/FlowSecretsPanel";
 import { FlowRunsPanel } from "@/components/flows/FlowRunsPanel";
 import { FlowPreviewModal } from "@/components/flows/FlowPreviewModal";
@@ -32,11 +33,13 @@ function flowSnapshotKey(nodes: FlowNode[], edges: FlowEdge[]): string {
 export default function EditFlowPage() {
   const t = useT();
   const { flowId } = useParams<{ flowId: string }>();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const suggestedBotId = searchParams.get("botId") ?? "";
   const { data: flow, isLoading } = useFlow(flowId);
   const update = useUpdateFlow(flowId);
   const toggleFlow = useToggleFlow();
+  const duplicateFlow = useDuplicateFlow();
   const editorRef = useRef<HTMLDivElement>(null);
   const { isFullscreen, toggle: toggleFullscreen } = useFullscreen(editorRef);
   const palettePanel = useResizablePanel({
@@ -60,6 +63,7 @@ export default function EditFlowPage() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [savedMessage, setSavedMessage] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [duplicateError, setDuplicateError] = useState("");
   const [savedKey, setSavedKey] = useState("");
   const initializedFlowKeyRef = useRef<string | null>(null);
   const handleSaveRef = useRef<() => Promise<void>>(async () => {});
@@ -249,12 +253,21 @@ export default function EditFlowPage() {
         isPublished={flow.enabled}
         isSaving={update.isPending}
         isToggling={toggleFlow.isPending}
+        isDuplicating={duplicateFlow.isPending}
         isDirty={isDirty}
         justSaved={savedMessage}
         onSave={() => void handleSave()}
-        onToggleEnabled={() =>
-          void toggleFlow.mutateAsync({ flowId: flow.flowId, enabled: !flow.enabled })
-        }
+        onToggleEnabled={() => {
+          toggleFlow.reset();
+          toggleFlow.mutate({ flowId: flow.flowId, enabled: !flow.enabled });
+        }}
+        onDuplicate={() => {
+          setDuplicateError("");
+          duplicateFlow.mutate(flow.flowId, {
+            onSuccess: (cloned) => router.push(`/flows/${cloned.flowId}/edit`),
+            onError: (err) => setDuplicateError(err.message || t("flows.duplicateError")),
+          });
+        }}
         onPreview={() => setPreviewOpen(true)}
         isFullscreen={isFullscreen}
         onToggleFullscreen={() => void toggleFullscreen()}
@@ -279,11 +292,31 @@ export default function EditFlowPage() {
         </p>
       ) : null}
 
-      {toggleFlow.isError && (
-        <p className="border-b border-danger/30 bg-danger/10 px-4 py-2 text-sm text-danger">
-          {toggleFlow.error.message}
-        </p>
-      )}
+      {duplicateError ? (
+        <div className="border-b border-danger/30 bg-danger/10 px-4 py-2">
+          <IntegrationErrorSupport
+            integration="flow"
+            error={duplicateError}
+            context={{
+              botId: resolveFlowBotIdFromNodes(localNodes) ?? flow?.botId,
+              flow: flow?.name,
+            }}
+          />
+        </div>
+      ) : null}
+
+      {toggleFlow.isError ? (
+        <div className="border-b border-danger/30 bg-danger/10 px-4 py-2">
+          <IntegrationErrorSupport
+            integration="flow"
+            error={toggleFlow.error.message}
+            context={{
+              botId: resolveFlowBotIdFromNodes(localNodes) ?? flow?.botId,
+              flow: flow?.name,
+            }}
+          />
+        </div>
+      ) : null}
 
       {triggerWarning && (
         <p className="border-b border-warning/30 bg-warning/10 px-4 py-2 text-sm text-warning">

@@ -70,6 +70,15 @@ export function useDeleteFlow() {
   });
 }
 
+export function useDuplicateFlow() {
+  const qc = useQueryClient();
+  return useMutation<FlowDefinition, Error, string>({
+    mutationFn: (flowId) =>
+      api.post<FlowDefinition>(`/flows/${encodeURIComponent(flowId)}/duplicate`, {}),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["flows"] }),
+  });
+}
+
 export function useFlowHook(flowId: string, enabled = true) {
   return useQuery<{
     configured: boolean;

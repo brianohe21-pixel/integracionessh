@@ -36,6 +36,7 @@ import { validateFlowDefinition, validateFlowDefinitionWithSecrets, issuesBlocki
 import {
   deleteFlowSecret,
   getFlowSecret,
+  getFlowSecrets,
   listFlowSecretNames,
   saveFlowSecret,
 } from "../../lib/flow/flow-secrets.repository.js";
@@ -153,6 +154,28 @@ function assertBotForEnable(flow: FlowDefinition): string | null {
     return "Add an assign bot node before enabling this flow";
   }
   return null;
+}
+
+function buildDuplicateFlowName(name: string): string {
+  const suffix = " (copy)";
+  const trimmed = name.trim();
+  const base =
+    trimmed.length + suffix.length > 120 ? trimmed.slice(0, 120 - suffix.length) : trimmed;
+  return `${base}${suffix}`;
+}
+
+async function copyFlowSecrets(
+  tenantId: string,
+  environment: string,
+  sourceFlowId: string,
+  targetFlowId: string
+): Promise<void> {
+  const secrets = await getFlowSecrets(tenantId, environment, sourceFlowId);
+  for (const [name, value] of Object.entries(secrets)) {
+    if (value.trim()) {
+      await saveFlowSecret(tenantId, environment, targetFlowId, name, value);
+    }
+  }
 }
 
 async function ensureFlowHook(
@@ -490,6 +513,43 @@ export async function handler(
       }
 
       return ok({ ...updated, ...hookResponse });
+    }
+
+    if (method === "POST" && flowId && path.endsWith("/duplicate")) {
+      const source = await getFlowDefinition(auth.tenantId, flowId);
+      if (!source) return notFound("Flow not found");
+
+      const tenant = await getTenant(auth.tenantId);
+      if (tenant) {
+        await assertCanCreateVisualFlow(tenant, source.botId, source.nodes.length);
+      }
+
+      const now = new Date().toISOString();
+      const newFlowId = makeFlowId();
+      const duplicate = sanitizeFlowEdges(
+        withBotFromNodes({
+          flowId: newFlowId,
+          tenantId: auth.tenantId,
+          name: buildDuplicateFlowName(source.name),
+          ...(source.flowKind ? { flowKind: source.flowKind } : {}),
+          enabled: false,
+          version: 1,
+          nodes: structuredClone(source.nodes),
+          edges: structuredClone(source.edges),
+          entryNodeId: source.entryNodeId,
+          createdAt: now,
+          updatedAt: now,
+        })
+      );
+
+      if (duplicate.botId) {
+        const bot = await getBot(auth.tenantId, duplicate.botId);
+        if (!bot) return notFound("Bot not found");
+      }
+
+      await createFlowDefinition(duplicate);
+      await copyFlowSecrets(auth.tenantId, ENVIRONMENT, flowId, newFlowId);
+      return created(duplicate);
     }
 
     if (method === "POST" && flowId && path.endsWith("/disable")) {

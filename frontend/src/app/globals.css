@@ -371,6 +371,13 @@ textarea {
     linear-gradient(180deg, #141628 0%, var(--canvas) 100%);
 }
 
+.conversations-workspace {
+  --text-secondary: var(--text-primary);
+  --text-muted: var(--text-primary);
+  --color-secondary: var(--text-primary);
+  --color-muted: var(--text-primary);
+}
+
 .conversations-sidebar-bg {
   background: var(--surface-elevated);
 }

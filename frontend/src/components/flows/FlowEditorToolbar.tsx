@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Undo2, Redo2, Maximize2, Minimize2 } from "lucide-react";
+import { ArrowLeft, Copy, Undo2, Redo2, Maximize2, Minimize2 } from "lucide-react";
 import Link from "next/link";
 import { useT } from "@/i18n/context";
 import { Badge } from "@/components/ui/Badge";
@@ -11,10 +11,12 @@ type FlowEditorToolbarProps = {
   isPublished?: boolean;
   isSaving?: boolean;
   isToggling?: boolean;
+  isDuplicating?: boolean;
   isDirty?: boolean;
   justSaved?: boolean;
   onSave: () => void;
   onToggleEnabled?: () => void;
+  onDuplicate?: () => void;
   onPreview?: () => void;
   isFullscreen?: boolean;
   onToggleFullscreen?: () => void;
@@ -29,10 +31,12 @@ export function FlowEditorToolbar({
   isPublished = true,
   isSaving = false,
   isToggling = false,
+  isDuplicating = false,
   isDirty = false,
   justSaved = false,
   onSave,
   onToggleEnabled,
+  onDuplicate,
   onPreview,
   isFullscreen = false,
   onToggleFullscreen,
@@ -115,6 +119,18 @@ export function FlowEditorToolbar({
         >
           {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
         </button>
+        {onDuplicate ? (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={onDuplicate}
+            disabled={isDuplicating}
+          >
+            <Copy className="h-3.5 w-3.5" />
+            {isDuplicating ? t("flows.duplicating") : t("flows.duplicate")}
+          </Button>
+        ) : null}
         <Button type="button" variant="secondary" size="sm" onClick={onPreview}>
           {t("flows.preview")}
         </Button>

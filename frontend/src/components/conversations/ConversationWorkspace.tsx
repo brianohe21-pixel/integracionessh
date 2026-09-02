@@ -486,7 +486,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   const showDetailOnMobile = Boolean(selectedId);
 
   return (
-    <div className="flex min-h-0 flex-1 overflow-hidden">
+    <div className="conversations-workspace flex min-h-0 flex-1 overflow-hidden">
       <ConversationListSidebar
         advisorMode={advisorMode}
         listTab={listTab}
