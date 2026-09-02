@@ -8,11 +8,12 @@ import type { WhatsAppChannel } from "@/types";
 export type WhatsAppConnectStatus = "idle" | "connecting" | "connected" | "error";
 
 export interface WhatsAppConnectResult {
-  phoneNumberId: string;
+  phoneNumberId?: string;
   whatsappBusinessAccountId: string;
   isOnBizApp?: boolean;
   platformType?: string;
   onboardingMode?: "cloud_api" | "coexistence";
+  pendingRegistration?: boolean;
 }
 
 export function useWhatsAppConnect(botId?: string) {
@@ -28,7 +29,7 @@ export function useWhatsAppConnect(botId?: string) {
   }, [botId, queryClient]);
 
   const connect = useCallback(
-    async (payload: WhatsAppConnectResult & { code: string; pin: string; label?: string }) => {
+    async (payload: WhatsAppConnectResult & { code: string; pin?: string; label?: string }) => {
       setStatus("connecting");
       setError("");
 
@@ -39,15 +40,16 @@ export function useWhatsAppConnect(botId?: string) {
 
         const result = await api.post<{
           connected: boolean;
-          phoneNumberId: string;
-          whatsappBusinessAccountId: string;
+          phoneNumberId?: string;
+          whatsappBusinessAccountId?: string;
           channel?: WhatsAppChannel;
           onboardingMode?: "cloud_api" | "coexistence";
+          pendingRegistration?: boolean;
         }>(endpoint, {
           code: payload.code,
           wabaId: payload.whatsappBusinessAccountId,
-          phoneNumberId: payload.phoneNumberId,
-          pin: payload.pin,
+          ...(payload.phoneNumberId ? { phoneNumberId: payload.phoneNumberId } : {}),
+          ...(payload.pin ? { pin: payload.pin } : {}),
           onboardingMode: "cloud_api",
           ...(payload.label ? { label: payload.label } : {}),
         });
@@ -57,8 +59,10 @@ export function useWhatsAppConnect(botId?: string) {
         return {
           phoneNumberId: result.channel?.phoneNumberId ?? result.phoneNumberId,
           whatsappBusinessAccountId:
-            result.channel?.whatsappBusinessAccountId ?? result.whatsappBusinessAccountId,
+            result.channel?.whatsappBusinessAccountId ?? payload.whatsappBusinessAccountId,
           onboardingMode: result.onboardingMode ?? "cloud_api",
+          pendingRegistration:
+            result.pendingRegistration ?? result.channel?.status === "pending_registration",
           channel: result.channel,
         };
       } catch (err) {
@@ -82,6 +86,10 @@ export function useWhatsAppConnect(botId?: string) {
       setError("");
 
       try {
+        const endpoint = botId
+          ? `/bots/${encodeURIComponent(botId)}/whatsapp-channels/connect`
+          : "/whatsapp/connect-coexistence";
+
         const result = await api.post<{
           connected: boolean;
           phoneNumberId: string;
@@ -90,17 +98,20 @@ export function useWhatsAppConnect(botId?: string) {
           platformType?: string;
           channel?: WhatsAppChannel;
           onboardingMode?: "coexistence";
-        }>("/whatsapp/connect-coexistence", {
+        }>(endpoint, {
           code: payload.code,
           wabaId: payload.wabaId,
+          onboardingMode: "coexistence",
           ...(payload.phoneNumberId ? { phoneNumberId: payload.phoneNumberId } : {}),
+          ...(payload.label ? { label: payload.label } : {}),
         });
 
         setStatus("connected");
         await invalidateChannels();
         return {
-          phoneNumberId: result.phoneNumberId,
-          whatsappBusinessAccountId: result.whatsappBusinessAccountId,
+          phoneNumberId: result.channel?.phoneNumberId ?? result.phoneNumberId,
+          whatsappBusinessAccountId:
+            result.channel?.whatsappBusinessAccountId ?? result.whatsappBusinessAccountId,
           onboardingMode: "coexistence" as const,
           ...(result.isOnBizApp !== undefined ? { isOnBizApp: result.isOnBizApp } : {}),
           ...(result.platformType ? { platformType: result.platformType } : {}),
@@ -113,7 +124,7 @@ export function useWhatsAppConnect(botId?: string) {
         throw err;
       }
     },
-    [invalidateChannels]
+    [botId, invalidateChannels]
   );
 
   const connectManual = useCallback(

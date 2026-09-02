@@ -11,6 +11,7 @@ import { buildWhatsAppCloudApiTemplateCurl } from "../../lib/whatsapp/cloud-api-
 import { getWhatsAppAccessToken, getWhatsAppAccessTokenForAccount } from "../../lib/whatsapp/secrets.js";
 import {
   connectWhatsAppChannelEmbedded,
+  connectWhatsAppChannelCoexistence,
   connectWhatsAppChannelManual,
   registerWhatsAppChannelPhone,
 } from "../../lib/whatsapp/channel-service.js";
@@ -41,19 +42,11 @@ const ConnectSchema = z
     onboardingMode: z.enum(["cloud_api", "coexistence"]).optional().default("cloud_api"),
   })
   .superRefine((data, ctx) => {
-    if (data.onboardingMode === "cloud_api") {
-      if (!data.phoneNumberId?.trim()) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "phoneNumberId is required for Cloud API onboarding",
-        });
-      }
-      if (!data.pin || !/^\d{6}$/.test(data.pin)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "PIN must be exactly 6 digits",
-        });
-      }
+    if (data.pin && !/^\d{6}$/.test(data.pin)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "PIN must be exactly 6 digits",
+      });
     }
   });
 
@@ -137,20 +130,48 @@ async function handleConnectChannel(
   const parsed = ConnectSchema.safeParse(body);
   if (!parsed.success) return badRequest(parsed.error.message);
 
+  if (parsed.data.onboardingMode === "coexistence") {
+    const channel = await connectWhatsAppChannelCoexistence({
+      tenantId: auth.tenantId,
+      botId,
+      code: parsed.data.code,
+      wabaId: parsed.data.wabaId,
+      ...(parsed.data.phoneNumberId ? { phoneNumberId: parsed.data.phoneNumberId } : {}),
+      appId: META_APP_ID,
+      appSecret: META_APP_SECRET,
+      platformAppSecret: WHATSAPP_APP_SECRET || META_APP_SECRET,
+      ...(parsed.data.label ? { label: parsed.data.label } : {}),
+    });
+
+    return ok({
+      connected: true,
+      onboardingMode: "coexistence",
+      phoneNumberId: channel.phoneNumberId,
+      whatsappBusinessAccountId: channel.whatsappBusinessAccountId,
+      isOnBizApp: channel.isOnBizApp,
+      platformType: channel.platformType,
+      channel,
+    });
+  }
+
   const channel = await connectWhatsAppChannelEmbedded({
     tenantId: auth.tenantId,
     botId,
     code: parsed.data.code,
     wabaId: parsed.data.wabaId,
-    phoneNumberId: parsed.data.phoneNumberId!,
-    pin: parsed.data.pin!,
+    ...(parsed.data.phoneNumberId ? { phoneNumberId: parsed.data.phoneNumberId } : {}),
+    ...(parsed.data.pin ? { pin: parsed.data.pin } : {}),
     appId: META_APP_ID,
     appSecret: META_APP_SECRET,
     platformAppSecret: WHATSAPP_APP_SECRET || META_APP_SECRET,
     ...(parsed.data.label ? { label: parsed.data.label } : {}),
   });
 
-  return ok({ connected: true, channel });
+  return ok({
+    connected: true,
+    pendingRegistration: channel.status === "pending_registration",
+    channel,
+  });
 }
 
 async function handleConnectManualChannel(
@@ -296,8 +317,8 @@ async function handleConnect(
     botId: bot.botId,
     code: parsed.data.code,
     wabaId: parsed.data.wabaId,
-    phoneNumberId: parsed.data.phoneNumberId!,
-    pin: parsed.data.pin!,
+    ...(parsed.data.phoneNumberId ? { phoneNumberId: parsed.data.phoneNumberId } : {}),
+    ...(parsed.data.pin ? { pin: parsed.data.pin } : {}),
     appId: META_APP_ID,
     appSecret: META_APP_SECRET,
     platformAppSecret: WHATSAPP_APP_SECRET || META_APP_SECRET,
@@ -309,6 +330,7 @@ async function handleConnect(
     onboardingMode: "cloud_api",
     phoneNumberId: channel.phoneNumberId,
     whatsappBusinessAccountId: channel.whatsappBusinessAccountId,
+    pendingRegistration: channel.status === "pending_registration",
     channel,
   });
 }

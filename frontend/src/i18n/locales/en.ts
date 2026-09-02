@@ -376,10 +376,14 @@ export const en: Messages = {
     notConfigured:
       "WhatsApp Embedded Signup is not configured. Set NEXT_PUBLIC_META_APP_ID and NEXT_PUBLIC_META_EMBEDDED_SIGNUP_CONFIG_ID.",
     pinLabel: "Verification PIN (6 digits)",
+    pinLabelOptional: "Verification PIN (optional)",
     pinPlaceholder: "123456",
     pinHint:
       "Sets WhatsApp two-step verification. If the number already had a PIN, use the existing one.",
+    pinHintOptional:
+      "Optional during signup. Provide it to register the number immediately, or register later from the bot settings.",
     pinInvalid: "Enter a PIN with exactly 6 digits.",
+    signupError: "WhatsApp signup failed. Please try again.",
     pendingTitle: "Phone number pending registration",
     pendingDescription:
       "Meta requires registering the number before sending messages. Enter the PIN and register.",

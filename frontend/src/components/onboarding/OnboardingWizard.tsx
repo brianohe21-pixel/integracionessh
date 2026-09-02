@@ -249,8 +249,16 @@ export function OnboardingWizard() {
           <OnboardingStepWhatsApp
             connected={whatsappConnected}
             onConnected={(data) => {
-              setWhatsappCredentials(data);
-              storeWhatsAppCredentials(data);
+              if (!data.phoneNumberId) return;
+              const credentials: WhatsAppCredentials = {
+                phoneNumberId: data.phoneNumberId,
+                whatsappBusinessAccountId: data.whatsappBusinessAccountId,
+                ...(data.onboardingMode ? { onboardingMode: data.onboardingMode } : {}),
+                ...(data.isOnBizApp !== undefined ? { isOnBizApp: data.isOnBizApp } : {}),
+                ...(data.platformType ? { platformType: data.platformType } : {}),
+              };
+              setWhatsappCredentials(credentials);
+              storeWhatsAppCredentials(credentials);
             }}
           />
         )}

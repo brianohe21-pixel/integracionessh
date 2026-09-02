@@ -375,10 +375,14 @@ export const es = {
     notConfigured:
       "Embedded Signup no está configurado. Define NEXT_PUBLIC_META_APP_ID y NEXT_PUBLIC_META_EMBEDDED_SIGNUP_CONFIG_ID.",
     pinLabel: "PIN de verificación (6 dígitos)",
+    pinLabelOptional: "PIN de verificación (opcional)",
     pinPlaceholder: "123456",
     pinHint:
       "Define la verificación en dos pasos de WhatsApp. Si el número ya tenía PIN, usa el existente.",
+    pinHintOptional:
+      "Opcional durante el registro. Úsalo para registrar el número de inmediato o regístralo después desde la configuración del bot.",
     pinInvalid: "Ingresa un PIN de exactamente 6 dígitos.",
+    signupError: "El registro de WhatsApp falló. Inténtalo de nuevo.",
     pendingTitle: "Número pendiente de registro",
     pendingDescription:
       "Meta requiere registrar el número antes de enviar mensajes. Ingresa el PIN y pulsa registrar.",
