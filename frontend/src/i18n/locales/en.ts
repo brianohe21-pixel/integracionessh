@@ -593,6 +593,16 @@ export const en: Messages = {
     csatLabel: "Rating (optional)",
     resolveConfirm: "Mark as resolved",
     delete: "Delete",
+    clear: "Clear messages",
+    clearTitle: "Clear conversation",
+    clearConfirm:
+      "Delete all messages in this conversation? The conversation will remain in the list.",
+    bulkDelete: "Delete selected",
+    bulkDeleteTitle: "Delete conversations",
+    bulkDeleteConfirm:
+      "Delete {{count}} conversations and all their messages? This action cannot be undone.",
+    bulkDeleteSuccess: "{{count}} conversations deleted",
+    bulkDeletePartial: "{{succeeded}} deleted, {{failed}} failed",
     filterTabSlaBreached: "SLA breached",
     slaBreached: "SLA breached",
     slaAtRisk: "SLA at risk",

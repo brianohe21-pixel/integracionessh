@@ -9,6 +9,7 @@ import {
   findConversationById,
   addMessage,
   deleteConversation,
+  clearConversationMessages,
   ensureConversationContactId,
 } from "../../lib/dynamodb/conversation.repository.js";
 import { getAdvisorByCognitoUserId } from "../../lib/dynamodb/advisor.repository.js";
@@ -167,6 +168,22 @@ const CreateQuotationSchema = z.object({
   includePaymentLink: z.boolean().optional().default(true),
 });
 
+const ClearConversationSchema = z.object({
+  botId: z.string().uuid(),
+});
+
+const BulkDeleteSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        conversationId: z.string().uuid(),
+        botId: z.string().uuid(),
+      })
+    )
+    .min(1)
+    .max(50),
+});
+
 async function resolveAdvisorRecord(auth: AuthContext) {
   if (auth.role !== "advisor") return null;
   return getAdvisorByCognitoUserId(auth.tenantId, auth.userId);
@@ -197,7 +214,7 @@ function resolveConversationId(
   pathParams: { conversationId?: string } | undefined
 ): string | undefined {
   if (pathParams?.conversationId) return pathParams.conversationId;
-  if (rawPath === "/conversations" || rawPath.endsWith("/conversations/bulk-handoff")) {
+  if (rawPath === "/conversations" || rawPath.endsWith("/conversations/bulk-handoff") || rawPath.endsWith("/conversations/bulk-delete")) {
     return undefined;
   }
   const match = rawPath.match(/^\/conversations\/([^/]+)/);
@@ -234,6 +251,41 @@ export async function handler(
       });
 
       return ok(result);
+    }
+
+    if (method === "POST" && rawPath.endsWith("/conversations/bulk-delete")) {
+      const body = JSON.parse(event.body ?? "{}");
+      const parsed = BulkDeleteSchema.safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const succeeded: string[] = [];
+      const failed: Array<{ conversationId: string; error: string }> = [];
+
+      for (const item of parsed.data.items) {
+        try {
+          const conversation = await findConversationById(auth.tenantId, item.conversationId);
+          if (!conversation || conversation.botId !== item.botId) {
+            failed.push({ conversationId: item.conversationId, error: "not_found" });
+            continue;
+          }
+
+          await assertCanAccessConversation(auth, conversation);
+          const deleted = await deleteConversation(
+            auth.tenantId,
+            item.botId,
+            item.conversationId
+          );
+          if (deleted) {
+            succeeded.push(item.conversationId);
+          } else {
+            failed.push({ conversationId: item.conversationId, error: "not_found" });
+          }
+        } catch {
+          failed.push({ conversationId: item.conversationId, error: "forbidden" });
+        }
+      }
+
+      return ok({ succeeded, failed });
     }
 
     if (method === "GET" && !conversationId) {
@@ -918,6 +970,28 @@ export async function handler(
       return created(result);
     }
 
+    if (method === "POST" && subPath === "clear") {
+      const body = JSON.parse(event.body ?? "{}");
+      const parsed = ClearConversationSchema.safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const conversation = await findConversationById(auth.tenantId, conversationId);
+      if (!conversation || conversation.botId !== parsed.data.botId) {
+        return notFound("Conversation not found");
+      }
+
+      await assertCanAccessConversation(auth, conversation);
+
+      const updated = await clearConversationMessages(
+        auth.tenantId,
+        parsed.data.botId,
+        conversationId
+      );
+      if (!updated) return notFound("Conversation not found");
+
+      return ok(updated);
+    }
+
     if (method === "GET" && subPath === "wa-link") {
       const conversation = await findConversationById(auth.tenantId, conversationId);
       if (!conversation) return notFound("Conversation not found");
@@ -1016,8 +1090,6 @@ export async function handler(
     }
 
     if (method === "DELETE" && !subPath) {
-      assertTenantManagerRole(auth);
-
       const botId = params.botId;
       if (!botId || !z.string().uuid().safeParse(botId).success) {
         return badRequest("botId query parameter is required");
@@ -1027,6 +1099,8 @@ export async function handler(
       if (!conversation || conversation.botId !== botId) {
         return notFound("Conversation not found");
       }
+
+      await assertCanAccessConversation(auth, conversation);
 
       const deleted = await deleteConversation(auth.tenantId, botId, conversationId);
       if (!deleted) return notFound("Conversation not found");

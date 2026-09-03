@@ -57,6 +57,7 @@ type Props = {
   onToggleSelection: (id: string) => void;
   onToggleSelectAll: () => void;
   onBulkReassign: () => void;
+  onBulkDelete: () => void;
   isLoading: boolean;
   isFetchingNextPage: boolean;
   listScrollRef: React.RefObject<HTMLDivElement | null>;
@@ -110,6 +111,7 @@ export function ConversationListSidebar({
   onToggleSelection,
   onToggleSelectAll,
   onBulkReassign,
+  onBulkDelete,
   isLoading,
   isFetchingNextPage,
   listScrollRef,
@@ -354,9 +356,14 @@ export function ConversationListSidebar({
           <Badge variant="accent">
             {t("conversations.bulkSelected", { count: selectedConversationIds.size })}
           </Badge>
-          <Button type="button" size="sm" onClick={onBulkReassign}>
-            {t("conversations.bulkReassign")}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button type="button" size="sm" variant="ghost" onClick={onBulkDelete}>
+              {t("conversations.bulkDelete")}
+            </Button>
+            <Button type="button" size="sm" onClick={onBulkReassign}>
+              {t("conversations.bulkReassign")}
+            </Button>
+          </div>
         </div>
       )}
 

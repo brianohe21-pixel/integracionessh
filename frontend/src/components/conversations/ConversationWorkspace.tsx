@@ -15,6 +15,8 @@ import {
   useSendConversationMessage,
   useResolveConversation,
   useDeleteConversation,
+  useClearConversationMessages,
+  useBulkDeleteConversations,
 } from "@/hooks/useConversations";
 import { useAdvisors } from "@/hooks/useAdvisors";
 import { useBots } from "@/hooks/useBots";
@@ -103,6 +105,8 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   const [showBulkReassignModal, setShowBulkReassignModal] = useState(false);
   const [showResolveModal, setShowResolveModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showClearModal, setShowClearModal] = useState(false);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const [csatScore, setCsatScore] = useState<number | "">("");
   const [resolveCategory, setResolveCategory] = useState<InteractionCategory | "">("");
   const [callPermissionFeedback, setCallPermissionFeedback] = useState<{
@@ -291,6 +295,8 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   const sendMessage = useSendConversationMessage();
   const resolveConv = useResolveConversation();
   const deleteConv = useDeleteConversation();
+  const clearConv = useClearConversationMessages();
+  const bulkDelete = useBulkDeleteConversations();
 
   const selectedConversation = conversations.find((c) => c.conversationId === selectedId);
   const selectedContactPhone =
@@ -506,6 +512,47 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     setSelectedId(null);
   }
 
+  async function handleClear() {
+    if (!selectedConversation) return;
+    await clearConv.mutateAsync({
+      conversationId: selectedConversation.conversationId,
+      botId: selectedConversation.botId,
+    });
+    setShowClearModal(false);
+  }
+
+  async function handleBulkDelete() {
+    const items = filteredConversations
+      .filter((conv) => selectedConversationIds.has(conv.conversationId))
+      .map((conv) => ({ conversationId: conv.conversationId, botId: conv.botId }));
+    if (items.length === 0) return;
+
+    const result = await bulkDelete.mutateAsync({ items });
+
+    setShowBulkDeleteModal(false);
+    setSelectedConversationIds(new Set());
+    if (selectedId && result.succeeded.includes(selectedId)) {
+      setSelectedId(null);
+    }
+
+    if (result.failed.length === 0) {
+      await alert({
+        title: t("conversations.bulkDeleteTitle"),
+        message: t("conversations.bulkDeleteSuccess", { count: result.succeeded.length }),
+        tone: "success",
+      });
+    } else {
+      await alert({
+        title: t("conversations.bulkDeleteTitle"),
+        message: t("conversations.bulkDeletePartial", {
+          succeeded: result.succeeded.length,
+          failed: result.failed.length,
+        }),
+        tone: "warning",
+      });
+    }
+  }
+
   function slaLabel(status: InboxSlaStatus): string | null {
     if (status === "breached") return t("conversations.slaBreached");
     if (status === "at_risk") return t("conversations.slaAtRisk");
@@ -566,6 +613,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
         onToggleSelection={toggleConversationSelection}
         onToggleSelectAll={toggleSelectAll}
         onBulkReassign={() => setShowBulkReassignModal(true)}
+        onBulkDelete={() => setShowBulkDeleteModal(true)}
         isLoading={isLoading}
         isFetchingNextPage={isFetchingNextPage}
         listScrollRef={listScrollRef}
@@ -691,6 +739,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                     callPermission.isPending || selectedWhatsAppPhone.length < 7
                   }
                   onClaim={handleClaim}
+                  onClear={() => setShowClearModal(true)}
                   onDelete={() => setShowDeleteModal(true)}
                   onTransfer={() => setShowHandoffModal(true)}
                   onRequestCallPermission={() => {
@@ -898,6 +947,19 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
         </div>
       )}
 
+      {showClearModal && selectedConversation && (
+        <ConfirmDialog
+          open={showClearModal}
+          title={t("conversations.clearTitle")}
+          description={t("conversations.clearConfirm")}
+          confirmLabel={t("conversations.clear")}
+          tone="warning"
+          loading={clearConv.isPending}
+          onConfirm={handleClear}
+          onCancel={() => setShowClearModal(false)}
+        />
+      )}
+
       {showDeleteModal && selectedConversation && (
         <ConfirmDialog
           open={showDeleteModal}
@@ -908,6 +970,21 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
           loading={deleteConv.isPending}
           onConfirm={handleDelete}
           onCancel={() => setShowDeleteModal(false)}
+        />
+      )}
+
+      {showBulkDeleteModal && (
+        <ConfirmDialog
+          open={showBulkDeleteModal}
+          title={t("conversations.bulkDeleteTitle")}
+          description={t("conversations.bulkDeleteConfirm", {
+            count: selectedConversationIds.size,
+          })}
+          confirmLabel={t("conversations.delete")}
+          tone="danger"
+          loading={bulkDelete.isPending}
+          onConfirm={handleBulkDelete}
+          onCancel={() => setShowBulkDeleteModal(false)}
         />
       )}
 

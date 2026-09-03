@@ -824,6 +824,34 @@ async function queryAllMessageKeys(
   return keys;
 }
 
+export async function clearConversationMessages(
+  tenantId: string,
+  botId: string,
+  conversationId: string
+): Promise<Conversation | null> {
+  const existing = await getConversation(tenantId, botId, conversationId);
+  if (!existing) return null;
+
+  const messageKeys = await queryAllMessageKeys(tenantId, conversationId);
+  for (let i = 0; i < messageKeys.length; i += 25) {
+    await docClient.send(
+      new BatchWriteCommand({
+        RequestItems: {
+          [TABLE_NAME]: messageKeys.slice(i, i + 25).map((key) => ({
+            DeleteRequest: { Key: key },
+          })),
+        },
+      })
+    );
+  }
+
+  const now = new Date().toISOString();
+  return updateConversation(tenantId, botId, conversationId, {
+    messageCount: 0,
+    lastMessageAt: existing.createdAt || now,
+  });
+}
+
 export async function deleteConversation(
   tenantId: string,
   botId: string,

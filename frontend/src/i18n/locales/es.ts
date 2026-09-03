@@ -593,6 +593,16 @@ export const es = {
     csatLabel: "Calificación (opcional)",
     resolveConfirm: "Marcar como resuelta",
     delete: "Eliminar",
+    clear: "Limpiar mensajes",
+    clearTitle: "Limpiar conversación",
+    clearConfirm:
+      "¿Eliminar todos los mensajes de esta conversación? La conversación seguirá en la lista.",
+    bulkDelete: "Eliminar seleccionadas",
+    bulkDeleteTitle: "Eliminar conversaciones",
+    bulkDeleteConfirm:
+      "¿Eliminar {{count}} conversaciones y todos sus mensajes? Esta acción no se puede deshacer.",
+    bulkDeleteSuccess: "{{count}} conversaciones eliminadas",
+    bulkDeletePartial: "{{succeeded}} eliminadas, {{failed}} fallidas",
     filterTabSlaBreached: "SLA vencido",
     slaBreached: "SLA vencido",
     slaAtRisk: "SLA en riesgo",

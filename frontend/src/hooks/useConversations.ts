@@ -334,3 +334,38 @@ export function useDeleteConversation() {
     },
   });
 }
+
+export function useClearConversationMessages() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { conversationId: string; botId: string }) =>
+      api.post<Conversation>(
+        `/conversations/${encodeURIComponent(body.conversationId)}/clear`,
+        { botId: body.botId }
+      ),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["conversations"] });
+      qc.invalidateQueries({ queryKey: ["conversation-messages", vars.conversationId] });
+      qc.invalidateQueries({ queryKey: ["metrics"] });
+    },
+  });
+}
+
+export function useBulkDeleteConversations() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: {
+      items: Array<{ conversationId: string; botId: string }>;
+    }) => api.post<{ succeeded: string[]; failed: Array<{ conversationId: string; error: string }> }>(
+      "/conversations/bulk-delete",
+      body
+    ),
+    onSuccess: (result) => {
+      qc.invalidateQueries({ queryKey: ["conversations"] });
+      for (const conversationId of result.succeeded) {
+        qc.removeQueries({ queryKey: ["conversation-messages", conversationId] });
+      }
+      qc.invalidateQueries({ queryKey: ["metrics"] });
+    },
+  });
+}
