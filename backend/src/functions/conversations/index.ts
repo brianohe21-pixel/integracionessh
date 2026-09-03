@@ -163,6 +163,7 @@ const CreateQuotationSchema = z.object({
   notes: z.string().max(1000).optional(),
   validUntil: z.string().datetime().optional(),
   paymentDescription: z.string().min(1).max(200).optional(),
+  includePaymentLink: z.boolean().optional().default(true),
 });
 
 async function resolveAdvisorRecord(auth: AuthContext) {
@@ -879,6 +880,7 @@ export async function handler(
         conversation,
         environment: ENVIRONMENT,
         items: parsed.data.items,
+        includePaymentLink: parsed.data.includePaymentLink,
         ...(parsed.data.notes ? { notes: parsed.data.notes } : {}),
         ...(parsed.data.validUntil ? { validUntil: parsed.data.validUntil } : {}),
         ...(parsed.data.paymentDescription

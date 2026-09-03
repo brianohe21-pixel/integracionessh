@@ -24,8 +24,9 @@ export function useCreateQuotation(conversationId: string) {
       notes?: string;
       validUntil?: string;
       paymentDescription?: string;
+      includePaymentLink?: boolean;
     }) =>
-      api.post<{ quotation: Quotation; payment: PaymentRequest }>(
+      api.post<{ quotation: Quotation; payment?: PaymentRequest }>(
         `/conversations/${conversationId}/quotations`,
         payload
       ),

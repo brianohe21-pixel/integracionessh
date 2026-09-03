@@ -47,7 +47,45 @@ export type CreateQuotationInput = {
   notes?: string;
   validUntil?: string;
   paymentDescription?: string;
+  includePaymentLink?: boolean;
 };
+
+function formatCopMessage(cents: number): string {
+  return new Intl.NumberFormat("es-CO", {
+    style: "currency",
+    currency: "COP",
+    maximumFractionDigits: 0,
+  }).format(cents / 100);
+}
+
+function formatQuotationDate(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return new Intl.DateTimeFormat("es-CO", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
+function buildQuotationTextMessage(params: {
+  quotation: Quotation;
+  pdfDownloadUrl: string;
+  documentSent: boolean;
+}): string {
+  const { quotation, pdfDownloadUrl, documentSent } = params;
+  const lines = [`Cotización ${quotation.number}`, `Total: ${formatCopMessage(quotation.totalInCents)}`];
+  if (quotation.notes?.trim()) {
+    lines.push("", quotation.notes.trim());
+  }
+  if (quotation.validUntil) {
+    lines.push(`Válida hasta: ${formatQuotationDate(quotation.validUntil)}`);
+  }
+  if (!documentSent) {
+    lines.push("", `Descargar cotización: ${pdfDownloadUrl}`);
+  }
+  return lines.join("\n");
+}
 
 export async function listConversationQuotations(params: {
   tenantId: string;
@@ -66,7 +104,7 @@ export async function listConversationQuotations(params: {
 
 export async function createAndSendQuotation(
   input: CreateQuotationInput
-): Promise<{ quotation: Quotation; payment: PaymentRequest }> {
+): Promise<{ quotation: Quotation; payment?: PaymentRequest }> {
   const lineItems = computeQuotationLineItems(input.items).filter(
     (item) => item.description.length > 0
   );
@@ -131,28 +169,37 @@ export async function createAndSendQuotation(
   await putObjectBuffer(pdfS3Key, pdfBuffer, "application/pdf");
   const pdfDownloadUrl = await getPresignedReadUrl(pdfS3Key, 86400);
 
-  const paymentDescription =
-    input.paymentDescription?.trim() || `Cotización ${quotation.number}`;
-
-  const payment = await createPaymentRequest({
-    tenantId: input.tenantId,
-    botId: input.botId,
-    amountInCents: totalInCents,
-    description: paymentDescription,
-    contactPhone,
-    ...(input.conversation.contactName ? { contactName: input.conversation.contactName } : {}),
-    source: "quotation",
-    conversationId: input.conversation.conversationId,
-    quotationId,
-    environment: input.environment,
-    sendWhatsApp: false,
-  });
-
-  const updatedQuotation = await updateQuotation(input.tenantId, quotationId, {
-    paymentId: payment.paymentId,
+  const includePaymentLink = input.includePaymentLink !== false;
+  let payment: PaymentRequest | undefined;
+  let updatedQuotation = await updateQuotation(input.tenantId, quotationId, {
     pdfS3Key,
     pdfDownloadUrl,
   });
+
+  if (includePaymentLink) {
+    const paymentDescription =
+      input.paymentDescription?.trim() || `Cotización ${quotation.number}`;
+
+    payment = await createPaymentRequest({
+      tenantId: input.tenantId,
+      botId: input.botId,
+      amountInCents: totalInCents,
+      description: paymentDescription,
+      contactPhone,
+      ...(input.conversation.contactName ? { contactName: input.conversation.contactName } : {}),
+      source: "quotation",
+      conversationId: input.conversation.conversationId,
+      quotationId,
+      environment: input.environment,
+      sendWhatsApp: false,
+    });
+
+    updatedQuotation = await updateQuotation(input.tenantId, quotationId, {
+      paymentId: payment.paymentId,
+      pdfS3Key,
+      pdfDownloadUrl,
+    });
+  }
 
   const config = await getConfigOrDefault(input.tenantId, input.botId);
   const channel = input.conversation.channel ?? "whatsapp";
@@ -172,13 +219,8 @@ export async function createAndSendQuotation(
     environment: input.environment,
   });
 
-  const paymentText = formatPaymentMessage(
-    config.paymentMessageTemplate,
-    payment.checkoutUrl,
-    totalInCents,
-    paymentDescription
-  );
-
+  const paymentDescription =
+    input.paymentDescription?.trim() || `Cotización ${quotation.number}`;
   const pdfFilename = `${quotation.number}.pdf`;
   let documentSent = false;
 
@@ -216,9 +258,28 @@ export async function createAndSendQuotation(
     }
   }
 
-  const textBody = documentSent
-    ? paymentText
-    : `${paymentText}\n\nDescargar cotización: ${pdfDownloadUrl}`;
+  const quotationText = buildQuotationTextMessage({
+    quotation,
+    pdfDownloadUrl,
+    documentSent,
+  });
+
+  const textBody =
+    includePaymentLink && payment
+      ? documentSent
+        ? formatPaymentMessage(
+            config.paymentMessageTemplate,
+            payment.checkoutUrl,
+            totalInCents,
+            paymentDescription
+          )
+        : `${formatPaymentMessage(
+            config.paymentMessageTemplate,
+            payment.checkoutUrl,
+            totalInCents,
+            paymentDescription
+          )}\n\nDescargar cotización: ${pdfDownloadUrl}`
+      : quotationText;
 
   const textResult = await sendChannelText(outboundCtx, textBody);
   await addMessage(
@@ -245,20 +306,26 @@ export async function createAndSendQuotation(
   );
 
   const finalQuotation =
-    updatedQuotation ?? { ...quotation, paymentId: payment.paymentId, pdfS3Key, pdfDownloadUrl };
+    updatedQuotation ??
+    ({
+      ...quotation,
+      ...(payment ? { paymentId: payment.paymentId } : {}),
+      pdfS3Key,
+      pdfDownloadUrl,
+    } satisfies Quotation);
 
   await syncOpportunityFromQuotation({
     tenantId: input.tenantId,
     conversationId: input.conversation.conversationId,
     quotationId: finalQuotation.quotationId,
-    paymentId: payment.paymentId,
     totalInCents: totalInCents,
     quotationNumber: finalQuotation.number,
+    ...(payment ? { paymentId: payment.paymentId } : {}),
   }).catch(() => null);
 
   return {
     quotation: finalQuotation,
-    payment,
+    ...(payment ? { payment } : {}),
   };
 }
 

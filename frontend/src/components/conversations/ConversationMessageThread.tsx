@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { CheckCheck } from "lucide-react";
 import { EmailMessageBubble } from "@/components/conversations/EmailMessageBubble";
 import { ConversationDateDivider } from "@/components/conversations/conversation-ui";
@@ -103,6 +104,52 @@ export function ConversationMessageThread({
   const t = useT();
   const { formatDate } = useFormatters();
   const intlLocale = locale === "en" ? "en-US" : "es-ES";
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const stickToBottomRef = useRef(true);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    function handleScroll() {
+      if (!container) return;
+      const distanceFromBottom =
+        container.scrollHeight - container.scrollTop - container.clientHeight;
+      stickToBottomRef.current = distanceFromBottom < 96;
+    }
+
+    handleScroll();
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, [conversation.conversationId]);
+
+  useEffect(() => {
+    stickToBottomRef.current = true;
+    const frame = requestAnimationFrame(() => {
+      bottomRef.current?.scrollIntoView({ block: "end" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [conversation.conversationId]);
+
+  useEffect(() => {
+    if (loading) return;
+
+    const lastMessage = messages?.[messages.length - 1];
+    const isOutgoing =
+      lastMessage?.role === "advisor" || lastMessage?.role === "assistant";
+
+    if (!stickToBottomRef.current && !isOutgoing) return;
+
+    const frame = requestAnimationFrame(() => {
+      bottomRef.current?.scrollIntoView({
+        block: "end",
+        behavior: isOutgoing ? "smooth" : "auto",
+      });
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [messages, crossChannelMessages, loading]);
 
   function formatMessageTime(iso: string) {
     const d = new Date(iso);
@@ -149,7 +196,10 @@ export function ConversationMessageThread({
   const hasCrossChannel = (crossChannelMessages?.length ?? 0) > 0;
 
   return (
-    <div className="relative flex min-h-0 flex-1 overflow-y-auto overscroll-contain conversations-pane-scroll">
+    <div
+      ref={scrollContainerRef}
+      className="relative flex min-h-0 flex-1 overflow-y-auto overscroll-contain conversations-pane-scroll"
+    >
       <div className="conversations-thread relative z-0 w-full space-y-0">
         {loading && <p className="text-sm text-secondary">{loadingLabel}</p>}
 
@@ -174,6 +224,7 @@ export function ConversationMessageThread({
                 {t("conversations.noMessages")}
               </p>
             ) : null}
+        <div ref={bottomRef} aria-hidden className="h-px w-full shrink-0" />
       </div>
     </div>
   );
