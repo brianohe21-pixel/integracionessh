@@ -50,9 +50,10 @@ export class GoogleCalendarProvider {
         tenantId: config.tenantId,
       },
     });
+    const meetingLink = resolveGoogleMeetingLink(event);
     return {
       externalEventId: event.id,
-      meetingLink: resolveGoogleMeetingLink(event),
+      ...(meetingLink ? { meetingLink } : {}),
     };
   }
 
