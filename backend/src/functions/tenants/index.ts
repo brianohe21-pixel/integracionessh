@@ -74,6 +74,7 @@ import { getLaw2300StatusForTenant } from "../../lib/compliance/law2300-tenant.j
 import { addCustomDomainToCognitoClient } from "../../lib/cognito/custom-domain-callbacks.js";
 import { handleProviderCredentialRoutes } from "./provider-credentials.routes.js";
 import { handleMemberRoutes } from "./members.routes.js";
+import { handleTeamRoutes } from "./teams.routes.js";
 import { handleEmailSettingsRoutes } from "./email-settings.routes.js";
 import { handleGoogleBusinessOAuthCallbackRoute, handleGoogleCalendarOAuthCallbackRoute, handleIntegrationRoutes } from "./integrations.routes.js";
 import { getPublicAuthMethodsByHost } from "../../lib/integrations/microsoft-sso.service.js";
@@ -584,6 +585,9 @@ export async function handler(
 
     const memberRoutesResponse = await handleMemberRoutes(event, method, auth);
     if (memberRoutesResponse) return memberRoutesResponse;
+
+    const teamRoutesResponse = await handleTeamRoutes(event, method, auth);
+    if (teamRoutesResponse) return teamRoutesResponse;
 
     const emailSettingsResponse = await handleEmailSettingsRoutes(event, method, auth);
     if (emailSettingsResponse) return emailSettingsResponse;

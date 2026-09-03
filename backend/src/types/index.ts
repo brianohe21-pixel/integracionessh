@@ -549,16 +549,31 @@ export interface Advisor {
   updatedAt: string;
 }
 
+export type TenantMemberRole = "member" | "supervisor" | "advisor";
+
 export interface TenantMember {
   userId: string;
   username: string;
   email: string;
   name: string;
-  role: "member" | "advisor";
+  role: TenantMemberRole;
   enabled: boolean;
   createdAt: string;
   advisorId?: string;
+  teamIds?: string[];
   lastLoginAt?: string;
+}
+
+export interface OrganizationTeam {
+  teamId: string;
+  tenantId: string;
+  name: string;
+  description?: string;
+  status: "active" | "inactive";
+  supervisorUserIds: string[];
+  memberUserIds: string[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Macro {
@@ -1723,7 +1738,7 @@ export interface AuthContext {
   userId: string;
   email: string;
   name?: string;
-  role: "admin" | "member" | "advisor";
+  role: "admin" | "member" | "supervisor" | "advisor";
   homeTenantId?: string;
 }
 

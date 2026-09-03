@@ -31,7 +31,7 @@ export async function sendMemberInviteEmail(params: {
   memberName: string;
   tenantName: string;
   temporaryPassword: string;
-  role: "member" | "advisor";
+  role: "member" | "advisor" | "supervisor";
 }): Promise<MemberInviteEmailResult> {
   const from = process.env.SES_FROM_EMAIL?.trim();
   if (!from) {
@@ -43,7 +43,9 @@ export async function sendMemberInviteEmail(params: {
   const roleLabel =
     params.role === "advisor"
       ? "cuenta de asesor en la plataforma"
-      : "cuenta de administrador en la plataforma";
+      : params.role === "supervisor"
+        ? "cuenta de supervisor en la plataforma"
+        : "cuenta de administrador en la plataforma";
   const subject = `Tu cuenta en ${params.tenantName}`;
   const text = [
     `Hola ${params.memberName},`,

@@ -98,3 +98,29 @@ export async function countMembersByRole(
   const members = await listMembers(tenantId);
   return members.filter((m) => m.role === role && m.enabled).length;
 }
+
+export async function updateMember(
+  tenantId: string,
+  userId: string,
+  updates: Partial<Pick<TenantMember, "name" | "role" | "enabled" | "teamIds" | "advisorId">>
+): Promise<TenantMember | null> {
+  const existing = await getMember(tenantId, userId);
+  if (!existing) return null;
+
+  const merged: TenantMember = {
+    ...existing,
+    ...updates,
+  };
+
+  await docClient.send(
+    new PutCommand({
+      TableName: TABLE_NAME,
+      Item: {
+        ...memberKeys(tenantId, userId),
+        ...merged,
+      },
+    })
+  );
+
+  return merged;
+}

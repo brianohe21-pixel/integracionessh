@@ -154,6 +154,7 @@ const memberNavCategories: NavCategory[] = [
     items: [
       { href: "/support", labelKey: "nav.support", icon: LifeBuoy },
       { href: "/billing", labelKey: "nav.billing", icon: CreditCard },
+      { href: "/users", labelKey: "nav.userCenter", icon: Users },
       { href: "/settings", labelKey: "nav.settings", icon: Settings },
     ],
   },
@@ -177,6 +178,24 @@ const advisorNavCategories: NavCategory[] = [
   },
 ];
 
+const supervisorNavCategories: NavCategory[] = [
+  {
+    id: "inbox",
+    labelKey: "nav.categoryMessaging",
+    icon: MessageSquare,
+    items: [
+      { href: "/inbox", labelKey: "nav.inbox", icon: MessageSquare },
+      { href: "/sales", labelKey: "nav.sales", icon: TrendingUp },
+    ],
+  },
+  {
+    id: "account",
+    labelKey: "nav.categoryAccount",
+    icon: Users,
+    items: [{ href: "/users", labelKey: "nav.userCenter", icon: Users }],
+  },
+];
+
 const adminNavCategories: NavCategory[] = [
   {
     id: "admin",
@@ -193,7 +212,8 @@ const adminNavCategories: NavCategory[] = [
 function roleLabel(role: string, t: ReturnType<typeof useT>): string {
   if (role === "admin") return t("nav.roleAdmin");
   if (role === "advisor") return t("nav.roleAdvisor");
-  return t("nav.roleMember");
+  if (role === "supervisor") return t("nav.roleSupervisor");
+  return t("nav.roleAdministrator");
 }
 
 function isNavItemActive(
@@ -1219,7 +1239,7 @@ export function Sidebar() {
   const { isAuthenticated, loading: authLoading } = useAuthSession();
   const { isOpen, close, isCollapsed, toggleCollapsed } = useSidebar();
   const { isAdmin, loading: adminLoading } = useAdminRole();
-  const { isAdvisor, loading: roleLoading } = useTenantRole();
+  const { isAdvisor, isSupervisor, loading: roleLoading } = useTenantRole();
   const brandingEnabled =
     isAuthenticated && !authLoading && !adminLoading && !isAdmin;
   const { data: branding } = useTenantBranding(brandingEnabled);
@@ -1237,7 +1257,7 @@ export function Sidebar() {
   const isSubaccountTenant =
     me?.tenantKind === "subaccount" || Boolean(me?.parentTenantId);
   const canManageSubaccounts =
-    !isAdmin && !isAdvisor && (isResellerTenant || isSubaccountTenant);
+    !isAdmin && !isAdvisor && !isSupervisor && (isResellerTenant || isSubaccountTenant);
 
   useEffect(() => {
     const stored = getTenantContext();
@@ -1272,7 +1292,9 @@ export function Sidebar() {
       ? adminNavCategories
       : isAdvisor
         ? advisorNavCategories
-        : memberNavCategories;
+        : isSupervisor
+          ? supervisorNavCategories
+          : memberNavCategories;
 
   const navCategories = isResellerHome
     ? baseCategories.map((category) =>
@@ -1299,7 +1321,7 @@ export function Sidebar() {
     .filter((category) => category.items.length > 0);
 
   const standaloneItems =
-    loading || isAdmin || isAdvisor ? [] : memberStandaloneNavItems;
+    loading || isAdmin || isAdvisor || isSupervisor ? [] : memberStandaloneNavItems;
 
   const assumedSubaccount = assumedId
     ? subaccounts.find((item) => item.tenantId === assumedId)

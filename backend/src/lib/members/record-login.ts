@@ -21,7 +21,7 @@ export async function recordUserLogin(params: {
   const now = new Date().toISOString();
   const email = params.email?.trim() ?? "";
   const name = params.name?.trim() || email || "User";
-  const role = params.role === "advisor" ? "advisor" : "member";
+  const role = params.role === "advisor" ? "advisor" : params.role === "supervisor" ? "supervisor" : "member";
 
   if (role === "advisor") {
     const advisor = await getAdvisorByCognitoUserId(tenantId, userId);
@@ -52,7 +52,7 @@ export async function recordUserLogin(params: {
       username: email,
       email,
       name,
-      role: "member",
+      role,
       enabled: true,
       createdAt: now,
       lastLoginAt: now,

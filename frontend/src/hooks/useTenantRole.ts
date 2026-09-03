@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { fetchAuthSession } from "aws-amplify/auth";
 
-export type TenantRole = "member" | "advisor" | "admin" | "unknown";
+export type TenantRole = "member" | "supervisor" | "advisor" | "admin" | "unknown";
 
 export function useTenantRole() {
   const [role, setRole] = useState<TenantRole>("unknown");
@@ -21,6 +21,7 @@ export function useTenantRole() {
         const raw = session.tokens.idToken.payload?.["custom:role"];
         if (raw === "admin") setRole("admin");
         else if (raw === "advisor") setRole("advisor");
+        else if (raw === "supervisor") setRole("supervisor");
         else if (raw === "member") setRole("member");
         else setRole("member");
       })
@@ -39,7 +40,9 @@ export function useTenantRole() {
     role,
     loading,
     isMember: role === "member",
+    isSupervisor: role === "supervisor",
     isAdvisor: role === "advisor",
     isAdmin: role === "admin",
+    canAccessUserCenter: role === "member" || role === "supervisor",
   };
 }

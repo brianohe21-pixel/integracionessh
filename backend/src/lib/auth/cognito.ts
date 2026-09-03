@@ -1,6 +1,7 @@
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from "aws-lambda";
 import type { AuthContext, Tenant } from "../../types/index.js";
 import { getTenant } from "../dynamodb/tenant.repository.js";
+import { getMember } from "../dynamodb/member.repository.js";
 import { assertPortalHostAccess } from "./host-portal.js";
 
 function readJwtClaims(
@@ -103,6 +104,7 @@ export async function resolveRequestAuth(
   const auth = extractAuthContext(event);
   const withContext = await applyTenantContext(event, auth);
   await assertPortalHostAccess(event, withContext);
+  await assertTenantMemberEnabled(withContext);
   return withContext;
 }
 
@@ -137,8 +139,55 @@ export function assertMemberRole(authContext: AuthContext): void {
   }
 }
 
+export function assertUserCenterAccess(authContext: AuthContext): void {
+  if (authContext.role === "admin") {
+    const error = new Error("Platform admin cannot access tenant product APIs");
+    (error as Error & { statusCode: number }).statusCode = 403;
+    throw error;
+  }
+  if (
+    authContext.role !== "member" &&
+    authContext.role !== "supervisor"
+  ) {
+    const error = new Error("Access denied");
+    (error as Error & { statusCode: number }).statusCode = 403;
+    throw error;
+  }
+}
+
+export function assertTenantAdminRole(authContext: AuthContext): void {
+  if (authContext.role !== "member") {
+    const error = new Error("Administrator access required");
+    (error as Error & { statusCode: number }).statusCode = 403;
+    throw error;
+  }
+}
+
+export async function assertTenantMemberEnabled(authContext: AuthContext): Promise<void> {
+  if (authContext.role === "admin" || !authContext.tenantId) return;
+
+  const member = await getMember(authContext.tenantId, authContext.userId);
+  if (member && !member.enabled) {
+    const error = new Error("Account is disabled");
+    (error as Error & { statusCode: number }).statusCode = 403;
+    throw error;
+  }
+}
+
 export function assertTenantManagerRole(authContext: AuthContext): void {
-  assertMemberRole(authContext);
+  if (authContext.role === "admin") {
+    const error = new Error("Platform admin cannot access tenant product APIs");
+    (error as Error & { statusCode: number }).statusCode = 403;
+    throw error;
+  }
+  if (
+    authContext.role !== "member" &&
+    authContext.role !== "supervisor"
+  ) {
+    const error = new Error("Access denied");
+    (error as Error & { statusCode: number }).statusCode = 403;
+    throw error;
+  }
 }
 
 export function assertAdvisorOrMember(authContext: AuthContext): void {
@@ -147,7 +196,11 @@ export function assertAdvisorOrMember(authContext: AuthContext): void {
     (error as Error & { statusCode: number }).statusCode = 403;
     throw error;
   }
-  if (authContext.role !== "member" && authContext.role !== "advisor") {
+  if (
+    authContext.role !== "member" &&
+    authContext.role !== "supervisor" &&
+    authContext.role !== "advisor"
+  ) {
     const error = new Error("Access denied");
     (error as Error & { statusCode: number }).statusCode = 403;
     throw error;

@@ -1042,10 +1042,11 @@ export interface TenantMember {
   username: string;
   email: string;
   name: string;
-  role: "member" | "advisor";
+  role: "member" | "supervisor" | "advisor";
   enabled: boolean;
   createdAt: string;
   advisorId?: string;
+  teamIds?: string[];
   lastLoginAt?: string;
 }
 
@@ -1063,6 +1064,24 @@ export interface TenantMemberInviteResponse {
     emailFailureReason?: "not_configured" | "recipient_not_verified" | "send_failed";
     temporaryPassword?: string;
   };
+}
+
+export interface OrganizationTeam {
+  teamId: string;
+  tenantId: string;
+  name: string;
+  description?: string;
+  status: "active" | "inactive";
+  supervisorUserIds: string[];
+  memberUserIds: string[];
+  memberCount?: number;
+  supervisorCount?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrganizationTeamsResponse {
+  teams: OrganizationTeam[];
 }
 
 export interface Macro {

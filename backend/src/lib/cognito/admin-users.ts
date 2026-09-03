@@ -131,6 +131,96 @@ export async function disableCognitoUserBySub(sub: string): Promise<void> {
   );
 }
 
+export async function enableCognitoUserBySub(sub: string): Promise<void> {
+  const client = new CognitoIdentityProviderClient({});
+  const poolId = getUserPoolId();
+
+  const result = await client.send(
+    new ListUsersCommand({
+      UserPoolId: poolId,
+      Filter: `sub = "${sub}"`,
+      Limit: 1,
+    })
+  );
+
+  const username = result.Users?.[0]?.Username;
+  if (!username) return;
+
+  await client.send(
+    new AdminEnableUserCommand({ UserPoolId: poolId, Username: username })
+  );
+}
+
+export async function getCognitoUserBySub(sub: string): Promise<CognitoUserSummary | null> {
+  const client = new CognitoIdentityProviderClient({});
+  const poolId = getUserPoolId();
+
+  const result = await client.send(
+    new ListUsersCommand({
+      UserPoolId: poolId,
+      Filter: `sub = "${sub}"`,
+      Limit: 1,
+    })
+  );
+
+  const user = result.Users?.[0];
+  if (!user?.Username) return null;
+
+  return mapUser(
+    user.Username,
+    user.Enabled ?? false,
+    user.UserCreateDate,
+    user.Attributes
+  );
+}
+
+export async function updateCognitoUserBySub(
+  sub: string,
+  updates: { enabled?: boolean; role?: string; name?: string }
+): Promise<void> {
+  const client = new CognitoIdentityProviderClient({});
+  const poolId = getUserPoolId();
+
+  const result = await client.send(
+    new ListUsersCommand({
+      UserPoolId: poolId,
+      Filter: `sub = "${sub}"`,
+      Limit: 1,
+    })
+  );
+
+  const username = result.Users?.[0]?.Username;
+  if (!username) return;
+
+  if (updates.enabled === true) {
+    await client.send(
+      new AdminEnableUserCommand({ UserPoolId: poolId, Username: username })
+    );
+  } else if (updates.enabled === false) {
+    await client.send(
+      new AdminDisableUserCommand({ UserPoolId: poolId, Username: username })
+    );
+  }
+
+  const userAttributes: AttributeType[] = [];
+  if (updates.role !== undefined) {
+    userAttributes.push({ Name: "custom:role", Value: updates.role });
+  }
+  if (updates.name !== undefined) {
+    userAttributes.push({ Name: "name", Value: updates.name });
+  }
+
+  if (userAttributes.length > 0) {
+    await client.send(
+      new AdminUpdateUserAttributesCommand({
+        UserPoolId: poolId,
+        Username: username,
+        UserAttributes: userAttributes,
+      })
+    );
+  }
+}
+
 export async function updateCognitoUser(
   username: string,
   updates: { enabled?: boolean; tenantId?: string; role?: string }
