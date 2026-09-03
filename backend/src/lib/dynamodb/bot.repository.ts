@@ -19,6 +19,12 @@ const keys = (tenantId: string, botId: string) => ({
   SK: `BOT#${botId}`,
 });
 
+export type BotUpdateInput = {
+  [K in keyof Omit<Bot, "tenantId" | "botId" | "createdAt">]?:
+    | Omit<Bot, "tenantId" | "botId" | "createdAt">[K]
+    | undefined;
+};
+
 export async function getBot(tenantId: string, botId: string): Promise<Bot | null> {
   const result = await docClient.send(
     new GetCommand({
@@ -77,7 +83,7 @@ export async function createBot(bot: Bot): Promise<void> {
 export async function updateBot(
   tenantId: string,
   botId: string,
-  updates: Partial<Omit<Bot, "tenantId" | "botId" | "createdAt">>
+  updates: BotUpdateInput
 ): Promise<Bot> {
   const setExpressions: string[] = [];
   const removeExpressions: string[] = [];

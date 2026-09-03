@@ -12,13 +12,15 @@ import {
 } from "react";
 import { useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import { api, getTenantContext } from "@/lib/api";
-import { subscribeRealtimeEvents } from "@/lib/notifications/bridge";
+import { emitRealtimeEvent, subscribeRealtimeEvents } from "@/lib/notifications/bridge";
 import { conversationHref, conversationLabel } from "@/lib/notifications/conversation-link";
 import { loadUnreadCounts, saveUnreadCounts } from "@/lib/unread-messages/storage";
+import { fetchInboxConversationsForSync } from "@/hooks/useConversations";
+import { useRealtimeConnection } from "@/components/realtime/RealtimeProvider";
 import { useTenantRole } from "@/hooks/useTenantRole";
 import { useT } from "@/i18n/context";
 import { MessageToast } from "@/components/notifications/MessageToast";
-import type { Conversation, ConversationsListResponse } from "@/types";
+import type { Conversation, ConversationsListResponse, Message } from "@/types";
 
 export type MessageToastState = {
   id: string;
@@ -31,10 +33,17 @@ type UnreadMessagesContextValue = {
   totalUnread: number;
   getUnreadCount: (conversationId: string) => number;
   setActiveConversationId: (conversationId: string | null) => void;
-  markConversationRead: (conversationId: string, botId?: string, workflowStatus?: string) => void;
+  markConversationRead: (
+    conversationId: string,
+    botId?: string,
+    workflowStatus?: string,
+    lastMessageAt?: string
+  ) => void;
 };
 
 const UnreadMessagesContext = createContext<UnreadMessagesContextValue | null>(null);
+
+const MAX_SEEN_MESSAGE_IDS = 500;
 
 function truncate(text: string, max = 120): string {
   const trimmed = text.trim();
@@ -58,12 +67,27 @@ function showBrowserNotification(title: string, body: string, href: string) {
   };
 }
 
+function buildSyntheticUserMessage(conversation: Conversation, timestamp: string): Message {
+  return {
+    messageId: `sync-${conversation.conversationId}-${timestamp}`,
+    conversationId: conversation.conversationId,
+    tenantId: conversation.tenantId,
+    role: "user",
+    content: "",
+    channel: conversation.channel ?? "whatsapp",
+    timestamp,
+  };
+}
+
 export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
   const t = useT();
   const queryClient = useQueryClient();
-  const { isAdvisor } = useTenantRole();
+  const { connected } = useRealtimeConnection();
+  const { isAdvisor, isAdmin, loading: roleLoading } = useTenantRole();
   const scopeRef = useRef(getTenantContext() ?? "default");
   const activeConversationIdRef = useRef<string | null>(null);
+  const lastSeenMessageAtRef = useRef<Record<string, string>>({});
+  const seenMessageIdsRef = useRef<Set<string>>(new Set());
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [toast, setToast] = useState<MessageToastState | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -79,52 +103,27 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const persistCounts = useCallback((next: Record<string, number>) => {
-    saveUnreadCounts(scopeRef.current, next);
-    setCounts(next);
+  const rememberMessageId = useCallback((messageId: string) => {
+    const seen = seenMessageIdsRef.current;
+    if (seen.has(messageId)) return false;
+    seen.add(messageId);
+    if (seen.size > MAX_SEEN_MESSAGE_IDS) {
+      const oldest = seen.values().next().value;
+      if (oldest) seen.delete(oldest);
+    }
+    return true;
   }, []);
 
-  const syncFromConversationsCache = useCallback(() => {
-    const queries = queryClient.getQueriesData<InfiniteData<ConversationsListResponse>>({
-      queryKey: ["conversations", "list"],
-    });
-
-    const newConversationIds = new Set<string>();
-    for (const [, data] of queries) {
-      for (const page of data?.pages ?? []) {
-        for (const conversation of page.items) {
-          if (conversation.workflowStatus === "new") {
-            newConversationIds.add(conversation.conversationId);
-          }
-        }
-      }
-    }
-
-    if (newConversationIds.size === 0) return;
-
+  const bumpUnread = useCallback((conversationId: string, amount = 1) => {
     setCounts((current) => {
-      let changed = false;
-      const next = { ...current };
-      for (const conversationId of newConversationIds) {
-        if ((next[conversationId] ?? 0) < 1) {
-          next[conversationId] = 1;
-          changed = true;
-        }
-      }
-      if (!changed) return current;
+      const next = {
+        ...current,
+        [conversationId]: (current[conversationId] ?? 0) + amount,
+      };
       saveUnreadCounts(scopeRef.current, next);
       return next;
     });
-  }, [queryClient]);
-
-  useEffect(() => {
-    syncFromConversationsCache();
-    return queryClient.getQueryCache().subscribe((event) => {
-      if (event?.query.queryKey[0] === "conversations" && event?.query.queryKey[1] === "list") {
-        syncFromConversationsCache();
-      }
-    });
-  }, [queryClient, syncFromConversationsCache]);
+  }, []);
 
   const notifyIncomingMessage = useCallback(
     (conversation: Conversation, content: string, messageId: string) => {
@@ -145,22 +144,120 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
     [isAdvisor, t]
   );
 
+  const handleUserMessage = useCallback(
+    (conversation: Conversation, message: Message) => {
+      if (message.role !== "user") return;
+      if (!rememberMessageId(message.messageId)) return;
+      if (conversation.conversationId === activeConversationIdRef.current) return;
+
+      const lastAt = message.timestamp || conversation.lastMessageAt;
+      if (lastAt) {
+        lastSeenMessageAtRef.current[conversation.conversationId] = lastAt;
+      }
+
+      bumpUnread(conversation.conversationId);
+      notifyIncomingMessage(
+        conversation,
+        message.content,
+        message.messageId
+      );
+    },
+    [bumpUnread, notifyIncomingMessage, rememberMessageId]
+  );
+
+  const syncFromConversationsCache = useCallback(() => {
+    const queries = queryClient.getQueriesData<InfiniteData<ConversationsListResponse>>({
+      queryKey: ["conversations", "list"],
+    });
+
+    for (const [, data] of queries) {
+      for (const page of data?.pages ?? []) {
+        for (const conversation of page.items) {
+          if (conversation.workflowStatus !== "new") continue;
+          if (conversation.conversationId === activeConversationIdRef.current) continue;
+          setCounts((current) => {
+            if ((current[conversation.conversationId] ?? 0) >= 1) return current;
+            const next = { ...current, [conversation.conversationId]: 1 };
+            saveUnreadCounts(scopeRef.current, next);
+            return next;
+          });
+        }
+      }
+    }
+  }, [queryClient]);
+
+  const pollInboxConversations = useCallback(async () => {
+    if (roleLoading || isAdmin) return;
+
+    try {
+      const conversations = await fetchInboxConversationsForSync();
+
+      for (const conversation of conversations) {
+        const conversationId = conversation.conversationId;
+        const lastAt = conversation.lastMessageAt ?? "";
+        const previousAt = lastSeenMessageAtRef.current[conversationId];
+
+        if (!previousAt) {
+          lastSeenMessageAtRef.current[conversationId] = lastAt;
+          if (
+            conversation.workflowStatus === "new" &&
+            conversationId !== activeConversationIdRef.current
+          ) {
+            setCounts((current) => {
+              if ((current[conversationId] ?? 0) >= 1) return current;
+              const next = { ...current, [conversationId]: 1 };
+              saveUnreadCounts(scopeRef.current, next);
+              return next;
+            });
+          }
+          continue;
+        }
+
+        if (
+          lastAt &&
+          lastAt > previousAt &&
+          conversationId !== activeConversationIdRef.current
+        ) {
+          lastSeenMessageAtRef.current[conversationId] = lastAt;
+          const syntheticMessage = buildSyntheticUserMessage(conversation, lastAt);
+          emitRealtimeEvent({
+            type: "message.created",
+            conversationId,
+            conversation,
+            message: syntheticMessage,
+          });
+        }
+      }
+    } catch {
+      // ignore polling errors
+    }
+  }, [isAdmin, roleLoading]);
+
+  useEffect(() => {
+    syncFromConversationsCache();
+    return queryClient.getQueryCache().subscribe((event) => {
+      if (event?.query.queryKey[0] === "conversations" && event?.query.queryKey[1] === "list") {
+        syncFromConversationsCache();
+      }
+    });
+  }, [queryClient, syncFromConversationsCache]);
+
+  useEffect(() => {
+    if (roleLoading || isAdmin) return undefined;
+
+    void pollInboxConversations();
+    const intervalMs = connected ? 20_000 : 8_000;
+    const interval = window.setInterval(() => {
+      void pollInboxConversations();
+    }, intervalMs);
+
+    return () => window.clearInterval(interval);
+  }, [connected, isAdmin, pollInboxConversations, roleLoading]);
+
   useEffect(() => {
     return subscribeRealtimeEvents((event) => {
       if (event.type === "message.created") {
-        if (event.message.role !== "user") return;
-        if (event.conversationId === activeConversationIdRef.current) return;
-
-        setCounts((current) => {
-          const next = {
-            ...current,
-            [event.conversationId]: (current[event.conversationId] ?? 0) + 1,
-          };
-          saveUnreadCounts(scopeRef.current, next);
-          return next;
-        });
-
-        notifyIncomingMessage(event.conversation, event.message.content, event.message.messageId);
+        handleUserMessage(event.conversation, event.message);
         return;
       }
 
@@ -170,30 +267,51 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
         setCounts((current) => {
           const next = {
             ...current,
-            [event.conversation.conversationId]: Math.max(current[event.conversation.conversationId] ?? 0, 1),
+            [event.conversation.conversationId]: Math.max(
+              current[event.conversation.conversationId] ?? 0,
+              1
+            ),
           };
           saveUnreadCounts(scopeRef.current, next);
           return next;
         });
 
+        const label = conversationLabel(event.conversation);
+        const href = conversationHref(event.conversation, { advisorMode: isAdvisor });
+        const title = t("notifications.types.handoff", { name: label });
+        const body = t("notifications.handoffBody");
+
         if (document.hidden) {
-          const label = conversationLabel(event.conversation);
-          showBrowserNotification(
-            t("notifications.types.handoff", { name: label }),
-            t("notifications.handoffBody"),
-            conversationHref(event.conversation, { advisorMode: isAdvisor })
-          );
+          showBrowserNotification(title, body, href);
+        } else {
+          if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+          setToast({
+            id: `handoff-${event.conversation.conversationId}-${event.conversation.handoffAt ?? Date.now()}`,
+            title,
+            body,
+            href,
+          });
+          toastTimerRef.current = setTimeout(() => setToast(null), 6_000);
         }
       }
     });
-  }, [isAdvisor, notifyIncomingMessage, t]);
+  }, [handleUserMessage, isAdvisor, t]);
 
   const setActiveConversationId = useCallback((conversationId: string | null) => {
     activeConversationIdRef.current = conversationId;
   }, []);
 
   const markConversationRead = useCallback(
-    (conversationId: string, botId?: string, workflowStatus?: string) => {
+    (
+      conversationId: string,
+      botId?: string,
+      workflowStatus?: string,
+      lastMessageAt?: string
+    ) => {
+      if (lastMessageAt) {
+        lastSeenMessageAtRef.current[conversationId] = lastMessageAt;
+      }
+
       setCounts((current) => {
         if (!current[conversationId]) return current;
         const next = { ...current };

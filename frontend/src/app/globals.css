@@ -898,6 +898,7 @@ textarea {
   font-weight: 500;
   color: var(--sidebar-text-muted);
   transition: background-color 0.15s ease, color 0.15s ease;
+  position: relative;
 }
 
 .nav-sub-icon {

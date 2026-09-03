@@ -317,12 +317,14 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     markConversationRead(
       selectedId,
       selectedConversation.botId,
-      selectedConversation.workflowStatus
+      selectedConversation.workflowStatus,
+      selectedConversation.lastMessageAt
     );
   }, [
     selectedId,
     selectedConversation?.conversationId,
     selectedConversation?.workflowStatus,
+    selectedConversation?.lastMessageAt,
     markConversationRead,
   ]);
 
