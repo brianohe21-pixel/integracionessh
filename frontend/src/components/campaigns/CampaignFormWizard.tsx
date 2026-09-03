@@ -25,6 +25,7 @@ import type { MessageTemplate, OutreachChannel } from "@/types";
 import { isSmsTemplate } from "@/types";
 import { OutreachChannelSelect } from "@/components/outreach/OutreachChannelSelect";
 import { SmsTemplatePreview } from "@/components/templates/SmsTemplatePreview";
+import { listOutreachAgents } from "@/lib/outreach-agents";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { TableContainer } from "@/components/ui/TableContainer";
@@ -72,6 +73,7 @@ interface CampaignFormWizardProps {
   title: string;
   subtitle: string;
   initialValues: CampaignFormValues;
+  recipientsSource?: "contacts";
   isSubmitting: boolean;
   submitLabel: string;
   submittingLabel: string;
@@ -161,6 +163,7 @@ export function CampaignFormWizard({
   title,
   subtitle,
   initialValues,
+  recipientsSource,
   isSubmitting,
   submitLabel,
   submittingLabel,
@@ -184,9 +187,8 @@ export function CampaignFormWizard({
   const { data: bots = [] } = useBots();
   const { data: templates = [] } = useTemplates(config.botId || undefined, config.channel);
 
-  const availableBots =
-    config.channel === "sms" ? bots.filter((bot) => bot.smsEnabled) : bots;
-  const selectedBot = availableBots.find((b) => b.botId === config.botId);
+  const availableAgents = listOutreachAgents(bots, config.channel);
+  const selectedAgent = availableAgents.find((b) => b.botId === config.botId);
   const selectedTemplate = templates.find(
     (template) => template.name === config.templateName && template.language === config.language
   );
@@ -284,7 +286,7 @@ export function CampaignFormWizard({
   }
 
   return (
-    <DashboardPage maxWidth="3xl" className="space-y-6">
+    <DashboardPage className="space-y-6">
       <PageHeader title={title} subtitle={subtitle} />
 
       <div className="flex items-center gap-2">
@@ -343,7 +345,7 @@ export function CampaignFormWizard({
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-secondary">{t("bulkSend.bot")}</label>
+              <label className="block text-sm font-medium text-secondary">{t("outreach.agent")}</label>
               <select
                 value={config.botId}
                 onChange={(e) =>
@@ -351,13 +353,18 @@ export function CampaignFormWizard({
                 }
                 className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent/30 bg-surface-elevated"
               >
-                <option value="">{t("bulkSend.selectBot")}</option>
-                {availableBots.map((b) => (
+                <option value="">{t("outreach.selectAgent")}</option>
+                {availableAgents.map((b) => (
                   <option key={b.botId} value={b.botId}>
                     {b.name}
                   </option>
                 ))}
               </select>
+              {availableAgents.length === 0 && (
+                <p className="text-xs text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg">
+                  {t("outreach.noAgentsForChannel")}
+                </p>
+              )}
             </div>
 
             {config.botId && (
@@ -476,6 +483,13 @@ export function CampaignFormWizard({
 
         {step === "recipients" && (
           <>
+            {recipientsSource === "contacts" && recipients.length > 0 && (
+              <div className="rounded-lg border border-accent/30 bg-accent-muted/40 px-4 py-3 text-sm text-accent">
+                {recipients.length === 1
+                  ? t("campaigns.fromContactsBanner", { count: recipients.length })
+                  : t("campaigns.fromContactsBannerPlural", { count: recipients.length })}
+              </div>
+            )}
             <div className="space-y-3 pb-4 border-b border-subtle">
               <label className="block text-sm font-medium text-secondary">{t("campaigns.audienceTagsLabel")}</label>
               <p className="text-xs text-secondary">{t("campaigns.audienceTagsHint")}</p>
@@ -583,8 +597,8 @@ export function CampaignFormWizard({
               <dd className="font-medium text-primary">
                 {config.channel === "sms" ? t("outreach.channelSms") : t("outreach.channelWhatsapp")}
               </dd>
-              <dt className="text-secondary">{t("bulkSend.bot")}</dt>
-              <dd className="font-medium text-primary">{selectedBot?.name}</dd>
+              <dt className="text-secondary">{t("outreach.agent")}</dt>
+              <dd className="font-medium text-primary">{selectedAgent?.name}</dd>
               <dt className="text-secondary">{t("bulkSend.template")}</dt>
               <dd className="font-medium text-primary">
                 {config.templateName} ({config.language})

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { History, Mail, Phone, Tag, User } from "lucide-react";
+import { History, Mail, Megaphone, Phone, Tag, User } from "lucide-react";
 import { SideDrawer } from "@/components/ui/SideDrawer";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -35,11 +35,13 @@ export function ContactDetailPanel({
   whatsappRisk,
   onClose,
   onDelete,
+  onStartCampaign,
 }: {
   contact: Contact;
   whatsappRisk?: WhatsAppRiskResponse;
   onClose: () => void;
   onDelete: () => void;
+  onStartCampaign?: () => void;
 }) {
   const t = useT();
   const { formatDate, formatRelativeTime } = useFormatters();
@@ -90,6 +92,12 @@ export function ContactDetailPanel({
       onClose={onClose}
       footer={
         <div className="flex flex-wrap gap-2">
+          {onStartCampaign && (
+            <Button type="button" size="sm" onClick={onStartCampaign}>
+              <Megaphone className="h-4 w-4" />
+              {t("contacts.startCampaign")}
+            </Button>
+          )}
           {contact.marketingConsent !== "opt_in" && (
             <Button
               type="button"
