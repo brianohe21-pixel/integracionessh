@@ -1167,6 +1167,20 @@ locals {
       function_arn = var.tenants_function_arn
       protected    = true
     }
+    tenants_whatsapp_risk = {
+      route_key    = "GET /tenants/me/whatsapp-risk"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
+    tenants_law2300 = {
+      route_key    = "GET /tenants/me/law2300"
+      slug         = "tenants"
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
     tenants_provider_credentials_get = {
       route_key    = "GET /tenants/me/provider-credentials"
       slug         = "tenants"

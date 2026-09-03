@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 import {
   createBookingForBot,
-  formatBookingConfirmation,
+  buildBookingConfirmationText,
   getAvailableSlots,
   getConfigOrDefault,
 } from "../calendar/calendar.service.js";
@@ -69,15 +69,11 @@ export async function createAndSendConversationBooking(input: {
 
   const calendarConfig = await getConfigOrDefault(input.tenantId, input.botId);
   const locale = input.conversation.locale ?? input.bot.defaultLocale ?? "es";
-  const scheduledPrefix =
-    locale === "en"
-      ? getSystemMessage("bookingScheduledPrefixEn", locale)
-      : getSystemMessage("bookingScheduledPrefix", locale);
-  const confirmationBase = `${scheduledPrefix} ${formatBookingConfirmation(
-    result.booking,
-    calendarConfig
-  )}.`;
-
+  const confirmationBase = buildBookingConfirmationText({
+    booking: result.booking,
+    config: calendarConfig,
+    locale,
+  });
   let textBody = confirmationBase;
   if (input.notes?.trim()) {
     textBody += `\n\n${input.notes.trim()}`;

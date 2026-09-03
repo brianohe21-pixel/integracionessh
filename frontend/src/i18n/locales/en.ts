@@ -600,6 +600,8 @@ export const en: Messages = {
     bookMeetingNoSlots: "No available times in the next few days",
     bookMeetingCalendarDisabled:
       "Enable the calendar on this bot to schedule meetings from conversations.",
+    bookMeetingLoadError:
+      "Could not load calendar availability. Try again in a few seconds.",
     configureCalendar: "Configure calendar",
     delete: "Delete",
     clear: "Clear messages",

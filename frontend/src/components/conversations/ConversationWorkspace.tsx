@@ -52,7 +52,6 @@ import { ChannelAvatar } from "@/components/conversations/conversation-ui";
 import { AdvisorCopilotPanel } from "@/components/conversations/AdvisorCopilotPanel";
 import { QuotationDrawer } from "@/components/conversations/QuotationDrawer";
 import { BookingDrawer } from "@/components/conversations/BookingDrawer";
-import { useConversationBookingSlots } from "@/hooks/useConversationBookings";
 import { useUnreadMessages } from "@/components/notifications/UnreadMessagesProvider";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useInboxSlaSettings } from "@/hooks/useInboxSla";
@@ -394,12 +393,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     isHuman &&
     !selectedConversation.assignedAdvisorId;
   const canCompose = isHuman && !!selectedConversation && !needsClaim && !isImapReadOnly;
-  const { data: bookingAvailability } = useConversationBookingSlots(
-    selectedConversation?.conversationId ?? "",
-    selectedConversation?.botId ?? "",
-    Boolean(canCompose && selectedConversation)
-  );
-  const showBookingAction = bookingAvailability?.enabled === true;
+  const showBookingAction = canCompose;
   const assignedAdvisor = advisors?.find(
     (a) => a.advisorId === selectedConversation?.assignedAdvisorId
   );

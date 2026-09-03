@@ -54,7 +54,7 @@ function formatTimeLabel(iso: string, locale: string, timeZone?: string): string
 export function BookingDrawer({ conversation, open, onClose }: Props) {
   const t = useT();
   const botId = conversation.botId;
-  const { data, isLoading } = useConversationBookingSlots(
+  const { data, isLoading, isError } = useConversationBookingSlots(
     conversation.conversationId,
     botId,
     open
@@ -134,6 +134,8 @@ export function BookingDrawer({ conversation, open, onClose }: Props) {
           <div className="flex-1 space-y-4 overflow-y-auto p-5">
             {isLoading ? (
               <div className="h-40 animate-pulse rounded-lg bg-surface-muted" />
+            ) : isError ? (
+              <p className="text-sm text-secondary">{t("conversations.bookMeetingLoadError")}</p>
             ) : !calendarEnabled ? (
               <div className="rounded-lg border border-default bg-surface-muted/60 p-4 text-sm text-secondary">
                 <p>{t("conversations.bookMeetingCalendarDisabled")}</p>

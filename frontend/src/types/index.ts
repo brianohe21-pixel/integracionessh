@@ -2033,6 +2033,7 @@ export interface Booking {
   source: "flow" | "openai" | "manual" | "public_link";
   notes?: string;
   externalEventId?: string;
+  meetingLink?: string;
   externalSyncStatus?: ExternalSyncStatus;
   externalSyncedAt?: string;
   paymentId?: string;

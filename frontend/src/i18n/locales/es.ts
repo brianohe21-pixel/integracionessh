@@ -600,6 +600,8 @@ export const es = {
     bookMeetingNoSlots: "No hay horarios disponibles en los próximos días",
     bookMeetingCalendarDisabled:
       "Activa el calendario en este bot para agendar reuniones desde conversaciones.",
+    bookMeetingLoadError:
+      "No se pudo cargar la disponibilidad del calendario. Intenta de nuevo en unos segundos.",
     configureCalendar: "Configurar calendario",
     delete: "Eliminar",
     clear: "Limpiar mensajes",

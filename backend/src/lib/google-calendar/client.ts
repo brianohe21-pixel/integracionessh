@@ -34,6 +34,14 @@ export interface GoogleCalendarListEntry {
 export interface GoogleCalendarEvent {
   id: string;
   status?: string;
+  hangoutLink?: string;
+  htmlLink?: string;
+  conferenceData?: {
+    entryPoints?: Array<{
+      entryPointType?: string;
+      uri?: string;
+    }>;
+  };
 }
 
 export interface GoogleFreeBusyResponse {
@@ -186,6 +194,15 @@ export async function listGoogleCalendars(
   return (data.items ?? []).filter((item) => item.id && item.summary);
 }
 
+export function resolveGoogleMeetingLink(event: GoogleCalendarEvent): string | undefined {
+  const conferenceLink = event.conferenceData?.entryPoints?.find(
+    (entry) =>
+      entry.entryPointType === "video" ||
+      (entry.uri?.includes("meet.google.com") ?? false)
+  )?.uri;
+  return conferenceLink ?? event.hangoutLink ?? event.htmlLink;
+}
+
 export async function createGoogleCalendarEvent(
   accessToken: string,
   calendarId: string,
@@ -196,18 +213,25 @@ export async function createGoogleCalendarEvent(
     endAt: string;
     timezone: string;
     privateExtendedProperties: Record<string, string>;
+    requestId: string;
   }
 ): Promise<GoogleCalendarEvent> {
   return googleFetch<GoogleCalendarEvent>(
-    `${CALENDAR_API}/calendars/${encodeURIComponent(calendarId)}/events`,
+    `${CALENDAR_API}/calendars/${encodeURIComponent(calendarId)}/events?conferenceDataVersion=1`,
     accessToken,
     {
       method: "POST",
       body: JSON.stringify({
         summary: event.summary,
         ...(event.description ? { description: event.description } : {}),
-        start: { dateTime: event.startAt },
-        end: { dateTime: event.endAt },
+        start: { dateTime: event.startAt, timeZone: event.timezone },
+        end: { dateTime: event.endAt, timeZone: event.timezone },
+        conferenceData: {
+          createRequest: {
+            requestId: event.requestId,
+            conferenceSolutionKey: { type: "hangoutsMeet" },
+          },
+        },
         extendedProperties: {
           private: event.privateExtendedProperties,
         },

@@ -2333,6 +2333,7 @@ export interface Booking {
   source: BookingSource;
   notes?: string;
   externalEventId?: string;
+  meetingLink?: string;
   externalSyncStatus?: ExternalSyncStatus;
   externalSyncedAt?: string;
   paymentId?: string;

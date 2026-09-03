@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { AvailableSlot, Booking, PaymentRequest } from "@/types";
@@ -15,7 +16,10 @@ export function useConversationBookingSlots(
   botId: string,
   enabled = true
 ) {
-  const { from, to } = bookingSlotsRange();
+  const { from, to } = useMemo(
+    () => (enabled ? bookingSlotsRange() : { from: "", to: "" }),
+    [conversationId, botId, enabled]
+  );
   const params = new URLSearchParams({ botId, from, to });
 
   return useQuery({
