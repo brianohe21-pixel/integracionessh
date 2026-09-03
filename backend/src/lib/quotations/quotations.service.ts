@@ -24,6 +24,7 @@ import {
 import { resolveAccessTokenForBot } from "./channel-access.js";
 import type {
   Bot,
+  Channel,
   Conversation,
   PaymentRequest,
   Quotation,
@@ -85,6 +86,55 @@ function buildQuotationTextMessage(params: {
     lines.push("", `Descargar cotización: ${pdfDownloadUrl}`);
   }
   return lines.join("\n");
+}
+
+async function addQuotationDocumentMessage(params: {
+  tenantId: string;
+  botId: string;
+  conversation: Conversation;
+  quotation: Quotation;
+  pdfS3Key: string;
+  pdfFilename: string;
+  pdfDownloadUrl: string;
+  caption: string;
+  createdByAdvisorId?: string;
+  externalMessageId?: string;
+  timestamp: string;
+}): Promise<void> {
+  const channel = (params.conversation.channel ?? "whatsapp") as Channel;
+  const metadata: Record<string, unknown> = {
+    kind: "document",
+    filename: params.pdfFilename,
+    mimeType: "application/pdf",
+    s3Key: params.pdfS3Key,
+    quotationId: params.quotation.quotationId,
+    downloadUrl: params.pdfDownloadUrl,
+  };
+
+  await addMessage(
+    {
+      messageId: `adv-${randomUUID()}`,
+      conversationId: params.conversation.conversationId,
+      tenantId: params.tenantId,
+      role: "advisor",
+      content: params.caption,
+      channel,
+      messageType: "document",
+      metadata,
+      source: "panel",
+      ...(params.createdByAdvisorId ? { sentByAdvisorId: params.createdByAdvisorId } : {}),
+      ...(params.externalMessageId
+        ? {
+            externalMessageId: params.externalMessageId,
+            ...(channel === "whatsapp"
+              ? { whatsappMessageId: params.externalMessageId }
+              : {}),
+          }
+        : {}),
+      timestamp: params.timestamp,
+    },
+    params.botId
+  );
 }
 
 export async function listConversationQuotations(params: {
@@ -222,7 +272,9 @@ export async function createAndSendQuotation(
   const paymentDescription =
     input.paymentDescription?.trim() || `Cotización ${quotation.number}`;
   const pdfFilename = `${quotation.number}.pdf`;
+  const documentCaption = `Cotización ${quotation.number}`;
   let documentSent = false;
+  let documentExternalMessageId: string | undefined;
 
   if (channel === "whatsapp" && accessToken) {
     try {
@@ -230,33 +282,28 @@ export async function createAndSendQuotation(
         buffer: pdfBuffer,
         mimeType: "application/pdf",
         filename: pdfFilename,
-        caption: `Cotización ${quotation.number}`,
+        caption: documentCaption,
       });
-      await addMessage(
-        {
-          messageId: `adv-${randomUUID()}`,
-          conversationId: input.conversation.conversationId,
-          tenantId: input.tenantId,
-          role: "advisor",
-          content: `[Documento] ${pdfFilename}`,
-          channel,
-          source: "panel",
-          ...(input.createdByAdvisorId ? { sentByAdvisorId: input.createdByAdvisorId } : {}),
-          ...(docResult.externalMessageId
-            ? {
-                externalMessageId: docResult.externalMessageId,
-                whatsappMessageId: docResult.externalMessageId,
-              }
-            : {}),
-          timestamp: now,
-        },
-        input.botId
-      );
       documentSent = true;
+      documentExternalMessageId = docResult.externalMessageId;
     } catch {
       documentSent = false;
     }
   }
+
+  await addQuotationDocumentMessage({
+    tenantId: input.tenantId,
+    botId: input.botId,
+    conversation: input.conversation,
+    quotation,
+    pdfS3Key,
+    pdfFilename,
+    pdfDownloadUrl,
+    caption: documentCaption,
+    ...(input.createdByAdvisorId ? { createdByAdvisorId: input.createdByAdvisorId } : {}),
+    ...(documentExternalMessageId ? { externalMessageId: documentExternalMessageId } : {}),
+    timestamp: now,
+  });
 
   const quotationText = buildQuotationTextMessage({
     quotation,

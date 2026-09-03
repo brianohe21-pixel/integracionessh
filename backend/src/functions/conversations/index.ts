@@ -2,6 +2,7 @@ import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 }
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import { getCrossChannelHistory, getContactTimelineMessages } from "../../lib/contacts/contact-timeline.js";
+import { enrichConversationMessages } from "../../lib/conversations/document-messages.js";
 import {
   listConversations,
   getConversationMessages,
@@ -338,7 +339,12 @@ export async function handler(
         limit,
       });
 
-      return ok({ contactId: resolved.contactId, messages });
+      const enriched = await enrichConversationMessages(messages, {
+        tenantId: auth.tenantId,
+        botId: resolved.botId,
+      });
+
+      return ok({ contactId: resolved.contactId, messages: enriched });
     }
 
     if (method === "GET" && !subPath) {
@@ -353,7 +359,11 @@ export async function handler(
       }
 
       const messages = await getConversationMessages(auth.tenantId, conversationId, limit);
-      return ok(messages);
+      const enriched = await enrichConversationMessages(messages, {
+        tenantId: auth.tenantId,
+        botId: conversation.botId,
+      });
+      return ok(enriched);
     }
 
     if (method === "PATCH" && subPath === "status") {
@@ -922,6 +932,34 @@ export async function handler(
         url: buildWaMeLink(conversation.phoneNumber),
         phoneNumber: conversation.phoneNumber,
       });
+    }
+
+    if (method === "GET" && rawPath.includes("/messages/") && rawPath.endsWith("/document")) {
+      const conversation = await findConversationById(auth.tenantId, conversationId);
+      if (!conversation) return notFound("Conversation not found");
+      await assertCanAccessConversation(auth, conversation);
+
+      const botId = params.botId;
+      if (!botId || !z.string().uuid().safeParse(botId).success) {
+        return badRequest("botId query parameter is required");
+      }
+      if (conversation.botId !== botId) return notFound("Conversation not found");
+
+      const match = rawPath.match(/\/messages\/([^/]+)\/document$/);
+      if (!match) return badRequest("Invalid document path");
+      const [, messageId] = match;
+
+      const { resolveDocumentDownloadUrl } = await import(
+        "../../lib/conversations/document-messages.js"
+      );
+      const result = await resolveDocumentDownloadUrl({
+        tenantId: auth.tenantId,
+        botId,
+        conversationId,
+        messageId: decodeURIComponent(messageId),
+      });
+      if (!result) return notFound("Document not found");
+      return ok(result);
     }
 
     if (method === "GET" && rawPath.includes("/messages/") && rawPath.includes("/attachments/")) {

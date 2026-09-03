@@ -12,11 +12,9 @@ import {
 } from "react";
 import { useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import { api, getTenantContext } from "@/lib/api";
-import { emitRealtimeEvent, subscribeRealtimeEvents } from "@/lib/notifications/bridge";
+import { subscribeRealtimeEvents } from "@/lib/notifications/bridge";
 import { conversationHref, conversationLabel } from "@/lib/notifications/conversation-link";
 import { loadUnreadCounts, saveUnreadCounts } from "@/lib/unread-messages/storage";
-import { fetchInboxConversationsForSync } from "@/hooks/useConversations";
-import { useRealtimeConnection } from "@/components/realtime/RealtimeProvider";
 import { useTenantRole } from "@/hooks/useTenantRole";
 import { useT } from "@/i18n/context";
 import { MessageToast } from "@/components/notifications/MessageToast";
@@ -67,23 +65,10 @@ function showBrowserNotification(title: string, body: string, href: string) {
   };
 }
 
-function buildSyntheticUserMessage(conversation: Conversation, timestamp: string): Message {
-  return {
-    messageId: `sync-${conversation.conversationId}-${timestamp}`,
-    conversationId: conversation.conversationId,
-    tenantId: conversation.tenantId,
-    role: "user",
-    content: "",
-    channel: conversation.channel ?? "whatsapp",
-    timestamp,
-  };
-}
-
 export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
   const t = useT();
   const queryClient = useQueryClient();
-  const { connected } = useRealtimeConnection();
-  const { isAdvisor, isAdmin, loading: roleLoading } = useTenantRole();
+  const { isAdvisor } = useTenantRole();
   const scopeRef = useRef(getTenantContext() ?? "default");
   const activeConversationIdRef = useRef<string | null>(null);
   const lastSeenMessageAtRef = useRef<Record<string, string>>({});
@@ -186,53 +171,6 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
     }
   }, [queryClient]);
 
-  const pollInboxConversations = useCallback(async () => {
-    if (roleLoading || isAdmin) return;
-
-    try {
-      const conversations = await fetchInboxConversationsForSync();
-
-      for (const conversation of conversations) {
-        const conversationId = conversation.conversationId;
-        const lastAt = conversation.lastMessageAt ?? "";
-        const previousAt = lastSeenMessageAtRef.current[conversationId];
-
-        if (!previousAt) {
-          lastSeenMessageAtRef.current[conversationId] = lastAt;
-          if (
-            conversation.workflowStatus === "new" &&
-            conversationId !== activeConversationIdRef.current
-          ) {
-            setCounts((current) => {
-              if ((current[conversationId] ?? 0) >= 1) return current;
-              const next = { ...current, [conversationId]: 1 };
-              saveUnreadCounts(scopeRef.current, next);
-              return next;
-            });
-          }
-          continue;
-        }
-
-        if (
-          lastAt &&
-          lastAt > previousAt &&
-          conversationId !== activeConversationIdRef.current
-        ) {
-          lastSeenMessageAtRef.current[conversationId] = lastAt;
-          const syntheticMessage = buildSyntheticUserMessage(conversation, lastAt);
-          emitRealtimeEvent({
-            type: "message.created",
-            conversationId,
-            conversation,
-            message: syntheticMessage,
-          });
-        }
-      }
-    } catch {
-      // ignore polling errors
-    }
-  }, [isAdmin, roleLoading]);
-
   useEffect(() => {
     syncFromConversationsCache();
     return queryClient.getQueryCache().subscribe((event) => {
@@ -241,18 +179,6 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
       }
     });
   }, [queryClient, syncFromConversationsCache]);
-
-  useEffect(() => {
-    if (roleLoading || isAdmin) return undefined;
-
-    void pollInboxConversations();
-    const intervalMs = connected ? 20_000 : 8_000;
-    const interval = window.setInterval(() => {
-      void pollInboxConversations();
-    }, intervalMs);
-
-    return () => window.clearInterval(interval);
-  }, [connected, isAdmin, pollInboxConversations, roleLoading]);
 
   useEffect(() => {
     return subscribeRealtimeEvents((event) => {

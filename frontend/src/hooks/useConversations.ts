@@ -69,12 +69,6 @@ function conversationsListQueryKey(options?: {
   ] as const;
 }
 
-export async function fetchInboxConversationsForSync(): Promise<Conversation[]> {
-  const params = new URLSearchParams({ limit: "100", handoffMode: "human" });
-  const raw = await api.get<unknown>(`/conversations?${params.toString()}`);
-  return normalizeConversationsPage(raw).items;
-}
-
 function fetchConversationsPage(
   pageParam: string | undefined,
   options?: {

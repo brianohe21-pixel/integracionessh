@@ -973,6 +973,15 @@ export interface EmailMessageMetadata {
   messageId: string;
 }
 
+export interface DocumentMessageMetadata {
+  kind: "document";
+  filename: string;
+  mimeType: string;
+  s3Key: string;
+  quotationId?: string;
+  downloadUrl?: string;
+}
+
 export interface Message {
   messageId: string;
   conversationId: string;
@@ -981,7 +990,7 @@ export interface Message {
   content: string;
   channel?: Channel;
   messageType?: string;
-  metadata?: EmailMessageMetadata | Record<string, unknown>;
+  metadata?: EmailMessageMetadata | DocumentMessageMetadata | Record<string, unknown>;
   source?: string;
   sentByAdvisorId?: string;
   whatsappMessageId?: string;

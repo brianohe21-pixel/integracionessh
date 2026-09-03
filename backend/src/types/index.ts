@@ -1593,6 +1593,15 @@ export interface EmailMessageMetadata {
   messageId: string;
 }
 
+export interface DocumentMessageMetadata {
+  kind: "document";
+  filename: string;
+  mimeType: string;
+  s3Key: string;
+  quotationId?: string;
+  downloadUrl?: string;
+}
+
 export interface InboundQueueMessage {
   channel: Channel;
   tenantId: string;
