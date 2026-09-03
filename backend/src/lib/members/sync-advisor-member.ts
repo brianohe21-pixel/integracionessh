@@ -21,6 +21,7 @@ export async function syncAdvisorMemberRecord(params: {
       enabled: true,
       createdAt: existing?.createdAt ?? now,
       advisorId: params.advisorId,
+      ...(existing?.lastLoginAt ? { lastLoginAt: existing.lastLoginAt } : {}),
     },
     params.tenantId
   );

@@ -1540,6 +1540,13 @@ export const es = {
     inviteEmailFailedSandbox:
       "El asesor fue creado, pero AWS SES (modo sandbox) no permite enviar a {{email}} hasta que ese correo esté verificado o la cuenta salga de sandbox.",
     panelAccess: "Acceso al panel",
+    colName: "Nombre",
+    colPhone: "Teléfono",
+    colAccess: "Acceso",
+    colLastLogin: "Último login",
+    colStatus: "Estado",
+    colActions: "Acciones",
+    neverLoggedIn: "Sin login",
     active: "Activo",
     inactive: "Inactivo",
     delete: "Eliminar",

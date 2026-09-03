@@ -77,6 +77,7 @@ async function upsertCurrentUser(auth: AuthContext): Promise<void> {
       enabled: true,
       createdAt: existing?.createdAt ?? now,
       ...(advisorId ? { advisorId } : {}),
+      ...(existing?.lastLoginAt ? { lastLoginAt: existing.lastLoginAt } : {}),
     },
     auth.tenantId
   );

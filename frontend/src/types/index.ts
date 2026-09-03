@@ -1022,6 +1022,7 @@ export interface Advisor {
   queueIds?: string[];
   voiceEnabled?: boolean;
   lastAssignedAt?: string;
+  lastLoginAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -1045,6 +1046,7 @@ export interface TenantMember {
   enabled: boolean;
   createdAt: string;
   advisorId?: string;
+  lastLoginAt?: string;
 }
 
 export interface TenantMembersResponse {

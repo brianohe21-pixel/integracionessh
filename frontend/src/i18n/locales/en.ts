@@ -1538,6 +1538,13 @@ export const en: Messages = {
     inviteEmailFailedSandbox:
       "The advisor was created, but AWS SES (sandbox mode) cannot send to {{email}} until that address is verified or the account leaves sandbox.",
     panelAccess: "Panel access",
+    colName: "Name",
+    colPhone: "Phone",
+    colAccess: "Access",
+    colLastLogin: "Last login",
+    colStatus: "Status",
+    colActions: "Actions",
+    neverLoggedIn: "Never logged in",
     active: "Active",
     inactive: "Inactive",
     delete: "Delete",
