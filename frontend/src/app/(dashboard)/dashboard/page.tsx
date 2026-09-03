@@ -8,6 +8,9 @@ import { useMarketingMetrics } from "@/hooks/useMarketingMetrics";
 import { useSalesMetrics } from "@/hooks/useSalesMetrics";
 import { useLeadMetrics } from "@/hooks/useLeads";
 import { useInboxSlaMetrics } from "@/hooks/useInboxSlaMetrics";
+import { useCallingMetrics } from "@/hooks/useCallingMetrics";
+import { useWebsiteMetrics } from "@/hooks/useWebsiteMetrics";
+import { useConversationCategoryMetrics } from "@/hooks/useConversationCategoryMetrics";
 import { dateRangeFromDays } from "@/lib/metrics-date-range";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -18,13 +21,20 @@ import { DashboardActivityChart } from "@/components/dashboard/DashboardActivity
 import { DashboardCampaignFunnelChart } from "@/components/dashboard/DashboardCampaignFunnelChart";
 import { DashboardSalesBySourceChart } from "@/components/dashboard/DashboardSalesBySourceChart";
 import { DashboardLeadFunnelChart } from "@/components/dashboard/DashboardLeadFunnelChart";
+import { DashboardInboxStatusChart } from "@/components/dashboard/DashboardInboxStatusChart";
+import { DashboardTopCampaignsChart } from "@/components/dashboard/DashboardTopCampaignsChart";
+import { DashboardCallingSummaryChart } from "@/components/dashboard/DashboardCallingSummaryChart";
+import { DashboardWebsiteTrendChart } from "@/components/dashboard/DashboardWebsiteTrendChart";
+import { DashboardSlaByAdvisorChart } from "@/components/dashboard/DashboardSlaByAdvisorChart";
+import { DashboardSalesByBotChart } from "@/components/dashboard/DashboardSalesByBotChart";
+import { DashboardConversationCategoriesChart } from "@/components/dashboard/DashboardConversationCategoriesChart";
 import { DashboardOperationalStatus } from "@/components/dashboard/DashboardOperationalStatus";
 import { DashboardQuickActions } from "@/components/dashboard/DashboardQuickActions";
 import { useT } from "@/i18n/context";
 
 export default function DashboardPageRoute() {
   const t = useT();
-  const salesRange = useMemo(() => dateRangeFromDays(30), []);
+  const metricsRange = useMemo(() => dateRangeFromDays(30), []);
 
   const { data: usage, isLoading: usageLoading, error: usageError } = useMetrics();
   const {
@@ -36,7 +46,7 @@ export default function DashboardPageRoute() {
     data: sales,
     isLoading: salesLoading,
     error: salesError,
-  } = useSalesMetrics(salesRange);
+  } = useSalesMetrics(metricsRange);
   const {
     data: leads,
     isLoading: leadsLoading,
@@ -45,10 +55,32 @@ export default function DashboardPageRoute() {
   const {
     data: inboxSla,
     isLoading: slaLoading,
+    error: slaError,
   } = useInboxSlaMetrics();
+  const {
+    data: calling,
+    isLoading: callingLoading,
+    error: callingError,
+  } = useCallingMetrics(metricsRange);
+  const {
+    data: website,
+    isLoading: websiteLoading,
+    error: websiteError,
+  } = useWebsiteMetrics(metricsRange);
+  const {
+    data: categories,
+    isLoading: categoriesLoading,
+    error: categoriesError,
+  } = useConversationCategoryMetrics(metricsRange.from, metricsRange.to);
 
   const kpiLoading =
-    usageLoading || marketingLoading || salesLoading || leadsLoading;
+    usageLoading ||
+    marketingLoading ||
+    salesLoading ||
+    leadsLoading ||
+    slaLoading ||
+    callingLoading ||
+    websiteLoading;
   const controlLoading = usageLoading || marketingLoading || slaLoading;
 
   return (
@@ -82,6 +114,9 @@ export default function DashboardPageRoute() {
         marketing={marketing}
         sales={sales}
         leads={leads}
+        inboxSla={inboxSla}
+        calling={calling}
+        website={website}
         isLoading={kpiLoading}
       />
 
@@ -103,11 +138,46 @@ export default function DashboardPageRoute() {
               isLoading={salesLoading}
               error={salesError}
             />
+            <DashboardInboxStatusChart
+              marketing={marketing}
+              isLoading={marketingLoading}
+              error={marketingError}
+            />
+            <DashboardTopCampaignsChart
+              marketing={marketing}
+              isLoading={marketingLoading}
+              error={marketingError}
+            />
+            <DashboardCallingSummaryChart
+              calling={calling}
+              isLoading={callingLoading}
+              error={callingError}
+            />
+            <DashboardWebsiteTrendChart
+              website={website}
+              isLoading={websiteLoading}
+              error={websiteError}
+            />
+            <DashboardSlaByAdvisorChart
+              inboxSla={inboxSla}
+              isLoading={slaLoading}
+              error={slaError}
+            />
+            <DashboardConversationCategoriesChart
+              categories={categories}
+              isLoading={categoriesLoading}
+              error={categoriesError}
+            />
           </div>
           <DashboardLeadFunnelChart
             leads={leads}
             isLoading={leadsLoading}
             error={leadsError}
+          />
+          <DashboardSalesByBotChart
+            sales={sales}
+            isLoading={salesLoading}
+            error={salesError}
           />
         </div>
 
@@ -124,18 +194,20 @@ export default function DashboardPageRoute() {
               <h2 className="section-header-title">{t("dashboard.dataScopeTitle")}</h2>
             </div>
             <div className="p-4 sm:p-5">
-            <ul className="space-y-2 text-xs text-muted">
-              <li>{t("dashboard.dataScopeSales")}</li>
-              <li>{t("dashboard.dataScopeUsage")}</li>
-              <li>{t("dashboard.dataScopeMarketing")}</li>
-            </ul>
-            <Link
-              href="/metrics"
-              className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline"
-            >
-              {t("dashboard.viewDetail")}
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
+              <ul className="space-y-2 text-xs text-muted">
+                <li>{t("dashboard.dataScopeSales")}</li>
+                <li>{t("dashboard.dataScopeUsage")}</li>
+                <li>{t("dashboard.dataScopeMarketing")}</li>
+                <li>{t("dashboard.dataScopeCalling")}</li>
+                <li>{t("dashboard.dataScopeWebsite")}</li>
+              </ul>
+              <Link
+                href="/metrics"
+                className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline"
+              >
+                {t("dashboard.viewDetail")}
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
             </div>
           </div>
         </div>

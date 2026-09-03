@@ -10,6 +10,7 @@ import { TermsAcceptanceSync } from "@/components/legal/TermsAcceptanceSync";
 import { OnboardingGate } from "@/components/onboarding/OnboardingGate";
 import { HelpCenterMount } from "@/components/help-center/HelpCenterMount";
 import { NotificationsMount } from "@/components/notifications/NotificationsMount";
+import { UnreadMessagesProvider } from "@/components/notifications/UnreadMessagesProvider";
 import { ConversationRealtimeProvider } from "@/components/realtime/ConversationRealtimeProvider";
 import { SoftphoneProvider } from "@/components/contact-center/SoftphoneProvider";
 import { SoftphoneUIProvider } from "@/components/contact-center/SoftphoneUIProvider";
@@ -21,6 +22,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <SidebarProvider>
         <DashboardAuthGuard>
           <ConversationRealtimeProvider>
+            <UnreadMessagesProvider>
             <SoftphoneProvider>
             <SoftphoneUIProvider>
             <div className="flex h-screen overflow-x-clip">
@@ -47,6 +49,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
             </SoftphoneUIProvider>
             </SoftphoneProvider>
+            </UnreadMessagesProvider>
           </ConversationRealtimeProvider>
         </DashboardAuthGuard>
       </SidebarProvider>

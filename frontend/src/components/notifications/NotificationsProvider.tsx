@@ -12,6 +12,7 @@ import {
 import { subscribeRealtimeEvents } from "@/lib/notifications/bridge";
 import { conversationHref, conversationLabel } from "@/lib/notifications/conversation-link";
 import { loadNotifications, saveNotifications } from "@/lib/notifications/storage";
+import { useTenantRole } from "@/hooks/useTenantRole";
 import { useT } from "@/i18n/context";
 import type { AppNotification } from "@/types/notifications";
 
@@ -37,6 +38,7 @@ function truncate(text: string, max = 120): string {
 
 export function NotificationsProvider({ children }: { children: ReactNode }) {
   const t = useT();
+  const { isAdvisor } = useTenantRole();
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
@@ -67,7 +69,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
           type: "message",
           title: t("notifications.types.message", { name: label }),
           body: truncate(event.message.content || t("notifications.emptyBody")),
-          href: conversationHref(event.conversation),
+          href: conversationHref(event.conversation, { advisorMode: isAdvisor }),
           conversationId: event.conversationId,
           createdAt: event.message.timestamp,
           read: false,
@@ -82,14 +84,14 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
           type: "handoff",
           title: t("notifications.types.handoff", { name: label }),
           body: t("notifications.handoffBody"),
-          href: conversationHref(event.conversation),
+          href: conversationHref(event.conversation, { advisorMode: isAdvisor }),
           conversationId: event.conversation.conversationId,
           createdAt: event.conversation.handoffAt ?? new Date().toISOString(),
           read: false,
         });
       }
     });
-  }, [addNotification, t]);
+  }, [addNotification, isAdvisor, t]);
 
   const open = useCallback(() => setIsOpen(true), []);
   const close = useCallback(() => setIsOpen(false), []);

@@ -6,14 +6,14 @@ import { NotificationsProvider } from "@/components/notifications/NotificationsP
 import { useTenantRole } from "@/hooks/useTenantRole";
 
 export function NotificationsMount({ children }: { children: ReactNode }) {
-  const { isMember, loading } = useTenantRole();
+  const { isAdmin, loading } = useTenantRole();
 
   if (loading) return <>{children}</>;
 
   return (
     <NotificationsProvider>
       {children}
-      {isMember ? <NotificationsPanel /> : null}
+      {!isAdmin ? <NotificationsPanel /> : null}
     </NotificationsProvider>
   );
 }

@@ -59,6 +59,7 @@ import {
 import { useClearTenantContext, useAssumeSubaccount, useResellerSubaccounts } from "@/hooks/useReseller";
 import { useAuthSession } from "@/hooks/useAuthSession";
 import { ThemeSwitcherCompact } from "@/components/theme/ThemeSwitcherCompact";
+import { useUnreadMessages } from "@/components/notifications/UnreadMessagesProvider";
 
 type NavItem = {
   href: string;
@@ -253,16 +254,32 @@ function filterNavItem(item: NavItem, tenant: Tenant | undefined): NavItem | nul
   return item;
 }
 
+function NavBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <span className="ml-auto flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-danger px-1.5 text-[10px] font-semibold text-white">
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+}
+
+function inboxBadgeCount(href: string, totalUnread: number): number {
+  if (href === "/conversations" || href === "/inbox") return totalUnread;
+  return 0;
+}
+
 function NavPrimaryLink({
   item,
   active,
   collapsed,
   onNavigate,
+  badgeCount = 0,
 }: {
   item: NavItem;
   active: boolean;
   collapsed: boolean;
   onNavigate?: () => void;
+  badgeCount?: number;
 }) {
   const t = useT();
   const Icon = item.icon;
@@ -276,12 +293,21 @@ function NavPrimaryLink({
       aria-label={label}
       className={cn(
         "flex items-center rounded-xl py-2.5 text-sm transition-all duration-150",
-        collapsed ? "justify-center px-2" : "gap-3 px-3",
+        collapsed ? "relative justify-center px-2" : "gap-3 px-3",
         active ? "nav-item-active" : "nav-item-idle"
       )}
     >
       <Icon className="nav-icon" />
-      {!collapsed ? <span className="truncate">{label}</span> : null}
+      {!collapsed ? (
+        <>
+          <span className="truncate">{label}</span>
+          <NavBadge count={badgeCount} />
+        </>
+      ) : badgeCount > 0 ? (
+        <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[9px] font-semibold text-white">
+          {badgeCount > 9 ? "9+" : badgeCount}
+        </span>
+      ) : null}
     </Link>
   );
 }
@@ -290,10 +316,12 @@ function NavSubLink({
   item,
   active,
   onNavigate,
+  badgeCount = 0,
 }: {
   item: NavItem;
   active: boolean;
   onNavigate?: () => void;
+  badgeCount?: number;
 }) {
   const t = useT();
   const Icon = item.icon;
@@ -308,6 +336,7 @@ function NavSubLink({
     >
       <Icon className="nav-sub-icon" />
       <span className="min-w-0 flex-1 truncate">{label}</span>
+      <NavBadge count={badgeCount} />
     </Link>
   );
 }
@@ -317,11 +346,13 @@ function NavItemGroupSection({
   pathname,
   searchParams,
   onNavigate,
+  totalUnread,
 }: {
   item: NavItem & { items: NavItem[] };
   pathname: string;
   searchParams: URLSearchParams;
   onNavigate?: () => void;
+  totalUnread: number;
 }) {
   const t = useT();
   const Icon = item.icon;
@@ -363,6 +394,7 @@ function NavItemGroupSection({
               item={child}
               active={isNavItemActive(pathname, searchParams, child.href)}
               onNavigate={onNavigate}
+              badgeCount={inboxBadgeCount(child.href, totalUnread)}
             />
           ))}
         </div>
@@ -375,7 +407,8 @@ function renderCategoryNavItem(
   item: NavItem,
   pathname: string,
   searchParams: URLSearchParams,
-  onNavigate?: () => void
+  onNavigate?: () => void,
+  totalUnread = 0
 ) {
   if (item.items?.length) {
     return (
@@ -385,6 +418,7 @@ function renderCategoryNavItem(
         pathname={pathname}
         searchParams={searchParams}
         onNavigate={onNavigate}
+        totalUnread={totalUnread}
       />
     );
   }
@@ -395,6 +429,7 @@ function renderCategoryNavItem(
       item={item}
       active={isNavItemActive(pathname, searchParams, item.href)}
       onNavigate={onNavigate}
+      badgeCount={inboxBadgeCount(item.href, totalUnread)}
     />
   );
 }
@@ -479,6 +514,7 @@ function CollapsedCategoryFlyout({
   open,
   onOpenChange,
   onNavigate,
+  totalUnread,
 }: {
   category: NavCategory;
   pathname: string;
@@ -486,6 +522,7 @@ function CollapsedCategoryFlyout({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onNavigate?: () => void;
+  totalUnread: number;
 }) {
   const t = useT();
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -530,6 +567,7 @@ function CollapsedCategoryFlyout({
                       onOpenChange(false);
                       onNavigate?.();
                     }}
+                    badgeCount={inboxBadgeCount(child.href, totalUnread)}
                   />
                 ))}
               </div>
@@ -542,6 +580,7 @@ function CollapsedCategoryFlyout({
                   onOpenChange(false);
                   onNavigate?.();
                 }}
+                badgeCount={inboxBadgeCount(item.href, totalUnread)}
               />
             )
           )}
@@ -559,6 +598,7 @@ function NavCategorySection({
   searchParams,
   onToggle,
   onNavigate,
+  totalUnread,
 }: {
   category: NavCategory;
   isOpen: boolean;
@@ -567,6 +607,7 @@ function NavCategorySection({
   searchParams: URLSearchParams;
   onToggle: () => void;
   onNavigate?: () => void;
+  totalUnread: number;
 }) {
   const t = useT();
   const Icon = category.icon;
@@ -598,7 +639,7 @@ function NavCategorySection({
       >
         <div className="nav-sub-list space-y-0.5 pb-1">
           {category.items.map((item) =>
-            renderCategoryNavItem(item, pathname, searchParams, onNavigate)
+            renderCategoryNavItem(item, pathname, searchParams, onNavigate, totalUnread)
           )}
         </div>
       </div>
@@ -646,6 +687,7 @@ function SidebarNav({
   const searchParams = useSearchParams();
   const router = useRouter();
   const t = useT();
+  const { totalUnread } = useUnreadMessages();
   const [openCategories, setOpenCategories] = useState<Set<string>>(() =>
     getActiveCategoryIds(pathname, searchParams, navCategories)
   );
@@ -700,6 +742,7 @@ function SidebarNav({
                 active={pathname.startsWith(item.href)}
                 collapsed={collapsed}
                 onNavigate={onNavigate}
+                badgeCount={inboxBadgeCount(item.href, totalUnread)}
               />
             ))}
           </div>
@@ -720,6 +763,7 @@ function SidebarNav({
                 active={isNavItemActive(pathname, searchParams, item.href)}
                 collapsed={collapsed}
                 onNavigate={onNavigate}
+                badgeCount={inboxBadgeCount(item.href, totalUnread)}
               />
             );
           }
@@ -734,6 +778,7 @@ function SidebarNav({
                 open={openFlyoutId === category.id}
                 onOpenChange={(nextOpen) => setOpenFlyoutId(nextOpen ? category.id : null)}
                 onNavigate={onNavigate}
+                totalUnread={totalUnread}
               />
             );
           }
@@ -748,6 +793,7 @@ function SidebarNav({
               searchParams={searchParams}
               onToggle={() => toggleCategory(category.id)}
               onNavigate={onNavigate}
+              totalUnread={totalUnread}
             />
           );
         })}

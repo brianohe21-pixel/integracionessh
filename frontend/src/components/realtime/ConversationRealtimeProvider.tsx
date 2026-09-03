@@ -51,16 +51,6 @@ function appendMessage(
   return [...messages, message];
 }
 
-function notifyHandoff(conversation: Conversation) {
-  if (typeof window === "undefined" || !document.hidden) return;
-  if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
-
-  const label = conversation.contactName ?? conversation.phoneNumber ?? conversation.conversationId;
-  new Notification("Nueva conversación asignada", {
-    body: `${label} requiere atención humana`,
-  });
-}
-
 function ConversationRealtimeInner({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const [connected, setConnected] = useState(false);
@@ -112,10 +102,6 @@ function ConversationRealtimeInner({ children }: { children: React.ReactNode }) 
             return;
           }
 
-          if (parsed.type === "conversation.handoff") {
-            notifyHandoff(parsed.conversation);
-          }
-
           queryClient.setQueriesData<InfiniteData<ConversationsListResponse>>(
             { queryKey: ["conversations", "list"] },
             (current) => mergeConversationInList(current, parsed.conversation)
@@ -144,10 +130,6 @@ function ConversationRealtimeInner({ children }: { children: React.ReactNode }) 
         reconnectDelayRef.current = Math.min(reconnectDelayRef.current * 2, MAX_RECONNECT_MS);
         void connect();
       }, reconnectDelayRef.current);
-    }
-
-    if (typeof Notification !== "undefined" && Notification.permission === "default") {
-      void Notification.requestPermission();
     }
 
     void connect();

@@ -49,6 +49,7 @@ import { ConversationHeaderMenu } from "@/components/conversations/ConversationH
 import { ChannelAvatar } from "@/components/conversations/conversation-ui";
 import { AdvisorCopilotPanel } from "@/components/conversations/AdvisorCopilotPanel";
 import { QuotationDrawer } from "@/components/conversations/QuotationDrawer";
+import { useUnreadMessages } from "@/components/notifications/UnreadMessagesProvider";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useInboxSlaSettings } from "@/hooks/useInboxSla";
 import { useWhatsAppRisk } from "@/hooks/useWhatsAppRisk";
@@ -124,6 +125,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     [inboxSlaSettings]
   );
   const { user: currentUser } = useCurrentUser();
+  const { getUnreadCount, setActiveConversationId, markConversationRead } = useUnreadMessages();
 
   useEffect(() => {
     const assignment = searchParams.get("assignment");
@@ -211,7 +213,9 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   const filteredConversations = conversations.filter((conv) => {
     if (!matchesSearchQuery(conv, searchQuery)) return false;
     if (advisorMode && listTab === "queue") return true;
-    if (listTab === "unread") return conv.workflowStatus === "new";
+    if (listTab === "unread") {
+      return getUnreadCount(conv.conversationId) > 0 || conv.workflowStatus === "new";
+    }
     if (listTab === "mine") return (conv.handoffMode ?? "bot") === "human";
     if (listTab === "sla_breached") {
       return conversationSlaStatuses.get(conv.conversationId) === "breached";
@@ -219,7 +223,9 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     return true;
   });
 
-  const unreadCount = conversations.filter((c) => c.workflowStatus === "new").length;
+  const unreadCount = conversations.filter(
+    (c) => getUnreadCount(c.conversationId) > 0 || c.workflowStatus === "new"
+  ).length;
   const slaBreachedCount = conversations.filter(
     (c) => conversationSlaStatuses.get(c.conversationId) === "breached"
   ).length;
@@ -301,6 +307,35 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   useEffect(() => {
     setCallPermissionFeedback(null);
   }, [selectedId]);
+
+  useEffect(() => {
+    setActiveConversationId(selectedId);
+  }, [selectedId, setActiveConversationId]);
+
+  useEffect(() => {
+    if (!selectedId || !selectedConversation) return;
+    markConversationRead(
+      selectedId,
+      selectedConversation.botId,
+      selectedConversation.workflowStatus
+    );
+  }, [
+    selectedId,
+    selectedConversation?.conversationId,
+    selectedConversation?.workflowStatus,
+    markConversationRead,
+  ]);
+
+  useEffect(() => {
+    const phone = searchParams.get("phone");
+    const botId = searchParams.get("botId");
+    if (!phone || selectedId) return;
+    const match = conversations.find(
+      (conv) =>
+        conv.phoneNumber === phone && (!botId || conv.botId === botId)
+    );
+    if (match) setSelectedId(match.conversationId);
+  }, [conversations, searchParams, selectedId]);
 
   function channelLabel(channel?: Channel): string {
     if (channel === "instagram") return t("conversations.channelInstagram");
