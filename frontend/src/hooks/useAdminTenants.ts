@@ -19,11 +19,15 @@ export function useAdminUpdateTenant() {
       tenantId: string;
       plan?: TenantPlan;
       status?: "active" | "suspended";
+      law2300Exempt?: boolean;
       resellerConfig?: Partial<ResellerConfig>;
     }) =>
       api.put<Tenant>(`/tenants/${input.tenantId}`, {
         ...(input.plan !== undefined ? { plan: input.plan } : {}),
         ...(input.status !== undefined ? { status: input.status } : {}),
+        ...(input.law2300Exempt !== undefined
+          ? { law2300Exempt: input.law2300Exempt }
+          : {}),
         ...(input.resellerConfig !== undefined
           ? { resellerConfig: input.resellerConfig }
           : {}),

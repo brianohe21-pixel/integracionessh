@@ -1,4 +1,5 @@
 import type { SQSEvent, SQSRecord } from "aws-lambda";
+import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
 import {
   incrementBulkJobProgress,
@@ -10,8 +11,11 @@ import { sendTemplateMessage, getWhatsAppAccessToken } from "../../lib/whatsapp/
 import { applyCoexistenceSendThrottle } from "../../lib/whatsapp/coexistence/throughput.js";
 import { sendSmsFromTemplate } from "../../lib/sms/send-outbound.js";
 import type { BulkSendSQSBody } from "../../types/index.js";
+import { evaluateLaw2300ForTenant } from "../../lib/compliance/law2300-tenant.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
+const BULK_QUEUE_URL = process.env.BULK_SQS_QUEUE_URL ?? "";
+const sqs = new SQSClient({});
 
 export async function handler(event: SQSEvent): Promise<void> {
   for (const record of event.Records) {
@@ -30,6 +34,26 @@ async function processRecord(record: SQSRecord): Promise<void> {
   }
 
   const { jobId, tenantId, botId, templateName, language, to, components, channel = "whatsapp" } = body;
+
+  const law2300 = await evaluateLaw2300ForTenant(tenantId);
+  if (!law2300.allowed) {
+    const secondsUntilWindow = law2300.nextWindowAt
+      ? Math.max(1, Math.floor((law2300.nextWindowAt.getTime() - Date.now()) / 1000))
+      : 900;
+    const delaySeconds = Math.min(900, secondsUntilWindow);
+    if (BULK_QUEUE_URL) {
+      await sqs.send(
+        new SendMessageCommand({
+          QueueUrl: BULK_QUEUE_URL,
+          MessageBody: record.body,
+          MessageGroupId: jobId,
+          MessageDeduplicationId: `${jobId}-${to}-${delaySeconds}-${Date.now()}`.slice(0, 128),
+          DelaySeconds: delaySeconds,
+        })
+      );
+    }
+    return;
+  }
 
   try {
     const bot = await getBot(tenantId, botId);

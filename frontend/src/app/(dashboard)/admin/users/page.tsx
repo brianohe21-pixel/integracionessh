@@ -171,6 +171,7 @@ export default function AdminUsersPage() {
     updates: {
       plan?: TenantPlan;
       status?: "active" | "suspended";
+      law2300Exempt?: boolean;
       resellerConfig?: Partial<Tenant["resellerConfig"]>;
     }
   ) {
@@ -307,6 +308,7 @@ export default function AdminUsersPage() {
                     <th className="px-4 py-3 font-medium">{t("admin.users.plan")}</th>
                     <th className="px-4 py-3 font-medium">{t("admin.users.tenantStatus")}</th>
                     <th className="px-4 py-3 font-medium">{t("admin.users.subscription")}</th>
+                    <th className="px-4 py-3 font-medium">{t("admin.users.law2300")}</th>
                     <th className="px-4 py-3 font-medium">{t("admin.users.periodEnd")}</th>
                     <th className="px-4 py-3 font-medium">{t("common.date")}</th>
                   </tr>
@@ -378,6 +380,22 @@ export default function AdminUsersPage() {
                         <span className="block text-xs text-muted">
                           {tenantPlanLabel(tenant.plan)}
                         </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <label className="inline-flex items-center gap-2 text-sm text-secondary">
+                          <input
+                            type="checkbox"
+                            checked={tenant.law2300Exempt ?? false}
+                            disabled={updateTenant.isPending}
+                            onChange={(e) =>
+                              void handleTenantUpdate(tenant, {
+                                law2300Exempt: e.target.checked,
+                              })
+                            }
+                            className="rounded border-default"
+                          />
+                          <span>{t("admin.users.law2300Exempt")}</span>
+                        </label>
                       </td>
                       <td className="px-4 py-3 text-secondary">
                         {tenant.currentPeriodEnd

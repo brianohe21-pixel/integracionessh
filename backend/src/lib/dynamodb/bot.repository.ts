@@ -86,11 +86,20 @@ export async function updateBot(
 
   const payload = { ...updates, updatedAt: new Date().toISOString() };
 
-  if (updates.phoneNumberId) {
-    payload.phoneNumberId = updates.phoneNumberId;
-    setExpressions.push("#GSI1PK = :gsi1pk");
-    expressionAttributeNames["#GSI1PK"] = "GSI1PK";
-    expressionAttributeValues[":gsi1pk"] = `PHONE#${updates.phoneNumberId}`;
+  if (updates.phoneNumberId !== undefined) {
+    if (updates.phoneNumberId.trim()) {
+      payload.phoneNumberId = updates.phoneNumberId;
+      setExpressions.push("#GSI1PK = :gsi1pk", "#GSI1SK = :gsi1sk");
+      expressionAttributeNames["#GSI1PK"] = "GSI1PK";
+      expressionAttributeNames["#GSI1SK"] = "GSI1SK";
+      expressionAttributeValues[":gsi1pk"] = `PHONE#${updates.phoneNumberId}`;
+      expressionAttributeValues[":gsi1sk"] = `BOT#${botId}`;
+    } else {
+      payload.phoneNumberId = "";
+      removeExpressions.push("#GSI1PK", "#GSI1SK");
+      expressionAttributeNames["#GSI1PK"] = "GSI1PK";
+      expressionAttributeNames["#GSI1SK"] = "GSI1SK";
+    }
   }
 
   Object.entries(payload).forEach(([key, value]) => {

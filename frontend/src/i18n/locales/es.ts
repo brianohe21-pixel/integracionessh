@@ -2735,6 +2735,8 @@ export const es = {
       periodEnd: "Vigencia",
       tenantStatus: "Estado cuenta",
       subscription: "Suscripción",
+      law2300: "Ley 2300",
+      law2300Exempt: "Omitir restricción",
       enabled: "Activo",
       disabled: "Deshabilitado",
       role: "Rol",

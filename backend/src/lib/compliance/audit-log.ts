@@ -6,7 +6,9 @@ export type ComplianceAction =
   | "marketing_blocked"
   | "consent_updated"
   | "suppressed"
-  | "unsuppressed";
+  | "unsuppressed"
+  | "law2300_blocked"
+  | "law2300_deferred";
 
 export async function writeComplianceLog(params: {
   tenantId: string;

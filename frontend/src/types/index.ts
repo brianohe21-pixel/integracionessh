@@ -206,6 +206,7 @@ export interface Tenant {
   branding?: TenantBranding;
   inboxSla?: InboxSlaSettings;
   websiteAnalytics?: WebsiteAnalyticsSettings;
+  law2300Exempt?: boolean;
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   subscriptionStatus?: SubscriptionStatus;

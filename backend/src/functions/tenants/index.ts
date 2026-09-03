@@ -70,6 +70,7 @@ import {
 import { syncReportSchedule } from "../../lib/reports/report-schedule.js";
 import { sendScheduledReport } from "../../lib/reports/send-scheduled-report.js";
 import { getTenantWhatsAppRiskByBot } from "../../lib/whatsapp/tenant-risk.js";
+import { getLaw2300StatusForTenant } from "../../lib/compliance/law2300-tenant.js";
 import { addCustomDomainToCognitoClient } from "../../lib/cognito/custom-domain-callbacks.js";
 import { handleProviderCredentialRoutes } from "./provider-credentials.routes.js";
 import { handleMemberRoutes } from "./members.routes.js";
@@ -89,6 +90,7 @@ const UpdateTenantSchema = z.object({
   name: z.string().min(1).max(128).optional(),
   plan: z.enum(["free", "starter", "pro", "scale", "reseller"]).optional(),
   status: z.enum(["active", "suspended"]).optional(),
+  law2300Exempt: z.boolean().optional(),
   resellerConfig: z
     .object({
       maxSubaccounts: z.number().int().min(1).max(10_000).optional(),
@@ -520,6 +522,11 @@ export async function handler(
       return ok(risk);
     }
 
+    if (method === "GET" && rawPath.endsWith("/tenants/me/law2300")) {
+      const status = await getLaw2300StatusForTenant(auth.tenantId);
+      return ok(status);
+    }
+
     if (method === "PATCH" && event.rawPath?.endsWith("/onboarding")) {
       await ensureTenant(auth.tenantId, auth.email, auth.name);
       const body = JSON.parse(event.body ?? "{}");
@@ -676,6 +683,7 @@ export async function handler(
         delete updates.plan;
         delete updates.status;
         delete updates.resellerConfig;
+        delete updates.law2300Exempt;
       }
 
       if (auth.role === "admin" && updates.resellerConfig !== undefined) {

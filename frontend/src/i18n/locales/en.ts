@@ -2733,6 +2733,8 @@ export const en: Messages = {
       periodEnd: "Valid until",
       tenantStatus: "Account status",
       subscription: "Subscription",
+      law2300: "Law 2300",
+      law2300Exempt: "Skip restriction",
       enabled: "Active",
       disabled: "Disabled",
       role: "Role",

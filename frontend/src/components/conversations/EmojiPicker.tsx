@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 
 type Props = {
   onInsert: (emoji: string) => void;
+  triggerClassName?: string;
 };
 
 type PickerPosition = {
@@ -33,7 +34,7 @@ const CATEGORY_LABEL_KEYS: Record<EmojiCategoryId, `conversations.emojiCategory$
   symbols: "conversations.emojiCategorySymbols",
 };
 
-export function EmojiPicker({ onInsert }: Props) {
+export function EmojiPicker({ onInsert, triggerClassName }: Props) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -179,7 +180,7 @@ export function EmojiPicker({ onInsert }: Props) {
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         className={cn(
-          "conversations-compose-action",
+          triggerClassName ?? "conversations-compose-action",
           open && "bg-surface-elevated text-primary"
         )}
         aria-label={t("conversations.emojiPickerLabel")}

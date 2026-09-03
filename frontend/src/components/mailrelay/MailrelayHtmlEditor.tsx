@@ -17,6 +17,7 @@ import Editor, {
   Separator,
   Toolbar,
 } from "react-simple-wysiwyg";
+import { EmojiPicker } from "@/components/conversations/EmojiPicker";
 import { insertIntoContentEditable } from "@/lib/text-insert";
 import { cn } from "@/lib/utils";
 
@@ -40,19 +41,21 @@ export const MailrelayHtmlEditor = forwardRef<MailrelayHtmlEditorHandle, Mailrel
       setMounted(true);
     }, []);
 
+    function insertAtCursor(text: string) {
+      const editable = containerRef.current?.querySelector("[contenteditable]") as HTMLElement | null;
+      if (!editable) {
+        onChange(value.trim() ? `${value} ${text}` : text);
+        return;
+      }
+      if (insertIntoContentEditable(editable, text)) {
+        onChange(editable.innerHTML);
+      } else {
+        onChange(value.trim() ? `${value} ${text}` : text);
+      }
+    }
+
     useImperativeHandle(ref, () => ({
-      insertAtCursor(text: string) {
-        const editable = containerRef.current?.querySelector("[contenteditable]") as HTMLElement | null;
-        if (!editable) {
-          onChange(value.trim() ? `${value} ${text}` : text);
-          return;
-        }
-        if (insertIntoContentEditable(editable, text)) {
-          onChange(editable.innerHTML);
-        } else {
-          onChange(value.trim() ? `${value} ${text}` : text);
-        }
-      },
+      insertAtCursor,
     }));
 
     if (!mounted) {
@@ -90,6 +93,8 @@ export const MailrelayHtmlEditor = forwardRef<MailrelayHtmlEditorHandle, Mailrel
             <Separator />
             <BtnLink />
             <BtnClearFormatting />
+            <Separator />
+            <EmojiPicker onInsert={insertAtCursor} triggerClassName="rsw-btn" />
             <Separator />
             <HtmlButton />
           </Toolbar>

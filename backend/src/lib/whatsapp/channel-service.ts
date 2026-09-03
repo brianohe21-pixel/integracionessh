@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto";
+import { deleteWabaLookup } from "../dynamodb/bot-lookup.repository.js";
 import { getBot, updateBot } from "../dynamodb/bot.repository.js";
 import {
   getWhatsAppAccountByWabaId,
@@ -9,6 +10,7 @@ import {
   createWhatsAppChannel,
   getWhatsAppChannel,
   getWhatsAppChannelByPhoneNumberId,
+  listWhatsAppChannels,
   updateWhatsAppChannel,
 } from "../dynamodb/whatsapp-channel.repository.js";
 import { assertCanAddWhatsAppChannel } from "../billing/assert-plan.js";
@@ -334,4 +336,66 @@ export async function registerWhatsAppChannelPhone(params: {
   }
 
   return { success: result.success };
+}
+
+async function clearBotLegacyWhatsAppFields(
+  tenantId: string,
+  botId: string
+): Promise<void> {
+  const bot = await getBot(tenantId, botId);
+  if (!bot) return;
+
+  if (bot.whatsappBusinessAccountId?.trim()) {
+    await deleteWabaLookup(bot.whatsappBusinessAccountId);
+  }
+
+  await updateBot(tenantId, botId, {
+    phoneNumberId: "",
+    whatsappBusinessAccountId: "",
+    whatsappOnboardingMode: undefined,
+    isOnBizApp: undefined,
+    platformType: undefined,
+    whatsappSyncStatus: undefined,
+    whatsappDisconnectedAt: undefined,
+    whatsappDisconnectionReason: undefined,
+  });
+}
+
+export async function syncBotAfterChannelDelete(params: {
+  tenantId: string;
+  botId: string;
+  deletedChannel: WhatsAppChannel;
+}): Promise<void> {
+  const bot = await getBot(params.tenantId, params.botId);
+  if (!bot) return;
+
+  const shouldSync =
+    params.deletedChannel.isDefault ||
+    bot.phoneNumberId === params.deletedChannel.phoneNumberId;
+  if (!shouldSync) return;
+
+  const remaining = (await listWhatsAppChannels(params.tenantId, params.botId)).filter(
+    (channel) => channel.status !== "disconnected"
+  );
+
+  if (remaining.length === 0) {
+    await clearBotLegacyWhatsAppFields(params.tenantId, params.botId);
+    return;
+  }
+
+  const nextDefault = remaining.find((channel) => channel.isDefault) ?? remaining[0];
+  if (!nextDefault) return;
+
+  if (!nextDefault.isDefault) {
+    await updateWhatsAppChannel(params.tenantId, params.botId, nextDefault.channelId, {
+      isDefault: true,
+    });
+    await syncBotLegacyFields(params.tenantId, params.botId, {
+      ...nextDefault,
+      isDefault: true,
+    });
+    return;
+  }
+
+  await syncBotLegacyFields(params.tenantId, params.botId, nextDefault);
 }

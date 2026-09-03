@@ -187,6 +187,7 @@ export interface Tenant {
   inboxSla?: InboxSlaSettings;
   metricsReportSchedule?: MetricsReportSchedule;
   websiteAnalytics?: WebsiteAnalyticsSettings;
+  law2300Exempt?: boolean;
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   subscriptionStatus?: SubscriptionStatus;

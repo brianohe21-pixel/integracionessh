@@ -17,6 +17,7 @@ import { ensureTenant } from "../../lib/dynamodb/tenant.repository.js";
 import { assertBulkRecipients } from "../../lib/billing/assert-plan.js";
 import { incrementBulkRecipients } from "../../lib/dynamodb/usage.repository.js";
 import { checkMarketingRecipients } from "../../lib/compliance/recipient-policy.js";
+import { evaluateLaw2300ForTenant } from "../../lib/compliance/law2300-tenant.js";
 import { normalizePhoneWithCountryCode } from "../../lib/phone/normalize.js";
 import { ok, created, badRequest, notFound, unprocessableEntity, handleError } from "../../lib/http.js";
 import type { BulkSendSQSBody } from "../../types/index.js";
@@ -173,6 +174,14 @@ export async function handler(
         if (filteredRecipients.length === 0) {
           return unprocessableEntity("No recipients eligible for marketing send", { blocked });
         }
+      }
+
+      const law2300 = await evaluateLaw2300ForTenant(auth.tenantId);
+      if (!law2300.allowed) {
+        return unprocessableEntity("Sending blocked by Colombian Law 2300 schedule", {
+          reason: law2300.reason,
+          nextWindowAt: law2300.nextWindowAt?.toISOString(),
+        });
       }
 
       const newJobId = randomUUID();

@@ -7,6 +7,7 @@ import {
   clearCampaignNextBatchAt,
 } from "../dynamodb/campaign.repository.js";
 import { checkMarketingRecipients } from "../compliance/recipient-policy.js";
+import { deferCampaignDispatchForLaw2300 } from "../compliance/law2300-campaign.js";
 import type { Campaign, CampaignSQSBody } from "../../types/index.js";
 import type { PendingRecipient as RepoPendingRecipient } from "../dynamodb/campaign.repository.js";
 
@@ -143,6 +144,15 @@ export async function dispatchCampaignBatch(
     return null;
   }
 
+  const canDispatch = await deferCampaignDispatchForLaw2300(
+    tenantId,
+    campaignId,
+    batchVersion
+  );
+  if (!canDispatch) {
+    return { dispatched: 0, hasMorePending: true, batchIndex: campaign.currentBatch ?? 0 };
+  }
+
   const batchSize = campaign.batchConfig?.size ?? 5000;
   const fetchLimit = campaign.batchConfig ? batchSize + 1 : batchSize;
   const pending = await listPendingRecipients(tenantId, campaignId, fetchLimit);
@@ -200,6 +210,9 @@ export async function startCampaignDispatch(
     await dispatchCampaignBatch(tenantId, campaignId, 1, actorUserId);
     return;
   }
+
+  const canDispatch = await deferCampaignDispatchForLaw2300(tenantId, campaignId, 1);
+  if (!canDispatch) return;
 
   const pending = await listPendingRecipients(tenantId, campaignId, 5000);
   const eligible = await filterPendingForMarketing(tenantId, pending, requireOptIn, actorUserId);

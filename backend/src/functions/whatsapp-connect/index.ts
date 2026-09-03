@@ -14,6 +14,7 @@ import {
   connectWhatsAppChannelCoexistence,
   connectWhatsAppChannelManual,
   registerWhatsAppChannelPhone,
+  syncBotAfterChannelDelete,
 } from "../../lib/whatsapp/channel-service.js";
 import {
   deleteWhatsAppChannel,
@@ -267,6 +268,11 @@ async function handleDeleteChannel(
   if (!existing) return notFound("Channel not found");
 
   await deleteWhatsAppChannel(auth.tenantId, botId, channelId);
+  await syncBotAfterChannelDelete({
+    tenantId: auth.tenantId,
+    botId,
+    deletedChannel: existing,
+  });
   return noContent();
 }
 

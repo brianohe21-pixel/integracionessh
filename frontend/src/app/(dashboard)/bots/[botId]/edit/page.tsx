@@ -38,7 +38,7 @@ export default function EditBotPage() {
   });
   const defaultWhatsAppChannel =
     whatsappChannels.find((channel) => channel.isDefault) ?? whatsappChannels[0];
-  const whatsappPhoneNumberId = defaultWhatsAppChannel?.phoneNumberId ?? bot?.phoneNumberId;
+  const whatsappPhoneNumberId = defaultWhatsAppChannel?.phoneNumberId;
   const whatsappConnected = Boolean(whatsappPhoneNumberId?.trim());
 
   const tabParam = searchParams.get("tab");
