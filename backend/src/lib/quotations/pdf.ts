@@ -22,6 +22,51 @@ function truncateText(text: string, max: number): string {
   return `${text.slice(0, max - 3)}...`;
 }
 
+const PDF_TEXT_REPLACEMENTS: Record<string, string> = {
+  "\u2018": "'",
+  "\u2019": "'",
+  "\u201C": '"',
+  "\u201D": '"',
+  "\u2013": "-",
+  "\u2014": "-",
+  "\u2026": "...",
+  "\u202F": " ",
+  "\u2009": " ",
+  "\u2002": " ",
+  "\u2003": " ",
+  "\u00A0": " ",
+};
+
+export function sanitizePdfText(text: string): string {
+  let output = "";
+  for (const char of text.normalize("NFKC")) {
+    const replacement = PDF_TEXT_REPLACEMENTS[char];
+    if (replacement) {
+      output += replacement;
+      continue;
+    }
+
+    const code = char.codePointAt(0)!;
+    if (code === 9 || code === 10 || code === 13) {
+      output += " ";
+      continue;
+    }
+    if (code >= 0x20 && code <= 0x7e) {
+      output += char;
+      continue;
+    }
+    if (code >= 0xa0 && code <= 0xff) {
+      output += char;
+    }
+  }
+
+  return output.replace(/\s+/g, " ").trim();
+}
+
+function pdfText(text: string): string {
+  return sanitizePdfText(text);
+}
+
 export function buildQuotationNumber(quotationId: string): string {
   const date = new Date();
   const ymd = [
@@ -97,7 +142,7 @@ export async function renderQuotationPdf(params: {
     }
   }
 
-  page.drawText(branding.brandName, {
+  page.drawText(pdfText(branding.brandName), {
     x: margin + 90,
     y: y - 10,
     size: 18,
@@ -111,7 +156,7 @@ export async function renderQuotationPdf(params: {
     font: fontBold,
     color: rgb(0.2, 0.2, 0.2),
   });
-  page.drawText(quotation.number, {
+  page.drawText(pdfText(quotation.number), {
     x: 420,
     y: y - 22,
     size: 10,
@@ -129,13 +174,13 @@ export async function renderQuotationPdf(params: {
   y -= 24;
 
   const clientName = quotation.contactName ?? quotation.contactPhone;
-  page.drawText(`Cliente: ${truncateText(clientName, 60)}`, {
+  page.drawText(pdfText(`Cliente: ${truncateText(clientName, 60)}`), {
     x: margin,
     y,
     size: 10,
     font,
   });
-  page.drawText(`Fecha: ${formatDate(quotation.sentAt)}`, {
+  page.drawText(pdfText(`Fecha: ${formatDate(quotation.sentAt)}`), {
     x: 360,
     y,
     size: 10,
@@ -143,7 +188,7 @@ export async function renderQuotationPdf(params: {
   });
   y -= 16;
   if (quotation.validUntil) {
-    page.drawText(`Válida hasta: ${formatDate(quotation.validUntil)}`, {
+    page.drawText(pdfText(`Válida hasta: ${formatDate(quotation.validUntil)}`), {
       x: 360,
       y,
       size: 10,
@@ -173,15 +218,15 @@ export async function renderQuotationPdf(params: {
 
   for (const item of quotation.items) {
     if (y < 120) break;
-    page.drawText(truncateText(item.description, 48), {
+    page.drawText(pdfText(truncateText(item.description, 48)), {
       x: colDesc,
       y,
       size: 9,
       font,
     });
     page.drawText(String(item.quantity), { x: colQty, y, size: 9, font });
-    page.drawText(formatCop(item.unitPriceInCents), { x: colUnit, y, size: 9, font });
-    page.drawText(formatCop(item.totalInCents), { x: colTotal, y, size: 9, font });
+    page.drawText(pdfText(formatCop(item.unitPriceInCents)), { x: colUnit, y, size: 9, font });
+    page.drawText(pdfText(formatCop(item.totalInCents)), { x: colTotal, y, size: 9, font });
     y -= 14;
   }
 
@@ -194,7 +239,7 @@ export async function renderQuotationPdf(params: {
   });
   y -= 18;
   page.drawText("Subtotal:", { x: 400, y, size: 10, font });
-  page.drawText(formatCop(quotation.subtotalInCents), {
+  page.drawText(pdfText(formatCop(quotation.subtotalInCents)), {
     x: colTotal,
     y,
     size: 10,
@@ -202,7 +247,7 @@ export async function renderQuotationPdf(params: {
   });
   y -= 16;
   page.drawText("Total:", { x: 400, y, size: 12, font: fontBold, color: primary });
-  page.drawText(formatCop(quotation.totalInCents), {
+  page.drawText(pdfText(formatCop(quotation.totalInCents)), {
     x: colTotal,
     y,
     size: 12,
@@ -216,7 +261,7 @@ export async function renderQuotationPdf(params: {
     y -= 14;
     const lines = wrapText(quotation.notes.trim(), 90);
     for (const line of lines.slice(0, 6)) {
-      page.drawText(line, { x: margin, y, size: 9, font });
+      page.drawText(pdfText(line), { x: margin, y, size: 9, font });
       y -= 12;
     }
   }
