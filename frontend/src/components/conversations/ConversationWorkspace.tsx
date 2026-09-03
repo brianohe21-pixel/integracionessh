@@ -51,6 +51,8 @@ import { ConversationHeaderMenu } from "@/components/conversations/ConversationH
 import { ChannelAvatar } from "@/components/conversations/conversation-ui";
 import { AdvisorCopilotPanel } from "@/components/conversations/AdvisorCopilotPanel";
 import { QuotationDrawer } from "@/components/conversations/QuotationDrawer";
+import { BookingDrawer } from "@/components/conversations/BookingDrawer";
+import { useConversationBookingSlots } from "@/hooks/useConversationBookings";
 import { useUnreadMessages } from "@/components/notifications/UnreadMessagesProvider";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useInboxSlaSettings } from "@/hooks/useInboxSla";
@@ -101,6 +103,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   const [assignmentFilter, setAssignmentFilter] = useState<"" | "unassigned">("");
   const [draft, setDraft] = useState("");
   const [showQuotationDrawer, setShowQuotationDrawer] = useState(false);
+  const [showBookingDrawer, setShowBookingDrawer] = useState(false);
   const [showHandoffModal, setShowHandoffModal] = useState(false);
   const [showBulkReassignModal, setShowBulkReassignModal] = useState(false);
   const [showResolveModal, setShowResolveModal] = useState(false);
@@ -391,6 +394,12 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     isHuman &&
     !selectedConversation.assignedAdvisorId;
   const canCompose = isHuman && !!selectedConversation && !needsClaim && !isImapReadOnly;
+  const { data: bookingAvailability } = useConversationBookingSlots(
+    selectedConversation?.conversationId ?? "",
+    selectedConversation?.botId ?? "",
+    Boolean(canCompose && selectedConversation)
+  );
+  const showBookingAction = bookingAvailability?.enabled === true;
   const assignedAdvisor = advisors?.find(
     (a) => a.advisorId === selectedConversation?.assignedAdvisorId
   );
@@ -886,6 +895,8 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                       conversation={selectedConversation}
                       macroPlaceholderContext={macroPlaceholderContext}
                       onOpenQuotation={() => setShowQuotationDrawer(true)}
+                      onOpenBooking={() => setShowBookingDrawer(true)}
+                      showBooking={showBookingAction}
                     />
                   </div>
                 </div>
@@ -903,6 +914,8 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
           channelLabel={channelLabel}
           locale={locale}
           onCreateQuotation={() => setShowQuotationDrawer(true)}
+          onCreateBooking={() => setShowBookingDrawer(true)}
+          showBooking={showBookingAction}
           whatsappRisk={whatsappRisk}
         />
       )}
@@ -1044,6 +1057,14 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
           </div>
         </div>
       )}
+      {showBookingDrawer && selectedConversation ? (
+        <BookingDrawer
+          conversation={selectedConversation}
+          open={showBookingDrawer}
+          onClose={() => setShowBookingDrawer(false)}
+        />
+      ) : null}
+
       {showQuotationDrawer && selectedConversation ? (
         <QuotationDrawer
           conversation={selectedConversation}

@@ -61,6 +61,10 @@ import {
   createAndSendQuotation,
   listConversationQuotations,
 } from "../../lib/quotations/quotations.service.js";
+import {
+  createAndSendConversationBooking,
+  listConversationBookingSlots,
+} from "../../lib/conversations/conversation-bookings.service.js";
 import { publishRealtimeEventSafe } from "../../lib/realtime/publish.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
@@ -166,6 +170,12 @@ const CreateQuotationSchema = z.object({
   validUntil: z.string().datetime().optional(),
   paymentDescription: z.string().min(1).max(200).optional(),
   includePaymentLink: z.boolean().optional().default(true),
+});
+
+const CreateConversationBookingSchema = z.object({
+  botId: z.string().uuid(),
+  startAt: z.string().datetime(),
+  notes: z.string().max(500).optional(),
 });
 
 const ClearConversationSchema = z.object({
@@ -875,6 +885,98 @@ export async function handler(
       );
 
       return created(message);
+    }
+
+    if (method === "GET" && subPath === "booking-slots") {
+      const botId = params.botId;
+      if (!botId || !z.string().uuid().safeParse(botId).success) {
+        return badRequest("botId query parameter is required");
+      }
+
+      const conversation = await findConversationById(auth.tenantId, conversationId);
+      if (!conversation || conversation.botId !== botId) {
+        return notFound("Conversation not found");
+      }
+
+      await assertCanAccessConversation(auth, conversation);
+
+      const from = params.from;
+      const to = params.to;
+      const slots = await listConversationBookingSlots({
+        tenantId: auth.tenantId,
+        botId,
+        ...(from ? { from } : {}),
+        ...(to ? { to } : {}),
+        environment: ENVIRONMENT,
+      });
+      return ok(slots);
+    }
+
+    if (method === "POST" && subPath === "bookings") {
+      const body = JSON.parse(event.body ?? "{}");
+      const parsed = CreateConversationBookingSchema.safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const conversation = await findConversationById(auth.tenantId, conversationId);
+      if (!conversation || conversation.botId !== parsed.data.botId) {
+        return notFound("Conversation not found");
+      }
+
+      await assertCanAccessConversation(auth, conversation);
+
+      if ((conversation.handoffMode ?? "bot") !== "human") {
+        return badRequest("Conversation is not in human handoff mode");
+      }
+
+      const bot = await getBot(auth.tenantId, parsed.data.botId);
+      if (!bot) return notFound("Bot not found");
+
+      const tenant = await getTenant(auth.tenantId);
+      if (tenant) {
+        try {
+          await assertCanSendMessages(tenant);
+        } catch (err) {
+          if (err instanceof PlanLimitError) {
+            return forbidden(err.message);
+          }
+          throw err;
+        }
+      }
+
+      let createdByAdvisorId: string | undefined;
+      if (auth.role === "advisor") {
+        const advisor = await resolveAdvisorRecord(auth);
+        createdByAdvisorId = advisor?.advisorId;
+      }
+
+      const result = await createAndSendConversationBooking({
+        tenantId: auth.tenantId,
+        botId: parsed.data.botId,
+        bot,
+        conversation,
+        environment: ENVIRONMENT,
+        startAt: parsed.data.startAt,
+        ...(parsed.data.notes ? { notes: parsed.data.notes } : {}),
+        ...(createdByAdvisorId ? { createdByAdvisorId } : {}),
+      });
+
+      await incrementMessages(auth.tenantId);
+
+      const now = new Date().toISOString();
+      const convPatch: Parameters<typeof updateConversation>[3] = {
+        workflowStatus: "open",
+      };
+      if (!conversation.firstHumanResponseAt) {
+        convPatch.firstHumanResponseAt = now;
+      }
+      await updateConversation(
+        auth.tenantId,
+        parsed.data.botId,
+        conversationId,
+        convPatch
+      );
+
+      return created(result);
     }
 
     if (method === "GET" && subPath === "quotations") {

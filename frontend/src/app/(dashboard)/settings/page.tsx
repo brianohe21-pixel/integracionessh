@@ -93,7 +93,7 @@ export default function SettingsPage() {
   ];
 
   return (
-    <DashboardPage maxWidth="5xl">
+    <DashboardPage>
       <PageHeader title={t("settings.title")} subtitle={t("settings.subtitle")} />
 
       <div className="mb-6 space-y-2">

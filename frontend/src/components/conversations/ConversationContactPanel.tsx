@@ -32,6 +32,8 @@ type Props = {
   channelLabel: (channel?: Channel) => string;
   locale: string;
   onCreateQuotation?: () => void;
+  onCreateBooking?: () => void;
+  showBooking?: boolean;
   whatsappRisk?: WhatsAppRiskResponse;
 };
 
@@ -42,6 +44,8 @@ export function ConversationContactPanel({
   channelLabel,
   locale,
   onCreateQuotation,
+  onCreateBooking,
+  showBooking = false,
   whatsappRisk,
 }: Props) {
   const t = useT();
@@ -177,6 +181,8 @@ export function ConversationContactPanel({
             activeLead={activeLead}
             locale={locale}
             onCreateQuotation={onCreateQuotation}
+            onCreateBooking={onCreateBooking}
+            showBooking={showBooking}
           />
         ) : panelTab === "contact" ? (
           <>
