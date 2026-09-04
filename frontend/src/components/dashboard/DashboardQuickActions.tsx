@@ -23,11 +23,11 @@ export function DashboardQuickActions() {
 
   return (
     <div className="content-card overflow-hidden">
-      <div className="section-header">
-        <h2 className="section-header-title">{t("dashboard.quickActionsTitle")}</h2>
-        <p className="section-header-subtitle">{t("dashboard.quickActionsSubtitle")}</p>
+      <div className="px-4 pb-3 pt-4 sm:px-6 sm:pt-6">
+        <h2 className="text-sm font-semibold text-primary">{t("dashboard.quickActionsTitle")}</h2>
+        <p className="mt-0.5 text-xs text-muted">{t("dashboard.quickActionsSubtitle")}</p>
       </div>
-      <div className="grid grid-cols-2 gap-2 p-4 sm:grid-cols-3 sm:p-5 lg:grid-cols-1">
+      <div className="grid grid-cols-2 gap-2 px-4 pb-4 sm:grid-cols-3 sm:px-5 sm:pb-5 lg:grid-cols-1">
         {QUICK_ACTIONS.map((action) => {
           const Icon = action.icon;
           return (

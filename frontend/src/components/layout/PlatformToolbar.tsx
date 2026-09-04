@@ -3,6 +3,7 @@
 import { SoftphoneToolbarTrigger } from "@/components/contact-center/SoftphoneToolbarTrigger";
 import { HelpCenterToolbarTrigger } from "@/components/help-center/HelpCenterToolbarTrigger";
 import { NotificationsDesktopTrigger } from "@/components/notifications/NotificationsDesktopTrigger";
+import { UserMenuTrigger } from "@/components/layout/UserMenuTrigger";
 
 export function PlatformToolbar() {
   return (
@@ -12,6 +13,7 @@ export function PlatformToolbar() {
       <HelpCenterToolbarTrigger />
       <NotificationsDesktopTrigger />
       <SoftphoneToolbarTrigger />
+      <UserMenuTrigger />
     </div>
   );
 }

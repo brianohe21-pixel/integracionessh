@@ -5,8 +5,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { signOutUser } from "@/lib/auth-session";
+import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/context";
 import {
@@ -20,7 +19,6 @@ import {
   LayoutDashboard,
   BarChart3,
   Settings,
-  LogOut,
   Megaphone,
   Mail,
   Zap,
@@ -31,7 +29,6 @@ import {
   CreditCard,
   KeyRound,
   X,
-  User,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
@@ -49,7 +46,6 @@ import {
 import { useAdminRole } from "@/hooks/useAdminRole";
 import { useTenantRole } from "@/hooks/useTenantRole";
 import { useTenantBranding } from "@/hooks/useTenantBranding";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useSidebar } from "@/components/layout/SidebarContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, getTenantContext } from "@/lib/api";
@@ -212,13 +208,6 @@ const adminNavCategories: NavCategory[] = [
     ],
   },
 ];
-
-function roleLabel(role: string, t: ReturnType<typeof useT>): string {
-  if (role === "admin") return t("nav.roleAdmin");
-  if (role === "advisor") return t("nav.roleAdvisor");
-  if (role === "supervisor") return t("nav.roleSupervisor");
-  return t("nav.roleAdministrator");
-}
 
 function isNavItemActive(
   pathname: string,
@@ -709,7 +698,6 @@ function SidebarNav({
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const router = useRouter();
   const t = useT();
   const { totalUnread } = useUnreadMessages();
   const [openCategories, setOpenCategories] = useState<Set<string>>(() =>
@@ -738,15 +726,6 @@ function SidebarNav({
     setOpenCategories((prev) => {
       return prev.has(id) ? new Set() : new Set([id]);
     });
-  }
-
-  async function handleSignOut() {
-    onNavigate?.();
-    try {
-      await signOutUser();
-    } finally {
-      router.push("/login");
-    }
   }
 
   return (
@@ -852,67 +831,6 @@ function SidebarNav({
             >
               {t("legal.footerPrivacy")}
             </a>
-          </div>
-        ) : null}
-        <button
-          type="button"
-          onClick={() => void handleSignOut()}
-          title={collapsed ? t("nav.signOut") : undefined}
-          className={cn(
-            "group flex w-full items-center rounded-xl py-2.5 text-[13px] font-medium text-[var(--sidebar-text-muted)] transition-colors hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text-secondary)]",
-            collapsed ? "justify-center px-2" : "gap-3 px-3"
-          )}
-        >
-          <LogOut className="nav-icon" />
-          {!collapsed ? t("nav.signOut") : null}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function SidebarUserProfile({ collapsed }: { collapsed: boolean }) {
-  const t = useT();
-  const { user, loading } = useCurrentUser();
-  const { role } = useTenantRole();
-
-  const displayName = user?.name || user?.email;
-
-  return (
-    <div className={cn("shrink-0 border-t border-[var(--sidebar-border)] py-3", collapsed ? "px-2" : "px-3")}>
-      <div
-        className={cn(
-          "flex items-center rounded-xl",
-          collapsed ? "justify-center px-1 py-1" : "gap-2.5 px-1 py-1"
-        )}
-        title={collapsed && displayName ? displayName : undefined}
-      >
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sidebar-muted text-xs font-semibold text-[var(--sidebar-text-secondary)] ring-1 ring-[var(--sidebar-border)]">
-          {loading ? (
-            <User className="h-3.5 w-3.5 text-[var(--sidebar-text-muted)]" />
-          ) : (
-            (displayName?.charAt(0) ?? "?").toUpperCase()
-          )}
-        </div>
-        {!collapsed ? (
-          <div className="min-w-0 flex-1">
-            {loading ? (
-              <>
-                <div className="mb-1 h-3 w-20 animate-pulse rounded bg-sidebar-muted" />
-                <div className="h-2.5 w-14 animate-pulse rounded bg-sidebar-muted" />
-              </>
-            ) : displayName ? (
-              <>
-                <p className="truncate text-xs font-semibold text-[var(--sidebar-text)]">
-                  {displayName}
-                </p>
-                <p className="truncate text-[11px] text-[var(--sidebar-text-muted)]">
-                  {user?.email && user.email !== displayName
-                    ? user.email
-                    : roleLabel(role, t)}
-                </p>
-              </>
-            ) : null}
           </div>
         ) : null}
       </div>
@@ -1384,7 +1302,6 @@ export function Sidebar() {
             navCategories={filteredNavCategories}
             collapsed={isCollapsed}
           />
-          <SidebarUserProfile collapsed={isCollapsed} />
         </div>
       </aside>
 
@@ -1414,7 +1331,6 @@ export function Sidebar() {
           drawerOpen={isOpen}
           onNavigate={close}
         />
-        <SidebarUserProfile collapsed={isCollapsed} />
         </div>
       </aside>
     </>

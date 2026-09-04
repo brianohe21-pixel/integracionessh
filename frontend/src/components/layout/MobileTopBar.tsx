@@ -8,6 +8,7 @@ import { NotificationsMobileTrigger } from "@/components/notifications/Notificat
 import { useUnreadMessages } from "@/components/notifications/UnreadMessagesProvider";
 import { useT } from "@/i18n/context";
 import { useSidebar } from "@/components/layout/SidebarContext";
+import { UserMenuTrigger } from "@/components/layout/UserMenuTrigger";
 
 const ROUTE_LABEL_KEYS: Record<string, string> = {
   "/dashboard": "nav.dashboard",
@@ -82,6 +83,7 @@ export function MobileTopBar() {
         <HelpCenterToolbarTrigger />
         <NotificationsMobileTrigger />
         <SoftphoneMobileTrigger />
+        <UserMenuTrigger />
       </div>
     </header>
   );

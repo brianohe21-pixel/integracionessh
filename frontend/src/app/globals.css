@@ -10,7 +10,7 @@
   --surface: #ffffff;
   --surface-elevated: #ffffff;
   --surface-muted: #e8ecf4;
-  --canvas: #edf0f7;
+  --canvas: #f5f5f5;
   --sidebar: #ffffff;
   --sidebar-elevated: #f8fafc;
   --sidebar-muted: #f1f5f9;
@@ -746,8 +746,6 @@ textarea {
   flex-direction: column;
   gap: 0.25rem;
   padding: 1rem 1.25rem;
-  background: var(--card-header-gradient);
-  border-bottom: 1px solid var(--card-header-border);
 }
 
 @media (min-width: 640px) {
@@ -759,25 +757,20 @@ textarea {
 .section-header-title {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--card-header-title);
+  color: var(--text-primary);
 }
 
 .section-header-subtitle {
   font-size: 0.75rem;
-  color: var(--card-header-subtitle);
+  color: var(--text-muted);
 }
 
 .section-header a {
-  color: var(--card-header-link);
+  color: var(--accent);
 }
 
 .section-header a:hover {
-  color: var(--card-header-link-hover);
-}
-
-.card-header {
-  background: var(--card-header-gradient);
-  border-bottom: 1px solid var(--card-header-border);
+  color: var(--accent-hover);
 }
 
 .card-body {
@@ -795,8 +788,6 @@ textarea {
   align-items: center;
   gap: 0.75rem;
   padding: 1rem 1.25rem;
-  background: var(--card-header-gradient);
-  border-bottom: 1px solid var(--card-header-border);
 }
 
 @media (min-width: 640px) {
@@ -813,33 +804,30 @@ textarea {
   align-items: center;
   justify-content: center;
   border-radius: 0.5rem;
-  border: 1px solid var(--card-header-icon-border);
-  background: var(--card-header-icon-bg);
-  color: var(--card-header-link);
+  background: var(--accent-muted);
+  color: var(--accent);
 }
 
 .card-icon-header-title {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--card-header-title);
+  color: var(--text-primary);
 }
 
 .card-icon-header-subtitle {
   margin-top: 0.125rem;
   font-size: 0.75rem;
-  color: var(--card-header-subtitle);
+  color: var(--text-muted);
 }
 
 .card-header-chip {
-  border: 1px solid var(--card-header-icon-border);
-  background: var(--card-header-icon-bg);
-  color: var(--card-header-link);
+  background: var(--accent-muted);
+  color: var(--accent);
 }
 
 .card-header-surface {
-  border: 1px solid var(--card-header-icon-border);
-  background: var(--card-header-icon-bg);
-  color: var(--card-header-title);
+  background: var(--accent-muted);
+  color: var(--text-primary);
 }
 
 .nav-item-active {
@@ -1017,6 +1005,12 @@ textarea {
   border-radius: 0.75rem;
   background: var(--accent-muted);
   color: var(--accent);
+}
+
+.stat-icon-badge {
+  background: var(--text-primary);
+  color: var(--surface-elevated);
+  box-shadow: var(--shadow-sm);
 }
 
 .mailrelay-html-editor {

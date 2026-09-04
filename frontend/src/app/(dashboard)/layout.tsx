@@ -28,7 +28,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <SoftphoneUIProvider>
                     <div className="flex h-screen overflow-x-clip">
                       <TermsAcceptanceSync />
-                      <Sidebar />
+                      <div className="shrink-0 lg:p-4 lg:[&>aside]:h-[calc(100vh-2rem)] lg:[&>aside]:rounded-2xl lg:[&>aside]:shadow-lg">
+                        <Sidebar />
+                      </div>
                       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden platform-canvas-bg">
                         <HelpCenterMount>
                           <MobileTopBar />

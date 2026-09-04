@@ -40,7 +40,7 @@ export function DashboardOperationalStatus({
       key: "open",
       label: t("dashboard.opsInboxOpen"),
       value: formatNumber(inbox?.open ?? 0),
-      sub: t("dashboard.opsInboxPending", { count: inbox?.pending ?? 0 }),
+      sub: t("dashboard.opsInboxOpenSub"),
       icon: MessageSquare,
       href: "/conversations",
       alert: hasOpenInbox,
@@ -59,7 +59,9 @@ export function DashboardOperationalStatus({
             key: "sla-compliance",
             label: t("metrics.inboxSlaCompliance"),
             value: `${inboxSla?.complianceRate ?? 0}%`,
-            sub: formatElapsedDuration(inboxSla?.averageResponseSeconds ?? 0),
+            sub: t("dashboard.opsSlaAvgResponse", {
+              time: formatElapsedDuration(inboxSla?.averageResponseSeconds ?? 0),
+            }),
             icon: Clock,
             href: "/metrics",
             alert: false,
@@ -79,9 +81,9 @@ export function DashboardOperationalStatus({
 
   return (
     <div className="content-card overflow-hidden">
-      <div className="section-header">
-        <h2 className="section-header-title">{t("dashboard.opsTitle")}</h2>
-        <p className="section-header-subtitle">{t("dashboard.opsSubtitle")}</p>
+      <div className="px-4 pb-3 pt-4 sm:px-6 sm:pt-6">
+        <h2 className="text-sm font-semibold text-primary">{t("dashboard.opsTitle")}</h2>
+        <p className="mt-0.5 text-xs text-muted">{t("dashboard.opsSubtitle")}</p>
       </div>
       <div className="divide-y divide-subtle">
         {items.map((item) => {
