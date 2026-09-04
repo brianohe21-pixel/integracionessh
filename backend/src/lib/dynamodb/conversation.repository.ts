@@ -770,7 +770,12 @@ export async function upsertMessageReaction(params: {
     params.conversationId,
     params.targetExternalMessageId
   );
-  if (!record) return null;
+  if (!record) {
+    console.warn(
+      `Reaction target not found: conversationId=${params.conversationId} target=${params.targetExternalMessageId}`
+    );
+    return null;
+  }
 
   const reactions = mergeMessageReaction(record.message.reactions, params.reaction);
 
@@ -802,6 +807,43 @@ export async function upsertMessageReaction(params: {
   }
 
   return updatedMessage;
+}
+
+export async function updateMessageExternalIds(params: {
+  tenantId: string;
+  conversationId: string;
+  messageId: string;
+  externalMessageId: string;
+  whatsappMessageId?: string;
+}): Promise<void> {
+  const record = await findMessageRecordByExternalId(
+    params.tenantId,
+    params.conversationId,
+    params.messageId
+  );
+  if (!record) return;
+
+  const values: Record<string, unknown> = {
+    ":externalMessageId": params.externalMessageId,
+  };
+  let updateExpression = "SET externalMessageId = :externalMessageId";
+
+  if (params.whatsappMessageId) {
+    values[":whatsappMessageId"] = params.whatsappMessageId;
+    updateExpression += ", whatsappMessageId = :whatsappMessageId";
+  }
+
+  await docClient.send(
+    new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: {
+        PK: record.pk,
+        SK: record.sk,
+      },
+      UpdateExpression: updateExpression,
+      ExpressionAttributeValues: values,
+    })
+  );
 }
 
 export async function getAllConversationMessages(

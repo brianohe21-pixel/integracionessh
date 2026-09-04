@@ -867,7 +867,7 @@ export async function handler(
               timestamp: now,
             }
           : {
-              messageId: `adv-${randomUUID()}`,
+              messageId: outbound.externalMessageId ?? `adv-${randomUUID()}`,
               conversationId,
               tenantId: auth.tenantId,
               role: "advisor",

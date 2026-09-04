@@ -24,16 +24,16 @@ export function MessageReactions({ reactions, align }: Props) {
   return (
     <div
       className={cn(
-        "mt-1 flex flex-wrap gap-1",
+        "-mt-2 flex flex-wrap gap-1",
         align === "left" ? "justify-start" : "justify-end"
       )}
     >
       {grouped.map(({ emoji, count }) => (
         <span
           key={emoji}
-          className="inline-flex items-center gap-0.5 rounded-full border border-border/60 bg-surface px-1.5 py-0.5 text-xs shadow-sm"
+          className="inline-flex items-center gap-0.5 rounded-full border border-default bg-surface-elevated px-1.5 py-0.5 text-xs shadow-sm"
         >
-          <span className="emoji-text leading-none">{emoji}</span>
+          <span className="emoji-text text-sm leading-none">{emoji}</span>
           {count > 1 ? <span className="text-[10px] text-muted">{count}</span> : null}
         </span>
       ))}

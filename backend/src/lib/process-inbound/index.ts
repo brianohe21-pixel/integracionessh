@@ -785,17 +785,17 @@ export async function processInboundMessage(
   const aiMessageId = `ai-${Date.now()}-${randomUUID().slice(0, 8)}`;
   const aiTimestamp = new Date().toISOString();
 
-  const assistantMessage: Message = {
-    messageId: aiMessageId,
-    conversationId: conversation.conversationId,
-    tenantId,
-    role: "assistant",
-    content: outboundText,
-    channel,
-    timestamp: aiTimestamp,
-  };
-
   if (channel === "webchat") {
+    const assistantMessage: Message = {
+      messageId: aiMessageId,
+      conversationId: conversation.conversationId,
+      tenantId,
+      role: "assistant",
+      content: outboundText,
+      channel,
+      timestamp: aiTimestamp,
+    };
+    await addMessage(assistantMessage, botId);
     await sendChannelText(
       buildOutboundContext({
         tenantId,
@@ -808,8 +808,24 @@ export async function processInboundMessage(
       outboundText
     );
   } else {
+    const sendResult = await sendChannelText(outboundCtxBase(), outboundText);
+    const externalMessageId = sendResult.externalMessageId;
+    const assistantMessage: Message = {
+      messageId: externalMessageId ?? aiMessageId,
+      conversationId: conversation.conversationId,
+      tenantId,
+      role: "assistant",
+      content: outboundText,
+      channel,
+      timestamp: aiTimestamp,
+      ...(externalMessageId
+        ? {
+            externalMessageId,
+            ...(channel === "whatsapp" ? { whatsappMessageId: externalMessageId } : {}),
+          }
+        : {}),
+    };
     await addMessage(assistantMessage, botId);
-    await sendChannelText(outboundCtxBase(), outboundText);
   }
 
   await incrementMessages(tenantId);

@@ -56,7 +56,12 @@ function updateMessageReactions(
   message: Message
 ): Message[] {
   if (!messages) return messages ?? [];
-  const index = messages.findIndex((item) => item.messageId === message.messageId);
+  const index = messages.findIndex(
+    (item) =>
+      item.messageId === message.messageId ||
+      (!!message.whatsappMessageId && item.whatsappMessageId === message.whatsappMessageId) ||
+      (!!message.externalMessageId && item.externalMessageId === message.externalMessageId)
+  );
   if (index < 0) return messages;
   const next = [...messages];
   next[index] = { ...next[index], reactions: message.reactions };
@@ -117,7 +122,15 @@ function ConversationRealtimeInner({ children }: { children: React.ReactNode }) 
           if (parsed.type === "message.reaction.updated") {
             queryClient.setQueryData<Message[]>(
               ["conversation-messages", parsed.conversationId],
-              (current) => updateMessageReactions(current, parsed.message)
+              (current) => {
+                const updated = updateMessageReactions(current, parsed.message);
+                if (updated === current) {
+                  void queryClient.invalidateQueries({
+                    queryKey: ["conversation-messages", parsed.conversationId],
+                  });
+                }
+                return updated;
+              }
             );
             return;
           }
