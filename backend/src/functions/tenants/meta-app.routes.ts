@@ -9,7 +9,7 @@ import {
   saveTenantMetaAppCredential,
 } from "../../lib/integrations/meta-app-credentials.js";
 import { normalizeMetaAppPayload } from "../../lib/integrations/meta-app-credentials.validation.js";
-import { badRequest, forbidden, handleError, noContent, ok, parseJsonBody } from "../../lib/http.js";
+import { badRequest, forbidden, handleError, ok, parseJsonBody } from "../../lib/http.js";
 
 export async function handleMetaAppRoutes(
   event: APIGatewayProxyEventV2WithJWTAuthorizer,

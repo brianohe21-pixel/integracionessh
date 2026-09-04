@@ -172,7 +172,6 @@ async function handleConnectChannel(
     appId: credentials.appId,
     appSecret: credentials.appSecret,
     platformAppSecret: credentials.platformAppSecret,
-    metaAppId: credentials.appId,
     metaAppOwnerTenantId: credentials.metaAppOwnerTenantId,
     ...(parsed.data.label ? { label: parsed.data.label } : {}),
   });
@@ -214,7 +213,6 @@ async function handleConnectManualChannel(
     phoneNumberId: parsed.data.phoneNumberId,
     pin: parsed.data.pin,
     platformAppSecret: credentials.platformAppSecret,
-    metaAppId: credentials.appId,
     metaAppOwnerTenantId: credentials.metaAppOwnerTenantId,
     ...(parsed.data.label ? { label: parsed.data.label } : {}),
   });
@@ -377,7 +375,6 @@ async function handleConnect(
     appId: credentials.appId,
     appSecret: credentials.appSecret,
     platformAppSecret: credentials.platformAppSecret,
-    metaAppId: credentials.appId,
     metaAppOwnerTenantId: credentials.metaAppOwnerTenantId,
     ...(parsed.data.label ? { label: parsed.data.label } : {}),
   });
@@ -471,7 +468,6 @@ async function handleConnectManual(
     phoneNumberId: parsed.data.phoneNumberId,
     pin: parsed.data.pin,
     platformAppSecret: credentials.platformAppSecret,
-    metaAppId: credentials.appId,
     metaAppOwnerTenantId: credentials.metaAppOwnerTenantId,
     ...(parsed.data.label ? { label: parsed.data.label } : {}),
   });
