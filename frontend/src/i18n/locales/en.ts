@@ -2957,6 +2957,11 @@ export const en: Messages = {
       generatingCsv: "Generating CSV…",
       downloadError: "Could not generate CSV",
       emptyTenants: "No companies registered",
+      noTenantsMatch: "No companies match the filters",
+      searchPlaceholder: "Search by company, email, or ID…",
+      filterActivityAll: "All activity",
+      filterWithMessages: "With messages in period",
+      filterWithoutMessages: "Without messages in period",
     },
     support: {
       title: "Support tickets",

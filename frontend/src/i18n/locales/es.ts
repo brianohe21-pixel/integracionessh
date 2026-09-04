@@ -2959,6 +2959,11 @@ export const es = {
       generatingCsv: "Generando CSV…",
       downloadError: "No se pudo generar el CSV",
       emptyTenants: "No hay empresas registradas",
+      noTenantsMatch: "No hay empresas que coincidan con los filtros",
+      searchPlaceholder: "Buscar por empresa, correo o ID…",
+      filterActivityAll: "Toda actividad",
+      filterWithMessages: "Con mensajes en el periodo",
+      filterWithoutMessages: "Sin mensajes en el periodo",
     },
     support: {
       title: "Tickets de soporte",

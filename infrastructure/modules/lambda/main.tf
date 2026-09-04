@@ -268,6 +268,11 @@ locals {
         TABLE_NAME                    = var.dynamodb_table_name
         ENVIRONMENT                   = var.environment
         FRONTEND_URL                  = var.frontend_url
+        META_APP_ID                   = var.meta_app_id
+        META_APP_SECRET               = var.meta_app_secret
+        WHATSAPP_APP_SECRET           = var.whatsapp_app_secret != "" ? var.whatsapp_app_secret : var.meta_app_secret
+        WHATSAPP_VERIFY_TOKEN         = var.whatsapp_verify_token
+        META_EMBEDDED_SIGNUP_CONFIG_ID = var.meta_embedded_signup_config_id
         SES_FROM_EMAIL                = var.ses_from_email
         ADMIN_NOTIFICATION_EMAILS     = join(",", var.admin_notification_emails)
         SCHEDULER_ROLE_ARN            = var.scheduler_role_arn
@@ -488,11 +493,13 @@ locals {
       timeout     = 30
       memory      = 256
       environment = {
-        TABLE_NAME          = var.dynamodb_table_name
-        ENVIRONMENT         = var.environment
-        META_APP_ID         = var.meta_app_id
-        META_APP_SECRET     = var.meta_app_secret
-        WHATSAPP_APP_SECRET = var.whatsapp_app_secret != "" ? var.whatsapp_app_secret : var.meta_app_secret
+        TABLE_NAME                   = var.dynamodb_table_name
+        ENVIRONMENT                  = var.environment
+        META_APP_ID                  = var.meta_app_id
+        META_APP_SECRET              = var.meta_app_secret
+        WHATSAPP_APP_SECRET          = var.whatsapp_app_secret != "" ? var.whatsapp_app_secret : var.meta_app_secret
+        WHATSAPP_VERIFY_TOKEN        = var.whatsapp_verify_token
+        META_EMBEDDED_SIGNUP_CONFIG_ID = var.meta_embedded_signup_config_id
       }
     }
     instagram_connect = {

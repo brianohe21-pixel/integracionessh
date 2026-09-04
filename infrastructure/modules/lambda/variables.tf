@@ -181,6 +181,12 @@ variable "meta_app_secret" {
   description = "Meta App Secret for WhatsApp Embedded Signup token exchange"
 }
 
+variable "meta_embedded_signup_config_id" {
+  type        = string
+  default     = ""
+  description = "Meta Embedded Signup configuration ID for WhatsApp connect"
+}
+
 variable "whatsapp_app_secret" {
   type        = string
   default     = ""

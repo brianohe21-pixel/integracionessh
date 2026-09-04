@@ -226,6 +226,7 @@ module "lambda" {
   whatsapp_verify_token         = var.whatsapp_verify_token
   meta_app_id                   = var.meta_app_id
   meta_app_secret               = var.meta_app_secret
+  meta_embedded_signup_config_id = var.meta_embedded_signup_config_id
   whatsapp_app_secret           = var.whatsapp_app_secret
   lambda_zip_path               = local.lambda_zip_path_absolute
   stripe_secret_key             = var.stripe_secret_key
