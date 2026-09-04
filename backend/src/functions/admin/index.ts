@@ -10,6 +10,7 @@ import {
   putPlatformBillingConfig,
 } from "../../lib/dynamodb/platform-config.repository.js";
 import { buildAdminBillingOverview } from "../../lib/billing/admin-billing-overview.js";
+import { buildAdminSentMessagesExportCsv } from "../../lib/reports/admin-sent-messages-export-csv.js";
 import { getTenant, updateTenant, normalizeDomain } from "../../lib/dynamodb/tenant.repository.js";
 import { buildResellerConfigFromDefaults } from "../../lib/billing/activate-plan.js";
 import { addCustomDomainToCognitoClient } from "../../lib/cognito/custom-domain-callbacks.js";
@@ -120,6 +121,27 @@ export async function handler(
         typeof period === "string" && /^\d{4}-\d{2}$/.test(period) ? period : undefined
       );
       return ok(overview);
+    }
+
+    if (method === "GET" && path.endsWith("/admin/reports/messages/export")) {
+      const tenantId = event.queryStringParameters?.tenantId?.trim();
+      const periodParam = event.queryStringParameters?.period;
+      if (!tenantId) return badRequest("tenantId is required");
+      const period =
+        typeof periodParam === "string" && /^\d{4}-\d{2}$/.test(periodParam)
+          ? periodParam
+          : undefined;
+      const exportResult = await buildAdminSentMessagesExportCsv(tenantId, period);
+      if (!exportResult) return notFound("Tenant not found");
+      return {
+        statusCode: 200,
+        headers: {
+          "Content-Type": "text/csv; charset=utf-8",
+          "Content-Disposition": `attachment; filename="${exportResult.filename}"`,
+          "Access-Control-Allow-Origin": "*",
+        },
+        body: exportResult.content,
+      };
     }
 
     if (method === "GET" && path.endsWith("/admin/reseller-plan-defaults")) {

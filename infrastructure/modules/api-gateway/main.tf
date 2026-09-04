@@ -1014,6 +1014,13 @@ locals {
       function_arn = var.admin_function_arn
       protected    = true
     }
+    admin_reports_messages_export = {
+      route_key    = "GET /admin/reports/messages/export"
+      slug         = "admin"
+      invoke_arn   = var.admin_invoke_arn
+      function_arn = var.admin_function_arn
+      protected    = true
+    }
     admin_reseller_plan_defaults_get = {
       route_key    = "GET /admin/reseller-plan-defaults"
       slug         = "admin"

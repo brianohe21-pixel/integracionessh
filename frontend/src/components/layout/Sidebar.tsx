@@ -44,6 +44,7 @@ import {
   Hash,
   ClipboardList,
   Receipt,
+  FileSpreadsheet,
 } from "lucide-react";
 import { useAdminRole } from "@/hooks/useAdminRole";
 import { useTenantRole } from "@/hooks/useTenantRole";
@@ -205,6 +206,7 @@ const adminNavCategories: NavCategory[] = [
     items: [
       { href: "/admin/users", labelKey: "nav.adminUsers", icon: Users },
       { href: "/admin/billing", labelKey: "nav.adminBilling", icon: Receipt },
+      { href: "/admin/reports", labelKey: "nav.adminReports", icon: FileSpreadsheet },
       { href: "/admin/payments", labelKey: "nav.adminPayments", icon: CreditCard },
       { href: "/admin/support", labelKey: "nav.adminSupport", icon: LifeBuoy },
     ],

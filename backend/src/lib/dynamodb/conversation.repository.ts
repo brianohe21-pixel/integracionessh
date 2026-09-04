@@ -700,6 +700,50 @@ export async function getConversationMessages(
   return dedupeMessagesById(chronological);
 }
 
+export async function getAllConversationMessages(
+  tenantId: string,
+  conversationId: string
+): Promise<Message[]> {
+  const items: Message[] = [];
+  let lastKey: Record<string, unknown> | undefined;
+
+  do {
+    const result = await docClient.send(
+      new QueryCommand({
+        TableName: TABLE_NAME,
+        KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+        ExpressionAttributeValues: {
+          ":pk": `TENANT#${tenantId}#CONV#${conversationId}`,
+          ":sk": "MSG#",
+        },
+        ScanIndexForward: true,
+        ...(lastKey ? { ExclusiveStartKey: lastKey } : {}),
+        Limit: 100,
+      })
+    );
+
+    for (const item of result.Items ?? []) {
+      const { PK, SK, GSI1PK, GSI1SK, ttl, ...rest } = item;
+      items.push(rest as Message);
+    }
+
+    lastKey = result.LastEvaluatedKey;
+  } while (lastKey);
+
+  return dedupeMessagesById(items);
+}
+
+export async function listAllConversationsForTenant(tenantId: string): Promise<Conversation[]> {
+  const bots = await listBots(tenantId);
+  if (bots.length === 0) return [];
+
+  const pages = await Promise.all(
+    bots.map((bot) => queryAllConversationsByBot(tenantId, bot.botId))
+  );
+
+  return pages.flat();
+}
+
 function dedupeMessagesById(messages: Message[]): Message[] {
   const byMessageId = new Map<string, Message>();
   for (const msg of messages) {
