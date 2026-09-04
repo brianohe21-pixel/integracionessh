@@ -265,29 +265,29 @@ locals {
       timeout     = 60
       memory      = 256
       environment = {
-        TABLE_NAME                    = var.dynamodb_table_name
-        ENVIRONMENT                   = var.environment
-        FRONTEND_URL                  = var.frontend_url
-        META_APP_ID                   = var.meta_app_id
-        META_APP_SECRET               = var.meta_app_secret
-        WHATSAPP_APP_SECRET           = var.whatsapp_app_secret != "" ? var.whatsapp_app_secret : var.meta_app_secret
-        WHATSAPP_VERIFY_TOKEN         = var.whatsapp_verify_token
+        TABLE_NAME                     = var.dynamodb_table_name
+        ENVIRONMENT                    = var.environment
+        FRONTEND_URL                   = var.frontend_url
+        META_APP_ID                    = var.meta_app_id
+        META_APP_SECRET                = var.meta_app_secret
+        WHATSAPP_APP_SECRET            = var.whatsapp_app_secret != "" ? var.whatsapp_app_secret : var.meta_app_secret
+        WHATSAPP_VERIFY_TOKEN          = var.whatsapp_verify_token
         META_EMBEDDED_SIGNUP_CONFIG_ID = var.meta_embedded_signup_config_id
-        SES_FROM_EMAIL                = var.ses_from_email
-        ADMIN_NOTIFICATION_EMAILS     = join(",", var.admin_notification_emails)
-        SCHEDULER_ROLE_ARN            = var.scheduler_role_arn
-        REPORTS_FUNCTION_ARN          = local.reports_function_arn
-        COGNITO_USER_POOL_ID          = var.cognito_user_pool_id
-        COGNITO_CLIENT_ID             = var.cognito_client_id
-        COGNITO_HOSTED_UI_DOMAIN      = var.cognito_hosted_ui_domain
-        MEDIA_BUCKET                  = var.media_bucket_name
-        API_PUBLIC_URL                = var.api_public_url
-        GOOGLE_BUSINESS_CLIENT_ID     = var.google_business_client_id
-        GOOGLE_BUSINESS_CLIENT_SECRET = var.google_business_client_secret
-        GOOGLE_BUSINESS_REDIRECT_URI  = trimspace(var.api_public_url) != "" ? "${trimsuffix(trimspace(var.api_public_url), "/")}/public/integrations/google-business/oauth/callback" : ""
-        GOOGLE_CALENDAR_CLIENT_ID     = var.google_calendar_client_id
-        GOOGLE_CALENDAR_CLIENT_SECRET = var.google_calendar_client_secret
-        GOOGLE_CALENDAR_REDIRECT_URI  = local.google_calendar_redirect_uri
+        SES_FROM_EMAIL                 = var.ses_from_email
+        ADMIN_NOTIFICATION_EMAILS      = join(",", var.admin_notification_emails)
+        SCHEDULER_ROLE_ARN             = var.scheduler_role_arn
+        REPORTS_FUNCTION_ARN           = local.reports_function_arn
+        COGNITO_USER_POOL_ID           = var.cognito_user_pool_id
+        COGNITO_CLIENT_ID              = var.cognito_client_id
+        COGNITO_HOSTED_UI_DOMAIN       = var.cognito_hosted_ui_domain
+        MEDIA_BUCKET                   = var.media_bucket_name
+        API_PUBLIC_URL                 = var.api_public_url
+        GOOGLE_BUSINESS_CLIENT_ID      = var.google_business_client_id
+        GOOGLE_BUSINESS_CLIENT_SECRET  = var.google_business_client_secret
+        GOOGLE_BUSINESS_REDIRECT_URI   = trimspace(var.api_public_url) != "" ? "${trimsuffix(trimspace(var.api_public_url), "/")}/public/integrations/google-business/oauth/callback" : ""
+        GOOGLE_CALENDAR_CLIENT_ID      = var.google_calendar_client_id
+        GOOGLE_CALENDAR_CLIENT_SECRET  = var.google_calendar_client_secret
+        GOOGLE_CALENDAR_REDIRECT_URI   = local.google_calendar_redirect_uri
       }
     }
     reseller = {
@@ -493,12 +493,12 @@ locals {
       timeout     = 30
       memory      = 256
       environment = {
-        TABLE_NAME                   = var.dynamodb_table_name
-        ENVIRONMENT                  = var.environment
-        META_APP_ID                  = var.meta_app_id
-        META_APP_SECRET              = var.meta_app_secret
-        WHATSAPP_APP_SECRET          = var.whatsapp_app_secret != "" ? var.whatsapp_app_secret : var.meta_app_secret
-        WHATSAPP_VERIFY_TOKEN        = var.whatsapp_verify_token
+        TABLE_NAME                     = var.dynamodb_table_name
+        ENVIRONMENT                    = var.environment
+        META_APP_ID                    = var.meta_app_id
+        META_APP_SECRET                = var.meta_app_secret
+        WHATSAPP_APP_SECRET            = var.whatsapp_app_secret != "" ? var.whatsapp_app_secret : var.meta_app_secret
+        WHATSAPP_VERIFY_TOKEN          = var.whatsapp_verify_token
         META_EMBEDDED_SIGNUP_CONFIG_ID = var.meta_embedded_signup_config_id
       }
     }
