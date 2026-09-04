@@ -3,6 +3,11 @@ import { getPlatformBillingConfig } from "../dynamodb/platform-config.repository
 import { currentUsagePeriod, getMonthlyUsage } from "../dynamodb/usage.repository.js";
 import type { AdminBillingOverview } from "../../types/index.js";
 
+import {
+  resolveTenantPricePerMessageCents,
+  tenantUsesCustomMessagePrice,
+} from "./resolve-message-price.js";
+
 export async function buildAdminBillingOverview(
   period = currentUsagePeriod()
 ): Promise<AdminBillingOverview> {
@@ -11,7 +16,11 @@ export async function buildAdminBillingOverview(
   const rows = await Promise.all(
     tenants.map(async (tenant) => {
       const usage = await getMonthlyUsage(tenant.tenantId, period);
-      const estimatedMessageCostCents = usage.messagesCount * config.pricePerMessageCents;
+      const pricePerMessageCents = resolveTenantPricePerMessageCents(
+        tenant,
+        config.pricePerMessageCents
+      );
+      const estimatedMessageCostCents = usage.messagesCount * pricePerMessageCents;
 
       return {
         tenantId: tenant.tenantId,
@@ -21,6 +30,8 @@ export async function buildAdminBillingOverview(
         period,
         messagesCount: usage.messagesCount,
         bulkRecipientsCount: usage.bulkRecipientsCount,
+        pricePerMessageCents,
+        usesPlatformPrice: !tenantUsesCustomMessagePrice(tenant),
         estimatedMessageCostCents,
       };
     })

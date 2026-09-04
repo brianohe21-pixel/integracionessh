@@ -5,6 +5,7 @@ import {
   getTenant,
   ensureTenant,
   createTenant,
+  clearTenantPricePerMessage,
   updateTenant,
   deleteTenant,
   listTenants,
@@ -93,6 +94,7 @@ const UpdateTenantSchema = z.object({
   plan: z.enum(["free", "starter", "pro", "scale", "reseller"]).optional(),
   status: z.enum(["active", "suspended"]).optional(),
   law2300Exempt: z.boolean().optional(),
+  pricePerMessageCents: z.number().int().min(0).max(1_000_000_000).optional(),
   resellerConfig: z
     .object({
       maxSubaccounts: z.number().int().min(1).max(10_000).optional(),
@@ -692,6 +694,13 @@ export async function handler(
         delete updates.status;
         delete updates.resellerConfig;
         delete updates.law2300Exempt;
+        delete updates.pricePerMessageCents;
+      }
+
+      const rawBody = JSON.parse(event.body ?? "{}") as { pricePerMessageCents?: number | null };
+      if (auth.role === "admin" && rawBody.pricePerMessageCents === null) {
+        const cleared = await clearTenantPricePerMessage(resolvedId);
+        return ok(cleared);
       }
 
       if (auth.role === "admin" && updates.resellerConfig !== undefined) {

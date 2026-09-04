@@ -132,6 +132,8 @@ export interface AdminBillingOverviewRow {
   period: string;
   messagesCount: number;
   bulkRecipientsCount: number;
+  pricePerMessageCents: number;
+  usesPlatformPrice: boolean;
   estimatedMessageCostCents: number;
 }
 
@@ -240,6 +242,7 @@ export interface Tenant {
   subscriptionStatus?: SubscriptionStatus;
   currentPeriodEnd?: string;
   paymentProvider?: "stripe" | "wompi";
+  pricePerMessageCents?: number;
   onboardingCompletedAt?: string;
   onboardingSkippedAt?: string;
   onboardingTestConfirmedAt?: string;

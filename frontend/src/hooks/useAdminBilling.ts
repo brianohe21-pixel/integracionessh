@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { AdminBillingOverview, PlatformBillingConfig } from "@/types";
+import type { AdminBillingOverview, PlatformBillingConfig, Tenant } from "@/types";
 
 export function useAdminBillingConfig() {
   return useQuery({
@@ -27,5 +27,19 @@ export function useAdminBillingOverview() {
   return useQuery({
     queryKey: ["admin-billing-overview"],
     queryFn: () => api.get<AdminBillingOverview>("/admin/billing/overview"),
+  });
+}
+
+export function useUpdateTenantBillingPrice() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { tenantId: string; pricePerMessageCents: number | null }) =>
+      api.put<Tenant>(`/tenants/${input.tenantId}`, {
+        pricePerMessageCents: input.pricePerMessageCents,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-billing-overview"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-tenants"] });
+    },
   });
 }
