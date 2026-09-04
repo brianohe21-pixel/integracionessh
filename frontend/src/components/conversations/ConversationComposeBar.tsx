@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { FileText, Calendar, Loader2, Send } from "lucide-react";
+import { Loader2, Send } from "lucide-react";
 import { Textarea } from "@/components/ui/Input";
 import { EmojiPicker } from "@/components/conversations/EmojiPicker";
-import { MacroPicker } from "@/components/conversations/MacroPicker";
+import { ConversationComposeActionsMenu } from "@/components/conversations/ConversationComposeActionsMenu";
 import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 import type { MacroPlaceholderContext } from "@/lib/macros/resolve-placeholders";
@@ -22,6 +22,9 @@ type Props = {
   onOpenQuotation: () => void;
   onOpenBooking?: () => void;
   showBooking?: boolean;
+  showAttachment?: boolean;
+  onAttachFile?: (file: File) => void;
+  attaching?: boolean;
 };
 
 export function ConversationComposeBar({
@@ -34,6 +37,9 @@ export function ConversationComposeBar({
   onOpenQuotation,
   onOpenBooking,
   showBooking = false,
+  showAttachment = false,
+  onAttachFile,
+  attaching = false,
 }: Props) {
   const t = useT();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -112,34 +118,18 @@ export function ConversationComposeBar({
           {conversation ? <EmojiPicker onInsert={insertEmoji} /> : null}
 
           {conversation ? (
-            <MacroPicker
-              botId={conversation.botId}
-              placeholderContext={macroPlaceholderContext}
+            <ConversationComposeActionsMenu
+              conversation={conversation}
               draft={draft}
-              onInsert={onDraftChange}
+              macroPlaceholderContext={macroPlaceholderContext}
+              onDraftChange={onDraftChange}
+              onOpenQuotation={onOpenQuotation}
+              onOpenBooking={onOpenBooking}
+              showBooking={showBooking}
+              showAttachment={showAttachment}
+              onAttachFile={onAttachFile}
+              attaching={attaching}
             />
-          ) : null}
-
-          {conversation ? (
-            <button
-              type="button"
-              onClick={onOpenQuotation}
-              title={t("quotations.drawerTitle")}
-              className="conversations-compose-action"
-            >
-              <FileText className="h-4 w-4" />
-            </button>
-          ) : null}
-
-          {conversation && showBooking && onOpenBooking ? (
-            <button
-              type="button"
-              onClick={onOpenBooking}
-              title={t("conversations.bookMeetingTitle")}
-              className="conversations-compose-action"
-            >
-              <Calendar className="h-4 w-4" />
-            </button>
           ) : null}
 
           <p className="ml-auto hidden text-[11px] text-muted sm:block">

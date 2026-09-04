@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { CheckCheck } from "lucide-react";
 import { EmailMessageBubble } from "@/components/conversations/EmailMessageBubble";
-import { DocumentMessageBubble } from "@/components/conversations/DocumentMessageBubble";
+import { AttachmentMessageBubble } from "@/components/conversations/AttachmentMessageBubble";
 import { ConversationDateDivider } from "@/components/conversations/conversation-ui";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useLocale, useT } from "@/i18n/context";
@@ -69,7 +69,7 @@ function renderMessageBubble(params: {
         ) : msg.channel === "email" && isInbound ? (
           <EmailMessageBubble message={msg} botId={conversation.botId} />
         ) : isDocumentMessage(msg) ? (
-          <DocumentMessageBubble
+          <AttachmentMessageBubble
             message={msg}
             conversationId={conversation.conversationId}
             botId={conversation.botId}

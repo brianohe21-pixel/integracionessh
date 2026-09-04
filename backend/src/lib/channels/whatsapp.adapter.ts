@@ -1,6 +1,7 @@
 import {
   markMessageAsRead,
   sendDocumentMessage,
+  sendImageMessage,
   sendTextMessage,
   truncateWhatsAppText,
   uploadWhatsAppMedia,
@@ -8,7 +9,13 @@ import {
 import { normalizeInboundMessage } from "../whatsapp/inbound.js";
 import { assertWhatsAppOutboundAllowed } from "../whatsapp/outbound-guard.js";
 import type { WhatsAppInboundPayload, WhatsAppMessage } from "../../types/index.js";
-import type { ChannelAdapter, OutboundContext, OutboundDocument, OutboundResult } from "./types.js";
+import type {
+  ChannelAdapter,
+  OutboundContext,
+  OutboundDocument,
+  OutboundImage,
+  OutboundResult,
+} from "./types.js";
 
 export const whatsappAdapter: ChannelAdapter = {
   channel: "whatsapp",
@@ -63,6 +70,33 @@ export const whatsappAdapter: ChannelAdapter = {
       mediaId: uploaded.id,
       filename: doc.filename,
       ...(doc.caption ? { caption: doc.caption } : {}),
+    });
+    return { externalMessageId: result.messages?.[0]?.id };
+  },
+
+  async sendImage(ctx: OutboundContext, image: OutboundImage): Promise<OutboundResult> {
+    if (!ctx.phoneNumberId || !ctx.accessToken) {
+      throw new Error("WhatsApp outbound requires phoneNumberId and accessToken");
+    }
+    await assertWhatsAppOutboundAllowed({
+      tenantId: ctx.tenantId,
+      phoneNumberId: ctx.phoneNumberId,
+      kind: ctx.outboundKind ?? "service",
+      to: ctx.participantId,
+    });
+    const uploaded = await uploadWhatsAppMedia({
+      phoneNumberId: ctx.phoneNumberId,
+      accessToken: ctx.accessToken,
+      buffer: image.buffer,
+      mimeType: image.mimeType,
+      filename: image.filename,
+    });
+    const result = await sendImageMessage({
+      phoneNumberId: ctx.phoneNumberId,
+      to: ctx.participantId,
+      accessToken: ctx.accessToken,
+      mediaId: uploaded.id,
+      ...(image.caption ? { caption: image.caption } : {}),
     });
     return { externalMessageId: result.messages?.[0]?.id };
   },

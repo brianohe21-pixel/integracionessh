@@ -176,6 +176,14 @@ export interface SendDocumentMessageOptions {
   caption?: string;
 }
 
+export interface SendImageMessageOptions {
+  phoneNumberId: string;
+  to: string;
+  accessToken: string;
+  mediaId: string;
+  caption?: string;
+}
+
 export async function uploadWhatsAppMedia(
   options: UploadWhatsAppMediaOptions
 ): Promise<UploadWhatsAppMediaResponse> {
@@ -212,6 +220,37 @@ export async function sendDocumentMessage(
     document: {
       id: options.mediaId,
       ...(options.filename ? { filename: options.filename } : {}),
+      ...(options.caption ? { caption: truncateWhatsAppText(options.caption) } : {}),
+    },
+  };
+
+  const response = await fetch(`${GRAPH_API_URL}/${options.phoneNumberId}/messages`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${options.accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throwGraphApiError(response.status, error);
+  }
+
+  return response.json() as Promise<SendTextMessageResponse>;
+}
+
+export async function sendImageMessage(
+  options: SendImageMessageOptions
+): Promise<SendTextMessageResponse> {
+  const body: Record<string, unknown> = {
+    messaging_product: "whatsapp",
+    recipient_type: "individual",
+    to: options.to,
+    type: "image",
+    image: {
+      id: options.mediaId,
       ...(options.caption ? { caption: truncateWhatsAppText(options.caption) } : {}),
     },
   };

@@ -1688,7 +1688,7 @@ export interface EmailMessageMetadata {
 }
 
 export interface DocumentMessageMetadata {
-  kind: "document";
+  kind: "document" | "image";
   filename: string;
   mimeType: string;
   s3Key: string;
