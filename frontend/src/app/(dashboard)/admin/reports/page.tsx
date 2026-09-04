@@ -8,7 +8,6 @@ import { useT } from "@/i18n/context";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { TableContainer } from "@/components/ui/TableContainer";
-import { Button } from "@/components/ui/Button";
 
 function currentPeriodValue(): string {
   const now = new Date();
@@ -79,7 +78,6 @@ export default function AdminReportsPage() {
                   <th className="px-4 py-3 font-medium">{t("auth.companyName")}</th>
                   <th className="px-4 py-3 font-medium">{t("common.email")}</th>
                   <th className="px-4 py-3 font-medium">{t("admin.users.plan")}</th>
-                  <th className="px-4 py-3 font-medium">{t("admin.reports.sentMessages")}</th>
                   <th className="px-4 py-3 font-medium w-40" />
                 </tr>
               </thead>
@@ -89,22 +87,17 @@ export default function AdminReportsPage() {
                     <td className="px-4 py-3 text-primary">{row.name}</td>
                     <td className="px-4 py-3 text-secondary">{row.email}</td>
                     <td className="px-4 py-3 text-secondary">{row.plan}</td>
-                    <td className="px-4 py-3 text-secondary">
-                      {row.messagesCount.toLocaleString()}
-                    </td>
                     <td className="px-4 py-3">
-                      <Button
+                      <button
                         type="button"
-                        variant="outline"
-                        size="sm"
+                        title={t("admin.reports.downloadCsv")}
+                        aria-label={t("admin.reports.downloadCsv")}
                         disabled={downloadingTenantId === row.tenantId}
                         onClick={() => void handleDownload(row.tenantId, row.name)}
+                        className="inline-flex items-center justify-center rounded-lg border border-default p-1.5 text-secondary hover:bg-surface-muted hover:text-primary disabled:opacity-50"
                       >
-                        <Download className="mr-1.5 h-4 w-4" />
-                        {downloadingTenantId === row.tenantId
-                          ? t("admin.reports.generatingCsv")
-                          : t("admin.reports.downloadCsv")}
-                      </Button>
+                        <Download className="h-4 w-4" />
+                      </button>
                     </td>
                   </tr>
                 ))}

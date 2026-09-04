@@ -76,6 +76,7 @@ export const es = {
     subaccounts: "Subcuentas",
     adminUsers: "Usuarios",
     adminBilling: "Facturación",
+    adminReports: "Reportes",
     adminPayments: "Control de pagos",
     adminSupport: "Tickets de soporte",
     signOut: "Cerrar sesión",
@@ -2943,6 +2944,21 @@ export const es = {
       usesPlatformPrice: "Precio predeterminado",
       customPrice: "Precio personalizado",
       resetPlatformPrice: "Usar predeterminado",
+    },
+    reports: {
+      title: "Reportes",
+      subtitle: "Descarga el detalle de mensajes enviados por empresa",
+      sectionTitle: "Mensajes enviados",
+      sectionHint:
+        "Genera un CSV con cada mensaje enviado (bot, asesor o sistema) en el periodo seleccionado.",
+      retentionHint:
+        "Solo se incluyen mensajes almacenados en conversaciones (historial disponible hasta 90 días).",
+      period: "Periodo",
+      sentMessages: "Mensajes registrados",
+      downloadCsv: "Descargar CSV",
+      generatingCsv: "Generando CSV…",
+      downloadError: "No se pudo generar el CSV",
+      emptyTenants: "No hay empresas registradas",
     },
     support: {
       title: "Tickets de soporte",

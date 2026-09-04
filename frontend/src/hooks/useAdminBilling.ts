@@ -23,10 +23,16 @@ export function useUpdateAdminBillingConfig() {
   });
 }
 
-export function useAdminBillingOverview() {
+export function useAdminBillingOverview(period?: string) {
   return useQuery({
-    queryKey: ["admin-billing-overview"],
-    queryFn: () => api.get<AdminBillingOverview>("/admin/billing/overview"),
+    queryKey: ["admin-billing-overview", period ?? "current"],
+    queryFn: () => {
+      const qs =
+        period && /^\d{4}-\d{2}$/.test(period)
+          ? `?period=${encodeURIComponent(period)}`
+          : "";
+      return api.get<AdminBillingOverview>(`/admin/billing/overview${qs}`);
+    },
   });
 }
 

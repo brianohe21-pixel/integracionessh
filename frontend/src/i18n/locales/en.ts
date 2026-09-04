@@ -78,6 +78,7 @@ export const en: Messages = {
     subaccounts: "Subaccounts",
     adminUsers: "Users",
     adminBilling: "Billing",
+    adminReports: "Reports",
     adminPayments: "Payment control",
     adminSupport: "Support tickets",
     signOut: "Sign out",
@@ -2941,6 +2942,21 @@ export const en: Messages = {
       usesPlatformPrice: "Default price",
       customPrice: "Custom price",
       resetPlatformPrice: "Use default",
+    },
+    reports: {
+      title: "Reports",
+      subtitle: "Download sent message details per company",
+      sectionTitle: "Sent messages",
+      sectionHint:
+        "Generate a CSV with each outbound message (bot, advisor, or system) in the selected period.",
+      retentionHint:
+        "Only messages stored in conversations are included (history available for up to 90 days).",
+      period: "Period",
+      sentMessages: "Recorded messages",
+      downloadCsv: "Download CSV",
+      generatingCsv: "Generating CSV…",
+      downloadError: "Could not generate CSV",
+      emptyTenants: "No companies registered",
     },
     support: {
       title: "Support tickets",
