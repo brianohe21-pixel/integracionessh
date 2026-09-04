@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Plus,
   Upload,
@@ -13,6 +14,7 @@ import {
   UserX,
   Ban,
   FilterX,
+  Megaphone,
 } from "lucide-react";
 import {
   useContacts,
@@ -38,6 +40,7 @@ import { WhatsAppRiskBadge } from "@/components/whatsapp/WhatsAppRiskBadge";
 import { useT } from "@/i18n/context";
 import type { Contact, MarketingConsent } from "@/types";
 import { decodeCsvBytes } from "@/lib/csv";
+import { saveCampaignRecipientDraft } from "@/lib/campaign-recipient-draft";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useWhatsAppRisk, resolveWhatsAppRisk } from "@/hooks/useWhatsAppRisk";
@@ -65,6 +68,7 @@ function contactInitials(name?: string, phone?: string): string {
 
 export default function ContactsPage() {
   const t = useT();
+  const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [consentFilter, setConsentFilter] = useState<"" | MarketingConsent>("");
   const [suppressedFilter, setSuppressedFilter] = useState<"" | "true" | "false">("");
@@ -74,7 +78,10 @@ export default function ContactsPage() {
   const [name, setName] = useState("");
   const [tagFilter, setTagFilter] = useState("");
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [selectedPhones, setSelectedPhones] = useState<Set<string>>(new Set());
   const [deleteTarget, setDeleteTarget] = useState<Contact | null>(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkLoading, setBulkLoading] = useState(false);
   const [showCompliance, setShowCompliance] = useState(true);
   const [error, setError] = useState("");
 
@@ -94,6 +101,10 @@ export default function ContactsPage() {
   const deleteContact = useDeleteContact();
 
   const contacts = useMemo(() => data?.items ?? [], [data?.items]);
+
+  useEffect(() => {
+    setSelectedPhones(new Set());
+  }, [consentFilter, suppressedFilter, tagFilter, q]);
 
   const activeContact = selectedContact
     ? contacts.find((c) => c.phoneNumber === selectedContact.phoneNumber) ?? selectedContact
@@ -146,10 +157,78 @@ export default function ContactsPage() {
     if (fileRef.current) fileRef.current.value = "";
   }
 
-  async function bulkConsent(phones: string[], consent: MarketingConsent) {
-    await Promise.all(
-      phones.map((p) => updateContact.mutateAsync({ phone: p, marketingConsent: consent }))
-    );
+  function togglePhoneSelection(phone: string) {
+    setSelectedPhones((prev) => {
+      const next = new Set(prev);
+      if (next.has(phone)) next.delete(phone);
+      else next.add(phone);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (selectedPhones.size === contacts.length) {
+      setSelectedPhones(new Set());
+      return;
+    }
+    setSelectedPhones(new Set(contacts.map((c) => c.phoneNumber)));
+  }
+
+  async function bulkConsentSelected(consent: MarketingConsent) {
+    const phones = Array.from(selectedPhones);
+    if (!phones.length) return;
+    setError("");
+    setBulkLoading(true);
+    try {
+      const results = await Promise.allSettled(
+        phones.map((p) =>
+          updateContact.mutateAsync({
+            phone: p,
+            marketingConsent: consent,
+            ...(consent === "opt_out" ? { suppressed: true } : {}),
+          })
+        )
+      );
+      const failed = results.filter((r) => r.status === "rejected").length;
+      if (failed > 0) {
+        setError(t("contacts.bulkPartial", { succeeded: phones.length - failed, failed }));
+      }
+      setSelectedPhones(new Set());
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBulkLoading(false);
+    }
+  }
+
+  function startCampaignWithPhones(phones: string[]) {
+    saveCampaignRecipientDraft(phones.map((to) => ({ to })));
+    router.push("/campaigns/new");
+  }
+
+  async function confirmBulkDelete() {
+    const phones = Array.from(selectedPhones);
+    if (!phones.length) return;
+    setError("");
+    setBulkLoading(true);
+    try {
+      const results = await Promise.allSettled(
+        phones.map((p) => deleteContact.mutateAsync(p))
+      );
+      const failed = results.filter((r) => r.status === "rejected").length;
+      if (failed > 0) {
+        setError(t("contacts.bulkPartial", { succeeded: phones.length - failed, failed }));
+      }
+      if (selectedContact && phones.includes(selectedContact.phoneNumber)) {
+        setSelectedContact(null);
+      }
+      setSelectedPhones(new Set());
+      setBulkDeleteOpen(false);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBulkLoading(false);
+    }
   }
 
   function clearFilters() {
@@ -323,22 +402,79 @@ export default function ContactsPage() {
             <p className="text-sm text-secondary">
               {t("contacts.shownCount", { count: contacts.length })}
             </p>
-            {contacts.length > 1 && (
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => bulkConsent(contacts.map((c) => c.phoneNumber), "opt_in")}
-              >
-                <ShieldCheck className="h-4 w-4" />
-                {t("contacts.bulkOptIn")}
-              </Button>
-            )}
           </div>
 
-          <DataTable minWidth="720px">
+          {selectedPhones.size > 0 && (
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-default bg-accent-muted/50 px-4 py-2.5">
+              <Badge variant="accent">
+                {t("contacts.bulkSelected", { count: selectedPhones.size })}
+              </Badge>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={bulkLoading}
+                  onClick={() => startCampaignWithPhones(Array.from(selectedPhones))}
+                >
+                  <Megaphone className="h-4 w-4" />
+                  {t("contacts.startCampaign")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  disabled={bulkLoading}
+                  onClick={() => void bulkConsentSelected("opt_in")}
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                  {t("contacts.markOptIn")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={bulkLoading}
+                  onClick={() => void bulkConsentSelected("opt_out")}
+                  className="border-danger/30 text-danger hover:bg-danger/5"
+                >
+                  <UserX className="h-4 w-4" />
+                  {t("contacts.markOptOut")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={bulkLoading}
+                  onClick={() => setBulkDeleteOpen(true)}
+                  className="text-danger"
+                >
+                  {t("common.delete")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={bulkLoading}
+                  onClick={() => setSelectedPhones(new Set())}
+                >
+                  {t("common.cancel")}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <DataTable minWidth="760px">
             <DataTableHead>
               <DataTableRow className="border-b border-default bg-surface-muted/60 text-xs uppercase tracking-wide text-secondary">
+                <DataTableCell header className="w-10 px-3">
+                  <input
+                    type="checkbox"
+                    checked={contacts.length > 0 && selectedPhones.size === contacts.length}
+                    onChange={toggleSelectAll}
+                    className="rounded border-default text-accent focus:ring-accent"
+                    aria-label={t("contacts.selectAll")}
+                  />
+                </DataTableCell>
                 <DataTableCell header>{t("contacts.colContact")}</DataTableCell>
                 <DataTableCell header>{t("contacts.colConsent")}</DataTableCell>
                 <DataTableCell header>{t("contacts.colCsat")}</DataTableCell>
@@ -358,6 +494,17 @@ export default function ContactsPage() {
                     className="group cursor-pointer transition-colors hover:bg-surface-muted/50"
                     onClick={() => setSelectedContact(c)}
                   >
+                    <DataTableCell className="w-10 px-3">
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedPhones.has(c.phoneNumber)}
+                          onChange={() => togglePhoneSelection(c.phoneNumber)}
+                          className="rounded border-default text-accent focus:ring-accent"
+                          aria-label={c.displayName ?? c.phoneNumber}
+                        />
+                      </div>
+                    </DataTableCell>
                     <DataTableCell>
                       <div className="flex items-center gap-3">
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent-muted text-xs font-semibold text-accent">
@@ -480,6 +627,7 @@ export default function ContactsPage() {
           whatsappRisk={whatsappRisk}
           onClose={() => setSelectedContact(null)}
           onDelete={() => setDeleteTarget(activeContact)}
+          onStartCampaign={() => startCampaignWithPhones([activeContact.phoneNumber])}
         />
       )}
 
@@ -494,6 +642,19 @@ export default function ContactsPage() {
         loading={deleteContact.isPending}
         onConfirm={() => void confirmDelete()}
         onCancel={() => setDeleteTarget(null)}
+      />
+
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        title={t("contacts.bulkDeleteConfirmTitle")}
+        description={t("contacts.bulkDeleteConfirmDescription", {
+          count: selectedPhones.size,
+        })}
+        confirmLabel={t("common.delete")}
+        tone="danger"
+        loading={bulkLoading}
+        onConfirm={() => void confirmBulkDelete()}
+        onCancel={() => setBulkDeleteOpen(false)}
       />
     </DashboardPage>
   );

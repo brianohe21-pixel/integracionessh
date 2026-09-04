@@ -1,4 +1,5 @@
 import type { SQSEvent, SQSRecord } from "aws-lambda";
+import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
 import {
   incrementBulkJobProgress,
@@ -7,11 +8,16 @@ import {
   saveMessageTracking,
 } from "../../lib/dynamodb/bulk-job.repository.js";
 import { sendTemplateMessage, getWhatsAppAccessToken } from "../../lib/whatsapp/client.js";
+import { assertWhatsAppOutboundAllowed } from "../../lib/whatsapp/outbound-guard.js";
+import { getContactByPhone } from "../../lib/dynamodb/contact.repository.js";
 import { applyCoexistenceSendThrottle } from "../../lib/whatsapp/coexistence/throughput.js";
 import { sendSmsFromTemplate } from "../../lib/sms/send-outbound.js";
 import type { BulkSendSQSBody } from "../../types/index.js";
+import { evaluateLaw2300ForTenant } from "../../lib/compliance/law2300-tenant.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
+const BULK_QUEUE_URL = process.env.BULK_SQS_QUEUE_URL ?? "";
+const sqs = new SQSClient({});
 
 export async function handler(event: SQSEvent): Promise<void> {
   for (const record of event.Records) {
@@ -29,7 +35,27 @@ async function processRecord(record: SQSRecord): Promise<void> {
     return;
   }
 
-  const { jobId, tenantId, botId, templateName, language, to, components, channel = "whatsapp" } = body;
+  const { jobId, tenantId, botId, templateName, language, to, components, channel = "whatsapp", requireOptIn = true, outboundKind = "marketing" } = body;
+
+  const law2300 = await evaluateLaw2300ForTenant(tenantId);
+  if (!law2300.allowed) {
+    const secondsUntilWindow = law2300.nextWindowAt
+      ? Math.max(1, Math.floor((law2300.nextWindowAt.getTime() - Date.now()) / 1000))
+      : 900;
+    const delaySeconds = Math.min(900, secondsUntilWindow);
+    if (BULK_QUEUE_URL) {
+      await sqs.send(
+        new SendMessageCommand({
+          QueueUrl: BULK_QUEUE_URL,
+          MessageBody: record.body,
+          MessageGroupId: jobId,
+          MessageDeduplicationId: `${jobId}-${to}-${delaySeconds}-${Date.now()}`.slice(0, 128),
+          DelaySeconds: delaySeconds,
+        })
+      );
+    }
+    return;
+  }
 
   try {
     const bot = await getBot(tenantId, botId);
@@ -63,8 +89,32 @@ async function processRecord(record: SQSRecord): Promise<void> {
       return;
     }
 
+    if (requireOptIn) {
+      const normalizedTo = to.replace(/\D/g, "");
+      const contact = await getContactByPhone(tenantId, normalizedTo);
+      if (
+        !contact ||
+        contact.suppressed ||
+        contact.marketingConsent !== "opt_in"
+      ) {
+        await recordBulkSendFailure(tenantId, jobId, "compliance", {
+          to,
+          errorMessage: "Recipient not eligible for marketing",
+        });
+        await incrementBulkJobProgress(tenantId, jobId, "failed");
+        return;
+      }
+    }
+
     await applyCoexistenceSendThrottle(bot.whatsappOnboardingMode);
     const accessToken = await getWhatsAppAccessToken(tenantId, ENVIRONMENT);
+    await assertWhatsAppOutboundAllowed({
+      tenantId,
+      phoneNumberId: bot.phoneNumberId,
+      kind: outboundKind,
+      to,
+      requireOptIn,
+    });
     const result = await sendTemplateMessage({
       phoneNumberId: bot.phoneNumberId,
       to,

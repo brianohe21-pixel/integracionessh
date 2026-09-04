@@ -142,7 +142,7 @@ export function CampaignMessagingList({ campaigns }: CampaignMessagingListProps)
             onChange={(event) => setBotFilter(event.target.value)}
             className="rounded-lg border border-default bg-surface-elevated px-3 py-2 text-sm text-primary"
           >
-            <option value="">{t("automations.allBots")}</option>
+            <option value="">{t("outreach.allAgents")}</option>
             {(bots ?? []).map((bot) => (
               <option key={bot.botId} value={bot.botId}>
                 {bot.name}

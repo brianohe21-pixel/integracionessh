@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto";
+import { deleteWabaLookup } from "../dynamodb/bot-lookup.repository.js";
 import { getBot, updateBot } from "../dynamodb/bot.repository.js";
 import {
   getWhatsAppAccountByWabaId,
@@ -9,11 +10,14 @@ import {
   createWhatsAppChannel,
   getWhatsAppChannel,
   getWhatsAppChannelByPhoneNumberId,
+  listWhatsAppChannels,
+  updateWhatsAppChannel,
 } from "../dynamodb/whatsapp-channel.repository.js";
 import { assertCanAddWhatsAppChannel } from "../billing/assert-plan.js";
 import { getTenant } from "../dynamodb/tenant.repository.js";
 import {
   completeEmbeddedSignup,
+  completeCoexistenceSignup,
   completeManualConnect,
   assertDistinctWabaAndPhone,
 } from "./embedded-signup.js";
@@ -33,6 +37,8 @@ async function ensureAccount(params: {
   wabaId: string;
   accessToken: string;
   appSecret: string;
+  metaAppId?: string;
+  metaAppOwnerTenantId?: string;
   label?: string;
 }): Promise<string> {
   const existing = await getWhatsAppAccountByWabaId(params.wabaId);
@@ -54,6 +60,8 @@ async function ensureAccount(params: {
     wabaId: params.wabaId,
     status: "active",
     ...(params.label ? { label: params.label } : {}),
+    ...(params.metaAppId ? { metaAppId: params.metaAppId } : {}),
+    ...(params.metaAppOwnerTenantId ? { metaAppOwnerTenantId: params.metaAppOwnerTenantId } : {}),
     createdAt: existing?.createdAt ?? new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   });
@@ -102,26 +110,24 @@ export async function connectWhatsAppChannelEmbedded(params: {
   botId: string;
   code: string;
   wabaId: string;
-  phoneNumberId: string;
-  pin: string;
+  phoneNumberId?: string;
+  pin?: string;
   appId: string;
   appSecret: string;
   platformAppSecret: string;
+  metaAppOwnerTenantId?: string;
   label?: string;
 }): Promise<WhatsAppChannel> {
   const bot = await getBot(params.tenantId, params.botId);
   if (!bot) throw Object.assign(new Error("Bot not found"), { statusCode: 404 });
-
-  await assertCanConnectPhone(params.tenantId, params.botId, params.phoneNumberId);
-  assertDistinctWabaAndPhone(params.wabaId, params.phoneNumberId);
 
   const signup = await completeEmbeddedSignup({
     tenantId: params.tenantId,
     environment: ENVIRONMENT,
     code: params.code,
     wabaId: params.wabaId,
-    phoneNumberId: params.phoneNumberId,
-    pin: params.pin,
+    ...(params.phoneNumberId ? { phoneNumberId: params.phoneNumberId } : {}),
+    ...(params.pin ? { pin: params.pin } : {}),
     appId: params.appId,
     appSecret: params.appSecret,
     platformAppSecret: params.platformAppSecret,
@@ -133,6 +139,87 @@ export async function connectWhatsAppChannelEmbedded(params: {
     wabaId: signup.whatsappBusinessAccountId,
     accessToken,
     appSecret: params.platformAppSecret,
+    metaAppId: params.appId,
+    ...(params.metaAppOwnerTenantId ? { metaAppOwnerTenantId: params.metaAppOwnerTenantId } : {}),
+    ...(params.label ? { label: params.label } : {}),
+  });
+
+  if (!signup.phoneNumberId) {
+    const err = new Error(
+      "WhatsApp account connected but no phone number was found. Add a number in Meta and reconnect."
+    ) as Error & { statusCode?: number };
+    err.statusCode = 400;
+    throw err;
+  }
+
+  await assertCanConnectPhone(params.tenantId, params.botId, signup.phoneNumberId);
+  assertDistinctWabaAndPhone(signup.whatsappBusinessAccountId, signup.phoneNumberId);
+
+  let displayPhoneNumber: string | undefined;
+  try {
+    const phoneInfo = await getPhoneNumberInfo(signup.phoneNumberId, accessToken);
+    displayPhoneNumber = phoneInfo.displayPhoneNumber;
+  } catch {
+    displayPhoneNumber = undefined;
+  }
+
+  const currentCount = await countWhatsAppChannels(params.tenantId, params.botId);
+  const channel = await createWhatsAppChannel({
+    tenantId: params.tenantId,
+    botId: params.botId,
+    accountId,
+    phoneNumberId: signup.phoneNumberId,
+    whatsappBusinessAccountId: signup.whatsappBusinessAccountId,
+    status: signup.needsRegistration ? "pending_registration" : "active",
+    isDefault: currentCount === 0,
+    whatsappOnboardingMode: "cloud_api",
+    ...(params.label ? { label: params.label } : {}),
+    ...(displayPhoneNumber ? { displayPhoneNumber } : {}),
+  });
+
+  if (channel.status === "active") {
+    await syncBotLegacyFields(params.tenantId, params.botId, channel);
+  }
+  return channel;
+}
+
+export async function connectWhatsAppChannelCoexistence(params: {
+  tenantId: string;
+  botId: string;
+  code: string;
+  wabaId: string;
+  phoneNumberId?: string;
+  appId: string;
+  appSecret: string;
+  platformAppSecret: string;
+  metaAppOwnerTenantId?: string;
+  label?: string;
+}): Promise<WhatsAppChannel> {
+  const bot = await getBot(params.tenantId, params.botId);
+  if (!bot) throw Object.assign(new Error("Bot not found"), { statusCode: 404 });
+
+  const signup = await completeCoexistenceSignup({
+    tenantId: params.tenantId,
+    environment: ENVIRONMENT,
+    code: params.code,
+    wabaId: params.wabaId,
+    ...(params.phoneNumberId ? { phoneNumberId: params.phoneNumberId } : {}),
+    appId: params.appId,
+    appSecret: params.appSecret,
+    platformAppSecret: params.platformAppSecret,
+  });
+
+  await assertCanConnectPhone(params.tenantId, params.botId, signup.phoneNumberId);
+  assertDistinctWabaAndPhone(signup.whatsappBusinessAccountId, signup.phoneNumberId);
+
+  const accessToken = await getWhatsAppAccessToken(params.tenantId, ENVIRONMENT);
+  const accountId = await ensureAccount({
+    tenantId: params.tenantId,
+    wabaId: signup.whatsappBusinessAccountId,
+    accessToken,
+    appSecret: params.platformAppSecret,
+    metaAppId: params.appId,
+    ...(params.metaAppOwnerTenantId ? { metaAppOwnerTenantId: params.metaAppOwnerTenantId } : {}),
     ...(params.label ? { label: params.label } : {}),
   });
 
@@ -153,7 +240,9 @@ export async function connectWhatsAppChannelEmbedded(params: {
     whatsappBusinessAccountId: signup.whatsappBusinessAccountId,
     status: "active",
     isDefault: currentCount === 0,
-    whatsappOnboardingMode: "cloud_api",
+    whatsappOnboardingMode: "coexistence",
+    isOnBizApp: signup.isOnBizApp,
+    platformType: signup.platformType,
     ...(params.label ? { label: params.label } : {}),
     ...(displayPhoneNumber ? { displayPhoneNumber } : {}),
   });
@@ -170,6 +259,8 @@ export async function connectWhatsAppChannelManual(params: {
   phoneNumberId: string;
   pin: string;
   platformAppSecret: string;
+  metaAppId?: string;
+  metaAppOwnerTenantId?: string;
   label?: string;
 }): Promise<WhatsAppChannel> {
   const bot = await getBot(params.tenantId, params.botId);
@@ -192,6 +283,8 @@ export async function connectWhatsAppChannelManual(params: {
     wabaId: signup.whatsappBusinessAccountId,
     accessToken: params.accessToken,
     appSecret: params.platformAppSecret,
+    ...(params.metaAppId ? { metaAppId: params.metaAppId } : {}),
+    ...(params.metaAppOwnerTenantId ? { metaAppOwnerTenantId: params.metaAppOwnerTenantId } : {}),
     ...(params.label ? { label: params.label } : {}),
   });
 
@@ -237,5 +330,86 @@ export async function registerWhatsAppChannelPhone(params: {
   );
 
   const result = await registerPhoneNumber(channel.phoneNumberId, accessToken, params.pin);
+
+  let displayPhoneNumber: string | undefined;
+  try {
+    const phoneInfo = await getPhoneNumberInfo(channel.phoneNumberId, accessToken);
+    displayPhoneNumber = phoneInfo.displayPhoneNumber;
+  } catch {
+    displayPhoneNumber = undefined;
+  }
+
+  await updateWhatsAppChannel(params.tenantId, params.botId, params.channelId, {
+    status: "active",
+    ...(displayPhoneNumber ? { displayPhoneNumber } : {}),
+  });
+
+  const updated = await getWhatsAppChannel(params.tenantId, params.botId, params.channelId);
+  if (updated?.isDefault) {
+    await syncBotLegacyFields(params.tenantId, params.botId, updated);
+  }
+
   return { success: result.success };
+}
+
+async function clearBotLegacyWhatsAppFields(
+  tenantId: string,
+  botId: string
+): Promise<void> {
+  const bot = await getBot(tenantId, botId);
+  if (!bot) return;
+
+  if (bot.whatsappBusinessAccountId?.trim()) {
+    await deleteWabaLookup(bot.whatsappBusinessAccountId);
+  }
+
+  await updateBot(tenantId, botId, {
+    phoneNumberId: "",
+    whatsappBusinessAccountId: "",
+    whatsappOnboardingMode: undefined,
+    isOnBizApp: undefined,
+    platformType: undefined,
+    whatsappSyncStatus: undefined,
+    whatsappDisconnectedAt: undefined,
+    whatsappDisconnectionReason: undefined,
+  });
+}
+
+export async function syncBotAfterChannelDelete(params: {
+  tenantId: string;
+  botId: string;
+  deletedChannel: WhatsAppChannel;
+}): Promise<void> {
+  const bot = await getBot(params.tenantId, params.botId);
+  if (!bot) return;
+
+  const shouldSync =
+    params.deletedChannel.isDefault ||
+    bot.phoneNumberId === params.deletedChannel.phoneNumberId;
+  if (!shouldSync) return;
+
+  const remaining = (await listWhatsAppChannels(params.tenantId, params.botId)).filter(
+    (channel) => channel.status !== "disconnected"
+  );
+
+  if (remaining.length === 0) {
+    await clearBotLegacyWhatsAppFields(params.tenantId, params.botId);
+    return;
+  }
+
+  const nextDefault = remaining.find((channel) => channel.isDefault) ?? remaining[0];
+  if (!nextDefault) return;
+
+  if (!nextDefault.isDefault) {
+    await updateWhatsAppChannel(params.tenantId, params.botId, nextDefault.channelId, {
+      isDefault: true,
+    });
+    await syncBotLegacyFields(params.tenantId, params.botId, {
+      ...nextDefault,
+      isDefault: true,
+    });
+    return;
+  }
+
+  await syncBotLegacyFields(params.tenantId, params.botId, nextDefault);
 }

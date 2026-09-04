@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Plus, X } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { useMetaFlows } from "@/hooks/useMetaFlows";
 import { useBots } from "@/hooks/useBots";
@@ -14,6 +14,7 @@ import { LocalizedHtmlField } from "@/components/ui/LocalizedHtmlField";
 import type { FlowNode, FlowNodeType, LocalizedText } from "@/types";
 import { extractSampleFields, FormBindingField } from "./FormBindingField";
 import { FlowWebhookPanel } from "./FlowWebhookPanel";
+import { FlowWebhookGuideAccordion } from "./FlowWebhookGuideAccordion";
 import { TemplatePicker } from "@/components/templates/TemplatePicker";
 import type { OutreachChannel } from "@/types";
 
@@ -709,7 +710,17 @@ export function NodePropertiesPanel({
                   <button
                     key={ch}
                     type="button"
-                    onClick={() => onUpdate({ notificationChannel: ch })}
+                    onClick={() => {
+                      const patch: Record<string, unknown> = { notificationChannel: ch };
+                      if (
+                        ch === "email" &&
+                        !d.notificationRecipientBindings?.length &&
+                        d.notificationRecipientBinding?.trim()
+                      ) {
+                        patch.notificationRecipientBindings = [d.notificationRecipientBinding];
+                      }
+                      onUpdate(patch);
+                    }}
                     className={`rounded-lg border px-2 py-1.5 text-xs font-semibold transition-all ${
                       active
                         ? "border-accent bg-accent text-white"
@@ -750,12 +761,79 @@ export function NodePropertiesPanel({
             </div>
           )}
 
-          <FormBindingField
-            label={t("flows.fields.notificationRecipientBinding")}
-            value={d.notificationRecipientBinding ?? ""}
-            onChange={(v) => onUpdate({ notificationRecipientBinding: v })}
-            sampleFields={sampleFields}
-          />
+          {(d.notificationChannel ?? "whatsapp") === "email" ? (
+            <div className="space-y-2">
+              <FieldLabel>{t("flows.fields.notificationRecipients")}</FieldLabel>
+              {(d.notificationRecipientBindings?.length
+                ? d.notificationRecipientBindings
+                : d.notificationRecipientBinding
+                  ? [d.notificationRecipientBinding]
+                  : [""]).map((binding, index, bindings) => (
+                <div key={index} className="flex items-start gap-2">
+                  <div className="min-w-0 flex-1">
+                    <FormBindingField
+                      label={index === 0 ? t("flows.fields.notificationRecipientBinding") : ""}
+                      value={binding}
+                      onChange={(value) => {
+                        const next = [...bindings];
+                        next[index] = value;
+                        onUpdate({
+                          notificationRecipientBindings: next,
+                          notificationRecipientBinding: next[0] ?? "",
+                        });
+                      }}
+                      sampleFields={sampleFields}
+                    />
+                  </div>
+                  {bindings.length > 1 ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = bindings.filter((_, itemIndex) => itemIndex !== index);
+                        onUpdate({
+                          notificationRecipientBindings: next,
+                          notificationRecipientBinding: next[0] ?? "",
+                        });
+                      }}
+                      className={`rounded-lg border border-default p-2 text-secondary hover:bg-surface-muted ${
+                        index === 0 ? "mt-6" : "mt-1.5"
+                      }`}
+                      aria-label={t("flows.fields.notificationRemoveRecipient")}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  ) : null}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => {
+                  const current = d.notificationRecipientBindings?.length
+                    ? d.notificationRecipientBindings
+                    : d.notificationRecipientBinding
+                      ? [d.notificationRecipientBinding]
+                      : [];
+                  const next = [...current, ""];
+                  onUpdate({
+                    notificationRecipientBindings: next,
+                    notificationRecipientBinding: next[0] ?? "",
+                  });
+                }}
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-accent hover:underline"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                {t("flows.fields.notificationAddRecipient")}
+              </button>
+              <p className="text-xs text-secondary">{t("flows.fields.notificationRecipientsHint")}</p>
+            </div>
+          ) : (
+            <FormBindingField
+              label={t("flows.fields.notificationRecipientBinding")}
+              value={d.notificationRecipientBinding ?? ""}
+              onChange={(v) => onUpdate({ notificationRecipientBinding: v })}
+              sampleFields={sampleFields}
+            />
+          )}
 
           {(d.notificationChannel ?? "whatsapp") === "email" && (
             <>
@@ -909,7 +987,23 @@ export function NodePropertiesPanel({
 
       {type === "webhook" && (
         <>
-          <FlowWebhookPanel flowId={flowId} />
+          <FlowWebhookGuideAccordion
+            flowId={flowId}
+            samplePayload={
+              d.formSamplePayload && typeof d.formSamplePayload === "object"
+                ? (d.formSamplePayload as Record<string, unknown>)
+                : undefined
+            }
+          />
+          <FlowWebhookPanel
+            flowId={flowId}
+            samplePayload={
+              d.formSamplePayload && typeof d.formSamplePayload === "object"
+                ? (d.formSamplePayload as Record<string, unknown>)
+                : undefined
+            }
+            showGuide={false}
+          />
           <div>
             <FieldLabel>{t("flows.fields.samplePayload")}</FieldLabel>
             {textArea(

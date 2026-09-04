@@ -69,8 +69,11 @@ function toReactFlowNodes(
 }
 
 function toReactFlowEdges(edges: FlowEdge[], nodes: FlowNode[]): Edge[] {
+  const nodeIds = new Set(nodes.map((node) => node.id));
   const nodeTypeById = new Map(nodes.map((n) => [n.id, n.type]));
-  return edges.map((e) => {
+  return edges
+    .filter((edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target))
+    .map((e) => {
     const sourceType = nodeTypeById.get(e.source);
     const isHumanEdge = sourceType === "handoff";
     return {
@@ -292,23 +295,33 @@ function FlowCanvasInner({
 
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
+      const removedIds = new Set<string>();
       const filtered = changes.filter((change) => {
         if (change.type !== "remove") return true;
         const flowNode = flowRef.current.nodes.find((n) => n.id === change.id);
-        if (flowNode?.type !== "trigger") return true;
+        if (flowNode?.type !== "trigger") {
+          removedIds.add(change.id);
+          return true;
+        }
         const triggerCount = flowRef.current.nodes.filter((n) => n.type === "trigger").length;
         if (triggerCount <= 1) {
           onCannotDeleteTriggerRef.current?.();
           return false;
         }
+        removedIds.add(change.id);
         return true;
       });
       if (filtered.some((c) => c.type === "remove" && c.id === selectedNodeId)) {
         onSelectNodeRef.current(null);
       }
       onNodesChange(filtered);
+      if (removedIds.size > 0) {
+        setEdges((current) =>
+          current.filter((edge) => !removedIds.has(edge.source) && !removedIds.has(edge.target))
+        );
+      }
     },
-    [onNodesChange, selectedNodeId]
+    [onNodesChange, selectedNodeId, setEdges]
   );
 
   return (

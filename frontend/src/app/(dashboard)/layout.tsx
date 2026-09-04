@@ -10,6 +10,7 @@ import { TermsAcceptanceSync } from "@/components/legal/TermsAcceptanceSync";
 import { OnboardingGate } from "@/components/onboarding/OnboardingGate";
 import { HelpCenterMount } from "@/components/help-center/HelpCenterMount";
 import { NotificationsMount } from "@/components/notifications/NotificationsMount";
+import { UnreadMessagesProvider } from "@/components/notifications/UnreadMessagesProvider";
 import { ConversationRealtimeProvider } from "@/components/realtime/ConversationRealtimeProvider";
 import { SoftphoneProvider } from "@/components/contact-center/SoftphoneProvider";
 import { SoftphoneUIProvider } from "@/components/contact-center/SoftphoneUIProvider";
@@ -21,32 +22,36 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <SidebarProvider>
         <DashboardAuthGuard>
           <ConversationRealtimeProvider>
-            <SoftphoneProvider>
-            <SoftphoneUIProvider>
-            <div className="flex h-screen overflow-x-clip">
-            <TermsAcceptanceSync />
-            <Sidebar />
-            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden platform-canvas-bg">
+            <UnreadMessagesProvider>
               <NotificationsMount>
-                <MobileTopBar />
-                <PlatformToolbar />
-                <SoftphoneBar />
-                <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto platform-canvas-bg">
-                  <div className="flex min-h-full flex-1 flex-col">
-                    <OnboardingGate>
-                      <HelpCenterMount>
-                        <DashboardRoleGuard>
-                          <SubaccountServiceGuard>{children}</SubaccountServiceGuard>
-                        </DashboardRoleGuard>
-                      </HelpCenterMount>
-                    </OnboardingGate>
-                  </div>
-                </main>
+                <SoftphoneProvider>
+                  <SoftphoneUIProvider>
+                    <div className="flex h-screen overflow-x-clip">
+                      <TermsAcceptanceSync />
+                      <div className="shrink-0 lg:p-4 lg:[&>aside]:h-[calc(100vh-2rem)] lg:[&>aside]:rounded-2xl lg:[&>aside]:shadow-lg">
+                        <Sidebar />
+                      </div>
+                      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden platform-canvas-bg">
+                        <HelpCenterMount>
+                          <MobileTopBar />
+                          <PlatformToolbar />
+                          <SoftphoneBar />
+                          <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto platform-canvas-bg">
+                            <div className="flex min-h-full flex-1 flex-col">
+                              <OnboardingGate>
+                                <DashboardRoleGuard>
+                                  <SubaccountServiceGuard>{children}</SubaccountServiceGuard>
+                                </DashboardRoleGuard>
+                              </OnboardingGate>
+                            </div>
+                          </main>
+                        </HelpCenterMount>
+                      </div>
+                    </div>
+                  </SoftphoneUIProvider>
+                </SoftphoneProvider>
               </NotificationsMount>
-            </div>
-            </div>
-            </SoftphoneUIProvider>
-            </SoftphoneProvider>
+            </UnreadMessagesProvider>
           </ConversationRealtimeProvider>
         </DashboardAuthGuard>
       </SidebarProvider>

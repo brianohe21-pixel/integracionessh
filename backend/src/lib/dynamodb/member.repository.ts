@@ -3,6 +3,7 @@ import {
   PutCommand,
   QueryCommand,
   DeleteCommand,
+  UpdateCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { docClient, TABLE_NAME } from "./client.js";
 import type { TenantMember } from "../../types/index.js";
@@ -72,10 +73,54 @@ export async function deleteMember(tenantId: string, userId: string): Promise<bo
   return true;
 }
 
+export async function touchMemberLastLogin(
+  tenantId: string,
+  userId: string
+): Promise<void> {
+  const existing = await getMember(tenantId, userId);
+  if (!existing) return;
+
+  const now = new Date().toISOString();
+  await docClient.send(
+    new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: memberKeys(tenantId, userId),
+      UpdateExpression: "SET lastLoginAt = :now",
+      ExpressionAttributeValues: { ":now": now },
+    })
+  );
+}
+
 export async function countMembersByRole(
   tenantId: string,
   role: TenantMember["role"]
 ): Promise<number> {
   const members = await listMembers(tenantId);
   return members.filter((m) => m.role === role && m.enabled).length;
+}
+
+export async function updateMember(
+  tenantId: string,
+  userId: string,
+  updates: Partial<Pick<TenantMember, "name" | "role" | "enabled" | "teamIds" | "advisorId">>
+): Promise<TenantMember | null> {
+  const existing = await getMember(tenantId, userId);
+  if (!existing) return null;
+
+  const merged: TenantMember = {
+    ...existing,
+    ...updates,
+  };
+
+  await docClient.send(
+    new PutCommand({
+      TableName: TABLE_NAME,
+      Item: {
+        ...memberKeys(tenantId, userId),
+        ...merged,
+      },
+    })
+  );
+
+  return merged;
 }

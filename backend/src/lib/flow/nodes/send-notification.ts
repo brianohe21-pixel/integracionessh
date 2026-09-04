@@ -59,6 +59,29 @@ async function resolveNotificationMessagingBot(
   return { botId, bot, accessToken };
 }
 
+function resolveEmailRecipientBindings(node: FlowNode): string[] {
+  const bindings = node.data.notificationRecipientBindings?.filter((item) => item.trim());
+  if (bindings && bindings.length > 0) return bindings;
+  const single = node.data.notificationRecipientBinding?.trim();
+  return single ? [single] : [];
+}
+
+function resolveEmailRecipients(
+  node: FlowNode,
+  bindingContext: ReturnType<typeof buildBindingContext>
+): string[] {
+  const emails = new Set<string>();
+  for (const binding of resolveEmailRecipientBindings(node)) {
+    const resolved = resolveBindingValue(binding, bindingContext);
+    if (!resolved) continue;
+    for (const part of resolved.split(/[,;\n]+/)) {
+      const email = part.trim().toLowerCase();
+      if (email) emails.add(email);
+    }
+  }
+  return [...emails];
+}
+
 export async function executeSendNotificationNode(
   node: FlowNode,
   ctx: FlowExecutionContext,
@@ -85,6 +108,9 @@ export async function executeSendNotificationNode(
   const bindingMessage = resolveBindingValue(messageTemplate, bindingContext);
 
   if (channel === "email") {
+    const recipients = resolveEmailRecipients(node, bindingContext);
+    if (recipients.length === 0) throw new Error("notificationRecipientBinding is required");
+
     const htmlTemplate =
       resolveLocalizedText(node.data.notificationMessageHtml, locale) ||
       node.data.notificationMessageBinding?.trim() ||
@@ -108,7 +134,7 @@ export async function executeSendNotificationNode(
     const skipPlatformTemplate = shouldSkipPlatformEmailTemplate(tenant);
     const subject = node.data.notificationEmailSubject?.trim() || "Notification";
     const emailResult = await sendEmail({
-      to: [recipient.trim().toLowerCase()],
+      to: recipients,
       subject,
       text,
       ...(html ? { html } : {}),
@@ -124,7 +150,7 @@ export async function executeSendNotificationNode(
       nextNodeId: getNextNodeId(ctx.flow, node.id),
       halt: false,
       wait: false,
-      output: recipient,
+      output: recipients.join(", "),
     };
   }
 

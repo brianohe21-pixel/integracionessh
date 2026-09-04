@@ -212,6 +212,13 @@ export function buildNodePreview(type: FlowNodeType, data: FlowNodeData, locale:
     case "send_notification": {
       const channel = data.notificationChannel ?? "whatsapp";
       const channelLabel: Record<string, string> = { whatsapp: "WhatsApp", sms: "SMS", email: "Email" };
+      if (channel === "email") {
+        const recipients =
+          data.notificationRecipientBindings?.filter((item) => item.trim()).join(", ") ||
+          data.notificationRecipientBinding ||
+          "";
+        return truncate(`[${channelLabel[channel]}] ${recipients}`.trim());
+      }
       const recipient = data.notificationRecipientBinding ?? "";
       if (data.notificationMessageType === "template") {
         return truncate(`[${channelLabel[channel]}] ${data.notificationTemplateName ?? ""}`.trim());

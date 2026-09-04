@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { BotLocale, LocalizedText } from "@/types";
 import { fromLocalizedRecord, toLocalizedRecord } from "@/lib/localized-text";
+import { insertIntoText } from "@/lib/text-insert";
 import { useT } from "@/i18n/context";
 
 interface LocalizedTextFieldProps {
@@ -24,16 +25,29 @@ export function LocalizedTextField({
 }: LocalizedTextFieldProps) {
   const t = useT();
   const [activeTab, setActiveTab] = useState<BotLocale>("es");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const record = toLocalizedRecord(value);
 
   function updateLocale(locale: BotLocale, text: string) {
     onChange(fromLocalizedRecord({ ...record, [locale]: text }));
   }
 
-  function appendField(locale: BotLocale, field: string) {
+  function insertField(field: string) {
     const token = `{{form.${field}}}`;
-    const current = record[locale];
-    updateLocale(locale, current.trim() ? `${current} ${token}` : token);
+    const current = record[activeTab];
+    const el = textareaRef.current;
+    if (!el) {
+      updateLocale(activeTab, current.trim() ? `${current} ${token}` : token);
+      return;
+    }
+    const start = el.selectionStart ?? current.length;
+    const end = el.selectionEnd ?? current.length;
+    const { text, cursor } = insertIntoText(current, token, start, end);
+    updateLocale(activeTab, text);
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(cursor, cursor);
+    });
   }
 
   return (
@@ -55,6 +69,7 @@ export function LocalizedTextField({
         ))}
       </div>
       <textarea
+        ref={textareaRef}
         value={record[activeTab]}
         onChange={(e) => updateLocale(activeTab, e.target.value)}
         placeholder={placeholder ?? t("flows.fields.localizedPlaceholder")}
@@ -67,7 +82,7 @@ export function LocalizedTextField({
             <button
               key={field}
               type="button"
-              onClick={() => appendField(activeTab, field)}
+              onClick={() => insertField(field)}
               className="rounded-md border border-field-border px-2 py-0.5 text-[10px] text-secondary hover:border-accent/40 hover:text-primary"
             >
               {field}

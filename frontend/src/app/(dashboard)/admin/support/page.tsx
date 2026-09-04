@@ -36,7 +36,7 @@ export default function AdminSupportPage() {
   }
 
   return (
-    <DashboardPage maxWidth="5xl">
+    <DashboardPage className="pb-8">
       <PageHeader
         title={t("admin.support.title")}
         subtitle={t("admin.support.subtitle")}

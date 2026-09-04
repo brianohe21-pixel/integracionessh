@@ -2,12 +2,14 @@ import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 }
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import { getCrossChannelHistory, getContactTimelineMessages } from "../../lib/contacts/contact-timeline.js";
+import { enrichConversationMessages } from "../../lib/conversations/document-messages.js";
 import {
   listConversations,
   getConversationMessages,
   findConversationById,
   addMessage,
   deleteConversation,
+  clearConversationMessages,
   ensureConversationContactId,
 } from "../../lib/dynamodb/conversation.repository.js";
 import { getAdvisorByCognitoUserId } from "../../lib/dynamodb/advisor.repository.js";
@@ -59,6 +61,10 @@ import {
   createAndSendQuotation,
   listConversationQuotations,
 } from "../../lib/quotations/quotations.service.js";
+import {
+  createAndSendConversationBooking,
+  listConversationBookingSlots,
+} from "../../lib/conversations/conversation-bookings.service.js";
 import { publishRealtimeEventSafe } from "../../lib/realtime/publish.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
@@ -163,6 +169,29 @@ const CreateQuotationSchema = z.object({
   notes: z.string().max(1000).optional(),
   validUntil: z.string().datetime().optional(),
   paymentDescription: z.string().min(1).max(200).optional(),
+  includePaymentLink: z.boolean().optional().default(true),
+});
+
+const CreateConversationBookingSchema = z.object({
+  botId: z.string().uuid(),
+  startAt: z.string().datetime(),
+  notes: z.string().max(500).optional(),
+});
+
+const ClearConversationSchema = z.object({
+  botId: z.string().uuid(),
+});
+
+const BulkDeleteSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        conversationId: z.string().uuid(),
+        botId: z.string().uuid(),
+      })
+    )
+    .min(1)
+    .max(50),
 });
 
 async function resolveAdvisorRecord(auth: AuthContext) {
@@ -195,7 +224,7 @@ function resolveConversationId(
   pathParams: { conversationId?: string } | undefined
 ): string | undefined {
   if (pathParams?.conversationId) return pathParams.conversationId;
-  if (rawPath === "/conversations" || rawPath.endsWith("/conversations/bulk-handoff")) {
+  if (rawPath === "/conversations" || rawPath.endsWith("/conversations/bulk-handoff") || rawPath.endsWith("/conversations/bulk-delete")) {
     return undefined;
   }
   const match = rawPath.match(/^\/conversations\/([^/]+)/);
@@ -232,6 +261,41 @@ export async function handler(
       });
 
       return ok(result);
+    }
+
+    if (method === "POST" && rawPath.endsWith("/conversations/bulk-delete")) {
+      const body = JSON.parse(event.body ?? "{}");
+      const parsed = BulkDeleteSchema.safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const succeeded: string[] = [];
+      const failed: Array<{ conversationId: string; error: string }> = [];
+
+      for (const item of parsed.data.items) {
+        try {
+          const conversation = await findConversationById(auth.tenantId, item.conversationId);
+          if (!conversation || conversation.botId !== item.botId) {
+            failed.push({ conversationId: item.conversationId, error: "not_found" });
+            continue;
+          }
+
+          await assertCanAccessConversation(auth, conversation);
+          const deleted = await deleteConversation(
+            auth.tenantId,
+            item.botId,
+            item.conversationId
+          );
+          if (deleted) {
+            succeeded.push(item.conversationId);
+          } else {
+            failed.push({ conversationId: item.conversationId, error: "not_found" });
+          }
+        } catch {
+          failed.push({ conversationId: item.conversationId, error: "forbidden" });
+        }
+      }
+
+      return ok({ succeeded, failed });
     }
 
     if (method === "GET" && !conversationId) {
@@ -337,7 +401,12 @@ export async function handler(
         limit,
       });
 
-      return ok({ contactId: resolved.contactId, messages });
+      const enriched = await enrichConversationMessages(messages, {
+        tenantId: auth.tenantId,
+        botId: resolved.botId,
+      });
+
+      return ok({ contactId: resolved.contactId, messages: enriched });
     }
 
     if (method === "GET" && !subPath) {
@@ -352,7 +421,11 @@ export async function handler(
       }
 
       const messages = await getConversationMessages(auth.tenantId, conversationId, limit);
-      return ok(messages);
+      const enriched = await enrichConversationMessages(messages, {
+        tenantId: auth.tenantId,
+        botId: conversation.botId,
+      });
+      return ok(enriched);
     }
 
     if (method === "PATCH" && subPath === "status") {
@@ -814,6 +887,98 @@ export async function handler(
       return created(message);
     }
 
+    if (method === "GET" && subPath === "booking-slots") {
+      const botId = params.botId;
+      if (!botId || !z.string().uuid().safeParse(botId).success) {
+        return badRequest("botId query parameter is required");
+      }
+
+      const conversation = await findConversationById(auth.tenantId, conversationId);
+      if (!conversation || conversation.botId !== botId) {
+        return notFound("Conversation not found");
+      }
+
+      await assertCanAccessConversation(auth, conversation);
+
+      const from = params.from;
+      const to = params.to;
+      const slots = await listConversationBookingSlots({
+        tenantId: auth.tenantId,
+        botId,
+        ...(from ? { from } : {}),
+        ...(to ? { to } : {}),
+        environment: ENVIRONMENT,
+      });
+      return ok(slots);
+    }
+
+    if (method === "POST" && subPath === "bookings") {
+      const body = JSON.parse(event.body ?? "{}");
+      const parsed = CreateConversationBookingSchema.safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const conversation = await findConversationById(auth.tenantId, conversationId);
+      if (!conversation || conversation.botId !== parsed.data.botId) {
+        return notFound("Conversation not found");
+      }
+
+      await assertCanAccessConversation(auth, conversation);
+
+      if ((conversation.handoffMode ?? "bot") !== "human") {
+        return badRequest("Conversation is not in human handoff mode");
+      }
+
+      const bot = await getBot(auth.tenantId, parsed.data.botId);
+      if (!bot) return notFound("Bot not found");
+
+      const tenant = await getTenant(auth.tenantId);
+      if (tenant) {
+        try {
+          await assertCanSendMessages(tenant);
+        } catch (err) {
+          if (err instanceof PlanLimitError) {
+            return forbidden(err.message);
+          }
+          throw err;
+        }
+      }
+
+      let createdByAdvisorId: string | undefined;
+      if (auth.role === "advisor") {
+        const advisor = await resolveAdvisorRecord(auth);
+        createdByAdvisorId = advisor?.advisorId;
+      }
+
+      const result = await createAndSendConversationBooking({
+        tenantId: auth.tenantId,
+        botId: parsed.data.botId,
+        bot,
+        conversation,
+        environment: ENVIRONMENT,
+        startAt: parsed.data.startAt,
+        ...(parsed.data.notes ? { notes: parsed.data.notes } : {}),
+        ...(createdByAdvisorId ? { createdByAdvisorId } : {}),
+      });
+
+      await incrementMessages(auth.tenantId);
+
+      const now = new Date().toISOString();
+      const convPatch: Parameters<typeof updateConversation>[3] = {
+        workflowStatus: "open",
+      };
+      if (!conversation.firstHumanResponseAt) {
+        convPatch.firstHumanResponseAt = now;
+      }
+      await updateConversation(
+        auth.tenantId,
+        parsed.data.botId,
+        conversationId,
+        convPatch
+      );
+
+      return created(result);
+    }
+
     if (method === "GET" && subPath === "quotations") {
       const botId = params.botId;
       if (!botId || !z.string().uuid().safeParse(botId).success) {
@@ -879,6 +1044,7 @@ export async function handler(
         conversation,
         environment: ENVIRONMENT,
         items: parsed.data.items,
+        includePaymentLink: parsed.data.includePaymentLink,
         ...(parsed.data.notes ? { notes: parsed.data.notes } : {}),
         ...(parsed.data.validUntil ? { validUntil: parsed.data.validUntil } : {}),
         ...(parsed.data.paymentDescription
@@ -906,6 +1072,28 @@ export async function handler(
       return created(result);
     }
 
+    if (method === "POST" && subPath === "clear") {
+      const body = JSON.parse(event.body ?? "{}");
+      const parsed = ClearConversationSchema.safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const conversation = await findConversationById(auth.tenantId, conversationId);
+      if (!conversation || conversation.botId !== parsed.data.botId) {
+        return notFound("Conversation not found");
+      }
+
+      await assertCanAccessConversation(auth, conversation);
+
+      const updated = await clearConversationMessages(
+        auth.tenantId,
+        parsed.data.botId,
+        conversationId
+      );
+      if (!updated) return notFound("Conversation not found");
+
+      return ok(updated);
+    }
+
     if (method === "GET" && subPath === "wa-link") {
       const conversation = await findConversationById(auth.tenantId, conversationId);
       if (!conversation) return notFound("Conversation not found");
@@ -920,6 +1108,34 @@ export async function handler(
         url: buildWaMeLink(conversation.phoneNumber),
         phoneNumber: conversation.phoneNumber,
       });
+    }
+
+    if (method === "GET" && rawPath.includes("/messages/") && rawPath.endsWith("/document")) {
+      const conversation = await findConversationById(auth.tenantId, conversationId);
+      if (!conversation) return notFound("Conversation not found");
+      await assertCanAccessConversation(auth, conversation);
+
+      const botId = params.botId;
+      if (!botId || !z.string().uuid().safeParse(botId).success) {
+        return badRequest("botId query parameter is required");
+      }
+      if (conversation.botId !== botId) return notFound("Conversation not found");
+
+      const match = rawPath.match(/\/messages\/([^/]+)\/document$/);
+      if (!match) return badRequest("Invalid document path");
+      const [, messageId] = match;
+
+      const { resolveDocumentDownloadUrl } = await import(
+        "../../lib/conversations/document-messages.js"
+      );
+      const result = await resolveDocumentDownloadUrl({
+        tenantId: auth.tenantId,
+        botId,
+        conversationId,
+        messageId: decodeURIComponent(messageId),
+      });
+      if (!result) return notFound("Document not found");
+      return ok(result);
     }
 
     if (method === "GET" && rawPath.includes("/messages/") && rawPath.includes("/attachments/")) {
@@ -976,8 +1192,6 @@ export async function handler(
     }
 
     if (method === "DELETE" && !subPath) {
-      assertTenantManagerRole(auth);
-
       const botId = params.botId;
       if (!botId || !z.string().uuid().safeParse(botId).success) {
         return badRequest("botId query parameter is required");
@@ -987,6 +1201,8 @@ export async function handler(
       if (!conversation || conversation.botId !== botId) {
         return notFound("Conversation not found");
       }
+
+      await assertCanAccessConversation(auth, conversation);
 
       const deleted = await deleteConversation(auth.tenantId, botId, conversationId);
       if (!deleted) return notFound("Conversation not found");

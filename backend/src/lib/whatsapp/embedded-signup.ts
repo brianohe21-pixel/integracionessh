@@ -16,9 +16,17 @@ const COEXISTENCE_WEBHOOK_FIELDS = [
   "smb_app_state_sync",
   "smb_message_echoes",
   "account_update",
+  "account_alerts",
+  "phone_number_quality_update",
 ];
 
-const CLOUD_API_WEBHOOK_FIELDS = ["messages", "calls"];
+const CLOUD_API_WEBHOOK_FIELDS = [
+  "messages",
+  "calls",
+  "account_update",
+  "account_alerts",
+  "phone_number_quality_update",
+];
 
 export function assertDistinctWabaAndPhone(wabaId: string, phoneNumberId: string): void {
   if (wabaId === phoneNumberId) {
@@ -88,6 +96,30 @@ export async function subscribeWabaWebhooks(
   }
 }
 
+export function resolveCloudApiPhoneNumber(
+  numbers: WabaPhoneNumberEntry[],
+  hintPhoneNumberId?: string
+): WabaPhoneNumberEntry | null {
+  if (hintPhoneNumberId) {
+    const byId = numbers.find((n) => n.id === hintPhoneNumberId);
+    if (byId) return byId;
+  }
+
+  if (numbers.length === 1) {
+    return numbers[0];
+  }
+
+  if (numbers.length > 1) {
+    const err = new Error(
+      "Multiple phone numbers found. Reconnect and select a single number in Meta."
+    ) as Error & { statusCode?: number };
+    err.statusCode = 400;
+    throw err;
+  }
+
+  return null;
+}
+
 export function resolveCoexistencePhoneNumber(
   numbers: WabaPhoneNumberEntry[],
   hintPhoneNumberId?: string
@@ -139,12 +171,16 @@ export async function completeEmbeddedSignup(params: {
   environment: string;
   code: string;
   wabaId: string;
-  phoneNumberId: string;
-  pin: string;
+  phoneNumberId?: string;
+  pin?: string;
   appId: string;
   appSecret: string;
   platformAppSecret: string;
-}): Promise<{ phoneNumberId: string; whatsappBusinessAccountId: string }> {
+}): Promise<{
+  phoneNumberId?: string;
+  whatsappBusinessAccountId: string;
+  needsRegistration: boolean;
+}> {
   const {
     tenantId,
     environment,
@@ -157,8 +193,6 @@ export async function completeEmbeddedSignup(params: {
     platformAppSecret,
   } = params;
 
-  assertDistinctWabaAndPhone(wabaId, phoneNumberId);
-
   const accessToken = await exchangeCodeForToken(code, appId, appSecret);
 
   await saveTenantWhatsAppSecret(tenantId, environment, {
@@ -167,11 +201,45 @@ export async function completeEmbeddedSignup(params: {
   });
 
   await subscribeWabaWebhooks(wabaId, accessToken);
-  await registerPhoneNumber(phoneNumberId, accessToken, pin);
+
+  let resolvedPhoneId = phoneNumberId?.trim() || undefined;
+  if (!resolvedPhoneId) {
+    const numbers = await listWabaPhoneNumbers(wabaId, accessToken);
+    const resolved = resolveCloudApiPhoneNumber(numbers, phoneNumberId);
+    resolvedPhoneId = resolved?.id;
+  }
+
+  if (!resolvedPhoneId) {
+    return {
+      whatsappBusinessAccountId: wabaId,
+      needsRegistration: false,
+    };
+  }
+
+  assertDistinctWabaAndPhone(wabaId, resolvedPhoneId);
+  const phoneInfo = await getPhoneNumberInfo(resolvedPhoneId, accessToken);
+
+  if (isPhoneAlreadyRegisteredForCloudApi(phoneInfo)) {
+    return {
+      phoneNumberId: resolvedPhoneId,
+      whatsappBusinessAccountId: wabaId,
+      needsRegistration: false,
+    };
+  }
+
+  if (pin && /^\d{6}$/.test(pin)) {
+    await registerPhoneNumber(resolvedPhoneId, accessToken, pin);
+    return {
+      phoneNumberId: resolvedPhoneId,
+      whatsappBusinessAccountId: wabaId,
+      needsRegistration: false,
+    };
+  }
 
   return {
-    phoneNumberId,
+    phoneNumberId: resolvedPhoneId,
     whatsappBusinessAccountId: wabaId,
+    needsRegistration: true,
   };
 }
 

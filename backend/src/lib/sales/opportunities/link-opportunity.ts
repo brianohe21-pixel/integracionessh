@@ -10,7 +10,7 @@ export async function syncOpportunityFromQuotation(params: {
   tenantId: string;
   conversationId: string;
   quotationId: string;
-  paymentId: string;
+  paymentId?: string;
   totalInCents: number;
   quotationNumber: string;
 }): Promise<Opportunity | null> {
@@ -31,7 +31,7 @@ export async function syncOpportunityFromQuotation(params: {
     opportunity,
     {
       quotationId: params.quotationId,
-      paymentId: params.paymentId,
+      ...(params.paymentId ? { paymentId: params.paymentId } : {}),
       amount,
       currency: "COP",
     }
@@ -64,7 +64,7 @@ export async function syncOpportunityFromQuotation(params: {
     message: params.quotationNumber,
     metadata: {
       quotationId: params.quotationId,
-      paymentId: params.paymentId,
+      ...(params.paymentId ? { paymentId: params.paymentId } : {}),
       totalInCents: params.totalInCents,
     },
     touchLastActivity: true,

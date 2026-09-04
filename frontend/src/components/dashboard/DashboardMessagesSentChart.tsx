@@ -10,7 +10,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import { BotMessageSquare } from "lucide-react";
+import { SendHorizonal } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { useFormatters } from "@/hooks/useFormatters";
 import { DashboardWidgetCard } from "./DashboardWidgetCard";
@@ -18,13 +18,17 @@ import type { UsageMetrics } from "@/types";
 
 const CHART_COLORS = ["#128c7e", "#2dd4bf", "#0f766e", "#14b8a6", "#0d9488"];
 
-interface DashboardActivityChartProps {
+interface DashboardMessagesSentChartProps {
   usage?: UsageMetrics | null;
   isLoading: boolean;
   error?: Error | null;
 }
 
-export function DashboardActivityChart({ usage, isLoading, error }: DashboardActivityChartProps) {
+export function DashboardMessagesSentChart({
+  usage,
+  isLoading,
+  error,
+}: DashboardMessagesSentChartProps) {
   const t = useT();
   const { formatNumber } = useFormatters();
 
@@ -35,20 +39,23 @@ export function DashboardActivityChart({ usage, isLoading, error }: DashboardAct
       name: bot.botName.length > 14 ? `${bot.botName.slice(0, 14)}…` : bot.botName,
       fullName: bot.botName,
       messages: bot.messages,
-      conversations: bot.conversations,
     }));
+
+  const isEmpty = !isLoading && !error && (usage?.summary.totalMessages ?? 0) === 0;
 
   return (
     <DashboardWidgetCard
-      title={t("dashboard.activityChartTitle")}
-      subtitle={t("dashboard.activityChartSubtitle")}
-      detailHref="/metrics"
+      title={t("dashboard.messagesSentTitle")}
+      subtitle={t("dashboard.messagesSentSubtitle", {
+        total: formatNumber(usage?.summary.totalMessages ?? 0),
+      })}
+      detailHref="/metrics?section=usage"
       isLoading={isLoading}
       error={error}
-      isEmpty={!isLoading && !error && data.length === 0}
-      emptyTitle={t("dashboard.activityEmptyTitle")}
-      emptyDescription={t("dashboard.activityEmptyDescription")}
-      emptyIcon={<BotMessageSquare className="h-5 w-5" />}
+      isEmpty={isEmpty}
+      emptyTitle={t("dashboard.messagesSentEmptyTitle")}
+      emptyDescription={t("dashboard.messagesSentEmptyDescription")}
+      emptyIcon={<SendHorizonal className="h-5 w-5" />}
     >
       <div className="h-56 w-full min-w-0">
         <ResponsiveContainer width="100%" height="100%">
@@ -65,6 +72,7 @@ export function DashboardActivityChart({ usage, isLoading, error }: DashboardAct
               axisLine={false}
               tickLine={false}
               tickFormatter={(v) => formatNumber(v)}
+              allowDecimals={false}
             />
             <Tooltip
               cursor={{ fill: "var(--accent-muted)" }}
@@ -74,13 +82,8 @@ export function DashboardActivityChart({ usage, isLoading, error }: DashboardAct
                 borderRadius: "8px",
                 fontSize: "12px",
               }}
-              formatter={(value, name) => [
-                formatNumber(Number(value)),
-                name === "messages" ? t("metrics.messages") : t("metrics.conversations"),
-              ]}
-              labelFormatter={(_, payload) =>
-                payload?.[0]?.payload?.fullName ?? ""
-              }
+              formatter={(value) => [formatNumber(Number(value)), t("metrics.messages")]}
+              labelFormatter={(_, payload) => payload?.[0]?.payload?.fullName ?? ""}
             />
             <Bar dataKey="messages" radius={[4, 4, 0, 0]} maxBarSize={48}>
               {data.map((_, index) => (

@@ -117,7 +117,12 @@ export async function deleteWhatsAppAccount(
 export async function updateWhatsAppAccount(
   tenantId: string,
   accountId: string,
-  updates: Partial<Pick<WhatsAppAccount, "label" | "status">>
+  updates: Partial<
+    Pick<
+      WhatsAppAccount,
+      "label" | "status" | "messagingEnforcement" | "metaAppId" | "metaAppOwnerTenantId"
+    >
+  >
 ): Promise<WhatsAppAccount | null> {
   const existing = await getWhatsAppAccount(tenantId, accountId);
   if (!existing) return null;

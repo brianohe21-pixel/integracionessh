@@ -7,6 +7,7 @@ import {
   clearCampaignNextBatchAt,
 } from "../dynamodb/campaign.repository.js";
 import { checkMarketingRecipients } from "../compliance/recipient-policy.js";
+import { deferCampaignDispatchForLaw2300 } from "../compliance/law2300-campaign.js";
 import type { Campaign, CampaignSQSBody } from "../../types/index.js";
 import type { PendingRecipient as RepoPendingRecipient } from "../dynamodb/campaign.repository.js";
 
@@ -37,7 +38,7 @@ async function filterPendingForMarketing(
 export async function enqueueRecipients(
   campaign: Pick<
     Campaign,
-    "campaignId" | "tenantId" | "botId" | "templateName" | "language" | "channel" | "requestDlr"
+    "campaignId" | "tenantId" | "botId" | "templateName" | "language" | "channel" | "requestDlr" | "requireOptIn"
   >,
   recipients: RepoPendingRecipient[],
   options?: EnqueueBatchOptions
@@ -50,6 +51,7 @@ export async function enqueueRecipients(
     language,
     channel = "whatsapp",
     requestDlr,
+    requireOptIn = true,
   } = campaign;
   const BATCH_SIZE = SQS_BATCH_SIZE;
   let entryIndex = 0;
@@ -75,6 +77,8 @@ export async function enqueueRecipients(
       ...(options?.batchVersion !== undefined ? { batchVersion: options.batchVersion } : {}),
       ...(options?.batchIndex !== undefined ? { batchIndex: options.batchIndex } : {}),
       ...(requestDlr ? { requestDlr: true } : {}),
+      requireOptIn,
+      outboundKind: "marketing",
     };
     if (recipient.components?.length) {
       body.components = recipient.components as NonNullable<CampaignSQSBody["components"]>;
@@ -143,13 +147,22 @@ export async function dispatchCampaignBatch(
     return null;
   }
 
+  const canDispatch = await deferCampaignDispatchForLaw2300(
+    tenantId,
+    campaignId,
+    batchVersion
+  );
+  if (!canDispatch) {
+    return { dispatched: 0, hasMorePending: true, batchIndex: campaign.currentBatch ?? 0 };
+  }
+
   const batchSize = campaign.batchConfig?.size ?? 5000;
   const fetchLimit = campaign.batchConfig ? batchSize + 1 : batchSize;
   const pending = await listPendingRecipients(tenantId, campaignId, fetchLimit);
   const eligible = await filterPendingForMarketing(
     tenantId,
     pending,
-    campaign.requireOptIn ?? false,
+    campaign.requireOptIn ?? true,
     actorUserId
   );
 
@@ -200,6 +213,9 @@ export async function startCampaignDispatch(
     await dispatchCampaignBatch(tenantId, campaignId, 1, actorUserId);
     return;
   }
+
+  const canDispatch = await deferCampaignDispatchForLaw2300(tenantId, campaignId, 1);
+  if (!canDispatch) return;
 
   const pending = await listPendingRecipients(tenantId, campaignId, 5000);
   const eligible = await filterPendingForMarketing(tenantId, pending, requireOptIn, actorUserId);

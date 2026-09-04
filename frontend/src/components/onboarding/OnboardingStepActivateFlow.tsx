@@ -10,6 +10,7 @@ import {
 import { getBotTemplate } from "@/lib/bot-templates";
 import type { BotIndustryTemplateId } from "@/lib/bot-templates";
 import { Button } from "@/components/ui/Button";
+import { IntegrationErrorSupport } from "@/components/support/IntegrationErrorSupport";
 import { ArrowRight, MessageSquare, Zap } from "lucide-react";
 import type { FlowNode } from "@/types";
 
@@ -102,7 +103,13 @@ export function OnboardingStepActivateFlow({
         </div>
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error ? (
+        <IntegrationErrorSupport
+          integration="flow"
+          error={error}
+          context={{ botId, flow: "onboarding_activate_flow" }}
+        />
+      ) : null}
 
       <Button
         onClick={() => void handleActivate()}

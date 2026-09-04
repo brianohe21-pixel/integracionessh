@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, CreditCard, FileText, ListTodo, TrendingUp, User } from "lucide-react";
+import { CheckCircle2, Calendar, CreditCard, FileText, ListTodo, TrendingUp, User } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { useDialog } from "@/components/ui/DialogProvider";
@@ -29,6 +29,8 @@ type Props = {
   activeLead?: Lead | null;
   locale: string;
   onCreateQuotation?: () => void;
+  onCreateBooking?: () => void;
+  showBooking?: boolean;
 };
 
 function contactPhone(conversation: Conversation): string | undefined {
@@ -52,6 +54,8 @@ export function ConversationOpportunityPanel({
   activeLead,
   locale,
   onCreateQuotation,
+  onCreateBooking,
+  showBooking = false,
 }: Props) {
   const t = useT();
   const { alert } = useDialog();
@@ -446,12 +450,20 @@ export function ConversationOpportunityPanel({
             <CreditCard className="h-3.5 w-3.5" />
             {t("sales.workspaceBilling")}
           </h4>
-          {onCreateQuotation ? (
-            <Button type="button" variant="ghost" size="sm" onClick={onCreateQuotation}>
-              <FileText className="h-3.5 w-3.5" />
-              {t("quotations.drawerTitle")}
-            </Button>
-          ) : null}
+          <div className="flex flex-wrap items-center justify-end gap-1">
+            {onCreateQuotation ? (
+              <Button type="button" variant="ghost" size="sm" onClick={onCreateQuotation}>
+                <FileText className="h-3.5 w-3.5" />
+                {t("quotations.drawerTitle")}
+              </Button>
+            ) : null}
+            {showBooking && onCreateBooking ? (
+              <Button type="button" variant="ghost" size="sm" onClick={onCreateBooking}>
+                <Calendar className="h-3.5 w-3.5" />
+                {t("conversations.bookMeetingTitle")}
+              </Button>
+            ) : null}
+          </div>
         </div>
 
         {detail?.quotation ? (

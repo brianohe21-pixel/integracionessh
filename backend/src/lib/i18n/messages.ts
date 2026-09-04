@@ -42,6 +42,7 @@ const messages = {
   bookingConfirmYes: "Confirmar",
   bookingConfirmNo: "Cancelar",
   bookingPaymentLink: "Te enviamos un link de pago para confirmar la reserva.",
+  bookingMeetingLink: "Link de la reunión:",
   bookingScheduledPrefix: "Tu cita fue agendada para",
   bookingScheduledPrefixEn: "Your appointment was scheduled for",
 } as const;
@@ -88,6 +89,7 @@ const enMessages: Record<keyof typeof messages, string> = {
   bookingConfirmYes: "Confirm",
   bookingConfirmNo: "Cancel",
   bookingPaymentLink: "We sent you a payment link to confirm the booking.",
+  bookingMeetingLink: "Meeting link:",
   bookingScheduledPrefix: "Tu cita fue agendada para",
   bookingScheduledPrefixEn: "Your appointment was scheduled for",
 };

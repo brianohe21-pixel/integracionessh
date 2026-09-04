@@ -2,6 +2,7 @@ import { performHandoff } from "../advisor/handoff.js";
 import { getContactByPhone, updateContact } from "../dynamodb/contact.repository.js";
 import { updateConversation } from "../dynamodb/conversation.repository.js";
 import { sendTemplateMessage } from "../whatsapp/client.js";
+import { assertWhatsAppOutboundAllowed } from "../whatsapp/outbound-guard.js";
 import { buildOutboundContext, sendChannelText } from "../channels/router.js";
 import type { AutomationRule, Bot, Channel, Conversation } from "../../types/index.js";
 import {
@@ -65,6 +66,12 @@ export async function executeAutomation(
       if (!rule.templateName || !rule.templateLanguage) {
         throw new Error("templateName and templateLanguage required");
       }
+      await assertWhatsAppOutboundAllowed({
+        tenantId: ctx.tenantId,
+        phoneNumberId: ctx.phoneNumberId,
+        kind: "transactional",
+        to: ctx.customerPhone,
+      });
       await sendTemplateMessage({
         phoneNumberId: ctx.phoneNumberId,
         to: ctx.customerPhone,

@@ -3,6 +3,7 @@ import {
   computeQuotationLineItems,
   computeQuotationTotals,
   renderQuotationPdf,
+  sanitizePdfText,
 } from "./pdf.js";
 
 describe("computeQuotationLineItems", () => {
@@ -42,6 +43,13 @@ describe("buildQuotationNumber", () => {
   });
 });
 
+describe("sanitizePdfText", () => {
+  it("removes emoji and unsupported unicode", () => {
+    expect(sanitizePdfText("Hola 👨‍💼 cliente")).toBe("Hola cliente");
+    expect(sanitizePdfText("Servicio técnico")).toBe("Servicio técnico");
+  });
+});
+
 describe("renderQuotationPdf", () => {
   it("returns a non-empty PDF buffer", async () => {
     const now = new Date().toISOString();
@@ -78,5 +86,42 @@ describe("renderQuotationPdf", () => {
 
     expect(buffer.byteLength).toBeGreaterThan(500);
     expect(Buffer.from(buffer).subarray(0, 4).toString()).toBe("%PDF");
+  });
+
+  it("renders when contact and line items contain emoji", async () => {
+    const now = new Date().toISOString();
+    const buffer = await renderQuotationPdf({
+      quotation: {
+        quotationId: "q-2",
+        tenantId: "t-1",
+        botId: "b-1",
+        conversationId: "c-1",
+        contactPhone: "573001234567",
+        contactName: "Juan 👨 Pérez",
+        number: "COT-20260101-ABC124",
+        items: [
+          {
+            description: "Paquete premium ✨",
+            quantity: 1,
+            unitPriceInCents: 50000,
+            totalInCents: 50000,
+          },
+        ],
+        subtotalInCents: 50000,
+        totalInCents: 50000,
+        currency: "COP",
+        notes: "Entrega rápida 🚀",
+        status: "sent",
+        sentAt: now,
+        createdAt: now,
+        updatedAt: now,
+      },
+      branding: {
+        brandName: "Mi Empresa 🏢",
+        primaryColor: "#4f46e5",
+      },
+    });
+
+    expect(buffer.byteLength).toBeGreaterThan(500);
   });
 });

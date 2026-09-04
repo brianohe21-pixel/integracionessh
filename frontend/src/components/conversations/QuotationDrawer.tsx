@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { FileText, Plus, Trash2, X } from "lucide-react";
 import { useT } from "@/i18n/context";
@@ -52,6 +52,14 @@ export function QuotationDrawer({ conversation, open, onClose }: Props) {
   const paymentsReady =
     paymentsData?.config.enabled === true && paymentsData.wompiConfigured === true;
 
+  const [includePaymentLink, setIncludePaymentLink] = useState(paymentsReady);
+
+  useEffect(() => {
+    if (open) {
+      setIncludePaymentLink(paymentsReady);
+    }
+  }, [open, paymentsReady]);
+
   const previewTotalCents = useMemo(() => {
     return lines.reduce((sum, line) => {
       const qty = Math.max(1, parseInt(line.quantity, 10) || 1);
@@ -73,6 +81,7 @@ export function QuotationDrawer({ conversation, open, onClose }: Props) {
     setNotes("");
     setValidUntil("");
     setError("");
+    setIncludePaymentLink(paymentsReady);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -102,6 +111,7 @@ export function QuotationDrawer({ conversation, open, onClose }: Props) {
       await create.mutateAsync({
         botId,
         items,
+        includePaymentLink: paymentsReady && includePaymentLink,
         ...(notes.trim() ? { notes: notes.trim() } : {}),
         ...(validUntil ? { validUntil: new Date(validUntil).toISOString() } : {}),
       });
@@ -113,6 +123,9 @@ export function QuotationDrawer({ conversation, open, onClose }: Props) {
   }
 
   if (!open) return null;
+
+  const sendLabel =
+    paymentsReady && includePaymentLink ? t("quotations.send") : t("quotations.sendWithoutPayment");
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4">
@@ -133,9 +146,26 @@ export function QuotationDrawer({ conversation, open, onClose }: Props) {
 
         <form onSubmit={(e) => void handleSubmit(e)} className="flex flex-1 flex-col overflow-hidden">
           <div className="flex-1 space-y-4 overflow-y-auto p-5">
-            {!paymentsReady ? (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                <p>{t("quotations.paymentsRequired")}</p>
+            {paymentsReady ? (
+              <label className="flex items-start gap-3 rounded-lg border border-default bg-surface-muted/60 p-3 text-sm">
+                <input
+                  type="checkbox"
+                  checked={includePaymentLink}
+                  onChange={(e) => setIncludePaymentLink(e.target.checked)}
+                  className="mt-0.5 rounded border-default text-accent focus:ring-accent"
+                />
+                <span>
+                  <span className="block font-medium text-primary">
+                    {t("quotations.includePaymentLink")}
+                  </span>
+                  <span className="mt-0.5 block text-secondary">
+                    {t("quotations.includePaymentLinkHint")}
+                  </span>
+                </span>
+              </label>
+            ) : (
+              <div className="rounded-lg border border-default bg-surface-muted/60 p-3 text-sm text-secondary">
+                <p>{t("quotations.sendWithoutPaymentHint")}</p>
                 <Link
                   href={`/apps/payments/${botId}`}
                   className="mt-2 inline-block font-medium text-accent hover:underline"
@@ -143,7 +173,7 @@ export function QuotationDrawer({ conversation, open, onClose }: Props) {
                   {t("quotations.configurePayments")}
                 </Link>
               </div>
-            ) : null}
+            )}
 
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -232,8 +262,8 @@ export function QuotationDrawer({ conversation, open, onClose }: Props) {
             <Button type="button" variant="ghost" onClick={onClose}>
               {t("common.cancel")}
             </Button>
-            <Button type="submit" disabled={!paymentsReady || create.isPending}>
-              {t("quotations.send")}
+            <Button type="submit" disabled={create.isPending}>
+              {sendLabel}
             </Button>
           </div>
         </form>

@@ -6,6 +6,7 @@ import {
   uploadWhatsAppMedia,
 } from "../whatsapp/client.js";
 import { normalizeInboundMessage } from "../whatsapp/inbound.js";
+import { assertWhatsAppOutboundAllowed } from "../whatsapp/outbound-guard.js";
 import type { WhatsAppInboundPayload, WhatsAppMessage } from "../../types/index.js";
 import type { ChannelAdapter, OutboundContext, OutboundDocument, OutboundResult } from "./types.js";
 
@@ -21,6 +22,12 @@ export const whatsappAdapter: ChannelAdapter = {
     if (!ctx.phoneNumberId || !ctx.accessToken) {
       throw new Error("WhatsApp outbound requires phoneNumberId and accessToken");
     }
+    await assertWhatsAppOutboundAllowed({
+      tenantId: ctx.tenantId,
+      phoneNumberId: ctx.phoneNumberId,
+      kind: ctx.outboundKind ?? "service",
+      to: ctx.participantId,
+    });
     const outboundText = truncateWhatsAppText(text);
     const result = await sendTextMessage({
       phoneNumberId: ctx.phoneNumberId,
@@ -36,6 +43,12 @@ export const whatsappAdapter: ChannelAdapter = {
     if (!ctx.phoneNumberId || !ctx.accessToken) {
       throw new Error("WhatsApp outbound requires phoneNumberId and accessToken");
     }
+    await assertWhatsAppOutboundAllowed({
+      tenantId: ctx.tenantId,
+      phoneNumberId: ctx.phoneNumberId,
+      kind: ctx.outboundKind ?? "service",
+      to: ctx.participantId,
+    });
     const uploaded = await uploadWhatsAppMedia({
       phoneNumberId: ctx.phoneNumberId,
       accessToken: ctx.accessToken,

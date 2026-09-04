@@ -13,7 +13,7 @@ export default function CampaignsPage() {
   const { data: campaigns = [], isLoading, error } = useCampaignList();
 
   return (
-    <DashboardPage maxWidth="6xl" className="space-y-6">
+    <DashboardPage className="space-y-6">
       <PageHeader
         title={t("campaigns.title")}
         subtitle={t("campaigns.subtitle")}

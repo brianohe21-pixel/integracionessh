@@ -26,12 +26,14 @@ const SALES_SOURCES: PaymentRequestSource[] = [
 
 interface DashboardSalesBySourceChartProps {
   sales?: SalesMetrics | null;
+  rangeLabel: string;
   isLoading: boolean;
   error?: Error | null;
 }
 
 export function DashboardSalesBySourceChart({
   sales,
+  rangeLabel,
   isLoading,
   error,
 }: DashboardSalesBySourceChartProps) {
@@ -52,7 +54,7 @@ export function DashboardSalesBySourceChart({
   return (
     <DashboardWidgetCard
       title={t("dashboard.salesBySourceTitle")}
-      subtitle={t("dashboard.salesBySourceSubtitle")}
+      subtitle={t("dashboard.salesBySourceSubtitlePeriod", { period: rangeLabel })}
       detailHref="/metrics?section=sales"
       isLoading={isLoading}
       error={error}

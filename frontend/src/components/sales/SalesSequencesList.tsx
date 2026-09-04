@@ -57,7 +57,7 @@ export function SalesSequencesList({
                   <Zap className="h-3 w-3" />
                   {stepsLabel(sequence.steps.length)}
                 </div>
-                <h3 className="truncate text-base font-semibold text-[var(--card-header-title)]">{sequence.name}</h3>
+                <h3 className="truncate text-base font-semibold text-primary">{sequence.name}</h3>
               </div>
               <Badge variant={sequence.enabled ? "success" : "default"} dot>
                 {sequence.enabled ? activeLabel : inactiveLabel}

@@ -5,23 +5,36 @@ import Script from "next/script";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/context";
 import { useWhatsAppConnect } from "@/hooks/useWhatsAppConnect";
+import { useMetaAppConfig } from "@/hooks/useMetaAppConfig";
+import { IntegrationErrorSupport } from "@/components/support/IntegrationErrorSupport";
 import { MessageCircle, Loader2, CheckCircle } from "lucide-react";
 
-const META_APP_ID = process.env.NEXT_PUBLIC_META_APP_ID ?? "";
-const CONFIG_ID = process.env.NEXT_PUBLIC_META_EMBEDDED_SIGNUP_CONFIG_ID ?? "";
+const FALLBACK_META_APP_ID = process.env.NEXT_PUBLIC_META_APP_ID ?? "";
+const FALLBACK_CONFIG_ID = process.env.NEXT_PUBLIC_META_EMBEDDED_SIGNUP_CONFIG_ID ?? "";
 const FB_SDK_VERSION = "v22.0";
 const PIN_LENGTH = 6;
+const SESSION_INFO_GRACE_MS = 5000;
+const SESSION_INFO_RETRY_MS = 400;
+
+const ALLOWED_ORIGINS = new Set(["https://www.facebook.com", "https://web.facebook.com"]);
+
+const FINISH_EVENTS = new Set([
+  "FINISH",
+  "FINISH_ONLY_WABA",
+  "FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING",
+]);
 
 export type WhatsAppOnboardingMode = "cloud_api" | "coexistence";
 
 interface EmbeddedSignupLauncherProps {
   onConnected: (data: {
-    phoneNumberId: string;
+    phoneNumberId?: string;
     whatsappBusinessAccountId: string;
     onboardingMode?: WhatsAppOnboardingMode;
     isOnBizApp?: boolean;
     platformType?: string;
     channelId?: string;
+    pendingRegistration?: boolean;
   }) => void;
   alreadyConnected?: boolean;
   className?: string;
@@ -40,6 +53,8 @@ interface EmbeddedSignupMessage {
   data?: {
     phone_number_id?: string;
     waba_id?: string;
+    error_message?: string;
+    current_step?: string;
   };
 }
 
@@ -61,27 +76,55 @@ export function EmbeddedSignupLauncher({
   botId,
 }: EmbeddedSignupLauncherProps) {
   const t = useT();
-  const { status, error, connect, connectCoexistence, reset } = useWhatsAppConnect(botId);
+  const { data: metaAppConfig, isLoading: metaAppLoading } = useMetaAppConfig();
+  const { status, error, connect, connectCoexistence, reset, setStatus } = useWhatsAppConnect(botId);
   const [sdkReady, setSdkReady] = useState(false);
   const [localConnected, setLocalConnected] = useState(alreadyConnected);
+  const [pendingRegistration, setPendingRegistration] = useState(false);
   const [pin, setPin] = useState("");
-  const [pinError, setPinError] = useState("");
+  const [signupError, setSignupError] = useState("");
   const pendingRef = useRef<{
     code?: string;
     wabaId?: string;
     phoneNumberId?: string;
     coexistence?: boolean;
+    sessionFinished?: boolean;
   }>({});
   const messageHandlerRef = useRef<((event: MessageEvent) => void) | null>(null);
+  const graceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const completingRef = useRef(false);
 
-  const isConfigured = Boolean(META_APP_ID && CONFIG_ID);
+  const metaAppId = metaAppConfig?.appId?.trim() || FALLBACK_META_APP_ID;
+  const configId = metaAppConfig?.embeddedSignupConfigId?.trim() || FALLBACK_CONFIG_ID;
+  const isConfigured = Boolean(metaAppId && configId);
   const isCoexistence = onboardingMode === "coexistence";
   const pinValid = /^\d{6}$/.test(pin);
 
+  useEffect(() => {
+    if (!metaAppId || !window.FB) return;
+    window.FB.init({
+      appId: metaAppId,
+      cookie: true,
+      xfbml: true,
+      version: FB_SDK_VERSION,
+    });
+    setSdkReady(true);
+  }, [metaAppId]);
+
+  const clearGraceTimer = useCallback(() => {
+    if (graceTimerRef.current) {
+      clearInterval(graceTimerRef.current);
+      graceTimerRef.current = null;
+    }
+  }, []);
+
   const tryComplete = useCallback(async () => {
     const { code, wabaId, phoneNumberId, coexistence } = pendingRef.current;
-    if (!code || !wabaId) return;
-    if (!coexistence && (!phoneNumberId || !pinValid)) return;
+    if (!code || !wabaId || completingRef.current) return;
+    if (!coexistence && pin && !pinValid) return;
+
+    completingRef.current = true;
+    clearGraceTimer();
 
     try {
       if (coexistence) {
@@ -92,6 +135,7 @@ export function EmbeddedSignupLauncher({
         });
         pendingRef.current = {};
         setLocalConnected(true);
+        setPendingRegistration(false);
         onConnected({
           phoneNumberId: result.phoneNumberId,
           whatsappBusinessAccountId: result.whatsappBusinessAccountId,
@@ -107,24 +151,41 @@ export function EmbeddedSignupLauncher({
 
       const result = await connect({
         code,
-        phoneNumberId: phoneNumberId!,
         whatsappBusinessAccountId: wabaId,
-        pin,
+        ...(phoneNumberId ? { phoneNumberId } : {}),
+        ...(pinValid ? { pin } : {}),
       });
       pendingRef.current = {};
       setLocalConnected(true);
+      setPendingRegistration(result.pendingRegistration ?? false);
       onConnected({
         phoneNumberId: result.phoneNumberId,
         whatsappBusinessAccountId: result.whatsappBusinessAccountId,
         onboardingMode: "cloud_api",
+        pendingRegistration: result.pendingRegistration,
         ...("channel" in result && result.channel
           ? { channelId: result.channel.channelId }
           : {}),
       });
     } catch {
       pendingRef.current = {};
+      setStatus("error");
+    } finally {
+      completingRef.current = false;
     }
-  }, [connect, connectCoexistence, onConnected, pin, pinValid]);
+  }, [clearGraceTimer, connect, connectCoexistence, onConnected, pin, pinValid, setStatus]);
+
+  const scheduleGraceRetries = useCallback(() => {
+    if (graceTimerRef.current) return;
+    const startedAt = Date.now();
+    graceTimerRef.current = setInterval(() => {
+      if (Date.now() - startedAt > SESSION_INFO_GRACE_MS) {
+        clearGraceTimer();
+        return;
+      }
+      void tryComplete();
+    }, SESSION_INFO_RETRY_MS);
+  }, [clearGraceTimer, tryComplete]);
 
   useEffect(() => {
     setLocalConnected(alreadyConnected);
@@ -132,32 +193,30 @@ export function EmbeddedSignupLauncher({
 
   useEffect(() => {
     return () => {
+      clearGraceTimer();
       if (messageHandlerRef.current) {
         window.removeEventListener("message", messageHandlerRef.current);
       }
     };
-  }, []);
+  }, [clearGraceTimer]);
 
   const handleLaunch = useCallback(() => {
     if (!sdkReady || !window.FB) {
       return;
     }
 
-    if (!isCoexistence && !pinValid) {
-      setPinError(t("whatsapp.pinInvalid"));
-      return;
-    }
-
-    setPinError("");
+    setSignupError("");
     reset();
+    completingRef.current = false;
     pendingRef.current = { coexistence: isCoexistence };
+    clearGraceTimer();
 
     if (messageHandlerRef.current) {
       window.removeEventListener("message", messageHandlerRef.current);
     }
 
     const handler = (event: MessageEvent) => {
-      if (event.origin !== "https://www.facebook.com") return;
+      if (!ALLOWED_ORIGINS.has(event.origin)) return;
 
       let payload: EmbeddedSignupMessage;
       try {
@@ -169,21 +228,34 @@ export function EmbeddedSignupLauncher({
 
       if (payload.type !== "WA_EMBEDDED_SIGNUP") return;
 
-      if (payload.event === "CANCEL") {
+      const eventName = String(payload.event ?? "").toUpperCase();
+
+      if (eventName === "CANCEL") {
         pendingRef.current = {};
+        clearGraceTimer();
         reset();
         return;
       }
 
-      if (
-        (payload.event === "FINISH" || payload.event === "FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING") &&
-        payload.data
-      ) {
+      if (eventName === "ERROR") {
+        pendingRef.current = {};
+        clearGraceTimer();
+        setSignupError(t("whatsapp.signupError"));
+        reset();
+        return;
+      }
+
+      if (payload.data?.waba_id) {
         pendingRef.current.wabaId = payload.data.waba_id;
-        if (payload.data.phone_number_id) {
-          pendingRef.current.phoneNumberId = payload.data.phone_number_id;
-        }
+      }
+      if (payload.data?.phone_number_id) {
+        pendingRef.current.phoneNumberId = payload.data.phone_number_id;
+      }
+
+      if (FINISH_EVENTS.has(eventName)) {
+        pendingRef.current.sessionFinished = true;
         void tryComplete();
+        scheduleGraceRetries();
       }
     };
 
@@ -191,16 +263,16 @@ export function EmbeddedSignupLauncher({
     window.addEventListener("message", handler);
 
     const loginOptions: Record<string, unknown> = {
-      config_id: CONFIG_ID,
+      config_id: configId,
       response_type: "code",
       override_default_response_type: true,
+      extras: { setup: {} },
     };
 
     if (isCoexistence) {
       loginOptions.extras = {
         setup: {},
         featureType: "whatsapp_business_app_onboarding",
-        sessionInfoVersion: "3",
       };
     }
 
@@ -209,18 +281,29 @@ export function EmbeddedSignupLauncher({
         if (response.status === "connected" && response.authResponse?.code) {
           pendingRef.current.code = response.authResponse.code;
           void tryComplete();
+          scheduleGraceRetries();
           return;
         }
         if (!pendingRef.current.code && response.status !== "connected") {
+          clearGraceTimer();
           reset();
         }
       },
       loginOptions
     );
-  }, [isCoexistence, pinValid, reset, sdkReady, t, tryComplete]);
+  }, [clearGraceTimer, configId, isCoexistence, reset, scheduleGraceRetries, sdkReady, t, tryComplete]);
 
   const isConnecting = status === "connecting";
   const showConnected = localConnected || status === "connected";
+  const integrationError = signupError || error;
+
+  if (metaAppLoading) {
+    return (
+      <div className={cn("rounded-lg border border-default bg-surface p-4 animate-pulse", className)}>
+        <div className="h-4 w-40 rounded bg-gray-200" />
+      </div>
+    );
+  }
 
   if (!isConfigured) {
     return (
@@ -237,8 +320,9 @@ export function EmbeddedSignupLauncher({
         strategy="lazyOnload"
         onLoad={() => {
           const initSdk = () => {
+            if (!metaAppId) return;
             window.FB?.init({
-              appId: META_APP_ID,
+              appId: metaAppId,
               cookie: true,
               xfbml: true,
               version: FB_SDK_VERSION,
@@ -266,7 +350,7 @@ export function EmbeddedSignupLauncher({
         {!isCoexistence && (
           <div className="mb-4">
             <label htmlFor="whatsapp-pin" className="block text-xs font-medium text-secondary mb-1">
-              {t("whatsapp.pinLabel")}
+              {t("whatsapp.pinLabelOptional")}
             </label>
             <input
               id="whatsapp-pin"
@@ -278,20 +362,23 @@ export function EmbeddedSignupLauncher({
               onChange={(e) => {
                 const next = e.target.value.replace(/\D/g, "").slice(0, PIN_LENGTH);
                 setPin(next);
-                if (pinError) setPinError("");
               }}
               placeholder={t("whatsapp.pinPlaceholder")}
               className="w-full max-w-xs rounded-lg border border-default px-3 py-2 text-sm font-mono tracking-widest"
             />
-            <p className="mt-1 text-xs text-secondary">{t("whatsapp.pinHint")}</p>
-            {pinError && <p className="mt-1 text-xs text-red-600">{pinError}</p>}
+            <p className="mt-1 text-xs text-secondary">{t("whatsapp.pinHintOptional")}</p>
           </div>
         )}
 
         {showConnected ? (
-          <div className="flex items-center gap-2 text-sm text-green-700">
-            <CheckCircle className="w-4 h-4 flex-shrink-0" />
-            <span>{t("whatsapp.connected")}</span>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-sm text-green-700">
+              <CheckCircle className="w-4 h-4 flex-shrink-0" />
+              <span>{t("whatsapp.connected")}</span>
+            </div>
+            {pendingRegistration && (
+              <p className="text-xs text-secondary">{t("whatsapp.pendingDescription")}</p>
+            )}
           </div>
         ) : (
           <button
@@ -325,6 +412,7 @@ export function EmbeddedSignupLauncher({
             type="button"
             onClick={() => {
               setLocalConnected(false);
+              setPendingRegistration(false);
               reset();
               handleLaunch();
             }}
@@ -340,11 +428,17 @@ export function EmbeddedSignupLauncher({
         )}
       </div>
 
-      {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3">
-          <p className="text-sm text-red-600">{error}</p>
-        </div>
-      )}
+      {integrationError ? (
+        <IntegrationErrorSupport
+          integration="whatsapp"
+          error={integrationError}
+          context={{
+            flow: "embedded_signup",
+            onboardingMode,
+            ...(botId ? { botId } : {}),
+          }}
+        />
+      ) : null}
     </div>
   );
 }

@@ -8,11 +8,12 @@ import { CheckCircle } from "lucide-react";
 interface OnboardingStepWhatsAppProps {
   connected: boolean;
   onConnected: (data: {
-    phoneNumberId: string;
+    phoneNumberId?: string;
     whatsappBusinessAccountId: string;
     onboardingMode?: WhatsAppOnboardingMode;
     isOnBizApp?: boolean;
     platformType?: string;
+    pendingRegistration?: boolean;
   }) => void;
 }
 

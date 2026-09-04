@@ -3,6 +3,8 @@ import type {
   Bot,
   BotLocale,
   ContactCenterQueue,
+  QueueFallbackAction,
+  QueueMembership,
   SupervisorRole,
   TelephonySession,
   VoiceCampaignAttempt,
@@ -56,6 +58,7 @@ import { normalizeE164 } from "../telnyx/phone.js";
 import { decodeTelnyxClientState } from "../telnyx/webhook.js";
 import {
   attachTelephonyCallControlId,
+  clearContactCenterPhase,
   clearTelephonySupervisor,
   indexTelephonyCallControlId,
   createTelephonySession,
@@ -106,6 +109,183 @@ function gatewayStreamUrl(streamToken: string): string {
 
 function speakLanguage(locale: BotLocale): string {
   return locale === "en" ? "en-US" : "es-ES";
+}
+
+const CALLBACK_GATHER_DIGIT = "9";
+const CALLBACK_QUEUE_PRIORITY = 10;
+
+async function startVoicemailPrompt(session: TelephonySession, prompt?: string): Promise<void> {
+  await patchTelephonySession(session.sessionId, { contactCenterPhase: "voicemail_prompt" });
+  await updateCallRecord(session.tenantId, session.callId, { status: "voicemail" }).catch(
+    () => undefined
+  );
+  await speakOnCall({
+    environment: ENVIRONMENT,
+    tenantId: session.tenantId,
+    callControlId: session.callControlId,
+    payload:
+      prompt ||
+      (session.locale === "en"
+        ? "Please leave a message after the tone"
+        : "Deje su mensaje después del tono"),
+    language: speakLanguage(session.locale),
+  });
+}
+
+async function beginVoicemailRecording(session: TelephonySession): Promise<void> {
+  await patchTelephonySession(session.sessionId, { contactCenterPhase: "voicemail_recording" });
+  await startCallRecording(ENVIRONMENT, session.callControlId, session.tenantId, {
+    playBeep: true,
+  }).catch(() => undefined);
+  await logEvent(session.tenantId, session.botId, session.callId, "recording_started");
+}
+
+async function applyQueueFallbackAction(
+  session: TelephonySession,
+  queue: ContactCenterQueue,
+  action: QueueFallbackAction
+): Promise<void> {
+  if (action === "ai") {
+    await connectSessionToAi(session);
+    return;
+  }
+  if (action === "voicemail") {
+    await startVoicemailPrompt(
+      session,
+      session.locale === "en"
+        ? "We are currently closed. Please leave a message after the tone."
+        : "En este momento estamos cerrados. Deje su mensaje después del tono."
+    );
+    return;
+  }
+  if (action === "callback") {
+    await scheduleCallback(session, queue, { afterHours: true });
+    return;
+  }
+  await hangupCall(ENVIRONMENT, session.callControlId, session.tenantId).catch(() => undefined);
+}
+
+async function scheduleCallback(
+  session: TelephonySession,
+  queue: ContactCenterQueue,
+  options?: { afterHours?: boolean; phoneNumber?: string }
+): Promise<void> {
+  const callbackNumber = normalizeE164(options?.phoneNumber || session.fromNumber);
+  if (!callbackNumber) {
+    await hangupCall(ENVIRONMENT, session.callControlId, session.tenantId).catch(() => undefined);
+    return;
+  }
+
+  const existing = await getQueueMembershipByCallId(session.callId);
+  if (existing) await deleteQueueMembership(existing);
+
+  const queuedAt = new Date().toISOString();
+  await enqueueQueueMembership({
+    membershipId: randomUUID(),
+    tenantId: session.tenantId,
+    queueId: queue.queueId,
+    callId: session.callId,
+    sessionId: session.sessionId,
+    botId: session.botId,
+    priority: options?.afterHours ? CALLBACK_QUEUE_PRIORITY : 0,
+    queuedAt,
+    callbackNumber,
+  });
+  await patchTelephonySession(session.sessionId, {
+    mode: "queue",
+    queueId: queue.queueId,
+    contactCenterPhase: "callback_queued",
+  });
+  await updateCallRecord(session.tenantId, session.callId, {
+    queueId: queue.queueId,
+    contactCenterMode: "queue",
+  });
+  await logEvent(session.tenantId, session.botId, session.callId, "callback", callbackNumber);
+
+  const message = options?.afterHours
+    ? session.locale === "en"
+      ? "We are currently closed. We will call you back during business hours. Goodbye."
+      : "En este momento estamos cerrados. Le devolveremos la llamada en horario de atención. Hasta luego."
+    : session.locale === "en"
+      ? "We will call you back shortly. Goodbye."
+      : "Le devolveremos la llamada en breve. Hasta luego.";
+
+  await speakOnCall({
+    environment: ENVIRONMENT,
+    tenantId: session.tenantId,
+    callControlId: session.callControlId,
+    payload: message,
+    language: speakLanguage(session.locale),
+  });
+}
+
+async function offerCallbackGather(session: TelephonySession): Promise<void> {
+  await patchTelephonySession(session.sessionId, { contactCenterPhase: "callback_offer" });
+  await gatherUsingSpeak({
+    environment: ENVIRONMENT,
+    tenantId: session.tenantId,
+    callControlId: session.callControlId,
+    payload:
+      session.locale === "en"
+        ? `Press ${CALLBACK_GATHER_DIGIT} to receive a callback instead of waiting.`
+        : `Marque ${CALLBACK_GATHER_DIGIT} para recibir una devolución de llamada.`,
+    validDigits: CALLBACK_GATHER_DIGIT,
+    timeoutMillis: 8000,
+    language: speakLanguage(session.locale),
+  });
+}
+
+async function offerCallbackToAgent(params: {
+  membership: QueueMembership;
+  session: TelephonySession;
+  queue: ContactCenterQueue;
+  advisorId: string;
+}): Promise<void> {
+  const bot = await getBot(params.session.tenantId, params.session.botId);
+  const from = normalizeE164(bot?.telephonyPhoneNumber ?? params.session.toNumber);
+  const to = normalizeE164(params.membership.callbackNumber ?? "");
+  if (!from || !to) {
+    await deleteQueueMembership(params.membership);
+    return;
+  }
+
+  const secrets = await getTelnyxSecrets(ENVIRONMENT, params.session.tenantId);
+  const dial = await dialCall({
+    environment: ENVIRONMENT,
+    tenantId: params.session.tenantId,
+    to,
+    from,
+    connectionId: secrets.connectionId,
+    clientState: encodeClientState({
+      sessionId: params.session.sessionId,
+      callId: params.session.callId,
+      leg: "customer",
+      advisorId: params.advisorId,
+    }),
+    timeoutSecs: 30,
+  });
+
+  await attachTelephonyCallControlId(params.session.sessionId, dial.callControlId);
+  await clearContactCenterPhase(params.session.sessionId);
+  await patchTelephonySession(params.session.sessionId, {
+    mode: "agent",
+    advisorId: params.advisorId,
+    direction: "outbound",
+    queueId: params.queue.queueId,
+  });
+  await updateCallRecord(params.session.tenantId, params.session.callId, {
+    status: "ringing",
+    advisorId: params.advisorId,
+    contactCenterMode: "agent",
+  });
+  await markAgentOffered({ tenantId: params.session.tenantId, advisorId: params.advisorId });
+  await logEvent(
+    params.session.tenantId,
+    params.session.botId,
+    params.session.callId,
+    "callback",
+    to
+  );
 }
 
 async function logEvent(
@@ -252,17 +432,7 @@ export async function startIvrNode(session: TelephonySession, nodeId?: string): 
   }
 
   if (node.type === "voicemail") {
-    await speakOnCall({
-      environment: ENVIRONMENT,
-      tenantId: session.tenantId,
-      callControlId: session.callControlId,
-      payload:
-        node.prompt ||
-        (session.locale === "en"
-          ? "Please leave a message after the tone"
-          : "Deje su mensaje después del tono"),
-      language,
-    });
+    await startVoicemailPrompt(session, node.prompt);
     return;
   }
 
@@ -273,8 +443,27 @@ export async function handleGatherEnded(payload: Record<string, unknown>): Promi
   const callControlId = String(payload.call_control_id ?? "");
   if (!callControlId) return;
   const session = await getTelephonySessionByCallControlId(callControlId);
-  if (!session?.ivrFlowId || !session.ivrNodeId) return;
+  if (!session) return;
   const digits = String(payload.digits ?? payload.dtmf ?? "");
+
+  if (
+    session.mode === "queue" &&
+    session.contactCenterPhase === "callback_offer" &&
+    session.queueId
+  ) {
+    await logEvent(session.tenantId, session.botId, session.callId, "dtmf", digits || "timeout");
+    const queue = await getContactCenterQueue(session.tenantId, session.queueId);
+    if (!queue) return;
+    if (digits === CALLBACK_GATHER_DIGIT) {
+      await scheduleCallback(session, queue);
+      return;
+    }
+    await clearContactCenterPhase(session.sessionId);
+    await playHold(session, queue);
+    return;
+  }
+
+  if (!session.ivrFlowId || !session.ivrNodeId) return;
   await logEvent(session.tenantId, session.botId, session.callId, "dtmf", digits || "timeout");
 
   const flow = await getContactCenterIvrFlow(session.tenantId, session.ivrFlowId);
@@ -378,24 +567,7 @@ export async function enqueueCall(params: {
 }
 
 async function handleAfterHours(session: TelephonySession, queue: ContactCenterQueue): Promise<void> {
-  if (queue.afterHoursAction === "ai") {
-    await connectSessionToAi(session);
-    return;
-  }
-  if (queue.afterHoursAction === "voicemail") {
-    await speakOnCall({
-      environment: ENVIRONMENT,
-      tenantId: session.tenantId,
-      callControlId: session.callControlId,
-      payload:
-        session.locale === "en"
-          ? "We are currently closed. Please leave a message."
-          : "En este momento estamos cerrados. Deje su mensaje.",
-      language: speakLanguage(session.locale),
-    });
-    return;
-  }
-  await hangupCall(ENVIRONMENT, session.callControlId, session.tenantId).catch(() => undefined);
+  await applyQueueFallbackAction(session, queue, queue.afterHoursAction);
 }
 
 async function playHold(session: TelephonySession, queue: ContactCenterQueue): Promise<void> {
@@ -438,9 +610,28 @@ export async function handleSpeakEnded(payload: Record<string, unknown>): Promis
   const callControlId = String(payload.call_control_id ?? "");
   if (!callControlId) return;
   const session = await getTelephonySessionByCallControlId(callControlId);
-  if (!session?.queueId || session.mode !== "queue" || session.advisorId) return;
+  if (!session) return;
+
+  if (session.contactCenterPhase === "voicemail_prompt") {
+    await beginVoicemailRecording(session);
+    return;
+  }
+
+  if (session.contactCenterPhase === "callback_queued") {
+    await clearContactCenterPhase(session.sessionId);
+    await patchTelephonySession(session.sessionId, { status: "ended" });
+    await hangupCall(ENVIRONMENT, session.callControlId, session.tenantId).catch(() => undefined);
+    if (session.queueId) await dispatchQueue(session.tenantId, session.queueId);
+    return;
+  }
+
+  if (!session.queueId || session.mode !== "queue" || session.advisorId) return;
   const queue = await getContactCenterQueue(session.tenantId, session.queueId);
   if (!queue) return;
+  if (queue.callbackEnabled) {
+    await offerCallbackGather(session);
+    return;
+  }
   await playHold(session, queue);
 }
 
@@ -468,6 +659,17 @@ export async function dispatchQueue(tenantId: string, queueId: string): Promise<
       await deleteQueueMembership(membership);
       continue;
     }
+    if (membership.callbackNumber && !isWithinBusinessHours(queue.hours)) {
+      continue;
+    }
+    if (membership.callbackNumber) {
+      await offerCallbackToAgent({ membership, session, queue, advisorId: agent.advisorId });
+      return;
+    }
+    if (session.status === "ended") {
+      await deleteQueueMembership(membership);
+      continue;
+    }
     await offerCallToAgent({ session, queue, advisorId: agent.advisorId });
     return;
   }
@@ -488,11 +690,7 @@ async function overflowOrHangup(
     await enqueueCall({ session, queueId: queue.overflowQueueId });
     return;
   }
-  if (queue.afterHoursAction === "ai") {
-    await connectSessionToAi(session);
-    return;
-  }
-  await hangupCall(ENVIRONMENT, session.callControlId, session.tenantId).catch(() => undefined);
+  await applyQueueFallbackAction(session, queue, queue.overflowAction ?? "hangup");
 }
 
 async function offerCallToAgent(params: {
@@ -608,6 +806,8 @@ export async function handleAgentLegAnswered(payload: Record<string, unknown>): 
     supervisorRole,
   });
   if (session.agentCallControlId === callControlId && session.advisorId) {
+    const membership = await getQueueMembershipByCallId(session.callId);
+    if (membership) await deleteQueueMembership(membership);
     await markAgentOnCall({ tenantId: session.tenantId, advisorId: session.advisorId });
     await logEvent(session.tenantId, session.botId, session.callId, "agent_answered");
     const queuedAt = (await getCallRecord(session.tenantId, session.callId))?.createdAt;
@@ -635,7 +835,21 @@ export async function handleContactCenterHangup(payload: Record<string, unknown>
   }
 
   const membership = await getQueueMembershipByCallId(session.callId);
-  if (membership) await deleteQueueMembership(membership);
+  if (membership && !membership.callbackNumber) {
+    await deleteQueueMembership(membership);
+  }
+  if (
+    session.contactCenterPhase === "voicemail_prompt" ||
+    session.contactCenterPhase === "voicemail_recording"
+  ) {
+    await updateCallRecord(session.tenantId, session.callId, { status: "voicemail" }).catch(
+      () => undefined
+    );
+  }
+  if (session.direction === "outbound" && membership?.callbackNumber) {
+    await deleteQueueMembership(membership);
+    if (session.queueId) await dispatchQueue(session.tenantId, session.queueId);
+  }
   if (session.advisorId) {
     const queue = session.queueId
       ? await getContactCenterQueue(session.tenantId, session.queueId)
@@ -828,17 +1042,29 @@ export async function requestCallback(params: {
   if (!session?.queueId) {
     throw Object.assign(new Error("Call is not queued"), { statusCode: 400 });
   }
-  const number = normalizeE164(params.phoneNumber || session.fromNumber);
-  const membership = await getQueueMembershipByCallId(session.callId);
-  if (membership) await deleteQueueMembership(membership);
-  await enqueueCall({
-    session,
-    queueId: session.queueId,
-    ...(number ? { callbackNumber: number } : {}),
+  const queue = await getContactCenterQueue(params.tenantId, session.queueId);
+  if (!queue) {
+    throw Object.assign(new Error("Queue not found"), { statusCode: 404 });
+  }
+  await stopPlayback(ENVIRONMENT, session.callControlId, session.tenantId).catch(() => undefined);
+  await scheduleCallback(session, queue, {
+    ...(params.phoneNumber ? { phoneNumber: params.phoneNumber } : {}),
   });
-  await logEvent(params.tenantId, session.botId, params.callId, "callback", number || undefined);
-  await hangupCall(ENVIRONMENT, session.callControlId, params.tenantId).catch(() => undefined);
 }
+
+export async function handleContactCenterRecordingSaved(
+  payload: Record<string, unknown>
+): Promise<boolean> {
+  const callControlId = String(payload.call_control_id ?? "");
+  if (!callControlId) return false;
+  const session = await getTelephonySessionByCallControlId(callControlId);
+  if (!session || session.contactCenterPhase !== "voicemail_recording") return false;
+  await clearContactCenterPhase(session.sessionId);
+  await updateCallRecord(session.tenantId, session.callId, { status: "voicemail" });
+  await hangupCall(ENVIRONMENT, session.callControlId, session.tenantId).catch(() => undefined);
+  return true;
+}
+
 
 export async function setCallDisposition(params: {
   tenantId: string;

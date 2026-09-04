@@ -4,7 +4,7 @@ import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
 import { getResolvedBrandingWithInheritance } from "../../lib/branding/inherit.js";
 import {
   createBookingForBot,
-  formatBookingConfirmation,
+  buildBookingConfirmationText,
   getBookingDates,
   getBookingSchedulableDates,
   getBookingSlotsForDate,
@@ -142,7 +142,10 @@ export async function handler(
         environment: ENVIRONMENT,
         sendPaymentWhatsApp: false,
       });
-      const label = formatBookingConfirmation(result.booking, ctx.config);
+      const label = buildBookingConfirmationText({
+        booking: result.booking,
+        config: ctx.config,
+      });
       return created({
         booking: {
           bookingId: result.booking.bookingId,

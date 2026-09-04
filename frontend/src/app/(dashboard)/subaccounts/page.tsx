@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
 import { Modal } from "@/components/ui/Modal";
 import { ResellerBagPanel } from "@/components/reseller/ResellerBagPanel";
+import { ResellerMetaAppPanel } from "@/components/reseller/ResellerMetaAppPanel";
 import { SubaccountBillingPanel } from "@/components/reseller/SubaccountBillingPanel";
 import { SubaccountServicesFields } from "@/components/reseller/SubaccountServicesFields";
 import { WhatsAppRiskBadge } from "@/components/whatsapp/WhatsAppRiskBadge";
@@ -268,7 +269,9 @@ export default function SubaccountsPage() {
   const [domainHydrated, setDomainHydrated] = useState(false);
   const [inviteInfo, setInviteInfo] = useState<string | null>(null);
   const [assumed, setAssumed] = useState<string | null>(null);
-  const [pageTab, setPageTab] = useState<"accounts" | "create" | "bag" | "billing" | "domain">(
+  const [pageTab, setPageTab] = useState<
+    "accounts" | "create" | "bag" | "billing" | "domain" | "metaApp"
+  >(
     "accounts"
   );
 
@@ -337,7 +340,7 @@ export default function SubaccountsPage() {
   }
 
   return (
-    <DashboardPage maxWidth="5xl" className="space-y-8">
+    <DashboardPage className="space-y-8">
       <PageHeader title={t("reseller.title")} subtitle={t("reseller.subtitle")} />
 
       {assumed && (
@@ -375,6 +378,7 @@ export default function SubaccountsPage() {
           { id: "bag", label: t("reseller.tabBag") },
           { id: "billing", label: t("reseller.tabBilling") },
           { id: "domain", label: t("reseller.tabDomain") },
+          { id: "metaApp", label: t("reseller.tabMetaApp") },
         ]}
         value={pageTab}
         onChange={setPageTab}
@@ -637,6 +641,8 @@ export default function SubaccountsPage() {
         )}
       </section>
       ) : null}
+
+      {pageTab === "metaApp" ? <ResellerMetaAppPanel /> : null}
 
       {editing ? (
         <Modal>

@@ -1,30 +1,25 @@
 "use client";
 
-import {
-  Banknote,
-  MessageSquare,
-  SendHorizonal,
-  UserPlus,
-} from "lucide-react";
+import { Banknote, Clock, Eye, UserPlus } from "lucide-react";
 import { StatCard } from "@/components/ui/StatCard";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useT } from "@/i18n/context";
 import { useFormatters } from "@/hooks/useFormatters";
-import type { UsageMetrics, MarketingMetrics, SalesMetrics, LeadMetrics } from "@/types";
+import type { MarketingMetrics, SalesMetrics, LeadMetrics } from "@/types";
 
 interface DashboardKpiGridProps {
-  usage?: UsageMetrics | null;
   marketing?: MarketingMetrics | null;
   sales?: SalesMetrics | null;
   leads?: LeadMetrics | null;
+  rangeLabel: string;
   isLoading: boolean;
 }
 
 export function DashboardKpiGrid({
-  usage,
   marketing,
   sales,
   leads,
+  rangeLabel,
   isLoading,
 }: DashboardKpiGridProps) {
   const t = useT();
@@ -40,37 +35,42 @@ export function DashboardKpiGrid({
     );
   }
 
+  const inbox = marketing?.inbox;
+  const aggregates = marketing?.campaigns.aggregates;
+
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <StatCard
-        label={t("dashboard.kpiRevenue")}
+        label={t("dashboard.kpiRevenuePeriod", { period: rangeLabel })}
         value={formatCurrency(sales?.totalRevenueInCents ?? 0)}
-        sub={t("dashboard.kpiRevenueSub", { count: formatNumber(sales?.paidCount ?? 0) })}
+        sub={t("dashboard.kpiRevenueSub", {
+          count: formatNumber(sales?.paidCount ?? 0),
+          ticket: formatCurrency(sales?.averageTicketInCents ?? 0),
+        })}
         icon={<Banknote className="h-5 w-5" />}
       />
       <StatCard
-        label={t("dashboard.kpiActiveConversations")}
-        value={formatNumber(usage?.summary.activeConversations ?? 0)}
-        sub={t("dashboard.kpiActiveConversationsSub", {
-          total: formatNumber(usage?.summary.totalConversations ?? 0),
+        label={t("dashboard.kpiPendingResponses")}
+        value={formatNumber(inbox?.pending ?? 0)}
+        sub={t("dashboard.kpiPendingResponsesSub", {
+          open: formatNumber(inbox?.open ?? 0),
         })}
-        icon={<MessageSquare className="h-5 w-5" />}
+        icon={<Clock className="h-5 w-5" />}
       />
       <StatCard
-        label={t("dashboard.kpiDeliveryRate")}
-        value={`${marketing?.campaigns.rates.deliveryRate ?? 0}%`}
-        sub={t("dashboard.kpiDeliveryRateSub", {
-          delivered: formatNumber(marketing?.campaigns.aggregates.delivered ?? 0),
-          sent: formatNumber(marketing?.campaigns.aggregates.sent ?? 0),
+        label={t("dashboard.kpiReadRate")}
+        value={`${marketing?.campaigns.rates.readRate ?? 0}%`}
+        sub={t("dashboard.kpiReadRateSub", {
+          read: formatNumber(aggregates?.read ?? 0),
+          delivered: formatNumber(aggregates?.delivered ?? 0),
         })}
-        icon={<SendHorizonal className="h-5 w-5" />}
+        icon={<Eye className="h-5 w-5" />}
       />
       <StatCard
-        label={t("dashboard.kpiLeadConversion")}
-        value={`${leads?.conversionRate ?? 0}%`}
-        sub={t("dashboard.kpiLeadConversionSub", {
+        label={t("dashboard.kpiLeadsThisWeek")}
+        value={formatNumber(leads?.capturedThisWeek ?? 0)}
+        sub={t("dashboard.kpiLeadsThisWeekSub", {
           total: formatNumber(leads?.total ?? 0),
-          week: formatNumber(leads?.capturedThisWeek ?? 0),
         })}
         icon={<UserPlus className="h-5 w-5" />}
       />

@@ -6,7 +6,11 @@ import { listAllPayments } from "../../lib/dynamodb/payment.repository.js";
 import {
   getResellerPlanDefaults,
   putResellerPlanDefaults,
+  getPlatformBillingConfig,
+  putPlatformBillingConfig,
 } from "../../lib/dynamodb/platform-config.repository.js";
+import { buildAdminBillingOverview } from "../../lib/billing/admin-billing-overview.js";
+import { buildAdminSentMessagesExportCsv } from "../../lib/reports/admin-sent-messages-export-csv.js";
 import { getTenant, updateTenant, normalizeDomain } from "../../lib/dynamodb/tenant.repository.js";
 import { buildResellerConfigFromDefaults } from "../../lib/billing/activate-plan.js";
 import { addCustomDomainToCognitoClient } from "../../lib/cognito/custom-domain-callbacks.js";
@@ -33,6 +37,10 @@ const ResellerDefaultsSchema = z.object({
 const ActivateDomainSchema = z.object({
   tenantId: z.string().min(1),
   status: z.enum(["pending_dns", "active", "error"]).optional().default("active"),
+});
+
+const BillingConfigSchema = z.object({
+  pricePerMessageCents: z.number().int().min(0).max(1_000_000_000),
 });
 
 export async function handler(
@@ -86,6 +94,54 @@ export async function handler(
     if (method === "GET" && path.endsWith("/admin/payments")) {
       const payments = await listAllPayments();
       return ok(payments);
+    }
+
+    if (method === "GET" && path.endsWith("/admin/billing-config")) {
+      const config = await getPlatformBillingConfig();
+      return ok(config);
+    }
+
+    if (method === "PUT" && path.endsWith("/admin/billing-config")) {
+      const body = parseJsonBody(event);
+      const parsed = BillingConfigSchema.safeParse(body);
+      if (!parsed.success) {
+        return badRequest(parsed.error.issues[0]?.message ?? "Invalid input");
+      }
+      return ok(
+        await putPlatformBillingConfig({
+          pricePerMessageCents: parsed.data.pricePerMessageCents,
+          currency: "COP",
+        })
+      );
+    }
+
+    if (method === "GET" && path.endsWith("/admin/billing/overview")) {
+      const period = event.queryStringParameters?.period;
+      const overview = await buildAdminBillingOverview(
+        typeof period === "string" && /^\d{4}-\d{2}$/.test(period) ? period : undefined
+      );
+      return ok(overview);
+    }
+
+    if (method === "GET" && path.endsWith("/admin/reports/messages/export")) {
+      const tenantId = event.queryStringParameters?.tenantId?.trim();
+      const periodParam = event.queryStringParameters?.period;
+      if (!tenantId) return badRequest("tenantId is required");
+      const period =
+        typeof periodParam === "string" && /^\d{4}-\d{2}$/.test(periodParam)
+          ? periodParam
+          : undefined;
+      const exportResult = await buildAdminSentMessagesExportCsv(tenantId, period);
+      if (!exportResult) return notFound("Tenant not found");
+      return {
+        statusCode: 200,
+        headers: {
+          "Content-Type": "text/csv; charset=utf-8",
+          "Content-Disposition": `attachment; filename="${exportResult.filename}"`,
+          "Access-Control-Allow-Origin": "*",
+        },
+        body: exportResult.content,
+      };
     }
 
     if (method === "GET" && path.endsWith("/admin/reseller-plan-defaults")) {

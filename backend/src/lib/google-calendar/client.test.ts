@@ -1,5 +1,10 @@
 import { describe, expect, it } from "@jest/globals";
-import { buildOAuthUrl, generatePkcePair, GOOGLE_CALENDAR_SCOPES } from "./client.js";
+import {
+  buildOAuthUrl,
+  generatePkcePair,
+  GOOGLE_CALENDAR_SCOPES,
+  resolveGoogleMeetingLink,
+} from "./client.js";
 
 describe("google-calendar client", () => {
   it("generates deterministic PKCE challenge from verifier", () => {
@@ -23,5 +28,24 @@ describe("google-calendar client", () => {
     expect(url.searchParams.get("code_challenge")).toBe(codeChallenge);
     expect(url.searchParams.get("code_challenge_method")).toBe("S256");
     expect(url.searchParams.get("access_type")).toBe("offline");
+  });
+
+  it("resolves Google Meet link from conference data", () => {
+    expect(
+      resolveGoogleMeetingLink({
+        id: "evt-1",
+        conferenceData: {
+          entryPoints: [
+            { entryPointType: "video", uri: "https://meet.google.com/abc-defg-hij" },
+          ],
+        },
+      })
+    ).toBe("https://meet.google.com/abc-defg-hij");
+    expect(
+      resolveGoogleMeetingLink({
+        id: "evt-2",
+        hangoutLink: "https://meet.google.com/legacy-link",
+      })
+    ).toBe("https://meet.google.com/legacy-link");
   });
 });

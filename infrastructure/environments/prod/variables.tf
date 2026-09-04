@@ -194,6 +194,12 @@ variable "livekit_api_secret" {
   sensitive = true
 }
 
+variable "enable_telephony_gateway" {
+  type        = bool
+  default     = false
+  description = "Deploy ECS Fargate telephony gateway and ALB. Disable to reduce fixed AWS costs."
+}
+
 variable "telephony_gateway_domain" {
   type    = string
   default = ""
@@ -206,7 +212,13 @@ variable "telephony_gateway_certificate_arn" {
 
 variable "telephony_gateway_vpc_id" {
   type        = string
-  description = "VPC ID for the telephony gateway (required for ECS Fargate + ALB)"
+  default     = ""
+  description = "VPC ID for the telephony gateway (required when enable_telephony_gateway is true)"
+
+  validation {
+    condition     = var.enable_telephony_gateway ? trimspace(var.telephony_gateway_vpc_id) != "" : true
+    error_message = "telephony_gateway_vpc_id is required when enable_telephony_gateway is true."
+  }
 }
 
 variable "telephony_gateway_public_subnet_ids" {

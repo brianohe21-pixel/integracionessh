@@ -17,6 +17,7 @@ import { ensureTenant } from "../../lib/dynamodb/tenant.repository.js";
 import { assertBulkRecipients } from "../../lib/billing/assert-plan.js";
 import { incrementBulkRecipients } from "../../lib/dynamodb/usage.repository.js";
 import { checkMarketingRecipients } from "../../lib/compliance/recipient-policy.js";
+import { evaluateLaw2300ForTenant } from "../../lib/compliance/law2300-tenant.js";
 import { normalizePhoneWithCountryCode } from "../../lib/phone/normalize.js";
 import { ok, created, badRequest, notFound, unprocessableEntity, handleError } from "../../lib/http.js";
 import type { BulkSendSQSBody } from "../../types/index.js";
@@ -52,7 +53,7 @@ const CreateBulkSendSchema = z.object({
   templateName: z.string().min(1),
   language: z.string().min(2).max(10),
   recipients: z.array(RecipientSchema).min(1).max(MAX_RECIPIENTS),
-  requireOptIn: z.boolean().optional().default(false),
+  requireOptIn: z.boolean().optional().default(true),
 });
 
 async function enqueueRecipients(
@@ -62,7 +63,8 @@ async function enqueueRecipients(
   channel: "whatsapp" | "sms",
   templateName: string,
   language: string,
-  recipients: z.infer<typeof CreateBulkSendSchema>["recipients"]
+  recipients: z.infer<typeof CreateBulkSendSchema>["recipients"],
+  requireOptIn: boolean
 ): Promise<void> {
   const batches: typeof recipients[] = [];
   for (let i = 0; i < recipients.length; i += SQS_BATCH_SIZE) {
@@ -83,6 +85,8 @@ async function enqueueRecipients(
             templateName,
             language,
             to: normalizePhoneWithCountryCode(recipient.to),
+            requireOptIn,
+            outboundKind: "marketing",
           };
           if (recipient.components?.length) {
             body.components = recipient.components as NonNullable<BulkSendSQSBody["components"]>;
@@ -175,6 +179,14 @@ export async function handler(
         }
       }
 
+      const law2300 = await evaluateLaw2300ForTenant(auth.tenantId);
+      if (!law2300.allowed) {
+        return unprocessableEntity("Sending blocked by Colombian Law 2300 schedule", {
+          reason: law2300.reason,
+          nextWindowAt: law2300.nextWindowAt?.toISOString(),
+        });
+      }
+
       const newJobId = randomUUID();
       const now = new Date().toISOString();
 
@@ -198,7 +210,8 @@ export async function handler(
         channel,
         templateName,
         language,
-        filteredRecipients
+        filteredRecipients,
+        requireOptIn
       );
 
       await updateBulkJobStatus(auth.tenantId, newJobId, "processing");

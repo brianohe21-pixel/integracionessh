@@ -31,9 +31,12 @@ import type {
   InstagramWebhookEvent,
   WhatsAppWebhookEvent,
 } from "../../types/index.js";
+import { getMetaAppCredentialForOwner } from "../../lib/integrations/meta-app-credentials.js";
+import { getWhatsAppAccountByWabaId } from "../../lib/dynamodb/whatsapp-account.repository.js";
 
 const sqs = new SQSClient({});
 const s3 = new S3Client({});
+const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 const QUEUE_URL = process.env.SQS_QUEUE_URL ?? "";
 const CALL_QUEUE_URL = process.env.CALL_EVENTS_QUEUE_URL ?? "";
 const WHATSAPP_SYNC_QUEUE_URL = process.env.WHATSAPP_SYNC_QUEUE_URL ?? "";
@@ -41,14 +44,107 @@ const MEDIA_BUCKET = process.env.MEDIA_BUCKET ?? "";
 const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN ?? "";
 const APP_SECRET = process.env.WHATSAPP_APP_SECRET ?? "";
 
+function extractWhatsAppWebhookOwnerId(path: string): string | null {
+  const match = path.match(/\/webhook\/whatsapp\/([^/]+)$/);
+  return match?.[1] ?? null;
+}
+
 export async function handler(
   event: APIGatewayProxyEventV2
 ): Promise<APIGatewayProxyResultV2> {
+  const path = event.rawPath ?? event.requestContext.http.path ?? "";
+  const ownerTenantId = extractWhatsAppWebhookOwnerId(path);
+
+  if (ownerTenantId) {
+    if (event.requestContext.http.method === "GET") {
+      return handleOwnerVerification(event, ownerTenantId);
+    }
+    return handleOwnerWebhook(event, ownerTenantId);
+  }
+
   if (event.requestContext.http.method === "GET") {
     return handleVerification(event);
   }
 
   return handleWebhook(event);
+}
+
+async function handleOwnerVerification(
+  event: APIGatewayProxyEventV2,
+  ownerTenantId: string
+): Promise<APIGatewayProxyResultV2> {
+  const params = event.queryStringParameters ?? {};
+  const mode = params["hub.mode"];
+  const token = params["hub.verify_token"];
+  const challenge = params["hub.challenge"];
+
+  const credential = await getMetaAppCredentialForOwner(ownerTenantId, ENVIRONMENT);
+  const verifyToken = credential?.webhookVerifyToken ?? VERIFY_TOKEN;
+
+  if (mode === "subscribe" && token === verifyToken && challenge) {
+    console.log("Owner webhook verified successfully", { ownerTenantId });
+    return { statusCode: 200, body: challenge };
+  }
+
+  console.warn("Owner webhook verification failed", { ownerTenantId, mode, token });
+  return { statusCode: 403, body: "Forbidden" };
+}
+
+async function assertWebhookOwnerMatchesPayload(
+  ownerTenantId: string,
+  payload: WhatsAppWebhookEvent
+): Promise<boolean> {
+  for (const entry of payload.entry) {
+    const account = await getWhatsAppAccountByWabaId(entry.id);
+    if (!account) continue;
+    const expectedOwner = account.metaAppOwnerTenantId ?? "platform";
+    if (expectedOwner !== ownerTenantId) {
+      console.warn("Webhook owner mismatch", {
+        ownerTenantId,
+        expectedOwner,
+        wabaId: entry.id,
+      });
+      return false;
+    }
+    return true;
+  }
+  return true;
+}
+
+async function handleOwnerWebhook(
+  event: APIGatewayProxyEventV2,
+  ownerTenantId: string
+): Promise<APIGatewayProxyResultV2> {
+  const rawBody = event.body ?? "";
+  const signature = event.headers["x-hub-signature-256"] ?? "";
+
+  const credential = await getMetaAppCredentialForOwner(ownerTenantId, ENVIRONMENT);
+  const appSecret = credential?.appSecret ?? APP_SECRET;
+
+  if (appSecret && !validateWebhookSignature(rawBody, signature, appSecret)) {
+    console.warn("Invalid owner webhook signature", { ownerTenantId });
+    return { statusCode: 401, body: "Invalid signature" };
+  }
+
+  let payload: { object: string; entry: unknown[] };
+  try {
+    payload = JSON.parse(rawBody) as { object: string; entry: unknown[] };
+  } catch {
+    return { statusCode: 400, body: "Invalid JSON" };
+  }
+
+  if (payload.object !== "whatsapp_business_account") {
+    return { statusCode: 200, body: "OK" };
+  }
+
+  const whatsappPayload = payload as WhatsAppWebhookEvent;
+  const ownerMatches = await assertWebhookOwnerMatchesPayload(ownerTenantId, whatsappPayload);
+  if (!ownerMatches) {
+    return { statusCode: 403, body: "Forbidden" };
+  }
+
+  await handleWhatsAppWebhook(whatsappPayload);
+  return { statusCode: 200, body: "OK" };
 }
 
 function handleVerification(event: APIGatewayProxyEventV2): APIGatewayProxyResultV2 {
@@ -223,12 +319,35 @@ async function handleCoexistenceChange(
   const metadata = value.metadata as
     | { phone_number_id?: string; display_phone_number?: string }
     | undefined;
-  const phoneNumberId = metadata?.phone_number_id;
+  const phoneNumberId =
+    metadata?.phone_number_id ?? (value.phone_number_id as string | undefined);
 
   if (change.field === "account_update") {
     await enqueueWhatsAppSync(WHATSAPP_SYNC_QUEUE_URL, {
       jobType: "account_update",
       dedupeKey: `account-update-${wabaId}-${Date.now()}`,
+      payload: {
+        wabaId,
+        value,
+      },
+    });
+    return;
+  }
+
+  if (change.field === "phone_number_quality_update" && phoneNumberId) {
+    await enqueueWhatsAppSync(WHATSAPP_SYNC_QUEUE_URL, {
+      jobType: "phone_quality_update",
+      phoneNumberId,
+      dedupeKey: `phone-quality-${phoneNumberId}-${Date.now()}`,
+      payload: { value },
+    });
+    return;
+  }
+
+  if (change.field === "account_alerts") {
+    await enqueueWhatsAppSync(WHATSAPP_SYNC_QUEUE_URL, {
+      jobType: "account_alert",
+      dedupeKey: `account-alert-${wabaId}-${Date.now()}`,
       payload: {
         wabaId,
         value,
@@ -317,7 +436,9 @@ async function handleWhatsAppWebhook(payload: WhatsAppWebhookEvent): Promise<voi
         change.field === "history" ||
         change.field === "smb_app_state_sync" ||
         change.field === "smb_message_echoes" ||
-        change.field === "account_update"
+        change.field === "account_update" ||
+        change.field === "phone_number_quality_update" ||
+        change.field === "account_alerts"
       ) {
         sqsPromises.push(handleCoexistenceChange(entry.id, change));
         continue;

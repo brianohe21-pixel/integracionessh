@@ -85,6 +85,7 @@ jobs:
           WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
           REPOSITORY_URL: ${{ vars.REPOSITORY_URL }}
           TELEPHONY_GATEWAY_VPC_ID: ${{ vars.TELEPHONY_GATEWAY_VPC_ID }}
+          ENABLE_TELEPHONY_GATEWAY: ${{ vars.ENABLE_TELEPHONY_GATEWAY }}
         run: |
           set -euo pipefail
           if [ -z "${GH_ACCESS_TOKEN}" ]; then
@@ -99,8 +100,8 @@ jobs:
             echo "::error::REPOSITORY_URL is missing or empty. Add it under Settings → Secrets and variables → Actions → Variables (e.g. https://github.com/org/repo)."
             exit 1
           fi
-          if [ -z "${TELEPHONY_GATEWAY_VPC_ID:-}" ]; then
-            echo "::error::TELEPHONY_GATEWAY_VPC_ID is missing or empty. Add it under Settings → Environments → dev → Variables (e.g. vpc-xxxxxxxx)."
+          if [ "${ENABLE_TELEPHONY_GATEWAY:-false}" = "true" ] && [ -z "${TELEPHONY_GATEWAY_VPC_ID:-}" ]; then
+            echo "::error::TELEPHONY_GATEWAY_VPC_ID is required when ENABLE_TELEPHONY_GATEWAY=true."
             exit 1
           fi
 
@@ -146,6 +147,7 @@ jobs:
           WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
           REPOSITORY_URL: ${{ vars.REPOSITORY_URL }}
           TELEPHONY_GATEWAY_VPC_ID: ${{ vars.TELEPHONY_GATEWAY_VPC_ID }}
+          ENABLE_TELEPHONY_GATEWAY: ${{ vars.ENABLE_TELEPHONY_GATEWAY }}
           TELEPHONY_GATEWAY_PUBLIC_SUBNET_IDS: ${{ vars.TELEPHONY_GATEWAY_PUBLIC_SUBNET_IDS }}
           TELEPHONY_GATEWAY_DOMAIN: ${{ vars.TELEPHONY_GATEWAY_DOMAIN }}
           TELEPHONY_GATEWAY_CERTIFICATE_ARN: ${{ vars.TELEPHONY_GATEWAY_CERTIFICATE_ARN }}
@@ -261,6 +263,7 @@ jobs:
           WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
           REPOSITORY_URL: ${{ vars.REPOSITORY_URL }}
           TELEPHONY_GATEWAY_VPC_ID: ${{ vars.TELEPHONY_GATEWAY_VPC_ID }}
+          ENABLE_TELEPHONY_GATEWAY: ${{ vars.ENABLE_TELEPHONY_GATEWAY }}
         run: bash ../../../.github/scripts/terraform-plan-apply.sh apply
 
       - name: Post-apply API Gateway preflight
@@ -343,6 +346,7 @@ jobs:
           WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
           REPOSITORY_URL: ${{ vars.REPOSITORY_URL }}
           TELEPHONY_GATEWAY_VPC_ID: ${{ vars.TELEPHONY_GATEWAY_VPC_ID }}
+          ENABLE_TELEPHONY_GATEWAY: ${{ vars.ENABLE_TELEPHONY_GATEWAY }}
         run: |
           set -euo pipefail
           if [ -z "${GH_ACCESS_TOKEN}" ]; then
@@ -357,8 +361,8 @@ jobs:
             echo "::error::REPOSITORY_URL is missing or empty. Add it under Settings → Secrets and variables → Actions → Variables."
             exit 1
           fi
-          if [ -z "${TELEPHONY_GATEWAY_VPC_ID:-}" ]; then
-            echo "::error::TELEPHONY_GATEWAY_VPC_ID is missing or empty. Add it under Settings → Environments → prod → Variables (e.g. vpc-xxxxxxxx)."
+          if [ "${ENABLE_TELEPHONY_GATEWAY:-false}" = "true" ] && [ -z "${TELEPHONY_GATEWAY_VPC_ID:-}" ]; then
+            echo "::error::TELEPHONY_GATEWAY_VPC_ID is required when ENABLE_TELEPHONY_GATEWAY=true."
             exit 1
           fi
 
@@ -403,6 +407,7 @@ jobs:
           WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
           REPOSITORY_URL: ${{ vars.REPOSITORY_URL }}
           TELEPHONY_GATEWAY_VPC_ID: ${{ vars.TELEPHONY_GATEWAY_VPC_ID }}
+          ENABLE_TELEPHONY_GATEWAY: ${{ vars.ENABLE_TELEPHONY_GATEWAY }}
           TELEPHONY_GATEWAY_PUBLIC_SUBNET_IDS: ${{ vars.TELEPHONY_GATEWAY_PUBLIC_SUBNET_IDS }}
           TELEPHONY_GATEWAY_DOMAIN: ${{ vars.TELEPHONY_GATEWAY_DOMAIN }}
           TELEPHONY_GATEWAY_CERTIFICATE_ARN: ${{ vars.TELEPHONY_GATEWAY_CERTIFICATE_ARN }}
@@ -442,6 +447,7 @@ jobs:
           WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
           REPOSITORY_URL: ${{ vars.REPOSITORY_URL }}
           TELEPHONY_GATEWAY_VPC_ID: ${{ vars.TELEPHONY_GATEWAY_VPC_ID }}
+          ENABLE_TELEPHONY_GATEWAY: ${{ vars.ENABLE_TELEPHONY_GATEWAY }}
         run: bash ../../../.github/scripts/terraform-plan-apply.sh apply
 
       - name: Post-apply API Gateway preflight

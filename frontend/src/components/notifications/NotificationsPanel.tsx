@@ -5,12 +5,15 @@ import { MessageSquare, UserRound, X } from "lucide-react";
 import { NotificationListItem } from "@/components/notifications/NotificationListItem";
 import { useNotifications } from "@/components/notifications/NotificationsProvider";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { useTenantRole } from "@/hooks/useTenantRole";
 import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 
 export function NotificationsPanel() {
   const t = useT();
+  const { isAdvisor } = useTenantRole();
   const { isOpen, close, notifications, unreadCount, markAllAsRead } = useNotifications();
+  const conversationsHref = isAdvisor ? "/inbox" : "/conversations";
 
   return (
     <>
@@ -80,7 +83,7 @@ export function NotificationsPanel() {
         {notifications.length > 0 ? (
           <div className="border-t border-default px-5 py-3">
             <Link
-              href="/conversations"
+              href={conversationsHref}
               onClick={close}
               className="inline-flex w-full items-center justify-center rounded-lg border border-default bg-surface px-4 py-2.5 text-sm font-medium text-primary hover:bg-surface-muted"
             >

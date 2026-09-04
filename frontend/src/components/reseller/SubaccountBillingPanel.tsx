@@ -1,11 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
+import { downloadResellerBillingPdf, downloadResellerCompanyBillingPdf } from "@/lib/reseller-billing-pdf";
 import { isUnlimitedLimit } from "@/lib/subaccount-services";
 import type { MonthlyUsage, ResellerLimitsOverride, Tenant } from "@/types";
-import { CreditCard } from "lucide-react";
+import { CreditCard, Download } from "lucide-react";
 import { TableContainer } from "@/components/ui/TableContainer";
+import { Button } from "@/components/ui/Button";
 
 type SubaccountWithUsage = Tenant & { usage?: MonthlyUsage };
 
@@ -99,6 +102,8 @@ export function SubaccountBillingPanel({
   bagTotal?: ResellerLimitsOverride;
 }) {
   const t = useT();
+  const [downloading, setDownloading] = useState(false);
+  const [downloadingCompanyId, setDownloadingCompanyId] = useState<string | null>(null);
   const unlimitedLabel = t("reseller.unlimited");
   const list = items ?? [];
 
@@ -116,21 +121,61 @@ export function SubaccountBillingPanel({
     voicebotMinutesCount: 0,
   };
 
+  function resellerPdfLabels() {
+    return {
+      title: t("reseller.billingTitle"),
+      hint: t("reseller.billingHint"),
+      period: t("admin.billing.period"),
+      metric: t("admin.billing.pdfMetric"),
+      value: t("admin.billing.pdfValue"),
+      unlimited: unlimitedLabel,
+      messages: t("billing.usageMessages"),
+      bulk: t("billing.usageBulk"),
+      campaigns: t("billing.usageCampaigns"),
+      voiceMinutes: t("reseller.limits.maxVoicebotMinutesPerMonth"),
+      accountName: t("reseller.name"),
+      filenamePrefix: t("reseller.billingPdfFilename"),
+    };
+  }
+
   return (
     <section className="content-card space-y-5 p-5 sm:p-6">
-      <div className="flex items-start gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-muted text-accent">
-          <CreditCard className="h-5 w-5" />
-        </span>
-        <div className="min-w-0">
-          <h2 className="text-base font-semibold text-primary">{t("reseller.billingTitle")}</h2>
-          <p className="mt-0.5 text-sm text-secondary">
-            {t("reseller.billingHint")}
-            {usagePeriod ? (
-              <span className="ml-1 text-muted">· {usagePeriod}</span>
-            ) : null}
-          </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex items-start gap-3 min-w-0">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-muted text-accent">
+            <CreditCard className="h-5 w-5" />
+          </span>
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold text-primary">{t("reseller.billingTitle")}</h2>
+            <p className="mt-0.5 text-sm text-secondary">
+              {t("reseller.billingHint")}
+              {usagePeriod ? (
+                <span className="ml-1 text-muted">· {usagePeriod}</span>
+              ) : null}
+            </p>
+          </div>
         </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={downloading}
+          onClick={() => {
+            setDownloading(true);
+            void downloadResellerBillingPdf({
+              items: list,
+              usagePeriod,
+              usageTotals,
+              bagTotal,
+              labels: resellerPdfLabels(),
+            })
+              .catch(() => undefined)
+              .finally(() => setDownloading(false));
+          }}
+        >
+          <Download className="mr-1.5 h-4 w-4" />
+          {downloading ? t("reseller.billingPdfGenerating") : t("reseller.billingDownloadPdf")}
+        </Button>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -170,6 +215,7 @@ export function SubaccountBillingPanel({
               <th className="px-4 py-3 font-medium">
                 {t("reseller.limits.maxVoicebotMinutesPerMonth")}
               </th>
+              <th className="px-4 py-3 font-medium w-12" />
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -206,6 +252,27 @@ export function SubaccountBillingPanel({
                       limit={limits.maxVoicebotMinutesPerMonth}
                       unlimitedLabel={unlimitedLabel}
                     />
+                  </td>
+                  <td className="px-4 py-3">
+                    <button
+                      type="button"
+                      title={t("reseller.billingDownloadCompanyPdf")}
+                      aria-label={t("reseller.billingDownloadCompanyPdf")}
+                      disabled={downloadingCompanyId === item.tenantId}
+                      onClick={() => {
+                        setDownloadingCompanyId(item.tenantId);
+                        void downloadResellerCompanyBillingPdf({
+                          item,
+                          usagePeriod,
+                          labels: resellerPdfLabels(),
+                        })
+                          .catch(() => undefined)
+                          .finally(() => setDownloadingCompanyId(null));
+                      }}
+                      className="inline-flex items-center justify-center rounded-lg p-1.5 text-secondary hover:bg-surface-muted hover:text-primary disabled:opacity-50"
+                    >
+                      <Download className="h-4 w-4" />
+                    </button>
                   </td>
                 </tr>
               );

@@ -282,6 +282,14 @@ locals {
       function_arn = var.short_links_function_arn
       protected    = true
     }
+    tenants_me = {
+      path         = "/tenants/me/{proxy+}"
+      slug         = "tenants"
+      methods      = ["GET", "POST", "PUT", "PATCH", "DELETE"]
+      invoke_arn   = var.tenants_invoke_arn
+      function_arn = var.tenants_function_arn
+      protected    = true
+    }
   }
 
   http_proxy_routes = {
@@ -315,6 +323,20 @@ locals {
     }
     webhook_receive = {
       route_key    = "POST /webhook"
+      slug         = "webhook"
+      invoke_arn   = var.webhook_invoke_arn
+      function_arn = var.webhook_function_arn
+      protected    = false
+    }
+    webhook_whatsapp_owner_verify = {
+      route_key    = "GET /webhook/whatsapp/{ownerTenantId}"
+      slug         = "webhook"
+      invoke_arn   = var.webhook_invoke_arn
+      function_arn = var.webhook_function_arn
+      protected    = false
+    }
+    webhook_whatsapp_owner_receive = {
+      route_key    = "POST /webhook/whatsapp/{ownerTenantId}"
       slug         = "webhook"
       invoke_arn   = var.webhook_invoke_arn
       function_arn = var.webhook_function_arn
@@ -971,6 +993,34 @@ locals {
       function_arn = var.admin_function_arn
       protected    = true
     }
+    admin_billing_config_get = {
+      route_key    = "GET /admin/billing-config"
+      slug         = "admin"
+      invoke_arn   = var.admin_invoke_arn
+      function_arn = var.admin_function_arn
+      protected    = true
+    }
+    admin_billing_config_put = {
+      route_key    = "PUT /admin/billing-config"
+      slug         = "admin"
+      invoke_arn   = var.admin_invoke_arn
+      function_arn = var.admin_function_arn
+      protected    = true
+    }
+    admin_billing_overview_get = {
+      route_key    = "GET /admin/billing/overview"
+      slug         = "admin"
+      invoke_arn   = var.admin_invoke_arn
+      function_arn = var.admin_function_arn
+      protected    = true
+    }
+    admin_reports_messages_export = {
+      route_key    = "GET /admin/reports/messages/export"
+      slug         = "admin"
+      invoke_arn   = var.admin_invoke_arn
+      function_arn = var.admin_function_arn
+      protected    = true
+    }
     admin_reseller_plan_defaults_get = {
       route_key    = "GET /admin/reseller-plan-defaults"
       slug         = "admin"
@@ -1144,223 +1194,6 @@ locals {
       slug         = "billing"
       invoke_arn   = var.billing_invoke_arn
       function_arn = var.billing_function_arn
-      protected    = true
-    }
-    tenants_accept_terms = {
-      route_key    = "POST /tenants/me/accept-terms"
-      slug         = "tenants"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_onboarding = {
-      route_key    = "PATCH /tenants/me/onboarding"
-      slug         = "tenants"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_legal = {
-      route_key    = "GET /tenants/me/legal"
-      slug         = "tenants"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_provider_credentials_get = {
-      route_key    = "GET /tenants/me/provider-credentials"
-      slug         = "tenants"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_provider_credentials_save = {
-      route_key    = "PUT /tenants/me/provider-credentials/{provider}"
-      slug         = "tenants"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_provider_credentials_delete = {
-      route_key    = "DELETE /tenants/me/provider-credentials/{provider}"
-      slug         = "tenants"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_branding_get = {
-      route_key    = "GET /tenants/me/branding"
-      slug         = "tenants"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_branding_update = {
-      route_key    = "PUT /tenants/me/branding"
-      slug         = "tenants"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_branding_logo_upload = {
-      route_key    = "POST /tenants/me/branding/logo"
-      slug         = "tenants"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_branding_logo_delete = {
-      route_key    = "DELETE /tenants/me/branding/logo"
-      slug         = "tenants"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_inbox_sla_get = {
-      route_key    = "GET /tenants/me/inbox-sla"
-      slug         = "tenants"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_inbox_sla_update = {
-      route_key    = "PUT /tenants/me/inbox-sla"
-      slug         = "tenants"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_report_schedule_get = {
-      route_key    = "GET /tenants/me/report-schedule"
-      slug         = "tenants"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_report_schedule_update = {
-      route_key    = "PUT /tenants/me/report-schedule"
-      slug         = "tenants"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_report_schedule_send_now = {
-      route_key    = "POST /tenants/me/report-schedule/send-now"
-      slug         = "tenants"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_website_analytics_get = {
-      route_key    = "GET /tenants/me/website-analytics"
-      slug         = "tenants"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_website_analytics_update = {
-      route_key    = "PUT /tenants/me/website-analytics"
-      slug         = "tenants"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_members_list = {
-      route_key    = "GET /tenants/me/members"
-      slug         = "tenants"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_members_create = {
-      route_key    = "POST /tenants/me/members"
-      slug         = "tenants"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_members_delete = {
-      route_key    = "DELETE /tenants/me/members/{userId}"
-      slug         = "tenants"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_email_settings_get = {
-      route_key    = "GET /tenants/me/email-settings"
-      slug         = "tenants"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_email_settings_update = {
-      route_key    = "PUT /tenants/me/email-settings"
-      slug         = "tenants"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_email_settings_domain_register = {
-      route_key    = "PUT /tenants/me/email-settings/domain"
-      slug         = "tenants"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_email_settings_domain_verify = {
-      route_key    = "POST /tenants/me/email-settings/domain/verify"
-      slug         = "tenants"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_email_settings_domain_delete = {
-      route_key    = "DELETE /tenants/me/email-settings/domain"
-      slug         = "tenants"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_integrations_catalog = {
-      route_key    = "GET /tenants/me/integrations"
-      slug         = "tenants"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_integrations_microsoft_sso_get = {
-      route_key    = "GET /tenants/me/integrations/microsoft-sso"
-      slug         = "tenants"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_integrations_microsoft_sso_put = {
-      route_key    = "PUT /tenants/me/integrations/microsoft-sso"
-      slug         = "tenants"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_integrations_microsoft_sso_patch = {
-      route_key    = "PATCH /tenants/me/integrations/microsoft-sso"
-      slug         = "tenants"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_integrations_microsoft_sso_test = {
-      route_key    = "POST /tenants/me/integrations/microsoft-sso/test"
-      slug         = "tenants"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
-      protected    = true
-    }
-    tenants_integrations_microsoft_sso_delete = {
-      route_key    = "DELETE /tenants/me/integrations/microsoft-sso"
-      slug         = "tenants"
-      invoke_arn   = var.tenants_invoke_arn
-      function_arn = var.tenants_function_arn
       protected    = true
     }
     bots_calling_settings_get = {

@@ -74,7 +74,8 @@ const QueueSchema = z.object({
   maxWaitSeconds: z.number().int().min(10).max(7200).optional(),
   holdAudioUrl: z.string().url().max(2048).optional(),
   overflowQueueId: z.string().uuid().optional(),
-  afterHoursAction: z.enum(["ai", "voicemail", "hangup"]).optional(),
+  afterHoursAction: z.enum(["ai", "voicemail", "hangup", "callback"]).optional(),
+  overflowAction: z.enum(["ai", "voicemail", "hangup", "callback"]).optional(),
   announcePosition: z.boolean().optional(),
   callbackEnabled: z.boolean().optional(),
   wrapUpSeconds: z.number().int().min(0).max(600).optional(),
@@ -349,6 +350,7 @@ export async function handleContactCenterHttp(
         skills: parsed.data.skills ?? [],
         slaSeconds: parsed.data.slaSeconds ?? 30,
         afterHoursAction: parsed.data.afterHoursAction ?? "ai",
+        overflowAction: parsed.data.overflowAction ?? "hangup",
         createdAt: now,
         updatedAt: now,
         ...(parsed.data.maxWaitSeconds !== undefined
@@ -392,6 +394,7 @@ export async function handleContactCenterHttp(
         skills: parsed.data.skills ?? existing.skills,
         slaSeconds: parsed.data.slaSeconds ?? existing.slaSeconds,
         afterHoursAction: parsed.data.afterHoursAction ?? existing.afterHoursAction,
+        overflowAction: parsed.data.overflowAction ?? existing.overflowAction ?? "hangup",
         updatedAt: new Date().toISOString(),
         ...(parsed.data.maxWaitSeconds !== undefined
           ? { maxWaitSeconds: parsed.data.maxWaitSeconds }

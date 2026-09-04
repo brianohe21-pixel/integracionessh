@@ -59,6 +59,9 @@ resource "aws_iam_role_policy" "cognito_trigger" {
         Effect = "Allow"
         Action = [
           "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:UpdateItem",
+          "dynamodb:Query",
         ]
         Resource = var.dynamodb_table_arn
       },
@@ -68,7 +71,7 @@ resource "aws_iam_role_policy" "cognito_trigger" {
 
 resource "aws_lambda_function" "cognito_pre_signup" {
   function_name = "${var.project}-${var.environment}-cognito-pre-signup"
-  description   = "Cognito Pre Sign-Up and Post Confirmation triggers for social login"
+  description   = "Cognito Pre Sign-Up, Post Confirmation, and Post Authentication triggers"
   role          = aws_iam_role.cognito_trigger.arn
   handler       = "cognito-pre-signup/index.handler"
   runtime       = "nodejs20.x"
@@ -146,8 +149,9 @@ resource "aws_cognito_user_pool" "main" {
   }
 
   lambda_config {
-    pre_sign_up       = aws_lambda_function.cognito_pre_signup.arn
-    post_confirmation = aws_lambda_function.cognito_pre_signup.arn
+    pre_sign_up         = aws_lambda_function.cognito_pre_signup.arn
+    post_confirmation   = aws_lambda_function.cognito_pre_signup.arn
+    post_authentication = aws_lambda_function.cognito_pre_signup.arn
   }
 
   tags = var.tags

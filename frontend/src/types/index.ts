@@ -118,6 +118,36 @@ export interface ResellerPlanDefaults {
   limitsOverride?: ResellerLimitsOverride;
 }
 
+export interface PlatformBillingConfig {
+  pricePerMessageCents: number;
+  currency: "COP";
+  updatedAt?: string;
+}
+
+export interface AdminBillingOverviewRow {
+  tenantId: string;
+  name: string;
+  email: string;
+  plan: TenantPlan;
+  period: string;
+  messagesCount: number;
+  bulkRecipientsCount: number;
+  pricePerMessageCents: number;
+  usesPlatformPrice: boolean;
+  estimatedMessageCostCents: number;
+}
+
+export interface AdminBillingOverview {
+  config: PlatformBillingConfig;
+  period: string;
+  rows: AdminBillingOverviewRow[];
+  totals: {
+    messagesCount: number;
+    bulkRecipientsCount: number;
+    estimatedMessageCostCents: number;
+  };
+}
+
 export interface InboxSlaSettings {
   enabled: boolean;
   firstResponseMinutes: number;
@@ -206,11 +236,13 @@ export interface Tenant {
   branding?: TenantBranding;
   inboxSla?: InboxSlaSettings;
   websiteAnalytics?: WebsiteAnalyticsSettings;
+  law2300Exempt?: boolean;
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   subscriptionStatus?: SubscriptionStatus;
   currentPeriodEnd?: string;
   paymentProvider?: "stripe" | "wompi";
+  pricePerMessageCents?: number;
   onboardingCompletedAt?: string;
   onboardingSkippedAt?: string;
   onboardingTestConfirmedAt?: string;
@@ -247,12 +279,49 @@ export interface BillingUsageResponse {
 
 export type WhatsAppChannelStatus = "active" | "pending_registration" | "disconnected";
 
+export type WhatsAppEnforcementSource = "meta_auto" | "platform_admin" | "reseller";
+
+export interface WhatsAppQualitySnapshot {
+  qualityRating: WhatsAppQualityRating;
+  phoneStatus: string;
+  risk: "ok" | "warn" | "block";
+  source: "webhook" | "poll" | "manual";
+  updatedAt: string;
+  rawEvent?: string;
+}
+
+export interface WhatsAppMessagingEnforcement {
+  blocked: boolean;
+  reason?: string;
+  event?: string;
+  source?: WhatsAppEnforcementSource;
+  blockedAt?: string;
+  blockedBy?: string;
+  clearedAt?: string;
+  clearedBy?: string;
+}
+
+export type MetaAppCredentialSource = "own" | "reseller" | "platform" | "none";
+
+export interface MetaAppConfigStatus {
+  configured: boolean;
+  source: MetaAppCredentialSource;
+  ownerTenantId?: string;
+  appId?: string;
+  embeddedSignupConfigId?: string;
+  webhookUrl?: string;
+  webhookVerifyToken?: string;
+}
+
 export interface WhatsAppAccount {
   accountId: string;
   tenantId: string;
   wabaId: string;
   label?: string;
   status: "active" | "inactive";
+  metaAppId?: string;
+  metaAppOwnerTenantId?: string;
+  messagingEnforcement?: WhatsAppMessagingEnforcement;
   createdAt: string;
   updatedAt: string;
 }
@@ -274,6 +343,8 @@ export interface WhatsAppChannel {
   whatsappSyncStatus?: WhatsAppSyncStatus;
   whatsappDisconnectedAt?: string;
   whatsappDisconnectionReason?: string;
+  qualitySnapshot?: WhatsAppQualitySnapshot;
+  messagingEnforcement?: WhatsAppMessagingEnforcement;
   createdAt: string;
   updatedAt: string;
 }
@@ -972,6 +1043,15 @@ export interface EmailMessageMetadata {
   messageId: string;
 }
 
+export interface DocumentMessageMetadata {
+  kind: "document";
+  filename: string;
+  mimeType: string;
+  s3Key: string;
+  quotationId?: string;
+  downloadUrl?: string;
+}
+
 export interface Message {
   messageId: string;
   conversationId: string;
@@ -980,7 +1060,7 @@ export interface Message {
   content: string;
   channel?: Channel;
   messageType?: string;
-  metadata?: EmailMessageMetadata | Record<string, unknown>;
+  metadata?: EmailMessageMetadata | DocumentMessageMetadata | Record<string, unknown>;
   source?: string;
   sentByAdvisorId?: string;
   whatsappMessageId?: string;
@@ -1012,6 +1092,7 @@ export interface Advisor {
   queueIds?: string[];
   voiceEnabled?: boolean;
   lastAssignedAt?: string;
+  lastLoginAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -1031,10 +1112,12 @@ export interface TenantMember {
   username: string;
   email: string;
   name: string;
-  role: "member" | "advisor";
+  role: "member" | "supervisor" | "advisor";
   enabled: boolean;
   createdAt: string;
   advisorId?: string;
+  teamIds?: string[];
+  lastLoginAt?: string;
 }
 
 export interface TenantMembersResponse {
@@ -1051,6 +1134,24 @@ export interface TenantMemberInviteResponse {
     emailFailureReason?: "not_configured" | "recipient_not_verified" | "send_failed";
     temporaryPassword?: string;
   };
+}
+
+export interface OrganizationTeam {
+  teamId: string;
+  tenantId: string;
+  name: string;
+  description?: string;
+  status: "active" | "inactive";
+  supervisorUserIds: string[];
+  memberUserIds: string[];
+  memberCount?: number;
+  supervisorCount?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrganizationTeamsResponse {
+  teams: OrganizationTeam[];
 }
 
 export interface Macro {
@@ -1609,6 +1710,7 @@ export interface FlowNodeData {
   notificationChannel?: "whatsapp" | "sms" | "email";
   notificationMessageType?: "text" | "template";
   notificationRecipientBinding?: string;
+  notificationRecipientBindings?: string[];
   notificationEmailSubject?: string;
   notificationMessageBinding?: string;
   notificationMessageText?: LocalizedText;
@@ -1649,9 +1751,22 @@ export interface FlowDefinition {
   nodes: FlowNode[];
   edges: FlowEdge[];
   entryNodeId: string;
+  draftNodes?: FlowNode[];
+  draftEdges?: FlowEdge[];
+  draftEntryNodeId?: string;
   publishedAt?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface FlowVersionSnapshot {
+  flowId: string;
+  tenantId: string;
+  version: number;
+  nodes: FlowNode[];
+  edges: FlowEdge[];
+  entryNodeId: string;
+  publishedAt: string;
 }
 
 export type FlowRunStatus = "active" | "waiting" | "completed" | "failed";
@@ -2009,6 +2124,7 @@ export interface Booking {
   source: "flow" | "openai" | "manual" | "public_link";
   notes?: string;
   externalEventId?: string;
+  meetingLink?: string;
   externalSyncStatus?: ExternalSyncStatus;
   externalSyncedAt?: string;
   paymentId?: string;
@@ -2436,7 +2552,11 @@ export type AgentPresenceState =
 
 export type QueueStrategy = "longest_idle" | "round_robin" | "fewest_calls";
 
-export type AfterHoursAction = "ai" | "voicemail" | "hangup";
+export type QueueFallbackAction = "ai" | "voicemail" | "hangup" | "callback";
+
+export type AfterHoursAction = QueueFallbackAction;
+
+export type OverflowAction = QueueFallbackAction;
 
 export type IvrNodeType = "menu" | "queue" | "ai" | "hangup" | "voicemail";
 
@@ -2468,6 +2588,7 @@ export interface ContactCenterQueue {
   holdAudioUrl?: string;
   overflowQueueId?: string;
   afterHoursAction: AfterHoursAction;
+  overflowAction?: OverflowAction;
   announcePosition?: boolean;
   callbackEnabled?: boolean;
   hours?: QueueBusinessHours;

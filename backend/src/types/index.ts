@@ -93,6 +93,36 @@ export interface ResellerPlanDefaults {
   limitsOverride?: ResellerLimitsOverride;
 }
 
+export interface PlatformBillingConfig {
+  pricePerMessageCents: number;
+  currency: "COP";
+  updatedAt?: string;
+}
+
+export interface AdminBillingOverviewRow {
+  tenantId: string;
+  name: string;
+  email: string;
+  plan: TenantPlan;
+  period: string;
+  messagesCount: number;
+  bulkRecipientsCount: number;
+  pricePerMessageCents: number;
+  usesPlatformPrice: boolean;
+  estimatedMessageCostCents: number;
+}
+
+export interface AdminBillingOverview {
+  config: PlatformBillingConfig;
+  period: string;
+  rows: AdminBillingOverviewRow[];
+  totals: {
+    messagesCount: number;
+    bulkRecipientsCount: number;
+    estimatedMessageCostCents: number;
+  };
+}
+
 export interface InboxSlaSettings {
   enabled: boolean;
   firstResponseMinutes: number;
@@ -187,11 +217,13 @@ export interface Tenant {
   inboxSla?: InboxSlaSettings;
   metricsReportSchedule?: MetricsReportSchedule;
   websiteAnalytics?: WebsiteAnalyticsSettings;
+  law2300Exempt?: boolean;
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   subscriptionStatus?: SubscriptionStatus;
   currentPeriodEnd?: string;
   paymentProvider?: "stripe" | "wompi";
+  pricePerMessageCents?: number;
   onboardingCompletedAt?: string;
   onboardingSkippedAt?: string;
   onboardingTestConfirmedAt?: string;
@@ -340,12 +372,51 @@ export interface Bot {
 
 export type WhatsAppChannelStatus = "active" | "pending_registration" | "disconnected";
 
+export type WhatsAppEnforcementSource = "meta_auto" | "platform_admin" | "reseller";
+
+export type WhatsAppOutboundSendKind = "marketing" | "transactional" | "service";
+
+export interface WhatsAppQualitySnapshot {
+  qualityRating: "GREEN" | "YELLOW" | "RED" | "NA";
+  phoneStatus: string;
+  risk: "ok" | "warn" | "block";
+  source: "webhook" | "poll" | "manual";
+  updatedAt: string;
+  rawEvent?: string;
+}
+
+export interface WhatsAppMessagingEnforcement {
+  blocked: boolean;
+  reason?: string;
+  event?: string;
+  source?: WhatsAppEnforcementSource;
+  blockedAt?: string;
+  blockedBy?: string;
+  clearedAt?: string;
+  clearedBy?: string;
+}
+
+export type MetaAppCredentialSource = "own" | "reseller" | "platform" | "none";
+
+export interface MetaAppConfigStatus {
+  configured: boolean;
+  source: MetaAppCredentialSource;
+  ownerTenantId?: string;
+  appId?: string;
+  embeddedSignupConfigId?: string;
+  webhookUrl?: string;
+  webhookVerifyToken?: string;
+}
+
 export interface WhatsAppAccount {
   accountId: string;
   tenantId: string;
   wabaId: string;
   label?: string;
   status: "active" | "inactive";
+  metaAppId?: string;
+  metaAppOwnerTenantId?: string;
+  messagingEnforcement?: WhatsAppMessagingEnforcement;
   createdAt: string;
   updatedAt: string;
 }
@@ -367,6 +438,8 @@ export interface WhatsAppChannel {
   whatsappSyncStatus?: WhatsAppSyncStatus;
   whatsappDisconnectedAt?: string;
   whatsappDisconnectionReason?: string;
+  qualitySnapshot?: WhatsAppQualitySnapshot;
+  messagingEnforcement?: WhatsAppMessagingEnforcement;
   createdAt: string;
   updatedAt: string;
 }
@@ -543,19 +616,36 @@ export interface Advisor {
   queueIds?: string[];
   voiceEnabled?: boolean;
   lastAssignedAt?: string;
+  lastLoginAt?: string;
   createdAt: string;
   updatedAt: string;
 }
+
+export type TenantMemberRole = "member" | "supervisor" | "advisor";
 
 export interface TenantMember {
   userId: string;
   username: string;
   email: string;
   name: string;
-  role: "member" | "advisor";
+  role: TenantMemberRole;
   enabled: boolean;
   createdAt: string;
   advisorId?: string;
+  teamIds?: string[];
+  lastLoginAt?: string;
+}
+
+export interface OrganizationTeam {
+  teamId: string;
+  tenantId: string;
+  name: string;
+  description?: string;
+  status: "active" | "inactive";
+  supervisorUserIds: string[];
+  memberUserIds: string[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Macro {
@@ -1002,6 +1092,9 @@ export interface WhatsAppAccountUpdateValue {
   event?: string;
   waba_info?: { waba_id?: string; owner_business_id?: string };
   disconnection_info?: { reason?: string; initiated_by?: string };
+  violation_info?: { violation_type?: string };
+  restriction_info?: Array<{ restriction_type?: string; expiration?: number }>;
+  ban_info?: { waba_ban_state?: string; waba_ban_date?: string };
 }
 
 export type WhatsAppSyncQueueJobType =
@@ -1009,7 +1102,9 @@ export type WhatsAppSyncQueueJobType =
   | "history_chunk"
   | "echo_batch"
   | "contact_batch"
-  | "account_update";
+  | "account_update"
+  | "phone_quality_update"
+  | "account_alert";
 
 export interface WhatsAppSyncQueueMessage {
   jobType: WhatsAppSyncQueueJobType;
@@ -1207,7 +1302,14 @@ export interface TelephonySession {
   ivrNodeId?: string;
   campaignId?: string;
   consultCallControlId?: string;
+  contactCenterPhase?: ContactCenterPhase;
 }
+
+export type ContactCenterPhase =
+  | "voicemail_prompt"
+  | "voicemail_recording"
+  | "callback_offer"
+  | "callback_queued";
 
 export type TelephonyRoutingMode = "ai" | "ivr" | "queue";
 
@@ -1223,7 +1325,11 @@ export type AgentPresenceState =
 
 export type QueueStrategy = "longest_idle" | "round_robin" | "fewest_calls";
 
-export type AfterHoursAction = "ai" | "voicemail" | "hangup";
+export type QueueFallbackAction = "ai" | "voicemail" | "hangup" | "callback";
+
+export type AfterHoursAction = QueueFallbackAction;
+
+export type OverflowAction = QueueFallbackAction;
 
 export type IvrNodeType = "menu" | "queue" | "ai" | "hangup" | "voicemail";
 
@@ -1255,6 +1361,7 @@ export interface ContactCenterQueue {
   holdAudioUrl?: string;
   overflowQueueId?: string;
   afterHoursAction: AfterHoursAction;
+  overflowAction?: OverflowAction;
   announcePosition?: boolean;
   callbackEnabled?: boolean;
   hours?: QueueBusinessHours;
@@ -1580,6 +1687,15 @@ export interface EmailMessageMetadata {
   messageId: string;
 }
 
+export interface DocumentMessageMetadata {
+  kind: "document";
+  filename: string;
+  mimeType: string;
+  s3Key: string;
+  quotationId?: string;
+  downloadUrl?: string;
+}
+
 export interface InboundQueueMessage {
   channel: Channel;
   tenantId: string;
@@ -1699,7 +1815,7 @@ export interface AuthContext {
   userId: string;
   email: string;
   name?: string;
-  role: "admin" | "member" | "advisor";
+  role: "admin" | "member" | "supervisor" | "advisor";
   homeTenantId?: string;
 }
 
@@ -1938,6 +2054,8 @@ export interface CampaignSQSBody {
   batchVersion?: number;
   batchIndex?: number;
   requestDlr?: boolean;
+  requireOptIn?: boolean;
+  outboundKind?: WhatsAppOutboundSendKind;
 }
 
 export type BulkSendJobStatus = "queued" | "processing" | "completed" | "failed";
@@ -1970,6 +2088,8 @@ export interface BulkSendSQSBody {
     type: string;
     parameters?: Array<{ type: string; text?: string; image?: { link: string } }>;
   }>;
+  requireOptIn?: boolean;
+  outboundKind?: WhatsAppOutboundSendKind;
 }
 
 export interface BotUsageMetrics {
@@ -2311,6 +2431,7 @@ export interface Booking {
   source: BookingSource;
   notes?: string;
   externalEventId?: string;
+  meetingLink?: string;
   externalSyncStatus?: ExternalSyncStatus;
   externalSyncedAt?: string;
   paymentId?: string;
@@ -2705,6 +2826,7 @@ export interface FlowNodeData {
   notificationChannel?: Channel;
   notificationMessageType?: "text" | "template";
   notificationRecipientBinding?: string;
+  notificationRecipientBindings?: string[];
   notificationMessageBinding?: string;
   notificationMessageText?: LocalizedText;
   notificationMessageHtml?: LocalizedText;
@@ -2745,6 +2867,9 @@ export interface FlowDefinition {
   nodes: FlowNode[];
   edges: FlowEdge[];
   entryNodeId: string;
+  draftNodes?: FlowNode[];
+  draftEdges?: FlowEdge[];
+  draftEntryNodeId?: string;
   publishedAt?: string;
   createdAt: string;
   updatedAt: string;

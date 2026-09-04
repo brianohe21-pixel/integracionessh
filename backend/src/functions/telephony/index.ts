@@ -48,6 +48,7 @@ import {
   handleAgentLegAnswered,
   handleAdvisorWebrtcOutboundAnswered,
   handleContactCenterHangup,
+  handleContactCenterRecordingSaved,
   handleGatherEnded,
   handleOutboundCustomerAnswered,
   handleSpeakEnded,
@@ -407,6 +408,7 @@ async function handleTelnyxWebhook(
 
     if (eventType === "call.recording.saved") {
       await handleCallRecordingSaved(payload);
+      await handleContactCenterRecordingSaved(payload);
       continue;
     }
 

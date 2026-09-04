@@ -9,6 +9,7 @@ import {
   listAdvisors,
   updateAdvisor,
 } from "../../lib/dynamodb/advisor.repository.js";
+import { listMembers } from "../../lib/dynamodb/member.repository.js";
 import { deleteMember } from "../../lib/dynamodb/member.repository.js";
 import {
   resolveRequestAuth,
@@ -23,6 +24,23 @@ import { sendAdvisorInviteEmail } from "../../lib/email/advisor-invite.js";
 import { syncAdvisorMemberRecord } from "../../lib/members/sync-advisor-member.js";
 import { ok, created, noContent, badRequest, notFound, handleError } from "../../lib/http.js";
 import type { Advisor } from "../../types/index.js";
+
+function enrichAdvisorsWithLastLogin(
+  advisors: Advisor[],
+  members: Awaited<ReturnType<typeof listMembers>>
+): Advisor[] {
+  const lastLoginByUserId = new Map(
+    members
+      .filter((member) => member.lastLoginAt)
+      .map((member) => [member.userId, member.lastLoginAt!])
+  );
+
+  return advisors.map((advisor) => {
+    if (!advisor.cognitoUserId) return advisor;
+    const lastLoginAt = lastLoginByUserId.get(advisor.cognitoUserId);
+    return lastLoginAt ? { ...advisor, lastLoginAt } : advisor;
+  });
+}
 
 const CreateAdvisorSchema = z.object({
   name: z.string().min(1).max(128),
@@ -50,8 +68,11 @@ export async function handler(
     const advisorId = event.pathParameters?.advisorId;
 
     if (method === "GET" && !advisorId) {
-      const advisors = await listAdvisors(auth.tenantId);
-      return ok(advisors);
+      const [advisors, members] = await Promise.all([
+        listAdvisors(auth.tenantId),
+        listMembers(auth.tenantId),
+      ]);
+      return ok(enrichAdvisorsWithLastLogin(advisors, members));
     }
 
     if (method === "GET" && advisorId) {

@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import type { FlowEdge, FlowNode } from "@/types";
+import { sanitizeFlowEdges } from "@/lib/flow-graph";
 
 export interface FlowEditorSnapshot {
   nodes: FlowNode[];
@@ -10,6 +11,13 @@ const MAX_HISTORY = 50;
 
 function cloneSnapshot(snapshot: FlowEditorSnapshot): FlowEditorSnapshot {
   return structuredClone(snapshot);
+}
+
+function sanitizeSnapshot(snapshot: FlowEditorSnapshot): FlowEditorSnapshot {
+  return {
+    nodes: snapshot.nodes,
+    edges: sanitizeFlowEdges(snapshot.nodes, snapshot.edges),
+  };
 }
 
 function snapshotsEqual(a: FlowEditorSnapshot, b: FlowEditorSnapshot): boolean {
@@ -34,7 +42,7 @@ export function useFlowEditorHistory() {
 
   const apply = useCallback(
     (snapshot: FlowEditorSnapshot) => {
-      const cloned = cloneSnapshot(snapshot);
+      const cloned = cloneSnapshot(sanitizeSnapshot(snapshot));
       presentRef.current = cloned;
       setState(cloned);
     },
@@ -60,7 +68,7 @@ export function useFlowEditorHistory() {
   const reset = useCallback(
     (snapshot: FlowEditorSnapshot) => {
       flushPending();
-      const cloned = cloneSnapshot(snapshot);
+      const cloned = cloneSnapshot(sanitizeSnapshot(snapshot));
       presentRef.current = cloned;
       pastRef.current = [];
       futureRef.current = [];
@@ -72,7 +80,7 @@ export function useFlowEditorHistory() {
 
   const commit = useCallback(
     (next: FlowEditorSnapshot, options?: { debounce?: boolean }) => {
-      const cloned = cloneSnapshot(next);
+      const cloned = cloneSnapshot(sanitizeSnapshot(next));
 
       if (!options?.debounce) {
         flushPending();

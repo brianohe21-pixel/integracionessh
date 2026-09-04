@@ -4,6 +4,7 @@ import type {
   Conversation,
   InboundNormalized,
   MessageSource,
+  WhatsAppOutboundSendKind,
 } from "../../types/index.js";
 
 export interface OutboundContext {
@@ -24,6 +25,7 @@ export interface OutboundContext {
   accessToken?: string;
   replyToExternalId?: string;
   environment: string;
+  outboundKind?: WhatsAppOutboundSendKind;
 }
 
 export interface OutboundResult {

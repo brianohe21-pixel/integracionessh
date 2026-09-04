@@ -168,7 +168,8 @@ export async function hangupCall(
 export async function startCallRecording(
   environment: string,
   callControlId: string,
-  tenantId: string
+  tenantId: string,
+  options?: { playBeep?: boolean }
 ): Promise<void> {
   try {
     await telnyxRequest(
@@ -179,7 +180,7 @@ export async function startCallRecording(
         body: JSON.stringify({
           format: "mp3",
           channels: "dual",
-          play_beep: false,
+          play_beep: options?.playBeep ?? false,
         }),
       },
       tenantId

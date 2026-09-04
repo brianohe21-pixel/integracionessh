@@ -2,6 +2,7 @@ import type { Booking, CalendarConfig } from "../../types/index.js";
 import {
   createGoogleCalendarEvent,
   deleteGoogleCalendarEvent,
+  resolveGoogleMeetingLink,
 } from "./client.js";
 import { resolveGoogleCalendarAccessToken } from "./token.js";
 
@@ -24,7 +25,7 @@ export class GoogleCalendarProvider {
   async createExternalEvent(
     booking: Booking,
     config: CalendarConfig
-  ): Promise<string | undefined> {
+  ): Promise<{ externalEventId: string; meetingLink?: string } | undefined> {
     if (!config.googleCalendarId) {
       throw new Error("Google Calendar is not selected");
     }
@@ -42,13 +43,18 @@ export class GoogleCalendarProvider {
       startAt: booking.startAt,
       endAt: booking.endAt,
       timezone: config.timezone,
+      requestId: booking.bookingId,
       privateExtendedProperties: {
         bookingId: booking.bookingId,
         botId: config.botId,
         tenantId: config.tenantId,
       },
     });
-    return event.id;
+    const meetingLink = resolveGoogleMeetingLink(event);
+    return {
+      externalEventId: event.id,
+      ...(meetingLink ? { meetingLink } : {}),
+    };
   }
 
   async cancelExternalEvent(booking: Booking, config: CalendarConfig): Promise<void> {

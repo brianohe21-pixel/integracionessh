@@ -1,10 +1,13 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { CheckCheck } from "lucide-react";
 import { EmailMessageBubble } from "@/components/conversations/EmailMessageBubble";
+import { DocumentMessageBubble } from "@/components/conversations/DocumentMessageBubble";
 import { ConversationDateDivider } from "@/components/conversations/conversation-ui";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useLocale, useT } from "@/i18n/context";
+import { isDocumentMessage } from "@/lib/conversations/document-messages";
 import { cn } from "@/lib/utils";
 import type { Channel, Conversation, CrossChannelMessage, Message } from "@/types";
 
@@ -36,7 +39,7 @@ function renderMessageBubble(params: {
 
   if (isSystem) {
     return (
-      <p key={listKey} className="py-2 text-center text-xs text-muted">
+      <p key={listKey} className="py-3 text-center text-xs text-muted">
         {msg.content}
       </p>
     );
@@ -44,11 +47,11 @@ function renderMessageBubble(params: {
 
   return (
     <div
-      className={cn("flex py-1", isInbound ? "justify-start" : "justify-end")}
+      className={cn("flex w-full", isInbound ? "justify-start pr-2 sm:pr-4" : "justify-end pl-2 sm:pl-4")}
     >
       <div
         className={cn(
-          "max-w-[min(85%,28rem)] px-3 py-2 text-sm leading-relaxed sm:max-w-md",
+          "max-w-[min(82%,30rem)] px-3.5 py-2 text-sm leading-snug sm:max-w-[min(76%,34rem)]",
           isInbound
             ? "conversations-wa-bubble-in text-primary"
             : isAdvisor
@@ -65,8 +68,14 @@ function renderMessageBubble(params: {
           <EmailMessageBubble message={msg} botId={conversation.botId} />
         ) : msg.channel === "email" && isInbound ? (
           <EmailMessageBubble message={msg} botId={conversation.botId} />
+        ) : isDocumentMessage(msg) ? (
+          <DocumentMessageBubble
+            message={msg}
+            conversationId={conversation.conversationId}
+            botId={conversation.botId}
+          />
         ) : (
-          <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+          <p className="emoji-text whitespace-pre-wrap break-words">{msg.content}</p>
         )}
         <div
           className={cn(
@@ -103,6 +112,52 @@ export function ConversationMessageThread({
   const t = useT();
   const { formatDate } = useFormatters();
   const intlLocale = locale === "en" ? "en-US" : "es-ES";
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const stickToBottomRef = useRef(true);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    function handleScroll() {
+      if (!container) return;
+      const distanceFromBottom =
+        container.scrollHeight - container.scrollTop - container.clientHeight;
+      stickToBottomRef.current = distanceFromBottom < 96;
+    }
+
+    handleScroll();
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, [conversation.conversationId]);
+
+  useEffect(() => {
+    stickToBottomRef.current = true;
+    const frame = requestAnimationFrame(() => {
+      bottomRef.current?.scrollIntoView({ block: "end" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [conversation.conversationId]);
+
+  useEffect(() => {
+    if (loading) return;
+
+    const lastMessage = messages?.[messages.length - 1];
+    const isOutgoing =
+      lastMessage?.role === "advisor" || lastMessage?.role === "assistant";
+
+    if (!stickToBottomRef.current && !isOutgoing) return;
+
+    const frame = requestAnimationFrame(() => {
+      bottomRef.current?.scrollIntoView({
+        block: "end",
+        behavior: isOutgoing ? "smooth" : "auto",
+      });
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [messages, crossChannelMessages, loading]);
 
   function formatMessageTime(iso: string) {
     const d = new Date(iso);
@@ -128,7 +183,7 @@ export function ConversationMessageThread({
         : undefined;
 
       return (
-        <div key={listKey}>
+        <div key={listKey} className="py-1.5">
           {showDateDivider ? (
             <ConversationDateDivider label={formatDate(msg.timestamp)} />
           ) : null}
@@ -149,9 +204,11 @@ export function ConversationMessageThread({
   const hasCrossChannel = (crossChannelMessages?.length ?? 0) > 0;
 
   return (
-    <div className="relative flex-1 overflow-y-auto sidebar-scroll">
-      <div className="conversations-chat-bg absolute inset-0" aria-hidden />
-      <div className="relative z-0 space-y-1 px-4 py-4 sm:px-6">
+    <div
+      ref={scrollContainerRef}
+      className="relative flex min-h-0 flex-1 overflow-y-auto overscroll-contain conversations-pane-scroll"
+    >
+      <div className="conversations-thread relative z-0 w-full space-y-0">
         {loading && <p className="text-sm text-secondary">{loadingLabel}</p>}
 
         {hasCrossChannel ? (
@@ -175,6 +232,7 @@ export function ConversationMessageThread({
                 {t("conversations.noMessages")}
               </p>
             ) : null}
+        <div ref={bottomRef} aria-hidden className="h-px w-full shrink-0" />
       </div>
     </div>
   );

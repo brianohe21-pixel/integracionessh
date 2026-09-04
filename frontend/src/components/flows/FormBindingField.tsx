@@ -17,7 +17,9 @@ export function FormBindingField({
 }: FormBindingFieldProps) {
   return (
     <div>
-      <label className="block text-xs font-medium text-secondary mb-1">{label}</label>
+      {label ? (
+        <label className="block text-xs font-medium text-secondary mb-1">{label}</label>
+      ) : null}
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}

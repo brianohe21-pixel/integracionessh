@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Arquitectura AWS — Telcored SAS</title>
+  <style>
+    @page { size: A4; margin: 14mm 14mm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      color: #1a2332;
+      font-size: 10.5pt;
+      line-height: 1.45;
+      background: #fff;
+    }
+    .page { page-break-after: always; padding: 0 2mm; position: relative; }
+    .page:last-child { page-break-after: auto; }
+
+    :root {
+      --tc-navy: #0f2f52;
+      --tc-primary: #0f2f52;
+      --tc-secondary: #00a0a8;
+      --tc-accent: #f7941d;
+      --tc-dark: #0f2f52;
+      --tc-muted: #6b7c8f;
+      --tc-text: #1a2b42;
+    }
+
+    .cover-page {
+      padding: 0 !important;
+      margin: 0;
+      page-break-after: always;
+      position: relative;
+      min-height: 267mm;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .cover-sidebar {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 22mm;
+      display: flex;
+      z-index: 1;
+    }
+    .cover-sidebar .bar-primary {
+      width: 16mm;
+      background: var(--tc-navy);
+      height: 100%;
+    }
+    .cover-sidebar .bar-secondary {
+      width: 6mm;
+      background: var(--tc-secondary);
+      height: 100%;
+    }
+
+    .cover-content {
+      position: relative;
+      z-index: 2;
+      margin-left: 28mm;
+      min-height: 267mm;
+      padding: 22mm 18mm 18mm 8mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .cover-top {
+      padding-top: 8mm;
+    }
+
+    .cover-top .logo-img.cover {
+      width: 240px !important;
+      height: 86px !important;
+      max-width: 240px !important;
+      max-height: 86px !important;
+      margin-bottom: 14px;
+    }
+
+    .cover-company {
+      font-size: 13pt;
+      font-weight: 800;
+      color: var(--tc-navy);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .cover-nit {
+      font-size: 10pt;
+      color: var(--tc-muted);
+      font-weight: 500;
+    }
+
+    .cover-bottom {
+      margin-top: auto;
+      padding-bottom: 18mm;
+    }
+
+    .cover-bottom h1 {
+      font-size: 30pt;
+      font-weight: 800;
+      color: var(--tc-navy);
+      line-height: 1.12;
+      letter-spacing: -0.5px;
+      text-transform: uppercase;
+      margin: 0 0 14px;
+    }
+
+    .cover-bottom .cover-subtitle {
+      font-size: 12pt;
+      color: var(--tc-muted);
+      font-weight: 500;
+      line-height: 1.4;
+      max-width: 90%;
+    }
+
+    .cover-bottom .cover-product {
+      color: var(--tc-secondary);
+      font-weight: 700;
+    }
+
+    .cover-meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px 24px;
+      font-size: 9pt;
+      color: var(--tc-muted);
+      border-top: 1px solid #d8e2ec;
+      padding-top: 14px;
+      margin-top: 20px;
+    }
+    .cover-meta-grid strong { color: var(--tc-navy); font-weight: 600; }
+
+    .cover-confidential {
+      font-size: 8pt;
+      color: #94a3b8;
+      margin-top: 16px;
+      line-height: 1.4;
+    }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #d8e2ec;
+      padding-bottom: 8px;
+      margin-bottom: 14px;
+      position: relative;
+      padding-left: 10px;
+    }
+    .page-header::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 8px;
+      width: 4px;
+      background: var(--tc-secondary);
+      border-radius: 2px;
+    }
+    .logo-block { display: flex; align-items: center; gap: 12px; max-width: 100%; }
+    .logo-img {
+      display: block;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+    .logo-img.header {
+      width: 150px !important;
+      height: 53px !important;
+      max-width: 150px !important;
+      max-height: 53px !important;
+    }
+    .logo-img.cover {
+      width: 240px !important;
+      height: 86px !important;
+      max-width: 240px !important;
+      max-height: 86px !important;
+      margin-bottom: 0;
+    }
+    .logo-img.footer {
+      width: 180px !important;
+      height: 64px !important;
+      max-width: 180px !important;
+      max-height: 64px !important;
+      margin: 0 auto 8px;
+    }
+    .logo-text .tagline { font-size: 7.5pt; color: var(--tc-muted); text-transform: uppercase; letter-spacing: 0.8px; }
+    .page-header .doc-meta { text-align: right; font-size: 8pt; color: var(--tc-muted); line-height: 1.5; }
+
+    .cover {
+      display: none;
+    }
+
+    h2.section {
+      font-size: 14.5pt;
+      color: var(--tc-primary);
+      border-bottom: 2px solid var(--tc-accent);
+      padding-bottom: 5px;
+      margin: 0 0 12px;
+    }
+    h3 { font-size: 10.5pt; color: var(--tc-dark); margin: 14px 0 7px; }
+    p { margin-bottom: 9px; color: #374151; }
+
+    .legend { display: flex; gap: 14px; flex-wrap: wrap; margin: 8px 0 14px; font-size: 8.5pt; }
+    .legend span { display: flex; align-items: center; gap: 5px; }
+    .dot { width: 11px; height: 11px; border-radius: 2px; display: inline-block; }
+    .dot-aws { background: #ff9900; }
+    .dot-sec { background: var(--tc-primary); }
+    .dot-ext { background: #6b7280; }
+    .dot-tls { background: #16a34a; }
+    .dot-e2e { background: #25d366; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 8.8pt; margin: 8px 0 14px; }
+    th, td { border: 1px solid #d1d5db; padding: 6px 7px; text-align: left; vertical-align: top; }
+    th { background: #e8f2fb; color: var(--tc-dark); font-weight: 600; }
+    tr:nth-child(even) td { background: #fafbfc; }
+
+    .badge { display: inline-block; font-size: 7.5pt; font-weight: 700; padding: 2px 5px; border-radius: 3px; text-transform: uppercase; }
+    .badge-aws { background: #fff3e0; color: #e65100; }
+    .badge-sec { background: #e3f2fd; color: #0d47a1; }
+    .badge-tls { background: #dcfce7; color: #166534; }
+    .badge-e2e { background: #d1fae5; color: #065f46; }
+    .badge-kms { background: #ede9fe; color: #5b21b6; }
+
+    .diagram-wrap {
+      border: 1px solid #c5d5e8;
+      border-radius: 8px;
+      padding: 11px;
+      background: #f8fbff;
+      margin: 10px 0;
+    }
+
+    .flow-row { display: flex; gap: 7px; align-items: stretch; margin-bottom: 7px; }
+    .zone {
+      flex: 1; border: 2px dashed #b8cfe6; border-radius: 8px;
+      padding: 9px; background: #fff; min-height: 68px;
+    }
+    .zone-title {
+      font-size: 7.5pt; font-weight: 700; text-transform: uppercase;
+      color: var(--tc-muted); margin-bottom: 7px; letter-spacing: 0.5px;
+    }
+    .box {
+      border-radius: 6px; padding: 6px 8px; margin-bottom: 5px;
+      font-size: 8pt; font-weight: 600; text-align: center; border: 1px solid transparent;
+    }
+    .box-ext { background: #f3f4f6; border-color: #9ca3af; color: #374151; }
+    .box-waf { background: var(--tc-primary); color: #fff; }
+    .box-kms { background: var(--tc-dark); color: #fff; }
+    .box-aws { background: #ff9900; color: #232f3e; }
+    .box-aws-dark { background: var(--tc-dark); color: #fff; }
+    .box-aws-light { background: #e8f2fb; border-color: var(--tc-secondary); color: var(--tc-dark); }
+    .box-compute { background: #ed7100; color: #fff; }
+    .box-data { background: #3b48cc; color: #fff; }
+    .box-net { background: #8c4fff; color: #fff; }
+    .box-tc { background: linear-gradient(135deg, var(--tc-primary), var(--tc-secondary)); color: #fff; }
+    .box-meta { background: #25d366; color: #fff; }
+    .box-tls { background: #16a34a; color: #fff; font-size: 7pt; padding: 3px 6px; margin: 3px 0; }
+
+    .arrow-row { text-align: center; font-size: 13pt; color: #94a3b8; margin: 2px 0; line-height: 1; }
+
+    .kms-bar { display: flex; gap: 6px; margin-top: 8px; }
+    .kms-item {
+      flex: 1; background: var(--tc-dark); color: #fff; border-radius: 5px;
+      padding: 7px; font-size: 7.5pt; text-align: center;
+    }
+    .kms-item strong { display: block; font-size: 8pt; margin-bottom: 1px; }
+
+    /* Conversation flow diagram */
+    .conv-flow { margin: 10px 0; }
+    .conv-lane {
+      border: 2px solid #c5d5e8; border-radius: 10px;
+      padding: 12px; margin-bottom: 12px; background: #fff;
+    }
+    .conv-lane-title {
+      font-size: 9pt; font-weight: 800; color: var(--tc-primary);
+      text-transform: uppercase; letter-spacing: 0.6px;
+      margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+    }
+    .conv-lane-title .arrow-dir { font-size: 14pt; color: var(--tc-accent); }
+    .conv-steps { display: flex; align-items: stretch; gap: 0; }
+    .conv-step {
+      flex: 1; text-align: center; position: relative; min-width: 0;
+    }
+    .conv-step-inner {
+      border: 1.5px solid #c5d5e8; border-radius: 8px;
+      padding: 8px 5px; background: #f8fbff; height: 100%;
+      display: flex; flex-direction: column; justify-content: center;
+    }
+    .conv-step .step-num {
+      font-size: 7pt; font-weight: 700; color: var(--tc-accent);
+      margin-bottom: 3px;
+    }
+    .conv-step .step-name { font-size: 7.8pt; font-weight: 700; color: var(--tc-dark); line-height: 1.25; }
+    .conv-step .step-detail { font-size: 6.8pt; color: var(--tc-muted); margin-top: 3px; line-height: 1.3; }
+    .conv-step .encrypt-badge {
+      display: inline-block; margin-top: 4px;
+      font-size: 6.5pt; font-weight: 700; padding: 2px 5px;
+      border-radius: 3px;
+    }
+    .enc-e2e { background: #d1fae5; color: #065f46; }
+    .enc-tls { background: #dcfce7; color: #166534; }
+    .enc-kms { background: #ede9fe; color: #5b21b6; }
+    .enc-hmac { background: #fef3c7; color: #92400e; }
+    .enc-jwt { background: #e0f2fe; color: #075985; }
+    .conv-connector {
+      display: flex; align-items: center; justify-content: center;
+      width: 18px; flex-shrink: 0; color: var(--tc-secondary);
+      font-size: 11pt; font-weight: 700;
+    }
+    .conv-connector .lock { font-size: 8pt; color: #16a34a; display: block; text-align: center; line-height: 1.1; }
+
+    .encrypt-legend {
+      display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0;
+      padding: 8px 10px; background: #f0f7ff; border-radius: 6px;
+      border: 1px solid #c5d5e8; font-size: 7.5pt;
+    }
+    .encrypt-legend span { display: flex; align-items: center; gap: 4px; }
+
+    ul.compact { margin: 0 0 9px 16px; font-size: 9pt; color: #374151; }
+    ul.compact li { margin-bottom: 3px; }
+
+    .footer {
+      margin-top: 20px; padding-top: 8px;
+      border-top: 2px solid var(--tc-primary);
+      font-size: 7.5pt; color: var(--tc-muted);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .footer .brand-mini { font-weight: 700; color: var(--tc-primary); }
+
+    .two-col { display: flex; gap: 14px; }
+    .two-col > div { flex: 1; }
+
+    .note {
+      background: #e8f2fb; border-left: 4px solid var(--tc-primary);
+      padding: 9px 11px; font-size: 8.8pt; margin: 9px 0; color: #1e3a5f;
+    }
+  </style>
+</head>
+<body>
+
+<!-- PORTADA -->
+<div class="page cover-page">
+  <div class="cover-sidebar">
+    <div class="bar-primary"></div>
+    <div class="bar-secondary"></div>
+  </div>
+  <div class="cover-content">
+    <div class="cover-top">
+      <img class="logo-img cover" src="logo-telcored-cover.png" width="240" height="86" alt="Telcored SAS" />
+      <div class="cover-company">Telcored SAS</div>
+      <div class="cover-nit">NIT 901.044.918-3</div>
+    </div>
+
+    <div class="cover-bottom">
+      <h1>Arquitectura AWS<br/>de la Plataforma</h1>
+      <p class="cover-subtitle">
+        WhatsApp Business Platform Omnicanal Serverless
+      </p>
+
+      <div class="cover-meta-grid">
+        <div><strong>Producto:</strong> WhatsApp Business Platform</div>
+        <div><strong>Región AWS:</strong> us-east-1</div>
+        <div><strong>Proveedor:</strong> Telcored SAS</div>
+        <div><strong>Entornos:</strong> dev · prod</div>
+        <div><strong>IaC:</strong> Terraform ≥ 1.10</div>
+        <div><strong>Versión:</strong> 1.2 · Septiembre 2026</div>
+      </div>
+
+      <div class="cover-confidential">
+        Documento confidencial · Propiedad intelectual de Telcored SAS · Prohibida su reproducción total o parcial sin autorización escrita.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RESUMEN + ARQUITECTURA -->
+<div class="page">
+  <div class="page-header">
+    <div class="logo-block">
+      <img class="logo-img header" src="logo-telcored-header.png" width="150" height="53" alt="Telcored SAS" />
+      <div class="logo-text">
+        <div class="tagline">Arquitectura AWS · Telcored SAS</div>
+      </div>
+    </div>
+    <div class="doc-meta">NIT 901.044.918-3<br/>Versión 1.2 · Confidencial</div>
+  </div>
+
+  <h2 class="section">1. Resumen ejecutivo</h2>
+  <p>
+    <strong>Telcored SAS</strong> opera su plataforma omnicanal serverless
+    desplegada en <strong>Amazon Web Services (AWS)</strong>. Funciona como capa empresarial sobre la API oficial de
+    <strong>Meta WhatsApp Business Platform (Cloud API)</strong>, con panel web, inbox multiagente, automatizaciones,
+    contact center y canales adicionales (SMS Telcored, email, voz, Telegram, Instagram).
+  </p>
+  <p>
+    La arquitectura separa: <em>canal oficial Meta</em>, <em>plataforma Telcored SAS</em>,
+    <em>identidad corporativa (Microsoft Entra ID)</em> y <em>controles de seguridad</em> mediante
+    <strong>AWS WAF</strong>, <strong>AWS KMS (CMK)</strong>, <strong>TLS</strong> y <strong>RBAC</strong>.
+  </p>
+
+  <div class="legend">
+    <span><i class="dot dot-aws"></i> Servicios AWS</span>
+    <span><i class="dot dot-sec"></i> WAF / KMS / Seguridad</span>
+    <span><i class="dot dot-tls"></i> Cifrado en tránsito (TLS)</span>
+    <span><i class="dot dot-e2e"></i> Cifrado WhatsApp (E2E)</span>
+    <span><i class="dot dot-ext"></i> Servicios externos</span>
+  </div>
+
+  <h3>Principios de diseño Telcored SAS</h3>
+  <ul class="compact">
+    <li><strong>Serverless first:</strong> ~50 funciones Lambda; telephony-gateway en ECS Fargate.</li>
+    <li><strong>Multi-tenant:</strong> aislamiento por tenant en DynamoDB con JWT Cognito.</li>
+    <li><strong>Event-driven:</strong> SQS FIFO + EventBridge Scheduler.</li>
+    <li><strong>Seguridad en capas:</strong> WAF, TLS, JWT, RBAC, Secrets Manager, CMK (KMS).</li>
+    <li><strong>Sin WhatsApp Web libre:</strong> solo Cloud API oficial de Meta.</li>
+  </ul>
+
+  <h2 class="section" style="margin-top:14px;">2. Diagrama de arquitectura AWS</h2>
+  <div class="diagram-wrap">
+    <div class="flow-row">
+      <div class="zone" style="flex:0.8;">
+        <div class="zone-title">Clientes y canales externos</div>
+        <div class="box box-ext">Usuarios / Agentes Almaviva</div>
+        <div class="box box-meta">Meta WhatsApp Cloud API</div>
+        <div class="box box-ext">Microsoft Entra ID</div>
+        <div class="box box-ext">Telnyx · OpenAI · SES</div>
+      </div>
+      <div class="zone" style="flex:0.25; display:flex; align-items:center; justify-content:center; border-style:solid; border-color:var(--tc-primary);">
+        <div style="text-align:center; font-size:16pt; color:var(--tc-primary);">→</div>
+      </div>
+      <div class="zone" style="flex:1.2;">
+        <div class="zone-title">Perímetro Telcored SAS · AWS</div>
+        <div class="box box-waf">AWS WAF v2</div>
+        <div class="box box-kms">AWS KMS — CMK Telcored</div>
+      </div>
+    </div>
+    <div class="arrow-row">▼</div>
+    <div class="flow-row">
+      <div class="zone">
+        <div class="zone-title">Frontend · Telcored SAS</div>
+        <div class="box box-tc">AWS Amplify · Next.js 15</div>
+        <div class="box box-aws-light">Amazon Cognito + Entra ID SSO</div>
+        <div class="box box-aws-light">ACM · TLS 1.2+</div>
+      </div>
+      <div class="zone">
+        <div class="zone-title">API Gateway</div>
+        <div class="box box-aws">HTTP API v2 · JWT</div>
+        <div class="box box-aws">WebSocket API · Inbox RT</div>
+      </div>
+      <div class="zone">
+        <div class="zone-title">Cómputo</div>
+        <div class="box box-compute">Lambda (~50 funciones)</div>
+        <div class="box box-compute">EventBridge Scheduler</div>
+      </div>
+    </div>
+    <div class="arrow-row">▼</div>
+    <div class="flow-row">
+      <div class="zone">
+        <div class="zone-title">Datos cifrados (KMS)</div>
+        <div class="box box-data">DynamoDB · SSE-KMS</div>
+        <div class="box box-data">SQS FIFO + DLQs · SSE-KMS</div>
+        <div class="box box-data">S3 · SSE-KMS</div>
+        <div class="box box-data">Secrets Manager · CMK</div>
+      </div>
+      <div class="zone">
+        <div class="zone-title">Telefonía (VPC)</div>
+        <div class="box box-net">ALB · TLS 1.3 + WAF</div>
+        <div class="box box-net">ECS Fargate Gateway</div>
+      </div>
+      <div class="zone">
+        <div class="zone-title">Observabilidad</div>
+        <div class="box box-aws-dark">CloudWatch · SNS</div>
+        <div class="box box-aws-dark">SES · IAM</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span class="brand-mini">Telcored SAS</span>
+    <span>NIT 901.044.918-3 · Confidencial · Página 2</span>
+  </div>
+</div>
+
+<!-- FLUJO CONVERSACIÓN CIFRADA -->
+<div class="page">
+  <div class="page-header">
+    <div class="logo-block">
+      <img class="logo-img header" src="logo-telcored-header.png" width="150" height="53" alt="Telcored SAS" />
+      <div class="logo-text">
+        <div class="tagline">Flujo de conversación cifrada</div>
+      </div>
+    </div>
+    <div class="doc-meta">Telcored SAS<br/>Versión 1.2</div>
+  </div>
+
+  <h2 class="section">3. Flujo de conversación cifrada — Cliente ↔ Meta ↔ Telcored SAS</h2>
+  <p>
+    Toda conversación WhatsApp transita por capas de cifrado en cada salto. Entre el teléfono del cliente y los servidores de Meta
+    aplica el <strong>cifrado de extremo a extremo (E2E)</strong> del protocolo Signal/WhatsApp. Entre Meta y la plataforma Telcored SAS,
+    y dentro de AWS, todo el tráfico usa <strong>TLS 1.2+</strong> y los datos en reposo se protegen con <strong>AWS KMS (CMK)</strong>.
+  </p>
+
+  <div class="encrypt-legend">
+    <span><span class="badge badge-e2e">E2E</span> Cifrado extremo a extremo WhatsApp (Signal)</span>
+    <span><span class="badge badge-tls">TLS</span> Cifrado en tránsito HTTPS/TLS 1.2+</span>
+    <span><span class="badge badge-kms">KMS</span> Cifrado en reposo con CMK</span>
+    <span><span class="badge badge-sec">HMAC</span> Firma webhook Meta SHA-256</span>
+    <span><span class="badge badge-sec">JWT</span> Token sesión agente Cognito/Entra</span>
+  </div>
+
+  <!-- ENTRANTE -->
+  <div class="conv-flow">
+    <div class="conv-lane">
+      <div class="conv-lane-title">
+        <span class="arrow-dir">→</span>
+        A. Mensaje entrante — Cliente externo hacia agente Almaviva
+      </div>
+      <div class="conv-steps">
+        <div class="conv-step">
+          <div class="conv-step-inner">
+            <div class="step-num">1</div>
+            <div class="step-name">Cliente WhatsApp</div>
+            <div class="step-detail">App móvil del cliente externo escribe mensaje</div>
+            <span class="encrypt-badge enc-e2e">E2E Signal</span>
+          </div>
+        </div>
+        <div class="conv-connector"><span class="lock">🔒</span>→</div>
+        <div class="conv-step">
+          <div class="conv-step-inner">
+            <div class="step-num">2</div>
+            <div class="step-name">Meta Cloud API</div>
+            <div class="step-detail">WABA recibe, descifra y reenvía webhook</div>
+            <span class="encrypt-badge enc-tls">TLS 1.2+</span>
+          </div>
+        </div>
+        <div class="conv-connector"><span class="lock">🔒</span>→</div>
+        <div class="conv-step">
+          <div class="conv-step-inner">
+            <div class="step-num">3</div>
+            <div class="step-name">AWS WAF</div>
+            <div class="step-detail">Filtra tráfico; rate limit; OWASP</div>
+            <span class="encrypt-badge enc-tls">TLS</span>
+          </div>
+        </div>
+        <div class="conv-connector"><span class="lock">🔒</span>→</div>
+        <div class="conv-step">
+          <div class="conv-step-inner">
+            <div class="step-num">4</div>
+            <div class="step-name">API Gateway</div>
+            <div class="step-detail">POST /webhook · access logs</div>
+            <span class="encrypt-badge enc-tls">TLS</span>
+          </div>
+        </div>
+        <div class="conv-connector"><span class="lock">🔒</span>→</div>
+        <div class="conv-step">
+          <div class="conv-step-inner">
+            <div class="step-num">5</div>
+            <div class="step-name">Lambda webhook</div>
+            <div class="step-detail">Valida X-Hub-Signature-256</div>
+            <span class="encrypt-badge enc-hmac">HMAC-SHA256</span>
+          </div>
+        </div>
+        <div class="conv-connector"><span class="lock">🔒</span>→</div>
+        <div class="conv-step">
+          <div class="conv-step-inner">
+            <div class="step-num">6</div>
+            <div class="step-name">SQS FIFO</div>
+            <div class="step-detail">Cola messages · desacople</div>
+            <span class="encrypt-badge enc-kms">SSE-KMS</span>
+          </div>
+        </div>
+        <div class="conv-connector"><span class="lock">🔒</span>→</div>
+        <div class="conv-step">
+          <div class="conv-step-inner">
+            <div class="step-num">7</div>
+            <div class="step-name">process-message</div>
+            <div class="step-detail">Procesa · automatización · IA</div>
+            <span class="encrypt-badge enc-tls">TLS interno</span>
+          </div>
+        </div>
+        <div class="conv-connector"><span class="lock">🔒</span>→</div>
+        <div class="conv-step">
+          <div class="conv-step-inner">
+            <div class="step-num">8</div>
+            <div class="step-name">DynamoDB</div>
+            <div class="step-detail">Persiste conversación + mensaje</div>
+            <span class="encrypt-badge enc-kms">SSE-KMS</span>
+          </div>
+        </div>
+        <div class="conv-connector"><span class="lock">🔒</span>→</div>
+        <div class="conv-step">
+          <div class="conv-step-inner">
+            <div class="step-num">9</div>
+            <div class="step-name">Inbox agente</div>
+            <div class="step-detail">WebSocket + panel Amplify</div>
+            <span class="encrypt-badge enc-jwt">TLS + JWT</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SALIENTE -->
+    <div class="conv-lane">
+      <div class="conv-lane-title">
+        <span class="arrow-dir">←</span>
+        B. Respuesta saliente — Agente Almaviva hacia cliente externo
+      </div>
+      <div class="conv-steps">
+        <div class="conv-step">
+          <div class="conv-step-inner">
+            <div class="step-num">1</div>
+            <div class="step-name">Agente</div>
+            <div class="step-detail">Escribe respuesta en inbox Telcored</div>
+            <span class="encrypt-badge enc-jwt">TLS + JWT + RBAC</span>
+          </div>
+        </div>
+        <div class="conv-connector"><span class="lock">🔒</span>→</div>
+        <div class="conv-step">
+          <div class="conv-step-inner">
+            <div class="step-num">2</div>
+            <div class="step-name">API Gateway</div>
+            <div class="step-detail">JWT Authorizer · Cognito/Entra</div>
+            <span class="encrypt-badge enc-tls">TLS 1.2+</span>
+          </div>
+        </div>
+        <div class="conv-connector"><span class="lock">🔒</span>→</div>
+        <div class="conv-step">
+          <div class="conv-step-inner">
+            <div class="step-num">3</div>
+            <div class="step-name">Lambda</div>
+            <div class="step-detail">conversations / process-message</div>
+            <span class="encrypt-badge enc-tls">TLS</span>
+          </div>
+        </div>
+        <div class="conv-connector"><span class="lock">🔒</span>→</div>
+        <div class="conv-step">
+          <div class="conv-step-inner">
+            <div class="step-num">4</div>
+            <div class="step-name">Secrets Manager</div>
+            <div class="step-detail">Token WhatsApp del tenant</div>
+            <span class="encrypt-badge enc-kms">CMK</span>
+          </div>
+        </div>
+        <div class="conv-connector"><span class="lock">🔒</span>→</div>
+        <div class="conv-step">
+          <div class="conv-step-inner">
+            <div class="step-num">5</div>
+            <div class="step-name">Meta Graph API</div>
+            <div class="step-detail">POST /messages · número institucional</div>
+            <span class="encrypt-badge enc-tls">TLS 1.2+</span>
+          </div>
+        </div>
+        <div class="conv-connector"><span class="lock">🔒</span>→</div>
+        <div class="conv-step">
+          <div class="conv-step-inner">
+            <div class="step-num">6</div>
+            <div class="step-name">Meta Cloud API</div>
+            <div class="step-detail">Enruta al número del cliente</div>
+            <span class="encrypt-badge enc-e2e">E2E Signal</span>
+          </div>
+        </div>
+        <div class="conv-connector"><span class="lock">🔒</span>→</div>
+        <div class="conv-step">
+          <div class="conv-step-inner">
+            <div class="step-num">7</div>
+            <div class="step-name">Cliente WhatsApp</div>
+            <div class="step-detail">Recibe mensaje cifrado en app</div>
+            <span class="encrypt-badge enc-e2e">E2E Signal</span>
+          </div>
+        </div>
+        <div class="conv-step" style="flex:0.6;">
+          <div class="conv-step-inner" style="background:#f0fdf4;border-color:#86efac;">
+            <div class="step-num">+</div>
+            <div class="step-name">DynamoDB</div>
+            <div class="step-detail">Registro trazable del envío</div>
+            <span class="encrypt-badge enc-kms">SSE-KMS</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>Nota de seguridad Telcored SAS:</strong> El tramo Cliente ↔ Meta está protegido por el cifrado E2E nativo de WhatsApp (protocolo Signal).
+    Telcored SAS no tiene acceso al contenido cifrado E2E en tránsito hacia el dispositivo del cliente; recibe y envía mensajes a través de la
+    Cloud API oficial de Meta bajo TLS, con validación HMAC de webhooks, almacenamiento cifrado con CMK y acceso restringido por RBAC.
+  </div>
+
+  <h3>3.1 Capas de cifrado por tramo</h3>
+  <table>
+    <thead><tr><th>Tramo</th><th>Protocolo</th><th>Responsable</th></tr></thead>
+    <tbody>
+      <tr><td>Cliente ↔ Meta (app WhatsApp)</td><td><span class="badge badge-e2e">E2E Signal</span></td><td>Meta / WhatsApp</td></tr>
+      <tr><td>Meta ↔ Plataforma Telcored (webhooks + API)</td><td><span class="badge badge-tls">TLS 1.2+</span> + <span class="badge badge-sec">HMAC</span></td><td>Telcored SAS / AWS</td></tr>
+      <tr><td>Agente ↔ Panel web (Amplify)</td><td><span class="badge badge-tls">TLS 1.2+</span> + <span class="badge badge-sec">JWT</span></td><td>Telcored SAS / AWS</td></tr>
+      <tr><td>Datos en reposo (DynamoDB, S3, SQS, Secrets)</td><td><span class="badge badge-kms">SSE-KMS / CMK</span></td><td>Telcored SAS / AWS</td></tr>
+      <tr><td>Colas internas SQS</td><td><span class="badge badge-kms">SSE-KMS</span></td><td>Telcored SAS / AWS</td></tr>
+    </tbody>
+  </table>
+
+  <div class="footer">
+    <span class="brand-mini">Telcored SAS</span>
+    <span>NIT 901.044.918-3 · Confidencial · Página 3</span>
+  </div>
+</div>
+
+<!-- SERVICIOS + SEGURIDAD -->
+<div class="page">
+  <div class="page-header">
+    <div class="logo-block">
+      <img class="logo-img header" src="logo-telcored-header.png" width="150" height="53" alt="Telcored SAS" />
+      <div class="logo-text">
+        <div class="tagline">Servicios AWS · Seguridad</div>
+      </div>
+    </div>
+    <div class="doc-meta">Telcored SAS<br/>Versión 1.2</div>
+  </div>
+
+  <h2 class="section">4. Inventario de servicios AWS — Telcored SAS</h2>
+  <table>
+    <thead><tr><th>Servicio</th><th>Módulo Terraform</th><th>Función</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge badge-sec">WAF v2</span></td><td>API GW + ALB</td><td>Rate limiting, OWASP, geo-blocking, IP allowlist</td></tr>
+      <tr><td><span class="badge badge-kms">KMS CMK</span></td><td>Plataforma</td><td>Cifrado DynamoDB, S3, SQS, Secrets, Logs</td></tr>
+      <tr><td><span class="badge badge-aws">Amplify</span></td><td>modules/amplify</td><td>Frontend Next.js 15 · WEB_COMPUTE</td></tr>
+      <tr><td><span class="badge badge-aws">API Gateway</span></td><td>modules/api-gateway</td><td>HTTP v2 + WebSocket · JWT Cognito</td></tr>
+      <tr><td><span class="badge badge-aws">Lambda</span></td><td>modules/lambda</td><td>~50 funciones Node.js 20</td></tr>
+      <tr><td><span class="badge badge-aws">Cognito</span></td><td>modules/cognito</td><td>User Pool · SSO Entra ID SAML/OIDC</td></tr>
+      <tr><td><span class="badge badge-aws">DynamoDB</span></td><td>modules/dynamodb</td><td>Single-table · GSI1 · TTL · PITR</td></tr>
+      <tr><td><span class="badge badge-aws">SQS</span></td><td>modules/sqs</td><td>12 colas FIFO + DLQs</td></tr>
+      <tr><td><span class="badge badge-aws">S3</span></td><td>modules/s3</td><td>Media · Artifacts · Versioning</td></tr>
+      <tr><td><span class="badge badge-aws">ECS Fargate</span></td><td>modules/telephony-gateway</td><td>Gateway voz PSTN · Telnyx</td></tr>
+      <tr><td><span class="badge badge-aws">CloudWatch</span></td><td>modules/monitoring</td><td>Logs · Alarmas → SNS</td></tr>
+    </tbody>
+  </table>
+
+  <h2 class="section">5. Seguridad — WAF, KMS y controles Telcored SAS</h2>
+  <div class="two-col">
+    <div>
+      <h3>5.1 AWS WAF v2</h3>
+      <ul class="compact">
+        <li>Web ACL en API Gateway HTTP y ALB telephony</li>
+        <li>Rate-based rules en /webhook y /v1/*</li>
+        <li>AWS Managed Rules: OWASP Core, Known Bad Inputs</li>
+        <li>Geo match e IP allowlist corporativa</li>
+        <li>Logs WAF → CloudWatch (cifrado KMS)</li>
+      </ul>
+    </div>
+    <div>
+      <h3>5.2 AWS KMS — CMK Telcored</h3>
+      <ul class="compact">
+        <li>CMK: alias/chatbot-platform-{env}-cmk</li>
+        <li>DynamoDB SSE-KMS (conversaciones)</li>
+        <li>S3 default encryption SSE-KMS</li>
+        <li>SQS SSE-KMS en colas FIFO</li>
+        <li>Secrets Manager con CMK dedicada</li>
+        <li>Rotación automática de claves</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>5.3 Controles adicionales</h3>
+  <table>
+    <thead><tr><th>Control</th><th>Implementación Telcored SAS</th></tr></thead>
+    <tbody>
+      <tr><td>Autenticación</td><td>Cognito + Microsoft Entra ID SSO (SAML/OIDC) + MFA</td></tr>
+      <tr><td>Autorización</td><td>RBAC: admin / member / advisor · multi-tenant</td></tr>
+      <tr><td>Webhooks Meta</td><td>HMAC-SHA256 · X-Hub-Signature-256</td></tr>
+      <tr><td>Cifrado tránsito</td><td>TLS 1.2+ en API GW, ALB, Amplify, Cognito</td></tr>
+      <tr><td>Cifrado reposo</td><td>CMK KMS en DynamoDB, S3, SQS, Secrets</td></tr>
+      <tr><td>Compliance</td><td>Opt-in/opt-out · Ley 2300 · audit logs</td></tr>
+      <tr><td>Monitoreo</td><td>CloudWatch Alarms → SNS 7×24</td></tr>
+    </tbody>
+  </table>
+
+  <h2 class="section" style="margin-top:12px;">6. Funciones Lambda (agrupadas)</h2>
+  <table>
+    <thead><tr><th>Grupo</th><th>Funciones</th></tr></thead>
+    <tbody>
+      <tr><td>Webhooks</td><td>webhook, telegram-webhook, sms-webhook, email-inbound, mailrelay-webhook</td></tr>
+      <tr><td>Workers SQS</td><td>process-message, process-bulk-send, process-campaign, process-automation, process-flow, process-integration, +6 más</td></tr>
+      <tr><td>API REST</td><td>tenants, bots, conversations, advisors, templates, campaigns, billing, admin, +20 más</td></tr>
+      <tr><td>Canales</td><td>whatsapp-connect, instagram-connect, telegram-connect, webchat, voicebot</td></tr>
+      <tr><td>Tiempo real</td><td>realtime, realtime-ws (WebSocket inbox)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="footer">
+    <span class="brand-mini">Telcored SAS</span>
+    <span>NIT 901.044.918-3 · Confidencial · Página 4</span>
+  </div>
+</div>
+
+<!-- COLAS + INTEGRACIONES -->
+<div class="page">
+  <div class="page-header">
+    <div class="logo-block">
+      <img class="logo-img header" src="logo-telcored-header.png" width="150" height="53" alt="Telcored SAS" />
+      <div class="logo-text">
+        <div class="tagline">Operación · Integraciones</div>
+      </div>
+    </div>
+    <div class="doc-meta">Telcored SAS<br/>Versión 1.2</div>
+  </div>
+
+  <h2 class="section">7. Colas SQS FIFO — Telcored SAS</h2>
+  <table>
+    <thead><tr><th>Cola</th><th>Worker</th><th>Propósito</th><th>Cifrado</th></tr></thead>
+    <tbody>
+      <tr><td>messages</td><td>process-message</td><td>Mensajes WhatsApp entrantes</td><td><span class="badge badge-kms">SSE-KMS</span></td></tr>
+      <tr><td>bulk_send</td><td>process-bulk-send</td><td>Envío masivo CSV</td><td><span class="badge badge-kms">SSE-KMS</span></td></tr>
+      <tr><td>campaign</td><td>process-campaign</td><td>Campañas programadas</td><td><span class="badge badge-kms">SSE-KMS</span></td></tr>
+      <tr><td>automation</td><td>process-automation</td><td>Reglas automáticas</td><td><span class="badge badge-kms">SSE-KMS</span></td></tr>
+      <tr><td>integration</td><td>process-integration</td><td>Webhooks salientes</td><td><span class="badge badge-kms">SSE-KMS</span></td></tr>
+      <tr><td>flow_run / flow_event</td><td>process-flow*</td><td>Flujos visuales</td><td><span class="badge badge-kms">SSE-KMS</span></td></tr>
+    </tbody>
+  </table>
+
+  <h2 class="section">8. Entornos y CI/CD</h2>
+  <table>
+    <thead><tr><th>Entorno</th><th>Rama</th><th>Despliegue</th></tr></thead>
+    <tbody>
+      <tr><td>dev</td><td>develop</td><td>Amplify develop.* · API dev · Terraform CI</td></tr>
+      <tr><td>prod</td><td>main</td><td>Amplify app.* · API prod · monitoring activo</td></tr>
+    </tbody>
+  </table>
+  <ul class="compact">
+    <li><strong>backend.yml</strong> — test, build, deploy Lambda</li>
+    <li><strong>frontend.yml</strong> — build, deploy Amplify</li>
+    <li><strong>terraform.yml</strong> — plan/apply infraestructura, smoke tests</li>
+    <li><strong>telephony-gateway.yml</strong> — Docker → ECR → ECS</li>
+  </ul>
+
+  <h2 class="section" style="margin-top:12px;">9. Integraciones externas</h2>
+  <table>
+    <thead><tr><th>Servicio</th><th>Uso · Cifrado</th></tr></thead>
+    <tbody>
+      <tr><td>Meta WhatsApp Cloud API</td><td>Canal principal · <span class="badge badge-e2e">E2E</span> + <span class="badge badge-tls">TLS</span></td></tr>
+      <tr><td>Microsoft Entra ID</td><td>SSO corporativo · <span class="badge badge-tls">TLS</span> + SAML/OIDC</td></tr>
+      <tr><td>Telcored SMS</td><td>Notificaciones transaccionales · <span class="badge badge-tls">TLS</span></td></tr>
+      <tr><td>OpenAI</td><td>IA conversacional · <span class="badge badge-tls">TLS</span></td></tr>
+      <tr><td>Telnyx</td><td>Telefonía PSTN · <span class="badge badge-tls">TLS</span> + WebSocket</td></tr>
+      <tr><td>Amazon SES</td><td>Email transaccional · <span class="badge badge-tls">TLS</span></td></tr>
+      <tr><td>Wompi / Stripe</td><td>Facturación · <span class="badge badge-tls">TLS</span></td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    Documento elaborado por <strong>Telcored SAS</strong> (NIT 901.044.918-3) a partir de la plataforma en producción.
+    Los componentes WAF y KMS (CMK) se documentan como capa de seguridad de la arquitectura
+    corporativa para despliegues enterprise (ej. Almaviva IC 000576).
+  </div>
+
+  <div style="margin-top:24px; padding:16px; background:#f0f7ff; border-radius:8px; border:1px solid #c5d5e8; text-align:center;">
+    <img class="logo-img footer" src="logo-telcored-footer.png" width="180" height="64" alt="Telcored SAS" />
+    <div style="font-size:9pt; color:var(--tc-muted); margin-top:4px;">NIT 901.044.918-3</div>
+    <div style="font-size:8.5pt; color:var(--tc-muted); margin-top:8px;">
+      Comunicaciones empresariales · Mensajería corporativa · Plataformas conversacionales<br/>
+      © 2026 Telcored SAS. Todos los derechos reservados. Documento confidencial.
+    </div>
+  </div>
+
+  <div class="footer">
+    <span class="brand-mini">Telcored SAS</span>
+    <span>NIT 901.044.918-3 · Confidencial · Página 5</span>
+  </div>
+</div>
+
+</body>
+</html>

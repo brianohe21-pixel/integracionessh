@@ -39,7 +39,7 @@ export default function EditCampaignPage({
 
   if (error || !campaign) {
     return (
-      <DashboardPage maxWidth="3xl">
+      <DashboardPage>
         <div className="rounded-lg bg-red-50 border border-red-200 p-4 text-sm text-red-700">
           {t("campaigns.loadError")}
         </div>
@@ -49,7 +49,7 @@ export default function EditCampaignPage({
 
   if (campaign.status !== "draft" && campaign.status !== "scheduled") {
     return (
-      <DashboardPage maxWidth="3xl" className="space-y-4">
+      <DashboardPage className="space-y-4">
         <Link
           href={`/campaigns/${campaignId}`}
           className="inline-flex items-center gap-2 text-sm text-secondary hover:text-primary"

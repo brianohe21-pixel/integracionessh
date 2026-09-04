@@ -12,6 +12,7 @@ import { assertCanSendMessages } from "../../billing/assert-plan.js";
 import { incrementMessages } from "../../dynamodb/usage.repository.js";
 import { checkMarketingRecipients } from "../../compliance/recipient-policy.js";
 import { sendTextMessage, sendTemplateMessage, getWhatsAppAccessToken } from "../../whatsapp/client.js";
+import { assertWhatsAppOutboundAllowed } from "../../whatsapp/outbound-guard.js";
 import { sendEmail } from "../../email/client.js";
 import { resolveTenantOutboundFrom } from "../../email/tenant-email.service.js";
 import { getBotLocale, templateLanguageForLocale } from "../../i18n/index.js";
@@ -50,9 +51,18 @@ async function executeWhatsAppStep(params: {
 
   const normalizedPhone = params.phone.replace(/\D/g, "");
   const { allowed } = await checkMarketingRecipients(params.tenantId, [normalizedPhone]);
-  const recipient = allowed[0] ?? normalizedPhone;
+  const recipient = allowed[0];
+  if (!recipient) return;
   const accessToken = await getWhatsAppAccessToken(params.tenantId, ENVIRONMENT);
   const locale = getBotLocale({}, bot);
+
+  await assertWhatsAppOutboundAllowed({
+    tenantId: params.tenantId,
+    phoneNumberId: bot.phoneNumberId,
+    kind: "marketing",
+    to: recipient,
+    requireOptIn: true,
+  });
 
   if (params.step.templateName) {
     await sendTemplateMessage({

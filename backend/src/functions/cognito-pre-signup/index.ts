@@ -1,4 +1,5 @@
 import type {
+  PostAuthenticationTriggerEvent,
   PostConfirmationTriggerEvent,
   PreSignUpTriggerEvent,
 } from "aws-lambda";
@@ -9,8 +10,12 @@ import {
   ListUsersCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
 import { getTenantIdBySsoProvider } from "../../lib/dynamodb/microsoft-sso.repository.js";
+import { recordUserLogin } from "../../lib/members/record-login.js";
 
-type CognitoTriggerEvent = PreSignUpTriggerEvent | PostConfirmationTriggerEvent;
+type CognitoTriggerEvent =
+  | PreSignUpTriggerEvent
+  | PostConfirmationTriggerEvent
+  | PostAuthenticationTriggerEvent;
 
 const client = new CognitoIdentityProviderClient({});
 
@@ -172,6 +177,26 @@ export async function handler(event: CognitoTriggerEvent): Promise<CognitoTrigge
       await ensureCustomAttributes(event);
     } catch {
       /* attributes will be retried on next confirmation if needed */
+    }
+  }
+
+  if (event.triggerSource === "PostAuthentication_Authentication") {
+    const tenantId = event.request.userAttributes["custom:tenantId"]?.trim() ?? "";
+    const userId = event.request.userAttributes.sub?.trim() ?? "";
+    const email = event.request.userAttributes.email?.trim();
+    const name = event.request.userAttributes.name?.trim();
+    const role = event.request.userAttributes["custom:role"]?.trim();
+
+    try {
+      await recordUserLogin({
+        tenantId,
+        userId,
+        ...(email ? { email } : {}),
+        ...(name ? { name } : {}),
+        ...(role ? { role } : {}),
+      });
+    } catch (error) {
+      console.error("Failed to record user login:", error);
     }
   }
 

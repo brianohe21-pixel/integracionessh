@@ -6,7 +6,7 @@ import { requireBotContext, requireMessagingContext } from "../types.js";
 import { getNextNodeId } from "../graph.js";
 import {
   createBookingForBot,
-  formatBookingConfirmation,
+  buildBookingConfirmationText,
   getBookingDates,
   getBookingSlotsForDate,
   requireEnabledCalendar,
@@ -141,13 +141,9 @@ export async function executeBookAppointmentNode(
           environment: ctx.environment,
         });
         const booking = result.booking;
-        const scheduledPrefix =
-          locale === "en"
-            ? getSystemMessage("bookingScheduledPrefixEn", locale)
-            : getSystemMessage("bookingScheduledPrefix", locale);
         const confirmationBase =
           resolveLocalizedText(node.data.confirmationMessage, locale) ||
-          `${scheduledPrefix} ${formatBookingConfirmation(booking, config)}.`;
+          buildBookingConfirmationText({ booking, config, locale });
         const confirmation = result.payment
           ? `${confirmationBase} ${getSystemMessage("bookingPaymentLink", locale)}`
           : confirmationBase;

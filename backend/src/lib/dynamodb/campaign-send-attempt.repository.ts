@@ -1,4 +1,4 @@
-import { GetCommand, PutCommand, QueryCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import { GetCommand, PutCommand, QueryCommand, UpdateCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
 import { ConditionalCheckFailedException } from "@aws-sdk/client-dynamodb";
 import { docClient, TABLE_NAME } from "./client.js";
 import { parseDeliveryFailureError } from "./bulk-job.repository.js";
@@ -97,6 +97,19 @@ export async function ensureCampaignSendAttempt(
     }
     throw error;
   }
+}
+
+export async function deleteCampaignSendAttempt(
+  tenantId: string,
+  campaignId: string,
+  attemptId: string
+): Promise<void> {
+  await docClient.send(
+    new DeleteCommand({
+      TableName: TABLE_NAME,
+      Key: attemptKeys(tenantId, campaignId, attemptId),
+    })
+  );
 }
 
 export function isCampaignSendAttemptTerminal(status: CampaignSendAttemptStatus): boolean {

@@ -11,6 +11,8 @@ import { Input, Select, Textarea } from "@/components/ui/Input";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ContactCenterDialpad } from "@/components/contact-center/ContactCenterDialpad";
 import { ContactCenterPhoneNumbersTab } from "@/components/contact-center/ContactCenterPhoneNumbersTab";
+import { ContactCenterQueueEditor } from "@/components/contact-center/ContactCenterQueueEditor";
+import { FormField } from "@/components/contact-center/FormField";
 import { ContactCenterWallboard } from "@/components/contact-center/ContactCenterWallboard";
 import { useBots } from "@/hooks/useBots";
 import { getOutboundCallableBots } from "@/lib/voice-bots";
@@ -68,6 +70,7 @@ export default function ContactCenterPage() {
   const [campaignName, setCampaignName] = useState("");
   const [campaignRecipients, setCampaignRecipients] = useState("");
   const [campaignQueueId, setCampaignQueueId] = useState("");
+  const [expandedQueueId, setExpandedQueueId] = useState<string | null>(null);
 
   const queues = queuesQuery.data?.items ?? [];
   const ivrs = ivrQuery.data?.items ?? [];
@@ -115,14 +118,16 @@ export default function ContactCenterPage() {
   return (
     <DashboardPage>
       <PageHeader title={t("contactCenter.title")} subtitle={t("contactCenter.subtitle")} />
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <Select value={selectedBotId} onChange={(event) => setBotId(event.target.value)}>
-          {voiceBots.map((bot) => (
-            <option key={bot.botId} value={bot.botId}>
-              {bot.name}
-            </option>
-          ))}
-        </Select>
+      <div className="mb-4 flex flex-wrap items-end gap-3">
+        <FormField label={t("contactCenter.voiceAgent")} className="min-w-[200px]">
+          <Select value={selectedBotId} onChange={(event) => setBotId(event.target.value)}>
+            {voiceBots.map((bot) => (
+              <option key={bot.botId} value={bot.botId}>
+                {bot.name}
+              </option>
+            ))}
+          </Select>
+        </FormField>
         <Tabs items={tabs} value={tab} onChange={setTab} />
       </div>
 
@@ -150,12 +155,13 @@ export default function ContactCenterPage() {
 
       {tab === "queues" ? (
         <Card padding="md" className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Input
-              value={queueName}
-              onChange={(event) => setQueueName(event.target.value)}
-              placeholder={t("contactCenter.queueName")}
-            />
+          <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+            <FormField label={t("contactCenter.queueName")}>
+              <Input
+                value={queueName}
+                onChange={(event) => setQueueName(event.target.value)}
+              />
+            </FormField>
             <Button
               onClick={() => {
                 if (!selectedBotId) return;
@@ -173,10 +179,17 @@ export default function ContactCenterPage() {
           ) : (
             <ul className="space-y-2 text-sm">
               {queues.map((queue) => (
-                <li key={queue.queueId} className="flex justify-between rounded-lg border border-default px-3 py-2">
-                  <span>{queue.name}</span>
-                  <span className="text-secondary">{queue.strategy}</span>
-                </li>
+                <ContactCenterQueueEditor
+                  key={queue.queueId}
+                  queue={queue}
+                  queues={queues}
+                  expanded={expandedQueueId === queue.queueId}
+                  onToggle={() =>
+                    setExpandedQueueId((current) =>
+                      current === queue.queueId ? null : queue.queueId
+                    )
+                  }
+                />
               ))}
             </ul>
           )}
@@ -185,16 +198,18 @@ export default function ContactCenterPage() {
 
       {tab === "ivr" ? (
         <Card padding="md" className="space-y-4">
-          <Input
-            value={ivrName}
-            onChange={(event) => setIvrName(event.target.value)}
-            placeholder={t("contactCenter.ivrName")}
-          />
-          <Textarea
-            value={ivrPrompt}
-            onChange={(event) => setIvrPrompt(event.target.value)}
-            placeholder={t("contactCenter.prompt")}
-          />
+          <FormField label={t("contactCenter.ivrName")}>
+            <Input
+              value={ivrName}
+              onChange={(event) => setIvrName(event.target.value)}
+            />
+          </FormField>
+          <FormField label={t("contactCenter.prompt")}>
+            <Textarea
+              value={ivrPrompt}
+              onChange={(event) => setIvrPrompt(event.target.value)}
+            />
+          </FormField>
           <Button
             onClick={() => {
               if (!selectedBotId) return;
@@ -231,30 +246,36 @@ export default function ContactCenterPage() {
 
       {tab === "routing" ? (
         <Card padding="md" className="space-y-4">
-          <Select
-            value={routingMode}
-            onChange={(event) => setRoutingMode(event.target.value as typeof routingMode)}
-          >
-            <option value="ai">{t("contactCenter.modeAi")}</option>
-            <option value="ivr">{t("contactCenter.modeIvr")}</option>
-            <option value="queue">{t("contactCenter.modeQueue")}</option>
-          </Select>
-          <Select value={routingQueueId} onChange={(event) => setRoutingQueueId(event.target.value)}>
-            <option value="">{t("contactCenter.tabQueues")}</option>
-            {queues.map((queue) => (
-              <option key={queue.queueId} value={queue.queueId}>
-                {queue.name}
-              </option>
-            ))}
-          </Select>
-          <Select value={routingIvrId} onChange={(event) => setRoutingIvrId(event.target.value)}>
-            <option value="">{t("contactCenter.tabIvr")}</option>
-            {ivrs.map((flow) => (
-              <option key={flow.ivrFlowId} value={flow.ivrFlowId}>
-                {flow.name}
-              </option>
-            ))}
-          </Select>
+          <FormField label={t("contactCenter.routingMode")}>
+            <Select
+              value={routingMode}
+              onChange={(event) => setRoutingMode(event.target.value as typeof routingMode)}
+            >
+              <option value="ai">{t("contactCenter.modeAi")}</option>
+              <option value="ivr">{t("contactCenter.modeIvr")}</option>
+              <option value="queue">{t("contactCenter.modeQueue")}</option>
+            </Select>
+          </FormField>
+          <FormField label={t("contactCenter.tabQueues")}>
+            <Select value={routingQueueId} onChange={(event) => setRoutingQueueId(event.target.value)}>
+              <option value="">{t("contactCenter.selectQueue")}</option>
+              {queues.map((queue) => (
+                <option key={queue.queueId} value={queue.queueId}>
+                  {queue.name}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+          <FormField label={t("contactCenter.tabIvr")}>
+            <Select value={routingIvrId} onChange={(event) => setRoutingIvrId(event.target.value)}>
+              <option value="">{t("contactCenter.selectIvr")}</option>
+              {ivrs.map((flow) => (
+                <option key={flow.ivrFlowId} value={flow.ivrFlowId}>
+                  {flow.name}
+                </option>
+              ))}
+            </Select>
+          </FormField>
           <Button
             onClick={() => {
               if (!selectedBotId) return;
@@ -371,27 +392,31 @@ export default function ContactCenterPage() {
 
       {tab === "campaigns" ? (
         <Card padding="md" className="space-y-4">
-          <Input
-            value={campaignName}
-            onChange={(event) => setCampaignName(event.target.value)}
-            placeholder={t("contactCenter.createCampaign")}
-          />
-          <Select
-            value={campaignQueueId || firstQueueId}
-            onChange={(event) => setCampaignQueueId(event.target.value)}
-          >
-            {queues.map((queue) => (
-              <option key={queue.queueId} value={queue.queueId}>
-                {queue.name}
-              </option>
-            ))}
-          </Select>
-          <Textarea
-            value={campaignRecipients}
-            onChange={(event) => setCampaignRecipients(event.target.value)}
-            placeholder={t("contactCenter.recipients")}
-            rows={6}
-          />
+          <FormField label={t("contactCenter.campaignName")}>
+            <Input
+              value={campaignName}
+              onChange={(event) => setCampaignName(event.target.value)}
+            />
+          </FormField>
+          <FormField label={t("contactCenter.tabQueues")}>
+            <Select
+              value={campaignQueueId || firstQueueId}
+              onChange={(event) => setCampaignQueueId(event.target.value)}
+            >
+              {queues.map((queue) => (
+                <option key={queue.queueId} value={queue.queueId}>
+                  {queue.name}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+          <FormField label={t("contactCenter.recipients")}>
+            <Textarea
+              value={campaignRecipients}
+              onChange={(event) => setCampaignRecipients(event.target.value)}
+              rows={6}
+            />
+          </FormField>
           <Button
             onClick={() => {
               if (!selectedBotId) return;

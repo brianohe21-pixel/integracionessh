@@ -7,6 +7,7 @@ import type {
   FlowEventSubmission,
   FlowHookCredentials,
   FlowRun,
+  FlowVersionSnapshot,
 } from "@/types";
 
 export function useFlows(botId?: string) {
@@ -67,6 +68,60 @@ export function useDeleteFlow() {
   return useMutation<void, Error, string>({
     mutationFn: (flowId) => api.delete(`/flows/${encodeURIComponent(flowId)}`),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["flows"] }),
+  });
+}
+
+export function useDuplicateFlow() {
+  const qc = useQueryClient();
+  return useMutation<FlowDefinition, Error, string>({
+    mutationFn: (flowId) =>
+      api.post<FlowDefinition>(`/flows/${encodeURIComponent(flowId)}/duplicate`, {}),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["flows"] }),
+  });
+}
+
+export function usePublishFlow(flowId: string) {
+  const qc = useQueryClient();
+  return useMutation<FlowDefinition, Error, void>({
+    mutationFn: () =>
+      api.post<FlowDefinition>(`/flows/${encodeURIComponent(flowId)}/publish`, {}),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["flows"] });
+      void qc.invalidateQueries({ queryKey: ["flows", flowId] });
+      void qc.invalidateQueries({ queryKey: ["flows", flowId, "versions"] });
+    },
+  });
+}
+
+function normalizeFlowVersions(data: unknown): FlowVersionSnapshot[] {
+  return Array.isArray(data) ? data : [];
+}
+
+export function useFlowVersions(flowId: string, enabled = true) {
+  return useQuery<FlowVersionSnapshot[]>({
+    queryKey: ["flows", flowId, "versions"],
+    queryFn: async () => {
+      const data = await api.get<unknown>(
+        `/flows/${encodeURIComponent(flowId)}/versions`
+      );
+      return normalizeFlowVersions(data);
+    },
+    enabled: !!flowId && enabled,
+  });
+}
+
+export function useRestoreFlowVersion(flowId: string) {
+  const qc = useQueryClient();
+  return useMutation<FlowDefinition, Error, number>({
+    mutationFn: (version) =>
+      api.post<FlowDefinition>(
+        `/flows/${encodeURIComponent(flowId)}/versions/${encodeURIComponent(String(version))}/restore`,
+        {}
+      ),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["flows"] });
+      void qc.invalidateQueries({ queryKey: ["flows", flowId] });
+    },
   });
 }
 

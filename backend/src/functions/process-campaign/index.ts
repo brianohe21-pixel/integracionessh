@@ -18,9 +18,11 @@ import {
   isCampaignSendAttemptTerminal,
   markCampaignSendAttemptFailed,
   markCampaignSendAttemptSent,
+  deleteCampaignSendAttempt,
 } from "../../lib/dynamodb/campaign-send-attempt.repository.js";
 import { getContactByPhone } from "../../lib/dynamodb/contact.repository.js";
 import { sendTemplateMessage, getWhatsAppAccessToken } from "../../lib/whatsapp/client.js";
+import { assertWhatsAppOutboundAllowed } from "../../lib/whatsapp/outbound-guard.js";
 import { applyCoexistenceSendThrottle } from "../../lib/whatsapp/coexistence/throughput.js";
 import { sendSmsFromTemplate } from "../../lib/sms/send-outbound.js";
 import type { CampaignSQSBody } from "../../types/index.js";
@@ -29,6 +31,9 @@ import {
   createCampaignBatchSchedule,
   deleteCampaignBatchSchedule,
 } from "../../lib/campaign/scheduler.js";
+import { evaluateLaw2300ForTenant } from "../../lib/compliance/law2300-tenant.js";
+import { deferCampaignDispatchForLaw2300, resolveLaw2300AwareRunAt } from "../../lib/compliance/law2300-campaign.js";
+import { writeComplianceLog } from "../../lib/compliance/audit-log.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 
@@ -72,7 +77,10 @@ async function processBatchComplete(body: CampaignSQSBody): Promise<void> {
   const pending = await listPendingRecipients(tenantId, campaignId, 1);
   if (pending.length === 0) return;
 
-  const nextRunAt = computeNextBatchAt(campaign.batchConfig.delaySeconds);
+  const nextRunAt = await resolveLaw2300AwareRunAt(
+    tenantId,
+    computeNextBatchAt(campaign.batchConfig.delaySeconds)
+  );
   await deleteCampaignBatchSchedule(campaignId);
   await setCampaignNextBatchAt(tenantId, campaignId, nextRunAt.toISOString());
   await createCampaignBatchSchedule(
@@ -147,7 +155,7 @@ async function processRecipient(body: CampaignSQSBody, sqsMessageId: string): Pr
     return;
   }
 
-  if (campaign.requireOptIn) {
+  if (body.requireOptIn ?? campaign.requireOptIn ?? true) {
     const contact = await getContactByPhone(tenantId, normalizedTo);
     if (
       !contact ||
@@ -175,6 +183,25 @@ async function processRecipient(body: CampaignSQSBody, sqsMessageId: string): Pr
       await incrementCampaignProgress(tenantId, campaignId, "failed");
       return;
     }
+  }
+
+  const law2300 = await evaluateLaw2300ForTenant(tenantId);
+  if (!law2300.allowed) {
+    await deleteCampaignSendAttempt(tenantId, campaignId, attemptId).catch((err) =>
+      console.warn(`Failed to delete deferred campaign attempt ${attemptId}:`, err)
+    );
+    await deferCampaignDispatchForLaw2300(
+      tenantId,
+      campaignId,
+      batchVersion ?? campaign.batchVersion ?? 1
+    );
+    await writeComplianceLog({
+      tenantId,
+      action: "law2300_deferred",
+      phone: normalizedTo,
+      reason: law2300.reason ?? "outside_window",
+    }).catch((err) => console.warn("Failed to write law2300 compliance log:", err));
+    return;
   }
 
   try {
@@ -241,6 +268,13 @@ async function processRecipient(body: CampaignSQSBody, sqsMessageId: string): Pr
     } else {
       await applyCoexistenceSendThrottle(bot.whatsappOnboardingMode);
       const accessToken = await getWhatsAppAccessToken(tenantId, ENVIRONMENT);
+      await assertWhatsAppOutboundAllowed({
+        tenantId,
+        phoneNumberId: bot.phoneNumberId,
+        kind: body.outboundKind ?? "marketing",
+        to: normalizedTo,
+        requireOptIn: body.requireOptIn ?? campaign.requireOptIn ?? true,
+      });
       const result = await sendTemplateMessage({
         phoneNumberId: bot.phoneNumberId,
         to,

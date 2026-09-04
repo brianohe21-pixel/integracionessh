@@ -17,6 +17,7 @@ import {
   createDefaultFlowNodes,
 } from "@/components/flows/FlowCanvas";
 import { useSaveTelephonySettings, useTelephonySettings } from "@/hooks/useTelephony";
+import { IntegrationErrorSupport } from "@/components/support/IntegrationErrorSupport";
 import { useT } from "@/i18n/context";
 import type { FlowDefinition } from "@/types";
 
@@ -43,6 +44,7 @@ export function VoiceAgentFlowPanel({ botId }: VoiceAgentFlowPanelProps) {
 
   const voiceFlows = useMemo(() => flows.filter(isVoiceFlow), [flows]);
   const [selectedFlowId, setSelectedFlowId] = useState("");
+  const [toggleError, setToggleError] = useState("");
 
   const selectedFlow = voiceFlows.find((flow) => flow.flowId === selectedFlowId);
 
@@ -170,17 +172,31 @@ export function VoiceAgentFlowPanel({ botId }: VoiceAgentFlowPanelProps) {
                 </Button>
                 <Button
                   type="button"
-                  onClick={() =>
-                    void toggleFlow.mutateAsync({
-                      flowId: selectedFlow.flowId,
-                      enabled: !selectedFlow.enabled,
-                    })
-                  }
+                  onClick={() => {
+                    setToggleError("");
+                    toggleFlow.mutate(
+                      {
+                        flowId: selectedFlow.flowId,
+                        enabled: !selectedFlow.enabled,
+                      },
+                      {
+                        onError: (err) => setToggleError(err.message),
+                      }
+                    );
+                  }}
                   disabled={toggleFlow.isPending}
                 >
                   {selectedFlow.enabled ? t("flows.disable") : t("flows.enable")}
                 </Button>
               </div>
+
+              {toggleError ? (
+                <IntegrationErrorSupport
+                  integration="flow"
+                  error={toggleError}
+                  context={{ botId, flow: selectedFlow.name }}
+                />
+              ) : null}
             </div>
           ) : (
             <p className="text-sm text-secondary">{t("voiceAgents.flowSelectHint")}</p>

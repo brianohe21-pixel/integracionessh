@@ -77,6 +77,24 @@ export function useRegisterWhatsAppChannel(botId: string) {
   });
 }
 
+export function useClearWhatsAppEnforcement(botId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (channelId: string) =>
+      api.post<{ channel: WhatsAppChannel }>(
+        `/bots/${encodeURIComponent(botId)}/whatsapp-channels/${encodeURIComponent(channelId)}/clear-enforcement`,
+        {}
+      ),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: whatsAppChannelsQueryKey(botId) });
+      await queryClient.invalidateQueries({ queryKey: ["bots", "detail", botId] });
+      await queryClient.invalidateQueries({ queryKey: ["bots", "list"] });
+      await queryClient.invalidateQueries({ queryKey: ["whatsapp-risk"] });
+    },
+  });
+}
+
 export interface WhatsAppTestSendInput {
   channelId?: string;
   to: string;

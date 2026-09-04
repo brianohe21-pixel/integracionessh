@@ -19,6 +19,12 @@ const keys = (tenantId: string, botId: string) => ({
   SK: `BOT#${botId}`,
 });
 
+export type BotUpdateInput = {
+  [K in keyof Omit<Bot, "tenantId" | "botId" | "createdAt">]?:
+    | Omit<Bot, "tenantId" | "botId" | "createdAt">[K]
+    | undefined;
+};
+
 export async function getBot(tenantId: string, botId: string): Promise<Bot | null> {
   const result = await docClient.send(
     new GetCommand({
@@ -77,7 +83,7 @@ export async function createBot(bot: Bot): Promise<void> {
 export async function updateBot(
   tenantId: string,
   botId: string,
-  updates: Partial<Omit<Bot, "tenantId" | "botId" | "createdAt">>
+  updates: BotUpdateInput
 ): Promise<Bot> {
   const setExpressions: string[] = [];
   const removeExpressions: string[] = [];
@@ -86,11 +92,20 @@ export async function updateBot(
 
   const payload = { ...updates, updatedAt: new Date().toISOString() };
 
-  if (updates.phoneNumberId) {
-    payload.phoneNumberId = updates.phoneNumberId;
-    setExpressions.push("#GSI1PK = :gsi1pk");
-    expressionAttributeNames["#GSI1PK"] = "GSI1PK";
-    expressionAttributeValues[":gsi1pk"] = `PHONE#${updates.phoneNumberId}`;
+  if (updates.phoneNumberId !== undefined) {
+    if (updates.phoneNumberId.trim()) {
+      payload.phoneNumberId = updates.phoneNumberId;
+      setExpressions.push("#GSI1PK = :gsi1pk", "#GSI1SK = :gsi1sk");
+      expressionAttributeNames["#GSI1PK"] = "GSI1PK";
+      expressionAttributeNames["#GSI1SK"] = "GSI1SK";
+      expressionAttributeValues[":gsi1pk"] = `PHONE#${updates.phoneNumberId}`;
+      expressionAttributeValues[":gsi1sk"] = `BOT#${botId}`;
+    } else {
+      payload.phoneNumberId = "";
+      removeExpressions.push("#GSI1PK", "#GSI1SK");
+      expressionAttributeNames["#GSI1PK"] = "GSI1PK";
+      expressionAttributeNames["#GSI1SK"] = "GSI1SK";
+    }
   }
 
   Object.entries(payload).forEach(([key, value]) => {

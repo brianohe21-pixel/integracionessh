@@ -5,8 +5,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { signOutUser } from "@/lib/auth-session";
+import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/context";
 import {
@@ -20,7 +19,6 @@ import {
   LayoutDashboard,
   BarChart3,
   Settings,
-  LogOut,
   Megaphone,
   Mail,
   Zap,
@@ -31,7 +29,6 @@ import {
   CreditCard,
   KeyRound,
   X,
-  User,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
@@ -43,11 +40,12 @@ import {
   Star,
   Hash,
   ClipboardList,
+  Receipt,
+  FileSpreadsheet,
 } from "lucide-react";
 import { useAdminRole } from "@/hooks/useAdminRole";
 import { useTenantRole } from "@/hooks/useTenantRole";
 import { useTenantBranding } from "@/hooks/useTenantBranding";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useSidebar } from "@/components/layout/SidebarContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, getTenantContext } from "@/lib/api";
@@ -59,6 +57,7 @@ import {
 import { useClearTenantContext, useAssumeSubaccount, useResellerSubaccounts } from "@/hooks/useReseller";
 import { useAuthSession } from "@/hooks/useAuthSession";
 import { ThemeSwitcherCompact } from "@/components/theme/ThemeSwitcherCompact";
+import { useUnreadMessages } from "@/components/notifications/UnreadMessagesProvider";
 
 type NavItem = {
   href: string;
@@ -153,6 +152,7 @@ const memberNavCategories: NavCategory[] = [
     items: [
       { href: "/support", labelKey: "nav.support", icon: LifeBuoy },
       { href: "/billing", labelKey: "nav.billing", icon: CreditCard },
+      { href: "/users", labelKey: "nav.userCenter", icon: Users },
       { href: "/settings", labelKey: "nav.settings", icon: Settings },
     ],
   },
@@ -176,6 +176,24 @@ const advisorNavCategories: NavCategory[] = [
   },
 ];
 
+const supervisorNavCategories: NavCategory[] = [
+  {
+    id: "inbox",
+    labelKey: "nav.categoryMessaging",
+    icon: MessageSquare,
+    items: [
+      { href: "/inbox", labelKey: "nav.inbox", icon: MessageSquare },
+      { href: "/sales", labelKey: "nav.sales", icon: TrendingUp },
+    ],
+  },
+  {
+    id: "account",
+    labelKey: "nav.categoryAccount",
+    icon: Users,
+    items: [{ href: "/users", labelKey: "nav.userCenter", icon: Users }],
+  },
+];
+
 const adminNavCategories: NavCategory[] = [
   {
     id: "admin",
@@ -183,17 +201,13 @@ const adminNavCategories: NavCategory[] = [
     icon: Users,
     items: [
       { href: "/admin/users", labelKey: "nav.adminUsers", icon: Users },
+      { href: "/admin/billing", labelKey: "nav.adminBilling", icon: Receipt },
+      { href: "/admin/reports", labelKey: "nav.adminReports", icon: FileSpreadsheet },
       { href: "/admin/payments", labelKey: "nav.adminPayments", icon: CreditCard },
       { href: "/admin/support", labelKey: "nav.adminSupport", icon: LifeBuoy },
     ],
   },
 ];
-
-function roleLabel(role: string, t: ReturnType<typeof useT>): string {
-  if (role === "admin") return t("nav.roleAdmin");
-  if (role === "advisor") return t("nav.roleAdvisor");
-  return t("nav.roleMember");
-}
 
 function isNavItemActive(
   pathname: string,
@@ -253,16 +267,32 @@ function filterNavItem(item: NavItem, tenant: Tenant | undefined): NavItem | nul
   return item;
 }
 
+function NavBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <span className="ml-auto flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-danger px-1.5 text-[10px] font-semibold text-white">
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+}
+
+function inboxBadgeCount(href: string, totalUnread: number): number {
+  if (href === "/conversations" || href === "/inbox") return totalUnread;
+  return 0;
+}
+
 function NavPrimaryLink({
   item,
   active,
   collapsed,
   onNavigate,
+  badgeCount = 0,
 }: {
   item: NavItem;
   active: boolean;
   collapsed: boolean;
   onNavigate?: () => void;
+  badgeCount?: number;
 }) {
   const t = useT();
   const Icon = item.icon;
@@ -276,12 +306,21 @@ function NavPrimaryLink({
       aria-label={label}
       className={cn(
         "flex items-center rounded-xl py-2.5 text-sm transition-all duration-150",
-        collapsed ? "justify-center px-2" : "gap-3 px-3",
+        collapsed ? "relative justify-center px-2" : "gap-3 px-3",
         active ? "nav-item-active" : "nav-item-idle"
       )}
     >
       <Icon className="nav-icon" />
-      {!collapsed ? <span className="truncate">{label}</span> : null}
+      {!collapsed ? (
+        <>
+          <span className="truncate">{label}</span>
+          <NavBadge count={badgeCount} />
+        </>
+      ) : badgeCount > 0 ? (
+        <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[9px] font-semibold text-white">
+          {badgeCount > 9 ? "9+" : badgeCount}
+        </span>
+      ) : null}
     </Link>
   );
 }
@@ -290,10 +329,12 @@ function NavSubLink({
   item,
   active,
   onNavigate,
+  badgeCount = 0,
 }: {
   item: NavItem;
   active: boolean;
   onNavigate?: () => void;
+  badgeCount?: number;
 }) {
   const t = useT();
   const Icon = item.icon;
@@ -308,6 +349,7 @@ function NavSubLink({
     >
       <Icon className="nav-sub-icon" />
       <span className="min-w-0 flex-1 truncate">{label}</span>
+      <NavBadge count={badgeCount} />
     </Link>
   );
 }
@@ -317,11 +359,13 @@ function NavItemGroupSection({
   pathname,
   searchParams,
   onNavigate,
+  totalUnread,
 }: {
   item: NavItem & { items: NavItem[] };
   pathname: string;
   searchParams: URLSearchParams;
   onNavigate?: () => void;
+  totalUnread: number;
 }) {
   const t = useT();
   const Icon = item.icon;
@@ -363,6 +407,7 @@ function NavItemGroupSection({
               item={child}
               active={isNavItemActive(pathname, searchParams, child.href)}
               onNavigate={onNavigate}
+              badgeCount={inboxBadgeCount(child.href, totalUnread)}
             />
           ))}
         </div>
@@ -375,7 +420,8 @@ function renderCategoryNavItem(
   item: NavItem,
   pathname: string,
   searchParams: URLSearchParams,
-  onNavigate?: () => void
+  onNavigate?: () => void,
+  totalUnread = 0
 ) {
   if (item.items?.length) {
     return (
@@ -385,6 +431,7 @@ function renderCategoryNavItem(
         pathname={pathname}
         searchParams={searchParams}
         onNavigate={onNavigate}
+        totalUnread={totalUnread}
       />
     );
   }
@@ -395,6 +442,7 @@ function renderCategoryNavItem(
       item={item}
       active={isNavItemActive(pathname, searchParams, item.href)}
       onNavigate={onNavigate}
+      badgeCount={inboxBadgeCount(item.href, totalUnread)}
     />
   );
 }
@@ -479,6 +527,7 @@ function CollapsedCategoryFlyout({
   open,
   onOpenChange,
   onNavigate,
+  totalUnread,
 }: {
   category: NavCategory;
   pathname: string;
@@ -486,6 +535,7 @@ function CollapsedCategoryFlyout({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onNavigate?: () => void;
+  totalUnread: number;
 }) {
   const t = useT();
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -530,6 +580,7 @@ function CollapsedCategoryFlyout({
                       onOpenChange(false);
                       onNavigate?.();
                     }}
+                    badgeCount={inboxBadgeCount(child.href, totalUnread)}
                   />
                 ))}
               </div>
@@ -542,6 +593,7 @@ function CollapsedCategoryFlyout({
                   onOpenChange(false);
                   onNavigate?.();
                 }}
+                badgeCount={inboxBadgeCount(item.href, totalUnread)}
               />
             )
           )}
@@ -559,6 +611,7 @@ function NavCategorySection({
   searchParams,
   onToggle,
   onNavigate,
+  totalUnread,
 }: {
   category: NavCategory;
   isOpen: boolean;
@@ -567,6 +620,7 @@ function NavCategorySection({
   searchParams: URLSearchParams;
   onToggle: () => void;
   onNavigate?: () => void;
+  totalUnread: number;
 }) {
   const t = useT();
   const Icon = category.icon;
@@ -598,7 +652,7 @@ function NavCategorySection({
       >
         <div className="nav-sub-list space-y-0.5 pb-1">
           {category.items.map((item) =>
-            renderCategoryNavItem(item, pathname, searchParams, onNavigate)
+            renderCategoryNavItem(item, pathname, searchParams, onNavigate, totalUnread)
           )}
         </div>
       </div>
@@ -644,8 +698,8 @@ function SidebarNav({
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const router = useRouter();
   const t = useT();
+  const { totalUnread } = useUnreadMessages();
   const [openCategories, setOpenCategories] = useState<Set<string>>(() =>
     getActiveCategoryIds(pathname, searchParams, navCategories)
   );
@@ -674,15 +728,6 @@ function SidebarNav({
     });
   }
 
-  async function handleSignOut() {
-    onNavigate?.();
-    try {
-      await signOutUser();
-    } finally {
-      router.push("/login");
-    }
-  }
-
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <nav
@@ -700,6 +745,7 @@ function SidebarNav({
                 active={pathname.startsWith(item.href)}
                 collapsed={collapsed}
                 onNavigate={onNavigate}
+                badgeCount={inboxBadgeCount(item.href, totalUnread)}
               />
             ))}
           </div>
@@ -720,6 +766,7 @@ function SidebarNav({
                 active={isNavItemActive(pathname, searchParams, item.href)}
                 collapsed={collapsed}
                 onNavigate={onNavigate}
+                badgeCount={inboxBadgeCount(item.href, totalUnread)}
               />
             );
           }
@@ -734,6 +781,7 @@ function SidebarNav({
                 open={openFlyoutId === category.id}
                 onOpenChange={(nextOpen) => setOpenFlyoutId(nextOpen ? category.id : null)}
                 onNavigate={onNavigate}
+                totalUnread={totalUnread}
               />
             );
           }
@@ -748,6 +796,7 @@ function SidebarNav({
               searchParams={searchParams}
               onToggle={() => toggleCategory(category.id)}
               onNavigate={onNavigate}
+              totalUnread={totalUnread}
             />
           );
         })}
@@ -782,67 +831,6 @@ function SidebarNav({
             >
               {t("legal.footerPrivacy")}
             </a>
-          </div>
-        ) : null}
-        <button
-          type="button"
-          onClick={() => void handleSignOut()}
-          title={collapsed ? t("nav.signOut") : undefined}
-          className={cn(
-            "group flex w-full items-center rounded-xl py-2.5 text-[13px] font-medium text-[var(--sidebar-text-muted)] transition-colors hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text-secondary)]",
-            collapsed ? "justify-center px-2" : "gap-3 px-3"
-          )}
-        >
-          <LogOut className="nav-icon" />
-          {!collapsed ? t("nav.signOut") : null}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function SidebarUserProfile({ collapsed }: { collapsed: boolean }) {
-  const t = useT();
-  const { user, loading } = useCurrentUser();
-  const { role } = useTenantRole();
-
-  const displayName = user?.name || user?.email;
-
-  return (
-    <div className={cn("shrink-0 border-t border-[var(--sidebar-border)] py-3", collapsed ? "px-2" : "px-3")}>
-      <div
-        className={cn(
-          "flex items-center rounded-xl",
-          collapsed ? "justify-center px-1 py-1" : "gap-2.5 px-1 py-1"
-        )}
-        title={collapsed && displayName ? displayName : undefined}
-      >
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sidebar-muted text-xs font-semibold text-[var(--sidebar-text-secondary)] ring-1 ring-[var(--sidebar-border)]">
-          {loading ? (
-            <User className="h-3.5 w-3.5 text-[var(--sidebar-text-muted)]" />
-          ) : (
-            (displayName?.charAt(0) ?? "?").toUpperCase()
-          )}
-        </div>
-        {!collapsed ? (
-          <div className="min-w-0 flex-1">
-            {loading ? (
-              <>
-                <div className="mb-1 h-3 w-20 animate-pulse rounded bg-sidebar-muted" />
-                <div className="h-2.5 w-14 animate-pulse rounded bg-sidebar-muted" />
-              </>
-            ) : displayName ? (
-              <>
-                <p className="truncate text-xs font-semibold text-[var(--sidebar-text)]">
-                  {displayName}
-                </p>
-                <p className="truncate text-[11px] text-[var(--sidebar-text-muted)]">
-                  {user?.email && user.email !== displayName
-                    ? user.email
-                    : roleLabel(role, t)}
-                </p>
-              </>
-            ) : null}
           </div>
         ) : null}
       </div>
@@ -1173,7 +1161,7 @@ export function Sidebar() {
   const { isAuthenticated, loading: authLoading } = useAuthSession();
   const { isOpen, close, isCollapsed, toggleCollapsed } = useSidebar();
   const { isAdmin, loading: adminLoading } = useAdminRole();
-  const { isAdvisor, loading: roleLoading } = useTenantRole();
+  const { isAdvisor, isSupervisor, loading: roleLoading } = useTenantRole();
   const brandingEnabled =
     isAuthenticated && !authLoading && !adminLoading && !isAdmin;
   const { data: branding } = useTenantBranding(brandingEnabled);
@@ -1191,7 +1179,7 @@ export function Sidebar() {
   const isSubaccountTenant =
     me?.tenantKind === "subaccount" || Boolean(me?.parentTenantId);
   const canManageSubaccounts =
-    !isAdmin && !isAdvisor && (isResellerTenant || isSubaccountTenant);
+    !isAdmin && !isAdvisor && !isSupervisor && (isResellerTenant || isSubaccountTenant);
 
   useEffect(() => {
     const stored = getTenantContext();
@@ -1226,7 +1214,9 @@ export function Sidebar() {
       ? adminNavCategories
       : isAdvisor
         ? advisorNavCategories
-        : memberNavCategories;
+        : isSupervisor
+          ? supervisorNavCategories
+          : memberNavCategories;
 
   const navCategories = isResellerHome
     ? baseCategories.map((category) =>
@@ -1253,7 +1243,7 @@ export function Sidebar() {
     .filter((category) => category.items.length > 0);
 
   const standaloneItems =
-    loading || isAdmin || isAdvisor ? [] : memberStandaloneNavItems;
+    loading || isAdmin || isAdvisor || isSupervisor ? [] : memberStandaloneNavItems;
 
   const assumedSubaccount = assumedId
     ? subaccounts.find((item) => item.tenantId === assumedId)
@@ -1312,7 +1302,6 @@ export function Sidebar() {
             navCategories={filteredNavCategories}
             collapsed={isCollapsed}
           />
-          <SidebarUserProfile collapsed={isCollapsed} />
         </div>
       </aside>
 
@@ -1342,7 +1331,6 @@ export function Sidebar() {
           drawerOpen={isOpen}
           onNavigate={close}
         />
-        <SidebarUserProfile collapsed={isCollapsed} />
         </div>
       </aside>
     </>

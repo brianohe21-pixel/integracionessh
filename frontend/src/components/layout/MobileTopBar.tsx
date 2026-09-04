@@ -3,9 +3,12 @@
 import { usePathname } from "next/navigation";
 import { PanelLeft } from "lucide-react";
 import { SoftphoneMobileTrigger } from "@/components/contact-center/SoftphoneMobileTrigger";
+import { HelpCenterToolbarTrigger } from "@/components/help-center/HelpCenterToolbarTrigger";
 import { NotificationsMobileTrigger } from "@/components/notifications/NotificationsMobileTrigger";
+import { useUnreadMessages } from "@/components/notifications/UnreadMessagesProvider";
 import { useT } from "@/i18n/context";
 import { useSidebar } from "@/components/layout/SidebarContext";
+import { UserMenuTrigger } from "@/components/layout/UserMenuTrigger";
 
 const ROUTE_LABEL_KEYS: Record<string, string> = {
   "/dashboard": "nav.dashboard",
@@ -34,6 +37,8 @@ const ROUTE_LABEL_KEYS: Record<string, string> = {
   "/onboarding": "nav.onboarding",
   "/subaccounts": "nav.subaccounts",
   "/admin/users": "nav.adminUsers",
+  "/admin/billing": "nav.adminBilling",
+  "/admin/reports": "nav.adminReports",
   "/admin/payments": "nav.adminPayments",
   "/admin/support": "nav.adminSupport",
 };
@@ -54,23 +59,31 @@ export function MobileTopBar() {
   const pathname = usePathname();
   const t = useT();
   const { toggle } = useSidebar();
+  const { totalUnread } = useUnreadMessages();
 
   return (
     <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-default bg-surface-elevated/95 px-4 py-3 backdrop-blur-md lg:hidden">
       <button
         type="button"
         onClick={toggle}
-        className="inline-flex items-center justify-center rounded-xl border border-default p-2 text-secondary transition-colors hover:bg-surface-muted hover:text-primary"
+        className="relative inline-flex items-center justify-center rounded-xl border border-default p-2 text-secondary transition-colors hover:bg-surface-muted hover:text-primary"
         aria-label={t("nav.openMenu")}
       >
         <PanelLeft className="h-5 w-5" />
+        {totalUnread > 0 ? (
+          <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[9px] font-semibold text-white">
+            {totalUnread > 9 ? "9+" : totalUnread}
+          </span>
+        ) : null}
       </button>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold text-primary">{resolveTitle(pathname, t)}</p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
+        <HelpCenterToolbarTrigger />
         <NotificationsMobileTrigger />
         <SoftphoneMobileTrigger />
+        <UserMenuTrigger />
       </div>
     </header>
   );

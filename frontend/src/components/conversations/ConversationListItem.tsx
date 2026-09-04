@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { ChannelAvatar } from "@/components/conversations/conversation-ui";
+import { useUnreadMessages } from "@/components/notifications/UnreadMessagesProvider";
 import { WhatsAppRiskBadge } from "@/components/whatsapp/WhatsAppRiskBadge";
 import { cn } from "@/lib/utils";
 import type { Conversation, InboxSlaStatus, TenantWhatsAppRiskSummary } from "@/types";
@@ -58,8 +59,10 @@ export function ConversationListItem({
   takeConversationLabel,
   whatsappRisk,
 }: Props) {
+  const { getUnreadCount } = useUnreadMessages();
   const isHuman = (conversation.handoffMode ?? "bot") === "human";
-  const isUnread = conversation.workflowStatus === "new";
+  const unreadMessages = getUnreadCount(conversation.conversationId);
+  const isUnread = unreadMessages > 0 || conversation.workflowStatus === "new";
 
   const previewParts = [
     channelLabel,
@@ -147,7 +150,7 @@ export function ConversationListItem({
           </div>
           {isUnread ? (
             <span className="flex h-5 min-w-5 flex-shrink-0 items-center justify-center rounded-full bg-accent px-1.5 text-[10px] font-bold text-white">
-              1
+              {unreadMessages > 0 ? (unreadMessages > 99 ? "99+" : unreadMessages) : 1}
             </span>
           ) : null}
         </div>

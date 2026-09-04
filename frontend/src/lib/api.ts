@@ -1,4 +1,6 @@
 import { getIdToken } from "@/lib/auth-session";
+import { localizeFlowError } from "@/lib/integration-errors";
+import { translate } from "@/i18n/standalone";
 
 const BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 const TENANT_CONTEXT_KEY = "x-tenant-context";
@@ -42,6 +44,11 @@ function getPortalHostHeader(): Record<string, string> {
   return { "X-Portal-Host": host };
 }
 
+function localizeRequestError(message: string, path: string): string {
+  if (!/\/flows(?:\/|$)/.test(path)) return message;
+  return localizeFlowError(message, translate);
+}
+
 async function request<T>(
   path: string,
   options: RequestInit = {}
@@ -71,7 +78,7 @@ async function request<T>(
     const error = await response.json().catch(() => ({ error: "Unknown error" }));
     const record = error as { error?: string; errors?: Record<string, unknown> };
     if (record.error) {
-      throw new Error(record.error);
+      throw new Error(localizeRequestError(record.error, path));
     }
     if (record.errors && typeof record.errors === "object") {
       const parts: string[] = [];
@@ -83,7 +90,9 @@ async function request<T>(
           }
         }
       }
-      if (parts.length > 0) throw new Error(parts.join("; "));
+      if (parts.length > 0) {
+        throw new Error(localizeRequestError(parts.join("; "), path));
+      }
     }
     throw new Error(`HTTP ${response.status}`);
   }

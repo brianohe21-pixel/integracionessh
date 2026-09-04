@@ -10,6 +10,7 @@ import {
   Phone,
   RotateCcw,
   Trash2,
+  Eraser,
 } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
@@ -37,6 +38,7 @@ type Props = {
   callPermissionDisabled?: boolean;
   canRequestCallPermission: boolean;
   onClaim: () => void;
+  onClear: () => void;
   onDelete: () => void;
   onTransfer: () => void;
   onRequestCallPermission: () => void;
@@ -62,6 +64,7 @@ export function ConversationHeaderMenu({
   callPermissionDisabled = false,
   canRequestCallPermission,
   onClaim,
+  onClear,
   onDelete,
   onTransfer,
   onRequestCallPermission,
@@ -185,7 +188,14 @@ export function ConversationHeaderMenu({
     });
   }
 
-  if (!advisorMode && conversation.botId) {
+  if (conversation.botId) {
+    items.push({
+      id: "clear",
+      label: t("conversations.clear"),
+      icon: Eraser,
+      onClick: onClear,
+    });
+
     items.push({
       id: "delete",
       label: t("conversations.delete"),

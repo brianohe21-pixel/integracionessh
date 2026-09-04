@@ -78,13 +78,13 @@ export function MacroPicker({ botId, placeholderContext, draft, onInsert, onShor
   if (!macros?.length) return null;
 
   return (
-    <div ref={containerRef} className="relative self-end">
+    <div ref={containerRef} className="relative">
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         className={cn(
-          "flex h-10 w-10 items-center justify-center rounded-full border border-default text-secondary transition-colors hover:bg-surface hover:text-primary",
-          open && "bg-surface text-primary"
+          "conversations-compose-action",
+          open && "bg-surface-elevated text-primary"
         )}
         aria-label={t("macros.pickerLabel")}
         title={t("macros.pickerLabel")}

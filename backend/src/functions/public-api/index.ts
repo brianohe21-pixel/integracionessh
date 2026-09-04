@@ -29,6 +29,7 @@ import {
   deleteMetaTemplate,
   type SendTemplateOptions,
 } from "../../lib/whatsapp/client.js";
+import { assertWhatsAppOutboundAllowed } from "../../lib/whatsapp/outbound-guard.js";
 import {
   initiateCall,
   performCallAction,
@@ -467,6 +468,12 @@ async function handleSendMessage(
   try {
     const data = parsed.data;
     if (data.type === "text") {
+      await assertWhatsAppOutboundAllowed({
+        tenantId: apiKey.tenantId,
+        phoneNumberId: bot.phoneNumberId,
+        kind: "transactional",
+        to: data.to,
+      });
       const result = await sendTextMessage({
         phoneNumberId: bot.phoneNumberId,
         to: data.to,
@@ -487,6 +494,13 @@ async function handleSendMessage(
           SendTemplateOptions["components"]
         >;
       }
+      await assertWhatsAppOutboundAllowed({
+        tenantId: apiKey.tenantId,
+        phoneNumberId: bot.phoneNumberId,
+        kind: "marketing",
+        to: data.to,
+        requireOptIn: true,
+      });
       const result = await sendTemplateMessage(templateOptions);
       messageId = result.messages[0]?.id ?? null;
     }

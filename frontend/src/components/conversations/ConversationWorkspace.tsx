@@ -15,6 +15,8 @@ import {
   useSendConversationMessage,
   useResolveConversation,
   useDeleteConversation,
+  useClearConversationMessages,
+  useBulkDeleteConversations,
 } from "@/hooks/useConversations";
 import { useAdvisors } from "@/hooks/useAdvisors";
 import { useBots } from "@/hooks/useBots";
@@ -23,16 +25,16 @@ import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Select } from "@/components/ui/Input";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { Textarea } from "@/components/ui/Input";
+import { ConversationComposeBar } from "@/components/conversations/ConversationComposeBar";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useT, useLocale } from "@/i18n/context";
 import { useDialog } from "@/components/ui/DialogProvider";
 import { buildWaMeLink, normalizeWhatsAppPhone } from "@/lib/wa-link";
 import {
   MessageSquare,
-  Send,
   ChevronLeft,
-  FileText,
+  PanelRightClose,
+  PanelRightOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { WorkflowStatus, Channel, InteractionCategory } from "@/types";
@@ -47,9 +49,10 @@ import { ConversationListSidebar } from "@/components/conversations/Conversation
 import { ConversationMessageThread } from "@/components/conversations/ConversationMessageThread";
 import { ConversationHeaderMenu } from "@/components/conversations/ConversationHeaderMenu";
 import { ChannelAvatar } from "@/components/conversations/conversation-ui";
-import { MacroPicker } from "@/components/conversations/MacroPicker";
 import { AdvisorCopilotPanel } from "@/components/conversations/AdvisorCopilotPanel";
 import { QuotationDrawer } from "@/components/conversations/QuotationDrawer";
+import { BookingDrawer } from "@/components/conversations/BookingDrawer";
+import { useUnreadMessages } from "@/components/notifications/UnreadMessagesProvider";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useInboxSlaSettings } from "@/hooks/useInboxSla";
 import { useWhatsAppRisk } from "@/hooks/useWhatsAppRisk";
@@ -99,10 +102,13 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   const [assignmentFilter, setAssignmentFilter] = useState<"" | "unassigned">("");
   const [draft, setDraft] = useState("");
   const [showQuotationDrawer, setShowQuotationDrawer] = useState(false);
+  const [showBookingDrawer, setShowBookingDrawer] = useState(false);
   const [showHandoffModal, setShowHandoffModal] = useState(false);
   const [showBulkReassignModal, setShowBulkReassignModal] = useState(false);
   const [showResolveModal, setShowResolveModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showClearModal, setShowClearModal] = useState(false);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const [csatScore, setCsatScore] = useState<number | "">("");
   const [resolveCategory, setResolveCategory] = useState<InteractionCategory | "">("");
   const [callPermissionFeedback, setCallPermissionFeedback] = useState<{
@@ -114,6 +120,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   const [selectedConversationIds, setSelectedConversationIds] = useState<Set<string>>(new Set());
   const [listTab, setListTab] = useState<ListTab>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [contactPanelCollapsed, setContactPanelCollapsed] = useState(false);
 
   const { data: bots } = useBots();
   const { data: advisors } = useAdvisors();
@@ -124,6 +131,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     [inboxSlaSettings]
   );
   const { user: currentUser } = useCurrentUser();
+  const { getUnreadCount, setActiveConversationId, markConversationRead } = useUnreadMessages();
 
   useEffect(() => {
     const assignment = searchParams.get("assignment");
@@ -211,7 +219,9 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   const filteredConversations = conversations.filter((conv) => {
     if (!matchesSearchQuery(conv, searchQuery)) return false;
     if (advisorMode && listTab === "queue") return true;
-    if (listTab === "unread") return conv.workflowStatus === "new";
+    if (listTab === "unread") {
+      return getUnreadCount(conv.conversationId) > 0 || conv.workflowStatus === "new";
+    }
     if (listTab === "mine") return (conv.handoffMode ?? "bot") === "human";
     if (listTab === "sla_breached") {
       return conversationSlaStatuses.get(conv.conversationId) === "breached";
@@ -219,7 +229,9 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     return true;
   });
 
-  const unreadCount = conversations.filter((c) => c.workflowStatus === "new").length;
+  const unreadCount = conversations.filter(
+    (c) => getUnreadCount(c.conversationId) > 0 || c.workflowStatus === "new"
+  ).length;
   const slaBreachedCount = conversations.filter(
     (c) => conversationSlaStatuses.get(c.conversationId) === "breached"
   ).length;
@@ -285,6 +297,8 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   const sendMessage = useSendConversationMessage();
   const resolveConv = useResolveConversation();
   const deleteConv = useDeleteConversation();
+  const clearConv = useClearConversationMessages();
+  const bulkDelete = useBulkDeleteConversations();
 
   const selectedConversation = conversations.find((c) => c.conversationId === selectedId);
   const selectedContactPhone =
@@ -301,6 +315,37 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   useEffect(() => {
     setCallPermissionFeedback(null);
   }, [selectedId]);
+
+  useEffect(() => {
+    setActiveConversationId(selectedId);
+  }, [selectedId, setActiveConversationId]);
+
+  useEffect(() => {
+    if (!selectedId || !selectedConversation) return;
+    markConversationRead(
+      selectedId,
+      selectedConversation.botId,
+      selectedConversation.workflowStatus,
+      selectedConversation.lastMessageAt
+    );
+  }, [
+    selectedId,
+    selectedConversation?.conversationId,
+    selectedConversation?.workflowStatus,
+    selectedConversation?.lastMessageAt,
+    markConversationRead,
+  ]);
+
+  useEffect(() => {
+    const phone = searchParams.get("phone");
+    const botId = searchParams.get("botId");
+    if (!phone || selectedId) return;
+    const match = conversations.find(
+      (conv) =>
+        conv.phoneNumber === phone && (!botId || conv.botId === botId)
+    );
+    if (match) setSelectedId(match.conversationId);
+  }, [conversations, searchParams, selectedId]);
 
   function channelLabel(channel?: Channel): string {
     if (channel === "instagram") return t("conversations.channelInstagram");
@@ -348,6 +393,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     isHuman &&
     !selectedConversation.assignedAdvisorId;
   const canCompose = isHuman && !!selectedConversation && !needsClaim && !isImapReadOnly;
+  const showBookingAction = canCompose;
   const assignedAdvisor = advisors?.find(
     (a) => a.advisorId === selectedConversation?.assignedAdvisorId
   );
@@ -357,8 +403,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     advisorName: assignedAdvisor?.name ?? (advisorMode ? currentUser?.name : undefined),
   };
 
-  async function handleSend(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSend() {
     if (!selectedConversation || !draft.trim()) return;
     await sendMessage.mutateAsync({
       conversationId: selectedConversation.conversationId,
@@ -470,6 +515,47 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     setSelectedId(null);
   }
 
+  async function handleClear() {
+    if (!selectedConversation) return;
+    await clearConv.mutateAsync({
+      conversationId: selectedConversation.conversationId,
+      botId: selectedConversation.botId,
+    });
+    setShowClearModal(false);
+  }
+
+  async function handleBulkDelete() {
+    const items = filteredConversations
+      .filter((conv) => selectedConversationIds.has(conv.conversationId))
+      .map((conv) => ({ conversationId: conv.conversationId, botId: conv.botId }));
+    if (items.length === 0) return;
+
+    const result = await bulkDelete.mutateAsync({ items });
+
+    setShowBulkDeleteModal(false);
+    setSelectedConversationIds(new Set());
+    if (selectedId && result.succeeded.includes(selectedId)) {
+      setSelectedId(null);
+    }
+
+    if (result.failed.length === 0) {
+      await alert({
+        title: t("conversations.bulkDeleteTitle"),
+        message: t("conversations.bulkDeleteSuccess", { count: result.succeeded.length }),
+        tone: "success",
+      });
+    } else {
+      await alert({
+        title: t("conversations.bulkDeleteTitle"),
+        message: t("conversations.bulkDeletePartial", {
+          succeeded: result.succeeded.length,
+          failed: result.failed.length,
+        }),
+        tone: "warning",
+      });
+    }
+  }
+
   function slaLabel(status: InboxSlaStatus): string | null {
     if (status === "breached") return t("conversations.slaBreached");
     if (status === "at_risk") return t("conversations.slaAtRisk");
@@ -487,7 +573,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   const showDetailOnMobile = Boolean(selectedId);
 
   return (
-    <div className="flex h-[calc(100dvh-3.5rem)] lg:h-screen">
+    <div className="conversations-workspace flex min-h-0 flex-1 overflow-hidden">
       <ConversationListSidebar
         advisorMode={advisorMode}
         listTab={listTab}
@@ -530,6 +616,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
         onToggleSelection={toggleConversationSelection}
         onToggleSelectAll={toggleSelectAll}
         onBulkReassign={() => setShowBulkReassignModal(true)}
+        onBulkDelete={() => setShowBulkDeleteModal(true)}
         isLoading={isLoading}
         isFetchingNextPage={isFetchingNextPage}
         listScrollRef={listScrollRef}
@@ -556,9 +643,10 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
 
       <div
         className={cn(
-          "relative flex min-w-0 flex-1 flex-col",
+          "relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden",
           showDetailOnMobile ? "flex" : "hidden lg:flex"
         )}
+        data-contact-panel-collapsed={contactPanelCollapsed || undefined}
       >
         {!selectedConversation ? (
           <div className="conversations-chat-bg hidden flex-1 items-center justify-center p-6 lg:flex">
@@ -570,7 +658,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
           </div>
         ) : (
           <>
-            <div className="conversations-chat-header relative z-30 flex min-h-[64px] flex-col gap-3 overflow-visible px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="conversations-chat-header relative z-30 flex min-h-[64px] flex-shrink-0 flex-col gap-3 overflow-visible px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex min-w-0 items-center gap-3">
                 <button
                   type="button"
@@ -616,6 +704,27 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                 </div>
               </div>
               <div className="flex flex-shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setContactPanelCollapsed((collapsed) => !collapsed)}
+                  className="hidden h-9 w-9 items-center justify-center rounded-xl border border-default bg-surface-muted text-secondary transition-colors hover:bg-surface-elevated hover:text-primary xl:inline-flex"
+                  aria-label={
+                    contactPanelCollapsed
+                      ? t("conversations.showContactPanel")
+                      : t("conversations.hideContactPanel")
+                  }
+                  title={
+                    contactPanelCollapsed
+                      ? t("conversations.showContactPanel")
+                      : t("conversations.hideContactPanel")
+                  }
+                >
+                  {contactPanelCollapsed ? (
+                    <PanelRightOpen className="h-4 w-4" />
+                  ) : (
+                    <PanelRightClose className="h-4 w-4" />
+                  )}
+                </button>
                 <ConversationHeaderMenu
                   conversation={selectedConversation}
                   advisorMode={advisorMode}
@@ -633,6 +742,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                     callPermission.isPending || selectedWhatsAppPhone.length < 7
                   }
                   onClaim={handleClaim}
+                  onClear={() => setShowClearModal(true)}
                   onDelete={() => setShowDeleteModal(true)}
                   onTransfer={() => setShowHandoffModal(true)}
                   onRequestCallPermission={() => {
@@ -741,80 +851,56 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
               </>
             )}
 
-            {needsClaim ? (
-              <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-3 p-6">
-                <p className="max-w-sm text-center text-sm text-secondary">
-                  {t("conversations.takeConversationHint")}
-                </p>
-                <Button type="button" onClick={handleClaim} disabled={claim.isPending}>
-                  {t("conversations.takeConversation")}
-                </Button>
-              </div>
-            ) : (
-              <ConversationMessageThread
-                messages={messages}
-                crossChannelMessages={crossChannelMessages}
-                conversation={selectedConversation}
-                loading={loadingMessages || loadingCrossChannel}
-                loadingLabel={t("common.loading")}
-                channelLabel={channelLabel}
-              />
-            )}
-
-            {canCompose && selectedConversation && (
-              <AdvisorCopilotPanel
-                conversation={selectedConversation}
-                onInsertSuggestion={setDraft}
-              />
-            )}
-
-            {canCompose && (
-              <form
-                onSubmit={handleSend}
-                className="conversations-compose-bar relative z-10 px-4 py-3 sm:px-6"
-              >
-                <div className="conversations-compose-input flex items-end gap-2 px-3 py-2">
-                  {selectedConversation ? (
-                    <MacroPicker
-                      botId={selectedConversation.botId}
-                      placeholderContext={macroPlaceholderContext}
-                      draft={draft}
-                      onInsert={setDraft}
-                    />
-                  ) : null}
-                  {selectedConversation && canCompose ? (
-                    <button
-                      type="button"
-                      onClick={() => setShowQuotationDrawer(true)}
-                      title={t("quotations.drawerTitle")}
-                      className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl text-secondary transition-colors hover:bg-surface-elevated hover:text-primary"
-                    >
-                      <FileText className="h-5 w-5" />
-                    </button>
-                  ) : null}
-                  <Textarea
-                    value={draft}
-                    onChange={(e) => setDraft(e.target.value)}
-                    rows={1}
-                    placeholder={t("conversations.messagePlaceholderShort")}
-                    className="min-h-[42px] max-h-32 flex-1 resize-none border-0 bg-transparent py-2.5 shadow-none focus:ring-0"
-                  />
-                  <button
-                    type="submit"
-                    disabled={!draft.trim() || sendMessage.isPending}
-                    className="conversations-send-btn inline-flex h-10 flex-shrink-0 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition-colors disabled:cursor-not-allowed"
-                  >
-                    <Send className="h-4 w-4" />
-                    <span className="hidden sm:inline">{t("conversations.send")}</span>
-                  </button>
+            <div className="conversations-chat-bg relative flex min-h-0 flex-1 flex-col">
+              {needsClaim ? (
+                <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-3 p-6">
+                  <p className="max-w-sm text-center text-sm text-secondary">
+                    {t("conversations.takeConversationHint")}
+                  </p>
+                  <Button type="button" onClick={handleClaim} disabled={claim.isPending}>
+                    {t("conversations.takeConversation")}
+                  </Button>
                 </div>
-              </form>
-            )}
+              ) : (
+                <ConversationMessageThread
+                  messages={messages}
+                  crossChannelMessages={crossChannelMessages}
+                  conversation={selectedConversation}
+                  loading={loadingMessages || loadingCrossChannel}
+                  loadingLabel={t("common.loading")}
+                  channelLabel={channelLabel}
+                />
+              )}
+
+              {canCompose ? (
+                <div className="conversations-chat-footer relative z-20 flex-shrink-0">
+                  <div className="conversations-chat-footer-inner w-full">
+                    {selectedConversation ? (
+                      <AdvisorCopilotPanel
+                        conversation={selectedConversation}
+                        onInsertSuggestion={setDraft}
+                      />
+                    ) : null}
+                    <ConversationComposeBar
+                      draft={draft}
+                      onDraftChange={setDraft}
+                      onSubmit={handleSend}
+                      sending={sendMessage.isPending}
+                      conversation={selectedConversation}
+                      macroPlaceholderContext={macroPlaceholderContext}
+                      onOpenQuotation={() => setShowQuotationDrawer(true)}
+                      onOpenBooking={() => setShowBookingDrawer(true)}
+                      showBooking={showBookingAction}
+                    />
+                  </div>
+                </div>
+              ) : null}
+            </div>
           </>
         )}
       </div>
 
-      {selectedConversation && (
+      {selectedConversation && !contactPanelCollapsed && (
         <ConversationContactPanel
           conversation={selectedConversation}
           activeLead={activeLead}
@@ -822,6 +908,8 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
           channelLabel={channelLabel}
           locale={locale}
           onCreateQuotation={() => setShowQuotationDrawer(true)}
+          onCreateBooking={() => setShowBookingDrawer(true)}
+          showBooking={showBookingAction}
           whatsappRisk={whatsappRisk}
         />
       )}
@@ -866,6 +954,19 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
         </div>
       )}
 
+      {showClearModal && selectedConversation && (
+        <ConfirmDialog
+          open={showClearModal}
+          title={t("conversations.clearTitle")}
+          description={t("conversations.clearConfirm")}
+          confirmLabel={t("conversations.clear")}
+          tone="warning"
+          loading={clearConv.isPending}
+          onConfirm={handleClear}
+          onCancel={() => setShowClearModal(false)}
+        />
+      )}
+
       {showDeleteModal && selectedConversation && (
         <ConfirmDialog
           open={showDeleteModal}
@@ -876,6 +977,21 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
           loading={deleteConv.isPending}
           onConfirm={handleDelete}
           onCancel={() => setShowDeleteModal(false)}
+        />
+      )}
+
+      {showBulkDeleteModal && (
+        <ConfirmDialog
+          open={showBulkDeleteModal}
+          title={t("conversations.bulkDeleteTitle")}
+          description={t("conversations.bulkDeleteConfirm", {
+            count: selectedConversationIds.size,
+          })}
+          confirmLabel={t("conversations.delete")}
+          tone="danger"
+          loading={bulkDelete.isPending}
+          onConfirm={handleBulkDelete}
+          onCancel={() => setShowBulkDeleteModal(false)}
         />
       )}
 
@@ -935,6 +1051,14 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
           </div>
         </div>
       )}
+      {showBookingDrawer && selectedConversation ? (
+        <BookingDrawer
+          conversation={selectedConversation}
+          open={showBookingDrawer}
+          onClose={() => setShowBookingDrawer(false)}
+        />
+      ) : null}
+
       {showQuotationDrawer && selectedConversation ? (
         <QuotationDrawer
           conversation={selectedConversation}

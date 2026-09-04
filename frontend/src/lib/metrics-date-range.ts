@@ -61,6 +61,43 @@ export function isCurrentMonthRange(range: MetricsDateRange, now = new Date()): 
   return range.from === preset.from && range.to === preset.to;
 }
 
+function previousMonthRange(now = new Date()): MetricsDateRange {
+  const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+  const to = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 0));
+  return { from: formatDateUtc(from), to: formatDateUtc(to) };
+}
+
+function isPreviousMonthRange(range: MetricsDateRange, now = new Date()): boolean {
+  const preset = previousMonthRange(now);
+  return range.from === preset.from && range.to === preset.to;
+}
+
+export function getDashboardRangeLabel(
+  range: MetricsDateRange,
+  labels: {
+    last7: string;
+    last14: string;
+    last30: string;
+    thisMonth: string;
+    lastMonth: string;
+    custom: (from: string, to: string) => string;
+  },
+  locale = "es"
+): string {
+  if (isPresetRange(range, 7)) return labels.last7;
+  if (isPresetRange(range, 14)) return labels.last14;
+  if (isPresetRange(range, 30)) return labels.last30;
+  if (isCurrentMonthRange(range)) return labels.thisMonth;
+  if (isPreviousMonthRange(range)) return labels.lastMonth;
+
+  const intlLocale = locale === "en" ? "en-US" : "es-ES";
+  const formatShort = (dateStr: string) =>
+    new Intl.DateTimeFormat(intlLocale, { day: "2-digit", month: "short" }).format(
+      new Date(`${dateStr}T12:00:00.000Z`)
+    );
+  return labels.custom(formatShort(range.from), formatShort(range.to));
+}
+
 export function dateRangeToIso(range: MetricsDateRange): { from: string; to: string } {
   const normalized = normalizeDateRange(range.from, range.to);
   return {

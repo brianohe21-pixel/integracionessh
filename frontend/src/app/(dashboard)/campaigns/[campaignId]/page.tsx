@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { useCampaign } from "@/hooks/useCampaigns";
+import { useBot } from "@/hooks/useBots";
 import { useCampaignExport } from "@/hooks/useCampaignExport";
 import { CampaignStatusBadge } from "@/components/campaigns/CampaignStatusBadge";
 import { CampaignProgressBar } from "@/components/campaigns/CampaignProgressBar";
@@ -69,6 +70,7 @@ export default function CampaignDetailPage({
   const router = useRouter();
 
   const { data: campaign, isLoading, error } = useCampaign(campaignId);
+  const { data: campaignAgent } = useBot(campaign?.botId ?? "");
   const { exportSendRecords, isExporting, exportError, canExport } = useCampaignExport(campaign);
   const campaignChannel = campaign?.channel ?? "whatsapp";
   const showSmsDeliveryMetrics = campaignChannel === "sms" && Boolean(campaign?.requestDlr);
@@ -89,7 +91,7 @@ export default function CampaignDetailPage({
 
   if (error || !campaign) {
     return (
-      <DashboardPage maxWidth="4xl">
+      <DashboardPage>
         <div className="rounded-lg bg-red-50 border border-red-200 p-4 text-sm text-red-700">
           {t("campaigns.loadError")}
         </div>
@@ -102,7 +104,7 @@ export default function CampaignDetailPage({
 
   return (
     <>
-    <DashboardPage maxWidth="4xl" className="space-y-6">
+    <DashboardPage className="space-y-6">
       <div className="flex items-center gap-3">
         <Link
           href="/campaigns"
@@ -120,6 +122,9 @@ export default function CampaignDetailPage({
             <span className="font-medium">
               {campaignChannel === "sms" ? t("outreach.channelSms") : t("outreach.channelWhatsapp")}
             </span>
+            {" · "}
+            {t("outreach.agent")}:{" "}
+            <span className="font-medium">{campaignAgent?.name ?? campaign.botId}</span>
             {" · "}
             {t("campaigns.templateLabel")}: <span className="font-medium">{campaign.templateName}</span>
             {" · "}

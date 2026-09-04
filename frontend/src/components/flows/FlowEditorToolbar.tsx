@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Undo2, Redo2, Maximize2, Minimize2 } from "lucide-react";
+import { ArrowLeft, Copy, Undo2, Redo2, Maximize2, Minimize2, Upload } from "lucide-react";
 import Link from "next/link";
 import { useT } from "@/i18n/context";
 import { Badge } from "@/components/ui/Badge";
@@ -9,12 +9,20 @@ import { Button } from "@/components/ui/Button";
 type FlowEditorToolbarProps = {
   flowName: string;
   isPublished?: boolean;
+  version?: number;
+  hasUnpublishedChanges?: boolean;
   isSaving?: boolean;
+  isPublishing?: boolean;
   isToggling?: boolean;
+  isDuplicating?: boolean;
   isDirty?: boolean;
   justSaved?: boolean;
+  justPublished?: boolean;
   onSave: () => void;
+  onPublish?: () => void;
+  publishDisabled?: boolean;
   onToggleEnabled?: () => void;
+  onDuplicate?: () => void;
   onPreview?: () => void;
   isFullscreen?: boolean;
   onToggleFullscreen?: () => void;
@@ -27,12 +35,20 @@ type FlowEditorToolbarProps = {
 export function FlowEditorToolbar({
   flowName,
   isPublished = true,
+  version = 0,
+  hasUnpublishedChanges = false,
   isSaving = false,
+  isPublishing = false,
   isToggling = false,
+  isDuplicating = false,
   isDirty = false,
   justSaved = false,
+  justPublished = false,
   onSave,
+  onPublish,
+  publishDisabled = false,
   onToggleEnabled,
+  onDuplicate,
   onPreview,
   isFullscreen = false,
   onToggleFullscreen,
@@ -54,17 +70,10 @@ export function FlowEditorToolbar({
         </Link>
         <div className="min-w-0">
           <h1 className="truncate text-base font-semibold text-primary">{flowName}</h1>
-          <div className="mt-1 flex items-center gap-2">
+          <div className="mt-1 flex flex-wrap items-center gap-2">
             <Badge variant={isPublished ? "success" : "warning"}>
               {isPublished ? t("flows.enabled") : t("flows.disabled")}
             </Badge>
-            {isSaving ? (
-              <span className="text-[11px] font-medium text-secondary">{t("common.saving")}</span>
-            ) : isDirty ? (
-              <span className="text-[11px] font-medium text-warning">{t("flows.unsaved")}</span>
-            ) : justSaved ? (
-              <span className="text-[11px] font-medium text-success">{t("flows.saved")}</span>
-            ) : null}
             {onToggleEnabled ? (
               <button
                 type="button"
@@ -84,6 +93,25 @@ export function FlowEditorToolbar({
                 />
               </button>
             ) : null}
+            <span className="text-[11px] font-medium text-secondary">
+              {version > 0 ? t("flows.versionLabel", { version }) : t("flows.notPublished")}
+            </span>
+            {hasUnpublishedChanges ? (
+              <span className="text-[11px] font-medium text-warning">
+                {t("flows.unpublishedChanges")}
+              </span>
+            ) : null}
+            <span className="min-w-[7.5rem] text-[11px] font-medium leading-5">
+              {isSaving ? (
+                <span className="text-secondary">{t("common.saving")}</span>
+              ) : isDirty ? (
+                <span className="text-warning">{t("flows.unsaved")}</span>
+              ) : justPublished ? (
+                <span className="text-success">{t("flows.publishedSuccess")}</span>
+              ) : justSaved ? (
+                <span className="text-success">{t("flows.saved")}</span>
+              ) : null}
+            </span>
           </div>
         </div>
       </div>
@@ -115,12 +143,35 @@ export function FlowEditorToolbar({
         >
           {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
         </button>
+        {onDuplicate ? (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={onDuplicate}
+            disabled={isDuplicating}
+          >
+            <Copy className="h-3.5 w-3.5" />
+            {isDuplicating ? t("flows.duplicating") : t("flows.duplicate")}
+          </Button>
+        ) : null}
         <Button type="button" variant="secondary" size="sm" onClick={onPreview}>
           {t("flows.preview")}
         </Button>
-        <Button type="button" size="sm" onClick={() => onSave()} disabled={isSaving || !isDirty}>
+        <Button type="button" variant="secondary" size="sm" onClick={() => onSave()} disabled={isSaving || !isDirty}>
           {isSaving ? t("common.saving") : t("flows.save")}
         </Button>
+        {onPublish ? (
+          <Button
+            type="button"
+            size="sm"
+            onClick={onPublish}
+            disabled={publishDisabled || isPublishing}
+          >
+            <Upload className="h-3.5 w-3.5" />
+            {isPublishing ? t("flows.publishing") : t("flows.publishChanges")}
+          </Button>
+        ) : null}
       </div>
     </div>
   );

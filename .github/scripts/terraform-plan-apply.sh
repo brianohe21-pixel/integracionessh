@@ -87,6 +87,9 @@ build_plan_args() {
   if [ -n "${TELEPHONY_GATEWAY_CERTIFICATE_ARN:-}" ]; then
     PLAN_ARGS+=(-var="telephony_gateway_certificate_arn=${TELEPHONY_GATEWAY_CERTIFICATE_ARN}")
   fi
+  if [ "${ENABLE_TELEPHONY_GATEWAY:-false}" = "true" ]; then
+    PLAN_ARGS+=(-var="enable_telephony_gateway=true")
+  fi
 }
 
 run_with_lock_retry() {

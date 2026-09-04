@@ -23,6 +23,8 @@ import type {
   WeeklySchedule,
 } from "../../types/index.js";
 import { DEFAULT_WEEKLY_SCHEDULE } from "../../types/index.js";
+import { getSystemMessage } from "../i18n/messages.js";
+import type { BotLocale } from "../i18n/types.js";
 import { getPaymentsConfig } from "../dynamodb/payments-config.repository.js";
 import { createPaymentRequest } from "../payments/payments.service.js";
 import { resolveBookingAmountInCents } from "./payment.js";
@@ -172,8 +174,8 @@ async function syncBookingToExternalCalendar(
   if (booking.externalEventId && booking.externalSyncStatus === "synced") return booking;
 
   try {
-    const externalEventId = await provider.createExternalEvent(booking, config);
-    if (!externalEventId) {
+    const external = await provider.createExternalEvent(booking, config);
+    if (!external?.externalEventId) {
       return (
         (await updateBooking(tenantId, booking.bookingId, {
           externalSyncStatus: "failed",
@@ -182,7 +184,8 @@ async function syncBookingToExternalCalendar(
     }
     return (
       (await updateBooking(tenantId, booking.bookingId, {
-        externalEventId,
+        externalEventId: external.externalEventId,
+        ...(external.meetingLink ? { meetingLink: external.meetingLink } : {}),
         externalSyncStatus: "synced",
         externalSyncedAt: new Date().toISOString(),
       })) ?? booking
@@ -654,6 +657,23 @@ export function formatBookingConfirmation(
   const dateLabel = formatDateLabel(booking.startAt.slice(0, 10), config.timezone);
   const timeLabel = formatSlotLabel(start, config.timezone);
   return `${dateLabel} ${timeLabel}`;
+}
+
+export function buildBookingConfirmationText(params: {
+  booking: Booking;
+  config: CalendarConfig;
+  locale?: BotLocale;
+}): string {
+  const locale = params.locale ?? "es";
+  const scheduledPrefix =
+    locale === "en"
+      ? getSystemMessage("bookingScheduledPrefixEn", locale)
+      : getSystemMessage("bookingScheduledPrefix", locale);
+  let text = `${scheduledPrefix} ${formatBookingConfirmation(params.booking, params.config)}.`;
+  if (params.booking.meetingLink) {
+    text += ` ${getSystemMessage("bookingMeetingLink", locale)} ${params.booking.meetingLink}`;
+  }
+  return text;
 }
 
 export type { WeeklySchedule };

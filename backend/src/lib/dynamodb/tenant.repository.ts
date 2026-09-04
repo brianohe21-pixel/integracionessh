@@ -133,6 +133,26 @@ export async function updateTenant(
   return updated;
 }
 
+export async function clearTenantPricePerMessage(tenantId: string): Promise<Tenant> {
+  const result = await docClient.send(
+    new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: keys(tenantId),
+      UpdateExpression: "REMOVE #pricePerMessageCents SET #updatedAt = :updatedAt",
+      ExpressionAttributeNames: {
+        "#pricePerMessageCents": "pricePerMessageCents",
+        "#updatedAt": "updatedAt",
+      },
+      ExpressionAttributeValues: {
+        ":updatedAt": new Date().toISOString(),
+      },
+      ReturnValues: "ALL_NEW",
+    })
+  );
+
+  return stripKeys(result.Attributes ?? {});
+}
+
 export async function deleteTenant(tenantId: string): Promise<void> {
   const existing = await getTenant(tenantId);
   if (existing?.parentTenantId) {

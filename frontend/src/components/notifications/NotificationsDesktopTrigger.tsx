@@ -4,9 +4,9 @@ import { NotificationsButton } from "@/components/notifications/NotificationsBut
 import { useTenantRole } from "@/hooks/useTenantRole";
 
 export function NotificationsDesktopTrigger() {
-  const { isMember, loading } = useTenantRole();
+  const { isAdmin, loading } = useTenantRole();
 
-  if (loading || !isMember) return null;
+  if (loading || isAdmin) return null;
 
   return <NotificationsButton />;
 }

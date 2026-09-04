@@ -57,6 +57,7 @@ type Props = {
   onToggleSelection: (id: string) => void;
   onToggleSelectAll: () => void;
   onBulkReassign: () => void;
+  onBulkDelete: () => void;
   isLoading: boolean;
   isFetchingNextPage: boolean;
   listScrollRef: React.RefObject<HTMLDivElement | null>;
@@ -110,6 +111,7 @@ export function ConversationListSidebar({
   onToggleSelection,
   onToggleSelectAll,
   onBulkReassign,
+  onBulkDelete,
   isLoading,
   isFetchingNextPage,
   listScrollRef,
@@ -147,7 +149,7 @@ export function ConversationListSidebar({
   return (
     <div
       className={cn(
-        "conversations-sidebar-bg flex w-full flex-col border-r border-default lg:w-[min(100%,22rem)] lg:flex-shrink-0",
+        "conversations-sidebar-bg flex w-full min-h-0 flex-col overflow-hidden border-r border-default lg:w-[min(100%,22rem)] lg:flex-shrink-0",
         showOnMobile ? "flex" : "hidden lg:flex"
       )}
     >
@@ -354,13 +356,18 @@ export function ConversationListSidebar({
           <Badge variant="accent">
             {t("conversations.bulkSelected", { count: selectedConversationIds.size })}
           </Badge>
-          <Button type="button" size="sm" onClick={onBulkReassign}>
-            {t("conversations.bulkReassign")}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button type="button" size="sm" variant="ghost" onClick={onBulkDelete}>
+              {t("conversations.bulkDelete")}
+            </Button>
+            <Button type="button" size="sm" onClick={onBulkReassign}>
+              {t("conversations.bulkReassign")}
+            </Button>
+          </div>
         </div>
       )}
 
-      <div ref={listScrollRef} className="sidebar-scroll flex-1 overflow-y-auto py-2">
+      <div ref={listScrollRef} className="conversations-pane-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain py-2">
         {isLoading && (
           <div className="flex flex-col gap-2 px-2">
             {[1, 2, 3, 4].map((i) => (
