@@ -6,12 +6,21 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useT } from "@/i18n/context";
 import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
 import { ThemeSwitcher } from "@/components/theme/ThemeSwitcher";
+import {
+  SettingsCard,
+  SettingsCardSkeleton,
+  SettingsCallout,
+  SettingsInfoGrid,
+  SettingsInfoTile,
+} from "@/components/settings/SettingsCard";
 import { ProviderCredentialsSection } from "@/components/settings/ProviderCredentialCard";
 import { ChangePasswordCard } from "@/components/settings/ChangePasswordCard";
+import { TwoFactorAuthCard } from "@/components/settings/TwoFactorAuthCard";
 import { InboxSlaCard } from "@/components/settings/InboxSlaCard";
 import { ScheduledReportsCard } from "@/components/settings/ScheduledReportsCard";
 import { BrandingSettingsCard } from "@/components/branding/BrandingSettingsCard";
@@ -19,21 +28,56 @@ import { TenantEmailSettingsCard } from "@/components/settings/TenantEmailSettin
 import { WebsiteAnalyticsCard } from "@/components/settings/WebsiteAnalyticsCard";
 import {
   Building2,
-  Key,
-  Webhook,
   CheckCircle,
+  Key,
   Languages,
   Palette,
-  Settings2,
   Plug,
+  Settings2,
+  Shield,
+  SlidersHorizontal,
   SunMoon,
+  Webhook,
 } from "lucide-react";
 import { PlanUsageCard } from "@/components/billing/PlanUsageCard";
 import type { Tenant } from "@/types";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
 
-type SettingsTab = "general" | "branding" | "integrations" | "apiKeys";
+const SETTINGS_TABS = [
+  "general",
+  "security",
+  "workspace",
+  "branding",
+  "integrations",
+  "apiKeys",
+] as const;
+
+type SettingsTab = (typeof SETTINGS_TABS)[number];
+
+function isSettingsTab(value: string | null): value is SettingsTab {
+  return SETTINGS_TABS.includes(value as SettingsTab);
+}
+
+function SettingsPanel({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="space-y-4">
+      <div>
+        <h2 className="text-base font-semibold text-primary">{title}</h2>
+        {description ? <p className="mt-1 text-sm text-secondary">{description}</p> : null}
+      </div>
+      <div className="space-y-6">{children}</div>
+    </section>
+  );
+}
 
 export default function SettingsPage() {
   const t = useT();
@@ -51,12 +95,7 @@ export default function SettingsPage() {
       router.replace("/users");
       return;
     }
-    if (
-      requested === "general" ||
-      requested === "branding" ||
-      requested === "integrations" ||
-      requested === "apiKeys"
-    ) {
+    if (isSettingsTab(requested)) {
       setTab(requested);
     }
   }, [searchParams, router]);
@@ -82,14 +121,20 @@ export default function SettingsPage() {
   }
 
   const tabs: { id: SettingsTab; label: string; icon: ReactNode }[] = [
-    { id: "general", label: t("settings.tabGeneral"), icon: <Settings2 className="w-4 h-4" /> },
-    { id: "branding", label: t("settings.tabBranding"), icon: <Palette className="w-4 h-4" /> },
+    { id: "general", label: t("settings.tabGeneral"), icon: <Settings2 className="h-4 w-4" /> },
+    { id: "security", label: t("settings.tabSecurity"), icon: <Shield className="h-4 w-4" /> },
+    {
+      id: "workspace",
+      label: t("settings.tabWorkspace"),
+      icon: <SlidersHorizontal className="h-4 w-4" />,
+    },
+    { id: "branding", label: t("settings.tabBranding"), icon: <Palette className="h-4 w-4" /> },
     {
       id: "integrations",
       label: t("settings.tabIntegrations"),
-      icon: <Plug className="w-4 h-4" />,
+      icon: <Plug className="h-4 w-4" />,
     },
-    { id: "apiKeys", label: t("settings.tabApiKeys"), icon: <Key className="w-4 h-4" /> },
+    { id: "apiKeys", label: t("settings.tabApiKeys"), icon: <Key className="h-4 w-4" /> },
   ];
 
   return (
@@ -128,157 +173,145 @@ export default function SettingsPage() {
         </nav>
       </div>
 
-      <div className="space-y-6">
-        {tab === "general" && (
-          <>
-            <div className="bg-surface-elevated rounded-xl border border-default p-6">
-              <div className="flex items-center gap-2 mb-2">
-                <Languages className="w-4 h-4 text-secondary" />
-                <h2 className="font-semibold text-primary text-sm">{t("settings.languageTitle")}</h2>
-              </div>
-              <p className="text-sm text-secondary mb-4">{t("settings.languageDescription")}</p>
+      {tab === "general" ? (
+        <SettingsPanel title={t("settings.tabGeneral")}>
+          <div className="grid gap-6 lg:grid-cols-2">
+            <SettingsCard
+              icon={<Languages className="h-4 w-4" />}
+              title={t("settings.languageTitle")}
+              description={t("settings.languageDescription")}
+            >
               <LanguageSwitcher />
-            </div>
+            </SettingsCard>
 
-            <div className="bg-surface-elevated rounded-xl border border-default p-6">
-              <div className="flex items-center gap-2 mb-2">
-                <SunMoon className="w-4 h-4 text-secondary" />
-                <h2 className="font-semibold text-primary text-sm">{t("settings.themeTitle")}</h2>
-              </div>
-              <p className="text-sm text-secondary mb-4">{t("settings.themeDescription")}</p>
+            <SettingsCard
+              icon={<SunMoon className="h-4 w-4" />}
+              title={t("settings.themeTitle")}
+              description={t("settings.themeDescription")}
+            >
               <ThemeSwitcher />
-            </div>
+            </SettingsCard>
+          </div>
 
-            <PlanUsageCard />
-
-            <InboxSlaCard />
-
-            <ScheduledReportsCard />
-
-            <WebsiteAnalyticsCard />
-
-            <div className="bg-surface-elevated rounded-xl border border-default p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <Building2 className="w-4 h-4 text-secondary" />
-                <h2 className="font-semibold text-primary text-sm">{t("settings.accountInfo")}</h2>
-              </div>
-
-              {tenant ? (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between py-2 border-b border-subtle">
-                    <span className="text-sm text-secondary">{t("settings.company")}</span>
-                    <span className="text-sm font-medium text-primary">{tenant.name}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-2 border-b border-subtle">
-                    <span className="text-sm text-secondary">{t("common.email")}</span>
-                    <span className="text-sm font-medium text-primary">{tenant.email}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-2 border-b border-subtle">
-                    <span className="text-sm text-secondary">{t("settings.plan")}</span>
-                    <Badge variant="info">{planLabel(tenant.plan)}</Badge>
-                  </div>
-                  <div className="flex items-center justify-between py-2 border-b border-subtle">
-                    <span className="text-sm text-secondary">{t("common.status")}</span>
+          {tenant ? (
+            <SettingsCard
+              icon={<Building2 className="h-4 w-4" />}
+              title={t("settings.accountInfo")}
+            >
+              <SettingsInfoGrid>
+                <SettingsInfoTile label={t("settings.company")} value={tenant.name} />
+                <SettingsInfoTile
+                  label={t("common.email")}
+                  value={<span className="truncate">{tenant.email}</span>}
+                />
+                <SettingsInfoTile
+                  label={t("settings.plan")}
+                  value={<Badge variant="info">{planLabel(tenant.plan)}</Badge>}
+                />
+                <SettingsInfoTile
+                  label={t("common.status")}
+                  value={
                     <Badge variant={tenant.status === "active" ? "success" : "warning"}>
                       {tenant.status === "active" ? t("common.active") : t("common.suspended")}
                     </Badge>
-                  </div>
-                  <div className="flex items-center justify-between py-2">
-                    <span className="text-sm text-secondary">{t("settings.memberSince")}</span>
-                    <span className="text-sm text-secondary">{formatDate(tenant.createdAt)}</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-3 animate-pulse">
-                  {[...Array(4)].map((_, i) => (
-                    <div key={i} className="flex justify-between py-2 border-b border-subtle">
-                      <div className="h-4 w-24 bg-gray-200 rounded" />
-                      <div className="h-4 w-32 bg-gray-200 rounded" />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                  }
+                />
+                <SettingsInfoTile
+                  className="sm:col-span-2"
+                  label={t("settings.memberSince")}
+                  value={formatDate(tenant.createdAt)}
+                />
+              </SettingsInfoGrid>
+            </SettingsCard>
+          ) : (
+            <SettingsCardSkeleton lines={3} />
+          )}
+        </SettingsPanel>
+      ) : null}
 
+      {tab === "security" ? (
+        <SettingsPanel title={t("settings.tabSecurity")}>
+          <div className="grid gap-6 xl:grid-cols-2">
             <ChangePasswordCard />
-          </>
-        )}
+            <TwoFactorAuthCard />
+          </div>
+        </SettingsPanel>
+      ) : null}
 
-        {tab === "branding" && <BrandingSettingsCard />}
+      {tab === "workspace" ? (
+        <SettingsPanel title={t("settings.tabWorkspace")}>
+          <PlanUsageCard />
+          <InboxSlaCard />
+          <ScheduledReportsCard />
+        </SettingsPanel>
+      ) : null}
 
-        {tab === "integrations" && (
-          <div className="space-y-6">
-            <WebsiteAnalyticsCard />
-            <TenantEmailSettingsCard />
-            <div className="bg-surface-elevated rounded-xl border border-default p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Webhook className="w-4 h-4 text-secondary" />
-              <h2 className="font-semibold text-primary text-sm">{t("settings.webhookTitle")}</h2>
-            </div>
+      {tab === "branding" ? <BrandingSettingsCard /> : null}
 
-            <p className="text-sm text-secondary mb-4">{t("settings.webhookDescription")}</p>
+      {tab === "integrations" ? (
+        <SettingsPanel title={t("settings.tabIntegrations")}>
+          <WebsiteAnalyticsCard />
+          <TenantEmailSettingsCard />
 
+          <SettingsCard
+            icon={<Webhook className="h-4 w-4" />}
+            title={t("settings.webhookTitle")}
+            description={t("settings.webhookDescription")}
+          >
             <div className="flex items-center gap-2">
-              <code className="flex-1 px-3 py-2.5 bg-surface border border-default rounded-lg text-xs font-mono text-secondary truncate">
+              <code className="flex-1 truncate rounded-lg border border-subtle bg-surface px-3 py-2.5 font-mono text-xs text-secondary">
                 {webhookUrl}
               </code>
-              <button
-                type="button"
-                onClick={() => void copyWebhook()}
-                className="flex items-center gap-1.5 px-3 py-2.5 border border-default rounded-lg text-xs font-medium text-secondary hover:bg-surface transition-colors flex-shrink-0"
-              >
+              <Button type="button" variant="secondary" size="sm" onClick={() => void copyWebhook()}>
                 {webhookCopied ? (
                   <>
-                    <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                    <CheckCircle className="h-3.5 w-3.5 text-success" />
                     {t("settings.copied")}
                   </>
                 ) : (
                   t("settings.copy")
                 )}
-              </button>
+              </Button>
             </div>
 
-            <div className="mt-4 bg-blue-50 border border-blue-100 rounded-lg p-4">
-              <p className="text-xs font-semibold text-blue-800 mb-2">
-                {t("settings.webhookStepsTitle")}
-              </p>
-              <ol className="text-xs text-blue-700 space-y-1 list-decimal list-inside">
+            <SettingsCallout title={t("settings.webhookStepsTitle")}>
+              <ol className="list-inside list-decimal space-y-1 text-xs">
                 <li>{t("settings.step0")}</li>
                 <li>{t("settings.step1")}</li>
                 <li>{t("settings.step2")}</li>
                 <li>{t("settings.step3")}</li>
               </ol>
-            </div>
+            </SettingsCallout>
 
-            <div className="mt-6 border-t border-default pt-4 space-y-3">
-              <h3 className="text-sm font-semibold text-primary">{t("settings.channelWebhooksTitle")}</h3>
+            <div className="space-y-3 border-t border-subtle pt-4">
+              <h3 className="text-sm font-semibold text-primary">
+                {t("settings.channelWebhooksTitle")}
+              </h3>
               <p className="text-xs text-secondary">{t("settings.telegramWebhookPattern")}</p>
-              <code className="block px-3 py-2 bg-surface border border-default rounded-lg text-xs font-mono text-secondary">
+              <code className="block rounded-lg border border-subtle bg-surface px-3 py-2 font-mono text-xs text-secondary">
                 {apiUrl}/sms/webhook
               </code>
               <p className="text-xs text-secondary">{t("settings.smsWebhookUrl")}</p>
-              <code className="block px-3 py-2 bg-surface border border-default rounded-lg text-xs font-mono text-secondary">
+              <code className="block rounded-lg border border-subtle bg-surface px-3 py-2 font-mono text-xs text-secondary">
                 {apiUrl}/email/inbound
               </code>
               <p className="text-xs text-secondary">{t("settings.emailWebhookUrl")}</p>
             </div>
-          </div>
-          </div>
-        )}
+          </SettingsCard>
+        </SettingsPanel>
+      ) : null}
 
-        {tab === "apiKeys" && (
-          <div className="bg-surface-elevated rounded-xl border border-default p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Key className="w-4 h-4 text-secondary" />
-              <h2 className="font-semibold text-primary text-sm">{t("settings.secretsTitle")}</h2>
-            </div>
-
-            <p className="text-sm text-secondary mb-4">{t("settings.secretsDescription")}</p>
-
+      {tab === "apiKeys" ? (
+        <SettingsPanel title={t("settings.tabApiKeys")}>
+          <SettingsCard
+            icon={<Key className="h-4 w-4" />}
+            title={t("settings.secretsTitle")}
+            description={t("settings.secretsDescription")}
+          >
             <div className="space-y-3">
-              <div className="flex items-center gap-3 p-3 bg-surface rounded-lg border border-default">
-                <div className="w-2 h-2 bg-green-400 rounded-full" />
-                <div className="flex-1">
+              <div className="flex items-center gap-3 rounded-xl border border-subtle bg-surface px-4 py-3">
+                <div className="h-2 w-2 shrink-0 rounded-full bg-success" />
+                <div className="min-w-0 flex-1">
                   <p className="text-xs font-medium text-secondary">{t("settings.whatsappToken")}</p>
                   <p className="text-xs text-muted">{t("settings.whatsappTokenStored")}</p>
                 </div>
@@ -287,9 +320,9 @@ export default function SettingsPage() {
 
               <ProviderCredentialsSection />
             </div>
-          </div>
-        )}
-      </div>
+          </SettingsCard>
+        </SettingsPanel>
+      ) : null}
     </DashboardPage>
   );
 }

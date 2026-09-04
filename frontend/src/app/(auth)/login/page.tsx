@@ -59,8 +59,9 @@ export default function LoginPage() {
   const [missingAttrs, setMissingAttrs] = useState<string[]>([]);
   const [attrValues, setAttrValues] = useState<Record<string, string>>({});
   const [phase, setPhase] = useState<
-    "credentials" | "newPassword" | "forgotRequest" | "forgotConfirm"
+    "credentials" | "newPassword" | "forgotRequest" | "forgotConfirm" | "totp"
   >("credentials");
+  const [totpCode, setTotpCode] = useState("");
   const [forgotCode, setForgotCode] = useState("");
   const [forgotNewPassword, setForgotNewPassword] = useState("");
   const [forgotConfirmPassword, setForgotConfirmPassword] = useState("");
@@ -132,7 +133,7 @@ export default function LoginPage() {
 
   function applySignInResult(
     out: Awaited<ReturnType<typeof signIn>>
-  ): "done" | "newPassword" | "unsupported" {
+  ): "done" | "newPassword" | "totp" | "unsupported" {
     if (out.isSignedIn) {
       void (async () => {
         if (!(await finishLogin())) return;
@@ -152,6 +153,11 @@ export default function LoginPage() {
       setConfirmNewPassword("");
       setPhase("newPassword");
       return "newPassword";
+    }
+    if (step === "CONFIRM_SIGN_IN_WITH_TOTP_CODE") {
+      setTotpCode("");
+      setPhase("totp");
+      return "totp";
     }
     return "unsupported";
   }
@@ -337,6 +343,96 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleTotpSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    const code = totpCode.trim();
+    if (!/^\d{6}$/.test(code)) {
+      setError(t("settings.twoFactorCodeInvalid"));
+      return;
+    }
+    setLoading(true);
+    try {
+      const out = await confirmSignIn({ challengeResponse: code });
+      if (out.isSignedIn) {
+        if (!(await finishLogin())) return;
+        await ensureAuthSession();
+        router.push(await getPostLoginPath(redirectTo));
+        return;
+      }
+      setError(t("auth.twoFactorLoginError"));
+    } catch (err) {
+      setError((err as Error).message ?? t("auth.twoFactorLoginError"));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (phase === "totp") {
+    return (
+      <div className="bg-surface-elevated rounded-2xl shadow-xl p-8 border border-subtle">
+        <h2 className="text-xl font-semibold text-primary mb-2">{t("auth.twoFactorPrompt")}</h2>
+        <p className="text-sm text-secondary mb-6">{t("auth.twoFactorLoginBody")}</p>
+
+        <form onSubmit={handleTotpSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="totp-login-code" className="block text-sm font-medium text-secondary mb-1">
+              {t("settings.twoFactorCodeLabel")}
+            </label>
+            <input
+              id="totp-login-code"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              required
+              value={totpCode}
+              onChange={(e) => setTotpCode(e.target.value)}
+              className="w-full px-3 py-2 border border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+              placeholder="123456"
+            />
+          </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={async () => {
+                setError("");
+                setTotpCode("");
+                try {
+                  await signOutUser();
+                } catch {
+                  /* ignore */
+                }
+                setPhase("credentials");
+              }}
+              className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium border border-default text-secondary hover:bg-surface"
+            >
+              {t("common.back")}
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className={cn(
+                "flex-1 py-2.5 px-4 rounded-lg text-sm font-medium text-white transition-colors",
+                loading
+                  ? "bg-accent/60 cursor-not-allowed"
+                  : "bg-accent hover:bg-accent-hover active:bg-accent-hover"
+              )}
+            >
+              {loading ? t("auth.signingIn") : t("auth.continue")}
+            </button>
+          </div>
+        </form>
+      </div>
+    );
   }
 
   if (phase === "newPassword") {

@@ -5,6 +5,7 @@ import { fetchAuthSession, updatePassword } from "aws-amplify/auth";
 import { KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { SettingsCard, SettingsCardSkeleton } from "@/components/settings/SettingsCard";
 import { getPasswordHint, validateCognitoPassword } from "@/lib/passwordPolicy";
 import { useT } from "@/i18n/context";
 
@@ -60,6 +61,7 @@ export function ChangePasswordCard() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [federated, setFederated] = useState(false);
@@ -74,6 +76,8 @@ export function ChangePasswordCard() {
         setFederated(hasFederatedIdentity(payload));
       } catch {
         if (!cancelled) setFederated(false);
+      } finally {
+        if (!cancelled) setCheckingAuth(false);
       }
     }
     void load();
@@ -119,20 +123,22 @@ export function ChangePasswordCard() {
     }
   }
 
-  return (
-    <div className="bg-surface-elevated rounded-xl border border-default p-6">
-      <div className="flex items-center gap-2 mb-2">
-        <KeyRound className="w-4 h-4 text-secondary" />
-        <h2 className="font-semibold text-primary text-sm">{t("settings.changePasswordTitle")}</h2>
-      </div>
-      <p className="text-sm text-secondary mb-4">{t("settings.changePasswordDescription")}</p>
+  if (checkingAuth) {
+    return <SettingsCardSkeleton lines={3} />;
+  }
 
+  return (
+    <SettingsCard
+      icon={<KeyRound className="h-4 w-4" />}
+      title={t("settings.changePasswordTitle")}
+      description={t("settings.changePasswordDescription")}
+    >
       {federated ? (
         <p className="text-sm text-secondary">{t("settings.changePasswordFederated")}</p>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
+        <form onSubmit={handleSubmit} className="max-w-md space-y-4">
           <div>
-            <label htmlFor="currentPassword" className="block text-sm font-medium text-secondary mb-1">
+            <label htmlFor="currentPassword" className="mb-1 block text-sm font-medium text-secondary">
               {t("settings.currentPassword")}
             </label>
             <Input
@@ -145,7 +151,7 @@ export function ChangePasswordCard() {
             />
           </div>
           <div>
-            <label htmlFor="newPassword" className="block text-sm font-medium text-secondary mb-1">
+            <label htmlFor="newPassword" className="mb-1 block text-sm font-medium text-secondary">
               {t("auth.newPassword")}
             </label>
             <Input
@@ -157,10 +163,10 @@ export function ChangePasswordCard() {
               minLength={8}
               disabled={loading}
             />
-            <p className="mt-1 text-xs text-secondary">{getPasswordHint(t)}</p>
+            <p className="mt-1 text-xs text-muted">{getPasswordHint(t)}</p>
           </div>
           <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-secondary mb-1">
+            <label htmlFor="confirmPassword" className="mb-1 block text-sm font-medium text-secondary">
               {t("auth.confirmPassword")}
             </label>
             <Input
@@ -182,6 +188,6 @@ export function ChangePasswordCard() {
           </Button>
         </form>
       )}
-    </div>
+    </SettingsCard>
   );
 }

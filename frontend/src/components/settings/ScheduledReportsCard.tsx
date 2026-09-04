@@ -3,6 +3,12 @@
 import { useEffect, useState } from "react";
 import { FileSpreadsheet } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import {
+  SettingsCard,
+  SettingsCardSkeleton,
+  SettingsToggleRow,
+} from "@/components/settings/SettingsCard";
 import {
   useReportSchedule,
   useSaveReportSchedule,
@@ -93,48 +99,40 @@ export function ScheduledReportsCard() {
   }
 
   if (isLoading) {
-    return (
-      <div className="rounded-lg border border-default p-4 animate-pulse">
-        <div className="h-4 w-40 bg-surface-muted rounded" />
-      </div>
-    );
+    return <SettingsCardSkeleton lines={4} />;
   }
 
   if (loadError) {
     return (
-      <div className="rounded-lg border border-default p-4">
+      <SettingsCard
+        icon={<FileSpreadsheet className="h-4 w-4" />}
+        title={t("settings.scheduledReportsTitle")}
+        description={t("settings.scheduledReportsDescription")}
+      >
         <p className="text-sm text-red-500">
           {loadError instanceof Error ? loadError.message : t("settings.scheduledReportsSaveError")}
         </p>
-      </div>
+      </SettingsCard>
     );
   }
 
   return (
-    <div className="rounded-lg border border-default overflow-hidden">
-      <div className="flex items-center gap-3 border-b border-default bg-surface p-4">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-muted text-accent">
-          <FileSpreadsheet className="h-4 w-4" />
-        </div>
-        <div className="flex-1">
-          <p className="text-sm font-medium text-primary">{t("settings.scheduledReportsTitle")}</p>
-          <p className="text-xs text-muted">{t("settings.scheduledReportsDescription")}</p>
-        </div>
+    <SettingsCard
+      icon={<FileSpreadsheet className="h-4 w-4" />}
+      title={t("settings.scheduledReportsTitle")}
+      description={t("settings.scheduledReportsDescription")}
+      badge={
         <Badge variant={enabled ? "success" : "default"}>
           {enabled ? t("settings.scheduledReportsEnabled") : t("settings.scheduledReportsDisabled")}
         </Badge>
-      </div>
-
-      <form onSubmit={handleSave} className="space-y-4 p-4">
-        <label className="flex items-center justify-between gap-4">
-          <span className="text-sm text-secondary">{t("settings.scheduledReportsEnableLabel")}</span>
-          <input
-            type="checkbox"
-            checked={enabled}
-            onChange={(e) => setEnabled(e.target.checked)}
-            className="h-4 w-4 rounded border-default"
-          />
-        </label>
+      }
+    >
+      <form onSubmit={handleSave} className="space-y-4">
+        <SettingsToggleRow
+          label={t("settings.scheduledReportsEnableLabel")}
+          checked={enabled}
+          onChange={setEnabled}
+        />
 
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block space-y-1">
@@ -214,23 +212,19 @@ export function ScheduledReportsCard() {
         {error && <p className="text-sm text-red-500">{error}</p>}
 
         <div className="flex flex-wrap gap-2">
-          <button
-            type="submit"
-            disabled={save.isPending}
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-          >
+          <Button type="submit" disabled={save.isPending}>
             {save.isPending ? t("settings.scheduledReportsSaving") : t("settings.scheduledReportsSave")}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="secondary"
             onClick={handleSendNow}
             disabled={save.isPending || sendNow.isPending}
-            className="rounded-lg border border-default px-4 py-2 text-sm font-medium text-primary disabled:opacity-50"
           >
             {sendNow.isPending ? t("settings.scheduledReportsSending") : t("settings.scheduledReportsSendNow")}
-          </button>
+          </Button>
         </div>
       </form>
-    </div>
+    </SettingsCard>
   );
 }

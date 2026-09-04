@@ -56,8 +56,9 @@ export function CardContent({ className, ...props }: HTMLAttributes<HTMLDivEleme
   return <div className={cn("card-body", className)} {...props} />;
 }
 
-type CardIconHeaderProps = HTMLAttributes<HTMLDivElement> & {
+type CardIconHeaderProps = Omit<HTMLAttributes<HTMLDivElement>, "title"> & {
   icon?: ReactNode;
+  iconClassName?: string;
   title: ReactNode;
   description?: ReactNode;
   actions?: ReactNode;
@@ -65,6 +66,7 @@ type CardIconHeaderProps = HTMLAttributes<HTMLDivElement> & {
 
 export function CardIconHeader({
   icon,
+  iconClassName,
   title,
   description,
   actions,
@@ -74,7 +76,9 @@ export function CardIconHeader({
   return (
     <div className={cn("card-icon-header flex-wrap justify-between", className)} {...props}>
       <div className="flex min-w-0 items-center gap-3">
-        {icon ? <span className="card-icon-header-icon">{icon}</span> : null}
+        {icon ? (
+          <span className={cn(iconClassName ?? "card-icon-header-icon")}>{icon}</span>
+        ) : null}
         <div className="min-w-0">
           <div className="card-icon-header-title">{title}</div>
           {description ? <div className="card-icon-header-subtitle">{description}</div> : null}
