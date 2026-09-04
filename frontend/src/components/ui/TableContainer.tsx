@@ -11,8 +11,8 @@ export function TableContainer({ children, className, card = true }: TableContai
   return (
     <div
       className={cn(
-        "-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0",
-        card && "content-card overflow-hidden",
+        "w-full min-w-0 overflow-x-auto",
+        card && "content-card",
         className
       )}
     >

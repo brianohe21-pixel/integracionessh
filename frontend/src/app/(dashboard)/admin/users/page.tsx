@@ -20,6 +20,7 @@ import type { CognitoUserSummary, ResellerPlanDefaults, Tenant, TenantPlan } fro
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { TableContainer } from "@/components/ui/TableContainer";
+import { AdminTenantsTable } from "@/components/admin/AdminTenantsTable";
 
 type Tab = "tenants" | "cognito" | "reseller";
 
@@ -77,10 +78,10 @@ function CognitoUserActions({
       <td className="px-4 py-3 text-secondary">
         {user.enabled ? t("admin.users.enabled") : t("admin.users.disabled")}
       </td>
-      <td className="px-4 py-3 text-secondary">
+      <td className="px-4 py-3 text-secondary whitespace-nowrap">
         {user.createdAt ? formatDate(user.createdAt) : "—"}
       </td>
-      <td className="px-4 py-3">
+      <td className="px-4 py-3 pr-6">
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
@@ -219,7 +220,9 @@ export default function AdminUsersPage() {
         <th className="px-4 py-3 font-medium">{t("admin.users.tenantId")}</th>
         <th className="px-4 py-3 font-medium">{t("common.status")}</th>
         <th className="px-4 py-3 font-medium">{t("common.date")}</th>
-        <th className="px-4 py-3 font-medium" />
+        <th className="px-4 py-3 pr-6 font-medium whitespace-nowrap">
+          {t("admin.users.actions")}
+        </th>
       </tr>
     </thead>
   );
@@ -227,7 +230,7 @@ export default function AdminUsersPage() {
   const resellerTenants = (tenants ?? []).filter((tenant) => tenant.plan === "reseller");
 
   return (
-    <DashboardPage maxWidth="6xl" className="space-y-8">
+    <DashboardPage className="space-y-8 pb-8">
       <PageHeader title={t("admin.users.title")} subtitle={t("admin.users.subtitle")} />
 
       <section>
@@ -246,7 +249,7 @@ export default function AdminUsersPage() {
             <TableContainer className="rounded-xl border border-accent/30 bg-surface-elevated">
               <table className="min-w-full text-sm">
                 {cognitoTableHeader}
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-default">
                   {platformAdmins.map((user) => (
                     <CognitoUserActions
                       key={`admin-${user.username}`}
@@ -293,124 +296,16 @@ export default function AdminUsersPage() {
       {tab === "tenants" ? (
         <>
           <p className="text-sm text-secondary">{t("admin.users.planManualHint")}</p>
-          {tenantsLoading ? (
-            <div className="h-40 bg-surface-muted rounded-xl animate-pulse" />
-          ) : !tenants?.length ? (
-            <p className="text-sm text-secondary">{t("admin.users.emptyTenants")}</p>
-          ) : (
-            <TableContainer className="rounded-xl border border-default bg-surface-elevated">
-              <table className="min-w-full text-sm">
-                <thead className="bg-surface text-left text-secondary">
-                  <tr>
-                    <th className="px-4 py-3 font-medium">{t("auth.companyName")}</th>
-                    <th className="px-4 py-3 font-medium">{t("common.email")}</th>
-                    <th className="px-4 py-3 font-medium">{t("admin.users.role")}</th>
-                    <th className="px-4 py-3 font-medium">{t("admin.users.plan")}</th>
-                    <th className="px-4 py-3 font-medium">{t("admin.users.tenantStatus")}</th>
-                    <th className="px-4 py-3 font-medium">{t("admin.users.subscription")}</th>
-                    <th className="px-4 py-3 font-medium">{t("admin.users.law2300")}</th>
-                    <th className="px-4 py-3 font-medium">{t("admin.users.periodEnd")}</th>
-                    <th className="px-4 py-3 font-medium">{t("common.date")}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {tenants.map((tenant) => (
-                    <tr key={tenant.tenantId}>
-                      <td className="px-4 py-3 text-primary">{tenant.name}</td>
-                      <td className="px-4 py-3 text-secondary">{tenant.email}</td>
-                      <td className="px-4 py-3">
-                        {isTenantAlsoAdmin(tenant) ? (
-                          <Badge variant="info">{t("admin.users.roleAdmin")}</Badge>
-                        ) : (
-                          <Badge variant="default">{t("admin.users.roleMember")}</Badge>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="space-y-1">
-                          <select
-                            value={tenant.plan}
-                            disabled={updateTenant.isPending}
-                            onChange={(e) =>
-                              void handleTenantUpdate(tenant, {
-                                plan: e.target.value as TenantPlan,
-                              })
-                            }
-                            className="rounded-lg border border-default px-2 py-1 text-sm"
-                          >
-                            <option value="free">{t("common.planFree")}</option>
-                            <option value="starter">{t("common.planStarter")}</option>
-                            <option value="pro">{t("common.planPro")}</option>
-                            <option value="scale">{t("common.planScale")}</option>
-                            <option value="reseller">{t("common.planReseller")}</option>
-                          </select>
-                          {tenantFeedback?.tenantId === tenant.tenantId && (
-                            <p
-                              className={`text-xs ${
-                                tenantFeedback.type === "success"
-                                  ? "text-green-600"
-                                  : "text-red-600"
-                              }`}
-                            >
-                              {tenantFeedback.type === "success"
-                                ? t("admin.users.planUpdated")
-                                : t("admin.users.planUpdateError")}
-                            </p>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <select
-                          value={tenant.status}
-                          disabled={updateTenant.isPending}
-                          onChange={(e) =>
-                            void handleTenantUpdate(tenant, {
-                              status: e.target.value as "active" | "suspended",
-                            })
-                          }
-                          className="rounded-lg border border-default px-2 py-1 text-sm"
-                        >
-                          <option value="active">{t("common.active")}</option>
-                          <option value="suspended">{t("common.suspended")}</option>
-                        </select>
-                      </td>
-                      <td className="px-4 py-3 text-secondary">
-                        {tenant.subscriptionStatus
-                          ? t(`billing.subscriptionStatus.${tenant.subscriptionStatus}`)
-                          : "—"}
-                        <span className="block text-xs text-muted">
-                          {tenantPlanLabel(tenant.plan)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <label className="inline-flex items-center gap-2 text-sm text-secondary">
-                          <input
-                            type="checkbox"
-                            checked={tenant.law2300Exempt ?? false}
-                            disabled={updateTenant.isPending}
-                            onChange={(e) =>
-                              void handleTenantUpdate(tenant, {
-                                law2300Exempt: e.target.checked,
-                              })
-                            }
-                            className="rounded border-default"
-                          />
-                          <span>{t("admin.users.law2300Exempt")}</span>
-                        </label>
-                      </td>
-                      <td className="px-4 py-3 text-secondary">
-                        {tenant.currentPeriodEnd
-                          ? formatDate(tenant.currentPeriodEnd)
-                          : "—"}
-                      </td>
-                      <td className="px-4 py-3 text-secondary">
-                        {formatDate(tenant.createdAt)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </TableContainer>
-          )}
+          <AdminTenantsTable
+            tenants={tenants ?? []}
+            isLoading={tenantsLoading}
+            isUpdating={updateTenant.isPending}
+            tenantFeedback={tenantFeedback}
+            isTenantAlsoAdmin={isTenantAlsoAdmin}
+            tenantPlanLabel={tenantPlanLabel}
+            onTenantUpdate={handleTenantUpdate}
+            formatDate={formatDate}
+          />
         </>
       ) : tab === "reseller" ? (
         <div className="space-y-8">
@@ -501,10 +396,10 @@ export default function AdminUsersPage() {
                       <th className="px-4 py-3 font-medium">{t("admin.users.maxSubaccounts")}</th>
                       <th className="px-4 py-3 font-medium">{t("admin.users.customDomain")}</th>
                       <th className="px-4 py-3 font-medium">{t("common.status")}</th>
-                      <th className="px-4 py-3 font-medium" />
+                      <th className="px-4 py-3 pr-6 font-medium" />
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-default">
                     {resellerTenants.map((tenant) => (
                       <tr key={tenant.tenantId}>
                         <td className="px-4 py-3 text-primary">{tenant.name}</td>
@@ -529,7 +424,7 @@ export default function AdminUsersPage() {
                         <td className="px-4 py-3 text-secondary">
                           {tenant.resellerConfig?.customDomainStatus ?? "none"}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 pr-6">
                           {tenant.resellerConfig?.customDomain &&
                             tenant.resellerConfig.customDomainStatus !== "active" && (
                               <button
@@ -564,7 +459,7 @@ export default function AdminUsersPage() {
           <TableContainer className="rounded-xl border border-default bg-surface-elevated">
             <table className="min-w-full text-sm">
               {cognitoTableHeader}
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-default">
                 {cognitoUsers.map((user) => (
                   <CognitoUserActions
                     key={user.username}

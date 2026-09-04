@@ -15,8 +15,13 @@ import { useT } from "@/i18n/context";
 import { useDialog } from "@/components/ui/DialogProvider";
 import { EmbeddedSignupLauncher } from "@/components/whatsapp/EmbeddedSignupLauncher";
 import { IntegrationErrorSupport } from "@/components/support/IntegrationErrorSupport";
+import { Badge } from "@/components/ui/Badge";
 import { BotWhatsAppCoexistenceStatus } from "@/components/bots/BotWhatsAppCoexistenceStatus";
 import { BotWhatsAppCloudApiTest } from "@/components/bots/BotWhatsAppCloudApiTest";
+import {
+  countBlockedWhatsAppChannels,
+  WhatsAppEnforcementPanel,
+} from "@/components/whatsapp/WhatsAppEnforcementPanel";
 import { Button } from "@/components/ui/Button";
 import { api } from "@/lib/api";
 import { isScaleOrResellerPlan } from "@/lib/normalize-plan";
@@ -82,6 +87,7 @@ export function BotWhatsAppConnect({ bot }: BotWhatsAppConnectProps) {
   );
 
   const hasChannels = sortedChannels.length > 0;
+  const blockedChannelCount = countBlockedWhatsAppChannels(sortedChannels);
   const legacyConnected = Boolean(bot.phoneNumberId?.trim()) && !hasChannels;
   const canAddChannel = multiChannelEnabled || !hasChannels;
   const isSaving =
@@ -358,6 +364,15 @@ export function BotWhatsAppConnect({ bot }: BotWhatsAppConnectProps) {
         </div>
       ) : null}
 
+      {blockedChannelCount > 0 ? (
+        <div className="rounded-lg border border-danger/25 bg-danger/5 p-4 text-sm text-secondary">
+          <p className="font-medium text-primary">
+            {t("whatsapp.enforcement.summaryTitle", { count: String(blockedChannelCount) })}
+          </p>
+          <p className="mt-1">{t("whatsapp.enforcement.summaryDescription")}</p>
+        </div>
+      ) : null}
+
       {isLoading ? (
         <div className="h-24 animate-pulse rounded-lg bg-surface-muted" />
       ) : hasChannels ? (
@@ -377,6 +392,11 @@ export function BotWhatsAppConnect({ bot }: BotWhatsAppConnectProps) {
                         <Star className="h-3 w-3" />
                         {t("whatsapp.channels.defaultBadge")}
                       </span>
+                    ) : null}
+                    {channel.messagingEnforcement?.blocked ? (
+                      <Badge variant="danger" dot>
+                        {t("whatsapp.enforcement.blockedBadge")}
+                      </Badge>
                     ) : null}
                   </div>
                   <p className="mt-1 text-xs text-secondary">
@@ -446,6 +466,8 @@ export function BotWhatsAppConnect({ bot }: BotWhatsAppConnectProps) {
                     : t("whatsapp.channels.addLabel")}
                 </button>
               )}
+
+              <WhatsAppEnforcementPanel botId={bot.botId} channel={channel} />
 
               {channel.status === "pending_registration" ? (
                 <div className="mt-3 space-y-2 rounded-lg border border-warning/20 bg-warning/5 p-3">

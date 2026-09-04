@@ -23,7 +23,7 @@ export default function AdminPaymentsPage() {
   const { data: payments, isLoading: paymentsLoading } = useAdminPayments();
 
   return (
-    <DashboardPage maxWidth="6xl" className="space-y-10">
+    <DashboardPage className="space-y-10 pb-8">
       <PageHeader
         title={t("admin.payments.title")}
         subtitle={t("admin.payments.subtitle")}

@@ -149,9 +149,9 @@ resource "aws_cognito_user_pool" "main" {
   }
 
   lambda_config {
-    pre_sign_up          = aws_lambda_function.cognito_pre_signup.arn
-    post_confirmation    = aws_lambda_function.cognito_pre_signup.arn
-    post_authentication  = aws_lambda_function.cognito_pre_signup.arn
+    pre_sign_up         = aws_lambda_function.cognito_pre_signup.arn
+    post_confirmation   = aws_lambda_function.cognito_pre_signup.arn
+    post_authentication = aws_lambda_function.cognito_pre_signup.arn
   }
 
   tags = var.tags

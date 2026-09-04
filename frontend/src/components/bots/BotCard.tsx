@@ -25,6 +25,7 @@ import { getModelLabel } from "@/lib/ai-models";
 import type { Bot } from "@/types";
 import { useDeleteBot, useUpdateBot } from "@/hooks/useBots";
 import { useWhatsAppChannels } from "@/hooks/useWhatsAppChannels";
+import { countBlockedWhatsAppChannels } from "@/components/whatsapp/WhatsAppEnforcementPanel";
 import { useDialog } from "@/components/ui/DialogProvider";
 import { cn } from "@/lib/utils";
 
@@ -79,6 +80,7 @@ export function BotCard({ bot }: BotCardProps) {
   const { confirm } = useDialog();
   const hasWhatsApp = Boolean(bot.phoneNumberId || bot.whatsappPhone);
   const { data: whatsappChannels } = useWhatsAppChannels(bot.botId, { enabled: hasWhatsApp });
+  const blockedWhatsAppCount = countBlockedWhatsAppChannels(whatsappChannels ?? []);
   const channels = getConnectedChannels(bot, whatsappChannels?.length);
 
   async function handleDelete() {
@@ -135,13 +137,21 @@ export function BotCard({ bot }: BotCardProps) {
             <div className="flex flex-wrap gap-1.5">
               {channels.map((channel) => {
                 const Icon = channel.icon;
+                const showBlocked =
+                  channel.key === "whatsapp" && blockedWhatsAppCount > 0;
                 return (
                   <span
                     key={channel.key}
-                    className="inline-flex items-center gap-1 rounded-full bg-surface-muted px-2.5 py-1 text-[11px] font-medium text-secondary ring-1 ring-default"
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1",
+                      showBlocked
+                        ? "bg-danger/10 text-danger ring-danger/20"
+                        : "bg-surface-muted text-secondary ring-default"
+                    )}
                   >
-                    <Icon className="h-3 w-3 text-accent" />
+                    <Icon className={cn("h-3 w-3", showBlocked ? "text-danger" : "text-accent")} />
                     {channel.label}
+                    {showBlocked ? ` · ${blockedWhatsAppCount}` : ""}
                   </span>
                 );
               })}

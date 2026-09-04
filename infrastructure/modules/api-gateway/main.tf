@@ -979,6 +979,27 @@ locals {
       function_arn = var.admin_function_arn
       protected    = true
     }
+    admin_billing_config_get = {
+      route_key    = "GET /admin/billing-config"
+      slug         = "admin"
+      invoke_arn   = var.admin_invoke_arn
+      function_arn = var.admin_function_arn
+      protected    = true
+    }
+    admin_billing_config_put = {
+      route_key    = "PUT /admin/billing-config"
+      slug         = "admin"
+      invoke_arn   = var.admin_invoke_arn
+      function_arn = var.admin_function_arn
+      protected    = true
+    }
+    admin_billing_overview_get = {
+      route_key    = "GET /admin/billing/overview"
+      slug         = "admin"
+      invoke_arn   = var.admin_invoke_arn
+      function_arn = var.admin_function_arn
+      protected    = true
+    }
     admin_reseller_plan_defaults_get = {
       route_key    = "GET /admin/reseller-plan-defaults"
       slug         = "admin"

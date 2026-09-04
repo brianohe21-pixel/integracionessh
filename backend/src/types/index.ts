@@ -93,6 +93,34 @@ export interface ResellerPlanDefaults {
   limitsOverride?: ResellerLimitsOverride;
 }
 
+export interface PlatformBillingConfig {
+  pricePerMessageCents: number;
+  currency: "COP";
+  updatedAt?: string;
+}
+
+export interface AdminBillingOverviewRow {
+  tenantId: string;
+  name: string;
+  email: string;
+  plan: TenantPlan;
+  period: string;
+  messagesCount: number;
+  bulkRecipientsCount: number;
+  estimatedMessageCostCents: number;
+}
+
+export interface AdminBillingOverview {
+  config: PlatformBillingConfig;
+  period: string;
+  rows: AdminBillingOverviewRow[];
+  totals: {
+    messagesCount: number;
+    bulkRecipientsCount: number;
+    estimatedMessageCostCents: number;
+  };
+}
+
 export interface InboxSlaSettings {
   enabled: boolean;
   firstResponseMinutes: number;

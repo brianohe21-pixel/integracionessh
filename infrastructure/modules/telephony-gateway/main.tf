@@ -21,6 +21,7 @@ locals {
 resource "aws_ecr_repository" "gateway" {
   name                 = "${var.project}-${var.environment}-telephony-gateway"
   image_tag_mutability = "MUTABLE"
+  force_delete         = true
   tags                 = var.tags
 }
 

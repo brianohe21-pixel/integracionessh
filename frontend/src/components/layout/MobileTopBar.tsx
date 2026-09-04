@@ -36,6 +36,7 @@ const ROUTE_LABEL_KEYS: Record<string, string> = {
   "/onboarding": "nav.onboarding",
   "/subaccounts": "nav.subaccounts",
   "/admin/users": "nav.adminUsers",
+  "/admin/billing": "nav.adminBilling",
   "/admin/payments": "nav.adminPayments",
   "/admin/support": "nav.adminSupport",
 };

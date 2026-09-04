@@ -43,6 +43,7 @@ import {
   Star,
   Hash,
   ClipboardList,
+  Receipt,
 } from "lucide-react";
 import { useAdminRole } from "@/hooks/useAdminRole";
 import { useTenantRole } from "@/hooks/useTenantRole";
@@ -203,6 +204,7 @@ const adminNavCategories: NavCategory[] = [
     icon: Users,
     items: [
       { href: "/admin/users", labelKey: "nav.adminUsers", icon: Users },
+      { href: "/admin/billing", labelKey: "nav.adminBilling", icon: Receipt },
       { href: "/admin/payments", labelKey: "nav.adminPayments", icon: CreditCard },
       { href: "/admin/support", labelKey: "nav.adminSupport", icon: LifeBuoy },
     ],
