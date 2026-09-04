@@ -12,7 +12,7 @@ export default function SupportPage() {
   const t = useT();
 
   return (
-    <DashboardPage maxWidth="3xl">
+    <DashboardPage>
       <PageHeader
         title={t("support.title")}
         subtitle={t("support.subtitle")}

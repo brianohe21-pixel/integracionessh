@@ -340,7 +340,7 @@ export default function SubaccountsPage() {
   }
 
   return (
-    <DashboardPage maxWidth="5xl" className="space-y-8">
+    <DashboardPage className="space-y-8">
       <PageHeader title={t("reseller.title")} subtitle={t("reseller.subtitle")} />
 
       {assumed && (
