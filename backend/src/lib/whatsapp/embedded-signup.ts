@@ -16,9 +16,17 @@ const COEXISTENCE_WEBHOOK_FIELDS = [
   "smb_app_state_sync",
   "smb_message_echoes",
   "account_update",
+  "account_alerts",
+  "phone_number_quality_update",
 ];
 
-const CLOUD_API_WEBHOOK_FIELDS = ["messages", "calls"];
+const CLOUD_API_WEBHOOK_FIELDS = [
+  "messages",
+  "calls",
+  "account_update",
+  "account_alerts",
+  "phone_number_quality_update",
+];
 
 export function assertDistinctWabaAndPhone(wabaId: string, phoneNumberId: string): void {
   if (wabaId === phoneNumberId) {

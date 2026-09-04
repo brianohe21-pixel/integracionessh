@@ -99,8 +99,8 @@ jobs:
             echo "::error::REPOSITORY_URL is missing or empty. Add it under Settings → Secrets and variables → Actions → Variables (e.g. https://github.com/org/repo)."
             exit 1
           fi
-          if [ -z "${TELEPHONY_GATEWAY_VPC_ID:-}" ]; then
-            echo "::error::TELEPHONY_GATEWAY_VPC_ID is missing or empty. Add it under Settings → Environments → dev → Variables (e.g. vpc-xxxxxxxx)."
+          if [ "${ENABLE_TELEPHONY_GATEWAY:-false}" = "true" ] && [ -z "${TELEPHONY_GATEWAY_VPC_ID:-}" ]; then
+            echo "::error::TELEPHONY_GATEWAY_VPC_ID is required when ENABLE_TELEPHONY_GATEWAY=true."
             exit 1
           fi
 
@@ -357,8 +357,8 @@ jobs:
             echo "::error::REPOSITORY_URL is missing or empty. Add it under Settings → Secrets and variables → Actions → Variables."
             exit 1
           fi
-          if [ -z "${TELEPHONY_GATEWAY_VPC_ID:-}" ]; then
-            echo "::error::TELEPHONY_GATEWAY_VPC_ID is missing or empty. Add it under Settings → Environments → prod → Variables (e.g. vpc-xxxxxxxx)."
+          if [ "${ENABLE_TELEPHONY_GATEWAY:-false}" = "true" ] && [ -z "${TELEPHONY_GATEWAY_VPC_ID:-}" ]; then
+            echo "::error::TELEPHONY_GATEWAY_VPC_ID is required when ENABLE_TELEPHONY_GATEWAY=true."
             exit 1
           fi
 

@@ -1,11 +1,16 @@
 import { getBotByWabaId } from "../../dynamodb/bot-lookup.repository.js";
 import { getBot, updateBot } from "../../dynamodb/bot.repository.js";
+import {
+  handleAccountUpdateEnforcement,
+} from "../enforcement.js";
 import type { WhatsAppAccountUpdateValue } from "../../../types/index.js";
 
 export async function handleAccountUpdate(params: {
   wabaId: string;
   value: WhatsAppAccountUpdateValue;
 }): Promise<void> {
+  await handleAccountUpdateEnforcement(params);
+
   const lookup = await getBotByWabaId(params.wabaId);
   if (!lookup) return;
 

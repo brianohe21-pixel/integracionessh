@@ -31,6 +31,12 @@ stripe_price_pro        = ""
 stripe_price_enterprise = ""
 frontend_url            = "https://app.yourdomain.com"
 
+enable_telephony_gateway             = false
+telephony_gateway_vpc_id             = "vpc-xxxxxxxx"
+telephony_gateway_public_subnet_ids  = ["subnet-xxxxxxxx", "subnet-yyyyyyyy"]
+telephony_gateway_domain             = ""
+telephony_gateway_certificate_arn    = "arn:aws:acm:us-east-1:123456789012:certificate/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
 enable_monitoring = true
 ops_alert_email   = "brianohe21@gmail.com"
 # ops_alert_emails = ["brianohe21@gmail.com", "oncall@example.com"]

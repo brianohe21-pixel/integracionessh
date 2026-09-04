@@ -170,6 +170,7 @@ resource "aws_iam_role_policy" "scheduler_invoke" {
 }
 
 module "telephony_gateway" {
+  count                 = var.enable_telephony_gateway ? 1 : 0
   source                = "../../modules/telephony-gateway"
   project               = local.project
   environment           = local.environment
@@ -248,7 +249,7 @@ module "lambda" {
   livekit_url                   = var.livekit_url
   livekit_api_key               = var.livekit_api_key
   livekit_api_secret            = var.livekit_api_secret
-  telephony_gateway_ws_url      = module.telephony_gateway.ws_url
+  telephony_gateway_ws_url      = var.enable_telephony_gateway ? module.telephony_gateway[0].ws_url : ""
   ses_from_email                = var.ses_from_email
   admin_notification_emails     = local.ops_alert_emails
   api_public_url                = local.api_public_url

@@ -8,7 +8,9 @@ export type ComplianceAction =
   | "suppressed"
   | "unsuppressed"
   | "law2300_blocked"
-  | "law2300_deferred";
+  | "law2300_deferred"
+  | "whatsapp_enforcement_blocked"
+  | "whatsapp_enforcement_cleared";
 
 export async function writeComplianceLog(params: {
   tenantId: string;

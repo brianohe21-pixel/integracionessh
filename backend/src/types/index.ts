@@ -341,12 +341,37 @@ export interface Bot {
 
 export type WhatsAppChannelStatus = "active" | "pending_registration" | "disconnected";
 
+export type WhatsAppEnforcementSource = "meta_auto" | "platform_admin" | "reseller";
+
+export type WhatsAppOutboundSendKind = "marketing" | "transactional" | "service";
+
+export interface WhatsAppQualitySnapshot {
+  qualityRating: "GREEN" | "YELLOW" | "RED" | "NA";
+  phoneStatus: string;
+  risk: "ok" | "warn" | "block";
+  source: "webhook" | "poll" | "manual";
+  updatedAt: string;
+  rawEvent?: string;
+}
+
+export interface WhatsAppMessagingEnforcement {
+  blocked: boolean;
+  reason?: string;
+  event?: string;
+  source?: WhatsAppEnforcementSource;
+  blockedAt?: string;
+  blockedBy?: string;
+  clearedAt?: string;
+  clearedBy?: string;
+}
+
 export interface WhatsAppAccount {
   accountId: string;
   tenantId: string;
   wabaId: string;
   label?: string;
   status: "active" | "inactive";
+  messagingEnforcement?: WhatsAppMessagingEnforcement;
   createdAt: string;
   updatedAt: string;
 }
@@ -368,6 +393,8 @@ export interface WhatsAppChannel {
   whatsappSyncStatus?: WhatsAppSyncStatus;
   whatsappDisconnectedAt?: string;
   whatsappDisconnectionReason?: string;
+  qualitySnapshot?: WhatsAppQualitySnapshot;
+  messagingEnforcement?: WhatsAppMessagingEnforcement;
   createdAt: string;
   updatedAt: string;
 }
@@ -1020,6 +1047,9 @@ export interface WhatsAppAccountUpdateValue {
   event?: string;
   waba_info?: { waba_id?: string; owner_business_id?: string };
   disconnection_info?: { reason?: string; initiated_by?: string };
+  violation_info?: { violation_type?: string };
+  restriction_info?: Array<{ restriction_type?: string; expiration?: number }>;
+  ban_info?: { waba_ban_state?: string; waba_ban_date?: string };
 }
 
 export type WhatsAppSyncQueueJobType =
@@ -1027,7 +1057,9 @@ export type WhatsAppSyncQueueJobType =
   | "history_chunk"
   | "echo_batch"
   | "contact_batch"
-  | "account_update";
+  | "account_update"
+  | "phone_quality_update"
+  | "account_alert";
 
 export interface WhatsAppSyncQueueMessage {
   jobType: WhatsAppSyncQueueJobType;
@@ -1977,6 +2009,8 @@ export interface CampaignSQSBody {
   batchVersion?: number;
   batchIndex?: number;
   requestDlr?: boolean;
+  requireOptIn?: boolean;
+  outboundKind?: WhatsAppOutboundSendKind;
 }
 
 export type BulkSendJobStatus = "queued" | "processing" | "completed" | "failed";
@@ -2009,6 +2043,8 @@ export interface BulkSendSQSBody {
     type: string;
     parameters?: Array<{ type: string; text?: string; image?: { link: string } }>;
   }>;
+  requireOptIn?: boolean;
+  outboundKind?: WhatsAppOutboundSendKind;
 }
 
 export interface BotUsageMetrics {

@@ -165,6 +165,8 @@ export async function updateWhatsAppChannel(
       | "whatsappSyncStatus"
       | "whatsappDisconnectedAt"
       | "whatsappDisconnectionReason"
+      | "qualitySnapshot"
+      | "messagingEnforcement"
     >
   >
 ): Promise<WhatsAppChannel | null> {

@@ -248,12 +248,35 @@ export interface BillingUsageResponse {
 
 export type WhatsAppChannelStatus = "active" | "pending_registration" | "disconnected";
 
+export type WhatsAppEnforcementSource = "meta_auto" | "platform_admin" | "reseller";
+
+export interface WhatsAppQualitySnapshot {
+  qualityRating: WhatsAppQualityRating;
+  phoneStatus: string;
+  risk: "ok" | "warn" | "block";
+  source: "webhook" | "poll" | "manual";
+  updatedAt: string;
+  rawEvent?: string;
+}
+
+export interface WhatsAppMessagingEnforcement {
+  blocked: boolean;
+  reason?: string;
+  event?: string;
+  source?: WhatsAppEnforcementSource;
+  blockedAt?: string;
+  blockedBy?: string;
+  clearedAt?: string;
+  clearedBy?: string;
+}
+
 export interface WhatsAppAccount {
   accountId: string;
   tenantId: string;
   wabaId: string;
   label?: string;
   status: "active" | "inactive";
+  messagingEnforcement?: WhatsAppMessagingEnforcement;
   createdAt: string;
   updatedAt: string;
 }
@@ -275,6 +298,8 @@ export interface WhatsAppChannel {
   whatsappSyncStatus?: WhatsAppSyncStatus;
   whatsappDisconnectedAt?: string;
   whatsappDisconnectionReason?: string;
+  qualitySnapshot?: WhatsAppQualitySnapshot;
+  messagingEnforcement?: WhatsAppMessagingEnforcement;
   createdAt: string;
   updatedAt: string;
 }

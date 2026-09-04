@@ -7,6 +7,7 @@ import { assertCanSendMessages } from "../../lib/billing/assert-plan.js";
 import { incrementMessages } from "../../lib/dynamodb/usage.repository.js";
 import { checkMarketingRecipients } from "../../lib/compliance/recipient-policy.js";
 import { sendTextMessage, sendTemplateMessage, getWhatsAppAccessToken } from "../../lib/whatsapp/client.js";
+import { assertWhatsAppOutboundAllowed } from "../../lib/whatsapp/outbound-guard.js";
 import { getBotLocale, resolveLocalizedText, templateLanguageForLocale } from "../../lib/i18n/index.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
@@ -56,12 +57,19 @@ async function processRecord(record: SQSRecord): Promise<void> {
   if (phones.length === 0) return;
 
   const { allowed } = await checkMarketingRecipients(tenantId, phones);
-  const recipients = allowed.length > 0 ? allowed : phones;
+  if (allowed.length === 0) return;
 
   const locale = getBotLocale({}, bot);
 
-  for (const to of recipients) {
+  for (const to of allowed) {
     try {
+      await assertWhatsAppOutboundAllowed({
+        tenantId,
+        phoneNumberId: bot.phoneNumberId,
+        kind: "marketing",
+        to,
+        requireOptIn: true,
+      });
       if (rule.action === "send_text" && rule.messageText) {
         const text = resolveLocalizedText(rule.messageText, locale);
         if (!text) continue;

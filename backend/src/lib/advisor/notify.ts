@@ -2,6 +2,7 @@ import { channelLabel } from "../process-inbound/parse.js";
 import { getAdvisor } from "../dynamodb/advisor.repository.js";
 import { updateConversation } from "../dynamodb/conversation.repository.js";
 import { sendTextMessage, truncateWhatsAppText } from "../whatsapp/client.js";
+import { assertWhatsAppOutboundAllowed } from "../whatsapp/outbound-guard.js";
 import { buildWaMeLink } from "./wa-link.js";
 import type { Conversation } from "../../types/index.js";
 
@@ -69,6 +70,12 @@ export async function notifyAdvisorOfConversation(params: {
     return;
   }
 
+  await assertWhatsAppOutboundAllowed({
+    tenantId: params.tenantId,
+    phoneNumberId: params.phoneNumberId,
+    kind: "service",
+    to: advisor.phoneNumber.replace(/\D/g, ""),
+  });
   await sendTextMessage({
     phoneNumberId: params.phoneNumberId,
     to: advisor.phoneNumber.replace(/\D/g, ""),

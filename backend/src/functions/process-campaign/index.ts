@@ -22,6 +22,7 @@ import {
 } from "../../lib/dynamodb/campaign-send-attempt.repository.js";
 import { getContactByPhone } from "../../lib/dynamodb/contact.repository.js";
 import { sendTemplateMessage, getWhatsAppAccessToken } from "../../lib/whatsapp/client.js";
+import { assertWhatsAppOutboundAllowed } from "../../lib/whatsapp/outbound-guard.js";
 import { applyCoexistenceSendThrottle } from "../../lib/whatsapp/coexistence/throughput.js";
 import { sendSmsFromTemplate } from "../../lib/sms/send-outbound.js";
 import type { CampaignSQSBody } from "../../types/index.js";
@@ -154,7 +155,7 @@ async function processRecipient(body: CampaignSQSBody, sqsMessageId: string): Pr
     return;
   }
 
-  if (campaign.requireOptIn) {
+  if (body.requireOptIn ?? campaign.requireOptIn ?? true) {
     const contact = await getContactByPhone(tenantId, normalizedTo);
     if (
       !contact ||
@@ -267,6 +268,13 @@ async function processRecipient(body: CampaignSQSBody, sqsMessageId: string): Pr
     } else {
       await applyCoexistenceSendThrottle(bot.whatsappOnboardingMode);
       const accessToken = await getWhatsAppAccessToken(tenantId, ENVIRONMENT);
+      await assertWhatsAppOutboundAllowed({
+        tenantId,
+        phoneNumberId: bot.phoneNumberId,
+        kind: body.outboundKind ?? "marketing",
+        to: normalizedTo,
+        requireOptIn: body.requireOptIn ?? campaign.requireOptIn ?? true,
+      });
       const result = await sendTemplateMessage({
         phoneNumberId: bot.phoneNumberId,
         to,

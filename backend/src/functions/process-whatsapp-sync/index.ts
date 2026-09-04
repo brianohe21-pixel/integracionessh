@@ -4,6 +4,10 @@ import { getBotByPhoneNumberId } from "../../lib/dynamodb/bot.repository.js";
 import { updateBot } from "../../lib/dynamodb/bot.repository.js";
 import { handleAccountUpdate } from "../../lib/whatsapp/coexistence/account-update.js";
 import {
+  handleAccountAlert,
+  handlePhoneNumberQualityUpdate,
+} from "../../lib/whatsapp/enforcement.js";
+import {
   persistCoexistenceContacts,
   persistCoexistenceEchoes,
   persistHistoryPayload,
@@ -50,6 +54,22 @@ async function processMessage(message: WhatsAppSyncQueueMessage): Promise<void> 
     const wabaId = message.payload.wabaId as string;
     const value = message.payload.value as WhatsAppAccountUpdateValue;
     await handleAccountUpdate({ wabaId, value });
+    return;
+  }
+
+  if (message.jobType === "phone_quality_update" && message.phoneNumberId && message.payload) {
+    await handlePhoneNumberQualityUpdate({
+      phoneNumberId: message.phoneNumberId,
+      value: message.payload.value as Record<string, unknown>,
+    });
+    return;
+  }
+
+  if (message.jobType === "account_alert" && message.payload) {
+    await handleAccountAlert({
+      wabaId: message.payload.wabaId as string,
+      value: message.payload.value as Record<string, unknown>,
+    });
     return;
   }
 

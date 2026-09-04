@@ -53,7 +53,7 @@ const CreateBulkSendSchema = z.object({
   templateName: z.string().min(1),
   language: z.string().min(2).max(10),
   recipients: z.array(RecipientSchema).min(1).max(MAX_RECIPIENTS),
-  requireOptIn: z.boolean().optional().default(false),
+  requireOptIn: z.boolean().optional().default(true),
 });
 
 async function enqueueRecipients(
@@ -63,7 +63,8 @@ async function enqueueRecipients(
   channel: "whatsapp" | "sms",
   templateName: string,
   language: string,
-  recipients: z.infer<typeof CreateBulkSendSchema>["recipients"]
+  recipients: z.infer<typeof CreateBulkSendSchema>["recipients"],
+  requireOptIn: boolean
 ): Promise<void> {
   const batches: typeof recipients[] = [];
   for (let i = 0; i < recipients.length; i += SQS_BATCH_SIZE) {
@@ -84,6 +85,8 @@ async function enqueueRecipients(
             templateName,
             language,
             to: normalizePhoneWithCountryCode(recipient.to),
+            requireOptIn,
+            outboundKind: "marketing",
           };
           if (recipient.components?.length) {
             body.components = recipient.components as NonNullable<BulkSendSQSBody["components"]>;
@@ -207,7 +210,8 @@ export async function handler(
         channel,
         templateName,
         language,
-        filteredRecipients
+        filteredRecipients,
+        requireOptIn
       );
 
       await updateBulkJobStatus(auth.tenantId, newJobId, "processing");

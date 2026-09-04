@@ -24,6 +24,7 @@ import {
   getWhatsAppAccessToken,
 } from "../../lib/whatsapp/client.js";
 import type { SendTemplateOptions } from "../../lib/whatsapp/client.js";
+import { assertWhatsAppOutboundAllowed } from "../../lib/whatsapp/outbound-guard.js";
 import { resolveRequestAuth, assertMemberRole } from "../../lib/auth/cognito.js";
 import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import {
@@ -318,6 +319,14 @@ export async function handler(
       }
 
       const { bot, accessToken } = await loadBotAndToken(auth.tenantId, botId);
+
+      await assertWhatsAppOutboundAllowed({
+        tenantId: auth.tenantId,
+        phoneNumberId: bot.phoneNumberId,
+        kind: "marketing",
+        to,
+        requireOptIn: true,
+      });
 
       const result = await sendTemplateMessage({
         phoneNumberId: bot.phoneNumberId,

@@ -24,8 +24,10 @@ import {
   updateWhatsAppChannel,
 } from "../../lib/dynamodb/whatsapp-channel.repository.js";
 import { listBots } from "../../lib/dynamodb/bot.repository.js";
-import { ok, badRequest, notFound, noContent } from "../../lib/http.js";
+import { ok, badRequest, notFound, noContent, forbidden } from "../../lib/http.js";
 import { handleIntegrationError } from "../../lib/integration-errors.js";
+import { clearMetaEnforcement } from "../../lib/whatsapp/enforcement.js";
+import { assertWhatsAppOutboundAllowed } from "../../lib/whatsapp/outbound-guard.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 const META_APP_ID = process.env.META_APP_ID ?? "";
@@ -225,6 +227,29 @@ async function handleRegisterChannel(
   });
 
   return ok({ registered: result.success, channelId });
+}
+
+async function handleClearEnforcement(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer,
+  botId: string,
+  channelId: string
+): Promise<APIGatewayProxyResultV2> {
+  const auth = await resolveRequestAuth(event);
+  if (auth.role !== "admin") {
+    return forbidden("Only platform admins can clear Meta enforcement blocks");
+  }
+  await assertBotAccess(auth.tenantId, botId);
+
+  const channel = await clearMetaEnforcement({
+    tenantId: auth.tenantId,
+    botId,
+    channelId,
+    clearedBy: auth.userId,
+    environment: ENVIRONMENT,
+  });
+
+  if (!channel) return notFound("Channel not found");
+  return ok({ channel });
 }
 
 async function handleUpdateChannel(
@@ -506,6 +531,13 @@ async function handleTestSend(
   const templateName = parsed.data.templateName;
   const language = parsed.data.language;
 
+  await assertWhatsAppOutboundAllowed({
+    tenantId: auth.tenantId,
+    phoneNumberId,
+    kind: "transactional",
+    to,
+  });
+
   const result = await sendTemplateMessage({
     phoneNumberId,
     to,
@@ -600,6 +632,9 @@ export async function handler(
         const effectiveChannelId =
           channelId && channelId !== "test-send" ? channelId : null;
         return await handleTestSend(event, botId, effectiveChannelId);
+      }
+      if (method === "POST" && channelId && path.endsWith("/clear-enforcement")) {
+        return await handleClearEnforcement(event, botId, channelId);
       }
       if (method === "POST" && channelId && path.endsWith("/register")) {
         return await handleRegisterChannel(event, botId, channelId);

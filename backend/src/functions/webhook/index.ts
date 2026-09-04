@@ -223,12 +223,35 @@ async function handleCoexistenceChange(
   const metadata = value.metadata as
     | { phone_number_id?: string; display_phone_number?: string }
     | undefined;
-  const phoneNumberId = metadata?.phone_number_id;
+  const phoneNumberId =
+    metadata?.phone_number_id ?? (value.phone_number_id as string | undefined);
 
   if (change.field === "account_update") {
     await enqueueWhatsAppSync(WHATSAPP_SYNC_QUEUE_URL, {
       jobType: "account_update",
       dedupeKey: `account-update-${wabaId}-${Date.now()}`,
+      payload: {
+        wabaId,
+        value,
+      },
+    });
+    return;
+  }
+
+  if (change.field === "phone_number_quality_update" && phoneNumberId) {
+    await enqueueWhatsAppSync(WHATSAPP_SYNC_QUEUE_URL, {
+      jobType: "phone_quality_update",
+      phoneNumberId,
+      dedupeKey: `phone-quality-${phoneNumberId}-${Date.now()}`,
+      payload: { value },
+    });
+    return;
+  }
+
+  if (change.field === "account_alerts") {
+    await enqueueWhatsAppSync(WHATSAPP_SYNC_QUEUE_URL, {
+      jobType: "account_alert",
+      dedupeKey: `account-alert-${wabaId}-${Date.now()}`,
       payload: {
         wabaId,
         value,
@@ -317,7 +340,9 @@ async function handleWhatsAppWebhook(payload: WhatsAppWebhookEvent): Promise<voi
         change.field === "history" ||
         change.field === "smb_app_state_sync" ||
         change.field === "smb_message_echoes" ||
-        change.field === "account_update"
+        change.field === "account_update" ||
+        change.field === "phone_number_quality_update" ||
+        change.field === "account_alerts"
       ) {
         sqsPromises.push(handleCoexistenceChange(entry.id, change));
         continue;

@@ -8,6 +8,8 @@ import {
   saveMessageTracking,
 } from "../../lib/dynamodb/bulk-job.repository.js";
 import { sendTemplateMessage, getWhatsAppAccessToken } from "../../lib/whatsapp/client.js";
+import { assertWhatsAppOutboundAllowed } from "../../lib/whatsapp/outbound-guard.js";
+import { getContactByPhone } from "../../lib/dynamodb/contact.repository.js";
 import { applyCoexistenceSendThrottle } from "../../lib/whatsapp/coexistence/throughput.js";
 import { sendSmsFromTemplate } from "../../lib/sms/send-outbound.js";
 import type { BulkSendSQSBody } from "../../types/index.js";
@@ -33,7 +35,7 @@ async function processRecord(record: SQSRecord): Promise<void> {
     return;
   }
 
-  const { jobId, tenantId, botId, templateName, language, to, components, channel = "whatsapp" } = body;
+  const { jobId, tenantId, botId, templateName, language, to, components, channel = "whatsapp", requireOptIn = true, outboundKind = "marketing" } = body;
 
   const law2300 = await evaluateLaw2300ForTenant(tenantId);
   if (!law2300.allowed) {
@@ -87,8 +89,32 @@ async function processRecord(record: SQSRecord): Promise<void> {
       return;
     }
 
+    if (requireOptIn) {
+      const normalizedTo = to.replace(/\D/g, "");
+      const contact = await getContactByPhone(tenantId, normalizedTo);
+      if (
+        !contact ||
+        contact.suppressed ||
+        contact.marketingConsent !== "opt_in"
+      ) {
+        await recordBulkSendFailure(tenantId, jobId, "compliance", {
+          to,
+          errorMessage: "Recipient not eligible for marketing",
+        });
+        await incrementBulkJobProgress(tenantId, jobId, "failed");
+        return;
+      }
+    }
+
     await applyCoexistenceSendThrottle(bot.whatsappOnboardingMode);
     const accessToken = await getWhatsAppAccessToken(tenantId, ENVIRONMENT);
+    await assertWhatsAppOutboundAllowed({
+      tenantId,
+      phoneNumberId: bot.phoneNumberId,
+      kind: outboundKind,
+      to,
+      requireOptIn,
+    });
     const result = await sendTemplateMessage({
       phoneNumberId: bot.phoneNumberId,
       to,

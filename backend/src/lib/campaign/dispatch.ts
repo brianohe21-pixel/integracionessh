@@ -38,7 +38,7 @@ async function filterPendingForMarketing(
 export async function enqueueRecipients(
   campaign: Pick<
     Campaign,
-    "campaignId" | "tenantId" | "botId" | "templateName" | "language" | "channel" | "requestDlr"
+    "campaignId" | "tenantId" | "botId" | "templateName" | "language" | "channel" | "requestDlr" | "requireOptIn"
   >,
   recipients: RepoPendingRecipient[],
   options?: EnqueueBatchOptions
@@ -51,6 +51,7 @@ export async function enqueueRecipients(
     language,
     channel = "whatsapp",
     requestDlr,
+    requireOptIn = true,
   } = campaign;
   const BATCH_SIZE = SQS_BATCH_SIZE;
   let entryIndex = 0;
@@ -76,6 +77,8 @@ export async function enqueueRecipients(
       ...(options?.batchVersion !== undefined ? { batchVersion: options.batchVersion } : {}),
       ...(options?.batchIndex !== undefined ? { batchIndex: options.batchIndex } : {}),
       ...(requestDlr ? { requestDlr: true } : {}),
+      requireOptIn,
+      outboundKind: "marketing",
     };
     if (recipient.components?.length) {
       body.components = recipient.components as NonNullable<CampaignSQSBody["components"]>;
@@ -159,7 +162,7 @@ export async function dispatchCampaignBatch(
   const eligible = await filterPendingForMarketing(
     tenantId,
     pending,
-    campaign.requireOptIn ?? false,
+    campaign.requireOptIn ?? true,
     actorUserId
   );
 

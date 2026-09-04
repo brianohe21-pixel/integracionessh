@@ -26,6 +26,7 @@ permissions:
 
 jobs:
   deploy:
+    if: vars.ENABLE_TELEPHONY_GATEWAY == 'true'
     name: Build, push and deploy (${{ github.event_name == 'workflow_dispatch' && inputs.environment || (github.ref == 'refs/heads/main' && 'prod' || 'dev') }})
     runs-on: ubuntu-latest
     environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || (github.ref == 'refs/heads/main' && 'prod' || 'dev') }}
