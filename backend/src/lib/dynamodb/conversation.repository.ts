@@ -8,7 +8,7 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 import { docClient, TABLE_NAME } from "./client.js";
 import { listBots } from "./bot.repository.js";
-import type { Conversation, HandoffMode, Message, WorkflowStatus, Channel, InteractionCategory } from "../../types/index.js";
+import type { Conversation, HandoffMode, Message, MessageReaction, WorkflowStatus, Channel, InteractionCategory } from "../../types/index.js";
 import {
   conversationLookupGsi1pk,
   whatsappConversationLookupGsi1pk,
@@ -698,6 +698,110 @@ export async function getConversationMessages(
     .reverse();
 
   return dedupeMessagesById(chronological);
+}
+
+function messageMatchesExternalId(message: Message, externalId: string): boolean {
+  return (
+    message.messageId === externalId ||
+    message.whatsappMessageId === externalId ||
+    message.externalMessageId === externalId
+  );
+}
+
+async function findMessageRecordByExternalId(
+  tenantId: string,
+  conversationId: string,
+  externalId: string
+): Promise<{ message: Message; pk: string; sk: string } | null> {
+  let lastKey: Record<string, unknown> | undefined;
+
+  do {
+    const result = await docClient.send(
+      new QueryCommand({
+        TableName: TABLE_NAME,
+        KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+        ExpressionAttributeValues: {
+          ":pk": `TENANT#${tenantId}#CONV#${conversationId}`,
+          ":sk": "MSG#",
+        },
+        ScanIndexForward: false,
+        ...(lastKey ? { ExclusiveStartKey: lastKey } : {}),
+        Limit: 100,
+      })
+    );
+
+    for (const item of result.Items ?? []) {
+      const { PK, SK, GSI1PK, GSI1SK, ttl, ...rest } = item;
+      const message = rest as Message;
+      if (messageMatchesExternalId(message, externalId)) {
+        return {
+          message,
+          pk: String(PK),
+          sk: String(SK),
+        };
+      }
+    }
+
+    lastKey = result.LastEvaluatedKey;
+  } while (lastKey);
+
+  return null;
+}
+
+function mergeMessageReaction(
+  existing: MessageReaction[] | undefined,
+  reaction: MessageReaction
+): MessageReaction[] {
+  const withoutUser = (existing ?? []).filter((item) => item.userId !== reaction.userId);
+  if (!reaction.emoji) return withoutUser;
+  return [...withoutUser, reaction];
+}
+
+export async function upsertMessageReaction(params: {
+  tenantId: string;
+  botId: string;
+  conversationId: string;
+  targetExternalMessageId: string;
+  reaction: MessageReaction;
+  publishRealtime?: boolean;
+}): Promise<Message | null> {
+  const record = await findMessageRecordByExternalId(
+    params.tenantId,
+    params.conversationId,
+    params.targetExternalMessageId
+  );
+  if (!record) return null;
+
+  const reactions = mergeMessageReaction(record.message.reactions, params.reaction);
+
+  await docClient.send(
+    new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: {
+        PK: record.pk,
+        SK: record.sk,
+      },
+      UpdateExpression: "SET reactions = :reactions",
+      ExpressionAttributeValues: {
+        ":reactions": reactions,
+      },
+    })
+  );
+
+  const updatedMessage: Message = {
+    ...record.message,
+    reactions,
+  };
+
+  if (params.publishRealtime !== false) {
+    publishRealtimeEventSafe(params.tenantId, {
+      type: "message.reaction.updated",
+      conversationId: params.conversationId,
+      message: updatedMessage,
+    });
+  }
+
+  return updatedMessage;
 }
 
 export async function getAllConversationMessages(

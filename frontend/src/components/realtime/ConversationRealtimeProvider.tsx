@@ -51,6 +51,18 @@ function appendMessage(
   return [...messages, message];
 }
 
+function updateMessageReactions(
+  messages: Message[] | undefined,
+  message: Message
+): Message[] {
+  if (!messages) return messages ?? [];
+  const index = messages.findIndex((item) => item.messageId === message.messageId);
+  if (index < 0) return messages;
+  const next = [...messages];
+  next[index] = { ...next[index], reactions: message.reactions };
+  return next;
+}
+
 function ConversationRealtimeInner({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const [connected, setConnected] = useState(false);
@@ -98,6 +110,14 @@ function ConversationRealtimeInner({ children }: { children: React.ReactNode }) 
             queryClient.setQueriesData<InfiniteData<ConversationsListResponse>>(
               { queryKey: ["conversations", "list"] },
               (current) => mergeConversationInList(current, parsed.conversation)
+            );
+            return;
+          }
+
+          if (parsed.type === "message.reaction.updated") {
+            queryClient.setQueryData<Message[]>(
+              ["conversation-messages", parsed.conversationId],
+              (current) => updateMessageReactions(current, parsed.message)
             );
             return;
           }

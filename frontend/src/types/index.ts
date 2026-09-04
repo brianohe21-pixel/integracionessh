@@ -1052,6 +1052,13 @@ export interface DocumentMessageMetadata {
   downloadUrl?: string;
 }
 
+export interface MessageReaction {
+  emoji: string;
+  userId: string;
+  role: "user" | "advisor";
+  timestamp: string;
+}
+
 export interface Message {
   messageId: string;
   conversationId: string;
@@ -1066,6 +1073,7 @@ export interface Message {
   whatsappMessageId?: string;
   externalMessageId?: string;
   callId?: string;
+  reactions?: MessageReaction[];
   timestamp: string;
 }
 

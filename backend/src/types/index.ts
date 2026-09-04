@@ -587,6 +587,13 @@ export interface LiveKitCall {
   endedAt?: string;
 }
 
+export interface MessageReaction {
+  emoji: string;
+  userId: string;
+  role: "user" | "advisor";
+  timestamp: string;
+}
+
 export interface Message {
   messageId: string;
   conversationId: string;
@@ -601,6 +608,7 @@ export interface Message {
   whatsappMessageId?: string;
   externalMessageId?: string | undefined;
   callId?: string;
+  reactions?: MessageReaction[];
   timestamp: string;
 }
 
@@ -1551,12 +1559,17 @@ export interface WhatsAppMessage {
     | "document"
     | "location"
     | "interactive"
-    | "order";
+    | "order"
+    | "reaction";
   text?: { body: string };
   image?: { id: string; mime_type: string; caption?: string };
   audio?: { id: string; mime_type: string };
   interactive?: WhatsAppInteractiveReply;
   order?: WhatsAppOrderPayload;
+  reaction?: {
+    message_id: string;
+    emoji: string;
+  };
 }
 
 export interface InboundNormalized {

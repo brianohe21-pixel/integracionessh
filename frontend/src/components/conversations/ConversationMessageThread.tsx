@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { CheckCheck } from "lucide-react";
 import { EmailMessageBubble } from "@/components/conversations/EmailMessageBubble";
 import { AttachmentMessageBubble } from "@/components/conversations/AttachmentMessageBubble";
+import { MessageReactions } from "@/components/conversations/MessageReactions";
 import { ConversationDateDivider } from "@/components/conversations/conversation-ui";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useLocale, useT } from "@/i18n/context";
@@ -49,52 +50,58 @@ function renderMessageBubble(params: {
     <div
       className={cn("flex w-full", isInbound ? "justify-start pr-2 sm:pr-4" : "justify-end pl-2 sm:pl-4")}
     >
-      <div
-        className={cn(
-          "max-w-[min(82%,30rem)] px-3.5 py-2 text-sm leading-snug sm:max-w-[min(76%,34rem)]",
-          isInbound
-            ? "conversations-wa-bubble-in text-primary"
-            : isAdvisor
-              ? "conversations-wa-bubble-out conversations-wa-bubble-advisor"
-              : "conversations-wa-bubble-out text-primary"
-        )}
-      >
-        {channelBadge ? (
-          <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-muted">
-            {channelBadge}
-          </p>
-        ) : null}
-        {conversation.channel === "email" && isInbound && !channelBadge ? (
-          <EmailMessageBubble message={msg} botId={conversation.botId} />
-        ) : msg.channel === "email" && isInbound ? (
-          <EmailMessageBubble message={msg} botId={conversation.botId} />
-        ) : isDocumentMessage(msg) ? (
-          <AttachmentMessageBubble
-            message={msg}
-            conversationId={conversation.conversationId}
-            botId={conversation.botId}
-          />
-        ) : (
-          <p className="emoji-text whitespace-pre-wrap break-words">{msg.content}</p>
-        )}
+      <div className={cn("max-w-[min(82%,30rem)] sm:max-w-[min(76%,34rem)]", isInbound ? "" : "flex flex-col items-end")}>
         <div
           className={cn(
-            "mt-1 flex items-center gap-1",
-            isInbound ? "justify-start" : "justify-end"
+            "px-3.5 py-2 text-sm leading-snug",
+            isInbound
+              ? "conversations-wa-bubble-in text-primary"
+              : isAdvisor
+                ? "conversations-wa-bubble-out conversations-wa-bubble-advisor"
+                : "conversations-wa-bubble-out text-primary"
           )}
         >
-          <p
+          {channelBadge ? (
+            <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-muted">
+              {channelBadge}
+            </p>
+          ) : null}
+          {conversation.channel === "email" && isInbound && !channelBadge ? (
+            <EmailMessageBubble message={msg} botId={conversation.botId} />
+          ) : msg.channel === "email" && isInbound ? (
+            <EmailMessageBubble message={msg} botId={conversation.botId} />
+          ) : isDocumentMessage(msg) ? (
+            <AttachmentMessageBubble
+              message={msg}
+              conversationId={conversation.conversationId}
+              botId={conversation.botId}
+            />
+          ) : (
+            <p className="emoji-text whitespace-pre-wrap break-words">{msg.content}</p>
+          )}
+          <div
             className={cn(
-              "text-[10px] leading-none",
-              isInbound ? "text-muted" : "text-secondary"
+              "mt-1 flex items-center gap-1",
+              isInbound ? "justify-start" : "justify-end"
             )}
           >
-            {formatMessageTime(msg.timestamp)}
-          </p>
-          {isOutbound ? (
-            <CheckCheck className="h-3 w-3 text-accent" aria-hidden />
-          ) : null}
+            <p
+              className={cn(
+                "text-[10px] leading-none",
+                isInbound ? "text-muted" : "text-secondary"
+              )}
+            >
+              {formatMessageTime(msg.timestamp)}
+            </p>
+            {isOutbound ? (
+              <CheckCheck className="h-3 w-3 text-accent" aria-hidden />
+            ) : null}
+          </div>
         </div>
+        <MessageReactions
+          reactions={msg.reactions}
+          align={isInbound ? "left" : "right"}
+        />
       </div>
     </div>
   );
