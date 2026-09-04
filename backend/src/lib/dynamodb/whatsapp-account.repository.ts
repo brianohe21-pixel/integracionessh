@@ -118,7 +118,10 @@ export async function updateWhatsAppAccount(
   tenantId: string,
   accountId: string,
   updates: Partial<
-    Pick<WhatsAppAccount, "label" | "status" | "messagingEnforcement">
+    Pick<
+      WhatsAppAccount,
+      "label" | "status" | "messagingEnforcement" | "metaAppId" | "metaAppOwnerTenantId"
+    >
   >
 ): Promise<WhatsAppAccount | null> {
   const existing = await getWhatsAppAccount(tenantId, accountId);

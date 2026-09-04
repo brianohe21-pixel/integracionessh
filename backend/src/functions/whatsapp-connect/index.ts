@@ -28,11 +28,9 @@ import { ok, badRequest, notFound, noContent, forbidden } from "../../lib/http.j
 import { handleIntegrationError } from "../../lib/integration-errors.js";
 import { clearMetaEnforcement } from "../../lib/whatsapp/enforcement.js";
 import { assertWhatsAppOutboundAllowed } from "../../lib/whatsapp/outbound-guard.js";
+import { resolveWhatsAppConnectCredentials } from "../../lib/whatsapp/resolve-connect-credentials.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
-const META_APP_ID = process.env.META_APP_ID ?? "";
-const META_APP_SECRET = process.env.META_APP_SECRET ?? "";
-const WHATSAPP_APP_SECRET = process.env.WHATSAPP_APP_SECRET ?? "";
 
 const PinSchema = z.string().regex(/^\d{6}$/, "PIN must be exactly 6 digits");
 
@@ -121,14 +119,19 @@ async function handleConnectChannel(
   event: APIGatewayProxyEventV2WithJWTAuthorizer,
   botId: string
 ): Promise<APIGatewayProxyResultV2> {
-  if (!META_APP_ID || !META_APP_SECRET) {
-    return badRequest("WhatsApp embedded signup is not configured on the server");
-  }
-
   const auth = await resolveRequestAuth(event);
   assertMemberRole(auth);
   await assertAssignedServices(auth.tenantId, "bots");
   await assertBotAccess(auth.tenantId, botId);
+
+  let credentials: Awaited<ReturnType<typeof resolveWhatsAppConnectCredentials>>;
+  try {
+    credentials = await resolveWhatsAppConnectCredentials(auth.tenantId, ENVIRONMENT);
+  } catch (error) {
+    return badRequest(
+      (error as Error).message || "WhatsApp embedded signup is not configured on the server"
+    );
+  }
 
   const body = JSON.parse(event.body ?? "{}");
   const parsed = ConnectSchema.safeParse(body);
@@ -141,9 +144,10 @@ async function handleConnectChannel(
       code: parsed.data.code,
       wabaId: parsed.data.wabaId,
       ...(parsed.data.phoneNumberId ? { phoneNumberId: parsed.data.phoneNumberId } : {}),
-      appId: META_APP_ID,
-      appSecret: META_APP_SECRET,
-      platformAppSecret: WHATSAPP_APP_SECRET || META_APP_SECRET,
+      appId: credentials.appId,
+      appSecret: credentials.appSecret,
+      platformAppSecret: credentials.platformAppSecret,
+      metaAppOwnerTenantId: credentials.metaAppOwnerTenantId,
       ...(parsed.data.label ? { label: parsed.data.label } : {}),
     });
 
@@ -165,9 +169,11 @@ async function handleConnectChannel(
     wabaId: parsed.data.wabaId,
     ...(parsed.data.phoneNumberId ? { phoneNumberId: parsed.data.phoneNumberId } : {}),
     ...(parsed.data.pin ? { pin: parsed.data.pin } : {}),
-    appId: META_APP_ID,
-    appSecret: META_APP_SECRET,
-    platformAppSecret: WHATSAPP_APP_SECRET || META_APP_SECRET,
+    appId: credentials.appId,
+    appSecret: credentials.appSecret,
+    platformAppSecret: credentials.platformAppSecret,
+    metaAppId: credentials.appId,
+    metaAppOwnerTenantId: credentials.metaAppOwnerTenantId,
     ...(parsed.data.label ? { label: parsed.data.label } : {}),
   });
 
@@ -187,6 +193,15 @@ async function handleConnectManualChannel(
   await assertAssignedServices(auth.tenantId, "bots");
   await assertBotAccess(auth.tenantId, botId);
 
+  let credentials: Awaited<ReturnType<typeof resolveWhatsAppConnectCredentials>>;
+  try {
+    credentials = await resolveWhatsAppConnectCredentials(auth.tenantId, ENVIRONMENT);
+  } catch (error) {
+    return badRequest(
+      (error as Error).message || "WhatsApp embedded signup is not configured on the server"
+    );
+  }
+
   const body = JSON.parse(event.body ?? "{}");
   const parsed = ConnectManualSchema.safeParse(body);
   if (!parsed.success) return badRequest(parsed.error.message);
@@ -198,7 +213,9 @@ async function handleConnectManualChannel(
     wabaId: parsed.data.wabaId,
     phoneNumberId: parsed.data.phoneNumberId,
     pin: parsed.data.pin,
-    platformAppSecret: WHATSAPP_APP_SECRET || META_APP_SECRET,
+    platformAppSecret: credentials.platformAppSecret,
+    metaAppId: credentials.appId,
+    metaAppOwnerTenantId: credentials.metaAppOwnerTenantId,
     ...(parsed.data.label ? { label: parsed.data.label } : {}),
   });
 
@@ -304,13 +321,19 @@ async function handleDeleteChannel(
 async function handleConnect(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): Promise<APIGatewayProxyResultV2> {
-  if (!META_APP_ID || !META_APP_SECRET) {
-    return badRequest("WhatsApp embedded signup is not configured on the server");
-  }
-
   const auth = await resolveRequestAuth(event);
   assertMemberRole(auth);
   await assertAssignedServices(auth.tenantId, "bots");
+
+  let credentials: Awaited<ReturnType<typeof resolveWhatsAppConnectCredentials>>;
+  try {
+    credentials = await resolveWhatsAppConnectCredentials(auth.tenantId, ENVIRONMENT);
+  } catch (error) {
+    return badRequest(
+      (error as Error).message || "WhatsApp embedded signup is not configured on the server"
+    );
+  }
+
   const body = JSON.parse(event.body ?? "{}");
   const parsed = ConnectSchema.safeParse(body);
 
@@ -325,9 +348,9 @@ async function handleConnect(
       code: parsed.data.code,
       wabaId: parsed.data.wabaId,
       ...(parsed.data.phoneNumberId ? { phoneNumberId: parsed.data.phoneNumberId } : {}),
-      appId: META_APP_ID,
-      appSecret: META_APP_SECRET,
-      platformAppSecret: WHATSAPP_APP_SECRET || META_APP_SECRET,
+      appId: credentials.appId,
+      appSecret: credentials.appSecret,
+      platformAppSecret: credentials.platformAppSecret,
     });
 
     return ok({
@@ -351,9 +374,11 @@ async function handleConnect(
     wabaId: parsed.data.wabaId,
     ...(parsed.data.phoneNumberId ? { phoneNumberId: parsed.data.phoneNumberId } : {}),
     ...(parsed.data.pin ? { pin: parsed.data.pin } : {}),
-    appId: META_APP_ID,
-    appSecret: META_APP_SECRET,
-    platformAppSecret: WHATSAPP_APP_SECRET || META_APP_SECRET,
+    appId: credentials.appId,
+    appSecret: credentials.appSecret,
+    platformAppSecret: credentials.platformAppSecret,
+    metaAppId: credentials.appId,
+    metaAppOwnerTenantId: credentials.metaAppOwnerTenantId,
     ...(parsed.data.label ? { label: parsed.data.label } : {}),
   });
 
@@ -370,13 +395,19 @@ async function handleConnect(
 async function handleConnectCoexistence(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): Promise<APIGatewayProxyResultV2> {
-  if (!META_APP_ID || !META_APP_SECRET) {
-    return badRequest("WhatsApp embedded signup is not configured on the server");
-  }
-
   const auth = await resolveRequestAuth(event);
   assertMemberRole(auth);
   await assertAssignedServices(auth.tenantId, "bots");
+
+  let credentials: Awaited<ReturnType<typeof resolveWhatsAppConnectCredentials>>;
+  try {
+    credentials = await resolveWhatsAppConnectCredentials(auth.tenantId, ENVIRONMENT);
+  } catch (error) {
+    return badRequest(
+      (error as Error).message || "WhatsApp embedded signup is not configured on the server"
+    );
+  }
+
   const body = JSON.parse(event.body ?? "{}");
   const parsed = ConnectCoexistenceSchema.safeParse(body);
 
@@ -390,9 +421,9 @@ async function handleConnectCoexistence(
     code: parsed.data.code,
     wabaId: parsed.data.wabaId,
     ...(parsed.data.phoneNumberId ? { phoneNumberId: parsed.data.phoneNumberId } : {}),
-    appId: META_APP_ID,
-    appSecret: META_APP_SECRET,
-    platformAppSecret: WHATSAPP_APP_SECRET || META_APP_SECRET,
+    appId: credentials.appId,
+    appSecret: credentials.appSecret,
+    platformAppSecret: credentials.platformAppSecret,
   });
 
   return ok({
@@ -411,6 +442,16 @@ async function handleConnectManual(
   const auth = await resolveRequestAuth(event);
   assertMemberRole(auth);
   await assertAssignedServices(auth.tenantId, "bots");
+
+  let credentials: Awaited<ReturnType<typeof resolveWhatsAppConnectCredentials>>;
+  try {
+    credentials = await resolveWhatsAppConnectCredentials(auth.tenantId, ENVIRONMENT);
+  } catch (error) {
+    return badRequest(
+      (error as Error).message || "WhatsApp embedded signup is not configured on the server"
+    );
+  }
+
   const body = JSON.parse(event.body ?? "{}");
   const parsed = ConnectManualSchema.safeParse(body);
 
@@ -429,7 +470,9 @@ async function handleConnectManual(
     wabaId: parsed.data.wabaId,
     phoneNumberId: parsed.data.phoneNumberId,
     pin: parsed.data.pin,
-    platformAppSecret: WHATSAPP_APP_SECRET || META_APP_SECRET,
+    platformAppSecret: credentials.platformAppSecret,
+    metaAppId: credentials.appId,
+    metaAppOwnerTenantId: credentials.metaAppOwnerTenantId,
     ...(parsed.data.label ? { label: parsed.data.label } : {}),
   });
 

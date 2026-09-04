@@ -3018,6 +3018,32 @@ export const es = {
     tabBag: "Bolsa",
     tabBilling: "Facturación",
     tabDomain: "Dominio",
+    tabMetaApp: "Meta App",
+    metaApp: {
+      title: "Usa tu propia Meta App",
+      hint:
+        "Conecta tu app de WhatsApp Cloud API para que las subcuentas usen tu marca y webhook de Meta.",
+      platformFallback:
+        "Las subcuentas usan actualmente la Meta App de la plataforma. Guarda tus credenciales para activar BYOA.",
+      appId: "Meta App ID",
+      appSecret: "Meta App Secret",
+      configId: "Embedded Signup Configuration ID",
+      secretKeep: "Déjalo vacío para conservar el secreto actual",
+      save: "Guardar Meta App",
+      saved: "Configuración de Meta App guardada",
+      saveError: "No se pudo guardar la configuración de Meta App",
+      edit: "Editar configuración",
+      cancel: "Cancelar",
+      remove: "Quitar BYOA",
+      removeTitle: "¿Eliminar configuración de Meta App?",
+      removeConfirm:
+        "Las subcuentas volverán a la Meta App de la plataforma. Los números conectados seguirán funcionando hasta reconectarse.",
+      webhookTitle: "Configuración del webhook",
+      webhookHint:
+        "En Meta for Developers, agrega esta URL de callback y el verify token a tu producto WhatsApp.",
+      webhookUrl: "URL de callback",
+      verifyToken: "Verify token",
+    },
     billingTitle: "Consumo por subcuenta",
     billingHint: "Uso real del mes actual frente a los cupos asignados a cada cliente.",
     billingEmpty: "Crea subcuentas para ver su consumo mensual.",

@@ -73,7 +73,6 @@ var VoicebotWidgetBundle = (() => {
   }
   function loadGoogleAnalytics(measurementId) {
     if (typeof window === "undefined" || !measurementId) return;
-    const loadedKey = "__wbGaLoaded";
     const win = window;
     if (win.__wbGaLoaded === measurementId) return;
     win.__wbGaLoaded = measurementId;

@@ -393,12 +393,26 @@ export interface WhatsAppMessagingEnforcement {
   clearedBy?: string;
 }
 
+export type MetaAppCredentialSource = "own" | "reseller" | "platform" | "none";
+
+export interface MetaAppConfigStatus {
+  configured: boolean;
+  source: MetaAppCredentialSource;
+  ownerTenantId?: string;
+  appId?: string;
+  embeddedSignupConfigId?: string;
+  webhookUrl?: string;
+  webhookVerifyToken?: string;
+}
+
 export interface WhatsAppAccount {
   accountId: string;
   tenantId: string;
   wabaId: string;
   label?: string;
   status: "active" | "inactive";
+  metaAppId?: string;
+  metaAppOwnerTenantId?: string;
   messagingEnforcement?: WhatsAppMessagingEnforcement;
   createdAt: string;
   updatedAt: string;

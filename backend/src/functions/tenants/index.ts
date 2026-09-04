@@ -73,6 +73,7 @@ import { getTenantWhatsAppRiskByBot } from "../../lib/whatsapp/tenant-risk.js";
 import { getLaw2300StatusForTenant } from "../../lib/compliance/law2300-tenant.js";
 import { addCustomDomainToCognitoClient } from "../../lib/cognito/custom-domain-callbacks.js";
 import { handleProviderCredentialRoutes } from "./provider-credentials.routes.js";
+import { handleMetaAppRoutes } from "./meta-app.routes.js";
 import { handleMemberRoutes } from "./members.routes.js";
 import { handleTeamRoutes } from "./teams.routes.js";
 import { handleEmailSettingsRoutes } from "./email-settings.routes.js";
@@ -582,6 +583,9 @@ export async function handler(
       ENVIRONMENT
     );
     if (providerCredentialsResponse) return providerCredentialsResponse;
+
+    const metaAppResponse = await handleMetaAppRoutes(event, method, auth, ENVIRONMENT);
+    if (metaAppResponse) return metaAppResponse;
 
     const memberRoutesResponse = await handleMemberRoutes(event, method, auth);
     if (memberRoutesResponse) return memberRoutesResponse;

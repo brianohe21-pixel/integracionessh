@@ -37,6 +37,8 @@ async function ensureAccount(params: {
   wabaId: string;
   accessToken: string;
   appSecret: string;
+  metaAppId?: string;
+  metaAppOwnerTenantId?: string;
   label?: string;
 }): Promise<string> {
   const existing = await getWhatsAppAccountByWabaId(params.wabaId);
@@ -58,6 +60,8 @@ async function ensureAccount(params: {
     wabaId: params.wabaId,
     status: "active",
     ...(params.label ? { label: params.label } : {}),
+    ...(params.metaAppId ? { metaAppId: params.metaAppId } : {}),
+    ...(params.metaAppOwnerTenantId ? { metaAppOwnerTenantId: params.metaAppOwnerTenantId } : {}),
     createdAt: existing?.createdAt ?? new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   });
@@ -111,6 +115,7 @@ export async function connectWhatsAppChannelEmbedded(params: {
   appId: string;
   appSecret: string;
   platformAppSecret: string;
+  metaAppOwnerTenantId?: string;
   label?: string;
 }): Promise<WhatsAppChannel> {
   const bot = await getBot(params.tenantId, params.botId);
@@ -134,6 +139,8 @@ export async function connectWhatsAppChannelEmbedded(params: {
     wabaId: signup.whatsappBusinessAccountId,
     accessToken,
     appSecret: params.platformAppSecret,
+    metaAppId: params.appId,
+    ...(params.metaAppOwnerTenantId ? { metaAppOwnerTenantId: params.metaAppOwnerTenantId } : {}),
     ...(params.label ? { label: params.label } : {}),
   });
 
@@ -185,6 +192,7 @@ export async function connectWhatsAppChannelCoexistence(params: {
   appId: string;
   appSecret: string;
   platformAppSecret: string;
+  metaAppOwnerTenantId?: string;
   label?: string;
 }): Promise<WhatsAppChannel> {
   const bot = await getBot(params.tenantId, params.botId);
@@ -210,6 +218,8 @@ export async function connectWhatsAppChannelCoexistence(params: {
     wabaId: signup.whatsappBusinessAccountId,
     accessToken,
     appSecret: params.platformAppSecret,
+    metaAppId: params.appId,
+    ...(params.metaAppOwnerTenantId ? { metaAppOwnerTenantId: params.metaAppOwnerTenantId } : {}),
     ...(params.label ? { label: params.label } : {}),
   });
 
@@ -249,6 +259,8 @@ export async function connectWhatsAppChannelManual(params: {
   phoneNumberId: string;
   pin: string;
   platformAppSecret: string;
+  metaAppId?: string;
+  metaAppOwnerTenantId?: string;
   label?: string;
 }): Promise<WhatsAppChannel> {
   const bot = await getBot(params.tenantId, params.botId);
@@ -271,6 +283,8 @@ export async function connectWhatsAppChannelManual(params: {
     wabaId: signup.whatsappBusinessAccountId,
     accessToken: params.accessToken,
     appSecret: params.platformAppSecret,
+    ...(params.metaAppId ? { metaAppId: params.metaAppId } : {}),
+    ...(params.metaAppOwnerTenantId ? { metaAppOwnerTenantId: params.metaAppOwnerTenantId } : {}),
     ...(params.label ? { label: params.label } : {}),
   });
 

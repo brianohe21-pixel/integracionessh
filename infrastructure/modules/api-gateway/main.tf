@@ -328,6 +328,20 @@ locals {
       function_arn = var.webhook_function_arn
       protected    = false
     }
+    webhook_whatsapp_owner_verify = {
+      route_key    = "GET /webhook/whatsapp/{ownerTenantId}"
+      slug         = "webhook"
+      invoke_arn   = var.webhook_invoke_arn
+      function_arn = var.webhook_function_arn
+      protected    = false
+    }
+    webhook_whatsapp_owner_receive = {
+      route_key    = "POST /webhook/whatsapp/{ownerTenantId}"
+      slug         = "webhook"
+      invoke_arn   = var.webhook_invoke_arn
+      function_arn = var.webhook_function_arn
+      protected    = false
+    }
     tenants_list = {
       route_key    = "GET /tenants"
       slug         = "tenants"

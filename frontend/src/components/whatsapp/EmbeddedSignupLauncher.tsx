@@ -5,11 +5,12 @@ import Script from "next/script";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/context";
 import { useWhatsAppConnect } from "@/hooks/useWhatsAppConnect";
+import { useMetaAppConfig } from "@/hooks/useMetaAppConfig";
 import { IntegrationErrorSupport } from "@/components/support/IntegrationErrorSupport";
 import { MessageCircle, Loader2, CheckCircle } from "lucide-react";
 
-const META_APP_ID = process.env.NEXT_PUBLIC_META_APP_ID ?? "";
-const CONFIG_ID = process.env.NEXT_PUBLIC_META_EMBEDDED_SIGNUP_CONFIG_ID ?? "";
+const FALLBACK_META_APP_ID = process.env.NEXT_PUBLIC_META_APP_ID ?? "";
+const FALLBACK_CONFIG_ID = process.env.NEXT_PUBLIC_META_EMBEDDED_SIGNUP_CONFIG_ID ?? "";
 const FB_SDK_VERSION = "v22.0";
 const PIN_LENGTH = 6;
 const SESSION_INFO_GRACE_MS = 5000;
@@ -75,6 +76,7 @@ export function EmbeddedSignupLauncher({
   botId,
 }: EmbeddedSignupLauncherProps) {
   const t = useT();
+  const { data: metaAppConfig, isLoading: metaAppLoading } = useMetaAppConfig();
   const { status, error, connect, connectCoexistence, reset, setStatus } = useWhatsAppConnect(botId);
   const [sdkReady, setSdkReady] = useState(false);
   const [localConnected, setLocalConnected] = useState(alreadyConnected);
@@ -92,9 +94,22 @@ export function EmbeddedSignupLauncher({
   const graceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const completingRef = useRef(false);
 
-  const isConfigured = Boolean(META_APP_ID && CONFIG_ID);
+  const metaAppId = metaAppConfig?.appId?.trim() || FALLBACK_META_APP_ID;
+  const configId = metaAppConfig?.embeddedSignupConfigId?.trim() || FALLBACK_CONFIG_ID;
+  const isConfigured = Boolean(metaAppId && configId);
   const isCoexistence = onboardingMode === "coexistence";
   const pinValid = /^\d{6}$/.test(pin);
+
+  useEffect(() => {
+    if (!metaAppId || !window.FB) return;
+    window.FB.init({
+      appId: metaAppId,
+      cookie: true,
+      xfbml: true,
+      version: FB_SDK_VERSION,
+    });
+    setSdkReady(true);
+  }, [metaAppId]);
 
   const clearGraceTimer = useCallback(() => {
     if (graceTimerRef.current) {
@@ -248,7 +263,7 @@ export function EmbeddedSignupLauncher({
     window.addEventListener("message", handler);
 
     const loginOptions: Record<string, unknown> = {
-      config_id: CONFIG_ID,
+      config_id: configId,
       response_type: "code",
       override_default_response_type: true,
       extras: { setup: {} },
@@ -276,11 +291,19 @@ export function EmbeddedSignupLauncher({
       },
       loginOptions
     );
-  }, [clearGraceTimer, isCoexistence, reset, scheduleGraceRetries, sdkReady, t, tryComplete]);
+  }, [clearGraceTimer, configId, isCoexistence, reset, scheduleGraceRetries, sdkReady, t, tryComplete]);
 
   const isConnecting = status === "connecting";
   const showConnected = localConnected || status === "connected";
   const integrationError = signupError || error;
+
+  if (metaAppLoading) {
+    return (
+      <div className={cn("rounded-lg border border-default bg-surface p-4 animate-pulse", className)}>
+        <div className="h-4 w-40 rounded bg-gray-200" />
+      </div>
+    );
+  }
 
   if (!isConfigured) {
     return (
@@ -297,8 +320,9 @@ export function EmbeddedSignupLauncher({
         strategy="lazyOnload"
         onLoad={() => {
           const initSdk = () => {
+            if (!metaAppId) return;
             window.FB?.init({
-              appId: META_APP_ID,
+              appId: metaAppId,
               cookie: true,
               xfbml: true,
               version: FB_SDK_VERSION,
