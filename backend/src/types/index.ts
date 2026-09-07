@@ -2952,6 +2952,25 @@ export interface FlowEventSubmission {
   updatedAt: string;
 }
 
+export type FlowActivityKind = "run" | "event";
+
+export interface FlowActivitySummary {
+  activityId: string;
+  kind: FlowActivityKind;
+  flowId: string;
+  status: FlowRunStatus | FlowEventStatus;
+  source?: FlowRunSource | "webhook";
+  createdAt: string;
+  updatedAt: string;
+  runId?: string;
+  submissionId?: string;
+  conversationId?: string;
+  customerPhone?: string;
+  stepCount?: number;
+  errorMessage?: string;
+  payloadPreview?: string;
+}
+
 export const HOSTED_FORM_FIELD_TYPES = [
   "text",
   "email",

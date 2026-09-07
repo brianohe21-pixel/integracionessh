@@ -20,6 +20,7 @@ import {
   seedTenantRecord,
   seedUsage,
 } from "../src/lib/demo/seed-expanded.js";
+import { seedDemoFlowActivity } from "../src/lib/demo/seed-flow-activity.js";
 
 export async function seedDemoAccount(options: { reset?: boolean } = {}): Promise<void> {
   assertDemoSeedEnvironment();
@@ -40,6 +41,7 @@ export async function seedDemoAccount(options: { reset?: boolean } = {}): Promis
   await seedTenantRecord(now, credentials.email);
   await seedBots(now);
   await seedFlows(now);
+  await seedDemoFlowActivity();
   await seedContacts(now);
   await seedConversations(now);
   await seedCalls(now);

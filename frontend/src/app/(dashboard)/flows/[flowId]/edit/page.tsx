@@ -14,12 +14,11 @@ import { NodePropertiesModal } from "@/components/flows/NodePropertiesModal";
 import { FlowEditorToolbar } from "@/components/flows/FlowEditorToolbar";
 import { IntegrationErrorSupport } from "@/components/support/IntegrationErrorSupport";
 import { FlowSecretsPanel } from "@/components/flows/FlowSecretsPanel";
-import { FlowRunsPanel } from "@/components/flows/FlowRunsPanel";
+import { FlowActivityTab } from "@/components/flows/FlowActivityTab";
 import { FlowVersionsPanel } from "@/components/flows/FlowVersionsPanel";
 import { FlowPreviewModal } from "@/components/flows/FlowPreviewModal";
 import { resolveFlowBotIdFromNodes } from "@/lib/resolve-flow-bot";
 import { createFlowNode, defaultPalettePosition } from "@/lib/flow-node-factory";
-import { isWebhookReceivingFlow } from "@/lib/flow-webhook";
 import { applyResolvedTriggerType, resolveFlowSamplePayload } from "@/lib/resolve-flow-trigger";
 import {
   flowGraphSnapshotKey,
@@ -31,6 +30,8 @@ const FlowCanvas = dynamic(
   () => import("@/components/flows/FlowCanvas").then((m) => m.FlowCanvas),
   { ssr: false, loading: () => <div className="h-[520px] animate-pulse rounded-xl bg-surface-muted" /> }
 );
+
+type FlowEditorTab = "editor" | "activity";
 
 export default function EditFlowPage() {
   const t = useT();
@@ -71,6 +72,7 @@ export default function EditFlowPage() {
   const [duplicateError, setDuplicateError] = useState("");
   const [savedKey, setSavedKey] = useState("");
   const [publishedKey, setPublishedKey] = useState("");
+  const [activeTab, setActiveTab] = useState<FlowEditorTab>("editor");
   const initializedFlowKeyRef = useRef<string | null>(null);
   const handleSaveRef = useRef<() => Promise<boolean>>(async () => true);
   const handlePublishRef = useRef<() => Promise<void>>(async () => {});
@@ -148,7 +150,6 @@ export default function EditFlowPage() {
 
   const selected = localNodes.find((n) => n.id === selectedNodeId);
   const triggerNode = localNodes.find((n) => n.type === "trigger");
-  const isFormFlow = isWebhookReceivingFlow(localNodes);
   const hasWebhookNode = localNodes.some((node) => node.type === "webhook");
   const isVoiceFlow =
     flow?.flowKind === "voice_ai" || triggerNode?.data.triggerType === "voice_call";
@@ -380,6 +381,34 @@ export default function EditFlowPage() {
         </p>
       )}
 
+      <div className="flex flex-shrink-0 gap-1 overflow-x-auto border-b border-default bg-surface-elevated px-3">
+        {(
+          [
+            { id: "editor" as const, label: t("flows.tabEditor") },
+            { id: "activity" as const, label: t("flows.tabActivity") },
+          ] as const
+        ).map((tabItem) => (
+          <button
+            key={tabItem.id}
+            type="button"
+            onClick={() => setActiveTab(tabItem.id)}
+            className={`border-b-2 px-4 py-2.5 text-sm font-medium transition-colors -mb-px ${
+              activeTab === tabItem.id
+                ? "border-accent text-accent"
+                : "border-transparent text-secondary hover:border-default hover:text-primary"
+            }`}
+          >
+            {tabItem.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "activity" ? (
+        <FlowActivityTab
+          flowId={flow.flowId}
+          nodes={localNodes.length > 0 ? localNodes : flow.nodes}
+        />
+      ) : (
       <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
         <aside
           ref={palettePanel.panelRef}
@@ -422,9 +451,9 @@ export default function EditFlowPage() {
             nodes={localNodes.length > 0 ? localNodes : flow.nodes}
           />
           <FlowVersionsPanel flowId={flow.flowId} onRestored={handleVersionRestored} />
-          <FlowRunsPanel flowId={flow.flowId} isFormFlow={isFormFlow} />
         </aside>
       </div>
+      )}
 
       <NodePropertiesModal
         selected={selected}
