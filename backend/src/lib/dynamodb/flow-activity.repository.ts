@@ -352,8 +352,6 @@ export async function listFlowActivity(
     }
   }
 
-  return {
-    items,
-    ...(encodeCursor(nextState) ? { nextCursor: encodeCursor(nextState) } : {}),
-  };
+  const nextCursor = encodeCursor(nextState);
+  return { items, ...(nextCursor ? { nextCursor } : {}) };
 }
