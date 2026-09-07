@@ -72,6 +72,17 @@ export function buildEmailAttachmentS3Key(
   return `tenants/${tenantId}/bots/${botId}/email/${messageHash}/attachments/${attachmentId}/${safeName}`;
 }
 
+export function buildConversationAttachmentS3Key(
+  tenantId: string,
+  botId: string,
+  conversationId: string,
+  attachmentId: string,
+  filename: string
+): string {
+  const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
+  return `tenants/${tenantId}/bots/${botId}/conversations/${conversationId}/attachments/${attachmentId}/${safeName}`;
+}
+
 export async function putObjectBuffer(
   s3Key: string,
   buffer: Uint8Array,

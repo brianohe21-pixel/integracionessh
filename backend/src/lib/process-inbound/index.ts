@@ -11,6 +11,7 @@ import {
   addMessage,
   clearMetaFlowSession,
   updateConversation,
+  upsertMessageReaction,
 } from "../dynamodb/conversation.repository.js";
 import { generateChatResponse, getOpenAIApiKey } from "../openai/client.js";
 import { callCustomWebhook } from "../webhook/client.js";
@@ -50,6 +51,7 @@ import {
   assertPayloadMatchesChannel,
   externalMessageIdFromBody,
 } from "./parse.js";
+import { extractInboundReaction, isReactionInboundMessage } from "../whatsapp/inbound.js";
 import {
   handleInboundOrder,
   isOrderInbound,
@@ -212,6 +214,39 @@ export async function processInboundMessage(
     channel === "whatsapp"
       ? (body.payload as import("../../types/index.js").WhatsAppInboundPayload)
       : undefined;
+
+  if (channel === "whatsapp" && whatsappPayload && isReactionInboundMessage(whatsappPayload.message)) {
+    const reactionData = extractInboundReaction(whatsappPayload.message);
+    if (!reactionData) return;
+
+    const conversation = await getOrCreateConversation(
+      tenantId,
+      botId,
+      channel,
+      participantId,
+      displayName,
+      {
+        ...(whatsappPayload.whatsappChannelId
+          ? { channelId: whatsappPayload.whatsappChannelId }
+          : {}),
+        businessPhoneNumberId: whatsappPayload.phoneNumberId,
+      }
+    );
+
+    await upsertMessageReaction({
+      tenantId,
+      botId,
+      conversationId: conversation.conversationId,
+      targetExternalMessageId: reactionData.targetMessageId,
+      reaction: {
+        emoji: reactionData.emoji,
+        userId: participantId,
+        role: "user",
+        timestamp: new Date().toISOString(),
+      },
+    });
+    return;
+  }
 
   const accessToken = await resolveAccessToken(
     tenantId,
@@ -750,17 +785,17 @@ export async function processInboundMessage(
   const aiMessageId = `ai-${Date.now()}-${randomUUID().slice(0, 8)}`;
   const aiTimestamp = new Date().toISOString();
 
-  const assistantMessage: Message = {
-    messageId: aiMessageId,
-    conversationId: conversation.conversationId,
-    tenantId,
-    role: "assistant",
-    content: outboundText,
-    channel,
-    timestamp: aiTimestamp,
-  };
-
   if (channel === "webchat") {
+    const assistantMessage: Message = {
+      messageId: aiMessageId,
+      conversationId: conversation.conversationId,
+      tenantId,
+      role: "assistant",
+      content: outboundText,
+      channel,
+      timestamp: aiTimestamp,
+    };
+    await addMessage(assistantMessage, botId);
     await sendChannelText(
       buildOutboundContext({
         tenantId,
@@ -773,8 +808,24 @@ export async function processInboundMessage(
       outboundText
     );
   } else {
+    const sendResult = await sendChannelText(outboundCtxBase(), outboundText);
+    const externalMessageId = sendResult.externalMessageId;
+    const assistantMessage: Message = {
+      messageId: externalMessageId ?? aiMessageId,
+      conversationId: conversation.conversationId,
+      tenantId,
+      role: "assistant",
+      content: outboundText,
+      channel,
+      timestamp: aiTimestamp,
+      ...(externalMessageId
+        ? {
+            externalMessageId,
+            ...(channel === "whatsapp" ? { whatsappMessageId: externalMessageId } : {}),
+          }
+        : {}),
+    };
     await addMessage(assistantMessage, botId);
-    await sendChannelText(outboundCtxBase(), outboundText);
   }
 
   await incrementMessages(tenantId);

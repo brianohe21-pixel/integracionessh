@@ -6,12 +6,18 @@ export function isDocumentMessageMetadata(
   return Boolean(
     metadata &&
       typeof metadata === "object" &&
-      metadata.kind === "document" &&
+      (metadata.kind === "document" || metadata.kind === "image") &&
       typeof metadata.filename === "string"
   );
 }
 
+export function isImageAttachmentMessage(message: Message): boolean {
+  if (message.messageType === "image") return true;
+  return isDocumentMessageMetadata(message.metadata) && message.metadata.kind === "image";
+}
+
 export function isDocumentMessage(message: Message): boolean {
+  if (isImageAttachmentMessage(message)) return true;
   if (message.messageType === "document" && isDocumentMessageMetadata(message.metadata)) {
     return true;
   }

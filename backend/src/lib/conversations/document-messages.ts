@@ -10,7 +10,10 @@ export function isDocumentMessageMetadata(
 ): metadata is DocumentMessageMetadata {
   if (!metadata || typeof metadata !== "object") return false;
   const value = metadata as Record<string, unknown>;
-  return value.kind === "document" && typeof value.s3Key === "string";
+  return (
+    (value.kind === "document" || value.kind === "image") &&
+    typeof value.s3Key === "string"
+  );
 }
 
 export function parseLegacyDocumentFilename(content: string): string | null {
@@ -92,9 +95,11 @@ export async function enrichConversationMessages(
   return Promise.all(
     messages.map(async (message) => {
       if (isDocumentMessageMetadata(message.metadata)) {
+        const messageType =
+          message.metadata.kind === "image" ? "image" : "document";
         return {
           ...message,
-          messageType: "document",
+          messageType,
           metadata: (await presignDocumentMetadata(
             message.metadata
           )) as unknown as Record<string, unknown>,

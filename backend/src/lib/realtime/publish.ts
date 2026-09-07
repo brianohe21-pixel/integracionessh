@@ -58,13 +58,18 @@ export async function publishRealtimeEvent(
   const client = getManagementClient();
   if (!client) return;
 
-  const conversation =
-    event.type === "message.created" ? event.conversation : event.conversation;
-
   const connections = await listRealtimeConnections(tenantId);
-  const targets = connections.filter((connection) =>
-    shouldDeliverToConnection(connection, conversation)
-  );
+  let targets = connections;
+
+  if (
+    event.type === "message.created" ||
+    event.type === "conversation.updated" ||
+    event.type === "conversation.handoff"
+  ) {
+    targets = connections.filter((connection) =>
+      shouldDeliverToConnection(connection, event.conversation)
+    );
+  }
 
   if (targets.length === 0) return;
 

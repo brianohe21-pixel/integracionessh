@@ -10,7 +10,12 @@ function formatFlowResponseJson(responseJson: string): string {
   }
 }
 
+export function isReactionInboundMessage(message: WhatsAppMessage): boolean {
+  return message.type === "reaction" && !!message.reaction?.message_id;
+}
+
 export function isProcessableInboundMessage(message: WhatsAppMessage): boolean {
+  if (isReactionInboundMessage(message)) return true;
   if (message.type === "text" && message.text?.body) return true;
   if (message.type === "order" && message.order?.product_items?.length) return true;
   if (message.type === "interactive" && message.interactive) {
@@ -18,6 +23,16 @@ export function isProcessableInboundMessage(message: WhatsAppMessage): boolean {
     return t === "button_reply" || t === "list_reply" || t === "nfm_reply";
   }
   return false;
+}
+
+export function extractInboundReaction(
+  message: WhatsAppMessage
+): { targetMessageId: string; emoji: string } | null {
+  if (!isReactionInboundMessage(message) || !message.reaction) return null;
+  return {
+    targetMessageId: message.reaction.message_id,
+    emoji: message.reaction.emoji ?? "",
+  };
 }
 
 export function normalizeInboundMessage(message: WhatsAppMessage): InboundNormalized {

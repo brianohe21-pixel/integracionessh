@@ -144,6 +144,12 @@ resource "aws_cognito_user_pool" "main" {
     allow_admin_create_user_only = false
   }
 
+  mfa_configuration = "OPTIONAL"
+
+  software_token_mfa_configuration {
+    enabled = true
+  }
+
   email_configuration {
     email_sending_account = "COGNITO_DEFAULT"
   }

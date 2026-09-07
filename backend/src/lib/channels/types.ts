@@ -39,11 +39,19 @@ export interface OutboundDocument {
   caption?: string;
 }
 
+export interface OutboundImage {
+  buffer: Uint8Array;
+  mimeType: string;
+  filename: string;
+  caption?: string;
+}
+
 export interface ChannelAdapter {
   channel: Channel;
   normalizeInbound(payload: unknown): InboundNormalized;
   sendText(ctx: OutboundContext, text: string): Promise<OutboundResult>;
   sendDocument?(ctx: OutboundContext, doc: OutboundDocument): Promise<OutboundResult>;
+  sendImage?(ctx: OutboundContext, image: OutboundImage): Promise<OutboundResult>;
   markRead?(ctx: OutboundContext, externalMessageId: string): Promise<void>;
 }
 

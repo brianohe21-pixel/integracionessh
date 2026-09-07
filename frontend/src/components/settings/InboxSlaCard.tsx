@@ -3,6 +3,13 @@
 import { useEffect, useState } from "react";
 import { Clock } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import {
+  SettingsCard,
+  SettingsCardSkeleton,
+  SettingsToggleRow,
+} from "@/components/settings/SettingsCard";
 import { useInboxSlaSettings, useSaveInboxSlaSettings } from "@/hooks/useInboxSla";
 import { DEFAULT_INBOX_SLA, resolveInboxSlaSettings } from "@/lib/inbox-sla";
 import { useT } from "@/i18n/context";
@@ -44,52 +51,44 @@ export function InboxSlaCard() {
   }
 
   if (isLoading) {
-    return (
-      <div className="rounded-lg border border-default p-4 animate-pulse">
-        <div className="h-4 w-40 bg-surface-muted rounded" />
-      </div>
-    );
+    return <SettingsCardSkeleton />;
   }
 
   if (loadError) {
     return (
-      <div className="rounded-lg border border-default p-4">
+      <SettingsCard
+        icon={<Clock className="h-4 w-4" />}
+        title={t("settings.inboxSlaTitle")}
+        description={t("settings.inboxSlaDescription")}
+      >
         <p className="text-sm text-red-500">
           {loadError instanceof Error ? loadError.message : t("settings.inboxSlaSaveError")}
         </p>
-      </div>
+      </SettingsCard>
     );
   }
 
   return (
-    <div className="rounded-lg border border-default overflow-hidden">
-      <div className="flex items-center gap-3 border-b border-default bg-surface p-4">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-muted text-accent">
-          <Clock className="h-4 w-4" />
-        </div>
-        <div className="flex-1">
-          <p className="text-sm font-medium text-primary">{t("settings.inboxSlaTitle")}</p>
-          <p className="text-xs text-muted">{t("settings.inboxSlaDescription")}</p>
-        </div>
+    <SettingsCard
+      icon={<Clock className="h-4 w-4" />}
+      title={t("settings.inboxSlaTitle")}
+      description={t("settings.inboxSlaDescription")}
+      badge={
         <Badge variant={enabled ? "success" : "default"}>
           {enabled ? t("settings.inboxSlaEnabled") : t("settings.inboxSlaDisabled")}
         </Badge>
-      </div>
-
-      <form onSubmit={handleSave} className="space-y-4 p-4">
-        <label className="flex items-center justify-between gap-4">
-          <span className="text-sm text-secondary">{t("settings.inboxSlaEnableLabel")}</span>
-          <input
-            type="checkbox"
-            checked={Boolean(enabled)}
-            onChange={(e) => setEnabled(e.target.checked)}
-            className="h-4 w-4 rounded border-default text-accent focus:ring-accent"
-          />
-        </label>
+      }
+    >
+      <form onSubmit={handleSave} className="space-y-4">
+        <SettingsToggleRow
+          label={t("settings.inboxSlaEnableLabel")}
+          checked={Boolean(enabled)}
+          onChange={setEnabled}
+        />
 
         <label className="block space-y-1.5">
-          <span className="text-sm text-secondary">{t("settings.inboxSlaMinutesLabel")}</span>
-          <input
+          <span className="text-sm font-medium text-secondary">{t("settings.inboxSlaMinutesLabel")}</span>
+          <Input
             type="number"
             min={1}
             max={1440}
@@ -99,20 +98,15 @@ export function InboxSlaCard() {
               setMinutes(Number.isFinite(next) ? next : DEFAULT_INBOX_SLA.firstResponseMinutes);
             }}
             disabled={!enabled}
-            className="w-full rounded-lg border border-default bg-surface px-3 py-2 text-sm text-primary disabled:opacity-50"
           />
         </label>
 
-        {error && <p className="text-xs text-red-500">{error}</p>}
+        {error ? <p className="text-xs text-red-500">{error}</p> : null}
 
-        <button
-          type="submit"
-          disabled={save.isPending}
-          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
-        >
+        <Button type="submit" disabled={save.isPending}>
           {save.isPending ? t("auth.saving") : t("common.save")}
-        </button>
+        </Button>
       </form>
-    </div>
+    </SettingsCard>
   );
 }

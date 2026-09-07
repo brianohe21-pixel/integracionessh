@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type {
+  FlowActivityPage,
   FlowDefinition,
   FlowEventSubmission,
   FlowHookCredentials,
@@ -169,6 +170,54 @@ export function useFlowEvents(flowId: string, enabled = true) {
     queryKey: ["flows", flowId, "events"],
     queryFn: () => api.get<FlowEventSubmission[]>(`/flows/${encodeURIComponent(flowId)}/events`),
     enabled: !!flowId && enabled,
+  });
+}
+
+export type FlowActivityFilters = {
+  status: string;
+  source: "all" | "conversation" | "event";
+  q: string;
+  limit: number;
+  cursor?: string;
+};
+
+export function useFlowActivity(flowId: string, filters: FlowActivityFilters, enabled = true) {
+  return useQuery<FlowActivityPage>({
+    queryKey: ["flows", flowId, "activity", filters],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      params.set("limit", String(filters.limit));
+      if (filters.cursor) params.set("cursor", filters.cursor);
+      if (filters.status && filters.status !== "all") params.set("status", filters.status);
+      if (filters.source && filters.source !== "all") params.set("source", filters.source);
+      if (filters.q.trim()) params.set("q", filters.q.trim());
+      return api.get<FlowActivityPage>(
+        `/flows/${encodeURIComponent(flowId)}/activity?${params.toString()}`
+      );
+    },
+    enabled: !!flowId && enabled,
+  });
+}
+
+export function useFlowRunDetail(runId: string | null) {
+  return useQuery<FlowRun>({
+    queryKey: ["flow-runs", runId],
+    queryFn: () => api.get<FlowRun>(`/flow-runs/${encodeURIComponent(runId ?? "")}`),
+    enabled: !!runId,
+  });
+}
+
+export function useSeedFlowActivity(flowId: string) {
+  const qc = useQueryClient();
+  return useMutation<{ seeded: number }, Error, void>({
+    mutationFn: () =>
+      api.post<{ seeded: number }>(
+        `/flows/${encodeURIComponent(flowId)}/activity/seed`,
+        {}
+      ),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["flows", flowId, "activity"] });
+    },
   });
 }
 

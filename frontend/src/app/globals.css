@@ -808,6 +808,18 @@ textarea {
   color: var(--accent);
 }
 
+.card-icon-header-icon-plain {
+  display: flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--text-secondary);
+}
+
 .card-icon-header-title {
   font-size: 0.875rem;
   font-weight: 600;

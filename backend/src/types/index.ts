@@ -587,6 +587,13 @@ export interface LiveKitCall {
   endedAt?: string;
 }
 
+export interface MessageReaction {
+  emoji: string;
+  userId: string;
+  role: "user" | "advisor";
+  timestamp: string;
+}
+
 export interface Message {
   messageId: string;
   conversationId: string;
@@ -601,6 +608,7 @@ export interface Message {
   whatsappMessageId?: string;
   externalMessageId?: string | undefined;
   callId?: string;
+  reactions?: MessageReaction[];
   timestamp: string;
 }
 
@@ -1551,12 +1559,17 @@ export interface WhatsAppMessage {
     | "document"
     | "location"
     | "interactive"
-    | "order";
+    | "order"
+    | "reaction";
   text?: { body: string };
   image?: { id: string; mime_type: string; caption?: string };
   audio?: { id: string; mime_type: string };
   interactive?: WhatsAppInteractiveReply;
   order?: WhatsAppOrderPayload;
+  reaction?: {
+    message_id: string;
+    emoji: string;
+  };
 }
 
 export interface InboundNormalized {
@@ -1688,7 +1701,7 @@ export interface EmailMessageMetadata {
 }
 
 export interface DocumentMessageMetadata {
-  kind: "document";
+  kind: "document" | "image";
   filename: string;
   mimeType: string;
   s3Key: string;
@@ -2937,6 +2950,25 @@ export interface FlowEventSubmission {
   errorMessage?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export type FlowActivityKind = "run" | "event";
+
+export interface FlowActivitySummary {
+  activityId: string;
+  kind: FlowActivityKind;
+  flowId: string;
+  status: FlowRunStatus | FlowEventStatus;
+  source?: FlowRunSource | "webhook";
+  createdAt: string;
+  updatedAt: string;
+  runId?: string;
+  submissionId?: string;
+  conversationId?: string;
+  customerPhone?: string;
+  stepCount?: number;
+  errorMessage?: string;
+  payloadPreview?: string;
 }
 
 export const HOSTED_FORM_FIELD_TYPES = [

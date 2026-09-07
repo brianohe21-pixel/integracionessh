@@ -24,6 +24,8 @@ import {
   putFlowHookConfig,
 } from "../../lib/dynamodb/flow-hook.repository.js";
 import { listFlowEventSubmissions } from "../../lib/dynamodb/flow-event.repository.js";
+import { listFlowActivity } from "../../lib/dynamodb/flow-activity.repository.js";
+import { seedFlowActivityForFlow } from "../../lib/demo/seed-flow-activity.js";
 import { resumeFlowRunById } from "../../lib/flow/interpreter.js";
 import { resumeEventFlowRun } from "../../lib/flow/event-runner.js";
 import {
@@ -287,6 +289,42 @@ export async function handler(
       const botId = apiEvent.queryStringParameters?.botId;
       const flows = await listFlowDefinitions(auth.tenantId, botId);
       return ok(flows.map((item) => sanitizeFlowEdges(item)));
+    }
+
+    if (method === "GET" && flowId && path.endsWith("/activity")) {
+      const flow = await getFlowDefinition(auth.tenantId, flowId);
+      if (!flow) return notFound("Flow not found");
+      const limitRaw = apiEvent.queryStringParameters?.limit;
+      const limit = limitRaw ? Number(limitRaw) : undefined;
+      const status = apiEvent.queryStringParameters?.status;
+      const source = apiEvent.queryStringParameters?.source;
+      const q = apiEvent.queryStringParameters?.q;
+      const cursor = apiEvent.queryStringParameters?.cursor;
+      const activity = await listFlowActivity(auth.tenantId, flowId, {
+        ...(limit && Number.isFinite(limit) ? { limit } : {}),
+        ...(cursor ? { cursor } : {}),
+        ...(status ? { status } : {}),
+        ...(source === "conversation" || source === "event" || source === "all"
+          ? { source: source as "all" | "conversation" | "event" }
+          : {}),
+        ...(q ? { q } : {}),
+      });
+      return ok(activity);
+    }
+
+    if (method === "POST" && flowId && path.endsWith("/activity/seed")) {
+      if (ENVIRONMENT !== "dev") {
+        return badRequest("Sample activity seed is only available in dev");
+      }
+      const flow = await getFlowDefinition(auth.tenantId, flowId);
+      if (!flow) return notFound("Flow not found");
+      const seeded = await seedFlowActivityForFlow(
+        auth.tenantId,
+        flowId,
+        flow.botId,
+        { randomizeIds: true }
+      );
+      return ok({ seeded });
     }
 
     if (method === "GET" && flowId && path.endsWith("/runs")) {

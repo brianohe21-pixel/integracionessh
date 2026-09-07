@@ -7,6 +7,11 @@ export type RealtimeEvent =
       message: Message;
       conversation: Conversation;
     }
+  | {
+      type: "message.reaction.updated";
+      conversationId: string;
+      message: Message;
+    }
   | { type: "conversation.updated"; conversation: Conversation }
   | { type: "conversation.handoff"; conversation: Conversation };
 

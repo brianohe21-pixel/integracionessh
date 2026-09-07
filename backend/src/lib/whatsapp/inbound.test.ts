@@ -1,4 +1,4 @@
-import { isProcessableInboundMessage, normalizeInboundMessage } from "./inbound.js";
+import { isProcessableInboundMessage, normalizeInboundMessage, extractInboundReaction } from "./inbound.js";
 
 describe("normalizeInboundMessage", () => {
   it("normalizes text messages", () => {
@@ -86,6 +86,15 @@ describe("isProcessableInboundMessage", () => {
         from: "1",
         id: "1",
         timestamp: "1",
+        type: "reaction",
+        reaction: { message_id: "wamid.target", emoji: "👍" },
+      })
+    ).toBe(true);
+    expect(
+      isProcessableInboundMessage({
+        from: "1",
+        id: "1",
+        timestamp: "1",
         type: "image",
       })
     ).toBe(false);
@@ -108,5 +117,29 @@ describe("isProcessableInboundMessage", () => {
         },
       })
     ).toBe(true);
+  });
+});
+
+describe("extractInboundReaction", () => {
+  it("extracts reaction target and emoji", () => {
+    const result = extractInboundReaction({
+      from: "57300",
+      id: "reaction-1",
+      timestamp: "1",
+      type: "reaction",
+      reaction: { message_id: "wamid.target", emoji: "❤️" },
+    });
+    expect(result).toEqual({ targetMessageId: "wamid.target", emoji: "❤️" });
+  });
+
+  it("returns empty emoji when reaction is removed", () => {
+    const result = extractInboundReaction({
+      from: "57300",
+      id: "reaction-2",
+      timestamp: "1",
+      type: "reaction",
+      reaction: { message_id: "wamid.target", emoji: "" },
+    });
+    expect(result?.emoji).toBe("");
   });
 });

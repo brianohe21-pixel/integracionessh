@@ -40,6 +40,10 @@ import { cn } from "@/lib/utils";
 import type { WorkflowStatus, Channel, InteractionCategory } from "@/types";
 import { INTERACTION_CATEGORIES } from "@/types";
 import { interactionCategoryLabelKey } from "@/lib/interaction-categories";
+import {
+  useSendConversationAttachment,
+  validateConversationAttachmentFile,
+} from "@/hooks/useConversationAttachments";
 import { useActiveLeadByPhone, useConvertLead } from "@/hooks/useLeads";
 import Link from "next/link";
 import { AdvisorCallPanel } from "@/components/conversations/AdvisorCallPanel";
@@ -295,6 +299,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   });
   const release = useReleaseConversation();
   const sendMessage = useSendConversationMessage();
+  const sendAttachment = useSendConversationAttachment();
   const resolveConv = useResolveConversation();
   const deleteConv = useDeleteConversation();
   const clearConv = useClearConversationMessages();
@@ -394,6 +399,8 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     !selectedConversation.assignedAdvisorId;
   const canCompose = isHuman && !!selectedConversation && !needsClaim && !isImapReadOnly;
   const showBookingAction = canCompose;
+  const showAttachmentAction =
+    canCompose && (selectedConversation?.channel ?? "whatsapp") === "whatsapp";
   const assignedAdvisor = advisors?.find(
     (a) => a.advisorId === selectedConversation?.assignedAdvisorId
   );
@@ -411,6 +418,52 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
       content: draft.trim(),
     });
     setDraft("");
+  }
+
+  async function handleAttachFile(file: File) {
+    if (!selectedConversation) return;
+
+    const validationError = validateConversationAttachmentFile(file);
+    if (validationError === "empty") {
+      await alert({
+        title: t("conversations.attachFile"),
+        message: t("conversations.attachFileEmpty"),
+      });
+      return;
+    }
+    if (validationError === "tooLarge") {
+      await alert({
+        title: t("conversations.attachFile"),
+        message: t("conversations.attachFileTooLarge"),
+      });
+      return;
+    }
+    if (validationError === "unsupported") {
+      await alert({
+        title: t("conversations.attachFile"),
+        message: t("conversations.attachFileUnsupported"),
+      });
+      return;
+    }
+
+    try {
+      await sendAttachment.mutateAsync({
+        conversationId: selectedConversation.conversationId,
+        botId: selectedConversation.botId,
+        file,
+        ...(draft.trim() ? { caption: draft.trim() } : {}),
+      });
+      setDraft("");
+    } catch (error) {
+      const message =
+        error instanceof Error && error.message === "uploadFailed"
+          ? t("conversations.attachFileUploadFailed")
+          : t("conversations.attachFileSendFailed");
+      await alert({
+        title: t("conversations.attachFile"),
+        message,
+      });
+    }
   }
 
   async function handleHandoff() {
@@ -885,12 +938,15 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                       draft={draft}
                       onDraftChange={setDraft}
                       onSubmit={handleSend}
-                      sending={sendMessage.isPending}
+                      sending={sendMessage.isPending || sendAttachment.isPending}
                       conversation={selectedConversation}
                       macroPlaceholderContext={macroPlaceholderContext}
                       onOpenQuotation={() => setShowQuotationDrawer(true)}
                       onOpenBooking={() => setShowBookingDrawer(true)}
                       showBooking={showBookingAction}
+                      showAttachment={showAttachmentAction}
+                      onAttachFile={handleAttachFile}
+                      attaching={sendAttachment.isPending}
                     />
                   </div>
                 </div>

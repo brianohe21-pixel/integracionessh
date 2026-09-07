@@ -65,6 +65,10 @@ import {
   createAndSendConversationBooking,
   listConversationBookingSlots,
 } from "../../lib/conversations/conversation-bookings.service.js";
+import {
+  createConversationAttachmentUploadUrl,
+  prepareConversationAttachmentSend,
+} from "../../lib/conversations/conversation-attachments.service.js";
 import { publishRealtimeEventSafe } from "../../lib/realtime/publish.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
@@ -180,6 +184,22 @@ const CreateConversationBookingSchema = z.object({
 
 const ClearConversationSchema = z.object({
   botId: z.string().uuid(),
+});
+
+const AttachmentUploadUrlSchema = z.object({
+  botId: z.string().uuid(),
+  filename: z.string().min(1).max(200),
+  mimeType: z.string().min(1).max(120),
+  sizeBytes: z.number().int().positive(),
+});
+
+const SendAttachmentSchema = z.object({
+  botId: z.string().uuid(),
+  attachmentId: z.string().uuid(),
+  s3Key: z.string().min(1).max(500),
+  filename: z.string().min(1).max(200),
+  mimeType: z.string().min(1).max(120),
+  caption: z.string().max(1024).optional(),
 });
 
 const BulkDeleteSchema = z.object({
@@ -847,7 +867,7 @@ export async function handler(
               timestamp: now,
             }
           : {
-              messageId: `adv-${randomUUID()}`,
+              messageId: outbound.externalMessageId ?? `adv-${randomUUID()}`,
               conversationId,
               tenantId: auth.tenantId,
               role: "advisor",
@@ -883,6 +903,64 @@ export async function handler(
         conversationId,
         convPatch
       );
+
+      return created(message);
+    }
+
+    if (method === "POST" && rawPath.endsWith("/attachments/upload-url")) {
+      const body = JSON.parse(event.body ?? "{}");
+      const parsed = AttachmentUploadUrlSchema.safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const conversation = await findConversationById(auth.tenantId, conversationId);
+      if (!conversation || conversation.botId !== parsed.data.botId) {
+        return notFound("Conversation not found");
+      }
+
+      await assertCanAccessConversation(auth, conversation);
+
+      if ((conversation.handoffMode ?? "bot") !== "human") {
+        return badRequest("Conversation is not in human handoff mode");
+      }
+      if ((conversation.channel ?? "whatsapp") !== "whatsapp") {
+        return badRequest("Attachments are only supported for WhatsApp conversations");
+      }
+
+      const result = await createConversationAttachmentUploadUrl({
+        tenantId: auth.tenantId,
+        botId: parsed.data.botId,
+        conversationId,
+        filename: parsed.data.filename,
+        mimeType: parsed.data.mimeType,
+        sizeBytes: parsed.data.sizeBytes,
+      });
+
+      return created(result);
+    }
+
+    if (method === "POST" && rawPath.endsWith("/attachments/send")) {
+      const body = JSON.parse(event.body ?? "{}");
+      const parsed = SendAttachmentSchema.safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const message = await prepareConversationAttachmentSend({
+        auth,
+        conversationId,
+        botId: parsed.data.botId,
+        attachmentId: parsed.data.attachmentId,
+        s3Key: parsed.data.s3Key,
+        filename: parsed.data.filename,
+        mimeType: parsed.data.mimeType,
+        ...(parsed.data.caption ? { caption: parsed.data.caption } : {}),
+        environment: ENVIRONMENT,
+        resolveAccessToken: resolveAccessTokenForChannel,
+        assertCanAccessConversation,
+        resolveAdvisorId: async (requestAuth) => {
+          if (requestAuth.role !== "advisor") return undefined;
+          const advisor = await resolveAdvisorRecord(requestAuth);
+          return advisor?.advisorId;
+        },
+      });
 
       return created(message);
     }
