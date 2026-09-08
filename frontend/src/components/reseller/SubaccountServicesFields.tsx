@@ -359,9 +359,9 @@ export function SubaccountServicesFields({
                     const current = currentLimits?.[key] ?? 0;
                     const bagUnlimited = Boolean(bag && remaining === null);
                     const available =
-                      bagUnlimited || remaining === undefined
-                        ? null
-                        : remaining + (typeof current === "number" ? current : 0);
+                      typeof remaining === "number"
+                        ? remaining + (typeof current === "number" ? current : 0)
+                        : null;
                     return (
                       <SubaccountLimitField
                         key={key}
