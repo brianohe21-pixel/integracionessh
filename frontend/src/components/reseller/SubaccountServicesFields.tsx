@@ -5,8 +5,11 @@ import {
   SERVICE_CATEGORIES,
   SERVICE_LIMIT_KEYS,
   SERVICE_NAV_KEYS,
+  UNLIMITED_LIMIT_VALUE,
+  getServiceLimitMode,
   type BagLimitKey,
   type ResellerBag,
+  type ServiceLimitMode,
   type SubaccountServiceId,
 } from "@/lib/subaccount-services";
 import type { ResellerLimitsOverride } from "@/types";
@@ -61,6 +64,118 @@ const SUBACCOUNT_ORDER: SubaccountServiceId[] = SERVICE_CATEGORIES.flatMap(
   (category) => category.services
 );
 
+function quotaModeButtonClass(active: boolean): string {
+  return cn(
+    "rounded-md border px-2 py-1 text-[11px] font-medium transition-colors",
+    active
+      ? "border-accent bg-accent text-white"
+      : "border-default bg-surface text-secondary hover:border-accent/40 hover:text-primary"
+  );
+}
+
+function SubaccountLimitField({
+  limitKey,
+  serviceLimits,
+  bagUnlimited,
+  available,
+  onModeChange,
+  onCustomChange,
+  t,
+}: {
+  limitKey: BagLimitKey;
+  serviceLimits: ResellerLimitsOverride;
+  bagUnlimited: boolean;
+  available: number | null;
+  onModeChange: (mode: ServiceLimitMode) => void;
+  onCustomChange: (value: number) => void;
+  t: (key: string, values?: Record<string, string | number>) => string;
+}) {
+  const mode = getServiceLimitMode(serviceLimits, limitKey);
+  const customValue = serviceLimits[limitKey];
+  const numericCustom =
+    mode === "custom" && typeof customValue === "number" ? customValue : 1;
+  const pct =
+    mode === "custom" && available && available > 0
+      ? Math.min(100, (numericCustom / available) * 100)
+      : 0;
+
+  const modeHint =
+    mode === "default"
+      ? t("reseller.quotaDefaultHint")
+      : mode === "unlimited"
+        ? t("reseller.quotaUnlimitedHint")
+        : t("reseller.quotaCustomHint");
+
+  return (
+    <div className="space-y-1.5 rounded-lg border border-default/80 bg-surface p-2.5">
+      <div className="flex items-start justify-between gap-2">
+        <span className="text-[11px] font-medium text-primary">{t(`reseller.limits.${limitKey}`)}</span>
+        {bagUnlimited ? (
+          <span className="shrink-0 text-[10px] text-accent">{t("reseller.unlimitedGroup")}</span>
+        ) : available !== null ? (
+          <span className="shrink-0 text-[10px] text-secondary">
+            {t("reseller.availableShort", { remaining: String(available) })}
+          </span>
+        ) : null}
+      </div>
+
+      <div className="flex flex-wrap gap-1">
+        <button
+          type="button"
+          className={quotaModeButtonClass(mode === "default")}
+          onClick={() => onModeChange("default")}
+        >
+          {t("reseller.quotaModeDefault")}
+        </button>
+        {bagUnlimited ? (
+          <button
+            type="button"
+            className={quotaModeButtonClass(mode === "unlimited")}
+            onClick={() => onModeChange("unlimited")}
+          >
+            {t("reseller.quotaModeUnlimited")}
+          </button>
+        ) : null}
+        <button
+          type="button"
+          className={quotaModeButtonClass(mode === "custom")}
+          onClick={() => onModeChange("custom")}
+        >
+          {t("reseller.quotaModeCustom")}
+        </button>
+      </div>
+
+      {mode === "custom" ? (
+        <>
+          <input
+            type="number"
+            min={1}
+            max={available ?? undefined}
+            value={numericCustom}
+            onChange={(e) => onCustomChange(Number(e.target.value))}
+            className="w-full rounded-lg border border-default bg-surface px-2.5 py-1.5 text-sm text-primary"
+          />
+          {available !== null ? (
+            <span className="block h-1 overflow-hidden rounded-full bg-surface-muted">
+              <span
+                className={cn(
+                  "block h-full rounded-full",
+                  pct >= 90 ? "bg-warning" : "bg-accent"
+                )}
+                style={{ width: `${pct}%` }}
+              />
+            </span>
+          ) : null}
+        </>
+      ) : mode === "unlimited" ? (
+        <Badge variant="accent">{t("reseller.unlimited")}</Badge>
+      ) : null}
+
+      <p className="text-[10px] leading-relaxed text-secondary">{modeHint}</p>
+    </div>
+  );
+}
+
 export function SubaccountServicesFields({
   enabledServices,
   serviceLimits,
@@ -104,10 +219,30 @@ export function SubaccountServicesFields({
     emit(nextEnabled, nextLimits);
   }
 
-  function setLimit(key: BagLimitKey, value: number) {
+  function setLimitMode(key: BagLimitKey, mode: ServiceLimitMode) {
+    const next = { ...serviceLimits };
+    if (mode === "default") {
+      delete next[key];
+    } else if (mode === "unlimited") {
+      next[key] = UNLIMITED_LIMIT_VALUE;
+    } else {
+      const current = next[key];
+      next[key] =
+        typeof current === "number" && current > 0 && current < UNLIMITED_LIMIT_VALUE / 2
+          ? current
+          : 1;
+    }
+    emit(enabledServices, next);
+  }
+
+  function setCustomLimit(key: BagLimitKey, value: number, max: number | null) {
+    const capped =
+      max !== null && Number.isFinite(max)
+        ? Math.min(max, Math.max(1, Math.floor(value)))
+        : Math.max(1, Math.floor(value));
     emit(enabledServices, {
       ...serviceLimits,
-      [key]: Number.isFinite(value) ? Math.max(0, value) : 0,
+      [key]: Number.isFinite(capped) ? capped : 1,
     });
   }
 
@@ -218,53 +353,26 @@ export function SubaccountServicesFields({
                 </span>
               </button>
               {isOn && keys.length > 0 ? (
-                <div className="grid gap-2 border-t border-accent/15 px-3 py-3 sm:grid-cols-2">
+                <div className="grid gap-2 border-t border-accent/15 px-3 py-3 sm:grid-cols-1">
                   {keys.map((key) => {
                     const remaining = bag?.remaining[key];
                     const current = currentLimits?.[key] ?? 0;
+                    const bagUnlimited = Boolean(bag && remaining === null);
                     const available =
-                      remaining === null || remaining === undefined
+                      bagUnlimited || remaining === undefined
                         ? null
                         : remaining + (typeof current === "number" ? current : 0);
-                    const value = serviceLimits[key] ?? 0;
-                    const pct =
-                      available && available > 0
-                        ? Math.min(100, (value / available) * 100)
-                        : 0;
                     return (
-                      <label key={key} className="space-y-1.5">
-                        <span className="flex items-center justify-between gap-2 text-[11px] text-secondary">
-                          <span>{t(`reseller.limits.${key}`)}</span>
-                          {available === null ? (
-                            <span className="text-accent">{t("reseller.unlimited")}</span>
-                          ) : (
-                            <span>
-                              {t("reseller.availableShort", {
-                                remaining: String(available),
-                              })}
-                            </span>
-                          )}
-                        </span>
-                        <input
-                          type="number"
-                          min={0}
-                          max={available ?? undefined}
-                          value={value}
-                          onChange={(e) => setLimit(key, Number(e.target.value))}
-                          className="w-full rounded-lg border border-default bg-surface px-2.5 py-1.5 text-sm text-primary"
-                        />
-                        {available !== null ? (
-                          <span className="block h-1 overflow-hidden rounded-full bg-surface-muted">
-                            <span
-                              className={cn(
-                                "block h-full rounded-full",
-                                pct >= 90 ? "bg-warning" : "bg-accent"
-                              )}
-                              style={{ width: `${pct}%` }}
-                            />
-                          </span>
-                        ) : null}
-                      </label>
+                      <SubaccountLimitField
+                        key={key}
+                        limitKey={key}
+                        serviceLimits={serviceLimits}
+                        bagUnlimited={bagUnlimited}
+                        available={available}
+                        onModeChange={(mode) => setLimitMode(key, mode)}
+                        onCustomChange={(value) => setCustomLimit(key, value, available)}
+                        t={t}
+                      />
                     );
                   })}
                 </div>
