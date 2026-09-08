@@ -153,8 +153,22 @@ export type ResellerBag = {
   remaining: Record<string, number | null>;
 };
 
+export const UNLIMITED_LIMIT_VALUE = Number.MAX_SAFE_INTEGER;
+
 export function isUnlimitedLimit(value: number | null | undefined): boolean {
-  return typeof value === "number" && value >= Number.MAX_SAFE_INTEGER / 2;
+  return typeof value === "number" && value >= UNLIMITED_LIMIT_VALUE / 2;
+}
+
+export type ServiceLimitMode = "default" | "unlimited" | "custom";
+
+export function getServiceLimitMode(
+  limits: ResellerLimitsOverride,
+  key: BagLimitKey
+): ServiceLimitMode {
+  const value = limits[key];
+  if (value === undefined) return "default";
+  if (isUnlimitedLimit(value)) return "unlimited";
+  return "custom";
 }
 
 export function isSubaccountTenant(tenant: Tenant | undefined | null): boolean {

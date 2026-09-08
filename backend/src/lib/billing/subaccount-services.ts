@@ -118,6 +118,20 @@ export function trimServiceLimitsForEnabled(
   return out;
 }
 
+export function fillMissingServiceLimitsFromPlan(
+  enabled: readonly SubaccountServiceId[],
+  limits: ResellerLimitsOverride,
+  planLimits: PlanLimits
+): ResellerLimitsOverride {
+  const allowed = new Set(enabled.flatMap((id) => SERVICE_LIMIT_KEYS[id]));
+  const out: ResellerLimitsOverride = { ...limits };
+  for (const key of BAG_LIMIT_KEYS) {
+    if (!allowed.has(key) || out[key] !== undefined) continue;
+    out[key] = planLimits[key];
+  }
+  return out;
+}
+
 export function isSubaccountServiceEnabled(
   tenant: Tenant,
   service: SubaccountServiceId

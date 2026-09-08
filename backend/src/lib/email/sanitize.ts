@@ -33,11 +33,13 @@ const ALLOWED_TAGS = [
   "hr",
 ];
 
+const EMAIL_LINK_STYLE = "color:#2563eb;text-decoration:underline;";
+
 export function sanitizeEmailHtml(html: string): string {
   return sanitizeHtml(html, {
     allowedTags: ALLOWED_TAGS,
     allowedAttributes: {
-      a: ["href", "title", "target"],
+      a: ["href", "title", "target", "style", "rel"],
       img: ["src", "alt", "width", "height"],
       td: ["colspan", "rowspan"],
       th: ["colspan", "rowspan"],
@@ -46,7 +48,15 @@ export function sanitizeEmailHtml(html: string): string {
     allowedSchemes: ["http", "https", "mailto", "cid"],
     allowProtocolRelative: false,
     transformTags: {
-      a: sanitizeHtml.simpleTransform("a", { rel: "noopener noreferrer", target: "_blank" }),
+      a: (tagName, attribs) => ({
+        tagName,
+        attribs: {
+          ...attribs,
+          rel: "noopener noreferrer",
+          target: attribs.target ?? "_blank",
+          style: attribs.style ? `${attribs.style};${EMAIL_LINK_STYLE}` : EMAIL_LINK_STYLE,
+        },
+      }),
     },
   });
 }

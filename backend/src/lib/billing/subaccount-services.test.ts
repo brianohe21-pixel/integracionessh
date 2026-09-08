@@ -115,11 +115,28 @@ describe("subaccount-services", () => {
 
   it("uses serviceLimits as effective plan limits for subaccounts", () => {
     const limits = getEffectivePlanLimits(
-      child({ serviceLimits: { maxActiveBots: 3, maxContacts: 80 } })
+      child({
+        enabledServices: ["bots", "contacts"],
+        serviceLimits: { maxActiveBots: 3, maxContacts: 80 },
+      })
     );
     expect(limits.maxActiveBots).toBe(3);
     expect(limits.maxContacts).toBe(80);
     expect(limits.maxMessagesPerMonth).toBe(0);
+  });
+
+  it("defaults missing limits from the child plan for enabled services", () => {
+    const limits = getEffectivePlanLimits(
+      child({
+        enabledServices: ["flows"],
+        serviceLimits: { maxActiveBots: 1 },
+      })
+    );
+    expect(limits.maxFlowNodes).toBe(getPlanLimits("pro").maxFlowNodes);
+    expect(limits.maxVisualFlowsPerBot).toBe(getPlanLimits("pro").maxVisualFlowsPerBot);
+    expect(limits.maxActiveFlowRuns).toBe(getPlanLimits("pro").maxActiveFlowRuns);
+    expect(limits.maxHostedFormsPerTenant).toBe(getPlanLimits("pro").maxHostedFormsPerTenant);
+    expect(limits.maxActiveBots).toBe(0);
   });
 
   it("keeps the child plan when serviceLimits is missing", () => {
