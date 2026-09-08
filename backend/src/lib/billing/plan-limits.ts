@@ -196,6 +196,12 @@ function applyLimitsOverride(
 }
 
 import { normalizeTenantPlan } from "./normalize-plan.js";
+import {
+  fillMissingServiceLimitsFromPlan,
+  normalizeEnabledServices,
+  normalizeServiceLimits,
+  trimServiceLimitsForEnabled,
+} from "./subaccount-services.js";
 
 export function getPlanLimits(plan: TenantPlan | string | undefined): PlanLimits {
   const normalized = normalizeTenantPlan(plan);
@@ -254,10 +260,14 @@ export function getEffectivePlanLimits(tenant: Tenant): PlanLimits {
 
   const isSubaccount = tenant.tenantKind === "subaccount" || Boolean(tenant.parentTenantId);
   if (isSubaccount && tenant.serviceLimits !== undefined) {
-    return applyLimitsOverride(
-      emptyNumericLimits(base.canCustomizeBranding),
-      tenant.serviceLimits
+    const enabled = normalizeEnabledServices(tenant.enabledServices);
+    const filled = fillMissingServiceLimitsFromPlan(
+      enabled,
+      normalizeServiceLimits(tenant.serviceLimits),
+      base
     );
+    const trimmed = trimServiceLimitsForEnabled(enabled, filled);
+    return applyLimitsOverride(emptyNumericLimits(base.canCustomizeBranding), trimmed);
   }
 
   return base;

@@ -44,6 +44,17 @@ const runGsi1ByFlow = (tenantId: string, flowId: string, createdAt: string, runI
   GSI1SK: `CREATED#${createdAt}#${runId}`,
 });
 
+function resolveRunGsi1(run: FlowRun, runId: string) {
+  if (
+    (run.status === "active" || run.status === "waiting") &&
+    run.conversationId &&
+    run.source !== "event"
+  ) {
+    return runGsi1(run.tenantId, run.conversationId);
+  }
+  return runGsi1ByFlow(run.tenantId, run.flowId, run.createdAt, runId);
+}
+
 export function makeFlowId(): string {
   return randomUUID();
 }
@@ -168,12 +179,7 @@ export async function listEnabledFlowsForBot(
 }
 
 export async function createFlowRun(run: FlowRun): Promise<FlowRun> {
-  const gsi1 =
-    run.source === "event"
-      ? runGsi1ByFlow(run.tenantId, run.flowId, run.createdAt, run.runId)
-      : run.conversationId
-        ? runGsi1(run.tenantId, run.conversationId)
-        : runGsi1ByFlow(run.tenantId, run.flowId, run.createdAt, run.runId);
+  const gsi1 = resolveRunGsi1(run, run.runId);
 
   await docClient.send(
     new PutCommand({
@@ -199,14 +205,7 @@ export async function updateFlowRun(
   if (updates.status === "active" && updates.waitingUntil === undefined) {
     delete merged.waitingUntil;
   }
-  const gsi1 =
-    merged.status === "active" || merged.status === "waiting"
-      ? merged.source === "event"
-        ? runGsi1ByFlow(merged.tenantId, merged.flowId, merged.createdAt, runId)
-        : merged.conversationId
-          ? runGsi1(merged.tenantId, merged.conversationId)
-          : runGsi1ByFlow(merged.tenantId, merged.flowId, merged.createdAt, runId)
-      : { GSI1PK: `TENANT#${merged.tenantId}#FLOWRUN#DONE`, GSI1SK: merged.runId };
+  const gsi1 = resolveRunGsi1(merged, runId);
 
   await docClient.send(
     new PutCommand({

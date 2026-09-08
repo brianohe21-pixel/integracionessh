@@ -21,7 +21,9 @@ import { resolveFlowBotIdFromNodes } from "@/lib/resolve-flow-bot";
 import { createFlowNode, defaultPalettePosition } from "@/lib/flow-node-factory";
 import { applyResolvedTriggerType, resolveFlowSamplePayload } from "@/lib/resolve-flow-trigger";
 import {
+  flowDraftSnapshotKey,
   flowGraphSnapshotKey,
+  flowPublishedSnapshotKey,
   resolveDraftEdges,
   resolveDraftNodes,
 } from "@/lib/flow-draft";
@@ -85,8 +87,8 @@ export default function EditFlowPage() {
     if (initializedFlowKeyRef.current === key) return;
     initializedFlowKeyRef.current = key;
     resetHistory({ nodes: draftNodes, edges: draftEdges });
-    setSavedKey(flowGraphSnapshotKey(draftNodes, draftEdges));
-    setPublishedKey(flowGraphSnapshotKey(flow.nodes, flow.edges));
+    setSavedKey(flowDraftSnapshotKey(flow));
+    setPublishedKey(flowPublishedSnapshotKey(flow));
     setSavedMessage(false);
     setPublishedMessage(false);
     setSaveError("");
@@ -217,8 +219,9 @@ export default function EditFlowPage() {
     if (!flow || update.isPending) return !isDirty;
     const nodesToSave = localNodes.length > 0 ? localNodes : resolveDraftNodes(flow);
     const edgesToSave = localNodes.length > 0 ? localEdges : resolveDraftEdges(flow);
-    if (flowGraphSnapshotKey(nodesToSave, edgesToSave) === savedKey) return true;
     const nodes = applyResolvedTriggerType(nodesToSave, isVoiceFlow);
+    const snapshotKey = flowGraphSnapshotKey(nodes, edgesToSave);
+    if (snapshotKey === savedKey) return true;
     setSaveError("");
     setSavedMessage(false);
     try {
@@ -228,7 +231,10 @@ export default function EditFlowPage() {
         edges: edgesToSave,
         entryNodeId: nodes.find((n) => n.type === "trigger")?.id ?? flow.entryNodeId,
       });
-      setSavedKey(flowGraphSnapshotKey(nodesToSave, edgesToSave));
+      setSavedKey(snapshotKey);
+      if (flowGraphSnapshotKey(nodesToSave, edgesToSave) !== snapshotKey) {
+        commitHistory({ nodes, edges: edgesToSave });
+      }
       setSavedMessage(true);
       window.setTimeout(() => setSavedMessage(false), 2500);
       return true;
@@ -249,8 +255,9 @@ export default function EditFlowPage() {
     setPublishedMessage(false);
     try {
       const updated = await publishFlow.mutateAsync();
-      setPublishedKey(flowGraphSnapshotKey(updated.nodes, updated.edges));
-      setSavedKey(flowGraphSnapshotKey(resolveDraftNodes(updated), resolveDraftEdges(updated)));
+      const publishedSnapshotKey = flowPublishedSnapshotKey(updated);
+      setPublishedKey(publishedSnapshotKey);
+      setSavedKey(publishedSnapshotKey);
       setPublishedMessage(true);
       window.setTimeout(() => setPublishedMessage(false), 2500);
     } catch (err) {
@@ -268,7 +275,8 @@ export default function EditFlowPage() {
     const draftNodes = resolveDraftNodes(updated);
     const draftEdges = resolveDraftEdges(updated);
     resetHistory({ nodes: draftNodes, edges: draftEdges });
-    setSavedKey(flowGraphSnapshotKey(draftNodes, draftEdges));
+    setSavedKey(flowDraftSnapshotKey(updated));
+    setPublishedKey(flowPublishedSnapshotKey(updated));
     setSavedMessage(false);
     setPublishedMessage(false);
   }

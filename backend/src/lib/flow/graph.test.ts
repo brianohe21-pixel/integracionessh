@@ -44,4 +44,22 @@ describe("sanitizeFlowEdges", () => {
 
     expect(sanitizeFlowEdges(input)).toBe(input);
   });
+
+  it("sanitizes draft edges independently from published edges", () => {
+    const nodes = [
+      { id: "a", type: "trigger" as const, position: { x: 0, y: 0 }, data: {} },
+      { id: "b", type: "end" as const, position: { x: 0, y: 100 }, data: {} },
+    ];
+    const validEdge = { id: "e1", source: "a", target: "b" };
+    const orphanEdge = { id: "e2", source: "a", target: "missing" };
+
+    const result = sanitizeFlowEdges({
+      ...flow(nodes, [validEdge]),
+      draftNodes: nodes,
+      draftEdges: [validEdge, orphanEdge],
+    });
+
+    expect(result.edges).toEqual([validEdge]);
+    expect(result.draftEdges).toEqual([validEdge]);
+  });
 });

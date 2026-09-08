@@ -1,4 +1,5 @@
 import type { FlowDefinition, FlowEdge, FlowNode } from "../../types/index.js";
+import { sanitizeEdgesForNodes } from "./graph.js";
 
 export function resolveDraftNodes(flow: FlowDefinition): FlowNode[] {
   return flow.draftNodes ?? flow.nodes;
@@ -13,7 +14,7 @@ export function resolveDraftEntryNodeId(flow: FlowDefinition): string {
 }
 
 export function flowGraphSnapshotKey(nodes: FlowNode[], edges: FlowEdge[]): string {
-  return JSON.stringify({ nodes, edges });
+  return JSON.stringify({ nodes, edges: sanitizeEdgesForNodes(nodes, edges) });
 }
 
 export function hasUnpublishedChanges(flow: FlowDefinition): boolean {
