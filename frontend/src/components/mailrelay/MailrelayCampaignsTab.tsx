@@ -583,7 +583,7 @@ export function MailrelayCampaignsTab({ connected }: { connected: boolean }) {
                 {t("mailrelay.campaigns.preview")}
               </p>
               <div
-                className="emoji-text min-h-40 overflow-auto rounded-lg border border-default bg-white p-4 text-gray-900"
+                className="rich-html-content emoji-text min-h-40 overflow-auto rounded-lg border border-default bg-white p-4 text-gray-900"
                 dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
               />
             </div>

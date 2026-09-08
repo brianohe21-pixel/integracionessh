@@ -1092,3 +1092,40 @@ textarea {
 .mailrelay-html-editor .rsw-ce[contenteditable="true"]:empty::before {
   color: var(--text-muted);
 }
+
+.mailrelay-html-editor .rsw-ce ul {
+  list-style-type: disc;
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.mailrelay-html-editor .rsw-ce ol {
+  list-style-type: decimal;
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.mailrelay-html-editor .rsw-ce li {
+  display: list-item;
+}
+
+.mailrelay-html-editor .rsw-ce ul ul {
+  list-style-type: circle;
+}
+
+.mailrelay-html-editor .rsw-ce ol ol {
+  list-style-type: lower-alpha;
+}
+
+.mailrelay-html-editor .rsw-ce a,
+.rich-html-content a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.mailrelay-html-editor .rsw-ce a:hover,
+.rich-html-content a:hover {
+  color: var(--accent-hover);
+}

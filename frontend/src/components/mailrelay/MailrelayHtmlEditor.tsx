@@ -1,12 +1,11 @@
 "use client";
 
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import Editor, {
   BtnBold,
   BtnBulletList,
   BtnClearFormatting,
   BtnItalic,
-  BtnLink,
   BtnNumberedList,
   BtnRedo,
   BtnStrikeThrough,
@@ -18,6 +17,7 @@ import Editor, {
   Toolbar,
 } from "react-simple-wysiwyg";
 import { EmojiPicker } from "@/components/conversations/EmojiPicker";
+import { HtmlEditorLinkProvider, HtmlEditorLinkToolbarButton } from "@/components/mailrelay/HtmlEditorLinks";
 import { insertIntoContentEditable } from "@/lib/text-insert";
 import { cn } from "@/lib/utils";
 
@@ -40,6 +40,24 @@ export const MailrelayHtmlEditor = forwardRef<MailrelayHtmlEditorHandle, Mailrel
     useEffect(() => {
       setMounted(true);
     }, []);
+
+    const syncEditorValue = useCallback(() => {
+      const editable = containerRef.current?.querySelector("[contenteditable]") as HTMLElement | null;
+      if (!editable) return;
+      const html = editable.innerHTML;
+      if (html !== value) {
+        onChange(html);
+      }
+    }, [onChange, value]);
+
+    useEffect(() => {
+      if (!mounted) return;
+      const toolbar = containerRef.current?.querySelector(".rsw-toolbar");
+      if (!toolbar) return;
+
+      toolbar.addEventListener("mouseup", syncEditorValue);
+      return () => toolbar.removeEventListener("mouseup", syncEditorValue);
+    }, [mounted, syncEditorValue]);
 
     function insertAtCursor(text: string) {
       const editable = containerRef.current?.querySelector("[contenteditable]") as HTMLElement | null;
@@ -75,29 +93,32 @@ export const MailrelayHtmlEditor = forwardRef<MailrelayHtmlEditorHandle, Mailrel
           value={value}
           placeholder={placeholder}
           onChange={(event) => onChange(event.target.value)}
+          onBlur={syncEditorValue}
           containerProps={{ className: "mailrelay-html-editor__container" }}
         >
-          <Toolbar>
-            <BtnUndo />
-            <BtnRedo />
-            <Separator />
-            <BtnStyles />
-            <Separator />
-            <BtnBold />
-            <BtnItalic />
-            <BtnUnderline />
-            <BtnStrikeThrough />
-            <Separator />
-            <BtnNumberedList />
-            <BtnBulletList />
-            <Separator />
-            <BtnLink />
-            <BtnClearFormatting />
-            <Separator />
-            <EmojiPicker onInsert={insertAtCursor} triggerClassName="rsw-btn" />
-            <Separator />
-            <HtmlButton />
-          </Toolbar>
+          <HtmlEditorLinkProvider onApplied={syncEditorValue}>
+            <Toolbar>
+              <BtnUndo />
+              <BtnRedo />
+              <Separator />
+              <BtnStyles />
+              <Separator />
+              <BtnBold />
+              <BtnItalic />
+              <BtnUnderline />
+              <BtnStrikeThrough />
+              <Separator />
+              <BtnNumberedList />
+              <BtnBulletList />
+              <Separator />
+              <HtmlEditorLinkToolbarButton />
+              <BtnClearFormatting />
+              <Separator />
+              <EmojiPicker onInsert={insertAtCursor} triggerClassName="rsw-btn" />
+              <Separator />
+              <HtmlButton />
+            </Toolbar>
+          </HtmlEditorLinkProvider>
         </Editor>
       </div>
     );
