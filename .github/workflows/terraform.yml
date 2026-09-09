@@ -86,6 +86,9 @@ jobs:
           REPOSITORY_URL: ${{ vars.REPOSITORY_URL }}
           TELEPHONY_GATEWAY_VPC_ID: ${{ vars.TELEPHONY_GATEWAY_VPC_ID }}
           ENABLE_TELEPHONY_GATEWAY: ${{ vars.ENABLE_TELEPHONY_GATEWAY }}
+          ENABLE_NEWRELIC: ${{ vars.ENABLE_NEWRELIC }}
+          NEW_RELIC_ACCOUNT_ID: ${{ vars.NEW_RELIC_ACCOUNT_ID }}
+          NEW_RELIC_LICENSE_KEY: ${{ secrets.NEW_RELIC_LICENSE_KEY }}
         run: |
           set -euo pipefail
           if [ -z "${GH_ACCESS_TOKEN}" ]; then
@@ -103,6 +106,16 @@ jobs:
           if [ "${ENABLE_TELEPHONY_GATEWAY:-false}" = "true" ] && [ -z "${TELEPHONY_GATEWAY_VPC_ID:-}" ]; then
             echo "::error::TELEPHONY_GATEWAY_VPC_ID is required when ENABLE_TELEPHONY_GATEWAY=true."
             exit 1
+          fi
+          if [ "${ENABLE_NEWRELIC:-false}" = "true" ]; then
+            if [ -z "${NEW_RELIC_ACCOUNT_ID:-}" ]; then
+              echo "::error::NEW_RELIC_ACCOUNT_ID is required when ENABLE_NEWRELIC=true."
+              exit 1
+            fi
+            if [ -z "${NEW_RELIC_LICENSE_KEY:-}" ]; then
+              echo "::error::NEW_RELIC_LICENSE_KEY is required when ENABLE_NEWRELIC=true."
+              exit 1
+            fi
           fi
 
       - name: Validate API Gateway integration model
@@ -168,6 +181,11 @@ jobs:
           SES_FROM_EMAIL: ${{ vars.SES_FROM_EMAIL }}
           GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          ENABLE_NEWRELIC: ${{ vars.ENABLE_NEWRELIC }}
+          NEW_RELIC_ACCOUNT_ID: ${{ vars.NEW_RELIC_ACCOUNT_ID }}
+          NEW_RELIC_LICENSE_KEY: ${{ secrets.NEW_RELIC_LICENSE_KEY }}
+          NEW_RELIC_TRUSTED_ACCOUNT_KEY: ${{ vars.NEW_RELIC_TRUSTED_ACCOUNT_KEY }}
+          NEW_RELIC_LAYER_VERSION: ${{ vars.NEW_RELIC_LAYER_VERSION }}
           TF_PLAN_OUT: ${{ github.event_name == 'push' && github.ref == 'refs/heads/develop' && 'true' || 'false' }}
         run: bash ../../../.github/scripts/terraform-plan-apply.sh plan
 
@@ -347,6 +365,9 @@ jobs:
           REPOSITORY_URL: ${{ vars.REPOSITORY_URL }}
           TELEPHONY_GATEWAY_VPC_ID: ${{ vars.TELEPHONY_GATEWAY_VPC_ID }}
           ENABLE_TELEPHONY_GATEWAY: ${{ vars.ENABLE_TELEPHONY_GATEWAY }}
+          ENABLE_NEWRELIC: ${{ vars.ENABLE_NEWRELIC }}
+          NEW_RELIC_ACCOUNT_ID: ${{ vars.NEW_RELIC_ACCOUNT_ID }}
+          NEW_RELIC_LICENSE_KEY: ${{ secrets.NEW_RELIC_LICENSE_KEY }}
         run: |
           set -euo pipefail
           if [ -z "${GH_ACCESS_TOKEN}" ]; then
@@ -364,6 +385,16 @@ jobs:
           if [ "${ENABLE_TELEPHONY_GATEWAY:-false}" = "true" ] && [ -z "${TELEPHONY_GATEWAY_VPC_ID:-}" ]; then
             echo "::error::TELEPHONY_GATEWAY_VPC_ID is required when ENABLE_TELEPHONY_GATEWAY=true."
             exit 1
+          fi
+          if [ "${ENABLE_NEWRELIC:-false}" = "true" ]; then
+            if [ -z "${NEW_RELIC_ACCOUNT_ID:-}" ]; then
+              echo "::error::NEW_RELIC_ACCOUNT_ID is required when ENABLE_NEWRELIC=true."
+              exit 1
+            fi
+            if [ -z "${NEW_RELIC_LICENSE_KEY:-}" ]; then
+              echo "::error::NEW_RELIC_LICENSE_KEY is required when ENABLE_NEWRELIC=true."
+              exit 1
+            fi
           fi
 
       - name: Validate API Gateway integration model
@@ -429,6 +460,11 @@ jobs:
           SES_FROM_EMAIL: ${{ vars.SES_FROM_EMAIL }}
           GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          ENABLE_NEWRELIC: ${{ vars.ENABLE_NEWRELIC }}
+          NEW_RELIC_ACCOUNT_ID: ${{ vars.NEW_RELIC_ACCOUNT_ID }}
+          NEW_RELIC_LICENSE_KEY: ${{ secrets.NEW_RELIC_LICENSE_KEY }}
+          NEW_RELIC_TRUSTED_ACCOUNT_KEY: ${{ vars.NEW_RELIC_TRUSTED_ACCOUNT_KEY }}
+          NEW_RELIC_LAYER_VERSION: ${{ vars.NEW_RELIC_LAYER_VERSION }}
           TF_PLAN_OUT: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && 'true' || 'false' }}
         run: bash ../../../.github/scripts/terraform-plan-apply.sh plan
 

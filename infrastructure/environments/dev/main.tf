@@ -255,6 +255,11 @@ module "lambda" {
   google_business_client_secret  = var.google_business_client_secret
   google_calendar_client_id      = var.google_calendar_client_id
   google_calendar_client_secret  = var.google_calendar_client_secret
+  enable_newrelic                = var.enable_newrelic
+  newrelic_account_id            = var.newrelic_account_id
+  newrelic_license_key           = var.newrelic_license_key
+  newrelic_trusted_account_key   = var.newrelic_trusted_account_key
+  newrelic_layer_version         = var.newrelic_layer_version
   tags                           = local.tags
 }
 

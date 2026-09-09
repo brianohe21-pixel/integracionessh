@@ -90,6 +90,21 @@ build_plan_args() {
   if [ "${ENABLE_TELEPHONY_GATEWAY:-false}" = "true" ]; then
     PLAN_ARGS+=(-var="enable_telephony_gateway=true")
   fi
+  if [ "${ENABLE_NEWRELIC:-false}" = "true" ]; then
+    PLAN_ARGS+=(-var="enable_newrelic=true")
+  fi
+  if [ -n "${NEW_RELIC_ACCOUNT_ID:-}" ]; then
+    PLAN_ARGS+=(-var="newrelic_account_id=${NEW_RELIC_ACCOUNT_ID}")
+  fi
+  if [ -n "${NEW_RELIC_LICENSE_KEY:-}" ]; then
+    PLAN_ARGS+=(-var="newrelic_license_key=${NEW_RELIC_LICENSE_KEY}")
+  fi
+  if [ -n "${NEW_RELIC_TRUSTED_ACCOUNT_KEY:-}" ]; then
+    PLAN_ARGS+=(-var="newrelic_trusted_account_key=${NEW_RELIC_TRUSTED_ACCOUNT_KEY}")
+  fi
+  if [ -n "${NEW_RELIC_LAYER_VERSION:-}" ]; then
+    PLAN_ARGS+=(-var="newrelic_layer_version=${NEW_RELIC_LAYER_VERSION}")
+  fi
 }
 
 run_with_lock_retry() {

@@ -45,5 +45,11 @@ demo_account_password = "DemoAccess2026!"
 
 enable_monitoring = false
 ops_alert_email   = "ops@example.com"
+
+enable_newrelic      = false
+newrelic_account_id  = ""
+newrelic_license_key = ""
+# newrelic_trusted_account_key = ""
+# newrelic_layer_version      = 124
 # ops_alert_emails = ["ops@example.com", "oncall@example.com"]
 ses_from_email    = "ops@integracionessh.lat"
