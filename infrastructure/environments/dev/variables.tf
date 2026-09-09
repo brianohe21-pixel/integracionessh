@@ -126,6 +126,37 @@ variable "enable_monitoring" {
   description = "Deploy SNS/CloudWatch ops alerts (requires SNS and CloudWatch IAM permissions)"
 }
 
+variable "enable_newrelic" {
+  type        = bool
+  default     = false
+  description = "Attach New Relic Lambda layer and APM wrapper to backend functions"
+}
+
+variable "newrelic_account_id" {
+  type        = string
+  default     = ""
+  description = "New Relic account ID (required when enable_newrelic is true)"
+}
+
+variable "newrelic_license_key" {
+  type        = string
+  default     = ""
+  sensitive   = true
+  description = "New Relic ingest license key (required when enable_newrelic is true)"
+}
+
+variable "newrelic_trusted_account_key" {
+  type        = string
+  default     = ""
+  description = "New Relic trusted account key; defaults to newrelic_account_id when empty"
+}
+
+variable "newrelic_layer_version" {
+  type        = number
+  default     = 124
+  description = "NewRelicNodeJS20X layer version for the deployment region"
+}
+
 variable "wompi_public_key" {
   type    = string
   default = ""

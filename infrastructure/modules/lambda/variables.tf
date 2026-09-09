@@ -383,6 +383,37 @@ variable "imap_poll_rate_minutes" {
   description = "Interval in minutes for polling active IMAP mailboxes"
 }
 
+variable "enable_newrelic" {
+  type        = bool
+  default     = false
+  description = "Attach New Relic Lambda layer and APM wrapper to all functions in this module"
+}
+
+variable "newrelic_account_id" {
+  type        = string
+  default     = ""
+  description = "New Relic account ID (required when enable_newrelic is true)"
+}
+
+variable "newrelic_license_key" {
+  type        = string
+  default     = ""
+  sensitive   = true
+  description = "New Relic ingest license key stored in Secrets Manager (required when enable_newrelic is true)"
+}
+
+variable "newrelic_trusted_account_key" {
+  type        = string
+  default     = ""
+  description = "New Relic trusted account key; defaults to newrelic_account_id when empty"
+}
+
+variable "newrelic_layer_version" {
+  type        = number
+  default     = 124
+  description = "NewRelicNodeJS20X layer version for the deployment region"
+}
+
 variable "cloudwatch_log_group_import_exclude" {
   type = set(string)
   default = [

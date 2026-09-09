@@ -1,6 +1,38 @@
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
+locals {
+  newrelic_enabled             = var.enable_newrelic && trimspace(var.newrelic_account_id) != "" && trimspace(var.newrelic_license_key) != ""
+  newrelic_secret_name         = "/${var.environment}/platform/newrelic"
+  newrelic_layer_arn           = "arn:aws:lambda:${data.aws_region.current.name}:451483290750:layer:NewRelicNodeJS20X:${var.newrelic_layer_version}"
+  newrelic_trusted_account_key = trimspace(var.newrelic_trusted_account_key) != "" ? trimspace(var.newrelic_trusted_account_key) : trimspace(var.newrelic_account_id)
+  newrelic_environment_variables = {
+    NEW_RELIC_ACCOUNT_ID                   = trimspace(var.newrelic_account_id)
+    NEW_RELIC_TRUSTED_ACCOUNT_KEY          = local.newrelic_trusted_account_key
+    NEW_RELIC_LICENSE_KEY_SECRET           = local.newrelic_secret_name
+    NEW_RELIC_NO_CONFIG_FILE               = "true"
+    NEW_RELIC_APM_LAMBDA_MODE              = "true"
+    NEW_RELIC_APP_NAME                     = "${var.project}-${var.environment}"
+    NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS = "true"
+    NEW_RELIC_CLOUD_AWS_ACCOUNT_ID         = data.aws_caller_identity.current.account_id
+    NEW_RELIC_NATIVE_METRICS_ENABLED       = "false"
+  }
+}
+
+resource "aws_secretsmanager_secret" "newrelic_license_key" {
+  count = local.newrelic_enabled ? 1 : 0
+
+  name = local.newrelic_secret_name
+  tags = var.tags
+}
+
+resource "aws_secretsmanager_secret_version" "newrelic_license_key" {
+  count = local.newrelic_enabled ? 1 : 0
+
+  secret_id     = aws_secretsmanager_secret.newrelic_license_key[0].id
+  secret_string = trimspace(var.newrelic_license_key)
+}
+
 data "aws_iam_policy_document" "assume_role" {
   statement {
     effect = "Allow"
@@ -1050,7 +1082,7 @@ resource "aws_lambda_function" "functions" {
   function_name = "${var.project}-${var.environment}-${replace(each.key, "_", "-")}"
   description   = each.value.description
   role          = aws_iam_role.lambda.arn
-  handler       = each.value.handler
+  handler       = local.newrelic_enabled ? "newrelic-lambda-wrapper.handler" : each.value.handler
   runtime       = "nodejs20.x"
   timeout       = each.value.timeout
   memory_size   = each.value.memory
@@ -1058,8 +1090,16 @@ resource "aws_lambda_function" "functions" {
   filename         = local.lambda_zip_effective
   source_code_hash = filebase64sha256(local.lambda_zip_effective)
 
+  layers = local.newrelic_enabled ? [local.newrelic_layer_arn] : []
+
   environment {
-    variables = each.value.environment
+    variables = local.newrelic_enabled ? merge(
+      each.value.environment,
+      local.newrelic_environment_variables,
+      {
+        NEW_RELIC_LAMBDA_HANDLER = each.value.handler
+      }
+    ) : each.value.environment
   }
 
   lifecycle {
