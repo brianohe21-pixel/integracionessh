@@ -78,6 +78,8 @@ const entryPoints = [
   "src/functions/google-business/index.ts",
 ];
 
+const isProduction = process.env.NODE_ENV === "production";
+
 const buildOptions = {
   entryPoints,
   bundle: true,
@@ -85,8 +87,8 @@ const buildOptions = {
   target: "node20",
   format: "cjs",
   outdir: "dist",
-  sourcemap: true,
-  minify: process.env.NODE_ENV === "production",
+  sourcemap: !isProduction,
+  minify: isProduction,
   external: [
     "@aws-sdk/*",
   ],
@@ -126,7 +128,7 @@ async function build() {
       if (!fs.existsSync(distDir)) {
         fs.mkdirSync(distDir, { recursive: true });
       }
-      execSync(`cd ${distDir} && zip -r functions.zip .`, { stdio: "inherit" });
+      execSync(`cd ${distDir} && zip -r functions.zip . -x '*.map'`, { stdio: "inherit" });
       console.log("Zip created at dist/functions.zip");
 
       const manifest = {

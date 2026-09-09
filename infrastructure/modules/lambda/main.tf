@@ -4,7 +4,7 @@ data "aws_region" "current" {}
 locals {
   newrelic_enabled             = var.enable_newrelic && trimspace(var.newrelic_account_id) != "" && trimspace(var.newrelic_license_key) != ""
   newrelic_secret_name         = "/${var.environment}/platform/newrelic"
-  newrelic_layer_arn           = "arn:aws:lambda:${data.aws_region.current.name}:451483290750:layer:NewRelicNodeJS20X:${var.newrelic_layer_version}"
+  newrelic_layer_arn           = "arn:aws:lambda:${data.aws_region.current.name}:451483290750:layer:NewRelicNodeJS20X-slim:${var.newrelic_layer_version}"
   newrelic_trusted_account_key = trimspace(var.newrelic_trusted_account_key) != "" ? trimspace(var.newrelic_trusted_account_key) : trimspace(var.newrelic_account_id)
   newrelic_environment_variables = {
     NEW_RELIC_ACCOUNT_ID                   = trimspace(var.newrelic_account_id)

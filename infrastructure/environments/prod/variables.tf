@@ -156,8 +156,8 @@ variable "newrelic_trusted_account_key" {
 
 variable "newrelic_layer_version" {
   type        = number
-  default     = 124
-  description = "NewRelicNodeJS20X layer version for the deployment region"
+  default     = 44
+  description = "NewRelicNodeJS20X-slim layer version for the deployment region"
 }
 
 variable "wompi_public_key" {
