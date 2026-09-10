@@ -78,7 +78,7 @@ jobs:
         with:
           name: lambda-package
           path: |
-            backend/dist/functions.zip
+            backend/dist/zips
             backend/dist/lambda-manifest.json
           retention-days: 1
 

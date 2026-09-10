@@ -67,4 +67,28 @@ if (( failed )); then
   exit 1
 fi
 
+DIST_DIR="${DIST_DIR:-backend/dist}"
+missing_packages=()
+for fn in "${manifest_funcs[@]}"; do
+  zip_rel=$(jq -r --arg fn "$fn" '.packages[$fn] // empty' "$MANIFEST")
+  if [[ -z "$zip_rel" ]]; then
+    missing_packages+=("$fn (missing manifest package entry)")
+    continue
+  fi
+  zip_path="${DIST_DIR}/${zip_rel}"
+  if [[ ! -f "$zip_path" ]]; then
+    missing_packages+=("$fn (${zip_path})")
+  fi
+done
+
+if ((${#missing_packages[@]} > 0)); then
+  echo "Missing Lambda package(s):"
+  printf '  - %s\n' "${missing_packages[@]}"
+  failed=1
+fi
+
+if (( failed )); then
+  exit 1
+fi
+
 echo "Lambda manifest matches Terraform (${#manifest_funcs[@]} functions)."

@@ -10,6 +10,10 @@ function entryPointToFunctionKey(entryPoint) {
   return folder.replace(/-/g, "_");
 }
 
+function entryPointToFolderName(entryPoint) {
+  return path.basename(path.dirname(entryPoint));
+}
+
 const entryPoints = [
   "src/functions/webhook/index.ts",
   "src/functions/process-message/index.ts",
@@ -97,6 +101,48 @@ const buildOptions = {
   },
 };
 
+function copyEmailAssets(distDir) {
+  const emailAssetsSrc = path.join(__dirname, "../src/lib/email/assets");
+  const emailAssetsDestDir = path.join(distDir, "email/assets");
+  fs.mkdirSync(emailAssetsDestDir, { recursive: true });
+  for (const entry of fs.readdirSync(emailAssetsSrc, { withFileTypes: true })) {
+    const sourcePath = path.join(emailAssetsSrc, entry.name);
+    const destPath = path.join(emailAssetsDestDir, entry.name);
+    if (entry.isDirectory()) {
+      fs.cpSync(sourcePath, destPath, { recursive: true });
+    } else {
+      fs.copyFileSync(sourcePath, destPath);
+    }
+  }
+}
+
+function createFunctionPackages(distDir) {
+  const zipsDir = path.join(distDir, "zips");
+  const stagingRoot = path.join(distDir, ".zip-staging");
+  fs.mkdirSync(zipsDir, { recursive: true });
+  fs.rmSync(stagingRoot, { recursive: true, force: true });
+
+  const packages = {};
+
+  for (const entryPoint of entryPoints) {
+    const functionKey = entryPointToFunctionKey(entryPoint);
+    const folderName = entryPointToFolderName(entryPoint);
+    const functionDir = path.join(distDir, folderName);
+    const stagingDir = path.join(stagingRoot, functionKey);
+    const zipPath = path.join(zipsDir, `${functionKey}.zip`);
+
+    fs.mkdirSync(stagingDir, { recursive: true });
+    fs.cpSync(functionDir, path.join(stagingDir, folderName), { recursive: true });
+    fs.cpSync(path.join(distDir, "email"), path.join(stagingDir, "email"), { recursive: true });
+
+    execSync(`cd ${stagingDir} && zip -qr ${zipPath} . -x '*.map'`, { stdio: "inherit" });
+    packages[functionKey] = `zips/${functionKey}.zip`;
+  }
+
+  fs.rmSync(stagingRoot, { recursive: true, force: true });
+  return packages;
+}
+
 async function build() {
   try {
     const distDir = path.resolve(__dirname, "../dist");
@@ -112,32 +158,18 @@ async function build() {
       await esbuild.build(buildOptions);
       console.log("Build complete.");
 
-      const emailAssetsSrc = path.join(__dirname, "../src/lib/email/assets");
-      const emailAssetsDestDir = path.join(distDir, "email/assets");
-      fs.mkdirSync(emailAssetsDestDir, { recursive: true });
-      for (const entry of fs.readdirSync(emailAssetsSrc, { withFileTypes: true })) {
-        const sourcePath = path.join(emailAssetsSrc, entry.name);
-        const destPath = path.join(emailAssetsDestDir, entry.name);
-        if (entry.isDirectory()) {
-          fs.cpSync(sourcePath, destPath, { recursive: true });
-        } else {
-          fs.copyFileSync(sourcePath, destPath);
-        }
-      }
-
-      if (!fs.existsSync(distDir)) {
-        fs.mkdirSync(distDir, { recursive: true });
-      }
-      execSync(`cd ${distDir} && zip -r functions.zip . -x '*.map'`, { stdio: "inherit" });
-      console.log("Zip created at dist/functions.zip");
+      copyEmailAssets(distDir);
+      const packages = createFunctionPackages(distDir);
 
       const manifest = {
         functions: entryPoints.map(entryPointToFunctionKey).sort(),
+        packages,
       };
       fs.writeFileSync(
         path.join(distDir, "lambda-manifest.json"),
         `${JSON.stringify(manifest, null, 2)}\n`
       );
+      console.log(`Created ${Object.keys(packages).length} function package(s) in dist/zips/`);
       console.log("Manifest created at dist/lambda-manifest.json");
     }
   } catch (error) {
