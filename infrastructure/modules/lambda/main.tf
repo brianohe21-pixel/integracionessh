@@ -9,7 +9,7 @@ locals {
   newrelic_environment_variables = {
     NEW_RELIC_ACCOUNT_ID                   = trimspace(var.newrelic_account_id)
     NEW_RELIC_TRUSTED_ACCOUNT_KEY          = local.newrelic_trusted_account_key
-    NEW_RELIC_LICENSE_KEY_SECRET           = local.newrelic_secret_name
+    NEW_RELIC_LICENSE_KEY_SECRET           = local.newrelic_enabled ? aws_secretsmanager_secret.newrelic_license_key[0].arn : ""
     NEW_RELIC_NO_CONFIG_FILE               = "true"
     NEW_RELIC_APM_LAMBDA_MODE              = "true"
     NEW_RELIC_APP_NAME                     = "${var.project}-${var.environment}"
@@ -29,8 +29,11 @@ resource "aws_secretsmanager_secret" "newrelic_license_key" {
 resource "aws_secretsmanager_secret_version" "newrelic_license_key" {
   count = local.newrelic_enabled ? 1 : 0
 
-  secret_id     = aws_secretsmanager_secret.newrelic_license_key[0].id
-  secret_string = trimspace(var.newrelic_license_key)
+  secret_id = aws_secretsmanager_secret.newrelic_license_key[0].id
+  secret_string = jsonencode({
+    LicenseKey  = trimspace(var.newrelic_license_key)
+    NrAccountId = trimspace(var.newrelic_account_id)
+  })
 }
 
 data "aws_iam_policy_document" "assume_role" {
