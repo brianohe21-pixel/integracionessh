@@ -11,6 +11,7 @@ on:
       - "package.json"
       - ".github/workflows/backend.yml"
       - ".github/scripts/deploy-lambdas.sh"
+      - ".github/scripts/resolve-lambda-deploy-targets.sh"
       - ".github/scripts/validate-lambda-manifest.sh"
       - ".github/scripts/wait-for-terraform.sh"
       - ".github/scripts/changed-files-in-push.sh"
@@ -24,6 +25,7 @@ on:
       - "package.json"
       - ".github/workflows/backend.yml"
       - ".github/scripts/deploy-lambdas.sh"
+      - ".github/scripts/resolve-lambda-deploy-targets.sh"
       - ".github/scripts/validate-lambda-manifest.sh"
       - ".github/scripts/wait-for-terraform.sh"
       - ".github/scripts/changed-files-in-push.sh"
@@ -43,6 +45,26 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve Lambda build targets
+        if: github.event_name == 'push'
+        id: build_targets
+        run: bash .github/scripts/resolve-lambda-deploy-targets.sh "${GITHUB_SHA}" "${{ github.event.before }}"
+
+      - name: Restore Lambda package cache
+        if: github.event_name == 'push'
+        uses: actions/cache@v4
+        with:
+          path: |
+            backend/dist/zips
+            backend/dist/lambda-manifest.json
+          key: lambda-packages-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'backend/scripts/build.js') }}-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            lambda-packages-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'backend/scripts/build.js') }}-${{ github.ref_name }}-
+            lambda-packages-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'backend/scripts/build.js') }}-
+            lambda-packages-${{ runner.os }}-
 
       - uses: pnpm/action-setup@v4
 
@@ -68,9 +90,20 @@ jobs:
         run: pnpm --filter chatbot-platform-backend run build
         env:
           NODE_ENV: production
+          LAMBDA_BUILD_ALL: ${{ github.event_name == 'pull_request' && 'true' || steps.build_targets.outputs.deploy_all }}
+          LAMBDA_BUILD_FUNCTIONS: ${{ github.event_name == 'pull_request' && '' || steps.build_targets.outputs.functions }}
 
       - name: Validate Lambda manifest
         run: bash .github/scripts/validate-lambda-manifest.sh
+
+      - name: Save Lambda package cache
+        if: github.event_name == 'push'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            backend/dist/zips
+            backend/dist/lambda-manifest.json
+          key: lambda-packages-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'backend/scripts/build.js') }}-${{ github.ref_name }}-${{ github.sha }}
 
       - name: Upload Lambda package
         if: github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main')
@@ -120,6 +153,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: bash .github/scripts/wait-for-terraform.sh "${GITHUB_REF_NAME}" "${GITHUB_SHA}" "${{ github.event.before }}"
 
+      - name: Resolve Lambda deploy targets
+        id: deploy_targets
+        run: bash .github/scripts/resolve-lambda-deploy-targets.sh "${GITHUB_SHA}" "${{ github.event.before }}"
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -128,6 +165,10 @@ jobs:
           aws-region: us-east-1
 
       - name: Deploy Lambdas
+        if: steps.deploy_targets.outputs.deploy_all == 'true' || steps.deploy_targets.outputs.functions != ''
+        env:
+          LAMBDA_DEPLOY_ALL: ${{ steps.deploy_targets.outputs.deploy_all }}
+          LAMBDA_DEPLOY_FUNCTIONS: ${{ steps.deploy_targets.outputs.functions }}
         run: bash .github/scripts/deploy-lambdas.sh dev
 
   deploy-prod:
@@ -168,6 +209,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: bash .github/scripts/wait-for-terraform.sh "${GITHUB_REF_NAME}" "${GITHUB_SHA}" "${{ github.event.before }}"
 
+      - name: Resolve Lambda deploy targets
+        id: deploy_targets
+        run: bash .github/scripts/resolve-lambda-deploy-targets.sh "${GITHUB_SHA}" "${{ github.event.before }}"
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -176,4 +221,8 @@ jobs:
           aws-region: us-east-1
 
       - name: Deploy Lambdas
+        if: steps.deploy_targets.outputs.deploy_all == 'true' || steps.deploy_targets.outputs.functions != ''
+        env:
+          LAMBDA_DEPLOY_ALL: ${{ steps.deploy_targets.outputs.deploy_all }}
+          LAMBDA_DEPLOY_FUNCTIONS: ${{ steps.deploy_targets.outputs.functions }}
         run: bash .github/scripts/deploy-lambdas.sh prod

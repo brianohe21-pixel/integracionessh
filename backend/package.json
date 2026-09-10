@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "build": "node scripts/build.js",
+    "build:all": "LAMBDA_BUILD_ALL=true node scripts/build.js",
     "build:watch": "node scripts/build.js --watch",
     "type-check": "tsc --noEmit",
     "test": "jest --passWithNoTests --forceExit --runInBand",
