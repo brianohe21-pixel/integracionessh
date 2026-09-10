@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ENV="${1:?Usage: deploy-lambdas.sh dev|prod}"
+ENV="${1:?Usage: deploy-lambdas.sh dev|prod [all|function_key ...]}"
 PROJECT="${PROJECT:-chatbot-platform}"
 PARALLEL="${PARALLEL:-5}"
+DIST_DIR="${DIST_DIR:-backend/dist}"
 MANIFEST="${MANIFEST:-backend/dist/lambda-manifest.json}"
-ZIP="${ZIP:-backend/dist/functions.zip}"
 AWS_REGION="${AWS_REGION:-us-east-1}"
 MAX_RETRIES="${MAX_RETRIES:-6}"
 RETRY_DELAY="${RETRY_DELAY:-30}"
+LAMBDA_DEPLOY_ALL="${LAMBDA_DEPLOY_ALL:-false}"
+LAMBDA_DEPLOY_FUNCTIONS="${LAMBDA_DEPLOY_FUNCTIONS:-}"
 
 if [[ "$ENV" != "dev" && "$ENV" != "prod" ]]; then
   echo "Environment must be dev or prod" >&2
@@ -20,17 +22,66 @@ if [[ ! -f "$MANIFEST" ]]; then
   exit 1
 fi
 
-if [[ ! -f "$ZIP" ]]; then
-  echo "Zip not found: $ZIP" >&2
-  exit 1
-fi
-
 if ! command -v jq >/dev/null 2>&1; then
   echo "jq is required" >&2
   exit 1
 fi
 
-mapfile -t functions < <(jq -r '.functions[]' "$MANIFEST")
+mapfile -t all_functions < <(jq -r '.functions[]' "$MANIFEST")
+
+functions=()
+if [[ "$LAMBDA_DEPLOY_ALL" == "true" ]] || [[ "${2:-}" == "all" ]]; then
+  functions=("${all_functions[@]}")
+elif [[ -n "$LAMBDA_DEPLOY_FUNCTIONS" ]]; then
+  IFS=',' read -ra requested <<< "$LAMBDA_DEPLOY_FUNCTIONS"
+  for fn in "${requested[@]}"; do
+    fn="${fn// /}"
+    [[ -n "$fn" ]] && functions+=("$fn")
+  done
+elif (("$#" >= 2)); then
+  for fn in "${@:2}"; do
+    functions+=("$fn")
+  done
+else
+  functions=("${all_functions[@]}")
+fi
+
+if ((${#functions[@]} == 0)); then
+  echo "No Lambda functions selected for deploy."
+  exit 0
+fi
+
+invalid=()
+for fn in "${functions[@]}"; do
+  if ! jq -e --arg fn "$fn" '.functions | index($fn) != null' "$MANIFEST" >/dev/null; then
+    invalid+=("$fn")
+  fi
+done
+
+if ((${#invalid[@]} > 0)); then
+  echo "Unknown Lambda function key(s):" >&2
+  printf '  - %s\n' "${invalid[@]}" >&2
+  exit 1
+fi
+
+missing_packages=()
+for fn in "${functions[@]}"; do
+  zip_rel=$(jq -r --arg fn "$fn" '.packages[$fn] // empty' "$MANIFEST")
+  if [[ -z "$zip_rel" ]]; then
+    missing_packages+=("$fn")
+    continue
+  fi
+  zip_path="${DIST_DIR}/${zip_rel}"
+  if [[ ! -f "$zip_path" ]]; then
+    missing_packages+=("$fn (${zip_path})")
+  fi
+done
+
+if ((${#missing_packages[@]} > 0)); then
+  echo "Missing Lambda package(s):" >&2
+  printf '  - %s\n' "${missing_packages[@]}" >&2
+  exit 1
+fi
 
 missing=()
 for fn in "${functions[@]}"; do
@@ -51,15 +102,22 @@ fi
 
 ACCOUNT_ID="${ACCOUNT_ID:-$(aws sts get-caller-identity --query Account --output text)}"
 ARTIFACTS_BUCKET="${ARTIFACTS_BUCKET:-${PROJECT}-${ENV}-artifacts-${ACCOUNT_ID}}"
-S3_KEY="${S3_KEY:-lambda/functions-$(date +%s).zip}"
-
-echo "Uploading ${ZIP} to s3://${ARTIFACTS_BUCKET}/${S3_KEY}..."
-aws s3 cp "$ZIP" "s3://${ARTIFACTS_BUCKET}/${S3_KEY}" --region "$AWS_REGION" --no-cli-pager
+DEPLOY_RUN_ID="${DEPLOY_RUN_ID:-$(date +%s)}"
 
 deploy_one() {
   local fn="$1"
   local function_name="${PROJECT}-${ENV}-${fn//_/-}"
+  local zip_rel
+  local zip_path
+  local s3_key
   local attempt=1
+
+  zip_rel=$(jq -r --arg fn "$fn" '.packages[$fn]' "$MANIFEST")
+  zip_path="${DIST_DIR}/${zip_rel}"
+  s3_key="lambda/${fn}-${DEPLOY_RUN_ID}.zip"
+
+  echo "Uploading ${zip_path} to s3://${ARTIFACTS_BUCKET}/${s3_key}..."
+  aws s3 cp "$zip_path" "s3://${ARTIFACTS_BUCKET}/${s3_key}" --region "$AWS_REGION" --no-cli-pager
 
   while (( attempt <= MAX_RETRIES )); do
     set +e
@@ -67,7 +125,7 @@ deploy_one() {
       --region "$AWS_REGION" \
       --function-name "$function_name" \
       --s3-bucket "$ARTIFACTS_BUCKET" \
-      --s3-key "$S3_KEY" \
+      --s3-key "$s3_key" \
       --no-cli-pager 2>&1)
     status=$?
     set -e
@@ -95,7 +153,7 @@ deploy_one() {
 }
 
 export -f deploy_one
-export PROJECT ENV AWS_REGION MAX_RETRIES RETRY_DELAY ARTIFACTS_BUCKET S3_KEY
+export PROJECT ENV AWS_REGION MAX_RETRIES RETRY_DELAY ARTIFACTS_BUCKET DEPLOY_RUN_ID DIST_DIR MANIFEST
 
 echo "Deploying ${#functions[@]} Lambda function(s) to ${ENV}..."
 
