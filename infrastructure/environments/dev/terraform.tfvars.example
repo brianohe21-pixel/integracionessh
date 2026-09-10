@@ -50,6 +50,6 @@ enable_newrelic      = false
 newrelic_account_id  = ""
 newrelic_license_key = ""
 # newrelic_trusted_account_key = ""
-# newrelic_layer_version      = 124
+# newrelic_layer_version      = 44
 # ops_alert_emails = ["ops@example.com", "oncall@example.com"]
 ses_from_email    = "ops@integracionessh.lat"
