@@ -3606,6 +3606,7 @@ export const en: Messages = {
     },
     tabEditor: "Editor",
     tabActivity: "Activity",
+    tabVersions: "Versions",
     activity: {
       title: "Flow activity",
       subtitle: "Execution history, inbound webhooks, and conversations.",
@@ -3665,8 +3666,13 @@ export const en: Messages = {
       title: "Versions",
       subtitle: "Published flow version history.",
       empty: "No published versions yet.",
+      emptyHint: "Publish changes from the editor to create flow versions.",
+      colVersion: "Version",
+      colPublishedAt: "Published",
       restore: "Restore to draft",
       restoring: "Restoring…",
+      showMore: "Show {{count}} more versions",
+      showLess: "Show fewer versions",
     },
     hints: {
       conditionBranches: "Connect each output (Yes / No) to the corresponding next node.",

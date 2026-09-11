@@ -15,7 +15,7 @@ import { FlowEditorToolbar } from "@/components/flows/FlowEditorToolbar";
 import { IntegrationErrorSupport } from "@/components/support/IntegrationErrorSupport";
 import { FlowSecretsPanel } from "@/components/flows/FlowSecretsPanel";
 import { FlowActivityTab } from "@/components/flows/FlowActivityTab";
-import { FlowVersionsPanel } from "@/components/flows/FlowVersionsPanel";
+import { FlowVersionsTab } from "@/components/flows/FlowVersionsTab";
 import { FlowPreviewModal } from "@/components/flows/FlowPreviewModal";
 import { resolveFlowBotIdFromNodes } from "@/lib/resolve-flow-bot";
 import { createFlowNode, defaultPalettePosition } from "@/lib/flow-node-factory";
@@ -33,7 +33,7 @@ const FlowCanvas = dynamic(
   { ssr: false, loading: () => <div className="h-[520px] animate-pulse rounded-xl bg-surface-muted" /> }
 );
 
-type FlowEditorTab = "editor" | "activity";
+type FlowEditorTab = "editor" | "activity" | "versions";
 
 export default function EditFlowPage() {
   const t = useT();
@@ -296,6 +296,7 @@ export default function EditFlowPage() {
     setPublishedKey(flowPublishedEditorSnapshotKey(updated));
     setSavedMessage(false);
     setPublishedMessage(false);
+    setActiveTab("editor");
     window.setTimeout(() => setAutoSaveReady(true), 1000);
   }
 
@@ -317,7 +318,7 @@ export default function EditFlowPage() {
   return (
     <div
       ref={editorRef}
-      className="flex h-[calc(100dvh-3.5rem)] w-full max-w-full flex-col overflow-hidden bg-canvas lg:h-full"
+      className="flow-editor-shell flex min-h-0 flex-1 w-full max-w-full flex-col overflow-hidden bg-canvas"
     >
       <FlowEditorToolbar
         flowName={flow.name}
@@ -412,6 +413,7 @@ export default function EditFlowPage() {
           [
             { id: "editor" as const, label: t("flows.tabEditor") },
             { id: "activity" as const, label: t("flows.tabActivity") },
+            { id: "versions" as const, label: t("flows.tabVersions") },
           ] as const
         ).map((tabItem) => (
           <button
@@ -434,51 +436,57 @@ export default function EditFlowPage() {
           flowId={flow.flowId}
           nodes={localNodes.length > 0 ? localNodes : flow.nodes}
         />
+      ) : activeTab === "versions" ? (
+        <FlowVersionsTab flowId={flow.flowId} onRestored={handleVersionRestored} />
       ) : (
-      <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
-        <aside
-          ref={palettePanel.panelRef}
-          style={{ width: palettePanel.width }}
-          className="relative hidden flex-shrink-0 overflow-x-hidden overflow-y-auto border-r border-default bg-surface-elevated p-3 lg:block"
-        >
-          <NodePalette onAddNode={addNode} />
-          <div
-            role="separator"
-            aria-orientation="vertical"
-            aria-label={t("flows.resizePalette")}
-            onMouseDown={palettePanel.startResize}
-            className={`absolute right-0 top-0 z-10 h-full w-1 cursor-col-resize touch-none transition-colors hover:bg-accent/30 ${
-              palettePanel.isResizing ? "bg-accent/40" : ""
-            }`}
-          />
-        </aside>
+        <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
+          <aside
+            ref={palettePanel.panelRef}
+            style={{ width: palettePanel.width }}
+            className="relative hidden min-h-0 flex-shrink-0 flex-col overflow-hidden border-r border-default bg-surface-elevated lg:flex"
+          >
+            <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-3 scrollbar-hidden">
+              <NodePalette onAddNode={addNode} />
+            </div>
+            {isVoiceFlow ? (
+              <div className="shrink-0 border-t border-default p-3">
+                <FlowSecretsPanel
+                  flowId={flow.flowId}
+                  isVoiceFlow={isVoiceFlow}
+                  nodes={localNodes.length > 0 ? localNodes : flow.nodes}
+                />
+              </div>
+            ) : null}
+            <div
+              role="separator"
+              aria-orientation="vertical"
+              aria-label={t("flows.resizePalette")}
+              onMouseDown={palettePanel.startResize}
+              className={`absolute right-0 top-0 z-10 h-full w-1 cursor-col-resize touch-none transition-colors hover:bg-accent/30 ${
+                palettePanel.isResizing ? "bg-accent/40" : ""
+              }`}
+            />
+          </aside>
 
-        <div className="min-h-0 min-w-0 flex-1">
-          <FlowCanvas
-            flow={{
-              ...flow,
-              nodes: localNodes.length > 0 ? localNodes : flow.nodes,
-              edges: localEdges.length > 0 ? localEdges : flow.edges,
-            }}
-            selectedNodeId={selectedNodeId}
-            onSelectNode={setSelectedNodeId}
-            onChange={handleCanvasChange}
-            onAddNode={addNode}
-            getTypeLabel={getTypeLabel}
-            getBranchLabel={getBranchLabel}
-            onCannotDeleteTrigger={handleCannotDeleteTrigger}
-          />
+          <div className="min-h-0 min-w-0 flex-1 overflow-hidden p-3 pr-5 pb-3 lg:p-4 lg:pr-8">
+            <div className="h-full min-h-0 overflow-hidden rounded-xl border border-default bg-surface-elevated shadow-sm">
+              <FlowCanvas
+                flow={{
+                  ...flow,
+                  nodes: localNodes.length > 0 ? localNodes : flow.nodes,
+                  edges: localEdges.length > 0 ? localEdges : flow.edges,
+                }}
+                selectedNodeId={selectedNodeId}
+                onSelectNode={setSelectedNodeId}
+                onChange={handleCanvasChange}
+                onAddNode={addNode}
+                getTypeLabel={getTypeLabel}
+                getBranchLabel={getBranchLabel}
+                onCannotDeleteTrigger={handleCannotDeleteTrigger}
+              />
+            </div>
+          </div>
         </div>
-
-        <aside className="hidden w-60 flex-shrink-0 overflow-y-auto border-l border-default bg-surface-elevated p-3 lg:block xl:w-64 space-y-4">
-          <FlowSecretsPanel
-            flowId={flow.flowId}
-            isVoiceFlow={isVoiceFlow}
-            nodes={localNodes.length > 0 ? localNodes : flow.nodes}
-          />
-          <FlowVersionsPanel flowId={flow.flowId} onRestored={handleVersionRestored} />
-        </aside>
-      </div>
       )}
 
       <NodePropertiesModal

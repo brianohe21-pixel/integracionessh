@@ -23,7 +23,7 @@ export function DashboardPage({
   return (
     <div
       className={cn(
-        "page-enter flex h-full min-h-full w-full min-w-0 flex-1 flex-col px-5 py-5 lg:px-6 lg:py-6",
+        "page-enter flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto px-5 py-5 lg:px-6 lg:py-6",
         maxWidthClasses[maxWidth],
         className
       )}

@@ -3609,6 +3609,7 @@ export const es = {
     },
     tabEditor: "Editor",
     tabActivity: "Actividad",
+    tabVersions: "Versiones",
     activity: {
       title: "Actividad del flujo",
       subtitle: "Historial de ejecuciones, webhooks entrantes y conversaciones.",
@@ -3668,8 +3669,13 @@ export const es = {
       title: "Versiones",
       subtitle: "Historial de publicaciones del flujo.",
       empty: "Sin versiones publicadas todavía.",
+      emptyHint: "Publica cambios desde el editor para crear versiones del flujo.",
+      colVersion: "Versión",
+      colPublishedAt: "Publicada",
       restore: "Restaurar borrador",
       restoring: "Restaurando…",
+      showMore: "Ver {{count}} versiones más",
+      showLess: "Ver menos versiones",
     },
     hints: {
       conditionBranches: "Conecta cada salida (Sí / No) al siguiente nodo correspondiente.",
