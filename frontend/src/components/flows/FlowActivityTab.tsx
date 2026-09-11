@@ -4,10 +4,8 @@ import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, History, Search } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { useFormatters } from "@/hooks/useFormatters";
-import { useFlowActivity, useSeedFlowActivity, type FlowActivityFilters } from "@/hooks/useFlows";
-import { isDevelopEnvironment } from "@/lib/demo-access";
+import { useFlowActivity, type FlowActivityFilters } from "@/hooks/useFlows";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SkeletonTable } from "@/components/ui/Skeleton";
 import { TableContainer } from "@/components/ui/TableContainer";
@@ -62,8 +60,6 @@ export function FlowActivityTab({ flowId, nodes }: FlowActivityTabProps) {
   };
 
   const { data, isLoading, isFetching } = useFlowActivity(flowId, filters);
-  const seedActivity = useSeedFlowActivity(flowId);
-  const showDevSeed = isDevelopEnvironment();
   const items = data?.items ?? [];
   const nextCursor = data?.nextCursor;
   const canGoPrev = pageIndex > 0;
@@ -87,23 +83,9 @@ export function FlowActivityTab({ flowId, nodes }: FlowActivityTabProps) {
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-canvas">
       <div className="border-b border-default bg-surface-elevated px-4 py-4 space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h2 className="text-sm font-semibold text-primary">{t("flows.activity.title")}</h2>
-            <p className="mt-1 text-xs text-secondary">{t("flows.activity.subtitle")}</p>
-          </div>
-          {showDevSeed ? (
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={seedActivity.isPending}
-              onClick={() => seedActivity.mutate()}
-            >
-              {seedActivity.isPending
-                ? t("flows.activity.seedLoading")
-                : t("flows.activity.seedSample")}
-            </Button>
-          ) : null}
+        <div>
+          <h2 className="text-sm font-semibold text-primary">{t("flows.activity.title")}</h2>
+          <p className="mt-1 text-xs text-secondary">{t("flows.activity.subtitle")}</p>
         </div>
 
         <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
@@ -168,19 +150,6 @@ export function FlowActivityTab({ flowId, nodes }: FlowActivityTabProps) {
             icon={<History className="h-6 w-6" />}
             title={t("flows.activity.empty")}
             description={t("flows.activity.emptyHint")}
-            action={
-              showDevSeed ? (
-                <Button
-                  variant="secondary"
-                  disabled={seedActivity.isPending}
-                  onClick={() => seedActivity.mutate()}
-                >
-                  {seedActivity.isPending
-                    ? t("flows.activity.seedLoading")
-                    : t("flows.activity.seedSample")}
-                </Button>
-              ) : undefined
-            }
           />
         ) : (
           <>

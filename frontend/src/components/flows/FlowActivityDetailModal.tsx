@@ -7,6 +7,7 @@ import { useFlowEventDetail, useFlowRunDetail } from "@/hooks/useFlows";
 import { Modal } from "@/components/ui/Modal";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { FlowWebhookRequestAccordion } from "@/components/flows/FlowWebhookRequestAccordion";
 import type { FlowActivitySummary, FlowNode } from "@/types";
 
 interface FlowActivityDetailModalProps {
@@ -228,6 +229,15 @@ export function FlowActivityDetailModal({
                 </div>
               )}
             </div>
+          ) : null}
+
+          {isWebhookItem && !eventLoading ? (
+            <FlowWebhookRequestAccordion
+              event={event}
+              webhookUrl={event?.webhookUrl}
+              hookKey={event?.hookKey ?? item.hookKey}
+              idempotencyKey={event?.idempotencyKey ?? item.idempotencyKey}
+            />
           ) : null}
 
           {payloadJson ? (
