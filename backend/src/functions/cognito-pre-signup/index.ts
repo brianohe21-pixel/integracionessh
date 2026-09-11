@@ -9,6 +9,7 @@ import {
   CognitoIdentityProviderClient,
   ListUsersCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
+import { normalizeEmail } from "../../lib/auth/normalize-email.js";
 import { getTenantIdBySsoProvider } from "../../lib/dynamodb/microsoft-sso.repository.js";
 import { recordUserLogin } from "../../lib/members/record-login.js";
 
@@ -16,6 +17,8 @@ type CognitoTriggerEvent =
   | PreSignUpTriggerEvent
   | PostConfirmationTriggerEvent
   | PostAuthenticationTriggerEvent;
+
+const DUPLICATE_EMAIL_MESSAGE = "An account with this email already exists";
 
 const client = new CognitoIdentityProviderClient({});
 
@@ -36,10 +39,13 @@ function isMicrosoftSsoProvider(providerName: string): boolean {
 }
 
 async function findExistingUserByEmail(email: string, userPoolId: string) {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) return null;
+
   const listed = await client.send(
     new ListUsersCommand({
       UserPoolId: userPoolId,
-      Filter: `email = "${email.replace(/"/g, '\\"')}"`,
+      Filter: `email = "${normalizedEmail.replace(/"/g, '\\"')}"`,
       Limit: 1,
     })
   );
@@ -51,6 +57,17 @@ function readUserAttribute(
   name: string
 ): string {
   return attributes?.find((attr) => attr.Name === name)?.Value?.trim() ?? "";
+}
+
+async function assertEmailAvailableForSignUp(
+  email: string,
+  userPoolId: string,
+  currentUsername?: string
+): Promise<void> {
+  const existingUser = await findExistingUserByEmail(email, userPoolId);
+  if (!existingUser?.Username) return;
+  if (currentUsername && existingUser.Username === currentUsername) return;
+  throw new Error(DUPLICATE_EMAIL_MESSAGE);
 }
 
 async function linkExternalProviderToExistingUser(
@@ -120,12 +137,28 @@ async function ensureCustomAttributes(
 }
 
 export async function handler(event: CognitoTriggerEvent): Promise<CognitoTriggerEvent> {
+  if (event.triggerSource === "PreSignUp_SignUp") {
+    const email = event.request.userAttributes.email?.trim();
+    if (!email) {
+      throw new Error("Email is required");
+    }
+
+    const normalizedEmail = normalizeEmail(email);
+    event.request.userAttributes.email = normalizedEmail;
+    await assertEmailAvailableForSignUp(normalizedEmail, event.userPoolId, event.userName);
+    return event;
+  }
+
   if (event.triggerSource === "PreSignUp_ExternalProvider") {
     const provider = parseExternalProviderUsername(event.userName);
     const microsoftProvider = provider ? isMicrosoftSsoProvider(provider.providerName) : false;
+    const email = event.request.userAttributes.email?.trim();
+
+    if (email) {
+      event.request.userAttributes.email = normalizeEmail(email);
+    }
 
     if (microsoftProvider) {
-      const email = event.request.userAttributes.email?.trim();
       if (!email) {
         throw new Error("Email is required for Microsoft SSO");
       }
@@ -156,7 +189,11 @@ export async function handler(event: CognitoTriggerEvent): Promise<CognitoTrigge
       throw new Error("Unable to link Microsoft account");
     }
 
-    if (!linked && !microsoftProvider) {
+    if (!linked) {
+      if (email) {
+        await assertEmailAvailableForSignUp(email, event.userPoolId);
+      }
+
       const { randomUUID } = await import("node:crypto");
       if (!event.request.userAttributes["custom:tenantId"]?.trim()) {
         event.request.userAttributes["custom:tenantId"] = randomUUID();

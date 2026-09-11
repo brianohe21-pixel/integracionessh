@@ -171,6 +171,7 @@ export const es = {
     resetError: "No se pudo restablecer la contraseña",
     resendError: "No se pudo reenviar el código",
     registerError: "Error al registrarse",
+    emailAlreadyExists: "Ya existe una cuenta con este correo. Inicia sesión o usa otro email.",
     invalidCode: "Código inválido",
     passwordHint:
       "Mínimo 8 caracteres, al menos una mayúscula, una minúscula y un número.",

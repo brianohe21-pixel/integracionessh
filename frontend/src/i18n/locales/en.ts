@@ -173,6 +173,8 @@ export const en: Messages = {
     resetError: "Could not reset password",
     resendError: "Could not resend the code",
     registerError: "Registration failed",
+    emailAlreadyExists: "An account with this email already exists. Sign in or use another email.",
+    emailAlreadyExists: "An account with this email already exists. Sign in or use another email.",
     invalidCode: "Invalid code",
     passwordHint:
       "At least 8 characters, including one uppercase letter, one lowercase letter, and one number.",

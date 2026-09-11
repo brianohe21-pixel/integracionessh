@@ -110,6 +110,7 @@ module "cognito" {
   google_client_secret = var.google_client_secret
   lambda_zip_path      = local.lambda_zip_path_absolute
   dynamodb_table_arn   = module.dynamodb.table_arn
+  dynamodb_table_name  = module.dynamodb.table_name
   tags                 = local.tags
 }
 
