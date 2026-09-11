@@ -15,10 +15,11 @@ import { ConversationRealtimeProvider } from "@/components/realtime/Conversation
 import { SoftphoneProvider } from "@/components/contact-center/SoftphoneProvider";
 import { SoftphoneUIProvider } from "@/components/contact-center/SoftphoneUIProvider";
 import { SoftphoneBar } from "@/components/contact-center/SoftphoneBar";
+import { PageLoader } from "@/components/ui/Loader";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<PageLoader />}>
       <SidebarProvider>
         <DashboardAuthGuard>
           <ConversationRealtimeProvider>

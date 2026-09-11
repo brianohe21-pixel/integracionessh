@@ -21,7 +21,6 @@ import { resolveFlowBotIdFromNodes } from "@/lib/resolve-flow-bot";
 import { createFlowNode, defaultPalettePosition } from "@/lib/flow-node-factory";
 import { applyResolvedTriggerType, resolveFlowSamplePayload } from "@/lib/resolve-flow-trigger";
 import {
-  flowDraftSnapshotKey,
   flowGraphSnapshotKey,
   flowPublishedSnapshotKey,
   resolveDraftEdges,
@@ -75,6 +74,7 @@ export default function EditFlowPage() {
   const [savedKey, setSavedKey] = useState("");
   const [publishedKey, setPublishedKey] = useState("");
   const [activeTab, setActiveTab] = useState<FlowEditorTab>("editor");
+  const [autoSaveReady, setAutoSaveReady] = useState(false);
   const initializedFlowKeyRef = useRef<string | null>(null);
   const handleSaveRef = useRef<() => Promise<boolean>>(async () => true);
   const handlePublishRef = useRef<() => Promise<void>>(async () => {});
@@ -83,16 +83,23 @@ export default function EditFlowPage() {
     if (!flow) return;
     const draftNodes = resolveDraftNodes(flow);
     const draftEdges = resolveDraftEdges(flow);
-    const key = `${flow.flowId}:${flow.version}:${flowGraphSnapshotKey(draftNodes, draftEdges)}`;
+    const voiceFlow =
+      flow.flowKind === "voice_ai" ||
+      draftNodes.find((node) => node.type === "trigger")?.data.triggerType === "voice_call";
+    const normalizedNodes = applyResolvedTriggerType(draftNodes, voiceFlow);
+    const key = `${flow.flowId}:${flow.version}:${flowGraphSnapshotKey(normalizedNodes, draftEdges)}`;
     if (initializedFlowKeyRef.current === key) return;
     initializedFlowKeyRef.current = key;
+    setAutoSaveReady(false);
     resetHistory({ nodes: draftNodes, edges: draftEdges });
-    setSavedKey(flowDraftSnapshotKey(flow));
+    setSavedKey(flowGraphSnapshotKey(normalizedNodes, draftEdges));
     setPublishedKey(flowPublishedSnapshotKey(flow));
     setSavedMessage(false);
     setPublishedMessage(false);
     setSaveError("");
     setPublishError("");
+    const readyTimer = window.setTimeout(() => setAutoSaveReady(true), 1000);
+    return () => window.clearTimeout(readyTimer);
   }, [flow, resetHistory]);
 
   useEffect(() => {
@@ -268,27 +275,37 @@ export default function EditFlowPage() {
   handleSaveRef.current = handleSave;
   handlePublishRef.current = handlePublish;
 
-  const isDirty = flowGraphSnapshotKey(localNodes, localEdges) !== savedKey && localNodes.length > 0;
+  const editorSnapshotKey = flowGraphSnapshotKey(
+    applyResolvedTriggerType(localNodes, isVoiceFlow),
+    localEdges
+  );
+  const isDirty = editorSnapshotKey !== savedKey && localNodes.length > 0;
   const hasUnpublishedChanges = savedKey !== publishedKey;
 
   function handleVersionRestored(updated: FlowDefinition) {
     const draftNodes = resolveDraftNodes(updated);
     const draftEdges = resolveDraftEdges(updated);
+    const voiceFlow =
+      updated.flowKind === "voice_ai" ||
+      draftNodes.find((node) => node.type === "trigger")?.data.triggerType === "voice_call";
+    const normalizedNodes = applyResolvedTriggerType(draftNodes, voiceFlow);
+    setAutoSaveReady(false);
     resetHistory({ nodes: draftNodes, edges: draftEdges });
-    setSavedKey(flowDraftSnapshotKey(updated));
+    setSavedKey(flowGraphSnapshotKey(normalizedNodes, draftEdges));
     setPublishedKey(flowPublishedSnapshotKey(updated));
     setSavedMessage(false);
     setPublishedMessage(false);
+    window.setTimeout(() => setAutoSaveReady(true), 1000);
   }
 
   useEffect(() => {
-    if (!isDirty || !flow || update.isPending) return;
+    if (!autoSaveReady || !isDirty || !flow || update.isPending) return;
     const timer = window.setTimeout(() => {
       void handleSaveRef.current();
     }, 1200);
 
     return () => window.clearTimeout(timer);
-  }, [isDirty, localNodes, localEdges, flow, update.isPending]);
+  }, [autoSaveReady, isDirty, localNodes, localEdges, flow, update.isPending]);
 
   if (isLoading || !flow) {
     return (

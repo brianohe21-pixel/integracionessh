@@ -129,6 +129,8 @@ function eventToActivity(event: FlowEventSubmission): FlowActivitySummary | null
     createdAt: event.createdAt,
     updatedAt: event.updatedAt,
     submissionId: event.submissionId,
+    hookKey: event.hookKey,
+    ...(event.idempotencyKey ? { idempotencyKey: event.idempotencyKey } : {}),
     ...(event.errorMessage ? { errorMessage: event.errorMessage } : {}),
     payloadPreview: payloadPreview(event.payload),
   };
@@ -159,6 +161,8 @@ function matchesActivity(
       item.activityId,
       item.runId,
       item.submissionId,
+      item.hookKey,
+      item.idempotencyKey,
       item.conversationId,
       item.customerPhone,
       item.errorMessage,

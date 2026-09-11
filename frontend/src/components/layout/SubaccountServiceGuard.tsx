@@ -11,6 +11,7 @@ import {
   serviceForPath,
 } from "@/lib/subaccount-services";
 import { useAdminRole } from "@/hooks/useAdminRole";
+import { ContentLoader } from "@/components/ui/Loader";
 
 export function SubaccountServiceGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -30,8 +31,8 @@ export function SubaccountServiceGuard({ children }: { children: React.ReactNode
     if (!allowed) router.replace(MEMBER_HOME);
   }, [adminLoading, allowed, isAdmin, isLoading, router]);
 
-  if (adminLoading || (!isAdmin && isLoading)) return null;
-  if (!isAdmin && !allowed) return null;
+  if (adminLoading || (!isAdmin && isLoading)) return <ContentLoader />;
+  if (!isAdmin && !allowed) return <ContentLoader />;
 
   return <>{children}</>;
 }

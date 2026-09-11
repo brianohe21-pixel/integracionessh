@@ -7,6 +7,7 @@ import { getPostLoginPath } from "@/lib/post-login-path";
 import { validatePortalSession } from "@/lib/host-portal";
 import { signOutUser } from "@/lib/auth-session";
 import { useT } from "@/i18n/context";
+import { PageLoader } from "@/components/ui/Loader";
 
 export default function Home() {
   const router = useRouter();
@@ -38,9 +39,5 @@ export default function Home() {
     };
   }, [isAuthenticated, loading, router]);
 
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-surface">
-      <p className="text-sm text-secondary">{t("common.loading")}</p>
-    </div>
-  );
+  return <PageLoader label={t("common.loading")} />;
 }

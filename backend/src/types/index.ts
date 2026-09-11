@@ -2969,6 +2969,8 @@ export interface FlowActivitySummary {
   stepCount?: number;
   errorMessage?: string;
   payloadPreview?: string;
+  hookKey?: string;
+  idempotencyKey?: string;
 }
 
 export const HOSTED_FORM_FIELD_TYPES = [

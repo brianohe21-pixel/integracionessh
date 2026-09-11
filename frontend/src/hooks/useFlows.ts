@@ -6,6 +6,7 @@ import type {
   FlowActivityPage,
   FlowDefinition,
   FlowEventSubmission,
+  FlowEventSubmissionDetail,
   FlowHookCredentials,
   FlowRun,
   FlowVersionSnapshot,
@@ -170,6 +171,21 @@ export function useFlowEvents(flowId: string, enabled = true) {
     queryKey: ["flows", flowId, "events"],
     queryFn: () => api.get<FlowEventSubmission[]>(`/flows/${encodeURIComponent(flowId)}/events`),
     enabled: !!flowId && enabled,
+  });
+}
+
+export function useFlowEventDetail(
+  flowId: string | null,
+  submissionId: string | null,
+  enabled = true
+) {
+  return useQuery<FlowEventSubmissionDetail>({
+    queryKey: ["flows", flowId, "events", submissionId],
+    queryFn: () =>
+      api.get<FlowEventSubmissionDetail>(
+        `/flows/${encodeURIComponent(flowId ?? "")}/events/${encodeURIComponent(submissionId ?? "")}`
+      ),
+    enabled: !!flowId && !!submissionId && enabled,
   });
 }
 
