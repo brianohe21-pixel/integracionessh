@@ -12,12 +12,16 @@ export function sanitizeFlowEdges(flow: FlowDefinition): FlowDefinition {
   const sanitizedDraftEdges = sanitizeEdgesForNodes(draftNodes, draftEdges);
   const edgesChanged = edges.length !== flow.edges.length;
   const draftEdgesChanged =
-    flow.draftEdges !== undefined && sanitizedDraftEdges.length !== flow.draftEdges.length;
+    flow.draftEdges !== undefined &&
+    (sanitizedDraftEdges.length !== flow.draftEdges.length ||
+      sanitizedDraftEdges.some((edge, index) => edge.id !== flow.draftEdges?.[index]?.id));
   if (!edgesChanged && !draftEdgesChanged) return flow;
   return {
     ...flow,
     edges,
-    ...(draftEdgesChanged ? { draftEdges: sanitizedDraftEdges } : {}),
+    ...(flow.draftEdges !== undefined || draftEdges !== flow.edges
+      ? { draftEdges: sanitizedDraftEdges }
+      : {}),
   };
 }
 

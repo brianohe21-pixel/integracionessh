@@ -21,8 +21,9 @@ import { resolveFlowBotIdFromNodes } from "@/lib/resolve-flow-bot";
 import { createFlowNode, defaultPalettePosition } from "@/lib/flow-node-factory";
 import { applyResolvedTriggerType, resolveFlowSamplePayload } from "@/lib/resolve-flow-trigger";
 import {
-  flowGraphSnapshotKey,
-  flowPublishedSnapshotKey,
+  flowDraftEditorSnapshotKey,
+  flowEditorSnapshotKey,
+  flowPublishedEditorSnapshotKey,
   resolveDraftEdges,
   resolveDraftNodes,
 } from "@/lib/flow-draft";
@@ -83,17 +84,13 @@ export default function EditFlowPage() {
     if (!flow) return;
     const draftNodes = resolveDraftNodes(flow);
     const draftEdges = resolveDraftEdges(flow);
-    const voiceFlow =
-      flow.flowKind === "voice_ai" ||
-      draftNodes.find((node) => node.type === "trigger")?.data.triggerType === "voice_call";
-    const normalizedNodes = applyResolvedTriggerType(draftNodes, voiceFlow);
-    const key = `${flow.flowId}:${flow.version}:${flowGraphSnapshotKey(normalizedNodes, draftEdges)}`;
+    const key = `${flow.flowId}:${flow.version}:${flowDraftEditorSnapshotKey(flow)}`;
     if (initializedFlowKeyRef.current === key) return;
     initializedFlowKeyRef.current = key;
     setAutoSaveReady(false);
     resetHistory({ nodes: draftNodes, edges: draftEdges });
-    setSavedKey(flowGraphSnapshotKey(normalizedNodes, draftEdges));
-    setPublishedKey(flowPublishedSnapshotKey(flow));
+    setSavedKey(flowDraftEditorSnapshotKey(flow));
+    setPublishedKey(flowPublishedEditorSnapshotKey(flow));
     setSavedMessage(false);
     setPublishedMessage(false);
     setSaveError("");
@@ -227,7 +224,7 @@ export default function EditFlowPage() {
     const nodesToSave = localNodes.length > 0 ? localNodes : resolveDraftNodes(flow);
     const edgesToSave = localNodes.length > 0 ? localEdges : resolveDraftEdges(flow);
     const nodes = applyResolvedTriggerType(nodesToSave, isVoiceFlow);
-    const snapshotKey = flowGraphSnapshotKey(nodes, edgesToSave);
+    const snapshotKey = flowEditorSnapshotKey(nodesToSave, edgesToSave, isVoiceFlow);
     if (snapshotKey === savedKey) return true;
     setSaveError("");
     setSavedMessage(false);
@@ -239,7 +236,7 @@ export default function EditFlowPage() {
         entryNodeId: nodes.find((n) => n.type === "trigger")?.id ?? flow.entryNodeId,
       });
       setSavedKey(snapshotKey);
-      if (flowGraphSnapshotKey(nodesToSave, edgesToSave) !== snapshotKey) {
+      if (flowEditorSnapshotKey(nodesToSave, edgesToSave, isVoiceFlow) !== snapshotKey) {
         commitHistory({ nodes, edges: edgesToSave });
       }
       setSavedMessage(true);
@@ -254,20 +251,27 @@ export default function EditFlowPage() {
   async function handlePublish() {
     if (!flow || publishFlow.isPending) return;
     if (isDirty && !(await handleSave())) return;
-    if (savedKey === publishedKey) {
+    if (!hasUnpublishedChanges) {
       setPublishError(t("flows.noPublishChanges"));
       return;
     }
     setPublishError("");
     setPublishedMessage(false);
+    setAutoSaveReady(false);
     try {
       const updated = await publishFlow.mutateAsync();
-      const publishedSnapshotKey = flowPublishedSnapshotKey(updated);
+      const publishedSnapshotKey = flowDraftEditorSnapshotKey(updated);
+      initializedFlowKeyRef.current = `${updated.flowId}:${updated.version}:${publishedSnapshotKey}`;
       setPublishedKey(publishedSnapshotKey);
       setSavedKey(publishedSnapshotKey);
+      const draftNodes = resolveDraftNodes(updated);
+      const draftEdges = resolveDraftEdges(updated);
+      resetHistory({ nodes: draftNodes, edges: draftEdges });
       setPublishedMessage(true);
       window.setTimeout(() => setPublishedMessage(false), 2500);
+      window.setTimeout(() => setAutoSaveReady(true), 1500);
     } catch (err) {
+      setAutoSaveReady(true);
       setPublishError(err instanceof Error ? err.message : t("flows.noPublishChanges"));
     }
   }
@@ -275,24 +279,21 @@ export default function EditFlowPage() {
   handleSaveRef.current = handleSave;
   handlePublishRef.current = handlePublish;
 
-  const editorSnapshotKey = flowGraphSnapshotKey(
-    applyResolvedTriggerType(localNodes, isVoiceFlow),
-    localEdges
-  );
+  const editorSnapshotKey = flowEditorSnapshotKey(localNodes, localEdges, isVoiceFlow);
   const isDirty = editorSnapshotKey !== savedKey && localNodes.length > 0;
-  const hasUnpublishedChanges = savedKey !== publishedKey;
+  const publishedSnapshotKey = flow ? flowPublishedEditorSnapshotKey(flow) : publishedKey;
+  const draftSnapshotKey =
+    flow && !isDirty ? flowDraftEditorSnapshotKey(flow) : editorSnapshotKey;
+  const hasUnpublishedChanges =
+    localNodes.length > 0 && draftSnapshotKey !== publishedSnapshotKey;
 
   function handleVersionRestored(updated: FlowDefinition) {
     const draftNodes = resolveDraftNodes(updated);
     const draftEdges = resolveDraftEdges(updated);
-    const voiceFlow =
-      updated.flowKind === "voice_ai" ||
-      draftNodes.find((node) => node.type === "trigger")?.data.triggerType === "voice_call";
-    const normalizedNodes = applyResolvedTriggerType(draftNodes, voiceFlow);
     setAutoSaveReady(false);
     resetHistory({ nodes: draftNodes, edges: draftEdges });
-    setSavedKey(flowGraphSnapshotKey(normalizedNodes, draftEdges));
-    setPublishedKey(flowPublishedSnapshotKey(updated));
+    setSavedKey(flowDraftEditorSnapshotKey(updated));
+    setPublishedKey(flowPublishedEditorSnapshotKey(updated));
     setSavedMessage(false);
     setPublishedMessage(false);
     window.setTimeout(() => setAutoSaveReady(true), 1000);

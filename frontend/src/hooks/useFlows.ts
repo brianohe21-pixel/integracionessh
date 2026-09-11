@@ -87,7 +87,8 @@ export function usePublishFlow(flowId: string) {
   return useMutation<FlowDefinition, Error, void>({
     mutationFn: () =>
       api.post<FlowDefinition>(`/flows/${encodeURIComponent(flowId)}/publish`, {}),
-    onSuccess: () => {
+    onSuccess: (data) => {
+      qc.setQueryData(["flows", flowId], data);
       void qc.invalidateQueries({ queryKey: ["flows"] });
       void qc.invalidateQueries({ queryKey: ["flows", flowId] });
       void qc.invalidateQueries({ queryKey: ["flows", flowId, "versions"] });
