@@ -24,6 +24,7 @@ import {
   flowDraftSnapshotKey,
   flowGraphSnapshotKey,
   flowPublishedSnapshotKey,
+  hasUnpublishedFlowChanges,
   resolveDraftEdges,
   resolveDraftNodes,
 } from "@/lib/flow-draft";
@@ -87,8 +88,14 @@ export default function EditFlowPage() {
     if (initializedFlowKeyRef.current === key) return;
     initializedFlowKeyRef.current = key;
     resetHistory({ nodes: draftNodes, edges: draftEdges });
-    setSavedKey(flowDraftSnapshotKey(flow));
-    setPublishedKey(flowPublishedSnapshotKey(flow));
+    const draftKey = flowDraftSnapshotKey(flow);
+    if (!hasUnpublishedFlowChanges(flow)) {
+      setSavedKey(draftKey);
+      setPublishedKey(draftKey);
+    } else {
+      setSavedKey(draftKey);
+      setPublishedKey(flowPublishedSnapshotKey(flow));
+    }
     setSavedMessage(false);
     setPublishedMessage(false);
     setSaveError("");
@@ -268,15 +275,21 @@ export default function EditFlowPage() {
   handleSaveRef.current = handleSave;
   handlePublishRef.current = handlePublish;
 
-  const isDirty = flowGraphSnapshotKey(localNodes, localEdges) !== savedKey && localNodes.length > 0;
-  const hasUnpublishedChanges = savedKey !== publishedKey;
+  const graphSnapshotKey = flowGraphSnapshotKey(localNodes, localEdges);
+  const isDirty = graphSnapshotKey !== savedKey && localNodes.length > 0;
+  const hasUnpublishedChanges =
+    localNodes.length > 0 &&
+    (isDirty ? graphSnapshotKey !== publishedKey : savedKey !== publishedKey);
 
   function handleVersionRestored(updated: FlowDefinition) {
     const draftNodes = resolveDraftNodes(updated);
     const draftEdges = resolveDraftEdges(updated);
     resetHistory({ nodes: draftNodes, edges: draftEdges });
-    setSavedKey(flowDraftSnapshotKey(updated));
-    setPublishedKey(flowPublishedSnapshotKey(updated));
+    const syncedKey = flowDraftSnapshotKey(updated);
+    setSavedKey(syncedKey);
+    setPublishedKey(
+      hasUnpublishedFlowChanges(updated) ? flowPublishedSnapshotKey(updated) : syncedKey
+    );
     setSavedMessage(false);
     setPublishedMessage(false);
   }

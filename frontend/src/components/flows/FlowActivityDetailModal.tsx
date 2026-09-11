@@ -3,13 +3,15 @@
 import { X } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { useFormatters } from "@/hooks/useFormatters";
-import { useFlowRunDetail } from "@/hooks/useFlows";
+import { useFlowEvents, useFlowHook, useFlowRunDetail } from "@/hooks/useFlows";
 import { Modal } from "@/components/ui/Modal";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { FlowWebhookRequestAccordion } from "@/components/flows/FlowWebhookRequestAccordion";
 import type { FlowActivitySummary, FlowNode } from "@/types";
 
 interface FlowActivityDetailModalProps {
+  flowId: string;
   item: FlowActivitySummary | null;
   nodes: FlowNode[];
   onClose: () => void;
@@ -26,14 +28,20 @@ function statusVariant(
 }
 
 export function FlowActivityDetailModal({
+  flowId,
   item,
   nodes,
   onClose,
 }: FlowActivityDetailModalProps) {
   const t = useT();
   const { formatDate } = useFormatters();
+  const isWebhookItem = item?.kind === "event";
   const runId = item?.kind === "run" ? item.runId ?? item.activityId : item?.runId ?? null;
   const { data: run, isLoading } = useFlowRunDetail(runId);
+  const { data: events, isLoading: eventsLoading } = useFlowEvents(flowId, isWebhookItem);
+  const { data: hookData } = useFlowHook(flowId, isWebhookItem);
+  const event =
+    events?.find((entry) => entry.submissionId === item?.submissionId) ?? null;
 
   if (!item) return null;
 
@@ -114,7 +122,18 @@ export function FlowActivityDetailModal({
             </div>
           ) : null}
 
-          {item.payloadPreview ? (
+          {isWebhookItem ? (
+            eventsLoading ? (
+              <div className="h-28 animate-pulse rounded-lg bg-surface-muted" />
+            ) : (
+              <FlowWebhookRequestAccordion
+                event={event}
+                webhookUrl={hookData?.webhookUrl}
+                hookKey={event?.hookKey ?? hookData?.hookKey}
+                idempotencyKey={event?.idempotencyKey}
+              />
+            )
+          ) : item.payloadPreview ? (
             <div>
               <p className="mb-1 text-xs font-medium text-secondary">{t("flows.activity.colPayload")}</p>
               <pre className="max-h-40 overflow-auto rounded-lg border border-default bg-surface-muted p-3 text-xs whitespace-pre-wrap break-all">

@@ -13,6 +13,7 @@ import {
   makeSubmissionId,
 } from "../../lib/flow/enqueue-event.js";
 import { hashFlowHookSecret, timingSafeEqual } from "../../lib/flow/hook-credentials.js";
+import { buildFlowHookRequestSnapshot } from "../../lib/flow/request-snapshot.js";
 import { isWebhookReceivingFlow } from "../../lib/flow/webhook-flow.js";
 import { checkAndIncrement } from "../../lib/rate-limiter/index.js";
 import { emitIntegrationEvent } from "../../lib/integrations/emit.js";
@@ -130,6 +131,7 @@ export async function handler(
       hookKey,
       ...(idempotencyKey ? { idempotencyKey } : {}),
       payload,
+      request: buildFlowHookRequestSnapshot(event, hookKey, rawBody),
       status: "accepted",
       createdAt: now,
       updatedAt: now,

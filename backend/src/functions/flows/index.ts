@@ -564,7 +564,7 @@ export async function handler(
       }
 
       const updated = await updateFlowDefinition(auth.tenantId, flowId, candidate);
-      return ok(updated);
+      return ok(updated ? sanitizeFlowEdges(updated) : updated);
     }
 
     if (method === "POST" && flowId && path.endsWith("/publish")) {
@@ -598,7 +598,8 @@ export async function handler(
 
       const newVersion = nextPublishedVersion(existing);
       const publishedAt = new Date().toISOString();
-      const updated = await updateFlowDefinition(auth.tenantId, flowId, {
+      const publishedFlow = sanitizeFlowEdges({
+        ...existing,
         nodes: draftNodes,
         edges: draftEdges,
         entryNodeId: draftEntryNodeId,
@@ -608,19 +609,20 @@ export async function handler(
         version: newVersion,
         publishedAt,
       });
+      const updated = await updateFlowDefinition(auth.tenantId, flowId, publishedFlow);
       if (!updated) return notFound("Flow not found");
 
       await createFlowVersionSnapshot({
         flowId,
         tenantId: auth.tenantId,
         version: newVersion,
-        nodes: draftNodes,
-        edges: draftEdges,
+        nodes: publishedFlow.nodes,
+        edges: publishedFlow.edges,
         entryNodeId: draftEntryNodeId,
         publishedAt,
       });
 
-      return ok(updated);
+      return ok(sanitizeFlowEdges(updated));
     }
 
     if (

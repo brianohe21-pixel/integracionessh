@@ -2938,6 +2938,16 @@ export interface FlowHookCredentials {
   webhookUrl: string;
 }
 
+export interface FlowEventRequestSnapshot {
+  method: string;
+  path: string;
+  headers: Record<string, string>;
+  queryString?: Record<string, string>;
+  bodyRaw?: string;
+  sourceIp?: string;
+  userAgent?: string;
+}
+
 export interface FlowEventSubmission {
   submissionId: string;
   tenantId: string;
@@ -2948,6 +2958,7 @@ export interface FlowEventSubmission {
   status: FlowEventStatus;
   runId?: string;
   errorMessage?: string;
+  request?: FlowEventRequestSnapshot;
   createdAt: string;
   updatedAt: string;
 }

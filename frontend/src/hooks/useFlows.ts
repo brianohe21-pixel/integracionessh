@@ -41,7 +41,8 @@ export function useUpdateFlow(flowId: string) {
   const qc = useQueryClient();
   return useMutation<FlowDefinition, Error, Partial<FlowDefinition>>({
     mutationFn: (body) => api.put<FlowDefinition>(`/flows/${encodeURIComponent(flowId)}`, body),
-    onSuccess: () => {
+    onSuccess: (data) => {
+      qc.setQueryData(["flows", flowId], data);
       void qc.invalidateQueries({ queryKey: ["flows"] });
       void qc.invalidateQueries({ queryKey: ["flows", flowId] });
     },
