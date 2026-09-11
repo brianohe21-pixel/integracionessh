@@ -23,7 +23,10 @@ import {
   getFlowHookConfig,
   putFlowHookConfig,
 } from "../../lib/dynamodb/flow-hook.repository.js";
-import { listFlowEventSubmissions } from "../../lib/dynamodb/flow-event.repository.js";
+import {
+  getFlowEventSubmission,
+  listFlowEventSubmissions,
+} from "../../lib/dynamodb/flow-event.repository.js";
 import { listFlowActivity } from "../../lib/dynamodb/flow-activity.repository.js";
 import { seedFlowActivityForFlow } from "../../lib/demo/seed-flow-activity.js";
 import { resumeFlowRunById } from "../../lib/flow/interpreter.js";
@@ -141,6 +144,11 @@ function resolveRunId(
 ): string | undefined {
   if (pathParams?.runId) return pathParams.runId;
   const match = rawPath.match(/^\/flow-runs\/([^/]+)/);
+  return match?.[1];
+}
+
+function resolveSubmissionId(rawPath: string): string | undefined {
+  const match = rawPath.match(/\/events\/([^/]+)$/);
   return match?.[1];
 }
 
@@ -330,6 +338,20 @@ export async function handler(
     if (method === "GET" && flowId && path.endsWith("/runs")) {
       const runs = await listFlowRunsByFlow(auth.tenantId, flowId);
       return ok(runs);
+    }
+
+    const submissionId = resolveSubmissionId(path);
+    if (method === "GET" && flowId && submissionId && path.includes("/events/")) {
+      const flow = await getFlowDefinition(auth.tenantId, flowId);
+      if (!flow) return notFound("Flow not found");
+      const submission = await getFlowEventSubmission(auth.tenantId, submissionId);
+      if (!submission || submission.flowId !== flowId) {
+        return notFound("Event submission not found");
+      }
+      return ok({
+        ...submission,
+        webhookUrl: buildFlowHookUrl(submission.hookKey),
+      });
     }
 
     if (method === "GET" && flowId && path.endsWith("/events")) {

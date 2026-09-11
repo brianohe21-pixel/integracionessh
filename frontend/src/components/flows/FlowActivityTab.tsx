@@ -154,7 +154,7 @@ export function FlowActivityTab({ flowId, nodes }: FlowActivityTabProps) {
         ) : (
           <>
             <TableContainer>
-              <table className="w-full min-w-[920px] text-sm">
+              <table className="w-full min-w-[1080px] text-sm">
                 <thead>
                   <tr className="bg-surface text-left text-xs uppercase tracking-wide text-secondary">
                     <th className="px-4 py-3">{t("flows.activity.colWhen")}</th>
@@ -162,6 +162,7 @@ export function FlowActivityTab({ flowId, nodes }: FlowActivityTabProps) {
                     <th className="px-4 py-3">{t("common.status")}</th>
                     <th className="px-4 py-3">{t("flows.activity.colContact")}</th>
                     <th className="px-4 py-3">{t("flows.activity.colSteps")}</th>
+                    <th className="px-4 py-3">{t("flows.activity.colWebhook")}</th>
                     <th className="px-4 py-3">{t("flows.activity.colPayload")}</th>
                   </tr>
                 </thead>
@@ -191,6 +192,30 @@ export function FlowActivityTab({ flowId, nodes }: FlowActivityTabProps) {
                       </td>
                       <td className="px-4 py-3 text-secondary">
                         {typeof item.stepCount === "number" ? item.stepCount : "—"}
+                      </td>
+                      <td className="px-4 py-3">
+                        {item.kind === "event" || item.source === "webhook" ? (
+                          <div className="space-y-1">
+                            {item.hookKey ? (
+                              <code className="block max-w-[10rem] truncate text-xs text-secondary">
+                                {item.hookKey}
+                              </code>
+                            ) : null}
+                            {item.submissionId ? (
+                              <span className="block max-w-[10rem] truncate font-mono text-[11px] text-muted">
+                                {item.submissionId}
+                              </span>
+                            ) : (
+                              !item.hookKey ? <span className="text-muted">—</span> : null
+                            )}
+                          </div>
+                        ) : item.submissionId ? (
+                          <span className="block max-w-[10rem] truncate font-mono text-xs text-secondary">
+                            {item.submissionId}
+                          </span>
+                        ) : (
+                          <span className="text-muted">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         {item.payloadPreview ? (

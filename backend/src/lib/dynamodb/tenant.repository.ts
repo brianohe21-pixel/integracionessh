@@ -6,6 +6,7 @@ import {
   QueryCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { ConditionalCheckFailedException } from "@aws-sdk/client-dynamodb";
+import { normalizeEmail } from "../auth/normalize-email.js";
 import { docClient, TABLE_NAME } from "./client.js";
 import type { Tenant } from "../../types/index.js";
 import { notifyAdminsOfNewRegistration } from "../email/registration-admin-notify.js";
@@ -31,6 +32,74 @@ function normalizeDomain(domain: string): string {
   return domain.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/$/, "");
 }
 
+function tenantEmailLookupKey(email: string) {
+  return {
+    PK: `LOOKUP#TENANT_EMAIL#${normalizeEmail(email)}`,
+    SK: "META",
+  };
+}
+
+function duplicateTenantEmailError(): Error {
+  return Object.assign(new Error("An account with this email already exists"), {
+    statusCode: 409,
+  });
+}
+
+export async function getTenantIdByRegistrationEmail(email: string): Promise<string | null> {
+  const normalized = normalizeEmail(email);
+  if (!normalized) return null;
+
+  const result = await docClient.send(
+    new GetCommand({
+      TableName: TABLE_NAME,
+      Key: tenantEmailLookupKey(normalized),
+    })
+  );
+
+  const tenantId = String(result.Item?.tenantId ?? "").trim();
+  return tenantId || null;
+}
+
+async function putTenantEmailLookup(email: string, tenantId: string): Promise<void> {
+  const normalized = normalizeEmail(email);
+  if (!normalized) return;
+
+  try {
+    await docClient.send(
+      new PutCommand({
+        TableName: TABLE_NAME,
+        Item: {
+          ...tenantEmailLookupKey(normalized),
+          email: normalized,
+          tenantId,
+          updatedAt: new Date().toISOString(),
+        },
+        ConditionExpression: "attribute_not_exists(PK) OR tenantId = :tenantId",
+        ExpressionAttributeValues: {
+          ":tenantId": tenantId,
+        },
+      })
+    );
+  } catch (error) {
+    if (error instanceof ConditionalCheckFailedException) {
+      throw duplicateTenantEmailError();
+    }
+    throw error;
+  }
+}
+
+async function deleteTenantEmailLookup(email: string): Promise<void> {
+  const normalized = normalizeEmail(email);
+  if (!normalized) return;
+
+  await docClient.send(
+    new DeleteCommand({
+      TableName: TABLE_NAME,
+      Key: tenantEmailLookupKey(normalized),
+    })
+  );
+}
+
 export async function getTenant(tenantId: string): Promise<Tenant | null> {
   const result = await docClient.send(
     new GetCommand({
@@ -44,6 +113,11 @@ export async function getTenant(tenantId: string): Promise<Tenant | null> {
 }
 
 export async function createTenant(tenant: Tenant): Promise<void> {
+  const existingTenantId = await getTenantIdByRegistrationEmail(tenant.email);
+  if (existingTenantId && existingTenantId !== tenant.tenantId) {
+    throw duplicateTenantEmailError();
+  }
+
   const item: Record<string, unknown> = {
     ...keys(tenant.tenantId),
     GSI1PK: "TENANT",
@@ -58,6 +132,8 @@ export async function createTenant(tenant: Tenant): Promise<void> {
       ConditionExpression: "attribute_not_exists(PK)",
     })
   );
+
+  await putTenantEmailLookup(tenant.email, tenant.tenantId);
 
   if (tenant.parentTenantId) {
     await docClient.send(
@@ -116,6 +192,15 @@ export async function updateTenant(
 
   const updated = stripKeys(result.Attributes ?? {});
 
+  if (updates.email !== undefined && existing?.email) {
+    const previousEmail = normalizeEmail(existing.email);
+    const nextEmail = normalizeEmail(updated.email);
+    if (previousEmail && nextEmail && previousEmail !== nextEmail) {
+      await deleteTenantEmailLookup(previousEmail);
+      await putTenantEmailLookup(nextEmail, tenantId);
+    }
+  }
+
   const oldDomain = existing?.resellerConfig?.customDomain
     ? normalizeDomain(existing.resellerConfig.customDomain)
     : undefined;
@@ -169,6 +254,9 @@ export async function deleteTenant(tenantId: string): Promise<void> {
   if (existing?.resellerConfig?.customDomain) {
     await deleteDomainMapping(normalizeDomain(existing.resellerConfig.customDomain));
   }
+  if (existing?.email) {
+    await deleteTenantEmailLookup(existing.email);
+  }
   await docClient.send(
     new DeleteCommand({
       TableName: TABLE_NAME,
@@ -182,14 +270,26 @@ export async function ensureTenant(
   email: string,
   name?: string
 ): Promise<Tenant> {
+  const normalizedEmail = normalizeEmail(email);
   const existing = await getTenant(tenantId);
-  if (existing) return existing;
+  if (existing) {
+    const mappedTenantId = await getTenantIdByRegistrationEmail(existing.email);
+    if (!mappedTenantId) {
+      await putTenantEmailLookup(existing.email, tenantId);
+    }
+    return existing;
+  }
+
+  const existingTenantId = await getTenantIdByRegistrationEmail(normalizedEmail);
+  if (existingTenantId && existingTenantId !== tenantId) {
+    throw duplicateTenantEmailError();
+  }
 
   const now = new Date().toISOString();
   const tenant: Tenant = {
     tenantId,
-    name: name?.trim() || email.split("@")[0] || "Tenant",
-    email,
+    name: name?.trim() || normalizedEmail.split("@")[0] || "Tenant",
+    email: normalizedEmail,
     plan: "free",
     tenantKind: "standard",
     status: "active",

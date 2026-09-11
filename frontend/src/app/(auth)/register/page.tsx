@@ -84,13 +84,15 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
+      const normalizedEmail = email.trim().toLowerCase();
+      setEmail(normalizedEmail);
       const tenantId = crypto.randomUUID();
       await signUp({
-        username: email,
+        username: normalizedEmail,
         password,
         options: {
           userAttributes: {
-            email,
+            email: normalizedEmail,
             name,
             "custom:tenantId": tenantId,
             "custom:role": "member",
@@ -100,7 +102,16 @@ export default function RegisterPage() {
       markPendingTermsAcceptance();
       setStep("confirm");
     } catch (err) {
-      setError((err as Error).message ?? t("auth.registerError"));
+      const message = (err as Error).message ?? "";
+      if (
+        message.includes("already exists") ||
+        message.includes("UsernameExistsException") ||
+        message.includes("AliasExistsException")
+      ) {
+        setError(t("auth.emailAlreadyExists"));
+      } else {
+        setError(message || t("auth.registerError"));
+      }
     } finally {
       setLoading(false);
     }

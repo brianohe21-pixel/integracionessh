@@ -6,6 +6,7 @@ import type {
   FlowActivityPage,
   FlowDefinition,
   FlowEventSubmission,
+  FlowEventSubmissionDetail,
   FlowHookCredentials,
   FlowRun,
   FlowVersionSnapshot,
@@ -87,7 +88,8 @@ export function usePublishFlow(flowId: string) {
   return useMutation<FlowDefinition, Error, void>({
     mutationFn: () =>
       api.post<FlowDefinition>(`/flows/${encodeURIComponent(flowId)}/publish`, {}),
-    onSuccess: () => {
+    onSuccess: (data) => {
+      qc.setQueryData(["flows", flowId], data);
       void qc.invalidateQueries({ queryKey: ["flows"] });
       void qc.invalidateQueries({ queryKey: ["flows", flowId] });
       void qc.invalidateQueries({ queryKey: ["flows", flowId, "versions"] });
@@ -171,6 +173,21 @@ export function useFlowEvents(flowId: string, enabled = true) {
     queryKey: ["flows", flowId, "events"],
     queryFn: () => api.get<FlowEventSubmission[]>(`/flows/${encodeURIComponent(flowId)}/events`),
     enabled: !!flowId && enabled,
+  });
+}
+
+export function useFlowEventDetail(
+  flowId: string | null,
+  submissionId: string | null,
+  enabled = true
+) {
+  return useQuery<FlowEventSubmissionDetail>({
+    queryKey: ["flows", flowId, "events", submissionId],
+    queryFn: () =>
+      api.get<FlowEventSubmissionDetail>(
+        `/flows/${encodeURIComponent(flowId ?? "")}/events/${encodeURIComponent(submissionId ?? "")}`
+      ),
+    enabled: !!flowId && !!submissionId && enabled,
   });
 }
 

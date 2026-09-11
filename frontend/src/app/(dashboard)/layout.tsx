@@ -15,10 +15,11 @@ import { ConversationRealtimeProvider } from "@/components/realtime/Conversation
 import { SoftphoneProvider } from "@/components/contact-center/SoftphoneProvider";
 import { SoftphoneUIProvider } from "@/components/contact-center/SoftphoneUIProvider";
 import { SoftphoneBar } from "@/components/contact-center/SoftphoneBar";
+import { PageLoader } from "@/components/ui/Loader";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<PageLoader />}>
       <SidebarProvider>
         <DashboardAuthGuard>
           <ConversationRealtimeProvider>
@@ -26,7 +27,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <NotificationsMount>
                 <SoftphoneProvider>
                   <SoftphoneUIProvider>
-                    <div className="flex h-screen overflow-x-clip">
+                    <div className="flex h-screen overflow-hidden">
                       <TermsAcceptanceSync />
                       <div className="shrink-0 lg:p-4 lg:[&>aside]:h-[calc(100vh-2rem)] lg:[&>aside]:rounded-2xl lg:[&>aside]:shadow-lg">
                         <Sidebar />
@@ -36,8 +37,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                           <MobileTopBar />
                           <PlatformToolbar />
                           <SoftphoneBar />
-                          <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto platform-canvas-bg">
-                            <div className="flex min-h-full flex-1 flex-col">
+                          <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden platform-canvas-bg">
+                            <div className="flex min-h-0 flex-1 flex-col">
                               <OnboardingGate>
                                 <DashboardRoleGuard>
                                   <SubaccountServiceGuard>{children}</SubaccountServiceGuard>

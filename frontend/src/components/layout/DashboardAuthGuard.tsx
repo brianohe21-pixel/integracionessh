@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAuthSession } from "@/hooks/useAuthSession";
 import { signOutUser } from "@/lib/auth-session";
 import { validatePortalSession } from "@/lib/host-portal";
+import { PageLoader } from "@/components/ui/Loader";
 
 export function DashboardAuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -46,7 +47,7 @@ export function DashboardAuthGuard({ children }: { children: React.ReactNode }) 
     router.replace(`/login?redirect=${encodeURIComponent(returnPath)}`);
   }, [isAuthenticated, loading, pathname, router, searchParams]);
 
-  if (loading || !isAuthenticated || !portalChecked) return null;
+  if (loading || !isAuthenticated || !portalChecked) return <PageLoader />;
 
   return <>{children}</>;
 }

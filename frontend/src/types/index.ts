@@ -1851,6 +1851,10 @@ export interface FlowEventSubmission {
   updatedAt: string;
 }
 
+export interface FlowEventSubmissionDetail extends FlowEventSubmission {
+  webhookUrl?: string;
+}
+
 export type FlowActivityKind = "run" | "event";
 
 export interface FlowActivitySummary {
@@ -1868,6 +1872,8 @@ export interface FlowActivitySummary {
   stepCount?: number;
   errorMessage?: string;
   payloadPreview?: string;
+  hookKey?: string;
+  idempotencyKey?: string;
 }
 
 export interface FlowActivityPage {

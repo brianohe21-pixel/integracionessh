@@ -15,16 +15,15 @@ import { FlowEditorToolbar } from "@/components/flows/FlowEditorToolbar";
 import { IntegrationErrorSupport } from "@/components/support/IntegrationErrorSupport";
 import { FlowSecretsPanel } from "@/components/flows/FlowSecretsPanel";
 import { FlowActivityTab } from "@/components/flows/FlowActivityTab";
-import { FlowVersionsPanel } from "@/components/flows/FlowVersionsPanel";
+import { FlowVersionsTab } from "@/components/flows/FlowVersionsTab";
 import { FlowPreviewModal } from "@/components/flows/FlowPreviewModal";
 import { resolveFlowBotIdFromNodes } from "@/lib/resolve-flow-bot";
 import { createFlowNode, defaultPalettePosition } from "@/lib/flow-node-factory";
 import { applyResolvedTriggerType, resolveFlowSamplePayload } from "@/lib/resolve-flow-trigger";
 import {
-  flowDraftSnapshotKey,
-  flowGraphSnapshotKey,
-  flowPublishedSnapshotKey,
-  hasUnpublishedFlowChanges,
+  flowDraftEditorSnapshotKey,
+  flowEditorSnapshotKey,
+  flowPublishedEditorSnapshotKey,
   resolveDraftEdges,
   resolveDraftNodes,
 } from "@/lib/flow-draft";
@@ -34,7 +33,7 @@ const FlowCanvas = dynamic(
   { ssr: false, loading: () => <div className="h-[520px] animate-pulse rounded-xl bg-surface-muted" /> }
 );
 
-type FlowEditorTab = "editor" | "activity";
+type FlowEditorTab = "editor" | "activity" | "versions";
 
 export default function EditFlowPage() {
   const t = useT();
@@ -76,6 +75,7 @@ export default function EditFlowPage() {
   const [savedKey, setSavedKey] = useState("");
   const [publishedKey, setPublishedKey] = useState("");
   const [activeTab, setActiveTab] = useState<FlowEditorTab>("editor");
+  const [autoSaveReady, setAutoSaveReady] = useState(false);
   const initializedFlowKeyRef = useRef<string | null>(null);
   const handleSaveRef = useRef<() => Promise<boolean>>(async () => true);
   const handlePublishRef = useRef<() => Promise<void>>(async () => {});
@@ -84,22 +84,19 @@ export default function EditFlowPage() {
     if (!flow) return;
     const draftNodes = resolveDraftNodes(flow);
     const draftEdges = resolveDraftEdges(flow);
-    const key = `${flow.flowId}:${flow.version}:${flowGraphSnapshotKey(draftNodes, draftEdges)}`;
+    const key = `${flow.flowId}:${flow.version}:${flowDraftEditorSnapshotKey(flow)}`;
     if (initializedFlowKeyRef.current === key) return;
     initializedFlowKeyRef.current = key;
+    setAutoSaveReady(false);
     resetHistory({ nodes: draftNodes, edges: draftEdges });
-    const draftKey = flowDraftSnapshotKey(flow);
-    if (!hasUnpublishedFlowChanges(flow)) {
-      setSavedKey(draftKey);
-      setPublishedKey(draftKey);
-    } else {
-      setSavedKey(draftKey);
-      setPublishedKey(flowPublishedSnapshotKey(flow));
-    }
+    setSavedKey(flowDraftEditorSnapshotKey(flow));
+    setPublishedKey(flowPublishedEditorSnapshotKey(flow));
     setSavedMessage(false);
     setPublishedMessage(false);
     setSaveError("");
     setPublishError("");
+    const readyTimer = window.setTimeout(() => setAutoSaveReady(true), 1000);
+    return () => window.clearTimeout(readyTimer);
   }, [flow, resetHistory]);
 
   useEffect(() => {
@@ -227,7 +224,7 @@ export default function EditFlowPage() {
     const nodesToSave = localNodes.length > 0 ? localNodes : resolveDraftNodes(flow);
     const edgesToSave = localNodes.length > 0 ? localEdges : resolveDraftEdges(flow);
     const nodes = applyResolvedTriggerType(nodesToSave, isVoiceFlow);
-    const snapshotKey = flowGraphSnapshotKey(nodes, edgesToSave);
+    const snapshotKey = flowEditorSnapshotKey(nodesToSave, edgesToSave, isVoiceFlow);
     if (snapshotKey === savedKey) return true;
     setSaveError("");
     setSavedMessage(false);
@@ -239,7 +236,7 @@ export default function EditFlowPage() {
         entryNodeId: nodes.find((n) => n.type === "trigger")?.id ?? flow.entryNodeId,
       });
       setSavedKey(snapshotKey);
-      if (flowGraphSnapshotKey(nodesToSave, edgesToSave) !== snapshotKey) {
+      if (flowEditorSnapshotKey(nodesToSave, edgesToSave, isVoiceFlow) !== snapshotKey) {
         commitHistory({ nodes, edges: edgesToSave });
       }
       setSavedMessage(true);
@@ -254,20 +251,27 @@ export default function EditFlowPage() {
   async function handlePublish() {
     if (!flow || publishFlow.isPending) return;
     if (isDirty && !(await handleSave())) return;
-    if (savedKey === publishedKey) {
+    if (!hasUnpublishedChanges) {
       setPublishError(t("flows.noPublishChanges"));
       return;
     }
     setPublishError("");
     setPublishedMessage(false);
+    setAutoSaveReady(false);
     try {
       const updated = await publishFlow.mutateAsync();
-      const publishedSnapshotKey = flowPublishedSnapshotKey(updated);
+      const publishedSnapshotKey = flowDraftEditorSnapshotKey(updated);
+      initializedFlowKeyRef.current = `${updated.flowId}:${updated.version}:${publishedSnapshotKey}`;
       setPublishedKey(publishedSnapshotKey);
       setSavedKey(publishedSnapshotKey);
+      const draftNodes = resolveDraftNodes(updated);
+      const draftEdges = resolveDraftEdges(updated);
+      resetHistory({ nodes: draftNodes, edges: draftEdges });
       setPublishedMessage(true);
       window.setTimeout(() => setPublishedMessage(false), 2500);
+      window.setTimeout(() => setAutoSaveReady(true), 1500);
     } catch (err) {
+      setAutoSaveReady(true);
       setPublishError(err instanceof Error ? err.message : t("flows.noPublishChanges"));
     }
   }
@@ -275,33 +279,35 @@ export default function EditFlowPage() {
   handleSaveRef.current = handleSave;
   handlePublishRef.current = handlePublish;
 
-  const graphSnapshotKey = flowGraphSnapshotKey(localNodes, localEdges);
-  const isDirty = graphSnapshotKey !== savedKey && localNodes.length > 0;
+  const editorSnapshotKey = flowEditorSnapshotKey(localNodes, localEdges, isVoiceFlow);
+  const isDirty = editorSnapshotKey !== savedKey && localNodes.length > 0;
+  const publishedSnapshotKey = flow ? flowPublishedEditorSnapshotKey(flow) : publishedKey;
+  const draftSnapshotKey =
+    flow && !isDirty ? flowDraftEditorSnapshotKey(flow) : editorSnapshotKey;
   const hasUnpublishedChanges =
-    localNodes.length > 0 &&
-    (isDirty ? graphSnapshotKey !== publishedKey : savedKey !== publishedKey);
+    localNodes.length > 0 && draftSnapshotKey !== publishedSnapshotKey;
 
   function handleVersionRestored(updated: FlowDefinition) {
     const draftNodes = resolveDraftNodes(updated);
     const draftEdges = resolveDraftEdges(updated);
+    setAutoSaveReady(false);
     resetHistory({ nodes: draftNodes, edges: draftEdges });
-    const syncedKey = flowDraftSnapshotKey(updated);
-    setSavedKey(syncedKey);
-    setPublishedKey(
-      hasUnpublishedFlowChanges(updated) ? flowPublishedSnapshotKey(updated) : syncedKey
-    );
+    setSavedKey(flowDraftEditorSnapshotKey(updated));
+    setPublishedKey(flowPublishedEditorSnapshotKey(updated));
     setSavedMessage(false);
     setPublishedMessage(false);
+    setActiveTab("editor");
+    window.setTimeout(() => setAutoSaveReady(true), 1000);
   }
 
   useEffect(() => {
-    if (!isDirty || !flow || update.isPending) return;
+    if (!autoSaveReady || !isDirty || !flow || update.isPending) return;
     const timer = window.setTimeout(() => {
       void handleSaveRef.current();
     }, 1200);
 
     return () => window.clearTimeout(timer);
-  }, [isDirty, localNodes, localEdges, flow, update.isPending]);
+  }, [autoSaveReady, isDirty, localNodes, localEdges, flow, update.isPending]);
 
   if (isLoading || !flow) {
     return (
@@ -312,7 +318,7 @@ export default function EditFlowPage() {
   return (
     <div
       ref={editorRef}
-      className="flex h-[calc(100dvh-3.5rem)] w-full max-w-full flex-col overflow-hidden bg-canvas lg:h-full"
+      className="flow-editor-shell flex min-h-0 flex-1 w-full max-w-full flex-col overflow-hidden bg-canvas"
     >
       <FlowEditorToolbar
         flowName={flow.name}
@@ -407,6 +413,7 @@ export default function EditFlowPage() {
           [
             { id: "editor" as const, label: t("flows.tabEditor") },
             { id: "activity" as const, label: t("flows.tabActivity") },
+            { id: "versions" as const, label: t("flows.tabVersions") },
           ] as const
         ).map((tabItem) => (
           <button
@@ -429,51 +436,57 @@ export default function EditFlowPage() {
           flowId={flow.flowId}
           nodes={localNodes.length > 0 ? localNodes : flow.nodes}
         />
+      ) : activeTab === "versions" ? (
+        <FlowVersionsTab flowId={flow.flowId} onRestored={handleVersionRestored} />
       ) : (
-      <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
-        <aside
-          ref={palettePanel.panelRef}
-          style={{ width: palettePanel.width }}
-          className="relative hidden flex-shrink-0 overflow-x-hidden overflow-y-auto border-r border-default bg-surface-elevated p-3 lg:block"
-        >
-          <NodePalette onAddNode={addNode} />
-          <div
-            role="separator"
-            aria-orientation="vertical"
-            aria-label={t("flows.resizePalette")}
-            onMouseDown={palettePanel.startResize}
-            className={`absolute right-0 top-0 z-10 h-full w-1 cursor-col-resize touch-none transition-colors hover:bg-accent/30 ${
-              palettePanel.isResizing ? "bg-accent/40" : ""
-            }`}
-          />
-        </aside>
+        <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
+          <aside
+            ref={palettePanel.panelRef}
+            style={{ width: palettePanel.width }}
+            className="relative hidden min-h-0 flex-shrink-0 flex-col overflow-hidden border-r border-default bg-surface-elevated lg:flex"
+          >
+            <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-3 scrollbar-hidden">
+              <NodePalette onAddNode={addNode} />
+            </div>
+            {isVoiceFlow ? (
+              <div className="shrink-0 border-t border-default p-3">
+                <FlowSecretsPanel
+                  flowId={flow.flowId}
+                  isVoiceFlow={isVoiceFlow}
+                  nodes={localNodes.length > 0 ? localNodes : flow.nodes}
+                />
+              </div>
+            ) : null}
+            <div
+              role="separator"
+              aria-orientation="vertical"
+              aria-label={t("flows.resizePalette")}
+              onMouseDown={palettePanel.startResize}
+              className={`absolute right-0 top-0 z-10 h-full w-1 cursor-col-resize touch-none transition-colors hover:bg-accent/30 ${
+                palettePanel.isResizing ? "bg-accent/40" : ""
+              }`}
+            />
+          </aside>
 
-        <div className="min-h-0 min-w-0 flex-1">
-          <FlowCanvas
-            flow={{
-              ...flow,
-              nodes: localNodes.length > 0 ? localNodes : flow.nodes,
-              edges: localEdges.length > 0 ? localEdges : flow.edges,
-            }}
-            selectedNodeId={selectedNodeId}
-            onSelectNode={setSelectedNodeId}
-            onChange={handleCanvasChange}
-            onAddNode={addNode}
-            getTypeLabel={getTypeLabel}
-            getBranchLabel={getBranchLabel}
-            onCannotDeleteTrigger={handleCannotDeleteTrigger}
-          />
+          <div className="min-h-0 min-w-0 flex-1 overflow-hidden p-3 pr-5 pb-3 lg:p-4 lg:pr-8">
+            <div className="h-full min-h-0 overflow-hidden rounded-xl border border-default bg-surface-elevated shadow-sm">
+              <FlowCanvas
+                flow={{
+                  ...flow,
+                  nodes: localNodes.length > 0 ? localNodes : flow.nodes,
+                  edges: localEdges.length > 0 ? localEdges : flow.edges,
+                }}
+                selectedNodeId={selectedNodeId}
+                onSelectNode={setSelectedNodeId}
+                onChange={handleCanvasChange}
+                onAddNode={addNode}
+                getTypeLabel={getTypeLabel}
+                getBranchLabel={getBranchLabel}
+                onCannotDeleteTrigger={handleCannotDeleteTrigger}
+              />
+            </div>
+          </div>
         </div>
-
-        <aside className="hidden w-60 flex-shrink-0 overflow-y-auto border-l border-default bg-surface-elevated p-3 lg:block xl:w-64 space-y-4">
-          <FlowSecretsPanel
-            flowId={flow.flowId}
-            isVoiceFlow={isVoiceFlow}
-            nodes={localNodes.length > 0 ? localNodes : flow.nodes}
-          />
-          <FlowVersionsPanel flowId={flow.flowId} onRestored={handleVersionRestored} />
-        </aside>
-      </div>
       )}
 
       <NodePropertiesModal

@@ -35,9 +35,16 @@ const edgeTypes: EdgeTypes = {
   default: FlowDeletableEdge,
 };
 
+function formatCoord(value: number): string {
+  return String(Math.round(value));
+}
+
 function fingerprint(nodes: FlowNode[], edges: FlowEdge[]): string {
   const nodePart = nodes
-    .map((n) => `${n.id}:${n.type}:${n.position.x},${n.position.y}:${JSON.stringify(n.data)}`)
+    .map(
+      (n) =>
+        `${n.id}:${n.type}:${formatCoord(n.position.x)},${formatCoord(n.position.y)}:${JSON.stringify(n.data)}`
+    )
     .join("|");
   const edgePart = edges
     .map((e) => `${e.id}:${e.source}:${e.target}:${e.sourceHandle ?? ""}`)
@@ -202,7 +209,9 @@ function FlowCanvasInner({
       return;
     }
     const converted = fromReactFlow(nodes, edges, flowRef.current);
-    lastExternalFingerprintRef.current = fingerprint(converted.nodes, converted.edges);
+    const nextFingerprint = fingerprint(converted.nodes, converted.edges);
+    if (nextFingerprint === lastExternalFingerprintRef.current) return;
+    lastExternalFingerprintRef.current = nextFingerprint;
     onChangeRef.current(converted.nodes, converted.edges);
   }, [nodes, edges]);
 

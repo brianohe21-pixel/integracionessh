@@ -81,6 +81,12 @@ resource "aws_lambda_function" "cognito_pre_signup" {
   filename         = local.lambda_zip_effective
   source_code_hash = filebase64sha256(local.lambda_zip_effective)
 
+  environment {
+    variables = {
+      TABLE_NAME = var.dynamodb_table_name
+    }
+  }
+
   lifecycle {
     ignore_changes = [
       filename,
