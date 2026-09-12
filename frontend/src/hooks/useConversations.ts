@@ -108,11 +108,16 @@ export function useConversations(options?: {
   assignedAdvisorId?: string;
   assignment?: "assigned" | "unassigned";
 }) {
+  const { connected } = useRealtimeConnection();
+
   return useInfiniteQuery({
     queryKey: conversationsListQueryKey(options),
     queryFn: ({ pageParam }) => fetchConversationsPage(pageParam, options),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => last.nextCursor,
+    refetchInterval: connected ? false : 30_000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
   });
 }
 

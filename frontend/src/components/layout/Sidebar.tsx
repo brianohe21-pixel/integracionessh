@@ -112,7 +112,6 @@ const memberNavCategories: NavCategory[] = [
     labelKey: "nav.categoryAutomation",
     icon: Zap,
     items: [
-      { href: "/automations", labelKey: "nav.automations", icon: Zap },
       { href: "/flows", labelKey: "nav.flows", icon: GitBranch },
       { href: "/forms", labelKey: "nav.forms", icon: ClipboardList },
     ],

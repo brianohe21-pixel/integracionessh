@@ -14,6 +14,7 @@ import {
   Settings,
   Sparkles,
   Workflow,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/context";
@@ -32,6 +33,7 @@ export const BOT_EDIT_TAB_IDS = [
   "telephony",
   "macros",
   "metaFlows",
+  "automations",
 ] as const;
 
 export type BotEditTab = (typeof BOT_EDIT_TAB_IDS)[number];
@@ -50,7 +52,10 @@ type BotEditNavGroup = {
   }[];
 };
 
-export function useBotEditNavGroups(): BotEditNavGroup[] {
+export function useBotEditNavGroups(hiddenTabs: BotEditTab[] = []): BotEditNavGroup[] {
+  const hidden = new Set(hiddenTabs);
+  const visible = (tab: BotEditTab) => !hidden.has(tab);
+
   return [
     {
       id: "general",
@@ -95,20 +100,27 @@ export function useBotEditNavGroups(): BotEditNavGroup[] {
       tabs: [
         { id: "macros", labelKey: "bots.tabMacros", icon: <MessageSquarePlus className="h-4 w-4" /> },
         { id: "metaFlows", labelKey: "bots.tabMetaFlows", icon: <Workflow className="h-4 w-4" /> },
+        { id: "automations", labelKey: "bots.tabAutomations", icon: <Zap className="h-4 w-4" /> },
       ],
     },
-  ];
+  ]
+    .map((group) => ({
+      ...group,
+      tabs: group.tabs.filter((tab) => visible(tab.id)),
+    }))
+    .filter((group) => group.tabs.length > 0);
 }
 
 interface BotEditNavProps {
   activeTab: BotEditTab;
   onSelect: (tab: BotEditTab) => void;
   aiActive?: boolean;
+  hiddenTabs?: BotEditTab[];
 }
 
-export function BotEditNav({ activeTab, onSelect, aiActive }: BotEditNavProps) {
+export function BotEditNav({ activeTab, onSelect, aiActive, hiddenTabs = [] }: BotEditNavProps) {
   const t = useT();
-  const groups = useBotEditNavGroups();
+  const groups = useBotEditNavGroups(hiddenTabs);
 
   return (
     <div className="space-y-5">

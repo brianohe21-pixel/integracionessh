@@ -6,6 +6,7 @@ import { Check, ChevronDown, History, Headphones, Lock, Mail, Phone, StickyNote,
 import { cn } from "@/lib/utils";
 import { ChannelAvatar } from "@/components/conversations/conversation-ui";
 import { ConversationOpportunityPanel } from "@/components/conversations/ConversationOpportunityPanel";
+import { ConversationLeadPanel } from "@/components/conversations/ConversationLeadPanel";
 import { useOpportunityByConversation } from "@/hooks/useSalesOpportunity";
 import { WhatsAppRiskBadge } from "@/components/whatsapp/WhatsAppRiskBadge";
 import { Badge } from "@/components/ui/Badge";
@@ -186,6 +187,7 @@ export function ConversationContactPanel({
           />
         ) : panelTab === "contact" ? (
           <>
+            <ConversationLeadPanel conversation={conversation} activeLead={activeLead} />
             <ContentCardSection title={t("conversations.contactInfo")}>
               <div className="space-y-2.5 text-sm">
                 {phone ? (
@@ -208,12 +210,6 @@ export function ConversationContactPanel({
                 ) : null}
               </div>
             </ContentCardSection>
-
-            {activeLead ? (
-              <ContentCardSection title={t("leads.leadStatus")}>
-                <Badge variant="accent">{t(`leads.status_${activeLead.status}`)}</Badge>
-              </ContentCardSection>
-            ) : null}
 
             {tags.length > 0 ? (
               <ContentCardSection title={t("conversations.tags")}>

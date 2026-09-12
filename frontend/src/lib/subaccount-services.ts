@@ -99,7 +99,6 @@ const SERVICE_PATHS: Array<{ prefix: string; service: SubaccountServiceId }> = [
   { prefix: "/leads", service: "leads" },
   { prefix: "/sales", service: "sales" },
   { prefix: "/advisors", service: "advisors" },
-  { prefix: "/automations", service: "automations" },
   { prefix: "/flows", service: "flows" },
   { prefix: "/forms", service: "flows" },
   { prefix: "/templates", service: "templates" },

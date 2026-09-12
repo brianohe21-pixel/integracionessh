@@ -44,7 +44,7 @@ import {
   useSendConversationAttachment,
   validateConversationAttachmentFile,
 } from "@/hooks/useConversationAttachments";
-import { useActiveLeadByPhone, useConvertLead } from "@/hooks/useLeads";
+import { useActiveLeadByPhone, useConvertLead, useCreateLead } from "@/hooks/useLeads";
 import Link from "next/link";
 import { AdvisorCallPanel } from "@/components/conversations/AdvisorCallPanel";
 import { WhatsAppSoftphone } from "@/components/conversations/WhatsAppSoftphone";
@@ -310,6 +310,29 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     selectedConversation?.phoneNumber || selectedConversation?.participantId;
   const { data: activeLead } = useActiveLeadByPhone(selectedContactPhone);
   const convertLead = useConvertLead();
+  const createLead = useCreateLead();
+
+  async function handleCreateLeadFromInbox() {
+    if (!selectedConversation || !selectedContactPhone) return;
+    try {
+      await createLead.mutateAsync({
+        botId: selectedConversation.botId,
+        conversationId: selectedConversation.conversationId,
+        ...(selectedConversation.contactName ? { name: selectedConversation.contactName } : {}),
+      });
+      await alert({
+        title: t("leads.title"),
+        message: t("leads.createdFromInbox"),
+        tone: "success",
+      });
+    } catch (err) {
+      await alert({
+        title: t("leads.title"),
+        message: (err as Error).message || t("leads.createFromInboxError"),
+        tone: "danger",
+      });
+    }
+  }
   const selectedBot = bots?.find((b) => b.botId === selectedConversation?.botId);
   const isImapReadOnly =
     selectedConversation?.channel === "email" && selectedBot?.emailInboundProvider === "imap";
@@ -890,6 +913,20 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                     {t("leads.convert")}
                   </button>
                 </div>
+              </div>
+            )}
+
+            {selectedConversation && !activeLead && selectedContactPhone && (
+              <div className="relative z-10 mx-4 mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-default bg-surface-muted p-3 text-sm text-primary shadow-sm">
+                <span className="text-secondary">{t("leads.noLeadForConversation")}</span>
+                <button
+                  type="button"
+                  onClick={() => void handleCreateLeadFromInbox()}
+                  disabled={createLead.isPending}
+                  className="text-xs font-medium text-accent hover:text-accent"
+                >
+                  {t("leads.createFromInbox")}
+                </button>
               </div>
             )}
 

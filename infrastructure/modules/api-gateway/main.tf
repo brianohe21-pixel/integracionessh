@@ -510,6 +510,13 @@ locals {
       function_arn = var.leads_function_arn
       protected    = true
     }
+    leads_create = {
+      route_key    = "POST /leads"
+      slug         = "leads"
+      invoke_arn   = var.leads_invoke_arn
+      function_arn = var.leads_function_arn
+      protected    = true
+    }
     leads_get = {
       route_key    = "GET /leads/{leadId}"
       slug         = "leads"

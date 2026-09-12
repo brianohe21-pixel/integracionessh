@@ -25,7 +25,6 @@ const ROUTE_LABEL_KEYS: Record<string, string> = {
   "/templates": "nav.templates",
   "/bulk-send": "nav.bulkSend",
   "/campaigns": "nav.campaigns",
-  "/automations": "nav.automations",
   "/flows": "nav.flows",
   "/forms": "nav.forms",
   "/apps": "nav.apps",

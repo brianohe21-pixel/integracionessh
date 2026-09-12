@@ -95,7 +95,7 @@ export default function LeadsPage() {
   }
 
   return (
-    <DashboardPage maxWidth="6xl">
+    <DashboardPage>
       <PageHeader
         title={t("leads.title")}
         subtitle={t("leads.subtitle")}
