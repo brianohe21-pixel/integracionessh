@@ -5,7 +5,9 @@ import {
   isAllowedConversationAttachmentMimeType,
   isAudioAttachmentMimeType,
   isImageAttachmentMimeType,
+  isOggOpusBuffer,
   isVoiceNoteMimeType,
+  normalizeConversationAttachmentMimeType,
 } from "./attachment-policy.js";
 
 describe("attachment-policy", () => {
@@ -48,10 +50,13 @@ describe("attachment-policy", () => {
 
   it("detects audio attachments and voice notes", () => {
     expect(isAudioAttachmentMimeType("audio/mpeg")).toBe(true);
+    expect(isAudioAttachmentMimeType("audio/ogg; codecs=opus")).toBe(true);
     expect(isAudioAttachmentMimeType("audio/webm")).toBe(false);
     expect(isVoiceNoteMimeType("audio/ogg")).toBe(true);
     expect(isVoiceNoteMimeType("audio/ogg; codecs=opus")).toBe(true);
     expect(isVoiceNoteMimeType("audio/mpeg")).toBe(false);
+    expect(normalizeConversationAttachmentMimeType("audio/ogg; codecs=opus")).toBe("audio/ogg");
+    expect(isOggOpusBuffer(new Uint8Array([0x4f, 0x67, 0x67, 0x53]))).toBe(true);
   });
 
   it("defines max size", () => {

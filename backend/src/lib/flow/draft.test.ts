@@ -52,6 +52,23 @@ describe("flow draft helpers", () => {
     expect(key).toBe(flowGraphSnapshotKey(nodes, []));
   });
 
+  it("ignores trigger normalization differences between draft and published", () => {
+    const nodes = [{ id: "n1", type: "trigger" as const, position: { x: 0, y: 0 }, data: {} }];
+    const flow = baseFlow({
+      nodes,
+      draftNodes: [
+        {
+          id: "n1",
+          type: "trigger",
+          position: { x: 0, y: 0 },
+          data: { triggerType: "any_message" },
+        },
+      ],
+      draftEdges: [],
+    });
+    expect(hasUnpublishedChanges(flow)).toBe(false);
+  });
+
   it("ignores orphan edges when comparing draft and published graphs", () => {
     const nodes = [{ id: "n1", type: "trigger" as const, position: { x: 0, y: 0 }, data: {} }];
     const validEdge = { id: "e1", source: "n1", target: "n1" };

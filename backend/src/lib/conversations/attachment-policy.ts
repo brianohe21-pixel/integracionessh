@@ -27,8 +27,15 @@ const BLOCKED_EXTENSIONS = new Set([
   ".htm",
 ]);
 
+export function normalizeConversationAttachmentMimeType(mimeType: string): string {
+  const normalized = mimeType.trim().toLowerCase().split(";")[0]?.trim() ?? "";
+  if (normalized === "audio/x-m4a") return "audio/mp4";
+  if (normalized === "audio/x-aac") return "audio/aac";
+  return normalized;
+}
+
 export function isAllowedConversationAttachmentMimeType(mimeType: string): boolean {
-  return ALLOWED_MIME_TYPES.has(mimeType.trim().toLowerCase());
+  return ALLOWED_MIME_TYPES.has(normalizeConversationAttachmentMimeType(mimeType));
 }
 
 export function isAllowedConversationAttachmentFilename(filename: string): boolean {
@@ -55,7 +62,7 @@ export function inferConversationAttachmentMimeType(
   filename: string,
   mimeType: string
 ): string | null {
-  const normalizedMime = mimeType.trim().toLowerCase();
+  const normalizedMime = normalizeConversationAttachmentMimeType(mimeType);
   if (isAllowedConversationAttachmentMimeType(normalizedMime)) {
     return normalizedMime;
   }
@@ -78,11 +85,20 @@ export function isImageAttachmentMimeType(mimeType: string): boolean {
 }
 
 export function isAudioAttachmentMimeType(mimeType: string): boolean {
-  const normalized = mimeType.trim().toLowerCase();
-  return normalized.startsWith("audio/") && isAllowedConversationAttachmentMimeType(normalized);
+  const normalized = normalizeConversationAttachmentMimeType(mimeType);
+  return normalized.startsWith("audio/") && ALLOWED_MIME_TYPES.has(normalized);
 }
 
 export function isVoiceNoteMimeType(mimeType: string): boolean {
-  const normalized = mimeType.trim().toLowerCase();
-  return normalized === "audio/ogg" || normalized === "audio/ogg; codecs=opus";
+  return normalizeConversationAttachmentMimeType(mimeType) === "audio/ogg";
+}
+
+export function isOggOpusBuffer(buffer: Uint8Array): boolean {
+  return (
+    buffer.byteLength >= 4 &&
+    buffer[0] === 0x4f &&
+    buffer[1] === 0x67 &&
+    buffer[2] === 0x67 &&
+    buffer[3] === 0x53
+  );
 }

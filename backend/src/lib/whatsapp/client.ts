@@ -5,6 +5,10 @@ const GRAPH_API_URL = "https://graph.facebook.com/v22.0";
 
 export const WHATSAPP_MAX_TEXT_BODY_LENGTH = 1024;
 
+export function normalizeWhatsAppRecipient(to: string): string {
+  return to.replace(/\D/g, "");
+}
+
 export function truncateWhatsAppText(text: string): string {
   if (text.length <= WHATSAPP_MAX_TEXT_BODY_LENGTH) return text;
   return text.slice(0, WHATSAPP_MAX_TEXT_BODY_LENGTH);
@@ -223,7 +227,7 @@ export async function sendDocumentMessage(
   const body: Record<string, unknown> = {
     messaging_product: "whatsapp",
     recipient_type: "individual",
-    to: options.to,
+    to: normalizeWhatsAppRecipient(options.to),
     type: "document",
     document: {
       id: options.mediaId,
@@ -255,7 +259,7 @@ export async function sendImageMessage(
   const body: Record<string, unknown> = {
     messaging_product: "whatsapp",
     recipient_type: "individual",
-    to: options.to,
+    to: normalizeWhatsAppRecipient(options.to),
     type: "image",
     image: {
       id: options.mediaId,
@@ -286,7 +290,7 @@ export async function sendAudioMessage(
   const body: Record<string, unknown> = {
     messaging_product: "whatsapp",
     recipient_type: "individual",
-    to: options.to,
+    to: normalizeWhatsAppRecipient(options.to),
     type: "audio",
     audio: {
       id: options.mediaId,
@@ -314,7 +318,8 @@ export async function sendAudioMessage(
 export async function sendTextMessage(
   options: SendTextMessageOptions
 ): Promise<SendTextMessageResponse> {
-  const { phoneNumberId, to, accessToken, replyToMessageId } = options;
+  const { phoneNumberId, accessToken, replyToMessageId } = options;
+  const to = normalizeWhatsAppRecipient(options.to);
   const text = truncateWhatsAppText(options.text);
 
   const body: Record<string, unknown> = {

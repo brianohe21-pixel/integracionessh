@@ -120,14 +120,27 @@ export const whatsappAdapter: ChannelAdapter = {
       mimeType: audio.mimeType,
       filename: audio.filename,
     });
-    const result = await sendAudioMessage({
+    const sendOptions = {
       phoneNumberId: ctx.phoneNumberId,
       to: ctx.participantId,
       accessToken: ctx.accessToken,
       mediaId: uploaded.id,
-      ...(audio.voice ? { voice: true } : {}),
-    });
-    return { externalMessageId: result.messages?.[0]?.id };
+    };
+    let result;
+    try {
+      result = await sendAudioMessage({
+        ...sendOptions,
+        ...(audio.voice ? { voice: true } : {}),
+      });
+    } catch (error) {
+      if (!audio.voice) throw error;
+      result = await sendAudioMessage(sendOptions);
+    }
+    const externalMessageId = result.messages?.[0]?.id;
+    if (!externalMessageId) {
+      throw new Error("WhatsApp did not return a message id for the audio");
+    }
+    return { externalMessageId };
   },
 
   async markRead(ctx: OutboundContext, externalMessageId: string): Promise<void> {

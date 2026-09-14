@@ -51,12 +51,7 @@ export function AttachmentMessageBubble({ message, conversationId, botId }: Prop
       : null;
 
   if (isAudio && metadata.downloadUrl) {
-    return (
-      <div className="space-y-2">
-        <ChatAudioPlayer src={metadata.downloadUrl} />
-        <p className="truncate text-xs text-secondary">{metadata.filename}</p>
-      </div>
-    );
+    return <ChatAudioPlayer src={metadata.downloadUrl} />;
   }
 
   if (isImage && metadata.downloadUrl) {

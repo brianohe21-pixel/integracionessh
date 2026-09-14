@@ -483,15 +483,24 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
         setDraft("");
       }
     } catch (error) {
-      const message =
-        error instanceof Error && error.message === "uploadFailed"
-          ? t("conversations.attachFileUploadFailed")
-          : t("conversations.attachFileSendFailed");
+      const message = resolveAttachmentErrorMessage(error);
       await alert({
         title: t("conversations.attachFile"),
         message,
       });
     }
+  }
+
+  function resolveAttachmentErrorMessage(error: unknown): string {
+    if (error instanceof Error) {
+      if (error.message === "uploadFailed") {
+        return t("conversations.attachFileUploadFailed");
+      }
+      if (error.message.trim()) {
+        return error.message;
+      }
+    }
+    return t("conversations.attachFileSendFailed");
   }
 
   async function handleSendVoiceNote(file: File) {
@@ -505,10 +514,10 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
         voiceNote: true,
       });
       setDraft("");
-    } catch {
+    } catch (error) {
       await alert({
         title: t("conversations.voiceNoteRecord"),
-        message: t("conversations.attachFileSendFailed"),
+        message: resolveAttachmentErrorMessage(error),
       });
     }
   }
@@ -517,6 +526,13 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     await alert({
       title: t("conversations.voiceNoteRecord"),
       message: t("conversations.voiceNoteMicDenied"),
+    });
+  }
+
+  async function handleInvalidVoiceNote() {
+    await alert({
+      title: t("conversations.voiceNoteRecord"),
+      message: t("conversations.voiceNoteInvalid"),
     });
   }
 
@@ -1016,6 +1032,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                       onAttachFile={handleAttachFile}
                       onSendVoiceNote={handleSendVoiceNote}
                       onMicDenied={handleMicDenied}
+                      onInvalidVoiceNote={handleInvalidVoiceNote}
                       attaching={sendAttachment.isPending}
                     />
                   </div>

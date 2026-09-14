@@ -5,6 +5,7 @@ import {
   isAllowedConversationAttachmentFilename,
   isAudioAttachmentMimeType,
   isImageAttachmentMimeType,
+  isOggOpusBuffer,
   isVoiceNoteMimeType,
 } from "./attachment-policy.js";
 import { addMessage, updateConversation } from "../dynamodb/conversation.repository.js";
@@ -189,6 +190,14 @@ export async function sendConversationAttachment(input: {
   const caption = input.caption?.trim() || undefined;
   const isImage = isImageAttachmentMimeType(resolvedMime);
   const isAudio = isAudioAttachmentMimeType(resolvedMime);
+  const voiceNote =
+    Boolean(input.voiceNote) &&
+    isVoiceNoteMimeType(resolvedMime) &&
+    isOggOpusBuffer(buffer);
+
+  if (isAudio && input.voiceNote && isVoiceNoteMimeType(resolvedMime) && !isOggOpusBuffer(buffer)) {
+    throw new ConversationAttachmentError("Invalid voice note audio format", 400);
+  }
   const outboundPayload = {
     buffer,
     mimeType: resolvedMime,
@@ -201,9 +210,13 @@ export async function sendConversationAttachment(input: {
     : isAudio
       ? await sendChannelAudio(outboundCtx, {
           ...outboundPayload,
-          voice: Boolean(input.voiceNote && isVoiceNoteMimeType(resolvedMime)),
+          voice: voiceNote,
         })
       : await sendChannelDocument(outboundCtx, outboundPayload);
+
+  if (!outboundResult.externalMessageId) {
+    throw new ConversationAttachmentError("WhatsApp did not accept the attachment", 502);
+  }
 
   const downloadUrl = await getPresignedReadUrl(input.s3Key, DOWNLOAD_URL_TTL_SECONDS);
   const now = new Date().toISOString();

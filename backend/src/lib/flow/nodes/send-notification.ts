@@ -132,7 +132,8 @@ export async function executeSendNotificationNode(
     const tenantFrom = await resolveTenantOutboundFrom(ctx.tenantId);
     const tenant = await getTenant(ctx.tenantId);
     const skipPlatformTemplate = shouldSkipPlatformEmailTemplate(tenant);
-    const subject = node.data.notificationEmailSubject?.trim() || "Notification";
+    const subjectTemplate = node.data.notificationEmailSubject?.trim() || "Notification";
+    const subject = resolveBindingValue(subjectTemplate, bindingContext) || subjectTemplate;
     const emailResult = await sendEmail({
       to: recipients,
       subject,

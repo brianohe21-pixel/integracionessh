@@ -5,7 +5,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/context";
 import {
@@ -55,6 +55,7 @@ import {
   serviceForNavHref,
 } from "@/lib/subaccount-services";
 import { useClearTenantContext, useAssumeSubaccount, useResellerSubaccounts } from "@/hooks/useReseller";
+import { MEMBER_HOME } from "@/lib/post-login-path";
 import { useAuthSession } from "@/hooks/useAuthSession";
 import { ThemeSwitcherCompact } from "@/components/theme/ThemeSwitcherCompact";
 import { useUnreadMessages } from "@/components/notifications/UnreadMessagesProvider";
@@ -1156,6 +1157,7 @@ function SidebarBrand({
 
 export function Sidebar() {
   const t = useT();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { isAuthenticated, loading: authLoading } = useAuthSession();
   const { isOpen, close, isCollapsed, toggleCollapsed } = useSidebar();
@@ -1266,6 +1268,7 @@ export function Sidebar() {
     }
     await assume.mutateAsync(subaccountId);
     setAssumedId(subaccountId);
+    router.push(MEMBER_HOME);
   }
 
   const shellClass =

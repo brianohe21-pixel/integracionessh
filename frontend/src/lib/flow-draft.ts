@@ -11,7 +11,11 @@ export function resolveDraftEdges(flow: FlowDefinition): FlowEdge[] {
 }
 
 export function flowGraphSnapshotKey(nodes: FlowNode[], edges: FlowEdge[]): string {
-  return JSON.stringify({ nodes, edges: sanitizeFlowEdges(nodes, edges) });
+  const sortedNodes = [...nodes].sort((a, b) => a.id.localeCompare(b.id));
+  const sortedEdges = [...sanitizeFlowEdges(nodes, edges)].sort((a, b) =>
+    a.id.localeCompare(b.id)
+  );
+  return JSON.stringify({ nodes: sortedNodes, edges: sortedEdges });
 }
 
 export function flowPublishedSnapshotKey(flow: FlowDefinition): string {
