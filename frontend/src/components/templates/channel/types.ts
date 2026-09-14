@@ -19,6 +19,7 @@ export interface WhatsAppTemplateFormValues {
   headerText: string;
   bodyText: string;
   footerText: string;
+  headerExamples: Record<string, string>;
   bodyExamples: Record<string, string>;
   buttons: TemplateButtonFormValue[];
 }
@@ -31,6 +32,7 @@ export const EMPTY_WHATSAPP_FORM: WhatsAppTemplateFormValues = {
   headerText: "",
   bodyText: "",
   footerText: "",
+  headerExamples: {},
   bodyExamples: {},
   buttons: [],
 };
@@ -93,16 +95,34 @@ export const EMPTY_SMS_FORM: SmsTemplateFormValues = {
   body: "",
 };
 
+function hasMissingExamples(
+  vars: string[],
+  examples: Record<string, string>
+): boolean {
+  return vars.some((v) => !examples[v]?.trim());
+}
+
 export function buildWhatsAppComponents(values: WhatsAppTemplateFormValues): TemplateComponent[] {
   const components: TemplateComponent[] = [];
+  const headerVars = sortBodyVariables(extractBodyVariables(values.headerText));
   if (values.headerText.trim()) {
-    components.push({ type: "HEADER", format: "TEXT", text: values.headerText.trim() });
+    const headerComp: TemplateComponent = {
+      type: "HEADER",
+      format: "TEXT",
+      text: values.headerText.trim(),
+    };
+    if (headerVars.length > 0) {
+      headerComp.example = {
+        header_text: headerVars.map((v) => values.headerExamples[v]?.trim() ?? ""),
+      };
+    }
+    components.push(headerComp);
   }
   const bodyVars = sortBodyVariables(extractBodyVariables(values.bodyText));
   const bodyComp: TemplateComponent = { type: "BODY", text: values.bodyText.trim() };
   if (bodyVars.length > 0) {
     bodyComp.example = {
-      body_text: [bodyVars.map((v) => values.bodyExamples[v]?.trim() || v)],
+      body_text: [bodyVars.map((v) => values.bodyExamples[v]?.trim() ?? "")],
     };
   }
   components.push(bodyComp);
@@ -120,6 +140,16 @@ export function buildWhatsAppComponents(values: WhatsAppTemplateFormValues): Tem
 }
 
 export function whatsAppFormFromComponents(components: TemplateComponent[]): WhatsAppTemplateFormValues {
+  const headerComp = components.find((c) => c.type === "HEADER");
+  const headerText = headerComp?.text ?? "";
+  const headerVars = sortBodyVariables(extractBodyVariables(headerText));
+  const headerExamples: Record<string, string> = {};
+  if (headerComp?.example?.header_text) {
+    headerVars.forEach((v, i) => {
+      headerExamples[v] = headerComp.example!.header_text![i] ?? "";
+    });
+  }
+
   const bodyComp = components.find((c) => c.type === "BODY");
   const bodyText = bodyComp?.text ?? "";
   const vars = sortBodyVariables(extractBodyVariables(bodyText));
@@ -140,9 +170,10 @@ export function whatsAppFormFromComponents(components: TemplateComponent[]): Wha
     })) ?? [];
 
   return {
-    headerText: components.find((c) => c.type === "HEADER")?.text ?? "",
+    headerText,
     bodyText,
     footerText: components.find((c) => c.type === "FOOTER")?.text ?? "",
+    headerExamples,
     bodyExamples,
     buttons,
   };
@@ -150,10 +181,10 @@ export function whatsAppFormFromComponents(components: TemplateComponent[]): Wha
 
 export function isWhatsAppFormValid(values: WhatsAppTemplateFormValues): boolean {
   if (!values.bodyText.trim()) return false;
-  const missingBodyExamples = sortBodyVariables(extractBodyVariables(values.bodyText)).some(
-    (v) => !values.bodyExamples[v]?.trim()
-  );
-  if (missingBodyExamples) return false;
+  const headerVars = sortBodyVariables(extractBodyVariables(values.headerText));
+  const bodyVars = sortBodyVariables(extractBodyVariables(values.bodyText));
+  if (hasMissingExamples(headerVars, values.headerExamples)) return false;
+  if (hasMissingExamples(bodyVars, values.bodyExamples)) return false;
 
   if (values.buttons.length === 0) return true;
 

@@ -27,8 +27,47 @@ function defaultButtonForGroup(
   return { type: "QUICK_REPLY", text: "" };
 }
 
+function VariableExamplesSection({
+  title,
+  vars,
+  examples,
+  onChange,
+}: {
+  title: string;
+  vars: string[];
+  examples: Record<string, string>;
+  onChange: (examples: Record<string, string>) => void;
+}) {
+  const t = useT();
+  if (vars.length === 0) return null;
+
+  return (
+    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-3">
+      <div>
+        <p className="text-sm font-medium text-amber-800">{title}</p>
+        <p className="text-xs text-amber-600 mt-0.5">{t("templates.examplesRequired")}</p>
+      </div>
+      {vars.map((v) => (
+        <div key={v} className="flex items-center gap-3">
+          <span className="text-xs font-mono bg-amber-100 text-amber-700 px-2 py-1 rounded w-12 text-center shrink-0">
+            {v}
+          </span>
+          <Input
+            type="text"
+            value={examples[v] ?? ""}
+            onChange={(e) => onChange({ ...examples, [v]: e.target.value })}
+            placeholder={t("templates.exampleVar", { var: "Juan" })}
+            className="flex-1 border-amber-300 focus:ring-amber-400"
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function WhatsAppTemplateFormFields({ values, onChange }: WhatsAppTemplateFormFieldsProps) {
   const t = useT();
+  const headerVars = sortBodyVariables(extractBodyVariables(values.headerText));
   const bodyVars = sortBodyVariables(extractBodyVariables(values.bodyText));
   const buttonGroup = getButtonGroup(values.buttons);
   const canAddButton =
@@ -75,10 +114,26 @@ export function WhatsAppTemplateFormFields({ values, onChange }: WhatsAppTemplat
         <Input
           type="text"
           value={values.headerText}
-          onChange={(e) => onChange({ ...values, headerText: e.target.value })}
+          onChange={(e) => {
+            const headerText = e.target.value;
+            const newVars = extractBodyVariables(headerText);
+            const headerExamples: Record<string, string> = {};
+            newVars.forEach((v) => {
+              headerExamples[v] = values.headerExamples[v] ?? "";
+            });
+            onChange({ ...values, headerText, headerExamples });
+          }}
           placeholder={t("templates.headerPlaceholder")}
         />
+        <p className="text-xs text-muted mt-1">{t("templates.bodyVarsHint")}</p>
       </div>
+
+      <VariableExamplesSection
+        title={t("templates.headerExamplesTitle")}
+        vars={headerVars}
+        examples={values.headerExamples}
+        onChange={(headerExamples) => onChange({ ...values, headerExamples })}
+      />
       <div>
         <label className="block text-sm font-medium text-secondary mb-1">{t("templates.body")}</label>
         <Textarea
@@ -99,33 +154,12 @@ export function WhatsAppTemplateFormFields({ values, onChange }: WhatsAppTemplat
         <p className="text-xs text-muted mt-1">{t("templates.bodyVarsHint")}</p>
       </div>
 
-      {bodyVars.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-3">
-          <div>
-            <p className="text-sm font-medium text-amber-800">{t("templates.examplesTitle")}</p>
-            <p className="text-xs text-amber-600 mt-0.5">{t("templates.examplesRequired")}</p>
-          </div>
-          {bodyVars.map((v) => (
-            <div key={v} className="flex items-center gap-3">
-              <span className="text-xs font-mono bg-amber-100 text-amber-700 px-2 py-1 rounded w-12 text-center shrink-0">
-                {v}
-              </span>
-              <Input
-                type="text"
-                value={values.bodyExamples[v] ?? ""}
-                onChange={(e) =>
-                  onChange({
-                    ...values,
-                    bodyExamples: { ...values.bodyExamples, [v]: e.target.value },
-                  })
-                }
-                placeholder={t("templates.exampleVar", { var: "Juan" })}
-                className="flex-1 border-amber-300 focus:ring-amber-400"
-              />
-            </div>
-          ))}
-        </div>
-      )}
+      <VariableExamplesSection
+        title={t("templates.examplesTitle")}
+        vars={bodyVars}
+        examples={values.bodyExamples}
+        onChange={(bodyExamples) => onChange({ ...values, bodyExamples })}
+      />
 
       <div>
         <label className="block text-sm font-medium text-secondary mb-1">

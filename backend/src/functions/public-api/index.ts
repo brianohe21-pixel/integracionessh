@@ -190,13 +190,27 @@ const TemplateComponentSchema = z
       .optional(),
   })
   .superRefine((comp, ctx) => {
-    if (comp.type === "BODY" && comp.text && /\{\{\d+\}\}/.test(comp.text)) {
-      const rows = comp.example?.body_text;
-      if (!rows?.length || !rows[0]?.length || rows[0].some((v) => !v.trim())) {
+    if (comp.type === "HEADER" && comp.text && /\{\{\d+\}\}/.test(comp.text)) {
+      const samples = comp.example?.header_text;
+      if (!samples?.length || samples.some((v) => !v.trim()) || /\{\{\d+\}\}/.test(samples.join(" "))) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message:
-            'BODY component has variables ({{N}}) but is missing "example.body_text" with non-empty sample values.',
+            'HEADER component has variables ({{N}}) but is missing "example.header_text" with realistic sample values.',
+        });
+      }
+    }
+    if (comp.type === "BODY" && comp.text && /\{\{\d+\}\}/.test(comp.text)) {
+      const rows = comp.example?.body_text;
+      if (
+        !rows?.length ||
+        !rows[0]?.length ||
+        rows[0].some((v) => !v.trim() || /\{\{\d+\}\}/.test(v))
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            'BODY component has variables ({{N}}) but is missing "example.body_text" with realistic sample values.',
         });
       }
     }
