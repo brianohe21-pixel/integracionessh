@@ -41,6 +41,13 @@ export function resolveFlowVoiceMode(flow: FlowDefinition): boolean {
   );
 }
 
+export function resolveEditorVoiceMode(flow: FlowDefinition, nodes: FlowNode[]): boolean {
+  if (flow.flowKind === "voice_ai") return true;
+  return [...nodes, ...flow.nodes].some(
+    (node) => node.type === "trigger" && node.data.triggerType === "voice_call"
+  );
+}
+
 export function flowEditorSnapshotKey(
   nodes: FlowNode[],
   edges: FlowEdge[],

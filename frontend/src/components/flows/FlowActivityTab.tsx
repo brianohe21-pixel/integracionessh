@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, History, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, FileSpreadsheet, History, Search } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useFlowActivity, type FlowActivityFilters } from "@/hooks/useFlows";
+import { useFlowActivityExport } from "@/hooks/useFlowActivityExport";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SkeletonTable } from "@/components/ui/Skeleton";
@@ -60,6 +61,15 @@ export function FlowActivityTab({ flowId, nodes }: FlowActivityTabProps) {
   };
 
   const { data, isLoading, isFetching } = useFlowActivity(flowId, filters);
+  const exportFilters = {
+    status,
+    source,
+    q: debouncedSearch,
+  };
+  const { exportCsv, exportExcel, isExporting, exportError } = useFlowActivityExport(
+    flowId,
+    exportFilters
+  );
   const items = data?.items ?? [];
   const nextCursor = data?.nextCursor;
   const canGoPrev = pageIndex > 0;
@@ -100,7 +110,26 @@ export function FlowActivityTab({ flowId, nodes }: FlowActivityTabProps) {
             />
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void exportCsv()}
+              disabled={isExporting || isLoading}
+              className="inline-flex items-center gap-2 rounded-lg border border-default bg-surface-elevated px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Download className="h-4 w-4" />
+              {isExporting ? t("flows.activity.exporting") : t("flows.activity.exportCsv")}
+            </button>
+            <button
+              type="button"
+              onClick={() => void exportExcel()}
+              disabled={isExporting || isLoading}
+              className="inline-flex items-center gap-2 rounded-lg border border-default bg-surface-elevated px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              {isExporting ? t("flows.activity.exporting") : t("flows.activity.exportExcel")}
+            </button>
+
             <select
               value={status}
               onChange={(event) => setStatus(event.target.value)}
@@ -140,6 +169,8 @@ export function FlowActivityTab({ flowId, nodes }: FlowActivityTabProps) {
             </select>
           </div>
         </div>
+
+        {exportError ? <p className="text-sm text-danger">{exportError}</p> : null}
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto p-4">

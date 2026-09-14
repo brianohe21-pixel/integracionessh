@@ -27,7 +27,7 @@ import {
   hasUnpublishedFlowChanges,
   resolveDraftEdges,
   resolveDraftNodes,
-  resolveFlowVoiceMode,
+  resolveEditorVoiceMode,
 } from "@/lib/flow-draft";
 
 const FlowCanvas = dynamic(
@@ -228,7 +228,7 @@ export default function EditFlowPage() {
     if (!flow || update.isPending) return !isDirty;
     const nodesToSave = localNodes.length > 0 ? localNodes : resolveDraftNodes(flow);
     const edgesToSave = localNodes.length > 0 ? localEdges : resolveDraftEdges(flow);
-    const voiceMode = resolveFlowVoiceMode(flow);
+    const voiceMode = resolveEditorVoiceMode(flow, nodesToSave);
     const nodes = applyResolvedTriggerType(nodesToSave, voiceMode);
     const snapshotKey = flowEditorSnapshotKey(nodesToSave, edgesToSave, voiceMode);
     if (snapshotKey === savedKey) return true;
@@ -288,16 +288,15 @@ export default function EditFlowPage() {
   handleSaveRef.current = handleSave;
   handlePublishRef.current = handlePublish;
 
-  const voiceMode = flow ? resolveFlowVoiceMode(flow) : isVoiceFlow;
-  const editorSnapshotKey = flowEditorSnapshotKey(localNodes, localEdges, voiceMode);
+  const editorVoiceMode = flow ? resolveEditorVoiceMode(flow, localNodes) : isVoiceFlow;
+  const editorSnapshotKey = flowEditorSnapshotKey(localNodes, localEdges, editorVoiceMode);
   const isDirty = editorSnapshotKey !== savedKey && localNodes.length > 0;
-  const hasUnpublishedChanges =
-    localNodes.length > 0 &&
-    (isDirty
-      ? editorSnapshotKey !== publishedKey
-      : flow
-        ? hasUnpublishedFlowChanges(flow)
-        : editorSnapshotKey !== publishedKey);
+  const hasUnpublishedChanges = (() => {
+    if (localNodes.length === 0) return false;
+    if (isDirty) return editorSnapshotKey !== publishedKey;
+    if (flow) return hasUnpublishedFlowChanges(flow);
+    return editorSnapshotKey !== publishedKey;
+  })();
 
   function handleVersionRestored(updated: FlowDefinition) {
     const draftNodes = resolveDraftNodes(updated);
@@ -339,7 +338,7 @@ export default function EditFlowPage() {
         flowName={flow.name}
         isPublished={flow.enabled}
         version={flow.version}
-        hasUnpublishedChanges={hasUnpublishedChanges}
+        publishedAt={flow.publishedAt}
         isSaving={update.isPending}
         isPublishing={publishFlow.isPending}
         isToggling={toggleFlow.isPending}
