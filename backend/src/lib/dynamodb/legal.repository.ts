@@ -8,7 +8,7 @@ export interface LegalAcceptance {
   termsVersion: string;
 }
 
-const TERMS_VERSION = "2026-05-30";
+const TERMS_VERSION = "2026-09-04";
 
 function legalKeys(tenantId: string, userId: string) {
   return {

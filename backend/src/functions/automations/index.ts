@@ -41,7 +41,7 @@ const LocalizedTextSchema = z.union([
   }),
 ]);
 
-const RuleSchema = z.object({
+const RuleBaseSchema = z.object({
   name: z.string().min(1).max(120),
   botId: z.string().uuid(),
   enabled: z.boolean().default(true),
@@ -53,14 +53,45 @@ const RuleSchema = z.object({
   scheduledAt: z.string().datetime().optional(),
   targetPhones: z.array(z.string().min(10)).max(5000).optional(),
   targetTags: z.array(z.string().max(50)).max(20).optional(),
-  action: z.enum(["send_text", "send_template", "tag_contact", "handoff"]),
+  action: z.enum(["send_text", "send_template", "tag_contact", "handoff", "set_consent"]),
   messageText: LocalizedTextSchema.optional(),
   templateName: z.string().max(128).optional(),
   templateLanguage: z.string().max(10).optional(),
   templateVariables: z.record(z.string()).optional(),
   tags: z.array(z.string().max(50)).max(20).optional(),
+  marketingConsent: z.enum(["opt_in", "opt_out"]).optional(),
   stopProcessing: z.boolean().optional(),
 });
+
+const RulePatchSchema = RuleBaseSchema.partial();
+
+function validateSetConsentRule(
+  body: z.infer<typeof RulePatchSchema>,
+  ctx: z.RefinementCtx
+): void {
+  if (body.action !== "set_consent") return;
+  if (!body.marketingConsent) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "marketingConsent is required when action is set_consent",
+    });
+  }
+  if (body.trigger !== "keyword") {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "set_consent requires keyword trigger",
+    });
+  }
+  if (!body.keywords?.length) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "keywords are required when action is set_consent",
+    });
+  }
+}
+
+const RuleSchema = RuleBaseSchema.superRefine(validateSetConsentRule);
+const RulePatchValidatedSchema = RulePatchSchema.superRefine(validateSetConsentRule);
 
 async function createSchedule(ruleId: string, tenantId: string, scheduledAt: string): Promise<void> {
   if (!SCHEDULER_ROLE_ARN || !AUTOMATIONS_FUNCTION_ARN) return;
@@ -165,6 +196,7 @@ export async function handler(
         ...(body.templateLanguage !== undefined ? { templateLanguage: body.templateLanguage } : {}),
         ...(body.templateVariables !== undefined ? { templateVariables: body.templateVariables } : {}),
         ...(body.tags !== undefined ? { tags: body.tags } : {}),
+        ...(body.marketingConsent !== undefined ? { marketingConsent: body.marketingConsent } : {}),
         ...(body.stopProcessing !== undefined ? { stopProcessing: body.stopProcessing } : {}),
       });
 
@@ -180,7 +212,7 @@ export async function handler(
       const existing = await getAutomation(auth.tenantId, ruleId);
       if (!existing) return notFound("Automation not found");
 
-      const body = RuleSchema.partial().parse(JSON.parse(apiEvent.body ?? "{}"));
+      const body = RulePatchValidatedSchema.parse(JSON.parse(apiEvent.body ?? "{}"));
       const tenant = await getTenant(auth.tenantId);
 
       if (body.enabled === true && (body.trigger === "schedule" || existing.trigger === "schedule")) {
@@ -204,6 +236,7 @@ export async function handler(
       if (body.templateLanguage !== undefined) updates.templateLanguage = body.templateLanguage;
       if (body.templateVariables !== undefined) updates.templateVariables = body.templateVariables;
       if (body.tags !== undefined) updates.tags = body.tags;
+      if (body.marketingConsent !== undefined) updates.marketingConsent = body.marketingConsent;
       if (body.stopProcessing !== undefined) updates.stopProcessing = body.stopProcessing;
 
       const updated = await updateAutomation(auth.tenantId, ruleId, updates);

@@ -1,7 +1,7 @@
 "use client";
 
-import { LegalDocument } from "@/components/legal/LegalDocument";
+import { PrivacyDocument } from "@/components/legal/PrivacyDocument";
 
 export default function PrivacyPage() {
-  return <LegalDocument namespace="legal.privacy" />;
+  return <PrivacyDocument />;
 }

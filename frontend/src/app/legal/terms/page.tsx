@@ -1,7 +1,7 @@
 "use client";
 
-import { LegalDocument } from "@/components/legal/LegalDocument";
+import { TermsDocument } from "@/components/legal/TermsDocument";
 
 export default function TermsPage() {
-  return <LegalDocument namespace="legal.terms" />;
+  return <TermsDocument />;
 }

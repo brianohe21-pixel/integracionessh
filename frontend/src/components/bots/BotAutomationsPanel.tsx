@@ -10,13 +10,25 @@ import {
   useUpdateAutomation,
 } from "@/hooks/useAutomations";
 import { useT } from "@/i18n/context";
-import type { AutomationAction, AutomationRule, AutomationTrigger, LocalizedText } from "@/types";
+import type {
+  AutomationAction,
+  AutomationRule,
+  AutomationTrigger,
+  LocalizedText,
+  MarketingConsent,
+} from "@/types";
 import { LocalizedTextField } from "@/components/ui/LocalizedTextField";
 import { TableContainer } from "@/components/ui/TableContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 const TRIGGERS: AutomationTrigger[] = ["keyword", "first_message", "schedule", "flow_completed"];
-const ACTIONS: AutomationAction[] = ["send_text", "send_template", "tag_contact", "handoff"];
+const ACTIONS: AutomationAction[] = [
+  "send_text",
+  "send_template",
+  "tag_contact",
+  "handoff",
+  "set_consent",
+];
 
 type DialogMode = "create" | "edit" | null;
 
@@ -28,6 +40,7 @@ type FormState = {
   messageText: LocalizedText;
   tags: string;
   metaFlowId: string;
+  marketingConsent: "opt_in" | "opt_out";
 };
 
 const EMPTY_FORM: FormState = {
@@ -38,6 +51,7 @@ const EMPTY_FORM: FormState = {
   messageText: "",
   tags: "",
   metaFlowId: "",
+  marketingConsent: "opt_in",
 };
 
 function ruleToForm(rule: AutomationRule): FormState {
@@ -49,6 +63,8 @@ function ruleToForm(rule: AutomationRule): FormState {
     messageText: rule.messageText ?? "",
     tags: rule.tags?.join(", ") ?? "",
     metaFlowId: rule.metaFlowId ?? "",
+    marketingConsent:
+      rule.marketingConsent === "opt_out" ? "opt_out" : "opt_in",
   };
 }
 
@@ -71,7 +87,23 @@ function formToPayload(form: FormState, botId: string) {
     ...(form.action === "tag_contact"
       ? { tags: form.tags.split(",").map((k) => k.trim()).filter(Boolean) }
       : { tags: [] }),
+    ...(form.action === "set_consent" ? { marketingConsent: form.marketingConsent } : {}),
   };
+}
+
+function actionLabel(
+  t: (key: string) => string,
+  action: AutomationAction,
+  marketingConsent?: MarketingConsent
+): string {
+  if (action === "set_consent") {
+    return marketingConsent === "opt_out"
+      ? t("automations.action_set_consent_opt_out")
+      : t("automations.action_set_consent_opt_in");
+  }
+  const key = `automations.action_${action}`;
+  const label = t(key as "automations.action_send_text");
+  return label === key ? action : label;
 }
 
 export function BotAutomationsPanel({ botId }: { botId: string }) {
@@ -175,7 +207,9 @@ export function BotAutomationsPanel({ botId }: { botId: string }) {
                 <tr key={rule.ruleId} className="border-b border-subtle">
                   <td className="px-4 py-3 font-medium text-primary">{rule.name}</td>
                   <td className="px-4 py-3 text-secondary">{rule.trigger}</td>
-                  <td className="px-4 py-3 text-secondary">{rule.action}</td>
+                  <td className="px-4 py-3 text-secondary">
+                    {actionLabel(t, rule.action, rule.marketingConsent)}
+                  </td>
                   <td className="px-4 py-3">
                     <button
                       type="button"
@@ -257,16 +291,26 @@ export function BotAutomationsPanel({ botId }: { botId: string }) {
                 </select>
                 <select
                   value={form.action}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, action: e.target.value as AutomationAction }))
-                  }
+                  onChange={(e) => {
+                    const action = e.target.value as AutomationAction;
+                    setForm((prev) => ({
+                      ...prev,
+                      action,
+                      ...(action === "set_consent" ? { trigger: "keyword" as const } : {}),
+                    }));
+                  }}
                   className="rounded-lg border border-default px-3 py-2 text-sm"
                 >
                   {ACTIONS.map((ac) => (
-                    <option key={ac} value={ac}>{ac}</option>
+                    <option key={ac} value={ac}>
+                      {actionLabel(t, ac, form.marketingConsent)}
+                    </option>
                   ))}
                 </select>
               </div>
+              {form.action === "set_consent" && (
+                <p className="text-xs text-secondary">{t("automations.setConsentHint")}</p>
+              )}
               {form.trigger === "keyword" && (
                 <input
                   value={form.keywords}
@@ -297,6 +341,21 @@ export function BotAutomationsPanel({ botId }: { botId: string }) {
                   placeholder={t("automations.tagsPlaceholder")}
                   className="w-full rounded-lg border border-default px-3 py-2 text-sm"
                 />
+              )}
+              {form.action === "set_consent" && (
+                <select
+                  value={form.marketingConsent}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      marketingConsent: e.target.value as "opt_in" | "opt_out",
+                    }))
+                  }
+                  className="w-full rounded-lg border border-default px-3 py-2 text-sm"
+                >
+                  <option value="opt_in">{t("contacts.consentOptIn")}</option>
+                  <option value="opt_out">{t("contacts.consentOptOut")}</option>
+                </select>
               )}
               {error && <p className="text-sm text-red-600">{error}</p>}
               <div className="flex justify-end gap-2">

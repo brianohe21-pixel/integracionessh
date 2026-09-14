@@ -3146,7 +3146,12 @@ export interface IntegrationDelivery {
 }
 
 export type AutomationTrigger = "keyword" | "first_message" | "schedule" | "flow_completed";
-export type AutomationAction = "send_text" | "send_template" | "tag_contact" | "handoff";
+export type AutomationAction =
+  | "send_text"
+  | "send_template"
+  | "tag_contact"
+  | "handoff"
+  | "set_consent";
 export type AutomationMatchMode = "contains" | "exact";
 
 export interface AutomationRule {
@@ -3169,6 +3174,7 @@ export interface AutomationRule {
   templateLanguage?: string;
   templateVariables?: Record<string, string>;
   tags?: string[];
+  marketingConsent?: MarketingConsent;
   stopProcessing?: boolean;
   createdAt: string;
   updatedAt: string;
