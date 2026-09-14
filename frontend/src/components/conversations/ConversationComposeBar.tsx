@@ -5,6 +5,7 @@ import { Loader2, Send } from "lucide-react";
 import { Textarea } from "@/components/ui/Input";
 import { EmojiPicker } from "@/components/conversations/EmojiPicker";
 import { ConversationComposeActionsMenu } from "@/components/conversations/ConversationComposeActionsMenu";
+import { ConversationVoiceRecorder } from "@/components/conversations/ConversationVoiceRecorder";
 import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 import type { MacroPlaceholderContext } from "@/lib/macros/resolve-placeholders";
@@ -24,6 +25,8 @@ type Props = {
   showBooking?: boolean;
   showAttachment?: boolean;
   onAttachFile?: (file: File) => void;
+  onSendVoiceNote?: (file: File) => void | Promise<void>;
+  onMicDenied?: () => void;
   attaching?: boolean;
 };
 
@@ -39,6 +42,8 @@ export function ConversationComposeBar({
   showBooking = false,
   showAttachment = false,
   onAttachFile,
+  onSendVoiceNote,
+  onMicDenied,
   attaching = false,
 }: Props) {
   const t = useT();
@@ -129,6 +134,15 @@ export function ConversationComposeBar({
               showAttachment={showAttachment}
               onAttachFile={onAttachFile}
               attaching={attaching}
+            />
+          ) : null}
+
+          {showAttachment && onSendVoiceNote ? (
+            <ConversationVoiceRecorder
+              disabled={attaching}
+              sending={attaching}
+              onSendVoiceNote={onSendVoiceNote}
+              onMicDenied={onMicDenied}
             />
           ) : null}
 

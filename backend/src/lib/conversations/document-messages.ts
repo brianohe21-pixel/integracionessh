@@ -11,7 +11,7 @@ export function isDocumentMessageMetadata(
   if (!metadata || typeof metadata !== "object") return false;
   const value = metadata as Record<string, unknown>;
   return (
-    (value.kind === "document" || value.kind === "image") &&
+    (value.kind === "document" || value.kind === "image" || value.kind === "audio") &&
     typeof value.s3Key === "string"
   );
 }
@@ -96,7 +96,11 @@ export async function enrichConversationMessages(
     messages.map(async (message) => {
       if (isDocumentMessageMetadata(message.metadata)) {
         const messageType =
-          message.metadata.kind === "image" ? "image" : "document";
+          message.metadata.kind === "image"
+            ? "image"
+            : message.metadata.kind === "audio"
+              ? "audio"
+              : "document";
         return {
           ...message,
           messageType,

@@ -3,7 +3,9 @@ import {
   CONVERSATION_ATTACHMENT_MAX_BYTES,
   inferConversationAttachmentMimeType,
   isAllowedConversationAttachmentFilename,
+  isAudioAttachmentMimeType,
   isImageAttachmentMimeType,
+  isVoiceNoteMimeType,
 } from "./attachment-policy.js";
 import { addMessage, updateConversation } from "../dynamodb/conversation.repository.js";
 import { getBot } from "../dynamodb/bot.repository.js";
@@ -13,6 +15,7 @@ import { assertCanSendMessages } from "../billing/assert-plan.js";
 import { PlanLimitError } from "../billing/plan-limits.js";
 import {
   buildOutboundContext,
+  sendChannelAudio,
   sendChannelDocument,
   sendChannelImage,
 } from "../channels/router.js";
@@ -115,6 +118,7 @@ export async function sendConversationAttachment(input: {
   filename: string;
   mimeType: string;
   caption?: string;
+  voiceNote?: boolean;
   sentByAdvisorId?: string;
   environment: string;
   resolveAccessToken: ResolveAccessToken;
@@ -183,22 +187,29 @@ export async function sendConversationAttachment(input: {
   });
 
   const caption = input.caption?.trim() || undefined;
+  const isImage = isImageAttachmentMimeType(resolvedMime);
+  const isAudio = isAudioAttachmentMimeType(resolvedMime);
   const outboundPayload = {
     buffer,
     mimeType: resolvedMime,
     filename: input.filename,
-    ...(caption ? { caption } : {}),
+    ...(caption && !isAudio ? { caption } : {}),
   };
 
-  const outboundResult = isImageAttachmentMimeType(resolvedMime)
+  const outboundResult = isImage
     ? await sendChannelImage(outboundCtx, outboundPayload)
-    : await sendChannelDocument(outboundCtx, outboundPayload);
+    : isAudio
+      ? await sendChannelAudio(outboundCtx, {
+          ...outboundPayload,
+          voice: Boolean(input.voiceNote && isVoiceNoteMimeType(resolvedMime)),
+        })
+      : await sendChannelDocument(outboundCtx, outboundPayload);
 
   const downloadUrl = await getPresignedReadUrl(input.s3Key, DOWNLOAD_URL_TTL_SECONDS);
   const now = new Date().toISOString();
-  const messageType = isImageAttachmentMimeType(resolvedMime) ? "image" : "document";
+  const messageType = isImage ? "image" : isAudio ? "audio" : "document";
   const metadata = {
-    kind: isImageAttachmentMimeType(resolvedMime) ? "image" : "document",
+    kind: isImage ? "image" : isAudio ? "audio" : "document",
     filename: input.filename,
     mimeType: resolvedMime,
     s3Key: input.s3Key,
@@ -210,7 +221,7 @@ export async function sendConversationAttachment(input: {
     conversationId: input.conversation.conversationId,
     tenantId: input.auth.tenantId,
     role: "advisor",
-    content: caption ?? input.filename,
+    content: isAudio ? input.filename : caption ?? input.filename,
     channel: "whatsapp",
     messageType,
     metadata,
@@ -253,6 +264,7 @@ export async function prepareConversationAttachmentSend(input: {
   filename: string;
   mimeType: string;
   caption?: string;
+  voiceNote?: boolean;
   environment: string;
   resolveAccessToken: ResolveAccessToken;
   assertCanAccessConversation: (auth: AuthContext, conversation: Conversation) => Promise<void>;
@@ -284,6 +296,7 @@ export async function prepareConversationAttachmentSend(input: {
     filename: input.filename,
     mimeType: input.mimeType,
     ...(input.caption ? { caption: input.caption } : {}),
+    ...(input.voiceNote ? { voiceNote: input.voiceNote } : {}),
     ...(sentByAdvisorId ? { sentByAdvisorId } : {}),
     environment: input.environment,
     resolveAccessToken: input.resolveAccessToken,

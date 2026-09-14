@@ -208,7 +208,7 @@ export function ConversationComposeActionsMenu({
       <input
         ref={fileInputRef}
         type="file"
-        accept="application/pdf,image/jpeg,image/png,image/webp,.pdf,.jpg,.jpeg,.png,.webp"
+        accept="application/pdf,image/jpeg,image/png,image/webp,audio/mpeg,audio/mp4,audio/aac,audio/amr,audio/ogg,.pdf,.jpg,.jpeg,.png,.webp,.mp3,.m4a,.aac,.amr,.ogg,.opus"
         className="hidden"
         onChange={handleFileChange}
       />

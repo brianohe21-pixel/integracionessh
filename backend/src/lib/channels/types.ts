@@ -46,12 +46,20 @@ export interface OutboundImage {
   caption?: string;
 }
 
+export interface OutboundAudio {
+  buffer: Uint8Array;
+  mimeType: string;
+  filename: string;
+  voice?: boolean;
+}
+
 export interface ChannelAdapter {
   channel: Channel;
   normalizeInbound(payload: unknown): InboundNormalized;
   sendText(ctx: OutboundContext, text: string): Promise<OutboundResult>;
   sendDocument?(ctx: OutboundContext, doc: OutboundDocument): Promise<OutboundResult>;
   sendImage?(ctx: OutboundContext, image: OutboundImage): Promise<OutboundResult>;
+  sendAudio?(ctx: OutboundContext, audio: OutboundAudio): Promise<OutboundResult>;
   markRead?(ctx: OutboundContext, externalMessageId: string): Promise<void>;
 }
 

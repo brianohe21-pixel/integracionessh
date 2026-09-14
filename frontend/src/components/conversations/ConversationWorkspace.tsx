@@ -41,6 +41,7 @@ import type { WorkflowStatus, Channel, InteractionCategory } from "@/types";
 import { INTERACTION_CATEGORIES } from "@/types";
 import { interactionCategoryLabelKey } from "@/lib/interaction-categories";
 import {
+  isAudioAttachmentFile,
   useSendConversationAttachment,
   validateConversationAttachmentFile,
 } from "@/hooks/useConversationAttachments";
@@ -469,14 +470,18 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
       return;
     }
 
+    const isAudio = isAudioAttachmentFile(file);
+
     try {
       await sendAttachment.mutateAsync({
         conversationId: selectedConversation.conversationId,
         botId: selectedConversation.botId,
         file,
-        ...(draft.trim() ? { caption: draft.trim() } : {}),
+        ...(!isAudio && draft.trim() ? { caption: draft.trim() } : {}),
       });
-      setDraft("");
+      if (!isAudio) {
+        setDraft("");
+      }
     } catch (error) {
       const message =
         error instanceof Error && error.message === "uploadFailed"
@@ -487,6 +492,32 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
         message,
       });
     }
+  }
+
+  async function handleSendVoiceNote(file: File) {
+    if (!selectedConversation) return;
+
+    try {
+      await sendAttachment.mutateAsync({
+        conversationId: selectedConversation.conversationId,
+        botId: selectedConversation.botId,
+        file,
+        voiceNote: true,
+      });
+      setDraft("");
+    } catch {
+      await alert({
+        title: t("conversations.voiceNoteRecord"),
+        message: t("conversations.attachFileSendFailed"),
+      });
+    }
+  }
+
+  async function handleMicDenied() {
+    await alert({
+      title: t("conversations.voiceNoteRecord"),
+      message: t("conversations.voiceNoteMicDenied"),
+    });
   }
 
   async function handleHandoff() {
@@ -983,6 +1014,8 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                       showBooking={showBookingAction}
                       showAttachment={showAttachmentAction}
                       onAttachFile={handleAttachFile}
+                      onSendVoiceNote={handleSendVoiceNote}
+                      onMicDenied={handleMicDenied}
                       attaching={sendAttachment.isPending}
                     />
                   </div>

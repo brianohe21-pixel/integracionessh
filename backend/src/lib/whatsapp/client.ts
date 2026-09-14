@@ -184,6 +184,14 @@ export interface SendImageMessageOptions {
   caption?: string;
 }
 
+export interface SendAudioMessageOptions {
+  phoneNumberId: string;
+  to: string;
+  accessToken: string;
+  mediaId: string;
+  voice?: boolean;
+}
+
 export async function uploadWhatsAppMedia(
   options: UploadWhatsAppMediaOptions
 ): Promise<UploadWhatsAppMediaResponse> {
@@ -252,6 +260,37 @@ export async function sendImageMessage(
     image: {
       id: options.mediaId,
       ...(options.caption ? { caption: truncateWhatsAppText(options.caption) } : {}),
+    },
+  };
+
+  const response = await fetch(`${GRAPH_API_URL}/${options.phoneNumberId}/messages`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${options.accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throwGraphApiError(response.status, error);
+  }
+
+  return response.json() as Promise<SendTextMessageResponse>;
+}
+
+export async function sendAudioMessage(
+  options: SendAudioMessageOptions
+): Promise<SendTextMessageResponse> {
+  const body: Record<string, unknown> = {
+    messaging_product: "whatsapp",
+    recipient_type: "individual",
+    to: options.to,
+    type: "audio",
+    audio: {
+      id: options.mediaId,
+      ...(options.voice ? { voice: true } : {}),
     },
   };
 

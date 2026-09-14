@@ -1,5 +1,6 @@
 import {
   markMessageAsRead,
+  sendAudioMessage,
   sendDocumentMessage,
   sendImageMessage,
   sendTextMessage,
@@ -12,6 +13,7 @@ import type { WhatsAppInboundPayload, WhatsAppMessage } from "../../types/index.
 import type {
   ChannelAdapter,
   OutboundContext,
+  OutboundAudio,
   OutboundDocument,
   OutboundImage,
   OutboundResult,
@@ -97,6 +99,33 @@ export const whatsappAdapter: ChannelAdapter = {
       accessToken: ctx.accessToken,
       mediaId: uploaded.id,
       ...(image.caption ? { caption: image.caption } : {}),
+    });
+    return { externalMessageId: result.messages?.[0]?.id };
+  },
+
+  async sendAudio(ctx: OutboundContext, audio: OutboundAudio): Promise<OutboundResult> {
+    if (!ctx.phoneNumberId || !ctx.accessToken) {
+      throw new Error("WhatsApp outbound requires phoneNumberId and accessToken");
+    }
+    await assertWhatsAppOutboundAllowed({
+      tenantId: ctx.tenantId,
+      phoneNumberId: ctx.phoneNumberId,
+      kind: ctx.outboundKind ?? "service",
+      to: ctx.participantId,
+    });
+    const uploaded = await uploadWhatsAppMedia({
+      phoneNumberId: ctx.phoneNumberId,
+      accessToken: ctx.accessToken,
+      buffer: audio.buffer,
+      mimeType: audio.mimeType,
+      filename: audio.filename,
+    });
+    const result = await sendAudioMessage({
+      phoneNumberId: ctx.phoneNumberId,
+      to: ctx.participantId,
+      accessToken: ctx.accessToken,
+      mediaId: uploaded.id,
+      ...(audio.voice ? { voice: true } : {}),
     });
     return { externalMessageId: result.messages?.[0]?.id };
   },

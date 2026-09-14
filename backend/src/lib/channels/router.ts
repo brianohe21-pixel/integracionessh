@@ -5,7 +5,14 @@ import { messengerAdapter } from "./messenger.adapter.js";
 import { phoneAdapter } from "./phone.adapter.js";
 import { smsAdapter } from "./sms.adapter.js";
 import { telegramAdapter } from "./telegram.adapter.js";
-import type { ChannelAdapter, OutboundContext, OutboundDocument, OutboundImage, OutboundResult } from "./types.js";
+import type {
+  ChannelAdapter,
+  OutboundAudio,
+  OutboundContext,
+  OutboundDocument,
+  OutboundImage,
+  OutboundResult,
+} from "./types.js";
 import { webchatAdapter } from "./webchat.adapter.js";
 import { voicebotAdapter } from "./voicebot.adapter.js";
 import { whatsappAdapter } from "./whatsapp.adapter.js";
@@ -56,6 +63,17 @@ export async function sendChannelImage(
     throw new Error(`Channel ${ctx.channel} does not support image messages`);
   }
   return adapter.sendImage(ctx, image);
+}
+
+export async function sendChannelAudio(
+  ctx: OutboundContext,
+  audio: OutboundAudio
+): Promise<OutboundResult> {
+  const adapter = getChannelAdapter(ctx.channel);
+  if (!adapter.sendAudio) {
+    throw new Error(`Channel ${ctx.channel} does not support audio messages`);
+  }
+  return adapter.sendAudio(ctx, audio);
 }
 
 export async function markChannelRead(
