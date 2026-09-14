@@ -56,7 +56,7 @@ export function useBotEditNavGroups(hiddenTabs: BotEditTab[] = []): BotEditNavGr
   const hidden = new Set(hiddenTabs);
   const visible = (tab: BotEditTab) => !hidden.has(tab);
 
-  return [
+  const groups: BotEditNavGroup[] = [
     {
       id: "general",
       labelKey: "bots.navGroupGeneral",
@@ -103,8 +103,10 @@ export function useBotEditNavGroups(hiddenTabs: BotEditTab[] = []): BotEditNavGr
         { id: "automations", labelKey: "bots.tabAutomations", icon: <Zap className="h-4 w-4" /> },
       ],
     },
-  ]
-    .map((group) => ({
+  ];
+
+  return groups
+    .map((group): BotEditNavGroup => ({
       ...group,
       tabs: group.tabs.filter((tab) => visible(tab.id)),
     }))
