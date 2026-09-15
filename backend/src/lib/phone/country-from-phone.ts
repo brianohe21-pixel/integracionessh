@@ -1,0 +1,253 @@
+import { stripPhoneDigits } from "./normalize.js";
+
+const DEFAULT_COUNTRY_CODE = "57";
+
+const CALLING_CODE_COUNTRIES: Record<string, string> = {
+  "998": "Uzbekistán",
+  "996": "Kirguistán",
+  "995": "Georgia",
+  "994": "Azerbaiyán",
+  "993": "Turkmenistán",
+  "992": "Tayikistán",
+  "977": "Nepal",
+  "976": "Mongolia",
+  "975": "Bután",
+  "974": "Catar",
+  "973": "Baréin",
+  "972": "Israel",
+  "971": "Emiratos Árabes Unidos",
+  "970": "Palestina",
+  "968": "Omán",
+  "967": "Yemen",
+  "966": "Arabia Saudita",
+  "965": "Kuwait",
+  "964": "Irak",
+  "963": "Siria",
+  "962": "Jordania",
+  "961": "Líbano",
+  "960": "Maldivas",
+  "886": "Taiwán",
+  "880": "Bangladés",
+  "856": "Laos",
+  "855": "Camboya",
+  "853": "Macao",
+  "852": "Hong Kong",
+  "850": "Corea del Norte",
+  "692": "Islas Marshall",
+  "691": "Micronesia",
+  "690": "Tokelau",
+  "689": "Polinesia Francesa",
+  "688": "Tuvalu",
+  "687": "Nueva Caledonia",
+  "686": "Kiribati",
+  "685": "Samoa",
+  "683": "Niue",
+  "682": "Islas Cook",
+  "681": "Wallis y Futuna",
+  "680": "Palaos",
+  "679": "Fiyi",
+  "678": "Vanuatu",
+  "677": "Islas Salomón",
+  "676": "Tonga",
+  "675": "Papúa Nueva Guinea",
+  "674": "Nauru",
+  "673": "Brunéi",
+  "672": "Antártida",
+  "670": "Timor Oriental",
+  "599": "Antillas Neerlandesas",
+  "598": "Uruguay",
+  "597": "Surinam",
+  "596": "Martinica",
+  "595": "Paraguay",
+  "594": "Guayana Francesa",
+  "593": "Ecuador",
+  "592": "Guyana",
+  "591": "Bolivia",
+  "590": "Guadalupe",
+  "509": "Haití",
+  "508": "San Pedro y Miquelón",
+  "507": "Panamá",
+  "506": "Costa Rica",
+  "505": "Nicaragua",
+  "504": "Honduras",
+  "503": "El Salvador",
+  "502": "Guatemala",
+  "501": "Belice",
+  "500": "Islas Malvinas",
+  "423": "Liechtenstein",
+  "421": "Eslovaquia",
+  "420": "República Checa",
+  "389": "Macedonia del Norte",
+  "387": "Bosnia y Herzegovina",
+  "386": "Eslovenia",
+  "385": "Croacia",
+  "381": "Serbia",
+  "380": "Ucrania",
+  "378": "San Marino",
+  "377": "Mónaco",
+  "376": "Andorra",
+  "375": "Bielorrusia",
+  "374": "Armenia",
+  "373": "Moldavia",
+  "372": "Estonia",
+  "371": "Letonia",
+  "370": "Lituania",
+  "359": "Bulgaria",
+  "358": "Finlandia",
+  "357": "Chipre",
+  "356": "Malta",
+  "355": "Albania",
+  "354": "Islandia",
+  "353": "Irlanda",
+  "352": "Luxemburgo",
+  "351": "Portugal",
+  "350": "Gibraltar",
+  "299": "Groenlandia",
+  "298": "Islas Feroe",
+  "297": "Aruba",
+  "291": "Eritrea",
+  "290": "Santa Elena",
+  "269": "Comoras",
+  "268": "Esuatini",
+  "267": "Botsuana",
+  "266": "Lesoto",
+  "265": "Malaui",
+  "264": "Namibia",
+  "263": "Zimbabue",
+  "262": "Reunión",
+  "261": "Madagascar",
+  "260": "Zambia",
+  "258": "Mozambique",
+  "257": "Burundi",
+  "256": "Uganda",
+  "255": "Tanzania",
+  "254": "Kenia",
+  "253": "Yibuti",
+  "252": "Somalia",
+  "251": "Etiopía",
+  "250": "Ruanda",
+  "249": "Sudán",
+  "248": "Seychelles",
+  "247": "Ascensión",
+  "246": "Diego García",
+  "245": "Guinea-Bisáu",
+  "244": "Angola",
+  "243": "República Democrática del Congo",
+  "242": "República del Congo",
+  "241": "Gabón",
+  "240": "Guinea Ecuatorial",
+  "239": "Santo Tomé y Príncipe",
+  "238": "Cabo Verde",
+  "237": "Camerún",
+  "236": "República Centroafricana",
+  "235": "Chad",
+  "234": "Nigeria",
+  "233": "Ghana",
+  "232": "Sierra Leona",
+  "231": "Liberia",
+  "230": "Mauricio",
+  "229": "Benín",
+  "228": "Togo",
+  "227": "Níger",
+  "226": "Burkina Faso",
+  "225": "Costa de Marfil",
+  "224": "Guinea",
+  "223": "Mali",
+  "222": "Mauritania",
+  "221": "Senegal",
+  "220": "Gambia",
+  "218": "Libia",
+  "216": "Túnez",
+  "213": "Argelia",
+  "212": "Marruecos",
+  "211": "Sudán del Sur",
+  "98": "Irán",
+  "95": "Myanmar",
+  "94": "Sri Lanka",
+  "93": "Afganistán",
+  "92": "Pakistán",
+  "91": "India",
+  "90": "Turquía",
+  "86": "China",
+  "84": "Vietnam",
+  "82": "Corea del Sur",
+  "81": "Japón",
+  "66": "Tailandia",
+  "65": "Singapur",
+  "64": "Nueva Zelanda",
+  "63": "Filipinas",
+  "62": "Indonesia",
+  "61": "Australia",
+  "60": "Malasia",
+  "58": "Venezuela",
+  "57": "Colombia",
+  "56": "Chile",
+  "55": "Brasil",
+  "54": "Argentina",
+  "53": "Cuba",
+  "52": "México",
+  "51": "Perú",
+  "49": "Alemania",
+  "48": "Polonia",
+  "47": "Noruega",
+  "46": "Suecia",
+  "45": "Dinamarca",
+  "44": "Reino Unido",
+  "43": "Austria",
+  "41": "Suiza",
+  "40": "Rumania",
+  "39": "Italia",
+  "36": "Hungría",
+  "34": "España",
+  "33": "Francia",
+  "32": "Bélgica",
+  "31": "Países Bajos",
+  "30": "Grecia",
+  "27": "Sudáfrica",
+  "20": "Egipto",
+  "7": "Rusia",
+  "1": "Estados Unidos",
+};
+
+const SORTED_CALLING_CODES = Object.keys(CALLING_CODE_COUNTRIES).sort(
+  (a, b) => b.length - a.length
+);
+
+function matchCountryFromDigits(digits: string): string | undefined {
+  for (const code of SORTED_CALLING_CODES) {
+    if (digits.startsWith(code)) {
+      return CALLING_CODE_COUNTRIES[code];
+    }
+  }
+  return undefined;
+}
+
+export function detectCountryFromPhone(phone: string): string | undefined {
+  const digits = stripPhoneDigits(phone);
+  if (!digits || digits.length < 8) return undefined;
+
+  const candidates =
+    digits.length <= 10 ? [`${DEFAULT_COUNTRY_CODE}${digits}`, digits] : [digits];
+
+  for (const candidate of candidates) {
+    const country = matchCountryFromDigits(candidate);
+    if (country) return country;
+  }
+
+  return undefined;
+}
+
+export function resolveContactCountry(phone: string, explicit?: string): string | undefined {
+  const trimmed = explicit?.trim();
+  if (trimmed) return trimmed;
+  return detectCountryFromPhone(phone);
+}
+
+export function enrichContactCountry<T extends { phoneNumber: string; country?: string }>(
+  contact: T
+): T {
+  if (contact.country?.trim()) return contact;
+  const detected = detectCountryFromPhone(contact.phoneNumber);
+  if (!detected) return contact;
+  return { ...contact, country: detected };
+}

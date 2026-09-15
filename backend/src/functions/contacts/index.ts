@@ -30,12 +30,15 @@ import {
   notFound,
   handleError,
 } from "../../lib/http.js";
+import { enrichContactCountry } from "../../lib/phone/country-from-phone.js";
 import type { Contact, MarketingConsent } from "../../types/index.js";
 
 const CreateContactSchema = z.object({
   phoneNumber: z.string().min(10).max(20),
   displayName: z.string().max(128).optional(),
   email: z.string().email().max(256).optional(),
+  country: z.string().max(100).optional(),
+  company: z.string().max(200).optional(),
   tags: z.array(z.string().max(50)).max(20).optional(),
   marketingConsent: z.enum(["unknown", "opt_in", "opt_out"]).optional(),
 });
@@ -43,6 +46,8 @@ const CreateContactSchema = z.object({
 const UpdateContactSchema = z.object({
   displayName: z.string().max(128).optional(),
   email: z.string().email().max(256).optional(),
+  country: z.string().max(100).optional(),
+  company: z.string().max(200).optional(),
   tags: z.array(z.string().max(50)).max(20).optional(),
   marketingConsent: z.enum(["unknown", "opt_in", "opt_out"]).optional(),
   suppressed: z.boolean().optional(),
@@ -55,6 +60,8 @@ const ImportSchema = z.object({
         phone: z.string().min(10),
         name: z.string().max(128).optional(),
         email: z.string().email().max(256).optional(),
+        country: z.string().max(100).optional(),
+        company: z.string().max(200).optional(),
         tags: z.array(z.string().max(50)).optional(),
         marketingConsent: z.enum(["unknown", "opt_in", "opt_out"]).optional(),
       })
@@ -74,12 +81,14 @@ function parseSubPath(rawPath: string, phone: string): string | null {
 }
 
 function exportCsv(contacts: Contact[]): string {
-  const header = "phone,displayName,email,marketingConsent,suppressed,tags";
+  const header = "phone,displayName,email,country,company,marketingConsent,suppressed,tags";
   const rows = contacts.map((c) => {
     const tags = c.tags.join("|");
     const name = (c.displayName ?? "").replace(/"/g, '""');
     const email = (c.email ?? "").replace(/"/g, '""');
-    return `${c.phoneNumber},"${name}","${email}",${c.marketingConsent},${c.suppressed},"${tags}"`;
+    const country = (c.country ?? "").replace(/"/g, '""');
+    const company = (c.company ?? "").replace(/"/g, '""');
+    return `${c.phoneNumber},"${name}","${email}","${country}","${company}",${c.marketingConsent},${c.suppressed},"${tags}"`;
   });
   return [header, ...rows].join("\n");
 }
@@ -142,10 +151,11 @@ export async function handler(
       return ok({
         ...result,
         items: result.items.map((contact) => {
+          const enriched = enrichContactCountry(contact);
           const csat = csatMap.get(contact.phoneNumber);
-          if (!csat) return contact;
+          if (!csat) return enriched;
           return {
-            ...contact,
+            ...enriched,
             csatAverage: csat.averageCsat,
             csatRatingCount: csat.ratingCount,
           };
@@ -156,7 +166,7 @@ export async function handler(
     if (method === "GET" && phoneParam) {
       const contact = await getContactByPhone(auth.tenantId, phoneParam);
       if (!contact) return notFound("Contact not found");
-      return ok(contact);
+      return ok(enrichContactCountry(contact));
     }
 
     if (method === "POST" && rawPath.endsWith("/contacts/import")) {
@@ -181,6 +191,8 @@ export async function handler(
         phone: row.phone,
         ...(row.name ? { name: row.name } : {}),
         ...(row.email ? { email: row.email } : {}),
+        ...(row.country ? { country: row.country } : {}),
+        ...(row.company ? { company: row.company } : {}),
         ...(row.tags?.length ? { tags: row.tags } : {}),
         ...(row.marketingConsent ? { marketingConsent: row.marketingConsent } : {}),
       }));
@@ -223,6 +235,8 @@ export async function handler(
         updatedAt: now,
         ...(parsed.data.displayName ? { displayName: parsed.data.displayName } : {}),
         ...(parsed.data.email ? { email: parsed.data.email } : {}),
+        ...(parsed.data.country ? { country: parsed.data.country } : {}),
+        ...(parsed.data.company ? { company: parsed.data.company } : {}),
         ...(consent !== "unknown"
           ? { consentAt: now, consentSource: "panel" as const }
           : {}),
@@ -254,6 +268,8 @@ export async function handler(
       const patch: Parameters<typeof updateContact>[2] = {};
       if (parsed.data.displayName !== undefined) patch.displayName = parsed.data.displayName;
       if (parsed.data.email !== undefined) patch.email = parsed.data.email;
+      if (parsed.data.country !== undefined) patch.country = parsed.data.country;
+      if (parsed.data.company !== undefined) patch.company = parsed.data.company;
       if (parsed.data.tags !== undefined) patch.tags = parsed.data.tags;
       if (parsed.data.suppressed !== undefined) patch.suppressed = parsed.data.suppressed;
       if (parsed.data.marketingConsent !== undefined) {
