@@ -41,10 +41,11 @@ import type { WorkflowStatus, Channel, InteractionCategory } from "@/types";
 import { INTERACTION_CATEGORIES } from "@/types";
 import { interactionCategoryLabelKey } from "@/lib/interaction-categories";
 import {
+  isAudioAttachmentFile,
   useSendConversationAttachment,
   validateConversationAttachmentFile,
 } from "@/hooks/useConversationAttachments";
-import { useActiveLeadByPhone, useConvertLead } from "@/hooks/useLeads";
+import { useActiveLeadByPhone, useConvertLead, useCreateLead } from "@/hooks/useLeads";
 import Link from "next/link";
 import { AdvisorCallPanel } from "@/components/conversations/AdvisorCallPanel";
 import { WhatsAppSoftphone } from "@/components/conversations/WhatsAppSoftphone";
@@ -310,6 +311,29 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     selectedConversation?.phoneNumber || selectedConversation?.participantId;
   const { data: activeLead } = useActiveLeadByPhone(selectedContactPhone);
   const convertLead = useConvertLead();
+  const createLead = useCreateLead();
+
+  async function handleCreateLeadFromInbox() {
+    if (!selectedConversation || !selectedContactPhone) return;
+    try {
+      await createLead.mutateAsync({
+        botId: selectedConversation.botId,
+        conversationId: selectedConversation.conversationId,
+        ...(selectedConversation.contactName ? { name: selectedConversation.contactName } : {}),
+      });
+      await alert({
+        title: t("leads.title"),
+        message: t("leads.createdFromInbox"),
+        tone: "success",
+      });
+    } catch (err) {
+      await alert({
+        title: t("leads.title"),
+        message: (err as Error).message || t("leads.createFromInboxError"),
+        tone: "danger",
+      });
+    }
+  }
   const selectedBot = bots?.find((b) => b.botId === selectedConversation?.botId);
   const isImapReadOnly =
     selectedConversation?.channel === "email" && selectedBot?.emailInboundProvider === "imap";
@@ -446,24 +470,70 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
       return;
     }
 
+    const isAudio = isAudioAttachmentFile(file);
+
     try {
       await sendAttachment.mutateAsync({
         conversationId: selectedConversation.conversationId,
         botId: selectedConversation.botId,
         file,
-        ...(draft.trim() ? { caption: draft.trim() } : {}),
+        ...(!isAudio && draft.trim() ? { caption: draft.trim() } : {}),
       });
-      setDraft("");
+      if (!isAudio) {
+        setDraft("");
+      }
     } catch (error) {
-      const message =
-        error instanceof Error && error.message === "uploadFailed"
-          ? t("conversations.attachFileUploadFailed")
-          : t("conversations.attachFileSendFailed");
+      const message = resolveAttachmentErrorMessage(error);
       await alert({
         title: t("conversations.attachFile"),
         message,
       });
     }
+  }
+
+  function resolveAttachmentErrorMessage(error: unknown): string {
+    if (error instanceof Error) {
+      if (error.message === "uploadFailed") {
+        return t("conversations.attachFileUploadFailed");
+      }
+      if (error.message.trim()) {
+        return error.message;
+      }
+    }
+    return t("conversations.attachFileSendFailed");
+  }
+
+  async function handleSendVoiceNote(file: File) {
+    if (!selectedConversation) return;
+
+    try {
+      await sendAttachment.mutateAsync({
+        conversationId: selectedConversation.conversationId,
+        botId: selectedConversation.botId,
+        file,
+        voiceNote: true,
+      });
+      setDraft("");
+    } catch (error) {
+      await alert({
+        title: t("conversations.voiceNoteRecord"),
+        message: resolveAttachmentErrorMessage(error),
+      });
+    }
+  }
+
+  async function handleMicDenied() {
+    await alert({
+      title: t("conversations.voiceNoteRecord"),
+      message: t("conversations.voiceNoteMicDenied"),
+    });
+  }
+
+  async function handleInvalidVoiceNote() {
+    await alert({
+      title: t("conversations.voiceNoteRecord"),
+      message: t("conversations.voiceNoteInvalid"),
+    });
   }
 
   async function handleHandoff() {
@@ -893,6 +963,20 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
               </div>
             )}
 
+            {selectedConversation && !activeLead && selectedContactPhone && (
+              <div className="relative z-10 mx-4 mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-default bg-surface-muted p-3 text-sm text-primary shadow-sm">
+                <span className="text-secondary">{t("leads.noLeadForConversation")}</span>
+                <button
+                  type="button"
+                  onClick={() => void handleCreateLeadFromInbox()}
+                  disabled={createLead.isPending}
+                  className="text-xs font-medium text-accent hover:text-accent"
+                >
+                  {t("leads.createFromInbox")}
+                </button>
+              </div>
+            )}
+
             {selectedConversation && (
               <>
                 <AdvisorCallPanel
@@ -946,6 +1030,9 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                       showBooking={showBookingAction}
                       showAttachment={showAttachmentAction}
                       onAttachFile={handleAttachFile}
+                      onSendVoiceNote={handleSendVoiceNote}
+                      onMicDenied={handleMicDenied}
+                      onInvalidVoiceNote={handleInvalidVoiceNote}
                       attaching={sendAttachment.isPending}
                     />
                   </div>

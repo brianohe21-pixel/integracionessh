@@ -180,6 +180,9 @@ importers:
       next:
         specifier: ^16.3.1
         version: 16.3.1(@babel/core@7.29.0)(@types/node@20.19.41)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      opus-media-recorder:
+        specifier: ^0.8.0
+        version: 0.8.0
       pdf-lib:
         specifier: ^1.17.1
         version: 1.17.1
@@ -198,6 +201,9 @@ importers:
       tailwind-merge:
         specifier: ^3.5.0
         version: 3.6.0
+      xlsx:
+        specifier: npm:@keep-lts/xlsx@^0.18.6
+        version: '@keep-lts/xlsx@0.18.6'
     devDependencies:
       '@tailwindcss/postcss':
         specifier: ^4
@@ -3483,6 +3489,9 @@ packages:
     resolution: {integrity: sha512-ZySD7Nf91aLB0RxL4KGrKHBXl7Eds1DAmEdcoVawXnLD7SDhpNgtuII2aAkg7a7QS41jxPSZ17p4VdGnMHk3MQ==}
     engines: {node: '>=0.4.0'}
 
+  detect-browser@4.8.0:
+    resolution: {integrity: sha512-f4h2dFgzHUIpjpBLjhnDIteXv8VQiUm8XzAuzQtYUqECX/eKh67ykuiVoyb7Db7a0PUSmJa3OGXStG0CbQFUVw==}
+
   detect-libc@2.1.2:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
     engines: {node: '>=8'}
@@ -3792,6 +3801,10 @@ packages:
   esutils@2.0.3:
     resolution: {integrity: sha512-kVscqXk4OCp68SZ0dkgEKVi6/8ij300KBWTJq32P/dYeWTSwK41WyTxalN1eRmA5Z9UU/LX9D7FWSmV9SAYx6g==}
     engines: {node: '>=0.10.0'}
+
+  event-target-shim@3.0.2:
+    resolution: {integrity: sha512-HK5GhnEAkm7fLy249GtF7DIuYmjLm85Ft6ssj7DhVl8Tx/z9+v0W6aiIVUdT4AXWGYy5Fc+s6gqBI49Bf0LejQ==}
+    engines: {node: '>=4'}
 
   event-target-shim@5.0.1:
     resolution: {integrity: sha512-i/2XbnSz/uxRCU6+NdVJgKWDTM427+MqYbkQzD321DuCQJUqOuJKIA0IM2+W2xtYHdKOmZ4dR6fExsd4SXL+WQ==}
@@ -4929,6 +4942,9 @@ packages:
   optionator@0.9.4:
     resolution: {integrity: sha512-6IpQ7mKUxRcZNLIObR0hz7lxsapSSIYNZJwXPGeF0mTVqGKFIXj1DQcMoT22S3ROcLyY/rz0PWaWZ9ayWmad9g==}
     engines: {node: '>= 0.8.0'}
+
+  opus-media-recorder@0.8.0:
+    resolution: {integrity: sha512-AIvJMpnJqZ18dFAU7Amtt5cZZp8oPzDoAOtobdTcLzwVNm/j815+GJmBupBzBZGBa4L940TEulm7Uu4tGOYDGQ==}
 
   own-keys@1.0.1:
     resolution: {integrity: sha512-qFOyK5PjiWZd+QQIh+1jhdb9LpxTF0qs7Pm8o5QHYZ0M3vKqSqzsZaEB6oWlxZ+q2sJBMI/Ktgd2N5ZwQoRHfg==}
@@ -10135,6 +10151,8 @@ snapshots:
 
   delayed-stream@1.0.0: {}
 
+  detect-browser@4.8.0: {}
+
   detect-libc@2.1.2: {}
 
   detect-newline@3.1.0: {}
@@ -10663,6 +10681,8 @@ snapshots:
   estraverse@5.3.0: {}
 
   esutils@2.0.3: {}
+
+  event-target-shim@3.0.2: {}
 
   event-target-shim@5.0.1: {}
 
@@ -12031,6 +12051,11 @@ snapshots:
       prelude-ls: 1.2.1
       type-check: 0.4.0
       word-wrap: 1.2.5
+
+  opus-media-recorder@0.8.0:
+    dependencies:
+      detect-browser: 4.8.0
+      event-target-shim: 3.0.2
 
   own-keys@1.0.1:
     dependencies:

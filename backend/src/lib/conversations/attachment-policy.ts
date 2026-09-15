@@ -5,6 +5,11 @@ const ALLOWED_MIME_TYPES = new Set([
   "image/jpeg",
   "image/png",
   "image/webp",
+  "audio/mpeg",
+  "audio/mp4",
+  "audio/aac",
+  "audio/amr",
+  "audio/ogg",
 ]);
 
 const BLOCKED_EXTENSIONS = new Set([
@@ -22,8 +27,15 @@ const BLOCKED_EXTENSIONS = new Set([
   ".htm",
 ]);
 
+export function normalizeConversationAttachmentMimeType(mimeType: string): string {
+  const normalized = mimeType.trim().toLowerCase().split(";")[0]?.trim() ?? "";
+  if (normalized === "audio/x-m4a") return "audio/mp4";
+  if (normalized === "audio/x-aac") return "audio/aac";
+  return normalized;
+}
+
 export function isAllowedConversationAttachmentMimeType(mimeType: string): boolean {
-  return ALLOWED_MIME_TYPES.has(mimeType.trim().toLowerCase());
+  return ALLOWED_MIME_TYPES.has(normalizeConversationAttachmentMimeType(mimeType));
 }
 
 export function isAllowedConversationAttachmentFilename(filename: string): boolean {
@@ -37,6 +49,12 @@ export function isAllowedConversationAttachmentFilename(filename: string): boole
   if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return true;
   if (lower.endsWith(".png")) return true;
   if (lower.endsWith(".webp")) return true;
+  if (lower.endsWith(".mp3")) return true;
+  if (lower.endsWith(".m4a")) return true;
+  if (lower.endsWith(".aac")) return true;
+  if (lower.endsWith(".amr")) return true;
+  if (lower.endsWith(".ogg")) return true;
+  if (lower.endsWith(".opus")) return true;
   return false;
 }
 
@@ -44,7 +62,7 @@ export function inferConversationAttachmentMimeType(
   filename: string,
   mimeType: string
 ): string | null {
-  const normalizedMime = mimeType.trim().toLowerCase();
+  const normalizedMime = normalizeConversationAttachmentMimeType(mimeType);
   if (isAllowedConversationAttachmentMimeType(normalizedMime)) {
     return normalizedMime;
   }
@@ -54,9 +72,33 @@ export function inferConversationAttachmentMimeType(
   if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
   if (lower.endsWith(".png")) return "image/png";
   if (lower.endsWith(".webp")) return "image/webp";
+  if (lower.endsWith(".mp3")) return "audio/mpeg";
+  if (lower.endsWith(".m4a")) return "audio/mp4";
+  if (lower.endsWith(".aac")) return "audio/aac";
+  if (lower.endsWith(".amr")) return "audio/amr";
+  if (lower.endsWith(".ogg") || lower.endsWith(".opus")) return "audio/ogg";
   return null;
 }
 
 export function isImageAttachmentMimeType(mimeType: string): boolean {
   return mimeType.startsWith("image/");
+}
+
+export function isAudioAttachmentMimeType(mimeType: string): boolean {
+  const normalized = normalizeConversationAttachmentMimeType(mimeType);
+  return normalized.startsWith("audio/") && ALLOWED_MIME_TYPES.has(normalized);
+}
+
+export function isVoiceNoteMimeType(mimeType: string): boolean {
+  return normalizeConversationAttachmentMimeType(mimeType) === "audio/ogg";
+}
+
+export function isOggOpusBuffer(buffer: Uint8Array): boolean {
+  return (
+    buffer.byteLength >= 4 &&
+    buffer[0] === 0x4f &&
+    buffer[1] === 0x67 &&
+    buffer[2] === 0x67 &&
+    buffer[3] === 0x53
+  );
 }

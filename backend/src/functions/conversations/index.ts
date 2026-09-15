@@ -200,6 +200,7 @@ const SendAttachmentSchema = z.object({
   filename: z.string().min(1).max(200),
   mimeType: z.string().min(1).max(120),
   caption: z.string().max(1024).optional(),
+  voiceNote: z.boolean().optional(),
 });
 
 const BulkDeleteSchema = z.object({
@@ -952,6 +953,7 @@ export async function handler(
         filename: parsed.data.filename,
         mimeType: parsed.data.mimeType,
         ...(parsed.data.caption ? { caption: parsed.data.caption } : {}),
+        ...(parsed.data.voiceNote ? { voiceNote: parsed.data.voiceNote } : {}),
         environment: ENVIRONMENT,
         resolveAccessToken: resolveAccessTokenForChannel,
         assertCanAccessConversation,

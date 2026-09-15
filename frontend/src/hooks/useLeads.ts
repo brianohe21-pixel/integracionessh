@@ -40,6 +40,26 @@ export function useLeadMetrics() {
   });
 }
 
+export function useCreateLead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: {
+      botId: string;
+      conversationId: string;
+      name?: string;
+      email?: string;
+      notes?: string;
+    }) => api.post<Lead>("/leads", body),
+    onSuccess: (lead) => {
+      qc.invalidateQueries({ queryKey: ["leads"] });
+      qc.invalidateQueries({ queryKey: ["metrics", "leads"] });
+      qc.invalidateQueries({ queryKey: ["contacts"] });
+      qc.invalidateQueries({ queryKey: ["leads", "active"] });
+      qc.setQueryData(["leads", "active", lead.phone], lead);
+    },
+  });
+}
+
 export function useUpdateLead() {
   const qc = useQueryClient();
   return useMutation({

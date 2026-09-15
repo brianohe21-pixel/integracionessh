@@ -1,4 +1,5 @@
 import { performHandoff } from "../advisor/handoff.js";
+import { applyMarketingConsent } from "../compliance/contact-consent.js";
 import { getContactByPhone, updateContact } from "../dynamodb/contact.repository.js";
 import { updateConversation } from "../dynamodb/conversation.repository.js";
 import { sendTemplateMessage } from "../whatsapp/client.js";
@@ -107,6 +108,19 @@ export async function executeAutomation(
         const mergedTags = [...new Set([...existing.tags, ...rule.tags])];
         await updateContact(ctx.tenantId, ctx.customerPhone, { tags: mergedTags });
       }
+      break;
+    }
+    case "set_consent": {
+      if (!rule.marketingConsent || rule.marketingConsent === "unknown") {
+        throw new Error("marketingConsent required for set_consent");
+      }
+      await applyMarketingConsent({
+        tenantId: ctx.tenantId,
+        phone: ctx.customerPhone,
+        marketingConsent: rule.marketingConsent,
+        consentSource: "whatsapp_keyword",
+        botId: ctx.botId,
+      });
       break;
     }
     case "handoff": {

@@ -7,7 +7,29 @@ import type { Message } from "@/types";
 export const CONVERSATION_ATTACHMENT_MAX_BYTES = 16 * 1024 * 1024;
 
 export const CONVERSATION_ATTACHMENT_ACCEPT =
-  "application/pdf,image/jpeg,image/png,image/webp,.pdf,.jpg,.jpeg,.png,.webp";
+  "application/pdf,image/jpeg,image/png,image/webp,audio/mpeg,audio/mp4,audio/aac,audio/amr,audio/ogg,.pdf,.jpg,.jpeg,.png,.webp,.mp3,.m4a,.aac,.amr,.ogg,.opus";
+
+export function isAudioAttachmentFile(file: File): boolean {
+  const lower = file.name.toLowerCase();
+  if (
+    lower.endsWith(".mp3") ||
+    lower.endsWith(".m4a") ||
+    lower.endsWith(".aac") ||
+    lower.endsWith(".amr") ||
+    lower.endsWith(".ogg") ||
+    lower.endsWith(".opus")
+  ) {
+    return true;
+  }
+  const mime = file.type.trim().toLowerCase();
+  return (
+    mime === "audio/mpeg" ||
+    mime === "audio/mp4" ||
+    mime === "audio/aac" ||
+    mime === "audio/amr" ||
+    mime === "audio/ogg"
+  );
+}
 
 export function validateConversationAttachmentFile(file: File): string | null {
   if (file.size <= 0) return "empty";
@@ -19,7 +41,13 @@ export function validateConversationAttachmentFile(file: File): string | null {
     lower.endsWith(".jpg") ||
     lower.endsWith(".jpeg") ||
     lower.endsWith(".png") ||
-    lower.endsWith(".webp");
+    lower.endsWith(".webp") ||
+    lower.endsWith(".mp3") ||
+    lower.endsWith(".m4a") ||
+    lower.endsWith(".aac") ||
+    lower.endsWith(".amr") ||
+    lower.endsWith(".ogg") ||
+    lower.endsWith(".opus");
 
   if (!allowed) return "unsupported";
   return null;
@@ -34,6 +62,7 @@ export function useSendConversationAttachment() {
       botId: string;
       file: File;
       caption?: string;
+      voiceNote?: boolean;
     }) => {
       const validationError = validateConversationAttachmentFile(body.file);
       if (validationError) {
@@ -76,6 +105,7 @@ export function useSendConversationAttachment() {
           filename: body.file.name,
           mimeType,
           ...(body.caption?.trim() ? { caption: body.caption.trim() } : {}),
+          ...(body.voiceNote ? { voiceNote: true } : {}),
         }
       );
     },

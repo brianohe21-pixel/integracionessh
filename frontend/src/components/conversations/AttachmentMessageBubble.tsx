@@ -3,7 +3,12 @@
 import { useMutation } from "@tanstack/react-query";
 import { ExternalLink, FileText } from "lucide-react";
 import { api } from "@/lib/api";
-import { getDocumentMetadata, isImageAttachmentMessage } from "@/lib/conversations/document-messages";
+import { ChatAudioPlayer } from "@/components/conversations/ChatAudioPlayer";
+import {
+  getDocumentMetadata,
+  isAudioAttachmentMessage,
+  isImageAttachmentMessage,
+} from "@/lib/conversations/document-messages";
 import { useT } from "@/i18n/context";
 import type { Message } from "@/types";
 
@@ -17,6 +22,7 @@ export function AttachmentMessageBubble({ message, conversationId, botId }: Prop
   const t = useT();
   const metadata = getDocumentMetadata(message);
   const isImage = isImageAttachmentMessage(message);
+  const isAudio = isAudioAttachmentMessage(message);
 
   const openAttachment = useMutation({
     mutationFn: async () => {
@@ -43,6 +49,10 @@ export function AttachmentMessageBubble({ message, conversationId, botId }: Prop
     message.content.trim() && message.content.trim() !== metadata.filename
       ? message.content.trim()
       : null;
+
+  if (isAudio && metadata.downloadUrl) {
+    return <ChatAudioPlayer src={metadata.downloadUrl} />;
+  }
 
   if (isImage && metadata.downloadUrl) {
     return (

@@ -73,6 +73,38 @@ describe("document message helpers", () => {
     });
   });
 
+  it("enriches audio messages with download urls", async () => {
+    const messages = await enrichConversationMessages(
+      [
+        {
+          messageId: "m-audio",
+          conversationId: "c-1",
+          tenantId: "t-1",
+          role: "advisor",
+          content: "voice-note.ogg",
+          messageType: "audio",
+          metadata: {
+            kind: "audio",
+            filename: "voice-note.ogg",
+            mimeType: "audio/ogg",
+            s3Key: "tenants/t/bots/b/conversations/c-1/attachments/a/voice-note.ogg",
+          },
+          timestamp: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+      { tenantId: "t-1", botId: "b-1" }
+    );
+
+    expect(getPresignedReadUrlMock).toHaveBeenCalledWith(
+      "tenants/t/bots/b/conversations/c-1/attachments/a/voice-note.ogg",
+      3600
+    );
+    expect(messages[0]?.messageType).toBe("audio");
+    expect(messages[0]?.metadata).toMatchObject({
+      downloadUrl: "https://example.com/file.pdf",
+    });
+  });
+
   it("upgrades legacy document messages using quotation pdf keys", async () => {
     listQuotationsMock.mockResolvedValue([
       {

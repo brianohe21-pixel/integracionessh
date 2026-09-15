@@ -6,7 +6,7 @@ export function isDocumentMessageMetadata(
   return Boolean(
     metadata &&
       typeof metadata === "object" &&
-      (metadata.kind === "document" || metadata.kind === "image") &&
+      (metadata.kind === "document" || metadata.kind === "image" || metadata.kind === "audio") &&
       typeof metadata.filename === "string"
   );
 }
@@ -16,8 +16,14 @@ export function isImageAttachmentMessage(message: Message): boolean {
   return isDocumentMessageMetadata(message.metadata) && message.metadata.kind === "image";
 }
 
+export function isAudioAttachmentMessage(message: Message): boolean {
+  if (message.messageType === "audio") return true;
+  return isDocumentMessageMetadata(message.metadata) && message.metadata.kind === "audio";
+}
+
 export function isDocumentMessage(message: Message): boolean {
   if (isImageAttachmentMessage(message)) return true;
+  if (isAudioAttachmentMessage(message)) return true;
   if (message.messageType === "document" && isDocumentMessageMetadata(message.metadata)) {
     return true;
   }

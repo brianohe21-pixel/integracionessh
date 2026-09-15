@@ -24,8 +24,10 @@ import {
   flowDraftEditorSnapshotKey,
   flowEditorSnapshotKey,
   flowPublishedEditorSnapshotKey,
+  hasUnpublishedFlowChanges,
   resolveDraftEdges,
   resolveDraftNodes,
+  resolveEditorVoiceMode,
 } from "@/lib/flow-draft";
 
 const FlowCanvas = dynamic(
@@ -89,8 +91,11 @@ export default function EditFlowPage() {
     initializedFlowKeyRef.current = key;
     setAutoSaveReady(false);
     resetHistory({ nodes: draftNodes, edges: draftEdges });
-    setSavedKey(flowDraftEditorSnapshotKey(flow));
-    setPublishedKey(flowPublishedEditorSnapshotKey(flow));
+    const draftKey = flowDraftEditorSnapshotKey(flow);
+    setSavedKey(draftKey);
+    setPublishedKey(
+      hasUnpublishedFlowChanges(flow) ? flowPublishedEditorSnapshotKey(flow) : draftKey
+    );
     setSavedMessage(false);
     setPublishedMessage(false);
     setSaveError("");
@@ -223,22 +228,26 @@ export default function EditFlowPage() {
     if (!flow || update.isPending) return !isDirty;
     const nodesToSave = localNodes.length > 0 ? localNodes : resolveDraftNodes(flow);
     const edgesToSave = localNodes.length > 0 ? localEdges : resolveDraftEdges(flow);
-    const nodes = applyResolvedTriggerType(nodesToSave, isVoiceFlow);
-    const snapshotKey = flowEditorSnapshotKey(nodesToSave, edgesToSave, isVoiceFlow);
+    const voiceMode = resolveEditorVoiceMode(flow, nodesToSave);
+    const nodes = applyResolvedTriggerType(nodesToSave, voiceMode);
+    const snapshotKey = flowEditorSnapshotKey(nodesToSave, edgesToSave, voiceMode);
     if (snapshotKey === savedKey) return true;
     setSaveError("");
     setSavedMessage(false);
     try {
-      await update.mutateAsync({
+      const updated = await update.mutateAsync({
         name: flow.name,
         nodes,
         edges: edgesToSave,
         entryNodeId: nodes.find((n) => n.type === "trigger")?.id ?? flow.entryNodeId,
       });
-      setSavedKey(snapshotKey);
-      if (flowEditorSnapshotKey(nodesToSave, edgesToSave, isVoiceFlow) !== snapshotKey) {
-        commitHistory({ nodes, edges: edgesToSave });
-      }
+      const draftKey = flowDraftEditorSnapshotKey(updated);
+      setSavedKey(draftKey);
+      setPublishedKey(
+        hasUnpublishedFlowChanges(updated)
+          ? flowPublishedEditorSnapshotKey(updated)
+          : draftKey
+      );
       setSavedMessage(true);
       window.setTimeout(() => setSavedMessage(false), 2500);
       return true;
@@ -279,21 +288,26 @@ export default function EditFlowPage() {
   handleSaveRef.current = handleSave;
   handlePublishRef.current = handlePublish;
 
-  const editorSnapshotKey = flowEditorSnapshotKey(localNodes, localEdges, isVoiceFlow);
+  const editorVoiceMode = flow ? resolveEditorVoiceMode(flow, localNodes) : isVoiceFlow;
+  const editorSnapshotKey = flowEditorSnapshotKey(localNodes, localEdges, editorVoiceMode);
   const isDirty = editorSnapshotKey !== savedKey && localNodes.length > 0;
-  const publishedSnapshotKey = flow ? flowPublishedEditorSnapshotKey(flow) : publishedKey;
-  const draftSnapshotKey =
-    flow && !isDirty ? flowDraftEditorSnapshotKey(flow) : editorSnapshotKey;
-  const hasUnpublishedChanges =
-    localNodes.length > 0 && draftSnapshotKey !== publishedSnapshotKey;
+  const hasUnpublishedChanges = (() => {
+    if (localNodes.length === 0) return false;
+    if (isDirty) return editorSnapshotKey !== publishedKey;
+    if (flow) return hasUnpublishedFlowChanges(flow);
+    return editorSnapshotKey !== publishedKey;
+  })();
 
   function handleVersionRestored(updated: FlowDefinition) {
     const draftNodes = resolveDraftNodes(updated);
     const draftEdges = resolveDraftEdges(updated);
     setAutoSaveReady(false);
     resetHistory({ nodes: draftNodes, edges: draftEdges });
-    setSavedKey(flowDraftEditorSnapshotKey(updated));
-    setPublishedKey(flowPublishedEditorSnapshotKey(updated));
+    const draftKey = flowDraftEditorSnapshotKey(updated);
+    setSavedKey(draftKey);
+    setPublishedKey(
+      hasUnpublishedFlowChanges(updated) ? flowPublishedEditorSnapshotKey(updated) : draftKey
+    );
     setSavedMessage(false);
     setPublishedMessage(false);
     setActiveTab("editor");
@@ -324,7 +338,7 @@ export default function EditFlowPage() {
         flowName={flow.name}
         isPublished={flow.enabled}
         version={flow.version}
-        hasUnpublishedChanges={hasUnpublishedChanges}
+        publishedAt={flow.publishedAt}
         isSaving={update.isPending}
         isPublishing={publishFlow.isPending}
         isToggling={toggleFlow.isPending}
@@ -473,8 +487,8 @@ export default function EditFlowPage() {
               <FlowCanvas
                 flow={{
                   ...flow,
-                  nodes: localNodes.length > 0 ? localNodes : flow.nodes,
-                  edges: localEdges.length > 0 ? localEdges : flow.edges,
+                  nodes: localNodes.length > 0 ? localNodes : resolveDraftNodes(flow),
+                  edges: localEdges.length > 0 ? localEdges : resolveDraftEdges(flow),
                 }}
                 selectedNodeId={selectedNodeId}
                 onSelectNode={setSelectedNodeId}

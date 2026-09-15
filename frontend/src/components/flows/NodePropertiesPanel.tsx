@@ -847,12 +847,12 @@ export function NodePropertiesPanel({
                     })
                   : t("flows.fields.notificationEmailSenderPlatform")}
               </p>
-              <div>
-                <FieldLabel>{t("flows.fields.notificationEmailSubject")}</FieldLabel>
-                {textInput(d.notificationEmailSubject ?? "", (v) => onUpdate({ notificationEmailSubject: v }), {
-                  placeholder: "Asunto del correo",
-                })}
-              </div>
+              <FormBindingField
+                label={t("flows.fields.notificationEmailSubject")}
+                value={d.notificationEmailSubject ?? ""}
+                onChange={(v) => onUpdate({ notificationEmailSubject: v })}
+                sampleFields={sampleFields}
+              />
             </>
           )}
 

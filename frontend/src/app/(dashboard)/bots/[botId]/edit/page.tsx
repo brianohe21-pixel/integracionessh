@@ -21,10 +21,16 @@ import { BotVoicebotSettings } from "@/components/bots/BotVoicebotSettings";
 import { BotTelephonySettings } from "@/components/bots/BotTelephonySettings";
 import { BotMetaFlowsPanel } from "@/components/bots/BotMetaFlowsPanel";
 import { BotMacrosPanel } from "@/components/bots/BotMacrosPanel";
+import { BotAutomationsPanel } from "@/components/bots/BotAutomationsPanel";
 import { BotEditNav, isBotEditTab, type BotEditTab } from "@/components/bots/BotEditNav";
 import { useT } from "@/i18n/context";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import type { Tenant } from "@/types";
+import { isSubaccountServiceEnabled } from "@/lib/subaccount-services";
+import { useEffect } from "react";
 
 export default function EditBotPage() {
   const t = useT();
@@ -41,9 +47,22 @@ export default function EditBotPage() {
   const whatsappPhoneNumberId = defaultWhatsAppChannel?.phoneNumberId;
   const whatsappConnected = Boolean(whatsappPhoneNumberId?.trim());
 
+  const { data: tenant } = useQuery({
+    queryKey: ["tenants", "me"],
+    queryFn: () => api.get<Tenant>("/tenants/me"),
+  });
+  const automationsEnabled = isSubaccountServiceEnabled(tenant, "automations");
+  const hiddenTabs: BotEditTab[] = automationsEnabled ? [] : ["automations"];
+
   const tabParam = searchParams.get("tab");
   const activeTab: BotEditTab = isBotEditTab(tabParam) ? tabParam : "general";
   const aiActive = Boolean(aiAssistant?.enabled || bot?.responseMode === "openai");
+
+  useEffect(() => {
+    if (activeTab === "automations" && !automationsEnabled) {
+      router.replace(`/bots/${botId}/edit?tab=general`, { scroll: false });
+    }
+  }, [activeTab, automationsEnabled, botId, router]);
 
   function setTab(nextTab: BotEditTab) {
     router.replace(`/bots/${botId}/edit?tab=${nextTab}`, { scroll: false });
@@ -83,7 +102,12 @@ export default function EditBotPage() {
       />
 
       <div className="grid gap-6 lg:grid-cols-[16rem_minmax(0,1fr)]">
-        <BotEditNav activeTab={activeTab} onSelect={setTab} aiActive={aiActive} />
+        <BotEditNav
+          activeTab={activeTab}
+          onSelect={setTab}
+          aiActive={aiActive}
+          hiddenTabs={hiddenTabs}
+        />
 
         <div className="min-w-0">
           {bot && activeTab === "general" && (
@@ -130,6 +154,9 @@ export default function EditBotPage() {
           {bot && activeTab === "telephony" && <BotTelephonySettings botId={bot.botId} />}
           {bot && activeTab === "macros" && <BotMacrosPanel bot={bot} />}
           {bot && activeTab === "metaFlows" && <BotMetaFlowsPanel botId={bot.botId} />}
+          {bot && activeTab === "automations" && automationsEnabled && (
+            <BotAutomationsPanel botId={bot.botId} />
+          )}
         </div>
       </div>
     </DashboardPage>

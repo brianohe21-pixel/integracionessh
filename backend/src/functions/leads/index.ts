@@ -10,6 +10,9 @@ import {
   convertLeadToContact,
   markLeadAsLost,
 } from "../../lib/leads/convert.js";
+import { createLeadFromInbox } from "../../lib/leads/inbox-lead.js";
+import { getConversation } from "../../lib/dynamodb/conversation.repository.js";
+import { getAdvisorByCognitoUserId } from "../../lib/dynamodb/advisor.repository.js";
 import {
   resolveRequestAuth,
   assertMemberRole,
@@ -18,6 +21,7 @@ import {
 import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import {
   ok,
+  created,
   badRequest,
   notFound,
   noContent,
@@ -40,6 +44,14 @@ const ConvertLeadSchema = z.object({
   marketingConsent: z.enum(["unknown", "opt_in", "opt_out"]).optional(),
 });
 
+const CreateLeadSchema = z.object({
+  botId: z.string().uuid(),
+  conversationId: z.string().uuid(),
+  name: z.string().max(128).optional(),
+  email: z.string().email().max(256).optional(),
+  notes: z.string().max(2000).optional(),
+});
+
 function parseSubPath(rawPath: string, leadId: string): string | null {
   const suffix = rawPath.split(`/leads/${leadId}`)[1] ?? "";
   if (!suffix || suffix === "") return null;
@@ -58,6 +70,44 @@ export async function handler(
     const rawPath = event.rawPath ?? event.requestContext.http.path;
     const leadId = event.pathParameters?.leadId;
     const params = event.queryStringParameters ?? {};
+
+    if (method === "POST" && !leadId) {
+      const body = JSON.parse(event.body ?? "{}");
+      const parsed = CreateLeadSchema.safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const conversation = await getConversation(
+        auth.tenantId,
+        parsed.data.botId,
+        parsed.data.conversationId
+      );
+      if (!conversation) return notFound("Conversation not found");
+
+      if (auth.role === "advisor") {
+        const advisor = await getAdvisorByCognitoUserId(auth.tenantId, auth.userId);
+        if (!advisor || conversation.assignedAdvisorId !== advisor.advisorId) {
+          return badRequest("Access denied to this conversation");
+        }
+      }
+
+      const assignedAdvisorId =
+        conversation.assignedAdvisorId ??
+        (auth.role === "advisor"
+          ? (await getAdvisorByCognitoUserId(auth.tenantId, auth.userId))?.advisorId
+          : undefined);
+
+      const lead = await createLeadFromInbox({
+        tenantId: auth.tenantId,
+        botId: parsed.data.botId,
+        conversation,
+        ...(parsed.data.name ? { name: parsed.data.name } : {}),
+        ...(parsed.data.email ? { email: parsed.data.email } : {}),
+        ...(parsed.data.notes ? { notes: parsed.data.notes } : {}),
+        ...(assignedAdvisorId ? { assignedAdvisorId } : {}),
+      });
+
+      return created(lead);
+    }
 
     if (method === "GET" && !leadId) {
       const limit = params.limit ? parseInt(params.limit, 10) : 50;

@@ -3,6 +3,7 @@
 import { ArrowLeft, Copy, Undo2, Redo2, Maximize2, Minimize2, Upload } from "lucide-react";
 import Link from "next/link";
 import { useT } from "@/i18n/context";
+import { useFormatters } from "@/hooks/useFormatters";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 
@@ -10,7 +11,7 @@ type FlowEditorToolbarProps = {
   flowName: string;
   isPublished?: boolean;
   version?: number;
-  hasUnpublishedChanges?: boolean;
+  publishedAt?: string;
   isSaving?: boolean;
   isPublishing?: boolean;
   isToggling?: boolean;
@@ -36,7 +37,7 @@ export function FlowEditorToolbar({
   flowName,
   isPublished = true,
   version = 0,
-  hasUnpublishedChanges = false,
+  publishedAt,
   isSaving = false,
   isPublishing = false,
   isToggling = false,
@@ -58,6 +59,26 @@ export function FlowEditorToolbar({
   onRedo,
 }: FlowEditorToolbarProps) {
   const t = useT();
+  const { formatDate } = useFormatters();
+
+  const statusMessage = (() => {
+    if (isSaving) {
+      return { text: t("common.saving"), className: "text-secondary" };
+    }
+    if (isPublishing) {
+      return { text: t("flows.publishing"), className: "text-secondary" };
+    }
+    if (justPublished) {
+      return { text: t("flows.publishedSuccess"), className: "text-success" };
+    }
+    if (justSaved) {
+      return { text: t("flows.saved"), className: "text-success" };
+    }
+    if (isDirty) {
+      return { text: t("flows.unsaved"), className: "text-warning" };
+    }
+    return null;
+  })();
 
   return (
     <div className="flex flex-shrink-0 flex-wrap items-center justify-between gap-2 border-b border-default bg-surface-elevated px-3 py-2">
@@ -96,20 +117,14 @@ export function FlowEditorToolbar({
             <span className="text-[11px] font-medium text-secondary">
               {version > 0 ? t("flows.versionLabel", { version }) : t("flows.notPublished")}
             </span>
-            {hasUnpublishedChanges ? (
-              <span className="text-[11px] font-medium text-warning">
-                {t("flows.unpublishedChanges")}
+            {publishedAt ? (
+              <span className="text-[11px] text-muted">
+                {t("flows.lastPublishedAt", { date: formatDate(publishedAt) })}
               </span>
             ) : null}
             <span className="min-w-[7.5rem] text-[11px] font-medium leading-5">
-              {isSaving ? (
-                <span className="text-secondary">{t("common.saving")}</span>
-              ) : isDirty ? (
-                <span className="text-warning">{t("flows.unsaved")}</span>
-              ) : justPublished ? (
-                <span className="text-success">{t("flows.publishedSuccess")}</span>
-              ) : justSaved ? (
-                <span className="text-success">{t("flows.saved")}</span>
+              {statusMessage ? (
+                <span className={statusMessage.className}>{statusMessage.text}</span>
               ) : null}
             </span>
           </div>

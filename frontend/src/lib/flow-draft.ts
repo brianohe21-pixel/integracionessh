@@ -11,7 +11,11 @@ export function resolveDraftEdges(flow: FlowDefinition): FlowEdge[] {
 }
 
 export function flowGraphSnapshotKey(nodes: FlowNode[], edges: FlowEdge[]): string {
-  return JSON.stringify({ nodes, edges: sanitizeFlowEdges(nodes, edges) });
+  const sortedNodes = [...nodes].sort((a, b) => a.id.localeCompare(b.id));
+  const sortedEdges = [...sanitizeFlowEdges(nodes, edges)].sort((a, b) =>
+    a.id.localeCompare(b.id)
+  );
+  return JSON.stringify({ nodes: sortedNodes, edges: sortedEdges });
 }
 
 export function flowPublishedSnapshotKey(flow: FlowDefinition): string {
@@ -33,6 +37,13 @@ export function resolveFlowVoiceMode(flow: FlowDefinition): boolean {
   if (flow.flowKind === "voice_ai") return true;
   const nodes = [...resolveDraftNodes(flow), ...flow.nodes];
   return nodes.some(
+    (node) => node.type === "trigger" && node.data.triggerType === "voice_call"
+  );
+}
+
+export function resolveEditorVoiceMode(flow: FlowDefinition, nodes: FlowNode[]): boolean {
+  if (flow.flowKind === "voice_ai") return true;
+  return [...nodes, ...flow.nodes].some(
     (node) => node.type === "trigger" && node.data.triggerType === "voice_call"
   );
 }
