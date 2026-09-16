@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useTenantContextId } from "@/hooks/useActiveTenant";
 import { api } from "@/lib/api";
 import type { MarketingMetrics } from "@/types";
 
@@ -19,8 +20,9 @@ async function fetchMarketingMetrics(): Promise<MarketingMetrics> {
 }
 
 export function useMarketingMetrics() {
+  const scope = useTenantContextId() ?? "home";
   return useQuery({
-    queryKey: ["metrics", "marketing"],
+    queryKey: ["metrics", "marketing", scope],
     queryFn: fetchMarketingMetrics,
     refetchInterval: 60_000,
     retry: false,

@@ -7,7 +7,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Palette, Upload, Trash2, RotateCcw } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { useAuthSession } from "@/hooks/useAuthSession";
-import { api } from "@/lib/api";
+import { api, getTenantContext } from "@/lib/api";
+import { isBillingVisible } from "@/lib/subaccount-services";
 import {
   useTenantBranding,
   useUpdateTenantBranding,
@@ -62,6 +63,7 @@ export function BrandingSettingsCard() {
 
   const canCustomize =
     data?.canCustomize === true || planAllowsBranding(tenant?.plan);
+  const showBillingLink = isBillingVisible(tenant, getTenantContext());
 
   const hasCustomBranding = Boolean(
     tenant?.branding?.brandName ||
@@ -148,10 +150,15 @@ export function BrandingSettingsCard() {
 
       {!canCustomize && !isError && (
         <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          {t("settings.brandingUpgrade")}{" "}
-          <Link href="/billing" className="font-medium underline">
-            {t("settings.brandingUpgradeLink")}
-          </Link>
+          {t("settings.brandingUpgrade")}
+          {showBillingLink ? (
+            <>
+              {" "}
+              <Link href="/billing" className="font-medium underline">
+                {t("settings.brandingUpgradeLink")}
+              </Link>
+            </>
+          ) : null}
         </div>
       )}
 

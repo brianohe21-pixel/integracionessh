@@ -3,10 +3,12 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { api, getTenantContext } from "@/lib/api";
 import type { Tenant } from "@/types";
 import { MEMBER_HOME } from "@/lib/post-login-path";
 import {
+  isBillingPath,
+  isBillingVisible,
   isSubaccountServiceEnabled,
   serviceForPath,
 } from "@/lib/subaccount-services";
@@ -23,8 +25,11 @@ export function SubaccountServiceGuard({ children }: { children: React.ReactNode
     enabled: !isAdmin,
   });
 
+  const tenantContext = getTenantContext();
   const service = serviceForPath(pathname);
-  const allowed = !service || isSubaccountServiceEnabled(me, service);
+  const allowed = isBillingPath(pathname)
+    ? isBillingVisible(me, tenantContext)
+    : !service || isSubaccountServiceEnabled(me, service);
 
   useEffect(() => {
     if (adminLoading || isLoading || isAdmin) return;

@@ -3,7 +3,8 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { api, getTenantContext } from "@/lib/api";
+import { isBillingVisible } from "@/lib/subaccount-services";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -104,6 +105,7 @@ export default function SettingsPage() {
     queryKey: ["tenant"],
     queryFn: () => api.get<Tenant>("/tenants/me"),
   });
+  const showBilling = isBillingVisible(tenant, getTenantContext());
 
   async function copyWebhook() {
     await navigator.clipboard.writeText(webhookUrl);
@@ -240,7 +242,7 @@ export default function SettingsPage() {
 
       {tab === "workspace" ? (
         <SettingsPanel title={t("settings.tabWorkspace")}>
-          <PlanUsageCard />
+          {showBilling ? <PlanUsageCard /> : null}
           <InboxSlaCard />
           <ScheduledReportsCard />
         </SettingsPanel>

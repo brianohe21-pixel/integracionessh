@@ -1646,6 +1646,7 @@ export const en: Messages = {
     colStatus: "Status",
     colLastLogin: "Last login",
     colActions: "Actions",
+    actionsMenu: "User actions",
     colTeamName: "Team",
     colSupervisors: "Supervisors",
     colMembers: "Members",
@@ -3070,9 +3071,41 @@ export const en: Messages = {
     assume: "Enter",
     suspend: "Suspend",
     activate: "Activate",
+    actionsMenu: "Subaccount actions",
+    sendCredentials: "Send credentials by email",
+    sendCredentialsEmailSent:
+      "Credentials sent to {{email}}. They will receive a temporary password by email.",
+    sendCredentialsEmailFailed:
+      "Could not send the email to {{email}}. Try again or share the login details manually.",
+    sendCredentialsEmailFailedSandbox:
+      "Could not send the email to {{email}} (SES sandbox). Share the login details manually.",
+    sendCredentialsPasswordFallback:
+      "Could not send the email to {{email}}. Temporary password: {{password}}. Share it securely; they must change it on first login.",
+    deleteSubaccount: "Delete",
+    confirmDeleteTitle: "Delete subaccount?",
+    confirmDeleteDescription:
+      "This will permanently delete {{name}}. This action cannot be undone.",
+    deleted: "Subaccount deleted",
+    deleteError: "Could not delete the subaccount",
     usage: "{{count}} of {{max}} subaccounts",
     created: "Subaccount created",
+    createError: "Could not create the subaccount. Check the details and try again.",
+    emailAlreadyExists:
+      "That email is already registered. Use another email or ask the owner to sign in with their existing account.",
+    accountEmailAlreadyExists:
+      "An account with this email already exists. Use another email or contact support.",
+    notifyOwner: "Notify owner by email",
+    notifyOwnerHint:
+      "Creates the login user and sends access credentials. Turn off to create the subaccount without inviting the owner.",
+    createdWithoutInvite: "Subaccount created without notifying the owner.",
     invitePassword: "Temporary password",
+    inviteEmailSent: "Invite sent to {{email}}. They will receive a temporary password by email.",
+    inviteEmailFailed:
+      "Subaccount created for {{email}}, but the invite email could not be sent.",
+    inviteEmailFailedSandbox:
+      "Subaccount created for {{email}}, but the email could not be sent (SES sandbox). Share the login details manually.",
+    invitePasswordFallback:
+      "Subaccount created for {{email}}. Temporary password: {{password}}. Share it securely; they must change it on first login.",
     domainTitle: "White-label domain",
     domainHint:
       "Use a subdomain (e.g. app.yourdomain.com). After registering it, add exactly the 2 CNAME records in your DNS provider (cPanel, Cloudflare, GoDaddy, etc.).",
@@ -3152,9 +3185,16 @@ export const en: Messages = {
       hint: "Connect your WhatsApp Cloud API app so subaccounts use your Meta branding and webhook.",
       platformFallback:
         "Subaccounts currently use the platform Meta App. Save your own app credentials to enable BYOA.",
+      credentialsTitle: "App credentials",
+      credentialsHint: "From Meta for Developers → your app → App settings → Basic.",
       appId: "Meta App ID",
       appSecret: "Meta App Secret",
-      configId: "Embedded Signup Configuration ID",
+      embeddedSignupTitle: "Embedded Signup",
+      embeddedSignupHint:
+        "Required so subaccounts can connect WhatsApp from the platform. Create a configuration in Meta for Developers → WhatsApp → Embedded Signup.",
+      configId: "Configuration ID",
+      configIdHelp:
+        "Copy the Configuration ID from your Embedded Signup setup in Meta. Subaccounts will use it when connecting a number.",
       secretKeep: "Leave blank to keep the current secret",
       save: "Save Meta App",
       saved: "Meta App configuration saved",
@@ -3175,7 +3215,9 @@ export const en: Messages = {
     billingHint: "Actual month usage compared to each client's assigned quotas.",
     billingEmpty: "Create subaccounts to see their monthly usage.",
     billingDownloadPdf: "Download PDF",
+    billingDownloadCsv: "Download CSV",
     billingDownloadCompanyPdf: "Download company PDF",
+    billingDownloadCompanyCsv: "Download company CSV",
     billingPdfGenerating: "Generating PDF…",
     billingPdfFilename: "subaccounts-billing",
     limits: {

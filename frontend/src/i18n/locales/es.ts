@@ -1649,6 +1649,7 @@ export const es = {
     colStatus: "Estado",
     colLastLogin: "Último acceso",
     colActions: "Acciones",
+    actionsMenu: "Acciones de usuario",
     colTeamName: "Equipo",
     colSupervisors: "Supervisores",
     colMembers: "Miembros",
@@ -3074,9 +3075,42 @@ export const es = {
     assume: "Entrar",
     suspend: "Suspender",
     activate: "Activar",
+    actionsMenu: "Acciones de subcuenta",
+    sendCredentials: "Enviar credenciales por correo",
+    sendCredentialsEmailSent:
+      "Credenciales enviadas a {{email}}. Recibirá una contraseña temporal por correo.",
+    sendCredentialsEmailFailed:
+      "No se pudo enviar el correo a {{email}}. Intenta de nuevo o comparte los datos manualmente.",
+    sendCredentialsEmailFailedSandbox:
+      "No se pudo enviar el correo a {{email}} (SES sandbox). Comparte los datos de acceso manualmente.",
+    sendCredentialsPasswordFallback:
+      "No se pudo enviar el correo a {{email}}. Contraseña temporal: {{password}}. Compártela de forma segura; deberá cambiarla en el primer inicio de sesión.",
+    deleteSubaccount: "Eliminar",
+    confirmDeleteTitle: "¿Eliminar subcuenta?",
+    confirmDeleteDescription:
+      "Se eliminará permanentemente {{name}}. Esta acción no se puede deshacer.",
+    deleted: "Subcuenta eliminada",
+    deleteError: "No se pudo eliminar la subcuenta",
     usage: "{{count}} de {{max}} subcuentas",
     created: "Subcuenta creada",
+    createError: "No se pudo crear la subcuenta. Revisa los datos e inténtalo de nuevo.",
+    emailAlreadyExists:
+      "Ese correo ya está registrado. Usa otro correo o pide al dueño que inicie sesión con su cuenta existente.",
+    accountEmailAlreadyExists:
+      "Ya existe una cuenta con este correo. Usa otro correo o contacta a soporte.",
+    notifyOwner: "Notificar al dueño por correo",
+    notifyOwnerHint:
+      "Crea el usuario de acceso y envía las credenciales. Desactívalo para crear la subcuenta sin invitar al dueño.",
+    createdWithoutInvite: "Subcuenta creada sin notificar al dueño.",
     invitePassword: "Contraseña temporal",
+    inviteEmailSent:
+      "Invitación enviada a {{email}}. Recibirá una contraseña temporal por correo.",
+    inviteEmailFailed:
+      "Subcuenta creada para {{email}}, pero no se pudo enviar el correo de invitación.",
+    inviteEmailFailedSandbox:
+      "Subcuenta creada para {{email}}, pero no se pudo enviar el correo (SES sandbox). Comparte los datos de acceso manualmente.",
+    invitePasswordFallback:
+      "Subcuenta creada para {{email}}. Contraseña temporal: {{password}}. Compártela de forma segura; deberá cambiarla en el primer inicio de sesión.",
     domainTitle: "Dominio white-label",
     domainHint:
       "Usa un subdominio (ej. app.tudominio.com). Tras registrarlo, agrega exactamente los 2 CNAME en el DNS de tu proveedor (cPanel, Cloudflare, GoDaddy, etc.).",
@@ -3157,9 +3191,16 @@ export const es = {
         "Conecta tu app de WhatsApp Cloud API para que las subcuentas usen tu marca y webhook de Meta.",
       platformFallback:
         "Las subcuentas usan actualmente la Meta App de la plataforma. Guarda tus credenciales para activar BYOA.",
+      credentialsTitle: "Credenciales de la app",
+      credentialsHint: "Desde Meta for Developers → tu app → Configuración de la app → Básica.",
       appId: "Meta App ID",
       appSecret: "Meta App Secret",
-      configId: "Embedded Signup Configuration ID",
+      embeddedSignupTitle: "Embedded Signup",
+      embeddedSignupHint:
+        "Necesario para que las subcuentas conecten WhatsApp desde la plataforma. Crea una configuración en Meta for Developers → WhatsApp → Embedded Signup.",
+      configId: "ID de configuración",
+      configIdHelp:
+        "Copia el Configuration ID de tu configuración de Embedded Signup en Meta. Las subcuentas lo usarán al conectar un número.",
       secretKeep: "Déjalo vacío para conservar el secreto actual",
       save: "Guardar Meta App",
       saved: "Configuración de Meta App guardada",
@@ -3180,7 +3221,9 @@ export const es = {
     billingHint: "Uso real del mes actual frente a los cupos asignados a cada cliente.",
     billingEmpty: "Crea subcuentas para ver su consumo mensual.",
     billingDownloadPdf: "Descargar PDF",
+    billingDownloadCsv: "Descargar CSV",
     billingDownloadCompanyPdf: "Descargar PDF de la empresa",
+    billingDownloadCompanyCsv: "Descargar CSV de la empresa",
     billingPdfGenerating: "Generando PDF…",
     billingPdfFilename: "facturacion-subcuentas",
     limits: {

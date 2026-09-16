@@ -15,6 +15,8 @@ import {
   useResellerDomain,
   useRegisterResellerDomain,
   useDeleteResellerDomain,
+  useDeleteSubaccount,
+  useSendSubaccountCredentials,
   useResellerSubaccounts,
   useUpdateSubaccount,
   type ResellerDomainDnsRecord,
@@ -24,11 +26,14 @@ import { useRouter } from "next/navigation";
 import { MEMBER_HOME } from "@/lib/post-login-path";
 import { ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Alert } from "@/components/ui/Alert";
+import { useDialog } from "@/components/ui/DialogProvider";
 import { Tabs } from "@/components/ui/Tabs";
 import { Modal } from "@/components/ui/Modal";
 import { ResellerBagPanel } from "@/components/reseller/ResellerBagPanel";
 import { ResellerMetaAppPanel } from "@/components/reseller/ResellerMetaAppPanel";
 import { SubaccountBillingPanel } from "@/components/reseller/SubaccountBillingPanel";
+import { SubaccountActionsMenu } from "@/components/reseller/SubaccountActionsMenu";
 import { SubaccountServicesFields } from "@/components/reseller/SubaccountServicesFields";
 import { WhatsAppRiskBadge } from "@/components/whatsapp/WhatsAppRiskBadge";
 import {
@@ -232,6 +237,7 @@ function DnsRecordCard({
 export default function SubaccountsPage() {
   const t = useT();
   const router = useRouter();
+  const { confirm } = useDialog();
 
   useEffect(() => {
     setTenantContext(null);
@@ -244,6 +250,8 @@ export default function SubaccountsPage() {
   const isReseller = me?.plan === "reseller" || me?.tenantKind === "reseller";
   const subaccounts = useResellerSubaccounts(Boolean(isReseller));
   const createSubaccount = useCreateSubaccount();
+  const deleteSubaccount = useDeleteSubaccount();
+  const sendCredentials = useSendSubaccountCredentials();
   const updateSubaccount = useUpdateSubaccount();
   const assume = useAssumeSubaccount();
   const clearContext = useClearTenantContext();
@@ -254,6 +262,7 @@ export default function SubaccountsPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [ownerName, setOwnerName] = useState("");
+  const [notifyOwner, setNotifyOwner] = useState(false);
   const [enabledServices, setEnabledServices] = useState<SubaccountServiceId[]>(
     defaultEnabledServices
   );
@@ -268,6 +277,10 @@ export default function SubaccountsPage() {
   const [domain, setDomain] = useState("");
   const [domainHydrated, setDomainHydrated] = useState(false);
   const [inviteInfo, setInviteInfo] = useState<string | null>(null);
+  const [inviteInfoType, setInviteInfoType] = useState<"success" | "warning">("success");
+  const [createError, setCreateError] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [sendCredentialsError, setSendCredentialsError] = useState("");
   const [assumed, setAssumed] = useState<string | null>(null);
   const [pageTab, setPageTab] = useState<
     "accounts" | "create" | "bag" | "billing" | "domain" | "metaApp"
@@ -309,27 +322,64 @@ export default function SubaccountsPage() {
     );
   }
 
+  function subaccountErrorMessage(message: string): string {
+    if (message === "A user with this email already exists") {
+      return t("reseller.emailAlreadyExists");
+    }
+    if (message === "An account with this email already exists") {
+      return t("reseller.accountEmailAlreadyExists");
+    }
+    if (message.startsWith("Maximum subaccounts reached")) {
+      return message;
+    }
+    return message || t("reseller.createError");
+  }
+
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    const result = await createSubaccount.mutateAsync({
-      name,
-      email,
-      ownerName: ownerName || undefined,
-      enabledServices,
-      serviceLimits,
-    });
-    setName("");
-    setEmail("");
-    setOwnerName("");
-    setEnabledServices(defaultEnabledServices());
-    setServiceLimits(emptyServiceLimits());
-    setPageTab("accounts");
-    if (result.invite?.temporaryPassword) {
-      setInviteInfo(
-        `${t("reseller.invitePassword")}: ${result.invite.temporaryPassword}`
-      );
-    } else {
-      setInviteInfo(t("reseller.created"));
+    setCreateError("");
+    try {
+      const shouldNotifyOwner = notifyOwner;
+      const result = await createSubaccount.mutateAsync({
+        name,
+        email,
+        ownerName: ownerName || undefined,
+        inviteOwner: shouldNotifyOwner,
+        enabledServices,
+        serviceLimits,
+      });
+      setName("");
+      setEmail("");
+      setOwnerName("");
+      setNotifyOwner(false);
+      setEnabledServices(defaultEnabledServices());
+      setServiceLimits(emptyServiceLimits());
+      setPageTab("accounts");
+      if (result.invite?.emailSent) {
+        setInviteInfoType("success");
+        setInviteInfo(t("reseller.inviteEmailSent", { email }));
+      } else if (result.invite) {
+        setInviteInfoType("warning");
+        if (result.invite.temporaryPassword) {
+          setInviteInfo(
+            t("reseller.invitePasswordFallback", {
+              email,
+              password: result.invite.temporaryPassword,
+            })
+          );
+        } else if (result.invite.emailFailureReason === "recipient_not_verified") {
+          setInviteInfo(t("reseller.inviteEmailFailedSandbox", { email }));
+        } else {
+          setInviteInfo(t("reseller.inviteEmailFailed", { email }));
+        }
+      } else {
+        setInviteInfoType("success");
+        setInviteInfo(
+          shouldNotifyOwner ? t("reseller.created") : t("reseller.createdWithoutInvite")
+        );
+      }
+    } catch (err) {
+      setCreateError(subaccountErrorMessage((err as Error).message));
     }
   }
 
@@ -337,6 +387,57 @@ export default function SubaccountsPage() {
     await assume.mutateAsync(id);
     setAssumed(id);
     router.push(MEMBER_HOME);
+  }
+
+  async function handleSendCredentials(item: Tenant) {
+    setSendCredentialsError("");
+    try {
+      const result = await sendCredentials.mutateAsync(item.tenantId);
+      const email = item.email ?? "";
+      if (result.invite.emailSent) {
+        setInviteInfoType("success");
+        setInviteInfo(t("reseller.sendCredentialsEmailSent", { email }));
+      } else {
+        setInviteInfoType("warning");
+        if (result.invite.temporaryPassword) {
+          setInviteInfo(
+            t("reseller.sendCredentialsPasswordFallback", {
+              email,
+              password: result.invite.temporaryPassword,
+            })
+          );
+        } else if (result.invite.emailFailureReason === "recipient_not_verified") {
+          setInviteInfo(t("reseller.sendCredentialsEmailFailedSandbox", { email }));
+        } else {
+          setInviteInfo(t("reseller.sendCredentialsEmailFailed", { email }));
+        }
+      }
+    } catch (err) {
+      setSendCredentialsError(subaccountErrorMessage((err as Error).message));
+    }
+  }
+
+  async function handleDelete(item: Tenant) {
+    const confirmed = await confirm({
+      title: t("reseller.confirmDeleteTitle"),
+      description: t("reseller.confirmDeleteDescription", { name: item.name }),
+      confirmLabel: t("common.delete"),
+      tone: "danger",
+    });
+    if (!confirmed) return;
+
+    setDeleteError("");
+    try {
+      await deleteSubaccount.mutateAsync(item.tenantId);
+      if (assumed === item.tenantId) {
+        clearContext();
+        setAssumed(null);
+      }
+      setInviteInfoType("success");
+      setInviteInfo(t("reseller.deleted"));
+    } catch (err) {
+      setDeleteError((err as Error).message || t("reseller.deleteError"));
+    }
   }
 
   return (
@@ -361,9 +462,27 @@ export default function SubaccountsPage() {
       )}
 
       {inviteInfo ? (
-        <p className="rounded-xl border border-success/25 bg-success/10 px-4 py-3 text-sm text-success">
+        <p
+          className={`rounded-xl border px-4 py-3 text-sm ${
+            inviteInfoType === "success"
+              ? "border-success/25 bg-success/10 text-success"
+              : "border-amber-200 bg-amber-50 text-amber-900"
+          }`}
+        >
           {inviteInfo}
         </p>
+      ) : null}
+
+      {deleteError ? (
+        <Alert variant="danger" onDismiss={() => setDeleteError("")}>
+          {deleteError}
+        </Alert>
+      ) : null}
+
+      {sendCredentialsError ? (
+        <Alert variant="danger" onDismiss={() => setSendCredentialsError("")}>
+          {sendCredentialsError}
+        </Alert>
       ) : null}
 
       <Tabs
@@ -436,6 +555,18 @@ export default function SubaccountsPage() {
             className="rounded-lg border border-default bg-surface px-3 py-2 text-sm text-primary"
           />
         </div>
+        <label className="flex items-start gap-3 rounded-xl border border-default bg-surface px-4 py-3">
+          <input
+            type="checkbox"
+            checked={notifyOwner}
+            onChange={(e) => setNotifyOwner(e.target.checked)}
+            className="mt-0.5 rounded border-default"
+          />
+          <span className="space-y-1">
+            <span className="block text-sm font-medium text-primary">{t("reseller.notifyOwner")}</span>
+            <span className="block text-sm text-secondary">{t("reseller.notifyOwnerHint")}</span>
+          </span>
+        </label>
         <div className="rounded-xl border border-default bg-surface p-4">
           <SubaccountServicesFields
             enabledServices={enabledServices}
@@ -447,12 +578,10 @@ export default function SubaccountsPage() {
             }}
           />
         </div>
-        {createSubaccount.isError ? (
-          <p className="text-sm text-red-600">
-            {createSubaccount.error instanceof Error
-              ? createSubaccount.error.message
-              : t("reseller.created")}
-          </p>
+        {createError ? (
+          <Alert variant="danger" onDismiss={() => setCreateError("")}>
+            {createError}
+          </Alert>
         ) : null}
         <div className="flex justify-end">
           <Button type="submit" disabled={createSubaccount.isPending}>
@@ -478,7 +607,7 @@ export default function SubaccountsPage() {
                 <th className="px-4 py-3 font-medium">{t("reseller.services")}</th>
                 <th className="px-4 py-3 font-medium">{t("reseller.whatsappRiskTitle")}</th>
                 <th className="px-4 py-3 font-medium">{t("common.status")}</th>
-                <th className="px-4 py-3 font-medium" />
+                <th className="px-4 py-3 font-medium text-right" />
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -498,47 +627,33 @@ export default function SubaccountsPage() {
                       {item.status}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        className="rounded border border-default px-2 py-1 text-xs"
-                        onClick={() => void handleAssume(item.tenantId)}
-                      >
-                        {t("reseller.assume")}
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded border border-default px-2 py-1 text-xs"
-                        onClick={() => {
-                          setEditing(item);
-                          setEditServices(
-                            item.enabledServices?.length
-                              ? item.enabledServices
-                              : defaultEnabledServices()
-                          );
-                          setEditLimits(item.serviceLimits ?? {});
-                        }}
-                      >
-                        {t("reseller.editServices")}
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded border border-default px-2 py-1 text-xs"
-                        disabled={updateSubaccount.isPending}
-                        onClick={() =>
-                          void updateSubaccount.mutateAsync({
-                            subaccountId: item.tenantId,
-                            status:
-                              item.status === "suspended" ? "active" : "suspended",
-                          })
-                        }
-                      >
-                        {item.status === "suspended"
-                          ? t("reseller.activate")
-                          : t("reseller.suspend")}
-                      </button>
-                    </div>
+                  <td className="px-4 py-3 text-right">
+                    <SubaccountActionsMenu
+                      item={item}
+                      busy={
+                        updateSubaccount.isPending ||
+                        deleteSubaccount.isPending ||
+                        sendCredentials.isPending
+                      }
+                      onAssume={() => void handleAssume(item.tenantId)}
+                      onEditServices={() => {
+                        setEditing(item);
+                        setEditServices(
+                          item.enabledServices?.length
+                            ? item.enabledServices
+                            : defaultEnabledServices()
+                        );
+                        setEditLimits(item.serviceLimits ?? {});
+                      }}
+                      onSendCredentials={() => void handleSendCredentials(item)}
+                      onToggleStatus={() =>
+                        void updateSubaccount.mutateAsync({
+                          subaccountId: item.tenantId,
+                          status: item.status === "suspended" ? "active" : "suspended",
+                        })
+                      }
+                      onDelete={() => void handleDelete(item)}
+                    />
                   </td>
                 </tr>
               ))}

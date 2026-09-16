@@ -117,12 +117,25 @@ const ALWAYS_ALLOWED_PREFIXES = [
   "/dashboard",
   "/settings",
   "/support",
-  "/billing",
   "/onboarding",
   "/subaccounts",
   "/inbox",
   "/admin",
 ];
+
+export function isBillingPath(pathname: string): boolean {
+  return pathname === "/billing" || pathname.startsWith("/billing/");
+}
+
+export function isBillingVisible(
+  tenant: Tenant | undefined | null,
+  activeTenantContext?: string | null
+): boolean {
+  if (!tenant) return true;
+  if (isSubaccountTenant(tenant)) return false;
+  if (activeTenantContext && activeTenantContext !== tenant.tenantId) return false;
+  return true;
+}
 
 export const SERVICE_NAV_KEYS: Record<SubaccountServiceId, string> = {
   bots: "nav.bots",
