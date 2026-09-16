@@ -316,12 +316,14 @@ export async function upsertFromConversation(params: {
 export async function createContact(contact: Contact): Promise<Contact> {
   const phone = normalizePhone(contact.phoneNumber);
   const now = contact.createdAt ?? new Date().toISOString();
+  const { country: explicitCountry, ...rest } = contact;
+  const country = resolveContactCountry(phone, explicitCountry);
   const item: Contact = {
-    ...contact,
+    ...rest,
     phoneNumber: phone,
-    country: resolveContactCountry(phone, contact.country),
     createdAt: now,
     updatedAt: now,
+    ...(country ? { country } : {}),
   };
 
   await docClient.send(
@@ -369,11 +371,14 @@ export async function updateContact(
   if (!existing) return null;
 
   const now = new Date().toISOString();
+  const { country: existingCountry, ...existingRest } = existing;
+  const { country: updateCountry, ...updateRest } = updates;
+  const country = resolveContactCountry(normalized, updateCountry ?? existingCountry);
   const merged: Contact = {
-    ...existing,
-    ...updates,
-    country: resolveContactCountry(normalized, updates.country ?? existing.country),
+    ...existingRest,
+    ...updateRest,
     updatedAt: now,
+    ...(country ? { country } : {}),
   };
 
   await docClient.send(
