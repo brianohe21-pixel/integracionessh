@@ -559,6 +559,8 @@ export interface Contact {
   tenantId: string;
   displayName?: string;
   email?: string;
+  country?: string;
+  company?: string;
   tags: string[];
   marketingConsent: MarketingConsent;
   consentAt?: string;

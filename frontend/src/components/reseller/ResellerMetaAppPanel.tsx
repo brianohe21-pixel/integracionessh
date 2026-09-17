@@ -84,7 +84,6 @@ export function ResellerMetaAppPanel() {
   }, [editing, data]);
 
   const isOwn = data?.source === "own";
-  const isConfigured = data?.configured ?? false;
 
   function sourceLabel(source: string | undefined): string {
     if (source === "own") return t("settings.ownBadge");
@@ -152,67 +151,111 @@ export function ResellerMetaAppPanel() {
         </p>
       ) : null}
 
-      {isOwn && data?.webhookUrl && data.webhookVerifyToken ? (
-        <div className="space-y-3 rounded-lg border border-default bg-surface p-4">
-          <p className="text-sm font-medium text-primary">{t("reseller.metaApp.webhookTitle")}</p>
-          <p className="text-xs text-secondary">{t("reseller.metaApp.webhookHint")}</p>
-          <CopyField
-            label={t("reseller.metaApp.webhookUrl")}
-            value={data.webhookUrl}
-            copyLabel={t("reseller.dnsCopy")}
-            copiedLabel={t("reseller.dnsCopied")}
-          />
-          <CopyField
-            label={t("reseller.metaApp.verifyToken")}
-            value={data.webhookVerifyToken}
-            copyLabel={t("reseller.dnsCopy")}
-            copiedLabel={t("reseller.dnsCopied")}
-          />
+      {isOwn && !editing ? (
+        <div className="space-y-4">
+          {data?.appId ? (
+            <CopyField
+              label={t("reseller.metaApp.appId")}
+              value={data.appId}
+              copyLabel={t("reseller.dnsCopy")}
+              copiedLabel={t("reseller.dnsCopied")}
+            />
+          ) : null}
+          {data?.embeddedSignupConfigId ? (
+            <div className="space-y-3 rounded-lg border border-default bg-surface p-4">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-primary">
+                  {t("reseller.metaApp.embeddedSignupTitle")}
+                </p>
+                <p className="text-xs text-secondary">{t("reseller.metaApp.embeddedSignupHint")}</p>
+              </div>
+              <CopyField
+                label={t("reseller.metaApp.configId")}
+                value={data.embeddedSignupConfigId}
+                copyLabel={t("reseller.dnsCopy")}
+                copiedLabel={t("reseller.dnsCopied")}
+              />
+            </div>
+          ) : null}
+          {data?.webhookUrl && data.webhookVerifyToken ? (
+            <div className="space-y-3 rounded-lg border border-default bg-surface p-4">
+              <p className="text-sm font-medium text-primary">{t("reseller.metaApp.webhookTitle")}</p>
+              <p className="text-xs text-secondary">{t("reseller.metaApp.webhookHint")}</p>
+              <CopyField
+                label={t("reseller.metaApp.webhookUrl")}
+                value={data.webhookUrl}
+                copyLabel={t("reseller.dnsCopy")}
+                copiedLabel={t("reseller.dnsCopied")}
+              />
+              <CopyField
+                label={t("reseller.metaApp.verifyToken")}
+                value={data.webhookVerifyToken}
+                copyLabel={t("reseller.dnsCopy")}
+                copiedLabel={t("reseller.dnsCopied")}
+              />
+            </div>
+          ) : null}
         </div>
       ) : null}
 
       {editing || !isOwn ? (
-        <form onSubmit={(e) => void handleSave(e)} className="space-y-4">
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-secondary">{t("reseller.metaApp.appId")}</label>
-            <input
-              value={appId}
-              onChange={(e) => setAppId(e.target.value)}
-              placeholder={data?.appId ?? "1234567890"}
-              className="w-full rounded-lg border border-default px-3 py-2 text-sm"
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-secondary">
-              {t("reseller.metaApp.appSecret")}
-            </label>
-            <div className="relative">
+        <form onSubmit={(e) => void handleSave(e)} className="space-y-5">
+          <div className="space-y-3 rounded-lg border border-default bg-surface p-4">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-primary">{t("reseller.metaApp.credentialsTitle")}</p>
+              <p className="text-xs text-secondary">{t("reseller.metaApp.credentialsHint")}</p>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-secondary">{t("reseller.metaApp.appId")}</label>
               <input
-                type={showSecret ? "text" : "password"}
-                value={appSecret}
-                onChange={(e) => setAppSecret(e.target.value)}
-                placeholder={isOwn ? t("reseller.metaApp.secretKeep") : ""}
-                className="w-full rounded-lg border border-default px-3 py-2 pr-10 text-sm"
+                value={appId}
+                onChange={(e) => setAppId(e.target.value)}
+                placeholder={data?.appId ?? "1234567890"}
+                className="w-full rounded-lg border border-default px-3 py-2 text-sm"
               />
-              <button
-                type="button"
-                onClick={() => setShowSecret((v) => !v)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted"
-              >
-                {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-secondary">
+                {t("reseller.metaApp.appSecret")}
+              </label>
+              <div className="relative">
+                <input
+                  type={showSecret ? "text" : "password"}
+                  value={appSecret}
+                  onChange={(e) => setAppSecret(e.target.value)}
+                  placeholder={isOwn ? t("reseller.metaApp.secretKeep") : ""}
+                  className="w-full rounded-lg border border-default px-3 py-2 pr-10 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowSecret((v) => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted"
+                >
+                  {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
           </div>
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-secondary">
-              {t("reseller.metaApp.configId")}
-            </label>
-            <input
-              value={configId}
-              onChange={(e) => setConfigId(e.target.value)}
-              placeholder={data?.embeddedSignupConfigId ?? ""}
-              className="w-full rounded-lg border border-default px-3 py-2 text-sm font-mono text-xs"
-            />
+          <div className="space-y-3 rounded-lg border border-default bg-surface p-4">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-primary">
+                {t("reseller.metaApp.embeddedSignupTitle")}
+              </p>
+              <p className="text-xs text-secondary">{t("reseller.metaApp.embeddedSignupHint")}</p>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-secondary">
+                {t("reseller.metaApp.configId")}
+              </label>
+              <input
+                required
+                value={configId}
+                onChange={(e) => setConfigId(e.target.value)}
+                placeholder={data?.embeddedSignupConfigId ?? ""}
+                className="w-full rounded-lg border border-default px-3 py-2 font-mono text-xs"
+              />
+              <p className="text-xs text-secondary">{t("reseller.metaApp.configIdHelp")}</p>
+            </div>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button type="submit" disabled={save.isPending}>

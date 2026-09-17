@@ -58,11 +58,38 @@ export function useCreateSubaccount() {
           username: string;
           temporaryPassword: string;
           emailSent: boolean;
+          emailFailureReason?: string;
         };
       }>("/reseller/subaccounts", body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reseller-subaccounts"] });
     },
+  });
+}
+
+export function useDeleteSubaccount() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (subaccountId: string) =>
+      api.delete<void>(`/reseller/subaccounts/${subaccountId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reseller-subaccounts"] });
+    },
+  });
+}
+
+export function useSendSubaccountCredentials() {
+  return useMutation({
+    mutationFn: (subaccountId: string) =>
+      api.post<{
+        invite: {
+          username: string;
+          temporaryPassword: string;
+          emailSent: boolean;
+          created: boolean;
+          emailFailureReason?: string;
+        };
+      }>(`/reseller/subaccounts/${subaccountId}/send-credentials`, {}),
   });
 }
 

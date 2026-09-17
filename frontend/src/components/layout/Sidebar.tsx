@@ -51,6 +51,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, getTenantContext } from "@/lib/api";
 import type { Tenant } from "@/types";
 import {
+  isBillingVisible,
   isSubaccountServiceEnabled,
   serviceForNavHref,
 } from "@/lib/subaccount-services";
@@ -254,12 +255,17 @@ function getActiveCategoryIds(
   return active;
 }
 
-function filterNavItem(item: NavItem, tenant: Tenant | undefined): NavItem | null {
+function filterNavItem(
+  item: NavItem,
+  tenant: Tenant | undefined,
+  assumedId: string | null
+): NavItem | null {
+  if (item.href === "/billing" && !isBillingVisible(tenant, assumedId)) return null;
   const service = serviceForNavHref(item.href);
   if (service && !isSubaccountServiceEnabled(tenant, service)) return null;
   if (item.items?.length) {
     const filteredChildren = item.items
-      .map((child) => filterNavItem(child, tenant))
+      .map((child) => filterNavItem(child, tenant, assumedId))
       .filter((child): child is NavItem => child !== null);
     if (filteredChildren.length === 0) return null;
     return { ...item, items: filteredChildren };
@@ -1238,7 +1244,7 @@ export function Sidebar() {
     .map((category) => ({
       ...category,
       items: category.items
-        .map((item) => filterNavItem(item, me))
+        .map((item) => filterNavItem(item, me, assumedId))
         .filter((item): item is NavItem => item !== null),
     }))
     .filter((category) => category.items.length > 0);

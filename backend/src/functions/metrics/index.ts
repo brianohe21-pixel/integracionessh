@@ -103,12 +103,16 @@ export async function handler(
         to?: string;
         days?: number;
         botId?: string;
+        includeProducts?: boolean;
+        includeCsat?: boolean;
       } = {};
       if (qs.from) options.from = qs.from;
       if (qs.to) options.to = qs.to;
       if (daysParam !== undefined && Number.isFinite(daysParam)) options.days = daysParam;
       const botId = qs.botId?.trim();
       if (botId) options.botId = botId;
+      if (qs.includeProducts === "false") options.includeProducts = false;
+      if (qs.includeCsat === "false") options.includeCsat = false;
       const sales = await getSalesMetrics(auth.tenantId, options);
       return ok(sales);
     }

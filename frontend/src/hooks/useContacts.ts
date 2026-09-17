@@ -23,6 +23,7 @@ export function useContacts(options?: {
   consent?: MarketingConsent;
   suppressed?: boolean;
   q?: string;
+  limit?: number;
   cursor?: string;
 }) {
   const params = new URLSearchParams();
@@ -30,6 +31,7 @@ export function useContacts(options?: {
   if (options?.consent) params.set("consent", options.consent);
   if (options?.suppressed !== undefined) params.set("suppressed", String(options.suppressed));
   if (options?.q) params.set("q", options.q);
+  if (options?.limit) params.set("limit", String(options.limit));
   if (options?.cursor) params.set("cursor", options.cursor);
   const qs = params.toString() ? `?${params.toString()}` : "";
 
@@ -45,6 +47,8 @@ export function useCreateContact() {
     mutationFn: (body: {
       phoneNumber: string;
       displayName?: string;
+      country?: string;
+      company?: string;
       tags?: string[];
       marketingConsent?: MarketingConsent;
     }) => api.post<Contact>("/contacts", body),
@@ -62,6 +66,8 @@ export function useUpdateContact() {
       phone: string;
       displayName?: string;
       email?: string;
+      country?: string;
+      company?: string;
       tags?: string[];
       marketingConsent?: MarketingConsent;
       suppressed?: boolean;
@@ -76,6 +82,8 @@ export function useImportContacts() {
     mutationFn: (rows: Array<{
       phone: string;
       name?: string;
+      country?: string;
+      company?: string;
       tags?: string[];
       marketingConsent?: MarketingConsent;
     }>) => api.post<{ created: number; updated: number }>("/contacts/import", { rows }),

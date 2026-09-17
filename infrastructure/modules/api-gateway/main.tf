@@ -1077,8 +1077,22 @@ locals {
       function_arn = var.reseller_function_arn
       protected    = true
     }
+    reseller_subaccounts_delete = {
+      route_key    = "DELETE /reseller/subaccounts/{subaccountId}"
+      slug         = "reseller"
+      invoke_arn   = var.reseller_invoke_arn
+      function_arn = var.reseller_function_arn
+      protected    = true
+    }
     reseller_subaccounts_assume = {
       route_key    = "POST /reseller/subaccounts/{subaccountId}/assume"
+      slug         = "reseller"
+      invoke_arn   = var.reseller_invoke_arn
+      function_arn = var.reseller_function_arn
+      protected    = true
+    }
+    reseller_subaccounts_send_credentials = {
+      route_key    = "POST /reseller/subaccounts/{subaccountId}/send-credentials"
       slug         = "reseller"
       invoke_arn   = var.reseller_invoke_arn
       function_arn = var.reseller_function_arn

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTenantContextId } from "@/hooks/useActiveTenant";
 import { api } from "@/lib/api";
 import type { Lead, LeadMetrics, LeadsListResponse, LeadStatus, MarketingConsent } from "@/types";
 
@@ -34,8 +35,9 @@ export function useLead(leadId: string | null) {
 }
 
 export function useLeadMetrics() {
+  const scope = useTenantContextId() ?? "home";
   return useQuery({
-    queryKey: ["metrics", "leads"],
+    queryKey: ["metrics", "leads", scope],
     queryFn: () => api.get<LeadMetrics>("/metrics/leads"),
   });
 }

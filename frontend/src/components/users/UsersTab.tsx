@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus, Pencil, Trash2, UserCheck, UserX } from "lucide-react";
+import { Plus } from "lucide-react";
+import { UserMemberActionsMenu } from "@/components/users/UserMemberActionsMenu";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -299,46 +300,17 @@ export function UsersTab() {
                   </DataTableCell>
                   <DataTableCell className="text-right">
                     {canManage ? (
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEdit(member)}
-                          aria-label={t("common.edit")}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        {isMember && !isSelf ? (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => void handleToggleEnabled(member)}
-                            aria-label={
-                              member.enabled
-                                ? t("userCenter.deactivate")
-                                : t("userCenter.activate")
-                            }
-                          >
-                            {member.enabled ? (
-                              <UserX className="h-4 w-4" />
-                            ) : (
-                              <UserCheck className="h-4 w-4" />
-                            )}
-                          </Button>
-                        ) : null}
-                        {isMember && !isSelf ? (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => void handleDelete(member)}
-                            aria-label={t("common.delete")}
-                          >
-                            <Trash2 className="h-4 w-4 text-danger" />
-                          </Button>
-                        ) : null}
+                      <div className="flex justify-end">
+                        <UserMemberActionsMenu
+                          member={member}
+                          busy={updateMember.isPending || removeMember.isPending}
+                          canEdit={canManage}
+                          canToggleStatus={isMember && !isSelf}
+                          canDelete={isMember && !isSelf}
+                          onEdit={() => openEdit(member)}
+                          onToggleStatus={() => void handleToggleEnabled(member)}
+                          onDelete={() => void handleDelete(member)}
+                        />
                       </div>
                     ) : null}
                   </DataTableCell>

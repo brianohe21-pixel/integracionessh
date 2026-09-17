@@ -5,6 +5,7 @@ import {
   QueryCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { docClient, TABLE_NAME } from "./client.js";
+import { resolveContactCountry } from "../phone/country-from-phone.js";
 import type { Contact, ContactSource, MarketingConsent, ConsentSource } from "../../types/index.js";
 
 export function normalizePhone(phone: string): string {
@@ -141,7 +142,9 @@ function matchesFilters(contact: Contact, options: ListContactsOptions): boolean
     const inPhone = contact.phoneNumber.includes(q);
     const inName = (contact.displayName ?? "").toLowerCase().includes(q);
     const inEmail = (contact.email ?? "").toLowerCase().includes(q);
-    if (!inPhone && !inName && !inEmail) return false;
+    const inCountry = (contact.country ?? "").toLowerCase().includes(q);
+    const inCompany = (contact.company ?? "").toLowerCase().includes(q);
+    if (!inPhone && !inName && !inEmail && !inCountry && !inCompany) return false;
   }
   return true;
 }
@@ -274,6 +277,7 @@ export async function upsertFromConversation(params: {
     return (await updateContact(params.tenantId, phone, updates)) ?? existing;
   }
 
+  const detectedCountry = resolveContactCountry(phone);
   const contact: Contact = {
     phoneNumber: phone,
     tenantId: params.tenantId,
@@ -289,6 +293,7 @@ export async function upsertFromConversation(params: {
     ...(params.email ? { email: params.email } : {}),
     ...(params.botId ? { lastBotId: params.botId } : {}),
     ...(params.leadId ? { leadId: params.leadId } : {}),
+    ...(detectedCountry ? { country: detectedCountry } : {}),
   };
 
   await docClient.send(
@@ -311,11 +316,14 @@ export async function upsertFromConversation(params: {
 export async function createContact(contact: Contact): Promise<Contact> {
   const phone = normalizePhone(contact.phoneNumber);
   const now = contact.createdAt ?? new Date().toISOString();
+  const { country: explicitCountry, ...rest } = contact;
+  const country = resolveContactCountry(phone, explicitCountry);
   const item: Contact = {
-    ...contact,
+    ...rest,
     phoneNumber: phone,
     createdAt: now,
     updatedAt: now,
+    ...(country ? { country } : {}),
   };
 
   await docClient.send(
@@ -344,6 +352,8 @@ export async function updateContact(
       Contact,
       | "displayName"
       | "email"
+      | "country"
+      | "company"
       | "tags"
       | "marketingConsent"
       | "consentAt"
@@ -361,7 +371,15 @@ export async function updateContact(
   if (!existing) return null;
 
   const now = new Date().toISOString();
-  const merged: Contact = { ...existing, ...updates, updatedAt: now };
+  const { country: existingCountry, ...existingRest } = existing;
+  const { country: updateCountry, ...updateRest } = updates;
+  const country = resolveContactCountry(normalized, updateCountry ?? existingCountry);
+  const merged: Contact = {
+    ...existingRest,
+    ...updateRest,
+    updatedAt: now,
+    ...(country ? { country } : {}),
+  };
 
   await docClient.send(
     new PutCommand({
@@ -396,6 +414,8 @@ export async function importContactsBatch(
     phone: string;
     name?: string;
     email?: string;
+    country?: string;
+    company?: string;
     tags?: string[];
     marketingConsent?: MarketingConsent;
   }>,
@@ -415,6 +435,11 @@ export async function importContactsBatch(
       const patch: Parameters<typeof updateContact>[2] = {};
       if (row.name) patch.displayName = row.name;
       if (row.email) patch.email = row.email;
+      const resolvedCountry = resolveContactCountry(phone, row.country ?? existing.country);
+      if (resolvedCountry && resolvedCountry !== existing.country) {
+        patch.country = resolvedCountry;
+      }
+      if (row.company) patch.company = row.company;
       if (row.tags?.length) {
         patch.tags = [...new Set([...existing.tags, ...row.tags])];
       }
@@ -441,6 +466,11 @@ export async function importContactsBatch(
         updatedAt: now,
         ...(row.name ? { displayName: row.name } : {}),
         ...(row.email ? { email: row.email } : {}),
+        ...(() => {
+          const resolvedCountry = resolveContactCountry(phone, row.country);
+          return resolvedCountry ? { country: resolvedCountry } : {};
+        })(),
+        ...(row.company ? { company: row.company } : {}),
         ...(row.marketingConsent
           ? { consentAt: now, consentSource }
           : {}),

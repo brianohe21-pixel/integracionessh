@@ -9,6 +9,8 @@ import { useSalesMetrics } from "@/hooks/useSalesMetrics";
 import { useLeadMetrics } from "@/hooks/useLeads";
 import { useInboxSlaMetrics } from "@/hooks/useInboxSlaMetrics";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { activeWorkspaceLabel, useActiveTenant } from "@/hooks/useActiveTenant";
+import { isSubaccountTenant } from "@/lib/subaccount-services";
 import { dateRangeFromDays, getDashboardRangeLabel } from "@/lib/metrics-date-range";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -26,6 +28,7 @@ export default function DashboardPageRoute() {
   const t = useT();
   const locale = useLocale();
   const { user } = useCurrentUser();
+  const { data: tenant, tenantContext } = useActiveTenant();
   const [metricsRange, setMetricsRange] = useState(() => dateRangeFromDays(30));
 
   const rangeLabel = useMemo(
@@ -45,9 +48,14 @@ export default function DashboardPageRoute() {
     [metricsRange, t, locale]
   );
 
-  const firstName = user?.name?.trim().split(/\s+/)[0];
-  const greetingTitle = firstName
-    ? t("dashboard.greeting", { name: firstName })
+  const personalFirstName = user?.name?.trim().split(/\s+/)[0] ?? "";
+  const workspaceLabel = activeWorkspaceLabel(tenant);
+  const inSubaccountWorkspace = Boolean(tenantContext) || isSubaccountTenant(tenant);
+  const greetingName = inSubaccountWorkspace
+    ? workspaceLabel || personalFirstName
+    : personalFirstName;
+  const greetingTitle = greetingName
+    ? t("dashboard.greeting", { name: greetingName })
     : t("dashboard.greetingFallback");
 
   const { data: marketing, isLoading: marketingLoading } = useMarketingMetrics();
@@ -56,7 +64,10 @@ export default function DashboardPageRoute() {
     data: sales,
     isLoading: salesLoading,
     error: salesError,
-  } = useSalesMetrics(metricsRange);
+  } = useSalesMetrics(metricsRange, undefined, {
+    includeProducts: false,
+    includeCsat: false,
+  });
   const { data: leads, isLoading: leadsLoading } = useLeadMetrics();
   const { data: inboxSla, isLoading: slaLoading } = useInboxSlaMetrics();
 

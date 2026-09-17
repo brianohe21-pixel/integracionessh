@@ -13,6 +13,7 @@ import { useFormatters } from "@/hooks/useFormatters";
 import { useUpdateContact } from "@/hooks/useContacts";
 import { useT } from "@/i18n/context";
 import { resolveWhatsAppRisk, type WhatsAppRiskResponse } from "@/hooks/useWhatsAppRisk";
+import { detectCountryFromPhone } from "@/lib/phone/country-from-phone";
 import type { Contact, MarketingConsent } from "@/types";
 
 function consentVariant(c: MarketingConsent): "success" | "warning" | "danger" | "default" {
@@ -49,6 +50,10 @@ export function ContactDetailPanel({
 
   const [displayName, setDisplayName] = useState(contact.displayName ?? "");
   const [email, setEmail] = useState(contact.email ?? "");
+  const [country, setCountry] = useState(
+    contact.country ?? detectCountryFromPhone(contact.phoneNumber) ?? ""
+  );
+  const [company, setCompany] = useState(contact.company ?? "");
   const [tags, setTags] = useState(contact.tags.join(", "));
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
@@ -64,6 +69,8 @@ export function ContactDetailPanel({
         phone: contact.phoneNumber,
         displayName: displayName.trim() || undefined,
         email: email.trim() || undefined,
+        country: country.trim() || undefined,
+        company: company.trim() || undefined,
         tags: tags
           .split(",")
           .map((tag) => tag.trim())
@@ -172,6 +179,24 @@ export function ContactDetailPanel({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder={t("common.email")}
+            />
+          </div>
+
+          <div>
+            <FieldLabel label={t("contacts.colCountry")} tooltip={t("contacts.countryPlaceholder")} />
+            <Input
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+              placeholder={t("contacts.countryPlaceholder")}
+            />
+          </div>
+
+          <div>
+            <FieldLabel label={t("contacts.colCompany")} tooltip={t("contacts.companyPlaceholder")} />
+            <Input
+              value={company}
+              onChange={(e) => setCompany(e.target.value)}
+              placeholder={t("contacts.companyPlaceholder")}
             />
           </div>
 

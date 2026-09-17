@@ -8,13 +8,18 @@ import {
 } from "../../lib/auth/cognito.js";
 import {
   createTenant,
+  deleteTenant,
   updateTenant,
   listSubaccounts,
   countSubaccounts,
   normalizeDomain,
   getTenantIdByDomain,
 } from "../../lib/dynamodb/tenant.repository.js";
-import { inviteMemberUser } from "../../lib/cognito/invite-member.js";
+import {
+  assertMemberEmailAvailable,
+  inviteMemberUser,
+  resendSubaccountOwnerCredentials,
+} from "../../lib/cognito/invite-member.js";
 import { sendSubaccountInviteEmail } from "../../lib/email/subaccount-invite.js";
 import { getEffectivePlanLimits, PlanLimitError } from "../../lib/billing/plan-limits.js";
 import {
@@ -47,6 +52,7 @@ import {
   created,
   badRequest,
   notFound,
+  noContent,
   handleError,
   parseJsonBody,
 } from "../../lib/http.js";
@@ -279,10 +285,11 @@ export async function handler(
         siblings,
         services.serviceLimits
       );
+      const ownerEmail = parsed.data.email.toLowerCase();
       const child: Tenant = {
         tenantId: childId,
         name: parsed.data.name,
-        email: parsed.data.email.toLowerCase(),
+        email: ownerEmail,
         plan: childPlan,
         tenantKind: "subaccount",
         parentTenantId: parentId,
@@ -294,34 +301,51 @@ export async function handler(
         updatedAt: now,
       };
 
+      if (parsed.data.inviteOwner !== false) {
+        await assertMemberEmailAvailable(ownerEmail);
+      }
+
       await createTenant(child);
 
       let invite:
-        | { username: string; temporaryPassword: string; emailSent: boolean }
+        | {
+            username: string;
+            temporaryPassword: string;
+            emailSent: boolean;
+            emailFailureReason?: string;
+          }
         | undefined;
 
       if (parsed.data.inviteOwner !== false) {
-        const invited = await inviteMemberUser({
-          email: parsed.data.email.toLowerCase(),
-          name: parsed.data.ownerName ?? parsed.data.name,
-          tenantId: childId,
-        });
-        const emailResult = await sendSubaccountInviteEmail({
-          to: parsed.data.email.toLowerCase(),
-          ownerName: parsed.data.ownerName ?? parsed.data.name,
-          subaccountName: parsed.data.name,
-          resellerName: reseller.name,
-          temporaryPassword: invited.temporaryPassword,
-          ...(reseller.resellerConfig?.customDomain &&
-          reseller.resellerConfig.customDomainStatus === "active"
-            ? { customDomain: reseller.resellerConfig.customDomain }
-            : {}),
-        });
-        invite = {
-          username: invited.username,
-          temporaryPassword: invited.temporaryPassword,
-          emailSent: emailResult.sent,
-        };
+        try {
+          const invited = await inviteMemberUser({
+            email: ownerEmail,
+            name: parsed.data.ownerName ?? parsed.data.name,
+            tenantId: childId,
+          });
+          const emailResult = await sendSubaccountInviteEmail({
+            to: ownerEmail,
+            ownerName: parsed.data.ownerName ?? parsed.data.name,
+            subaccountName: parsed.data.name,
+            resellerName: reseller.name,
+            temporaryPassword: invited.temporaryPassword,
+            ...(reseller.resellerConfig?.customDomain &&
+            reseller.resellerConfig.customDomainStatus === "active"
+              ? { customDomain: reseller.resellerConfig.customDomain }
+              : {}),
+          });
+          invite = {
+            username: invited.username,
+            temporaryPassword: invited.temporaryPassword,
+            emailSent: emailResult.sent,
+            ...(emailResult.failureReason
+              ? { emailFailureReason: emailResult.failureReason }
+              : {}),
+          };
+        } catch (error) {
+          await deleteTenant(childId);
+          throw error;
+        }
       }
 
       return created({ tenant: child, invite });
@@ -372,6 +396,12 @@ export async function handler(
       return ok(updated);
     }
 
+    if (method === "DELETE" && subaccountId && !path.endsWith("/assume")) {
+      await assertResellerOwnsSubaccount(parentId, subaccountId);
+      await deleteTenant(subaccountId);
+      return noContent();
+    }
+
     if (method === "POST" && subaccountId && path.endsWith("/assume")) {
       const child = await assertResellerOwnsSubaccount(parentId, subaccountId);
       if (child.status === "suspended") {
@@ -381,6 +411,41 @@ export async function handler(
         tenantId: child.tenantId,
         tenant: child,
         header: { "X-Tenant-Context": child.tenantId },
+      });
+    }
+
+    if (method === "POST" && subaccountId && path.endsWith("/send-credentials")) {
+      const child = await assertResellerOwnsSubaccount(parentId, subaccountId);
+      const ownerEmail = child.email?.trim().toLowerCase();
+      if (!ownerEmail) {
+        return badRequest("Subaccount has no owner email");
+      }
+      const credentials = await resendSubaccountOwnerCredentials({
+        email: ownerEmail,
+        name: child.name,
+        tenantId: child.tenantId,
+      });
+      const emailResult = await sendSubaccountInviteEmail({
+        to: ownerEmail,
+        ownerName: child.name,
+        subaccountName: child.name,
+        resellerName: reseller.name,
+        temporaryPassword: credentials.temporaryPassword,
+        ...(reseller.resellerConfig?.customDomain &&
+        reseller.resellerConfig.customDomainStatus === "active"
+          ? { customDomain: reseller.resellerConfig.customDomain }
+          : {}),
+      });
+      return ok({
+        invite: {
+          username: credentials.username,
+          temporaryPassword: credentials.temporaryPassword,
+          emailSent: emailResult.sent,
+          created: credentials.created,
+          ...(emailResult.failureReason
+            ? { emailFailureReason: emailResult.failureReason }
+            : {}),
+        },
       });
     }
 

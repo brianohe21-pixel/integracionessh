@@ -8,6 +8,7 @@ import {
   Upload,
   Download,
   BookUser,
+  ChevronLeft,
   ChevronRight,
   ShieldCheck,
   UserCheck,
@@ -40,6 +41,7 @@ import { WhatsAppRiskBadge } from "@/components/whatsapp/WhatsAppRiskBadge";
 import { useT } from "@/i18n/context";
 import type { Contact, MarketingConsent } from "@/types";
 import { decodeCsvBytes } from "@/lib/csv";
+import { detectCountryFromPhone } from "@/lib/phone/country-from-phone";
 import { saveCampaignRecipientDraft } from "@/lib/campaign-recipient-draft";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -56,6 +58,8 @@ function csatVariant(score: number): "success" | "warning" | "danger" {
   if (score >= 3) return "warning";
   return "danger";
 }
+
+const CONTACTS_PAGE_SIZE = 25;
 
 function contactInitials(name?: string, phone?: string): string {
   if (name?.trim()) {
@@ -76,6 +80,8 @@ export default function ContactsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
+  const [country, setCountry] = useState("");
+  const [company, setCompany] = useState("");
   const [tagFilter, setTagFilter] = useState("");
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [selectedPhones, setSelectedPhones] = useState<Set<string>>(new Set());
@@ -84,14 +90,18 @@ export default function ContactsPage() {
   const [bulkLoading, setBulkLoading] = useState(false);
   const [showCompliance, setShowCompliance] = useState(true);
   const [error, setError] = useState("");
+  const [cursorStack, setCursorStack] = useState<Array<string | undefined>>([undefined]);
+  const [pageIndex, setPageIndex] = useState(0);
 
   const hasFilters = consentFilter || suppressedFilter || tagFilter || q;
 
-  const { data, isLoading } = useContacts({
+  const { data, isLoading, isFetching } = useContacts({
     tag: tagFilter || undefined,
     consent: consentFilter || undefined,
     suppressed: suppressedFilter === "" ? undefined : suppressedFilter === "true",
     q: q || undefined,
+    limit: CONTACTS_PAGE_SIZE,
+    cursor: cursorStack[pageIndex],
   });
   const { data: whatsappRisk } = useWhatsAppRisk();
 
@@ -101,10 +111,25 @@ export default function ContactsPage() {
   const deleteContact = useDeleteContact();
 
   const contacts = useMemo(() => data?.items ?? [], [data?.items]);
+  const nextCursor = data?.nextCursor;
+  const canGoPrev = pageIndex > 0;
+  const canGoNext = Boolean(nextCursor);
+  const pageStart = contacts.length > 0 ? pageIndex * CONTACTS_PAGE_SIZE + 1 : 0;
+  const pageEnd = pageIndex * CONTACTS_PAGE_SIZE + contacts.length;
+
+  useEffect(() => {
+    setCursorStack([undefined]);
+    setPageIndex(0);
+  }, [consentFilter, suppressedFilter, tagFilter, q]);
 
   useEffect(() => {
     setSelectedPhones(new Set());
-  }, [consentFilter, suppressedFilter, tagFilter, q]);
+  }, [consentFilter, suppressedFilter, tagFilter, q, pageIndex]);
+
+  useEffect(() => {
+    const detected = detectCountryFromPhone(phone);
+    if (detected) setCountry(detected);
+  }, [phone]);
 
   const activeContact = selectedContact
     ? contacts.find((c) => c.phoneNumber === selectedContact.phoneNumber) ?? selectedContact
@@ -124,10 +149,14 @@ export default function ContactsPage() {
       await createContact.mutateAsync({
         phoneNumber: phone,
         displayName: name || undefined,
+        country: country.trim() || undefined,
+        company: company.trim() || undefined,
         marketingConsent: "opt_in",
       });
       setPhone("");
       setName("");
+      setCountry("");
+      setCompany("");
       setShowCreate(false);
     } catch (err) {
       setError((err as Error).message);
@@ -143,10 +172,14 @@ export default function ContactsPage() {
       const text = decodeCsvBytes(bytes);
       const lines = text.split(/\r?\n/).filter(Boolean);
       const rows = lines.slice(1).map((line) => {
-        const [phoneCol, nameCol, consentCol] = line.split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
+        const [phoneCol, nameCol, countryCol, companyCol, consentCol] = line
+          .split(",")
+          .map((c) => c.trim().replace(/^"|"$/g, ""));
         return {
           phone: phoneCol ?? "",
           name: nameCol || undefined,
+          country: countryCol || undefined,
+          company: companyCol || undefined,
           marketingConsent: (consentCol as MarketingConsent) || undefined,
         };
       }).filter((r) => r.phone.length >= 10);
@@ -236,6 +269,21 @@ export default function ContactsPage() {
     setConsentFilter("");
     setSuppressedFilter("");
     setTagFilter("");
+  }
+
+  function goNextPage() {
+    if (!nextCursor) return;
+    setCursorStack((current) => {
+      const next = [...current];
+      next[pageIndex + 1] = nextCursor;
+      return next.slice(0, pageIndex + 2);
+    });
+    setPageIndex((current) => current + 1);
+  }
+
+  function goPrevPage() {
+    if (pageIndex <= 0) return;
+    setPageIndex((current) => current - 1);
   }
 
   async function confirmDelete() {
@@ -374,7 +422,7 @@ export default function ContactsPage() {
         </Alert>
       )}
 
-      {isLoading && <SkeletonTable rows={6} cols={5} className="mb-4" />}
+      {isLoading && <SkeletonTable rows={6} cols={7} className="mb-4" />}
 
       {!isLoading && contacts.length === 0 && (
         <EmptyState
@@ -400,7 +448,10 @@ export default function ContactsPage() {
         <>
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm text-secondary">
-              {t("contacts.shownCount", { count: contacts.length })}
+              {contacts.length > 0
+                ? t("contacts.pageRange", { from: pageStart, to: pageEnd, page: pageIndex + 1 })
+                : t("contacts.shownCount", { count: 0 })}
+              {isFetching ? ` · ${t("common.loading")}` : ""}
             </p>
           </div>
 
@@ -463,7 +514,7 @@ export default function ContactsPage() {
             </div>
           )}
 
-          <DataTable minWidth="760px">
+          <DataTable minWidth="960px">
             <DataTableHead>
               <DataTableRow className="border-b border-default bg-surface-muted/60 text-xs uppercase tracking-wide text-secondary">
                 <DataTableCell header className="w-10 px-3">
@@ -476,6 +527,8 @@ export default function ContactsPage() {
                   />
                 </DataTableCell>
                 <DataTableCell header>{t("contacts.colContact")}</DataTableCell>
+                <DataTableCell header>{t("contacts.colCountry")}</DataTableCell>
+                <DataTableCell header>{t("contacts.colCompany")}</DataTableCell>
                 <DataTableCell header>{t("contacts.colConsent")}</DataTableCell>
                 <DataTableCell header>{t("contacts.colCsat")}</DataTableCell>
                 <DataTableCell header>{t("contacts.colTags")}</DataTableCell>
@@ -520,6 +573,20 @@ export default function ContactsPage() {
                           )}
                         </div>
                       </div>
+                    </DataTableCell>
+                    <DataTableCell>
+                      {c.country ? (
+                        <span className="text-sm text-primary">{c.country}</span>
+                      ) : (
+                        <span className="text-muted">—</span>
+                      )}
+                    </DataTableCell>
+                    <DataTableCell>
+                      {c.company ? (
+                        <span className="truncate text-sm text-primary">{c.company}</span>
+                      ) : (
+                        <span className="text-muted">—</span>
+                      )}
                     </DataTableCell>
                     <DataTableCell>
                       <div className="flex flex-wrap gap-1">
@@ -573,6 +640,36 @@ export default function ContactsPage() {
               })}
             </DataTableBody>
           </DataTable>
+
+          {(canGoPrev || canGoNext) && (
+            <div className="mt-4 flex flex-col gap-3 border-t border-default pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-secondary">
+                {t("contacts.pageLabel", { page: pageIndex + 1 })}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={goPrevPage}
+                  disabled={!canGoPrev || isFetching}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  {t("contacts.previousPage")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={goNextPage}
+                  disabled={!canGoNext || isFetching}
+                >
+                  {t("contacts.nextPage")}
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </>
       )}
 
@@ -605,6 +702,29 @@ export default function ContactsPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder={t("contacts.namePlaceholder")}
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-secondary">
+                  {t("contacts.colCountry")}
+                </label>
+                <Input
+                  type="text"
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value)}
+                  placeholder={t("contacts.countryPlaceholder")}
+                />
+                <p className="mt-1 text-xs text-muted">{t("contacts.countryAutoHint")}</p>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-secondary">
+                  {t("contacts.colCompany")}
+                </label>
+                <Input
+                  type="text"
+                  value={company}
+                  onChange={(e) => setCompany(e.target.value)}
+                  placeholder={t("contacts.companyPlaceholder")}
                 />
               </div>
               <div className="flex justify-end gap-2 border-t border-default pt-4">

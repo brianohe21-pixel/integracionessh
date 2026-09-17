@@ -54,8 +54,24 @@ interface EmbeddedSignupMessage {
     phone_number_id?: string;
     waba_id?: string;
     error_message?: string;
+    error_code?: string | null;
+    session_id?: string;
+    timestamp?: string;
     current_step?: string;
   };
+}
+
+function formatMetaSignupError(data: EmbeddedSignupMessage["data"]): string {
+  const message = data?.error_message?.trim();
+  if (!message) return "";
+
+  const reference = data?.error_code
+    ? `#${data.error_code}`
+    : data?.session_id
+      ? `#N/A:${data.session_id}`
+      : "";
+
+  return reference ? `${message} (${reference})` : message;
 }
 
 declare global {
@@ -230,17 +246,23 @@ export function EmbeddedSignupLauncher({
 
       const eventName = String(payload.event ?? "").toUpperCase();
 
+      const metaSignupError = formatMetaSignupError(payload.data);
+
       if (eventName === "CANCEL") {
         pendingRef.current = {};
         clearGraceTimer();
-        reset();
+        if (metaSignupError) {
+          setSignupError(metaSignupError);
+        } else {
+          reset();
+        }
         return;
       }
 
       if (eventName === "ERROR") {
         pendingRef.current = {};
         clearGraceTimer();
-        setSignupError(t("whatsapp.signupError"));
+        setSignupError(metaSignupError || t("whatsapp.signupError"));
         reset();
         return;
       }
@@ -266,15 +288,12 @@ export function EmbeddedSignupLauncher({
       config_id: configId,
       response_type: "code",
       override_default_response_type: true,
-      extras: { setup: {} },
-    };
-
-    if (isCoexistence) {
-      loginOptions.extras = {
+      extras: {
         setup: {},
-        featureType: "whatsapp_business_app_onboarding",
-      };
-    }
+        sessionInfoVersion: "3",
+        ...(isCoexistence ? { featureType: "whatsapp_business_app_onboarding" } : {}),
+      },
+    };
 
     window.FB.login(
       (response) => {

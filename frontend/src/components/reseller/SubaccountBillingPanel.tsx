@@ -3,6 +3,10 @@
 import { useState } from "react";
 import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
+import {
+  downloadResellerBillingCsv,
+  downloadResellerCompanyBillingCsv,
+} from "@/lib/reseller-billing-csv";
 import { downloadResellerBillingPdf, downloadResellerCompanyBillingPdf } from "@/lib/reseller-billing-pdf";
 import { isUnlimitedLimit } from "@/lib/subaccount-services";
 import type { MonthlyUsage, ResellerLimitsOverride, Tenant } from "@/types";
@@ -102,8 +106,10 @@ export function SubaccountBillingPanel({
   bagTotal?: ResellerLimitsOverride;
 }) {
   const t = useT();
-  const [downloading, setDownloading] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [downloadingCsv, setDownloadingCsv] = useState(false);
   const [downloadingCompanyId, setDownloadingCompanyId] = useState<string | null>(null);
+  const [downloadingCompanyCsvId, setDownloadingCompanyCsvId] = useState<string | null>(null);
   const unlimitedLabel = t("reseller.unlimited");
   const list = items ?? [];
 
@@ -121,7 +127,7 @@ export function SubaccountBillingPanel({
     voicebotMinutesCount: 0,
   };
 
-  function resellerPdfLabels() {
+  function resellerBillingLabels() {
     return {
       title: t("reseller.billingTitle"),
       hint: t("reseller.billingHint"),
@@ -134,6 +140,7 @@ export function SubaccountBillingPanel({
       campaigns: t("billing.usageCampaigns"),
       voiceMinutes: t("reseller.limits.maxVoicebotMinutesPerMonth"),
       accountName: t("reseller.name"),
+      email: t("common.email"),
       filenamePrefix: t("reseller.billingPdfFilename"),
     };
   }
@@ -155,27 +162,52 @@ export function SubaccountBillingPanel({
             </p>
           </div>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={downloading}
-          onClick={() => {
-            setDownloading(true);
-            void downloadResellerBillingPdf({
-              items: list,
-              usagePeriod,
-              usageTotals,
-              bagTotal,
-              labels: resellerPdfLabels(),
-            })
-              .catch(() => undefined)
-              .finally(() => setDownloading(false));
-          }}
-        >
-          <Download className="mr-1.5 h-4 w-4" />
-          {downloading ? t("reseller.billingPdfGenerating") : t("reseller.billingDownloadPdf")}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={downloadingPdf}
+            onClick={() => {
+              setDownloadingPdf(true);
+              void downloadResellerBillingPdf({
+                items: list,
+                usagePeriod,
+                usageTotals,
+                bagTotal,
+                labels: resellerBillingLabels(),
+              })
+                .catch(() => undefined)
+                .finally(() => setDownloadingPdf(false));
+            }}
+          >
+            <Download className="mr-1.5 h-4 w-4" />
+            {downloadingPdf ? t("reseller.billingPdfGenerating") : t("reseller.billingDownloadPdf")}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={downloadingCsv}
+            onClick={() => {
+              setDownloadingCsv(true);
+              try {
+                downloadResellerBillingCsv({
+                  items: list,
+                  usagePeriod,
+                  usageTotals,
+                  bagTotal,
+                  labels: resellerBillingLabels(),
+                });
+              } finally {
+                setDownloadingCsv(false);
+              }
+            }}
+          >
+            <Download className="mr-1.5 h-4 w-4" />
+            {downloadingCsv ? t("reseller.billingPdfGenerating") : t("reseller.billingDownloadCsv")}
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -215,7 +247,7 @@ export function SubaccountBillingPanel({
               <th className="px-4 py-3 font-medium">
                 {t("reseller.limits.maxVoicebotMinutesPerMonth")}
               </th>
-              <th className="px-4 py-3 font-medium w-12" />
+              <th className="px-4 py-3 font-medium w-20" />
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -254,25 +286,48 @@ export function SubaccountBillingPanel({
                     />
                   </td>
                   <td className="px-4 py-3">
-                    <button
-                      type="button"
-                      title={t("reseller.billingDownloadCompanyPdf")}
-                      aria-label={t("reseller.billingDownloadCompanyPdf")}
-                      disabled={downloadingCompanyId === item.tenantId}
-                      onClick={() => {
-                        setDownloadingCompanyId(item.tenantId);
-                        void downloadResellerCompanyBillingPdf({
-                          item,
-                          usagePeriod,
-                          labels: resellerPdfLabels(),
-                        })
-                          .catch(() => undefined)
-                          .finally(() => setDownloadingCompanyId(null));
-                      }}
-                      className="inline-flex items-center justify-center rounded-lg p-1.5 text-secondary hover:bg-surface-muted hover:text-primary disabled:opacity-50"
-                    >
-                      <Download className="h-4 w-4" />
-                    </button>
+                    <div className="flex items-center gap-0.5">
+                      <button
+                        type="button"
+                        title={t("reseller.billingDownloadCompanyPdf")}
+                        aria-label={t("reseller.billingDownloadCompanyPdf")}
+                        disabled={downloadingCompanyId === item.tenantId}
+                        onClick={() => {
+                          setDownloadingCompanyId(item.tenantId);
+                          void downloadResellerCompanyBillingPdf({
+                            item,
+                            usagePeriod,
+                            labels: resellerBillingLabels(),
+                          })
+                            .catch(() => undefined)
+                            .finally(() => setDownloadingCompanyId(null));
+                        }}
+                        className="inline-flex items-center justify-center rounded-lg p-1.5 text-secondary hover:bg-surface-muted hover:text-primary disabled:opacity-50"
+                      >
+                        <Download className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        title={t("reseller.billingDownloadCompanyCsv")}
+                        aria-label={t("reseller.billingDownloadCompanyCsv")}
+                        disabled={downloadingCompanyCsvId === item.tenantId}
+                        onClick={() => {
+                          setDownloadingCompanyCsvId(item.tenantId);
+                          try {
+                            downloadResellerCompanyBillingCsv({
+                              item,
+                              usagePeriod,
+                              labels: resellerBillingLabels(),
+                            });
+                          } finally {
+                            setDownloadingCompanyCsvId(null);
+                          }
+                        }}
+                        className="inline-flex items-center justify-center rounded-lg px-1.5 py-1 text-[10px] font-semibold uppercase text-secondary hover:bg-surface-muted hover:text-primary disabled:opacity-50"
+                      >
+                        {t("common.csv")}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               );
