@@ -75,6 +75,12 @@ build_plan_args() {
   if [ -n "${GOOGLE_CLIENT_SECRET:-}" ]; then
     PLAN_ARGS+=(-var="google_client_secret=${GOOGLE_CLIENT_SECRET}")
   fi
+  if [ -n "${GOOGLE_BUSINESS_CLIENT_ID:-}" ]; then
+    PLAN_ARGS+=(-var="google_business_client_id=${GOOGLE_BUSINESS_CLIENT_ID}")
+  fi
+  if [ -n "${GOOGLE_BUSINESS_CLIENT_SECRET:-}" ]; then
+    PLAN_ARGS+=(-var="google_business_client_secret=${GOOGLE_BUSINESS_CLIENT_SECRET}")
+  fi
   if [ -n "${TELEPHONY_GATEWAY_VPC_ID:-}" ]; then
     PLAN_ARGS+=(-var="telephony_gateway_vpc_id=${TELEPHONY_GATEWAY_VPC_ID}")
   fi

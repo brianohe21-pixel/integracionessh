@@ -2226,6 +2226,12 @@ export interface BotUsageMetrics {
   lastActivityAt: string | null;
 }
 
+export interface ChannelUsageMetrics {
+  channel: Channel;
+  conversations: number;
+  messages: number;
+}
+
 export interface UsageMetricsSummary {
   totalBots: number;
   activeBots: number;
@@ -2242,6 +2248,7 @@ export interface UsageMetricsSummary {
 export interface UsageMetrics {
   summary: UsageMetricsSummary;
   byBot: BotUsageMetrics[];
+  byChannel: ChannelUsageMetrics[];
   recentBulkJobs: BulkSendJob[];
 }
 

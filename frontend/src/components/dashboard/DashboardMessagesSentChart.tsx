@@ -14,7 +14,7 @@ import { SendHorizonal } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { useFormatters } from "@/hooks/useFormatters";
 import { DashboardWidgetCard } from "./DashboardWidgetCard";
-import type { UsageMetrics } from "@/types";
+import type { Channel, UsageMetrics } from "@/types";
 
 const CHART_COLORS = ["#128c7e", "#2dd4bf", "#0f766e", "#14b8a6", "#0d9488"];
 
@@ -22,6 +22,18 @@ interface DashboardMessagesSentChartProps {
   usage?: UsageMetrics | null;
   isLoading: boolean;
   error?: Error | null;
+}
+
+function getChannelLabel(channel: Channel, t: ReturnType<typeof useT>): string {
+  if (channel === "instagram") return t("conversations.channelInstagram");
+  if (channel === "webchat") return t("conversations.channelWebchat");
+  if (channel === "telegram") return t("conversations.channelTelegram");
+  if (channel === "messenger") return t("conversations.channelMessenger");
+  if (channel === "sms") return t("conversations.channelSms");
+  if (channel === "email") return t("conversations.channelEmail");
+  if (channel === "voicebot") return t("conversations.channelVoicebot");
+  if (channel === "phone") return t("conversations.channelPhone");
+  return t("conversations.channelWhatsapp");
 }
 
 export function DashboardMessagesSentChart({
@@ -32,14 +44,17 @@ export function DashboardMessagesSentChart({
   const t = useT();
   const { formatNumber } = useFormatters();
 
-  const data = (usage?.byBot ?? [])
+  const data = (usage?.byChannel ?? [])
     .sort((a, b) => b.messages - a.messages)
     .slice(0, 6)
-    .map((bot) => ({
-      name: bot.botName.length > 14 ? `${bot.botName.slice(0, 14)}…` : bot.botName,
-      fullName: bot.botName,
-      messages: bot.messages,
-    }));
+    .map((entry) => {
+      const label = getChannelLabel(entry.channel, t);
+      return {
+        name: label.length > 14 ? `${label.slice(0, 14)}…` : label,
+        fullName: label,
+        messages: entry.messages,
+      };
+    });
 
   const isEmpty = !isLoading && !error && (usage?.summary.totalMessages ?? 0) === 0;
 
