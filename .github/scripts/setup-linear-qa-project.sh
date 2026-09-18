@@ -11,6 +11,12 @@ PROJECT_DESCRIPTION="${LINEAR_PROJECT_DESCRIPTION:-Cola de verificación de camb
 TEAM_NAME="${LINEAR_TEAM_NAME:-}"
 APPLY_GITHUB_SETTINGS="${APPLY_GITHUB_SETTINGS:-false}"
 
+TEAM_LABELS_QUERY='query($teamId: ID!) { team(id: $teamId) { labels { nodes { id name } } } } }'
+LABEL_CREATE_MUTATION='mutation($input: IssueLabelCreateInput!) { issueLabelCreate(input: $input) { success issueLabel { id name } } } }'
+TEAM_PROJECTS_QUERY='query($teamId: ID!) { team(id: $teamId) { projects { nodes { id name } } } } }'
+PROJECT_CREATE_MUTATION='mutation($input: ProjectCreateInput!) { projectCreate(input: $input) { success project { id name url } } } }'
+PROJECT_URL_QUERY='query($id: ID!) { project(id: $id) { id name url } }'
+
 for arg in "$@"; do
   case "$arg" in
     --apply-github)
@@ -18,6 +24,10 @@ for arg in "$@"; do
       ;;
   esac
 done
+
+team_variables() {
+  jq -nc --arg teamId "$TEAM_ID" '{teamId: $teamId}'
+}
 
 echo "Resolving Linear team..."
 teams_response="$(linear_graphql 'query { teams { nodes { id name key } } }')"
@@ -56,22 +66,11 @@ fi
 
 resolve_or_create_label() {
   local label_name="$1"
-  local labels_response
-  labels_response="$(linear_graphql "$(cat <<'EOF'
-query($teamId: String!) {
-  team(id: $teamId) {
-    labels {
-      nodes {
-        id
-        name
-      }
-    }
-  }
-}
-EOF
-)" "$(jq -n --arg teamId "$TEAM_ID" '{teamId: $teamId}')")"
+  local labels_variables create_variables labels_response create_response label_id
 
-  local label_id
+  labels_variables="$(team_variables)"
+  labels_response="$(linear_graphql "$TEAM_LABELS_QUERY" "$labels_variables")"
+
   label_id="$(jq -r --arg name "$label_name" '.data.team.labels.nodes[] | select(.name == $name) | .id' <<<"$labels_response" | head -n 1)"
 
   if [[ -n "$label_id" ]]; then
@@ -80,21 +79,15 @@ EOF
     return
   fi
 
-  local create_response
-  create_response="$(linear_graphql "$(cat <<'EOF'
-mutation($input: IssueLabelCreateInput!) {
-  issueLabelCreate(input: $input) {
-    success
-    issueLabel {
-      id
-      name
-    }
-  }
-}
-EOF
-)" "$(jq -n --arg teamId "$TEAM_ID" --arg name "$label_name" '{input: {teamId: $teamId, name: $name}}')")"
+  create_variables="$(jq -nc --arg teamId "$TEAM_ID" --arg name "$label_name" '{input: {teamId: $teamId, name: $name}}')"
+  create_response="$(linear_graphql "$LABEL_CREATE_MUTATION" "$create_variables")"
 
   label_id="$(jq -r '.data.issueLabelCreate.issueLabel.id' <<<"$create_response")"
+  if [[ -z "$label_id" || "$label_id" == "null" ]]; then
+    echo "Failed to create label: ${label_name}" >&2
+    exit 1
+  fi
+
   echo "Label created: ${label_name} (${label_id})" >&2
   printf '%s' "$label_id"
 }
@@ -103,56 +96,31 @@ QA_LABEL_ID="$(resolve_or_create_label qa)"
 NEEDS_TESTING_LABEL_ID="$(resolve_or_create_label needs-testing)"
 
 echo "Resolving project (${PROJECT_NAME})..."
-projects_response="$(linear_graphql "$(cat <<'EOF'
-query($teamId: String!) {
-  team(id: $teamId) {
-    projects {
-      nodes {
-        id
-        name
-      }
-    }
-  }
-}
-EOF
-)" "$(jq -n --arg teamId "$TEAM_ID" '{teamId: $teamId}')")"
+projects_variables="$(team_variables)"
+projects_response="$(linear_graphql "$TEAM_PROJECTS_QUERY" "$projects_variables")"
 
 PROJECT_ID="$(jq -r --arg name "$PROJECT_NAME" '.data.team.projects.nodes[] | select(.name == $name) | .id' <<<"$projects_response" | head -n 1)"
 
 if [[ -z "$PROJECT_ID" ]]; then
-  create_project_response="$(linear_graphql "$(cat <<'EOF'
-mutation($input: ProjectCreateInput!) {
-  projectCreate(input: $input) {
-    success
-    project {
-      id
-      name
-      url
-    }
-  }
-}
-EOF
-)" "$(jq -n \
+  create_project_variables="$(jq -nc \
     --arg name "$PROJECT_NAME" \
     --arg description "$PROJECT_DESCRIPTION" \
     --arg teamId "$TEAM_ID" \
-    '{input: {name: $name, description: $description, teamIds: [$teamId]}}')")"
+    '{input: {name: $name, description: $description, teamIds: [$teamId]}}')"
+  create_project_response="$(linear_graphql "$PROJECT_CREATE_MUTATION" "$create_project_variables")"
 
   PROJECT_ID="$(jq -r '.data.projectCreate.project.id' <<<"$create_project_response")"
   PROJECT_URL="$(jq -r '.data.projectCreate.project.url' <<<"$create_project_response")"
   echo "Project created: ${PROJECT_NAME} (${PROJECT_ID})"
 else
-  PROJECT_URL="$(linear_graphql "$(cat <<'EOF'
-query($id: String!) {
-  project(id: $id) {
-    id
-    name
-    url
-  }
-}
-EOF
-)" "$(jq -n --arg id "$PROJECT_ID" '{id: $id}')" | jq -r '.data.project.url')"
+  project_variables="$(jq -nc --arg id "$PROJECT_ID" '{id: $id}')"
+  PROJECT_URL="$(linear_graphql "$PROJECT_URL_QUERY" "$project_variables" | jq -r '.data.project.url')"
   echo "Project exists: ${PROJECT_NAME} (${PROJECT_ID})"
+fi
+
+if [[ -z "$PROJECT_ID" || "$PROJECT_ID" == "null" ]]; then
+  echo "Failed to resolve Linear project ID" >&2
+  exit 1
 fi
 
 cat <<EOF

@@ -66,21 +66,13 @@ fetch_changed_files() {
   }
 }
 
+SEARCH_ISSUES_QUERY='query($term: String!) { searchIssues(term: $term, first: 10) { nodes { id identifier url description } } }'
+ISSUE_CREATE_MUTATION='mutation($input: IssueCreateInput!) { issueCreate(input: $input) { success issue { id identifier url title } } }'
+
 find_existing_issue() {
-  local search_response
-  search_response="$(linear_graphql "$(cat <<'EOF'
-query($term: String!) {
-  searchIssues(term: $term, first: 10) {
-    nodes {
-      id
-      identifier
-      url
-      description
-    }
-  }
-}
-EOF
-)" "$(jq -n --arg term "$PR_URL" '{term: $term}')")"
+  local search_variables search_response
+  search_variables="$(jq -nc --arg term "$PR_URL" '{term: $term}')"
+  search_response="$(linear_graphql "$SEARCH_ISSUES_QUERY" "$search_variables")"
 
   jq -r --arg pr_url "$PR_URL" '
     .data.searchIssues.nodes[]
@@ -155,20 +147,7 @@ create_issue() {
     }')"
 
   local create_response
-  create_response="$(linear_graphql "$(cat <<'EOF'
-mutation($input: IssueCreateInput!) {
-  issueCreate(input: $input) {
-    success
-    issue {
-      id
-      identifier
-      url
-      title
-    }
-  }
-}
-EOF
-)" "$variables")"
+  create_response="$(linear_graphql "$ISSUE_CREATE_MUTATION" "$variables")"
 
   jq -r '.data.issueCreate.issue.url' <<<"$create_response"
 }
