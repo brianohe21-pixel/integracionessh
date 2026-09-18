@@ -594,6 +594,7 @@ export interface Lead {
   notes?: string;
   assignedAdvisorId?: string;
   convertedAt?: string;
+  attribution?: AdsAttribution;
   createdAt: string;
   updatedAt: string;
 }
@@ -627,6 +628,35 @@ export type OpportunityLossReason =
   | "timing"
   | "not_qualified"
   | "other";
+
+export type AdsAttributionSource = "meta_ctwa" | "meta_lead_ads" | "utm" | "web_form";
+
+export interface AdsAttribution {
+  source: AdsAttributionSource;
+  adId?: string;
+  adSourceId?: string;
+  adSetId?: string;
+  formId?: string;
+  ctwaClid?: string;
+  headline?: string;
+  body?: string;
+  sourceUrl?: string;
+  sourceType?: string;
+  mediaType?: string;
+  imageUrl?: string;
+  campaignId?: string;
+  flowId?: string;
+  submissionId?: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  utmContent?: string;
+  utmTerm?: string;
+  referrer?: string;
+  landingPage?: string;
+  shortLinkId?: string;
+  shortLinkSlug?: string;
+}
 
 export interface OpportunityAttribution {
   source?: string;
@@ -925,6 +955,7 @@ export interface Conversation {
   copilotGeneratedAt?: string;
   interactionCategory?: InteractionCategory;
   interactionCategoryAt?: string;
+  attribution?: AdsAttribution;
   messageCount: number;
   lastMessageAt: string;
   emailSubject?: string;
@@ -1128,6 +1159,15 @@ export interface TenantMember {
   advisorId?: string;
   teamIds?: string[];
   lastLoginAt?: string;
+  profilePhotoS3Key?: string;
+}
+
+export interface UserProfile {
+  userId: string;
+  email: string;
+  name: string;
+  role: "member" | "supervisor" | "advisor";
+  profilePhotoUrl?: string;
 }
 
 export interface TenantMembersResponse {
@@ -1311,6 +1351,51 @@ export interface BulkSendJob {
   failed: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export type SmsHistoryStatus =
+  | "pending"
+  | "sent"
+  | "delivered"
+  | "delivery_failed"
+  | "send_failed";
+
+export type SmsDlrSource = "campaign" | "template" | "api";
+
+export interface SmsHistoryItem {
+  receiptId: string;
+  to: string;
+  source: SmsDlrSource;
+  status: SmsHistoryStatus;
+  templateName: string | null;
+  campaignId: string | null;
+  botId: string;
+  createdAt: string;
+  dlrAt: string | null;
+  telcoredMessageId: string | null;
+  sendError: string | null;
+}
+
+export interface SmsHistoryPage {
+  items: SmsHistoryItem[];
+  nextCursor?: string;
+}
+
+export interface SmsOverview {
+  enabledBots: number;
+  activeCampaigns: number;
+  campaignSent: number;
+  campaignFailed: number;
+  campaignDelivered: number;
+  campaignDeliveryFailed: number;
+  bulkJobs: number;
+  bulkSent: number;
+  bulkFailed: number;
+  dlrDelivered: number;
+  dlrFailed: number;
+  dlrPending: number;
+  dlrSent: number;
+  deliveryRate: number;
 }
 
 export interface BotUsageMetrics {

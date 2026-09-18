@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { SidebarProvider } from "@/components/layout/SidebarContext";
-import { MobileTopBar } from "@/components/layout/MobileTopBar";
 import { PlatformToolbar } from "@/components/layout/PlatformToolbar";
 import { DashboardAuthGuard } from "@/components/layout/DashboardAuthGuard";
 import { DashboardRoleGuard } from "@/components/layout/DashboardRoleGuard";
@@ -27,27 +26,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <NotificationsMount>
                 <SoftphoneProvider>
                   <SoftphoneUIProvider>
-                    <div className="flex h-screen overflow-hidden">
+                    <div className="flex h-screen flex-col overflow-hidden platform-canvas-bg">
                       <TermsAcceptanceSync />
-                      <div className="shrink-0 lg:p-4 lg:[&>aside]:h-[calc(100vh-2rem)] lg:[&>aside]:rounded-2xl lg:[&>aside]:shadow-lg">
-                        <Sidebar />
-                      </div>
-                      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden platform-canvas-bg">
-                        <HelpCenterMount>
-                          <MobileTopBar />
-                          <PlatformToolbar />
-                          <SoftphoneBar />
-                          <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden platform-canvas-bg">
-                            <div className="flex min-h-0 flex-1 flex-col">
-                              <OnboardingGate>
-                                <DashboardRoleGuard>
-                                  <SubaccountServiceGuard>{children}</SubaccountServiceGuard>
-                                </DashboardRoleGuard>
-                              </OnboardingGate>
-                            </div>
-                          </main>
-                        </HelpCenterMount>
-                      </div>
+                      <HelpCenterMount>
+                        <PlatformToolbar />
+                        <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
+                          <div className="flex h-full shrink-0 flex-col lg:[&>aside]:min-h-0 lg:[&>aside]:flex-1">
+                            <Sidebar />
+                          </div>
+                          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden platform-canvas-bg">
+                            <SoftphoneBar />
+                            <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden platform-canvas-bg">
+                              <div className="flex min-h-0 flex-1 flex-col">
+                                <OnboardingGate>
+                                  <DashboardRoleGuard>
+                                    <SubaccountServiceGuard>{children}</SubaccountServiceGuard>
+                                  </DashboardRoleGuard>
+                                </OnboardingGate>
+                              </div>
+                            </main>
+                          </div>
+                        </div>
+                      </HelpCenterMount>
                     </div>
                   </SoftphoneUIProvider>
                 </SoftphoneProvider>

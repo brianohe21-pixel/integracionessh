@@ -12,7 +12,7 @@ import {
 } from "../dynamodb/lead.repository.js";
 import { emitIntegrationEvent } from "../integrations/emit.js";
 import { buildLeadCreatedPayload } from "../integrations/payloads.js";
-import type { Lead } from "../../types/index.js";
+import type { AdsAttribution, Lead } from "../../types/index.js";
 import { upsertContactFromLead } from "./convert.js";
 import { linkConversationToContact } from "../contacts/link-conversation-to-contact.js";
 
@@ -22,9 +22,12 @@ export async function createLeadFromFormData(params: {
   phone: string;
   name?: string;
   email?: string;
+  notes?: string;
   tags?: string[];
   sourceId?: string;
   linkConversationId?: string;
+  metaFlowId?: string;
+  attribution?: AdsAttribution;
 }): Promise<Lead> {
   const phone = normalizePhone(params.phone);
   const now = new Date().toISOString();
@@ -34,6 +37,10 @@ export async function createLeadFromFormData(params: {
     const updated = await updateLead(params.tenantId, activeLead.leadId, {
       ...(params.name ? { name: params.name } : {}),
       ...(params.email ? { email: params.email } : {}),
+      ...(params.notes ? { notes: params.notes } : {}),
+      ...(params.attribution && !activeLead.attribution
+        ? { attribution: params.attribution }
+        : {}),
       ...(params.tags?.length
         ? { tags: [...new Set([...activeLead.tags, ...params.tags])] }
         : {}),
@@ -63,13 +70,14 @@ export async function createLeadFromFormData(params: {
   }
 
   const leadId = randomUUID();
+  const metaFlowId = params.metaFlowId ?? "web_form";
   const lead: Lead = {
     leadId,
     tenantId: params.tenantId,
     botId: params.botId,
     phone,
-    conversationId: params.sourceId ?? `form-${leadId}`,
-    metaFlowId: "web_form",
+    conversationId: params.linkConversationId ?? params.sourceId ?? `form-${leadId}`,
+    metaFlowId,
     flowResponseId: params.sourceId ?? leadId,
     status: "new",
     tags: params.tags ?? ["lead"],
@@ -77,6 +85,8 @@ export async function createLeadFromFormData(params: {
     updatedAt: now,
     ...(params.name ? { name: params.name } : {}),
     ...(params.email ? { email: params.email } : {}),
+    ...(params.notes ? { notes: params.notes } : {}),
+    ...(params.attribution ? { attribution: params.attribution } : {}),
   };
 
   await createLead(lead);
@@ -99,9 +109,10 @@ export async function createLeadFromFormData(params: {
       leadId,
       conversationId: lead.conversationId,
       phone,
-      metaFlowId: "web_form",
+      metaFlowId,
       ...(params.name ? { name: params.name } : {}),
       ...(params.email ? { email: params.email } : {}),
+      ...(params.attribution ? { attribution: params.attribution } : {}),
     })
   ).catch((err) => console.error("Failed to emit lead.created:", err));
 

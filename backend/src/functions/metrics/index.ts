@@ -11,7 +11,18 @@ import { getAdvisorWorkloadMetrics } from "../../lib/dynamodb/advisor-workload.r
 import { getConversationCategoryMetrics } from "../../lib/dynamodb/conversation-category-metrics.repository.js";
 import { getWebsiteMetrics } from "../../lib/dynamodb/website-metrics.repository.js";
 import { buildUsageMarketingCsv } from "../../lib/reports/metrics-csv.js";
+import { getSmsHistoryPage, getSmsOverview } from "../../lib/dynamodb/sms-metrics.repository.js";
+import type { SmsDlrSource, SmsHistoryStatus } from "../../types/index.js";
 import { ok, badRequest, handleError } from "../../lib/http.js";
+
+const SMS_SOURCES = new Set<SmsDlrSource>(["api", "campaign", "template"]);
+const SMS_STATUSES = new Set<SmsHistoryStatus>([
+  "pending",
+  "sent",
+  "delivered",
+  "delivery_failed",
+  "send_failed",
+]);
 
 export async function handler(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
@@ -47,6 +58,33 @@ export async function handler(
     if (method === "GET" && rawPath.endsWith("/metrics/marketing")) {
       const marketing = await getMarketingMetrics(auth.tenantId);
       return ok(marketing);
+    }
+
+    if (method === "GET" && rawPath.endsWith("/metrics/sms/history")) {
+      await assertAssignedServices(auth.tenantId, "campaigns");
+      const qs = event.queryStringParameters ?? {};
+      const limitParam = qs.limit ? parseInt(qs.limit, 10) : undefined;
+      const source = qs.source?.trim();
+      const status = qs.status?.trim();
+      const history = await getSmsHistoryPage(auth.tenantId, {
+        ...(limitParam !== undefined && Number.isFinite(limitParam) ? { limit: limitParam } : {}),
+        ...(qs.cursor ? { cursor: qs.cursor } : {}),
+        ...(qs.from ? { from: qs.from } : {}),
+        ...(qs.to ? { to: qs.to } : {}),
+        ...(source && SMS_SOURCES.has(source as SmsDlrSource)
+          ? { source: source as SmsDlrSource }
+          : {}),
+        ...(status && SMS_STATUSES.has(status as SmsHistoryStatus)
+          ? { status: status as SmsHistoryStatus }
+          : {}),
+      });
+      return ok(history);
+    }
+
+    if (method === "GET" && rawPath.endsWith("/metrics/sms")) {
+      await assertAssignedServices(auth.tenantId, "campaigns");
+      const overview = await getSmsOverview(auth.tenantId);
+      return ok({ overview });
     }
 
     if (method === "GET" && rawPath.endsWith("/metrics/inbox-sla")) {

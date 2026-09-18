@@ -1,4 +1,9 @@
-import type { IntegrationEvent, IntegrationEventPayload, TelephonyStructuredOutputPayload } from "../../types/index.js";
+import type {
+  AdsAttribution,
+  IntegrationEvent,
+  IntegrationEventPayload,
+  TelephonyStructuredOutputPayload,
+} from "../../types/index.js";
 
 export function buildIntegrationPayload(params: {
   event: IntegrationEvent;
@@ -91,6 +96,7 @@ export function buildLeadCreatedPayload(params: {
   metaFlowId: string;
   name?: string;
   email?: string;
+  attribution?: AdsAttribution;
 }): IntegrationEventPayload {
   return buildIntegrationPayload({
     event: "lead.created",
@@ -103,6 +109,7 @@ export function buildLeadCreatedPayload(params: {
       metaFlowId: params.metaFlowId,
       ...(params.name ? { name: params.name } : {}),
       ...(params.email ? { email: params.email } : {}),
+      ...(params.attribution ? { attribution: params.attribution } : {}),
     },
   });
 }

@@ -218,6 +218,10 @@ export async function renderQuotationPdf(params: {
 
   for (const item of quotation.items) {
     if (y < 120) break;
+    const lineItem = item as QuotationLineItem & {
+      unitPriceLabel?: string;
+      totalPriceLabel?: string;
+    };
     page.drawText(pdfText(truncateText(item.description, 48)), {
       x: colDesc,
       y,
@@ -225,8 +229,14 @@ export async function renderQuotationPdf(params: {
       font,
     });
     page.drawText(String(item.quantity), { x: colQty, y, size: 9, font });
-    page.drawText(pdfText(formatCop(item.unitPriceInCents)), { x: colUnit, y, size: 9, font });
-    page.drawText(pdfText(formatCop(item.totalInCents)), { x: colTotal, y, size: 9, font });
+    page.drawText(
+      pdfText(lineItem.unitPriceLabel ?? formatCop(item.unitPriceInCents)),
+      { x: colUnit, y, size: 9, font }
+    );
+    page.drawText(
+      pdfText(lineItem.totalPriceLabel ?? formatCop(item.totalInCents)),
+      { x: colTotal, y, size: 9, font }
+    );
     y -= 14;
   }
 

@@ -1,18 +1,11 @@
 "use client";
 
-import Image from "next/image";
+import { QrCodeImage } from "@/components/ui/QrCodeImage";
+import { buildQrImageUrl } from "@/lib/qr-code";
 
 interface ShortLinkQrProps {
   url: string;
   label: string;
-}
-
-function buildQrImageUrl(url: string, size = 200): string {
-  const params = new URLSearchParams({
-    size: `${size}x${size}`,
-    data: url,
-  });
-  return `https://api.qrserver.com/v1/create-qr-code/?${params.toString()}`;
 }
 
 export function ShortLinkQr({ url, label }: ShortLinkQrProps) {
@@ -32,14 +25,7 @@ export function ShortLinkQr({ url, label }: ShortLinkQrProps) {
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <Image
-        src={qrUrl}
-        alt={label}
-        width={160}
-        height={160}
-        unoptimized
-        className="rounded-lg border border-default bg-white p-2"
-      />
+      <QrCodeImage data={url} size={160} alt={label} />
       <button
         type="button"
         onClick={() => void handleDownload()}

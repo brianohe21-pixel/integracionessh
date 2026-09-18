@@ -60,6 +60,7 @@ export function BotMessengerConnect({ bot }: { bot: Bot }) {
           <li>{t("messenger.setupStep3")}</li>
         </ol>
         <p className="text-xs text-blue-700">{t("messenger.tokenHint")}</p>
+        <p className="text-xs text-blue-700">{t("messenger.adsHint")}</p>
       </div>
 
       <div className="grid gap-3 lg:grid-cols-2">

@@ -9,6 +9,7 @@ export function useLeads(options?: {
   status?: LeadStatus;
   botId?: string;
   metaFlowId?: string;
+  adsOnly?: boolean;
   q?: string;
   cursor?: string;
 }) {
@@ -16,6 +17,7 @@ export function useLeads(options?: {
   if (options?.status) params.set("status", options.status);
   if (options?.botId) params.set("botId", options.botId);
   if (options?.metaFlowId) params.set("metaFlowId", options.metaFlowId);
+  if (options?.adsOnly) params.set("adsOnly", "true");
   if (options?.q) params.set("q", options.q);
   if (options?.cursor) params.set("cursor", options.cursor);
   const qs = params.toString() ? `?${params.toString()}` : "";

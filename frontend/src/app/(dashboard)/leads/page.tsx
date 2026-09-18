@@ -55,15 +55,17 @@ export default function LeadsPage() {
   const [view, setView] = useState<"table" | "kanban">("table");
   const [statusFilter, setStatusFilter] = useState<"" | LeadStatus>("");
   const [botFilter, setBotFilter] = useState("");
+  const [metaAdsOnly, setMetaAdsOnly] = useState(false);
   const [q, setQ] = useState("");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
 
-  const hasFilters = statusFilter || botFilter || q;
+  const hasFilters = statusFilter || botFilter || metaAdsOnly || q;
 
   const { data: bots } = useBots();
   const { data, isLoading } = useLeads({
     ...(statusFilter ? { status: statusFilter } : {}),
     ...(botFilter ? { botId: botFilter } : {}),
+    ...(metaAdsOnly ? { adsOnly: true } : {}),
     ...(q ? { q } : {}),
   });
   const { data: metrics } = useLeadMetrics();
@@ -92,6 +94,7 @@ export default function LeadsPage() {
     setQ("");
     setStatusFilter("");
     setBotFilter("");
+    setMetaAdsOnly(false);
   }
 
   return (
@@ -181,6 +184,15 @@ export default function LeadsPage() {
             <option key={b.botId} value={b.botId}>{b.name}</option>
           ))}
         </Select>
+        <label className="inline-flex items-center gap-2 text-sm text-secondary">
+          <input
+            type="checkbox"
+            checked={metaAdsOnly}
+            onChange={(event) => setMetaAdsOnly(event.target.checked)}
+            className="rounded border-default text-accent focus:ring-accent"
+          />
+          {t("leads.filterMetaAds")}
+        </label>
         {hasFilters && (
           <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
             <FilterX className="h-4 w-4" />

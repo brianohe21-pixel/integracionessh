@@ -21,6 +21,7 @@ import {
 } from "@/components/settings/SettingsCard";
 import { ProviderCredentialsSection } from "@/components/settings/ProviderCredentialCard";
 import { ChangePasswordCard } from "@/components/settings/ChangePasswordCard";
+import { ProfileSettingsCard } from "@/components/settings/ProfileSettingsCard";
 import { TwoFactorAuthCard } from "@/components/settings/TwoFactorAuthCard";
 import { InboxSlaCard } from "@/components/settings/InboxSlaCard";
 import { ScheduledReportsCard } from "@/components/settings/ScheduledReportsCard";
@@ -38,6 +39,7 @@ import {
   Shield,
   SlidersHorizontal,
   SunMoon,
+  User as UserIcon,
   Webhook,
 } from "lucide-react";
 import { PlanUsageCard } from "@/components/billing/PlanUsageCard";
@@ -46,6 +48,7 @@ import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
 
 const SETTINGS_TABS = [
+  "profile",
   "general",
   "security",
   "workspace",
@@ -96,9 +99,16 @@ export default function SettingsPage() {
       router.replace("/users");
       return;
     }
-    if (isSettingsTab(requested)) {
-      setTab(requested);
+    if (requested === "general") {
+      setTab("general");
+      router.replace("/settings", { scroll: false });
+      return;
     }
+    if (requested && isSettingsTab(requested)) {
+      setTab(requested);
+      return;
+    }
+    setTab("general");
   }, [searchParams, router]);
 
   const { data: tenant } = useQuery({
@@ -123,6 +133,7 @@ export default function SettingsPage() {
   }
 
   const tabs: { id: SettingsTab; label: string; icon: ReactNode }[] = [
+    { id: "profile", label: t("settings.tabProfile"), icon: <UserIcon className="h-4 w-4" /> },
     { id: "general", label: t("settings.tabGeneral"), icon: <Settings2 className="h-4 w-4" /> },
     { id: "security", label: t("settings.tabSecurity"), icon: <Shield className="h-4 w-4" /> },
     {
@@ -174,6 +185,12 @@ export default function SettingsPage() {
           </div>
         </nav>
       </div>
+
+      {tab === "profile" ? (
+        <SettingsPanel title={t("settings.tabProfile")}>
+          <ProfileSettingsCard />
+        </SettingsPanel>
+      ) : null}
 
       {tab === "general" ? (
         <SettingsPanel title={t("settings.tabGeneral")}>

@@ -81,6 +81,7 @@ export function applyBrandCssVariables(primaryColor: string): void {
   root.style.setProperty("--brand-primary", primaryColor);
   root.style.setProperty("--brand-primary-hover", hover);
   root.style.setProperty("--brand-primary-light", light);
+  root.style.setProperty("--topbar", primaryColor);
   root.style.setProperty("--color-brand-primary", primaryColor);
   root.style.setProperty("--accent", primaryColor);
   root.style.setProperty("--accent-hover", hover);

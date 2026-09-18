@@ -12,6 +12,7 @@ import { ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { QrCodeImage } from "@/components/ui/QrCodeImage";
 import {
   SettingsCallout,
   SettingsCard,
@@ -151,12 +152,19 @@ export function TwoFactorAuthCard() {
         <form onSubmit={handleVerifySetup} className="max-w-md space-y-4">
           <p className="text-sm text-secondary">{t("settings.twoFactorSetupHint")}</p>
           {setupUri ? (
-            <SettingsCallout title={t("settings.twoFactorSecretLabel")}>
-              <code className="block break-all text-xs text-primary">{setupSecret}</code>
-              <a href={setupUri} className="mt-2 inline-block text-xs text-accent hover:underline">
-                {t("settings.twoFactorOpenAuthenticator")}
-              </a>
-            </SettingsCallout>
+            <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+              <QrCodeImage
+                data={setupUri}
+                size={180}
+                alt={t("settings.twoFactorQrAlt")}
+              />
+              <SettingsCallout title={t("settings.twoFactorSecretLabel")}>
+                <code className="block break-all text-xs text-primary">{setupSecret}</code>
+                <a href={setupUri} className="mt-2 inline-block text-xs text-accent hover:underline">
+                  {t("settings.twoFactorOpenAuthenticator")}
+                </a>
+              </SettingsCallout>
+            </div>
           ) : null}
           <div>
             <label htmlFor="totpCode" className="mb-1 block text-sm font-medium text-secondary">

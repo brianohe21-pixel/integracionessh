@@ -102,7 +102,9 @@ export async function countMembersByRole(
 export async function updateMember(
   tenantId: string,
   userId: string,
-  updates: Partial<Pick<TenantMember, "name" | "role" | "enabled" | "teamIds" | "advisorId">>
+  updates: Partial<
+    Pick<TenantMember, "name" | "role" | "enabled" | "teamIds" | "advisorId" | "profilePhotoS3Key">
+  >
 ): Promise<TenantMember | null> {
   const existing = await getMember(tenantId, userId);
   if (!existing) return null;

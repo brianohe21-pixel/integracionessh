@@ -48,6 +48,8 @@ export interface ListLeadsOptions {
   status?: LeadStatus;
   botId?: string;
   metaFlowId?: string;
+  attributionSource?: string;
+  adsOnly?: boolean;
   q?: string;
 }
 
@@ -59,6 +61,18 @@ export interface ListLeadsResult {
 function matchesFilters(lead: Lead, options: ListLeadsOptions): boolean {
   if (options.botId && lead.botId !== options.botId) return false;
   if (options.metaFlowId && lead.metaFlowId !== options.metaFlowId) return false;
+  if (options.attributionSource && lead.attribution?.source !== options.attributionSource) {
+    return false;
+  }
+  if (options.adsOnly) {
+    const isAdsLead =
+      lead.metaFlowId === "meta_ctwa" ||
+      lead.metaFlowId === "meta_lead_ads" ||
+      lead.attribution?.source === "meta_ctwa" ||
+      lead.attribution?.source === "meta_lead_ads" ||
+      lead.tags.includes("meta_ads");
+    if (!isAdsLead) return false;
+  }
   if (options.q) {
     const q = options.q.toLowerCase();
     const inPhone = lead.phone.includes(q);
@@ -267,6 +281,7 @@ export type LeadUpdateInput = Partial<
     | "tags"
     | "notes"
     | "convertedAt"
+    | "attribution"
   >
 > & {
   assignedAdvisorId?: string | null;

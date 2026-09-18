@@ -65,6 +65,7 @@ describe("sms client", () => {
           to: ["573013350265"],
           text: "Holis, Prueba",
           from: "msg",
+          part: true,
         }),
       })
     );
@@ -96,7 +97,35 @@ describe("sms client", () => {
           to: ["573001234567"],
           text: "Hola",
           from: "msg",
+          part: true,
           "dlr-url": dlrUrl,
+        }),
+      })
+    );
+  });
+
+  it("omits part when multipart is disabled", async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ messageId: "telcored-789" }),
+    });
+    global.fetch = fetchMock as typeof fetch;
+
+    await sendSmsTextMessage({
+      phoneNumber: "573001234567",
+      text: "Hola",
+      from: "msg",
+      part: false,
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://omnicanal.telcoredsas.com/Api/rest/message",
+      expect.objectContaining({
+        body: JSON.stringify({
+          to: ["573001234567"],
+          text: "Hola",
+          from: "msg",
         }),
       })
     );

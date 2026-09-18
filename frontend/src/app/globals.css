@@ -94,6 +94,11 @@
   --card-header-icon-bg: color-mix(in srgb, var(--brand-primary) 18%, rgba(255, 255, 255, 0.08));
   --card-header-icon-border: color-mix(in srgb, var(--brand-primary) 28%, rgba(255, 255, 255, 0.12));
 
+  --topbar: var(--brand-primary);
+  --topbar-text: #ffffff;
+  --topbar-icon: rgba(255, 255, 255, 0.9);
+  --topbar-hover: rgba(255, 255, 255, 0.12);
+
   --background: var(--canvas);
   --foreground: var(--text-primary);
 }
@@ -164,12 +169,35 @@
   --card-header-icon-bg: color-mix(in srgb, var(--brand-primary) 18%, rgba(255, 255, 255, 0.06));
   --card-header-icon-border: color-mix(in srgb, var(--brand-primary) 28%, rgba(255, 255, 255, 0.1));
 
+  --topbar: var(--brand-primary);
+  --topbar-text: #ffffff;
+  --topbar-icon: rgba(255, 255, 255, 0.9);
+  --topbar-hover: rgba(255, 255, 255, 0.12);
+
   --background: var(--canvas);
   --foreground: var(--text-primary);
 }
 
 [data-theme="light"] {
   color-scheme: light;
+}
+
+.platform-topbar {
+  background: var(--topbar);
+  color: var(--topbar-text);
+}
+
+.topbar-icon {
+  color: var(--topbar-icon);
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.topbar-icon:hover,
+.topbar-icon[aria-expanded="true"] {
+  background: var(--topbar-hover);
+  color: var(--topbar-text);
 }
 
 @theme inline {

@@ -21,6 +21,7 @@ import {
 import { useAdvisors } from "@/hooks/useAdvisors";
 import { useBots } from "@/hooks/useBots";
 import { Badge } from "@/components/ui/Badge";
+import { conversationHasMetaAdsAttribution } from "@/lib/meta-ads";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Select } from "@/components/ui/Input";
@@ -799,6 +800,13 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                         ? selectedConversation.emailSubject
                         : contactDisplay(selectedConversation)}
                     </p>
+                    {conversationHasMetaAdsAttribution(selectedConversation) ? (
+                      <Badge variant="warning" className="text-[10px]">
+                        {selectedConversation.attribution?.source === "meta_ctwa"
+                          ? t("ads.badgeCtwa")
+                          : t("ads.badge")}
+                      </Badge>
+                    ) : null}
                     {activeLead?.tags?.slice(0, 2).map((tag) => (
                       <Badge key={tag} variant="default" className="text-[10px]">
                         {tag}
