@@ -9,6 +9,8 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 source "${SCRIPT_DIR}/linear-graphql.sh"
+# shellcheck source=/dev/null
+source "${SCRIPT_DIR}/linear-qa-content.sh"
 
 required_vars=(
   LINEAR_TEAM_ID
@@ -84,33 +86,14 @@ find_existing_issue() {
 build_issue_description() {
   local changed_files="$1"
   local merge_sha="${PR_MERGE_SHA:-}"
+  local context_block
 
-  cat <<EOF
-## Contexto
-
-- **PR:** [#${PR_NUMBER} ${PR_TITLE}](${PR_URL})
+  context_block="- **PR:** [#${PR_NUMBER} ${PR_TITLE}](${PR_URL})
 - **Autor:** @${PR_AUTHOR}
 - **Rama base:** develop
-- **Commit de merge:** \`${merge_sha:-desconocido}\`
+- **Commit de merge:** \`${merge_sha:-desconocido}\`"
 
-## Entorno de prueba
-
-- **Ambiente:** develop
-- **Frontend:** ${DEVELOP_FRONTEND_URL}
-
-> Espera a que terminen los workflows de deploy (Backend y Frontend) antes de iniciar las pruebas.
-
-## Archivos cambiados
-
-${changed_files}
-
-## Checklist QA
-
-- [ ] Validar el flujo principal del cambio
-- [ ] Revisar regresiones en el área afectada
-- [ ] Confirmar comportamiento en develop
-- [ ] Marcar como Done o reportar bug con evidencia
-EOF
+  build_qa_issue_description "$context_block" "$changed_files" "$DEVELOP_FRONTEND_URL"
 }
 
 create_issue() {
@@ -204,7 +187,7 @@ if [[ -n "$existing_issue_url" ]]; then
 fi
 
 changed_files="$(fetch_changed_files)"
-issue_title="QA: ${PR_TITLE}"
+issue_title="$(spanish_qa_title "$PR_TITLE")"
 issue_description="$(build_issue_description "$changed_files")"
 issue_url="$(create_issue "$issue_title" "$issue_description")"
 

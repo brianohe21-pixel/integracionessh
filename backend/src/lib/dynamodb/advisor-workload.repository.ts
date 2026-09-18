@@ -2,6 +2,7 @@ import { listBots } from "./bot.repository.js";
 import { listAdvisors } from "./advisor.repository.js";
 import { listAllConversationsForBot } from "./metrics.repository.js";
 import { getTenant } from "./tenant.repository.js";
+import { isWithinDateRange } from "./call-metrics.js";
 import {
   getConversationSlaStatus,
   resolveInboxSlaSettings,
@@ -36,19 +37,40 @@ function incrementWorkflow(
   else if (ws === "open") counts.open++;
 }
 
-function isActiveHumanConversation(conversation: Conversation): boolean {
-  if ((conversation.handoffMode ?? "bot") !== "human") return false;
-  return (conversation.workflowStatus ?? "open") !== "resolved";
+function isHumanConversation(conversation: Conversation): boolean {
+  return (conversation.handoffMode ?? "bot") === "human";
+}
+
+function conversationHandoffAt(conversation: Conversation): string {
+  return conversation.handoffAt ?? conversation.createdAt;
+}
+
+function shouldIncludeConversation(
+  conversation: Conversation,
+  options?: { from?: string; to?: string }
+): boolean {
+  if (!isHumanConversation(conversation)) return false;
+
+  if (!options?.from || !options?.to) {
+    return (conversation.workflowStatus ?? "open") !== "resolved";
+  }
+
+  return isWithinDateRange(conversationHandoffAt(conversation), options.from, options.to);
 }
 
 export async function getAdvisorWorkloadMetrics(
-  tenantId: string
+  tenantId: string,
+  options?: { botId?: string; from?: string; to?: string }
 ): Promise<AdvisorWorkloadMetrics> {
   const [tenant, advisors, bots] = await Promise.all([
     getTenant(tenantId),
     listAdvisors(tenantId),
     listBots(tenantId),
   ]);
+
+  const scopedBots = options?.botId
+    ? bots.filter((bot) => bot.botId === options.botId)
+    : bots;
 
   const slaSettings = resolveInboxSlaSettings(tenant?.inboxSla);
   const nowMs = Date.now();
@@ -68,10 +90,10 @@ export async function getAdvisorWorkloadMetrics(
     ...emptyCounts(),
   };
 
-  for (const bot of bots) {
+  for (const bot of scopedBots) {
     const conversations = await listAllConversationsForBot(tenantId, bot.botId);
     for (const conversation of conversations) {
-      if (!isActiveHumanConversation(conversation)) continue;
+      if (!shouldIncludeConversation(conversation, options)) continue;
 
       const slaStatus = getConversationSlaStatus(conversation, slaSettings, nowMs);
       const breached = slaStatus === "breached" ? 1 : 0;

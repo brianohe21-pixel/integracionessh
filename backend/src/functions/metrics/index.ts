@@ -4,6 +4,7 @@ import { assertAssignedServices } from "../../lib/billing/subaccount-services.js
 import { getTenantUsageMetrics } from "../../lib/dynamodb/metrics.repository.js";
 import { getMarketingMetrics } from "../../lib/dynamodb/marketing-metrics.repository.js";
 import { getLeadMetrics } from "../../lib/dynamodb/lead-metrics.repository.js";
+import { getContactMetrics } from "../../lib/dynamodb/contact-metrics.repository.js";
 import { getCallingMetrics } from "../../lib/dynamodb/call-metrics.repository.js";
 import { getSalesMetrics } from "../../lib/dynamodb/sales-metrics.repository.js";
 import { getInboxSlaMetrics } from "../../lib/dynamodb/inbox-sla-metrics.repository.js";
@@ -53,6 +54,12 @@ export async function handler(
     if (method === "GET" && rawPath.endsWith("/metrics/leads")) {
       const leads = await getLeadMetrics(auth.tenantId);
       return ok(leads);
+    }
+
+    if (method === "GET" && rawPath.endsWith("/metrics/contacts")) {
+      await assertAssignedServices(auth.tenantId, "contacts");
+      const contacts = await getContactMetrics(auth.tenantId);
+      return ok(contacts);
     }
 
     if (method === "GET" && rawPath.endsWith("/metrics/marketing")) {
@@ -111,7 +118,14 @@ export async function handler(
     }
 
     if (method === "GET" && rawPath.endsWith("/metrics/advisor-workload")) {
-      const workload = await getAdvisorWorkloadMetrics(auth.tenantId);
+      const qs = event.queryStringParameters ?? {};
+      const botId = qs.botId?.trim();
+      const from = qs.from?.trim();
+      const to = qs.to?.trim();
+      const workload = await getAdvisorWorkloadMetrics(auth.tenantId, {
+        ...(botId ? { botId } : {}),
+        ...(from && to ? { from, to } : {}),
+      });
       return ok(workload);
     }
 

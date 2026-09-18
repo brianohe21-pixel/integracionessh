@@ -8,8 +8,8 @@ type DataTableProps = HTMLAttributes<HTMLDivElement> & {
 
 export function DataTable({ children, className, minWidth = "560px", ...props }: DataTableProps) {
   return (
-    <div className={cn("content-card overflow-hidden", className)} {...props}>
-      <div className="-mx-px overflow-x-auto">
+    <div className={cn("content-card shrink-0", className)} {...props}>
+      <div className="-mx-px overflow-x-auto rounded-[inherit]">
         <table
           className="data-table w-full text-sm"
           style={{ minWidth }}

@@ -16,9 +16,12 @@ import {
   Ban,
   FilterX,
   Megaphone,
+  Calendar,
+  TrendingUp,
 } from "lucide-react";
 import {
   useContacts,
+  useContactMetrics,
   useCreateContact,
   useUpdateContact,
   useImportContacts,
@@ -26,6 +29,7 @@ import {
   downloadContactsExport,
 } from "@/hooks/useContacts";
 import { ContactDetailPanel } from "@/components/contacts/ContactDetailPanel";
+import { ContactsDateFilters } from "@/components/contacts/ContactsDateFilters";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Alert } from "@/components/ui/Alert";
@@ -38,9 +42,17 @@ import { StatCard } from "@/components/ui/StatCard";
 import { SkeletonTable } from "@/components/ui/Skeleton";
 import { DataTable, DataTableBody, DataTableCell, DataTableHead, DataTableRow } from "@/components/ui/DataTable";
 import { WhatsAppRiskBadge } from "@/components/whatsapp/WhatsAppRiskBadge";
+import { useBots } from "@/hooks/useBots";
 import { useT } from "@/i18n/context";
-import type { Contact, MarketingConsent } from "@/types";
+import type { Contact, ContactSortField, MarketingConsent } from "@/types";
 import { decodeCsvBytes } from "@/lib/csv";
+import { downloadContactsImportTemplate } from "@/lib/contacts-import-csv";
+import {
+  contactsDateRange,
+  EMPTY_CONTACTS_DATE_FILTERS,
+  hasContactsDateRange,
+  type ContactsDateFilterState,
+} from "@/lib/contacts-date-filters";
 import { detectCountryFromPhone } from "@/lib/phone/country-from-phone";
 import { saveCampaignRecipientDraft } from "@/lib/campaign-recipient-draft";
 import { DashboardPage } from "@/components/layout/DashboardPage";
@@ -83,6 +95,11 @@ export default function ContactsPage() {
   const [country, setCountry] = useState("");
   const [company, setCompany] = useState("");
   const [tagFilter, setTagFilter] = useState("");
+  const [countryFilter, setCountryFilter] = useState("");
+  const [companyFilter, setCompanyFilter] = useState("");
+  const [botFilter, setBotFilter] = useState("");
+  const [sortFilter, setSortFilter] = useState<ContactSortField>("updated");
+  const [dateFilters, setDateFilters] = useState<ContactsDateFilterState>(EMPTY_CONTACTS_DATE_FILTERS);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [selectedPhones, setSelectedPhones] = useState<Set<string>>(new Set());
   const [deleteTarget, setDeleteTarget] = useState<Contact | null>(null);
@@ -93,13 +110,31 @@ export default function ContactsPage() {
   const [cursorStack, setCursorStack] = useState<Array<string | undefined>>([undefined]);
   const [pageIndex, setPageIndex] = useState(0);
 
-  const hasFilters = consentFilter || suppressedFilter || tagFilter || q;
+  const hasFilters =
+    consentFilter ||
+    suppressedFilter ||
+    tagFilter ||
+    countryFilter ||
+    companyFilter ||
+    botFilter ||
+    sortFilter !== "updated" ||
+    hasContactsDateRange(dateFilters) ||
+    q;
 
+  const dateRange = contactsDateRange(dateFilters);
+  const { data: bots } = useBots();
+  const { data: metrics } = useContactMetrics();
   const { data, isLoading, isFetching } = useContacts({
     tag: tagFilter || undefined,
     consent: consentFilter || undefined,
     suppressed: suppressedFilter === "" ? undefined : suppressedFilter === "true",
     q: q || undefined,
+    country: countryFilter || undefined,
+    company: companyFilter || undefined,
+    botId: botFilter || undefined,
+    sort: sortFilter,
+    dateField: dateFilters.dateField,
+    ...(dateRange ? { from: dateRange.from, to: dateRange.to } : {}),
     limit: CONTACTS_PAGE_SIZE,
     cursor: cursorStack[pageIndex],
   });
@@ -120,7 +155,7 @@ export default function ContactsPage() {
   useEffect(() => {
     setCursorStack([undefined]);
     setPageIndex(0);
-  }, [consentFilter, suppressedFilter, tagFilter, q]);
+  }, [consentFilter, suppressedFilter, tagFilter, countryFilter, companyFilter, botFilter, sortFilter, dateFilters, q]);
 
   useEffect(() => {
     setSelectedPhones(new Set());
@@ -134,13 +169,6 @@ export default function ContactsPage() {
   const activeContact = selectedContact
     ? contacts.find((c) => c.phoneNumber === selectedContact.phoneNumber) ?? selectedContact
     : null;
-
-  const metrics = useMemo(() => {
-    const optIn = contacts.filter((c) => c.marketingConsent === "opt_in").length;
-    const optOut = contacts.filter((c) => c.marketingConsent === "opt_out").length;
-    const suppressed = contacts.filter((c) => c.suppressed).length;
-    return { total: contacts.length, optIn, optOut, suppressed };
-  }, [contacts]);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -269,6 +297,11 @@ export default function ContactsPage() {
     setConsentFilter("");
     setSuppressedFilter("");
     setTagFilter("");
+    setCountryFilter("");
+    setCompanyFilter("");
+    setBotFilter("");
+    setSortFilter("updated");
+    setDateFilters(EMPTY_CONTACTS_DATE_FILTERS);
   }
 
   function goNextPage() {
@@ -311,6 +344,15 @@ export default function ContactsPage() {
               type="button"
               variant="secondary"
               size="sm"
+              onClick={() => downloadContactsImportTemplate()}
+            >
+              <Download className="h-4 w-4" />
+              {t("contacts.downloadTemplate")}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
               onClick={() => fileRef.current?.click()}
             >
               <Upload className="h-4 w-4" />
@@ -325,6 +367,15 @@ export default function ContactsPage() {
             >
               <Download className="h-4 w-4" />
               {t("contacts.export")}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => downloadContactsExport("all")}
+            >
+              <Download className="h-4 w-4" />
+              {t("contacts.exportAll")}
             </Button>
             <Button type="button" size="sm" onClick={() => setShowCreate(true)}>
               <Plus className="h-4 w-4" />
@@ -347,8 +398,8 @@ export default function ContactsPage() {
         </Alert>
       )}
 
-      {!isLoading && contacts.length > 0 && (
-        <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+      {metrics && (
+        <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
           <StatCard
             label={t("contacts.metricsTotal")}
             value={String(metrics.total)}
@@ -368,6 +419,16 @@ export default function ContactsPage() {
             label={t("contacts.metricsSuppressed")}
             value={String(metrics.suppressed)}
             icon={<Ban className="h-5 w-5 text-warning" />}
+          />
+          <StatCard
+            label={t("contacts.metricsToday")}
+            value={String(metrics.addedToday)}
+            icon={<Calendar className="h-5 w-5 text-accent" />}
+          />
+          <StatCard
+            label={t("contacts.metricsWeek")}
+            value={String(metrics.addedThisWeek)}
+            icon={<TrendingUp className="h-5 w-5 text-success" />}
           />
         </div>
       )}
@@ -408,6 +469,41 @@ export default function ContactsPage() {
           <option value="lead">{t("contacts.filterTagLead")}</option>
           <option value="converted">{t("contacts.filterTagConverted")}</option>
         </Select>
+        <Input
+          value={countryFilter}
+          onChange={(e) => setCountryFilter(e.target.value)}
+          placeholder={t("contacts.filterCountry")}
+          className="sm:w-auto sm:min-w-[140px]"
+        />
+        <Input
+          value={companyFilter}
+          onChange={(e) => setCompanyFilter(e.target.value)}
+          placeholder={t("contacts.filterCompany")}
+          className="sm:w-auto sm:min-w-[140px]"
+        />
+        <Select
+          value={botFilter}
+          onChange={(e) => setBotFilter(e.target.value)}
+          className="sm:w-auto sm:min-w-[160px]"
+        >
+          <option value="">{t("contacts.filterAllBots")}</option>
+          {(bots ?? []).map((bot) => (
+            <option key={bot.botId} value={bot.botId}>
+              {bot.name}
+            </option>
+          ))}
+        </Select>
+        <Select
+          value={sortFilter}
+          onChange={(e) => setSortFilter(e.target.value as ContactSortField)}
+          className="sm:w-auto sm:min-w-[180px]"
+        >
+          <option value="updated">{t("contacts.sortUpdated")}</option>
+          <option value="lastSeen">{t("contacts.sortLastSeen")}</option>
+          <option value="created">{t("contacts.sortCreated")}</option>
+          <option value="name">{t("contacts.sortName")}</option>
+          <option value="csat">{t("contacts.sortCsat")}</option>
+        </Select>
         {hasFilters && (
           <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
             <FilterX className="h-4 w-4" />
@@ -415,6 +511,11 @@ export default function ContactsPage() {
           </Button>
         )}
       </div>
+
+      <ContactsDateFilters
+        filters={dateFilters}
+        onChange={(patch) => setDateFilters((current) => ({ ...current, ...patch }))}
+      />
 
       {error && (
         <Alert variant="danger" className="mb-4" onDismiss={() => setError("")}>
@@ -445,7 +546,7 @@ export default function ContactsPage() {
       )}
 
       {!isLoading && contacts.length > 0 && (
-        <>
+        <div className="shrink-0">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm text-secondary">
               {contacts.length > 0
@@ -670,7 +771,7 @@ export default function ContactsPage() {
               </div>
             </div>
           )}
-        </>
+        </div>
       )}
 
       {showCreate && (

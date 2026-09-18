@@ -1,8 +1,16 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTenantContextId } from "@/hooks/useActiveTenant";
 import { api } from "@/lib/api";
-import type { Contact, ContactsListResponse, MarketingConsent } from "@/types";
+import type {
+  Contact,
+  ContactDateField,
+  ContactMetrics,
+  ContactSortField,
+  ContactsListResponse,
+  MarketingConsent,
+} from "@/types";
 
 const BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
@@ -23,6 +31,13 @@ export function useContacts(options?: {
   consent?: MarketingConsent;
   suppressed?: boolean;
   q?: string;
+  country?: string;
+  company?: string;
+  botId?: string;
+  sort?: ContactSortField;
+  dateField?: ContactDateField;
+  from?: string;
+  to?: string;
   limit?: number;
   cursor?: string;
 }) {
@@ -31,6 +46,13 @@ export function useContacts(options?: {
   if (options?.consent) params.set("consent", options.consent);
   if (options?.suppressed !== undefined) params.set("suppressed", String(options.suppressed));
   if (options?.q) params.set("q", options.q);
+  if (options?.country) params.set("country", options.country);
+  if (options?.company) params.set("company", options.company);
+  if (options?.botId) params.set("botId", options.botId);
+  if (options?.sort) params.set("sort", options.sort);
+  if (options?.dateField) params.set("dateField", options.dateField);
+  if (options?.from) params.set("from", options.from);
+  if (options?.to) params.set("to", options.to);
   if (options?.limit) params.set("limit", String(options.limit));
   if (options?.cursor) params.set("cursor", options.cursor);
   const qs = params.toString() ? `?${params.toString()}` : "";
@@ -38,6 +60,14 @@ export function useContacts(options?: {
   return useQuery({
     queryKey: ["contacts", options],
     queryFn: () => api.get<ContactsListResponse>(`/contacts${qs}`),
+  });
+}
+
+export function useContactMetrics() {
+  const scope = useTenantContextId() ?? "home";
+  return useQuery({
+    queryKey: ["metrics", "contacts", scope],
+    queryFn: () => api.get<ContactMetrics>("/metrics/contacts"),
   });
 }
 
@@ -52,7 +82,10 @@ export function useCreateContact() {
       tags?: string[];
       marketingConsent?: MarketingConsent;
     }) => api.post<Contact>("/contacts", body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["contacts"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["contacts"] });
+      qc.invalidateQueries({ queryKey: ["metrics", "contacts"] });
+    },
   });
 }
 
@@ -69,10 +102,14 @@ export function useUpdateContact() {
       country?: string;
       company?: string;
       tags?: string[];
+      notes?: string;
       marketingConsent?: MarketingConsent;
       suppressed?: boolean;
     }) => api.patch<Contact>(`/contacts/${encodeURIComponent(phone)}`, body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["contacts"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["contacts"] });
+      qc.invalidateQueries({ queryKey: ["metrics", "contacts"] });
+    },
   });
 }
 
@@ -87,7 +124,10 @@ export function useImportContacts() {
       tags?: string[];
       marketingConsent?: MarketingConsent;
     }>) => api.post<{ created: number; updated: number }>("/contacts/import", { rows }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["contacts"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["contacts"] });
+      qc.invalidateQueries({ queryKey: ["metrics", "contacts"] });
+    },
   });
 }
 
@@ -95,7 +135,10 @@ export function useDeleteContact() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (phone: string) => api.delete(`/contacts/${encodeURIComponent(phone)}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["contacts"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["contacts"] });
+      qc.invalidateQueries({ queryKey: ["metrics", "contacts"] });
+    },
   });
 }
 

@@ -684,6 +684,10 @@ export type ConsentSource = "manual" | "import" | "whatsapp_keyword" | "panel" |
 
 export type ContactSource = "sync" | "manual" | "import" | "lead_capture";
 
+export type ContactSortField = "updated" | "lastSeen" | "created" | "name" | "csat";
+
+export type ContactDateField = "firstSeen" | "lastSeen" | "created";
+
 export interface Contact {
   phoneNumber: string;
   tenantId: string;
@@ -692,6 +696,7 @@ export interface Contact {
   country?: string;
   company?: string;
   tags: string[];
+  notes?: string;
   marketingConsent: MarketingConsent;
   consentAt?: string;
   consentSource?: ConsentSource;
@@ -1036,6 +1041,17 @@ export interface LeadMetrics {
     converted: number;
     lost: number;
   };
+}
+
+export interface ContactMetrics {
+  total: number;
+  optIn: number;
+  optOut: number;
+  unknown: number;
+  suppressed: number;
+  addedToday: number;
+  addedThisWeek: number;
+  withLead: number;
 }
 
 export interface DynamoDBItem {

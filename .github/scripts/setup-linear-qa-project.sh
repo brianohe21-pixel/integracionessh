@@ -11,11 +11,11 @@ PROJECT_DESCRIPTION="${LINEAR_PROJECT_DESCRIPTION:-Cola de verificación de camb
 TEAM_NAME="${LINEAR_TEAM_NAME:-}"
 APPLY_GITHUB_SETTINGS="${APPLY_GITHUB_SETTINGS:-false}"
 
-TEAM_LABELS_QUERY='query($teamId: ID!) { team(id: $teamId) { labels { nodes { id name } } } } }'
-LABEL_CREATE_MUTATION='mutation($input: IssueLabelCreateInput!) { issueLabelCreate(input: $input) { success issueLabel { id name } } } }'
-TEAM_PROJECTS_QUERY='query($teamId: ID!) { team(id: $teamId) { projects { nodes { id name } } } } }'
-PROJECT_CREATE_MUTATION='mutation($input: ProjectCreateInput!) { projectCreate(input: $input) { success project { id name url } } } }'
-PROJECT_URL_QUERY='query($id: ID!) { project(id: $id) { id name url } }'
+TEAM_LABELS_QUERY='query($teamId: String!) { team(id: $teamId) { labels { nodes { id name } } } }'
+LABEL_CREATE_MUTATION='mutation($input: IssueLabelCreateInput!) { issueLabelCreate(input: $input) { success issueLabel { id name } } }'
+TEAM_PROJECTS_QUERY='query($teamId: String!) { team(id: $teamId) { projects { nodes { id name } } } }'
+PROJECT_CREATE_MUTATION='mutation($input: ProjectCreateInput!) { projectCreate(input: $input) { success project { id name url } } }'
+PROJECT_URL_QUERY='query($id: String!) { project(id: $id) { id name url } }'
 
 for arg in "$@"; do
   case "$arg" in

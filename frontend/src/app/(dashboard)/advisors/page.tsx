@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Users, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, Plus, Users, Trash2 } from "lucide-react";
 import {
   useAdvisors,
   useCreateAdvisor,
@@ -21,8 +21,13 @@ import {
 } from "@/components/ui/DataTable";
 import { useT } from "@/i18n/context";
 import { useFormatters } from "@/hooks/useFormatters";
+import { AdvisorDateFilters } from "@/components/advisors/AdvisorDateFilters";
+import { AdvisorFilters } from "@/components/advisors/AdvisorFilters";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { EMPTY_ADVISOR_FILTERS, filterAdvisors } from "@/lib/advisor-filters";
+
+const ADVISORS_PAGE_SIZE = 20;
 
 export default function AdvisorsPage() {
   const t = useT();
@@ -44,6 +49,41 @@ export default function AdvisorsPage() {
   const [deleteTarget, setDeleteTarget] = useState<{ advisorId: string; name: string } | null>(
     null
   );
+  const [filters, setFilters] = useState(EMPTY_ADVISOR_FILTERS);
+  const [page, setPage] = useState(1);
+
+  const filteredAdvisors = useMemo(
+    () => filterAdvisors(advisors ?? [], filters),
+    [advisors, filters]
+  );
+
+  const totalPages = Math.max(1, Math.ceil(filteredAdvisors.length / ADVISORS_PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pageStart =
+    filteredAdvisors.length === 0 ? 0 : (safePage - 1) * ADVISORS_PAGE_SIZE + 1;
+  const pageEnd = Math.min(safePage * ADVISORS_PAGE_SIZE, filteredAdvisors.length);
+  const paginatedAdvisors = filteredAdvisors.slice(
+    (safePage - 1) * ADVISORS_PAGE_SIZE,
+    safePage * ADVISORS_PAGE_SIZE
+  );
+
+  useEffect(() => {
+    setPage(1);
+  }, [filters]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
+
+  function updateFilters(patch: Partial<typeof filters>) {
+    setFilters((current) => ({ ...current, ...patch }));
+  }
+
+  function clearFilters() {
+    setFilters(EMPTY_ADVISOR_FILTERS);
+  }
 
   function confirmDelete() {
     if (!deleteTarget) return;
@@ -130,6 +170,18 @@ export default function AdvisorsPage() {
         </div>
       )}
 
+      {!isLoading && (advisors?.length ?? 0) > 0 && (
+        <>
+          <AdvisorFilters
+            filters={filters}
+            bots={bots ?? []}
+            onChange={updateFilters}
+            onClear={clearFilters}
+          />
+          <AdvisorDateFilters filters={filters} onChange={updateFilters} />
+        </>
+      )}
+
       {isLoading ? (
         <SkeletonTable rows={4} cols={6} />
       ) : advisors?.length === 0 ? (
@@ -144,68 +196,121 @@ export default function AdvisorsPage() {
             </Button>
           }
         />
+      ) : filteredAdvisors.length === 0 ? (
+        <EmptyState
+          icon={<Users className="h-6 w-6" />}
+          title={t("advisors.noResultsTitle")}
+          description={t("advisors.noResultsDescription")}
+          action={
+            <Button type="button" variant="secondary" size="sm" onClick={clearFilters}>
+              {t("common.clearFilters")}
+            </Button>
+          }
+        />
       ) : (
-        <DataTable>
-          <DataTableHead>
-            <DataTableRow>
-              <DataTableCell header>{t("advisors.colName")}</DataTableCell>
-              <DataTableCell header>{t("advisors.colPhone")}</DataTableCell>
-              <DataTableCell header>{t("advisors.colAccess")}</DataTableCell>
-              <DataTableCell header>{t("advisors.colLastLogin")}</DataTableCell>
-              <DataTableCell header>{t("advisors.colStatus")}</DataTableCell>
-              <DataTableCell header className="text-right">
-                {t("advisors.colActions")}
-              </DataTableCell>
-            </DataTableRow>
-          </DataTableHead>
-          <DataTableBody>
-            {advisors?.map((advisor) => (
-              <DataTableRow key={advisor.advisorId}>
-                <DataTableCell>
-                  <p className="font-medium text-primary">{advisor.name}</p>
-                </DataTableCell>
-                <DataTableCell>
-                  <p className="text-secondary">{advisor.phoneNumber}</p>
-                </DataTableCell>
-                <DataTableCell>
-                  {advisor.cognitoUserId ? (
-                    <span className="text-xs text-muted">{t("advisors.panelAccess")}</span>
-                  ) : (
-                    <span className="text-xs text-muted">—</span>
-                  )}
-                </DataTableCell>
-                <DataTableCell>
-                  {advisor.lastLoginAt ? (
-                    <div>
-                      <p className="text-secondary">{formatRelativeTime(advisor.lastLoginAt)}</p>
-                      <p className="text-xs text-muted">{formatDate(advisor.lastLoginAt)}</p>
-                    </div>
-                  ) : (
-                    <span className="text-xs text-muted">{t("advisors.neverLoggedIn")}</span>
-                  )}
-                </DataTableCell>
-                <DataTableCell>
-                  <Badge variant={advisor.status === "active" ? "success" : "default"}>
-                    {advisor.status === "active" ? t("advisors.active") : t("advisors.inactive")}
-                  </Badge>
-                </DataTableCell>
-                <DataTableCell className="text-right">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setDeleteTarget({ advisorId: advisor.advisorId, name: advisor.name })
-                    }
-                    disabled={deleteAdvisor.isPending}
-                    className="rounded border border-default p-1.5 text-danger hover:bg-danger/10 disabled:opacity-50"
-                    aria-label={t("advisors.delete")}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+        <div className="shrink-0">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-secondary">
+              {t("advisors.pageRange", {
+                from: pageStart,
+                to: pageEnd,
+                page: safePage,
+              })}
+            </p>
+          </div>
+
+          <DataTable>
+            <DataTableHead>
+              <DataTableRow>
+                <DataTableCell header>{t("advisors.colName")}</DataTableCell>
+                <DataTableCell header>{t("advisors.colPhone")}</DataTableCell>
+                <DataTableCell header>{t("advisors.colAccess")}</DataTableCell>
+                <DataTableCell header>{t("advisors.colLastLogin")}</DataTableCell>
+                <DataTableCell header>{t("advisors.colStatus")}</DataTableCell>
+                <DataTableCell header className="text-right">
+                  {t("advisors.colActions")}
                 </DataTableCell>
               </DataTableRow>
-            ))}
-          </DataTableBody>
-        </DataTable>
+            </DataTableHead>
+            <DataTableBody>
+              {paginatedAdvisors.map((advisor) => (
+                <DataTableRow key={advisor.advisorId}>
+                  <DataTableCell>
+                    <p className="font-medium text-primary">{advisor.name}</p>
+                  </DataTableCell>
+                  <DataTableCell>
+                    <p className="text-secondary">{advisor.phoneNumber}</p>
+                  </DataTableCell>
+                  <DataTableCell>
+                    {advisor.cognitoUserId ? (
+                      <span className="text-xs text-muted">{t("advisors.panelAccess")}</span>
+                    ) : (
+                      <span className="text-xs text-muted">—</span>
+                    )}
+                  </DataTableCell>
+                  <DataTableCell>
+                    {advisor.lastLoginAt ? (
+                      <div>
+                        <p className="text-secondary">{formatRelativeTime(advisor.lastLoginAt)}</p>
+                        <p className="text-xs text-muted">{formatDate(advisor.lastLoginAt)}</p>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted">{t("advisors.neverLoggedIn")}</span>
+                    )}
+                  </DataTableCell>
+                  <DataTableCell>
+                    <Badge variant={advisor.status === "active" ? "success" : "default"}>
+                      {advisor.status === "active" ? t("advisors.active") : t("advisors.inactive")}
+                    </Badge>
+                  </DataTableCell>
+                  <DataTableCell className="text-right">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setDeleteTarget({ advisorId: advisor.advisorId, name: advisor.name })
+                      }
+                      disabled={deleteAdvisor.isPending}
+                      className="rounded border border-default p-1.5 text-danger hover:bg-danger/10 disabled:opacity-50"
+                      aria-label={t("advisors.delete")}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </DataTableCell>
+                </DataTableRow>
+              ))}
+            </DataTableBody>
+          </DataTable>
+
+          {totalPages > 1 && (
+            <div className="mt-4 flex flex-col gap-3 border-t border-default pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-secondary">
+                {t("advisors.pageLabel", { page: safePage })}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setPage((current) => Math.max(1, current - 1))}
+                  disabled={safePage <= 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  {t("advisors.previousPage")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+                  disabled={safePage >= totalPages}
+                >
+                  {t("advisors.nextPage")}
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {deleteTarget && (

@@ -8,7 +8,7 @@ fi
 
 linear_graphql() {
   local query="$1"
-  local variables="${2:-{}}"
+  local variables="${2:-"{}"}"
 
   if [[ -z "$variables" ]]; then
     variables="{}"

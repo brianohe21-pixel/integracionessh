@@ -6,7 +6,15 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 import { docClient, TABLE_NAME } from "./client.js";
 import { resolveContactCountry } from "../phone/country-from-phone.js";
-import type { Contact, ContactSource, MarketingConsent, ConsentSource } from "../../types/index.js";
+import { isWithinDateRange } from "./call-metrics.js";
+import type {
+  Contact,
+  ContactDateField,
+  ContactSortField,
+  ContactSource,
+  MarketingConsent,
+  ConsentSource,
+} from "../../types/index.js";
 
 export function normalizePhone(phone: string): string {
   return phone.replace(/\D/g, "");
@@ -40,7 +48,16 @@ export interface ListContactsOptions {
   consent?: MarketingConsent;
   suppressed?: boolean;
   q?: string;
+  country?: string;
+  company?: string;
+  botId?: string;
+  sort?: ContactSortField;
+  dateField?: ContactDateField;
+  from?: string;
+  to?: string;
 }
+
+type ContactCsatLookup = Map<string, { averageCsat: number; ratingCount: number }>;
 
 export interface ListContactsResult {
   items: Contact[];
@@ -133,10 +150,31 @@ export async function getContactsByPhones(
   return map;
 }
 
+function contactDateValue(contact: Contact, field: ContactDateField): string {
+  if (field === "firstSeen") return contact.firstSeenAt;
+  if (field === "lastSeen") return contact.lastSeenAt;
+  return contact.createdAt;
+}
+
+function needsMemoryListing(options: ListContactsOptions): boolean {
+  return Boolean(
+    (options.sort && options.sort !== "updated") || (options.from && options.to)
+  );
+}
+
 function matchesFilters(contact: Contact, options: ListContactsOptions): boolean {
   if (options.tag && !contact.tags.includes(options.tag)) return false;
   if (options.consent && contact.marketingConsent !== options.consent) return false;
   if (options.suppressed !== undefined && contact.suppressed !== options.suppressed) return false;
+  if (options.botId && contact.lastBotId !== options.botId) return false;
+  if (options.country) {
+    const country = options.country.toLowerCase();
+    if (!(contact.country ?? "").toLowerCase().includes(country)) return false;
+  }
+  if (options.company) {
+    const company = options.company.toLowerCase();
+    if (!(contact.company ?? "").toLowerCase().includes(company)) return false;
+  }
   if (options.q) {
     const q = options.q.toLowerCase();
     const inPhone = contact.phoneNumber.includes(q);
@@ -146,13 +184,95 @@ function matchesFilters(contact: Contact, options: ListContactsOptions): boolean
     const inCompany = (contact.company ?? "").toLowerCase().includes(q);
     if (!inPhone && !inName && !inEmail && !inCountry && !inCompany) return false;
   }
-  return true;
+  return contactMatchesDateRange(contact, options);
+}
+
+export function contactMatchesDateRange(
+  contact: Contact,
+  options: Pick<ListContactsOptions, "from" | "to" | "dateField">
+): boolean {
+  if (!options.from || !options.to) return true;
+  const field = options.dateField ?? "lastSeen";
+  return isWithinDateRange(contactDateValue(contact, field), options.from, options.to);
+}
+
+function parseOffsetCursor(cursor?: string): number {
+  if (!cursor) return 0;
+  try {
+    const parsed = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8")) as {
+      offset?: number;
+    };
+    return typeof parsed.offset === "number" && parsed.offset >= 0 ? parsed.offset : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function encodeOffsetCursor(offset: number): string {
+  return Buffer.from(JSON.stringify({ offset })).toString("base64url");
+}
+
+export function compareContacts(
+  a: Contact,
+  b: Contact,
+  sort: ContactSortField
+): number {
+  switch (sort) {
+    case "name": {
+      const aName = (a.displayName ?? a.phoneNumber).toLocaleLowerCase();
+      const bName = (b.displayName ?? b.phoneNumber).toLocaleLowerCase();
+      return aName.localeCompare(bName);
+    }
+    case "created":
+      return b.createdAt.localeCompare(a.createdAt);
+    case "lastSeen":
+      return b.lastSeenAt.localeCompare(a.lastSeenAt);
+    case "csat":
+      return (b.csatAverage ?? -1) - (a.csatAverage ?? -1);
+    default:
+      return b.updatedAt.localeCompare(a.updatedAt);
+  }
+}
+
+function attachCsat(contact: Contact, csatByPhone?: ContactCsatLookup): Contact {
+  const csat = csatByPhone?.get(contact.phoneNumber);
+  if (!csat) return contact;
+  return {
+    ...contact,
+    csatAverage: csat.averageCsat,
+    csatRatingCount: csat.ratingCount,
+  };
+}
+
+async function listContactsInMemory(
+  tenantId: string,
+  options: ListContactsOptions,
+  csatByPhone?: ContactCsatLookup
+): Promise<ListContactsResult> {
+  const limit = Math.min(Math.max(options.limit ?? 50, 1), 100);
+  const offset = parseOffsetCursor(options.cursor);
+  const sort = options.sort ?? "updated";
+  const all = await listAllContacts(tenantId);
+  const filtered = all
+    .filter((contact) => matchesFilters(contact, options))
+    .map((contact) => attachCsat(contact, csatByPhone))
+    .sort((a, b) => compareContacts(a, b, sort));
+  const items = filtered.slice(offset, offset + limit);
+  const nextOffset = offset + limit;
+  const nextCursor =
+    nextOffset < filtered.length ? encodeOffsetCursor(nextOffset) : undefined;
+  return { items, ...(nextCursor ? { nextCursor } : {}) };
 }
 
 export async function listContacts(
   tenantId: string,
-  options: ListContactsOptions = {}
+  options: ListContactsOptions = {},
+  csatByPhone?: ContactCsatLookup
 ): Promise<ListContactsResult> {
+  if (needsMemoryListing(options)) {
+    return listContactsInMemory(tenantId, options, csatByPhone);
+  }
+
   const limit = Math.min(Math.max(options.limit ?? 50, 1), 100);
   const items: Contact[] = [];
   let lastKey: Record<string, unknown> | undefined;
@@ -229,18 +349,23 @@ export async function listContactsByTags(
   return matched;
 }
 
-export async function countContacts(tenantId: string): Promise<number> {
-  let count = 0;
+export async function listAllContacts(tenantId: string): Promise<Contact[]> {
+  const all: Contact[] = [];
   let cursor: string | undefined;
   do {
     const page = await listContacts(tenantId, {
       limit: 100,
       ...(cursor ? { cursor } : {}),
     });
-    count += page.items.length;
+    all.push(...page.items);
     cursor = page.nextCursor;
   } while (cursor);
-  return count;
+  return all;
+}
+
+export async function countContacts(tenantId: string): Promise<number> {
+  const all = await listAllContacts(tenantId);
+  return all.length;
 }
 
 export async function upsertFromConversation(params: {
@@ -363,6 +488,7 @@ export async function updateContact(
       | "lastBotId"
       | "messageCount"
       | "leadId"
+      | "notes"
     >
   >
 ): Promise<Contact | null> {
