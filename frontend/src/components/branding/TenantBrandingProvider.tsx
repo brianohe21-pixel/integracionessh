@@ -9,7 +9,13 @@ import {
   useTenantBranding,
 } from "@/hooks/useTenantBranding";
 import { useTheme } from "@/components/theme/ThemeProvider";
-import { applyBrandCssVariables, DEFAULT_PRIMARY_COLOR } from "@/lib/brand-colors";
+import {
+  applyBrandCssVariables,
+  clearPersistedBrandColor,
+  DEFAULT_PRIMARY_COLOR,
+  persistBrandColor,
+  readStoredBrandColor,
+} from "@/lib/brand-colors";
 import { api } from "@/lib/api";
 import type { Tenant } from "@/types";
 
@@ -32,8 +38,15 @@ export function TenantBrandingProvider({ children }: { children: React.ReactNode
 
     if (!isAuthenticated) {
       queryClient.removeQueries({ queryKey: TENANT_BRANDING_QUERY_KEY });
+      clearPersistedBrandColor();
       applyBrandCssVariables(DEFAULT_PRIMARY_COLOR);
       return;
+    }
+
+    const cachedColor = readStoredBrandColor();
+    if (cachedColor) {
+      persistBrandColor(cachedColor);
+      applyBrandCssVariables(cachedColor);
     }
 
     void queryClient.refetchQueries({ queryKey: TENANT_BRANDING_QUERY_KEY });

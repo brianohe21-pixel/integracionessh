@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useT } from "@/i18n/context";
 import type { ShortLinkUtm } from "@/types";
 import { Button } from "@/components/ui/Button";
+import { FieldLabel } from "@/components/ui/FieldLabel";
 
 interface ShortLinkFormProps {
   initial?: {
@@ -103,42 +104,78 @@ export function ShortLinkForm({
 
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block space-y-1">
-          <span className="text-xs font-medium text-secondary">utm_source</span>
+          <FieldLabel
+            label="utm_source"
+            tooltip={t("shortLinks.utmSourceTooltip")}
+            htmlFor="short-link-utm-source"
+            className="text-xs"
+          />
           <input
+            id="short-link-utm-source"
             value={utmSource}
             onChange={(event) => setUtmSource(event.target.value)}
+            placeholder={t("shortLinks.utmSourcePlaceholder")}
             className="w-full rounded-lg border border-default bg-surface px-3 py-2 text-sm"
           />
         </label>
         <label className="block space-y-1">
-          <span className="text-xs font-medium text-secondary">utm_medium</span>
+          <FieldLabel
+            label="utm_medium"
+            tooltip={t("shortLinks.utmMediumTooltip")}
+            htmlFor="short-link-utm-medium"
+            className="text-xs"
+          />
           <input
+            id="short-link-utm-medium"
             value={utmMedium}
             onChange={(event) => setUtmMedium(event.target.value)}
+            placeholder={t("shortLinks.utmMediumPlaceholder")}
             className="w-full rounded-lg border border-default bg-surface px-3 py-2 text-sm"
           />
         </label>
         <label className="block space-y-1">
-          <span className="text-xs font-medium text-secondary">utm_campaign</span>
+          <FieldLabel
+            label="utm_campaign"
+            tooltip={t("shortLinks.utmCampaignTooltip")}
+            htmlFor="short-link-utm-campaign"
+            className="text-xs"
+          />
           <input
+            id="short-link-utm-campaign"
             value={utmCampaign}
             onChange={(event) => setUtmCampaign(event.target.value)}
+            placeholder={t("shortLinks.utmCampaignPlaceholder")}
             className="w-full rounded-lg border border-default bg-surface px-3 py-2 text-sm"
           />
         </label>
         <label className="block space-y-1">
-          <span className="text-xs font-medium text-secondary">utm_content</span>
+          <FieldLabel
+            label="utm_content"
+            tooltip={t("shortLinks.utmContentTooltip")}
+            htmlFor="short-link-utm-content"
+            className="text-xs"
+          />
           <input
+            id="short-link-utm-content"
             value={utmContent}
             onChange={(event) => setUtmContent(event.target.value)}
+            placeholder={t("shortLinks.utmContentPlaceholder")}
             className="w-full rounded-lg border border-default bg-surface px-3 py-2 text-sm"
           />
         </label>
         <label className="block space-y-1 sm:col-span-2">
-          <span className="text-xs font-medium text-secondary">utm_term</span>
+          <FieldLabel
+            label="utm_term"
+            tooltip={t("shortLinks.utmTermTooltip")}
+            htmlFor="short-link-utm-term"
+            className="text-xs"
+            tooltipSide="top"
+          />
           <input
+            id="short-link-utm-term"
             value={utmTerm}
             onChange={(event) => setUtmTerm(event.target.value)}
+            placeholder={t("shortLinks.utmTermPlaceholder")}
             className="w-full rounded-lg border border-default bg-surface px-3 py-2 text-sm"
           />
         </label>

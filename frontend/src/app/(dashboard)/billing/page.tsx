@@ -40,7 +40,7 @@ function BillingPageContent() {
   }, [planParam]);
 
   return (
-    <DashboardPage maxWidth="4xl">
+    <DashboardPage>
       <PageHeader
         title={t("billing.pageTitle")}
         subtitle={
@@ -69,7 +69,7 @@ function BillingPageContent() {
 
 export default function BillingPage() {
   return (
-    <Suspense fallback={<DashboardPage maxWidth="4xl"><div className="animate-pulse h-64 bg-surface-muted rounded-xl" /></DashboardPage>}>
+    <Suspense fallback={<DashboardPage><div className="animate-pulse h-64 bg-surface-muted rounded-xl" /></DashboardPage>}>
       <BillingPageContent />
     </Suspense>
   );
