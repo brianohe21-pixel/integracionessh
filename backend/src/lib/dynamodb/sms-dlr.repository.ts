@@ -36,7 +36,7 @@ function stripReceiptItem(item: Record<string, unknown>): SmsDlrReceipt {
   void GSI1PK;
   void GSI1SK;
   void _ttl;
-  return rest as SmsDlrReceipt;
+  return rest as unknown as SmsDlrReceipt;
 }
 
 export interface ListSmsDlrReceiptsOptions {

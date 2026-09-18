@@ -32,11 +32,15 @@ export async function processLeadgenWebhook(
   const detail = await fetchMetaLeadgenDetail(leadgenId, accessToken);
   const fields = extractLeadAdsFieldValues(detail.field_data ?? []);
 
+  const adId = change.value.ad_id ?? detail.ad_id;
+  const adSetId = change.value.adgroup_id ?? detail.adset_id;
+  const formId = change.value.form_id ?? detail.form_id;
+
   const attribution = attributionFromLeadAds({
-    adId: change.value.ad_id ?? detail.ad_id,
-    adSetId: change.value.adgroup_id ?? detail.adset_id,
-    formId: change.value.form_id ?? detail.form_id,
     leadgenId,
+    ...(adId ? { adId } : {}),
+    ...(adSetId ? { adSetId } : {}),
+    ...(formId ? { formId } : {}),
   });
 
   const phone = fields.phone ?? placeholderPhoneForLeadAds(leadgenId);
