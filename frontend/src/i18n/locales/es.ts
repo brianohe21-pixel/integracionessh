@@ -2516,6 +2516,9 @@ export const es = {
     twoFactorFederated:
       "Las cuentas que inician sesión con Google o Microsoft no usan 2FA de esta plataforma.",
     company: "Empresa",
+    companyNameRequired: "Ingresa el nombre de la empresa",
+    companySaved: "Nombre de la empresa actualizado",
+    companySaveError: "No se pudo actualizar el nombre de la empresa",
     plan: "Plan",
     memberSince: "Miembro desde",
     teamTitle: "Miembros del equipo",

@@ -2511,6 +2511,9 @@ export const en: Messages = {
     twoFactorFederated:
       "Accounts that sign in with Google or Microsoft do not use this platform's 2FA.",
     company: "Company",
+    companyNameRequired: "Enter the company name",
+    companySaved: "Company name updated",
+    companySaveError: "Could not update the company name",
     plan: "Plan",
     memberSince: "Member since",
     teamTitle: "Team members",

@@ -6,19 +6,12 @@ import { useQuery } from "@tanstack/react-query";
 import { api, getTenantContext } from "@/lib/api";
 import { isBillingVisible } from "@/lib/subaccount-services";
 import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { useFormatters } from "@/hooks/useFormatters";
 import { useT } from "@/i18n/context";
 import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
 import { ThemeSwitcher } from "@/components/theme/ThemeSwitcher";
-import {
-  SettingsCard,
-  SettingsCardSkeleton,
-  SettingsCallout,
-  SettingsInfoGrid,
-  SettingsInfoTile,
-} from "@/components/settings/SettingsCard";
+import { SettingsCard, SettingsCallout } from "@/components/settings/SettingsCard";
+import { CompanySettingsCard } from "@/components/settings/CompanySettingsCard";
 import { ProviderCredentialsSection } from "@/components/settings/ProviderCredentialCard";
 import { ChangePasswordCard } from "@/components/settings/ChangePasswordCard";
 import { ProfileSettingsCard } from "@/components/settings/ProfileSettingsCard";
@@ -29,7 +22,6 @@ import { BrandingSettingsCard } from "@/components/branding/BrandingSettingsCard
 import { TenantEmailSettingsCard } from "@/components/settings/TenantEmailSettingsCard";
 import { WebsiteAnalyticsCard } from "@/components/settings/WebsiteAnalyticsCard";
 import {
-  Building2,
   CheckCircle,
   Key,
   Languages,
@@ -87,7 +79,6 @@ export default function SettingsPage() {
   const t = useT();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { formatDate, planLabel } = useFormatters();
   const [tab, setTab] = useState<SettingsTab>("general");
   const [webhookCopied, setWebhookCopied] = useState(false);
   const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
@@ -212,39 +203,7 @@ export default function SettingsPage() {
             </SettingsCard>
           </div>
 
-          {tenant ? (
-            <SettingsCard
-              icon={<Building2 className="h-4 w-4" />}
-              title={t("settings.accountInfo")}
-            >
-              <SettingsInfoGrid>
-                <SettingsInfoTile label={t("settings.company")} value={tenant.name} />
-                <SettingsInfoTile
-                  label={t("common.email")}
-                  value={<span className="truncate">{tenant.email}</span>}
-                />
-                <SettingsInfoTile
-                  label={t("settings.plan")}
-                  value={<Badge variant="info">{planLabel(tenant.plan)}</Badge>}
-                />
-                <SettingsInfoTile
-                  label={t("common.status")}
-                  value={
-                    <Badge variant={tenant.status === "active" ? "success" : "warning"}>
-                      {tenant.status === "active" ? t("common.active") : t("common.suspended")}
-                    </Badge>
-                  }
-                />
-                <SettingsInfoTile
-                  className="sm:col-span-2"
-                  label={t("settings.memberSince")}
-                  value={formatDate(tenant.createdAt)}
-                />
-              </SettingsInfoGrid>
-            </SettingsCard>
-          ) : (
-            <SettingsCardSkeleton lines={3} />
-          )}
+          <CompanySettingsCard />
         </SettingsPanel>
       ) : null}
 
