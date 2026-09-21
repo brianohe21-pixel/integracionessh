@@ -978,7 +978,12 @@ export const en: Messages = {
       expiresAt: "Expires",
       traceId: "Trace ID",
       attemptsRemaining: "Attempts remaining: {{count}}",
-      noBots: "No SMS-enabled agents. Configure SMS in Agents before sending OTP.",
+      noAgentsTitle: "No agents yet",
+      noAgentsHint: "Create an agent to enable SMS OTP sending.",
+      createAgent: "Create agent",
+      noSmsAgentsTitle: "SMS not configured",
+      noSmsAgentsHint: "Enable SMS and set a sender label on at least one agent.",
+      configureSms: "Configure SMS",
       reason: {
         verified: "Code verified",
         invalid_code: "Incorrect code",

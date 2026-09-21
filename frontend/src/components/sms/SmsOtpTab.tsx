@@ -1,11 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ShieldCheck } from "lucide-react";
 import { useBots } from "@/hooks/useBots";
 import { useSendSmsOtp, useVerifySmsOtp } from "@/hooks/useSmsOtp";
 import { useT } from "@/i18n/context";
 import { useFormatters } from "@/hooks/useFormatters";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 const DEFAULT_MESSAGE = "Tu codigo de verificacion es {{code}}. Expira en 5 minutos.";
 
@@ -17,6 +19,12 @@ export function SmsOtpTab() {
   const verifyMutation = useVerifySmsOtp();
 
   const smsBots = useMemo(() => bots.filter((bot) => bot.smsEnabled), [bots]);
+  const configureSmsHref = useMemo(() => {
+    if (bots.length === 1) {
+      return `/bots/${bots[0].botId}/edit?tab=sms`;
+    }
+    return "/bots";
+  }, [bots]);
   const [botId, setBotId] = useState("");
   const [to, setTo] = useState("");
   const [message, setMessage] = useState(DEFAULT_MESSAGE);
@@ -73,10 +81,34 @@ export function SmsOtpTab() {
         <p className="mt-1 text-xs text-secondary">{t("smsDashboard.otp.subtitle")}</p>
       </div>
 
-      {smsBots.length === 0 ? (
-        <div className="rounded-xl border border-default bg-surface-elevated p-6 text-sm text-secondary">
-          {t("smsDashboard.otp.noBots")}
-        </div>
+      {bots.length === 0 ? (
+        <EmptyState
+          icon={<ShieldCheck className="h-7 w-7" />}
+          title={t("smsDashboard.otp.noAgentsTitle")}
+          description={t("smsDashboard.otp.noAgentsHint")}
+          action={
+            <Link
+              href="/bots/new"
+              className="inline-flex items-center justify-center rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover"
+            >
+              {t("smsDashboard.otp.createAgent")}
+            </Link>
+          }
+        />
+      ) : smsBots.length === 0 ? (
+        <EmptyState
+          icon={<ShieldCheck className="h-7 w-7" />}
+          title={t("smsDashboard.otp.noSmsAgentsTitle")}
+          description={t("smsDashboard.otp.noSmsAgentsHint")}
+          action={
+            <Link
+              href={configureSmsHref}
+              className="inline-flex items-center justify-center rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover"
+            >
+              {t("smsDashboard.otp.configureSms")}
+            </Link>
+          }
+        />
       ) : (
         <div className="grid gap-6 xl:grid-cols-2">
           <section className="rounded-xl border border-default bg-surface-elevated p-5">

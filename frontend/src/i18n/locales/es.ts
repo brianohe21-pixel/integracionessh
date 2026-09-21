@@ -979,7 +979,12 @@ export const es = {
       expiresAt: "Expira",
       traceId: "ID trazabilidad",
       attemptsRemaining: "Intentos restantes: {{count}}",
-      noBots: "No hay agentes con SMS habilitado. Configura SMS en Agentes antes de enviar OTP.",
+      noAgentsTitle: "Sin agentes",
+      noAgentsHint: "Crea un agente para habilitar el envío de OTP por SMS.",
+      createAgent: "Crear agente",
+      noSmsAgentsTitle: "SMS no configurado",
+      noSmsAgentsHint: "Activa SMS y define un remitente en al menos un agente.",
+      configureSms: "Configurar SMS",
       reason: {
         verified: "Código verificado",
         invalid_code: "Código incorrecto",

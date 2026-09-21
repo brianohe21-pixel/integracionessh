@@ -1,7 +1,8 @@
 import type { Bot } from "../../types/index.js";
 import type { OutreachChannel } from "../../types/index.js";
 import { getBot } from "../dynamodb/bot.repository.js";
-import { sendSmsTextWithDlr } from "../sms/send-outbound.js";
+import { resolveApiPublicUrl } from "../sms/dlr.js";
+import { sendSmsText, sendSmsTextWithDlr } from "../sms/send-outbound.js";
 import { sendTemplateMessage, sendTextMessage } from "../whatsapp/client.js";
 import { assertWhatsAppOutboundAllowed } from "../whatsapp/outbound-guard.js";
 import { renderOtpMessage } from "./crypto.js";
@@ -50,7 +51,25 @@ export async function sendOtpViaChannel(
 
   if (params.channel === "sms") {
     const text = renderOtpMessage(params.messageTemplate ?? DEFAULT_OTP_MESSAGE, params.code);
-    const result = await sendSmsTextWithDlr({
+    if (resolveApiPublicUrl()) {
+      const result = await sendSmsTextWithDlr({
+        tenantId: params.tenantId,
+        bot,
+        botId: params.botId,
+        to: normalizedTo,
+        text,
+        ...(params.environment ? { environment: params.environment } : {}),
+      });
+
+      return {
+        messageId: result.messageId,
+        channel: "sms",
+        text: result.text,
+        receiptId: result.receiptId,
+      };
+    }
+
+    const result = await sendSmsText({
       tenantId: params.tenantId,
       bot,
       botId: params.botId,
@@ -63,7 +82,6 @@ export async function sendOtpViaChannel(
       messageId: result.messageId,
       channel: "sms",
       text: result.text,
-      receiptId: result.receiptId,
     };
   }
 
