@@ -65,6 +65,12 @@ const ENDPOINT_GROUPS: EndpointGroup[] = [
     match: (e) => e.path.startsWith("/v1/sms"),
   },
   {
+    id: "otp",
+    titleKey: "apiDocs.groups.otp",
+    icon: Shield,
+    match: (e) => e.path.startsWith("/v1/otp"),
+  },
+  {
     id: "templates",
     titleKey: "apiDocs.groups.templates",
     icon: LayoutTemplate,

@@ -108,7 +108,13 @@ export async function handler(
 
     if (method === "GET" && rawPath.endsWith("/metrics/sms")) {
       await assertAssignedServices(auth.tenantId, "campaigns");
-      const overview = await getSmsOverview(auth.tenantId);
+      const qs = event.queryStringParameters ?? {};
+      const from = qs.from?.trim();
+      const to = qs.to?.trim();
+      const overview = await getSmsOverview(auth.tenantId, {
+        ...(from ? { from } : {}),
+        ...(to ? { to } : {}),
+      });
       return ok({ overview });
     }
 

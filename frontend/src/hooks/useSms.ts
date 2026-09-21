@@ -14,6 +14,19 @@ export interface SmsHistoryFilters {
   status?: SmsHistoryStatus | "all";
 }
 
+export interface SmsOverviewFilters {
+  from?: string;
+  to?: string;
+}
+
+function buildOverviewQuery(filters: SmsOverviewFilters): string {
+  const params = new URLSearchParams();
+  if (filters.from) params.set("from", filters.from);
+  if (filters.to) params.set("to", filters.to);
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
 function buildHistoryQuery(filters: SmsHistoryFilters): string {
   const params = new URLSearchParams();
   if (filters.limit) params.set("limit", String(filters.limit));
@@ -26,13 +39,24 @@ function buildHistoryQuery(filters: SmsHistoryFilters): string {
   return query ? `?${query}` : "";
 }
 
-export function useSmsOverview() {
+export function useSmsOverview(filters: SmsOverviewFilters = {}) {
   const scope = useTenantContextId() ?? "home";
   return useQuery({
-    queryKey: ["sms", "overview", scope],
+    queryKey: ["sms", "overview", scope, filters],
     queryFn: async () => {
-      const data = await api.get<{ overview: SmsOverview }>("/metrics/sms");
-      return data.overview;
+      const data = await api.get<{ overview: SmsOverview }>(
+        `/metrics/sms${buildOverviewQuery(filters)}`
+      );
+      const overview = data.overview;
+      return {
+        ...overview,
+        charts: overview.charts ?? {
+          dailyTrend: [],
+          byStatus: [],
+          bySource: [],
+          byChannel: [],
+        },
+      };
     },
     refetchInterval: 60_000,
   });

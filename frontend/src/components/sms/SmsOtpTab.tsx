@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ShieldCheck } from "lucide-react";
+import { CheckCircle2, ShieldCheck } from "lucide-react";
 import { useBots } from "@/hooks/useBots";
 import { useSendSmsOtp, useVerifySmsOtp } from "@/hooks/useSmsOtp";
 import { useT } from "@/i18n/context";
@@ -32,7 +32,15 @@ export function SmsOtpTab() {
   const [code, setCode] = useState("");
   const [sendResult, setSendResult] = useState<Awaited<ReturnType<typeof sendMutation.mutateAsync>> | null>(null);
   const [verifyResult, setVerifyResult] = useState<Awaited<ReturnType<typeof verifyMutation.mutateAsync>> | null>(null);
-  const [error, setError] = useState("");
+  const [sendError, setSendError] = useState("");
+  const [verifyError, setVerifyError] = useState("");
+
+  const verifyPhone = useMemo(
+    () => (sendResult?.destination ?? to).replace(/\D/g, ""),
+    [sendResult?.destination, to]
+  );
+  const verifyCode = useMemo(() => code.replace(/\D/g, ""), [code]);
+  const canVerify = verifyPhone.length >= 7 && verifyCode.length >= 4;
 
   useEffect(() => {
     if (!botId && smsBots.length === 1) {
@@ -40,11 +48,18 @@ export function SmsOtpTab() {
     }
   }, [botId, smsBots]);
 
+  useEffect(() => {
+    if (sendResult?.destination) {
+      setTo(sendResult.destination);
+    }
+  }, [sendResult?.destination]);
+
   async function handleSend() {
     if (!botId || !to.trim()) return;
-    setError("");
+    setSendError("");
     setSendResult(null);
     setVerifyResult(null);
+    setVerifyError("");
     try {
       const parsedMaxAttempts = Number.parseInt(maxAttempts, 10);
       const result = await sendMutation.mutateAsync({
@@ -55,22 +70,30 @@ export function SmsOtpTab() {
       });
       setSendResult(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("smsDashboard.otp.sendFailed"));
+      setSendError(err instanceof Error ? err.message : t("smsDashboard.otp.sendFailed"));
     }
   }
 
   async function handleVerify() {
-    if (!to.trim() || !code.trim()) return;
-    setError("");
+    if (verifyPhone.length < 7) {
+      setVerifyError(t("smsDashboard.otp.verifyPhoneRequired"));
+      return;
+    }
+    if (verifyCode.length < 4) {
+      setVerifyError(t("smsDashboard.otp.verifyCodeRequired"));
+      return;
+    }
+
+    setVerifyError("");
     setVerifyResult(null);
     try {
       const result = await verifyMutation.mutateAsync({
-        to: to.replace(/\D/g, ""),
-        code: code.replace(/\D/g, ""),
+        to: verifyPhone,
+        code: verifyCode,
       });
       setVerifyResult(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("smsDashboard.otp.verifyFailed"));
+      setVerifyError(err instanceof Error ? err.message : t("smsDashboard.otp.verifyFailed"));
     }
   }
 
@@ -175,83 +198,127 @@ export function SmsOtpTab() {
                 type="button"
                 onClick={() => void handleSend()}
                 disabled={sendMutation.isPending || !botId || !to.trim()}
-                className="inline-flex items-center justify-center rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-60"
+                className="inline-flex w-full items-center justify-center rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-60"
               >
                 {sendMutation.isPending ? t("smsDashboard.otp.sending") : t("smsDashboard.otp.sendAction")}
               </button>
+
+              {sendError ? (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">
+                  {sendError}
+                </div>
+              ) : null}
+
+              {sendResult ? (
+                <div className="rounded-lg border border-default bg-surface px-3 py-2.5 text-sm text-secondary">
+                  <p className="font-medium text-primary">{t("smsDashboard.otp.sendSuccess")}</p>
+                  <p className="mt-1.5">{t("smsDashboard.otp.destination")}: {sendResult.destination}</p>
+                  <p>{t("smsDashboard.otp.expiresAt")}: {formatDate(sendResult.expiresAt)}</p>
+                  {sendResult.traceId ? (
+                    <p>
+                      {t("smsDashboard.otp.traceId")}: {sendResult.traceId}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           </section>
 
           <section className="rounded-xl border border-default bg-surface-elevated p-5">
             <h3 className="mb-4 font-medium text-primary">{t("smsDashboard.otp.verifyTitle")}</h3>
 
-            <div className="space-y-4">
+            <form
+              className="space-y-4"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void handleVerify();
+              }}
+            >
+              <div>
+                <label className="mb-1 block text-sm font-medium text-secondary">
+                  {t("smsDashboard.otp.phone")}
+                </label>
+                <input
+                  value={to}
+                  onChange={(e) => {
+                    setTo(e.target.value);
+                    setVerifyResult(null);
+                    setVerifyError("");
+                  }}
+                  placeholder="573001234567"
+                  className="w-full rounded-lg border border-default bg-surface px-3 py-2 text-sm text-primary"
+                />
+                {sendResult?.destination ? (
+                  <p className="mt-1 text-xs text-secondary">
+                    {t("smsDashboard.otp.verifyPhoneHint", { phone: sendResult.destination })}
+                  </p>
+                ) : null}
+              </div>
+
               <div>
                 <label className="mb-1 block text-sm font-medium text-secondary">
                   {t("smsDashboard.otp.code")}
                 </label>
                 <input
                   value={code}
-                  onChange={(e) => setCode(e.target.value)}
+                  onChange={(e) => {
+                    setCode(e.target.value);
+                    setVerifyResult(null);
+                    setVerifyError("");
+                  }}
                   inputMode="numeric"
                   autoComplete="one-time-code"
                   placeholder="123456"
-                  className="w-full rounded-lg border border-default bg-surface px-3 py-2 text-sm text-primary"
+                  maxLength={10}
+                  className="w-full rounded-lg border border-default bg-surface px-3 py-2 text-center text-lg font-semibold tracking-[0.3em] text-primary"
                 />
               </div>
 
               <button
-                type="button"
-                onClick={() => void handleVerify()}
-                disabled={verifyMutation.isPending || !to.trim() || !code.trim()}
-                className="inline-flex items-center justify-center rounded-lg border border-default bg-surface px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-surface-muted disabled:opacity-60"
+                type="submit"
+                disabled={verifyMutation.isPending || !canVerify}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
               >
+                <CheckCircle2 className="h-4 w-4" />
                 {verifyMutation.isPending ? t("smsDashboard.otp.verifying") : t("smsDashboard.otp.verifyAction")}
               </button>
-            </div>
+
+              {!canVerify && !verifyError && !verifyResult ? (
+                <p className="text-xs text-secondary">{t("smsDashboard.otp.verifyFieldsHint")}</p>
+              ) : null}
+
+              {verifyError ? (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">
+                  {verifyError}
+                </div>
+              ) : null}
+
+              {verifyResult ? (
+                <div
+                  className={`rounded-lg border px-3 py-2.5 text-sm ${
+                    verifyResult.verified
+                      ? "border-green-200 bg-green-50 text-green-800"
+                      : "border-amber-200 bg-amber-50 text-amber-900"
+                  }`}
+                >
+                  <p className="font-medium">
+                    {verifyResult.verified
+                      ? t("smsDashboard.otp.verifySuccess")
+                      : t(`smsDashboard.otp.reason.${verifyResult.reason}`)}
+                  </p>
+                  {verifyResult.attemptsRemaining !== undefined ? (
+                    <p className="mt-1.5">
+                      {t("smsDashboard.otp.attemptsRemaining", {
+                        count: verifyResult.attemptsRemaining,
+                      })}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+            </form>
           </section>
         </div>
       )}
-
-      {error ? (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>
-      ) : null}
-
-      {sendResult ? (
-        <div className="rounded-xl border border-default bg-surface-elevated p-5 text-sm text-secondary">
-          <p className="font-medium text-primary">{t("smsDashboard.otp.sendSuccess")}</p>
-          <p className="mt-2">{t("smsDashboard.otp.destination")}: {sendResult.destination}</p>
-          <p>{t("smsDashboard.otp.expiresAt")}: {formatDate(sendResult.expiresAt)}</p>
-          {sendResult.traceId ? (
-            <p>
-              {t("smsDashboard.otp.traceId")}: {sendResult.traceId}
-            </p>
-          ) : null}
-        </div>
-      ) : null}
-
-      {verifyResult ? (
-        <div
-          className={`rounded-xl border p-5 text-sm ${
-            verifyResult.verified
-              ? "border-green-200 bg-green-50 text-green-800"
-              : "border-amber-200 bg-amber-50 text-amber-900"
-          }`}
-        >
-          <p className="font-medium">
-            {verifyResult.verified
-              ? t("smsDashboard.otp.verifySuccess")
-              : t(`smsDashboard.otp.reason.${verifyResult.reason}`)}
-          </p>
-          {verifyResult.attemptsRemaining !== undefined ? (
-            <p className="mt-2">
-              {t("smsDashboard.otp.attemptsRemaining", {
-                count: verifyResult.attemptsRemaining,
-              })}
-            </p>
-          ) : null}
-        </div>
-      ) : null}
     </div>
   );
 }

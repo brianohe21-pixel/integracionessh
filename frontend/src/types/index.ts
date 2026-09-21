@@ -1397,6 +1397,36 @@ export interface SmsHistoryPage {
   nextCursor?: string;
 }
 
+export interface SmsOverviewDailyPoint {
+  date: string;
+  total: number;
+  delivered: number;
+  failed: number;
+}
+
+export interface SmsOverviewStatusPoint {
+  status: SmsHistoryStatus;
+  count: number;
+}
+
+export interface SmsOverviewSourcePoint {
+  source: SmsDlrSource;
+  count: number;
+}
+
+export interface SmsOverviewChannelPoint {
+  channel: "campaign" | "bulk";
+  sent: number;
+  failed: number;
+}
+
+export interface SmsOverviewCharts {
+  dailyTrend: SmsOverviewDailyPoint[];
+  byStatus: SmsOverviewStatusPoint[];
+  bySource: SmsOverviewSourcePoint[];
+  byChannel: SmsOverviewChannelPoint[];
+}
+
 export interface SmsOverview {
   enabledBots: number;
   activeCampaigns: number;
@@ -1412,6 +1442,7 @@ export interface SmsOverview {
   dlrPending: number;
   dlrSent: number;
   deliveryRate: number;
+  charts: SmsOverviewCharts;
 }
 
 export interface BotUsageMetrics {

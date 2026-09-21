@@ -1,39 +1,48 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { useSearchParams } from "next/navigation";
-import { BarChart3, FileText, History, LayoutGrid, Megaphone, ShieldCheck } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { LayoutGrid, Settings } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { VoiceAgentSideNav } from "@/components/voice-agents/VoiceAgentSideNav";
 import { SmsOverviewStrip } from "./SmsOverviewStrip";
-import { SmsHistoryTab } from "./SmsHistoryTab";
-import { SmsCampaignsTab } from "./SmsCampaignsTab";
-import { SmsTemplatesTab } from "./SmsTemplatesTab";
-import { SmsOtpTab } from "./SmsOtpTab";
+import { SmsConfigTab, type SmsConfigSection } from "./SmsConfigTab";
 import { SmsShortcuts } from "./SmsShortcuts";
 
-type SmsTab = "overview" | "history" | "campaigns" | "templates" | "otp";
+type SmsMainTab = "overview" | "config";
 
-function parseSmsTab(value: string | null): SmsTab {
-  if (
-    value === "history" ||
-    value === "campaigns" ||
-    value === "templates" ||
-    value === "overview" ||
-    value === "otp"
-  ) {
-    return value;
-  }
+const LEGACY_CONFIG_TABS: SmsConfigSection[] = ["history", "campaigns", "templates", "otp"];
+
+function parseMainTab(tab: string | null, section: string | null): SmsMainTab {
+  if (tab === "config") return "config";
+  if (tab && LEGACY_CONFIG_TABS.includes(tab as SmsConfigSection)) return "config";
+  if (section && LEGACY_CONFIG_TABS.includes(section as SmsConfigSection)) return "config";
   return "overview";
+}
+
+function parseLegacySection(tab: string | null, section: string | null): SmsConfigSection | null {
+  if (section && LEGACY_CONFIG_TABS.includes(section as SmsConfigSection)) {
+    return section as SmsConfigSection;
+  }
+  if (tab && LEGACY_CONFIG_TABS.includes(tab as SmsConfigSection)) {
+    return tab as SmsConfigSection;
+  }
+  return null;
 }
 
 export function SmsDashboard() {
   const t = useT();
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const initialTab = useMemo(() => parseSmsTab(searchParams.get("tab")), [searchParams]);
-  const [tab, setTab] = useState<SmsTab>(initialTab);
+  const tabParam = searchParams.get("tab");
+  const sectionParam = searchParams.get("section");
+  const initialTab = useMemo(
+    () => parseMainTab(tabParam, sectionParam),
+    [tabParam, sectionParam]
+  );
+  const [tab, setTab] = useState<SmsMainTab>(initialTab);
 
   const tabs = useMemo(
     () =>
@@ -44,32 +53,40 @@ export function SmsDashboard() {
           icon: <LayoutGrid className="h-4 w-4" />,
         },
         {
-          id: "history" as const,
-          label: t("smsDashboard.tabs.history"),
-          icon: <History className="h-4 w-4" />,
+          id: "config" as const,
+          label: t("smsDashboard.tabs.config"),
+          icon: <Settings className="h-4 w-4" />,
         },
-        {
-          id: "campaigns" as const,
-          label: t("smsDashboard.tabs.campaigns"),
-          icon: <Megaphone className="h-4 w-4" />,
-        },
-        {
-          id: "templates" as const,
-          label: t("smsDashboard.tabs.templates"),
-          icon: <FileText className="h-4 w-4" />,
-        },
-        {
-          id: "otp" as const,
-          label: t("smsDashboard.tabs.otp"),
-          icon: <ShieldCheck className="h-4 w-4" />,
-        },
-      ] satisfies Array<{ id: SmsTab; label: string; icon: ReactNode }>,
+      ] satisfies Array<{ id: SmsMainTab; label: string; icon: ReactNode }>,
     [t]
   );
 
   useEffect(() => {
     setTab(initialTab);
   }, [initialTab]);
+
+  useEffect(() => {
+    const legacySection = parseLegacySection(tabParam, sectionParam);
+    if (!legacySection) return;
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", "config");
+    params.set("section", legacySection);
+    router.replace(`/sms?${params.toString()}`, { scroll: false });
+  }, [router, searchParams, sectionParam, tabParam]);
+
+  function handleSelect(nextTab: SmsMainTab) {
+    setTab(nextTab);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", nextTab);
+    if (nextTab === "config" && !params.get("section")) {
+      params.set("section", "history");
+    }
+    if (nextTab === "overview") {
+      params.delete("section");
+    }
+    router.replace(`/sms?${params.toString()}`, { scroll: false });
+  }
 
   return (
     <DashboardPage className="min-h-full gap-6">
@@ -78,33 +95,20 @@ export function SmsDashboard() {
         subtitle={t("smsDashboard.subtitle")}
         actions={<SmsShortcuts />}
       />
-      {tab === "overview" ? <SmsOverviewStrip /> : null}
 
-      <div className="grid flex-1 gap-6 lg:grid-cols-[16rem_minmax(0,1fr)]">
-        <VoiceAgentSideNav
-          tabs={tabs}
-          activeTab={tab}
-          onSelect={setTab}
-          sectionTitle={t("smsDashboard.navSectionTitle")}
-          sectionSubtitle={t("smsDashboard.navSectionSubtitle")}
-        />
+      <div className="content-card overflow-hidden">
+        <div className="border-b border-default px-3 py-2 sm:px-4">
+          <VoiceAgentSideNav
+            tabs={tabs}
+            activeTab={tab}
+            onSelect={handleSelect}
+            variant="horizontal"
+          />
+        </div>
 
-        <div className="min-w-0 space-y-4">
-          {tab === "overview" ? (
-            <div className="rounded-xl border border-default bg-surface-elevated p-6">
-              <div className="flex items-start gap-3">
-                <BarChart3 className="mt-0.5 h-5 w-5 text-accent" />
-                <div>
-                  <h2 className="font-semibold text-primary">{t("smsDashboard.overview.panelTitle")}</h2>
-                  <p className="mt-1 text-sm text-secondary">{t("smsDashboard.overview.panelSubtitle")}</p>
-                </div>
-              </div>
-            </div>
-          ) : null}
-          {tab === "history" ? <SmsHistoryTab /> : null}
-          {tab === "campaigns" ? <SmsCampaignsTab /> : null}
-          {tab === "templates" ? <SmsTemplatesTab /> : null}
-          {tab === "otp" ? <SmsOtpTab /> : null}
+        <div className="p-4 sm:p-6">
+          {tab === "overview" ? <SmsOverviewStrip /> : null}
+          {tab === "config" ? <SmsConfigTab /> : null}
         </div>
       </div>
     </DashboardPage>

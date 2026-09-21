@@ -10,7 +10,7 @@ export function SmsShortcuts() {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Link
-        href="/sms?tab=otp"
+        href="/sms?tab=config&section=otp"
         className="inline-flex items-center gap-2 rounded-lg border border-default bg-surface-elevated px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-surface-muted"
       >
         <ShieldCheck className="h-4 w-4" />
