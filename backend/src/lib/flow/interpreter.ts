@@ -302,12 +302,18 @@ export async function advanceFlowRun(params: {
     return { handled: true, halt: true };
   }
 
+  if (currentNode?.type === "send_otp" && params.inbound.text?.trim()) {
+    const ctx = buildContext({ ...params, flow });
+    return runFromNode(run, flow, ctx);
+  }
+
   const waitingNodeTypes = [
     "buttons",
     "meta_flow",
     "book_appointment",
     "request_payment",
     "await_order",
+    "send_otp",
   ] as const;
   if (
     currentNode &&

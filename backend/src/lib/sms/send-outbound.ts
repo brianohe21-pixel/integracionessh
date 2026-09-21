@@ -127,6 +127,31 @@ export async function sendSmsTextWithDlr(params: {
   };
 }
 
+export async function sendSmsText(params: {
+  tenantId: string;
+  bot: Bot;
+  botId: string;
+  to: string;
+  text: string;
+  environment?: string;
+}): Promise<{ messageId: string; text: string }> {
+  const result = await deliverSms({
+    tenantId: params.tenantId,
+    bot: params.bot,
+    botId: params.botId,
+    to: params.to,
+    text: params.text,
+    ...(params.environment ? { environment: params.environment } : {}),
+    requestDlr: false,
+    source: "api",
+  });
+
+  return {
+    messageId: result.messageId,
+    text: result.text,
+  };
+}
+
 export async function sendSmsFromTemplate(params: {
   tenantId: string;
   bot: Bot;

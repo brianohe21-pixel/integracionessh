@@ -31,13 +31,13 @@ export function HelpCenterButton() {
       aria-label={t("helpCenter.openButton")}
       title={t("helpCenter.openButton")}
       className={cn(
-        "relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-default bg-surface-elevated text-secondary shadow-sm transition-colors hover:bg-surface-muted hover:text-primary",
-        isOpen && "bg-surface-muted text-primary"
+        "topbar-icon relative inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors",
+        isOpen && "bg-white/15 text-white"
       )}
     >
       <CircleHelp className="h-4 w-4" />
       {pendingCount > 0 ? (
-        <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-semibold text-white">
+        <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[9px] font-semibold text-white">
           {pendingCount}
         </span>
       ) : null}

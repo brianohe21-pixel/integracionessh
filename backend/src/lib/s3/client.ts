@@ -83,6 +83,16 @@ export function buildConversationAttachmentS3Key(
   return `tenants/${tenantId}/bots/${botId}/conversations/${conversationId}/attachments/${attachmentId}/${safeName}`;
 }
 
+export function buildMemberProfilePhotoS3Key(
+  tenantId: string,
+  userId: string,
+  extension: string
+): string {
+  const safeExt = extension.replace(/[^a-z0-9]/gi, "").toLowerCase() || "jpg";
+  const safeUserId = userId.replace(/[^a-zA-Z0-9_-]/g, "");
+  return `members/${tenantId}/${safeUserId}/profile.${safeExt}`;
+}
+
 export async function putObjectBuffer(
   s3Key: string,
   buffer: Uint8Array,

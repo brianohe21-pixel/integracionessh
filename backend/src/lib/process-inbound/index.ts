@@ -62,6 +62,10 @@ import {
   getBotLocale,
   resolveConversationLocale,
 } from "../i18n/index.js";
+import {
+  buildCtwaMessageMetadata,
+  handleCtwaAttribution,
+} from "../meta-ads/ctwa.js";
 
 async function resolveAccessToken(
   tenantId: string,
@@ -282,6 +286,22 @@ export async function processInboundMessage(
     if (updated) conversation = updated;
   }
 
+  if (channel === "whatsapp" && whatsappPayload) {
+    conversation = await handleCtwaAttribution({
+      tenantId,
+      botId,
+      conversation,
+      message: whatsappPayload.message,
+      participantId,
+      ...(displayName ? { displayName } : {}),
+    });
+  }
+
+  const ctwaMetadata =
+    channel === "whatsapp" && whatsappPayload
+      ? buildCtwaMessageMetadata(whatsappPayload.message)
+      : undefined;
+
   const emailMetadata =
     channel === "email"
       ? (await import("../email/mime.js")).buildEmailMessageMetadata(
@@ -379,6 +399,7 @@ export async function processInboundMessage(
     ...(inbound.interactive?.responseJson
       ? { metadata: { responseJson: inbound.interactive.responseJson } }
       : {}),
+    ...(ctwaMetadata ? { metadata: ctwaMetadata } : {}),
     ...(emailMetadata ? { metadata: emailMetadata } : {}),
     source,
     externalMessageId: externalId,

@@ -10,9 +10,14 @@ import type { AdvisorWorkloadMetric, AdvisorWorkloadUnassigned } from "@/types";
 type Props = {
   advisors: AdvisorWorkloadMetric[];
   unassigned: AdvisorWorkloadUnassigned;
+  showUnassigned?: boolean;
 };
 
-export function AdvisorWorkloadTable({ advisors, unassigned }: Props) {
+export function AdvisorWorkloadTable({
+  advisors,
+  unassigned,
+  showUnassigned = true,
+}: Props) {
   const t = useT();
   const router = useRouter();
 
@@ -47,37 +52,41 @@ export function AdvisorWorkloadTable({ advisors, unassigned }: Props) {
           </tr>
         </thead>
         <tbody>
-          <tr
-            className="cursor-pointer border-b border-subtle bg-warning/5 hover:bg-warning/10"
-            onClick={() => navigateToConversations({ assignment: "unassigned", handoffMode: "human" })}
-          >
-            <td className="px-4 py-3 font-medium text-primary">
-              {t("supervisor.unassignedQueue")}
-              <Badge variant="warning" className="ml-2 text-[10px]">
-                {unassigned.count}
-              </Badge>
-            </td>
-            <td className="px-4 py-3 text-right text-secondary">{unassigned.new}</td>
-            <td className="px-4 py-3 text-right text-secondary">{unassigned.open}</td>
-            <td className="px-4 py-3 text-right text-secondary">{unassigned.pending}</td>
-            <td className="px-4 py-3 text-right font-semibold text-primary">
-              {unassigned.totalActive}
-            </td>
-            <td className="px-4 py-3 text-right">
-              {unassigned.slaBreached > 0 && (
-                <span className="inline-flex items-center gap-1 text-xs font-medium text-red-600">
-                  <AlertTriangle className="h-3 w-3" />
-                  {unassigned.slaBreached}
-                </span>
-              )}
-              {unassigned.slaAtRisk > 0 && unassigned.slaBreached === 0 && (
-                <span className="text-xs font-medium text-amber-600">{unassigned.slaAtRisk}</span>
-              )}
-              {unassigned.slaBreached === 0 && unassigned.slaAtRisk === 0 && (
-                <span className="text-xs text-muted">—</span>
-              )}
-            </td>
-          </tr>
+          {showUnassigned ? (
+            <tr
+              className="cursor-pointer border-b border-subtle bg-warning/5 hover:bg-warning/10"
+              onClick={() =>
+                navigateToConversations({ assignment: "unassigned", handoffMode: "human" })
+              }
+            >
+              <td className="px-4 py-3 font-medium text-primary">
+                {t("supervisor.unassignedQueue")}
+                <Badge variant="warning" className="ml-2 text-[10px]">
+                  {unassigned.count}
+                </Badge>
+              </td>
+              <td className="px-4 py-3 text-right text-secondary">{unassigned.new}</td>
+              <td className="px-4 py-3 text-right text-secondary">{unassigned.open}</td>
+              <td className="px-4 py-3 text-right text-secondary">{unassigned.pending}</td>
+              <td className="px-4 py-3 text-right font-semibold text-primary">
+                {unassigned.totalActive}
+              </td>
+              <td className="px-4 py-3 text-right">
+                {unassigned.slaBreached > 0 && (
+                  <span className="inline-flex items-center gap-1 text-xs font-medium text-red-600">
+                    <AlertTriangle className="h-3 w-3" />
+                    {unassigned.slaBreached}
+                  </span>
+                )}
+                {unassigned.slaAtRisk > 0 && unassigned.slaBreached === 0 && (
+                  <span className="text-xs font-medium text-amber-600">{unassigned.slaAtRisk}</span>
+                )}
+                {unassigned.slaBreached === 0 && unassigned.slaAtRisk === 0 && (
+                  <span className="text-xs text-muted">—</span>
+                )}
+              </td>
+            </tr>
+          ) : null}
           {advisors.map((advisor) => (
             <tr
               key={advisor.advisorId}

@@ -26,18 +26,18 @@ export function SoftphoneTrigger() {
       aria-label={t("contactCenter.openSoftphone")}
       aria-expanded={open}
       className={cn(
-        "relative inline-flex h-10 w-10 items-center justify-center rounded-xl border shadow-sm transition-colors",
+        "topbar-icon relative inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
         phone.status === "ringing"
-          ? "border-amber-400 bg-amber-50 text-amber-700 dark:bg-amber-950/40"
+          ? "bg-amber-400/20 text-amber-200"
           : phone.status === "dialing"
-            ? "border-sky-400 bg-sky-50 text-sky-700 dark:bg-sky-950/40"
-            : "border-default bg-surface-elevated text-accent hover:bg-surface-muted"
+            ? "bg-sky-400/20 text-sky-200"
+            : "text-white/90 hover:text-white"
       )}
     >
       <Phone className="h-4 w-4" />
       <span
         className={cn(
-          "absolute right-1.5 top-1.5 h-2 w-2 rounded-full ring-2 ring-surface-elevated",
+          "absolute right-1.5 top-1.5 h-2 w-2 rounded-full ring-2 ring-[var(--topbar)]",
           statusDotClass(phone.status)
         )}
       />

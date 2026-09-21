@@ -11,7 +11,7 @@ import {
   normalizeDateRange,
   type MetricsDateRange,
 } from "@/lib/metrics-date-range";
-import type { BotUsageMetrics, BulkSendJob, UsageMetrics, UsageMetricsSummary } from "@/types";
+import type { BotUsageMetrics, BulkSendJob, ChannelUsageMetrics, UsageMetrics, UsageMetricsSummary } from "@/types";
 
 export const METRICS_PERIOD_OPTIONS = [7, 14, 30] as const;
 export type MetricsPeriod = (typeof METRICS_PERIOD_OPTIONS)[number];
@@ -90,7 +90,7 @@ export function filterUsageMetrics(
   metrics: UsageMetrics,
   botId: string,
   range: MetricsDateRange
-): { summary: UsageMetricsSummary; byBot: BotUsageMetrics[]; recentBulkJobs: BulkSendJob[] } {
+): { summary: UsageMetricsSummary; byBot: BotUsageMetrics[]; byChannel: ChannelUsageMetrics[]; recentBulkJobs: BulkSendJob[] } {
   const inRange = (iso: string) => isWithinDateRange(iso, range);
   const recentBulkJobs = metrics.recentBulkJobs.filter(
     (job) => inRange(job.createdAt) && (!botId || job.botId === botId)
@@ -105,6 +105,7 @@ export function filterUsageMetrics(
         bulkMessagesFailed: recentBulkJobs.reduce((sum, job) => sum + job.failed, 0),
       },
       byBot: metrics.byBot,
+      byChannel: metrics.byChannel,
       recentBulkJobs,
     };
   }
@@ -126,6 +127,7 @@ export function filterUsageMetrics(
         lastActivityAt: null,
       },
       byBot: [],
+      byChannel: [],
       recentBulkJobs,
     };
   }
@@ -147,6 +149,7 @@ export function filterUsageMetrics(
       lastActivityAt: selected.lastActivityAt,
     },
     byBot,
+    byChannel: [],
     recentBulkJobs,
   };
 }

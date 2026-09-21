@@ -5,6 +5,8 @@ import { listCachedTemplates } from "./template.repository.js";
 import type {
   BulkSendJob,
   BotUsageMetrics,
+  Channel,
+  ChannelUsageMetrics,
   Conversation,
   UsageMetrics,
 } from "../../types/index.js";
@@ -96,6 +98,7 @@ export async function getTenantUsageMetrics(tenantId: string): Promise<UsageMetr
   ]);
 
   const byBot: BotUsageMetrics[] = [];
+  const byChannelMap = new Map<Channel, { conversations: number; messages: number }>();
   let totalConversations = 0;
   let activeConversations = 0;
   let totalMessages = 0;
@@ -108,6 +111,14 @@ export async function getTenantUsageMetrics(tenantId: string): Promise<UsageMetr
         listAllConversationsForBot(tenantId, bot.botId),
         listCachedTemplates(tenantId, bot.botId),
       ]);
+
+      for (const conversation of conversations) {
+        const channel = conversation.channel ?? "whatsapp";
+        const current = byChannelMap.get(channel) ?? { conversations: 0, messages: 0 };
+        current.conversations += 1;
+        current.messages += conversation.messageCount ?? 0;
+        byChannelMap.set(channel, current);
+      }
 
       const botMessages = conversations.reduce((sum, c) => sum + (c.messageCount ?? 0), 0);
       const botActive = conversations.filter((c) => c.status === "active").length;
@@ -134,6 +145,14 @@ export async function getTenantUsageMetrics(tenantId: string): Promise<UsageMetr
 
   byBot.sort((a, b) => b.messages - a.messages);
 
+  const byChannel: ChannelUsageMetrics[] = [...byChannelMap.entries()]
+    .map(([channel, stats]) => ({
+      channel,
+      conversations: stats.conversations,
+      messages: stats.messages,
+    }))
+    .sort((a, b) => b.messages - a.messages);
+
   const bulkMessagesSent = bulkJobs.reduce((sum, j) => sum + j.sent, 0);
   const bulkMessagesFailed = bulkJobs.reduce((sum, j) => sum + j.failed, 0);
   const bulkActivity = maxIsoDate(bulkJobs.map((j) => j.updatedAt));
@@ -152,6 +171,7 @@ export async function getTenantUsageMetrics(tenantId: string): Promise<UsageMetr
       lastActivityAt: maxIsoDate([...activityDates, bulkActivity]),
     },
     byBot,
+    byChannel,
     recentBulkJobs: bulkJobs.slice(0, 10),
   };
 }

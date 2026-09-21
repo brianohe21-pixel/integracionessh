@@ -125,6 +125,8 @@ export async function handler(
       if (status) listOpts.status = status;
       if (params.botId) listOpts.botId = params.botId;
       if (params.metaFlowId) listOpts.metaFlowId = params.metaFlowId;
+      if (params.attributionSource) listOpts.attributionSource = params.attributionSource;
+      if (params.adsOnly === "true" || params.adsOnly === "1") listOpts.adsOnly = true;
       if (params.q) listOpts.q = params.q;
 
       const result = await listLeads(auth.tenantId, listOpts);

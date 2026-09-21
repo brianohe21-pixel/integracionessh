@@ -1,0 +1,37 @@
+name: QA Linear Issue
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [develop]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  create-qa-issue:
+    name: Create QA issue in Linear
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create Linear QA issue
+        env:
+          LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
+          LINEAR_TEAM_ID: ${{ vars.LINEAR_TEAM_ID }}
+          LINEAR_PROJECT_ID: ${{ vars.LINEAR_PROJECT_ID }}
+          LINEAR_QA_ASSIGNEE_ID: ${{ vars.LINEAR_QA_ASSIGNEE_ID }}
+          LINEAR_LABEL_QA_ID: ${{ vars.LINEAR_LABEL_QA_ID }}
+          LINEAR_LABEL_NEEDS_TESTING_ID: ${{ vars.LINEAR_LABEL_NEEDS_TESTING_ID }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ github.token }}
+          DEVELOP_FRONTEND_URL: https://develop.d5sepmwbbwly9.amplifyapp.com
+        run: bash .github/scripts/create-linear-qa-issue.sh

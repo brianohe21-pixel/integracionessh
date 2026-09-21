@@ -1,14 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Key, Trash2, ToggleLeft, ToggleRight, Clock, Bot, Shield } from "lucide-react";
+import { Key, Clock, Bot } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useUpdateApiKey, useDeleteApiKey } from "@/hooks/useApiKeys";
 import type { ApiKey } from "@/types";
 import { TableContainer } from "@/components/ui/TableContainer";
-import { getSelectedVoiceScopes } from "@/lib/api-key-scopes";
+import { getSelectedOptionalScopes } from "@/lib/api-key-scopes";
 import { ApiKeyScopesModal } from "@/components/developer/ApiKeyScopesModal";
+import { ApiKeyActionsMenu } from "@/components/developer/ApiKeyActionsMenu";
 import { useT } from "@/i18n/context";
 
 interface ApiKeysListProps {
@@ -17,7 +19,7 @@ interface ApiKeysListProps {
 }
 
 export function ApiKeysList({ keys, bots }: ApiKeysListProps) {
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [revokeKey, setRevokeKey] = useState<ApiKey | null>(null);
   const [scopesKey, setScopesKey] = useState<ApiKey | null>(null);
   const updateKey = useUpdateApiKey();
   const deleteKey = useDeleteApiKey();
@@ -39,9 +41,10 @@ export function ApiKeysList({ keys, bots }: ApiKeysListProps) {
     await updateKey.mutateAsync({ keyId: key.keyId, enabled: !key.enabled });
   }
 
-  async function handleDelete(keyId: string) {
-    await deleteKey.mutateAsync(keyId);
-    setConfirmDelete(null);
+  async function handleDelete() {
+    if (!revokeKey) return;
+    await deleteKey.mutateAsync(revokeKey.keyId);
+    setRevokeKey(null);
   }
 
   if (keys.length === 0) {
@@ -53,6 +56,8 @@ export function ApiKeysList({ keys, bots }: ApiKeysListProps) {
       />
     );
   }
+
+  const busy = updateKey.isPending || deleteKey.isPending;
 
   return (
     <TableContainer>
@@ -86,12 +91,12 @@ export function ApiKeysList({ keys, bots }: ApiKeysListProps) {
               </td>
               <td className="px-6 py-3.5">
                 <div className="flex flex-wrap gap-1 max-w-[220px]">
-                  {getSelectedVoiceScopes(key.scopes).length === 0 ? (
-                    <span className="text-xs text-muted">{t("developer.noVoiceScopes")}</span>
+                  {getSelectedOptionalScopes(key.scopes).length === 0 ? (
+                    <span className="text-xs text-muted">{t("developer.noOptionalScopes")}</span>
                   ) : (
-                    getSelectedVoiceScopes(key.scopes).map((scope) => (
+                    getSelectedOptionalScopes(key.scopes).map((scope) => (
                       <Badge key={scope} variant="default" className="text-[10px]">
-                        {scope.replace("voice:calls:", "")}
+                        {scope.replace("voice:calls:", "").replace("otp:", "")}
                       </Badge>
                     ))
                   )}
@@ -114,61 +119,35 @@ export function ApiKeysList({ keys, bots }: ApiKeysListProps) {
               </td>
               <td className="px-6 py-3.5 text-secondary">{formatDate(key.createdAt)}</td>
               <td className="px-6 py-3.5">
-                <div className="flex items-center gap-2 justify-end">
-                  <button
-                    onClick={() => setScopesKey(key)}
-                    title={t("developer.editScopes")}
-                    className="text-muted hover:text-accent transition-colors"
-                  >
-                    <Shield className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleToggle(key)}
-                    disabled={updateKey.isPending}
-                    title={key.enabled ? "Disable key" : "Enable key"}
-                    className="text-muted hover:text-accent transition-colors disabled:opacity-40"
-                  >
-                    {key.enabled ? (
-                      <ToggleRight className="w-5 h-5 text-accent" />
-                    ) : (
-                      <ToggleLeft className="w-5 h-5" />
-                    )}
-                  </button>
-
-                  {confirmDelete === key.keyId ? (
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => handleDelete(key.keyId)}
-                        disabled={deleteKey.isPending}
-                        className="text-xs px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-40"
-                      >
-                        Confirm
-                      </button>
-                      <button
-                        onClick={() => setConfirmDelete(null)}
-                        className="text-xs px-2 py-1 bg-surface-muted text-secondary rounded hover:bg-gray-200"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setConfirmDelete(key.keyId)}
-                      title="Revoke key"
-                      className="text-muted hover:text-red-500 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
+                <div className="flex items-center justify-end">
+                  <ApiKeyActionsMenu
+                    enabled={key.enabled}
+                    busy={busy}
+                    onEditScopes={() => setScopesKey(key)}
+                    onToggleEnabled={() => void handleToggle(key)}
+                    onRevoke={() => setRevokeKey(key)}
+                  />
                 </div>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+
       {scopesKey && (
         <ApiKeyScopesModal apiKey={scopesKey} onClose={() => setScopesKey(null)} />
       )}
+
+      <ConfirmDialog
+        open={revokeKey !== null}
+        title={t("developer.revokeKeyTitle")}
+        description={t("developer.revokeKeyDescription", { name: revokeKey?.name ?? "" })}
+        confirmLabel={t("developer.revokeKey")}
+        tone="danger"
+        loading={deleteKey.isPending}
+        onConfirm={() => void handleDelete()}
+        onCancel={() => setRevokeKey(null)}
+      />
     </TableContainer>
   );
 }

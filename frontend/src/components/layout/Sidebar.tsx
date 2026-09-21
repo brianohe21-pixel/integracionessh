@@ -4,7 +4,6 @@ import type React from "react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/context";
@@ -20,6 +19,7 @@ import {
   BarChart3,
   Settings,
   Megaphone,
+  MessageSquareText,
   Mail,
   Zap,
   GitBranch,
@@ -45,7 +45,6 @@ import {
 } from "lucide-react";
 import { useAdminRole } from "@/hooks/useAdminRole";
 import { useTenantRole } from "@/hooks/useTenantRole";
-import { useTenantBranding } from "@/hooks/useTenantBranding";
 import { useSidebar } from "@/components/layout/SidebarContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, getTenantContext } from "@/lib/api";
@@ -58,7 +57,6 @@ import {
 import { useClearTenantContext, useAssumeSubaccount, useResellerSubaccounts } from "@/hooks/useReseller";
 import { MEMBER_HOME } from "@/lib/post-login-path";
 import { useAuthSession } from "@/hooks/useAuthSession";
-import { ThemeSwitcherCompact } from "@/components/theme/ThemeSwitcherCompact";
 import { useUnreadMessages } from "@/components/notifications/UnreadMessagesProvider";
 
 type NavItem = {
@@ -105,6 +103,7 @@ const memberNavCategories: NavCategory[] = [
       { href: "/supervisor", labelKey: "nav.supervisor", icon: LayoutGrid },
       { href: "/contacts", labelKey: "nav.contacts", icon: BookUser },
       { href: "/leads", labelKey: "nav.leads", icon: UserPlus },
+      { href: "/ads", labelKey: "nav.ads", icon: Megaphone },
       { href: "/sales", labelKey: "nav.sales", icon: TrendingUp },
       { href: "/advisors", labelKey: "nav.advisors", icon: Users },
     ],
@@ -128,6 +127,7 @@ const memberNavCategories: NavCategory[] = [
       { href: "/campaigns", labelKey: "nav.campaigns", icon: Megaphone },
       { href: "/short-links", labelKey: "nav.shortLinks", icon: Link2 },
       { href: "/email-marketing", labelKey: "nav.emailMarketing", icon: Mail },
+      { href: "/sms", labelKey: "nav.sms", icon: MessageSquareText },
     ],
   },
   {
@@ -681,7 +681,7 @@ function SidebarEdgeToggle({
       type="button"
       onClick={onToggle}
       title={label}
-      className="sidebar-edge-toggle absolute -right-3.5 top-20 z-50 hidden h-8 w-8 items-center justify-center rounded-full lg:flex"
+      className="sidebar-edge-toggle absolute -right-3.5 top-8 z-50 hidden h-8 w-8 items-center justify-center rounded-full lg:flex"
       aria-label={label}
     >
       {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
@@ -738,7 +738,7 @@ function SidebarNav({
     <div className="flex min-h-0 flex-1 flex-col">
       <nav
         className={cn(
-          "sidebar-scroll min-h-0 flex-1 overscroll-contain py-2",
+          "sidebar-scroll min-h-0 flex-1 overscroll-contain pt-4 pb-2",
           collapsed ? "space-y-1 overflow-x-hidden overflow-y-auto px-2" : "space-y-0.5 overflow-y-auto px-3"
         )}
       >
@@ -815,15 +815,6 @@ function SidebarNav({
         )}
       >
         {!collapsed ? (
-          <div className="mb-3 px-1">
-            <ThemeSwitcherCompact />
-          </div>
-        ) : (
-          <div className="mb-3 flex justify-center">
-            <ThemeSwitcherCompact collapsed />
-          </div>
-        )}
-        {!collapsed ? (
           <div className="mb-2 flex gap-3 px-2.5 text-[11px] text-[var(--sidebar-text-muted)]">
             <a
               href="/legal/terms"
@@ -896,7 +887,7 @@ function SubaccountSwitcher({
   }
 
   return (
-    <div ref={rootRef} className="relative mt-3">
+    <div ref={rootRef} className="relative">
       <button
         type="button"
         disabled={switching}
@@ -1031,8 +1022,6 @@ function SubaccountSwitcher({
 }
 
 function SidebarBrand({
-  displayName,
-  logoUrl,
   assumedId,
   subaccounts,
   switching,
@@ -1041,8 +1030,6 @@ function SidebarBrand({
   onClose,
   onToggleCollapsed,
 }: {
-  displayName: string;
-  logoUrl?: string;
   assumedId: string | null;
   subaccounts: Tenant[];
   switching: boolean;
@@ -1054,109 +1041,46 @@ function SidebarBrand({
   const t = useT();
   const showSwitcher = subaccounts.length > 0 || Boolean(assumedId);
 
+  const mobileActions = (
+    <div className={cn("flex items-center gap-0.5", collapsed && "flex-col")}>
+      {onToggleCollapsed ? (
+        <button
+          type="button"
+          onClick={onToggleCollapsed}
+          className="sidebar-action-btn rounded-lg p-1.5 lg:hidden"
+          aria-label={collapsed ? t("nav.expandSidebar") : t("nav.collapseSidebar")}
+        >
+          {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+        </button>
+      ) : null}
+      <button
+        type="button"
+        onClick={onClose}
+        className="sidebar-action-btn rounded-lg p-1.5 lg:hidden"
+        aria-label={t("nav.closeMenu")}
+      >
+        <X className="h-5 w-5" />
+      </button>
+    </div>
+  );
+
   if (collapsed) {
-    return (
-      <div className="shrink-0 px-2 pb-2 pt-4">
-        <div className="flex flex-col items-center gap-2">
-          <div
-            className={cn(
-              "flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-sidebar-elevated ring-1 ring-[var(--sidebar-border)]",
-              logoUrl && "bg-white p-1.5"
-            )}
-            title={displayName}
-          >
-            {logoUrl ? (
-              <Image
-                src={logoUrl}
-                alt=""
-                width={40}
-                height={40}
-                unoptimized
-                className="max-h-full max-w-full object-contain"
-                key={logoUrl}
-              />
-            ) : (
-              <BotMessageSquare className="h-5 w-5 text-[var(--sidebar-icon-active)]" />
-            )}
-          </div>
-          {onToggleCollapsed ? (
-            <button
-              type="button"
-              onClick={onToggleCollapsed}
-              className="sidebar-action-btn inline-flex rounded-lg p-1.5 lg:hidden"
-              aria-label={t("nav.expandSidebar")}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          ) : null}
-          <button
-            type="button"
-            onClick={onClose}
-            className="sidebar-action-btn rounded-lg p-1.5 lg:hidden"
-            aria-label={t("nav.closeMenu")}
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-      </div>
-    );
+    return <div className="shrink-0 px-2 pb-2 pt-4 lg:hidden">{mobileActions}</div>;
+  }
+
+  if (!showSwitcher) {
+    return <div className="relative z-20 shrink-0 px-3 pb-2 pt-4 lg:hidden">{mobileActions}</div>;
   }
 
   return (
     <div className="relative z-20 shrink-0 px-3 pb-2 pt-4">
-      <div className="flex items-center gap-3">
-        <div
-          className={cn(
-            "flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-sidebar-elevated ring-1 ring-[var(--sidebar-border)]",
-            logoUrl && "bg-white p-1.5"
-          )}
-        >
-          {logoUrl ? (
-            <Image
-              src={logoUrl}
-              alt=""
-              width={40}
-              height={40}
-              unoptimized
-              className="max-h-full max-w-full object-contain"
-              key={logoUrl}
-            />
-          ) : (
-            <BotMessageSquare className="h-5 w-5 text-[var(--sidebar-icon-active)]" />
-          )}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-[var(--sidebar-text)]">{displayName}</p>
-        </div>
-        <div className="flex shrink-0 items-center gap-0.5">
-          {onToggleCollapsed ? (
-            <button
-              type="button"
-              onClick={onToggleCollapsed}
-              className="sidebar-action-btn rounded-lg p-1.5 lg:hidden"
-              aria-label={t("nav.collapseSidebar")}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-          ) : null}
-          <button
-            type="button"
-            onClick={onClose}
-            className="sidebar-action-btn rounded-lg p-1.5 lg:hidden"
-            aria-label={t("nav.closeMenu")}
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-      </div>
-      {showSwitcher ? (
-        <SubaccountSwitcher
-          assumedId={assumedId}
-          subaccounts={subaccounts}
-          switching={switching}
-          onSelectSubaccount={onSelectSubaccount}
-        />
-      ) : null}
+      <div className="mb-2 flex justify-end lg:hidden">{mobileActions}</div>
+      <SubaccountSwitcher
+        assumedId={assumedId}
+        subaccounts={subaccounts}
+        switching={switching}
+        onSelectSubaccount={onSelectSubaccount}
+      />
     </div>
   );
 }
@@ -1169,9 +1093,6 @@ export function Sidebar() {
   const { isOpen, close, isCollapsed, toggleCollapsed } = useSidebar();
   const { isAdmin, loading: adminLoading } = useAdminRole();
   const { isAdvisor, isSupervisor, loading: roleLoading } = useTenantRole();
-  const brandingEnabled =
-    isAuthenticated && !authLoading && !adminLoading && !isAdmin;
-  const { data: branding } = useTenantBranding(brandingEnabled);
   const clearContext = useClearTenantContext();
   const assume = useAssumeSubaccount();
   const { data: me } = useQuery({
@@ -1252,19 +1173,6 @@ export function Sidebar() {
   const standaloneItems =
     loading || isAdmin || isAdvisor || isSupervisor ? [] : memberStandaloneNavItems;
 
-  const assumedSubaccount = assumedId
-    ? subaccounts.find((item) => item.tenantId === assumedId)
-    : undefined;
-  const tenantName = (
-    assumedSubaccount?.name ||
-    branding?.brandName ||
-    me?.resolvedBranding?.brandName ||
-    me?.branding?.brandName ||
-    ""
-  ).trim();
-  const displayName = tenantName || me?.name?.trim() || t("common.appName");
-  const logoUrl = branding?.logoUrl ?? me?.resolvedBranding?.logoUrl;
-
   async function handleSelectSubaccount(subaccountId: string | null) {
     if (subaccountId === assumedId) return;
     if (!subaccountId) {
@@ -1287,8 +1195,6 @@ export function Sidebar() {
 
   const brand = (collapsed: boolean, showCollapseToggle: boolean) => (
     <SidebarBrand
-      displayName={displayName}
-      logoUrl={logoUrl}
       assumedId={canManageSubaccounts ? assumedId : null}
       subaccounts={subaccounts}
       switching={assume.isPending}
@@ -1301,7 +1207,7 @@ export function Sidebar() {
 
   return (
     <>
-      <aside className={cn("sticky top-0 hidden h-screen shrink-0 overflow-visible lg:flex", desktopWidth, shellClass)}>
+      <aside className={cn("sticky top-0 hidden min-h-0 shrink-0 overflow-visible lg:flex", desktopWidth, shellClass)}>
         <SidebarEdgeToggle collapsed={isCollapsed} onToggle={toggleCollapsed} />
         <div className={shellContentClass}>
           {brand(isCollapsed, true)}
@@ -1316,7 +1222,7 @@ export function Sidebar() {
       {isOpen ? (
         <button
           type="button"
-          className="fixed inset-0 z-[45] bg-black/50 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 top-14 z-[45] bg-black/50 backdrop-blur-sm lg:hidden"
           onClick={close}
           aria-label={t("nav.closeMenu")}
         />
@@ -1325,7 +1231,7 @@ export function Sidebar() {
       <aside
         className={cn(
           shellClass,
-          "fixed inset-y-0 left-0 z-50 h-[100dvh] overflow-hidden transition-[width,transform] duration-200 lg:hidden",
+          "fixed bottom-0 left-0 top-14 z-40 overflow-hidden transition-[width,transform] duration-200 lg:hidden",
           mobileWidth,
           isOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full pointer-events-none"
         )}

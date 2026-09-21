@@ -76,6 +76,7 @@ import { addCustomDomainToCognitoClient } from "../../lib/cognito/custom-domain-
 import { handleProviderCredentialRoutes } from "./provider-credentials.routes.js";
 import { handleMetaAppRoutes } from "./meta-app.routes.js";
 import { handleMemberRoutes } from "./members.routes.js";
+import { handleProfileRoutes } from "./profile.routes.js";
 import { handleTeamRoutes } from "./teams.routes.js";
 import { handleEmailSettingsRoutes } from "./email-settings.routes.js";
 import { handleGoogleBusinessOAuthCallbackRoute, handleGoogleCalendarOAuthCallbackRoute, handleIntegrationRoutes } from "./integrations.routes.js";
@@ -588,6 +589,9 @@ export async function handler(
 
     const metaAppResponse = await handleMetaAppRoutes(event, method, auth, ENVIRONMENT);
     if (metaAppResponse) return metaAppResponse;
+
+    const profileRoutesResponse = await handleProfileRoutes(event, method, auth);
+    if (profileRoutesResponse) return profileRoutesResponse;
 
     const memberRoutesResponse = await handleMemberRoutes(event, method, auth);
     if (memberRoutesResponse) return memberRoutesResponse;

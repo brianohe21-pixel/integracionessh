@@ -6,6 +6,8 @@ import { ChannelAvatar } from "@/components/conversations/conversation-ui";
 import { useUnreadMessages } from "@/components/notifications/UnreadMessagesProvider";
 import { WhatsAppRiskBadge } from "@/components/whatsapp/WhatsAppRiskBadge";
 import { cn } from "@/lib/utils";
+import { conversationHasMetaAdsAttribution } from "@/lib/meta-ads";
+import { useT } from "@/i18n/context";
 import type { Conversation, InboxSlaStatus, TenantWhatsAppRiskSummary } from "@/types";
 
 type Props = {
@@ -59,8 +61,10 @@ export function ConversationListItem({
   takeConversationLabel,
   whatsappRisk,
 }: Props) {
+  const t = useT();
   const { getUnreadCount } = useUnreadMessages();
   const isHuman = (conversation.handoffMode ?? "bot") === "human";
+  const hasMetaAdsAttribution = conversationHasMetaAdsAttribution(conversation);
   const unreadMessages = getUnreadCount(conversation.conversationId);
   const isUnread = unreadMessages > 0 || conversation.workflowStatus === "new";
 
@@ -130,6 +134,15 @@ export function ConversationListItem({
             <p className="truncate text-xs text-secondary">
               {previewParts.join(" · ")}
             </p>
+            {hasMetaAdsAttribution ? (
+              <div className="mt-1">
+                <Badge variant="warning" className="text-[10px]">
+                  {conversation.attribution?.source === "meta_ctwa"
+                    ? t("ads.badgeCtwa")
+                    : t("ads.badge")}
+                </Badge>
+              </div>
+            ) : null}
             {conversation.interactionCategory && categoryLabel ? (
               <div className="mt-1">
                 <Badge variant="info" className="text-[10px]">

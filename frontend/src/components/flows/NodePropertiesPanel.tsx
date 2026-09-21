@@ -552,6 +552,34 @@ export function NodePropertiesPanel({
         </div>
       )}
 
+      {type === "send_otp" && (
+        <>
+          <div>
+            <FieldLabel>{t("flows.fields.otpMessageText")}</FieldLabel>
+            {localizedField(d.otpMessageText, (v) => onUpdate({ otpMessageText: v }), 3)}
+          </div>
+          <div>
+            <FieldLabel>{t("flows.fields.otpWhatsAppTemplateName")}</FieldLabel>
+            {textInput(d.otpWhatsAppTemplateName ?? "", (v) =>
+              onUpdate({ otpWhatsAppTemplateName: v || undefined })
+            )}
+          </div>
+          <div>
+            <FieldLabel>{t("flows.fields.otpWhatsAppTemplateLanguage")}</FieldLabel>
+            {textInput(d.otpWhatsAppTemplateLanguage ?? "", (v) =>
+              onUpdate({ otpWhatsAppTemplateLanguage: v || undefined })
+            )}
+          </div>
+          <div>
+            <FieldLabel>{t("flows.fields.otpMaxAttempts")}</FieldLabel>
+            {textInput(String(d.otpMaxAttempts ?? 3), (v) => {
+              const parsed = Number.parseInt(v, 10);
+              onUpdate({ otpMaxAttempts: Number.isFinite(parsed) ? parsed : 3 });
+            })}
+          </div>
+        </>
+      )}
+
       {type === "save_contact" && (
         <>
           <FormBindingField

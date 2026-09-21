@@ -109,6 +109,7 @@ async function upsertCurrentUser(auth: AuthContext): Promise<void> {
       ...(advisorId ? { advisorId } : {}),
       ...(existing?.teamIds ? { teamIds: existing.teamIds } : {}),
       ...(existing?.lastLoginAt ? { lastLoginAt: existing.lastLoginAt } : {}),
+      ...(existing?.profilePhotoS3Key ? { profilePhotoS3Key: existing.profilePhotoS3Key } : {}),
     },
     auth.tenantId
   );

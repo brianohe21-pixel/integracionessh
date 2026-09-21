@@ -30,6 +30,7 @@ export async function sendSmsTextMessage(params: {
   from: string;
   environment?: string;
   dlrUrl?: string;
+  part?: boolean;
 }): Promise<{ messageId: string }> {
   const environment = params.environment ?? process.env.ENVIRONMENT ?? "dev";
   const authorization = await getTelcoredAuthorizationHeader(environment);
@@ -46,6 +47,8 @@ export async function sendSmsTextMessage(params: {
     throw Object.assign(new Error("Invalid Telcored SMS sender label"), { statusCode: 400 });
   }
 
+  const enableMultipart = params.part ?? true;
+
   const response = await fetch(TELCORED_MESSAGE_URL, {
     method: "POST",
     headers: {
@@ -57,6 +60,7 @@ export async function sendSmsTextMessage(params: {
       to: [to],
       text: params.text,
       from,
+      ...(enableMultipart ? { part: true } : {}),
       ...(params.dlrUrl ? { "dlr-url": params.dlrUrl } : {}),
     }),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),

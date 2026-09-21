@@ -191,6 +191,7 @@ export async function updateConversation(
       | "copilotGeneratedAt"
       | "interactionCategory"
       | "interactionCategoryAt"
+      | "attribution"
       | "status"
       | "welcomeSentAt"
       | "activeFlowRunId"

@@ -18,6 +18,14 @@ export const API_SCOPES = [
     endpoints: ["GET /v1/sms/{traceId}"],
   },
   {
+    scope: "otp:send",
+    endpoints: ["POST /v1/otp/send"],
+  },
+  {
+    scope: "otp:verify",
+    endpoints: ["POST /v1/otp/verify"],
+  },
+  {
     scope: "templates:read",
     endpoints: ["GET /v1/templates"],
   },

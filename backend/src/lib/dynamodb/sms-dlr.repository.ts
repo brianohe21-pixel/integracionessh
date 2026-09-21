@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { GetCommand, PutCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import { GetCommand, PutCommand, QueryCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { ConditionalCheckFailedException } from "@aws-sdk/client-dynamodb";
 import { docClient, TABLE_NAME } from "./client.js";
 import {
@@ -10,6 +10,7 @@ import {
 import { incrementCampaignAnalytics } from "./campaign.repository.js";
 import { recordBulkSendFailure } from "./bulk-job.repository.js";
 import { applySmsDlrToAttempt } from "./campaign-send-attempt.repository.js";
+import { deriveSmsTraceStatus, type SmsTraceStatus } from "../sms/traceability.js";
 import type { SmsDlrReceipt, SmsDlrSource } from "../../types/index.js";
 
 const RECEIPT_TTL_SECONDS = 30 * 24 * 60 * 60;
@@ -19,6 +20,136 @@ function receiptKeys(receiptId: string) {
     PK: `SMSDLR#${receiptId}`,
     SK: `SMSDLR#${receiptId}`,
   };
+}
+
+function receiptGsiKeys(tenantId: string, createdAt: string, receiptId: string) {
+  return {
+    GSI1PK: `TENANT#${tenantId}#SMSDLR`,
+    GSI1SK: `CREATED#${createdAt}#${receiptId}`,
+  };
+}
+
+function stripReceiptItem(item: Record<string, unknown>): SmsDlrReceipt {
+  const { PK, SK, GSI1PK, GSI1SK, ttl: _ttl, ...rest } = item;
+  void PK;
+  void SK;
+  void GSI1PK;
+  void GSI1SK;
+  void _ttl;
+  return rest as unknown as SmsDlrReceipt;
+}
+
+export interface ListSmsDlrReceiptsOptions {
+  limit?: number;
+  cursor?: string;
+  from?: string;
+  to?: string;
+  source?: SmsDlrSource;
+  status?: SmsTraceStatus;
+}
+
+export interface ListSmsDlrReceiptsResult {
+  items: SmsDlrReceipt[];
+  nextCursor?: string;
+}
+
+function matchesReceiptFilters(
+  receipt: SmsDlrReceipt,
+  options: ListSmsDlrReceiptsOptions
+): boolean {
+  if (options.source && receipt.source !== options.source) return false;
+  if (options.status && deriveSmsTraceStatus(receipt) !== options.status) return false;
+  if (options.from && receipt.createdAt < options.from) return false;
+  if (options.to && receipt.createdAt > options.to) return false;
+  return true;
+}
+
+export async function listSmsDlrReceipts(
+  tenantId: string,
+  options: ListSmsDlrReceiptsOptions = {}
+): Promise<ListSmsDlrReceiptsResult> {
+  const limit = Math.min(Math.max(options.limit ?? 50, 1), 100);
+  const items: SmsDlrReceipt[] = [];
+  let lastKey: Record<string, unknown> | undefined;
+
+  if (options.cursor) {
+    try {
+      lastKey = JSON.parse(Buffer.from(options.cursor, "base64url").toString("utf8")) as Record<
+        string,
+        unknown
+      >;
+    } catch {
+      lastKey = undefined;
+    }
+  }
+
+  const gsi1pk = `TENANT#${tenantId}#SMSDLR`;
+  let keyCondition = "GSI1PK = :gsi1pk";
+  const expressionValues: Record<string, string> = { ":gsi1pk": gsi1pk };
+
+  if (options.from && options.to) {
+    keyCondition += " AND GSI1SK BETWEEN :from AND :to";
+    expressionValues[":from"] = `CREATED#${options.from}`;
+    expressionValues[":to"] = `CREATED#${options.to}~`;
+  } else if (options.from) {
+    keyCondition += " AND GSI1SK >= :from";
+    expressionValues[":from"] = `CREATED#${options.from}`;
+  } else if (options.to) {
+    keyCondition += " AND GSI1SK <= :to";
+    expressionValues[":to"] = `CREATED#${options.to}~`;
+  }
+
+  while (items.length < limit) {
+    const result = await docClient.send(
+      new QueryCommand({
+        TableName: TABLE_NAME,
+        IndexName: "GSI1",
+        KeyConditionExpression: keyCondition,
+        ExpressionAttributeValues: expressionValues,
+        ScanIndexForward: false,
+        Limit: limit * 3,
+        ExclusiveStartKey: lastKey,
+      })
+    );
+
+    for (const item of result.Items ?? []) {
+      const receipt = stripReceiptItem(item);
+      if (matchesReceiptFilters(receipt, options)) {
+        items.push(receipt);
+        if (items.length >= limit) break;
+      }
+    }
+
+    lastKey = result.LastEvaluatedKey;
+    if (!lastKey || items.length >= limit) break;
+  }
+
+  const nextCursor =
+    lastKey && items.length >= limit
+      ? Buffer.from(JSON.stringify(lastKey)).toString("base64url")
+      : undefined;
+
+  return { items: items.slice(0, limit), ...(nextCursor ? { nextCursor } : {}) };
+}
+
+export async function listAllSmsDlrReceipts(
+  tenantId: string,
+  options: Omit<ListSmsDlrReceiptsOptions, "limit" | "cursor"> = {}
+): Promise<SmsDlrReceipt[]> {
+  const all: SmsDlrReceipt[] = [];
+  let cursor: string | undefined;
+
+  do {
+    const page = await listSmsDlrReceipts(tenantId, {
+      ...options,
+      limit: 100,
+      ...(cursor ? { cursor } : {}),
+    });
+    all.push(...page.items);
+    cursor = page.nextCursor;
+  } while (cursor);
+
+  return all;
 }
 
 export function makeSmsDlrReceiptId(): string {
@@ -55,6 +186,7 @@ export async function createSmsDlrReceipt(
       TableName: TABLE_NAME,
       Item: {
         ...receiptKeys(receipt.receiptId),
+        ...receiptGsiKeys(receipt.tenantId, receipt.createdAt, receipt.receiptId),
         ...receipt,
         ttl,
       },
@@ -73,8 +205,7 @@ export async function getSmsDlrReceipt(receiptId: string): Promise<SmsDlrReceipt
   );
 
   if (!result.Item) return null;
-  const { PK, SK, ttl: _ttl, ...rest } = result.Item;
-  return rest as SmsDlrReceipt;
+  return stripReceiptItem(result.Item);
 }
 
 export async function markSmsDlrReceiptSent(

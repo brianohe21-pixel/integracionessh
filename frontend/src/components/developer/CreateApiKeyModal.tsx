@@ -4,7 +4,7 @@ import { useState } from "react";
 import { X, Copy, CheckCircle, Eye, EyeOff } from "lucide-react";
 import { useCreateApiKey } from "@/hooks/useApiKeys";
 import type { ApiKeyWithSecret } from "@/types";
-import { buildApiKeyScopes, OPTIONAL_VOICE_API_KEY_SCOPES } from "@/lib/api-key-scopes";
+import { buildApiKeyScopes, OPTIONAL_OTP_API_KEY_SCOPES, OPTIONAL_VOICE_API_KEY_SCOPES } from "@/lib/api-key-scopes";
 import { buildSendMessageCurlExample, CALLS_ENDPOINT_HINT } from "@/lib/api-docs/curl";
 import { useT } from "@/i18n/context";
 
@@ -21,23 +21,31 @@ export function CreateApiKeyModal({ bots, onClose }: CreateApiKeyModalProps) {
 
   const [name, setName] = useState("");
   const [botId, setBotId] = useState(bots[0]?.botId ?? "");
-  const [voiceScopes, setVoiceScopes] = useState<string[]>([]);
+  const [optionalScopes, setOptionalScopes] = useState<string[]>([]);
 
   const createKey = useCreateApiKey();
   const t = useT();
 
-  const voiceScopeLabels: Record<string, string> = {
+  const optionalScopeLabels: Record<string, string> = {
+    "otp:send": t("developer.scopeOtpSend"),
+    "otp:verify": t("developer.scopeOtpVerify"),
     "voice:calls:initiate": t("developer.scopeVoiceInitiate"),
     "voice:calls:read": t("developer.scopeVoiceRead"),
     "voice:calls:manage": t("developer.scopeVoiceManage"),
   };
+
+  function toggleOptionalScope(scope: string) {
+    setOptionalScopes((current) =>
+      current.includes(scope) ? current.filter((s) => s !== scope) : [...current, scope]
+    );
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const result = await createKey.mutateAsync({
       name,
       botId,
-      scopes: buildApiKeyScopes(voiceScopes),
+      scopes: buildApiKeyScopes(optionalScopes),
     });
     setCreatedKey(result);
     setStep("reveal");
@@ -94,6 +102,29 @@ export function CreateApiKeyModal({ bots, onClose }: CreateApiKeyModalProps) {
 
             <div>
               <label className="block text-sm font-medium text-secondary mb-1.5">
+                {t("developer.otpScopesLabel")}
+              </label>
+              <p className="text-xs text-muted mb-2">{t("developer.otpScopesHint")}</p>
+              <div className="space-y-2">
+                {OPTIONAL_OTP_API_KEY_SCOPES.map((scope) => (
+                  <label
+                    key={scope}
+                    className="flex items-center gap-2 text-sm text-secondary cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={optionalScopes.includes(scope)}
+                      onChange={() => toggleOptionalScope(scope)}
+                      className="h-4 w-4 rounded border-default text-accent focus:ring-accent"
+                    />
+                    <span>{optionalScopeLabels[scope]}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-secondary mb-1.5">
                 {t("developer.voiceScopesLabel")}
               </label>
               <p className="text-xs text-muted mb-2">{t("developer.voiceScopesHint")}</p>
@@ -105,17 +136,11 @@ export function CreateApiKeyModal({ bots, onClose }: CreateApiKeyModalProps) {
                   >
                     <input
                       type="checkbox"
-                      checked={voiceScopes.includes(scope)}
-                      onChange={() =>
-                        setVoiceScopes((current) =>
-                          current.includes(scope)
-                            ? current.filter((s) => s !== scope)
-                            : [...current, scope]
-                        )
-                      }
+                      checked={optionalScopes.includes(scope)}
+                      onChange={() => toggleOptionalScope(scope)}
                       className="h-4 w-4 rounded border-default text-accent focus:ring-accent"
                     />
-                    <span>{voiceScopeLabels[scope]}</span>
+                    <span>{optionalScopeLabels[scope]}</span>
                   </label>
                 ))}
               </div>

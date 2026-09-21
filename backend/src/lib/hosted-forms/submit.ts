@@ -10,6 +10,7 @@ import { enqueueFlowEventSubmission, makeSubmissionId } from "../flow/enqueue-ev
 import { isWebhookReceivingFlow } from "../flow/webhook-flow.js";
 import { emitIntegrationEvent } from "../integrations/emit.js";
 import { createLeadFromFormData } from "../leads/form-lead.js";
+import { attributionFromFormAttribution } from "../meta-ads/attribution.js";
 import type { FormAttribution, HostedForm, HostedFormSubmission } from "../../types/index.js";
 import { mappedCrmValues, validateAndNormalizeSubmission } from "./validate.js";
 
@@ -25,6 +26,9 @@ export async function submitHostedForm(params: {
 
   let leadId: string | undefined;
   if (params.form.createLeadOnSubmit && params.form.botId && crm.phone) {
+    const attribution = params.attribution
+      ? attributionFromFormAttribution(params.attribution, submissionId)
+      : undefined;
     const lead = await createLeadFromFormData({
       tenantId: params.form.tenantId,
       botId: params.form.botId,
@@ -33,6 +37,7 @@ export async function submitHostedForm(params: {
       ...(crm.email ? { email: crm.email } : {}),
       ...(params.form.tags?.length ? { tags: params.form.tags } : {}),
       sourceId: submissionId,
+      ...(attribution ? { attribution } : {}),
     });
     leadId = lead.leadId;
   }

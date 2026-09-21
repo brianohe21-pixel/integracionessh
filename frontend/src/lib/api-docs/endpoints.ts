@@ -247,6 +247,18 @@ const VOICE_STRUCTURED_OUTPUT_RESPONSE = JSON.stringify(
 
 const SEND_SMS_BODY = '{"to":"573001234567","text":"Hello from SMS API"}';
 
+const SEND_OTP_BODY = JSON.stringify(
+  {
+    channel: "sms",
+    to: "573001234567",
+    message: "Tu codigo de verificacion es {{code}}. Expira en 5 minutos.",
+  },
+  null,
+  2
+);
+
+const VERIFY_OTP_BODY = '{"to":"573001234567","code":"123456"}';
+
 const SMS_TRACE_RESPONSE = JSON.stringify(
   {
     traceId: "550e8400-e29b-41d4-a716-446655440000",
@@ -320,6 +332,56 @@ export const API_DOC_ENDPOINTS: ApiDocEndpoint[] = [
       body: SEND_SMS_BODY,
     }),
     notesKey: "apiDocs.endpoints.sendSmsNotes",
+  },
+  {
+    id: "send-otp",
+    method: "POST",
+    path: "/v1/otp/send",
+    scope: "otp:send",
+    descriptionKey: "apiDocs.endpoints.sendOtp",
+    requestExample: SEND_OTP_BODY,
+    responseExample: JSON.stringify(
+      {
+        destination: "573001234567",
+        channel: "sms",
+        messageId: "telcored-123",
+        expiresAt: "2026-06-17T12:05:00.000Z",
+        maxAttempts: 3,
+        traceId: "550e8400-e29b-41d4-a716-446655440000",
+        timestamp: "2026-06-17T12:00:00.000Z",
+      },
+      null,
+      2
+    ),
+    curlExample: buildCurlExample({
+      method: "POST",
+      path: "/v1/otp/send",
+      body: SEND_OTP_BODY.replace(/\n/g, "").replace(/  +/g, ""),
+    }),
+    notesKey: "apiDocs.endpoints.sendOtpNotes",
+  },
+  {
+    id: "verify-otp",
+    method: "POST",
+    path: "/v1/otp/verify",
+    scope: "otp:verify",
+    descriptionKey: "apiDocs.endpoints.verifyOtp",
+    requestExample: VERIFY_OTP_BODY,
+    responseExample: JSON.stringify(
+      {
+        verified: true,
+        reason: "verified",
+        timestamp: "2026-06-17T12:01:00.000Z",
+      },
+      null,
+      2
+    ),
+    curlExample: buildCurlExample({
+      method: "POST",
+      path: "/v1/otp/verify",
+      body: VERIFY_OTP_BODY,
+    }),
+    notesKey: "apiDocs.endpoints.verifyOtpNotes",
   },
   {
     id: "get-sms-trace",

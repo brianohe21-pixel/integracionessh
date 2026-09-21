@@ -524,6 +524,7 @@ export interface Conversation {
   copilotGeneratedAt?: string;
   interactionCategory?: InteractionCategory;
   interactionCategoryAt?: string;
+  attribution?: AdsAttribution;
   messageCount: number;
   lastMessageAt: string;
   welcomeSentAt?: string;
@@ -642,6 +643,15 @@ export interface TenantMember {
   advisorId?: string;
   teamIds?: string[];
   lastLoginAt?: string;
+  profilePhotoS3Key?: string;
+}
+
+export interface UserProfile {
+  userId: string;
+  email: string;
+  name: string;
+  role: TenantMemberRole;
+  profilePhotoUrl?: string;
 }
 
 export interface OrganizationTeam {
@@ -674,6 +684,10 @@ export type ConsentSource = "manual" | "import" | "whatsapp_keyword" | "panel" |
 
 export type ContactSource = "sync" | "manual" | "import" | "lead_capture";
 
+export type ContactSortField = "updated" | "lastSeen" | "created" | "name" | "csat";
+
+export type ContactDateField = "firstSeen" | "lastSeen" | "created";
+
 export interface Contact {
   phoneNumber: string;
   tenantId: string;
@@ -682,6 +696,7 @@ export interface Contact {
   country?: string;
   company?: string;
   tags: string[];
+  notes?: string;
   marketingConsent: MarketingConsent;
   consentAt?: string;
   consentSource?: ConsentSource;
@@ -715,6 +730,7 @@ export interface Lead {
   notes?: string;
   assignedAdvisorId?: string;
   convertedAt?: string;
+  attribution?: AdsAttribution;
   createdAt: string;
   updatedAt: string;
 }
@@ -748,6 +764,35 @@ export type OpportunityLossReason =
   | "timing"
   | "not_qualified"
   | "other";
+
+export type AdsAttributionSource = "meta_ctwa" | "meta_lead_ads" | "utm" | "web_form";
+
+export interface AdsAttribution {
+  source: AdsAttributionSource;
+  adId?: string;
+  adSourceId?: string;
+  adSetId?: string;
+  formId?: string;
+  ctwaClid?: string;
+  headline?: string;
+  body?: string;
+  sourceUrl?: string;
+  sourceType?: string;
+  mediaType?: string;
+  imageUrl?: string;
+  campaignId?: string;
+  flowId?: string;
+  submissionId?: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  utmContent?: string;
+  utmTerm?: string;
+  referrer?: string;
+  landingPage?: string;
+  shortLinkId?: string;
+  shortLinkSlug?: string;
+}
 
 export interface OpportunityAttribution {
   source?: string;
@@ -996,6 +1041,17 @@ export interface LeadMetrics {
     converted: number;
     lost: number;
   };
+}
+
+export interface ContactMetrics {
+  total: number;
+  optIn: number;
+  optOut: number;
+  unknown: number;
+  suppressed: number;
+  addedToday: number;
+  addedThisWeek: number;
+  withLead: number;
 }
 
 export interface DynamoDBItem {
@@ -1549,6 +1605,17 @@ export interface WhatsAppOrderPayload {
   product_items: WhatsAppOrderProductItem[];
 }
 
+export interface WhatsAppReferral {
+  source_url?: string;
+  source_type?: string;
+  source_id?: string;
+  headline?: string;
+  body?: string;
+  media_type?: string;
+  image_url?: string;
+  ctwa_clid?: string;
+}
+
 export interface WhatsAppMessage {
   from: string;
   id: string;
@@ -1568,6 +1635,7 @@ export interface WhatsAppMessage {
   audio?: { id: string; mime_type: string };
   interactive?: WhatsAppInteractiveReply;
   order?: WhatsAppOrderPayload;
+  referral?: WhatsAppReferral;
   reaction?: {
     message_id: string;
     emoji: string;
@@ -1597,6 +1665,18 @@ export interface InstagramMessage {
   }>;
 }
 
+export interface MetaLeadgenWebhookChange {
+  field: "leadgen";
+  value: {
+    ad_id?: string;
+    form_id?: string;
+    leadgen_id: string;
+    created_time: number;
+    page_id: string;
+    adgroup_id?: string;
+  };
+}
+
 export interface InstagramWebhookEvent {
   object: string;
   entry: Array<{
@@ -1607,6 +1687,7 @@ export interface InstagramWebhookEvent {
       timestamp: number;
       message?: InstagramMessage;
     }>;
+    changes?: MetaLeadgenWebhookChange[];
   }>;
 }
 
@@ -1943,6 +2024,80 @@ export interface Campaign {
 
 export type SmsDlrSource = "campaign" | "template" | "api";
 
+export type SmsHistoryStatus =
+  | "pending"
+  | "sent"
+  | "delivered"
+  | "delivery_failed"
+  | "send_failed";
+
+export interface SmsHistoryItem {
+  receiptId: string;
+  to: string;
+  source: SmsDlrSource;
+  status: SmsHistoryStatus;
+  templateName: string | null;
+  campaignId: string | null;
+  botId: string;
+  createdAt: string;
+  dlrAt: string | null;
+  telcoredMessageId: string | null;
+  sendError: string | null;
+}
+
+export interface SmsHistoryPage {
+  items: SmsHistoryItem[];
+  nextCursor?: string;
+}
+
+export interface SmsOverviewDailyPoint {
+  date: string;
+  total: number;
+  delivered: number;
+  failed: number;
+}
+
+export interface SmsOverviewStatusPoint {
+  status: SmsHistoryStatus;
+  count: number;
+}
+
+export interface SmsOverviewSourcePoint {
+  source: SmsDlrSource;
+  count: number;
+}
+
+export interface SmsOverviewChannelPoint {
+  channel: "campaign" | "bulk";
+  sent: number;
+  failed: number;
+}
+
+export interface SmsOverviewCharts {
+  dailyTrend: SmsOverviewDailyPoint[];
+  byStatus: SmsOverviewStatusPoint[];
+  bySource: SmsOverviewSourcePoint[];
+  byChannel: SmsOverviewChannelPoint[];
+}
+
+export interface SmsOverview {
+  enabledBots: number;
+  activeCampaigns: number;
+  campaignSent: number;
+  campaignFailed: number;
+  campaignDelivered: number;
+  campaignDeliveryFailed: number;
+  bulkJobs: number;
+  bulkSent: number;
+  bulkFailed: number;
+  dlrDelivered: number;
+  dlrFailed: number;
+  dlrPending: number;
+  dlrSent: number;
+  deliveryRate: number;
+  charts: SmsOverviewCharts;
+}
+
 export interface SmsDlrReceipt {
   receiptId: string;
   tenantId: string;
@@ -2118,6 +2273,12 @@ export interface BotUsageMetrics {
   lastActivityAt: string | null;
 }
 
+export interface ChannelUsageMetrics {
+  channel: Channel;
+  conversations: number;
+  messages: number;
+}
+
 export interface UsageMetricsSummary {
   totalBots: number;
   activeBots: number;
@@ -2134,6 +2295,7 @@ export interface UsageMetricsSummary {
 export interface UsageMetrics {
   summary: UsageMetricsSummary;
   byBot: BotUsageMetrics[];
+  byChannel: ChannelUsageMetrics[];
   recentBulkJobs: BulkSendJob[];
 }
 
@@ -2739,6 +2901,7 @@ export type FlowNodeType =
   | "send_catalog"
   | "send_products"
   | "await_order"
+  | "send_otp"
   | "save_contact"
   | "create_lead"
   | "create_opportunity"
@@ -2855,6 +3018,10 @@ export interface FlowNodeData {
   webhookBody?: string;
   webhookHeaders?: FlowHttpHeader[];
   webhookResponseVariable?: string;
+  otpMessageText?: LocalizedText;
+  otpWhatsAppTemplateName?: string;
+  otpWhatsAppTemplateLanguage?: string;
+  otpMaxAttempts?: number;
 }
 
 export interface FlowNode {

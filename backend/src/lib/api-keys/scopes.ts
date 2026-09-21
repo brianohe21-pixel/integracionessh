@@ -12,6 +12,8 @@ export const API_KEY_SCOPES = {
   messagesSend: "messages:send",
   smsSend: "sms:send",
   smsRead: "sms:read",
+  otpSend: "otp:send",
+  otpVerify: "otp:verify",
   callsInitiate: "calls:initiate",
   callsManage: "calls:manage",
   callsSettings: "calls:settings",
@@ -34,6 +36,8 @@ export const DEFAULT_API_KEY_SCOPES = [
 ];
 
 export const OPTIONAL_API_KEY_SCOPES = [
+  API_KEY_SCOPES.otpSend,
+  API_KEY_SCOPES.otpVerify,
   API_KEY_SCOPES.voiceCallsInitiate,
   API_KEY_SCOPES.voiceCallsRead,
   API_KEY_SCOPES.voiceCallsManage,

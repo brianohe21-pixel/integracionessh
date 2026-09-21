@@ -9,9 +9,18 @@ interface FieldLabelProps {
   tooltip: string;
   htmlFor?: string;
   className?: string;
+  tooltipSide?: "top" | "bottom" | "left" | "right";
+  tooltipClassName?: string;
 }
 
-export function FieldLabel({ label, tooltip, htmlFor, className }: FieldLabelProps) {
+export function FieldLabel({
+  label,
+  tooltip,
+  htmlFor,
+  className,
+  tooltipSide = "bottom",
+  tooltipClassName,
+}: FieldLabelProps) {
   return (
     <span className={cn("mb-1 flex items-center gap-1.5 text-secondary", className)}>
       {htmlFor ? (
@@ -21,8 +30,8 @@ export function FieldLabel({ label, tooltip, htmlFor, className }: FieldLabelPro
       ) : (
         <span className="font-medium">{label}</span>
       )}
-      <Tooltip content={tooltip}>
-        <span title={tooltip}>
+      <Tooltip content={tooltip} side={tooltipSide} contentClassName={tooltipClassName}>
+        <span>
           <CircleHelp
             tabIndex={0}
             className="h-4 w-4 cursor-help text-muted outline-none focus:text-secondary"

@@ -3,9 +3,9 @@
 @import "driver.js/dist/driver.css";
 
 :root {
-  --brand-primary: #6366f1;
-  --brand-primary-hover: #4f46e5;
-  --brand-primary-light: rgba(99, 102, 241, 0.16);
+  --brand-primary: #128c7e;
+  --brand-primary-hover: #107b6f;
+  --brand-primary-light: rgba(18, 140, 126, 0.16);
 
   --surface: #ffffff;
   --surface-elevated: #ffffff;
@@ -22,7 +22,7 @@
   --sidebar-icon-active: #0f172a;
   --sidebar-border: #e2e8f0;
   --sidebar-hover: #f1f5f9;
-  --sidebar-active: #eef2ff;
+  --sidebar-active: rgba(18, 140, 126, 0.12);
 
   --text-primary: #0f172a;
   --text-secondary: #475569;
@@ -94,6 +94,11 @@
   --card-header-icon-bg: color-mix(in srgb, var(--brand-primary) 18%, rgba(255, 255, 255, 0.08));
   --card-header-icon-border: color-mix(in srgb, var(--brand-primary) 28%, rgba(255, 255, 255, 0.12));
 
+  --topbar: var(--brand-primary);
+  --topbar-text: #ffffff;
+  --topbar-icon: rgba(255, 255, 255, 0.9);
+  --topbar-hover: rgba(255, 255, 255, 0.12);
+
   --background: var(--canvas);
   --foreground: var(--text-primary);
 }
@@ -116,7 +121,7 @@
   --sidebar-icon-active: #fafafa;
   --sidebar-border: rgba(255, 255, 255, 0.1);
   --sidebar-hover: rgba(255, 255, 255, 0.06);
-  --sidebar-active: rgba(99, 102, 241, 0.18);
+  --sidebar-active: rgba(18, 140, 126, 0.18);
 
   --text-primary: #f1f5f9;
   --text-secondary: #c7d2fe;
@@ -164,12 +169,35 @@
   --card-header-icon-bg: color-mix(in srgb, var(--brand-primary) 18%, rgba(255, 255, 255, 0.06));
   --card-header-icon-border: color-mix(in srgb, var(--brand-primary) 28%, rgba(255, 255, 255, 0.1));
 
+  --topbar: var(--brand-primary);
+  --topbar-text: #ffffff;
+  --topbar-icon: rgba(255, 255, 255, 0.9);
+  --topbar-hover: rgba(255, 255, 255, 0.12);
+
   --background: var(--canvas);
   --foreground: var(--text-primary);
 }
 
 [data-theme="light"] {
   color-scheme: light;
+}
+
+.platform-topbar {
+  background: var(--topbar);
+  color: var(--topbar-text);
+}
+
+.topbar-icon {
+  color: var(--topbar-icon);
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.topbar-icon:hover,
+.topbar-icon[aria-expanded="true"] {
+  background: var(--topbar-hover);
+  color: var(--topbar-text);
 }
 
 @theme inline {

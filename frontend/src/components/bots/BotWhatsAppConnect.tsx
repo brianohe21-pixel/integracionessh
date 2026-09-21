@@ -341,6 +341,7 @@ export function BotWhatsAppConnect({ bot }: BotWhatsAppConnectProps) {
               ? t("whatsapp.channels.multiDescription")
               : t("whatsapp.channels.singleDescription")}
           </p>
+          <p className="mt-2 text-xs text-secondary">{t("whatsapp.adsHint")}</p>
         </div>
         {canAddChannel ? (
           <Button

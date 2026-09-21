@@ -8,6 +8,8 @@ meta_embedded_signup_config_id = "your-embedded-signup-config-id"
 lambda_zip_path       = "../../modules/lambda/bootstrap/functions.zip"
 google_client_id      = ""
 google_client_secret  = ""
+google_business_client_id     = ""
+google_business_client_secret = ""
 custom_domain         = "app.yourdomain.com"
 api_custom_domain     = "api.integracionessh.lat"
 

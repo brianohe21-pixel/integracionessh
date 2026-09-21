@@ -554,6 +554,10 @@ export type MarketingConsent = "unknown" | "opt_in" | "opt_out";
 
 export type ContactSource = "sync" | "manual" | "import" | "lead_capture";
 
+export type ContactSortField = "updated" | "lastSeen" | "created" | "name" | "csat";
+
+export type ContactDateField = "firstSeen" | "lastSeen" | "created";
+
 export interface Contact {
   phoneNumber: string;
   tenantId: string;
@@ -562,6 +566,7 @@ export interface Contact {
   country?: string;
   company?: string;
   tags: string[];
+  notes?: string;
   marketingConsent: MarketingConsent;
   consentAt?: string;
   consentSource?: string;
@@ -594,6 +599,7 @@ export interface Lead {
   notes?: string;
   assignedAdvisorId?: string;
   convertedAt?: string;
+  attribution?: AdsAttribution;
   createdAt: string;
   updatedAt: string;
 }
@@ -627,6 +633,35 @@ export type OpportunityLossReason =
   | "timing"
   | "not_qualified"
   | "other";
+
+export type AdsAttributionSource = "meta_ctwa" | "meta_lead_ads" | "utm" | "web_form";
+
+export interface AdsAttribution {
+  source: AdsAttributionSource;
+  adId?: string;
+  adSourceId?: string;
+  adSetId?: string;
+  formId?: string;
+  ctwaClid?: string;
+  headline?: string;
+  body?: string;
+  sourceUrl?: string;
+  sourceType?: string;
+  mediaType?: string;
+  imageUrl?: string;
+  campaignId?: string;
+  flowId?: string;
+  submissionId?: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  utmContent?: string;
+  utmTerm?: string;
+  referrer?: string;
+  landingPage?: string;
+  shortLinkId?: string;
+  shortLinkSlug?: string;
+}
 
 export interface OpportunityAttribution {
   source?: string;
@@ -887,6 +922,17 @@ export interface LeadMetrics {
   };
 }
 
+export interface ContactMetrics {
+  total: number;
+  optIn: number;
+  optOut: number;
+  unknown: number;
+  suppressed: number;
+  addedToday: number;
+  addedThisWeek: number;
+  withLead: number;
+}
+
 export interface ContactsListResponse {
   items: Contact[];
   nextCursor?: string;
@@ -925,6 +971,7 @@ export interface Conversation {
   copilotGeneratedAt?: string;
   interactionCategory?: InteractionCategory;
   interactionCategoryAt?: string;
+  attribution?: AdsAttribution;
   messageCount: number;
   lastMessageAt: string;
   emailSubject?: string;
@@ -1128,6 +1175,15 @@ export interface TenantMember {
   advisorId?: string;
   teamIds?: string[];
   lastLoginAt?: string;
+  profilePhotoS3Key?: string;
+}
+
+export interface UserProfile {
+  userId: string;
+  email: string;
+  name: string;
+  role: "member" | "supervisor" | "advisor";
+  profilePhotoUrl?: string;
 }
 
 export interface TenantMembersResponse {
@@ -1313,6 +1369,82 @@ export interface BulkSendJob {
   updatedAt: string;
 }
 
+export type SmsHistoryStatus =
+  | "pending"
+  | "sent"
+  | "delivered"
+  | "delivery_failed"
+  | "send_failed";
+
+export type SmsDlrSource = "campaign" | "template" | "api";
+
+export interface SmsHistoryItem {
+  receiptId: string;
+  to: string;
+  source: SmsDlrSource;
+  status: SmsHistoryStatus;
+  templateName: string | null;
+  campaignId: string | null;
+  botId: string;
+  createdAt: string;
+  dlrAt: string | null;
+  telcoredMessageId: string | null;
+  sendError: string | null;
+}
+
+export interface SmsHistoryPage {
+  items: SmsHistoryItem[];
+  nextCursor?: string;
+}
+
+export interface SmsOverviewDailyPoint {
+  date: string;
+  total: number;
+  delivered: number;
+  failed: number;
+}
+
+export interface SmsOverviewStatusPoint {
+  status: SmsHistoryStatus;
+  count: number;
+}
+
+export interface SmsOverviewSourcePoint {
+  source: SmsDlrSource;
+  count: number;
+}
+
+export interface SmsOverviewChannelPoint {
+  channel: "campaign" | "bulk";
+  sent: number;
+  failed: number;
+}
+
+export interface SmsOverviewCharts {
+  dailyTrend: SmsOverviewDailyPoint[];
+  byStatus: SmsOverviewStatusPoint[];
+  bySource: SmsOverviewSourcePoint[];
+  byChannel: SmsOverviewChannelPoint[];
+}
+
+export interface SmsOverview {
+  enabledBots: number;
+  activeCampaigns: number;
+  campaignSent: number;
+  campaignFailed: number;
+  campaignDelivered: number;
+  campaignDeliveryFailed: number;
+  bulkJobs: number;
+  bulkSent: number;
+  bulkFailed: number;
+  dlrDelivered: number;
+  dlrFailed: number;
+  dlrPending: number;
+  dlrSent: number;
+  deliveryRate: number;
+  charts: SmsOverviewCharts;
+}
+
 export interface BotUsageMetrics {
   botId: string;
   botName: string;
@@ -1322,6 +1454,12 @@ export interface BotUsageMetrics {
   messages: number;
   templates: number;
   lastActivityAt: string | null;
+}
+
+export interface ChannelUsageMetrics {
+  channel: Channel;
+  conversations: number;
+  messages: number;
 }
 
 export interface UsageMetricsSummary {
@@ -1340,6 +1478,7 @@ export interface UsageMetricsSummary {
 export interface UsageMetrics {
   summary: UsageMetricsSummary;
   byBot: BotUsageMetrics[];
+  byChannel: ChannelUsageMetrics[];
   recentBulkJobs: BulkSendJob[];
 }
 
@@ -1609,6 +1748,7 @@ export type FlowNodeType =
   | "send_catalog"
   | "send_products"
   | "await_order"
+  | "send_otp"
   | "save_contact"
   | "create_lead"
   | "create_opportunity"
@@ -1734,6 +1874,10 @@ export interface FlowNodeData {
   webhookBody?: string;
   webhookHeaders?: FlowHttpHeader[];
   webhookResponseVariable?: string;
+  otpMessageText?: LocalizedText;
+  otpWhatsAppTemplateName?: string;
+  otpWhatsAppTemplateLanguage?: string;
+  otpMaxAttempts?: number;
 }
 
 export interface FlowNode {

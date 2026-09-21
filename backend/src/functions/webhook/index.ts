@@ -251,9 +251,20 @@ async function handleInstagramWebhook(payload: InstagramWebhookEvent): Promise<v
 
 async function handleMessengerWebhook(payload: InstagramWebhookEvent): Promise<void> {
   const sqsPromises: Promise<unknown>[] = [];
+  const leadgenPromises: Promise<unknown>[] = [];
 
   for (const entry of payload.entry) {
     const pageId = entry.id;
+
+    for (const change of entry.changes ?? []) {
+      if (change.field !== "leadgen") continue;
+      const { processLeadgenWebhook } = await import("../../lib/meta-ads/process-leadgen.js");
+      leadgenPromises.push(
+        processLeadgenWebhook(change, ENVIRONMENT).catch((err) =>
+          console.error("Failed to process Lead Ads webhook:", err)
+        )
+      );
+    }
 
     for (const event of entry.messaging ?? []) {
       const message = event.message;
@@ -303,7 +314,7 @@ async function handleMessengerWebhook(payload: InstagramWebhookEvent): Promise<v
     }
   }
 
-  await Promise.all(sqsPromises);
+  await Promise.all([...sqsPromises, ...leadgenPromises]);
 }
 
 async function handleCoexistenceChange(

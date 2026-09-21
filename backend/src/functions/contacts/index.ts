@@ -31,7 +31,22 @@ import {
   handleError,
 } from "../../lib/http.js";
 import { enrichContactCountry } from "../../lib/phone/country-from-phone.js";
-import type { Contact, MarketingConsent } from "../../types/index.js";
+import type {
+  Contact,
+  ContactDateField,
+  ContactSortField,
+  MarketingConsent,
+} from "../../types/index.js";
+
+const CONTACT_SORT_FIELDS = new Set<ContactSortField>([
+  "updated",
+  "lastSeen",
+  "created",
+  "name",
+  "csat",
+]);
+
+const CONTACT_DATE_FIELDS = new Set<ContactDateField>(["firstSeen", "lastSeen", "created"]);
 
 const CreateContactSchema = z.object({
   phoneNumber: z.string().min(10).max(20),
@@ -49,6 +64,7 @@ const UpdateContactSchema = z.object({
   country: z.string().max(100).optional(),
   company: z.string().max(200).optional(),
   tags: z.array(z.string().max(50)).max(20).optional(),
+  notes: z.string().max(4000).optional(),
   marketingConsent: z.enum(["unknown", "opt_in", "opt_out"]).optional(),
   suppressed: z.boolean().optional(),
 });
@@ -81,14 +97,15 @@ function parseSubPath(rawPath: string, phone: string): string | null {
 }
 
 function exportCsv(contacts: Contact[]): string {
-  const header = "phone,displayName,email,country,company,marketingConsent,suppressed,tags";
+  const header = "phone,displayName,email,country,company,marketingConsent,suppressed,tags,notes";
   const rows = contacts.map((c) => {
     const tags = c.tags.join("|");
     const name = (c.displayName ?? "").replace(/"/g, '""');
     const email = (c.email ?? "").replace(/"/g, '""');
     const country = (c.country ?? "").replace(/"/g, '""');
     const company = (c.company ?? "").replace(/"/g, '""');
-    return `${c.phoneNumber},"${name}","${email}","${country}","${company}",${c.marketingConsent},${c.suppressed},"${tags}"`;
+    const notes = (c.notes ?? "").replace(/"/g, '""');
+    return `${c.phoneNumber},"${name}","${email}","${country}","${company}",${c.marketingConsent},${c.suppressed},"${tags}","${notes}"`;
   });
   return [header, ...rows].join("\n");
 }
@@ -134,6 +151,11 @@ export async function handler(
         return badRequest("Invalid consent filter");
       }
 
+      const sortParam = params.sort?.trim() as ContactSortField | undefined;
+      if (sortParam && !CONTACT_SORT_FIELDS.has(sortParam)) {
+        return badRequest("Invalid sort field");
+      }
+
       const listOpts: Parameters<typeof listContacts>[1] = { limit };
       if (params.cursor) listOpts.cursor = params.cursor;
       if (params.tag) listOpts.tag = params.tag;
@@ -141,17 +163,37 @@ export async function handler(
       if (params.suppressed === "true") listOpts.suppressed = true;
       if (params.suppressed === "false") listOpts.suppressed = false;
       if (params.q) listOpts.q = params.q;
+      if (params.country) listOpts.country = params.country;
+      if (params.company) listOpts.company = params.company;
+      const botId = params.botId?.trim();
+      if (botId) listOpts.botId = botId;
+      if (sortParam) listOpts.sort = sortParam;
+      const from = params.from?.trim();
+      const to = params.to?.trim();
+      const dateField = params.dateField?.trim() as ContactDateField | undefined;
+      if ((from && !to) || (!from && to)) {
+        return badRequest("Both from and to are required for date filtering");
+      }
+      if (from && to) {
+        listOpts.from = from;
+        listOpts.to = to;
+      }
+      if (dateField) {
+        if (!CONTACT_DATE_FIELDS.has(dateField)) {
+          return badRequest("Invalid date field");
+        }
+        listOpts.dateField = dateField;
+      }
 
-      const [result, conversations] = await Promise.all([
-        listContacts(auth.tenantId, listOpts),
-        listAllConversationsForTenant(auth.tenantId),
-      ]);
+      const conversations = await listAllConversationsForTenant(auth.tenantId);
       const csatMap = buildCustomerCsatMap(conversations);
+      const result = await listContacts(auth.tenantId, listOpts, csatMap);
 
       return ok({
         ...result,
         items: result.items.map((contact) => {
           const enriched = enrichContactCountry(contact);
+          if (contact.csatAverage !== undefined) return enriched;
           const csat = csatMap.get(contact.phoneNumber);
           if (!csat) return enriched;
           return {
@@ -271,6 +313,7 @@ export async function handler(
       if (parsed.data.country !== undefined) patch.country = parsed.data.country;
       if (parsed.data.company !== undefined) patch.company = parsed.data.company;
       if (parsed.data.tags !== undefined) patch.tags = parsed.data.tags;
+      if (parsed.data.notes !== undefined) patch.notes = parsed.data.notes;
       if (parsed.data.suppressed !== undefined) patch.suppressed = parsed.data.suppressed;
       if (parsed.data.marketingConsent !== undefined) {
         patch.marketingConsent = parsed.data.marketingConsent;

@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { History, Mail, Megaphone, Phone, Tag, User } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { History, Mail, Megaphone, MessageSquare, Phone, PhoneCall, Tag, User } from "lucide-react";
 import { SideDrawer } from "@/components/ui/SideDrawer";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -10,11 +11,14 @@ import { Input, Textarea } from "@/components/ui/Input";
 import { FieldLabel } from "@/components/ui/FieldLabel";
 import { WhatsAppRiskBadge } from "@/components/whatsapp/WhatsAppRiskBadge";
 import { useFormatters } from "@/hooks/useFormatters";
+import { useClickToCall } from "@/hooks/useContactCenter";
 import { useUpdateContact } from "@/hooks/useContacts";
 import { useT } from "@/i18n/context";
+import { api } from "@/lib/api";
+import { isSubaccountServiceEnabled } from "@/lib/subaccount-services";
 import { resolveWhatsAppRisk, type WhatsAppRiskResponse } from "@/hooks/useWhatsAppRisk";
 import { detectCountryFromPhone } from "@/lib/phone/country-from-phone";
-import type { Contact, MarketingConsent } from "@/types";
+import type { Contact, MarketingConsent, Tenant } from "@/types";
 
 function consentVariant(c: MarketingConsent): "success" | "warning" | "danger" | "default" {
   if (c === "opt_in") return "success";
@@ -29,6 +33,12 @@ function contactInitials(name?: string, phone?: string): string {
     return name.slice(0, 2).toUpperCase();
   }
   return phone?.slice(-2) ?? "?";
+}
+
+function conversationHref(contact: Contact): string {
+  const params = new URLSearchParams({ phone: contact.phoneNumber });
+  if (contact.lastBotId) params.set("botId", contact.lastBotId);
+  return `/conversations?${params.toString()}`;
 }
 
 export function ContactDetailPanel({
@@ -47,6 +57,14 @@ export function ContactDetailPanel({
   const t = useT();
   const { formatDate, formatRelativeTime } = useFormatters();
   const updateContact = useUpdateContact();
+  const clickToCall = useClickToCall();
+  const { data: me } = useQuery({
+    queryKey: ["tenants", "me"],
+    queryFn: () => api.get<Tenant>("/tenants/me"),
+  });
+  const showCallAction = Boolean(
+    contact.lastBotId && isSubaccountServiceEnabled(me, "contactCenter")
+  );
 
   const [displayName, setDisplayName] = useState(contact.displayName ?? "");
   const [email, setEmail] = useState(contact.email ?? "");
@@ -55,8 +73,10 @@ export function ContactDetailPanel({
   );
   const [company, setCompany] = useState(contact.company ?? "");
   const [tags, setTags] = useState(contact.tags.join(", "));
+  const [notes, setNotes] = useState(contact.notes ?? "");
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
+  const [notesSaved, setNotesSaved] = useState(false);
 
   const initials = contactInitials(contact.displayName, contact.phoneNumber);
   const title = contact.displayName?.trim() || contact.phoneNumber;
@@ -82,6 +102,20 @@ export function ContactDetailPanel({
     }
   }
 
+  async function saveNotes() {
+    setError("");
+    setNotesSaved(false);
+    try {
+      await updateContact.mutateAsync({
+        phone: contact.phoneNumber,
+        notes: notes.trim(),
+      });
+      setNotesSaved(true);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
   async function setConsent(consent: MarketingConsent) {
     setError("");
     await updateContact.mutateAsync({
@@ -89,6 +123,19 @@ export function ContactDetailPanel({
       marketingConsent: consent,
       ...(consent === "opt_out" ? { suppressed: true } : {}),
     });
+  }
+
+  async function handleCall() {
+    if (!contact.lastBotId) return;
+    setError("");
+    try {
+      await clickToCall.mutateAsync({
+        botId: contact.lastBotId,
+        to: contact.phoneNumber,
+      });
+    } catch (err) {
+      setError((err as Error).message);
+    }
   }
 
   const sourceKey = `contacts.source_${contact.source}` as const;
@@ -153,6 +200,34 @@ export function ContactDetailPanel({
           </div>
         </div>
 
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href={conversationHref(contact)}
+            className="inline-flex items-center gap-2 rounded-lg border border-default bg-surface px-3 py-1.5 text-sm font-medium text-primary hover:bg-surface-muted"
+          >
+            <MessageSquare className="h-4 w-4" />
+            {t("contacts.openConversation")}
+          </Link>
+          {showCallAction ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => void handleCall()}
+              disabled={clickToCall.isPending}
+            >
+              <PhoneCall className="h-4 w-4" />
+              {t("contacts.callContact")}
+            </Button>
+          ) : null}
+          {onStartCampaign ? (
+            <Button type="button" size="sm" variant="secondary" onClick={onStartCampaign}>
+              <Megaphone className="h-4 w-4" />
+              {t("contacts.startCampaign")}
+            </Button>
+          ) : null}
+        </div>
+
         <div className="rounded-xl border border-default bg-surface p-4 space-y-3">
           <div className="flex items-center justify-between gap-2">
             <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
@@ -215,6 +290,24 @@ export function ContactDetailPanel({
               {t("common.save")}
             </Button>
             {saved && <span className="text-xs text-success">{t("contacts.saved")}</span>}
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-default bg-surface p-4 space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-secondary">
+            {t("contacts.notes")}
+          </p>
+          <Textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={4}
+            placeholder={t("contacts.notesPlaceholder")}
+          />
+          <div className="flex items-center gap-2">
+            <Button type="button" size="sm" onClick={saveNotes} disabled={updateContact.isPending}>
+              {t("common.save")}
+            </Button>
+            {notesSaved && <span className="text-xs text-success">{t("contacts.saved")}</span>}
           </div>
         </div>
 
@@ -285,14 +378,12 @@ export function ContactDetailPanel({
         </div>
 
         <div className="flex flex-wrap gap-3">
-          {contact.lastBotId && (
-            <Link
-              href={`/conversations?botId=${contact.lastBotId}&phone=${encodeURIComponent(contact.phoneNumber)}`}
-              className="text-sm font-medium text-accent hover:underline"
-            >
-              {t("leads.openConversation")}
-            </Link>
-          )}
+          <Link
+            href={conversationHref(contact)}
+            className="text-sm font-medium text-accent hover:underline"
+          >
+            {t("contacts.openConversation")}
+          </Link>
           {contact.leadId && (
             <Link href={`/leads?q=${encodeURIComponent(contact.phoneNumber)}`} className="text-sm font-medium text-accent hover:underline">
               {t("contacts.viewLead")}
