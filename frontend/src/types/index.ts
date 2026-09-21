@@ -1717,6 +1717,7 @@ export type FlowNodeType =
   | "send_catalog"
   | "send_products"
   | "await_order"
+  | "send_otp"
   | "save_contact"
   | "create_lead"
   | "create_opportunity"
@@ -1842,6 +1843,10 @@ export interface FlowNodeData {
   webhookBody?: string;
   webhookHeaders?: FlowHttpHeader[];
   webhookResponseVariable?: string;
+  otpMessageText?: LocalizedText;
+  otpWhatsAppTemplateName?: string;
+  otpWhatsAppTemplateLanguage?: string;
+  otpMaxAttempts?: number;
 }
 
 export interface FlowNode {

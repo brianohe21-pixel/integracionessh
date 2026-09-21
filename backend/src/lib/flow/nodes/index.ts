@@ -22,6 +22,7 @@ import { executeSendNotificationNode } from "./send-notification.js";
 import { executeAssignBotNode } from "./assign-bot.js";
 import { executeWebhookNode } from "./webhook.js";
 import { executeTriggerNode } from "./trigger.js";
+import { executeSendOtpNode } from "./send-otp.js";
 
 export async function executeNode(
   node: FlowNode,
@@ -59,6 +60,8 @@ export async function executeNode(
       return executeSendProductsNode(node, ctx, run);
     case "await_order":
       return executeAwaitOrderNode(node, ctx, run);
+    case "send_otp":
+      return executeSendOtpNode(node, ctx, run);
     case "save_contact":
       return executeSaveContactNode(node, ctx, run);
     case "create_lead":

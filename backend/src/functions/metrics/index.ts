@@ -1,6 +1,10 @@
 import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
+import { z } from "zod";
 import { resolveRequestAuth, assertMemberRole } from "../../lib/auth/cognito.js";
 import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
+import { getBot } from "../../lib/dynamodb/bot.repository.js";
+import { incrementMessages } from "../../lib/dynamodb/usage.repository.js";
+import { assertOtpChannelReady, sendOtp, verifyOtp } from "../../lib/otp/service.js";
 import { getTenantUsageMetrics } from "../../lib/dynamodb/metrics.repository.js";
 import { getMarketingMetrics } from "../../lib/dynamodb/marketing-metrics.repository.js";
 import { getLeadMetrics } from "../../lib/dynamodb/lead-metrics.repository.js";
@@ -24,6 +28,20 @@ const SMS_STATUSES = new Set<SmsHistoryStatus>([
   "delivery_failed",
   "send_failed",
 ]);
+
+const SendSmsOtpSchema = z.object({
+  botId: z.string().min(1),
+  to: z.string().min(7).max(20).regex(/^\d+$/, "Phone number must contain only digits"),
+  message: z.string().min(1).max(1024).optional(),
+  maxAttempts: z.number().int().min(1).max(10).optional(),
+});
+
+const VerifySmsOtpSchema = z.object({
+  to: z.string().min(7).max(20).regex(/^\d+$/, "Phone number must contain only digits"),
+  code: z.string().min(4).max(10).regex(/^\d+$/, "Verification code must contain only digits"),
+});
+
+const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 
 export async function handler(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
@@ -92,6 +110,64 @@ export async function handler(
       await assertAssignedServices(auth.tenantId, "campaigns");
       const overview = await getSmsOverview(auth.tenantId);
       return ok({ overview });
+    }
+
+    if (method === "POST" && rawPath.endsWith("/metrics/sms/otp/send")) {
+      await assertAssignedServices(auth.tenantId, "campaigns");
+      const parsed = SendSmsOtpSchema.safeParse(JSON.parse(event.body ?? "{}"));
+      if (!parsed.success) {
+        return badRequest(parsed.error.errors[0]?.message ?? "Invalid request body");
+      }
+
+      const bot = await getBot(auth.tenantId, parsed.data.botId);
+      if (!bot || bot.status !== "active") {
+        return badRequest("Bot not found or inactive");
+      }
+      assertOtpChannelReady(bot, "sms");
+
+      const result = await sendOtp({
+        tenantId: auth.tenantId,
+        botId: parsed.data.botId,
+        channel: "sms",
+        to: parsed.data.to,
+        ...(parsed.data.message ? { messageTemplate: parsed.data.message } : {}),
+        ...(parsed.data.maxAttempts ? { maxAttempts: parsed.data.maxAttempts } : {}),
+        environment: ENVIRONMENT,
+      });
+
+      await incrementMessages(auth.tenantId);
+      return ok({
+        destination: result.destination,
+        channel: result.channel,
+        messageId: result.messageId,
+        expiresAt: result.expiresAt,
+        maxAttempts: result.maxAttempts,
+        ...(result.receiptId ? { traceId: result.receiptId } : {}),
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    if (method === "POST" && rawPath.endsWith("/metrics/sms/otp/verify")) {
+      await assertAssignedServices(auth.tenantId, "campaigns");
+      const parsed = VerifySmsOtpSchema.safeParse(JSON.parse(event.body ?? "{}"));
+      if (!parsed.success) {
+        return badRequest(parsed.error.errors[0]?.message ?? "Invalid request body");
+      }
+
+      const result = await verifyOtp({
+        tenantId: auth.tenantId,
+        to: parsed.data.to,
+        code: parsed.data.code,
+      });
+
+      return ok({
+        verified: result.verified,
+        reason: result.reason,
+        ...(result.attemptsRemaining !== undefined
+          ? { attemptsRemaining: result.attemptsRemaining }
+          : {}),
+        timestamp: new Date().toISOString(),
+      });
     }
 
     if (method === "GET" && rawPath.endsWith("/metrics/inbox-sla")) {

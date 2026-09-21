@@ -22,6 +22,7 @@ import {
   Bell,
   Webhook,
   Bot,
+  ShieldCheck,
 } from "lucide-react";
 import type { FlowNodeData, FlowNodeType, LocalizedText } from "@/types";
 import { resolveLocalizedText } from "@/lib/localized-text";
@@ -40,13 +41,20 @@ export interface FlowNodeMeta {
   icon: LucideIcon;
   hasInput: boolean;
   hasOutput: boolean;
-  branchHandles?: "condition" | "buttons";
+  branchHandles?: "condition" | "buttons" | "otp";
 }
 
 export const FLOW_NODE_META: Record<FlowNodeType, FlowNodeMeta> = {
   trigger: { category: "entry", icon: Play, hasInput: false, hasOutput: true },
   message: { category: "messaging", icon: MessageSquare, hasInput: true, hasOutput: true },
   template: { category: "messaging", icon: FileText, hasInput: true, hasOutput: true },
+  send_otp: {
+    category: "messaging",
+    icon: ShieldCheck,
+    hasInput: true,
+    hasOutput: true,
+    branchHandles: "otp",
+  },
   buttons: {
     category: "messaging",
     icon: MousePointerClick,
@@ -93,7 +101,7 @@ export const FLOW_NODE_CATEGORIES: FlowPaletteCategory[] = [
 
 export const FLOW_PALETTE_NODES: Record<FlowPaletteCategory, FlowNodeType[]> = {
   crm: ["save_contact", "create_lead", "create_opportunity", "send_notification"],
-  messaging: ["message", "template", "buttons"],
+  messaging: ["message", "template", "buttons", "send_otp"],
   logic: ["condition", "delay", "set_variable"],
   integrations: ["assign_bot", "webhook", "meta_flow", "http_request", "handoff"],
   apps: [
@@ -203,6 +211,8 @@ export function buildNodePreview(type: FlowNodeType, data: FlowNodeData, locale:
       return text(data.messageText);
     case "await_order":
       return text(data.messageText) || text(data.orderConfirmationMessage);
+    case "send_otp":
+      return text(data.otpMessageText) || data.otpWhatsAppTemplateName || "OTP";
     case "save_contact":
       return data.contactPhoneBinding ?? "";
     case "create_lead":

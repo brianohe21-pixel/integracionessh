@@ -42,6 +42,18 @@ describe("mergeDefaultScopes", () => {
     expect(merged).not.toContain(API_KEY_SCOPES.voiceCallsInitiate);
     expect(merged).not.toContain(API_KEY_SCOPES.voiceCallsRead);
     expect(merged).not.toContain(API_KEY_SCOPES.voiceCallsManage);
+    expect(merged).not.toContain(API_KEY_SCOPES.otpSend);
+    expect(merged).not.toContain(API_KEY_SCOPES.otpVerify);
+  });
+
+  it("adds optional otp scopes only when requested", () => {
+    const scopes = validateAndNormalizeScopes([
+      ...DEFAULT_API_KEY_SCOPES,
+      API_KEY_SCOPES.otpSend,
+      API_KEY_SCOPES.otpVerify,
+    ]);
+    expect(scopes).toContain(API_KEY_SCOPES.otpSend);
+    expect(scopes).toContain(API_KEY_SCOPES.otpVerify);
   });
 
   it("adds optional voice scopes only when requested", () => {

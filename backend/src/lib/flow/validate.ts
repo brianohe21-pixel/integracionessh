@@ -27,9 +27,10 @@ const CONVERSATION_ONLY_NODES = [
   "send_catalog",
   "send_products",
   "await_order",
+  "send_otp",
 ] as const;
 
-const BRANCHING_NODES = ["condition", "buttons"] as const;
+const BRANCHING_NODES = ["condition", "buttons", "send_otp"] as const;
 
 function hasLocalizedText(value: LocalizedText | undefined): boolean {
   if (!value) return false;
@@ -307,7 +308,7 @@ export function validateFlowDefinition(flow: FlowDefinition): FlowValidationIssu
 
     if (
       voiceFlow &&
-      ["buttons", "meta_flow", "book_appointment", "request_payment", "send_catalog", "send_products", "await_order"].includes(
+      ["buttons", "meta_flow", "book_appointment", "request_payment", "send_catalog", "send_products", "await_order", "send_otp"].includes(
         node.type
       )
     ) {
@@ -362,6 +363,18 @@ export function validateFlowDefinition(flow: FlowDefinition): FlowValidationIssu
             issues.push({
               code: "missing_branch",
               message: `Condition node missing ${handle} branch`,
+              nodeId: node.id,
+            });
+          }
+        }
+      }
+      if (node.type === "send_otp") {
+        const handles = new Set(outgoing.map((edge) => edge.sourceHandle));
+        for (const handle of ["verified", "failed"]) {
+          if (!handles.has(handle)) {
+            issues.push({
+              code: "missing_branch",
+              message: `OTP node missing ${handle} branch`,
               nodeId: node.id,
             });
           }

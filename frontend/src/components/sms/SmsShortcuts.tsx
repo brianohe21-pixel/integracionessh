@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Megaphone, SendHorizonal, Settings } from "lucide-react";
+import { Megaphone, SendHorizonal, Settings, ShieldCheck } from "lucide-react";
 import { useT } from "@/i18n/context";
 
 export function SmsShortcuts() {
@@ -9,6 +9,13 @@ export function SmsShortcuts() {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
+      <Link
+        href="/sms?tab=otp"
+        className="inline-flex items-center gap-2 rounded-lg border border-default bg-surface-elevated px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-surface-muted"
+      >
+        <ShieldCheck className="h-4 w-4" />
+        {t("smsDashboard.shortcuts.otp")}
+      </Link>
       <Link
         href="/bulk-send"
         className="inline-flex items-center gap-2 rounded-lg border border-default bg-surface-elevated px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-surface-muted"

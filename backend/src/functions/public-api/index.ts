@@ -46,6 +46,7 @@ import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
 import { getSmsDlrReceipt } from "../../lib/dynamodb/sms-dlr.repository.js";
 import { sendSmsTextWithDlr } from "../../lib/sms/send-outbound.js";
 import { mapSmsDlrReceiptToTraceability } from "../../lib/sms/traceability.js";
+import { assertOtpChannelReady, sendOtp, verifyOtp } from "../../lib/otp/service.js";
 import {
   sendTemplateApprovedEmail,
   sendTemplateCreatedEmail,
@@ -162,6 +163,24 @@ const UserWaIdParamSchema = z.string().min(7).max(20).regex(/^\d+$/);
 const SendSmsSchema = z.object({
   to: z.string().min(7).max(20).regex(/^\d+$/, "Phone number must contain only digits"),
   text: z.string().min(1).max(1024),
+});
+
+const SendOtpSchema = z.object({
+  channel: z.enum(["sms", "whatsapp"]),
+  to: z.string().min(7).max(20).regex(/^\d+$/, "Phone number must contain only digits"),
+  message: z.string().min(1).max(1024).optional(),
+  template: z
+    .object({
+      name: z.string().min(1).max(512),
+      language: z.string().min(2).max(20),
+    })
+    .optional(),
+  maxAttempts: z.number().int().min(1).max(10).optional(),
+});
+
+const VerifyOtpSchema = z.object({
+  to: z.string().min(7).max(20).regex(/^\d+$/, "Phone number must contain only digits"),
+  code: z.string().min(4).max(10).regex(/^\d+$/, "Verification code must contain only digits"),
 });
 
 const TraceIdParamSchema = z.string().uuid("Invalid trace ID");
@@ -636,6 +655,113 @@ async function handleSendSms(
 
     throw err;
   }
+}
+
+async function handleOtpSend(
+  event: APIGatewayProxyEventV2
+): Promise<APIGatewayProxyResultV2> {
+  const startMs = Date.now();
+  const auth = await authenticateApiKey(event);
+  if (!isAuthResult(auth)) return auth;
+
+  const { apiKey, hashedKey, rateResult } = auth;
+  assertApiKeyScope(apiKey, API_KEY_SCOPES.otpSend);
+
+  const parsed = SendOtpSchema.safeParse(JSON.parse(event.body ?? "{}"));
+  if (!parsed.success) {
+    return badRequest(parsed.error.errors[0]?.message ?? "Invalid request body");
+  }
+
+  const bot = await loadBotForApiKey(apiKey);
+  assertOtpChannelReady(bot, parsed.data.channel);
+
+  const accessToken =
+    parsed.data.channel === "whatsapp"
+      ? await getWhatsAppAccessToken(apiKey.tenantId, ENVIRONMENT)
+      : undefined;
+
+  const result = await sendOtp({
+    tenantId: apiKey.tenantId,
+    botId: apiKey.botId,
+    channel: parsed.data.channel,
+    to: parsed.data.to,
+    ...(parsed.data.message ? { messageTemplate: parsed.data.message } : {}),
+    ...(parsed.data.template ? { whatsappTemplate: parsed.data.template } : {}),
+    ...(parsed.data.maxAttempts ? { maxAttempts: parsed.data.maxAttempts } : {}),
+    ...(accessToken ? { accessToken } : {}),
+    environment: ENVIRONMENT,
+  });
+
+  await incrementMessages(apiKey.tenantId);
+  await logUsage({
+    apiKey,
+    hashedKey,
+    endpoint: "POST /v1/otp/send",
+    method: "POST",
+    statusCode: 200,
+    durationMs: Date.now() - startMs,
+    messageId: result.messageId,
+    maskedPhone: maskPhone(parsed.data.to),
+  });
+
+  return {
+    statusCode: 200,
+    headers: successHeaders(apiKey, rateResult),
+    body: JSON.stringify({
+      destination: result.destination,
+      channel: result.channel,
+      messageId: result.messageId,
+      expiresAt: result.expiresAt,
+      maxAttempts: result.maxAttempts,
+      ...(result.receiptId ? { traceId: result.receiptId } : {}),
+      timestamp: new Date().toISOString(),
+    }),
+  };
+}
+
+async function handleOtpVerify(
+  event: APIGatewayProxyEventV2
+): Promise<APIGatewayProxyResultV2> {
+  const startMs = Date.now();
+  const auth = await authenticateApiKey(event);
+  if (!isAuthResult(auth)) return auth;
+
+  const { apiKey, hashedKey, rateResult } = auth;
+  assertApiKeyScope(apiKey, API_KEY_SCOPES.otpVerify);
+
+  const parsed = VerifyOtpSchema.safeParse(JSON.parse(event.body ?? "{}"));
+  if (!parsed.success) {
+    return badRequest(parsed.error.errors[0]?.message ?? "Invalid request body");
+  }
+
+  const result = await verifyOtp({
+    tenantId: apiKey.tenantId,
+    to: parsed.data.to,
+    code: parsed.data.code,
+  });
+
+  await logUsage({
+    apiKey,
+    hashedKey,
+    endpoint: "POST /v1/otp/verify",
+    method: "POST",
+    statusCode: 200,
+    durationMs: Date.now() - startMs,
+    maskedPhone: maskPhone(parsed.data.to),
+  });
+
+  return {
+    statusCode: 200,
+    headers: successHeaders(apiKey, rateResult),
+    body: JSON.stringify({
+      verified: result.verified,
+      reason: result.reason,
+      ...(result.attemptsRemaining !== undefined
+        ? { attemptsRemaining: result.attemptsRemaining }
+        : {}),
+      timestamp: new Date().toISOString(),
+    }),
+  };
 }
 
 async function handleGetSmsTrace(
@@ -1208,6 +1334,12 @@ export async function handler(
     }
     if (path.endsWith("/v1/sms") && method === "POST") {
       return await handleSendSms(event);
+    }
+    if (path.endsWith("/v1/otp/send") && method === "POST") {
+      return await handleOtpSend(event);
+    }
+    if (path.endsWith("/v1/otp/verify") && method === "POST") {
+      return await handleOtpVerify(event);
     }
     if (path.endsWith("/v1/templates") && method === "GET") {
       return await handleListTemplates(event);

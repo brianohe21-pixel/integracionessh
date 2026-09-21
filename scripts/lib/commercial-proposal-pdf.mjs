@@ -751,6 +751,78 @@ function drawPricingTable(ctx) {
   ctx.y = bottomY;
 }
 
+function drawVolumeTable(ctx, table) {
+  const headers = table.headers ?? [];
+  const rows = table.rows ?? [];
+  if (!headers.length) return;
+
+  const colCount = headers.length;
+  const widths = table.widths ?? headers.map(() => 1 / colCount);
+  const headerH = 26;
+  const rowH = table.rowHeight ?? 20;
+  const tableH = headerH + rows.length * rowH + 6;
+  ensureSpace(ctx, tableH + 16);
+
+  const { page, font, fontBold } = ctx;
+  const tableTop = ctx.y;
+  const tableBottom = tableTop - tableH + 8;
+  const colXs = [];
+  let x = MARGIN;
+  for (const width of widths) {
+    colXs.push(x);
+    x += CONTENT_W * width;
+  }
+
+  page.drawRectangle({
+    x: MARGIN,
+    y: tableBottom,
+    width: CONTENT_W,
+    height: tableH,
+    borderColor: COLORS.border,
+    borderWidth: 1,
+    color: COLORS.white,
+  });
+  page.drawRectangle({
+    x: MARGIN,
+    y: tableTop - headerH + 10,
+    width: CONTENT_W,
+    height: headerH,
+    color: COLORS.primaryDark,
+  });
+
+  headers.forEach((header, index) => {
+    page.drawText(sanitize(header), {
+      x: colXs[index] + 8,
+      y: tableTop - 6,
+      size: 8,
+      font: fontBold,
+      color: COLORS.white,
+    });
+  });
+
+  let rowY = tableTop - headerH - 6;
+  rows.forEach((row) => {
+    page.drawLine({
+      start: { x: MARGIN, y: rowY + 12 },
+      end: { x: PAGE_W - MARGIN, y: rowY + 12 },
+      thickness: 0.5,
+      color: COLORS.border,
+    });
+    row.forEach((cell, index) => {
+      page.drawText(sanitize(cell), {
+        x: colXs[index] + 8,
+        y: rowY,
+        size: 8,
+        font: index === row.length - 1 ? fontBold : font,
+        color: COLORS.text,
+      });
+    });
+    rowY -= rowH;
+  });
+
+  ctx.y = tableBottom - 12;
+}
+
 function renderInvestment(ctx) {
   newPage(ctx);
   drawInnerPageHeader(ctx);
@@ -763,6 +835,16 @@ function renderInvestment(ctx) {
   drawPricingTable(ctx);
   if (ctx.proposal.recurringNote) {
     drawParagraph(ctx, ctx.proposal.recurringNote, { size: 9, color: COLORS.textMuted });
+  }
+  for (const table of ctx.proposal.volumeTables ?? []) {
+    if (table.title) drawSectionTitle(ctx, table.title);
+    if (table.intro) {
+      drawParagraph(ctx, table.intro, { size: 9, color: COLORS.textMuted });
+    }
+    drawVolumeTable(ctx, table);
+    if (table.note) {
+      drawParagraph(ctx, table.note, { size: 8, color: COLORS.textMuted, gapAfter: 12 });
+    }
   }
   if (ctx.proposal.excludedCosts?.length) {
     drawSectionTitle(ctx, "Costos no asumidos");
@@ -783,6 +865,8 @@ function renderTermsAndNextSteps(ctx) {
   drawBulletList(ctx, ctx.proposal.terms ?? []);
   drawSectionTitle(ctx, "Próximos pasos");
   drawBulletList(ctx, ctx.proposal.nextSteps ?? []);
+
+  drawSignature(ctx);
 
   ensureSpace(ctx, 80);
   ctx.page.drawRectangle({
@@ -813,9 +897,7 @@ function renderTermsAndNextSteps(ctx) {
     }
   );
   ctx.y -= 80;
-  ctx.y -= 36;
-
-  drawSignature(ctx);
+  ctx.y -= 16;
 
   drawParagraph(
     ctx,

@@ -87,6 +87,31 @@ function FlowNodeCardComponent({ id, data, selected }: NodeProps) {
         </div>
       </div>
 
+      {meta.branchHandles === "otp" && meta.hasOutput && (
+        <div className="relative mt-4 h-6">
+          <Handle
+            type="source"
+            id="verified"
+            position={Position.Bottom}
+            style={{ left: "25%" }}
+            className="!h-2.5 !w-2.5 !border-2 !border-surface-elevated !bg-success"
+          />
+          <Handle
+            type="source"
+            id="failed"
+            position={Position.Bottom}
+            style={{ left: "75%" }}
+            className="!h-2.5 !w-2.5 !border-2 !border-surface-elevated !bg-danger"
+          />
+          <span className="absolute -bottom-4 left-[12%] text-[9px] font-medium text-success">
+            verified
+          </span>
+          <span className="absolute -bottom-4 left-[66%] text-[9px] font-medium text-danger">
+            failed
+          </span>
+        </div>
+      )}
+
       {meta.branchHandles === "condition" && meta.hasOutput && (
         <div className="relative mt-4 h-6">
           <Handle

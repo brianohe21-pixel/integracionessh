@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
-import { BarChart3, FileText, History, LayoutGrid, Megaphone } from "lucide-react";
+import { BarChart3, FileText, History, LayoutGrid, Megaphone, ShieldCheck } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -11,12 +11,19 @@ import { SmsOverviewStrip } from "./SmsOverviewStrip";
 import { SmsHistoryTab } from "./SmsHistoryTab";
 import { SmsCampaignsTab } from "./SmsCampaignsTab";
 import { SmsTemplatesTab } from "./SmsTemplatesTab";
+import { SmsOtpTab } from "./SmsOtpTab";
 import { SmsShortcuts } from "./SmsShortcuts";
 
-type SmsTab = "overview" | "history" | "campaigns" | "templates";
+type SmsTab = "overview" | "history" | "campaigns" | "templates" | "otp";
 
 function parseSmsTab(value: string | null): SmsTab {
-  if (value === "history" || value === "campaigns" || value === "templates" || value === "overview") {
+  if (
+    value === "history" ||
+    value === "campaigns" ||
+    value === "templates" ||
+    value === "overview" ||
+    value === "otp"
+  ) {
     return value;
   }
   return "overview";
@@ -50,6 +57,11 @@ export function SmsDashboard() {
           id: "templates" as const,
           label: t("smsDashboard.tabs.templates"),
           icon: <FileText className="h-4 w-4" />,
+        },
+        {
+          id: "otp" as const,
+          label: t("smsDashboard.tabs.otp"),
+          icon: <ShieldCheck className="h-4 w-4" />,
         },
       ] satisfies Array<{ id: SmsTab; label: string; icon: ReactNode }>,
     [t]
@@ -92,6 +104,7 @@ export function SmsDashboard() {
           {tab === "history" ? <SmsHistoryTab /> : null}
           {tab === "campaigns" ? <SmsCampaignsTab /> : null}
           {tab === "templates" ? <SmsTemplatesTab /> : null}
+          {tab === "otp" ? <SmsOtpTab /> : null}
         </div>
       </div>
     </DashboardPage>

@@ -245,7 +245,7 @@ locals {
     metrics = {
       path         = "/metrics/{proxy+}"
       slug         = "metrics"
-      methods      = ["GET"]
+      methods      = ["GET", "POST"]
       invoke_arn   = var.metrics_invoke_arn
       function_arn = var.metrics_function_arn
       protected    = true
