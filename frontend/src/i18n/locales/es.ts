@@ -255,8 +255,13 @@ export const es = {
     systemPrompt: "Prompt del sistema",
     systemPromptPlaceholder: "Eres un asistente virtual de [empresa]. Tu función es...",
     systemPromptCharCount: "{{current}}/{{max}}",
+    systemPromptExpand: "Ampliar",
     validationSystemPromptTooLong: "El prompt del sistema debe tener como máximo {{max}} caracteres",
     model: "Modelo",
+    modelSelectHint: "Elige el modelo que generará las respuestas del agente.",
+    modelFilterAll: "Todos",
+    modelSearchPlaceholder: "Buscar modelo...",
+    modelSearchEmpty: "No se encontraron modelos.",
     modelPlanHint: "Los modelos avanzados (GPT-5.6, GPT-4.1, GPT-4o, razonamiento) están disponibles en el plan Enterprise.",
     modelCategory: {
       economy: "Económico",

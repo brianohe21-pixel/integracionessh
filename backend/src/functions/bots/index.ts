@@ -22,6 +22,7 @@ import {
   buildAiAssistantAutoEnableUpdates,
   toAiAssistantConfig,
 } from "../../lib/ai-assistant/config.js";
+import { BOT_SYSTEM_PROMPT_MAX_LENGTH } from "../../lib/ai-assistant/limits.js";
 import { TELEPHONY_SYSTEM_PROMPT_MAX_LENGTH } from "../../lib/telephony/limits.js";
 import {
   DEFAULT_MODEL_ID,
@@ -57,7 +58,7 @@ const CreateBotSchema = z
     name: z.string().min(1).max(128),
     defaultLocale: z.enum(["es", "en"]).optional(),
     responseMode: z.enum(["none", "openai", "webhook"]).default("none"),
-    systemPrompt: z.string().min(1).max(4096).optional(),
+    systemPrompt: z.string().min(1).max(BOT_SYSTEM_PROMPT_MAX_LENGTH).optional(),
     aiProvider: AiProviderSchema.optional(),
     model: ModelSchema.default(DEFAULT_MODEL_ID),
     temperature: z.number().min(0).max(2).default(0.7),
@@ -102,7 +103,7 @@ const UpdateBotSchema = z.object({
 });
 
 const AiAssistantUpdateSchema = z.object({
-  systemPrompt: z.string().min(1).max(4096).optional(),
+  systemPrompt: z.string().min(1).max(BOT_SYSTEM_PROMPT_MAX_LENGTH).optional(),
   aiProvider: AiProviderSchema.optional(),
   model: ModelSchema.optional(),
   temperature: z.number().min(0).max(2).optional(),
@@ -111,7 +112,7 @@ const AiAssistantUpdateSchema = z.object({
 });
 
 const AiAssistantEnableSchema = z.object({
-  systemPrompt: z.string().min(1).max(4096),
+  systemPrompt: z.string().min(1).max(BOT_SYSTEM_PROMPT_MAX_LENGTH),
   aiProvider: AiProviderSchema.optional(),
   model: ModelSchema.default(DEFAULT_MODEL_ID),
   temperature: z.number().min(0).max(2).default(0.7),

@@ -1,0 +1,1 @@
+export const BOT_SYSTEM_PROMPT_MAX_LENGTH = 12000;

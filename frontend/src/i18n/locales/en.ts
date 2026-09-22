@@ -256,8 +256,13 @@ export const en: Messages = {
     systemPrompt: "System prompt",
     systemPromptPlaceholder: "You are a virtual assistant for [company]. Your role is...",
     systemPromptCharCount: "{{current}}/{{max}}",
+    systemPromptExpand: "Expand",
     validationSystemPromptTooLong: "System prompt must be at most {{max}} characters",
     model: "Model",
+    modelSelectHint: "Choose the model that will generate the agent's responses.",
+    modelFilterAll: "All",
+    modelSearchPlaceholder: "Search models...",
+    modelSearchEmpty: "No models found.",
     modelPlanHint: "Advanced models (GPT-5.6, GPT-4.1, GPT-4o, reasoning) are available on the Enterprise plan.",
     modelCategory: {
       economy: "Economy",
