@@ -2,8 +2,8 @@ import type { Messages } from "./es";
 
 export const en: Messages = {
   common: {
-    appName: "Agent Platform",
-    appTagline: "WhatsApp agents and automation",
+    appName: "Integraciones SH",
+    appTagline: "We connect · We integrate · We boost",
     back: "Back",
     cancel: "Cancel",
     close: "Close",

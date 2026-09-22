@@ -1,7 +1,7 @@
 export const es = {
   common: {
-    appName: "Agent Platform",
-    appTagline: "Agentes con WhatsApp y automatización",
+    appName: "Integraciones SH",
+    appTagline: "Conectamos · Integramos · Impulsamos",
     back: "Volver",
     cancel: "Cancelar",
     close: "Cerrar",

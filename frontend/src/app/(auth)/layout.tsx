@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import Image from "next/image";
 import { useT } from "@/i18n/context";
 import { DEFAULT_PRIMARY_COLOR, hexToRgba } from "@/lib/brand-colors";
+import { PLATFORM_LOGO_PATH, readCookie } from "@/lib/platform-brand";
 import { api } from "@/lib/api";
 
 type HostBranding = {
@@ -23,14 +24,6 @@ function AuthPageFallback() {
       </div>
     </div>
   );
-}
-
-function readCookie(name: string): string | undefined {
-  if (typeof document === "undefined") return undefined;
-  const match = document.cookie
-    .split("; ")
-    .find((row) => row.startsWith(`${name}=`));
-  return match ? decodeURIComponent(match.split("=").slice(1).join("=")) : undefined;
 }
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
@@ -67,6 +60,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       .catch(() => undefined);
   }, []);
 
+  const isWhiteLabel = Boolean(hostBranding?.brandName || hostBranding?.logoUrl);
   const displayName = hostBranding?.brandName ?? t("common.appName");
   const primaryColor = hostBranding?.primaryColor ?? DEFAULT_PRIMARY_COLOR;
   const logoUrl = hostBranding?.logoUrl;
@@ -80,32 +74,50 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     >
       <div className="relative w-full max-w-md px-4">
         <div className="mb-8 text-center">
-          <div
-            className="relative mb-4 inline-flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl shadow-lg"
-            style={{ backgroundColor: primaryColor }}
-          >
-            {logoUrl ? (
-              <Image
-                key={logoUrl}
-                src={logoUrl}
-                alt=""
-                fill
-                unoptimized
-                className="object-cover"
-              />
-            ) : (
-              <svg className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+          {isWhiteLabel ? (
+            <>
+              <div
+                className="relative mb-4 inline-flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl shadow-lg"
+                style={{ backgroundColor: primaryColor }}
+              >
+                {logoUrl ? (
+                  <Image
+                    key={logoUrl}
+                    src={logoUrl}
+                    alt=""
+                    fill
+                    unoptimized
+                    className="object-cover"
+                  />
+                ) : (
+                  <svg className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+                    />
+                  </svg>
+                )}
+              </div>
+              <h1 className="text-2xl font-bold text-primary">{displayName}</h1>
+              <p className="mt-1 text-sm text-secondary">{t("common.appTagline")}</p>
+            </>
+          ) : (
+            <>
+              <div className="relative mx-auto mb-4 h-24 w-24 overflow-hidden rounded-full shadow-lg">
+                <Image
+                  src={PLATFORM_LOGO_PATH}
+                  alt={displayName}
+                  fill
+                  priority
+                  className="object-cover object-top"
                 />
-              </svg>
-            )}
-          </div>
-          <h1 className="text-2xl font-bold text-primary">{displayName}</h1>
-          <p className="mt-1 text-sm text-secondary">{t("common.appTagline")}</p>
+              </div>
+              <h1 className="text-2xl font-bold text-primary">{displayName}</h1>
+              <p className="mt-1 text-sm text-secondary">{t("common.appTagline")}</p>
+            </>
+          )}
         </div>
         <Suspense fallback={<AuthPageFallback />}>{children}</Suspense>
         <p className="mt-6 text-center text-xs text-muted">
