@@ -7,11 +7,10 @@ import { api, getTenantContext } from "@/lib/api";
 import { isBillingVisible } from "@/lib/subaccount-services";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
 import { useT } from "@/i18n/context";
 import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
 import { ThemeSwitcher } from "@/components/theme/ThemeSwitcher";
-import { SettingsCard, SettingsCallout } from "@/components/settings/SettingsCard";
+import { SettingsCard } from "@/components/settings/SettingsCard";
 import { CompanySettingsCard } from "@/components/settings/CompanySettingsCard";
 import { ProviderCredentialsSection } from "@/components/settings/ProviderCredentialCard";
 import { ChangePasswordCard } from "@/components/settings/ChangePasswordCard";
@@ -23,7 +22,6 @@ import { BrandingSettingsCard } from "@/components/branding/BrandingSettingsCard
 import { TenantEmailSettingsCard } from "@/components/settings/TenantEmailSettingsCard";
 import { WebsiteAnalyticsCard } from "@/components/settings/WebsiteAnalyticsCard";
 import {
-  CheckCircle,
   Key,
   Languages,
   Palette,
@@ -33,7 +31,6 @@ import {
   SlidersHorizontal,
   SunMoon,
   User as UserIcon,
-  Webhook,
 } from "lucide-react";
 import { PlanUsageCard } from "@/components/billing/PlanUsageCard";
 import type { Tenant } from "@/types";
@@ -81,9 +78,6 @@ export default function SettingsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<SettingsTab>("general");
-  const [webhookCopied, setWebhookCopied] = useState(false);
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
-  const webhookUrl = `${apiUrl}/webhook`;
 
   useEffect(() => {
     const requested = searchParams.get("tab");
@@ -108,12 +102,6 @@ export default function SettingsPage() {
     queryFn: () => api.get<Tenant>("/tenants/me"),
   });
   const showBilling = isBillingVisible(tenant, getTenantContext());
-
-  async function copyWebhook() {
-    await navigator.clipboard.writeText(webhookUrl);
-    setWebhookCopied(true);
-    setTimeout(() => setWebhookCopied(false), 2000);
-  }
 
   function selectTab(nextTab: SettingsTab) {
     setTab(nextTab);
@@ -231,52 +219,6 @@ export default function SettingsPage() {
         <SettingsPanel title={t("settings.tabIntegrations")}>
           <WebsiteAnalyticsCard />
           <TenantEmailSettingsCard />
-
-          <SettingsCard
-            icon={<Webhook className="h-4 w-4" />}
-            title={t("settings.webhookTitle")}
-            description={t("settings.webhookDescription")}
-          >
-            <div className="flex items-center gap-2">
-              <code className="flex-1 truncate rounded-lg border border-subtle bg-surface px-3 py-2.5 font-mono text-xs text-secondary">
-                {webhookUrl}
-              </code>
-              <Button type="button" variant="secondary" size="sm" onClick={() => void copyWebhook()}>
-                {webhookCopied ? (
-                  <>
-                    <CheckCircle className="h-3.5 w-3.5 text-success" />
-                    {t("settings.copied")}
-                  </>
-                ) : (
-                  t("settings.copy")
-                )}
-              </Button>
-            </div>
-
-            <SettingsCallout title={t("settings.webhookStepsTitle")}>
-              <ol className="list-inside list-decimal space-y-1 text-xs">
-                <li>{t("settings.step0")}</li>
-                <li>{t("settings.step1")}</li>
-                <li>{t("settings.step2")}</li>
-                <li>{t("settings.step3")}</li>
-              </ol>
-            </SettingsCallout>
-
-            <div className="space-y-3 border-t border-subtle pt-4">
-              <h3 className="text-sm font-semibold text-primary">
-                {t("settings.channelWebhooksTitle")}
-              </h3>
-              <p className="text-xs text-secondary">{t("settings.telegramWebhookPattern")}</p>
-              <code className="block rounded-lg border border-subtle bg-surface px-3 py-2 font-mono text-xs text-secondary">
-                {apiUrl}/sms/webhook
-              </code>
-              <p className="text-xs text-secondary">{t("settings.smsWebhookUrl")}</p>
-              <code className="block rounded-lg border border-subtle bg-surface px-3 py-2 font-mono text-xs text-secondary">
-                {apiUrl}/email/inbound
-              </code>
-              <p className="text-xs text-secondary">{t("settings.emailWebhookUrl")}</p>
-            </div>
-          </SettingsCard>
         </SettingsPanel>
       ) : null}
 
