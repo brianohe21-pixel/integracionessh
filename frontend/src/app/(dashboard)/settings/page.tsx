@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api, getTenantContext } from "@/lib/api";
 import { isBillingVisible } from "@/lib/subaccount-services";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { useT } from "@/i18n/context";
 import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";

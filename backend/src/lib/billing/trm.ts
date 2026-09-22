@@ -63,10 +63,10 @@ export async function getTrmCopPerUsd(): Promise<number> {
 
 export async function calculateUsdPriceInCopCents(
   usd: number
-): Promise<{ amountCents: number; trm: number }> {
+): Promise<{ amountInCents: number; trm: number }> {
   const trm = await getTrmCopPerUsd();
   const cop = usdToCopWithTrm(usd, trm);
-  return { amountCents: copToAmountCents(cop), trm };
+  return { amountInCents: copToAmountCents(cop), trm };
 }
 
 export function resetTrmCacheForTests(): void {

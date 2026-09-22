@@ -33,7 +33,7 @@ describe("trm", () => {
 
     const result = await calculateUsdPriceInCopCents(80);
     expect(result.trm).toBe(4050.12);
-    expect(result.amountCents).toBe(32_400_000);
+    expect(result.amountInCents).toBe(32_400_000);
   });
 
   it("falls back to cached TRM when fetch fails", async () => {
@@ -48,6 +48,6 @@ describe("trm", () => {
 
     const result = await calculateUsdPriceInCopCents(80);
     expect(result.trm).toBe(4000);
-    expect(result.amountCents).toBe(32_000_000);
+    expect(result.amountInCents).toBe(32_000_000);
   });
 });
