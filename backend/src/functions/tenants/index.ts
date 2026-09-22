@@ -99,7 +99,7 @@ const UpdateTenantSchema = z.object({
   resellerConfig: z
     .object({
       maxSubaccounts: z.number().int().min(1).max(10_000).optional(),
-      defaultSubaccountPlan: z.enum(["free", "starter", "pro", "scale"]).optional(),
+      defaultSubaccountPlan: z.enum(["free", "starter", "pro"]).optional(),
       customDomain: z.string().min(3).max(253).optional(),
       customDomainStatus: z
         .enum(["none", "pending_dns", "active", "error"])
@@ -128,8 +128,9 @@ const UpdateOnboardingSchema = z
     skip: z.boolean().optional(),
     testConfirmed: z.boolean().optional(),
     complete: z.boolean().optional(),
+    dismissBanner: z.boolean().optional(),
   })
-  .refine((data) => data.skip || data.testConfirmed || data.complete, {
+  .refine((data) => data.skip || data.testConfirmed || data.complete || data.dismissBanner, {
     message: "At least one action is required",
   });
 
@@ -551,6 +552,9 @@ export async function handler(
       }
       if (parsed.data.complete) {
         updates.onboardingCompletedAt = now;
+      }
+      if (parsed.data.dismissBanner) {
+        updates.onboardingBannerDismissedAt = now;
       }
 
       const updated = await updateTenant(auth.tenantId, updates);

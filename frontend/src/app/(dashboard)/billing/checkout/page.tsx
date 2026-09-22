@@ -9,17 +9,20 @@ import {
   WompiCheckoutWidget,
 } from "@/components/billing/WompiCheckoutWidget";
 import { DashboardPage } from "@/components/layout/DashboardPage";
-import { useCheckout, useBillingProviders } from "@/hooks/useBilling";
-import { formatCopPrice, formatUsdPrice } from "@/lib/plan-config";
+import { useBillingProviders, useBillingStatus, useCheckout } from "@/hooks/useBilling";
+import { formatCopPrice, formatUsdPrice, SALES_WHATSAPP_URL } from "@/lib/plan-config";
 import type { PaidBillingPlan } from "@/lib/plan-config";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useT } from "@/i18n/context";
 import type { WompiCheckoutParams } from "@/hooks/useBilling";
 
 function parsePlan(value: string | null): PaidBillingPlan | null {
-  if (value === "starter" || value === "pro" || value === "scale") return value;
-  if (value === "enterprise") return "scale";
+  if (value === "starter") return "starter";
   return null;
+}
+
+function isCheckoutAllowed(plan: PaidBillingPlan): boolean {
+  return plan === "starter";
 }
 
 function BillingCheckoutPageContent() {
@@ -30,6 +33,7 @@ function BillingCheckoutPageContent() {
   const plan = parsePlan(searchParams.get("plan"));
   const checkout = useCheckout();
   const { data: providers } = useBillingProviders();
+  const { data: status } = useBillingStatus();
   const [error, setError] = useState("");
   const [wompiConfig, setWompiConfig] = useState<WompiCheckoutParams | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
@@ -42,6 +46,10 @@ function BillingCheckoutPageContent() {
   const startCheckout = useCallback(async () => {
     if (!plan) {
       setError(t("billing.checkoutInvalidPlan"));
+      return;
+    }
+    if (!isCheckoutAllowed(plan)) {
+      setError(t("billing.checkoutSalesOnly"));
       return;
     }
     if (!defaultProvider) {
@@ -71,10 +79,11 @@ function BillingCheckoutPageContent() {
   }, [checkout, defaultProvider, plan, t]);
 
   useEffect(() => {
-    if (started.current || !plan || !providers) return;
+    if (started.current || !plan || !providers || !status) return;
+    if (!isCheckoutAllowed(plan)) return;
     started.current = true;
     void startCheckout();
-  }, [plan, providers, startCheckout]);
+  }, [plan, providers, startCheckout, status]);
 
   const handleApproved = useCallback(
     (transactionId: string) => {
@@ -107,22 +116,34 @@ function BillingCheckoutPageContent() {
     setPaymentOpen(false);
   }, []);
 
-  const price = plan
-    ? providers?.plans?.[plan] ?? (plan === "scale" ? providers?.plans?.enterprise : undefined)
-    : null;
+  const price = plan ? providers?.plans?.[plan] : null;
 
-  if (!plan) {
+  if (!plan || (status && !isCheckoutAllowed(plan))) {
     return (
       <DashboardPage maxWidth="3xl">
         <div className="rounded-xl border border-default bg-surface-elevated p-6 sm:p-8 text-center">
           <AlertCircle className="mx-auto mb-4 h-12 w-12 text-amber-500" />
-          <h1 className="text-xl font-semibold text-primary">{t("billing.checkoutInvalidPlan")}</h1>
-          <Link
-            href="/billing"
-            className="mt-6 inline-block rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover"
-          >
-            {t("billing.backToBilling")}
-          </Link>
+          <h1 className="text-xl font-semibold text-primary">
+            {!plan ? t("billing.checkoutInvalidPlan") : t("billing.checkoutSalesOnly")}
+          </h1>
+          <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+            <Link
+              href="/billing"
+              className="inline-block rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover"
+            >
+              {t("billing.backToBilling")}
+            </Link>
+            {plan !== "starter" ? (
+              <a
+                href={SALES_WHATSAPP_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block rounded-lg border border-accent px-4 py-2.5 text-sm font-medium text-accent hover:bg-accent-muted"
+              >
+                {t("billing.contactSales")}
+              </a>
+            ) : null}
+          </div>
         </div>
       </DashboardPage>
     );
@@ -142,7 +163,7 @@ function BillingCheckoutPageContent() {
             <h1 className="text-xl font-semibold text-primary">{t("billing.checkoutTitle")}</h1>
             <p className="mt-2 text-sm text-secondary">
               {planLabel(plan)}
-              {price
+              {price?.listPriceUsd && price.amountCents
                 ? ` · ${formatUsdPrice(price.listPriceUsd)} · ${formatCopPrice(price.amountCents)}`
                 : ""}
             </p>

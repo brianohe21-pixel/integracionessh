@@ -48,10 +48,10 @@ describe("getEffectivePlanLimits", () => {
     expect(limits.maxActiveBots).toBe(10);
   });
 
-  it("limits WhatsApp channels to one for free, starter and pro", () => {
+  it("limits WhatsApp channels by plan", () => {
     expect(getEffectivePlanLimits(tenant("free")).maxWhatsAppChannelsPerBot).toBe(1);
-    expect(getEffectivePlanLimits(tenant("starter")).maxWhatsAppChannelsPerBot).toBe(1);
-    expect(getEffectivePlanLimits(tenant("pro")).maxWhatsAppChannelsPerBot).toBe(1);
+    expect(getEffectivePlanLimits(tenant("starter")).maxWhatsAppChannelsPerBot).toBe(5);
+    expect(getEffectivePlanLimits(tenant("pro")).maxWhatsAppChannelsPerBot).toBe(5);
   });
 
   it("allows 60 WhatsApp channels on scale", () => {

@@ -965,6 +965,13 @@ locals {
       function_arn = var.support_tickets_function_arn
       protected    = true
     }
+    support_tickets_delete = {
+      route_key    = "DELETE /support/tickets/{ticketId}"
+      slug         = "support_tickets"
+      invoke_arn   = var.support_tickets_invoke_arn
+      function_arn = var.support_tickets_function_arn
+      protected    = true
+    }
     admin_support_tickets_list = {
       route_key    = "GET /admin/support/tickets"
       slug         = "support_tickets"

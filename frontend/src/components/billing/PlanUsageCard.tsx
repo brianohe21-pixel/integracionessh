@@ -3,18 +3,57 @@
 import { useBillingUsage } from "@/hooks/useBilling";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useT } from "@/i18n/context";
-import { CreditCard } from "lucide-react";
+import { BarChart3 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import {
   SettingsCard,
   SettingsCardSkeleton,
-  SettingsMetricRow,
 } from "@/components/settings/SettingsCard";
 import { BillingActions } from "./BillingActions";
+import { cn } from "@/lib/utils";
 
 function formatLimit(value: number, t: (key: string) => string): string {
   if (value >= 1_000_000) return t("billing.unlimited");
-  return String(value);
+  return value.toLocaleString();
+}
+
+function UsageMetricBar({
+  label,
+  used,
+  max,
+  t,
+}: {
+  label: string;
+  used: number;
+  max: number;
+  t: (key: string) => string;
+}) {
+  const unlimited = max >= 1_000_000;
+  const percent = unlimited || max <= 0 ? 0 : Math.min(100, Math.round((used / max) * 100));
+  const highUsage = !unlimited && percent >= 85;
+
+  return (
+    <div className="rounded-xl border border-subtle bg-surface px-4 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm text-secondary">{label}</span>
+        <span className="text-sm font-semibold tabular-nums text-primary">
+          {used.toLocaleString()}
+          <span className="font-normal text-muted"> / {formatLimit(max, t)}</span>
+        </span>
+      </div>
+      {!unlimited ? (
+        <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-surface-muted">
+          <div
+            className={cn(
+              "h-full rounded-full transition-all",
+              highUsage ? "bg-warning" : "bg-accent"
+            )}
+            style={{ width: `${percent}%` }}
+          />
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 export function PlanUsageCard({ hideActions = false }: { hideActions?: boolean }) {
@@ -30,32 +69,27 @@ export function PlanUsageCard({ hideActions = false }: { hideActions?: boolean }
 
   const rows = [
     {
-      label: t("billing.usageBots"),
-      used: "—",
-      max: formatLimit(data.limits.maxActiveBots, t),
-    },
-    {
       label: t("billing.usageMessages"),
-      used: String(data.usage.messagesCount ?? 0),
-      max: formatLimit(data.limits.maxMessagesPerMonth, t),
+      used: data.usage.messagesCount ?? 0,
+      max: data.limits.maxMessagesPerMonth,
     },
     {
       label: t("billing.usageBulk"),
-      used: String(data.usage.bulkRecipientsCount ?? 0),
-      max: formatLimit(monthlyBulkLimit, t),
+      used: data.usage.bulkRecipientsCount ?? 0,
+      max: monthlyBulkLimit,
     },
     {
       label: t("billing.usageCampaigns"),
-      used: String(data.usage.campaignsStarted ?? 0),
-      max: formatLimit(data.limits.maxActiveCampaigns, t),
+      used: data.usage.campaignsStarted ?? 0,
+      max: data.limits.maxActiveCampaigns,
     },
   ];
 
   return (
     <SettingsCard
-      icon={<CreditCard className="h-4 w-4" />}
+      icon={<BarChart3 className="h-4 w-4" />}
       title={t("billing.title")}
-      description={t("billing.currentPlan")}
+      description={t("billing.usageSection")}
       badge={<Badge variant="info">{planLabel(data.plan)}</Badge>}
       footer={!hideActions ? <BillingActions /> : undefined}
     >
@@ -65,9 +99,9 @@ export function PlanUsageCard({ hideActions = false }: { hideActions?: boolean }
         </p>
       ) : null}
 
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {rows.map((row) => (
-          <SettingsMetricRow key={row.label} label={row.label} used={row.used} max={row.max} />
+          <UsageMetricBar key={row.label} label={row.label} used={row.used} max={row.max} t={t} />
         ))}
       </div>
     </SettingsCard>

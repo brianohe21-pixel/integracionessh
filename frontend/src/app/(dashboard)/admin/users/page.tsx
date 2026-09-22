@@ -340,7 +340,7 @@ export default function AdminUsersPage() {
                     onChange={(e) =>
                       setDefaultsForm({
                         ...defaultsForm,
-                        defaultSubaccountPlan: e.target.value as "free" | "starter" | "pro" | "scale",
+                        defaultSubaccountPlan: e.target.value as "free" | "starter" | "pro",
                       })
                     }
                     className="w-full rounded-lg border border-default px-3 py-2"
@@ -348,7 +348,6 @@ export default function AdminUsersPage() {
                     <option value="free">{t("common.planFree")}</option>
                     <option value="starter">{t("common.planStarter")}</option>
                     <option value="pro">{t("common.planPro")}</option>
-                    <option value="scale">{t("common.planScale")}</option>
                   </select>
                 </label>
                 <label className="flex items-center gap-2 text-sm text-secondary sm:col-span-2">

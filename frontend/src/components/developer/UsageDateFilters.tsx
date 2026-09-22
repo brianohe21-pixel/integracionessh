@@ -29,7 +29,7 @@ export function UsageDateFilters({ range, onChange }: UsageDateFiltersProps) {
   }
 
   return (
-    <div className="rounded-xl border border-default bg-surface-elevated p-4 space-y-4">
+    <div className="content-card space-y-4 p-4 sm:p-5">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-1">
           <label className="text-xs font-medium uppercase tracking-wide text-secondary">

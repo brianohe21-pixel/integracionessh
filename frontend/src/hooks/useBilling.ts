@@ -8,10 +8,13 @@ import type { BillingUsageResponse, TenantPlan } from "@/types";
 export type BillingProvider = "wompi" | "stripe";
 
 export interface BillingPlanPrice {
-  amountCents: number;
-  listPriceUsd: number;
+  amountCents?: number;
+  listPriceUsd?: number;
   currency: string;
   periodDays: number;
+  trm?: number;
+  salesOnly?: boolean;
+  renewalOnly?: boolean;
 }
 
 export interface WompiCheckoutParams {
@@ -36,10 +39,8 @@ export interface BillingProvidersResponse {
   stripe: boolean;
   default: BillingProvider | null;
   plans?: {
-    starter: BillingPlanPrice;
-    pro: BillingPlanPrice;
-    scale: BillingPlanPrice;
-    enterprise?: BillingPlanPrice;
+    starter?: BillingPlanPrice;
+    pro?: BillingPlanPrice;
   };
 }
 

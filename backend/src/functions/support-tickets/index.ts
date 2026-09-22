@@ -3,11 +3,14 @@ import { z } from "zod";
 import { resolveRequestAuth, assertMemberRole } from "../../lib/auth/cognito.js";
 import {
   createTicket,
+  deleteTicket,
+  getTicket,
   listTicketsByUser,
   listAllTickets,
   updateTicketAdmin,
 } from "../../lib/dynamodb/ticket.repository.js";
-import { ok, created, badRequest, notFound, forbidden, handleError } from "../../lib/http.js";
+import { notifySupportTeamOfNewTicket } from "../../lib/email/support-ticket-notify.js";
+import { ok, created, noContent, badRequest, notFound, forbidden, handleError } from "../../lib/http.js";
 
 const CreateTicketSchema = z.object({
   category: z.enum(["general", "technical", "billing", "whatsapp"]),
@@ -75,7 +78,24 @@ export async function handler(
         email: auth.email,
       });
 
+      void notifySupportTeamOfNewTicket(ticket).catch((error) => {
+        console.error("Failed to send support ticket notification email", error);
+      });
+
       return created(ticket);
+    }
+
+    if (method === "DELETE" && ticketId) {
+      assertMemberRole(auth);
+      const existing = await getTicket(auth.tenantId, ticketId);
+      if (!existing) return notFound("Ticket not found");
+      if (existing.createdBy !== auth.userId) {
+        return forbidden("Not allowed to delete this ticket");
+      }
+
+      const deleted = await deleteTicket(auth.tenantId, ticketId);
+      if (!deleted) return notFound("Ticket not found");
+      return noContent();
     }
 
     return badRequest("Route not found");

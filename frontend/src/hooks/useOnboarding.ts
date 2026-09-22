@@ -17,7 +17,7 @@ export interface WhatsAppStatus {
   whatsappBusinessAccountId?: string;
 }
 
-export type OnboardingAction = "skip" | "testConfirmed" | "complete";
+export type OnboardingAction = "skip" | "testConfirmed" | "complete" | "dismissBanner";
 
 export function useOnboardingStatus() {
   const { data: tenant, isLoading: tenantLoading } = useQuery({
@@ -45,7 +45,9 @@ export function useOnboardingStatus() {
   });
 
   const showBanner = Boolean(
-    tenant?.onboardingSkippedAt && !tenant?.onboardingCompletedAt
+    tenant?.onboardingSkippedAt &&
+      !tenant?.onboardingCompletedAt &&
+      !tenant?.onboardingBannerDismissedAt
   );
 
   const isComplete = step === "done" && Boolean(tenant?.onboardingCompletedAt);
@@ -74,7 +76,9 @@ export function useUpdateOnboarding() {
           ? { skip: true }
           : action === "testConfirmed"
             ? { testConfirmed: true }
-            : { complete: true };
+            : action === "dismissBanner"
+              ? { dismissBanner: true }
+              : { complete: true };
       return api.patch<Tenant>("/tenants/me/onboarding", body);
     },
     onSuccess: () => {

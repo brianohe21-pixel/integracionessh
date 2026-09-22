@@ -104,7 +104,7 @@ export interface ResellerLimitsOverride {
 
 export interface ResellerConfig {
   maxSubaccounts: number;
-  defaultSubaccountPlan: "free" | "starter" | "pro" | "scale";
+  defaultSubaccountPlan: "free" | "starter" | "pro";
   customDomain?: string;
   customDomainStatus?: CustomDomainStatus;
   allowSubaccountBranding: boolean;
@@ -113,7 +113,7 @@ export interface ResellerConfig {
 
 export interface ResellerPlanDefaults {
   maxSubaccounts: number;
-  defaultSubaccountPlan: "free" | "starter" | "pro" | "scale";
+  defaultSubaccountPlan: "free" | "starter" | "pro";
   allowSubaccountBranding: boolean;
   limitsOverride?: ResellerLimitsOverride;
 }
@@ -245,6 +245,7 @@ export interface Tenant {
   pricePerMessageCents?: number;
   onboardingCompletedAt?: string;
   onboardingSkippedAt?: string;
+  onboardingBannerDismissedAt?: string;
   onboardingTestConfirmedAt?: string;
   createdAt: string;
   updatedAt: string;

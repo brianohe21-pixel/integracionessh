@@ -113,7 +113,6 @@ export function AdminTenantsTable({
             <option value="free">{t("common.planFree")}</option>
             <option value="starter">{t("common.planStarter")}</option>
             <option value="pro">{t("common.planPro")}</option>
-            <option value="scale">{t("common.planScale")}</option>
             <option value="reseller">{t("common.planReseller")}</option>
           </select>
           <select
@@ -185,7 +184,6 @@ export function AdminTenantsTable({
                           <option value="free">{t("common.planFree")}</option>
                           <option value="starter">{t("common.planStarter")}</option>
                           <option value="pro">{t("common.planPro")}</option>
-                          <option value="scale">{t("common.planScale")}</option>
                           <option value="reseller">{t("common.planReseller")}</option>
                         </select>
                         {tenantFeedback?.tenantId === tenant.tenantId ? (

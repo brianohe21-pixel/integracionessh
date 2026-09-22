@@ -38,7 +38,7 @@ export function planLabel(plan: string): string {
   const labels: Record<string, string> = {
     free: "Gratuito",
     starter: "Starter",
-    pro: "Growth",
+    pro: "Pro",
     scale: "Scale",
     enterprise: "Scale",
     reseller: "Reseller",

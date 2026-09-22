@@ -11,6 +11,7 @@ const eslintConfig = defineConfig([
     "public/widget-call.bundle.js",
     "public/widget-voice.bundle.js",
     "public/widget.js",
+    "public/opus-media-recorder/**",
     "scripts/**",
   ]),
   ...nextVitals,

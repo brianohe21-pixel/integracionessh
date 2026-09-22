@@ -119,14 +119,18 @@ export default function DeveloperPage() {
       )}
 
       {!isLoading && !error && tab !== "webhooks" && (
-        <div className="bg-surface-elevated rounded-xl border border-default overflow-hidden">
-          {tab === "keys" && <ApiKeysList keys={keys} bots={bots} />}
+        <>
+          {tab === "keys" && (
+            <div className="overflow-hidden rounded-xl border border-default bg-surface-elevated">
+              <ApiKeysList keys={keys} bots={bots} />
+            </div>
+          )}
           {tab === "usage" && (
-            <div className="p-6">
+            <div className="rounded-xl border border-default bg-surface-elevated p-6">
               <ApiUsageChart />
             </div>
           )}
-        </div>
+        </>
       )}
 
       {showCreate && bots.length > 0 && (

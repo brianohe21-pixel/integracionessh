@@ -11,8 +11,10 @@ import {
   useDisableAiAssistant,
   useEnableAiAssistant,
 } from "@/hooks/useAiAssistant";
+import { AiAssistantDisableBlockers } from "@/components/ai-assistant/AiAssistantDisableBlockers";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { canDisableAiAssistant } from "@/lib/ai-assistant-policy";
 
 export default function AiAssistantAppsPage() {
   const t = useT();
@@ -26,12 +28,15 @@ export default function AiAssistantAppsPage() {
   const [error, setError] = useState("");
 
   const enabled = config?.enabled ?? false;
+  const selectedBot = bots.find((bot) => bot.botId === botId);
+  const disableBlocked = Boolean(enabled && selectedBot && !canDisableAiAssistant(selectedBot));
   const aiApp = appsData?.apps.find((app) => app.id === "ai-assistant");
   const activeBots = aiApp?.installedBots.filter((bot) => bot.enabled) ?? [];
 
   async function handleToggle() {
     if (!botId) return;
     setError("");
+    if (enabled && selectedBot && !canDisableAiAssistant(selectedBot)) return;
     try {
       if (enabled) {
         await disable.mutateAsync();
@@ -108,8 +113,8 @@ export default function AiAssistantAppsPage() {
             <button
               type="button"
               onClick={() => void handleToggle()}
-              disabled={enable.isPending || disable.isPending}
-              className={`rounded-lg px-4 py-2 text-sm font-medium text-white ${
+              disabled={enable.isPending || disable.isPending || disableBlocked}
+              className={`rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-60 ${
                 enabled ? "bg-gray-600 hover:bg-gray-700" : "bg-accent hover:bg-accent-hover"
               }`}
             >
@@ -123,6 +128,12 @@ export default function AiAssistantAppsPage() {
                 {t("aiAssistant.configure")}
               </Link>
             )}
+          </div>
+        ) : null}
+
+        {enabled && selectedBot && disableBlocked ? (
+          <div className="mt-3">
+            <AiAssistantDisableBlockers bot={selectedBot} />
           </div>
         ) : null}
 

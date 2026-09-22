@@ -4,29 +4,31 @@ import {
   type AiModelDefinition,
 } from "@/lib/ai-models";
 import type { BillingPlanPrice } from "@/hooks/useBilling";
+import { buildWaMeLink } from "@/lib/wa-link";
 
 export type AllowedModel = string;
-export type PaidBillingPlan = "starter" | "pro" | "scale";
+export type PaidBillingPlan = "starter" | "pro";
 
 export const PLAN_LIST_PRICE_USD: Record<PaidBillingPlan, number> = {
-  starter: 59,
+  starter: 80,
   pro: 199,
-  scale: 699,
 };
+
+export const PUBLIC_SELF_SERVICE_PLAN: PaidBillingPlan = "starter";
+
+export const SALES_WHATSAPP_URL = buildWaMeLink("+573217455642");
 
 export function resolveBillingPlanPrice(
   plans:
     | {
         starter?: BillingPlanPrice;
         pro?: BillingPlanPrice;
-        scale?: BillingPlanPrice;
-        enterprise?: BillingPlanPrice;
       }
     | undefined,
   plan: PaidBillingPlan
 ): BillingPlanPrice | undefined {
   if (!plans) return undefined;
-  return plans[plan] ?? (plan === "scale" ? plans.enterprise : undefined);
+  return plans[plan];
 }
 
 export function getAllowedModelsForPlan(plan: TenantPlan | string | undefined): AllowedModel[] {

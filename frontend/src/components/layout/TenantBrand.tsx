@@ -9,6 +9,7 @@ import { useAuthSession } from "@/hooks/useAuthSession";
 import { useResellerSubaccounts } from "@/hooks/useReseller";
 import { useTenantBranding } from "@/hooks/useTenantBranding";
 import { api, getTenantContext } from "@/lib/api";
+import { readPortalBrandingFromCookies } from "@/lib/platform-brand";
 import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 import type { Tenant } from "@/types";
@@ -25,6 +26,7 @@ export function TenantBrand({ className }: { className?: string }) {
     enabled: isAuthenticated && !authLoading && !isAdmin,
   });
   const [assumedId, setAssumedId] = useState<string | null>(() => getTenantContext());
+  const [portalBranding, setPortalBranding] = useState(() => readPortalBrandingFromCookies());
 
   const isResellerTenant = me?.plan === "reseller" || me?.tenantKind === "reseller";
   const isSubaccountTenant = me?.tenantKind === "subaccount" || Boolean(me?.parentTenantId);
@@ -36,18 +38,28 @@ export function TenantBrand({ className }: { className?: string }) {
     setAssumedId(getTenantContext());
   }, [me, subaccountsData]);
 
+  useEffect(() => {
+    setPortalBranding(readPortalBrandingFromCookies());
+  }, []);
+
   const assumedSubaccount = assumedId
     ? subaccounts.find((item) => item.tenantId === assumedId)
     : undefined;
+
+  const isWhiteLabelPortal = Boolean(portalBranding.brandName || portalBranding.logoUrl);
+
   const tenantName = (
     assumedSubaccount?.name ||
+    (isWhiteLabelPortal ? portalBranding.brandName : undefined) ||
     branding?.brandName ||
     me?.resolvedBranding?.brandName ||
     me?.branding?.brandName ||
     ""
   ).trim();
   const displayName = tenantName || me?.name?.trim() || t("common.appName");
-  const logoUrl = branding?.logoUrl ?? me?.resolvedBranding?.logoUrl;
+  const logoUrl = isWhiteLabelPortal
+    ? portalBranding.logoUrl ?? branding?.logoUrl ?? me?.resolvedBranding?.logoUrl
+    : branding?.logoUrl ?? me?.resolvedBranding?.logoUrl;
 
   return (
     <div className={cn("flex min-w-0 items-center gap-2", className)}>

@@ -10,12 +10,11 @@ const PENDING_BILLING_PLAN_KEY = "pendingBillingPlan";
 export type { PaidBillingPlan };
 
 export function isPaidBillingPlan(value: string | null | undefined): value is PaidBillingPlan {
-  return value === "starter" || value === "pro" || value === "scale" || value === "enterprise";
+  return value === "starter" || value === "pro";
 }
 
 export function billingPlanFromRedirect(redirect: string | null | undefined): PaidBillingPlan | null {
   if (!redirect) return null;
-  if (redirect.includes("plan=scale") || redirect.includes("plan=enterprise")) return "scale";
   if (redirect.includes("plan=pro")) return "pro";
   if (redirect.includes("plan=starter")) return "starter";
   return null;

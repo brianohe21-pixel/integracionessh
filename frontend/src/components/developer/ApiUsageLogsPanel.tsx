@@ -38,12 +38,12 @@ export function ApiUsageLogsPanel({
   const { data: logs = [], isLoading } = useApiKeyLogs(selectedKeyId, { errorsOnly, range: dateRange });
 
   return (
-    <div className="bg-surface-elevated rounded-xl border border-default overflow-hidden">
-      <div className="px-6 py-4 border-b border-subtle space-y-4">
+    <div className="content-card overflow-hidden">
+      <div className="section-header space-y-4 border-b border-default">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-primary">{t("developer.logsTitle")}</h3>
-            <p className="text-xs text-secondary mt-0.5">{t("developer.logsSubtitle")}</p>
+            <h3 className="section-header-title">{t("developer.logsTitle")}</h3>
+            <p className="section-header-subtitle">{t("developer.logsSubtitle")}</p>
           </div>
           <label className="flex items-center gap-2 text-sm text-secondary cursor-pointer">
             <input
@@ -95,7 +95,7 @@ export function ApiUsageLogsPanel({
       )}
 
       {selectedKeyId && !isLoading && logs.length > 0 && (
-        <TableContainer>
+        <TableContainer card={false}>
           <table className="w-full min-w-[720px] text-sm">
             <thead>
               <tr className="bg-surface text-left text-xs text-secondary uppercase tracking-wide">

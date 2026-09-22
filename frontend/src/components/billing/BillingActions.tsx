@@ -5,16 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import {
-  useBillingPortal,
-  useBillingProviders,
-} from "@/hooks/useBilling";
-import { formatCopPrice, formatUsdPrice } from "@/lib/plan-config";
-import type { PaidBillingPlan } from "@/lib/plan-config";
+import { useBillingPortal, useBillingProviders } from "@/hooks/useBilling";
+import { formatCopPrice, formatUsdPrice, SALES_WHATSAPP_URL } from "@/lib/plan-config";
 import { useT } from "@/i18n/context";
 import type { Tenant } from "@/types";
-
-const UPGRADE_PLANS: PaidBillingPlan[] = ["starter", "pro", "scale"];
 
 export function BillingActions() {
   const t = useT();
@@ -33,13 +27,13 @@ export function BillingActions() {
     (providers?.wompi ? "wompi" : providers?.stripe ? "stripe" : null);
   const canCheckout = Boolean(defaultProvider);
 
-  function goToCheckout(plan: PaidBillingPlan) {
+  function goToStarterCheckout() {
     setError("");
     if (!defaultProvider) {
       setError(t("billing.noProviderConfigured"));
       return;
     }
-    router.push(`/billing/checkout?plan=${plan}`);
+    router.push("/billing/checkout?plan=starter");
   }
 
   async function goToPortal() {
@@ -55,18 +49,7 @@ export function BillingActions() {
   const hasStripePortal = Boolean(tenant?.stripeCustomerId);
   const showWompiNote = defaultProvider === "wompi";
   const currentPlan = tenant?.plan ?? "free";
-
-  function upgradeLabel(plan: PaidBillingPlan): string {
-    if (plan === "starter") return t("billing.upgradeStarter");
-    if (plan === "pro") return t("billing.upgradePro");
-    return t("billing.upgradeEnterprise");
-  }
-
-  function formatPlanPrice(plan: PaidBillingPlan): string | null {
-    const price = providers?.plans?.[plan] ?? (plan === "scale" ? providers?.plans?.enterprise : undefined);
-    if (!price) return null;
-    return `${formatUsdPrice(price.listPriceUsd)} · ${formatCopPrice(price.amountCents)}`;
-  }
+  const starterPrice = providers?.plans?.starter;
 
   return (
     <div className="flex flex-col gap-3 mt-4">
@@ -74,27 +57,29 @@ export function BillingActions() {
         <p className="text-xs text-secondary">{t("billing.wompiNote")}</p>
       )}
       <div className="flex flex-wrap gap-2">
-        {UPGRADE_PLANS.filter((plan) => currentPlan !== plan).map((plan) => {
-          const price = formatPlanPrice(plan);
-          const isPrimary = plan === "pro";
-
-          return (
-            <button
-              key={plan}
-              type="button"
-              onClick={() => goToCheckout(plan)}
-              disabled={!canCheckout}
-              className={
-                isPrimary
-                  ? "rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50"
-                  : "rounded-lg border border-accent px-4 py-2 text-sm font-medium text-accent hover:bg-accent-muted disabled:opacity-50"
-              }
-            >
-              {upgradeLabel(plan)}
-              {price ? ` · ${price}` : ""}
-            </button>
-          );
-        })}
+        {currentPlan !== "starter" && (
+          <button
+            type="button"
+            onClick={goToStarterCheckout}
+            disabled={!canCheckout}
+            className="rounded-lg border border-accent px-4 py-2 text-sm font-medium text-accent hover:bg-accent-muted disabled:opacity-50"
+          >
+            {t("billing.upgradeStarter")}
+            {starterPrice?.listPriceUsd != null && starterPrice.amountCents != null
+              ? ` · ${formatUsdPrice(starterPrice.listPriceUsd)} · ${formatCopPrice(starterPrice.amountCents)}`
+              : ""}
+          </button>
+        )}
+        {currentPlan !== "pro" && currentPlan !== "scale" && currentPlan !== "reseller" && (
+          <a
+            href={SALES_WHATSAPP_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover"
+          >
+            {t("billing.contactSales")}
+          </a>
+        )}
         {hasStripePortal && (
           <button
             type="button"

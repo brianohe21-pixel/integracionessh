@@ -28,3 +28,14 @@ export function useCreateSupportTicket() {
     },
   });
 }
+
+export function useDeleteSupportTicket() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (ticketId: string) => api.delete(`/support/tickets/${ticketId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["support-tickets"] });
+    },
+  });
+}

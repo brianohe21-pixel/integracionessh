@@ -1,17 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Maximize2, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useT } from "@/i18n/context";
+import { Modal } from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Button";
 import { getAllowedModelDefinitionsForPlan } from "@/lib/plan-config";
-import {
-  AI_MODEL_CATEGORIES,
-  AI_MODELS,
-  DEFAULT_MODEL_ID,
-  groupModelsByCategory,
-  type AiModelCategory,
-} from "@/lib/ai-models";
+import { AI_MODELS, DEFAULT_MODEL_ID } from "@/lib/ai-models";
+import { AiAssistantDisableBlockers } from "@/components/ai-assistant/AiAssistantDisableBlockers";
+import { AiModelPicker } from "@/components/ai-assistant/AiModelPicker";
+import { useBot } from "@/hooks/useBots";
+import { canDisableAiAssistant } from "@/lib/ai-assistant-policy";
 import {
   useAiAssistant,
   useDisableAiAssistant,
@@ -19,9 +20,8 @@ import {
   useSaveAiAssistant,
 } from "@/hooks/useAiAssistant";
 import { BotKnowledge } from "@/components/bots/BotKnowledge";
+import { BOT_SYSTEM_PROMPT_MAX_LENGTH } from "@/lib/bot-limits";
 import type { Bot, Tenant } from "@/types";
-
-const SYSTEM_PROMPT_MAX_LENGTH = 4096;
 
 interface AiAssistantSettingsProps {
   bot: Bot;
@@ -30,11 +30,13 @@ interface AiAssistantSettingsProps {
 export function AiAssistantSettings({ bot }: AiAssistantSettingsProps) {
   const t = useT();
   const { data: config, isLoading } = useAiAssistant(bot.botId);
+  const { data: liveBot } = useBot(bot.botId);
   const save = useSaveAiAssistant(bot.botId);
   const enable = useEnableAiAssistant(bot.botId);
   const disable = useDisableAiAssistant(bot.botId);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
+  const [showPromptModal, setShowPromptModal] = useState(false);
 
   const [form, setForm] = useState({
     systemPrompt: bot.systemPrompt ?? "",
@@ -55,8 +57,6 @@ export function AiAssistantSettings({ bot }: AiAssistantSettingsProps) {
     const currentModel = AI_MODELS.find((model) => model.id === form.model);
     if (currentModel) displayModels.push(currentModel);
   }
-  const modelsByCategory = groupModelsByCategory(displayModels);
-
   useEffect(() => {
     if (!config) return;
     setForm({
@@ -68,13 +68,23 @@ export function AiAssistantSettings({ bot }: AiAssistantSettingsProps) {
     });
   }, [config]);
 
-  const enabled = config?.enabled ?? bot.responseMode === "openai";
-  const systemPromptTooLong = form.systemPrompt.length > SYSTEM_PROMPT_MAX_LENGTH;
-  const isPending = save.isPending || enable.isPending || disable.isPending;
+  useEffect(() => {
+    if (!showPromptModal) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      setShowPromptModal(false);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [showPromptModal]);
 
-  function getModelCategoryLabel(category: AiModelCategory): string {
-    return t(`bots.modelCategory.${category}`);
-  }
+  const agent = liveBot ?? bot;
+  const enabled = config?.enabled ?? bot.responseMode === "openai";
+  const promptEditable = enabled || enable.isPending;
+  const systemPromptTooLong = form.systemPrompt.length > BOT_SYSTEM_PROMPT_MAX_LENGTH;
+  const isPending = save.isPending || enable.isPending || disable.isPending;
+  const disableBlocked = enabled && !canDisableAiAssistant(agent);
 
   async function handleEnable() {
     setError("");
@@ -83,7 +93,7 @@ export function AiAssistantSettings({ bot }: AiAssistantSettingsProps) {
       return;
     }
     if (systemPromptTooLong) {
-      setError(t("bots.validationSystemPromptTooLong", { max: SYSTEM_PROMPT_MAX_LENGTH }));
+      setError(t("bots.validationSystemPromptTooLong", { max: BOT_SYSTEM_PROMPT_MAX_LENGTH }));
       return;
     }
     try {
@@ -101,6 +111,7 @@ export function AiAssistantSettings({ bot }: AiAssistantSettingsProps) {
 
   async function handleDisable() {
     setError("");
+    if (!canDisableAiAssistant(agent)) return;
     try {
       await disable.mutateAsync();
     } catch (err) {
@@ -112,7 +123,7 @@ export function AiAssistantSettings({ bot }: AiAssistantSettingsProps) {
     setError("");
     setSaved(false);
     if (systemPromptTooLong) {
-      setError(t("bots.validationSystemPromptTooLong", { max: SYSTEM_PROMPT_MAX_LENGTH }));
+      setError(t("bots.validationSystemPromptTooLong", { max: BOT_SYSTEM_PROMPT_MAX_LENGTH }));
       return;
     }
     try {
@@ -173,7 +184,7 @@ export function AiAssistantSettings({ bot }: AiAssistantSettingsProps) {
               <button
                 type="button"
                 onClick={() => void handleDisable()}
-                disabled={isPending}
+                disabled={isPending || disableBlocked}
                 className="rounded-lg bg-gray-600 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-60"
               >
                 {disable.isPending ? t("common.loading") : t("aiAssistant.disable")}
@@ -182,54 +193,50 @@ export function AiAssistantSettings({ bot }: AiAssistantSettingsProps) {
           )}
         </div>
 
+        {enabled && disableBlocked ? <AiAssistantDisableBlockers bot={agent} /> : null}
+
         {error && <p className="text-sm text-red-600">{error}</p>}
         {saved && <p className="text-sm text-green-700">{t("aiAssistant.saved")}</p>}
       </div>
 
       <div className="rounded-xl border border-default bg-surface-elevated p-6 space-y-4">
         <div>
-          <label className="mb-1 block text-sm font-medium text-secondary">
-            {t("bots.systemPrompt")}
-          </label>
+          <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+            <label className="text-sm font-medium text-secondary">{t("bots.systemPrompt")}</label>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowPromptModal(true)}
+            >
+              <Maximize2 className="h-4 w-4" />
+              {t("bots.systemPromptExpand")}
+            </Button>
+          </div>
           <textarea
             rows={5}
             value={form.systemPrompt}
             onChange={(e) => setForm((prev) => ({ ...prev, systemPrompt: e.target.value }))}
-            disabled={!enabled && !enable.isPending}
-            className="w-full resize-none rounded-lg border border-default px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+            disabled={!promptEditable}
+            className="w-full resize-none rounded-lg border border-default px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-60"
             placeholder={t("bots.systemPromptPlaceholder")}
           />
           <p className="mt-1 text-xs text-muted">
             {t("bots.systemPromptCharCount", {
               current: form.systemPrompt.length,
-              max: SYSTEM_PROMPT_MAX_LENGTH,
+              max: BOT_SYSTEM_PROMPT_MAX_LENGTH,
             })}
           </p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-secondary">{t("bots.model")}</label>
-            <select
+          <div className="md:col-span-2">
+            <AiModelPicker
               value={form.model}
-              onChange={(e) => setForm((prev) => ({ ...prev, model: e.target.value }))}
+              onChange={(modelId) => setForm((prev) => ({ ...prev, model: modelId }))}
+              models={displayModels}
               disabled={!enabled}
-              className="w-full rounded-lg border border-default bg-surface-elevated px-3 py-2 text-sm"
-            >
-              {AI_MODEL_CATEGORIES.map((category) => {
-                const models = modelsByCategory[category];
-                if (!models?.length) return null;
-                return (
-                  <optgroup key={category} label={getModelCategoryLabel(category)}>
-                    {models.map((model) => (
-                      <option key={model.id} value={model.id}>
-                        {model.label}
-                      </option>
-                    ))}
-                  </optgroup>
-                );
-              })}
-            </select>
+            />
           </div>
 
           <div>
@@ -283,6 +290,54 @@ export function AiAssistantSettings({ bot }: AiAssistantSettingsProps) {
       </div>
 
       {enabled && <BotKnowledge bot={bot} knowledgeEnabled={form.knowledgeEnabled} showToggle={false} />}
+
+      {showPromptModal ? (
+        <Modal className="p-4">
+          <div
+            className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-default bg-surface-elevated shadow-xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="system-prompt-modal-title"
+          >
+            <div className="flex items-center justify-between border-b border-default px-6 py-4">
+              <h2 id="system-prompt-modal-title" className="text-lg font-semibold text-primary">
+                {t("bots.systemPrompt")}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setShowPromptModal(false)}
+                className="rounded-md p-1 text-muted hover:bg-surface-muted hover:text-secondary"
+                aria-label={t("common.close")}
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+              <textarea
+                autoFocus
+                value={form.systemPrompt}
+                onChange={(e) => setForm((prev) => ({ ...prev, systemPrompt: e.target.value }))}
+                disabled={!promptEditable}
+                maxLength={BOT_SYSTEM_PROMPT_MAX_LENGTH}
+                rows={16}
+                className="min-h-[50vh] w-full resize-y rounded-lg border border-default px-3 py-2 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-60"
+                placeholder={t("bots.systemPromptPlaceholder")}
+              />
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-default px-6 py-4">
+              <p className="text-xs text-muted">
+                {t("bots.systemPromptCharCount", {
+                  current: form.systemPrompt.length,
+                  max: BOT_SYSTEM_PROMPT_MAX_LENGTH,
+                })}
+              </p>
+              <Button type="button" variant="ghost" onClick={() => setShowPromptModal(false)}>
+                {t("common.close")}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      ) : null}
     </div>
   );
 }
