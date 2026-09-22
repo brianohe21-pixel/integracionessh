@@ -9,7 +9,10 @@ import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { getAllowedModelDefinitionsForPlan } from "@/lib/plan-config";
 import { AI_MODELS, DEFAULT_MODEL_ID } from "@/lib/ai-models";
+import { AiAssistantDisableBlockers } from "@/components/ai-assistant/AiAssistantDisableBlockers";
 import { AiModelPicker } from "@/components/ai-assistant/AiModelPicker";
+import { useBot } from "@/hooks/useBots";
+import { canDisableAiAssistant } from "@/lib/ai-assistant-policy";
 import {
   useAiAssistant,
   useDisableAiAssistant,
@@ -27,6 +30,7 @@ interface AiAssistantSettingsProps {
 export function AiAssistantSettings({ bot }: AiAssistantSettingsProps) {
   const t = useT();
   const { data: config, isLoading } = useAiAssistant(bot.botId);
+  const { data: liveBot } = useBot(bot.botId);
   const save = useSaveAiAssistant(bot.botId);
   const enable = useEnableAiAssistant(bot.botId);
   const disable = useDisableAiAssistant(bot.botId);
@@ -75,10 +79,12 @@ export function AiAssistantSettings({ bot }: AiAssistantSettingsProps) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [showPromptModal]);
 
+  const agent = liveBot ?? bot;
   const enabled = config?.enabled ?? bot.responseMode === "openai";
   const promptEditable = enabled || enable.isPending;
   const systemPromptTooLong = form.systemPrompt.length > BOT_SYSTEM_PROMPT_MAX_LENGTH;
   const isPending = save.isPending || enable.isPending || disable.isPending;
+  const disableBlocked = enabled && !canDisableAiAssistant(agent);
 
   async function handleEnable() {
     setError("");
@@ -105,6 +111,7 @@ export function AiAssistantSettings({ bot }: AiAssistantSettingsProps) {
 
   async function handleDisable() {
     setError("");
+    if (!canDisableAiAssistant(agent)) return;
     try {
       await disable.mutateAsync();
     } catch (err) {
@@ -177,7 +184,7 @@ export function AiAssistantSettings({ bot }: AiAssistantSettingsProps) {
               <button
                 type="button"
                 onClick={() => void handleDisable()}
-                disabled={isPending}
+                disabled={isPending || disableBlocked}
                 className="rounded-lg bg-gray-600 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-60"
               >
                 {disable.isPending ? t("common.loading") : t("aiAssistant.disable")}
@@ -185,6 +192,8 @@ export function AiAssistantSettings({ bot }: AiAssistantSettingsProps) {
             </>
           )}
         </div>
+
+        {enabled && disableBlocked ? <AiAssistantDisableBlockers bot={agent} /> : null}
 
         {error && <p className="text-sm text-red-600">{error}</p>}
         {saved && <p className="text-sm text-green-700">{t("aiAssistant.saved")}</p>}

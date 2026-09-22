@@ -4186,6 +4186,10 @@ export const es = {
     statusInactive: "Inactivo",
     saved: "Configuración guardada",
     promptRequired: "El prompt del sistema es obligatorio para activar el Asistente IA",
+    disableBlockedTelephony:
+      "Desactiva la telefonía antes de apagar el Asistente IA. Ve a",
+    disableBlockedVoicebot:
+      "Desactiva el voicebot antes de apagar el Asistente IA. Ve a",
     defaultPrompt: "Eres un asistente virtual útil. Responde de forma clara y profesional.",
   },
   apps: {
