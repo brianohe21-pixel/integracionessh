@@ -3772,6 +3772,7 @@ export const es = {
     colUpdated: "Última actualización",
     colPublished: "Publicación",
     colActions: "Acciones",
+    actionsMenu: "Acciones del flujo",
     notPublished: "Sin publicar",
     enabled: "Activo",
     disabled: "Inactivo",

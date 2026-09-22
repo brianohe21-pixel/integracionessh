@@ -3764,6 +3764,7 @@ export const en: Messages = {
     colUpdated: "Last updated",
     colPublished: "Published",
     colActions: "Actions",
+    actionsMenu: "Flow actions",
     notPublished: "Not published",
     enabled: "Enabled",
     disabled: "Disabled",
