@@ -18,6 +18,7 @@ import {
   listGoogleReviews,
   refreshAccessToken,
   updateGoogleReviewReply,
+  formatGoogleApiError,
   type GoogleReviewsListResponse,
 } from "./client.js";
 import {
@@ -169,7 +170,8 @@ export async function handleGoogleBusinessOAuthCallback(
     await putGoogleBusinessConfig(config);
     return `${frontendBaseUrl()}/integrations/google-business?connected=1`;
   } catch (error) {
-    const message = error instanceof Error ? error.message : "oauth_failed";
+    const rawMessage = error instanceof Error ? error.message : "oauth_failed";
+    const message = formatGoogleApiError(rawMessage);
     return `${frontendBaseUrl()}/integrations/google-business?error=${encodeURIComponent(message)}`;
   }
 }

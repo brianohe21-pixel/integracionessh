@@ -86,6 +86,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
                     src={logoUrl}
                     alt=""
                     fill
+                    sizes="56px"
                     unoptimized
                     className="object-cover"
                   />
@@ -110,6 +111,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
                   src={PLATFORM_LOGO_PATH}
                   alt={displayName}
                   fill
+                  sizes="96px"
                   priority
                   className="object-cover object-top"
                 />
