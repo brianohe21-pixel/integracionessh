@@ -128,8 +128,9 @@ const UpdateOnboardingSchema = z
     skip: z.boolean().optional(),
     testConfirmed: z.boolean().optional(),
     complete: z.boolean().optional(),
+    dismissBanner: z.boolean().optional(),
   })
-  .refine((data) => data.skip || data.testConfirmed || data.complete, {
+  .refine((data) => data.skip || data.testConfirmed || data.complete || data.dismissBanner, {
     message: "At least one action is required",
   });
 
@@ -551,6 +552,9 @@ export async function handler(
       }
       if (parsed.data.complete) {
         updates.onboardingCompletedAt = now;
+      }
+      if (parsed.data.dismissBanner) {
+        updates.onboardingBannerDismissedAt = now;
       }
 
       const updated = await updateTenant(auth.tenantId, updates);

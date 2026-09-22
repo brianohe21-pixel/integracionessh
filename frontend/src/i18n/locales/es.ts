@@ -4754,6 +4754,7 @@ export const es = {
     bannerTitle: "Termina de configurar tu cuenta",
     bannerDescription: "Te faltan unos pasos para tener tu bot listo en WhatsApp.",
     bannerResume: "Continuar configuración",
+    bannerDismiss: "Cerrar aviso de configuración",
     step: {
       whatsapp: "WhatsApp",
       createBot: "Crear bot",

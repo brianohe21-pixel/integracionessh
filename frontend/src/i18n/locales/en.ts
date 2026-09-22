@@ -4744,6 +4744,7 @@ export const en: Messages = {
     bannerTitle: "Finish setting up your account",
     bannerDescription: "A few more steps to get your WhatsApp bot ready.",
     bannerResume: "Continue setup",
+    bannerDismiss: "Dismiss setup reminder",
     step: {
       whatsapp: "WhatsApp",
       createBot: "Create bot",

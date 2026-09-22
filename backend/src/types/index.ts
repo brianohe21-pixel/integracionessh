@@ -226,6 +226,7 @@ export interface Tenant {
   pricePerMessageCents?: number;
   onboardingCompletedAt?: string;
   onboardingSkippedAt?: string;
+  onboardingBannerDismissedAt?: string;
   onboardingTestConfirmedAt?: string;
   createdAt: string;
   updatedAt: string;
