@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Check, ChevronDown, History, Headphones, Lock, Mail, Phone, StickyNote, User } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ChannelAvatar } from "@/components/conversations/conversation-ui";
+import { ConversationAvatar } from "@/components/conversations/conversation-ui";
 import { ConversationOpportunityPanel } from "@/components/conversations/ConversationOpportunityPanel";
 import { ConversationLeadPanel } from "@/components/conversations/ConversationLeadPanel";
 import { useOpportunityByConversation } from "@/hooks/useSalesOpportunity";
@@ -139,7 +139,14 @@ export function ConversationContactPanel({
 
       <div className="conversations-sidebar-header border-b border-default px-4 py-4">
         <div className="flex items-start gap-3">
-          <ChannelAvatar channel={conversation.channel} size="md" className="shrink-0" />
+          <ConversationAvatar
+            contactName={conversation.contactName}
+            phoneNumber={conversation.phoneNumber}
+            participantId={conversation.participantId}
+            channel={conversation.channel}
+            size="md"
+            className="shrink-0"
+          />
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-base font-semibold tracking-tight text-primary">
               {displayName}
