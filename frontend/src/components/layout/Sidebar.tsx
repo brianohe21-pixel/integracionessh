@@ -21,7 +21,6 @@ import {
   Megaphone,
   MessageSquareText,
   Mail,
-  Zap,
   GitBranch,
   Link2,
   LifeBuoy,
@@ -59,6 +58,7 @@ import { useClearTenantContext, useAssumeSubaccount, useResellerSubaccounts } fr
 import { MEMBER_HOME } from "@/lib/post-login-path";
 import { useAuthSession } from "@/hooks/useAuthSession";
 import { useUnreadMessages } from "@/components/notifications/UnreadMessagesProvider";
+import { SidebarCategoryIcon } from "@/components/layout/SidebarCategoryIcon";
 
 type NavItem = {
   href: string;
@@ -70,7 +70,6 @@ type NavItem = {
 type NavCategory = {
   id: string;
   labelKey: string;
-  icon: React.ComponentType<{ className?: string }>;
   items: NavItem[];
 };
 
@@ -82,7 +81,6 @@ const memberNavCategories: NavCategory[] = [
   {
     id: "operations",
     labelKey: "nav.categoryOperations",
-    icon: LayoutGrid,
     items: [
       { href: "/bots", labelKey: "nav.bots", icon: BotMessageSquare },
       {
@@ -112,7 +110,6 @@ const memberNavCategories: NavCategory[] = [
   {
     id: "automation",
     labelKey: "nav.categoryAutomation",
-    icon: Zap,
     items: [
       { href: "/flows", labelKey: "nav.flows", icon: GitBranch },
       { href: "/forms", labelKey: "nav.forms", icon: ClipboardList },
@@ -121,7 +118,6 @@ const memberNavCategories: NavCategory[] = [
   {
     id: "outreach",
     labelKey: "nav.categoryOutreach",
-    icon: Megaphone,
     items: [
       { href: "/templates", labelKey: "nav.templates", icon: LayoutTemplate },
       { href: "/bulk-send", labelKey: "nav.bulkSend", icon: SendHorizonal },
@@ -134,13 +130,11 @@ const memberNavCategories: NavCategory[] = [
   {
     id: "insights",
     labelKey: "nav.categoryInsights",
-    icon: BarChart3,
     items: [{ href: "/metrics", labelKey: "nav.metrics", icon: BarChart3 }],
   },
   {
     id: "integrations",
     labelKey: "nav.categoryIntegrations",
-    icon: KeyRound,
     items: [
       { href: "/integrations", labelKey: "nav.integrations", icon: Link2 },
       { href: "/apps", labelKey: "nav.apps", icon: LayoutGrid },
@@ -150,7 +144,6 @@ const memberNavCategories: NavCategory[] = [
   {
     id: "account",
     labelKey: "nav.categoryAccount",
-    icon: Settings,
     items: [
       { href: "/support", labelKey: "nav.support", icon: LifeBuoy },
       { href: "/billing", labelKey: "nav.billing", icon: CreditCard },
@@ -170,7 +163,6 @@ const advisorNavCategories: NavCategory[] = [
   {
     id: "inbox",
     labelKey: "nav.categoryMessaging",
-    icon: MessageSquare,
     items: [
       { href: "/inbox", labelKey: "nav.inbox", icon: MessageSquare },
       { href: "/sales", labelKey: "nav.sales", icon: TrendingUp },
@@ -182,7 +174,6 @@ const supervisorNavCategories: NavCategory[] = [
   {
     id: "inbox",
     labelKey: "nav.categoryMessaging",
-    icon: MessageSquare,
     items: [
       { href: "/inbox", labelKey: "nav.inbox", icon: MessageSquare },
       { href: "/sales", labelKey: "nav.sales", icon: TrendingUp },
@@ -191,7 +182,6 @@ const supervisorNavCategories: NavCategory[] = [
   {
     id: "account",
     labelKey: "nav.categoryAccount",
-    icon: Users,
     items: [{ href: "/users", labelKey: "nav.userCenter", icon: Users }],
   },
 ];
@@ -200,7 +190,6 @@ const adminNavCategories: NavCategory[] = [
   {
     id: "admin",
     labelKey: "nav.categoryAdmin",
-    icon: Users,
     items: [
       { href: "/admin/users", labelKey: "nav.adminUsers", icon: Users },
       { href: "/admin/billing", labelKey: "nav.adminBilling", icon: Receipt },
@@ -304,6 +293,12 @@ function NavPrimaryLink({
   const t = useT();
   const Icon = item.icon;
   const label = t(item.labelKey);
+  const coloredIconId =
+    item.href === "/dashboard"
+      ? "dashboard"
+      : item.href === "/metrics"
+        ? "insights"
+        : null;
 
   return (
     <Link
@@ -317,7 +312,11 @@ function NavPrimaryLink({
         active ? "nav-item-active" : "nav-item-idle"
       )}
     >
-      <Icon className="nav-icon" />
+      {coloredIconId ? (
+        <SidebarCategoryIcon categoryId={coloredIconId} />
+      ) : (
+        <Icon className="nav-icon" />
+      )}
       {!collapsed ? (
         <>
           <span className="truncate">{label}</span>
@@ -594,7 +593,6 @@ function CollapsedCategoryFlyout({
 }) {
   const t = useT();
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const Icon = category.icon;
   const hasActiveItem = category.items.some((item) =>
     navItemMatchesPath(item, pathname, searchParams)
   );
@@ -613,7 +611,7 @@ function CollapsedCategoryFlyout({
           open || hasActiveItem ? "nav-item-active" : "nav-item-idle"
         )}
       >
-        <Icon className="nav-icon" />
+        <SidebarCategoryIcon categoryId={category.id} />
       </button>
       <SidebarFlyout open={open} onClose={() => onOpenChange(false)} anchorRef={triggerRef}>
         <p className="px-3 pb-1.5 text-[11px] font-medium text-[var(--sidebar-text-muted)]">
@@ -696,7 +694,6 @@ function NavCategorySection({
   tenantPlan: TenantPlan | undefined;
 }) {
   const t = useT();
-  const Icon = category.icon;
 
   return (
     <div className="space-y-0.5">
@@ -708,7 +705,7 @@ function NavCategorySection({
           isOpen || hasActiveItem ? "nav-item-active" : "nav-item-idle"
         )}
       >
-        <Icon className="nav-icon" />
+        <SidebarCategoryIcon categoryId={category.id} />
         <span className="min-w-0 flex-1 truncate">{t(category.labelKey)}</span>
         <ChevronDown
           className={cn(
