@@ -23,6 +23,8 @@ import { BotMetaFlowsPanel } from "@/components/bots/BotMetaFlowsPanel";
 import { BotMacrosPanel } from "@/components/bots/BotMacrosPanel";
 import { BotAutomationsPanel } from "@/components/bots/BotAutomationsPanel";
 import { BotEditNav, isBotEditTab, type BotEditTab } from "@/components/bots/BotEditNav";
+import { BotEditProOnlyPanel } from "@/components/bots/BotEditProOnlyPanel";
+import { isBotEditTabLockedForPlan } from "@/lib/bot-edit-plan";
 import { useT } from "@/i18n/context";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -57,6 +59,7 @@ export default function EditBotPage() {
   const tabParam = searchParams.get("tab");
   const activeTab: BotEditTab = isBotEditTab(tabParam) ? tabParam : "general";
   const aiActive = Boolean(aiAssistant?.enabled || bot?.responseMode === "openai");
+  const proOnlyTabActive = isBotEditTabLockedForPlan(activeTab, tenant?.plan);
 
   useEffect(() => {
     if (activeTab === "automations" && !automationsEnabled) {
@@ -65,6 +68,7 @@ export default function EditBotPage() {
   }, [activeTab, automationsEnabled, botId, router]);
 
   function setTab(nextTab: BotEditTab) {
+    if (isBotEditTabLockedForPlan(nextTab, tenant?.plan)) return;
     router.replace(`/bots/${botId}/edit?tab=${nextTab}`, { scroll: false });
   }
 
@@ -107,6 +111,7 @@ export default function EditBotPage() {
           onSelect={setTab}
           aiActive={aiActive}
           hiddenTabs={hiddenTabs}
+          plan={tenant?.plan}
         />
 
         <div className="min-w-0">
@@ -148,10 +153,13 @@ export default function EditBotPage() {
           {bot && activeTab === "webchat" && <BotWebchatSettings bot={bot} />}
           {bot && activeTab === "telegram" && <BotTelegramConnect bot={bot} />}
           {bot && activeTab === "messenger" && <BotMessengerConnect bot={bot} />}
-          {bot && activeTab === "sms" && <BotSmsSettings bot={bot} />}
-          {bot && activeTab === "email" && <BotEmailSettings bot={bot} />}
-          {bot && activeTab === "voicebot" && <BotVoicebotSettings bot={bot} />}
-          {bot && activeTab === "telephony" && <BotTelephonySettings botId={bot.botId} />}
+          {bot && proOnlyTabActive && <BotEditProOnlyPanel tab={activeTab} />}
+          {bot && activeTab === "sms" && !proOnlyTabActive && <BotSmsSettings bot={bot} />}
+          {bot && activeTab === "email" && !proOnlyTabActive && <BotEmailSettings bot={bot} />}
+          {bot && activeTab === "voicebot" && !proOnlyTabActive && <BotVoicebotSettings bot={bot} />}
+          {bot && activeTab === "telephony" && !proOnlyTabActive && (
+            <BotTelephonySettings botId={bot.botId} />
+          )}
           {bot && activeTab === "macros" && <BotMacrosPanel bot={bot} />}
           {bot && activeTab === "metaFlows" && <BotMetaFlowsPanel botId={bot.botId} />}
           {bot && activeTab === "automations" && automationsEnabled && (

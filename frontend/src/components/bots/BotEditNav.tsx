@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/context";
+import { isBotEditTabLockedForPlan } from "@/lib/bot-edit-plan";
+import type { TenantPlan } from "@/types";
 
 export const BOT_EDIT_TAB_IDS = [
   "general",
@@ -118,11 +120,25 @@ interface BotEditNavProps {
   onSelect: (tab: BotEditTab) => void;
   aiActive?: boolean;
   hiddenTabs?: BotEditTab[];
+  plan?: TenantPlan;
 }
 
-export function BotEditNav({ activeTab, onSelect, aiActive, hiddenTabs = [] }: BotEditNavProps) {
+function BotEditProOnlyBadge() {
+  const t = useT();
+  return (
+    <span className="ml-auto shrink-0 rounded-md bg-surface-muted px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-muted">
+      {t("nav.proOnly")}
+    </span>
+  );
+}
+
+export function BotEditNav({ activeTab, onSelect, aiActive, hiddenTabs = [], plan }: BotEditNavProps) {
   const t = useT();
   const groups = useBotEditNavGroups(hiddenTabs);
+
+  function isTabLocked(tab: BotEditTab): boolean {
+    return isBotEditTabLockedForPlan(tab, plan);
+  }
 
   return (
     <div className="space-y-5">
@@ -138,11 +154,15 @@ export function BotEditNav({ activeTab, onSelect, aiActive, hiddenTabs = [] }: B
             className="w-full rounded-xl border border-default bg-surface-elevated px-3 py-2.5 text-sm text-primary focus:outline-none focus:ring-2 focus:ring-accent"
           >
             {groups.flatMap((group) =>
-              group.tabs.map((tab) => (
-                <option key={tab.id} value={tab.id}>
-                  {t(tab.labelKey)}
-                </option>
-              ))
+              group.tabs.map((tab) => {
+                const locked = isTabLocked(tab.id);
+                return (
+                  <option key={tab.id} value={tab.id} disabled={locked}>
+                    {t(tab.labelKey)}
+                    {locked ? ` (${t("nav.proOnly")})` : ""}
+                  </option>
+                );
+              })
             )}
           </select>
         </div>
@@ -179,6 +199,22 @@ export function BotEditNav({ activeTab, onSelect, aiActive, hiddenTabs = [] }: B
               <div className="space-y-0.5">
                 {group.tabs.map((tab) => {
                   const active = activeTab === tab.id;
+                  const locked = isTabLocked(tab.id);
+
+                  if (locked) {
+                    return (
+                      <div
+                        key={tab.id}
+                        title={t("nav.proOnlyHint")}
+                        className="flex w-full cursor-not-allowed items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-secondary opacity-55"
+                      >
+                        {tab.icon}
+                        <span className="min-w-0 flex-1 truncate">{t(tab.labelKey)}</span>
+                        <BotEditProOnlyBadge />
+                      </div>
+                    );
+                  }
+
                   return (
                     <button
                       key={tab.id}

@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { PutCommand, QueryCommand, GetCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import { PutCommand, QueryCommand, GetCommand, UpdateCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
 import { docClient, TABLE_NAME } from "./client.js";
 import { listTenants } from "./tenant.repository.js";
 import type { SupportTicket, SupportTicketCategory, SupportTicketStatus } from "../../types/index.js";
@@ -139,4 +139,18 @@ export async function updateTicketAdmin(
 
   const { PK, SK, GSI1PK, GSI1SK, ...rest } = result.Attributes ?? {};
   return rest as SupportTicket;
+}
+
+export async function deleteTicket(tenantId: string, ticketId: string): Promise<boolean> {
+  const existing = await getTicket(tenantId, ticketId);
+  if (!existing) return false;
+
+  await docClient.send(
+    new DeleteCommand({
+      TableName: TABLE_NAME,
+      Key: { PK: `TENANT#${tenantId}`, SK: `TICKET#${ticketId}` },
+    })
+  );
+
+  return true;
 }
