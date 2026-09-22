@@ -307,8 +307,8 @@ function NavPrimaryLink({
       title={collapsed ? label : undefined}
       aria-label={label}
       className={cn(
-        "flex items-center rounded-xl py-2.5 text-sm transition-all duration-150",
-        collapsed ? "relative justify-center px-2" : "gap-3 px-3",
+        "flex items-center rounded-xl py-2.5 text-[15px] leading-5 transition-all duration-150",
+        collapsed ? "relative justify-center px-2" : "gap-3.5 px-3",
         active ? "nav-item-active" : "nav-item-idle"
       )}
     >
@@ -436,7 +436,7 @@ function NavItemGroupSection({
         <span className="min-w-0 flex-1 truncate text-left">{t(item.labelKey)}</span>
         <ChevronDown
           className={cn(
-            "h-3.5 w-3.5 shrink-0 opacity-50 transition-transform duration-200",
+            "h-4 w-4 shrink-0 opacity-50 transition-transform duration-200",
             open && "rotate-180"
           )}
         />
@@ -701,7 +701,7 @@ function NavCategorySection({
         type="button"
         onClick={onToggle}
         className={cn(
-          "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-all duration-150",
+          "flex w-full items-center gap-3.5 rounded-xl px-3 py-2.5 text-left text-[15px] leading-5 transition-all duration-150",
           isOpen || hasActiveItem ? "nav-item-active" : "nav-item-idle"
         )}
       >
@@ -709,7 +709,7 @@ function NavCategorySection({
         <span className="min-w-0 flex-1 truncate">{t(category.labelKey)}</span>
         <ChevronDown
           className={cn(
-            "h-4 w-4 shrink-0 opacity-50 transition-transform duration-200",
+            "h-[1.125rem] w-[1.125rem] shrink-0 opacity-50 transition-transform duration-200",
             isOpen && "rotate-180"
           )}
         />

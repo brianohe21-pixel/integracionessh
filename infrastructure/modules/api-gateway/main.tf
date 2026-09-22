@@ -1196,6 +1196,13 @@ locals {
       function_arn = var.billing_function_arn
       protected    = true
     }
+    billing_payments = {
+      route_key    = "GET /billing/payments"
+      slug         = "billing"
+      invoke_arn   = var.billing_invoke_arn
+      function_arn = var.billing_function_arn
+      protected    = true
+    }
     billing_webhook = {
       route_key    = "POST /billing/webhook"
       slug         = "billing"

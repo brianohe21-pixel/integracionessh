@@ -10,6 +10,7 @@ import { ensureTenant, updateTenant } from "../../lib/dynamodb/tenant.repository
 import {
   createPaymentIntent,
   getPaymentByReference,
+  listPaymentsByTenant,
   updatePaymentIntent,
 } from "../../lib/dynamodb/payment.repository.js";
 import { activateTenantPlan } from "../../lib/billing/activate-plan.js";
@@ -297,6 +298,11 @@ export async function handler(
         subscription: tenant.subscriptionStatus ?? "none",
         paymentProvider: tenant.paymentProvider ?? (isWompiConfigured() ? "wompi" : "stripe"),
       });
+    }
+
+    if (method === "GET" && path.endsWith("/billing/payments")) {
+      const payments = await listPaymentsByTenant(auth.tenantId);
+      return ok(payments);
     }
 
     if (method === "GET" && path.endsWith("/billing/transaction")) {
