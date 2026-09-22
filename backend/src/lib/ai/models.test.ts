@@ -60,7 +60,7 @@ describe("ai models registry", () => {
         "gpt-4-turbo",
       ])
     );
-    expect(getModelsForPlan("enterprise").map((model) => model.id)).toEqual(scaleModels);
+    expect(getModelsForPlan("enterprise").map((model) => model.id)).toEqual(proModels);
     expect(isModelAllowedForPlan("free", "gpt-4.1-mini")).toBe(true);
     expect(isModelAllowedForPlan("free", "gpt-5-mini")).toBe(false);
     expect(isModelAllowedForPlan("pro", "gpt-5-mini")).toBe(true);

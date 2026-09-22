@@ -24,7 +24,6 @@ const STARTER_FEATURE_KEYS = [
 const PRO_FEATURE_KEYS = [
   "billing.proFeatureTailored",
   "billing.proFeatureSupport",
-  "billing.proFeatureScale",
 ] as const;
 
 function PlanCardSkeleton() {
@@ -132,7 +131,7 @@ export function BillingPlanCards({ autoCheckoutPlan }: { autoCheckoutPlan?: Tena
 
           <div className="mt-3 space-y-1 rounded-xl bg-surface-muted/40 px-3 py-2.5">
             <p className="text-sm font-medium text-primary">
-              {starterPrice ? formatCopPrice(starterPrice.amountCents) : "—"}
+              {starterPrice?.amountCents != null ? formatCopPrice(starterPrice.amountCents) : "—"}
             </p>
             <p className="text-xs text-muted">
               {t("billing.periodDays", { days: starterPrice?.periodDays ?? 30 })}

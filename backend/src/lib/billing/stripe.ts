@@ -23,14 +23,13 @@ export function priceIdForPlan(plan: PaidTenantPlan): string {
   const envByPlan: Record<PaidTenantPlan, string | undefined> = {
     starter: process.env.STRIPE_PRICE_STARTER,
     pro: process.env.STRIPE_PRICE_PRO,
-    scale: process.env.STRIPE_PRICE_ENTERPRISE,
   };
   const id = envByPlan[plan];
   if (!id) throw new Error(`Stripe price not configured for plan ${plan}`);
   return id;
 }
 
-export function planFromPriceId(priceId: string): PaidTenantPlan | null {
+export function planFromPriceId(priceId: string): PaidTenantPlan | "scale" | null {
   if (priceId === process.env.STRIPE_PRICE_STARTER) return "starter";
   if (priceId === process.env.STRIPE_PRICE_PRO) return "pro";
   if (priceId === process.env.STRIPE_PRICE_ENTERPRISE) return "scale";

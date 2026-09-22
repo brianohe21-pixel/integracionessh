@@ -36,15 +36,6 @@ export function BillingActions() {
     router.push("/billing/checkout?plan=starter");
   }
 
-  function goToScaleRenewal() {
-    setError("");
-    if (!defaultProvider) {
-      setError(t("billing.noProviderConfigured"));
-      return;
-    }
-    router.push("/billing/checkout?plan=scale");
-  }
-
   async function goToPortal() {
     setError("");
     try {
@@ -59,7 +50,6 @@ export function BillingActions() {
   const showWompiNote = defaultProvider === "wompi";
   const currentPlan = tenant?.plan ?? "free";
   const starterPrice = providers?.plans?.starter;
-  const scalePrice = providers?.plans?.scale;
 
   return (
     <div className="flex flex-col gap-3 mt-4">
@@ -75,12 +65,12 @@ export function BillingActions() {
             className="rounded-lg border border-accent px-4 py-2 text-sm font-medium text-accent hover:bg-accent-muted disabled:opacity-50"
           >
             {t("billing.upgradeStarter")}
-            {starterPrice
+            {starterPrice?.listPriceUsd != null && starterPrice.amountCents != null
               ? ` · ${formatUsdPrice(starterPrice.listPriceUsd)} · ${formatCopPrice(starterPrice.amountCents)}`
               : ""}
           </button>
         )}
-        {currentPlan !== "pro" && (
+        {currentPlan !== "pro" && currentPlan !== "scale" && currentPlan !== "reseller" && (
           <a
             href={SALES_WHATSAPP_URL}
             target="_blank"
@@ -89,17 +79,6 @@ export function BillingActions() {
           >
             {t("billing.contactSales")}
           </a>
-        )}
-        {currentPlan === "scale" && scalePrice && (
-          <button
-            type="button"
-            onClick={goToScaleRenewal}
-            disabled={!canCheckout}
-            className="rounded-lg border border-default px-4 py-2 text-sm font-medium text-secondary hover:bg-surface disabled:opacity-50"
-          >
-            {t("billing.renewScale")}
-            {` · ${formatUsdPrice(scalePrice.listPriceUsd)} · ${formatCopPrice(scalePrice.amountCents)}`}
-          </button>
         )}
         {hasStripePortal && (
           <button

@@ -8,7 +8,7 @@ export function normalizeTenantPlan(
   plan: string | undefined | null
 ): CanonicalTenantPlan {
   if (!plan) return "free";
-  if (plan === "enterprise") return "scale";
+  if (plan === "enterprise") return "pro";
   if (
     plan === "starter" ||
     plan === "pro" ||

@@ -25,8 +25,4 @@ describe("checkout policy", () => {
     expect(() => assertCheckoutAllowed(tenant("pro"), "pro")).toThrow(PlanLimitError);
   });
 
-  it("allows scale renewal only for scale tenants", () => {
-    expect(canCheckoutPlan(tenant("scale"), "scale")).toBe(true);
-    expect(canCheckoutPlan(tenant("starter"), "scale")).toBe(false);
-  });
 });

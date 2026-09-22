@@ -18,17 +18,11 @@ import type { WompiCheckoutParams } from "@/hooks/useBilling";
 
 function parsePlan(value: string | null): PaidBillingPlan | null {
   if (value === "starter") return "starter";
-  if (value === "scale" || value === "enterprise") return "scale";
   return null;
 }
 
-function isCheckoutAllowed(
-  plan: PaidBillingPlan,
-  currentPlan: string | undefined
-): boolean {
-  if (plan === "starter") return true;
-  if (plan === "scale") return currentPlan === "scale";
-  return false;
+function isCheckoutAllowed(plan: PaidBillingPlan): boolean {
+  return plan === "starter";
 }
 
 function BillingCheckoutPageContent() {
@@ -54,7 +48,7 @@ function BillingCheckoutPageContent() {
       setError(t("billing.checkoutInvalidPlan"));
       return;
     }
-    if (!isCheckoutAllowed(plan, status?.plan)) {
+    if (!isCheckoutAllowed(plan)) {
       setError(t("billing.checkoutSalesOnly"));
       return;
     }
@@ -82,11 +76,11 @@ function BillingCheckoutPageContent() {
     } catch (err) {
       setError(err instanceof Error ? err.message : t("billing.checkoutError"));
     }
-  }, [checkout, defaultProvider, plan, status?.plan, t]);
+  }, [checkout, defaultProvider, plan, t]);
 
   useEffect(() => {
     if (started.current || !plan || !providers || !status) return;
-    if (!isCheckoutAllowed(plan, status.plan)) return;
+    if (!isCheckoutAllowed(plan)) return;
     started.current = true;
     void startCheckout();
   }, [plan, providers, startCheckout, status]);
@@ -122,11 +116,9 @@ function BillingCheckoutPageContent() {
     setPaymentOpen(false);
   }, []);
 
-  const price = plan
-    ? providers?.plans?.[plan] ?? (plan === "scale" ? providers?.plans?.enterprise : undefined)
-    : null;
+  const price = plan ? providers?.plans?.[plan] : null;
 
-  if (!plan || (status && !isCheckoutAllowed(plan, status.plan))) {
+  if (!plan || (status && !isCheckoutAllowed(plan))) {
     return (
       <DashboardPage maxWidth="3xl">
         <div className="rounded-xl border border-default bg-surface-elevated p-6 sm:p-8 text-center">
@@ -141,7 +133,7 @@ function BillingCheckoutPageContent() {
             >
               {t("billing.backToBilling")}
             </Link>
-            {plan === "pro" || (plan && plan !== "starter" && plan !== "scale") ? (
+            {plan !== "starter" ? (
               <a
                 href={SALES_WHATSAPP_URL}
                 target="_blank"

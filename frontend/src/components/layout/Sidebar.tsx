@@ -48,12 +48,13 @@ import { useTenantRole } from "@/hooks/useTenantRole";
 import { useSidebar } from "@/components/layout/SidebarContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, getTenantContext } from "@/lib/api";
-import type { Tenant } from "@/types";
+import type { Tenant, TenantPlan } from "@/types";
 import {
   isBillingVisible,
   isSubaccountServiceEnabled,
   serviceForNavHref,
 } from "@/lib/subaccount-services";
+import { isNavItemPlanLocked, isNavLockedForPlan } from "@/lib/plan-nav";
 import { useClearTenantContext, useAssumeSubaccount, useResellerSubaccounts } from "@/hooks/useReseller";
 import { MEMBER_HOME } from "@/lib/post-login-path";
 import { useAuthSession } from "@/hooks/useAuthSession";
@@ -331,20 +332,45 @@ function NavPrimaryLink({
   );
 }
 
+function NavProOnlyBadge() {
+  const t = useT();
+  return (
+    <span className="ml-auto shrink-0 rounded-md bg-[var(--sidebar-muted)] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--sidebar-text-muted)]">
+      {t("nav.proOnly")}
+    </span>
+  );
+}
+
 function NavSubLink({
   item,
   active,
   onNavigate,
   badgeCount = 0,
+  locked = false,
 }: {
   item: NavItem;
   active: boolean;
   onNavigate?: () => void;
   badgeCount?: number;
+  locked?: boolean;
 }) {
   const t = useT();
   const Icon = item.icon;
   const label = t(item.labelKey);
+
+  if (locked) {
+    return (
+      <div
+        className="nav-sub-item cursor-not-allowed opacity-55"
+        title={t("nav.proOnlyHint")}
+        aria-label={`${label} — ${t("nav.proOnlyHint")}`}
+      >
+        <Icon className="nav-sub-icon" />
+        <span className="min-w-0 flex-1 truncate">{label}</span>
+        <NavProOnlyBadge />
+      </div>
+    );
+  }
 
   return (
     <Link
@@ -366,12 +392,14 @@ function NavItemGroupSection({
   searchParams,
   onNavigate,
   totalUnread,
+  locked = false,
 }: {
   item: NavItem & { items: NavItem[] };
   pathname: string;
   searchParams: URLSearchParams;
   onNavigate?: () => void;
   totalUnread: number;
+  locked?: boolean;
 }) {
   const t = useT();
   const Icon = item.icon;
@@ -383,6 +411,20 @@ function NavItemGroupSection({
   useEffect(() => {
     if (hasActiveChild) setOpen(true);
   }, [hasActiveChild]);
+
+  if (locked) {
+    return (
+      <div
+        className="nav-sub-item cursor-not-allowed opacity-55"
+        title={t("nav.proOnlyHint")}
+        aria-label={`${t(item.labelKey)} — ${t("nav.proOnlyHint")}`}
+      >
+        <Icon className="nav-sub-icon" />
+        <span className="min-w-0 flex-1 truncate text-left">{t(item.labelKey)}</span>
+        <NavProOnlyBadge />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-0.5">
@@ -426,9 +468,12 @@ function renderCategoryNavItem(
   item: NavItem,
   pathname: string,
   searchParams: URLSearchParams,
+  tenantPlan: TenantPlan | undefined,
   onNavigate?: () => void,
   totalUnread = 0
 ) {
+  const locked = isNavItemPlanLocked(item, tenantPlan);
+
   if (item.items?.length) {
     return (
       <NavItemGroupSection
@@ -438,6 +483,7 @@ function renderCategoryNavItem(
         searchParams={searchParams}
         onNavigate={onNavigate}
         totalUnread={totalUnread}
+        locked={locked}
       />
     );
   }
@@ -449,6 +495,7 @@ function renderCategoryNavItem(
       active={isNavItemActive(pathname, searchParams, item.href)}
       onNavigate={onNavigate}
       badgeCount={inboxBadgeCount(item.href, totalUnread)}
+      locked={locked}
     />
   );
 }
@@ -534,6 +581,7 @@ function CollapsedCategoryFlyout({
   onOpenChange,
   onNavigate,
   totalUnread,
+  tenantPlan,
 }: {
   category: NavCategory;
   pathname: string;
@@ -542,6 +590,7 @@ function CollapsedCategoryFlyout({
   onOpenChange: (open: boolean) => void;
   onNavigate?: () => void;
   totalUnread: number;
+  tenantPlan: TenantPlan | undefined;
 }) {
   const t = useT();
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -571,26 +620,41 @@ function CollapsedCategoryFlyout({
           {t(category.labelKey)}
         </p>
         <div className="nav-sub-list mx-3 mb-1.5 max-h-[min(24rem,calc(100vh-2rem))] space-y-0.5 overflow-y-auto">
-          {category.items.map((item) =>
-            item.items?.length ? (
-              <div key={item.href} className="space-y-0.5">
-                <p className="px-3 pt-1 text-[10px] font-medium uppercase tracking-wide text-[var(--sidebar-text-muted)]">
-                  {t(item.labelKey)}
-                </p>
-                {item.items.map((child) => (
+          {category.items.map((item) => {
+            const itemLocked = isNavItemPlanLocked(item, tenantPlan);
+            if (item.items?.length) {
+              if (itemLocked) {
+                return (
                   <NavSubLink
-                    key={child.href}
-                    item={child}
-                    active={isNavItemActive(pathname, searchParams, child.href)}
-                    onNavigate={() => {
-                      onOpenChange(false);
-                      onNavigate?.();
-                    }}
-                    badgeCount={inboxBadgeCount(child.href, totalUnread)}
+                    key={item.href}
+                    item={item}
+                    active={false}
+                    locked
                   />
-                ))}
-              </div>
-            ) : (
+                );
+              }
+              return (
+                <div key={item.href} className="space-y-0.5">
+                  <p className="px-3 pt-1 text-[10px] font-medium uppercase tracking-wide text-[var(--sidebar-text-muted)]">
+                    {t(item.labelKey)}
+                  </p>
+                  {item.items.map((child) => (
+                    <NavSubLink
+                      key={child.href}
+                      item={child}
+                      active={isNavItemActive(pathname, searchParams, child.href)}
+                      onNavigate={() => {
+                        onOpenChange(false);
+                        onNavigate?.();
+                      }}
+                      badgeCount={inboxBadgeCount(child.href, totalUnread)}
+                      locked={isNavLockedForPlan(child.href, tenantPlan)}
+                    />
+                  ))}
+                </div>
+              );
+            }
+            return (
               <NavSubLink
                 key={item.href}
                 item={item}
@@ -600,9 +664,10 @@ function CollapsedCategoryFlyout({
                   onNavigate?.();
                 }}
                 badgeCount={inboxBadgeCount(item.href, totalUnread)}
+                locked={itemLocked}
               />
-            )
-          )}
+            );
+          })}
         </div>
       </SidebarFlyout>
     </>
@@ -618,6 +683,7 @@ function NavCategorySection({
   onToggle,
   onNavigate,
   totalUnread,
+  tenantPlan,
 }: {
   category: NavCategory;
   isOpen: boolean;
@@ -627,6 +693,7 @@ function NavCategorySection({
   onToggle: () => void;
   onNavigate?: () => void;
   totalUnread: number;
+  tenantPlan: TenantPlan | undefined;
 }) {
   const t = useT();
   const Icon = category.icon;
@@ -658,7 +725,7 @@ function NavCategorySection({
       >
         <div className="nav-sub-list space-y-0.5 pb-1">
           {category.items.map((item) =>
-            renderCategoryNavItem(item, pathname, searchParams, onNavigate, totalUnread)
+            renderCategoryNavItem(item, pathname, searchParams, tenantPlan, onNavigate, totalUnread)
           )}
         </div>
       </div>
@@ -695,12 +762,14 @@ function SidebarNav({
   collapsed,
   drawerOpen,
   onNavigate,
+  tenantPlan,
 }: {
   standaloneItems?: NavItem[];
   navCategories: NavCategory[];
   collapsed: boolean;
   drawerOpen?: boolean;
   onNavigate?: () => void;
+  tenantPlan: TenantPlan | undefined;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -788,6 +857,7 @@ function SidebarNav({
                 onOpenChange={(nextOpen) => setOpenFlyoutId(nextOpen ? category.id : null)}
                 onNavigate={onNavigate}
                 totalUnread={totalUnread}
+                tenantPlan={tenantPlan}
               />
             );
           }
@@ -803,6 +873,7 @@ function SidebarNav({
               onToggle={() => toggleCategory(category.id)}
               onNavigate={onNavigate}
               totalUnread={totalUnread}
+              tenantPlan={tenantPlan}
             />
           );
         })}
@@ -1215,6 +1286,7 @@ export function Sidebar() {
             standaloneItems={standaloneItems}
             navCategories={filteredNavCategories}
             collapsed={isCollapsed}
+            tenantPlan={me?.plan}
           />
         </div>
       </aside>
@@ -1244,6 +1316,7 @@ export function Sidebar() {
           collapsed={isCollapsed}
           drawerOpen={isOpen}
           onNavigate={close}
+          tenantPlan={me?.plan}
         />
         </div>
       </aside>

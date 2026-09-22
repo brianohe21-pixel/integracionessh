@@ -51,7 +51,7 @@ import { calculateUsdPriceInCopCents } from "../../lib/billing/trm.js";
 import type { SubscriptionStatus, TenantPlan } from "../../types/index.js";
 
 const CheckoutSchema = z.object({
-  plan: z.enum(["starter", "pro", "scale"]),
+  plan: z.enum(["starter", "pro"]),
   provider: z.enum(["wompi", "stripe"]).optional(),
 });
 
@@ -335,15 +335,6 @@ export async function handler(
           periodDays: 30,
         },
       };
-      if (tenant.plan === "scale") {
-        plans.scale = {
-          amountCents: amountInCentsForPlan("scale"),
-          listPriceUsd: PLAN_LIST_PRICE_USD.scale,
-          currency: "COP",
-          periodDays: 30,
-          renewalOnly: true,
-        };
-      }
       return ok({
         wompi,
         stripe,

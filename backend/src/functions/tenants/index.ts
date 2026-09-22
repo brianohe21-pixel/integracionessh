@@ -99,7 +99,7 @@ const UpdateTenantSchema = z.object({
   resellerConfig: z
     .object({
       maxSubaccounts: z.number().int().min(1).max(10_000).optional(),
-      defaultSubaccountPlan: z.enum(["free", "starter", "pro", "scale"]).optional(),
+      defaultSubaccountPlan: z.enum(["free", "starter", "pro"]).optional(),
       customDomain: z.string().min(3).max(253).optional(),
       customDomainStatus: z
         .enum(["none", "pending_dns", "active", "error"])

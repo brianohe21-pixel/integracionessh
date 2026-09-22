@@ -6,10 +6,8 @@ export function isSelfServiceCheckoutPlan(plan: PaidTenantPlan): boolean {
   return plan === "starter";
 }
 
-export function canCheckoutPlan(tenant: Tenant, plan: PaidTenantPlan): boolean {
-  if (plan === "starter") return true;
-  if (plan === "scale") return tenant.plan === "scale";
-  return false;
+export function canCheckoutPlan(_tenant: Tenant, plan: PaidTenantPlan): boolean {
+  return plan === "starter";
 }
 
 export function assertCheckoutAllowed(tenant: Tenant, plan: PaidTenantPlan): void {

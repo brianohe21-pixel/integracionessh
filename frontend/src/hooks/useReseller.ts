@@ -47,7 +47,7 @@ export function useCreateSubaccount() {
       name: string;
       email: string;
       ownerName?: string;
-      plan?: "free" | "pro" | "scale";
+      plan?: "free" | "starter" | "pro";
       inviteOwner?: boolean;
       enabledServices?: SubaccountServiceId[];
       serviceLimits?: ResellerLimitsOverride;
@@ -100,7 +100,7 @@ export function useUpdateSubaccount() {
       subaccountId: string;
       name?: string;
       status?: "active" | "suspended";
-      plan?: "free" | "pro" | "scale";
+      plan?: "free" | "starter" | "pro";
       enabledServices?: SubaccountServiceId[];
       serviceLimits?: ResellerLimitsOverride;
     }) =>

@@ -126,6 +126,8 @@ export const en: Messages = {
     mainAccount: "Main account",
     switchSubaccount: "Switch subaccount",
     onboarding: "Getting started",
+    proOnly: "Pro only",
+    proOnlyHint: "Available on the Pro plan only",
   },
   auth: {
     signIn: "Sign in",
