@@ -3016,8 +3016,11 @@ export const en: Messages = {
     paymentHistory: {
       title: "Payment history",
       empty: "You do not have any payments yet.",
+      noResults: "No payments match the selected date range.",
       amount: "Amount",
-      reference: "Reference",
+      pageSize: "Per page",
+      pageSizeOption: "{{size}} per page",
+      pageOf: "Page {{page}} of {{total}}",
     },
     paymentStatus: {
       pending: "Pending",

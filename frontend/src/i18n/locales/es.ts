@@ -3022,8 +3022,11 @@ export const es = {
     paymentHistory: {
       title: "Historial de pagos",
       empty: "Aún no tienes pagos registrados.",
+      noResults: "No hay pagos en el rango de fechas seleccionado.",
       amount: "Monto",
-      reference: "Referencia",
+      pageSize: "Por página",
+      pageSizeOption: "{{size}} por página",
+      pageOf: "Página {{page}} de {{total}}",
     },
     paymentStatus: {
       pending: "Pendiente",
