@@ -45,6 +45,8 @@ import {
   PLAN_LIST_PRICE_USD,
   type PaidTenantPlan,
 } from "../../lib/billing/plan-config.js";
+import { assertCheckoutAllowed } from "../../lib/billing/checkout-policy.js";
+import { calculateUsdPriceInCopCents } from "../../lib/billing/trm.js";
 
 import type { SubscriptionStatus, TenantPlan } from "../../types/index.js";
 
@@ -126,12 +128,24 @@ async function syncSubscriptionToTenant(
   await updateTenant(tenantId, patch);
 }
 
+async function resolveCheckoutAmountInCents(
+  plan: PaidTenantPlan
+): Promise<{ amountInCents: number; trm?: number }> {
+  if (plan === "starter") {
+    const priced = await calculateUsdPriceInCopCents(PLAN_LIST_PRICE_USD.starter);
+    return priced;
+  }
+  return { amountInCents: amountInCentsForPlan(plan) };
+}
+
 async function handleWompiCheckout(
-  tenantId: string,
+  tenant: Awaited<ReturnType<typeof ensureTenant>>,
   email: string,
   plan: PaidTenantPlan
 ) {
-  const amountInCents = amountInCentsForPlan(plan);
+  assertCheckoutAllowed(tenant, plan);
+  const { amountInCents } = await resolveCheckoutAmountInCents(plan);
+  const tenantId = tenant.tenantId;
   const reference = buildPaymentReference(tenantId, plan);
 
   await createPaymentIntent({
@@ -306,30 +320,35 @@ export async function handler(
       const wompi = isWompiConfigured();
       const stripe = isStripeConfigured();
       const defaultProvider = wompi ? "wompi" : stripe ? "stripe" : null;
+      const starterPrice = await resolveCheckoutAmountInCents("starter");
+      const plans: Record<string, Record<string, unknown>> = {
+        starter: {
+          amountCents: starterPrice.amountInCents,
+          listPriceUsd: PLAN_LIST_PRICE_USD.starter,
+          currency: "COP",
+          periodDays: 30,
+          ...(starterPrice.trm !== undefined ? { trm: starterPrice.trm } : {}),
+        },
+        pro: {
+          salesOnly: true,
+          currency: "COP",
+          periodDays: 30,
+        },
+      };
+      if (tenant.plan === "scale") {
+        plans.scale = {
+          amountCents: amountInCentsForPlan("scale"),
+          listPriceUsd: PLAN_LIST_PRICE_USD.scale,
+          currency: "COP",
+          periodDays: 30,
+          renewalOnly: true,
+        };
+      }
       return ok({
         wompi,
         stripe,
         default: defaultProvider,
-        plans: {
-          starter: {
-            amountCents: amountInCentsForPlan("starter"),
-            listPriceUsd: PLAN_LIST_PRICE_USD.starter,
-            currency: "COP",
-            periodDays: 30,
-          },
-          pro: {
-            amountCents: amountInCentsForPlan("pro"),
-            listPriceUsd: PLAN_LIST_PRICE_USD.pro,
-            currency: "COP",
-            periodDays: 30,
-          },
-          scale: {
-            amountCents: amountInCentsForPlan("scale"),
-            listPriceUsd: PLAN_LIST_PRICE_USD.scale,
-            currency: "COP",
-            periodDays: 30,
-          },
-        },
+        plans,
       });
     }
 
@@ -365,8 +384,10 @@ export async function handler(
         );
       }
 
+      assertCheckoutAllowed(tenant, parsed.data.plan);
+
       if (provider === "wompi") {
-        return handleWompiCheckout(auth.tenantId, auth.email, parsed.data.plan);
+        return handleWompiCheckout(tenant, auth.email, parsed.data.plan);
       }
 
       return handleStripeCheckout(tenant, parsed.data.plan);
