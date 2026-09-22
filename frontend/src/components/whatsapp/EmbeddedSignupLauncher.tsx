@@ -84,6 +84,16 @@ declare global {
   }
 }
 
+function initFacebookSdk(appId: string) {
+  window.FB?.init({
+    appId,
+    cookie: true,
+    xfbml: true,
+    version: FB_SDK_VERSION,
+    fedCM: false,
+  });
+}
+
 export function EmbeddedSignupLauncher({
   onConnected,
   alreadyConnected = false,
@@ -118,12 +128,7 @@ export function EmbeddedSignupLauncher({
 
   useEffect(() => {
     if (!metaAppId || !window.FB) return;
-    window.FB.init({
-      appId: metaAppId,
-      cookie: true,
-      xfbml: true,
-      version: FB_SDK_VERSION,
-    });
+    initFacebookSdk(metaAppId);
     setSdkReady(true);
   }, [metaAppId]);
 
@@ -340,12 +345,7 @@ export function EmbeddedSignupLauncher({
         onLoad={() => {
           const initSdk = () => {
             if (!metaAppId) return;
-            window.FB?.init({
-              appId: metaAppId,
-              cookie: true,
-              xfbml: true,
-              version: FB_SDK_VERSION,
-            });
+            initFacebookSdk(metaAppId);
             setSdkReady(true);
           };
           if (window.FB) {
