@@ -88,8 +88,17 @@ export default function WhatsAppUsageReportPage() {
     setFiltersOpen(false);
   }
 
-  const hasData = Boolean(data && data.daily.length > 0);
-  const canExport = Boolean(data) && !isLoading && !isFetching;
+  const daily = data?.daily ?? [];
+  const totals = data?.totals ?? {
+    apiOutbound: 0,
+    appEcho: 0,
+    inbound: 0,
+    total: 0,
+  };
+  const hasData = daily.some(
+    (row) => row.apiOutbound > 0 || row.appEcho > 0 || row.inbound > 0
+  );
+  const canExport = Boolean(data?.daily) && !isLoading && !isFetching && !error;
   const appliedBotName =
     applied?.botId
       ? bots?.find((bot) => bot.botId === applied.botId)?.name ?? applied.botId
@@ -159,26 +168,26 @@ export default function WhatsAppUsageReportPage() {
         <Alert variant="danger">{t("reports.loadError")}</Alert>
       ) : isLoading ? (
         <p className="text-sm text-secondary">{t("common.loading")}</p>
-      ) : data ? (
+      ) : data?.daily ? (
         <div className="space-y-4">
           <Alert variant="info">{t("reports.whatsappUsage.billingNote")}</Alert>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <StatCard
               label={t("reports.whatsappUsage.kpiApi")}
-              value={formatNumber(data.totals.apiOutbound)}
+              value={formatNumber(totals.apiOutbound)}
               sub={t("reports.whatsappUsage.kpiApiHint")}
               icon={<MessageSquare className="h-4 w-4" />}
             />
             <StatCard
               label={t("reports.whatsappUsage.kpiApp")}
-              value={formatNumber(data.totals.appEcho)}
+              value={formatNumber(totals.appEcho)}
               sub={t("reports.whatsappUsage.kpiAppHint")}
               icon={<Smartphone className="h-4 w-4" />}
             />
             <StatCard
               label={t("reports.whatsappUsage.kpiInbound")}
-              value={formatNumber(data.totals.inbound)}
+              value={formatNumber(totals.inbound)}
               sub={t("reports.whatsappUsage.kpiInboundHint")}
               icon={<MessageCircle className="h-4 w-4" />}
             />
@@ -202,7 +211,7 @@ export default function WhatsAppUsageReportPage() {
                 </DataTableRow>
               </DataTableHead>
               <DataTableBody>
-                {data.daily.map((row) => (
+                {daily.map((row) => (
                   <DataTableRow key={row.date}>
                     <DataTableCell>{row.date}</DataTableCell>
                     <DataTableCell>{formatNumber(row.apiOutbound)}</DataTableCell>

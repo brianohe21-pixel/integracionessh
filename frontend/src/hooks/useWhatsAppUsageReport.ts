@@ -5,6 +5,20 @@ import { api } from "@/lib/api";
 import type { MetricsDateRange } from "@/lib/metrics-date-range";
 import type { WhatsAppUsageReport } from "@/types";
 
+function isWhatsAppUsageReport(data: unknown): data is WhatsAppUsageReport {
+  if (!data || typeof data !== "object") return false;
+  const report = data as WhatsAppUsageReport;
+  return (
+    typeof report.from === "string" &&
+    typeof report.to === "string" &&
+    Array.isArray(report.daily) &&
+    Boolean(report.totals) &&
+    typeof report.totals.apiOutbound === "number" &&
+    typeof report.totals.appEcho === "number" &&
+    typeof report.totals.inbound === "number"
+  );
+}
+
 async function fetchWhatsAppUsageReport(
   range: MetricsDateRange,
   botId?: string
@@ -14,7 +28,13 @@ async function fetchWhatsAppUsageReport(
     to: range.to,
   });
   if (botId) params.set("botId", botId);
-  return api.get<WhatsAppUsageReport>(`/metrics/whatsapp-usage?${params.toString()}`);
+  const data = await api.get<WhatsAppUsageReport>(
+    `/metrics/whatsapp-usage?${params.toString()}`
+  );
+  if (!isWhatsAppUsageReport(data)) {
+    throw new Error("Invalid WhatsApp usage report response");
+  }
+  return data;
 }
 
 export function useWhatsAppUsageReport(
