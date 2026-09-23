@@ -109,17 +109,20 @@ export default function WhatsAppUsageReportPage() {
 
   return (
     <DashboardPage>
+      <div className="mb-4">
+        <Link
+          href="/reports"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-secondary transition-colors hover:text-primary"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          {t("reports.backToList")}
+        </Link>
+      </div>
       <PageHeader
         title={t("reports.whatsappUsage.title")}
         subtitle={t("reports.whatsappUsage.description")}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Link href="/reports">
-              <Button variant="secondary" size="sm">
-                <ArrowLeft className="h-4 w-4" />
-                {t("reports.backToList")}
-              </Button>
-            </Link>
             <Button size="sm" onClick={openFiltersModal} disabled={isFetching}>
               {isFetching ? t("reports.generating") : t("reports.generate")}
             </Button>
