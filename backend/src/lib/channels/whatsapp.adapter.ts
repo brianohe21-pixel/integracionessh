@@ -151,5 +151,6 @@ export const whatsappAdapter: ChannelAdapter = {
 
 export function isWhatsAppPayload(payload: unknown): payload is WhatsAppInboundPayload {
   const p = payload as WhatsAppInboundPayload;
-  return Boolean(p?.message && (p.message as WhatsAppMessage).from);
+  const message = p?.message as WhatsAppMessage | undefined;
+  return Boolean(message && (message.from || message.from_user_id));
 }

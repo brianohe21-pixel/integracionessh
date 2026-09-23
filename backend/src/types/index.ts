@@ -1581,8 +1581,8 @@ export interface CallQueueMessage {
 }
 
 export interface WhatsAppContact {
-  profile?: { name: string };
-  wa_id: string;
+  profile?: { name: string; username?: string; country_code?: string };
+  wa_id?: string;
   user_id?: string;
 }
 
@@ -1618,7 +1618,8 @@ export interface WhatsAppReferral {
 }
 
 export interface WhatsAppMessage {
-  from: string;
+  from?: string;
+  from_user_id?: string;
   id: string;
   timestamp: string;
   type:

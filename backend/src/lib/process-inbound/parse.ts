@@ -24,20 +24,26 @@ export function parseInboundQueueBody(raw: string): InboundQueueMessage | null {
 }
 
 function legacyWhatsAppBodyToInbound(body: SQSMessageBody): InboundQueueMessage | null {
-  if (!body.tenantId || !body.botId || !body.message?.from) return null;
+  if (!body.tenantId || !body.botId) return null;
+  const participantId =
+    body.message?.from?.trim() ||
+    body.message?.from_user_id?.trim() ||
+    body.contact?.wa_id?.trim() ||
+    body.contact?.user_id?.trim();
+  if (!participantId || !body.message) return null;
   const contactName = body.contact?.profile?.name;
   return {
     channel: "whatsapp",
     tenantId: body.tenantId,
     botId: body.botId,
-    participantId: body.message.from,
-    conversationKey: body.conversationId ?? `${body.tenantId}-${body.botId}-${body.message.from}`,
+    participantId,
+    conversationKey: body.conversationId ?? `${body.tenantId}-${body.botId}-${participantId}`,
     ...(contactName ? { displayName: contactName } : {}),
     replyToExternalId: body.message.id,
     payload: {
       phoneNumberId: body.phoneNumberId,
       message: body.message,
-      contact: body.contact ?? { wa_id: body.message.from },
+      contact: body.contact ?? { wa_id: participantId },
     },
   };
 }
