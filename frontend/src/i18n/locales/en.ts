@@ -460,13 +460,12 @@ export const en: Messages = {
     coexistenceCallingDisabled: "WhatsApp calling is not available in coexistence mode.",
     riskTitle: "WhatsApp risk",
     riskNone: "No WhatsApp",
-    riskNoneHint: "No connected WhatsApp numbers",
-    riskScore: "Score {{score}}/100",
+    riskNoneHint: "No connected numbers",
+    riskScore: "{{score}}/100",
     risk_ok: "Low",
     risk_warn: "Medium",
     risk_block: "High",
-    riskHint:
-      "Business number quality from Meta. High risk may affect campaigns and bulk messaging.",
+    riskHint: "Number quality from Meta.",
     enforcement: {
       summaryTitle: "{{count}} number(s) with outbound sending blocked",
       summaryDescription:

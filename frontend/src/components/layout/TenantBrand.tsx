@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useQuery } from "@tanstack/react-query";
-import { BotMessageSquare } from "lucide-react";
 import { useAdminRole } from "@/hooks/useAdminRole";
 import { useAuthSession } from "@/hooks/useAuthSession";
 import { useResellerSubaccounts } from "@/hooks/useReseller";
@@ -63,13 +62,8 @@ export function TenantBrand({ className }: { className?: string }) {
 
   return (
     <div className={cn("flex min-w-0 items-center gap-2", className)}>
-      <div
-        className={cn(
-          "flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-md",
-          logoUrl ? "bg-white p-0.5" : "bg-white/10"
-        )}
-      >
-        {logoUrl ? (
+      {logoUrl ? (
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-md bg-white p-0.5">
           <Image
             src={logoUrl}
             alt=""
@@ -79,10 +73,8 @@ export function TenantBrand({ className }: { className?: string }) {
             className="max-h-full max-w-full object-contain"
             key={logoUrl}
           />
-        ) : (
-          <BotMessageSquare className="h-4 w-4 text-white" />
-        )}
-      </div>
+        </div>
+      ) : null}
       <p className="truncate text-[15px] font-semibold tracking-tight text-white">{displayName}</p>
     </div>
   );

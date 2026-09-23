@@ -156,6 +156,20 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     }
   }, [searchParams]);
 
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 1023px)");
+    const syncImmersive = () => {
+      const immersive = Boolean(selectedId) && media.matches;
+      document.documentElement.toggleAttribute("data-conversations-immersive", immersive);
+    };
+    syncImmersive();
+    media.addEventListener("change", syncImmersive);
+    return () => {
+      media.removeEventListener("change", syncImmersive);
+      document.documentElement.removeAttribute("data-conversations-immersive");
+    };
+  }, [selectedId]);
+
   const conversationQueryOptions = useMemo(() => {
     const base = {
       botId: botFilter || undefined,
@@ -762,7 +776,6 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
         }}
         claimPending={claim.isPending}
         showOnMobile={showListOnMobile}
-        whatsappRisk={whatsappRisk}
       />
 
       <div
@@ -782,12 +795,12 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
           </div>
         ) : (
           <>
-            <div className="conversations-chat-header relative z-30 flex min-h-[64px] flex-shrink-0 flex-col gap-3 overflow-visible px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex min-w-0 items-center gap-3">
+            <div className="conversations-chat-header relative z-30 flex min-h-[56px] flex-shrink-0 items-center justify-between gap-2 overflow-visible px-2 py-2 sm:min-h-[64px] sm:gap-3 sm:px-4 sm:py-3">
+              <div className="flex min-w-0 items-center gap-2 sm:gap-3">
                 <button
                   type="button"
                   onClick={() => setSelectedId(null)}
-                  className="rounded-xl p-2 text-secondary transition-colors hover:bg-surface-muted lg:hidden"
+                  className="rounded-xl p-1.5 text-secondary transition-colors hover:bg-surface-muted lg:hidden"
                   aria-label={t("conversations.backToList")}
                 >
                   <ChevronLeft className="h-5 w-5" />
@@ -800,26 +813,29 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                   size="md"
                 />
                 <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex min-w-0 items-center gap-2">
                     <p className="truncate text-base font-semibold text-primary">
                       {selectedConversation.channel === "email" && selectedConversation.emailSubject
                         ? selectedConversation.emailSubject
                         : contactDisplay(selectedConversation)}
                     </p>
                     {conversationHasMetaAdsAttribution(selectedConversation) ? (
-                      <Badge variant="warning" className="text-[10px]">
+                      <Badge variant="warning" className="hidden text-[10px] lg:inline-flex">
                         {selectedConversation.attribution?.source === "meta_ctwa"
                           ? t("ads.badgeCtwa")
                           : t("ads.badge")}
                       </Badge>
                     ) : null}
                     {activeLead?.tags?.slice(0, 2).map((tag) => (
-                      <Badge key={tag} variant="default" className="text-[10px]">
+                      <Badge key={tag} variant="default" className="hidden text-[10px] lg:inline-flex">
                         {tag}
                       </Badge>
                     ))}
                   </div>
-                  <p className="truncate text-xs text-secondary">
+                  <p className="truncate text-xs text-secondary lg:hidden">
+                    {channelLabel(selectedConversation.channel)}
+                  </p>
+                  <p className="hidden truncate text-xs text-secondary lg:block">
                     {channelLabel(selectedConversation.channel)}
                     {" · "}
                     {(selectedConversation.channel ?? "whatsapp") === "whatsapp" ||
@@ -832,7 +848,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                   </p>
                   {(selectedConversation.channel ?? "whatsapp") === "whatsapp" &&
                   selectedConversation.whatsappDisplayNumber ? (
-                    <p className="truncate text-xs text-muted">
+                    <p className="hidden truncate text-xs text-muted lg:block">
                       {t("conversations.replyingFrom", {
                         number: selectedConversation.whatsappDisplayNumber,
                       })}
@@ -840,7 +856,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                   ) : null}
                 </div>
               </div>
-              <div className="flex flex-shrink-0 items-center gap-2">
+              <div className="flex flex-shrink-0 items-center gap-1 sm:gap-2">
                 <button
                   type="button"
                   onClick={() => setContactPanelCollapsed((collapsed) => !collapsed)}
@@ -916,7 +932,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
             ) : null}
 
             {isHuman && (selectedConversation.channel ?? "whatsapp") === "whatsapp" && (
-              <p className="border-b border-warning/30 bg-warning/10 px-4 py-2 text-xs leading-relaxed text-primary sm:px-6">
+              <p className="hidden border-b border-warning/30 bg-warning/10 px-4 py-2 text-xs leading-relaxed text-primary sm:px-6 lg:block">
                 {t("conversations.personalChannelHint")}
               </p>
             )}
@@ -925,7 +941,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
               selectedElapsedSeconds !== null && (
                 <p
                   className={cn(
-                    "border-b px-6 py-2.5 text-xs font-medium",
+                    "border-b px-4 py-2 text-xs font-medium sm:px-6",
                     selectedSlaStatus === "breached"
                       ? "border-danger/30 bg-danger/10 text-danger"
                       : "border-warning/30 bg-warning/10 text-warning"
@@ -943,20 +959,20 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                 </p>
               )}
             {isHuman && (selectedConversation.channel ?? "whatsapp") !== "whatsapp" && !isImapReadOnly && (
-              <p className="border-b border-default border-l-4 border-l-accent bg-surface-muted px-6 py-2.5 text-xs font-medium text-primary">
+              <p className="hidden border-b border-default border-l-4 border-l-accent bg-surface-muted px-6 py-2.5 text-xs font-medium text-primary lg:block">
                 {t("conversations.replyViaChannel", {
                   channel: channelLabel(selectedConversation.channel),
                 })}
               </p>
             )}
             {isImapReadOnly && (
-              <p className="border-b border-default border-l-4 border-l-warning bg-warning/10 px-6 py-2.5 text-xs font-medium text-primary">
+              <p className="border-b border-default border-l-4 border-l-warning bg-warning/10 px-4 py-2 text-xs font-medium text-primary sm:px-6">
                 {t("emailChannel.imapReadOnly")}
               </p>
             )}
 
             {selectedConversation && activeLead && (
-              <div className="relative z-10 mx-4 mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-warning/30 bg-warning/10 p-3 text-sm text-primary shadow-sm">
+              <div className="relative z-10 mx-4 mt-3 hidden flex-wrap items-center justify-between gap-2 rounded-2xl border border-warning/30 bg-warning/10 p-3 text-sm text-primary shadow-sm lg:flex">
                 <div>
                   <span className="font-semibold">{t("leads.leadStatus")}: </span>
                   <span>{t(`leads.status_${activeLead.status}`)}</span>
@@ -978,7 +994,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
             )}
 
             {selectedConversation && !activeLead && selectedContactPhone && (
-              <div className="relative z-10 mx-4 mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-default bg-surface-muted p-3 text-sm text-primary shadow-sm">
+              <div className="relative z-10 mx-4 mt-3 hidden flex-wrap items-center justify-between gap-2 rounded-2xl border border-default bg-surface-muted p-3 text-sm text-primary shadow-sm lg:flex">
                 <span className="text-secondary">{t("leads.noLeadForConversation")}</span>
                 <button
                   type="button"
@@ -993,11 +1009,13 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
 
             {selectedConversation && (
               <>
-                <AdvisorCallPanel
-                  conversation={selectedConversation}
-                  advisorMode={advisorMode}
-                  voiceEnabled={selectedBot?.webchatVoiceEnabled}
-                />
+                <div className="hidden lg:contents">
+                  <AdvisorCallPanel
+                    conversation={selectedConversation}
+                    advisorMode={advisorMode}
+                    voiceEnabled={selectedBot?.webchatVoiceEnabled}
+                  />
+                </div>
                 <WhatsAppSoftphone conversation={selectedConversation} advisorMode={advisorMode} />
               </>
             )}

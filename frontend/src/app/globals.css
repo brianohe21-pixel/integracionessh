@@ -473,15 +473,15 @@ textarea {
   margin-inline: auto;
   max-width: 56rem;
   width: 100%;
-  padding-inline: 1.5rem;
+  padding-inline: 0.75rem;
 }
 
 .conversations-thread {
-  padding-block: 1rem;
+  padding-block: 0.75rem;
 }
 
 .conversations-chat-footer-inner {
-  padding-bottom: 1rem;
+  padding-bottom: 0.75rem;
 }
 
 @media (min-width: 640px) {
@@ -503,6 +503,16 @@ textarea {
   .conversations-thread,
   .conversations-chat-footer-inner {
     padding-inline: 3rem;
+  }
+}
+
+@media (max-width: 1023px) {
+  html[data-conversations-immersive] .platform-topbar {
+    display: none;
+  }
+
+  html[data-conversations-immersive] .conversations-compose-bar {
+    padding-block: 0.5rem;
   }
 }
 

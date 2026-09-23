@@ -462,13 +462,12 @@ export const es = {
       "Las llamadas de WhatsApp no están disponibles en modo coexistencia.",
     riskTitle: "Riesgo WhatsApp",
     riskNone: "Sin WhatsApp",
-    riskNoneHint: "No hay números de WhatsApp conectados",
-    riskScore: "Score {{score}}/100",
+    riskNoneHint: "Sin números conectados",
+    riskScore: "{{score}}/100",
     risk_ok: "Bajo",
     risk_warn: "Medio",
     risk_block: "Alto",
-    riskHint:
-      "Calidad del número de negocio según Meta. Un riesgo alto puede afectar campañas y mensajería masiva.",
+    riskHint: "Calidad del número según Meta.",
     enforcement: {
       summaryTitle: "{{count}} número(s) con envíos salientes bloqueados",
       summaryDescription:

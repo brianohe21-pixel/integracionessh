@@ -124,7 +124,7 @@ export function ConversationComposeBar({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="conversations-compose-bar relative py-3">
+    <form onSubmit={handleSubmit} className="conversations-compose-bar relative py-2 sm:py-3">
       <div className="conversations-compose-input overflow-hidden">
         {voice.active ? (
           <VoiceNoteComposeBar voice={voice} sending={sending || attaching} />

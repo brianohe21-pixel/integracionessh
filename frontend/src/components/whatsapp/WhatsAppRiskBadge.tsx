@@ -40,8 +40,6 @@ export function WhatsAppRiskBadge({
     level === "none" ? t("whatsapp.riskNone") : t(`whatsapp.risk_${level}`);
   const scoreLabel =
     risk && risk.score !== null ? t("whatsapp.riskScore", { score: String(risk.score) }) : null;
-  const detail =
-    level === "none" ? t("whatsapp.riskNoneHint") : t("whatsapp.riskHint");
 
   if (iconOnly) {
     const Icon =
@@ -53,17 +51,21 @@ export function WhatsAppRiskBadge({
             ? ShieldAlert
             : MessageCircle;
 
+    const tooltipLine =
+      level === "none"
+        ? t("whatsapp.riskNoneHint")
+        : scoreLabel
+          ? `${statusLabel} · ${scoreLabel}`
+          : statusLabel;
+
     return (
       <Tooltip
         side="bottom"
         content={
-          <span className="flex flex-col gap-1">
+          <span className="whitespace-nowrap">
             <span className="font-semibold">{t("whatsapp.riskTitle")}</span>
-            <span>
-              {statusLabel}
-              {scoreLabel ? ` · ${scoreLabel}` : ""}
-            </span>
-            <span className="text-secondary">{detail}</span>
+            {": "}
+            {tooltipLine}
           </span>
         }
       >

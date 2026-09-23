@@ -41,7 +41,7 @@ export function Tabs<T extends string>({
           type="button"
           onClick={() => onChange(item.id)}
           className={cn(
-            "flex-1 rounded-lg px-3 py-2 text-xs font-medium transition-all duration-150",
+            "flex-1 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-all duration-150 sm:px-3 sm:py-2 sm:text-xs",
             value === item.id
               ? isVibrant
                 ? "bg-gradient-to-br from-brand-primary to-accent text-white shadow-md shadow-brand-primary/25"
