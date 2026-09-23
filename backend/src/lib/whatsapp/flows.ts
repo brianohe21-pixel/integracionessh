@@ -1,4 +1,5 @@
 import { formatMetaValidationErrors, validateMetaFlowJson } from "../meta-flow/validate.js";
+import { buildWhatsAppRecipientFields } from "./identity.js";
 
 const GRAPH_API_URL = "https://graph.facebook.com/v22.0";
 
@@ -168,7 +169,7 @@ export async function sendFlowMessage(options: SendFlowMessageOptions): Promise<
   const body: Record<string, unknown> = {
     messaging_product: "whatsapp",
     recipient_type: "individual",
-    to: options.to,
+    ...buildWhatsAppRecipientFields(options.to),
     type: "interactive",
     interactive: {
       type: "flow",
@@ -218,7 +219,7 @@ export async function sendInteractiveButtons(
   const body: Record<string, unknown> = {
     messaging_product: "whatsapp",
     recipient_type: "individual",
-    to: options.to,
+    ...buildWhatsAppRecipientFields(options.to),
     type: "interactive",
     interactive: {
       type: "button",

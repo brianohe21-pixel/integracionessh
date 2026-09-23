@@ -5,6 +5,7 @@ import { randomUUID } from "crypto";
 import { validateWebhookSignature } from "../../lib/whatsapp/client.js";
 import { isProcessableInboundMessage } from "../../lib/whatsapp/inbound.js";
 import { normalizeWhatsAppContact } from "../../lib/whatsapp/contact.js";
+import { resolveInboundParticipantId } from "../../lib/whatsapp/identity.js";
 import { enqueueWhatsAppSync } from "../../lib/whatsapp/coexistence/sync-queue.js";
 import { isProcessableInstagramMessage } from "../../lib/instagram/inbound.js";
 import { isProcessableMessengerMessage } from "../../lib/messenger/inbound.js";
@@ -605,9 +606,22 @@ async function handleWhatsAppWebhook(payload: WhatsAppWebhookEvent): Promise<voi
       for (const message of messages) {
         if (!isProcessableInboundMessage(message)) continue;
 
-        const contact = normalizeWhatsAppContact(
-          contacts.find((c) => c.wa_id === message.from) ?? { wa_id: message.from }
-        );
+        const matchedContact =
+          contacts.find(
+            (c) =>
+              (message.from && c.wa_id === message.from) ||
+              (message.from_user_id && c.user_id === message.from_user_id)
+          ) ?? contacts[0];
+        const participantId = resolveInboundParticipantId(message, matchedContact);
+        if (!participantId) {
+          console.warn("Skipping WhatsApp message without participant identity", {
+            messageId: message.id,
+            phoneNumberId,
+          });
+          continue;
+        }
+
+        const contact = normalizeWhatsAppContact(matchedContact ?? {}, participantId);
 
         const resolved = await resolveWhatsAppChannelByPhoneNumberId(phoneNumberId);
         const bot = resolved?.bot ?? (await getBotByPhoneNumberId(phoneNumberId));
@@ -617,13 +631,13 @@ async function handleWhatsAppWebhook(payload: WhatsAppWebhookEvent): Promise<voi
         }
 
         const conversationKey = resolved
-          ? `${bot.tenantId}-${bot.botId}-${phoneNumberId}-${message.from}`
-          : `${bot.tenantId}-${bot.botId}-${message.from}`;
+          ? `${bot.tenantId}-${bot.botId}-${phoneNumberId}-${participantId}`
+          : `${bot.tenantId}-${bot.botId}-${participantId}`;
         const sqsBody: InboundQueueMessage = {
           channel: "whatsapp",
           tenantId: bot.tenantId,
           botId: bot.botId,
-          participantId: message.from,
+          participantId,
           conversationKey,
           displayName: contact.profile?.name,
           replyToExternalId: message.id,
