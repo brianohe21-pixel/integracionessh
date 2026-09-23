@@ -28,13 +28,12 @@ resource "aws_amplify_app" "frontend" {
                   env | grep '^NEXT_PUBLIC_' > frontend/.env.production || true
                   if grep -q '^NEXT_PUBLIC_WS_URL=' frontend/.env.production; then
                     ws=$(grep '^NEXT_PUBLIC_WS_URL=' frontend/.env.production | cut -d= -f2- | tr -d "'\"")
-                    ws=${ws%/}
-                    ws=${ws%/\$default}
-                    ws=${ws%/$default}
-                    if [[ "$ws" == *".execute-api."*".amazonaws.com" ]]; then
-                      export NEXT_PUBLIC_WS_URL="${ws}/\$default"
+                    ws=$${ws%/}
+                    ws=$${ws%/\$$default}
+                    if [[ "$$ws" == *".execute-api."*".amazonaws.com" ]]; then
+                      export NEXT_PUBLIC_WS_URL="$${ws}/\$$default"
                       grep -v '^NEXT_PUBLIC_WS_URL=' frontend/.env.production > /tmp/next_public_env || true
-                      echo "NEXT_PUBLIC_WS_URL='${NEXT_PUBLIC_WS_URL}'" >> /tmp/next_public_env
+                      echo "NEXT_PUBLIC_WS_URL='$${NEXT_PUBLIC_WS_URL}'" >> /tmp/next_public_env
                       mv /tmp/next_public_env frontend/.env.production
                     fi
                   fi
