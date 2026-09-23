@@ -24,8 +24,8 @@ resource "aws_amplify_app" "frontend" {
                 - pnpm install --frozen-lockfile
             build:
               commands:
-                - env | grep '^NEXT_PUBLIC_' > frontend/.env.production || true
                 - |
+                  env | grep '^NEXT_PUBLIC_' > frontend/.env.production || true
                   if grep -q '^NEXT_PUBLIC_WS_URL=' frontend/.env.production; then
                     ws=$(grep '^NEXT_PUBLIC_WS_URL=' frontend/.env.production | cut -d= -f2- | tr -d "'\"")
                     ws=${ws%/}
@@ -38,7 +38,7 @@ resource "aws_amplify_app" "frontend" {
                       mv /tmp/next_public_env frontend/.env.production
                     fi
                   fi
-                - pnpm --filter frontend run build
+                  pnpm --filter frontend run build
           artifacts:
             baseDirectory: frontend/.next
             files:
