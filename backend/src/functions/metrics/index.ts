@@ -16,6 +16,7 @@ import { getAdvisorWorkloadMetrics } from "../../lib/dynamodb/advisor-workload.r
 import { getConversationCategoryMetrics } from "../../lib/dynamodb/conversation-category-metrics.repository.js";
 import { getWebsiteMetrics } from "../../lib/dynamodb/website-metrics.repository.js";
 import { getWhatsAppUsageReport } from "../../lib/dynamodb/whatsapp-usage-metrics.repository.js";
+import { getCampaignPerformanceReport } from "../../lib/dynamodb/campaign-performance.repository.js";
 import { buildUsageMarketingCsv } from "../../lib/reports/metrics-csv.js";
 import { getSmsHistoryPage, getSmsOverview } from "../../lib/dynamodb/sms-metrics.repository.js";
 import type { SmsDlrSource, SmsHistoryStatus } from "../../types/index.js";
@@ -285,6 +286,25 @@ export async function handler(
       const botId = qs.botId?.trim();
       if (botId) options.botId = botId;
       const report = await getWhatsAppUsageReport(auth.tenantId, options);
+      return ok(report);
+    }
+
+    if (method === "GET" && rawPath.endsWith("/metrics/campaign-performance")) {
+      await assertAssignedServices(auth.tenantId, "campaigns");
+      const qs = event.queryStringParameters ?? {};
+      const daysParam = qs.days ? parseInt(qs.days, 10) : undefined;
+      const options: {
+        from?: string;
+        to?: string;
+        days?: number;
+        botId?: string;
+      } = {};
+      if (qs.from) options.from = qs.from;
+      if (qs.to) options.to = qs.to;
+      if (daysParam !== undefined && Number.isFinite(daysParam)) options.days = daysParam;
+      const botId = qs.botId?.trim();
+      if (botId) options.botId = botId;
+      const report = await getCampaignPerformanceReport(auth.tenantId, options);
       return ok(report);
     }
 

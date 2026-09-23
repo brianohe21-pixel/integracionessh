@@ -16,4 +16,18 @@ export const TENANT_REPORTS: TenantReport[] = [
     href: "/reports/whatsapp-usage",
     status: "available",
   },
+  {
+    id: "plan-usage",
+    titleKey: "reports.planUsage.title",
+    descriptionKey: "reports.planUsage.description",
+    href: "/reports/plan-usage",
+    status: "available",
+  },
+  {
+    id: "campaign-performance",
+    titleKey: "reports.campaignPerformance.title",
+    descriptionKey: "reports.campaignPerformance.description",
+    href: "/reports/campaign-performance",
+    status: "available",
+  },
 ];

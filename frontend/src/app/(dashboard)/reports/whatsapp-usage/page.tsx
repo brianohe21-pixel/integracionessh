@@ -6,9 +6,6 @@ import {
   ArrowLeft,
   Download,
   FileSpreadsheet,
-  MessageCircle,
-  MessageSquare,
-  Smartphone,
   X,
 } from "lucide-react";
 import { DashboardPage } from "@/components/layout/DashboardPage";
@@ -24,7 +21,6 @@ import {
 } from "@/components/ui/DataTable";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Modal } from "@/components/ui/Modal";
-import { StatCard } from "@/components/ui/StatCard";
 import { useBots } from "@/hooks/useBots";
 import { useWhatsAppUsageExport } from "@/hooks/useWhatsAppUsageExport";
 import { useWhatsAppUsageReport } from "@/hooks/useWhatsAppUsageReport";
@@ -175,27 +171,6 @@ export default function WhatsAppUsageReportPage() {
         <div className="space-y-4">
           <Alert variant="info">{t("reports.whatsappUsage.billingNote")}</Alert>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <StatCard
-              label={t("reports.whatsappUsage.kpiApi")}
-              value={formatNumber(totals.apiOutbound)}
-              sub={t("reports.whatsappUsage.kpiApiHint")}
-              icon={<MessageSquare className="h-4 w-4" />}
-            />
-            <StatCard
-              label={t("reports.whatsappUsage.kpiApp")}
-              value={formatNumber(totals.appEcho)}
-              sub={t("reports.whatsappUsage.kpiAppHint")}
-              icon={<Smartphone className="h-4 w-4" />}
-            />
-            <StatCard
-              label={t("reports.whatsappUsage.kpiInbound")}
-              value={formatNumber(totals.inbound)}
-              sub={t("reports.whatsappUsage.kpiInboundHint")}
-              icon={<MessageCircle className="h-4 w-4" />}
-            />
-          </div>
-
           {!hasData ? (
             <EmptyState
               icon={<FileSpreadsheet className="h-5 w-5" />}
@@ -223,6 +198,13 @@ export default function WhatsAppUsageReportPage() {
                     <DataTableCell>{formatNumber(row.total)}</DataTableCell>
                   </DataTableRow>
                 ))}
+                <DataTableRow className="border-t border-default font-semibold text-primary">
+                  <DataTableCell>{t("common.total")}</DataTableCell>
+                  <DataTableCell>{formatNumber(totals.apiOutbound)}</DataTableCell>
+                  <DataTableCell>{formatNumber(totals.appEcho)}</DataTableCell>
+                  <DataTableCell>{formatNumber(totals.inbound)}</DataTableCell>
+                  <DataTableCell>{formatNumber(totals.total)}</DataTableCell>
+                </DataTableRow>
               </DataTableBody>
             </DataTable>
           )}
