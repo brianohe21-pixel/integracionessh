@@ -16,7 +16,8 @@ export const PLAN_LIST_PRICE_USD: Record<PaidBillingPlan, number> = {
 
 export const PUBLIC_SELF_SERVICE_PLAN: PaidBillingPlan = "starter";
 
-export const SALES_WHATSAPP_URL = buildWaMeLink("+573217455642");
+export const SALES_WHATSAPP_URL =
+  buildWaMeLink("+573217455642") ?? "https://wa.me/573217455642";
 
 export function resolveBillingPlanPrice(
   plans:

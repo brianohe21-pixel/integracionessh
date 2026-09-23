@@ -3,6 +3,7 @@ import { getAdvisor } from "../dynamodb/advisor.repository.js";
 import { updateConversation } from "../dynamodb/conversation.repository.js";
 import { sendTextMessage, truncateWhatsAppText } from "../whatsapp/client.js";
 import { assertWhatsAppOutboundAllowed } from "../whatsapp/outbound-guard.js";
+import { isWhatsAppBsuid } from "../whatsapp/identity.js";
 import { buildWaMeLink } from "./wa-link.js";
 import type { Conversation } from "../../types/index.js";
 
@@ -39,19 +40,26 @@ export async function notifyAdvisorOfConversation(params: {
   const channel = conversation.channel ?? "whatsapp";
   const participantId = conversation.participantId ?? conversation.phoneNumber;
   const contactLabel = conversation.contactName ?? participantId;
+  const identity = conversation.phoneNumber || participantId;
+  const identityIsBsuid = Boolean(identity && isWhatsAppBsuid(identity));
 
   const channelLine =
     channel === "whatsapp"
-      ? `Teléfono: ${conversation.phoneNumber || participantId}`
+      ? identityIsBsuid
+        ? `ID de usuario: ${identity}`
+        : `Teléfono: ${identity}`
       : `Canal: ${channelLabel(channel)} · ID: ${participantId}`;
 
-  const waLinkLine =
-    channel === "whatsapp" && conversation.phoneNumber
-      ? `Abrir chat: ${buildWaMeLink(
-          conversation.phoneNumber,
-          `Hi ${contactLabel}, I'm following up on your request.`
-        )}`
-      : "Responde desde el panel de conversaciones.";
+  const waLink =
+    channel === "whatsapp" && identity && !identityIsBsuid
+      ? buildWaMeLink(
+          identity,
+          `Hola ${contactLabel}, te escribo respecto a tu solicitud.`
+        )
+      : null;
+  const waLinkLine = waLink
+    ? `Abrir chat: ${waLink}`
+    : "Responde desde el panel de conversaciones.";
 
   const body = truncateWhatsAppText(
     [
