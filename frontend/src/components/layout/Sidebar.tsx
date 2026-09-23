@@ -130,7 +130,10 @@ const memberNavCategories: NavCategory[] = [
   {
     id: "insights",
     labelKey: "nav.categoryInsights",
-    items: [{ href: "/metrics", labelKey: "nav.metrics", icon: BarChart3 }],
+    items: [
+      { href: "/metrics", labelKey: "nav.metrics", icon: BarChart3 },
+      { href: "/reports", labelKey: "nav.reports", icon: FileSpreadsheet },
+    ],
   },
   {
     id: "integrations",

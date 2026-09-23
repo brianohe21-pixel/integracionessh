@@ -18,6 +18,10 @@ import { upsertFromConversation } from "./contact.repository.js";
 import { publishRealtimeEventSafe } from "../realtime/publish.js";
 import { resolveContactIdFromConversation } from "../contacts/resolve-contact-id.js";
 import { indexContactConversation } from "../contacts/contact-conversation-index.js";
+import {
+  incrementWhatsAppUsage,
+  type WhatsAppUsageBucket,
+} from "./whatsapp-usage-metrics.repository.js";
 
 const REALTIME_CONVERSATION_FIELDS = new Set([
   "handoffMode",
@@ -26,6 +30,21 @@ const REALTIME_CONVERSATION_FIELDS = new Set([
   "status",
   "interactionCategory",
 ]);
+
+function resolveWhatsAppUsageBucket(message: Message): WhatsAppUsageBucket | null {
+  if ((message.channel ?? "whatsapp") !== "whatsapp") return null;
+  if (message.source === "whatsapp_history") return null;
+  if (message.source === "whatsapp_app_echo") return "appEcho";
+  if (message.source === "whatsapp_inbound" || message.role === "user") return "inbound";
+  if (
+    message.role === "advisor" ||
+    message.role === "assistant" ||
+    message.source === "panel"
+  ) {
+    return "apiOutbound";
+  }
+  return null;
+}
 
 export function normalizeConversation(conv: Conversation): Conversation {
   const channel: Channel = conv.channel ?? "whatsapp";
@@ -669,6 +688,25 @@ export async function addMessageIdempotent(
             ? (conversation.messageCount ?? 0) + 1
             : conversation.messageCount,
         },
+      });
+    }
+  }
+
+  const usageBucket = resolveWhatsAppUsageBucket(message);
+  if (usageBucket) {
+    try {
+      await incrementWhatsAppUsage(
+        message.tenantId,
+        botId,
+        usageBucket,
+        new Date(message.timestamp || now)
+      );
+    } catch (error) {
+      console.warn("whatsapp usage metrics increment failed", {
+        tenantId: message.tenantId,
+        botId,
+        bucket: usageBucket,
+        error: (error as Error).message,
       });
     }
   }

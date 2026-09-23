@@ -1065,6 +1065,25 @@ export interface CallingMetrics {
   byBot: CallingMetricsBotRow[];
 }
 
+export interface WhatsAppUsageDayCounts {
+  apiOutbound: number;
+  appEcho: number;
+  inbound: number;
+}
+
+export interface WhatsAppUsageDailyPoint extends WhatsAppUsageDayCounts {
+  date: string;
+  total: number;
+}
+
+export interface WhatsAppUsageReport {
+  from: string;
+  to: string;
+  botId?: string;
+  totals: WhatsAppUsageDayCounts & { total: number };
+  daily: WhatsAppUsageDailyPoint[];
+}
+
 export type MessageRole = "user" | "assistant" | "advisor" | "system";
 
 export interface EmailMessageAttachment {
