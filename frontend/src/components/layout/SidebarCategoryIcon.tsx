@@ -41,7 +41,7 @@ function getCategoryStyle(categoryId: string): CategoryStyle {
 }
 
 function CategoryGlyph({ categoryId, className }: { categoryId: string; className?: string }) {
-  const shared = cn("h-3 w-3", className);
+  const shared = cn("h-3.5 w-3.5", className);
 
   switch (categoryId) {
     case "dashboard":
@@ -145,7 +145,7 @@ export function SidebarCategoryIcon({ categoryId, className }: SidebarCategoryIc
   return (
     <span
       className={cn(
-        "nav-category-icon flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-white shadow-sm",
+        "nav-category-icon flex h-[1.375rem] w-[1.375rem] shrink-0 items-center justify-center rounded-md text-white shadow-sm",
         style.bgClass,
         className
       )}

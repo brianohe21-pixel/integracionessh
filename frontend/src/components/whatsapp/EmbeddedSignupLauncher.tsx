@@ -11,7 +11,7 @@ import { MessageCircle, Loader2, CheckCircle } from "lucide-react";
 
 const FALLBACK_META_APP_ID = process.env.NEXT_PUBLIC_META_APP_ID ?? "";
 const FALLBACK_CONFIG_ID = process.env.NEXT_PUBLIC_META_EMBEDDED_SIGNUP_CONFIG_ID ?? "";
-const FB_SDK_VERSION = "v22.0";
+const FB_SDK_VERSION = "v25.0";
 const PIN_LENGTH = 6;
 const SESSION_INFO_GRACE_MS = 5000;
 const SESSION_INFO_RETRY_MS = 400;
@@ -40,6 +40,7 @@ interface EmbeddedSignupLauncherProps {
   className?: string;
   onboardingMode?: WhatsAppOnboardingMode;
   botId?: string;
+  onBusyChange?: (busy: boolean) => void;
 }
 
 interface FBLoginResponse {
@@ -61,12 +62,21 @@ interface EmbeddedSignupMessage {
   };
 }
 
-function formatMetaSignupError(data: EmbeddedSignupMessage["data"]): string {
+function formatMetaSignupError(
+  data: EmbeddedSignupMessage["data"],
+  ownerPortfolioMessage: string
+): string {
+  const errorCode = String(data?.error_code ?? "").trim();
+  if (errorCode === "3441038") {
+    const sessionRef = data?.session_id ? ` (#3441038:${data.session_id})` : " (#3441038)";
+    return `${ownerPortfolioMessage}${sessionRef}`;
+  }
+
   const message = data?.error_message?.trim();
   if (!message) return "";
 
-  const reference = data?.error_code
-    ? `#${data.error_code}`
+  const reference = errorCode
+    ? `#${errorCode}`
     : data?.session_id
       ? `#N/A:${data.session_id}`
       : "";
@@ -84,17 +94,29 @@ declare global {
   }
 }
 
+function initFacebookSdk(appId: string) {
+  window.FB?.init({
+    appId,
+    cookie: true,
+    xfbml: true,
+    version: FB_SDK_VERSION,
+    fedCM: false,
+  });
+}
+
 export function EmbeddedSignupLauncher({
   onConnected,
   alreadyConnected = false,
   className,
   onboardingMode = "cloud_api",
   botId,
+  onBusyChange,
 }: EmbeddedSignupLauncherProps) {
   const t = useT();
   const { data: metaAppConfig, isLoading: metaAppLoading } = useMetaAppConfig();
   const { status, error, connect, connectCoexistence, reset, setStatus } = useWhatsAppConnect(botId);
   const [sdkReady, setSdkReady] = useState(false);
+  const [signupInProgress, setSignupInProgress] = useState(false);
   const [localConnected, setLocalConnected] = useState(alreadyConnected);
   const [pendingRegistration, setPendingRegistration] = useState(false);
   const [pin, setPin] = useState("");
@@ -118,12 +140,7 @@ export function EmbeddedSignupLauncher({
 
   useEffect(() => {
     if (!metaAppId || !window.FB) return;
-    window.FB.init({
-      appId: metaAppId,
-      cookie: true,
-      xfbml: true,
-      version: FB_SDK_VERSION,
-    });
+    initFacebookSdk(metaAppId);
     setSdkReady(true);
   }, [metaAppId]);
 
@@ -188,6 +205,7 @@ export function EmbeddedSignupLauncher({
       setStatus("error");
     } finally {
       completingRef.current = false;
+      setSignupInProgress(false);
     }
   }, [clearGraceTimer, connect, connectCoexistence, onConnected, pin, pinValid, setStatus]);
 
@@ -197,11 +215,19 @@ export function EmbeddedSignupLauncher({
     graceTimerRef.current = setInterval(() => {
       if (Date.now() - startedAt > SESSION_INFO_GRACE_MS) {
         clearGraceTimer();
+        if (!completingRef.current && (!pendingRef.current.code || !pendingRef.current.wabaId)) {
+          setSignupInProgress(false);
+          if (pendingRef.current.sessionFinished) {
+            pendingRef.current = {};
+            setSignupError(t("whatsapp.signupError"));
+          }
+          reset();
+        }
         return;
       }
       void tryComplete();
     }, SESSION_INFO_RETRY_MS);
-  }, [clearGraceTimer, tryComplete]);
+  }, [clearGraceTimer, reset, t, tryComplete]);
 
   useEffect(() => {
     setLocalConnected(alreadyConnected);
@@ -221,8 +247,15 @@ export function EmbeddedSignupLauncher({
       return;
     }
 
+    if (!isCoexistence && pin && !pinValid) {
+      setSignupError(t("whatsapp.pinInvalid"));
+      return;
+    }
+
     setSignupError("");
     reset();
+    setSignupInProgress(true);
+    setStatus("connecting");
     completingRef.current = false;
     pendingRef.current = { coexistence: isCoexistence };
     clearGraceTimer();
@@ -246,13 +279,18 @@ export function EmbeddedSignupLauncher({
 
       const eventName = String(payload.event ?? "").toUpperCase();
 
-      const metaSignupError = formatMetaSignupError(payload.data);
+      const metaSignupError = formatMetaSignupError(
+        payload.data,
+        t("whatsapp.signupErrorOwnerPortfolio")
+      );
 
       if (eventName === "CANCEL") {
         pendingRef.current = {};
         clearGraceTimer();
+        setSignupInProgress(false);
         if (metaSignupError) {
           setSignupError(metaSignupError);
+          reset();
         } else {
           reset();
         }
@@ -262,6 +300,7 @@ export function EmbeddedSignupLauncher({
       if (eventName === "ERROR") {
         pendingRef.current = {};
         clearGraceTimer();
+        setSignupInProgress(false);
         setSignupError(metaSignupError || t("whatsapp.signupError"));
         reset();
         return;
@@ -290,8 +329,12 @@ export function EmbeddedSignupLauncher({
       override_default_response_type: true,
       extras: {
         setup: {},
-        sessionInfoVersion: "3",
-        ...(isCoexistence ? { featureType: "whatsapp_business_app_onboarding" } : {}),
+        ...(isCoexistence
+          ? {
+              featureType: "whatsapp_business_app_onboarding",
+              sessionInfoVersion: "3",
+            }
+          : {}),
       },
     };
 
@@ -305,15 +348,21 @@ export function EmbeddedSignupLauncher({
         }
         if (!pendingRef.current.code && response.status !== "connected") {
           clearGraceTimer();
+          setSignupInProgress(false);
           reset();
         }
       },
       loginOptions
     );
-  }, [clearGraceTimer, configId, isCoexistence, reset, scheduleGraceRetries, sdkReady, t, tryComplete]);
+  }, [clearGraceTimer, configId, isCoexistence, pin, pinValid, reset, scheduleGraceRetries, sdkReady, setStatus, t, tryComplete]);
 
-  const isConnecting = status === "connecting";
-  const showConnected = localConnected || status === "connected";
+  const isConnecting = signupInProgress || status === "connecting";
+  const showConnected = !isConnecting && (localConnected || status === "connected");
+
+  useEffect(() => {
+    onBusyChange?.(isConnecting);
+    return () => onBusyChange?.(false);
+  }, [isConnecting, onBusyChange]);
   const integrationError = signupError || error;
 
   if (metaAppLoading) {
@@ -340,12 +389,7 @@ export function EmbeddedSignupLauncher({
         onLoad={() => {
           const initSdk = () => {
             if (!metaAppId) return;
-            window.FB?.init({
-              appId: metaAppId,
-              cookie: true,
-              xfbml: true,
-              version: FB_SDK_VERSION,
-            });
+            initFacebookSdk(metaAppId);
             setSdkReady(true);
           };
           if (window.FB) {
@@ -383,13 +427,26 @@ export function EmbeddedSignupLauncher({
                 setPin(next);
               }}
               placeholder={t("whatsapp.pinPlaceholder")}
-              className="w-full max-w-xs rounded-lg border border-default px-3 py-2 text-sm font-mono tracking-widest"
+              disabled={isConnecting}
+              className="w-full max-w-xs rounded-lg border border-default px-3 py-2 text-sm font-mono tracking-widest disabled:opacity-60"
             />
             <p className="mt-1 text-xs text-secondary">{t("whatsapp.pinHintOptional")}</p>
           </div>
         )}
 
-        {showConnected ? (
+        {isConnecting ? (
+          <div
+            role="status"
+            aria-live="polite"
+            className="flex items-center gap-3 rounded-lg border border-[#25D366]/30 bg-[#25D366]/10 px-4 py-3"
+          >
+            <Loader2 className="h-5 w-5 shrink-0 animate-spin text-[#128C7E]" />
+            <div>
+              <p className="text-sm font-medium text-primary">{t("whatsapp.connecting")}</p>
+              <p className="text-xs text-secondary">{t("whatsapp.connectingHint")}</p>
+            </div>
+          </div>
+        ) : showConnected ? (
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-sm text-green-700">
               <CheckCircle className="w-4 h-4 flex-shrink-0" />
@@ -403,26 +460,16 @@ export function EmbeddedSignupLauncher({
           <button
             type="button"
             onClick={handleLaunch}
-            disabled={!sdkReady || isConnecting}
+            disabled={!sdkReady}
             className={cn(
               "inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white transition-colors",
-              !sdkReady || isConnecting
+              !sdkReady
                 ? "bg-[#25D366]/60 cursor-not-allowed"
                 : "bg-[#25D366] hover:bg-[#1da851]"
             )}
           >
-            {isConnecting ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <MessageCircle className="w-4 h-4" />
-            )}
-            {isConnecting
-              ? t("whatsapp.connecting")
-              : isCoexistence
-                ? t("whatsapp.coexistenceConnectButton")
-                : showConnected
-                  ? t("whatsapp.reconnect")
-                  : t("whatsapp.connectButton")}
+            <MessageCircle className="w-4 h-4" />
+            {isCoexistence ? t("whatsapp.coexistenceConnectButton") : t("whatsapp.connectButton")}
           </button>
         )}
 

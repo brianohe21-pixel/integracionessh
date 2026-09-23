@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Plus, GitBranch, Copy, Power, PowerOff, Trash2 } from "lucide-react";
+import { Plus, GitBranch } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { useFlows, useToggleFlow, useDeleteFlow, useDuplicateFlow } from "@/hooks/useFlows";
 import { useFormatters } from "@/hooks/useFormatters";
@@ -18,11 +18,7 @@ import { SkeletonTable } from "@/components/ui/Skeleton";
 import { ContextualHint } from "@/components/help-center/ContextualHint";
 import { TourPageSuggestion } from "@/components/help-center/TourList";
 import { IntegrationErrorSupport } from "@/components/support/IntegrationErrorSupport";
-
-const flowActionButtonClass =
-  "rounded-md p-1.5 text-muted transition-colors hover:bg-accent-muted hover:text-accent disabled:pointer-events-none disabled:opacity-50";
-const flowDangerButtonClass =
-  "rounded-md p-1.5 text-muted transition-colors hover:bg-red-50 hover:text-red-600 disabled:pointer-events-none disabled:opacity-50";
+import { FlowActionsMenu } from "@/components/flows/FlowActionsMenu";
 
 export default function FlowsPage() {
   const t = useT();
@@ -123,15 +119,12 @@ export default function FlowsPage() {
                   {flow.publishedAt ? formatDate(flow.publishedAt) : t("flows.notPublished")}
                 </DataTableCell>
                 <DataTableCell className="text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    <button
-                      type="button"
-                      data-tour={index === 0 ? "flows-toggle" : undefined}
-                      className={flowActionButtonClass}
-                      title={flow.enabled ? t("flows.disable") : t("flows.enable")}
-                      aria-label={flow.enabled ? t("flows.disable") : t("flows.enable")}
-                      disabled={toggle.isPending}
-                      onClick={() => {
+                  <div className="flex items-center justify-end">
+                    <FlowActionsMenu
+                      enabled={flow.enabled}
+                      busy={toggle.isPending || duplicate.isPending || remove.isPending}
+                      tourId={index === 0 ? "flows-toggle" : undefined}
+                      onToggleEnabled={() => {
                         setActionError(null);
                         toggle.mutate(
                           { flowId: flow.flowId, enabled: !flow.enabled },
@@ -145,20 +138,7 @@ export default function FlowsPage() {
                           }
                         );
                       }}
-                    >
-                      {flow.enabled ? (
-                        <PowerOff className="h-4 w-4" />
-                      ) : (
-                        <Power className="h-4 w-4" />
-                      )}
-                    </button>
-                    <button
-                      type="button"
-                      className={flowActionButtonClass}
-                      title={t("flows.duplicate")}
-                      aria-label={t("flows.duplicate")}
-                      disabled={duplicate.isPending}
-                      onClick={() => {
+                      onDuplicate={() => {
                         setActionError(null);
                         duplicate.mutate(flow.flowId, {
                           onSuccess: (cloned) => router.push(`/flows/${cloned.flowId}/edit`),
@@ -170,19 +150,8 @@ export default function FlowsPage() {
                             }),
                         });
                       }}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
-                      className={flowDangerButtonClass}
-                      title={t("common.delete")}
-                      aria-label={t("common.delete")}
-                      disabled={remove.isPending}
-                      onClick={() => remove.mutate(flow.flowId)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                      onDelete={() => remove.mutate(flow.flowId)}
+                    />
                   </div>
                 </DataTableCell>
               </DataTableRow>

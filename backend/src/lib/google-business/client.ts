@@ -1,7 +1,10 @@
 const OAUTH_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const OAUTH_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo";
-const SCOPE = "https://www.googleapis.com/auth/business.manage";
+const SCOPE = [
+  "https://www.googleapis.com/auth/business.manage",
+  "https://www.googleapis.com/auth/userinfo.email",
+].join(" ");
 
 const ACCOUNT_API = "https://mybusinessaccountmanagement.googleapis.com/v1";
 const LOCATIONS_API = "https://mybusinessbusinessinformation.googleapis.com/v1";
@@ -69,25 +72,54 @@ async function parseGoogleError(response: Response): Promise<string> {
   }
 }
 
+function isQuotaError(message: string): boolean {
+  return /quota exceeded/i.test(message);
+}
+
+export function formatGoogleApiError(message: string): string {
+  if (isQuotaError(message)) {
+    return "Google API rate limit reached. Wait one minute and try connecting again.";
+  }
+  return message;
+}
+
+function isRetryableGoogleResponse(status: number, message: string): boolean {
+  return status === 429 || status === 503 || isQuotaError(message);
+}
+
+async function sleep(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function googleFetch<T>(
   url: string,
   accessToken: string,
   init?: RequestInit
 ): Promise<T> {
-  const response = await fetch(url, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-    },
-  });
-  if (!response.ok) {
+  const maxAttempts = 3;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const response = await fetch(url, {
+      ...init,
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        ...(init?.headers ?? {}),
+      },
+    });
+    if (response.ok) {
+      if (response.status === 204) return {} as T;
+      return (await response.json()) as T;
+    }
     const message = await parseGoogleError(response);
-    throw Object.assign(new Error(message), { statusCode: response.status === 403 ? 403 : 502 });
+    if (attempt < maxAttempts && isRetryableGoogleResponse(response.status, message)) {
+      await sleep(2_000 * attempt);
+      continue;
+    }
+    const statusCode =
+      response.status === 403 ? 403 : response.status === 429 || isQuotaError(message) ? 429 : 502;
+    throw Object.assign(new Error(formatGoogleApiError(message)), { statusCode });
   }
-  if (response.status === 204) return {} as T;
-  return (await response.json()) as T;
+  throw Object.assign(new Error("Google API request failed"), { statusCode: 502 });
 }
 
 export function buildOAuthUrl(state: string): string {
@@ -143,9 +175,13 @@ export async function refreshAccessToken(refreshToken: string): Promise<GoogleTo
   return (await response.json()) as GoogleTokenResponse;
 }
 
-export async function getGoogleUserEmail(accessToken: string): Promise<string> {
-  const data = await googleFetch<{ email?: string }>(USERINFO_URL, accessToken);
-  return data.email?.trim() ?? "";
+export async function getGoogleUserEmail(accessToken: string): Promise<string | undefined> {
+  const response = await fetch(USERINFO_URL, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!response.ok) return undefined;
+  const data = (await response.json()) as { email?: string };
+  return data.email?.trim() || undefined;
 }
 
 export async function listGoogleAccounts(accessToken: string): Promise<

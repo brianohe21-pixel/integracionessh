@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Phone, Plus, Star, Trash2 } from "lucide-react";
+import { Loader2, Phone, Plus, Star, Trash2 } from "lucide-react";
 import { useWhatsAppConnect } from "@/hooks/useWhatsAppConnect";
 import {
   useDeleteWhatsAppChannel,
@@ -76,6 +76,7 @@ export function BotWhatsAppConnect({ bot }: BotWhatsAppConnectProps) {
   const [error, setError] = useState("");
   const [advancedMode, setAdvancedMode] = useState(false);
   const [connectMode, setConnectMode] = useState<"coexistence" | "cloud_api">("coexistence");
+  const [signupBusy, setSignupBusy] = useState(false);
 
   const sortedChannels = useMemo(
     () =>
@@ -208,8 +209,9 @@ export function BotWhatsAppConnect({ bot }: BotWhatsAppConnectProps) {
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
+            disabled={signupBusy}
             onClick={() => setConnectMode("coexistence")}
-            className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+            className={`rounded-full px-3 py-1.5 text-xs font-medium disabled:opacity-50 ${
               connectMode === "coexistence"
                 ? "bg-accent text-white"
                 : "bg-surface-muted text-secondary"
@@ -219,8 +221,9 @@ export function BotWhatsAppConnect({ bot }: BotWhatsAppConnectProps) {
           </button>
           <button
             type="button"
+            disabled={signupBusy}
             onClick={() => setConnectMode("cloud_api")}
-            className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+            className={`rounded-full px-3 py-1.5 text-xs font-medium disabled:opacity-50 ${
               connectMode === "cloud_api"
                 ? "bg-accent text-white"
                 : "bg-surface-muted text-secondary"
@@ -247,6 +250,7 @@ export function BotWhatsAppConnect({ bot }: BotWhatsAppConnectProps) {
           botId={bot.botId}
           alreadyConnected={false}
           onboardingMode={connectMode}
+          onBusyChange={setSignupBusy}
           onConnected={() => void handleEmbeddedConnected()}
         />
 
@@ -321,9 +325,10 @@ export function BotWhatsAppConnect({ bot }: BotWhatsAppConnectProps) {
             <Button
               type="button"
               onClick={() => void handleManualConnect()}
-              disabled={isSaving || !hasManualIds || !hasManualCredentials}
+              disabled={isSaving || signupBusy || !hasManualIds || !hasManualCredentials}
             >
-              {isSaving ? t("bots.saving") : t("whatsapp.connectButton")}
+              {whatsappStatus === "connecting" ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              {whatsappStatus === "connecting" ? t("whatsapp.connecting") : t("whatsapp.connectButton")}
             </Button>
           </div>
         ) : null}
@@ -348,6 +353,7 @@ export function BotWhatsAppConnect({ bot }: BotWhatsAppConnectProps) {
             type="button"
             size="sm"
             variant="secondary"
+            disabled={signupBusy}
             onClick={() => setShowAddPanel((value) => !value)}
           >
             <Plus className="h-4 w-4" />

@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
-  BotMessageSquare,
   Camera,
   Globe,
   Mail,
@@ -11,14 +10,11 @@ import {
   Phone,
   PhoneCall,
   Send,
-  Trash2,
-  Edit,
-  Power,
-  PowerOff,
   Webhook,
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
+import { BotActionsMenu } from "@/components/bots/BotActionsMenu";
+import { BotAvatar } from "@/components/bots/BotAvatar";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useT } from "@/i18n/context";
 import { getModelLabel } from "@/lib/ai-models";
@@ -74,6 +70,7 @@ function getConnectedChannels(bot: Bot, whatsappChannelCount?: number) {
 
 export function BotCard({ bot }: BotCardProps) {
   const t = useT();
+  const router = useRouter();
   const { formatDate } = useFormatters();
   const deleteBot = useDeleteBot();
   const updateBot = useUpdateBot(bot.botId);
@@ -98,23 +95,61 @@ export function BotCard({ bot }: BotCardProps) {
     updateBot.mutate({ status: bot.status === "active" ? "inactive" : "active" });
   }
 
+  const editHref = `/bots/${bot.botId}/edit`;
+
+  function handleCardClick() {
+    router.push(editHref);
+  }
+
+  function handleCardKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    router.push(editHref);
+  }
+
   return (
-    <div className="content-card content-card-interactive group flex flex-col overflow-hidden">
+    <div
+      className="content-card content-card-interactive group flex cursor-pointer flex-col overflow-hidden"
+      onClick={handleCardClick}
+      onKeyDown={handleCardKeyDown}
+      role="link"
+      tabIndex={0}
+      aria-label={t("bots.editBot", { name: bot.name })}
+    >
       <div className="card-header px-5 py-5">
-        <div className="flex items-start gap-3">
-          <div className="card-header-chip flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105">
-            <BotMessageSquare className="h-5 w-5" />
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex min-w-0 items-start gap-3">
+            <BotAvatar
+              name={bot.name}
+              size="md"
+              variant={bot.responseMode === "webhook" ? "webhook" : "ai"}
+              className="transition-transform duration-200 group-hover:scale-105"
+            />
+            <div className="min-w-0">
+              <h3 className="truncate text-base font-semibold text-primary transition-colors group-hover:text-accent">
+                {bot.name}
+              </h3>
+              {bot.responseMode === "webhook" ? (
+                <p className="mt-0.5 flex items-center gap-1 text-xs text-accent">
+                  <Webhook className="h-3 w-3" />
+                  {t("bots.webhookOwn")}
+                </p>
+              ) : (
+                <p className="mt-0.5 text-xs text-muted">{getModelLabel(bot.model ?? "")}</p>
+              )}
+            </div>
           </div>
-          <div className="min-w-0">
-            <h3 className="truncate text-base font-semibold text-primary">{bot.name}</h3>
-            {bot.responseMode === "webhook" ? (
-              <p className="mt-0.5 flex items-center gap-1 text-xs text-accent">
-                <Webhook className="h-3 w-3" />
-                {t("bots.webhookOwn")}
-              </p>
-            ) : (
-              <p className="mt-0.5 text-xs text-muted">{getModelLabel(bot.model ?? "")}</p>
-            )}
+          <div
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
+          >
+            <BotActionsMenu
+              active={bot.status === "active"}
+              busy={updateBot.isPending || deleteBot.isPending}
+              onEdit={() => router.push(editHref)}
+              onToggleStatus={handleToggleStatus}
+              onDelete={() => void handleDelete()}
+            />
           </div>
         </div>
       </div>
@@ -125,9 +160,6 @@ export function BotCard({ bot }: BotCardProps) {
             {bot.status === "active" ? t("common.active") : t("common.inactive")}
           </Badge>
         </div>
-        <p className="mb-4 line-clamp-2 text-sm leading-relaxed text-secondary">
-          {bot.responseMode === "webhook" ? bot.webhookUrl : bot.systemPrompt}
-        </p>
 
         <div className="mb-4">
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-secondary">
@@ -161,43 +193,9 @@ export function BotCard({ bot }: BotCardProps) {
           )}
         </div>
 
-        <p className="mb-4 text-xs text-muted">
+        <p className="mt-auto text-xs text-muted">
           {t("bots.created", { date: formatDate(bot.createdAt) })}
         </p>
-
-        <div className="mt-auto flex items-center gap-1 border-t border-subtle pt-4">
-          <Link href={`/bots/${bot.botId}/edit`} className="flex-1">
-            <Button variant="secondary" size="sm" className="w-full">
-              <Edit className="h-3.5 w-3.5" />
-              {t("common.edit")}
-            </Button>
-          </Link>
-
-          <button
-            onClick={handleToggleStatus}
-            disabled={updateBot.isPending}
-            className="flex items-center justify-center rounded-lg border border-default p-2 text-secondary transition-colors hover:bg-surface-muted hover:text-primary"
-            title={bot.status === "active" ? t("bots.deactivate") : t("bots.activate")}
-          >
-            {bot.status === "active" ? (
-              <PowerOff className="h-4 w-4" />
-            ) : (
-              <Power className="h-4 w-4" />
-            )}
-          </button>
-
-          <button
-            onClick={handleDelete}
-            disabled={deleteBot.isPending}
-            className={cn(
-              "flex items-center justify-center rounded-lg border border-default p-2 text-danger transition-colors",
-              "hover:border-danger/30 hover:bg-[var(--alert-danger-bg)]"
-            )}
-            title={t("common.delete")}
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
-        </div>
       </div>
     </div>
   );

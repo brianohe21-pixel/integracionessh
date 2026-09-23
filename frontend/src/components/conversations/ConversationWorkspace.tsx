@@ -54,7 +54,7 @@ import { ConversationContactPanel } from "@/components/conversations/Conversatio
 import { ConversationListSidebar } from "@/components/conversations/ConversationListSidebar";
 import { ConversationMessageThread } from "@/components/conversations/ConversationMessageThread";
 import { ConversationHeaderMenu } from "@/components/conversations/ConversationHeaderMenu";
-import { ChannelAvatar } from "@/components/conversations/conversation-ui";
+import { ConversationAvatar } from "@/components/conversations/conversation-ui";
 import { AdvisorCopilotPanel } from "@/components/conversations/AdvisorCopilotPanel";
 import { QuotationDrawer } from "@/components/conversations/QuotationDrawer";
 import { BookingDrawer } from "@/components/conversations/BookingDrawer";
@@ -792,7 +792,13 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                 >
                   <ChevronLeft className="h-5 w-5" />
                 </button>
-                <ChannelAvatar channel={selectedConversation.channel} size="md" />
+                <ConversationAvatar
+                  contactName={selectedConversation.contactName}
+                  phoneNumber={selectedConversation.phoneNumber}
+                  participantId={selectedConversation.participantId}
+                  channel={selectedConversation.channel}
+                  size="md"
+                />
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="truncate text-base font-semibold text-primary">

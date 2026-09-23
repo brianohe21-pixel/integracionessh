@@ -8,7 +8,16 @@ import { emitRealtimeEvent } from "@/lib/notifications/bridge";
 import { parseRealtimeEvent } from "@/lib/realtime/events";
 import { RealtimeProvider } from "@/components/realtime/RealtimeProvider";
 
-const WS_BASE_URL = (process.env.NEXT_PUBLIC_WS_URL ?? "").replace(/\/$/, "");
+function resolveWebSocketBaseUrl(): string {
+  const configured = (process.env.NEXT_PUBLIC_WS_URL ?? "").trim().replace(/\/$/, "");
+  if (!configured) return "";
+  if (/\.execute-api\.[a-z0-9-]+\.amazonaws\.com$/i.test(configured)) {
+    return `${configured}/$default`;
+  }
+  return configured;
+}
+
+const WS_BASE_URL = resolveWebSocketBaseUrl();
 const MIN_RECONNECT_MS = 1_000;
 const MAX_RECONNECT_MS = 30_000;
 

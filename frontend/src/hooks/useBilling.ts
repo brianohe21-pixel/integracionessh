@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { PaidBillingPlan } from "@/lib/plan-config";
-import type { BillingUsageResponse, TenantPlan } from "@/types";
+import type { BillingUsageResponse, PaymentIntent, TenantPlan } from "@/types";
 
 export type BillingProvider = "wompi" | "stripe";
 
@@ -84,6 +84,13 @@ export interface BillingTransactionResponse {
   wompiTransactionId: string | null;
 }
 
+export function useBillingPayments() {
+  return useQuery({
+    queryKey: ["billing-payments"],
+    queryFn: () => api.get<PaymentIntent[]>("/billing/payments"),
+  });
+}
+
 export function useBillingTransaction(reference: string | null) {
   return useQuery({
     queryKey: ["billing-transaction", reference],
@@ -113,6 +120,7 @@ export function useConfirmWompiPayment() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["billing-usage"] });
       queryClient.invalidateQueries({ queryKey: ["billing-status"] });
+      queryClient.invalidateQueries({ queryKey: ["billing-payments"] });
       queryClient.invalidateQueries({ queryKey: ["billing-transaction"] });
       queryClient.invalidateQueries({ queryKey: ["tenant"] });
     },

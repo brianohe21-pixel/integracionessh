@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { ChannelAvatar } from "@/components/conversations/conversation-ui";
+import { ConversationAvatar } from "@/components/conversations/conversation-ui";
 import { useUnreadMessages } from "@/components/notifications/UnreadMessagesProvider";
 import { WhatsAppRiskBadge } from "@/components/whatsapp/WhatsAppRiskBadge";
 import { cn } from "@/lib/utils";
@@ -107,7 +107,10 @@ export function ConversationListItem({
         className="min-w-0 flex-1 px-3 py-3 text-left"
       >
         <div className="flex items-center gap-3">
-          <ChannelAvatar
+          <ConversationAvatar
+            contactName={conversation.contactName}
+            phoneNumber={conversation.phoneNumber}
+            participantId={conversation.participantId}
             channel={conversation.channel}
             unread={isUnread}
             size="sm"

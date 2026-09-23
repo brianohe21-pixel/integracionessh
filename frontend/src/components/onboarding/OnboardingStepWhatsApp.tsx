@@ -23,6 +23,7 @@ export function OnboardingStepWhatsApp({
 }: OnboardingStepWhatsAppProps) {
   const t = useT();
   const [mode, setMode] = useState<WhatsAppOnboardingMode>("coexistence");
+  const [signupBusy, setSignupBusy] = useState(false);
 
   return (
     <div className="space-y-4">
@@ -34,8 +35,9 @@ export function OnboardingStepWhatsApp({
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
+          disabled={signupBusy}
           onClick={() => setMode("coexistence")}
-          className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+          className={`rounded-full px-3 py-1.5 text-xs font-medium disabled:opacity-50 ${
             mode === "coexistence"
               ? "bg-accent text-white"
               : "bg-surface-muted text-secondary"
@@ -45,8 +47,9 @@ export function OnboardingStepWhatsApp({
         </button>
         <button
           type="button"
+          disabled={signupBusy}
           onClick={() => setMode("cloud_api")}
-          className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+          className={`rounded-full px-3 py-1.5 text-xs font-medium disabled:opacity-50 ${
             mode === "cloud_api"
               ? "bg-accent text-white"
               : "bg-surface-muted text-secondary"
@@ -62,7 +65,11 @@ export function OnboardingStepWhatsApp({
           {t("onboarding.whatsapp.connected")}
         </div>
       ) : (
-        <EmbeddedSignupLauncher onboardingMode={mode} onConnected={onConnected} />
+        <EmbeddedSignupLauncher
+          onboardingMode={mode}
+          onBusyChange={setSignupBusy}
+          onConnected={onConnected}
+        />
       )}
     </div>
   );
