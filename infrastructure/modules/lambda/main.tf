@@ -269,6 +269,7 @@ locals {
       timeout     = 30
       memory      = 256
       environment = {
+        ENVIRONMENT             = var.environment
         WHATSAPP_VERIFY_TOKEN   = var.whatsapp_verify_token
         WHATSAPP_APP_SECRET     = var.whatsapp_app_secret != "" ? var.whatsapp_app_secret : var.meta_app_secret
         SQS_QUEUE_URL           = var.sqs_queue_url

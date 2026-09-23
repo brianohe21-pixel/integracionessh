@@ -426,6 +426,8 @@ export const en: Messages = {
       "Optional during signup. Provide it to register the number immediately, or register later from the bot settings.",
     pinInvalid: "Enter a PIN with exactly 6 digits.",
     signupError: "WhatsApp signup failed. Please try again.",
+    signupErrorOwnerPortfolio:
+      "Meta does not allow the portfolio that owns the app to connect as a client. Create a separate business portfolio (without the app), register the number in WhatsApp Business App there, and retry, or have an external client complete the flow.",
     pendingTitle: "Phone number pending registration",
     pendingDescription:
       "Meta requires registering the number before sending messages. Enter the PIN and register.",

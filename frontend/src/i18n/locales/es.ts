@@ -427,6 +427,8 @@ export const es = {
       "Opcional durante el registro. Úsalo para registrar el número de inmediato o regístralo después desde la configuración del bot.",
     pinInvalid: "Ingresa un PIN de exactamente 6 dígitos.",
     signupError: "El registro de WhatsApp falló. Inténtalo de nuevo.",
+    signupErrorOwnerPortfolio:
+      "Meta no permite que el portfolio que posee la app se conecte como cliente. Crea un portfolio de negocio distinto (sin la app), registra ahí el número en WhatsApp Business App y repite el flujo, o pide a un cliente externo que lo complete.",
     pendingTitle: "Número pendiente de registro",
     pendingDescription:
       "Meta requiere registrar el número antes de enviar mensajes. Ingresa el PIN y pulsa registrar.",

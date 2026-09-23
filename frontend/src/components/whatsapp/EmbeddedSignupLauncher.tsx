@@ -11,7 +11,7 @@ import { MessageCircle, Loader2, CheckCircle } from "lucide-react";
 
 const FALLBACK_META_APP_ID = process.env.NEXT_PUBLIC_META_APP_ID ?? "";
 const FALLBACK_CONFIG_ID = process.env.NEXT_PUBLIC_META_EMBEDDED_SIGNUP_CONFIG_ID ?? "";
-const FB_SDK_VERSION = "v22.0";
+const FB_SDK_VERSION = "v25.0";
 const PIN_LENGTH = 6;
 const SESSION_INFO_GRACE_MS = 5000;
 const SESSION_INFO_RETRY_MS = 400;
@@ -61,12 +61,21 @@ interface EmbeddedSignupMessage {
   };
 }
 
-function formatMetaSignupError(data: EmbeddedSignupMessage["data"]): string {
+function formatMetaSignupError(
+  data: EmbeddedSignupMessage["data"],
+  ownerPortfolioMessage: string
+): string {
+  const errorCode = String(data?.error_code ?? "").trim();
+  if (errorCode === "3441038") {
+    const sessionRef = data?.session_id ? ` (#3441038:${data.session_id})` : " (#3441038)";
+    return `${ownerPortfolioMessage}${sessionRef}`;
+  }
+
   const message = data?.error_message?.trim();
   if (!message) return "";
 
-  const reference = data?.error_code
-    ? `#${data.error_code}`
+  const reference = errorCode
+    ? `#${errorCode}`
     : data?.session_id
       ? `#N/A:${data.session_id}`
       : "";
@@ -251,7 +260,10 @@ export function EmbeddedSignupLauncher({
 
       const eventName = String(payload.event ?? "").toUpperCase();
 
-      const metaSignupError = formatMetaSignupError(payload.data);
+      const metaSignupError = formatMetaSignupError(
+        payload.data,
+        t("whatsapp.signupErrorOwnerPortfolio")
+      );
 
       if (eventName === "CANCEL") {
         pendingRef.current = {};
@@ -295,8 +307,12 @@ export function EmbeddedSignupLauncher({
       override_default_response_type: true,
       extras: {
         setup: {},
-        sessionInfoVersion: "3",
-        ...(isCoexistence ? { featureType: "whatsapp_business_app_onboarding" } : {}),
+        ...(isCoexistence
+          ? {
+              featureType: "whatsapp_business_app_onboarding",
+              sessionInfoVersion: "3",
+            }
+          : {}),
       },
     };
 
