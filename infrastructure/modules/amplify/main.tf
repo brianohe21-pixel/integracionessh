@@ -25,6 +25,19 @@ resource "aws_amplify_app" "frontend" {
             build:
               commands:
                 - env | grep '^NEXT_PUBLIC_' > frontend/.env.production || true
+                - |
+                  if grep -q '^NEXT_PUBLIC_WS_URL=' frontend/.env.production; then
+                    ws=$(grep '^NEXT_PUBLIC_WS_URL=' frontend/.env.production | cut -d= -f2- | tr -d "'\"")
+                    ws=${ws%/}
+                    ws=${ws%/\$default}
+                    ws=${ws%/$default}
+                    if [[ "$ws" == *".execute-api."*".amazonaws.com" ]]; then
+                      export NEXT_PUBLIC_WS_URL="${ws}/\$default"
+                      grep -v '^NEXT_PUBLIC_WS_URL=' frontend/.env.production > /tmp/next_public_env || true
+                      echo "NEXT_PUBLIC_WS_URL='${NEXT_PUBLIC_WS_URL}'" >> /tmp/next_public_env
+                      mv /tmp/next_public_env frontend/.env.production
+                    fi
+                  fi
                 - pnpm --filter frontend run build
           artifacts:
             baseDirectory: frontend/.next
@@ -67,6 +80,13 @@ resource "aws_amplify_branch" "main" {
   enable_auto_build = false
 
   environment_variables = {
+    NEXT_PUBLIC_API_URL                        = local.api_public_url
+    NEXT_PUBLIC_WS_URL                         = var.websocket_url
+    NEXT_PUBLIC_COGNITO_REGION                 = var.aws_region
+    NEXT_PUBLIC_USER_POOL_ID                   = var.cognito_user_pool_id
+    NEXT_PUBLIC_USER_POOL_CLIENT               = var.cognito_client_id
+    NEXT_PUBLIC_COGNITO_DOMAIN                 = var.cognito_hosted_ui_domain
+    NEXT_PUBLIC_GOOGLE_AUTH_ENABLED            = var.google_auth_enabled ? "true" : "false"
     NEXT_PUBLIC_ENV                            = var.environment
     NEXT_PUBLIC_DEMO_EMAIL                     = var.demo_account_email
     NEXT_PUBLIC_DEMO_PASSWORD                  = var.demo_account_password

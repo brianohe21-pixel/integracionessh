@@ -414,6 +414,7 @@ export const es = {
     connectButton: "Conectar con WhatsApp",
     reconnect: "Reconectar WhatsApp",
     connecting: "Conectando...",
+    connectingHint: "Estamos vinculando tu número de WhatsApp. No cierres esta página.",
     connected: "WhatsApp conectado",
     sdkLoading: "Cargando SDK de Meta...",
     notConfigured:

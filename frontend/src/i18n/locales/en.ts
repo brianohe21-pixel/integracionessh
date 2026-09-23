@@ -413,6 +413,7 @@ export const en: Messages = {
     connectButton: "Connect with WhatsApp",
     reconnect: "Reconnect WhatsApp",
     connecting: "Connecting...",
+    connectingHint: "We are linking your WhatsApp number. Do not close this page.",
     connected: "WhatsApp connected",
     sdkLoading: "Loading Meta SDK...",
     notConfigured:
