@@ -32,6 +32,7 @@ type Props = {
   modeHumanLabel: string;
   modeBotLabel: string;
   takeConversationLabel: string;
+  onContextMenu?: (event: React.MouseEvent, conversation: Conversation) => void;
 };
 
 export function ConversationListItem({
@@ -57,6 +58,7 @@ export function ConversationListItem({
   modeHumanLabel,
   modeBotLabel,
   takeConversationLabel,
+  onContextMenu,
 }: Props) {
   const t = useT();
   const { getUnreadCount } = useUnreadMessages();
@@ -86,6 +88,11 @@ export function ConversationListItem({
         slaStatus === "breached" && !selected && "bg-danger/5",
         slaStatus === "at_risk" && !selected && "bg-warning/5"
       )}
+      onContextMenu={(event) => {
+        if (!onContextMenu) return;
+        event.preventDefault();
+        onContextMenu(event, conversation);
+      }}
     >
       {showCheckbox ? (
         <div className="hidden items-center pl-3 lg:flex">

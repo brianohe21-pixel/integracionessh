@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ChangeEvent, type ComponentType } from "react";
 import { createPortal } from "react-dom";
-import { Calendar, FileText, Loader2, MessageSquarePlus, Paperclip, Plus } from "lucide-react";
+import { Calendar, CheckSquare, FileText, Loader2, MessageSquarePlus, Paperclip, Plus } from "lucide-react";
 import { MacroPicker } from "@/components/conversations/MacroPicker";
 import { useMacros } from "@/hooks/useMacros";
 import { useT } from "@/i18n/context";
@@ -17,6 +17,7 @@ type Props = {
   onDraftChange: (value: string) => void;
   onOpenQuotation: () => void;
   onOpenBooking?: () => void;
+  onOpenTask?: () => void;
   showBooking?: boolean;
   showAttachment?: boolean;
   onAttachFile?: (file: File) => void;
@@ -46,6 +47,7 @@ export function ConversationComposeActionsMenu({
   onDraftChange,
   onOpenQuotation,
   onOpenBooking,
+  onOpenTask,
   showBooking = false,
   showAttachment = false,
   onAttachFile,
@@ -151,6 +153,18 @@ export function ConversationComposeActionsMenu({
       onOpenQuotation();
     },
   });
+
+  if (onOpenTask) {
+    items.push({
+      id: "task",
+      label: t("tasks.createFromConversation"),
+      icon: CheckSquare,
+      onClick: () => {
+        setMenuOpen(false);
+        onOpenTask();
+      },
+    });
+  }
 
   if (showBooking && onOpenBooking) {
     items.push({

@@ -154,6 +154,12 @@ export interface InboxSlaSettings {
   firstResponseMinutes: number;
 }
 
+export interface TaskReminderWhatsAppSettings {
+  botId?: string;
+  templateName?: string;
+  templateLanguage?: string;
+}
+
 export type ReportScheduleFrequency = "daily" | "weekly";
 
 export interface MetricsReportSchedule {
@@ -237,6 +243,7 @@ export interface Tenant {
   resellerConfig?: ResellerConfig;
   branding?: TenantBranding;
   inboxSla?: InboxSlaSettings;
+  taskReminderWhatsApp?: TaskReminderWhatsAppSettings;
   websiteAnalytics?: WebsiteAnalyticsSettings;
   law2300Exempt?: boolean;
   stripeCustomerId?: string;
@@ -863,6 +870,14 @@ export interface SequenceEnrollment {
 }
 
 export type SalesTaskStatus = "open" | "done" | "cancelled";
+export type SalesTaskReminderTarget = "advisor" | "contact";
+export type SalesTaskReminderChannel = "email" | "whatsapp" | "platform";
+export type SalesTaskReminderStatus =
+  | "scheduled"
+  | "sent"
+  | "skipped"
+  | "failed"
+  | "cancelled";
 
 export interface SalesTask {
   taskId: string;
@@ -870,12 +885,41 @@ export interface SalesTask {
   opportunityId?: string;
   enrollmentId?: string;
   advisorId?: string;
+  leadId?: string;
+  conversationId?: string;
+  botId?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  contactName?: string;
   title: string;
   description?: string;
   dueAt?: string;
   status: SalesTaskStatus;
+  reminderTargets?: SalesTaskReminderTarget[];
+  reminderChannels?: SalesTaskReminderChannel[];
+  reminderMinutesBefore?: number;
+  reminderStatus?: SalesTaskReminderStatus;
+  reminderScheduleName?: string;
+  reminderSentAt?: string;
+  commentCount?: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface SalesTaskComment {
+  commentId: string;
+  taskId: string;
+  tenantId: string;
+  body: string;
+  authorId: string;
+  authorName?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface SalesTaskCommentsListResponse {
+  items: SalesTaskComment[];
+  nextCursor?: string;
 }
 
 export interface SalesFunnelMetrics {

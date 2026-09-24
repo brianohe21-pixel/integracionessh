@@ -87,6 +87,7 @@ describe("platform email template", () => {
     expect(html).toContain("cid:platform-logo");
     expect(html).toContain("cid:platform-social-facebook");
     expect(html).toContain('bgcolor="#08090b"');
+    expect(html).not.toContain("font-size:20px;font-weight:700");
     expect(html).not.toContain("data:image");
     expect(html).toContain('alt="Facebook"');
     expect(html).toContain('alt="Instagram"');

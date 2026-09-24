@@ -89,6 +89,20 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
           createdAt: event.conversation.handoffAt ?? new Date().toISOString(),
           read: false,
         });
+        return;
+      }
+
+      if (event.type === "task.reminder") {
+        addNotification({
+          id: `task-${event.taskId}-${event.createdAt}`,
+          type: "task",
+          title: t("notifications.types.task", { title: event.title }),
+          body: truncate(event.body || t("notifications.taskBody")),
+          href: event.href || "/tasks",
+          taskId: event.taskId,
+          createdAt: event.createdAt,
+          read: false,
+        });
       }
     });
   }, [addNotification, isAdvisor, t]);

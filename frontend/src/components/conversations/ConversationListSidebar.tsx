@@ -70,6 +70,7 @@ type Props = {
   onClaimFromQueue: (conv: Conversation) => Promise<void>;
   claimPending: boolean;
   showOnMobile: boolean;
+  onConversationContextMenu?: (event: React.MouseEvent, conversation: Conversation) => void;
 };
 
 export function ConversationListSidebar({
@@ -123,6 +124,7 @@ export function ConversationListSidebar({
   onClaimFromQueue,
   claimPending,
   showOnMobile,
+  onConversationContextMenu,
 }: Props) {
   const t = useT();
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -420,6 +422,7 @@ export function ConversationListSidebar({
               modeHumanLabel={t("conversations.modeHuman")}
               modeBotLabel={t("conversations.modeBot")}
               takeConversationLabel={t("conversations.takeConversation")}
+              onContextMenu={onConversationContextMenu}
             />
           );
         })}

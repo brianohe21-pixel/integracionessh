@@ -13,7 +13,16 @@ export type RealtimeEvent =
       message: Message;
     }
   | { type: "conversation.updated"; conversation: Conversation }
-  | { type: "conversation.handoff"; conversation: Conversation };
+  | { type: "conversation.handoff"; conversation: Conversation }
+  | {
+      type: "task.reminder";
+      taskId: string;
+      title: string;
+      body: string;
+      href: string;
+      createdAt: string;
+      advisorId?: string;
+    };
 
 export function parseRealtimeEvent(raw: string): RealtimeEvent | null {
   try {

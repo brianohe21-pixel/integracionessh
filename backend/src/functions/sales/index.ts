@@ -57,6 +57,13 @@ import {
   listSalesTasks,
   updateSalesTask,
 } from "../../lib/dynamodb/sales-task.repository.js";
+import {
+  createSalesTaskComment,
+  deleteSalesTaskComment,
+  listSalesTaskComments,
+  updateSalesTaskComment,
+} from "../../lib/dynamodb/sales-task-comment.repository.js";
+import { getLeadById } from "../../lib/dynamodb/lead.repository.js";
 import { getSalesFunnelMetrics } from "../../lib/dynamodb/sales-funnel-metrics.repository.js";
 import { moveOpportunityStage } from "../../lib/sales/opportunities/stage.js";
 import { getOpportunityDetail } from "../../lib/sales/opportunities/detail.js";
@@ -79,6 +86,8 @@ import {
   resumeEnrollment,
 } from "../../lib/sales/sequences/enroll.js";
 import { processSequenceStep } from "../../lib/sales/sequences/executor.js";
+import { sendTaskReminder } from "../../lib/sales/tasks/reminder-send.js";
+import { syncTaskReminder } from "../../lib/sales/tasks/reminder-schedule.js";
 import { findStageById } from "../../lib/dynamodb/pipeline.repository.js";
 import { buildDefaultPipeline, findStageByKey } from "../../lib/sales/default-pipeline.js";
 import { normalizePhone } from "../../lib/dynamodb/contact.repository.js";
@@ -92,6 +101,8 @@ import type {
   SalesSequence,
   SalesSequenceStep,
   SalesTask,
+  SalesTaskReminderChannel,
+  SalesTaskReminderTarget,
 } from "../../types/index.js";
 
 const AttributionSchema = z.object({
@@ -205,12 +216,24 @@ const EnrollSchema = z.object({
   assignedAdvisorId: z.string().uuid().optional(),
 });
 
+const ReminderTargetSchema = z.enum(["advisor", "contact"]);
+const ReminderChannelSchema = z.enum(["email", "whatsapp", "platform"]);
+
 const CreateTaskSchema = z.object({
   title: z.string().min(1).max(200),
   description: z.string().max(2000).optional(),
   opportunityId: z.string().uuid().optional(),
   advisorId: z.string().uuid().optional(),
+  leadId: z.string().uuid().optional(),
   dueAt: z.string().datetime().optional(),
+  conversationId: z.string().uuid().optional(),
+  botId: z.string().uuid().optional(),
+  contactPhone: z.string().max(32).optional(),
+  contactEmail: z.string().email().max(320).optional(),
+  contactName: z.string().max(200).optional(),
+  reminderTargets: z.array(ReminderTargetSchema).max(2).optional(),
+  reminderChannels: z.array(ReminderChannelSchema).max(3).optional(),
+  reminderMinutesBefore: z.number().int().min(0).max(10080).optional(),
 });
 
 const UpdateTaskSchema = z.object({
@@ -218,7 +241,24 @@ const UpdateTaskSchema = z.object({
   description: z.string().max(2000).optional(),
   status: z.enum(["open", "done", "cancelled"]).optional(),
   advisorId: z.string().uuid().optional(),
-  dueAt: z.string().datetime().optional(),
+  leadId: z.string().uuid().optional().nullable(),
+  dueAt: z.string().datetime().optional().nullable(),
+  conversationId: z.string().uuid().optional(),
+  botId: z.string().uuid().optional(),
+  contactPhone: z.string().max(32).optional(),
+  contactEmail: z.string().email().max(320).optional().nullable(),
+  contactName: z.string().max(200).optional(),
+  reminderTargets: z.array(ReminderTargetSchema).max(2).optional(),
+  reminderChannels: z.array(ReminderChannelSchema).max(3).optional(),
+  reminderMinutesBefore: z.number().int().min(0).max(10080).optional(),
+});
+
+const CreateTaskCommentSchema = z.object({
+  body: z.string().min(1).max(2000),
+});
+
+const UpdateTaskCommentSchema = z.object({
+  body: z.string().min(1).max(2000),
 });
 
 function parseSalesPath(rawPath: string): string[] {
@@ -313,12 +353,26 @@ function forbidden(message = "Access denied"): APIGatewayProxyResultV2 {
 }
 
 export async function handler(
-  event: APIGatewayProxyEventV2WithJWTAuthorizer | { action?: string; tenantId?: string; enrollmentId?: string; stepIndex?: number }
+  event:
+    | APIGatewayProxyEventV2WithJWTAuthorizer
+    | {
+        action?: string;
+        tenantId?: string;
+        enrollmentId?: string;
+        stepIndex?: number;
+        taskId?: string;
+      }
 ): Promise<APIGatewayProxyResultV2 | void> {
   try {
     if ("action" in event && event.action === "run-sequence-step") {
       if (!event.tenantId || !event.enrollmentId || event.stepIndex === undefined) return;
       await processSequenceStep(event.tenantId, event.enrollmentId, event.stepIndex);
+      return;
+    }
+
+    if ("action" in event && event.action === "send-task-reminder") {
+      if (!event.tenantId || !event.taskId) return;
+      await sendTaskReminder({ tenantId: event.tenantId, taskId: event.taskId });
       return;
     }
 
@@ -755,6 +809,10 @@ export async function handler(
       if (advisorId) listOpts.advisorId = advisorId;
       else if (params.advisorId) listOpts.advisorId = params.advisorId;
       if (params.opportunityId) listOpts.opportunityId = params.opportunityId;
+      if (params.conversationId) listOpts.conversationId = params.conversationId;
+      if (params.from) listOpts.from = params.from;
+      if (params.to) listOpts.to = params.to;
+      if (params.q) listOpts.q = params.q;
 
       const result = await listSalesTasks(auth.tenantId, listOpts);
       return ok(result);
@@ -765,6 +823,12 @@ export async function handler(
       if (!parsed.success) return badRequest(parsed.error.message);
 
       const now = new Date().toISOString();
+      const reminderTargets = uniqueReminderTargets(parsed.data.reminderTargets);
+      const reminderChannels = uniqueReminderChannels(parsed.data.reminderChannels);
+      const contactPhone = parsed.data.contactPhone
+        ? normalizePhone(parsed.data.contactPhone) || parsed.data.contactPhone
+        : undefined;
+
       const task: SalesTask = {
         taskId: randomUUID(),
         tenantId: auth.tenantId,
@@ -774,15 +838,40 @@ export async function handler(
         updatedAt: now,
         ...(parsed.data.description ? { description: parsed.data.description } : {}),
         ...(parsed.data.opportunityId ? { opportunityId: parsed.data.opportunityId } : {}),
-        ...(parsed.data.advisorId ? { advisorId: parsed.data.advisorId } : advisorId ? { advisorId } : {}),
+        ...(parsed.data.leadId ? { leadId: parsed.data.leadId } : {}),
+        ...(parsed.data.advisorId
+          ? { advisorId: parsed.data.advisorId }
+          : advisorId
+            ? { advisorId }
+            : {}),
         ...(parsed.data.dueAt ? { dueAt: parsed.data.dueAt } : {}),
+        ...(parsed.data.conversationId ? { conversationId: parsed.data.conversationId } : {}),
+        ...(parsed.data.botId ? { botId: parsed.data.botId } : {}),
+        ...(contactPhone ? { contactPhone } : {}),
+        ...(parsed.data.contactEmail ? { contactEmail: parsed.data.contactEmail } : {}),
+        ...(parsed.data.contactName ? { contactName: parsed.data.contactName.trim() } : {}),
+        ...(reminderTargets.length ? { reminderTargets } : {}),
+        ...(reminderChannels.length ? { reminderChannels } : {}),
+        ...(parsed.data.reminderMinutesBefore !== undefined
+          ? { reminderMinutesBefore: parsed.data.reminderMinutesBefore }
+          : reminderChannels.length
+            ? { reminderMinutesBefore: 60 }
+            : {}),
       };
+      if (advisorId && task.advisorId && task.advisorId !== advisorId) {
+        return forbidden();
+      }
       if (task.opportunityId) {
         const opp = await getOpportunityById(auth.tenantId, task.opportunityId);
         if (!opp) return badRequest("Opportunity not found");
         if (!canAdvisorAccessOpportunity(advisorId, opp)) return forbidden();
       }
+      if (task.leadId) {
+        const lead = await getLeadById(auth.tenantId, task.leadId);
+        if (!lead) return badRequest("Lead not found");
+      }
       await createSalesTask(task);
+      const withReminder = await syncTaskReminder(task);
       if (task.opportunityId) {
         await recordOpportunityActivity({
           tenantId: auth.tenantId,
@@ -793,7 +882,7 @@ export async function handler(
           touchLastActivity: true,
         });
       }
-      return created(task);
+      return created(withReminder);
     }
 
     if (segments[0] === "tasks" && segments[1]) {
@@ -818,11 +907,60 @@ export async function handler(
         if (parsed.data.title !== undefined) updates.title = parsed.data.title.trim();
         if (parsed.data.description !== undefined) updates.description = parsed.data.description;
         if (parsed.data.status !== undefined) updates.status = parsed.data.status;
-        if (parsed.data.advisorId !== undefined) updates.advisorId = parsed.data.advisorId;
-        if (parsed.data.dueAt !== undefined) updates.dueAt = parsed.data.dueAt;
+        if (parsed.data.advisorId !== undefined) {
+          if (advisorId && parsed.data.advisorId !== advisorId) return forbidden();
+          updates.advisorId = parsed.data.advisorId;
+        }
+        if (parsed.data.leadId !== undefined) {
+          if (parsed.data.leadId) {
+            const lead = await getLeadById(auth.tenantId, parsed.data.leadId);
+            if (!lead) return badRequest("Lead not found");
+            updates.leadId = parsed.data.leadId;
+          } else {
+            updates.leadId = null;
+          }
+        }
+        if (parsed.data.dueAt !== undefined) {
+          updates.dueAt = parsed.data.dueAt ?? null;
+        }
+        if (parsed.data.conversationId !== undefined) {
+          updates.conversationId = parsed.data.conversationId;
+        }
+        if (parsed.data.botId !== undefined) updates.botId = parsed.data.botId;
+        if (parsed.data.contactPhone !== undefined) {
+          updates.contactPhone =
+            normalizePhone(parsed.data.contactPhone) || parsed.data.contactPhone;
+        }
+        if (parsed.data.contactEmail !== undefined) {
+          updates.contactEmail = parsed.data.contactEmail ?? null;
+        }
+        if (parsed.data.contactName !== undefined) {
+          updates.contactName = parsed.data.contactName.trim();
+        }
+        if (parsed.data.reminderTargets !== undefined) {
+          updates.reminderTargets = uniqueReminderTargets(parsed.data.reminderTargets);
+        }
+        if (parsed.data.reminderChannels !== undefined) {
+          updates.reminderChannels = uniqueReminderChannels(parsed.data.reminderChannels);
+        }
+        if (parsed.data.reminderMinutesBefore !== undefined) {
+          updates.reminderMinutesBefore = parsed.data.reminderMinutesBefore;
+        }
+
+        const reminderFieldsChanged =
+          parsed.data.dueAt !== undefined ||
+          parsed.data.reminderTargets !== undefined ||
+          parsed.data.reminderChannels !== undefined ||
+          parsed.data.reminderMinutesBefore !== undefined;
+
+        if (reminderFieldsChanged && existingTask.reminderSentAt) {
+          updates.reminderSentAt = null;
+          updates.reminderStatus = null;
+        }
 
         const updated = await updateSalesTask(auth.tenantId, taskId, updates);
         if (!updated) return notFound("Task not found");
+        const withReminder = await syncTaskReminder(updated);
         if (updated.opportunityId && parsed.data.status === "done") {
           await recordOpportunityActivity({
             tenantId: auth.tenantId,
@@ -833,7 +971,66 @@ export async function handler(
             touchLastActivity: true,
           });
         }
-        return ok(updated);
+        return ok(withReminder);
+      }
+
+      if (segments[2] === "comments" && segments.length === 3) {
+        const existingTask = await getSalesTaskById(auth.tenantId, taskId);
+        if (!existingTask) return notFound("Task not found");
+        if (!canAdvisorAccessTask(advisorId, existingTask)) return forbidden();
+
+        if (method === "GET") {
+          const limit = params.limit ? parseInt(params.limit, 10) : 50;
+          if (isNaN(limit) || limit < 1 || limit > 100) return badRequest("Invalid limit (1-100)");
+          const result = await listSalesTaskComments(auth.tenantId, taskId, {
+            limit,
+            ...(params.cursor ? { cursor: params.cursor } : {}),
+          });
+          return ok(result);
+        }
+
+        if (method === "POST") {
+          const parsed = CreateTaskCommentSchema.safeParse(JSON.parse(apiEvent.body ?? "{}"));
+          if (!parsed.success) return badRequest(parsed.error.message);
+          const comment = await createSalesTaskComment({
+            tenantId: auth.tenantId,
+            taskId,
+            body: parsed.data.body,
+            authorId: auth.userId,
+            ...(auth.name ? { authorName: auth.name } : {}),
+          });
+          return created(comment);
+        }
+      }
+
+      if (segments[2] === "comments" && segments.length === 4) {
+        const commentId = segments[3];
+        const existingTask = await getSalesTaskById(auth.tenantId, taskId);
+        if (!existingTask) return notFound("Task not found");
+        if (!canAdvisorAccessTask(advisorId, existingTask)) return forbidden();
+
+        if (method === "PATCH") {
+          const parsed = UpdateTaskCommentSchema.safeParse(JSON.parse(apiEvent.body ?? "{}"));
+          if (!parsed.success) return badRequest(parsed.error.message);
+          const updated = await updateSalesTaskComment({
+            tenantId: auth.tenantId,
+            taskId,
+            commentId,
+            body: parsed.data.body,
+          });
+          if (!updated) return notFound("Comment not found");
+          return ok(updated);
+        }
+
+        if (method === "DELETE") {
+          const deleted = await deleteSalesTaskComment({
+            tenantId: auth.tenantId,
+            taskId,
+            commentId,
+          });
+          if (!deleted) return notFound("Comment not found");
+          return noContent();
+        }
       }
     }
 
@@ -841,4 +1038,18 @@ export async function handler(
   } catch (error) {
     return handleError(error);
   }
+}
+
+function uniqueReminderTargets(
+  values?: SalesTaskReminderTarget[]
+): SalesTaskReminderTarget[] {
+  if (!values?.length) return [];
+  return Array.from(new Set(values));
+}
+
+function uniqueReminderChannels(
+  values?: SalesTaskReminderChannel[]
+): SalesTaskReminderChannel[] {
+  if (!values?.length) return [];
+  return Array.from(new Set(values));
 }

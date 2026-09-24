@@ -4,7 +4,6 @@ import { platformLogoSrc, platformSocialIconSrc } from "./platform-assets.js";
 
 const DEFAULT_BRAND_NAME = "Integraciones SSH";
 const DEFAULT_PLATFORM_DOMAIN = "integracionessh.lat";
-const DEFAULT_PRIMARY_COLOR = "#000000";
 const DEFAULT_FACEBOOK_URL = "https://www.facebook.com/integracionessh";
 const DEFAULT_INSTAGRAM_URL = "https://www.instagram.com/integracionessh";
 const DEFAULT_TIKTOK_URL = "https://www.tiktok.com/@integracionessh";
@@ -154,9 +153,6 @@ export function wrapPlatformEmailHtml(contentHtml: string): string {
   const brandName = escapeHtml(platformBrandName());
   const websiteUrl = escapeHtml(platformWebsiteUrl());
   const supportEmail = escapeHtml(platformSupportEmail());
-  const primaryColor = escapeHtml(
-    process.env.PLATFORM_EMAIL_PRIMARY_COLOR?.trim() || DEFAULT_PRIMARY_COLOR
-  );
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -170,11 +166,6 @@ export function wrapPlatformEmailHtml(contentHtml: string): string {
       <tr>
         <td align="center">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background-color:#ffffff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
-            <tr>
-              <td style="background-color:${primaryColor};padding:20px 28px;">
-                <p style="margin:0;color:#ffffff;font-size:20px;font-weight:700;line-height:1.3;">${brandName}</p>
-              </td>
-            </tr>
             <tr>
               <td style="padding:28px;">
                 ${contentHtml}

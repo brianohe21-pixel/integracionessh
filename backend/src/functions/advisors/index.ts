@@ -14,6 +14,7 @@ import { deleteMember } from "../../lib/dynamodb/member.repository.js";
 import {
   resolveRequestAuth,
   assertTenantManagerRole,
+  assertAdvisorOrMember,
 } from "../../lib/auth/cognito.js";
 import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import { inviteAdvisorUser } from "../../lib/cognito/invite-advisor.js";
@@ -61,25 +62,33 @@ export async function handler(
 ): Promise<APIGatewayProxyResultV2> {
   try {
     const auth = await resolveRequestAuth(event);
-    assertTenantManagerRole(auth);
-    await assertAssignedServices(auth.tenantId, "advisors");
-
     const method = event.requestContext.http.method;
     const advisorId = event.pathParameters?.advisorId;
 
-    if (method === "GET" && !advisorId) {
-      const [advisors, members] = await Promise.all([
-        listAdvisors(auth.tenantId),
-        listMembers(auth.tenantId),
+    if (method === "GET") {
+      assertAdvisorOrMember(auth);
+      await assertAssignedServices(auth.tenantId, [
+        "advisors",
+        "sales",
+        "conversations",
+        "contactCenter",
       ]);
-      return ok(enrichAdvisorsWithLastLogin(advisors, members));
-    }
 
-    if (method === "GET" && advisorId) {
+      if (!advisorId) {
+        const [advisors, members] = await Promise.all([
+          listAdvisors(auth.tenantId),
+          listMembers(auth.tenantId),
+        ]);
+        return ok(enrichAdvisorsWithLastLogin(advisors, members));
+      }
+
       const advisor = await getAdvisor(auth.tenantId, advisorId);
       if (!advisor) return notFound("Advisor not found");
       return ok(advisor);
     }
+
+    assertTenantManagerRole(auth);
+    await assertAssignedServices(auth.tenantId, "advisors");
 
     if (method === "POST") {
       const body = JSON.parse(event.body ?? "{}");

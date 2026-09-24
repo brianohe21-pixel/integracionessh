@@ -10,8 +10,11 @@ import type {
   SalesSequence,
   SalesSequenceStep,
   SalesTask,
+  SalesTaskComment,
+  SalesTaskCommentsListResponse,
   SalesTasksListResponse,
   SequenceEnrollment,
+  TaskReminderWhatsAppSettings,
 } from "@/types";
 
 export function useSalesPipelines() {
@@ -93,15 +96,51 @@ export function useSalesSequences() {
 export function useSalesTasks(options?: {
   status?: SalesTask["status"];
   advisorId?: string;
+  opportunityId?: string;
+  conversationId?: string;
+  from?: string;
+  to?: string;
+  q?: string;
 }) {
   const params = new URLSearchParams();
   if (options?.status) params.set("status", options.status);
   if (options?.advisorId) params.set("advisorId", options.advisorId);
+  if (options?.opportunityId) params.set("opportunityId", options.opportunityId);
+  if (options?.conversationId) params.set("conversationId", options.conversationId);
+  if (options?.from) params.set("from", options.from);
+  if (options?.to) params.set("to", options.to);
+  if (options?.q) params.set("q", options.q);
   const qs = params.toString() ? `?${params.toString()}` : "";
 
   return useQuery({
     queryKey: ["sales", "tasks", options],
     queryFn: () => api.get<SalesTasksListResponse>(`/sales/tasks${qs}`),
+  });
+}
+
+export function useTaskReminderWhatsAppSettings(enabled = true) {
+  return useQuery({
+    queryKey: ["tenants", "task-reminder-whatsapp"],
+    queryFn: () =>
+      api.get<Required<TaskReminderWhatsAppSettings>>(
+        "/tenants/me/task-reminder-whatsapp"
+      ),
+    enabled,
+  });
+}
+
+export function useUpdateTaskReminderWhatsAppSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: TaskReminderWhatsAppSettings) =>
+      api.put<Required<TaskReminderWhatsAppSettings>>(
+        "/tenants/me/task-reminder-whatsapp",
+        body
+      ),
+    onSuccess: (data) => {
+      qc.setQueryData(["tenants", "task-reminder-whatsapp"], data);
+      qc.invalidateQueries({ queryKey: ["tenant"] });
+    },
   });
 }
 
@@ -240,6 +279,17 @@ export function useUpdateSalesTask() {
       status?: SalesTask["status"];
       title?: string;
       description?: string;
+      advisorId?: string;
+      leadId?: string | null;
+      dueAt?: string | null;
+      conversationId?: string;
+      botId?: string;
+      contactPhone?: string;
+      contactEmail?: string | null;
+      contactName?: string;
+      reminderTargets?: SalesTask["reminderTargets"];
+      reminderChannels?: SalesTask["reminderChannels"];
+      reminderMinutesBefore?: number;
     }) => api.patch<SalesTask>(`/sales/tasks/${taskId}`, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sales", "tasks"] });
@@ -255,9 +305,70 @@ export function useCreateSalesTask() {
       description?: string;
       opportunityId?: string;
       advisorId?: string;
+      leadId?: string;
       dueAt?: string;
+      conversationId?: string;
+      botId?: string;
+      contactPhone?: string;
+      contactEmail?: string;
+      contactName?: string;
+      reminderTargets?: SalesTask["reminderTargets"];
+      reminderChannels?: SalesTask["reminderChannels"];
+      reminderMinutesBefore?: number;
     }) => api.post<SalesTask>("/sales/tasks", body),
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["sales", "tasks"] });
+    },
+  });
+}
+
+export function useSalesTaskComments(taskId: string | null, enabled = true) {
+  return useQuery({
+    queryKey: ["sales", "tasks", taskId, "comments"],
+    queryFn: () =>
+      api.get<SalesTaskCommentsListResponse>(`/sales/tasks/${taskId}/comments`),
+    enabled: Boolean(taskId) && enabled,
+  });
+}
+
+export function useCreateSalesTaskComment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ taskId, body }: { taskId: string; body: string }) =>
+      api.post<SalesTaskComment>(`/sales/tasks/${taskId}/comments`, { body }),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["sales", "tasks", vars.taskId, "comments"] });
+      qc.invalidateQueries({ queryKey: ["sales", "tasks"] });
+    },
+  });
+}
+
+export function useUpdateSalesTaskComment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      taskId,
+      commentId,
+      body,
+    }: {
+      taskId: string;
+      commentId: string;
+      body: string;
+    }) => api.patch<SalesTaskComment>(`/sales/tasks/${taskId}/comments/${commentId}`, { body }),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["sales", "tasks", vars.taskId, "comments"] });
+      qc.invalidateQueries({ queryKey: ["sales", "tasks"] });
+    },
+  });
+}
+
+export function useDeleteSalesTaskComment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ taskId, commentId }: { taskId: string; commentId: string }) =>
+      api.delete(`/sales/tasks/${taskId}/comments/${commentId}`),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["sales", "tasks", vars.taskId, "comments"] });
       qc.invalidateQueries({ queryKey: ["sales", "tasks"] });
     },
   });

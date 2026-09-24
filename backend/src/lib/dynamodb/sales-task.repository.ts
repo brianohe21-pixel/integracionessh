@@ -16,6 +16,11 @@ const oppTaskKeys = (tenantId: string, opportunityId: string, taskId: string) =>
   SK: `OPPTASK#${opportunityId}#${taskId}`,
 });
 
+const convTaskKeys = (tenantId: string, conversationId: string, taskId: string) => ({
+  PK: `TENANT#${tenantId}`,
+  SK: `CONVTASK#${conversationId}#${taskId}`,
+});
+
 function gsi1Keys(tenantId: string, status: SalesTaskStatus, dueAt: string, taskId: string) {
   return {
     GSI1PK: `TENANT#${tenantId}#TASKS`,
@@ -32,12 +37,59 @@ function stripItem(item: Record<string, unknown>): SalesTask {
   return rest as unknown as SalesTask;
 }
 
+function matchesSearch(task: SalesTask, q?: string): boolean {
+  if (!q) return true;
+  const needle = q.trim().toLowerCase();
+  if (!needle) return true;
+  const haystack = [task.title, task.description, task.contactName, task.contactEmail, task.contactPhone]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return haystack.includes(needle);
+}
+
+function matchesDueRange(task: SalesTask, from?: string, to?: string): boolean {
+  if (!from && !to) return true;
+  if (!task.dueAt) return false;
+  if (from && task.dueAt < from) return false;
+  if (to && task.dueAt > to) return false;
+  return true;
+}
+
+export type SalesTaskUpdateFields = Partial<
+  Pick<
+    SalesTask,
+    | "title"
+    | "description"
+    | "status"
+    | "advisorId"
+    | "conversationId"
+    | "botId"
+    | "contactPhone"
+    | "contactName"
+    | "reminderTargets"
+    | "reminderChannels"
+    | "reminderMinutesBefore"
+  >
+> & {
+  dueAt?: string | null;
+  leadId?: string | null;
+  contactEmail?: string | null;
+  reminderScheduleName?: string | null;
+  reminderSentAt?: string | null;
+  reminderStatus?: SalesTask["reminderStatus"] | null;
+};
+
 export interface ListSalesTasksOptions {
   limit?: number;
   cursor?: string;
   status?: SalesTaskStatus;
   advisorId?: string;
   opportunityId?: string;
+  conversationId?: string;
+  from?: string;
+  to?: string;
+  q?: string;
 }
 
 export interface ListSalesTasksResult {
@@ -63,6 +115,9 @@ export async function listSalesTasks(
   tenantId: string,
   options: ListSalesTasksOptions = {}
 ): Promise<ListSalesTasksResult> {
+  if (options.conversationId) {
+    return listSalesTasksByConversation(tenantId, options.conversationId, options);
+  }
   if (options.opportunityId) {
     return listSalesTasksByOpportunity(tenantId, options.opportunityId, options);
   }
@@ -82,14 +137,17 @@ export async function listSalesTasks(
     }
   }
 
-  const keyCondition = options.status
-    ? "GSI1PK = :gsi1pk AND begins_with(GSI1SK, :statusPrefix)"
-    : "GSI1PK = :gsi1pk";
-
   const expressionValues: Record<string, string> = {
     ":gsi1pk": `TENANT#${tenantId}#TASKS`,
   };
-  if (options.status) {
+
+  let keyCondition = "GSI1PK = :gsi1pk";
+  if (options.status && options.from && options.to) {
+    keyCondition = "GSI1PK = :gsi1pk AND GSI1SK BETWEEN :fromSk AND :toSk";
+    expressionValues[":fromSk"] = `STATUS#${options.status}#DUE#${options.from}`;
+    expressionValues[":toSk"] = `STATUS#${options.status}#DUE#${options.to}~`;
+  } else if (options.status) {
+    keyCondition = "GSI1PK = :gsi1pk AND begins_with(GSI1SK, :statusPrefix)";
     expressionValues[":statusPrefix"] = `STATUS#${options.status}#`;
   }
 
@@ -110,6 +168,8 @@ export async function listSalesTasks(
       if (!String(item.SK ?? "").startsWith("SALESTASK#")) continue;
       const task = stripItem(item);
       if (options.advisorId && task.advisorId !== options.advisorId) continue;
+      if (!matchesDueRange(task, options.from, options.to)) continue;
+      if (!matchesSearch(task, options.q)) continue;
       items.push(task);
       if (items.length >= limit) break;
     }
@@ -141,7 +201,7 @@ export async function listSalesTasksByOpportunity(
         ":skPrefix": `OPPTASK#${opportunityId}#`,
       },
       ScanIndexForward: false,
-      Limit: limit,
+      Limit: limit * 2,
     })
   );
 
@@ -152,7 +212,45 @@ export async function listSalesTasksByOpportunity(
     if (!task) continue;
     if (options.status && task.status !== options.status) continue;
     if (options.advisorId && task.advisorId !== options.advisorId) continue;
+    if (!matchesDueRange(task, options.from, options.to)) continue;
+    if (!matchesSearch(task, options.q)) continue;
     tasks.push(task);
+    if (tasks.length >= limit) break;
+  }
+
+  return { items: tasks.slice(0, limit) };
+}
+
+export async function listSalesTasksByConversation(
+  tenantId: string,
+  conversationId: string,
+  options: ListSalesTasksOptions = {}
+): Promise<ListSalesTasksResult> {
+  const limit = Math.min(Math.max(options.limit ?? 50, 1), 100);
+  const result = await docClient.send(
+    new QueryCommand({
+      TableName: TABLE_NAME,
+      KeyConditionExpression: "PK = :pk AND begins_with(SK, :skPrefix)",
+      ExpressionAttributeValues: {
+        ":pk": `TENANT#${tenantId}`,
+        ":skPrefix": `CONVTASK#${conversationId}#`,
+      },
+      ScanIndexForward: false,
+      Limit: limit * 2,
+    })
+  );
+
+  const taskIds = (result.Items ?? []).map((item) => String(item.taskId ?? ""));
+  const tasks: SalesTask[] = [];
+  for (const taskId of taskIds) {
+    const task = await getSalesTaskById(tenantId, taskId);
+    if (!task) continue;
+    if (options.status && task.status !== options.status) continue;
+    if (options.advisorId && task.advisorId !== options.advisorId) continue;
+    if (!matchesDueRange(task, options.from, options.to)) continue;
+    if (!matchesSearch(task, options.q)) continue;
+    tasks.push(task);
+    if (tasks.length >= limit) break;
   }
 
   return { items: tasks.slice(0, limit) };
@@ -186,22 +284,85 @@ export async function createSalesTask(task: SalesTask): Promise<SalesTask> {
     );
   }
 
+  if (task.conversationId) {
+    await docClient.send(
+      new PutCommand({
+        TableName: TABLE_NAME,
+        Item: {
+          ...convTaskKeys(task.tenantId, task.conversationId, task.taskId),
+          tenantId: task.tenantId,
+          conversationId: task.conversationId,
+          taskId: task.taskId,
+          createdAt: task.createdAt,
+        },
+      })
+    );
+  }
+
   return task;
 }
 
 export async function updateSalesTask(
   tenantId: string,
   taskId: string,
-  updates: Partial<Pick<SalesTask, "title" | "description" | "dueAt" | "status" | "advisorId">>
+  updates: SalesTaskUpdateFields
 ): Promise<SalesTask | null> {
   const existing = await getSalesTaskById(tenantId, taskId);
   if (!existing) return null;
 
   const merged: SalesTask = {
     ...existing,
-    ...updates,
     updatedAt: new Date().toISOString(),
   };
+
+  if (updates.title !== undefined) merged.title = updates.title;
+  if (updates.description !== undefined) merged.description = updates.description;
+  if (updates.status !== undefined) merged.status = updates.status;
+  if (updates.advisorId !== undefined) merged.advisorId = updates.advisorId;
+  if (updates.conversationId !== undefined) merged.conversationId = updates.conversationId;
+  if (updates.botId !== undefined) merged.botId = updates.botId;
+  if (updates.contactPhone !== undefined) merged.contactPhone = updates.contactPhone;
+  if (updates.contactName !== undefined) merged.contactName = updates.contactName;
+  if (updates.reminderTargets !== undefined) merged.reminderTargets = updates.reminderTargets;
+  if (updates.reminderChannels !== undefined) merged.reminderChannels = updates.reminderChannels;
+  if (updates.reminderMinutesBefore !== undefined) {
+    merged.reminderMinutesBefore = updates.reminderMinutesBefore;
+  }
+  if (updates.leadId === null) {
+    delete merged.leadId;
+  } else if (updates.leadId !== undefined) {
+    merged.leadId = updates.leadId;
+  }
+  if (updates.reminderStatus !== undefined) {
+    if (updates.reminderStatus === null) {
+      delete merged.reminderStatus;
+    } else {
+      merged.reminderStatus = updates.reminderStatus;
+    }
+  }
+  if (updates.reminderSentAt === null) {
+    delete merged.reminderSentAt;
+  } else if (updates.reminderSentAt !== undefined) {
+    merged.reminderSentAt = updates.reminderSentAt;
+  }
+
+  if (updates.dueAt === null) {
+    delete merged.dueAt;
+  } else if (updates.dueAt !== undefined) {
+    merged.dueAt = updates.dueAt;
+  }
+
+  if (updates.contactEmail === null) {
+    delete merged.contactEmail;
+  } else if (updates.contactEmail !== undefined) {
+    merged.contactEmail = updates.contactEmail;
+  }
+
+  if (updates.reminderScheduleName === null) {
+    delete merged.reminderScheduleName;
+  } else if (updates.reminderScheduleName !== undefined) {
+    merged.reminderScheduleName = updates.reminderScheduleName;
+  }
 
   const dueAt = merged.dueAt ?? merged.updatedAt;
   await docClient.send(
@@ -214,5 +375,21 @@ export async function updateSalesTask(
       },
     })
   );
+
+  if (merged.conversationId && merged.conversationId !== existing.conversationId) {
+    await docClient.send(
+      new PutCommand({
+        TableName: TABLE_NAME,
+        Item: {
+          ...convTaskKeys(tenantId, merged.conversationId, taskId),
+          tenantId,
+          conversationId: merged.conversationId,
+          taskId,
+          createdAt: merged.createdAt,
+        },
+      })
+    );
+  }
+
   return merged;
 }
