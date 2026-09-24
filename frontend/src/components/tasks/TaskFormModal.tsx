@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
+import { TaskTimePicker } from "@/components/tasks/TaskTimePicker";
 import { useLeads, useLead } from "@/hooks/useLeads";
 import { useT } from "@/i18n/context";
 import type {
@@ -55,6 +56,29 @@ function fromLocalInputValue(value: string): string | undefined {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return undefined;
   return date.toISOString();
+}
+
+function splitLocalDateTime(value: string): { date: string; time: string } {
+  if (!value.includes("T")) return { date: "", time: "" };
+  const [date, time = ""] = value.split("T");
+  return { date: date ?? "", time: time.slice(0, 5) };
+}
+
+function joinLocalDateTime(date: string, time: string): string {
+  if (!date) return "";
+  return `${date}T${time || "09:00"}`;
+}
+
+function roundToQuarterHour(time: string): string {
+  const match = /^(\d{2}):(\d{2})$/.exec(time);
+  if (!match) return "09:00";
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  const rounded = Math.round(minutes / 15) * 15;
+  if (rounded === 60) {
+    return `${String((hours + 1) % 24).padStart(2, "0")}:00`;
+  }
+  return `${String(hours).padStart(2, "0")}:${String(rounded).padStart(2, "0")}`;
 }
 
 function toggleValue<T extends string>(list: T[], value: T): T[] {
@@ -119,7 +143,11 @@ export function TaskFormModal({
   const initial = { ...defaultsFromTask(task), ...defaults };
   const [title, setTitle] = useState(initial.title ?? "");
   const [description, setDescription] = useState(initial.description ?? "");
-  const [dueLocal, setDueLocal] = useState(toLocalInputValue(initial.dueAt ?? undefined));
+  const initialDue = splitLocalDateTime(toLocalInputValue(initial.dueAt ?? undefined));
+  const [dueDate, setDueDate] = useState(initialDue.date);
+  const [dueTime, setDueTime] = useState(
+    initialDue.time ? roundToQuarterHour(initialDue.time) : "09:00"
+  );
   const [advisorId, setAdvisorId] = useState(initial.advisorId ?? "");
   const [leadId, setLeadId] = useState(initial.leadId ?? "");
   const [contactPhone, setContactPhone] = useState(initial.contactPhone ?? "");
@@ -138,11 +166,15 @@ export function TaskFormModal({
   const { data: leadsData } = useLeads();
   const { data: selectedLead } = useLead(leadId || null);
   const leads = useMemo(() => {
-    const items = [...(leadsData?.items ?? [])];
-    if (selectedLead && !items.some((item) => item.leadId === selectedLead.leadId)) {
-      items.unshift(selectedLead);
+    const byId = new Map<string, Lead>();
+    for (const lead of leadsData?.items ?? []) {
+      if (!lead.leadId || byId.has(lead.leadId)) continue;
+      byId.set(lead.leadId, lead);
     }
-    return items;
+    if (selectedLead?.leadId && !byId.has(selectedLead.leadId)) {
+      byId.set(selectedLead.leadId, selectedLead);
+    }
+    return Array.from(byId.values());
   }, [leadsData?.items, selectedLead]);
 
   const canSubmit = title.trim().length > 0 && !submitting;
@@ -179,7 +211,7 @@ export function TaskFormModal({
 
   async function handleSubmit() {
     if (!canSubmit) return;
-    const dueAt = fromLocalInputValue(dueLocal);
+    const dueAt = fromLocalInputValue(joinLocalDateTime(dueDate, dueTime));
     await onSubmit({
       title: title.trim(),
       description: description.trim() || undefined,
@@ -209,8 +241,8 @@ export function TaskFormModal({
 
   return (
     <Modal>
-      <div className="mx-4 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-surface-elevated shadow-xl">
-        <div className="flex items-center justify-between border-b border-default px-6 py-4">
+      <div className="mx-4 w-full max-w-2xl overflow-visible rounded-2xl bg-surface-elevated shadow-xl">
+        <div className="flex items-center justify-between border-b border-default px-5 py-3">
           <h2 className="text-lg font-semibold text-primary">
             {isEdit ? t("tasks.editTask") : t("tasks.newTask")}
           </h2>
@@ -222,9 +254,9 @@ export function TaskFormModal({
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="space-y-4 px-6 py-5">
+        <div className="space-y-3 px-5 py-4">
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-primary">
+            <label className="mb-1 block text-sm font-medium text-primary">
               {t("tasks.taskTitle")}
             </label>
             <Input
@@ -234,10 +266,10 @@ export function TaskFormModal({
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-primary">
+            <label className="mb-1 block text-sm font-medium text-primary">
               {t("tasks.description")}
             </label>
-            <div className="mb-2 flex flex-wrap gap-1.5">
+            <div className="mb-1.5 flex flex-wrap gap-1.5">
               {DESCRIPTION_CHIP_KEYS.map((key) => {
                 const label = t(`tasks.descriptionChips.${key}`);
                 const active = description.toLowerCase().includes(label.toLowerCase());
@@ -261,36 +293,47 @@ export function TaskFormModal({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder={t("tasks.descriptionPlaceholder")}
-              className="min-h-[90px]"
+              className="min-h-[64px]"
+              rows={2}
             />
           </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-primary">
-              {t("tasks.dueAt")}
-            </label>
-            <Input
-              type="datetime-local"
-              value={dueLocal}
-              onChange={(e) => setDueLocal(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-primary">
-              {t("tasks.lead")}
-            </label>
-            <Select value={leadId} onChange={(e) => handleLeadChange(e.target.value)}>
-              <option value="">{t("tasks.anyLead")}</option>
-              {leads.map((lead) => (
-                <option key={lead.leadId} value={lead.leadId}>
-                  {leadLabel(lead)}
-                </option>
-              ))}
-            </Select>
-            <p className="mt-1.5 text-xs text-muted">{t("tasks.leadHint")}</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-primary">
+                {t("tasks.dueAt")}
+              </label>
+              <div className="grid grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] gap-2">
+                <Input
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  aria-label={t("tasks.dueDate")}
+                />
+                <TaskTimePicker
+                  value={dueTime}
+                  onChange={setDueTime}
+                  disabled={!dueDate}
+                  aria-label={t("tasks.dueTime")}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-primary">
+                {t("tasks.lead")}
+              </label>
+              <Select value={leadId} onChange={(e) => handleLeadChange(e.target.value)}>
+                <option value="">{t("tasks.anyLead")}</option>
+                {leads.map((lead) => (
+                  <option key={lead.leadId} value={lead.leadId}>
+                    {leadLabel(lead)}
+                  </option>
+                ))}
+              </Select>
+            </div>
           </div>
           {showAdvisorSelect ? (
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-primary">
+              <label className="mb-1 block text-sm font-medium text-primary">
                 {t("tasks.advisor")}
               </label>
               <Select value={advisorId} onChange={(e) => setAdvisorId(e.target.value)}>
@@ -303,49 +346,50 @@ export function TaskFormModal({
               </Select>
             </div>
           ) : null}
-          <div>
-            <p className="mb-2 text-sm font-medium text-primary">{t("tasks.reminderTargets")}</p>
-            <div className="flex flex-wrap gap-2">
-              {(["advisor", "contact"] as SalesTaskReminderTarget[]).map((target) => (
-                <button
-                  key={target}
-                  type="button"
-                  onClick={() => setReminderTargets((prev) => toggleValue(prev, target))}
-                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                    reminderTargets.includes(target)
-                      ? "border-accent bg-accent-muted text-accent"
-                      : "border-default text-secondary hover:bg-surface-muted"
-                  }`}
-                >
-                  {t(`tasks.target.${target}`)}
-                </button>
-              ))}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <p className="mb-1.5 text-sm font-medium text-primary">{t("tasks.reminderTargets")}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {(["advisor", "contact"] as SalesTaskReminderTarget[]).map((target) => (
+                  <button
+                    key={target}
+                    type="button"
+                    onClick={() => setReminderTargets((prev) => toggleValue(prev, target))}
+                    className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                      reminderTargets.includes(target)
+                        ? "border-accent bg-accent-muted text-accent"
+                        : "border-default text-secondary hover:bg-surface-muted"
+                    }`}
+                  >
+                    {t(`tasks.target.${target}`)}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-          <div>
-            <p className="mb-2 text-sm font-medium text-primary">{t("tasks.reminderChannels")}</p>
-            <div className="flex flex-wrap gap-2">
-              {REMINDER_CHANNELS.map((channel) => (
-                <button
-                  key={channel}
-                  type="button"
-                  onClick={() => setReminderChannels((prev) => toggleValue(prev, channel))}
-                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                    reminderChannels.includes(channel)
-                      ? "border-accent bg-accent-muted text-accent"
-                      : "border-default text-secondary hover:bg-surface-muted"
-                  }`}
-                >
-                  {t(`tasks.channel.${channel}`)}
-                </button>
-              ))}
+            <div>
+              <p className="mb-1.5 text-sm font-medium text-primary">{t("tasks.reminderChannels")}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {REMINDER_CHANNELS.map((channel) => (
+                  <button
+                    key={channel}
+                    type="button"
+                    onClick={() => setReminderChannels((prev) => toggleValue(prev, channel))}
+                    className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                      reminderChannels.includes(channel)
+                        ? "border-accent bg-accent-muted text-accent"
+                        : "border-default text-secondary hover:bg-surface-muted"
+                    }`}
+                  >
+                    {t(`tasks.channel.${channel}`)}
+                  </button>
+                ))}
+              </div>
             </div>
-            <p className="mt-1.5 text-xs text-muted">{t("tasks.reminderHint")}</p>
           </div>
           {reminderChannels.length > 0 &&
           (reminderTargets.length > 0 || reminderChannels.includes("platform")) ? (
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-primary">
+              <label className="mb-1 block text-sm font-medium text-primary">
                 {t("tasks.reminderWhen")}
               </label>
               <Select
@@ -360,7 +404,7 @@ export function TaskFormModal({
               </Select>
             </div>
           ) : null}
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex justify-end gap-2 pt-1">
             <Button variant="secondary" onClick={onClose} disabled={submitting}>
               {t("common.cancel")}
             </Button>
