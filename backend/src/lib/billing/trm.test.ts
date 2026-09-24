@@ -36,6 +36,14 @@ describe("trm", () => {
     expect(result.amountInCents).toBe(32_400_000);
   });
 
+  it("falls back to BILLING_USD_TO_COP_RATE when fetch fails and no env fallback", async () => {
+    global.fetch = jest.fn().mockRejectedValue(new Error("offline")) as typeof fetch;
+
+    const result = await calculateUsdPriceInCopCents(80);
+    expect(result.trm).toBe(4100);
+    expect(result.amountInCents).toBe(32_800_000);
+  });
+
   it("falls back to cached TRM when fetch fails", async () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,

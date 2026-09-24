@@ -3197,6 +3197,8 @@ export const en: Messages = {
     wompiConfirmError: "Could not confirm payment. If you already paid, wait a few minutes or contact support.",
     noProviderConfigured:
       "Payments are not configured on the server. Run terraform apply with Wompi keys.",
+    providersLoadError:
+      "Could not load payment information. Try again in a few minutes.",
     successPendingTitle: "Confirming your payment",
     successPendingBody: "We are verifying the transaction with Wompi. This may take a few seconds.",
     successActiveBody: "You can now use your new plan limits.",

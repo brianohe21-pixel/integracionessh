@@ -3203,6 +3203,8 @@ export const es = {
     wompiConfirmError: "No se pudo confirmar el pago. Si ya pagaste, espera unos minutos o contacta soporte.",
     noProviderConfigured:
       "Pagos no configurados en el servidor. Ejecuta terraform apply con las claves Wompi.",
+    providersLoadError:
+      "No se pudo cargar la información de pagos. Intenta de nuevo en unos minutos.",
     successPendingTitle: "Confirmando tu pago",
     successPendingBody: "Estamos verificando la transacción con Wompi. Esto puede tardar unos segundos.",
     successActiveBody: "Ya puedes usar los límites de tu nuevo plan.",

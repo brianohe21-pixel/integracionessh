@@ -59,7 +59,8 @@ export function BillingPlanCards({ autoCheckoutPlan }: { autoCheckoutPlan?: Tena
   const t = useT();
   const router = useRouter();
   const { planLabel } = useFormatters();
-  const { data: providers, isLoading: providersLoading } = useBillingProviders();
+  const { data: providers, isLoading: providersLoading, isError: providersError } =
+    useBillingProviders();
   const { data: status } = useBillingStatus();
   const [error, setError] = useState("");
   const autoStarted = useRef(false);
@@ -97,6 +98,12 @@ export function BillingPlanCards({ autoCheckoutPlan }: { autoCheckoutPlan?: Tena
         <PlanCardSkeleton />
         <PlanCardSkeleton />
       </div>
+    );
+  }
+
+  if (providersError && !providers) {
+    return (
+      <SettingsCallout variant="warning">{t("billing.providersLoadError")}</SettingsCallout>
     );
   }
 
@@ -148,15 +155,22 @@ export function BillingPlanCards({ autoCheckoutPlan }: { autoCheckoutPlan?: Tena
           {isStarterCurrent ? (
             <p className="mt-6 text-center text-sm text-muted">{t("billing.currentPlan")}</p>
           ) : (
-            <Button
-              type="button"
-              onClick={startStarterCheckout}
-              disabled={!defaultProvider}
-              className="mt-6 w-full"
-              size="lg"
-            >
-              {t("billing.subscribe")}
-            </Button>
+            <>
+              <Button
+                type="button"
+                onClick={startStarterCheckout}
+                disabled={!defaultProvider}
+                className="mt-6 w-full"
+                size="lg"
+              >
+                {t("billing.subscribe")}
+              </Button>
+              {!defaultProvider ? (
+                <p className="mt-2 text-center text-xs text-red-600">
+                  {t("billing.noProviderConfigured")}
+                </p>
+              ) : null}
+            </>
           )}
         </article>
 
