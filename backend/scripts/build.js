@@ -148,6 +148,7 @@ function createBuildOptions(selectedEntryPoints) {
     target: "node20",
     format: "cjs",
     outdir: "dist",
+    outbase: "src/functions",
     sourcemap: !isProduction,
     minify: isProduction,
     external: [
