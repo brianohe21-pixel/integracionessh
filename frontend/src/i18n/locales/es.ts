@@ -2269,8 +2269,6 @@ export const es = {
       title: "Uso WhatsApp: API vs app",
       description:
         "Compara mensajes enviados desde la plataforma (Cloud API) y desde WhatsApp Business App en coexistencia.",
-      billingNote:
-        "Los mensajes enviados solo desde WhatsApp Business App no se cobran como Cloud API. Los enviados desde la plataforma sí aplican pricing de Cloud API.",
       idleTitle: "Genera el reporte",
       idleDescription: "Pulsa Generar y elige el rango de fechas (y el agente, si quieres) en el modal.",
       modalTitle: "Generar reporte",

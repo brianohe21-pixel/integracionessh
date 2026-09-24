@@ -2265,8 +2265,6 @@ export const en: Messages = {
       title: "WhatsApp usage: API vs app",
       description:
         "Compare messages sent from the platform (Cloud API) and from the WhatsApp Business App in coexistence.",
-      billingNote:
-        "Messages sent only from the WhatsApp Business App are not charged as Cloud API. Messages sent from the platform follow Cloud API pricing.",
       idleTitle: "Generate the report",
       idleDescription: "Click Generate and choose the date range (and agent, if needed) in the modal.",
       modalTitle: "Generate report",

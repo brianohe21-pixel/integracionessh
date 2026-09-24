@@ -168,47 +168,43 @@ export default function WhatsAppUsageReportPage() {
       ) : isLoading ? (
         <p className="text-sm text-secondary">{t("common.loading")}</p>
       ) : data?.daily ? (
-        <div className="space-y-4">
-          <Alert variant="info">{t("reports.whatsappUsage.billingNote")}</Alert>
-
-          {!hasData ? (
-            <EmptyState
-              icon={<FileSpreadsheet className="h-5 w-5" />}
-              title={t("reports.whatsappUsage.noDataTitle")}
-              description={t("reports.whatsappUsage.noDataDescription")}
-            />
-          ) : (
-            <DataTable>
-              <DataTableHead>
-                <DataTableRow>
-                  <DataTableCell header>{t("reports.whatsappUsage.colDate")}</DataTableCell>
-                  <DataTableCell header>{t("reports.whatsappUsage.colApi")}</DataTableCell>
-                  <DataTableCell header>{t("reports.whatsappUsage.colApp")}</DataTableCell>
-                  <DataTableCell header>{t("reports.whatsappUsage.colInbound")}</DataTableCell>
-                  <DataTableCell header>{t("reports.whatsappUsage.colTotal")}</DataTableCell>
+        !hasData ? (
+          <EmptyState
+            icon={<FileSpreadsheet className="h-5 w-5" />}
+            title={t("reports.whatsappUsage.noDataTitle")}
+            description={t("reports.whatsappUsage.noDataDescription")}
+          />
+        ) : (
+          <DataTable>
+            <DataTableHead>
+              <DataTableRow>
+                <DataTableCell header>{t("reports.whatsappUsage.colDate")}</DataTableCell>
+                <DataTableCell header>{t("reports.whatsappUsage.colApi")}</DataTableCell>
+                <DataTableCell header>{t("reports.whatsappUsage.colApp")}</DataTableCell>
+                <DataTableCell header>{t("reports.whatsappUsage.colInbound")}</DataTableCell>
+                <DataTableCell header>{t("reports.whatsappUsage.colTotal")}</DataTableCell>
+              </DataTableRow>
+            </DataTableHead>
+            <DataTableBody>
+              {daily.map((row) => (
+                <DataTableRow key={row.date}>
+                  <DataTableCell>{row.date}</DataTableCell>
+                  <DataTableCell>{formatNumber(row.apiOutbound)}</DataTableCell>
+                  <DataTableCell>{formatNumber(row.appEcho)}</DataTableCell>
+                  <DataTableCell>{formatNumber(row.inbound)}</DataTableCell>
+                  <DataTableCell>{formatNumber(row.total)}</DataTableCell>
                 </DataTableRow>
-              </DataTableHead>
-              <DataTableBody>
-                {daily.map((row) => (
-                  <DataTableRow key={row.date}>
-                    <DataTableCell>{row.date}</DataTableCell>
-                    <DataTableCell>{formatNumber(row.apiOutbound)}</DataTableCell>
-                    <DataTableCell>{formatNumber(row.appEcho)}</DataTableCell>
-                    <DataTableCell>{formatNumber(row.inbound)}</DataTableCell>
-                    <DataTableCell>{formatNumber(row.total)}</DataTableCell>
-                  </DataTableRow>
-                ))}
-                <DataTableRow className="border-t border-default font-semibold text-primary">
-                  <DataTableCell>{t("common.total")}</DataTableCell>
-                  <DataTableCell>{formatNumber(totals.apiOutbound)}</DataTableCell>
-                  <DataTableCell>{formatNumber(totals.appEcho)}</DataTableCell>
-                  <DataTableCell>{formatNumber(totals.inbound)}</DataTableCell>
-                  <DataTableCell>{formatNumber(totals.total)}</DataTableCell>
-                </DataTableRow>
-              </DataTableBody>
-            </DataTable>
-          )}
-        </div>
+              ))}
+              <DataTableRow className="border-t border-default font-semibold text-primary">
+                <DataTableCell>{t("common.total")}</DataTableCell>
+                <DataTableCell>{formatNumber(totals.apiOutbound)}</DataTableCell>
+                <DataTableCell>{formatNumber(totals.appEcho)}</DataTableCell>
+                <DataTableCell>{formatNumber(totals.inbound)}</DataTableCell>
+                <DataTableCell>{formatNumber(totals.total)}</DataTableCell>
+              </DataTableRow>
+            </DataTableBody>
+          </DataTable>
+        )
       ) : null}
 
       {filtersOpen ? (
