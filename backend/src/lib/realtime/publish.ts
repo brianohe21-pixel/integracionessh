@@ -25,9 +25,21 @@ export function shouldDeliverToConnection(
   connection: RealtimeConnection,
   conversation: Conversation
 ): boolean {
-  if (connection.role === "member") return true;
+  if (connection.role === "member" || connection.role === "supervisor") return true;
   if (connection.role === "advisor") {
     return conversation.assignedAdvisorId === connection.advisorId;
+  }
+  return false;
+}
+
+function shouldDeliverTaskReminder(
+  connection: RealtimeConnection,
+  advisorId?: string
+): boolean {
+  if (connection.role === "member" || connection.role === "supervisor") return true;
+  if (connection.role === "advisor") {
+    if (!advisorId) return false;
+    return connection.advisorId === advisorId;
   }
   return false;
 }
@@ -68,6 +80,10 @@ export async function publishRealtimeEvent(
   ) {
     targets = connections.filter((connection) =>
       shouldDeliverToConnection(connection, event.conversation)
+    );
+  } else if (event.type === "task.reminder") {
+    targets = connections.filter((connection) =>
+      shouldDeliverTaskReminder(connection, event.advisorId)
     );
   }
 

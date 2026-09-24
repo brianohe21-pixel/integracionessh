@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { MessageSquare, UserRound, X } from "lucide-react";
+import { CheckSquare, MessageSquare, UserRound, X } from "lucide-react";
 import { useNotifications } from "@/components/notifications/NotificationsProvider";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useT } from "@/i18n/context";
@@ -16,6 +16,9 @@ type NotificationListItemProps = {
 function NotificationIcon({ type }: { type: AppNotification["type"] }) {
   if (type === "handoff") {
     return <UserRound className="h-4 w-4" />;
+  }
+  if (type === "task") {
+    return <CheckSquare className="h-4 w-4" />;
   }
   return <MessageSquare className="h-4 w-4" />;
 }
@@ -50,7 +53,9 @@ export function NotificationListItem({ notification, onNavigate }: NotificationL
               "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
               notification.type === "handoff"
                 ? "bg-warning/15 text-warning"
-                : "bg-accent-muted text-accent"
+                : notification.type === "task"
+                  ? "bg-info/15 text-info"
+                  : "bg-accent-muted text-accent"
             )}
           >
             <NotificationIcon type={notification.type} />

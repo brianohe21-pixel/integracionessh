@@ -24,6 +24,7 @@ type Props = {
   macroPlaceholderContext: MacroPlaceholderContext;
   onOpenQuotation: () => void;
   onOpenBooking?: () => void;
+  onOpenTask?: () => void;
   showBooking?: boolean;
   showAttachment?: boolean;
   onAttachFile?: (file: File) => void;
@@ -42,6 +43,7 @@ export function ConversationComposeBar({
   macroPlaceholderContext,
   onOpenQuotation,
   onOpenBooking,
+  onOpenTask,
   showBooking = false,
   showAttachment = false,
   onAttachFile,
@@ -155,6 +157,7 @@ export function ConversationComposeBar({
               onDraftChange={onDraftChange}
               onOpenQuotation={onOpenQuotation}
               onOpenBooking={onOpenBooking}
+              onOpenTask={onOpenTask}
               showBooking={showBooking}
               showAttachment={showAttachment && !voice.active}
               onAttachFile={onAttachFile}

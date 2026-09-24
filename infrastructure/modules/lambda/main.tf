@@ -409,6 +409,9 @@ locals {
         SCHEDULER_ROLE_ARN     = var.scheduler_role_arn
         SALES_FUNCTION_ARN     = local.sales_function_arn
         SEQUENCE_SQS_QUEUE_URL = var.sequence_sqs_queue_url
+        SES_FROM_EMAIL         = var.ses_from_email
+        FRONTEND_URL           = var.frontend_url
+        WEBSOCKET_API_ENDPOINT = local.websocket_management_endpoint
       }
     }
     process_sequence = {

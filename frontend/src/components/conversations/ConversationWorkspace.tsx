@@ -27,6 +27,8 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Select } from "@/components/ui/Input";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ConversationComposeBar } from "@/components/conversations/ConversationComposeBar";
+import { TaskFormModal, type TaskFormValues } from "@/components/tasks/TaskFormModal";
+import { useCreateSalesTask } from "@/hooks/useSales";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useT, useLocale } from "@/i18n/context";
 import { useDialog } from "@/components/ui/DialogProvider";
@@ -109,6 +111,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   const [draft, setDraft] = useState("");
   const [showQuotationDrawer, setShowQuotationDrawer] = useState(false);
   const [showBookingDrawer, setShowBookingDrawer] = useState(false);
+  const [showTaskModal, setShowTaskModal] = useState(false);
   const [showHandoffModal, setShowHandoffModal] = useState(false);
   const [showBulkReassignModal, setShowBulkReassignModal] = useState(false);
   const [showResolveModal, setShowResolveModal] = useState(false);
@@ -327,6 +330,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   const { data: activeLead } = useActiveLeadByPhone(selectedContactPhone);
   const convertLead = useConvertLead();
   const createLead = useCreateLead();
+  const createTask = useCreateSalesTask();
 
   async function handleCreateLeadFromInbox() {
     if (!selectedConversation || !selectedContactPhone) return;
@@ -1059,6 +1063,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                       macroPlaceholderContext={macroPlaceholderContext}
                       onOpenQuotation={() => setShowQuotationDrawer(true)}
                       onOpenBooking={() => setShowBookingDrawer(true)}
+                      onOpenTask={() => setShowTaskModal(true)}
                       showBooking={showBookingAction}
                       showAttachment={showAttachmentAction}
                       onAttachFile={handleAttachFile}
@@ -1239,6 +1244,56 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
           conversation={selectedConversation}
           open={showQuotationDrawer}
           onClose={() => setShowQuotationDrawer(false)}
+        />
+      ) : null}
+
+      {showTaskModal && selectedConversation ? (
+        <TaskFormModal
+          onClose={() => setShowTaskModal(false)}
+          submitting={createTask.isPending}
+          defaults={{
+            conversationId: selectedConversation.conversationId,
+            botId: selectedConversation.botId,
+            advisorId: selectedConversation.assignedAdvisorId,
+            contactPhone: selectedConversation.phoneNumber || selectedConversation.participantId,
+            contactName: selectedConversation.contactName,
+            reminderTargets: ["advisor"],
+            reminderChannels: ["email", "whatsapp"],
+            reminderMinutesBefore: 60,
+          }}
+          onSubmit={async (values: TaskFormValues) => {
+            await createTask.mutateAsync({
+              title: values.title,
+              ...(values.description ? { description: values.description } : {}),
+              ...(values.dueAt ? { dueAt: values.dueAt } : {}),
+              ...(values.advisorId
+                ? { advisorId: values.advisorId }
+                : selectedConversation.assignedAdvisorId
+                  ? { advisorId: selectedConversation.assignedAdvisorId }
+                  : {}),
+              conversationId: selectedConversation.conversationId,
+              botId: selectedConversation.botId,
+              ...(values.contactPhone || selectedConversation.phoneNumber
+                ? {
+                    contactPhone:
+                      values.contactPhone ||
+                      selectedConversation.phoneNumber ||
+                      selectedConversation.participantId,
+                  }
+                : {}),
+              ...(values.contactEmail ? { contactEmail: values.contactEmail } : {}),
+              ...(values.contactName || selectedConversation.contactName
+                ? {
+                    contactName:
+                      values.contactName || selectedConversation.contactName || undefined,
+                  }
+                : {}),
+              reminderTargets: values.reminderTargets,
+              reminderChannels: values.reminderChannels,
+              reminderMinutesBefore: values.reminderMinutesBefore,
+            });
+            setShowTaskModal(false);
+          }}
         />
       ) : null}
     </div>

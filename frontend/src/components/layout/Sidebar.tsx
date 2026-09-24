@@ -41,6 +41,7 @@ import {
   ClipboardList,
   Receipt,
   FileSpreadsheet,
+  CheckSquare,
 } from "lucide-react";
 import { useAdminRole } from "@/hooks/useAdminRole";
 import { useTenantRole } from "@/hooks/useTenantRole";
@@ -105,6 +106,7 @@ const memberNavCategories: NavCategory[] = [
       { href: "/leads", labelKey: "nav.leads", icon: UserPlus },
       { href: "/ads", labelKey: "nav.ads", icon: Megaphone },
       { href: "/sales", labelKey: "nav.sales", icon: TrendingUp },
+      { href: "/tasks", labelKey: "nav.tasks", icon: CheckSquare },
       { href: "/advisors", labelKey: "nav.advisors", icon: Users },
     ],
   },
@@ -170,6 +172,7 @@ const advisorNavCategories: NavCategory[] = [
     items: [
       { href: "/inbox", labelKey: "nav.inbox", icon: MessageSquare },
       { href: "/sales", labelKey: "nav.sales", icon: TrendingUp },
+      { href: "/tasks", labelKey: "nav.tasks", icon: CheckSquare },
     ],
   },
 ];
@@ -181,6 +184,7 @@ const supervisorNavCategories: NavCategory[] = [
     items: [
       { href: "/inbox", labelKey: "nav.inbox", icon: MessageSquare },
       { href: "/sales", labelKey: "nav.sales", icon: TrendingUp },
+      { href: "/tasks", labelKey: "nav.tasks", icon: CheckSquare },
     ],
   },
   {
