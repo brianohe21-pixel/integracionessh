@@ -32,6 +32,41 @@ export function resolveBillingPlanPrice(
   return plans[plan];
 }
 
+export const PRO_PLAN_CATALOG_LIMITS = {
+  maxActiveBots: 5,
+  maxMessagesPerMonth: 10_000,
+  maxBulkRecipientsPerJob: 2_000,
+  maxActiveCampaigns: 10,
+  maxContacts: 10_000,
+  maxAutomationsPerBot: 20,
+  maxScheduledAutomations: 10,
+  maxDocumentsPerBot: 25,
+  maxKnowledgeStorageMb: 150,
+  maxMetaFlowsPerBot: 10,
+  maxVisualFlowsPerBot: 10,
+  maxFlowNodes: 40,
+  maxActiveFlowRuns: 50,
+  maxChannelsPerBot: 5,
+  maxWhatsAppChannelsPerBot: 5,
+  maxActiveWebChatSessions: 200,
+  maxConcurrentLiveKitCalls: 3,
+  maxVoicebotMinutesPerMonth: 300,
+  maxCalendarAppsPerTenant: 5,
+  maxPaymentsAppsPerTenant: 5,
+  maxCatalogAppsPerTenant: 5,
+  maxHostedFormsPerTenant: 10,
+  maxProductsPerBot: 200,
+  maxOrdersPerMonth: 2_000,
+  apiRateLimitPerMinute: 120,
+  apiRateLimitPerDay: 50_000,
+} as const;
+
+export type ProPlanLimitKey = keyof typeof PRO_PLAN_CATALOG_LIMITS;
+
+export const PRO_PLAN_LIMIT_KEYS = Object.keys(
+  PRO_PLAN_CATALOG_LIMITS
+) as ProPlanLimitKey[];
+
 export function getAllowedModelsForPlan(plan: TenantPlan | string | undefined): AllowedModel[] {
   return getModelsForPlan(plan).map((model) => model.id);
 }

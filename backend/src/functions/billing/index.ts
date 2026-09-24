@@ -137,8 +137,12 @@ async function resolveCheckoutAmountInCents(
   plan: PaidTenantPlan
 ): Promise<{ amountInCents: number; trm?: number }> {
   if (plan === "starter") {
-    const priced = await calculateUsdPriceInCopCents(PLAN_LIST_PRICE_USD.starter);
-    return priced;
+    try {
+      return await calculateUsdPriceInCopCents(PLAN_LIST_PRICE_USD.starter);
+    } catch (error) {
+      console.warn("Starter TRM pricing unavailable, using fixed Wompi amount", error);
+      return { amountInCents: amountInCentsForPlan(plan) };
+    }
   }
   return { amountInCents: amountInCentsForPlan(plan) };
 }

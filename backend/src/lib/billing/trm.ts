@@ -1,5 +1,7 @@
+import { BILLING_USD_TO_COP_RATE } from "./plan-config.js";
+
 const TRM_DATASET_URL =
-  "https://www.datos.gov.co/resource/32sa-z8j3.json?$order=vigenciadesde%20DESC&$limit=1";
+  "https://www.datos.gov.co/resource/32sa-8pi3.json?$order=vigenciadesde%20DESC&$limit=1";
 
 type TrmCache = {
   dateKey: string;
@@ -31,12 +33,20 @@ export function usdToCopWithTrm(usd: number, trm: number): number {
   return roundCopToNearestThousand(usd * trm);
 }
 
+function resolveFallbackTrm(): number | null {
+  const envFallback = Number(process.env.BILLING_TRM_FALLBACK_COP);
+  if (Number.isFinite(envFallback) && envFallback > 0) return envFallback;
+  if (Number.isFinite(BILLING_USD_TO_COP_RATE) && BILLING_USD_TO_COP_RATE > 0) {
+    return BILLING_USD_TO_COP_RATE;
+  }
+  return null;
+}
+
 export async function getTrmCopPerUsd(): Promise<number> {
   const dateKey = todayKey();
   if (cache?.dateKey === dateKey) return cache.value;
 
-  const fallback = Number(process.env.BILLING_TRM_FALLBACK_COP);
-  const hasFallback = Number.isFinite(fallback) && fallback > 0;
+  const fallback = resolveFallbackTrm();
 
   try {
     const response = await fetch(TRM_DATASET_URL, {
@@ -53,7 +63,7 @@ export async function getTrmCopPerUsd(): Promise<number> {
   } catch (error) {
     console.warn("TRM fetch failed:", error);
     if (cache) return cache.value;
-    if (hasFallback) {
+    if (fallback) {
       cache = { dateKey, value: fallback };
       return fallback;
     }

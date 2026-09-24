@@ -54,6 +54,7 @@ import {
   serviceForNavHref,
 } from "@/lib/subaccount-services";
 import { isNavItemPlanLocked, isNavLockedForPlan } from "@/lib/plan-nav";
+import { isGoogleBusinessComingSoon } from "@/lib/feature-flags";
 import { useClearTenantContext, useAssumeSubaccount, useResellerSubaccounts } from "@/hooks/useReseller";
 import { MEMBER_HOME } from "@/lib/post-login-path";
 import { useAuthSession } from "@/hooks/useAuthSession";
@@ -343,22 +344,51 @@ function NavProOnlyBadge() {
   );
 }
 
+function NavComingSoonBadge() {
+  const t = useT();
+  return (
+    <span className="ml-auto shrink-0 rounded-md bg-[var(--sidebar-muted)] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--sidebar-text-muted)]">
+      {t("nav.comingSoon")}
+    </span>
+  );
+}
+
+function isNavComingSoon(href: string): boolean {
+  return href === "/reviews" && isGoogleBusinessComingSoon();
+}
+
 function NavSubLink({
   item,
   active,
   onNavigate,
   badgeCount = 0,
   locked = false,
+  comingSoon = false,
 }: {
   item: NavItem;
   active: boolean;
   onNavigate?: () => void;
   badgeCount?: number;
   locked?: boolean;
+  comingSoon?: boolean;
 }) {
   const t = useT();
   const Icon = item.icon;
   const label = t(item.labelKey);
+
+  if (comingSoon) {
+    return (
+      <div
+        className="nav-sub-item cursor-not-allowed opacity-55"
+        title={t("nav.comingSoon")}
+        aria-label={`${label} — ${t("nav.comingSoon")}`}
+      >
+        <Icon className="nav-sub-icon" />
+        <span className="min-w-0 flex-1 truncate">{label}</span>
+        <NavComingSoonBadge />
+      </div>
+    );
+  }
 
   if (locked) {
     return (
@@ -475,6 +505,7 @@ function renderCategoryNavItem(
   totalUnread = 0
 ) {
   const locked = isNavItemPlanLocked(item, tenantPlan);
+  const comingSoon = isNavComingSoon(item.href);
 
   if (item.items?.length) {
     return (
@@ -498,6 +529,7 @@ function renderCategoryNavItem(
       onNavigate={onNavigate}
       badgeCount={inboxBadgeCount(item.href, totalUnread)}
       locked={locked}
+      comingSoon={comingSoon}
     />
   );
 }
@@ -666,6 +698,7 @@ function CollapsedCategoryFlyout({
                 }}
                 badgeCount={inboxBadgeCount(item.href, totalUnread)}
                 locked={itemLocked}
+                comingSoon={isNavComingSoon(item.href)}
               />
             );
           })}

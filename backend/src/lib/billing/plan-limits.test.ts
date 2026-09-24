@@ -67,4 +67,55 @@ describe("getEffectivePlanLimits", () => {
     expect(getEffectivePlanLimits(tenant("starter")).maxHostedFormsPerTenant).toBe(3);
     expect(getEffectivePlanLimits(tenant("pro")).maxHostedFormsPerTenant).toBe(10);
   });
+
+  it("applies partial planLimitsOverride for direct Pro tenants", () => {
+    const limits = getEffectivePlanLimits(
+      tenant("pro", {
+        planLimitsOverride: {
+          maxMessagesPerMonth: 25_000,
+          maxActiveBots: 8,
+        },
+      })
+    );
+
+    expect(limits.maxMessagesPerMonth).toBe(25_000);
+    expect(limits.maxActiveBots).toBe(8);
+    expect(limits.maxContacts).toBe(10_000);
+    expect(limits.canCustomizeBranding).toBe(true);
+  });
+
+  it("ignores planLimitsOverride when plan is not Pro", () => {
+    const limits = getEffectivePlanLimits(
+      tenant("starter", {
+        planLimitsOverride: {
+          maxMessagesPerMonth: 99_000,
+        },
+      })
+    );
+
+    expect(limits.maxMessagesPerMonth).toBe(2_000);
+  });
+
+  it("prefers subaccount serviceLimits over planLimitsOverride", () => {
+    const limits = getEffectivePlanLimits(
+      tenant("pro", {
+        tenantKind: "subaccount",
+        parentTenantId: "reseller-1",
+        enabledServices: ["bots", "campaigns", "contacts"],
+        serviceLimits: {
+          maxActiveBots: 2,
+          maxMessagesPerMonth: 500,
+          maxContacts: 100,
+        },
+        planLimitsOverride: {
+          maxActiveBots: 50,
+          maxMessagesPerMonth: 80_000,
+        },
+      })
+    );
+
+    expect(limits.maxActiveBots).toBe(2);
+    expect(limits.maxMessagesPerMonth).toBe(500);
+    expect(limits.maxContacts).toBe(100);
+  });
 });

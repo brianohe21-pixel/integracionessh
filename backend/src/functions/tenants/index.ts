@@ -6,6 +6,7 @@ import {
   ensureTenant,
   createTenant,
   clearTenantPricePerMessage,
+  clearTenantPlanLimitsOverride,
   updateTenant,
   deleteTenant,
   listTenants,
@@ -90,12 +91,46 @@ const CreateTenantSchema = z.object({
   plan: z.enum(["free", "starter", "pro", "scale", "reseller"]).default("free"),
 });
 
+const PlanLimitValueSchema = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
+
+const PlanLimitsOverrideSchema = z
+  .object({
+    maxActiveBots: PlanLimitValueSchema.optional(),
+    maxMessagesPerMonth: PlanLimitValueSchema.optional(),
+    maxBulkRecipientsPerJob: PlanLimitValueSchema.optional(),
+    maxActiveCampaigns: PlanLimitValueSchema.optional(),
+    maxContacts: PlanLimitValueSchema.optional(),
+    maxAutomationsPerBot: PlanLimitValueSchema.optional(),
+    maxScheduledAutomations: PlanLimitValueSchema.optional(),
+    maxDocumentsPerBot: PlanLimitValueSchema.optional(),
+    maxKnowledgeStorageMb: PlanLimitValueSchema.optional(),
+    maxMetaFlowsPerBot: PlanLimitValueSchema.optional(),
+    maxVisualFlowsPerBot: PlanLimitValueSchema.optional(),
+    maxFlowNodes: PlanLimitValueSchema.optional(),
+    maxActiveFlowRuns: PlanLimitValueSchema.optional(),
+    maxChannelsPerBot: PlanLimitValueSchema.optional(),
+    maxWhatsAppChannelsPerBot: PlanLimitValueSchema.optional(),
+    maxActiveWebChatSessions: PlanLimitValueSchema.optional(),
+    maxConcurrentLiveKitCalls: PlanLimitValueSchema.optional(),
+    maxVoicebotMinutesPerMonth: PlanLimitValueSchema.optional(),
+    maxCalendarAppsPerTenant: PlanLimitValueSchema.optional(),
+    maxPaymentsAppsPerTenant: PlanLimitValueSchema.optional(),
+    maxCatalogAppsPerTenant: PlanLimitValueSchema.optional(),
+    maxHostedFormsPerTenant: PlanLimitValueSchema.optional(),
+    maxProductsPerBot: PlanLimitValueSchema.optional(),
+    maxOrdersPerMonth: PlanLimitValueSchema.optional(),
+    apiRateLimitPerMinute: PlanLimitValueSchema.optional(),
+    apiRateLimitPerDay: PlanLimitValueSchema.optional(),
+  })
+  .strict();
+
 const UpdateTenantSchema = z.object({
   name: z.string().min(1).max(128).optional(),
   plan: z.enum(["free", "starter", "pro", "scale", "reseller"]).optional(),
   status: z.enum(["active", "suspended"]).optional(),
   law2300Exempt: z.boolean().optional(),
   pricePerMessageCents: z.number().int().min(0).max(1_000_000_000).optional(),
+  planLimitsOverride: PlanLimitsOverrideSchema.nullable().optional(),
   resellerConfig: z
     .object({
       maxSubaccounts: z.number().int().min(1).max(10_000).optional(),
@@ -703,12 +738,53 @@ export async function handler(
         delete updates.resellerConfig;
         delete updates.law2300Exempt;
         delete updates.pricePerMessageCents;
+        delete updates.planLimitsOverride;
       }
 
-      const rawBody = JSON.parse(event.body ?? "{}") as { pricePerMessageCents?: number | null };
+      const rawBody = JSON.parse(event.body ?? "{}") as {
+        pricePerMessageCents?: number | null;
+        planLimitsOverride?: unknown;
+      };
       if (auth.role === "admin" && rawBody.pricePerMessageCents === null) {
         const cleared = await clearTenantPricePerMessage(resolvedId);
         return ok(cleared);
+      }
+
+      if (auth.role === "admin" && rawBody.planLimitsOverride === null) {
+        delete updates.planLimitsOverride;
+        const cleared = await clearTenantPlanLimitsOverride(resolvedId);
+        if (
+          updates.plan === undefined &&
+          updates.status === undefined &&
+          updates.law2300Exempt === undefined &&
+          updates.pricePerMessageCents === undefined &&
+          updates.resellerConfig === undefined &&
+          updates.name === undefined
+        ) {
+          return ok(cleared);
+        }
+      }
+
+      if (auth.role === "admin" && updates.planLimitsOverride !== undefined && updates.planLimitsOverride !== null) {
+        const cleaned = Object.fromEntries(
+          Object.entries(updates.planLimitsOverride).filter(([, value]) => value !== undefined)
+        );
+        if (Object.keys(cleaned).length === 0) {
+          delete updates.planLimitsOverride;
+          const cleared = await clearTenantPlanLimitsOverride(resolvedId);
+          if (
+            updates.plan === undefined &&
+            updates.status === undefined &&
+            updates.law2300Exempt === undefined &&
+            updates.pricePerMessageCents === undefined &&
+            updates.resellerConfig === undefined &&
+            updates.name === undefined
+          ) {
+            return ok(cleared);
+          }
+        } else {
+          updates.planLimitsOverride = cleaned;
+        }
       }
 
       if (auth.role === "admin" && updates.resellerConfig !== undefined) {

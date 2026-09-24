@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { ResellerConfig, ResellerPlanDefaults, Tenant, TenantPlan } from "@/types";
+import type { ResellerConfig, ResellerLimitsOverride, ResellerPlanDefaults, Tenant, TenantPlan } from "@/types";
 
 export function useAdminTenants() {
   return useQuery({
@@ -21,6 +21,7 @@ export function useAdminUpdateTenant() {
       status?: "active" | "suspended";
       law2300Exempt?: boolean;
       resellerConfig?: Partial<ResellerConfig>;
+      planLimitsOverride?: ResellerLimitsOverride | null;
     }) =>
       api.put<Tenant>(`/tenants/${input.tenantId}`, {
         ...(input.plan !== undefined ? { plan: input.plan } : {}),
@@ -30,6 +31,9 @@ export function useAdminUpdateTenant() {
           : {}),
         ...(input.resellerConfig !== undefined
           ? { resellerConfig: input.resellerConfig }
+          : {}),
+        ...(input.planLimitsOverride !== undefined
+          ? { planLimitsOverride: input.planLimitsOverride }
           : {}),
       }),
     onSuccess: () => {

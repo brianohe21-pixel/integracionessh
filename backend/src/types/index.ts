@@ -212,6 +212,7 @@ export interface Tenant {
   parentTenantId?: string;
   enabledServices?: SubaccountServiceId[];
   serviceLimits?: ResellerLimitsOverride;
+  planLimitsOverride?: ResellerLimitsOverride;
   resellerConfig?: ResellerConfig;
   branding?: TenantBranding;
   inboxSla?: InboxSlaSettings;
