@@ -120,9 +120,11 @@ export function useSalesTasks(options?: {
 
 export function useTaskReminderWhatsAppSettings(enabled = true) {
   return useQuery({
-    queryKey: ["sales", "tasks", "reminder-settings"],
+    queryKey: ["tenants", "task-reminder-whatsapp"],
     queryFn: () =>
-      api.get<Required<TaskReminderWhatsAppSettings>>("/sales/tasks/reminder-settings"),
+      api.get<Required<TaskReminderWhatsAppSettings>>(
+        "/tenants/me/task-reminder-whatsapp"
+      ),
     enabled,
   });
 }
@@ -132,11 +134,12 @@ export function useUpdateTaskReminderWhatsAppSettings() {
   return useMutation({
     mutationFn: (body: TaskReminderWhatsAppSettings) =>
       api.put<Required<TaskReminderWhatsAppSettings>>(
-        "/sales/tasks/reminder-settings",
+        "/tenants/me/task-reminder-whatsapp",
         body
       ),
     onSuccess: (data) => {
-      qc.setQueryData(["sales", "tasks", "reminder-settings"], data);
+      qc.setQueryData(["tenants", "task-reminder-whatsapp"], data);
+      qc.invalidateQueries({ queryKey: ["tenant"] });
     },
   });
 }

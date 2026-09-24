@@ -31,6 +31,7 @@ import type {
   InboxSlaSettings,
   MetricsReportSchedule,
   WebsiteAnalyticsSettings,
+  TaskReminderWhatsAppSettings,
 } from "../../types/index.js";
 import { recordLegalAcceptance, getLegalAcceptance } from "../../lib/dynamodb/legal.repository.js";
 import {
@@ -249,6 +250,66 @@ async function handleInboxSlaRoutes(
     const inboxSla: InboxSlaSettings = parsed.data;
     const updated = await updateTenant(auth.tenantId, { inboxSla });
     return ok(resolveInboxSlaSettings(updated.inboxSla));
+  }
+
+  return badRequest("Route not found");
+}
+
+const TaskReminderWhatsAppSettingsSchema = z.object({
+  botId: z.string().max(80).optional(),
+  templateName: z.string().max(120).optional(),
+  templateLanguage: z.string().min(2).max(10).optional(),
+});
+
+function resolveTaskReminderWhatsAppSettings(settings?: {
+  botId?: string;
+  templateName?: string;
+  templateLanguage?: string;
+} | null): Required<TaskReminderWhatsAppSettings> {
+  return {
+    botId: settings?.botId?.trim() ?? "",
+    templateName: settings?.templateName?.trim() ?? "",
+    templateLanguage: settings?.templateLanguage?.trim() || "es",
+  };
+}
+
+async function handleTaskReminderWhatsAppRoutes(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer,
+  auth: AuthContext
+): Promise<APIGatewayProxyResultV2 | null> {
+  const rawPath = event.rawPath ?? event.requestContext.http.path ?? "";
+  if (!rawPath.includes("/tenants/me/task-reminder-whatsapp")) return null;
+
+  const method = (event.requestContext.http.method ?? "").toUpperCase();
+
+  assertMemberRole(auth);
+  await ensureTenant(auth.tenantId, auth.email, auth.name);
+
+  if (method === "GET") {
+    const tenant = await getTenant(auth.tenantId);
+    return ok(resolveTaskReminderWhatsAppSettings(tenant?.taskReminderWhatsApp));
+  }
+
+  if (method === "PUT") {
+    const body = parseJsonBody(event);
+    const parsed = TaskReminderWhatsAppSettingsSchema.safeParse(body);
+    if (!parsed.success) {
+      return badRequest(formatZodError(parsed.error));
+    }
+
+    const templateName = parsed.data.templateName?.trim() ?? "";
+    const templateLanguage = parsed.data.templateLanguage?.trim() || "es";
+    const botId = parsed.data.botId?.trim() ?? "";
+    const taskReminderWhatsApp: TaskReminderWhatsAppSettings = templateName
+      ? {
+          templateName,
+          templateLanguage,
+          ...(botId ? { botId } : {}),
+        }
+      : {};
+
+    const updated = await updateTenant(auth.tenantId, { taskReminderWhatsApp });
+    return ok(resolveTaskReminderWhatsAppSettings(updated.taskReminderWhatsApp));
   }
 
   return badRequest("Route not found");
@@ -611,6 +672,9 @@ export async function handler(
 
     const inboxSlaResponse = await handleInboxSlaRoutes(event, auth);
     if (inboxSlaResponse) return inboxSlaResponse;
+
+    const taskReminderWhatsAppResponse = await handleTaskReminderWhatsAppRoutes(event, auth);
+    if (taskReminderWhatsAppResponse) return taskReminderWhatsAppResponse;
 
     const reportScheduleResponse = await handleReportScheduleRoutes(event, auth);
     if (reportScheduleResponse) return reportScheduleResponse;
