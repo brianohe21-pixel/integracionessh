@@ -126,6 +126,7 @@ export const es = {
     switchSubaccount: "Cambiar subcuenta",
     onboarding: "Configuración inicial",
     proOnly: "Solo en Pro",
+    comingSoon: "Pronto",
     proOnlyHint: "Disponible solo en el plan Pro",
   },
   auth: {

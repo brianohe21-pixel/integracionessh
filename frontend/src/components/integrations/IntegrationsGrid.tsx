@@ -5,6 +5,7 @@ import { LayoutGrid } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { Badge } from "@/components/ui/Badge";
 import type { IntegrationCatalogItem } from "@/hooks/useMicrosoftSso";
+import { isGoogleBusinessComingSoon } from "@/lib/feature-flags";
 
 const INTEGRATION_ROUTES: Record<string, string> = {
   "microsoft-sso": "/integrations/microsoft",
@@ -25,19 +26,26 @@ const INTEGRATION_I18N: Record<
   },
 };
 
+function isComingSoon(id: string): boolean {
+  return id === "google-business-profile" && isGoogleBusinessComingSoon();
+}
+
 export function IntegrationsGrid({ items }: { items: IntegrationCatalogItem[] }) {
   const t = useT();
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {items.map((item) => {
-        const route = INTEGRATION_ROUTES[item.id];
+        const comingSoon = isComingSoon(item.id);
+        const route = comingSoon ? undefined : INTEGRATION_ROUTES[item.id];
         const i18n = INTEGRATION_I18N[item.id];
-        const statusLabel = item.configured
-          ? item.enabled
-            ? t("integrationsPage.enabled")
-            : t("integrationsPage.configured")
-          : t("integrationsPage.notConfigured");
+        const statusLabel = comingSoon
+          ? t("integrationsPage.comingSoon")
+          : item.configured
+            ? item.enabled
+              ? t("integrationsPage.enabled")
+              : t("integrationsPage.configured")
+            : t("integrationsPage.notConfigured");
 
         return (
           <div
@@ -56,7 +64,7 @@ export function IntegrationsGrid({ items }: { items: IntegrationCatalogItem[] })
                   <p className="text-sm text-secondary">{statusLabel}</p>
                 </div>
               </div>
-              <Badge variant={item.configured ? "success" : "default"}>
+              <Badge variant={comingSoon ? "default" : item.configured ? "success" : "default"}>
                 {statusLabel}
               </Badge>
             </div>
