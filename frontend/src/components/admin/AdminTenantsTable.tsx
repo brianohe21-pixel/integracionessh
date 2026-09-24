@@ -5,8 +5,21 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { TableContainer } from "@/components/ui/TableContainer";
+import {
+  AdminProPlanLimitsDrawer,
+  tenantHasProPlanLimits,
+} from "@/components/admin/AdminProPlanLimitsDrawer";
+import {
+  AdminTenantActionsMenu,
+  type AdminTenantDrawerAction,
+} from "@/components/admin/AdminTenantActionsMenu";
+import {
+  AdminTenantLaw2300Drawer,
+  AdminTenantPlanDrawer,
+  AdminTenantStatusDrawer,
+} from "@/components/admin/AdminTenantSettingsDrawers";
 import { useT } from "@/i18n/context";
-import type { Tenant, TenantPlan } from "@/types";
+import type { ResellerLimitsOverride, Tenant, TenantPlan } from "@/types";
 
 const PAGE_SIZE = 20;
 
@@ -14,11 +27,16 @@ type PlanFilter = "" | TenantPlan;
 type StatusFilter = "" | Tenant["status"];
 type RoleFilter = "" | "admin" | "member";
 
+type TenantDrawerState = {
+  action: AdminTenantDrawerAction;
+  tenant: Tenant;
+} | null;
+
 interface AdminTenantsTableProps {
   tenants: Tenant[];
   isLoading: boolean;
   isUpdating: boolean;
-  tenantFeedback: { tenantId: string; type: "success" | "error" } | null;
+  tenantFeedback: { tenantId: string; type: "success" | "error"; message?: string } | null;
   isTenantAlsoAdmin: (tenant: Tenant) => boolean;
   tenantPlanLabel: (plan: TenantPlan) => string;
   onTenantUpdate: (
@@ -27,6 +45,7 @@ interface AdminTenantsTableProps {
       plan?: TenantPlan;
       status?: "active" | "suspended";
       law2300Exempt?: boolean;
+      planLimitsOverride?: ResellerLimitsOverride | null;
     }
   ) => Promise<void>;
   formatDate: (iso: string) => string;
@@ -48,10 +67,19 @@ export function AdminTenantsTable({
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("");
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("");
   const [page, setPage] = useState(1);
+  const [drawer, setDrawer] = useState<TenantDrawerState>(null);
 
   useEffect(() => {
     setPage(1);
   }, [query, planFilter, statusFilter, roleFilter]);
+
+  useEffect(() => {
+    setDrawer((current) => {
+      if (!current) return null;
+      const fresh = tenants.find((item) => item.tenantId === current.tenant.tenantId);
+      return fresh ? { ...current, tenant: fresh } : current;
+    });
+  }, [tenants]);
 
   const filteredTenants = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -152,8 +180,11 @@ export function AdminTenantsTable({
                   <th className="px-4 py-3 font-medium">{t("admin.users.subscription")}</th>
                   <th className="px-4 py-3 font-medium">{t("admin.users.law2300")}</th>
                   <th className="px-4 py-3 font-medium">{t("admin.users.periodEnd")}</th>
-                  <th className="px-4 py-3 pr-6 font-medium whitespace-nowrap">
+                  <th className="px-4 py-3 font-medium whitespace-nowrap">
                     {t("common.date")}
+                  </th>
+                  <th className="px-4 py-3 pr-6 font-medium text-right">
+                    {t("admin.users.actions")}
                   </th>
                 </tr>
               </thead>
@@ -171,21 +202,12 @@ export function AdminTenantsTable({
                     </td>
                     <td className="px-4 py-3">
                       <div className="space-y-1">
-                        <select
-                          value={tenant.plan}
-                          disabled={isUpdating}
-                          onChange={(event) =>
-                            void onTenantUpdate(tenant, {
-                              plan: event.target.value as TenantPlan,
-                            })
-                          }
-                          className="rounded-lg border border-default px-2 py-1 text-sm"
-                        >
-                          <option value="free">{t("common.planFree")}</option>
-                          <option value="starter">{t("common.planStarter")}</option>
-                          <option value="pro">{t("common.planPro")}</option>
-                          <option value="reseller">{t("common.planReseller")}</option>
-                        </select>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <Badge variant="info">{tenantPlanLabel(tenant.plan)}</Badge>
+                          {tenant.plan === "pro" && tenantHasProPlanLimits(tenant) ? (
+                            <Badge variant="accent">{t("admin.users.proLimitsCustomBadge")}</Badge>
+                          ) : null}
+                        </div>
                         {tenantFeedback?.tenantId === tenant.tenantId ? (
                           <p
                             className={`text-xs ${
@@ -194,57 +216,48 @@ export function AdminTenantsTable({
                                 : "text-red-600"
                             }`}
                           >
-                            {tenantFeedback.type === "success"
-                              ? t("admin.users.planUpdated")
-                              : t("admin.users.planUpdateError")}
+                            {tenantFeedback.message
+                              ? tenantFeedback.message
+                              : tenantFeedback.type === "success"
+                                ? t("admin.users.planUpdated")
+                                : t("admin.users.planUpdateError")}
                           </p>
                         ) : null}
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <select
-                        value={tenant.status}
-                        disabled={isUpdating}
-                        onChange={(event) =>
-                          void onTenantUpdate(tenant, {
-                            status: event.target.value as "active" | "suspended",
-                          })
-                        }
-                        className="rounded-lg border border-default px-2 py-1 text-sm"
+                      <Badge
+                        variant={tenant.status === "active" ? "success" : "warning"}
                       >
-                        <option value="active">{t("common.active")}</option>
-                        <option value="suspended">{t("common.suspended")}</option>
-                      </select>
+                        {tenant.status === "active"
+                          ? t("common.active")
+                          : t("common.suspended")}
+                      </Badge>
                     </td>
                     <td className="px-4 py-3 text-secondary">
                       {tenant.subscriptionStatus
                         ? t(`billing.subscriptionStatus.${tenant.subscriptionStatus}`)
                         : "—"}
-                      <span className="block text-xs text-muted">
-                        {tenantPlanLabel(tenant.plan)}
-                      </span>
                     </td>
                     <td className="px-4 py-3">
-                      <label className="inline-flex items-center gap-2 text-sm text-secondary">
-                        <input
-                          type="checkbox"
-                          checked={tenant.law2300Exempt ?? false}
-                          disabled={isUpdating}
-                          onChange={(event) =>
-                            void onTenantUpdate(tenant, {
-                              law2300Exempt: event.target.checked,
-                            })
-                          }
-                          className="rounded border-default"
-                        />
-                        <span>{t("admin.users.law2300Exempt")}</span>
-                      </label>
+                      <Badge variant={tenant.law2300Exempt ? "warning" : "default"}>
+                        {tenant.law2300Exempt
+                          ? t("admin.users.law2300Exempt")
+                          : t("admin.users.law2300Applies")}
+                      </Badge>
                     </td>
                     <td className="px-4 py-3 text-secondary whitespace-nowrap">
                       {tenant.currentPeriodEnd ? formatDate(tenant.currentPeriodEnd) : "—"}
                     </td>
-                    <td className="px-4 py-3 pr-6 text-secondary whitespace-nowrap">
+                    <td className="px-4 py-3 text-secondary whitespace-nowrap">
                       {formatDate(tenant.createdAt)}
+                    </td>
+                    <td className="px-4 py-3 pr-6 text-right">
+                      <AdminTenantActionsMenu
+                        tenant={tenant}
+                        busy={isUpdating}
+                        onOpenDrawer={(action) => setDrawer({ action, tenant })}
+                      />
                     </td>
                   </tr>
                 ))}
@@ -288,6 +301,54 @@ export function AdminTenantsTable({
           </div>
         </>
       )}
+
+      {drawer?.action === "plan" ? (
+        <AdminTenantPlanDrawer
+          tenant={drawer.tenant}
+          saving={isUpdating}
+          onClose={() => setDrawer(null)}
+          onSave={async (plan) => {
+            await onTenantUpdate(drawer.tenant, { plan });
+            setDrawer(null);
+          }}
+        />
+      ) : null}
+
+      {drawer?.action === "status" ? (
+        <AdminTenantStatusDrawer
+          tenant={drawer.tenant}
+          saving={isUpdating}
+          onClose={() => setDrawer(null)}
+          onSave={async (status) => {
+            await onTenantUpdate(drawer.tenant, { status });
+            setDrawer(null);
+          }}
+        />
+      ) : null}
+
+      {drawer?.action === "law2300" ? (
+        <AdminTenantLaw2300Drawer
+          tenant={drawer.tenant}
+          saving={isUpdating}
+          onClose={() => setDrawer(null)}
+          onSave={async (law2300Exempt) => {
+            await onTenantUpdate(drawer.tenant, { law2300Exempt });
+            setDrawer(null);
+          }}
+        />
+      ) : null}
+
+      {drawer?.action === "quotas" ? (
+        <AdminProPlanLimitsDrawer
+          tenant={drawer.tenant}
+          saving={isUpdating}
+          onClose={() => setDrawer(null)}
+          onSave={async (planLimitsOverride) => {
+            await onTenantUpdate(drawer.tenant, { planLimitsOverride });
+            setDrawer(null);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

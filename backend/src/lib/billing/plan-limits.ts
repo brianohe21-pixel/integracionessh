@@ -270,6 +270,14 @@ export function getEffectivePlanLimits(tenant: Tenant): PlanLimits {
     return applyLimitsOverride(emptyNumericLimits(base.canCustomizeBranding), trimmed);
   }
 
+  if (
+    normalizeTenantPlan(tenant.plan) === "pro" &&
+    !isSubaccount &&
+    tenant.planLimitsOverride
+  ) {
+    return applyLimitsOverride(base, tenant.planLimitsOverride);
+  }
+
   return base;
 }
 

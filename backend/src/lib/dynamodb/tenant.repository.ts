@@ -238,6 +238,26 @@ export async function clearTenantPricePerMessage(tenantId: string): Promise<Tena
   return stripKeys(result.Attributes ?? {});
 }
 
+export async function clearTenantPlanLimitsOverride(tenantId: string): Promise<Tenant> {
+  const result = await docClient.send(
+    new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: keys(tenantId),
+      UpdateExpression: "REMOVE #planLimitsOverride SET #updatedAt = :updatedAt",
+      ExpressionAttributeNames: {
+        "#planLimitsOverride": "planLimitsOverride",
+        "#updatedAt": "updatedAt",
+      },
+      ExpressionAttributeValues: {
+        ":updatedAt": new Date().toISOString(),
+      },
+      ReturnValues: "ALL_NEW",
+    })
+  );
+
+  return stripKeys(result.Attributes ?? {});
+}
+
 export async function deleteTenant(tenantId: string): Promise<void> {
   const existing = await getTenant(tenantId);
   if (existing?.parentTenantId) {

@@ -16,7 +16,7 @@ import {
 } from "@/hooks/useAdminCognitoUsers";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useT } from "@/i18n/context";
-import type { CognitoUserSummary, ResellerPlanDefaults, Tenant, TenantPlan } from "@/types";
+import type { CognitoUserSummary, ResellerLimitsOverride, ResellerPlanDefaults, Tenant, TenantPlan } from "@/types";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { TableContainer } from "@/components/ui/TableContainer";
@@ -123,6 +123,7 @@ export default function AdminUsersPage() {
   const [tenantFeedback, setTenantFeedback] = useState<{
     tenantId: string;
     type: "success" | "error";
+    message?: string;
   } | null>(null);
   const [defaultsForm, setDefaultsForm] = useState<ResellerPlanDefaults | null>(null);
   const [defaultsSaved, setDefaultsSaved] = useState(false);
@@ -174,17 +175,55 @@ export default function AdminUsersPage() {
       status?: "active" | "suspended";
       law2300Exempt?: boolean;
       resellerConfig?: Partial<Tenant["resellerConfig"]>;
+      planLimitsOverride?: ResellerLimitsOverride | null;
     }
   ) {
     try {
       await updateTenant.mutateAsync({ tenantId: tenant.tenantId, ...updates });
       if (updates.plan !== undefined) {
         setTenantFeedback({ tenantId: tenant.tenantId, type: "success" });
+      } else if (updates.status !== undefined) {
+        setTenantFeedback({
+          tenantId: tenant.tenantId,
+          type: "success",
+          message: t("admin.users.statusUpdated"),
+        });
+      } else if (updates.law2300Exempt !== undefined) {
+        setTenantFeedback({
+          tenantId: tenant.tenantId,
+          type: "success",
+          message: t("admin.users.law2300Updated"),
+        });
+      } else if (updates.planLimitsOverride !== undefined) {
+        setTenantFeedback({
+          tenantId: tenant.tenantId,
+          type: "success",
+          message: t("admin.users.proLimitsSaved"),
+        });
       }
-    } catch {
+    } catch (error) {
       if (updates.plan !== undefined) {
         setTenantFeedback({ tenantId: tenant.tenantId, type: "error" });
+      } else if (updates.status !== undefined) {
+        setTenantFeedback({
+          tenantId: tenant.tenantId,
+          type: "error",
+          message: t("admin.users.statusUpdateError"),
+        });
+      } else if (updates.law2300Exempt !== undefined) {
+        setTenantFeedback({
+          tenantId: tenant.tenantId,
+          type: "error",
+          message: t("admin.users.law2300UpdateError"),
+        });
+      } else if (updates.planLimitsOverride !== undefined) {
+        setTenantFeedback({
+          tenantId: tenant.tenantId,
+          type: "error",
+          message: t("admin.users.proLimitsSaveError"),
+        });
       }
+      throw error;
     }
   }
 
