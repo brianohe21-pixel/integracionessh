@@ -23,6 +23,34 @@ export function conversationInitials(
   return fallback?.slice(-2).toUpperCase() ?? "?";
 }
 
+const AVATAR_PALETTE = [
+  { bg: "bg-[#25D366]", text: "text-white" },
+  { bg: "bg-[#128C7E]", text: "text-white" },
+  { bg: "bg-[#0084FF]", text: "text-white" },
+  { bg: "bg-[#26A5E4]", text: "text-white" },
+  { bg: "bg-[#DD2A7B]", text: "text-white" },
+  { bg: "bg-[#8134AF]", text: "text-white" },
+  { bg: "bg-[#F58529]", text: "text-white" },
+  { bg: "bg-[#EA4335]", text: "text-white" },
+  { bg: "bg-[#7C3AED]", text: "text-white" },
+  { bg: "bg-[#0EA5E9]", text: "text-white" },
+  { bg: "bg-[#14B8A6]", text: "text-white" },
+  { bg: "bg-[#F59E0B]", text: "text-white" },
+] as const;
+
+export function conversationAvatarColor(
+  contactName?: string,
+  phoneNumber?: string,
+  participantId?: string
+): (typeof AVATAR_PALETTE)[number] {
+  const seed = (contactName?.trim() || phoneNumber || participantId || "?").toLowerCase();
+  let hash = 0;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  }
+  return AVATAR_PALETTE[hash % AVATAR_PALETTE.length];
+}
+
 type ChannelAvatarProps = {
   channel?: Channel;
   size?: "sm" | "md" | "lg";
@@ -92,6 +120,7 @@ export function ConversationAvatar({
   className,
 }: ConversationAvatarProps) {
   const initials = conversationInitials(contactName, phoneNumber, participantId);
+  const color = conversationAvatarColor(contactName, phoneNumber, participantId);
   const brand = getChannelBrandStyle(channel);
   const badge = channelBadgeSizes[size];
 
@@ -99,8 +128,10 @@ export function ConversationAvatar({
     <div className={cn("relative flex-shrink-0", className)}>
       <div
         className={cn(
-          "flex items-center justify-center rounded-full bg-accent-muted font-semibold text-accent shadow-sm ring-2 ring-surface-elevated",
-          avatarSizes[size]
+          "flex items-center justify-center rounded-full font-semibold shadow-sm ring-2 ring-surface-elevated",
+          avatarSizes[size],
+          color.bg,
+          color.text
         )}
       >
         {initials}

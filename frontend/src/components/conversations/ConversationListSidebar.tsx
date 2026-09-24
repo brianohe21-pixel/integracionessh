@@ -9,14 +9,12 @@ import { Select } from "@/components/ui/Input";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { Tabs } from "@/components/ui/Tabs";
 import { ConversationListItem } from "@/components/conversations/ConversationListItem";
-import { resolveWhatsAppRisk } from "@/hooks/useWhatsAppRisk";
 import { useWhatsAppChannels } from "@/hooks/useWhatsAppChannels";
 import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 import type { Bot, Advisor, Channel, Conversation, InboxSlaStatus, WorkflowStatus, InteractionCategory } from "@/types";
 import { INTERACTION_CATEGORIES } from "@/types";
 import { interactionCategoryLabelKey } from "@/lib/interaction-categories";
-import type { WhatsAppRiskResponse } from "@/hooks/useWhatsAppRisk";
 
 type ListTab = "all" | "unread" | "mine" | "sla_breached" | "queue";
 
@@ -72,7 +70,6 @@ type Props = {
   onClaimFromQueue: (conv: Conversation) => Promise<void>;
   claimPending: boolean;
   showOnMobile: boolean;
-  whatsappRisk?: WhatsAppRiskResponse;
 };
 
 export function ConversationListSidebar({
@@ -126,7 +123,6 @@ export function ConversationListSidebar({
   onClaimFromQueue,
   claimPending,
   showOnMobile,
-  whatsappRisk,
 }: Props) {
   const t = useT();
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -153,13 +149,13 @@ export function ConversationListSidebar({
         showOnMobile ? "flex" : "hidden lg:flex"
       )}
     >
-      <div className="conversations-sidebar-header border-b border-default px-4 py-4">
+      <div className="conversations-sidebar-header border-b border-default px-3 py-3 lg:px-4 lg:py-4">
         <div className="mb-1 flex items-start justify-between gap-2">
-          <div>
+          <div className="min-w-0">
             <h1 className="text-lg font-semibold tracking-tight text-primary">
               {advisorMode ? t("inbox.title") : t("conversations.title")}
             </h1>
-            <p className="mt-0.5 text-xs text-secondary">
+            <p className="mt-0.5 hidden text-xs text-secondary lg:block">
               {t("conversations.listCount", { count: filteredConversations.length })}
             </p>
           </div>
@@ -190,7 +186,7 @@ export function ConversationListSidebar({
           onChange={(e) => onSearchChange(e.target.value)}
           onClear={() => onSearchChange("")}
           placeholder={t("conversations.searchPlaceholder")}
-          className="mb-3 mt-3"
+          className="mb-2 mt-2 lg:mb-3 lg:mt-3"
         />
 
         <Tabs<ListTab>
@@ -335,7 +331,7 @@ export function ConversationListSidebar({
             </button>
           )}
           {!advisorMode && filteredConversations.length > 0 && (
-            <label className="flex items-center gap-2 text-xs text-secondary">
+            <label className="hidden items-center gap-2 text-xs text-secondary lg:flex">
               <input
                 type="checkbox"
                 checked={
@@ -352,7 +348,7 @@ export function ConversationListSidebar({
       )}
 
       {!advisorMode && selectedConversationIds.size > 0 && (
-        <div className="flex items-center justify-between gap-2 border-b border-default bg-accent-muted/50 px-4 py-2.5">
+        <div className="hidden items-center justify-between gap-2 border-b border-default bg-accent-muted/50 px-4 py-2.5 lg:flex">
           <Badge variant="accent">
             {t("conversations.bulkSelected", { count: selectedConversationIds.size })}
           </Badge>
@@ -424,11 +420,6 @@ export function ConversationListSidebar({
               modeHumanLabel={t("conversations.modeHuman")}
               modeBotLabel={t("conversations.modeBot")}
               takeConversationLabel={t("conversations.takeConversation")}
-              whatsappRisk={
-                (conv.channel ?? "whatsapp") === "whatsapp"
-                  ? resolveWhatsAppRisk(whatsappRisk, conv.botId)
-                  : null
-              }
             />
           );
         })}

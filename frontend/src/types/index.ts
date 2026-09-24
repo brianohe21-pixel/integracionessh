@@ -276,6 +276,10 @@ export interface BillingUsageResponse {
   limits: PlanLimits;
   plan: TenantPlan;
   subscription?: SubscriptionStatus;
+  from?: string;
+  to?: string;
+  periods?: MonthlyUsage[];
+  paymentProvider?: string;
 }
 
 export type WhatsAppChannelStatus = "active" | "pending_registration" | "disconnected";
@@ -1065,6 +1069,25 @@ export interface CallingMetrics {
   byBot: CallingMetricsBotRow[];
 }
 
+export interface WhatsAppUsageDayCounts {
+  apiOutbound: number;
+  appEcho: number;
+  inbound: number;
+}
+
+export interface WhatsAppUsageDailyPoint extends WhatsAppUsageDayCounts {
+  date: string;
+  total: number;
+}
+
+export interface WhatsAppUsageReport {
+  from: string;
+  to: string;
+  botId?: string;
+  totals: WhatsAppUsageDayCounts & { total: number };
+  daily: WhatsAppUsageDailyPoint[];
+}
+
 export type MessageRole = "user" | "assistant" | "advisor" | "system";
 
 export interface EmailMessageAttachment {
@@ -1334,6 +1357,66 @@ export interface Campaign {
   archivedAt?: string;
   requireOptIn?: boolean;
   requestDlr?: boolean;
+}
+
+export interface CampaignPerformanceTotals {
+  campaigns: number;
+  sent: number;
+  delivered: number;
+  read: number;
+  failed: number;
+  deliveryFailed: number;
+  replies: number;
+  deliveryRate: number;
+  readRate: number;
+  replyRate: number;
+}
+
+export interface CampaignPerformanceRow {
+  campaignId: string;
+  name: string;
+  botId: string;
+  channel: string;
+  templateName: string;
+  language: string;
+  status: CampaignStatus;
+  createdAt: string;
+  startedAt?: string;
+  completedAt?: string;
+  total: number;
+  sent: number;
+  delivered: number;
+  read: number;
+  failed: number;
+  deliveryFailed: number;
+  replies: number;
+  deliveryRate: number;
+  readRate: number;
+  replyRate: number;
+}
+
+export interface CampaignTemplateAggregate {
+  templateName: string;
+  language: string;
+  campaigns: number;
+  sent: number;
+  delivered: number;
+  read: number;
+  failed: number;
+  deliveryFailed: number;
+  replies: number;
+  deliveryRate: number;
+  readRate: number;
+  replyRate: number;
+}
+
+export interface CampaignPerformanceReport {
+  from: string;
+  to: string;
+  botId?: string;
+  totals: CampaignPerformanceTotals;
+  campaigns: CampaignPerformanceRow[];
+  byTemplate: CampaignTemplateAggregate[];
 }
 
 export interface CampaignMetrics {

@@ -77,7 +77,7 @@ export function AdvisorCopilotPanel({
   }
 
   return (
-    <div className="conversations-copilot border-t border-default py-2.5">
+    <div className="conversations-copilot hidden border-t border-default py-2.5 lg:block">
       <div className="flex items-center gap-2">
         <button
           type="button"

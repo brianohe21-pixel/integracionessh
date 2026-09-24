@@ -4,11 +4,10 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { ConversationAvatar } from "@/components/conversations/conversation-ui";
 import { useUnreadMessages } from "@/components/notifications/UnreadMessagesProvider";
-import { WhatsAppRiskBadge } from "@/components/whatsapp/WhatsAppRiskBadge";
 import { cn } from "@/lib/utils";
 import { conversationHasMetaAdsAttribution } from "@/lib/meta-ads";
 import { useT } from "@/i18n/context";
-import type { Conversation, InboxSlaStatus, TenantWhatsAppRiskSummary } from "@/types";
+import type { Conversation, InboxSlaStatus } from "@/types";
 
 type Props = {
   conversation: Conversation;
@@ -33,7 +32,6 @@ type Props = {
   modeHumanLabel: string;
   modeBotLabel: string;
   takeConversationLabel: string;
-  whatsappRisk?: TenantWhatsAppRiskSummary | null;
 };
 
 export function ConversationListItem({
@@ -59,7 +57,6 @@ export function ConversationListItem({
   modeHumanLabel,
   modeBotLabel,
   takeConversationLabel,
-  whatsappRisk,
 }: Props) {
   const t = useT();
   const { getUnreadCount } = useUnreadMessages();
@@ -79,6 +76,7 @@ export function ConversationListItem({
     conversation.emailSubject,
     slaText,
   ].filter(Boolean);
+  const mobilePreview = conversation.emailSubject?.trim() || channelLabel;
 
   return (
     <div
@@ -90,7 +88,7 @@ export function ConversationListItem({
       )}
     >
       {showCheckbox ? (
-        <div className="flex items-center pl-3">
+        <div className="hidden items-center pl-3 lg:flex">
           <input
             type="checkbox"
             checked={checked}
@@ -134,11 +132,12 @@ export function ConversationListItem({
                 {relativeTime}
               </span>
             </div>
-            <p className="truncate text-xs text-secondary">
+            <p className="truncate text-xs text-secondary lg:hidden">{mobilePreview}</p>
+            <p className="hidden truncate text-xs text-secondary lg:block">
               {previewParts.join(" · ")}
             </p>
             {hasMetaAdsAttribution ? (
-              <div className="mt-1">
+              <div className="mt-1 hidden lg:block">
                 <Badge variant="warning" className="text-[10px]">
                   {conversation.attribution?.source === "meta_ctwa"
                     ? t("ads.badgeCtwa")
@@ -147,19 +146,14 @@ export function ConversationListItem({
               </div>
             ) : null}
             {conversation.interactionCategory && categoryLabel ? (
-              <div className="mt-1">
+              <div className="mt-1 hidden lg:block">
                 <Badge variant="info" className="text-[10px]">
                   {categoryLabel}
                 </Badge>
               </div>
             ) : null}
-            {whatsappRisk && whatsappRisk.risk !== "none" && whatsappRisk.risk !== "ok" ? (
-              <div className="mt-1">
-                <WhatsAppRiskBadge risk={whatsappRisk} compact />
-              </div>
-            ) : null}
             {elapsedSeconds !== null && elapsedLabel ? (
-              <p className="mt-0.5 truncate text-[11px] font-medium text-warning">
+              <p className="mt-0.5 hidden truncate text-[11px] font-medium text-warning lg:block">
                 {elapsedLabel}
               </p>
             ) : null}

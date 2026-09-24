@@ -15,7 +15,11 @@ import {
 } from "../../lib/dynamodb/payment.repository.js";
 import { activateTenantPlan } from "../../lib/billing/activate-plan.js";
 import { getPlanLimits } from "../../lib/billing/plan-limits.js";
-import { getMonthlyUsage } from "../../lib/dynamodb/usage.repository.js";
+import {
+  getMonthlyUsage,
+  listMonthlyUsageInRange,
+  sumMonthlyUsage,
+} from "../../lib/dynamodb/usage.repository.js";
 import {
   getStripe,
   getStripeWebhookSecret,
@@ -288,15 +292,43 @@ export async function handler(
     }
 
     if (method === "GET" && path.endsWith("/billing/usage")) {
-      const usage = await getMonthlyUsage(tenant.tenantId);
+      const qs = event.queryStringParameters ?? {};
+      const from = qs.from?.trim();
+      const to = qs.to?.trim();
       const plan = tenant.plan ?? "free";
       const limits = getPlanLimits(plan);
+      const paymentProvider =
+        tenant.paymentProvider ?? (isWompiConfigured() ? "wompi" : "stripe");
+
+      if (from && to) {
+        const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+        if (!DATE_ONLY.test(from) || !DATE_ONLY.test(to)) {
+          return badRequest("from and to must be YYYY-MM-DD");
+        }
+        if (from > to) {
+          return badRequest("from must be before or equal to to");
+        }
+        const periods = await listMonthlyUsageInRange(tenant.tenantId, from, to);
+        const usage = sumMonthlyUsage(tenant.tenantId, periods);
+        return ok({
+          from,
+          to,
+          usage,
+          periods,
+          limits,
+          plan,
+          subscription: tenant.subscriptionStatus ?? "none",
+          paymentProvider,
+        });
+      }
+
+      const usage = await getMonthlyUsage(tenant.tenantId);
       return ok({
         usage,
         limits,
         plan,
         subscription: tenant.subscriptionStatus ?? "none",
-        paymentProvider: tenant.paymentProvider ?? (isWompiConfigured() ? "wompi" : "stripe"),
+        paymentProvider,
       });
     }
 

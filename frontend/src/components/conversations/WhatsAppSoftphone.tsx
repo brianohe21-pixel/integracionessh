@@ -123,7 +123,7 @@ export function WhatsAppSoftphone({ conversation, advisorMode = false }: Props) 
 
   if (!showFullBar) {
     return (
-      <div className="flex items-center justify-end gap-2 border-b border-default px-4 py-1.5 sm:px-6">
+      <div className="hidden items-center justify-end gap-2 border-b border-default px-4 py-1.5 sm:px-6 lg:flex">
         <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
         <Button
           type="button"

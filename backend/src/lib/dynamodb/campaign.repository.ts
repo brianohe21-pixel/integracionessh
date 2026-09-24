@@ -87,6 +87,13 @@ export async function getCampaign(
   return campaign;
 }
 
+function mapCampaignItem(item: Record<string, unknown>): Campaign {
+  const { PK: _pk, SK: _sk, GSI1PK: _gsi1pk, GSI1SK: _gsi1sk, ...rest } = item;
+  const campaign = rest as unknown as Campaign;
+  if (campaign.replyCount === undefined) campaign.replyCount = 0;
+  return campaign;
+}
+
 export async function listCampaigns(
   tenantId: string,
   limit = 50
@@ -105,12 +112,37 @@ export async function listCampaigns(
   );
 
   return (result.Items ?? [])
-    .map(({ PK, SK, GSI1PK, GSI1SK, ...rest }) => {
-      const campaign = rest as Campaign;
-      if (campaign.replyCount === undefined) campaign.replyCount = 0;
-      return campaign;
-    })
+    .map((item) => mapCampaignItem(item as Record<string, unknown>))
     .filter((campaign) => !campaign.archivedAt);
+}
+
+export async function listAllCampaigns(tenantId: string): Promise<Campaign[]> {
+  const items: Campaign[] = [];
+  let lastKey: Record<string, unknown> | undefined;
+
+  do {
+    const result = await docClient.send(
+      new QueryCommand({
+        TableName: TABLE_NAME,
+        KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+        ExpressionAttributeValues: {
+          ":pk": `TENANT#${tenantId}`,
+          ":sk": "CAMPAIGN#",
+        },
+        ScanIndexForward: false,
+        ExclusiveStartKey: lastKey,
+      })
+    );
+
+    for (const item of result.Items ?? []) {
+      const campaign = mapCampaignItem(item as Record<string, unknown>);
+      if (!campaign.archivedAt) items.push(campaign);
+    }
+
+    lastKey = result.LastEvaluatedKey as Record<string, unknown> | undefined;
+  } while (lastKey);
+
+  return items;
 }
 
 export async function updateCampaignStatus(

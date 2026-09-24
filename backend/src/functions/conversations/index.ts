@@ -1184,8 +1184,15 @@ export async function handler(
         return badRequest("WhatsApp link is only available for WhatsApp conversations");
       }
 
+      const url = buildWaMeLink(conversation.phoneNumber);
+      if (!url) {
+        return badRequest(
+          "WhatsApp link is not available because this conversation has no phone number"
+        );
+      }
+
       return ok({
-        url: buildWaMeLink(conversation.phoneNumber),
+        url,
         phoneNumber: conversation.phoneNumber,
       });
     }
