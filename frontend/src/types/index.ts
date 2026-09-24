@@ -154,6 +154,12 @@ export interface InboxSlaSettings {
   firstResponseMinutes: number;
 }
 
+export interface TaskReminderWhatsAppSettings {
+  botId?: string;
+  templateName?: string;
+  templateLanguage?: string;
+}
+
 export type ReportScheduleFrequency = "daily" | "weekly";
 
 export interface MetricsReportSchedule {
@@ -237,6 +243,7 @@ export interface Tenant {
   resellerConfig?: ResellerConfig;
   branding?: TenantBranding;
   inboxSla?: InboxSlaSettings;
+  taskReminderWhatsApp?: TaskReminderWhatsAppSettings;
   websiteAnalytics?: WebsiteAnalyticsSettings;
   law2300Exempt?: boolean;
   stripeCustomerId?: string;

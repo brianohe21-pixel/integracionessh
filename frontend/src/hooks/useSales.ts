@@ -14,6 +14,7 @@ import type {
   SalesTaskCommentsListResponse,
   SalesTasksListResponse,
   SequenceEnrollment,
+  TaskReminderWhatsAppSettings,
 } from "@/types";
 
 export function useSalesPipelines() {
@@ -114,6 +115,29 @@ export function useSalesTasks(options?: {
   return useQuery({
     queryKey: ["sales", "tasks", options],
     queryFn: () => api.get<SalesTasksListResponse>(`/sales/tasks${qs}`),
+  });
+}
+
+export function useTaskReminderWhatsAppSettings(enabled = true) {
+  return useQuery({
+    queryKey: ["sales", "tasks", "reminder-settings"],
+    queryFn: () =>
+      api.get<Required<TaskReminderWhatsAppSettings>>("/sales/tasks/reminder-settings"),
+    enabled,
+  });
+}
+
+export function useUpdateTaskReminderWhatsAppSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: TaskReminderWhatsAppSettings) =>
+      api.put<Required<TaskReminderWhatsAppSettings>>(
+        "/sales/tasks/reminder-settings",
+        body
+      ),
+    onSuccess: (data) => {
+      qc.setQueryData(["sales", "tasks", "reminder-settings"], data);
+    },
   });
 }
 

@@ -64,6 +64,7 @@ import {
   updateSalesTaskComment,
 } from "../../lib/dynamodb/sales-task-comment.repository.js";
 import { getLeadById } from "../../lib/dynamodb/lead.repository.js";
+import { getTenant, updateTenant } from "../../lib/dynamodb/tenant.repository.js";
 import { getSalesFunnelMetrics } from "../../lib/dynamodb/sales-funnel-metrics.repository.js";
 import { moveOpportunityStage } from "../../lib/sales/opportunities/stage.js";
 import { getOpportunityDetail } from "../../lib/sales/opportunities/detail.js";
@@ -260,6 +261,24 @@ const CreateTaskCommentSchema = z.object({
 const UpdateTaskCommentSchema = z.object({
   body: z.string().min(1).max(2000),
 });
+
+const TaskReminderWhatsAppSettingsSchema = z.object({
+  botId: z.string().max(80).optional(),
+  templateName: z.string().max(120).optional(),
+  templateLanguage: z.string().min(2).max(10).optional(),
+});
+
+function resolveTaskReminderWhatsAppSettings(settings?: {
+  botId?: string;
+  templateName?: string;
+  templateLanguage?: string;
+} | null): { botId: string; templateName: string; templateLanguage: string } {
+  return {
+    botId: settings?.botId?.trim() ?? "",
+    templateName: settings?.templateName?.trim() ?? "",
+    templateLanguage: settings?.templateLanguage?.trim() || "es",
+  };
+}
 
 function parseSalesPath(rawPath: string): string[] {
   const normalized = rawPath.replace(/\/+$/, "");
@@ -797,6 +816,44 @@ export async function handler(
         if (!updated) return notFound("Enrollment not found");
         return ok(updated);
       }
+    }
+
+    if (
+      method === "GET" &&
+      segments[0] === "tasks" &&
+      segments[1] === "reminder-settings" &&
+      segments.length === 2
+    ) {
+      assertTenantManagerRole(auth);
+      const tenant = await getTenant(auth.tenantId);
+      return ok(resolveTaskReminderWhatsAppSettings(tenant?.taskReminderWhatsApp));
+    }
+
+    if (
+      method === "PUT" &&
+      segments[0] === "tasks" &&
+      segments[1] === "reminder-settings" &&
+      segments.length === 2
+    ) {
+      assertTenantManagerRole(auth);
+      const parsed = TaskReminderWhatsAppSettingsSchema.safeParse(
+        JSON.parse(apiEvent.body ?? "{}")
+      );
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const templateName = parsed.data.templateName?.trim() ?? "";
+      const templateLanguage = parsed.data.templateLanguage?.trim() || "es";
+      const botId = parsed.data.botId?.trim() ?? "";
+      const taskReminderWhatsApp = templateName
+        ? {
+            templateName,
+            templateLanguage,
+            ...(botId ? { botId } : {}),
+          }
+        : {};
+
+      const updated = await updateTenant(auth.tenantId, { taskReminderWhatsApp });
+      return ok(resolveTaskReminderWhatsAppSettings(updated.taskReminderWhatsApp));
     }
 
     if (method === "GET" && segments[0] === "tasks" && segments.length === 1) {

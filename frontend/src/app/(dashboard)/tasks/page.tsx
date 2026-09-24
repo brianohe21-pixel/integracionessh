@@ -9,12 +9,14 @@ import {
   Mail,
   MessageCircle,
   Plus,
+  Settings2,
 } from "lucide-react";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { TaskActionsMenu } from "@/components/tasks/TaskActionsMenu";
 import { TaskCommentsPanel } from "@/components/tasks/TaskCommentsPanel";
 import { TaskFormModal, type TaskFormValues } from "@/components/tasks/TaskFormModal";
+import { TaskWhatsAppReminderSettings } from "@/components/tasks/TaskWhatsAppReminderSettings";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -105,6 +107,7 @@ export default function TasksPage() {
   const [q, setQ] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [editingTask, setEditingTask] = useState<SalesTask | null>(null);
+  const [showWhatsAppSettings, setShowWhatsAppSettings] = useState(false);
 
   const queryStatus =
     statusFilter === "done" ? "done" : statusFilter === "all" ? undefined : "open";
@@ -208,10 +211,21 @@ export default function TasksPage() {
         title={t("tasks.title")}
         subtitle={t("tasks.subtitle")}
         actions={
-          <Button onClick={() => setShowCreate(true)}>
-            <Plus className="h-4 w-4" />
-            {t("tasks.newTask")}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            {canManageAll ? (
+              <Button
+                variant="secondary"
+                onClick={() => setShowWhatsAppSettings(true)}
+              >
+                <Settings2 className="h-4 w-4" />
+                {t("tasks.whatsappTemplateConfigure")}
+              </Button>
+            ) : null}
+            <Button onClick={() => setShowCreate(true)}>
+              <Plus className="h-4 w-4" />
+              {t("tasks.newTask")}
+            </Button>
+          </div>
         }
       />
 
@@ -432,6 +446,11 @@ export default function TasksPage() {
           submitting={updateTask.isPending}
         />
       ) : null}
+
+      <TaskWhatsAppReminderSettings
+        open={showWhatsAppSettings}
+        onClose={() => setShowWhatsAppSettings(false)}
+      />
     </DashboardPage>
   );
 }
