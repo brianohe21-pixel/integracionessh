@@ -1785,6 +1785,9 @@ export const en: Messages = {
     commentsUnknownAuthor: "User",
     commentsToggle: "Comments",
     commentsCount: "{{count}}",
+    commentsEdited: "edited",
+    commentsDeleteTitle: "Delete comment",
+    commentsDeleteConfirm: "Delete this comment? This action cannot be undone.",
     target: {
       advisor: "Advisor",
       contact: "Contact",

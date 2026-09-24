@@ -1,4 +1,4 @@
-import { PutCommand, QueryCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import { DeleteCommand, PutCommand, QueryCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { randomUUID } from "crypto";
 import { docClient, TABLE_NAME } from "./client.js";
 import type { SalesTaskComment } from "../../types/index.js";
@@ -73,6 +73,109 @@ export async function createSalesTaskComment(params: {
   );
 
   return comment;
+}
+
+export async function getSalesTaskCommentById(
+  tenantId: string,
+  taskId: string,
+  commentId: string
+): Promise<(SalesTaskComment & { PK: string; SK: string }) | null> {
+  let lastKey: Record<string, unknown> | undefined;
+
+  for (;;) {
+    const result = await docClient.send(
+      new QueryCommand({
+        TableName: TABLE_NAME,
+        KeyConditionExpression: "PK = :pk AND begins_with(SK, :skPrefix)",
+        FilterExpression: "commentId = :commentId",
+        ExpressionAttributeValues: {
+          ":pk": `TENANT#${tenantId}`,
+          ":skPrefix": `TASKCOMMENT#${taskId}#`,
+          ":commentId": commentId,
+        },
+        ...(lastKey ? { ExclusiveStartKey: lastKey } : {}),
+      })
+    );
+
+    const item = result.Items?.[0];
+    if (item) return item as SalesTaskComment & { PK: string; SK: string };
+    if (!result.LastEvaluatedKey) return null;
+    lastKey = result.LastEvaluatedKey as Record<string, unknown>;
+  }
+}
+
+export async function updateSalesTaskComment(params: {
+  tenantId: string;
+  taskId: string;
+  commentId: string;
+  body: string;
+}): Promise<SalesTaskComment | null> {
+  const existing = await getSalesTaskCommentById(params.tenantId, params.taskId, params.commentId);
+  if (!existing) return null;
+
+  const updatedAt = new Date().toISOString();
+  const body = params.body.trim();
+
+  await docClient.send(
+    new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: { PK: existing.PK, SK: existing.SK },
+      UpdateExpression: "SET #body = :body, updatedAt = :updatedAt",
+      ExpressionAttributeNames: { "#body": "body" },
+      ExpressionAttributeValues: {
+        ":body": body,
+        ":updatedAt": updatedAt,
+      },
+    })
+  );
+
+  const { PK, SK, ...rest } = existing;
+  void PK;
+  void SK;
+  return {
+    ...rest,
+    body,
+    updatedAt,
+  };
+}
+
+export async function deleteSalesTaskComment(params: {
+  tenantId: string;
+  taskId: string;
+  commentId: string;
+}): Promise<boolean> {
+  const existing = await getSalesTaskCommentById(params.tenantId, params.taskId, params.commentId);
+  if (!existing) return false;
+
+  const now = new Date().toISOString();
+
+  await docClient.send(
+    new DeleteCommand({
+      TableName: TABLE_NAME,
+      Key: { PK: existing.PK, SK: existing.SK },
+    })
+  );
+
+  try {
+    await docClient.send(
+      new UpdateCommand({
+        TableName: TABLE_NAME,
+        Key: taskKeys(params.tenantId, params.taskId),
+        UpdateExpression:
+          "SET commentCount = if_not_exists(commentCount, :one) - :one, updatedAt = :now",
+        ConditionExpression: "attribute_not_exists(commentCount) OR commentCount > :zero",
+        ExpressionAttributeValues: {
+          ":zero": 0,
+          ":one": 1,
+          ":now": now,
+        },
+      })
+    );
+  } catch {
+    // ignore counter race when commentCount is already at 0
+  }
+
+  return true;
 }
 
 export async function listSalesTaskComments(

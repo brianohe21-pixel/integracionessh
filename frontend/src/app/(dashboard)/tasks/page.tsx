@@ -105,7 +105,6 @@ export default function TasksPage() {
   const [q, setQ] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [editingTask, setEditingTask] = useState<SalesTask | null>(null);
-  const [expandedCommentsTaskId, setExpandedCommentsTaskId] = useState<string | null>(null);
 
   const queryStatus =
     statusFilter === "done" ? "done" : statusFilter === "all" ? undefined : "open";
@@ -284,8 +283,17 @@ export default function TasksPage() {
             return (
               <div
                 key={task.taskId}
+                role="button"
+                tabIndex={0}
+                onClick={() => setEditingTask(task)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    setEditingTask(task);
+                  }
+                }}
                 className={cn(
-                  "content-card p-4 transition-all duration-150 hover:shadow-md",
+                  "content-card cursor-pointer p-4 transition-all duration-150 hover:shadow-md",
                   overdue && "border-danger/25 bg-danger/[0.03]"
                 )}
               >
@@ -382,22 +390,21 @@ export default function TasksPage() {
                       </div>
                     </div>
                   </div>
-                  <TaskActionsMenu
-                    status={task.status}
-                    commentCount={task.commentCount}
-                    busy={updateTask.isPending}
-                    onEdit={() => setEditingTask(task)}
-                    onComments={() =>
-                      setExpandedCommentsTaskId((prev) =>
-                        prev === task.taskId ? null : task.taskId
-                      )
-                    }
-                    onToggleComplete={() => void handleToggleComplete(task)}
-                  />
+                  <div
+                    onClick={(event) => event.stopPropagation()}
+                    onKeyDown={(event) => event.stopPropagation()}
+                  >
+                    <TaskActionsMenu
+                      status={task.status}
+                      busy={updateTask.isPending}
+                      onEdit={() => setEditingTask(task)}
+                      onToggleComplete={() => void handleToggleComplete(task)}
+                    />
+                  </div>
                 </div>
-                {expandedCommentsTaskId === task.taskId ? (
+                <div onClick={(event) => event.stopPropagation()}>
                   <TaskCommentsPanel taskId={task.taskId} />
-                ) : null}
+                </div>
               </div>
             );
           })}

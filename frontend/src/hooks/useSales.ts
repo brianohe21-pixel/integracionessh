@@ -315,3 +315,34 @@ export function useCreateSalesTaskComment() {
     },
   });
 }
+
+export function useUpdateSalesTaskComment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      taskId,
+      commentId,
+      body,
+    }: {
+      taskId: string;
+      commentId: string;
+      body: string;
+    }) => api.patch<SalesTaskComment>(`/sales/tasks/${taskId}/comments/${commentId}`, { body }),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["sales", "tasks", vars.taskId, "comments"] });
+      qc.invalidateQueries({ queryKey: ["sales", "tasks"] });
+    },
+  });
+}
+
+export function useDeleteSalesTaskComment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ taskId, commentId }: { taskId: string; commentId: string }) =>
+      api.delete(`/sales/tasks/${taskId}/comments/${commentId}`),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["sales", "tasks", vars.taskId, "comments"] });
+      qc.invalidateQueries({ queryKey: ["sales", "tasks"] });
+    },
+  });
+}

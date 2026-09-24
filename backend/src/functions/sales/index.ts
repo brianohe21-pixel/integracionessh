@@ -59,7 +59,9 @@ import {
 } from "../../lib/dynamodb/sales-task.repository.js";
 import {
   createSalesTaskComment,
+  deleteSalesTaskComment,
   listSalesTaskComments,
+  updateSalesTaskComment,
 } from "../../lib/dynamodb/sales-task-comment.repository.js";
 import { getLeadById } from "../../lib/dynamodb/lead.repository.js";
 import { getSalesFunnelMetrics } from "../../lib/dynamodb/sales-funnel-metrics.repository.js";
@@ -252,6 +254,10 @@ const UpdateTaskSchema = z.object({
 });
 
 const CreateTaskCommentSchema = z.object({
+  body: z.string().min(1).max(2000),
+});
+
+const UpdateTaskCommentSchema = z.object({
   body: z.string().min(1).max(2000),
 });
 
@@ -994,6 +1000,36 @@ export async function handler(
             ...(auth.name ? { authorName: auth.name } : {}),
           });
           return created(comment);
+        }
+      }
+
+      if (segments[2] === "comments" && segments.length === 4) {
+        const commentId = segments[3];
+        const existingTask = await getSalesTaskById(auth.tenantId, taskId);
+        if (!existingTask) return notFound("Task not found");
+        if (!canAdvisorAccessTask(advisorId, existingTask)) return forbidden();
+
+        if (method === "PATCH") {
+          const parsed = UpdateTaskCommentSchema.safeParse(JSON.parse(apiEvent.body ?? "{}"));
+          if (!parsed.success) return badRequest(parsed.error.message);
+          const updated = await updateSalesTaskComment({
+            tenantId: auth.tenantId,
+            taskId,
+            commentId,
+            body: parsed.data.body,
+          });
+          if (!updated) return notFound("Comment not found");
+          return ok(updated);
+        }
+
+        if (method === "DELETE") {
+          const deleted = await deleteSalesTaskComment({
+            tenantId: auth.tenantId,
+            taskId,
+            commentId,
+          });
+          if (!deleted) return notFound("Comment not found");
+          return noContent();
         }
       }
     }

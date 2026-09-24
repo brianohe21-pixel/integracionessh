@@ -907,6 +907,7 @@ export interface SalesTaskComment {
   authorId: string;
   authorName?: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface SalesTaskCommentsListResponse {

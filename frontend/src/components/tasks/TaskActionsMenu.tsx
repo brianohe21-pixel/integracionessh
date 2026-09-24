@@ -4,7 +4,6 @@ import { useEffect, useRef, useState, type ComponentType } from "react";
 import { createPortal } from "react-dom";
 import {
   CheckCircle2,
-  MessageSquare,
   MoreVertical,
   Pencil,
   RotateCcw,
@@ -18,7 +17,6 @@ type MenuItem = {
   icon: ComponentType<{ className?: string }>;
   onClick: () => void;
   disabled?: boolean;
-  badge?: number;
 };
 
 type MenuPosition = {
@@ -29,19 +27,15 @@ type MenuPosition = {
 
 type Props = {
   status: "open" | "done" | "cancelled";
-  commentCount?: number;
   busy?: boolean;
   onEdit: () => void;
-  onComments: () => void;
   onToggleComplete: () => void;
 };
 
 export function TaskActionsMenu({
   status,
-  commentCount = 0,
   busy = false,
   onEdit,
-  onComments,
   onToggleComplete,
 }: Props) {
   const t = useT();
@@ -110,13 +104,6 @@ export function TaskActionsMenu({
       disabled: busy,
     },
     {
-      id: "comments",
-      label: t("tasks.commentsToggle"),
-      icon: MessageSquare,
-      onClick: onComments,
-      ...(commentCount > 0 ? { badge: commentCount } : {}),
-    },
-    {
       id: "toggle",
       label: status === "done" ? t("tasks.reopen") : t("tasks.markDone"),
       icon: status === "done" ? RotateCcw : CheckCircle2,
@@ -160,11 +147,6 @@ export function TaskActionsMenu({
             >
               <Icon className="h-4 w-4 shrink-0 text-secondary" />
               <span className="flex-1">{menuItem.label}</span>
-              {menuItem.badge ? (
-                <span className="rounded-full bg-surface-muted px-1.5 py-0.5 text-[11px] font-medium text-secondary">
-                  {menuItem.badge}
-                </span>
-              ) : null}
             </button>
           );
         })}

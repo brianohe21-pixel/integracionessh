@@ -1789,6 +1789,9 @@ export const es = {
     commentsUnknownAuthor: "Usuario",
     commentsToggle: "Comentarios",
     commentsCount: "{{count}}",
+    commentsEdited: "editado",
+    commentsDeleteTitle: "Eliminar comentario",
+    commentsDeleteConfirm: "¿Eliminar este comentario? Esta acción no se puede deshacer.",
     target: {
       advisor: "Asesor",
       contact: "Contacto",
