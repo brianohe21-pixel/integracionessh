@@ -5,6 +5,7 @@ import { CheckCheck } from "lucide-react";
 import { EmailMessageBubble } from "@/components/conversations/EmailMessageBubble";
 import { AttachmentMessageBubble } from "@/components/conversations/AttachmentMessageBubble";
 import { MessageReactions } from "@/components/conversations/MessageReactions";
+import { MessageTaskActions } from "@/components/conversations/MessageTaskActions";
 import { ConversationDateDivider } from "@/components/conversations/conversation-ui";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useLocale, useT } from "@/i18n/context";
@@ -23,6 +24,7 @@ type Props = {
   loading: boolean;
   loadingLabel: string;
   channelLabel: (channel?: Channel) => string;
+  onCreateTaskFromText?: (text: string) => void;
 };
 
 function renderMessageBubble(params: {
@@ -31,12 +33,20 @@ function renderMessageBubble(params: {
   conversation: Conversation;
   formatMessageTime: (iso: string) => string;
   channelBadge?: string;
+  onCreateTaskFromText?: (text: string) => void;
 }) {
-  const { msg, listKey, conversation, formatMessageTime, channelBadge } = params;
+  const { msg, listKey, conversation, formatMessageTime, channelBadge, onCreateTaskFromText } =
+    params;
   const isInbound = msg.role === "user";
   const isSystem = msg.role === "system";
   const isAdvisor = msg.role === "advisor";
   const isOutbound = !isInbound && !isSystem;
+  const isEmailBubble =
+    (conversation.channel === "email" && isInbound && !channelBadge) ||
+    (msg.channel === "email" && isInbound);
+  const isAttachment = isDocumentMessage(msg);
+  const canCreateTaskFromText =
+    Boolean(onCreateTaskFromText) && !isEmailBubble && !isAttachment && Boolean(msg.content?.trim());
 
   if (isSystem) {
     return (
@@ -66,11 +76,9 @@ function renderMessageBubble(params: {
               {channelBadge}
             </p>
           ) : null}
-          {conversation.channel === "email" && isInbound && !channelBadge ? (
+          {isEmailBubble ? (
             <EmailMessageBubble message={msg} botId={conversation.botId} />
-          ) : msg.channel === "email" && isInbound ? (
-            <EmailMessageBubble message={msg} botId={conversation.botId} />
-          ) : isDocumentMessage(msg) ? (
+          ) : isAttachment ? (
             <AttachmentMessageBubble
               message={msg}
               conversationId={conversation.conversationId}
@@ -96,6 +104,13 @@ function renderMessageBubble(params: {
             {isOutbound ? (
               <CheckCheck className="h-3 w-3 text-accent" aria-hidden />
             ) : null}
+            {canCreateTaskFromText && onCreateTaskFromText ? (
+              <MessageTaskActions
+                text={msg.content}
+                align={isInbound ? "left" : "right"}
+                onCreateTask={onCreateTaskFromText}
+              />
+            ) : null}
           </div>
         </div>
         <MessageReactions
@@ -114,6 +129,7 @@ export function ConversationMessageThread({
   loading,
   loadingLabel,
   channelLabel,
+  onCreateTaskFromText,
 }: Props) {
   const locale = useLocale();
   const t = useT();
@@ -202,6 +218,7 @@ export function ConversationMessageThread({
             channelBadge: crossMsg
               ? channelLabel(crossMsg.originChannel)
               : undefined,
+            onCreateTaskFromText,
           })}
         </div>
       );

@@ -61,6 +61,7 @@ import {
   createSalesTaskComment,
   listSalesTaskComments,
 } from "../../lib/dynamodb/sales-task-comment.repository.js";
+import { getLeadById } from "../../lib/dynamodb/lead.repository.js";
 import { getSalesFunnelMetrics } from "../../lib/dynamodb/sales-funnel-metrics.repository.js";
 import { moveOpportunityStage } from "../../lib/sales/opportunities/stage.js";
 import { getOpportunityDetail } from "../../lib/sales/opportunities/detail.js";
@@ -221,6 +222,7 @@ const CreateTaskSchema = z.object({
   description: z.string().max(2000).optional(),
   opportunityId: z.string().uuid().optional(),
   advisorId: z.string().uuid().optional(),
+  leadId: z.string().uuid().optional(),
   dueAt: z.string().datetime().optional(),
   conversationId: z.string().uuid().optional(),
   botId: z.string().uuid().optional(),
@@ -237,6 +239,7 @@ const UpdateTaskSchema = z.object({
   description: z.string().max(2000).optional(),
   status: z.enum(["open", "done", "cancelled"]).optional(),
   advisorId: z.string().uuid().optional(),
+  leadId: z.string().uuid().optional().nullable(),
   dueAt: z.string().datetime().optional().nullable(),
   conversationId: z.string().uuid().optional(),
   botId: z.string().uuid().optional(),
@@ -829,6 +832,7 @@ export async function handler(
         updatedAt: now,
         ...(parsed.data.description ? { description: parsed.data.description } : {}),
         ...(parsed.data.opportunityId ? { opportunityId: parsed.data.opportunityId } : {}),
+        ...(parsed.data.leadId ? { leadId: parsed.data.leadId } : {}),
         ...(parsed.data.advisorId
           ? { advisorId: parsed.data.advisorId }
           : advisorId
@@ -855,6 +859,10 @@ export async function handler(
         const opp = await getOpportunityById(auth.tenantId, task.opportunityId);
         if (!opp) return badRequest("Opportunity not found");
         if (!canAdvisorAccessOpportunity(advisorId, opp)) return forbidden();
+      }
+      if (task.leadId) {
+        const lead = await getLeadById(auth.tenantId, task.leadId);
+        if (!lead) return badRequest("Lead not found");
       }
       await createSalesTask(task);
       const withReminder = await syncTaskReminder(task);
@@ -896,6 +904,15 @@ export async function handler(
         if (parsed.data.advisorId !== undefined) {
           if (advisorId && parsed.data.advisorId !== advisorId) return forbidden();
           updates.advisorId = parsed.data.advisorId;
+        }
+        if (parsed.data.leadId !== undefined) {
+          if (parsed.data.leadId) {
+            const lead = await getLeadById(auth.tenantId, parsed.data.leadId);
+            if (!lead) return badRequest("Lead not found");
+            updates.leadId = parsed.data.leadId;
+          } else {
+            updates.leadId = null;
+          }
         }
         if (parsed.data.dueAt !== undefined) {
           updates.dueAt = parsed.data.dueAt ?? null;

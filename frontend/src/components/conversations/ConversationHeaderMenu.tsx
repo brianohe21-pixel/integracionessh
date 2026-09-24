@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ComponentType } from "react";
 import { createPortal } from "react-dom";
 import {
   CheckCircle2,
+  CheckSquare,
   ExternalLink,
   Headphones,
   MoreVertical,
@@ -45,6 +46,7 @@ type Props = {
   onResolve: () => void;
   onOpenWhatsApp: string | null;
   onRelease: () => void;
+  onOpenTask?: () => void;
 };
 
 type MenuPosition = {
@@ -71,6 +73,7 @@ export function ConversationHeaderMenu({
   onResolve,
   onOpenWhatsApp,
   onRelease,
+  onOpenTask,
 }: Props) {
   const t = useT();
   const [open, setOpen] = useState(false);
@@ -138,6 +141,15 @@ export function ConversationHeaderMenu({
       icon: Headphones,
       onClick: onClaim,
       disabled: claimPending,
+    });
+  }
+
+  if (onOpenTask) {
+    items.push({
+      id: "task",
+      label: t("tasks.createFromConversation"),
+      icon: CheckSquare,
+      onClick: onOpenTask,
     });
   }
 

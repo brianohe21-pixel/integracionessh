@@ -27,6 +27,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Select } from "@/components/ui/Input";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ConversationComposeBar } from "@/components/conversations/ConversationComposeBar";
+import { ConversationContextMenu, type ConversationContextMenuState } from "@/components/conversations/ConversationContextMenu";
 import { TaskFormModal, type TaskFormValues } from "@/components/tasks/TaskFormModal";
 import { useCreateSalesTask } from "@/hooks/useSales";
 import { useFormatters } from "@/hooks/useFormatters";
@@ -40,7 +41,7 @@ import {
   PanelRightOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { WorkflowStatus, Channel, InteractionCategory } from "@/types";
+import type { WorkflowStatus, Channel, InteractionCategory, Conversation } from "@/types";
 import { INTERACTION_CATEGORIES } from "@/types";
 import { interactionCategoryLabelKey } from "@/lib/interaction-categories";
 import {
@@ -112,6 +113,10 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   const [showQuotationDrawer, setShowQuotationDrawer] = useState(false);
   const [showBookingDrawer, setShowBookingDrawer] = useState(false);
   const [showTaskModal, setShowTaskModal] = useState(false);
+  const [taskModalDefaults, setTaskModalDefaults] = useState<Partial<TaskFormValues>>({});
+  const [taskModalKey, setTaskModalKey] = useState(0);
+  const [conversationContextMenu, setConversationContextMenu] =
+    useState<ConversationContextMenuState | null>(null);
   const [showHandoffModal, setShowHandoffModal] = useState(false);
   const [showBulkReassignModal, setShowBulkReassignModal] = useState(false);
   const [showResolveModal, setShowResolveModal] = useState(false);
@@ -331,6 +336,29 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   const convertLead = useConvertLead();
   const createLead = useCreateLead();
   const createTask = useCreateSalesTask();
+
+  function openTaskModal(seed: Partial<TaskFormValues> = {}) {
+    setTaskModalDefaults(seed);
+    setTaskModalKey((key) => key + 1);
+    setShowTaskModal(true);
+  }
+
+  function openConversationContextMenu(
+    event: React.MouseEvent,
+    conversation: Conversation
+  ) {
+    event.preventDefault();
+    setConversationContextMenu({
+      x: event.clientX,
+      y: event.clientY,
+      conversation,
+    });
+  }
+
+  function selectConversationForAction(conversation: Conversation) {
+    setSelectedId(conversation.conversationId);
+    return conversation;
+  }
 
   async function handleCreateLeadFromInbox() {
     if (!selectedConversation || !selectedContactPhone) return;
@@ -780,6 +808,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
         }}
         claimPending={claim.isPending}
         showOnMobile={showListOnMobile}
+        onConversationContextMenu={openConversationContextMenu}
       />
 
       <div
@@ -799,7 +828,10 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
           </div>
         ) : (
           <>
-            <div className="conversations-chat-header relative z-30 flex min-h-[56px] flex-shrink-0 items-center justify-between gap-2 overflow-visible px-2 py-2 sm:min-h-[64px] sm:gap-3 sm:px-4 sm:py-3">
+            <div
+              className="conversations-chat-header relative z-30 flex min-h-[56px] flex-shrink-0 items-center justify-between gap-2 overflow-visible px-2 py-2 sm:min-h-[64px] sm:gap-3 sm:px-4 sm:py-3"
+              onContextMenu={(event) => openConversationContextMenu(event, selectedConversation)}
+            >
               <div className="flex min-w-0 items-center gap-2 sm:gap-3">
                 <button
                   type="button"
@@ -918,6 +950,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                       : null
                   }
                   onRelease={handleRelease}
+                  onOpenTask={() => openTaskModal()}
                 />
               </div>
             </div>
@@ -1042,6 +1075,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                   loading={loadingMessages || loadingCrossChannel}
                   loadingLabel={t("common.loading")}
                   channelLabel={channelLabel}
+                  onCreateTaskFromText={(text) => openTaskModal({ description: text })}
                 />
               )}
 
@@ -1063,7 +1097,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                       macroPlaceholderContext={macroPlaceholderContext}
                       onOpenQuotation={() => setShowQuotationDrawer(true)}
                       onOpenBooking={() => setShowBookingDrawer(true)}
-                      onOpenTask={() => setShowTaskModal(true)}
+                      onOpenTask={() => openTaskModal()}
                       showBooking={showBookingAction}
                       showAttachment={showAttachmentAction}
                       onAttachFile={handleAttachFile}
@@ -1089,6 +1123,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
           locale={locale}
           onCreateQuotation={() => setShowQuotationDrawer(true)}
           onCreateBooking={() => setShowBookingDrawer(true)}
+          onCreateTask={() => openTaskModal()}
           showBooking={showBookingAction}
           whatsappRisk={whatsappRisk}
         />
@@ -1249,17 +1284,22 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
 
       {showTaskModal && selectedConversation ? (
         <TaskFormModal
+          key={taskModalKey}
           onClose={() => setShowTaskModal(false)}
           submitting={createTask.isPending}
+          advisors={advisors ?? []}
+          showAdvisorSelect={!advisorMode}
           defaults={{
             conversationId: selectedConversation.conversationId,
             botId: selectedConversation.botId,
             advisorId: selectedConversation.assignedAdvisorId,
+            ...(activeLead?.leadId ? { leadId: activeLead.leadId } : {}),
             contactPhone: selectedConversation.phoneNumber || selectedConversation.participantId,
             contactName: selectedConversation.contactName,
             reminderTargets: ["advisor"],
             reminderChannels: ["email", "whatsapp"],
             reminderMinutesBefore: 60,
+            ...taskModalDefaults,
           }}
           onSubmit={async (values: TaskFormValues) => {
             await createTask.mutateAsync({
@@ -1271,6 +1311,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                 : selectedConversation.assignedAdvisorId
                   ? { advisorId: selectedConversation.assignedAdvisorId }
                   : {}),
+              ...(values.leadId ? { leadId: values.leadId } : {}),
               conversationId: selectedConversation.conversationId,
               botId: selectedConversation.botId,
               ...(values.contactPhone || selectedConversation.phoneNumber
@@ -1296,6 +1337,53 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
           }}
         />
       ) : null}
+
+      <ConversationContextMenu
+        state={conversationContextMenu}
+        onClose={() => setConversationContextMenu(null)}
+        advisorMode={advisorMode}
+        claimPending={claim.isPending}
+        releasePending={release.isPending}
+        onCreateTask={(conversation) => {
+          selectConversationForAction(conversation);
+          openTaskModal();
+        }}
+        onTransfer={(conversation) => {
+          selectConversationForAction(conversation);
+          setShowHandoffModal(true);
+        }}
+        onResolve={(conversation) => {
+          selectConversationForAction(conversation);
+          setShowResolveModal(true);
+        }}
+        onClaim={async (conversation) => {
+          selectConversationForAction(conversation);
+          await claim.mutateAsync({
+            conversationId: conversation.conversationId,
+            botId: conversation.botId,
+          });
+          if (advisorMode) setListTab("mine");
+        }}
+        onRelease={async (conversation) => {
+          selectConversationForAction(conversation);
+          await release.mutateAsync({
+            conversationId: conversation.conversationId,
+            botId: conversation.botId,
+          });
+        }}
+        onClear={(conversation) => {
+          selectConversationForAction(conversation);
+          setShowClearModal(true);
+        }}
+        onDelete={(conversation) => {
+          selectConversationForAction(conversation);
+          setShowDeleteModal(true);
+        }}
+        onOpenWhatsApp={(conversation) => {
+          const link = buildWaMeLink(conversation.phoneNumber);
+          if (link) window.open(link, "_blank", "noopener,noreferrer");
+        }}
+      />
     </div>
   );
 }

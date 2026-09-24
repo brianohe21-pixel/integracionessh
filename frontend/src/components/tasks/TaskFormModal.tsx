@@ -5,9 +5,11 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
+import { useLeads, useLead } from "@/hooks/useLeads";
 import { useT } from "@/i18n/context";
 import type {
   Advisor,
+  Lead,
   SalesTask,
   SalesTaskReminderChannel,
   SalesTaskReminderTarget,
@@ -18,6 +20,7 @@ export type TaskFormValues = {
   description?: string;
   dueAt?: string | null;
   advisorId?: string;
+  leadId?: string | null;
   conversationId?: string;
   botId?: string;
   contactPhone?: string;
@@ -78,6 +81,11 @@ function appendDescriptionChip(current: string, chip: string): string {
   return `${trimmed}\n${chip}`;
 }
 
+function leadLabel(lead: Lead): string {
+  const name = lead.name?.trim() || lead.phone;
+  return lead.name?.trim() ? `${name} · ${lead.phone}` : name;
+}
+
 function defaultsFromTask(task?: SalesTask | null): Partial<TaskFormValues> {
   if (!task) return {};
   return {
@@ -85,6 +93,7 @@ function defaultsFromTask(task?: SalesTask | null): Partial<TaskFormValues> {
     ...(task.description ? { description: task.description } : {}),
     ...(task.dueAt ? { dueAt: task.dueAt } : {}),
     ...(task.advisorId ? { advisorId: task.advisorId } : {}),
+    ...(task.leadId ? { leadId: task.leadId } : {}),
     ...(task.conversationId ? { conversationId: task.conversationId } : {}),
     ...(task.botId ? { botId: task.botId } : {}),
     ...(task.contactPhone ? { contactPhone: task.contactPhone } : {}),
@@ -112,6 +121,10 @@ export function TaskFormModal({
   const [description, setDescription] = useState(initial.description ?? "");
   const [dueLocal, setDueLocal] = useState(toLocalInputValue(initial.dueAt ?? undefined));
   const [advisorId, setAdvisorId] = useState(initial.advisorId ?? "");
+  const [leadId, setLeadId] = useState(initial.leadId ?? "");
+  const [contactPhone, setContactPhone] = useState(initial.contactPhone ?? "");
+  const [contactEmail, setContactEmail] = useState(initial.contactEmail ?? "");
+  const [contactName, setContactName] = useState(initial.contactName ?? "");
   const [reminderTargets, setReminderTargets] = useState<SalesTaskReminderTarget[]>(
     initial.reminderTargets ?? ["advisor"]
   );
@@ -121,6 +134,16 @@ export function TaskFormModal({
   const [reminderMinutesBefore, setReminderMinutesBefore] = useState(
     initial.reminderMinutesBefore ?? 60
   );
+
+  const { data: leadsData } = useLeads();
+  const { data: selectedLead } = useLead(leadId || null);
+  const leads = useMemo(() => {
+    const items = [...(leadsData?.items ?? [])];
+    if (selectedLead && !items.some((item) => item.leadId === selectedLead.leadId)) {
+      items.unshift(selectedLead);
+    }
+    return items;
+  }, [leadsData?.items, selectedLead]);
 
   const canSubmit = title.trim().length > 0 && !submitting;
   const isEdit = mode === "edit";
@@ -144,6 +167,16 @@ export function TaskFormModal({
     }
   }
 
+  function handleLeadChange(nextLeadId: string) {
+    setLeadId(nextLeadId);
+    if (!nextLeadId) return;
+    const lead = leads.find((item) => item.leadId === nextLeadId);
+    if (!lead) return;
+    if (lead.name?.trim()) setContactName(lead.name.trim());
+    if (lead.phone) setContactPhone(lead.phone);
+    if (lead.email?.trim()) setContactEmail(lead.email.trim());
+  }
+
   async function handleSubmit() {
     if (!canSubmit) return;
     const dueAt = fromLocalInputValue(dueLocal);
@@ -158,11 +191,16 @@ export function TaskFormModal({
         : initial.advisorId
           ? { advisorId: initial.advisorId }
           : {}),
+      ...(isEdit
+        ? { leadId: leadId || null }
+        : leadId
+          ? { leadId }
+          : {}),
       ...(initial.conversationId ? { conversationId: initial.conversationId } : {}),
       ...(initial.botId ? { botId: initial.botId } : {}),
-      ...(initial.contactPhone ? { contactPhone: initial.contactPhone } : {}),
-      ...(initial.contactEmail ? { contactEmail: initial.contactEmail } : {}),
-      ...(initial.contactName ? { contactName: initial.contactName } : {}),
+      ...(contactPhone.trim() ? { contactPhone: contactPhone.trim() } : {}),
+      ...(contactEmail.trim() ? { contactEmail: contactEmail.trim() } : {}),
+      ...(contactName.trim() ? { contactName: contactName.trim() } : {}),
       reminderTargets,
       reminderChannels,
       reminderMinutesBefore,
@@ -235,6 +273,20 @@ export function TaskFormModal({
               value={dueLocal}
               onChange={(e) => setDueLocal(e.target.value)}
             />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-primary">
+              {t("tasks.lead")}
+            </label>
+            <Select value={leadId} onChange={(e) => handleLeadChange(e.target.value)}>
+              <option value="">{t("tasks.anyLead")}</option>
+              {leads.map((lead) => (
+                <option key={lead.leadId} value={lead.leadId}>
+                  {leadLabel(lead)}
+                </option>
+              ))}
+            </Select>
+            <p className="mt-1.5 text-xs text-muted">{t("tasks.leadHint")}</p>
           </div>
           {showAdvisorSelect ? (
             <div>

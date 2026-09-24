@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Check, ChevronDown, History, Headphones, Lock, Mail, Phone, StickyNote, User } from "lucide-react";
+import { Check, CheckSquare, ChevronDown, History, Headphones, Lock, Mail, Phone, StickyNote, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ConversationAvatar } from "@/components/conversations/conversation-ui";
 import { ConversationOpportunityPanel } from "@/components/conversations/ConversationOpportunityPanel";
@@ -34,6 +34,7 @@ type Props = {
   locale: string;
   onCreateQuotation?: () => void;
   onCreateBooking?: () => void;
+  onCreateTask?: () => void;
   showBooking?: boolean;
   whatsappRisk?: WhatsAppRiskResponse;
 };
@@ -46,6 +47,7 @@ export function ConversationContactPanel({
   locale,
   onCreateQuotation,
   onCreateBooking,
+  onCreateTask,
   showBooking = false,
   whatsappRisk,
 }: Props) {
@@ -194,6 +196,12 @@ export function ConversationContactPanel({
           />
         ) : panelTab === "contact" ? (
           <>
+            {onCreateTask ? (
+              <Button type="button" className="w-full" onClick={onCreateTask}>
+                <CheckSquare className="h-4 w-4" />
+                {t("tasks.createFromConversation")}
+              </Button>
+            ) : null}
             <ConversationLeadPanel conversation={conversation} activeLead={activeLead} />
             <ContentCardSection title={t("conversations.contactInfo")}>
               <div className="space-y-2.5 text-sm">

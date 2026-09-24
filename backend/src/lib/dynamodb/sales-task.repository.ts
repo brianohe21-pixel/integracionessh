@@ -73,6 +73,7 @@ export type SalesTaskUpdateFields = Partial<
   >
 > & {
   dueAt?: string | null;
+  leadId?: string | null;
   contactEmail?: string | null;
   reminderScheduleName?: string | null;
   reminderSentAt?: string | null;
@@ -326,6 +327,11 @@ export async function updateSalesTask(
   if (updates.reminderChannels !== undefined) merged.reminderChannels = updates.reminderChannels;
   if (updates.reminderMinutesBefore !== undefined) {
     merged.reminderMinutesBefore = updates.reminderMinutesBefore;
+  }
+  if (updates.leadId === null) {
+    delete merged.leadId;
+  } else if (updates.leadId !== undefined) {
+    merged.leadId = updates.leadId;
   }
   if (updates.reminderStatus !== undefined) {
     if (updates.reminderStatus === null) {

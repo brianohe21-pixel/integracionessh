@@ -994,6 +994,7 @@ export interface SalesTask {
   opportunityId?: string;
   enrollmentId?: string;
   advisorId?: string;
+  leadId?: string;
   conversationId?: string;
   botId?: string;
   contactPhone?: string;

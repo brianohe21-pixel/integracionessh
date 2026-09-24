@@ -253,6 +253,7 @@ export function useUpdateSalesTask() {
       title?: string;
       description?: string;
       advisorId?: string;
+      leadId?: string | null;
       dueAt?: string | null;
       conversationId?: string;
       botId?: string;
@@ -277,6 +278,7 @@ export function useCreateSalesTask() {
       description?: string;
       opportunityId?: string;
       advisorId?: string;
+      leadId?: string;
       dueAt?: string;
       conversationId?: string;
       botId?: string;
