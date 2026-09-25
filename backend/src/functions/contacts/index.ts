@@ -17,10 +17,9 @@ import { writeComplianceLog } from "../../lib/compliance/audit-log.js";
 import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
 import { assertCanAddContacts } from "../../lib/billing/assert-plan.js";
 import { PlanLimitError } from "../../lib/billing/plan-limits.js";
-import {
-  resolveRequestAuth,
-  assertMemberRole,
-} from "../../lib/auth/cognito.js";
+import { resolveRequestAuth } from "../../lib/auth/cognito.js";
+import { assertPermission, type Permission } from "../../lib/auth/permissions.js";
+import { writeAuditEvent } from "../../lib/audit/write-audit-event.js";
 import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import {
   ok,
@@ -115,11 +114,13 @@ export async function handler(
 ): Promise<APIGatewayProxyResultV2> {
   try {
     const auth = await resolveRequestAuth(event);
-    assertMemberRole(auth);
     await assertAssignedServices(auth.tenantId, "contacts");
 
     const method = event.requestContext.http.method;
     const rawPath = event.rawPath ?? event.requestContext.http.path;
+    const contactPermission: Permission =
+      method === "GET" ? "contacts.read" : method === "DELETE" ? "contacts.delete" : "contacts.write";
+    await assertPermission(auth, contactPermission);
     const phoneParam = event.pathParameters?.phone
       ? decodeURIComponent(event.pathParameters.phone)
       : undefined;
@@ -239,6 +240,16 @@ export async function handler(
         ...(row.marketingConsent ? { marketingConsent: row.marketingConsent } : {}),
       }));
       const result = await importContactsBatch(auth.tenantId, rows);
+      await writeAuditEvent({
+        tenantId: auth.tenantId,
+        actorUserId: auth.userId,
+        actorEmail: auth.email,
+        module: "contacts",
+        action: "import",
+        entityType: "contact",
+        entityId: auth.tenantId,
+        summary: `Imported ${rows.length} contacts`,
+      });
       return ok(result);
     }
 
@@ -294,6 +305,16 @@ export async function handler(
         });
       }
 
+      await writeAuditEvent({
+        tenantId: auth.tenantId,
+        actorUserId: auth.userId,
+        actorEmail: auth.email,
+        module: "contacts",
+        action: "create",
+        entityType: "contact",
+        entityId: phone,
+        summary: `Created contact ${phone}`,
+      });
       return created(contact);
     }
 
@@ -343,6 +364,16 @@ export async function handler(
         });
       }
 
+      await writeAuditEvent({
+        tenantId: auth.tenantId,
+        actorUserId: auth.userId,
+        actorEmail: auth.email,
+        module: "contacts",
+        action: "update",
+        entityType: "contact",
+        entityId: phone,
+        summary: `Updated contact ${phone}`,
+      });
       return ok(updated);
     }
 
@@ -360,6 +391,16 @@ export async function handler(
         actorUserId: auth.userId,
       });
 
+      await writeAuditEvent({
+        tenantId: auth.tenantId,
+        actorUserId: auth.userId,
+        actorEmail: auth.email,
+        module: "contacts",
+        action: "delete",
+        entityType: "contact",
+        entityId: phone,
+        summary: `Suppressed contact ${phone}`,
+      });
       return noContent();
     }
 

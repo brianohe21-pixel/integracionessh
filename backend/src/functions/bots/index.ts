@@ -8,7 +8,10 @@ import {
   deleteBot,
   listBots,
 } from "../../lib/dynamodb/bot.repository.js";
-import { resolveRequestAuth, assertTenantAccess, assertMemberRole } from "../../lib/auth/cognito.js";
+import { resolveRequestAuth, assertTenantAccess } from "../../lib/auth/cognito.js";
+import { assertPermission, type Permission } from "../../lib/auth/permissions.js";
+import { writeAuditEvent } from "../../lib/audit/write-audit-event.js";
+import type { AuthContext, Bot } from "../../types/index.js";
 import { ensureTenant } from "../../lib/dynamodb/tenant.repository.js";
 import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import { assertCanCreateBot, assertCanUseWebChat, assertCanEnableChannel, assertCanStartLiveKitCall, assertCanUseVoicebot } from "../../lib/billing/assert-plan.js";
@@ -37,7 +40,6 @@ import {
 import { ok, created, noContent, badRequest, notFound, handleError } from "../../lib/http.js";
 import { shouldRegisterSmsInboundLookup } from "../../lib/sms/client.js";
 import { enqueueWhatsAppSync } from "../../lib/whatsapp/coexistence/sync-queue.js";
-import type { Bot } from "../../types/index.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 const WHATSAPP_SYNC_QUEUE_URL = process.env.WHATSAPP_SYNC_QUEUE_URL ?? "";
@@ -120,16 +122,43 @@ const AiAssistantEnableSchema = z.object({
   knowledgeEnabled: z.boolean().optional(),
 });
 
+let auditAuth: AuthContext | null = null;
+
+async function updateBotAudited(
+  tenantId: string,
+  botId: string,
+  updates: Partial<Omit<Bot, "tenantId" | "botId" | "createdAt">>
+): Promise<Bot> {
+  const updated = await updateBot(tenantId, botId, updates);
+  const auth = auditAuth;
+  if (auth) {
+    await writeAuditEvent({
+      tenantId: auth.tenantId,
+      actorUserId: auth.userId,
+      actorEmail: auth.email,
+      module: "bots",
+      action: "update",
+      entityType: "bot",
+      entityId: botId,
+      summary: `Updated bot ${updated.name}`,
+    });
+  }
+  return updated;
+}
+
 export async function handler(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): Promise<APIGatewayProxyResultV2> {
   try {
     const auth = await resolveRequestAuth(event);
-    assertMemberRole(auth);
+    auditAuth = auth;
     await assertAssignedServices(auth.tenantId, "bots");
     const method = event.requestContext.http.method;
     const botId = event.pathParameters?.botId;
     const rawPath = event.rawPath ?? event.requestContext.http.path;
+    const botPermission: Permission =
+      method === "GET" ? "bots.read" : method === "DELETE" ? "bots.delete" : "bots.write";
+    await assertPermission(auth, botPermission);
 
     if (botId && method === "POST" && rawPath.includes("/webchat/rotate-key")) {
       const existing = await getBot(auth.tenantId, botId);
@@ -148,7 +177,7 @@ export async function handler(
         await deleteWidgetKeyLookup(existing.webchatWidgetKey);
       }
       await putWidgetKeyLookup(newKey, auth.tenantId, botId);
-      const updated = await updateBot(auth.tenantId, botId, {
+      const updated = await updateBotAudited(auth.tenantId, botId, {
         webchatWidgetKey: newKey,
         webchatEnabled: true,
       });
@@ -196,7 +225,7 @@ export async function handler(
         updates.webchatVideoEnabled = parsed.data.webchatVideoEnabled;
       }
 
-      const updated = await updateBot(auth.tenantId, botId, updates);
+      const updated = await updateBotAudited(auth.tenantId, botId, updates);
       return ok({
         webchatEnabled: updated.webchatEnabled,
         webchatWidgetKey: updated.webchatWidgetKey,
@@ -248,7 +277,7 @@ export async function handler(
         updates.smsOriginationNumber = parsed.data.smsOriginationNumber;
       }
 
-      const updated = await updateBot(auth.tenantId, botId, updates);
+      const updated = await updateBotAudited(auth.tenantId, botId, updates);
       return ok({
         smsEnabled: updated.smsEnabled,
         smsOriginationNumber: updated.smsOriginationNumber,
@@ -303,7 +332,7 @@ export async function handler(
         updates.emailInboundProvider = "ses";
       }
 
-      const updated = await updateBot(auth.tenantId, botId, updates);
+      const updated = await updateBotAudited(auth.tenantId, botId, updates);
       return ok({
         emailEnabled: updated.emailEnabled,
         emailAddress: updated.emailAddress,
@@ -364,7 +393,7 @@ export async function handler(
         updates.voicebotSystemPrompt = parsed.data.voicebotSystemPrompt;
       }
 
-      const updated = await updateBot(auth.tenantId, botId, updates);
+      const updated = await updateBotAudited(auth.tenantId, botId, updates);
       return ok({
         voicebotEnabled: updated.voicebotEnabled,
         voicebotWidgetKey: updated.voicebotWidgetKey,
@@ -390,7 +419,7 @@ export async function handler(
         await deleteVoicebotWidgetKeyLookup(existing.voicebotWidgetKey);
       }
       await putVoicebotWidgetKeyLookup(newKey, auth.tenantId, botId);
-      const updated = await updateBot(auth.tenantId, botId, {
+      const updated = await updateBotAudited(auth.tenantId, botId, {
         voicebotWidgetKey: newKey,
         voicebotEnabled: true,
       });
@@ -440,7 +469,7 @@ export async function handler(
         updates.knowledgeEnabled = parsed.data.knowledgeEnabled;
       }
 
-      const updated = await updateBot(auth.tenantId, botId, updates);
+      const updated = await updateBotAudited(auth.tenantId, botId, updates);
       return ok(toAiAssistantConfig(updated));
     }
 
@@ -461,7 +490,7 @@ export async function handler(
         assertCanEnableKnowledge(tenant);
       }
 
-      const updated = await updateBot(auth.tenantId, botId, {
+      const updated = await updateBotAudited(auth.tenantId, botId, {
         responseMode: "openai",
         systemPrompt: parsed.data.systemPrompt,
         model: parsed.data.model,
@@ -481,7 +510,7 @@ export async function handler(
       assertTenantAccess(auth, existing.tenantId);
       assertCanDisableAiAssistant(existing);
 
-      const updated = await updateBot(auth.tenantId, botId, { responseMode: "none" });
+      const updated = await updateBotAudited(auth.tenantId, botId, { responseMode: "none" });
       return ok(toAiAssistantConfig(updated));
     }
 
@@ -567,6 +596,16 @@ export async function handler(
       }
 
       await createBot(newBot);
+      await writeAuditEvent({
+        tenantId: auth.tenantId,
+        actorUserId: auth.userId,
+        actorEmail: auth.email,
+        module: "bots",
+        action: "create",
+        entityType: "bot",
+        entityId: newBot.botId,
+        summary: `Created bot ${newBot.name}`,
+      });
 
       if (
         newBot.whatsappOnboardingMode === "coexistence" &&
@@ -601,7 +640,7 @@ export async function handler(
         assertCanDisableAiAssistant(existing);
       }
 
-      const updated = await updateBot(
+      const updated = await updateBotAudited(
         auth.tenantId,
         botId,
         parsed.data as Partial<Omit<Bot, "tenantId" | "botId" | "createdAt">>
@@ -637,6 +676,16 @@ export async function handler(
       assertTenantAccess(auth, existing.tenantId);
 
       await deleteBot(auth.tenantId, botId);
+      await writeAuditEvent({
+        tenantId: auth.tenantId,
+        actorUserId: auth.userId,
+        actorEmail: auth.email,
+        module: "bots",
+        action: "delete",
+        entityType: "bot",
+        entityId: botId,
+        summary: `Deleted bot ${existing.name}`,
+      });
       return noContent();
     }
 

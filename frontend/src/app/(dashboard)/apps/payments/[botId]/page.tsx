@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useT } from "@/i18n/context";
+import { usePermissions } from "@/hooks/usePermissions";
 import { usePaymentsConfig, useSavePaymentsConfig } from "@/hooks/usePayments";
 import type { PaymentsConfig } from "@/types";
 import { DashboardPage } from "@/components/layout/DashboardPage";
@@ -20,6 +21,9 @@ function parseTab(value: string | null): Tab {
 export default function PaymentsBotPage() {
   const t = useT();
   const router = useRouter();
+  const { can, loading: permissionsLoading } = usePermissions();
+  const canRead = can("payments.read");
+  const canManage = can("payments.manage");
   const searchParams = useSearchParams();
   const { botId } = useParams<{ botId: string }>();
   const [tab, setTab] = useState<Tab>(() => parseTab(searchParams.get("tab")));
@@ -29,6 +33,10 @@ export default function PaymentsBotPage() {
 
   const { data, isLoading } = usePaymentsConfig(botId);
   const saveConfig = useSavePaymentsConfig(botId);
+
+  useEffect(() => {
+    if (!permissionsLoading && !canRead) router.replace("/dashboard");
+  }, [canRead, permissionsLoading, router]);
 
   useEffect(() => {
     if (data?.config) setDraft(data.config);
@@ -63,7 +71,7 @@ export default function PaymentsBotPage() {
     }
   }
 
-  if (isLoading || !draft) {
+  if (permissionsLoading || !canRead || isLoading || !draft) {
     return (
       <DashboardPage>
         <div className="h-64 animate-pulse rounded-xl bg-surface-muted" />
@@ -99,14 +107,14 @@ export default function PaymentsBotPage() {
       </div>
 
       {tab === "config" ? (
-        <div className="space-y-6">
+        <fieldset disabled={!canManage} className="space-y-6 disabled:opacity-60">
           <PaymentsWompiCredentialsForm />
           <PaymentsConfigForm draft={draft} onChange={setDraft} />
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => void handleSave()}
-              disabled={saveConfig.isPending}
+              disabled={!canManage || saveConfig.isPending}
               className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover"
             >
               {t("common.save")}
@@ -114,7 +122,7 @@ export default function PaymentsBotPage() {
             {saved ? <span className="text-sm text-green-600">{t("payments.saved")}</span> : null}
             {error ? <span className="text-sm text-red-600">{error}</span> : null}
           </div>
-        </div>
+        </fieldset>
       ) : (
         <PaymentRequestsList botId={botId} />
       )}

@@ -26,12 +26,15 @@ import {
   Languages,
   Palette,
   Plug,
+  ScrollText,
   Settings2,
   Shield,
   SlidersHorizontal,
   SunMoon,
   User as UserIcon,
 } from "lucide-react";
+import { ActivityLogCard } from "@/components/settings/ActivityLogCard";
+import { usePermissions } from "@/hooks/usePermissions";
 import { PlanUsageCard } from "@/components/billing/PlanUsageCard";
 import type { Tenant } from "@/types";
 import { DashboardPage } from "@/components/layout/DashboardPage";
@@ -45,6 +48,7 @@ const SETTINGS_TABS = [
   "branding",
   "integrations",
   "apiKeys",
+  "activity",
 ] as const;
 
 type SettingsTab = (typeof SETTINGS_TABS)[number];
@@ -76,6 +80,7 @@ function SettingsPanel({
 export default function SettingsPage() {
   const t = useT();
   const router = useRouter();
+  const { can, loading: permissionsLoading } = usePermissions();
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<SettingsTab>("general");
 
@@ -102,6 +107,15 @@ export default function SettingsPage() {
     queryFn: () => api.get<Tenant>("/tenants/me"),
   });
   const showBilling = isBillingVisible(tenant, getTenantContext());
+  const canReadSettings = can("settings.read");
+  const canManageSettings = can("settings.manage");
+  const canReadAudit = can("audit.read");
+
+  useEffect(() => {
+    if (!permissionsLoading && !canReadSettings) {
+      router.replace("/dashboard");
+    }
+  }, [canReadSettings, permissionsLoading, router]);
 
   function selectTab(nextTab: SettingsTab) {
     setTab(nextTab);
@@ -128,7 +142,12 @@ export default function SettingsPage() {
       icon: <Plug className="h-4 w-4" />,
     },
     { id: "apiKeys", label: t("settings.tabApiKeys"), icon: <Key className="h-4 w-4" /> },
+    ...(canReadAudit
+      ? [{ id: "activity" as const, label: t("settings.tabActivity"), icon: <ScrollText className="h-4 w-4" /> }]
+      : []),
   ];
+
+  if (permissionsLoading || !canReadSettings) return null;
 
   return (
     <DashboardPage>
@@ -192,7 +211,9 @@ export default function SettingsPage() {
             </SettingsCard>
           </div>
 
-          <CompanySettingsCard />
+          <fieldset disabled={!canManageSettings} className="disabled:opacity-60">
+            <CompanySettingsCard />
+          </fieldset>
         </SettingsPanel>
       ) : null}
 
@@ -207,23 +228,38 @@ export default function SettingsPage() {
 
       {tab === "workspace" ? (
         <SettingsPanel title={t("settings.tabWorkspace")}>
-          {showBilling ? <PlanUsageCard /> : null}
-          <InboxSlaCard />
-          <ScheduledReportsCard />
+          <fieldset disabled={!canManageSettings} className="space-y-6 disabled:opacity-60">
+            {showBilling ? <PlanUsageCard /> : null}
+            <InboxSlaCard />
+            <ScheduledReportsCard />
+          </fieldset>
         </SettingsPanel>
       ) : null}
 
-      {tab === "branding" ? <BrandingSettingsCard /> : null}
+      {tab === "branding" ? (
+        <fieldset disabled={!canManageSettings} className="disabled:opacity-60">
+          <BrandingSettingsCard />
+        </fieldset>
+      ) : null}
 
       {tab === "integrations" ? (
         <SettingsPanel title={t("settings.tabIntegrations")}>
-          <WebsiteAnalyticsCard />
-          <TenantEmailSettingsCard />
+          <fieldset disabled={!canManageSettings} className="space-y-6 disabled:opacity-60">
+            <WebsiteAnalyticsCard />
+            <TenantEmailSettingsCard />
+          </fieldset>
+        </SettingsPanel>
+      ) : null}
+
+      {tab === "activity" && canReadAudit ? (
+        <SettingsPanel title={t("settings.tabActivity")}>
+          <ActivityLogCard />
         </SettingsPanel>
       ) : null}
 
       {tab === "apiKeys" ? (
         <SettingsPanel title={t("settings.tabApiKeys")}>
+          <fieldset disabled={!canManageSettings} className="disabled:opacity-60">
           <SettingsCard
             icon={<Key className="h-4 w-4" />}
             title={t("settings.secretsTitle")}
@@ -242,6 +278,7 @@ export default function SettingsPage() {
               <ProviderCredentialsSection />
             </div>
           </SettingsCard>
+          </fieldset>
         </SettingsPanel>
       ) : null}
     </DashboardPage>

@@ -20,8 +20,9 @@ import {
 import {
   resolveRequestAuth,
   resolveRequestAuthWithoutPortalCheck,
-  assertMemberRole,
 } from "../../lib/auth/cognito.js";
+import { assertPermission, assertSettingsAccess } from "../../lib/auth/permissions.js";
+import { writeAuditEvent } from "../../lib/audit/write-audit-event.js";
 import { isAuthAllowedOnPortal, getActivePortalTenantId } from "../../lib/auth/host-portal.js";
 import type {
   AuthContext,
@@ -81,6 +82,7 @@ import { handleMemberRoutes } from "./members.routes.js";
 import { handleProfileRoutes } from "./profile.routes.js";
 import { handleTeamRoutes } from "./teams.routes.js";
 import { handleEmailSettingsRoutes } from "./email-settings.routes.js";
+import { handleAccessRoutes } from "./access.routes.js";
 import { handleGoogleBusinessOAuthCallbackRoute, handleGoogleCalendarOAuthCallbackRoute, handleIntegrationRoutes } from "./integrations.routes.js";
 import { getPublicAuthMethodsByHost } from "../../lib/integrations/microsoft-sso.service.js";
 
@@ -232,7 +234,7 @@ async function handleInboxSlaRoutes(
 
   const method = (event.requestContext.http.method ?? "").toUpperCase();
 
-  assertMemberRole(auth);
+  await assertSettingsAccess(auth, method);
   await ensureTenant(auth.tenantId, auth.email, auth.name);
 
   if (method === "GET") {
@@ -249,6 +251,16 @@ async function handleInboxSlaRoutes(
 
     const inboxSla: InboxSlaSettings = parsed.data;
     const updated = await updateTenant(auth.tenantId, { inboxSla });
+    await writeAuditEvent({
+      tenantId: auth.tenantId,
+      actorUserId: auth.userId,
+      actorEmail: auth.email,
+      module: "settings",
+      action: "update",
+      entityType: "inboxSla",
+      entityId: auth.tenantId,
+      summary: "Updated inbox SLA settings",
+    });
     return ok(resolveInboxSlaSettings(updated.inboxSla));
   }
 
@@ -282,7 +294,7 @@ async function handleTaskReminderWhatsAppRoutes(
 
   const method = (event.requestContext.http.method ?? "").toUpperCase();
 
-  assertMemberRole(auth);
+  await assertSettingsAccess(auth, method);
   await ensureTenant(auth.tenantId, auth.email, auth.name);
 
   if (method === "GET") {
@@ -309,6 +321,16 @@ async function handleTaskReminderWhatsAppRoutes(
       : {};
 
     const updated = await updateTenant(auth.tenantId, { taskReminderWhatsApp });
+    await writeAuditEvent({
+      tenantId: auth.tenantId,
+      actorUserId: auth.userId,
+      actorEmail: auth.email,
+      module: "settings",
+      action: "update",
+      entityType: "taskReminderWhatsApp",
+      entityId: auth.tenantId,
+      summary: "Updated task reminder WhatsApp settings",
+    });
     return ok(resolveTaskReminderWhatsAppSettings(updated.taskReminderWhatsApp));
   }
 
@@ -325,7 +347,7 @@ async function handleReportScheduleRoutes(
 
   const method = (event.requestContext.http.method ?? "").toUpperCase();
 
-  assertMemberRole(auth);
+  await assertSettingsAccess(auth, method);
   await ensureTenant(auth.tenantId, auth.email, auth.name);
 
   if (method === "GET") {
@@ -357,6 +379,16 @@ async function handleReportScheduleRoutes(
 
     const updated = await updateTenant(auth.tenantId, { metricsReportSchedule });
     await syncReportSchedule(auth.tenantId, metricsReportSchedule);
+    await writeAuditEvent({
+      tenantId: auth.tenantId,
+      actorUserId: auth.userId,
+      actorEmail: auth.email,
+      module: "settings",
+      action: "update",
+      entityType: "reportSchedule",
+      entityId: auth.tenantId,
+      summary: "Updated report schedule",
+    });
     return ok(resolveMetricsReportSchedule(updated.metricsReportSchedule));
   }
 
@@ -384,7 +416,7 @@ async function handleWebsiteAnalyticsRoutes(
 
   const method = (event.requestContext.http.method ?? "").toUpperCase();
 
-  assertMemberRole(auth);
+  await assertSettingsAccess(auth, method);
   await ensureTenant(auth.tenantId, auth.email, auth.name);
 
   if (method === "GET") {
@@ -409,6 +441,16 @@ async function handleWebsiteAnalyticsRoutes(
       : { enabled: false };
 
     const updated = await updateTenant(auth.tenantId, { websiteAnalytics });
+    await writeAuditEvent({
+      tenantId: auth.tenantId,
+      actorUserId: auth.userId,
+      actorEmail: auth.email,
+      module: "settings",
+      action: "update",
+      entityType: "websiteAnalytics",
+      entityId: auth.tenantId,
+      summary: "Updated website analytics settings",
+    });
     return ok(resolveWebsiteAnalyticsSettings(updated.websiteAnalytics));
   }
 
@@ -424,6 +466,7 @@ async function handleBrandingRoutes(
   if (!rawPath.includes("/tenants/me/branding")) return null;
 
   const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
+  await assertSettingsAccess(auth, method);
 
   if (method === "GET" && rawPath.endsWith("/tenants/me/branding")) {
     const branding = await getResolvedBrandingWithInheritance(tenant);
@@ -454,6 +497,16 @@ async function handleBrandingRoutes(
     }
 
     const updated = await updateTenant(auth.tenantId, { branding });
+    await writeAuditEvent({
+      tenantId: auth.tenantId,
+      actorUserId: auth.userId,
+      actorEmail: auth.email,
+      module: "settings",
+      action: "update",
+      entityType: "branding",
+      entityId: auth.tenantId,
+      summary: "Updated branding",
+    });
     const resolved = await getResolvedTenantBranding(updated);
     return ok({
       ...resolved,
@@ -495,6 +548,16 @@ async function handleBrandingRoutes(
     const updated = await updateTenant(auth.tenantId, {
       branding: { ...(tenant.branding ?? {}), logoS3Key },
     });
+    await writeAuditEvent({
+      tenantId: auth.tenantId,
+      actorUserId: auth.userId,
+      actorEmail: auth.email,
+      module: "settings",
+      action: "update",
+      entityType: "branding",
+      entityId: auth.tenantId,
+      summary: "Updated branding logo",
+    });
     const resolved = await getResolvedTenantBranding(updated);
     return ok({
       ...resolved,
@@ -510,6 +573,16 @@ async function handleBrandingRoutes(
     const branding: TenantBranding = { ...(tenant.branding ?? {}) };
     delete branding.logoS3Key;
     const updated = await updateTenant(auth.tenantId, { branding });
+    await writeAuditEvent({
+      tenantId: auth.tenantId,
+      actorUserId: auth.userId,
+      actorEmail: auth.email,
+      module: "settings",
+      action: "delete",
+      entityType: "branding",
+      entityId: auth.tenantId,
+      summary: "Removed branding logo",
+    });
     const resolved = await getResolvedTenantBranding(updated);
     return ok({
       ...resolved,
@@ -523,6 +596,16 @@ async function handleBrandingRoutes(
       await deleteObject(tenant.branding.logoS3Key);
     }
     const updated = await updateTenant(auth.tenantId, { branding: {} });
+    await writeAuditEvent({
+      tenantId: auth.tenantId,
+      actorUserId: auth.userId,
+      actorEmail: auth.email,
+      module: "settings",
+      action: "delete",
+      entityType: "branding",
+      entityId: auth.tenantId,
+      summary: "Cleared branding",
+    });
     const resolved = await getResolvedBrandingWithInheritance(updated);
     return ok({
       ...resolved,
@@ -609,6 +692,9 @@ export async function handler(
 
     const auth = await resolveRequestAuth(event);
     const tenantId = event.pathParameters?.tenantId;
+
+    const accessResponse = await handleAccessRoutes(event, method, auth);
+    if (accessResponse) return accessResponse;
 
     if (method === "GET" && rawPath === "/tenants") {
       if (auth.role !== "admin") {
@@ -714,6 +800,7 @@ export async function handler(
     if (integrationRoutesResponse) return integrationRoutesResponse;
 
     if (event.rawPath?.endsWith("/openai-key")) {
+      await assertSettingsAccess(auth, method);
       if (method === "GET") {
         const exists = await hasOpenAIApiKey(auth.tenantId, ENVIRONMENT);
         return ok({ configured: exists });
@@ -726,11 +813,31 @@ export async function handler(
           return badRequest("Invalid OpenAI API key format");
         }
         await saveOpenAIApiKey(auth.tenantId, ENVIRONMENT, apiKey);
+        await writeAuditEvent({
+          tenantId: auth.tenantId,
+          actorUserId: auth.userId,
+          actorEmail: auth.email,
+          module: "settings",
+          action: "update",
+          entityType: "openaiKey",
+          entityId: auth.tenantId,
+          summary: "Updated OpenAI API key",
+        });
         return ok({ configured: true });
       }
 
       if (method === "DELETE") {
         await deleteOpenAIApiKey(auth.tenantId, ENVIRONMENT);
+        await writeAuditEvent({
+          tenantId: auth.tenantId,
+          actorUserId: auth.userId,
+          actorEmail: auth.email,
+          module: "settings",
+          action: "delete",
+          entityType: "openaiKey",
+          entityId: auth.tenantId,
+          summary: "Removed OpenAI API key",
+        });
         return noContent();
       }
     }
@@ -789,6 +896,9 @@ export async function handler(
       const resolvedId = tenantId === "me" ? auth.tenantId : tenantId;
       if (resolvedId !== auth.tenantId && auth.role !== "admin") {
         return handleError(Object.assign(new Error("Forbidden"), { statusCode: 403 }));
+      }
+      if (auth.role !== "admin") {
+        await assertPermission(auth, "settings.manage");
       }
 
       const body = JSON.parse(event.body ?? "{}");
@@ -906,6 +1016,18 @@ export async function handler(
         resolvedId,
         updates as Partial<Omit<Tenant, "tenantId" | "createdAt">>
       );
+      if (auth.role !== "admin") {
+        await writeAuditEvent({
+          tenantId: resolvedId,
+          actorUserId: auth.userId,
+          actorEmail: auth.email,
+          module: "settings",
+          action: "update",
+          entityType: "tenant",
+          entityId: resolvedId,
+          summary: "Updated account settings",
+        });
+      }
       return ok(updated);
     }
 

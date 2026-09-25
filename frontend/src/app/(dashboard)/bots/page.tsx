@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Plus, BotMessageSquare } from "lucide-react";
 import { useBots } from "@/hooks/useBots";
 import { BotCard } from "@/components/bots/BotCard";
@@ -11,6 +12,7 @@ import { Button } from "@/components/ui/Button";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { useT } from "@/i18n/context";
+import { usePermissions } from "@/hooks/usePermissions";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { OnboardingBanner } from "@/components/onboarding/OnboardingBanner";
@@ -22,7 +24,15 @@ type StatusFilter = "all" | "active" | "inactive";
 
 export default function BotsPage() {
   const t = useT();
+  const router = useRouter();
+  const { can, loading: permissionsLoading } = usePermissions();
   const { data: bots, isLoading, error } = useBots();
+  const canRead = can("bots.read");
+  const canWrite = can("bots.write");
+
+  useEffect(() => {
+    if (!permissionsLoading && !canRead) router.replace("/dashboard");
+  }, [canRead, permissionsLoading, router]);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
@@ -54,6 +64,8 @@ export default function BotsPage() {
     { id: "inactive", label: t("common.inactive") },
   ];
 
+  if (permissionsLoading || !canRead) return null;
+
   return (
     <DashboardPage>
       <div data-tour="bots-header">
@@ -61,6 +73,7 @@ export default function BotsPage() {
           title={t("bots.title")}
           subtitle={t("bots.subtitle")}
           actions={
+            canWrite ? (
             <ContextualHint hintId="bots-create" content={t("helpCenter.hints.botsCreate")}>
               <Link data-tour="bots-create" href="/bots/new">
                 <Button size="md">
@@ -69,6 +82,7 @@ export default function BotsPage() {
                 </Button>
               </Link>
             </ContextualHint>
+            ) : null
           }
         />
       </div>
@@ -130,12 +144,14 @@ export default function BotsPage() {
             title={t("bots.emptyTitle")}
             description={t("bots.emptyDescription")}
             action={
+              canWrite ? (
               <Link href="/bots/new">
                 <Button>
                   <Plus className="h-4 w-4" />
                   {t("bots.createFirst")}
                 </Button>
               </Link>
+              ) : null
             }
           />
         </div>

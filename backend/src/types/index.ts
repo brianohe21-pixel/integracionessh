@@ -653,6 +653,7 @@ export interface TenantMember {
   teamIds?: string[];
   lastLoginAt?: string;
   profilePhotoS3Key?: string;
+  customRoleId?: string;
 }
 
 export interface UserProfile {

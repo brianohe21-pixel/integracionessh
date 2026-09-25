@@ -26,6 +26,7 @@ import {
   useTenantMembers,
   useUpdateTenantMember,
 } from "@/hooks/useTenantMembers";
+import { useCustomRoles } from "@/hooks/usePermissions";
 import { useTenantRole } from "@/hooks/useTenantRole";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useT } from "@/i18n/context";
@@ -46,6 +47,7 @@ export function UsersTab() {
   const { isMember, isSupervisor } = useTenantRole();
   const { data, isLoading } = useTenantMembers();
   const { data: teamsData } = useOrganizationTeams();
+  const { data: rolesData } = useCustomRoles(isMember);
   const inviteMember = useInviteTenantMember();
   const updateMember = useUpdateTenantMember();
   const removeMember = useRemoveTenantMember();
@@ -62,15 +64,18 @@ export function UsersTab() {
   const [inviteRole, setInviteRole] = useState<MemberRole>("advisor");
   const [invitePhone, setInvitePhone] = useState("");
   const [inviteTeamIds, setInviteTeamIds] = useState<string[]>([]);
+  const [inviteCustomRoleId, setInviteCustomRoleId] = useState("");
 
   const [editName, setEditName] = useState("");
   const [editRole, setEditRole] = useState<MemberRole>("advisor");
   const [editTeamIds, setEditTeamIds] = useState<string[]>([]);
   const [editPhone, setEditPhone] = useState("");
+  const [editCustomRoleId, setEditCustomRoleId] = useState("");
 
   const members = data?.members ?? [];
   const currentUserId = data?.currentUserId ?? "";
   const teams = teamsData?.teams ?? [];
+  const customRoles = rolesData?.roles ?? [];
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -117,6 +122,7 @@ export function UsersTab() {
     setEditRole(member.role);
     setEditTeamIds(member.teamIds ?? []);
     setEditPhone("");
+    setEditCustomRoleId(member.customRoleId ?? "");
     setError("");
   }
 
@@ -130,6 +136,7 @@ export function UsersTab() {
         role: inviteRole,
         ...(inviteRole === "advisor" ? { phoneNumber: invitePhone } : {}),
         ...(inviteTeamIds.length ? { teamIds: inviteTeamIds } : {}),
+        ...(inviteCustomRoleId ? { customRoleId: inviteCustomRoleId } : {}),
       });
       setInviteOpen(false);
       setInviteName("");
@@ -137,6 +144,7 @@ export function UsersTab() {
       setInvitePhone("");
       setInviteRole("advisor");
       setInviteTeamIds([]);
+      setInviteCustomRoleId("");
     } catch (err) {
       setError(memberErrorMessage((err as Error).message));
     }
@@ -150,7 +158,7 @@ export function UsersTab() {
         userId: editTarget.userId,
         body: {
           name: editName,
-          ...(isMember ? { role: editRole } : {}),
+          ...(isMember ? { role: editRole, customRoleId: editCustomRoleId || null } : {}),
           teamIds: editTeamIds,
           ...(editRole === "advisor" && editPhone ? { phoneNumber: editPhone } : {}),
         },
@@ -350,6 +358,19 @@ export function UsersTab() {
                 <option value="supervisor">{t("nav.roleSupervisor")}</option>
                 <option value="advisor">{t("nav.roleAdvisor")}</option>
               </SelectControl>
+              {isMember && customRoles.length > 0 ? (
+                <SelectControl
+                  value={inviteCustomRoleId}
+                  onChange={(e) => setInviteCustomRoleId(e.target.value)}
+                >
+                  <option value="">{t("userCenter.customRoleNone")}</option>
+                  {customRoles.map((role) => (
+                    <option key={role.roleId} value={role.roleId}>
+                      {role.name}
+                    </option>
+                  ))}
+                </SelectControl>
+              ) : null}
               {inviteRole === "advisor" ? (
                 <Input
                   required
@@ -427,6 +448,19 @@ export function UsersTab() {
                 <option value="member">{t("nav.roleAdministrator")}</option>
                 <option value="supervisor">{t("nav.roleSupervisor")}</option>
                 <option value="advisor">{t("nav.roleAdvisor")}</option>
+              </SelectControl>
+            ) : null}
+            {isMember && customRoles.length > 0 ? (
+              <SelectControl
+                value={editCustomRoleId}
+                onChange={(e) => setEditCustomRoleId(e.target.value)}
+              >
+                <option value="">{t("userCenter.customRoleNone")}</option>
+                {customRoles.map((role) => (
+                  <option key={role.roleId} value={role.roleId}>
+                    {role.name}
+                  </option>
+                ))}
               </SelectControl>
             ) : null}
             {editRole === "advisor" ? (

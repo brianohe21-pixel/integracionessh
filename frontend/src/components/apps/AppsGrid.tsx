@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Calendar, CreditCard, LayoutGrid, ShoppingBag, Sparkles } from "lucide-react";
 import { useT } from "@/i18n/context";
+import { usePermissions } from "@/hooks/usePermissions";
 import type { AppCatalogItem } from "@/types";
 
 const APP_ICONS: Record<string, typeof Calendar> = {
@@ -31,10 +32,12 @@ const APP_I18N_KEYS: Record<string, { name: string; description: string }> = {
 
 export function AppsGrid({ apps }: { apps: AppCatalogItem[] }) {
   const t = useT();
+  const { can, loading } = usePermissions();
+  const visibleApps = apps.filter((app) => app.id !== "payments" || loading || can("payments.read"));
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {apps.map((app) => {
+      {visibleApps.map((app) => {
         const Icon = APP_ICONS[app.id] ?? LayoutGrid;
         const enabledCount = app.installedBots.filter((b) => b.enabled).length;
         const tenantEnabled = app.enabled ?? app.configured;

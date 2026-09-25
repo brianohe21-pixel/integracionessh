@@ -1,7 +1,8 @@
 import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
 import { z } from "zod";
 import type { AuthContext } from "../../types/index.js";
-import { assertMemberRole } from "../../lib/auth/cognito.js";
+import { assertSettingsAccess } from "../../lib/auth/permissions.js";
+import { writeAuditEvent } from "../../lib/audit/write-audit-event.js";
 import { ensureTenant } from "../../lib/dynamodb/tenant.repository.js";
 import {
   getTenantEmailSettingsView,
@@ -34,7 +35,7 @@ export async function handleEmailSettingsRoutes(
   const rawPath = event.rawPath ?? event.requestContext.http.path ?? "";
   if (!rawPath.includes("/tenants/me/email-settings")) return null;
 
-  assertMemberRole(auth);
+  await assertSettingsAccess(auth, method);
   await ensureTenant(auth.tenantId, auth.email, auth.name);
 
   if (method === "GET" && rawPath.endsWith("/email-settings")) {
@@ -52,6 +53,16 @@ export async function handleEmailSettingsRoutes(
       ...(fromEmail !== undefined ? { fromEmail } : {}),
       ...(fromName !== undefined ? { fromName } : {}),
     });
+    await writeAuditEvent({
+      tenantId: auth.tenantId,
+      actorUserId: auth.userId,
+      actorEmail: auth.email,
+      module: "settings",
+      action: "update",
+      entityType: "emailSettings",
+      entityId: auth.tenantId,
+      summary: "Updated email settings",
+    });
     return ok(view);
   }
 
@@ -61,6 +72,16 @@ export async function handleEmailSettingsRoutes(
     if (!parsed.success) return badRequest(formatZodError(parsed.error));
     try {
       const view = await registerTenantEmailDomain(auth.tenantId, parsed.data.domain);
+      await writeAuditEvent({
+        tenantId: auth.tenantId,
+        actorUserId: auth.userId,
+        actorEmail: auth.email,
+        module: "settings",
+        action: "update",
+        entityType: "emailDomain",
+        entityId: auth.tenantId,
+        summary: "Registered email domain",
+      });
       return ok(view);
     } catch (error) {
       return handleError(error);
@@ -78,6 +99,16 @@ export async function handleEmailSettingsRoutes(
 
   if (method === "DELETE" && rawPath.endsWith("/email-settings/domain")) {
     const view = await removeTenantEmailDomain(auth.tenantId);
+    await writeAuditEvent({
+      tenantId: auth.tenantId,
+      actorUserId: auth.userId,
+      actorEmail: auth.email,
+      module: "settings",
+      action: "delete",
+      entityType: "emailDomain",
+      entityId: auth.tenantId,
+      summary: "Removed email domain",
+    });
     return ok(view);
   }
 

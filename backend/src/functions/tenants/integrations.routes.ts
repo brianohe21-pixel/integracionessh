@@ -1,7 +1,8 @@
 import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
 import { z } from "zod";
 import type { AuthContext } from "../../types/index.js";
-import { assertMemberRole } from "../../lib/auth/cognito.js";
+import { assertSettingsAccess } from "../../lib/auth/permissions.js";
+import { writeAuditEvent } from "../../lib/audit/write-audit-event.js";
 import { ensureTenant } from "../../lib/dynamodb/tenant.repository.js";
 import {
   deleteMicrosoftSsoConfiguration,
@@ -56,7 +57,12 @@ export async function handleIntegrationRoutes(
   if (!rawPath.includes("/integrations")) return null;
 
   if (rawPath.includes("/tenants/me/integrations")) {
-    assertMemberRole(auth);
+    const readOnly =
+      method === "GET" &&
+      (rawPath.endsWith("/integrations") ||
+        rawPath.endsWith("/microsoft-sso") ||
+        rawPath.endsWith("/google-business-profile"));
+    await assertSettingsAccess(auth, readOnly ? "GET" : method);
     await ensureTenant(auth.tenantId, auth.email, auth.name);
 
     if (method === "GET" && rawPath.endsWith("/integrations")) {
@@ -87,6 +93,16 @@ export async function handleIntegrationRoutes(
             ...(parsed.data.allowedDomains ? { allowedDomains: parsed.data.allowedDomains } : {}),
             ...(parsed.data.enforceSso !== undefined ? { enforceSso: parsed.data.enforceSso } : {}),
           });
+          await writeAuditEvent({
+            tenantId: auth.tenantId,
+            actorUserId: auth.userId,
+            actorEmail: auth.email,
+            module: "settings",
+            action: "update",
+            entityType: "microsoftSso",
+            entityId: auth.tenantId,
+            summary: "Updated Microsoft SSO",
+          });
           return ok(view);
         } catch (error) {
           return handleError(error);
@@ -103,6 +119,16 @@ export async function handleIntegrationRoutes(
             parsed.data.enabled,
             environment
           );
+          await writeAuditEvent({
+            tenantId: auth.tenantId,
+            actorUserId: auth.userId,
+            actorEmail: auth.email,
+            module: "settings",
+            action: "update",
+            entityType: "microsoftSso",
+            entityId: auth.tenantId,
+            summary: "Updated Microsoft SSO status",
+          });
           return ok(view);
         } catch (error) {
           return handleError(error);
@@ -120,6 +146,16 @@ export async function handleIntegrationRoutes(
 
       if (method === "DELETE" && rawPath.endsWith("/microsoft-sso")) {
         const view = await deleteMicrosoftSsoConfiguration(auth.tenantId, environment);
+        await writeAuditEvent({
+          tenantId: auth.tenantId,
+          actorUserId: auth.userId,
+          actorEmail: auth.email,
+          module: "settings",
+          action: "delete",
+          entityType: "microsoftSso",
+          entityId: auth.tenantId,
+          summary: "Removed Microsoft SSO",
+        });
         return ok(view);
       }
     }
@@ -159,6 +195,16 @@ export async function handleIntegrationRoutes(
               ? { selectedLocationIds: parsed.data.selectedLocationIds }
               : {}),
           });
+          await writeAuditEvent({
+            tenantId: auth.tenantId,
+            actorUserId: auth.userId,
+            actorEmail: auth.email,
+            module: "settings",
+            action: "update",
+            entityType: "googleBusiness",
+            entityId: auth.tenantId,
+            summary: "Updated Google Business settings",
+          });
           return ok(view);
         } catch (error) {
           return handleError(error);
@@ -168,6 +214,16 @@ export async function handleIntegrationRoutes(
       if (method === "DELETE" && rawPath.endsWith("/google-business-profile")) {
         try {
           const view = await disconnectGoogleBusiness(auth.tenantId, environment);
+          await writeAuditEvent({
+            tenantId: auth.tenantId,
+            actorUserId: auth.userId,
+            actorEmail: auth.email,
+            module: "settings",
+            action: "delete",
+            entityType: "googleBusiness",
+            entityId: auth.tenantId,
+            summary: "Disconnected Google Business",
+          });
           return ok(view);
         } catch (error) {
           return handleError(error);

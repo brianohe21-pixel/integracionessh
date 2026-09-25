@@ -22,7 +22,10 @@ import {
 import { listBulkSendFailures } from "../../lib/dynamodb/bulk-job.repository.js";
 import { getCampaignMetrics } from "../../lib/dynamodb/campaign-metrics.repository.js";
 import { buildCampaignExportCsv } from "../../lib/reports/campaign-export-csv.js";
-import { resolveRequestAuth, assertMemberRole } from "../../lib/auth/cognito.js";
+import { resolveRequestAuth } from "../../lib/auth/cognito.js";
+import { assertPermission, type Permission } from "../../lib/auth/permissions.js";
+import { writeAuditEvent } from "../../lib/audit/write-audit-event.js";
+import type { AuthContext } from "../../types/index.js";
 import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import { ensureTenant } from "../../lib/dynamodb/tenant.repository.js";
 import { assertBulkRecipients, assertCanStartCampaign } from "../../lib/billing/assert-plan.js";
@@ -215,6 +218,19 @@ async function startCampaign(
   );
 }
 
+function auditCampaign(auth: AuthContext, action: string, campaignId: string, summary: string) {
+  return writeAuditEvent({
+    tenantId: auth.tenantId,
+    actorUserId: auth.userId,
+    actorEmail: auth.email,
+    module: "campaigns",
+    action,
+    entityType: "campaign",
+    entityId: campaignId,
+    summary,
+  });
+}
+
 export async function handler(
   event: APIGatewayProxyEventV2WithJWTAuthorizer & {
     action?: string;
@@ -260,13 +276,20 @@ export async function handler(
     }
 
     const auth = await resolveRequestAuth(event);
-    assertMemberRole(auth);
     await assertAssignedServices(auth.tenantId, "campaigns");
     const method = event.requestContext.http.method;
     const campaignId = event.pathParameters?.campaignId;
     const rawPath = event.rawPath ?? event.requestContext.http.path ?? "";
     const pathSegments = rawPath.split("/").filter(Boolean);
     const action = pathSegments[pathSegments.length - 1];
+    const sendAction = action === "start" || action === "pause" || action === "resume" || action === "retry";
+    const campaignPermission: Permission =
+      method === "GET"
+        ? "campaigns.read"
+        : method === "POST" && campaignId && sendAction
+          ? "campaigns.send"
+          : "campaigns.write";
+    await assertPermission(auth, campaignPermission);
 
     if (method === "GET" && !campaignId) {
       const campaigns = await listCampaigns(auth.tenantId);
@@ -404,6 +427,7 @@ export async function handler(
         await createCampaignStartSchedule(newCampaignId, auth.tenantId, scheduledAt);
       }
 
+      await auditCampaign(auth, "create", newCampaignId, `Created campaign ${name}`);
       return created(campaign);
     }
 
@@ -490,6 +514,7 @@ export async function handler(
       );
 
       const updated = await getCampaign(auth.tenantId, campaignId);
+      await auditCampaign(auth, "update", campaignId, `Updated campaign ${campaign.name}`);
       return ok(updated);
     }
 
@@ -521,6 +546,7 @@ export async function handler(
       await incrementCampaignsStarted(auth.tenantId);
       await incrementBulkRecipients(auth.tenantId, campaign.total);
       const updated = await getCampaign(auth.tenantId, campaignId);
+      await auditCampaign(auth, "start", campaignId, `Started campaign ${campaign.name}`);
       return ok(updated);
     }
 
@@ -534,6 +560,7 @@ export async function handler(
       await incrementCampaignBatchVersion(auth.tenantId, campaignId);
       await updateCampaignStatus(auth.tenantId, campaignId, "paused");
       const updated = await getCampaign(auth.tenantId, campaignId);
+      await auditCampaign(auth, "pause", campaignId, `Paused campaign ${campaign.name}`);
       return ok(updated);
     }
 
@@ -573,6 +600,7 @@ export async function handler(
       }
 
       const updated = await getCampaign(auth.tenantId, campaignId);
+      await auditCampaign(auth, "resume", campaignId, `Resumed campaign ${campaign.name}`);
       return ok(updated);
     }
 
@@ -594,6 +622,7 @@ export async function handler(
         await updateCampaignStatus(auth.tenantId, campaignId, "cancelled");
       }
       await archiveCampaign(auth.tenantId, campaignId);
+      await auditCampaign(auth, "archive", campaignId, `Archived campaign ${campaign.name}`);
       return ok({ message: "Campaign archived" });
     }
 
@@ -638,6 +667,7 @@ export async function handler(
       }
 
       const updated = await getCampaign(auth.tenantId, campaignId);
+      await auditCampaign(auth, "retry", campaignId, `Retried campaign ${campaign.name}`);
       return ok(updated);
     }
 
@@ -677,6 +707,7 @@ export async function handler(
       });
 
       await saveRecipients(auth.tenantId, newCampaignId, recipients as CampaignRecipientType[]);
+      await auditCampaign(auth, "clone", newCampaignId, `Cloned campaign ${campaign.name}`);
       return created(cloned);
     }
 
@@ -690,6 +721,7 @@ export async function handler(
       await deleteCampaignBatchSchedule(campaignId);
       await incrementCampaignBatchVersion(auth.tenantId, campaignId);
       await updateCampaignStatus(auth.tenantId, campaignId, "cancelled");
+      await auditCampaign(auth, "cancel", campaignId, `Cancelled campaign ${campaign.name}`);
       return ok({ message: "Campaign cancelled" });
     }
 

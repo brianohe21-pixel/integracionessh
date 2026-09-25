@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { CreditCard, Settings2 } from "lucide-react";
 import { useT } from "@/i18n/context";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useApps } from "@/hooks/useApps";
 import { useBots } from "@/hooks/useBots";
 import {
@@ -16,6 +18,10 @@ import { PageHeader } from "@/components/layout/PageHeader";
 
 export default function PaymentsAppsPage() {
   const t = useT();
+  const router = useRouter();
+  const { can, loading: permissionsLoading } = usePermissions();
+  const canRead = can("payments.read");
+  const canManage = can("payments.manage");
   const { data: appsData } = useApps();
   const { data: botsData } = useBots();
   const bots = botsData ?? [];
@@ -42,6 +48,12 @@ export default function PaymentsAppsPage() {
       setError((err as Error).message);
     }
   }
+
+  useEffect(() => {
+    if (!permissionsLoading && !canRead) router.replace("/dashboard");
+  }, [canRead, permissionsLoading, router]);
+
+  if (permissionsLoading || !canRead) return null;
 
   return (
     <DashboardPage>
@@ -101,7 +113,7 @@ export default function PaymentsAppsPage() {
             <button
               type="button"
               onClick={() => void handleToggle()}
-              disabled={enable.isPending || disable.isPending}
+              disabled={!canManage || enable.isPending || disable.isPending}
               className={`rounded-lg px-4 py-2 text-sm font-medium text-white ${
                 enabled ? "bg-gray-600 hover:bg-gray-700" : "bg-accent hover:bg-accent-hover"
               }`}
