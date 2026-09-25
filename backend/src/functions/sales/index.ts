@@ -1115,7 +1115,7 @@ async function resolveReminderUserIds(
 }
 
 function normalizeReminderExternal(
-  value?: { email?: string; whatsapp?: string } | null
+  value?: { email?: string | undefined; whatsapp?: string | undefined } | null
 ): SalesTask["reminderExternal"] | null {
   if (value === null || value === undefined) return null;
   const email = value.email?.trim().toLowerCase() || undefined;
@@ -1124,10 +1124,10 @@ function normalizeReminderExternal(
     ? normalizePhone(rawWhatsapp) || rawWhatsapp
     : undefined;
   if (!email && !whatsapp) return null;
-  return {
-    ...(email ? { email } : {}),
-    ...(whatsapp ? { whatsapp } : {}),
-  };
+  const normalized: NonNullable<SalesTask["reminderExternal"]> = {};
+  if (email) normalized.email = email;
+  if (whatsapp) normalized.whatsapp = whatsapp;
+  return normalized;
 }
 
 function uniqueReminderChannels(
