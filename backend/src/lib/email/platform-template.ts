@@ -40,7 +40,7 @@ function renderPlatformFooterBrandHtml(brandName: string, websiteUrl: string): s
     <tr>
       <td align="center" style="background-color:#0f1014;padding:10px 18px;border-radius:4px;">
         <a href="${websiteUrl}" target="_blank" rel="noopener noreferrer" style="text-decoration:none;display:inline-block;">
-          <img src="${logoSrc}" width="210" alt="${brandName}" style="display:block;border:0;outline:none;max-width:210px;width:210px;height:auto;" />
+          <img src="${logoSrc}" width="64" alt="${brandName}" style="display:block;border:0;outline:none;max-width:64px;width:64px;height:auto;" />
         </a>
       </td>
     </tr>

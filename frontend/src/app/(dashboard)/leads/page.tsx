@@ -15,6 +15,7 @@ import {
 import { useT } from "@/i18n/context";
 import { useBots } from "@/hooks/useBots";
 import { useLeads, useLeadMetrics, useUpdateLead } from "@/hooks/useLeads";
+import { useTenantRole } from "@/hooks/useTenantRole";
 import { LeadDetailPanel } from "@/components/leads/LeadDetailPanel";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -52,6 +53,7 @@ function leadInitials(name?: string, phone?: string): string {
 export default function LeadsPage() {
   const t = useT();
   const { formatDate } = useFormatters();
+  const { isAdvisor } = useTenantRole();
   const [view, setView] = useState<"table" | "kanban">("table");
   const [statusFilter, setStatusFilter] = useState<"" | LeadStatus>("");
   const [botFilter, setBotFilter] = useState("");
@@ -61,14 +63,14 @@ export default function LeadsPage() {
 
   const hasFilters = statusFilter || botFilter || metaAdsOnly || q;
 
-  const { data: bots } = useBots();
+  const { data: bots } = useBots({ enabled: !isAdvisor });
   const { data, isLoading } = useLeads({
     ...(statusFilter ? { status: statusFilter } : {}),
     ...(botFilter ? { botId: botFilter } : {}),
     ...(metaAdsOnly ? { adsOnly: true } : {}),
     ...(q ? { q } : {}),
   });
-  const { data: metrics } = useLeadMetrics();
+  const { data: metrics } = useLeadMetrics({ enabled: !isAdvisor });
   const updateLead = useUpdateLead();
 
   const leads = useMemo(() => data?.items ?? [], [data?.items]);
@@ -174,16 +176,18 @@ export default function LeadsPage() {
             <option key={s} value={s}>{t(`leads.status_${s}`)}</option>
           ))}
         </Select>
-        <Select
-          value={botFilter}
-          onChange={(e) => setBotFilter(e.target.value)}
-          className="sm:w-auto sm:min-w-[160px]"
-        >
-          <option value="">{t("automations.allBots")}</option>
-          {(bots ?? []).map((b) => (
-            <option key={b.botId} value={b.botId}>{b.name}</option>
-          ))}
-        </Select>
+        {!isAdvisor ? (
+          <Select
+            value={botFilter}
+            onChange={(e) => setBotFilter(e.target.value)}
+            className="sm:w-auto sm:min-w-[160px]"
+          >
+            <option value="">{t("automations.allBots")}</option>
+            {(bots ?? []).map((b) => (
+              <option key={b.botId} value={b.botId}>{b.name}</option>
+            ))}
+          </Select>
+        ) : null}
         <label className="inline-flex items-center gap-2 text-sm text-secondary">
           <input
             type="checkbox"
@@ -235,7 +239,9 @@ export default function LeadsPage() {
             <DataTableHead>
               <DataTableRow className="border-b border-default bg-surface-muted/60 text-xs uppercase tracking-wide text-secondary">
                 <DataTableCell header>{t("leads.colLead")}</DataTableCell>
-                <DataTableCell header>{t("leads.colBot")}</DataTableCell>
+                {!isAdvisor ? (
+                  <DataTableCell header>{t("leads.colBot")}</DataTableCell>
+                ) : null}
                 <DataTableCell header>{t("common.status")}</DataTableCell>
                 <DataTableCell header>{t("common.date")}</DataTableCell>
                 <DataTableCell header className="w-10">
@@ -269,9 +275,11 @@ export default function LeadsPage() {
                         </div>
                       </div>
                     </DataTableCell>
-                    <DataTableCell>
-                      <span className="text-sm text-secondary">{botName}</span>
-                    </DataTableCell>
+                    {!isAdvisor ? (
+                      <DataTableCell>
+                        <span className="text-sm text-secondary">{botName}</span>
+                      </DataTableCell>
+                    ) : null}
                     <DataTableCell>
                       <Badge variant={statusVariant(lead.status)}>
                         {t(`leads.status_${lead.status}`)}

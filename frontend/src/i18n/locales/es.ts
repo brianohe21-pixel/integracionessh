@@ -5131,7 +5131,7 @@ export const es = {
           "El panel te permite operar agentes conversacionales en varios canales desde un solo lugar. Este manual cubre las tareas esenciales para un operador del negocio (rol member).",
         steps: {
           "0": "El rol member gestiona bots, canales, flujos, campañas y configuración de la cuenta.",
-          "1": "El rol advisor solo accede al Inbox para responder conversaciones asignadas.",
+          "1": "El rol advisor accede al Inbox, Leads, Ventas y Tareas para gestionar conversaciones y prospectos asignados.",
           "2": "Si es tu primera vez, sigue el onboarding en /onboarding o usa el checklist del Centro de ayuda.",
         },
       },

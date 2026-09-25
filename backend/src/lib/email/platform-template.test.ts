@@ -85,6 +85,8 @@ describe("platform email template", () => {
     expect(html).toContain("ops@integracionessh.lat");
     expect(html).toContain('alt="Integraciones SSH"');
     expect(html).toContain("cid:platform-logo");
+    expect(html).toContain('width="64"');
+    expect(html).toContain("max-width:64px");
     expect(html).toContain("cid:platform-social-facebook");
     expect(html).toContain('bgcolor="#08090b"');
     expect(html).not.toContain("font-size:20px;font-weight:700");

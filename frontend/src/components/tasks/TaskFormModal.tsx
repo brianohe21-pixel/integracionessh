@@ -20,6 +20,17 @@ import type {
   SalesTaskReminderTarget,
 } from "@/types";
 
+const ACTIVE_REMINDER_TARGETS: SalesTaskReminderTarget[] = ["advisor"];
+
+function sanitizeReminderTargets(
+  targets: SalesTaskReminderTarget[] | undefined
+): SalesTaskReminderTarget[] {
+  const next = (targets ?? ["advisor"]).filter((target) =>
+    ACTIVE_REMINDER_TARGETS.includes(target)
+  );
+  return next.length > 0 ? next : ["advisor"];
+}
+
 export type TaskFormValues = {
   title: string;
   description?: string;
@@ -132,9 +143,9 @@ function defaultsFromTask(task?: SalesTask | null): Partial<TaskFormValues> {
     ...(task.contactEmail ? { contactEmail: task.contactEmail } : {}),
     ...(task.contactName ? { contactName: task.contactName } : {}),
     priority: task.priority ?? "medium",
-    reminderTargets: task.reminderTargets ?? ["advisor"],
+    reminderTargets: sanitizeReminderTargets(task.reminderTargets),
     reminderUserIds: task.reminderUserIds ?? [],
-    reminderExternal: task.reminderExternal ?? null,
+    reminderExternal: null,
     reminderChannels: task.reminderChannels ?? ["email"],
     reminderMinutesBefore: task.reminderMinutesBefore ?? 60,
   };
@@ -166,16 +177,10 @@ export function TaskFormModal({
   const [contactName, setContactName] = useState(initial.contactName ?? "");
   const [priority, setPriority] = useState<SalesTaskPriority>(initial.priority ?? "medium");
   const [reminderTargets, setReminderTargets] = useState<SalesTaskReminderTarget[]>(
-    initial.reminderTargets ?? ["advisor"]
+    sanitizeReminderTargets(initial.reminderTargets)
   );
   const [reminderUserIds, setReminderUserIds] = useState<string[]>(
     initial.reminderUserIds ?? []
-  );
-  const [externalEmail, setExternalEmail] = useState(
-    initial.reminderExternal?.email ?? ""
-  );
-  const [externalWhatsapp, setExternalWhatsapp] = useState(
-    initial.reminderExternal?.whatsapp ?? ""
   );
   const [reminderChannels, setReminderChannels] = useState<SalesTaskReminderChannel[]>(
     initial.reminderChannels ?? ["email"]
@@ -208,7 +213,6 @@ export function TaskFormModal({
   const hasReminderRecipients =
     reminderTargets.length > 0 ||
     reminderUserIds.length > 0 ||
-    Boolean(externalEmail.trim() || externalWhatsapp.trim()) ||
     reminderChannels.includes("platform");
 
   const minutesOptions = useMemo(
@@ -243,15 +247,6 @@ export function TaskFormModal({
   async function handleSubmit() {
     if (!canSubmit) return;
     const dueAt = fromLocalInputValue(joinLocalDateTime(dueDate, dueTime));
-    const email = externalEmail.trim();
-    const whatsapp = externalWhatsapp.trim();
-    const reminderExternal =
-      email || whatsapp
-        ? {
-            ...(email ? { email } : {}),
-            ...(whatsapp ? { whatsapp } : {}),
-          }
-        : null;
     await onSubmit({
       title: title.trim(),
       description: description.trim() || undefined,
@@ -274,9 +269,9 @@ export function TaskFormModal({
       ...(contactEmail.trim() ? { contactEmail: contactEmail.trim() } : {}),
       ...(contactName.trim() ? { contactName: contactName.trim() } : {}),
       priority,
-      reminderTargets,
+      reminderTargets: sanitizeReminderTargets(reminderTargets),
       reminderUserIds,
-      reminderExternal,
+      reminderExternal: null,
       reminderChannels,
       reminderMinutesBefore,
     });
@@ -442,7 +437,7 @@ export function TaskFormModal({
             <div>
               <p className="mb-1.5 text-sm font-medium text-primary">{t("tasks.reminderTargets")}</p>
               <div className="flex flex-wrap gap-1.5">
-                {(["advisor", "contact"] as SalesTaskReminderTarget[]).map((target) => (
+                {ACTIVE_REMINDER_TARGETS.map((target) => (
                   <button
                     key={target}
                     type="button"
@@ -527,25 +522,6 @@ export function TaskFormModal({
                 })}
               </div>
             ) : null}
-          </div>
-          <div>
-            <p className="mb-1.5 text-sm font-medium text-primary">
-              {t("tasks.reminderExternal")}
-            </p>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <Input
-                type="email"
-                value={externalEmail}
-                onChange={(e) => setExternalEmail(e.target.value)}
-                placeholder={t("tasks.reminderExternalEmail")}
-              />
-              <Input
-                value={externalWhatsapp}
-                onChange={(e) => setExternalWhatsapp(e.target.value)}
-                placeholder={t("tasks.reminderExternalWhatsapp")}
-              />
-            </div>
-            <p className="mt-1 text-xs text-muted">{t("tasks.reminderExternalHint")}</p>
           </div>
           {reminderChannels.length > 0 && hasReminderRecipients ? (
             <div>

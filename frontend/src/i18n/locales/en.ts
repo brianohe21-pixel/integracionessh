@@ -5118,7 +5118,7 @@ export const en: Messages = {
           "The dashboard lets you operate conversational agents across multiple channels from one place. This manual covers essential tasks for a business operator (member role).",
         steps: {
           "0": "The member role manages bots, channels, flows, campaigns, and account settings.",
-          "1": "The advisor role only accesses the Inbox to reply to assigned conversations.",
+          "1": "The advisor role accesses Inbox, Leads, Sales, and Tasks to manage assigned conversations and prospects.",
           "2": "If this is your first time, follow onboarding at /onboarding or use the Help Center checklist.",
         },
       },
