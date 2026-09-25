@@ -2,33 +2,35 @@
 
 import { useMemo, useState } from "react";
 import {
-  Bell,
-  Calendar,
+  AlignLeft,
+  ArrowRightCircle,
+  AtSign,
+  Check,
   CheckSquare,
-  Clock,
-  Mail,
-  MessageCircle,
+  ChevronsDown,
+  ChevronsUp,
+  Equal,
   Plus,
   Settings2,
+  Tag,
 } from "lucide-react";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { TaskActionsMenu } from "@/components/tasks/TaskActionsMenu";
-import { TaskCommentsPanel } from "@/components/tasks/TaskCommentsPanel";
 import { TaskFormModal, type TaskFormValues } from "@/components/tasks/TaskFormModal";
 import { TaskWhatsAppReminderSettings } from "@/components/tasks/TaskWhatsAppReminderSettings";
-import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Input, Select } from "@/components/ui/Input";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { SkeletonTable } from "@/components/ui/Skeleton";
+import { TableContainer } from "@/components/ui/TableContainer";
 import { useAdvisors } from "@/hooks/useAdvisors";
 import { useCreateSalesTask, useSalesTasks, useUpdateSalesTask } from "@/hooks/useSales";
 import { useTenantRole } from "@/hooks/useTenantRole";
 import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
-import type { SalesTask } from "@/types";
+import type { SalesTask, SalesTaskPriority } from "@/types";
 
 type StatusFilter = "open" | "today" | "overdue" | "done" | "all";
 
@@ -77,14 +79,14 @@ function advisorInitials(name?: string): string {
 }
 
 const ADVISOR_AVATAR_PALETTE = [
-  "bg-[#0084FF] text-white",
+  "bg-[#0052CC] text-white",
   "bg-[#128C7E] text-white",
-  "bg-[#7C3AED] text-white",
+  "bg-[#0EA5E9] text-white",
   "bg-[#DD2A7B] text-white",
   "bg-[#F58529] text-white",
-  "bg-[#0EA5E9] text-white",
   "bg-[#14B8A6] text-white",
   "bg-[#EA4335] text-white",
+  "bg-[#64748B] text-white",
 ] as const;
 
 function advisorAvatarTone(name?: string): string {
@@ -94,6 +96,74 @@ function advisorAvatarTone(name?: string): string {
     hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
   }
   return ADVISOR_AVATAR_PALETTE[hash % ADVISOR_AVATAR_PALETTE.length];
+}
+
+function formatDueDatePill(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function taskStatusMeta(
+  task: SalesTask,
+  t: (key: string) => string
+): { label: string; className: string } {
+  if (task.status === "done") {
+    return {
+      label: t("tasks.statusDone"),
+      className: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80",
+    };
+  }
+  if (task.status === "cancelled") {
+    return {
+      label: t("tasks.statusCancelled"),
+      className: "bg-slate-100 text-slate-600 ring-1 ring-slate-200/80",
+    };
+  }
+  if (isOverdue(task)) {
+    return {
+      label: t("tasks.statusOverdue"),
+      className: "bg-rose-50 text-rose-700 ring-1 ring-rose-200/80",
+    };
+  }
+  return {
+    label: t("tasks.statusOpen"),
+    className: "bg-sky-50 text-sky-800 ring-1 ring-sky-200/80",
+  };
+}
+
+function taskPriorityMeta(
+  priority: SalesTaskPriority | undefined,
+  t: (key: string) => string
+): { label: string; iconClass: string; Icon: typeof ChevronsUp } {
+  switch (priority) {
+    case "low":
+      return {
+        label: t("tasks.priorityLow"),
+        iconClass: "text-sky-600",
+        Icon: ChevronsDown,
+      };
+    case "high":
+      return {
+        label: t("tasks.priorityHigh"),
+        iconClass: "text-orange-500",
+        Icon: ChevronsUp,
+      };
+    case "highest":
+      return {
+        label: t("tasks.priorityHighest"),
+        iconClass: "text-rose-600",
+        Icon: ChevronsUp,
+      };
+    case "medium":
+    default:
+      return {
+        label: t("tasks.priorityMedium"),
+        iconClass: "text-amber-500",
+        Icon: Equal,
+      };
+  }
 }
 
 export default function TasksPage() {
@@ -155,6 +225,20 @@ export default function TasksPage() {
     return items;
   }, [data?.items, statusFilter]);
 
+  const headerAdvisors = useMemo(() => {
+    const seen = new Set<string>();
+    const list: Array<{ id: string; name: string }> = [];
+    for (const task of tasks) {
+      if (!task.advisorId || seen.has(task.advisorId)) continue;
+      const name = advisorNameById.get(task.advisorId);
+      if (!name) continue;
+      seen.add(task.advisorId);
+      list.push({ id: task.advisorId, name });
+      if (list.length >= 5) break;
+    }
+    return list;
+  }, [tasks, advisorNameById]);
+
   const filters: Array<{ id: StatusFilter; label: string }> = [
     { id: "open", label: t("tasks.filterOpen") },
     { id: "today", label: t("tasks.filterToday") },
@@ -175,7 +259,10 @@ export default function TasksPage() {
       ...(values.contactPhone ? { contactPhone: values.contactPhone } : {}),
       ...(values.contactEmail ? { contactEmail: values.contactEmail } : {}),
       ...(values.contactName ? { contactName: values.contactName } : {}),
+      priority: values.priority,
       reminderTargets: values.reminderTargets,
+      reminderUserIds: values.reminderUserIds,
+      reminderExternal: values.reminderExternal,
       reminderChannels: values.reminderChannels,
       reminderMinutesBefore: values.reminderMinutesBefore,
     });
@@ -191,7 +278,10 @@ export default function TasksPage() {
       dueAt: values.dueAt ?? null,
       ...(values.advisorId ? { advisorId: values.advisorId } : {}),
       leadId: values.leadId ?? null,
+      priority: values.priority,
       reminderTargets: values.reminderTargets,
+      reminderUserIds: values.reminderUserIds,
+      reminderExternal: values.reminderExternal,
       reminderChannels: values.reminderChannels,
       reminderMinutesBefore: values.reminderMinutesBefore,
     });
@@ -229,14 +319,14 @@ export default function TasksPage() {
         }
       />
 
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className="mb-3 flex flex-wrap gap-1.5">
         {filters.map((filter) => (
           <button
             key={filter.id}
             type="button"
             onClick={() => setStatusFilter(filter.id)}
             className={cn(
-              "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+              "rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
               statusFilter === filter.id
                 ? "border-accent bg-accent-muted text-accent"
                 : "border-default text-secondary hover:bg-surface-muted"
@@ -247,7 +337,7 @@ export default function TasksPage() {
         ))}
       </div>
 
-      <div className="mb-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
         <SearchInput
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -287,142 +377,193 @@ export default function TasksPage() {
           description={t("tasks.emptyDescription")}
         />
       ) : (
-        <div className="space-y-3">
-          {tasks.map((task) => {
-            const overdue = isOverdue(task);
-            const advisorName = task.advisorId
-              ? advisorNameById.get(task.advisorId)
-              : undefined;
+        <TableContainer className="overflow-hidden">
+          {headerAdvisors.length > 0 ? (
+            <div className="flex items-center justify-end border-b border-default px-3 py-2">
+              <div className="flex -space-x-1.5">
+                {headerAdvisors.map((advisor) => (
+                  <span
+                    key={advisor.id}
+                    title={advisor.name}
+                    className={cn(
+                      "inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold ring-2 ring-surface",
+                      advisorAvatarTone(advisor.name)
+                    )}
+                  >
+                    {advisorInitials(advisor.name)}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
-            return (
-              <div
-                key={task.taskId}
-                role="button"
-                tabIndex={0}
-                onClick={() => setEditingTask(task)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    setEditingTask(task);
-                  }
-                }}
-                className={cn(
-                  "content-card cursor-pointer p-4 transition-all duration-150 hover:shadow-md",
-                  overdue && "border-danger/25 bg-danger/[0.03]"
-                )}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex min-w-0 flex-1 gap-3">
-                    <div
-                      className={cn(
-                        "mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
-                        advisorName
-                          ? advisorAvatarTone(advisorName)
-                          : overdue
-                            ? "bg-danger/15 text-danger"
-                            : "bg-accent-muted text-accent"
-                      )}
-                      title={advisorName ?? t("tasks.anyAdvisor")}
+          <div className="overflow-x-auto">
+            <table className="min-w-[920px] w-full border-collapse text-left">
+              <thead>
+                <tr className="border-b border-default text-xs font-semibold uppercase tracking-wide text-muted">
+                  <th className="w-12 px-4 py-3" />
+                  <th className="px-4 py-3">
+                    <span className="inline-flex items-center gap-1.5">
+                      <AlignLeft className="h-4 w-4" />
+                      {t("tasks.colSummary")}
+                    </span>
+                  </th>
+                  <th className="w-[150px] px-4 py-3">
+                    <span className="inline-flex items-center gap-1.5">
+                      <ArrowRightCircle className="h-4 w-4" />
+                      {t("tasks.colStatus")}
+                    </span>
+                  </th>
+                  <th className="w-[180px] px-4 py-3">
+                    <span className="inline-flex items-center gap-1.5">
+                      <AtSign className="h-4 w-4" />
+                      {t("tasks.colAssignee")}
+                    </span>
+                  </th>
+                  <th className="w-[140px] px-4 py-3">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Tag className="h-4 w-4" />
+                      {t("tasks.colDueDate")}
+                    </span>
+                  </th>
+                  <th className="w-[140px] px-4 py-3">
+                    <span className="inline-flex items-center gap-1.5">
+                      <ChevronsUp className="h-4 w-4" />
+                      {t("tasks.colPriority")}
+                    </span>
+                  </th>
+                  <th className="w-12 px-4 py-3" />
+                </tr>
+              </thead>
+              <tbody>
+                {tasks.map((task) => {
+                  const overdue = isOverdue(task);
+                  const advisorName = task.advisorId
+                    ? advisorNameById.get(task.advisorId)
+                    : undefined;
+                  const status = taskStatusMeta(task, t);
+                  const priority = taskPriorityMeta(task.priority, t);
+                  const PriorityIcon = priority.Icon;
+                  const done = task.status === "done";
+
+                  return (
+                    <tr
+                      key={task.taskId}
+                      className="group border-b border-default/70 last:border-b-0 hover:bg-surface-muted/40"
                     >
-                      {advisorName ? (
-                        advisorInitials(advisorName)
-                      ) : (
-                        <CheckSquare className="h-5 w-5" />
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3
+                      <td className="px-4 py-4 align-middle">
+                        <button
+                          type="button"
+                          aria-label={done ? t("tasks.reopen") : t("tasks.markDone")}
+                          disabled={updateTask.isPending || task.status === "cancelled"}
+                          onClick={() => void handleToggleComplete(task)}
                           className={cn(
-                            "font-semibold text-primary",
-                            task.status === "done" && "text-secondary line-through"
+                            "flex h-6 w-6 items-center justify-center rounded-[5px] border transition-colors",
+                            done
+                              ? "border-[#0052CC] bg-[#0052CC] text-white"
+                              : "border-slate-300 bg-surface text-transparent hover:border-[#0052CC]",
+                            "disabled:cursor-not-allowed disabled:opacity-50"
                           )}
                         >
-                          {task.title}
-                        </h3>
-                        {overdue ? (
-                          <Badge variant="danger" dot>
-                            {t("tasks.filterOverdue")}
-                          </Badge>
-                        ) : null}
-                        {task.status === "done" ? (
-                          <Badge variant="success" dot>
-                            {t("tasks.filterDone")}
-                          </Badge>
-                        ) : null}
-                      </div>
-                      {task.description ? (
-                        <p className="mt-1 text-sm leading-relaxed text-secondary">
-                          {task.description}
-                        </p>
-                      ) : null}
-                      <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted">
+                          <Check className="h-4 w-4" strokeWidth={3} />
+                        </button>
+                      </td>
+                      <td className="px-4 py-4 align-middle">
+                        <button
+                          type="button"
+                          onClick={() => setEditingTask(task)}
+                          className="flex min-w-0 w-full items-center gap-2.5 text-left"
+                          title={task.description || task.title}
+                        >
+                          <span
+                            className={cn(
+                              "min-w-0 flex-1 truncate text-base font-medium text-primary transition-colors group-hover:text-accent",
+                              done && "text-secondary line-through"
+                            )}
+                          >
+                            {task.title}
+                          </span>
+                          {typeof task.commentCount === "number" && task.commentCount > 0 ? (
+                            <span className="shrink-0 text-xs font-medium text-muted">
+                              {t("tasks.commentsCount", { count: task.commentCount })}
+                            </span>
+                          ) : null}
+                        </button>
+                      </td>
+                      <td className="px-4 py-4 align-middle">
+                        <span
+                          className={cn(
+                            "inline-flex rounded-md px-2.5 py-1 text-xs font-semibold uppercase tracking-wide",
+                            status.className
+                          )}
+                        >
+                          {status.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 align-middle">
+                        {advisorName ? (
+                          <div className="flex min-w-0 items-center gap-2.5">
+                            <span
+                              className={cn(
+                                "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
+                                advisorAvatarTone(advisorName)
+                              )}
+                            >
+                              {advisorInitials(advisorName)}
+                            </span>
+                            <span className="truncate text-base text-primary">{advisorName}</span>
+                          </div>
+                        ) : (
+                          <span className="text-base text-muted">{t("tasks.anyAdvisor")}</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-4 align-middle">
                         {task.dueAt ? (
                           <span
                             className={cn(
-                              "inline-flex items-center gap-1.5 font-medium",
-                              overdue ? "text-danger" : "text-muted"
+                              "inline-flex rounded-md bg-slate-100 px-2.5 py-1 text-sm font-medium text-slate-700",
+                              overdue && "bg-rose-50 text-rose-700"
                             )}
+                            title={new Date(task.dueAt).toLocaleString()}
                           >
-                            <Clock className="h-3.5 w-3.5" />
-                            {new Date(task.dueAt).toLocaleString()}
+                            {formatDueDatePill(task.dueAt)}
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5">
-                            <Calendar className="h-3.5 w-3.5" />
-                            {t("tasks.noDueDate")}
-                          </span>
+                          <span className="text-sm text-muted">{t("tasks.noDueDate")}</span>
                         )}
-                        {advisorName ? (
-                          <span className="inline-flex items-center gap-1.5 font-medium text-secondary">
-                            {advisorName}
-                          </span>
-                        ) : null}
-                        {task.contactName || task.contactPhone ? (
-                          <span>
-                            {[task.contactName, task.contactPhone].filter(Boolean).join(" · ")}
-                          </span>
-                        ) : null}
-                        {(task.reminderChannels ?? []).includes("email") ? (
-                          <span className="inline-flex items-center gap-1">
-                            <Mail className="h-3.5 w-3.5" />
-                            {t("tasks.channel.email")}
-                          </span>
-                        ) : null}
-                        {(task.reminderChannels ?? []).includes("whatsapp") ? (
-                          <span className="inline-flex items-center gap-1">
-                            <MessageCircle className="h-3.5 w-3.5" />
-                            {t("tasks.channel.whatsapp")}
-                          </span>
-                        ) : null}
-                        {(task.reminderChannels ?? []).includes("platform") ? (
-                          <span className="inline-flex items-center gap-1">
-                            <Bell className="h-3.5 w-3.5" />
-                            {t("tasks.channel.platform")}
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-                  <div
-                    onClick={(event) => event.stopPropagation()}
-                    onKeyDown={(event) => event.stopPropagation()}
-                  >
-                    <TaskActionsMenu
-                      status={task.status}
-                      busy={updateTask.isPending}
-                      onEdit={() => setEditingTask(task)}
-                      onToggleComplete={() => void handleToggleComplete(task)}
-                    />
-                  </div>
-                </div>
-                <div onClick={(event) => event.stopPropagation()}>
-                  <TaskCommentsPanel taskId={task.taskId} />
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                      </td>
+                      <td className="px-4 py-4 align-middle">
+                        <span className="inline-flex items-center gap-2 text-base text-primary">
+                          <PriorityIcon className={cn("h-5 w-5", priority.iconClass)} />
+                          {priority.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 align-middle">
+                        <TaskActionsMenu
+                          status={task.status}
+                          busy={updateTask.isPending}
+                          onEdit={() => setEditingTask(task)}
+                          onToggleComplete={() => void handleToggleComplete(task)}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="border-t border-default px-4 py-3">
+            <button
+              type="button"
+              onClick={() => setShowCreate(true)}
+              className="inline-flex items-center gap-2 rounded-md px-2.5 py-2 text-base font-semibold text-[#0052CC] transition-colors hover:bg-sky-50"
+            >
+              <Plus className="h-5 w-5" />
+              {t("tasks.createRow")}
+            </button>
+          </div>
+        </TableContainer>
       )}
 
       {showCreate ? (

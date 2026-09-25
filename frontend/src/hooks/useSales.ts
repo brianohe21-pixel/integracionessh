@@ -287,7 +287,10 @@ export function useUpdateSalesTask() {
       contactPhone?: string;
       contactEmail?: string | null;
       contactName?: string;
+      priority?: SalesTask["priority"];
       reminderTargets?: SalesTask["reminderTargets"];
+      reminderUserIds?: string[];
+      reminderExternal?: SalesTask["reminderExternal"] | null;
       reminderChannels?: SalesTask["reminderChannels"];
       reminderMinutesBefore?: number;
     }) => api.patch<SalesTask>(`/sales/tasks/${taskId}`, body),
@@ -312,7 +315,10 @@ export function useCreateSalesTask() {
       contactPhone?: string;
       contactEmail?: string;
       contactName?: string;
+      priority?: SalesTask["priority"];
       reminderTargets?: SalesTask["reminderTargets"];
+      reminderUserIds?: string[];
+      reminderExternal?: SalesTask["reminderExternal"] | null;
       reminderChannels?: SalesTask["reminderChannels"];
       reminderMinutesBefore?: number;
     }) => api.post<SalesTask>("/sales/tasks", body),

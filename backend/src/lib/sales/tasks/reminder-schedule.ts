@@ -24,7 +24,11 @@ export function shouldScheduleTaskReminder(task: SalesTask): boolean {
   if (!task.reminderChannels?.length) return false;
   const channels = new Set(task.reminderChannels);
   if (channels.has("platform")) return true;
-  if (!task.reminderTargets?.length) return false;
+  const hasTargets =
+    Boolean(task.reminderTargets?.length) ||
+    Boolean(task.reminderUserIds?.length) ||
+    Boolean(task.reminderExternal?.email || task.reminderExternal?.whatsapp);
+  if (!hasTargets) return false;
   return channels.has("email") || channels.has("whatsapp");
 }
 

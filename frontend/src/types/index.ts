@@ -870,6 +870,7 @@ export interface SequenceEnrollment {
 }
 
 export type SalesTaskStatus = "open" | "done" | "cancelled";
+export type SalesTaskPriority = "low" | "medium" | "high" | "highest";
 export type SalesTaskReminderTarget = "advisor" | "contact";
 export type SalesTaskReminderChannel = "email" | "whatsapp" | "platform";
 export type SalesTaskReminderStatus =
@@ -878,6 +879,11 @@ export type SalesTaskReminderStatus =
   | "skipped"
   | "failed"
   | "cancelled";
+
+export interface SalesTaskReminderExternal {
+  email?: string;
+  whatsapp?: string;
+}
 
 export interface SalesTask {
   taskId: string;
@@ -895,7 +901,10 @@ export interface SalesTask {
   description?: string;
   dueAt?: string;
   status: SalesTaskStatus;
+  priority?: SalesTaskPriority;
   reminderTargets?: SalesTaskReminderTarget[];
+  reminderUserIds?: string[];
+  reminderExternal?: SalesTaskReminderExternal;
   reminderChannels?: SalesTaskReminderChannel[];
   reminderMinutesBefore?: number;
   reminderStatus?: SalesTaskReminderStatus;

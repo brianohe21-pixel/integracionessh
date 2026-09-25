@@ -34,8 +34,10 @@ export function shouldDeliverToConnection(
 
 function shouldDeliverTaskReminder(
   connection: RealtimeConnection,
-  advisorId?: string
+  advisorId?: string,
+  userIds?: string[]
 ): boolean {
+  if (userIds?.length && userIds.includes(connection.userId)) return true;
   if (connection.role === "member" || connection.role === "supervisor") return true;
   if (connection.role === "advisor") {
     if (!advisorId) return false;
@@ -83,7 +85,7 @@ export async function publishRealtimeEvent(
     );
   } else if (event.type === "task.reminder") {
     targets = connections.filter((connection) =>
-      shouldDeliverTaskReminder(connection, event.advisorId)
+      shouldDeliverTaskReminder(connection, event.advisorId, event.userIds)
     );
   }
 

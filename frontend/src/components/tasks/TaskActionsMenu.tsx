@@ -28,6 +28,7 @@ type MenuPosition = {
 type Props = {
   status: "open" | "done" | "cancelled";
   busy?: boolean;
+  compact?: boolean;
   onEdit: () => void;
   onToggleComplete: () => void;
 };
@@ -35,6 +36,7 @@ type Props = {
 export function TaskActionsMenu({
   status,
   busy = false,
+  compact = false,
   onEdit,
   onToggleComplete,
 }: Props) {
@@ -164,11 +166,12 @@ export function TaskActionsMenu({
         aria-label={t("tasks.actionsMenu")}
         disabled={busy}
         className={cn(
-          "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-default text-secondary transition-colors hover:bg-surface-muted hover:text-primary disabled:cursor-not-allowed disabled:opacity-50",
+          "inline-flex shrink-0 items-center justify-center rounded-md border border-default text-secondary transition-colors hover:bg-surface-muted hover:text-primary disabled:cursor-not-allowed disabled:opacity-50",
+          compact ? "h-6 w-6" : "h-8 w-8 rounded-lg",
           open && "border-accent/30 bg-accent-muted text-accent"
         )}
       >
-        <MoreVertical className="h-4 w-4" />
+        <MoreVertical className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} />
       </button>
       {mounted && menu ? createPortal(menu, document.body) : null}
     </>

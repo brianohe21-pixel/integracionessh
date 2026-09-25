@@ -22,6 +22,7 @@ export type RealtimeEvent =
       href: string;
       createdAt: string;
       advisorId?: string;
+      userIds?: string[];
     };
 
 export interface RealtimeConnection {

@@ -6,13 +6,17 @@ import { Button } from "@/components/ui/Button";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { TaskTimePicker } from "@/components/tasks/TaskTimePicker";
+import { TaskCommentsPanel } from "@/components/tasks/TaskCommentsPanel";
 import { useLeads, useLead } from "@/hooks/useLeads";
+import { useTenantMembers } from "@/hooks/useTenantMembers";
 import { useT } from "@/i18n/context";
 import type {
   Advisor,
   Lead,
   SalesTask,
+  SalesTaskPriority,
   SalesTaskReminderChannel,
+  SalesTaskReminderExternal,
   SalesTaskReminderTarget,
 } from "@/types";
 
@@ -27,7 +31,10 @@ export type TaskFormValues = {
   contactPhone?: string;
   contactEmail?: string;
   contactName?: string;
+  priority: SalesTaskPriority;
   reminderTargets: SalesTaskReminderTarget[];
+  reminderUserIds: string[];
+  reminderExternal: SalesTaskReminderExternal | null;
   reminderChannels: SalesTaskReminderChannel[];
   reminderMinutesBefore: number;
 };
@@ -97,6 +104,7 @@ const DESCRIPTION_CHIP_KEYS = [
 type DescriptionChipKey = (typeof DESCRIPTION_CHIP_KEYS)[number];
 
 const REMINDER_CHANNELS: SalesTaskReminderChannel[] = ["email", "whatsapp", "platform"];
+const TASK_PRIORITIES: SalesTaskPriority[] = ["low", "medium", "high", "highest"];
 
 function appendDescriptionChip(current: string, chip: string): string {
   const trimmed = current.trim();
@@ -123,7 +131,10 @@ function defaultsFromTask(task?: SalesTask | null): Partial<TaskFormValues> {
     ...(task.contactPhone ? { contactPhone: task.contactPhone } : {}),
     ...(task.contactEmail ? { contactEmail: task.contactEmail } : {}),
     ...(task.contactName ? { contactName: task.contactName } : {}),
+    priority: task.priority ?? "medium",
     reminderTargets: task.reminderTargets ?? ["advisor"],
+    reminderUserIds: task.reminderUserIds ?? [],
+    reminderExternal: task.reminderExternal ?? null,
     reminderChannels: task.reminderChannels ?? ["email"],
     reminderMinutesBefore: task.reminderMinutesBefore ?? 60,
   };
@@ -153,8 +164,18 @@ export function TaskFormModal({
   const [contactPhone, setContactPhone] = useState(initial.contactPhone ?? "");
   const [contactEmail, setContactEmail] = useState(initial.contactEmail ?? "");
   const [contactName, setContactName] = useState(initial.contactName ?? "");
+  const [priority, setPriority] = useState<SalesTaskPriority>(initial.priority ?? "medium");
   const [reminderTargets, setReminderTargets] = useState<SalesTaskReminderTarget[]>(
     initial.reminderTargets ?? ["advisor"]
+  );
+  const [reminderUserIds, setReminderUserIds] = useState<string[]>(
+    initial.reminderUserIds ?? []
+  );
+  const [externalEmail, setExternalEmail] = useState(
+    initial.reminderExternal?.email ?? ""
+  );
+  const [externalWhatsapp, setExternalWhatsapp] = useState(
+    initial.reminderExternal?.whatsapp ?? ""
   );
   const [reminderChannels, setReminderChannels] = useState<SalesTaskReminderChannel[]>(
     initial.reminderChannels ?? ["email"]
@@ -165,6 +186,11 @@ export function TaskFormModal({
 
   const { data: leadsData } = useLeads();
   const { data: selectedLead } = useLead(leadId || null);
+  const { data: membersData } = useTenantMembers();
+  const tenantMembers = useMemo(
+    () => (membersData?.members ?? []).filter((member) => member.enabled),
+    [membersData?.members]
+  );
   const leads = useMemo(() => {
     const byId = new Map<string, Lead>();
     for (const lead of leadsData?.items ?? []) {
@@ -179,6 +205,11 @@ export function TaskFormModal({
 
   const canSubmit = title.trim().length > 0 && !submitting;
   const isEdit = mode === "edit";
+  const hasReminderRecipients =
+    reminderTargets.length > 0 ||
+    reminderUserIds.length > 0 ||
+    Boolean(externalEmail.trim() || externalWhatsapp.trim()) ||
+    reminderChannels.includes("platform");
 
   const minutesOptions = useMemo(
     () => [
@@ -212,6 +243,15 @@ export function TaskFormModal({
   async function handleSubmit() {
     if (!canSubmit) return;
     const dueAt = fromLocalInputValue(joinLocalDateTime(dueDate, dueTime));
+    const email = externalEmail.trim();
+    const whatsapp = externalWhatsapp.trim();
+    const reminderExternal =
+      email || whatsapp
+        ? {
+            ...(email ? { email } : {}),
+            ...(whatsapp ? { whatsapp } : {}),
+          }
+        : null;
     await onSubmit({
       title: title.trim(),
       description: description.trim() || undefined,
@@ -233,7 +273,10 @@ export function TaskFormModal({
       ...(contactPhone.trim() ? { contactPhone: contactPhone.trim() } : {}),
       ...(contactEmail.trim() ? { contactEmail: contactEmail.trim() } : {}),
       ...(contactName.trim() ? { contactName: contactName.trim() } : {}),
+      priority,
       reminderTargets,
+      reminderUserIds,
+      reminderExternal,
       reminderChannels,
       reminderMinutesBefore,
     });
@@ -241,8 +284,8 @@ export function TaskFormModal({
 
   return (
     <Modal>
-      <div className="mx-4 w-full max-w-2xl overflow-visible rounded-2xl bg-surface-elevated shadow-xl">
-        <div className="flex items-center justify-between border-b border-default px-5 py-3">
+      <div className="mx-4 flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-surface-elevated shadow-xl">
+        <div className="flex shrink-0 items-center justify-between border-b border-default px-5 py-3">
           <h2 className="text-lg font-semibold text-primary">
             {isEdit ? t("tasks.editTask") : t("tasks.newTask")}
           </h2>
@@ -254,7 +297,7 @@ export function TaskFormModal({
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="space-y-3 px-5 py-4">
+        <div className="space-y-3 overflow-y-auto overflow-x-visible px-5 py-4">
           <div>
             <label className="mb-1 block text-sm font-medium text-primary">
               {t("tasks.taskTitle")}
@@ -332,20 +375,69 @@ export function TaskFormModal({
             </div>
           </div>
           {showAdvisorSelect ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-primary">
+                  {t("tasks.advisor")}
+                </label>
+                <Select value={advisorId} onChange={(e) => setAdvisorId(e.target.value)}>
+                  <option value="">{t("tasks.anyAdvisor")}</option>
+                  {advisors.map((advisor) => (
+                    <option key={advisor.advisorId} value={advisor.advisorId}>
+                      {advisor.name}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-primary">
+                  {t("tasks.priority")}
+                </label>
+                <Select
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value as SalesTaskPriority)}
+                >
+                  {TASK_PRIORITIES.map((value) => (
+                    <option key={value} value={value}>
+                      {t(
+                        value === "low"
+                          ? "tasks.priorityLow"
+                          : value === "medium"
+                            ? "tasks.priorityMedium"
+                            : value === "high"
+                              ? "tasks.priorityHigh"
+                              : "tasks.priorityHighest"
+                      )}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            </div>
+          ) : (
             <div>
               <label className="mb-1 block text-sm font-medium text-primary">
-                {t("tasks.advisor")}
+                {t("tasks.priority")}
               </label>
-              <Select value={advisorId} onChange={(e) => setAdvisorId(e.target.value)}>
-                <option value="">{t("tasks.anyAdvisor")}</option>
-                {advisors.map((advisor) => (
-                  <option key={advisor.advisorId} value={advisor.advisorId}>
-                    {advisor.name}
+              <Select
+                value={priority}
+                onChange={(e) => setPriority(e.target.value as SalesTaskPriority)}
+              >
+                {TASK_PRIORITIES.map((value) => (
+                  <option key={value} value={value}>
+                    {t(
+                      value === "low"
+                        ? "tasks.priorityLow"
+                        : value === "medium"
+                          ? "tasks.priorityMedium"
+                          : value === "high"
+                            ? "tasks.priorityHigh"
+                            : "tasks.priorityHighest"
+                    )}
                   </option>
                 ))}
               </Select>
             </div>
-          ) : null}
+          )}
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <p className="mb-1.5 text-sm font-medium text-primary">{t("tasks.reminderTargets")}</p>
@@ -386,8 +478,76 @@ export function TaskFormModal({
               </div>
             </div>
           </div>
-          {reminderChannels.length > 0 &&
-          (reminderTargets.length > 0 || reminderChannels.includes("platform")) ? (
+          <div>
+            <label className="mb-1 block text-sm font-medium text-primary">
+              {t("tasks.reminderUsers")}
+            </label>
+            <Select
+              value=""
+              onChange={(e) => {
+                const userId = e.target.value;
+                if (!userId) return;
+                setReminderUserIds((prev) =>
+                  prev.includes(userId) ? prev : [...prev, userId]
+                );
+              }}
+              disabled={tenantMembers.length === 0}
+            >
+              <option value="">
+                {tenantMembers.length === 0
+                  ? t("tasks.reminderUsersEmpty")
+                  : t("tasks.reminderUsersNone")}
+              </option>
+              {tenantMembers
+                .filter((member) => !reminderUserIds.includes(member.userId))
+                .map((member) => (
+                  <option key={member.userId} value={member.userId}>
+                    {member.name || member.email}
+                  </option>
+                ))}
+            </Select>
+            {reminderUserIds.length > 0 ? (
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {reminderUserIds.map((userId) => {
+                  const member = tenantMembers.find((item) => item.userId === userId);
+                  const label = member?.name || member?.email || userId;
+                  return (
+                    <button
+                      key={userId}
+                      type="button"
+                      onClick={() =>
+                        setReminderUserIds((prev) => prev.filter((id) => id !== userId))
+                      }
+                      className="inline-flex items-center gap-1 rounded-full border border-accent bg-accent-muted px-2.5 py-1 text-xs font-medium text-accent"
+                    >
+                      {label}
+                      <X className="h-3 w-3" aria-hidden="true" />
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
+          <div>
+            <p className="mb-1.5 text-sm font-medium text-primary">
+              {t("tasks.reminderExternal")}
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Input
+                type="email"
+                value={externalEmail}
+                onChange={(e) => setExternalEmail(e.target.value)}
+                placeholder={t("tasks.reminderExternalEmail")}
+              />
+              <Input
+                value={externalWhatsapp}
+                onChange={(e) => setExternalWhatsapp(e.target.value)}
+                placeholder={t("tasks.reminderExternalWhatsapp")}
+              />
+            </div>
+            <p className="mt-1 text-xs text-muted">{t("tasks.reminderExternalHint")}</p>
+          </div>
+          {reminderChannels.length > 0 && hasReminderRecipients ? (
             <div>
               <label className="mb-1 block text-sm font-medium text-primary">
                 {t("tasks.reminderWhen")}
@@ -404,6 +564,7 @@ export function TaskFormModal({
               </Select>
             </div>
           ) : null}
+          {isEdit && task?.taskId ? <TaskCommentsPanel taskId={task.taskId} /> : null}
           <div className="flex justify-end gap-2 pt-1">
             <Button variant="secondary" onClick={onClose} disabled={submitting}>
               {t("common.cancel")}
