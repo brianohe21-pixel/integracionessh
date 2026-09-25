@@ -17,6 +17,7 @@ import {
   LayoutGrid,
   LayoutDashboard,
   BarChart3,
+  Bell,
   Settings,
   Megaphone,
   MessageSquareText,
@@ -45,6 +46,8 @@ import {
 } from "lucide-react";
 import { useAdminRole } from "@/hooks/useAdminRole";
 import { useTenantRole } from "@/hooks/useTenantRole";
+import { usePermissions } from "@/hooks/usePermissions";
+import { permissionForNavHref, type Permission } from "@/lib/permissions";
 import { useSidebar } from "@/components/layout/SidebarContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, getTenantContext } from "@/lib/api";
@@ -154,6 +157,7 @@ const memberNavCategories: NavCategory[] = [
       { href: "/support", labelKey: "nav.support", icon: LifeBuoy },
       { href: "/billing", labelKey: "nav.billing", icon: CreditCard },
       { href: "/users", labelKey: "nav.userCenter", icon: Users },
+      { href: "/alerts", labelKey: "nav.alerts", icon: Bell },
       { href: "/settings", labelKey: "nav.settings", icon: Settings },
     ],
   },
@@ -191,7 +195,10 @@ const supervisorNavCategories: NavCategory[] = [
   {
     id: "account",
     labelKey: "nav.categoryAccount",
-    items: [{ href: "/users", labelKey: "nav.userCenter", icon: Users }],
+    items: [
+      { href: "/alerts", labelKey: "nav.alerts", icon: Bell },
+      { href: "/users", labelKey: "nav.userCenter", icon: Users },
+    ],
   },
 ];
 
@@ -1202,6 +1209,7 @@ export function Sidebar() {
   const { isOpen, close, isCollapsed, toggleCollapsed } = useSidebar();
   const { isAdmin, loading: adminLoading } = useAdminRole();
   const { isAdvisor, isSupervisor, loading: roleLoading } = useTenantRole();
+  const { can, loading: permissionsLoading } = usePermissions();
   const clearContext = useClearTenantContext();
   const assume = useAssumeSubaccount();
   const { data: me } = useQuery({
@@ -1244,7 +1252,7 @@ export function Sidebar() {
       )
     : [];
 
-  const loading = adminLoading || roleLoading;
+  const loading = adminLoading || roleLoading || permissionsLoading;
   const baseCategories = loading
     ? []
     : isAdmin
@@ -1270,14 +1278,45 @@ export function Sidebar() {
       )
     : baseCategories;
 
-  const filteredNavCategories = navCategories
+  const permissionFiltered = navCategories
     .map((category) => ({
       ...category,
       items: category.items
         .map((item) => filterNavItem(item, me, assumedId))
-        .filter((item): item is NavItem => item !== null),
+        .filter((item): item is NavItem => item !== null)
+        .filter((item) => {
+          const required = permissionForNavHref(item.href);
+          return !required || can(required);
+        }),
     }))
     .filter((category) => category.items.length > 0);
+
+  const extraItems: NavItem[] = [];
+  if (!loading && !isAdmin) {
+    const present = new Set(
+      permissionFiltered.flatMap((category) => category.items.map((item) => item.href))
+    );
+    const extras: { href: string; labelKey: string; icon: NavItem["icon"]; permission: Permission }[] = [
+      { href: "/bots", labelKey: "nav.bots", icon: BotMessageSquare, permission: "bots.read" },
+      { href: "/contacts", labelKey: "nav.contacts", icon: BookUser, permission: "contacts.read" },
+      { href: "/campaigns", labelKey: "nav.campaigns", icon: Megaphone, permission: "campaigns.read" },
+      { href: "/alerts", labelKey: "nav.alerts", icon: Bell, permission: "settings.read" },
+      { href: "/settings", labelKey: "nav.settings", icon: Settings, permission: "settings.read" },
+    ];
+    for (const extra of extras) {
+      if (can(extra.permission) && !present.has(extra.href)) {
+        extraItems.push({ href: extra.href, labelKey: extra.labelKey, icon: extra.icon });
+      }
+    }
+  }
+
+  const filteredNavCategories =
+    extraItems.length === 0
+      ? permissionFiltered
+      : [
+          ...permissionFiltered,
+          { id: "granted", labelKey: "nav.categoryAccount", items: extraItems },
+        ];
 
   const standaloneItems =
     loading || isAdmin || isAdvisor || isSupervisor ? [] : memberStandaloneNavItems;

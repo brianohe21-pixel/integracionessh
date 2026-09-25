@@ -38,6 +38,7 @@ import {
   syncSupervisorTeamMembership,
   teamIdsForUser,
 } from "../../lib/teams/membership.js";
+import { getCustomRole } from "../../lib/dynamodb/role.repository.js";
 import {
   badRequest,
   created,
@@ -55,6 +56,7 @@ const CreateMemberSchema = z
     role: z.enum(["member", "supervisor", "advisor"]),
     phoneNumber: z.string().min(8).max(20).optional(),
     teamIds: z.array(z.string().min(1)).optional(),
+    customRoleId: z.string().uuid().nullable().optional(),
   })
   .superRefine((data, ctx) => {
     if (data.role === "advisor" && !data.phoneNumber) {
@@ -72,6 +74,7 @@ const UpdateMemberSchema = z.object({
   enabled: z.boolean().optional(),
   teamIds: z.array(z.string().min(1)).optional(),
   phoneNumber: z.string().min(8).max(20).optional(),
+  customRoleId: z.string().uuid().nullable().optional(),
 });
 
 function formatZodError(error: z.ZodError): string {
@@ -184,6 +187,20 @@ async function sendInviteEmail(params: {
   return result;
 }
 
+async function resolveCustomRoleId(
+  tenantId: string,
+  customRoleId: string | null | undefined
+): Promise<string | null | undefined> {
+  if (customRoleId === undefined || customRoleId === null) return customRoleId;
+  const role = await getCustomRole(tenantId, customRoleId);
+  if (!role) {
+    const error = new Error("Custom role not found");
+    (error as Error & { statusCode: number }).statusCode = 400;
+    throw error;
+  }
+  return customRoleId;
+}
+
 function assertSupervisorCanManageUser(
   auth: AuthContext,
   targetUserId: string,
@@ -245,6 +262,7 @@ export async function handleMemberRoutes(
     const teamIds = parsed.data.teamIds ?? [];
     await assertTeamIdsBelongToTenant(auth.tenantId, teamIds);
 
+    const customRoleId = await resolveCustomRoleId(auth.tenantId, parsed.data.customRoleId);
     const now = new Date().toISOString();
     const { name, email, role } = parsed.data;
 
@@ -287,6 +305,7 @@ export async function handleMemberRoutes(
       createdAt: now,
       ...(teamIds.length ? { teamIds } : {}),
       ...(advisor ? { advisorId: advisor.advisorId } : {}),
+      ...(customRoleId ? { customRoleId } : {}),
     };
     await putMember(member, auth.tenantId);
 
@@ -333,7 +352,11 @@ export async function handleMemberRoutes(
     }
 
     if (auth.role === "supervisor") {
-      if (parsed.data.role !== undefined || parsed.data.enabled !== undefined) {
+      if (
+        parsed.data.role !== undefined ||
+        parsed.data.enabled !== undefined ||
+        parsed.data.customRoleId !== undefined
+      ) {
         return forbidden("Supervisor cannot change role or status");
       }
       if (target.role === "member") {
@@ -359,6 +382,12 @@ export async function handleMemberRoutes(
         return badRequest("Cannot disable the last account administrator");
       }
     }
+
+    if (parsed.data.customRoleId !== undefined && auth.role !== "member") {
+      return forbidden("Only administrators can change roles");
+    }
+
+    const customRoleId = await resolveCustomRoleId(auth.tenantId, parsed.data.customRoleId);
 
     if (parsed.data.teamIds) {
       await assertTeamIdsBelongToTenant(auth.tenantId, parsed.data.teamIds);
@@ -406,11 +435,12 @@ export async function handleMemberRoutes(
       });
     }
 
-    const memberUpdates: Partial<TenantMember> = {};
+    const memberUpdates: Parameters<typeof updateMember>[2] = {};
     if (parsed.data.name !== undefined) memberUpdates.name = parsed.data.name;
     if (parsed.data.role !== undefined) memberUpdates.role = parsed.data.role;
     if (parsed.data.enabled !== undefined) memberUpdates.enabled = parsed.data.enabled;
     if (parsed.data.teamIds !== undefined) memberUpdates.teamIds = parsed.data.teamIds;
+    if (customRoleId !== undefined) memberUpdates.customRoleId = customRoleId;
 
     const updated = await updateMember(auth.tenantId, userId, memberUpdates);
     if (!updated) return notFound("Member not found");

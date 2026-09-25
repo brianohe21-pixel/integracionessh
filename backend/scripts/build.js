@@ -80,6 +80,8 @@ const entryPoints = [
   "src/functions/process-whatsapp-sync/index.ts",
   "src/functions/mailrelay-webhook/index.ts",
   "src/functions/google-business/index.ts",
+  "src/functions/evaluate-ops-alerts/index.ts",
+  "src/functions/check-service-status/index.ts",
 ];
 
 const isProduction = process.env.NODE_ENV === "production";

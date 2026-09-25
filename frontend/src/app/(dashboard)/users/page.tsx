@@ -9,6 +9,7 @@ import { StatCard } from "@/components/ui/StatCard";
 import { Tabs } from "@/components/ui/Tabs";
 import { UsersTab } from "@/components/users/UsersTab";
 import { TeamsTab } from "@/components/users/TeamsTab";
+import { RolesTab } from "@/components/users/RolesTab";
 import {
   useOrganizationTeams,
   useTenantMembers,
@@ -17,7 +18,7 @@ import { useTenantRole } from "@/hooks/useTenantRole";
 import { useT } from "@/i18n/context";
 import { MEMBER_HOME } from "@/lib/post-login-path";
 
-type UserCenterTab = "users" | "teams";
+type UserCenterTab = "users" | "teams" | "roles";
 
 export default function UserCenterPage() {
   const t = useT();
@@ -37,7 +38,7 @@ export default function UserCenterPage() {
 
   useEffect(() => {
     const requested = searchParams.get("tab");
-    if (requested === "users" || requested === "teams") {
+    if (requested === "users" || requested === "teams" || requested === "roles") {
       setTab(requested);
     }
   }, [searchParams]);
@@ -107,11 +108,12 @@ export default function UserCenterPage() {
         items={[
           { id: "users", label: t("userCenter.tabUsers"), count: members.length },
           { id: "teams", label: t("userCenter.tabTeams"), count: teams.length },
+          { id: "roles", label: t("userCenter.tabRoles") },
         ]}
-        className="mb-6 w-full max-w-md"
+        className="mb-6 w-full max-w-lg"
       />
 
-      {tab === "users" ? <UsersTab /> : <TeamsTab />}
+      {tab === "users" ? <UsersTab /> : tab === "teams" ? <TeamsTab /> : <RolesTab />}
     </DashboardPage>
   );
 }

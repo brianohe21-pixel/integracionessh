@@ -119,6 +119,7 @@ const SERVICE_PATHS: Array<{ prefix: string; service: SubaccountServiceId }> = [
 const ALWAYS_ALLOWED_PREFIXES = [
   "/dashboard",
   "/settings",
+  "/alerts",
   "/support",
   "/onboarding",
   "/subaccounts",

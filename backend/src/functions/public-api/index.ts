@@ -74,6 +74,8 @@ import {
   handleStartVoiceCall,
   isVoiceCallSubPath,
 } from "./voice-handlers.js";
+import { getServiceStatusSnapshot } from "../../lib/dynamodb/service-status.repository.js";
+import { buildPublicServiceStatusResponse } from "../../lib/service-status/public-response.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 
@@ -1329,6 +1331,15 @@ export async function handler(
   }
 
   try {
+    if (path.endsWith("/v1/status") && method === "GET") {
+      const snapshot = await getServiceStatusSnapshot();
+      return {
+        statusCode: 200,
+        headers: CORS_HEADERS,
+        body: JSON.stringify(buildPublicServiceStatusResponse(snapshot)),
+      };
+    }
+
     if (path.endsWith("/v1/messages") && method === "POST") {
       return await handleSendMessage(event);
     }

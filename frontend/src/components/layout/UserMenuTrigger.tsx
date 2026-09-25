@@ -35,7 +35,7 @@ export function UserMenuTrigger() {
   const t = useT();
   const router = useRouter();
   const { user, loading } = useCurrentUser();
-  const { role, isAdmin } = useTenantRole();
+  const { role, isAdmin, isAdvisor } = useTenantRole();
   const { data: profile } = useUserProfile(!isAdmin);
   const updateAvailability = useUpdateAdvisorAvailability();
   const [open, setOpen] = useState(false);
@@ -187,15 +187,17 @@ export function UserMenuTrigger() {
                   <UserIcon className="h-4 w-4" />
                   {t("nav.profile")}
                 </Link>
-                <Link
-                  href="/settings?tab=general"
-                  role="menuitem"
-                  className={menuItemClass}
-                  onClick={() => setOpen(false)}
-                >
-                  <Settings className="h-4 w-4" />
-                  {t("nav.settings")}
-                </Link>
+                {!isAdvisor ? (
+                  <Link
+                    href="/settings?tab=general"
+                    role="menuitem"
+                    className={menuItemClass}
+                    onClick={() => setOpen(false)}
+                  >
+                    <Settings className="h-4 w-4" />
+                    {t("nav.settings")}
+                  </Link>
+                ) : null}
                 <div className="my-1.5 border-t border-subtle" />
               </>
             ) : null}

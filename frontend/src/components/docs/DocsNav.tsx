@@ -40,6 +40,17 @@ export function DocsNav() {
         Login
       </Link>
       <Link
+        href="/status"
+        className={cn(
+          "rounded-lg px-3 py-1.5 transition-colors",
+          pathname.startsWith("/status")
+            ? "bg-accent-muted font-medium text-accent"
+            : "hover:bg-surface-muted hover:text-primary"
+        )}
+      >
+        Status
+      </Link>
+      <Link
         href="/legal/terms"
         className="hidden rounded-lg px-3 py-1.5 transition-colors hover:bg-surface-muted hover:text-primary sm:inline-flex"
       >

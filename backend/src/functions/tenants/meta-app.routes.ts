@@ -9,6 +9,8 @@ import {
   saveTenantMetaAppCredential,
 } from "../../lib/integrations/meta-app-credentials.js";
 import { normalizeMetaAppPayload } from "../../lib/integrations/meta-app-credentials.validation.js";
+import { assertSettingsAccess } from "../../lib/auth/permissions.js";
+import { writeAuditEvent } from "../../lib/audit/write-audit-event.js";
 import { badRequest, forbidden, handleError, ok, parseJsonBody } from "../../lib/http.js";
 
 export async function handleMetaAppRoutes(
@@ -20,6 +22,7 @@ export async function handleMetaAppRoutes(
   const rawPath = event.rawPath ?? "";
   if (!rawPath.includes("/meta-app")) return null;
 
+  await assertSettingsAccess(auth, method);
   const apiBaseUrl = resolveApiBaseUrl(event);
 
   if (method === "GET") {
@@ -53,6 +56,16 @@ export async function handleMetaAppRoutes(
       return handleError(error);
     }
 
+    await writeAuditEvent({
+      tenantId: auth.tenantId,
+      actorUserId: auth.userId,
+      actorEmail: auth.email,
+      module: "settings",
+      action: "update",
+      entityType: "metaApp",
+      entityId: auth.tenantId,
+      summary: "Updated Meta app configuration",
+    });
     const status = await getMetaAppConfigStatus(auth.tenantId, environment, apiBaseUrl);
     return ok(status);
   }
@@ -70,6 +83,16 @@ export async function handleMetaAppRoutes(
     }
 
     await deleteTenantMetaAppCredential(auth.tenantId, environment);
+    await writeAuditEvent({
+      tenantId: auth.tenantId,
+      actorUserId: auth.userId,
+      actorEmail: auth.email,
+      module: "settings",
+      action: "delete",
+      entityType: "metaApp",
+      entityId: auth.tenantId,
+      summary: "Removed Meta app configuration",
+    });
     const status = await getMetaAppConfigStatus(auth.tenantId, environment, apiBaseUrl);
     return ok(status);
   }

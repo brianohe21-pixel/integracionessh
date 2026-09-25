@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { X } from "lucide-react";
+import { useMemo, useState, type ReactNode } from "react";
+import { CalendarClock, ChevronsDown, ChevronsUp, Equal, UserRound, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { FieldLabel } from "@/components/ui/FieldLabel";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { TaskTimePicker } from "@/components/tasks/TaskTimePicker";
@@ -10,6 +11,7 @@ import { TaskCommentsPanel } from "@/components/tasks/TaskCommentsPanel";
 import { useLeads, useLead } from "@/hooks/useLeads";
 import { useTenantMembers } from "@/hooks/useTenantMembers";
 import { useT } from "@/i18n/context";
+import { cn } from "@/lib/utils";
 import type {
   Advisor,
   Lead,
@@ -103,6 +105,17 @@ function toggleValue<T extends string>(list: T[], value: T): T[] {
   return list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
 }
 
+function localDateString(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function addDays(base: Date, days: number): Date {
+  const next = new Date(base);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
 const DESCRIPTION_CHIP_KEYS = [
   "followUp",
   "callBack",
@@ -116,6 +129,12 @@ type DescriptionChipKey = (typeof DESCRIPTION_CHIP_KEYS)[number];
 
 const REMINDER_CHANNELS: SalesTaskReminderChannel[] = ["email", "whatsapp", "platform"];
 const TASK_PRIORITIES: SalesTaskPriority[] = ["low", "medium", "high", "highest"];
+const DUE_PRESETS = [
+  { key: "today", days: 0 },
+  { key: "tomorrow", days: 1 },
+  { key: "in3Days", days: 3 },
+  { key: "nextWeek", days: 7 },
+] as const;
 
 function appendDescriptionChip(current: string, chip: string): string {
   const trimmed = current.trim();
@@ -151,6 +170,89 @@ function defaultsFromTask(task?: SalesTask | null): Partial<TaskFormValues> {
   };
 }
 
+function FormSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-xl border border-default bg-surface p-4 space-y-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-secondary">{title}</p>
+      {children}
+    </section>
+  );
+}
+
+function ChipButton({
+  active,
+  onClick,
+  children,
+  className,
+}: {
+  active?: boolean;
+  onClick: () => void;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors",
+        active
+          ? "border-accent bg-accent-muted text-accent"
+          : "border-default text-secondary hover:bg-surface-muted",
+        className
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function priorityTone(value: SalesTaskPriority, active: boolean): string {
+  if (value === "highest") {
+    return active
+      ? "border-rose-500 bg-rose-500 text-white shadow-sm"
+      : "border-rose-200 bg-rose-50 text-rose-700 hover:border-rose-300 hover:bg-rose-100";
+  }
+  if (value === "high") {
+    return active
+      ? "border-orange-500 bg-orange-500 text-white shadow-sm"
+      : "border-orange-200 bg-orange-50 text-orange-700 hover:border-orange-300 hover:bg-orange-100";
+  }
+  if (value === "medium") {
+    return active
+      ? "border-amber-500 bg-amber-500 text-white shadow-sm"
+      : "border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300 hover:bg-amber-100";
+  }
+  return active
+    ? "border-sky-500 bg-sky-500 text-white shadow-sm"
+    : "border-sky-200 bg-sky-50 text-sky-700 hover:border-sky-300 hover:bg-sky-100";
+}
+
+function priorityLabelKey(value: SalesTaskPriority): string {
+  if (value === "low") return "tasks.priorityLow";
+  if (value === "medium") return "tasks.priorityMedium";
+  if (value === "high") return "tasks.priorityHigh";
+  return "tasks.priorityHighest";
+}
+
+function PriorityIcon({
+  value,
+  className,
+}: {
+  value: SalesTaskPriority;
+  className?: string;
+}) {
+  if (value === "low") return <ChevronsDown className={className} />;
+  if (value === "high" || value === "highest") return <ChevronsUp className={className} />;
+  return <Equal className={className} />;
+}
+
 export function TaskFormModal({
   onClose,
   onSubmit,
@@ -176,7 +278,7 @@ export function TaskFormModal({
   const [contactEmail, setContactEmail] = useState(initial.contactEmail ?? "");
   const [contactName, setContactName] = useState(initial.contactName ?? "");
   const [priority, setPriority] = useState<SalesTaskPriority>(initial.priority ?? "medium");
-  const [reminderTargets, setReminderTargets] = useState<SalesTaskReminderTarget[]>(
+  const [reminderTargets] = useState<SalesTaskReminderTarget[]>(
     sanitizeReminderTargets(initial.reminderTargets)
   );
   const [reminderUserIds, setReminderUserIds] = useState<string[]>(
@@ -214,6 +316,9 @@ export function TaskFormModal({
     reminderTargets.length > 0 ||
     reminderUserIds.length > 0 ||
     reminderChannels.includes("platform");
+  const showContactSummary = Boolean(
+    contactName.trim() || contactPhone.trim() || contactEmail.trim()
+  );
 
   const minutesOptions = useMemo(
     () => [
@@ -242,6 +347,13 @@ export function TaskFormModal({
     if (lead.name?.trim()) setContactName(lead.name.trim());
     if (lead.phone) setContactPhone(lead.phone);
     if (lead.email?.trim()) setContactEmail(lead.email.trim());
+  }
+
+  function applyDuePreset(days: number) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    setDueDate(localDateString(addDays(today, days)));
+    if (!dueTime) setDueTime("09:00");
   }
 
   async function handleSubmit() {
@@ -280,10 +392,13 @@ export function TaskFormModal({
   return (
     <Modal>
       <div className="mx-4 flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-surface-elevated shadow-xl">
-        <div className="flex shrink-0 items-center justify-between border-b border-default px-5 py-3">
-          <h2 className="text-lg font-semibold text-primary">
-            {isEdit ? t("tasks.editTask") : t("tasks.newTask")}
-          </h2>
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-default px-5 py-4">
+          <div>
+            <h2 className="text-lg font-semibold text-primary">
+              {isEdit ? t("tasks.editTask") : t("tasks.newTask")}
+            </h2>
+            <p className="mt-0.5 text-sm text-secondary">{t("tasks.formSubtitle")}</p>
+          </div>
           <button
             type="button"
             onClick={onClose}
@@ -292,61 +407,90 @@ export function TaskFormModal({
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="space-y-3 overflow-y-auto overflow-x-visible px-5 py-4">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-primary">
-              {t("tasks.taskTitle")}
-            </label>
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder={t("tasks.taskTitle")}
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-primary">
-              {t("tasks.description")}
-            </label>
-            <div className="mb-1.5 flex flex-wrap gap-1.5">
-              {DESCRIPTION_CHIP_KEYS.map((key) => {
-                const label = t(`tasks.descriptionChips.${key}`);
-                const active = description.toLowerCase().includes(label.toLowerCase());
+
+        <div className="space-y-4 overflow-y-auto overflow-x-visible px-5 py-4">
+          <FormSection title={t("tasks.sectionWhat")}>
+            <div>
+              <label className="mb-1 block text-sm text-secondary">{t("tasks.taskTitle")}</label>
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder={t("tasks.taskTitlePlaceholder")}
+                autoFocus={!isEdit}
+              />
+            </div>
+            <div>
+              <p className="mb-1.5 text-sm text-secondary">{t("tasks.quickTemplates")}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {DESCRIPTION_CHIP_KEYS.map((key) => {
+                  const label = t(`tasks.descriptionChips.${key}`);
+                  const active = description.toLowerCase().includes(label.toLowerCase());
+                  return (
+                    <ChipButton
+                      key={key}
+                      active={active}
+                      onClick={() => handleDescriptionChip(key)}
+                    >
+                      {label}
+                    </ChipButton>
+                  );
+                })}
+              </div>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm text-secondary">{t("tasks.description")}</label>
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder={t("tasks.descriptionPlaceholder")}
+                className="min-h-[72px]"
+                rows={3}
+              />
+            </div>
+          </FormSection>
+
+          <FormSection title={t("tasks.sectionWhen")}>
+            <div className="flex flex-wrap gap-1.5">
+              {DUE_PRESETS.map((preset) => {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const presetDate = localDateString(addDays(today, preset.days));
                 return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => handleDescriptionChip(key)}
-                    className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
-                      active
-                        ? "border-accent bg-accent-muted text-accent"
-                        : "border-default text-secondary hover:bg-surface-muted"
-                    }`}
+                  <ChipButton
+                    key={preset.key}
+                    active={dueDate === presetDate}
+                    onClick={() => applyDuePreset(preset.days)}
                   >
-                    {label}
-                  </button>
+                    <span className="inline-flex items-center gap-1">
+                      <CalendarClock className="h-3.5 w-3.5" />
+                      {t(`tasks.duePresets.${preset.key}`)}
+                    </span>
+                  </ChipButton>
                 );
               })}
+              {dueDate ? (
+                <ChipButton
+                  onClick={() => {
+                    setDueDate("");
+                    setDueTime("09:00");
+                  }}
+                >
+                  {t("tasks.clearDueDate")}
+                </ChipButton>
+              ) : null}
             </div>
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder={t("tasks.descriptionPlaceholder")}
-              className="min-h-[64px]"
-              rows={2}
-            />
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-primary">
-                {t("tasks.dueAt")}
-              </label>
-              <div className="grid grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] gap-2">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-sm text-secondary">{t("tasks.dueDate")}</label>
                 <Input
                   type="date"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
                   aria-label={t("tasks.dueDate")}
                 />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm text-secondary">{t("tasks.dueTime")}</label>
                 <TaskTimePicker
                   value={dueTime}
                   onChange={setDueTime}
@@ -356,199 +500,166 @@ export function TaskFormModal({
               </div>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-primary">
-                {t("tasks.lead")}
-              </label>
-              <Select value={leadId} onChange={(e) => handleLeadChange(e.target.value)}>
-                <option value="">{t("tasks.anyLead")}</option>
-                {leads.map((lead) => (
-                  <option key={lead.leadId} value={lead.leadId}>
-                    {leadLabel(lead)}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          </div>
-          {showAdvisorSelect ? (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <label className="mb-1 block text-sm font-medium text-primary">
-                  {t("tasks.advisor")}
-                </label>
-                <Select value={advisorId} onChange={(e) => setAdvisorId(e.target.value)}>
-                  <option value="">{t("tasks.anyAdvisor")}</option>
-                  {advisors.map((advisor) => (
-                    <option key={advisor.advisorId} value={advisor.advisorId}>
-                      {advisor.name}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-primary">
-                  {t("tasks.priority")}
-                </label>
-                <Select
-                  value={priority}
-                  onChange={(e) => setPriority(e.target.value as SalesTaskPriority)}
-                >
-                  {TASK_PRIORITIES.map((value) => (
-                    <option key={value} value={value}>
-                      {t(
-                        value === "low"
-                          ? "tasks.priorityLow"
-                          : value === "medium"
-                            ? "tasks.priorityMedium"
-                            : value === "high"
-                              ? "tasks.priorityHigh"
-                              : "tasks.priorityHighest"
-                      )}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-            </div>
-          ) : (
-            <div>
-              <label className="mb-1 block text-sm font-medium text-primary">
-                {t("tasks.priority")}
-              </label>
-              <Select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as SalesTaskPriority)}
-              >
-                {TASK_PRIORITIES.map((value) => (
-                  <option key={value} value={value}>
-                    {t(
-                      value === "low"
-                        ? "tasks.priorityLow"
-                        : value === "medium"
-                          ? "tasks.priorityMedium"
-                          : value === "high"
-                            ? "tasks.priorityHigh"
-                            : "tasks.priorityHighest"
-                    )}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          )}
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <p className="mb-1.5 text-sm font-medium text-primary">{t("tasks.reminderTargets")}</p>
-              <div className="flex flex-wrap gap-1.5">
-                {ACTIVE_REMINDER_TARGETS.map((target) => (
-                  <button
-                    key={target}
-                    type="button"
-                    onClick={() => setReminderTargets((prev) => toggleValue(prev, target))}
-                    className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                      reminderTargets.includes(target)
-                        ? "border-accent bg-accent-muted text-accent"
-                        : "border-default text-secondary hover:bg-surface-muted"
-                    }`}
-                  >
-                    {t(`tasks.target.${target}`)}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <p className="mb-1.5 text-sm font-medium text-primary">{t("tasks.reminderChannels")}</p>
-              <div className="flex flex-wrap gap-1.5">
-                {REMINDER_CHANNELS.map((channel) => (
-                  <button
-                    key={channel}
-                    type="button"
-                    onClick={() => setReminderChannels((prev) => toggleValue(prev, channel))}
-                    className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                      reminderChannels.includes(channel)
-                        ? "border-accent bg-accent-muted text-accent"
-                        : "border-default text-secondary hover:bg-surface-muted"
-                    }`}
-                  >
-                    {t(`tasks.channel.${channel}`)}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-primary">
-              {t("tasks.reminderUsers")}
-            </label>
-            <Select
-              value=""
-              onChange={(e) => {
-                const userId = e.target.value;
-                if (!userId) return;
-                setReminderUserIds((prev) =>
-                  prev.includes(userId) ? prev : [...prev, userId]
-                );
-              }}
-              disabled={tenantMembers.length === 0}
-            >
-              <option value="">
-                {tenantMembers.length === 0
-                  ? t("tasks.reminderUsersEmpty")
-                  : t("tasks.reminderUsersNone")}
-              </option>
-              {tenantMembers
-                .filter((member) => !reminderUserIds.includes(member.userId))
-                .map((member) => (
-                  <option key={member.userId} value={member.userId}>
-                    {member.name || member.email}
-                  </option>
-                ))}
-            </Select>
-            {reminderUserIds.length > 0 ? (
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
-                {reminderUserIds.map((userId) => {
-                  const member = tenantMembers.find((item) => item.userId === userId);
-                  const label = member?.name || member?.email || userId;
+              <p className="mb-1.5 text-sm text-secondary">{t("tasks.priority")}</p>
+              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+                {TASK_PRIORITIES.map((value) => {
+                  const active = priority === value;
                   return (
                     <button
-                      key={userId}
+                      key={value}
                       type="button"
-                      onClick={() =>
-                        setReminderUserIds((prev) => prev.filter((id) => id !== userId))
-                      }
-                      className="inline-flex items-center gap-1 rounded-full border border-accent bg-accent-muted px-2.5 py-1 text-xs font-medium text-accent"
+                      onClick={() => setPriority(value)}
+                      className={cn(
+                        "inline-flex items-center justify-center gap-1 rounded-lg border px-2.5 py-2 text-xs font-medium transition-colors",
+                        priorityTone(value, active)
+                      )}
                     >
-                      {label}
-                      <X className="h-3 w-3" aria-hidden="true" />
+                      <PriorityIcon value={value} className="h-3.5 w-3.5" />
+                      {t(priorityLabelKey(value))}
                     </button>
                   );
                 })}
               </div>
-            ) : null}
-          </div>
-          {reminderChannels.length > 0 && hasReminderRecipients ? (
-            <div>
-              <label className="mb-1 block text-sm font-medium text-primary">
-                {t("tasks.reminderWhen")}
-              </label>
-              <Select
-                value={String(reminderMinutesBefore)}
-                onChange={(e) => setReminderMinutesBefore(Number(e.target.value))}
-              >
-                {minutesOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </Select>
             </div>
+          </FormSection>
+
+          <FormSection title={t("tasks.sectionAssignment")}>
+            <div className={cn("grid gap-3", showAdvisorSelect ? "sm:grid-cols-2" : "")}>
+              <div>
+                <FieldLabel label={t("tasks.lead")} tooltip={t("tasks.leadHint")} />
+                <Select value={leadId} onChange={(e) => handleLeadChange(e.target.value)}>
+                  <option value="">{t("tasks.anyLead")}</option>
+                  {leads.map((lead) => (
+                    <option key={lead.leadId} value={lead.leadId}>
+                      {leadLabel(lead)}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              {showAdvisorSelect ? (
+                <div>
+                  <label className="mb-1 block text-sm text-secondary">{t("tasks.advisor")}</label>
+                  <Select value={advisorId} onChange={(e) => setAdvisorId(e.target.value)}>
+                    <option value="">{t("tasks.anyAdvisor")}</option>
+                    {advisors.map((advisor) => (
+                      <option key={advisor.advisorId} value={advisor.advisorId}>
+                        {advisor.name}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              ) : null}
+            </div>
+            {showContactSummary ? (
+              <div className="flex items-start gap-2.5 rounded-lg border border-default bg-surface-muted/60 px-3 py-2.5">
+                <UserRound className="mt-0.5 h-4 w-4 shrink-0 text-muted" />
+                <div className="min-w-0 space-y-0.5 text-sm">
+                  <p className="font-medium text-primary">
+                    {contactName.trim() || t("tasks.contactSummary")}
+                  </p>
+                  <p className="truncate text-secondary">
+                    {[contactPhone.trim(), contactEmail.trim()].filter(Boolean).join(" · ")}
+                  </p>
+                </div>
+              </div>
+            ) : null}
+          </FormSection>
+
+          <FormSection title={t("tasks.sectionReminder")}>
+            <div>
+              <p className="mb-1.5 text-sm text-secondary">{t("tasks.reminderChannels")}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {REMINDER_CHANNELS.map((channel) => (
+                  <ChipButton
+                    key={channel}
+                    active={reminderChannels.includes(channel)}
+                    onClick={() => setReminderChannels((prev) => toggleValue(prev, channel))}
+                  >
+                    {t(`tasks.channel.${channel}`)}
+                  </ChipButton>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm text-secondary">{t("tasks.reminderUsers")}</label>
+              <Select
+                value=""
+                onChange={(e) => {
+                  const userId = e.target.value;
+                  if (!userId) return;
+                  setReminderUserIds((prev) =>
+                    prev.includes(userId) ? prev : [...prev, userId]
+                  );
+                }}
+                disabled={tenantMembers.length === 0}
+              >
+                <option value="">
+                  {tenantMembers.length === 0
+                    ? t("tasks.reminderUsersEmpty")
+                    : t("tasks.reminderUsersNone")}
+                </option>
+                {tenantMembers
+                  .filter((member) => !reminderUserIds.includes(member.userId))
+                  .map((member) => (
+                    <option key={member.userId} value={member.userId}>
+                      {member.name || member.email}
+                    </option>
+                  ))}
+              </Select>
+              {reminderUserIds.length > 0 ? (
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {reminderUserIds.map((userId) => {
+                    const member = tenantMembers.find((item) => item.userId === userId);
+                    const label = member?.name || member?.email || userId;
+                    return (
+                      <button
+                        key={userId}
+                        type="button"
+                        onClick={() =>
+                          setReminderUserIds((prev) => prev.filter((id) => id !== userId))
+                        }
+                        className="inline-flex items-center gap-1 rounded-lg border border-accent bg-accent-muted px-2.5 py-1 text-xs font-medium text-accent"
+                      >
+                        {label}
+                        <X className="h-3 w-3" aria-hidden="true" />
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
+            {reminderChannels.length > 0 && hasReminderRecipients ? (
+              <div>
+                <p className="mb-1.5 text-sm text-secondary">{t("tasks.reminderWhen")}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {minutesOptions.map((option) => (
+                    <ChipButton
+                      key={option.value}
+                      active={reminderMinutesBefore === option.value}
+                      onClick={() => setReminderMinutesBefore(option.value)}
+                    >
+                      {option.label}
+                    </ChipButton>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </FormSection>
+
+          {isEdit && task?.taskId ? (
+            <FormSection title={t("tasks.commentsTitle")}>
+              <TaskCommentsPanel taskId={task.taskId} />
+            </FormSection>
           ) : null}
-          {isEdit && task?.taskId ? <TaskCommentsPanel taskId={task.taskId} /> : null}
-          <div className="flex justify-end gap-2 pt-1">
-            <Button variant="secondary" onClick={onClose} disabled={submitting}>
-              {t("common.cancel")}
-            </Button>
-            <Button disabled={!canSubmit} onClick={() => void handleSubmit()}>
-              {isEdit ? t("common.save") : t("common.create")}
-            </Button>
-          </div>
+        </div>
+
+        <div className="flex shrink-0 justify-end gap-2 border-t border-default px-5 py-3">
+          <Button variant="secondary" onClick={onClose} disabled={submitting}>
+            {t("common.cancel")}
+          </Button>
+          <Button disabled={!canSubmit} onClick={() => void handleSubmit()}>
+            {isEdit ? t("common.save") : t("common.create")}
+          </Button>
         </div>
       </div>
     </Modal>

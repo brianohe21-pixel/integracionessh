@@ -44,6 +44,7 @@ import { DataTable, DataTableBody, DataTableCell, DataTableHead, DataTableRow } 
 import { WhatsAppRiskBadge } from "@/components/whatsapp/WhatsAppRiskBadge";
 import { useBots } from "@/hooks/useBots";
 import { useT } from "@/i18n/context";
+import { usePermissions } from "@/hooks/usePermissions";
 import type { Contact, ContactSortField, MarketingConsent } from "@/types";
 import { decodeCsvBytes } from "@/lib/csv";
 import { downloadContactsImportTemplate } from "@/lib/contacts-import-csv";
@@ -85,6 +86,9 @@ function contactInitials(name?: string, phone?: string): string {
 export default function ContactsPage() {
   const t = useT();
   const router = useRouter();
+  const { can, loading: permissionsLoading } = usePermissions();
+  const canRead = can("contacts.read");
+  const canWrite = can("contacts.write");
   const fileRef = useRef<HTMLInputElement>(null);
   const [consentFilter, setConsentFilter] = useState<"" | MarketingConsent>("");
   const [suppressedFilter, setSuppressedFilter] = useState<"" | "true" | "false">("");
@@ -333,6 +337,12 @@ export default function ContactsPage() {
     }
   }
 
+  useEffect(() => {
+    if (!permissionsLoading && !canRead) router.replace("/dashboard");
+  }, [canRead, permissionsLoading, router]);
+
+  if (permissionsLoading || !canRead) return null;
+
   return (
     <DashboardPage>
       <PageHeader
@@ -353,6 +363,7 @@ export default function ContactsPage() {
               type="button"
               variant="secondary"
               size="sm"
+              disabled={!canWrite}
               onClick={() => fileRef.current?.click()}
             >
               <Upload className="h-4 w-4" />
@@ -377,7 +388,7 @@ export default function ContactsPage() {
               <Download className="h-4 w-4" />
               {t("contacts.exportAll")}
             </Button>
-            <Button type="button" size="sm" onClick={() => setShowCreate(true)}>
+            <Button type="button" size="sm" disabled={!canWrite} onClick={() => setShowCreate(true)}>
               <Plus className="h-4 w-4" />
               {t("contacts.new")}
             </Button>
@@ -536,7 +547,7 @@ export default function ContactsPage() {
                 {t("common.clearFilters")}
               </Button>
             ) : (
-              <Button type="button" size="sm" onClick={() => setShowCreate(true)}>
+              <Button type="button" size="sm" disabled={!canWrite} onClick={() => setShowCreate(true)}>
                 <Plus className="h-4 w-4" />
                 {t("contacts.new")}
               </Button>

@@ -174,6 +174,19 @@ export async function updateCampaignStatus(
       ExpressionAttributeValues: exprValues,
     })
   );
+
+  if (status === "paused" || status === "failed") {
+    const { emitOpsAlertSafe } = await import("../ops-alerts/emit.js");
+    emitOpsAlertSafe({
+      tenantId,
+      ruleId: "campaign_stopped",
+      title: status === "paused" ? "Campaign paused" : "Campaign failed",
+      body: `Campaign ${campaignId} is now ${status}.`,
+      href: `/campaigns/${campaignId}`,
+      severity: status === "failed" ? "critical" : "warning",
+      dedupeKey: `campaign_stopped:${campaignId}:${status}`,
+    });
+  }
 }
 
 export async function updateCampaignDraft(

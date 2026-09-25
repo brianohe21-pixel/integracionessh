@@ -1,4 +1,4 @@
-export type NotificationType = "message" | "handoff" | "task";
+export type NotificationType = "message" | "handoff" | "task" | "ops";
 
 export interface AppNotification {
   id: string;
@@ -8,6 +8,7 @@ export interface AppNotification {
   href: string;
   conversationId?: string;
   taskId?: string;
+  alertId?: string;
   createdAt: string;
   read: boolean;
 }

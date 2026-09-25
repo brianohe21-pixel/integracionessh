@@ -4,7 +4,9 @@ import type {
   APIGatewayProxyResultV2,
 } from "aws-lambda";
 import { z } from "zod";
-import { resolveRequestAuth, assertMemberRole } from "../../lib/auth/cognito.js";
+import { resolveRequestAuth } from "../../lib/auth/cognito.js";
+import { assertPermission, type Permission } from "../../lib/auth/permissions.js";
+import { writeAuditEvent } from "../../lib/audit/write-audit-event.js";
 import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import { assertCanEnablePayments } from "../../lib/billing/assert-plan.js";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
@@ -86,8 +88,9 @@ export async function handler(
     }
 
     const auth = await resolveRequestAuth(event as APIGatewayProxyEventV2WithJWTAuthorizer);
-    assertMemberRole(auth);
     await assertAssignedServices(auth.tenantId, "apps");
+    const paymentPermission: Permission = method === "GET" ? "payments.read" : "payments.manage";
+    await assertPermission(auth, paymentPermission);
 
     if (method === "GET" && rawPath === "/payments/wompi/credentials") {
       const secrets = await getTenantWompiSecrets(auth.tenantId, ENVIRONMENT);
@@ -100,11 +103,31 @@ export async function handler(
     if (method === "PUT" && rawPath === "/payments/wompi/credentials") {
       const body = CredentialsSchema.parse(JSON.parse(event.body ?? "{}"));
       await saveTenantWompiSecrets(auth.tenantId, ENVIRONMENT, body);
+      await writeAuditEvent({
+        tenantId: auth.tenantId,
+        actorUserId: auth.userId,
+        actorEmail: auth.email,
+        module: "payments",
+        action: "update",
+        entityType: "wompiCredentials",
+        entityId: auth.tenantId,
+        summary: "Updated Wompi credentials",
+      });
       return ok({ saved: true });
     }
 
     if (method === "DELETE" && rawPath === "/payments/wompi/credentials") {
       await deleteTenantWompiSecrets(auth.tenantId, ENVIRONMENT);
+      await writeAuditEvent({
+        tenantId: auth.tenantId,
+        actorUserId: auth.userId,
+        actorEmail: auth.email,
+        module: "payments",
+        action: "delete",
+        entityType: "wompiCredentials",
+        entityId: auth.tenantId,
+        summary: "Removed Wompi credentials",
+      });
       return ok({ deleted: true });
     }
 
@@ -133,6 +156,16 @@ export async function handler(
         patch.successRedirectUrl = body.successRedirectUrl;
       }
       const config = await savePaymentsConfig(auth.tenantId, botId, patch);
+      await writeAuditEvent({
+        tenantId: auth.tenantId,
+        actorUserId: auth.userId,
+        actorEmail: auth.email,
+        module: "payments",
+        action: "update",
+        entityType: "paymentsConfig",
+        entityId: botId,
+        summary: "Updated payments configuration",
+      });
       return ok({ config });
     }
 
@@ -141,11 +174,31 @@ export async function handler(
       if (!tenant) throw new Error("Tenant not found");
       await assertCanEnablePayments(tenant, botId);
       const config = await enablePayments(auth.tenantId, botId);
+      await writeAuditEvent({
+        tenantId: auth.tenantId,
+        actorUserId: auth.userId,
+        actorEmail: auth.email,
+        module: "payments",
+        action: "enable",
+        entityType: "paymentsConfig",
+        entityId: botId,
+        summary: "Enabled payments",
+      });
       return ok({ config });
     }
 
     if (method === "POST" && rawPath === `/payments/${botId}/disable`) {
       const config = await disablePayments(auth.tenantId, botId);
+      await writeAuditEvent({
+        tenantId: auth.tenantId,
+        actorUserId: auth.userId,
+        actorEmail: auth.email,
+        module: "payments",
+        action: "disable",
+        entityType: "paymentsConfig",
+        entityId: botId,
+        summary: "Disabled payments",
+      });
       return ok({ config });
     }
 
@@ -177,6 +230,16 @@ export async function handler(
         source: "manual",
         environment: ENVIRONMENT,
         sendWhatsApp: body.sendWhatsApp ?? true,
+      });
+      await writeAuditEvent({
+        tenantId: auth.tenantId,
+        actorUserId: auth.userId,
+        actorEmail: auth.email,
+        module: "payments",
+        action: "create",
+        entityType: "paymentRequest",
+        entityId: request.paymentId ?? botId,
+        summary: "Created payment request",
       });
       return created({ request });
     }

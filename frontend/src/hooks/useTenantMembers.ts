@@ -25,6 +25,7 @@ export function useInviteTenantMember() {
       role: "member" | "supervisor" | "advisor";
       phoneNumber?: string;
       teamIds?: string[];
+      customRoleId?: string | null;
     }) => api.post<TenantMemberInviteResponse>("/tenants/me/members", body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tenant-members"] });
@@ -48,6 +49,7 @@ export function useUpdateTenantMember() {
         enabled?: boolean;
         teamIds?: string[];
         phoneNumber?: string;
+        customRoleId?: string | null;
       };
     }) =>
       api.patch(`/tenants/me/members/${encodeURIComponent(userId)}`, body),

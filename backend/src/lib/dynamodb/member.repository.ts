@@ -104,15 +104,21 @@ export async function updateMember(
   userId: string,
   updates: Partial<
     Pick<TenantMember, "name" | "role" | "enabled" | "teamIds" | "advisorId" | "profilePhotoS3Key">
-  >
+  > & { customRoleId?: string | null }
 ): Promise<TenantMember | null> {
   const existing = await getMember(tenantId, userId);
   if (!existing) return null;
 
+  const { customRoleId, ...rest } = updates;
   const merged: TenantMember = {
     ...existing,
-    ...updates,
+    ...rest,
   };
+  if (customRoleId === null) {
+    delete merged.customRoleId;
+  } else if (typeof customRoleId === "string") {
+    merged.customRoleId = customRoleId;
+  }
 
   await docClient.send(
     new PutCommand({

@@ -12,6 +12,9 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
             <Link href="/docs/api" className="hover:text-primary">
               API
             </Link>
+            <Link href="/status" className="hover:text-primary">
+              Status
+            </Link>
             <Link href="/legal/terms" className="hover:text-primary">
               Terms
             </Link>

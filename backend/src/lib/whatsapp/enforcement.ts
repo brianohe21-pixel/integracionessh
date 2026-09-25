@@ -13,6 +13,7 @@ import {
 import { getTenant } from "../dynamodb/tenant.repository.js";
 import { writeComplianceLog } from "../compliance/audit-log.js";
 import { notifyWhatsAppEnforcementBlock } from "../email/whatsapp-enforcement-notify.js";
+import { emitOpsAlertSafe } from "../ops-alerts/emit.js";
 import { assessWhatsAppPhone } from "./assess-quality.js";
 import { getPhoneNumberInfo, getWhatsAppAccessToken } from "./client.js";
 import type {
@@ -119,6 +120,35 @@ export async function blockWhatsAppChannel(params: {
         ...(params.event ? { event: params.event } : {}),
       }).catch((err) => console.warn("Enforcement notify failed:", err));
     }
+
+    const isQuality =
+      params.qualitySnapshot?.qualityRating === "RED" ||
+      params.reason.toLowerCase().includes("quality") ||
+      params.reason === "red";
+    const phoneLabel =
+      updated.displayPhoneNumber ?? updated.phoneNumberId ?? params.channelId;
+
+    if (isQuality) {
+      emitOpsAlertSafe({
+        tenantId: params.tenantId,
+        ruleId: "whatsapp_quality",
+        title: "WhatsApp quality blocked",
+        body: `Outbound messaging blocked for ${phoneLabel}: ${params.reason}`,
+        href: `/bots/${params.botId}`,
+        severity: "critical",
+        dedupeKey: `whatsapp_quality:${params.channelId}`,
+      });
+    } else {
+      emitOpsAlertSafe({
+        tenantId: params.tenantId,
+        ruleId: "channel_down",
+        title: "WhatsApp channel blocked",
+        body: `Channel ${phoneLabel} blocked: ${params.reason}`,
+        href: `/bots/${params.botId}`,
+        severity: "critical",
+        dedupeKey: `channel_down:${params.channelId}:blocked`,
+      });
+    }
   }
 
   return updated;
@@ -189,6 +219,18 @@ export async function handlePhoneNumberQualityUpdate(params: {
   await updateWhatsAppChannel(channel.tenantId, channel.botId, channel.channelId, {
     qualitySnapshot: snapshot,
   });
+
+  if (qualityRating === "RED" && assessment.risk !== "block") {
+    emitOpsAlertSafe({
+      tenantId: channel.tenantId,
+      ruleId: "whatsapp_quality",
+      title: "WhatsApp quality is RED",
+      body: `Phone ${channel.displayPhoneNumber ?? channel.phoneNumberId} quality rating is RED.`,
+      href: `/bots/${channel.botId}`,
+      severity: "critical",
+      dedupeKey: `whatsapp_quality:${channel.channelId}:red`,
+    });
+  }
 
   if (assessment.risk !== "block") return;
 

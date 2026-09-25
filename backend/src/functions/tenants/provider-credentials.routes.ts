@@ -18,6 +18,8 @@ import {
 } from "../../lib/integrations/provider-credentials.validation.js";
 import { resolveApiBaseUrl } from "../../lib/api-base-url.js";
 import { prepareTelnyxCredentialPayload } from "../../lib/telnyx/provision.js";
+import { assertSettingsAccess } from "../../lib/auth/permissions.js";
+import { writeAuditEvent } from "../../lib/audit/write-audit-event.js";
 import { badRequest, handleError, ok, parseJsonBody } from "../../lib/http.js";
 
 const ProviderSchema = z.enum(["openai", "telnyx", "elevenlabs", "deepgram"]);
@@ -31,6 +33,7 @@ export async function handleProviderCredentialRoutes(
   const rawPath = event.rawPath ?? "";
   if (!rawPath.includes("/provider-credentials")) return null;
 
+  await assertSettingsAccess(auth, method);
   const providerParam = event.pathParameters?.provider;
   const apiBaseUrl = resolveApiBaseUrl(event);
 
@@ -83,11 +86,31 @@ export async function handleProviderCredentialRoutes(
 
     const items = await getProviderCredentialStatuses(auth.tenantId, environment, apiBaseUrl);
     const item = items.find((entry) => entry.provider === provider);
+    await writeAuditEvent({
+      tenantId: auth.tenantId,
+      actorUserId: auth.userId,
+      actorEmail: auth.email,
+      module: "settings",
+      action: "update",
+      entityType: "providerCredential",
+      entityId: provider,
+      summary: `Updated ${provider} credentials`,
+    });
     return ok(item ?? { provider, configured: true, source: "own", ownerTenantId: auth.tenantId });
   }
 
   if (method === "DELETE") {
     await deleteTenantProviderCredential(auth.tenantId, environment, provider);
+    await writeAuditEvent({
+      tenantId: auth.tenantId,
+      actorUserId: auth.userId,
+      actorEmail: auth.email,
+      module: "settings",
+      action: "delete",
+      entityType: "providerCredential",
+      entityId: provider,
+      summary: `Removed ${provider} credentials`,
+    });
     const items = await getProviderCredentialStatuses(auth.tenantId, environment, apiBaseUrl);
     const item = items.find((entry) => entry.provider === provider);
     return ok(item ?? { provider, configured: false, source: "none" });
