@@ -15,9 +15,10 @@ import { getConversation } from "../../lib/dynamodb/conversation.repository.js";
 import { getAdvisorByCognitoUserId } from "../../lib/dynamodb/advisor.repository.js";
 import {
   resolveRequestAuth,
-  assertMemberRole,
+  assertAdvisorOrMember,
   assertTenantManagerRole,
 } from "../../lib/auth/cognito.js";
+import { resolveAdvisorIdForAuth } from "../../lib/sales/opportunities/access.js";
 import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import {
   ok,
@@ -25,9 +26,10 @@ import {
   badRequest,
   notFound,
   noContent,
+  forbidden,
   handleError,
 } from "../../lib/http.js";
-import type { LeadStatus, MarketingConsent } from "../../types/index.js";
+import type { Lead, LeadStatus, MarketingConsent } from "../../types/index.js";
 
 const LeadStatusSchema = z.enum(["new", "contacted", "qualified", "converted", "lost"]);
 
@@ -58,13 +60,19 @@ function parseSubPath(rawPath: string, leadId: string): string | null {
   return suffix.replace(/^\//, "").split("/")[0] ?? null;
 }
 
+function canAdvisorAccessLead(advisorId: string | null, lead: Lead): boolean {
+  if (!advisorId) return true;
+  return lead.assignedAdvisorId === advisorId;
+}
+
 export async function handler(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): Promise<APIGatewayProxyResultV2> {
   try {
     const auth = await resolveRequestAuth(event);
-    assertMemberRole(auth);
+    assertAdvisorOrMember(auth);
     await assertAssignedServices(auth.tenantId, "leads");
+    const advisorId = await resolveAdvisorIdForAuth(auth);
 
     const method = event.requestContext.http.method;
     const rawPath = event.rawPath ?? event.requestContext.http.path;
@@ -128,6 +136,8 @@ export async function handler(
       if (params.attributionSource) listOpts.attributionSource = params.attributionSource;
       if (params.adsOnly === "true" || params.adsOnly === "1") listOpts.adsOnly = true;
       if (params.q) listOpts.q = params.q;
+      if (advisorId) listOpts.assignedAdvisorId = advisorId;
+      else if (params.assignedAdvisorId) listOpts.assignedAdvisorId = params.assignedAdvisorId;
 
       const result = await listLeads(auth.tenantId, listOpts);
       return ok(result);
@@ -136,6 +146,7 @@ export async function handler(
     if (method === "GET" && leadId) {
       const lead = await getLeadById(auth.tenantId, leadId);
       if (!lead) return notFound("Lead not found");
+      if (!canAdvisorAccessLead(advisorId, lead)) return forbidden();
       return ok(lead);
     }
 
@@ -146,6 +157,7 @@ export async function handler(
 
       const existing = await getLeadById(auth.tenantId, leadId);
       if (!existing) return notFound("Lead not found");
+      if (!canAdvisorAccessLead(advisorId, existing)) return forbidden();
       if (existing.status === "converted" || existing.status === "lost") {
         return badRequest("Cannot update a closed lead");
       }
@@ -157,6 +169,9 @@ export async function handler(
       if (parsed.data.name !== undefined) patch.name = parsed.data.name;
       if (parsed.data.email !== undefined) patch.email = parsed.data.email;
       if (parsed.data.assignedAdvisorId !== undefined) {
+        if (advisorId && parsed.data.assignedAdvisorId !== advisorId) {
+          return forbidden();
+        }
         patch.assignedAdvisorId = parsed.data.assignedAdvisorId;
       }
 
@@ -169,6 +184,7 @@ export async function handler(
       const sub = parseSubPath(rawPath, leadId);
       const existing = await getLeadById(auth.tenantId, leadId);
       if (!existing) return notFound("Lead not found");
+      if (!canAdvisorAccessLead(advisorId, existing)) return forbidden();
 
       if (sub === "convert") {
         if (existing.status === "converted") return badRequest("Lead already converted");

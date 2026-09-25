@@ -21,7 +21,7 @@ function normalizeBotsPayload(raw: unknown): Bot[] {
   return [];
 }
 
-export function useBots() {
+export function useBots(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["bots", "list"],
     queryFn: async () => {
@@ -30,6 +30,7 @@ export function useBots() {
     },
     staleTime: 0,
     refetchOnMount: "always",
+    enabled: options?.enabled ?? true,
   });
 }
 

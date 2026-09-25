@@ -1,7 +1,7 @@
 import { getAdvisor } from "../../dynamodb/advisor.repository.js";
 import { getBot, listBots } from "../../dynamodb/bot.repository.js";
 import { getContactByPhone } from "../../dynamodb/contact.repository.js";
-import { listMembers } from "../../dynamodb/member.repository.js";
+import { getMember, listMembers } from "../../dynamodb/member.repository.js";
 import { getSalesTaskById, updateSalesTask } from "../../dynamodb/sales-task.repository.js";
 import { getTenant } from "../../dynamodb/tenant.repository.js";
 import { sendEmail } from "../../email/client.js";
@@ -11,7 +11,7 @@ import {
   sendTemplateMessage,
 } from "../../whatsapp/client.js";
 import { assertWhatsAppOutboundAllowed } from "../../whatsapp/outbound-guard.js";
-import type { SalesTask } from "../../../types/index.js";
+import type { SalesTask, TenantMember } from "../../../types/index.js";
 
 function formatDueAt(dueAt?: string): string {
   if (!dueAt) return "";
@@ -124,6 +124,78 @@ async function resolveContactEmail(task: SalesTask): Promise<string | null> {
   return contact?.email?.trim() || null;
 }
 
+async function sendEmailReminder(params: {
+  email: string;
+  task: SalesTask;
+  text: string;
+  html: string;
+}): Promise<boolean> {
+  await sendEmail({
+    to: [params.email],
+    subject: `Recordatorio: ${params.task.title}`,
+    text: params.text,
+    html: params.html,
+  });
+  return true;
+}
+
+async function sendMemberReminder(params: {
+  tenantId: string;
+  member: TenantMember;
+  task: SalesTask;
+  channels: Set<string>;
+  text: string;
+  html: string;
+  sentEmails: Set<string>;
+  sentPhones: Set<string>;
+}): Promise<{ sent: boolean; failed: boolean }> {
+  let sent = false;
+  let failed = false;
+  const email = params.member.email?.trim().toLowerCase();
+
+  if (params.channels.has("email") && email && !params.sentEmails.has(email)) {
+    try {
+      await sendEmailReminder({
+        email,
+        task: params.task,
+        text: params.text,
+        html: params.html,
+      });
+      params.sentEmails.add(email);
+      sent = true;
+    } catch (error) {
+      console.error("Failed to send member task reminder email", error);
+      failed = true;
+    }
+  }
+
+  if (params.channels.has("whatsapp") && params.member.advisorId) {
+    try {
+      const advisor = await getAdvisor(params.tenantId, params.member.advisorId);
+      const phone = advisor?.phoneNumber?.replace(/\D/g, "") || "";
+      if (phone && !params.sentPhones.has(phone)) {
+        const ok = await sendWhatsAppReminder({
+          tenantId: params.tenantId,
+          ...(params.task.botId ? { botId: params.task.botId } : {}),
+          to: advisor!.phoneNumber!,
+          task: params.task,
+        });
+        if (ok) {
+          params.sentPhones.add(phone);
+          sent = true;
+        } else {
+          failed = true;
+        }
+      }
+    } catch (error) {
+      console.error("Failed to send member task reminder WhatsApp", error);
+      failed = true;
+    }
+  }
+
+  return { sent, failed };
+}
+
 async function sendWhatsAppReminder(params: {
   tenantId: string;
   botId?: string;
@@ -197,11 +269,16 @@ export async function sendTaskReminder(params: {
 
   const channels = new Set(task.reminderChannels ?? []);
   const targets = new Set(task.reminderTargets ?? []);
-  const hasExternalChannel =
-    channels.has("email") || channels.has("whatsapp");
+  const reminderUserIds = Array.from(new Set(task.reminderUserIds ?? []));
+  const hasExternal = Boolean(
+    task.reminderExternal?.email?.trim() || task.reminderExternal?.whatsapp?.trim()
+  );
+  const hasExternalChannel = channels.has("email") || channels.has("whatsapp");
   const hasPlatform = channels.has("platform");
+  const hasRecipientTargets =
+    targets.size > 0 || reminderUserIds.length > 0 || hasExternal;
 
-  if (!channels.size || (hasExternalChannel && !targets.size && !hasPlatform)) {
+  if (!channels.size || (hasExternalChannel && !hasRecipientTargets && !hasPlatform)) {
     await updateSalesTask(params.tenantId, params.taskId, {
       reminderStatus: "skipped",
       reminderScheduleName: null,
@@ -209,7 +286,7 @@ export async function sendTaskReminder(params: {
     return { message: "No reminder channels or targets, skipping." };
   }
 
-  if (!hasPlatform && !targets.size) {
+  if (!hasPlatform && !hasRecipientTargets) {
     await updateSalesTask(params.tenantId, params.taskId, {
       reminderStatus: "skipped",
       reminderScheduleName: null,
@@ -221,6 +298,8 @@ export async function sendTaskReminder(params: {
   const html = buildReminderHtml(task);
   let sentAny = false;
   let failedAny = false;
+  const sentEmails = new Set<string>();
+  const sentPhones = new Set<string>();
 
   if (hasPlatform) {
     try {
@@ -233,6 +312,7 @@ export async function sendTaskReminder(params: {
         href: "/tasks",
         createdAt,
         ...(task.advisorId ? { advisorId: task.advisorId } : {}),
+        ...(reminderUserIds.length ? { userIds: reminderUserIds } : {}),
       });
       sentAny = true;
     } catch (error) {
@@ -245,13 +325,10 @@ export async function sendTaskReminder(params: {
     if (channels.has("email")) {
       try {
         const email = await resolveAdvisorEmail(params.tenantId, task.advisorId);
-        if (email) {
-          await sendEmail({
-            to: [email],
-            subject: `Recordatorio: ${task.title}`,
-            text,
-            html,
-          });
+        const normalized = email?.toLowerCase();
+        if (normalized && !sentEmails.has(normalized)) {
+          await sendEmailReminder({ email: normalized, task, text, html });
+          sentEmails.add(normalized);
           sentAny = true;
         }
       } catch (error) {
@@ -262,15 +339,18 @@ export async function sendTaskReminder(params: {
     if (channels.has("whatsapp")) {
       try {
         const advisor = await getAdvisor(params.tenantId, task.advisorId);
-        if (advisor?.phoneNumber) {
+        const phone = advisor?.phoneNumber?.replace(/\D/g, "") || "";
+        if (advisor?.phoneNumber && phone && !sentPhones.has(phone)) {
           const ok = await sendWhatsAppReminder({
             tenantId: params.tenantId,
             ...(task.botId ? { botId: task.botId } : {}),
             to: advisor.phoneNumber,
             task,
           });
-          if (ok) sentAny = true;
-          else failedAny = true;
+          if (ok) {
+            sentPhones.add(phone);
+            sentAny = true;
+          } else failedAny = true;
         }
       } catch (error) {
         console.error("Failed to send advisor task reminder WhatsApp", error);
@@ -283,13 +363,10 @@ export async function sendTaskReminder(params: {
     if (channels.has("email")) {
       try {
         const email = await resolveContactEmail(task);
-        if (email) {
-          await sendEmail({
-            to: [email],
-            subject: `Recordatorio: ${task.title}`,
-            text,
-            html,
-          });
+        const normalized = email?.toLowerCase();
+        if (normalized && !sentEmails.has(normalized)) {
+          await sendEmailReminder({ email: normalized, task, text, html });
+          sentEmails.add(normalized);
           sentAny = true;
         }
       } catch (error) {
@@ -299,20 +376,80 @@ export async function sendTaskReminder(params: {
     }
     if (channels.has("whatsapp")) {
       try {
-        const phone = task.contactPhone;
-        if (phone) {
+        const phoneRaw = task.contactPhone;
+        const phone = phoneRaw?.replace(/\D/g, "") || "";
+        if (phoneRaw && phone && !sentPhones.has(phone)) {
           const ok = await sendWhatsAppReminder({
             tenantId: params.tenantId,
             ...(task.botId ? { botId: task.botId } : {}),
-            to: phone,
+            to: phoneRaw,
             task,
           });
-          if (ok) sentAny = true;
-          else failedAny = true;
+          if (ok) {
+            sentPhones.add(phone);
+            sentAny = true;
+          } else failedAny = true;
         }
       } catch (error) {
         console.error("Failed to send contact task reminder WhatsApp", error);
         failedAny = true;
+      }
+    }
+  }
+
+  if (reminderUserIds.length) {
+    const membersById = new Map(
+      (await listMembers(params.tenantId)).map((member) => [member.userId, member])
+    );
+    for (const userId of reminderUserIds) {
+      const member = membersById.get(userId) ?? (await getMember(params.tenantId, userId));
+      if (!member?.enabled) continue;
+      const result = await sendMemberReminder({
+        tenantId: params.tenantId,
+        member,
+        task,
+        channels,
+        text,
+        html,
+        sentEmails,
+        sentPhones,
+      });
+      if (result.sent) sentAny = true;
+      if (result.failed) failedAny = true;
+    }
+  }
+
+  if (hasExternal) {
+    const externalEmail = task.reminderExternal?.email?.trim().toLowerCase();
+    const externalWhatsapp = task.reminderExternal?.whatsapp?.trim();
+    if (channels.has("email") && externalEmail && !sentEmails.has(externalEmail)) {
+      try {
+        await sendEmailReminder({ email: externalEmail, task, text, html });
+        sentEmails.add(externalEmail);
+        sentAny = true;
+      } catch (error) {
+        console.error("Failed to send external task reminder email", error);
+        failedAny = true;
+      }
+    }
+    if (channels.has("whatsapp") && externalWhatsapp) {
+      const phone = externalWhatsapp.replace(/\D/g, "");
+      if (phone && !sentPhones.has(phone)) {
+        try {
+          const ok = await sendWhatsAppReminder({
+            tenantId: params.tenantId,
+            ...(task.botId ? { botId: task.botId } : {}),
+            to: externalWhatsapp,
+            task,
+          });
+          if (ok) {
+            sentPhones.add(phone);
+            sentAny = true;
+          } else failedAny = true;
+        } catch (error) {
+          console.error("Failed to send external task reminder WhatsApp", error);
+          failedAny = true;
+        }
       }
     }
   }

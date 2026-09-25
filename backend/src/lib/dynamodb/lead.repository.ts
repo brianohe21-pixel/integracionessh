@@ -51,6 +51,7 @@ export interface ListLeadsOptions {
   attributionSource?: string;
   adsOnly?: boolean;
   q?: string;
+  assignedAdvisorId?: string;
 }
 
 export interface ListLeadsResult {
@@ -59,6 +60,9 @@ export interface ListLeadsResult {
 }
 
 function matchesFilters(lead: Lead, options: ListLeadsOptions): boolean {
+  if (options.assignedAdvisorId && lead.assignedAdvisorId !== options.assignedAdvisorId) {
+    return false;
+  }
   if (options.botId && lead.botId !== options.botId) return false;
   if (options.metaFlowId && lead.metaFlowId !== options.metaFlowId) return false;
   if (options.attributionSource && lead.attribution?.source !== options.attributionSource) {

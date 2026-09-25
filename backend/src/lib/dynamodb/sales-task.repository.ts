@@ -67,7 +67,9 @@ export type SalesTaskUpdateFields = Partial<
     | "botId"
     | "contactPhone"
     | "contactName"
+    | "priority"
     | "reminderTargets"
+    | "reminderUserIds"
     | "reminderChannels"
     | "reminderMinutesBefore"
   >
@@ -75,6 +77,7 @@ export type SalesTaskUpdateFields = Partial<
   dueAt?: string | null;
   leadId?: string | null;
   contactEmail?: string | null;
+  reminderExternal?: SalesTask["reminderExternal"] | null;
   reminderScheduleName?: string | null;
   reminderSentAt?: string | null;
   reminderStatus?: SalesTask["reminderStatus"] | null;
@@ -323,7 +326,22 @@ export async function updateSalesTask(
   if (updates.botId !== undefined) merged.botId = updates.botId;
   if (updates.contactPhone !== undefined) merged.contactPhone = updates.contactPhone;
   if (updates.contactName !== undefined) merged.contactName = updates.contactName;
+  if (updates.priority !== undefined) merged.priority = updates.priority;
   if (updates.reminderTargets !== undefined) merged.reminderTargets = updates.reminderTargets;
+  if (updates.reminderUserIds !== undefined) {
+    if (updates.reminderUserIds.length === 0) {
+      delete merged.reminderUserIds;
+    } else {
+      merged.reminderUserIds = updates.reminderUserIds;
+    }
+  }
+  if (updates.reminderExternal !== undefined) {
+    if (updates.reminderExternal === null) {
+      delete merged.reminderExternal;
+    } else {
+      merged.reminderExternal = updates.reminderExternal;
+    }
+  }
   if (updates.reminderChannels !== undefined) merged.reminderChannels = updates.reminderChannels;
   if (updates.reminderMinutesBefore !== undefined) {
     merged.reminderMinutesBefore = updates.reminderMinutesBefore;

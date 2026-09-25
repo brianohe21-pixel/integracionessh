@@ -6,6 +6,7 @@ import { Bot, Mail, MessageSquare, Phone, User } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { useBots } from "@/hooks/useBots";
 import { useAdvisors } from "@/hooks/useAdvisors";
+import { useTenantRole } from "@/hooks/useTenantRole";
 import {
   useConvertLead,
   useLoseLead,
@@ -44,7 +45,8 @@ export function LeadDetailPanel({
 }) {
   const t = useT();
   const { formatDate } = useFormatters();
-  const { data: bots } = useBots();
+  const { isAdvisor } = useTenantRole();
+  const { data: bots } = useBots({ enabled: !isAdvisor });
   const { data: advisors } = useAdvisors();
   const updateLead = useUpdateLead();
   const convertLead = useConvertLead();
@@ -58,6 +60,12 @@ export function LeadDetailPanel({
   const isClosed = lead.status === "converted" || lead.status === "lost";
   const initials = leadInitials(lead.name, lead.phone);
   const title = lead.name?.trim() || lead.phone;
+  const conversationHref = isAdvisor
+    ? `/inbox?botId=${lead.botId}&phone=${encodeURIComponent(lead.phone)}`
+    : `/conversations?botId=${lead.botId}&phone=${encodeURIComponent(lead.phone)}`;
+  const assignedAdvisorName =
+    advisors?.find((a) => a.advisorId === lead.assignedAdvisorId)?.name ??
+    (lead.assignedAdvisorId ? lead.assignedAdvisorId : t("leads.unassigned"));
 
   async function saveNotes() {
     setError("");
@@ -179,34 +187,40 @@ export function LeadDetailPanel({
               </div>
             </div>
           )}
-          <div className="flex items-start gap-3">
-            <Bot className="mt-0.5 h-4 w-4 shrink-0 text-muted" />
-            <div>
-              <p className="text-secondary">{t("leads.colBot")}</p>
-              <p className="text-primary">{botName}</p>
+          {!isAdvisor ? (
+            <div className="flex items-start gap-3">
+              <Bot className="mt-0.5 h-4 w-4 shrink-0 text-muted" />
+              <div>
+                <p className="text-secondary">{t("leads.colBot")}</p>
+                <p className="text-primary">{botName}</p>
+              </div>
             </div>
-          </div>
+          ) : null}
         </div>
 
         <div className="rounded-xl border border-default bg-surface p-4 space-y-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-secondary">
             {t("leads.assignedAdvisor")}
           </p>
-          <Select
-            value={lead.assignedAdvisorId ?? ""}
-            disabled={isClosed}
-            onChange={(e) =>
-              updateLead.mutate({
-                leadId: lead.leadId,
-                assignedAdvisorId: e.target.value || null,
-              })
-            }
-          >
-            <option value="">{t("leads.unassigned")}</option>
-            {(advisors ?? []).map((a) => (
-              <option key={a.advisorId} value={a.advisorId}>{a.name}</option>
-            ))}
-          </Select>
+          {isAdvisor ? (
+            <p className="text-sm text-primary">{assignedAdvisorName}</p>
+          ) : (
+            <Select
+              value={lead.assignedAdvisorId ?? ""}
+              disabled={isClosed}
+              onChange={(e) =>
+                updateLead.mutate({
+                  leadId: lead.leadId,
+                  assignedAdvisorId: e.target.value || null,
+                })
+              }
+            >
+              <option value="">{t("leads.unassigned")}</option>
+              {(advisors ?? []).map((a) => (
+                <option key={a.advisorId} value={a.advisorId}>{a.name}</option>
+              ))}
+            </Select>
+          )}
         </div>
 
         <div className="rounded-xl border border-default bg-surface p-4 space-y-3">
@@ -231,20 +245,20 @@ export function LeadDetailPanel({
 
         <div className="flex flex-wrap gap-3">
           <Link
-            href={`/conversations?botId=${lead.botId}&phone=${encodeURIComponent(lead.phone)}`}
+            href={conversationHref}
             className="inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:underline"
           >
             <MessageSquare className="h-4 w-4" />
             {t("leads.openConversation")}
           </Link>
-          {lead.status === "converted" && (
+          {lead.status === "converted" && !isAdvisor ? (
             <Link
               href={`/contacts?q=${encodeURIComponent(lead.phone)}`}
               className="text-sm font-medium text-accent hover:underline"
             >
               {t("leads.viewContact")}
             </Link>
-          )}
+          ) : null}
         </div>
 
         {error && <p className="text-sm text-danger">{error}</p>}

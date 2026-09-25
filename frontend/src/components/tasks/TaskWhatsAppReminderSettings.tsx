@@ -123,7 +123,7 @@ export function TaskWhatsAppReminderSettings({ open, onClose }: Props) {
 
   return (
     <Modal>
-      <div className="mx-4 w-full max-w-lg rounded-2xl border border-default bg-surface p-5 shadow-xl">
+      <div className="mx-4 w-full max-w-xl rounded-2xl border border-default bg-surface p-5 shadow-xl">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">
             <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl bg-accent-muted text-accent">
@@ -219,19 +219,47 @@ export function TaskWhatsAppReminderSettings({ open, onClose }: Props) {
               </label>
             )}
 
-            {!hasNoTemplates ? (
-              <div className="rounded-xl border border-default bg-surface-muted/40 px-3 py-2.5">
-                <p className="text-xs text-secondary">{t("tasks.whatsappTemplateHint")}</p>
-                <Link
-                  href="/templates"
-                  onClick={onClose}
-                  className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-accent hover:underline"
-                >
-                  <ExternalLink className="h-3.5 w-3.5" />
-                  {t("tasks.whatsappTemplateManageLink")}
-                </Link>
+            <div className="space-y-2.5 rounded-xl border border-default bg-surface-muted/40 px-3 py-3">
+              <p className="text-sm font-medium text-primary">
+                {t("tasks.whatsappTemplateGuideTitle")}
+              </p>
+              <p className="text-xs text-secondary">{t("tasks.whatsappTemplateGuideCategory")}</p>
+              <div>
+                <p className="text-xs font-medium text-secondary">
+                  {t("tasks.whatsappTemplateGuideVarsTitle")}
+                </p>
+                <ul className="mt-1 space-y-0.5 text-xs text-secondary">
+                  <li>{t("tasks.whatsappTemplateGuideVar1")}</li>
+                  <li>{t("tasks.whatsappTemplateGuideVar2")}</li>
+                  <li>{t("tasks.whatsappTemplateGuideVar3")}</li>
+                </ul>
               </div>
-            ) : null}
+              <div>
+                <p className="text-xs font-medium text-secondary">
+                  {t("tasks.whatsappTemplateGuideExampleTitle")}
+                </p>
+                <pre className="mt-1 overflow-x-auto rounded-lg border border-default bg-surface px-2.5 py-2 font-mono text-[11px] leading-relaxed text-primary whitespace-pre-wrap">
+                  {t("tasks.whatsappTemplateGuideExampleBody")}
+                </pre>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-secondary">
+                  {t("tasks.whatsappTemplateGuideExampleValuesTitle")}
+                </p>
+                <pre className="mt-1 overflow-x-auto rounded-lg border border-default bg-surface px-2.5 py-2 font-mono text-[11px] leading-relaxed text-primary whitespace-pre-wrap">
+                  {t("tasks.whatsappTemplateGuideExampleValues")}
+                </pre>
+              </div>
+              <p className="text-xs text-secondary">{t("tasks.whatsappTemplateHint")}</p>
+              <Link
+                href="/templates"
+                onClick={onClose}
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-accent hover:underline"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                {t("tasks.whatsappTemplateManageLink")}
+              </Link>
+            </div>
 
             {error ? <p className="text-xs text-red-500">{error}</p> : null}
             {saved ? (

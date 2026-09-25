@@ -1330,8 +1330,11 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                   }
                 : {}),
               reminderTargets: values.reminderTargets,
+              reminderUserIds: values.reminderUserIds,
+              reminderExternal: values.reminderExternal,
               reminderChannels: values.reminderChannels,
               reminderMinutesBefore: values.reminderMinutesBefore,
+              priority: values.priority,
             });
             setShowTaskModal(false);
           }}

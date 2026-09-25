@@ -33,8 +33,8 @@ export function AdvisorFilters({ filters, bots, onChange, onClear }: Props) {
         className="sm:w-auto sm:min-w-[160px]"
       >
         <option value="">{t("advisors.filterAllStatus")}</option>
-        <option value="active">{t("advisors.active")}</option>
-        <option value="inactive">{t("advisors.inactive")}</option>
+        <option value="active">{t("advisors.online")}</option>
+        <option value="inactive">{t("advisors.offline")}</option>
       </Select>
       <Select
         value={filters.botId}

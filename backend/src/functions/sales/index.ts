@@ -64,6 +64,7 @@ import {
   updateSalesTaskComment,
 } from "../../lib/dynamodb/sales-task-comment.repository.js";
 import { getLeadById } from "../../lib/dynamodb/lead.repository.js";
+import { listMembers } from "../../lib/dynamodb/member.repository.js";
 import { getSalesFunnelMetrics } from "../../lib/dynamodb/sales-funnel-metrics.repository.js";
 import { moveOpportunityStage } from "../../lib/sales/opportunities/stage.js";
 import { getOpportunityDetail } from "../../lib/sales/opportunities/detail.js";
@@ -218,6 +219,16 @@ const EnrollSchema = z.object({
 
 const ReminderTargetSchema = z.enum(["advisor", "contact"]);
 const ReminderChannelSchema = z.enum(["email", "whatsapp", "platform"]);
+const TaskPrioritySchema = z.enum(["low", "medium", "high", "highest"]);
+const ReminderExternalSchema = z
+  .object({
+    email: z.string().email().max(320).optional(),
+    whatsapp: z.string().max(32).optional(),
+  })
+  .refine(
+    (value) => Boolean(value.email?.trim() || value.whatsapp?.trim()),
+    { message: "External reminder requires email or whatsapp" }
+  );
 
 const CreateTaskSchema = z.object({
   title: z.string().min(1).max(200),
@@ -231,7 +242,10 @@ const CreateTaskSchema = z.object({
   contactPhone: z.string().max(32).optional(),
   contactEmail: z.string().email().max(320).optional(),
   contactName: z.string().max(200).optional(),
+  priority: TaskPrioritySchema.optional(),
   reminderTargets: z.array(ReminderTargetSchema).max(2).optional(),
+  reminderUserIds: z.array(z.string().min(1).max(128)).max(20).optional(),
+  reminderExternal: ReminderExternalSchema.nullable().optional(),
   reminderChannels: z.array(ReminderChannelSchema).max(3).optional(),
   reminderMinutesBefore: z.number().int().min(0).max(10080).optional(),
 });
@@ -248,7 +262,10 @@ const UpdateTaskSchema = z.object({
   contactPhone: z.string().max(32).optional(),
   contactEmail: z.string().email().max(320).optional().nullable(),
   contactName: z.string().max(200).optional(),
+  priority: TaskPrioritySchema.optional(),
   reminderTargets: z.array(ReminderTargetSchema).max(2).optional(),
+  reminderUserIds: z.array(z.string().min(1).max(128)).max(20).optional(),
+  reminderExternal: ReminderExternalSchema.nullable().optional(),
   reminderChannels: z.array(ReminderChannelSchema).max(3).optional(),
   reminderMinutesBefore: z.number().int().min(0).max(10080).optional(),
 });
@@ -825,6 +842,13 @@ export async function handler(
       const now = new Date().toISOString();
       const reminderTargets = uniqueReminderTargets(parsed.data.reminderTargets);
       const reminderChannels = uniqueReminderChannels(parsed.data.reminderChannels);
+      const reminderUsers = await resolveReminderUserIds(
+        auth.tenantId,
+        parsed.data.reminderUserIds
+      );
+      if (!reminderUsers.ok) return badRequest(reminderUsers.error);
+      const reminderUserIds = reminderUsers.userIds;
+      const reminderExternal = normalizeReminderExternal(parsed.data.reminderExternal);
       const contactPhone = parsed.data.contactPhone
         ? normalizePhone(parsed.data.contactPhone) || parsed.data.contactPhone
         : undefined;
@@ -850,7 +874,10 @@ export async function handler(
         ...(contactPhone ? { contactPhone } : {}),
         ...(parsed.data.contactEmail ? { contactEmail: parsed.data.contactEmail } : {}),
         ...(parsed.data.contactName ? { contactName: parsed.data.contactName.trim() } : {}),
+        priority: parsed.data.priority ?? "medium",
         ...(reminderTargets.length ? { reminderTargets } : {}),
+        ...(reminderUserIds.length ? { reminderUserIds } : {}),
+        ...(reminderExternal ? { reminderExternal } : {}),
         ...(reminderChannels.length ? { reminderChannels } : {}),
         ...(parsed.data.reminderMinutesBefore !== undefined
           ? { reminderMinutesBefore: parsed.data.reminderMinutesBefore }
@@ -937,8 +964,22 @@ export async function handler(
         if (parsed.data.contactName !== undefined) {
           updates.contactName = parsed.data.contactName.trim();
         }
+        if (parsed.data.priority !== undefined) {
+          updates.priority = parsed.data.priority;
+        }
         if (parsed.data.reminderTargets !== undefined) {
           updates.reminderTargets = uniqueReminderTargets(parsed.data.reminderTargets);
+        }
+        if (parsed.data.reminderUserIds !== undefined) {
+          const reminderUsers = await resolveReminderUserIds(
+            auth.tenantId,
+            parsed.data.reminderUserIds
+          );
+          if (!reminderUsers.ok) return badRequest(reminderUsers.error);
+          updates.reminderUserIds = reminderUsers.userIds;
+        }
+        if (parsed.data.reminderExternal !== undefined) {
+          updates.reminderExternal = normalizeReminderExternal(parsed.data.reminderExternal);
         }
         if (parsed.data.reminderChannels !== undefined) {
           updates.reminderChannels = uniqueReminderChannels(parsed.data.reminderChannels);
@@ -950,6 +991,8 @@ export async function handler(
         const reminderFieldsChanged =
           parsed.data.dueAt !== undefined ||
           parsed.data.reminderTargets !== undefined ||
+          parsed.data.reminderUserIds !== undefined ||
+          parsed.data.reminderExternal !== undefined ||
           parsed.data.reminderChannels !== undefined ||
           parsed.data.reminderMinutesBefore !== undefined;
 
@@ -1045,6 +1088,46 @@ function uniqueReminderTargets(
 ): SalesTaskReminderTarget[] {
   if (!values?.length) return [];
   return Array.from(new Set(values));
+}
+
+function uniqueReminderUserIds(values?: string[]): string[] {
+  if (!values?.length) return [];
+  return Array.from(
+    new Set(values.map((value) => value.trim()).filter(Boolean))
+  ).slice(0, 20);
+}
+
+async function resolveReminderUserIds(
+  tenantId: string,
+  values?: string[]
+): Promise<{ ok: true; userIds: string[] } | { ok: false; error: string }> {
+  const userIds = uniqueReminderUserIds(values);
+  if (!userIds.length) return { ok: true, userIds: [] };
+  const members = await listMembers(tenantId);
+  const enabledIds = new Set(
+    members.filter((member) => member.enabled).map((member) => member.userId)
+  );
+  const invalid = userIds.filter((userId) => !enabledIds.has(userId));
+  if (invalid.length) {
+    return { ok: false, error: "One or more reminder users are invalid or disabled" };
+  }
+  return { ok: true, userIds };
+}
+
+function normalizeReminderExternal(
+  value?: { email?: string | undefined; whatsapp?: string | undefined } | null
+): SalesTask["reminderExternal"] | null {
+  if (value === null || value === undefined) return null;
+  const email = value.email?.trim().toLowerCase() || undefined;
+  const rawWhatsapp = value.whatsapp?.trim() || undefined;
+  const whatsapp = rawWhatsapp
+    ? normalizePhone(rawWhatsapp) || rawWhatsapp
+    : undefined;
+  if (!email && !whatsapp) return null;
+  const normalized: NonNullable<SalesTask["reminderExternal"]> = {};
+  if (email) normalized.email = email;
+  if (whatsapp) normalized.whatsapp = whatsapp;
+  return normalized;
 }
 
 function uniqueReminderChannels(

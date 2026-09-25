@@ -2,12 +2,7 @@
 
 import { useEffect, useRef, useState, type ComponentType } from "react";
 import { createPortal } from "react-dom";
-import {
-  CheckCircle2,
-  MoreVertical,
-  Pencil,
-  RotateCcw,
-} from "lucide-react";
+import { MoreVertical, Pencil, Power, PowerOff, Trash2 } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +12,7 @@ type MenuItem = {
   icon: ComponentType<{ className?: string }>;
   onClick: () => void;
   disabled?: boolean;
+  variant?: "default" | "danger";
 };
 
 type MenuPosition = {
@@ -25,27 +21,30 @@ type MenuPosition = {
   width: number;
 };
 
-type Props = {
-  status: "open" | "done" | "cancelled";
+type AdvisorActionsMenuProps = {
+  status: "active" | "inactive";
   busy?: boolean;
-  compact?: boolean;
   onEdit: () => void;
-  onToggleComplete: () => void;
+  onSetOffline: () => void;
+  onSetOnline: () => void;
+  onDelete: () => void;
 };
 
-export function TaskActionsMenu({
+export function AdvisorActionsMenu({
   status,
   busy = false,
-  compact = false,
   onEdit,
-  onToggleComplete,
-}: Props) {
+  onSetOffline,
+  onSetOnline,
+  onDelete,
+}: AdvisorActionsMenuProps) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [menuPosition, setMenuPosition] = useState<MenuPosition | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const isOnline = status === "active";
 
   useEffect(() => {
     setMounted(true);
@@ -105,12 +104,28 @@ export function TaskActionsMenu({
       onClick: onEdit,
       disabled: busy,
     },
+    isOnline
+      ? {
+          id: "offline",
+          label: t("advisors.setOffline"),
+          icon: PowerOff,
+          onClick: onSetOffline,
+          disabled: busy,
+        }
+      : {
+          id: "online",
+          label: t("advisors.setOnline"),
+          icon: Power,
+          onClick: onSetOnline,
+          disabled: busy,
+        },
     {
-      id: "toggle",
-      label: status === "done" ? t("tasks.reopen") : t("tasks.markDone"),
-      icon: status === "done" ? RotateCcw : CheckCircle2,
-      onClick: onToggleComplete,
-      disabled: busy || status === "cancelled",
+      id: "delete",
+      label: t("advisors.delete"),
+      icon: Trash2,
+      onClick: onDelete,
+      disabled: busy,
+      variant: "danger",
     },
   ];
 
@@ -125,7 +140,7 @@ export function TaskActionsMenu({
       <div
         ref={rootRef}
         role="menu"
-        aria-label={t("tasks.actionsMenu")}
+        aria-label={t("advisors.actionsMenu")}
         style={{
           top: menuPosition.top,
           left: menuPosition.left,
@@ -143,12 +158,15 @@ export function TaskActionsMenu({
               disabled={menuItem.disabled}
               onClick={() => handleSelect(menuItem)}
               className={cn(
-                "flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm text-primary transition-colors hover:bg-surface-muted",
-                menuItem.disabled && "cursor-not-allowed opacity-50"
+                "flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm transition-colors",
+                menuItem.disabled && "cursor-not-allowed opacity-50",
+                menuItem.variant === "danger"
+                  ? "text-danger hover:bg-danger/10"
+                  : "text-primary hover:bg-surface-muted"
               )}
             >
-              <Icon className="h-4 w-4 shrink-0 text-secondary" />
-              <span className="flex-1">{menuItem.label}</span>
+              <Icon className="h-4 w-4 shrink-0" />
+              <span>{menuItem.label}</span>
             </button>
           );
         })}
@@ -163,15 +181,14 @@ export function TaskActionsMenu({
         onClick={() => setOpen((value) => !value)}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={t("tasks.actionsMenu")}
+        aria-label={t("advisors.actionsMenu")}
         disabled={busy}
         className={cn(
-          "inline-flex shrink-0 items-center justify-center rounded-md border border-default text-secondary transition-colors hover:bg-surface-muted hover:text-primary disabled:cursor-not-allowed disabled:opacity-50",
-          compact ? "h-6 w-6" : "h-8 w-8 rounded-lg",
+          "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-default text-secondary transition-colors hover:bg-surface-muted hover:text-primary disabled:cursor-not-allowed disabled:opacity-50",
           open && "border-accent/30 bg-accent-muted text-accent"
         )}
       >
-        <MoreVertical className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} />
+        <MoreVertical className="h-4 w-4" />
       </button>
       {mounted && menu ? createPortal(menu, document.body) : null}
     </>

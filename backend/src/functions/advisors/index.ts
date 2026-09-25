@@ -9,8 +9,7 @@ import {
   listAdvisors,
   updateAdvisor,
 } from "../../lib/dynamodb/advisor.repository.js";
-import { listMembers } from "../../lib/dynamodb/member.repository.js";
-import { deleteMember } from "../../lib/dynamodb/member.repository.js";
+import { listMembers, deleteMember, updateMember } from "../../lib/dynamodb/member.repository.js";
 import {
   resolveRequestAuth,
   assertTenantManagerRole,
@@ -18,7 +17,7 @@ import {
 } from "../../lib/auth/cognito.js";
 import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import { inviteAdvisorUser } from "../../lib/cognito/invite-advisor.js";
-import { deleteCognitoUserBySub } from "../../lib/cognito/admin-users.js";
+import { deleteCognitoUserBySub, updateCognitoUserBySub } from "../../lib/cognito/admin-users.js";
 import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
 import { resolveBranding } from "../../lib/branding/resolve.js";
 import { sendAdvisorInviteEmail } from "../../lib/email/advisor-invite.js";
@@ -183,6 +182,25 @@ export async function handler(
       if (parsed.data.status !== undefined) updates.status = parsed.data.status;
 
       const updated = await updateAdvisor(auth.tenantId, advisorId, updates);
+      if (!updated) return notFound("Advisor not found");
+
+      if (
+        existing.cognitoUserId &&
+        parsed.data.name !== undefined &&
+        parsed.data.name !== existing.name
+      ) {
+        try {
+          await updateCognitoUserBySub(existing.cognitoUserId, { name: parsed.data.name });
+        } catch {
+          // Advisor name is still updated even if Cognito rename fails.
+        }
+        try {
+          await updateMember(auth.tenantId, existing.cognitoUserId, { name: parsed.data.name });
+        } catch {
+          // Advisor name is still updated even if member rename fails.
+        }
+      }
+
       return ok(updated);
     }
 

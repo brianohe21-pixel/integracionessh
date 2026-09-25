@@ -36,11 +36,12 @@ export function useLead(leadId: string | null) {
   });
 }
 
-export function useLeadMetrics() {
+export function useLeadMetrics(options?: { enabled?: boolean }) {
   const scope = useTenantContextId() ?? "home";
   return useQuery({
     queryKey: ["metrics", "leads", scope],
     queryFn: () => api.get<LeadMetrics>("/metrics/leads"),
+    enabled: options?.enabled ?? true,
   });
 }
 
