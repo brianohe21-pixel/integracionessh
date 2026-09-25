@@ -48,6 +48,18 @@ export function useUserProfile(enabled = true) {
   });
 }
 
+export function useUpdateAdvisorAvailability() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (status: "active" | "inactive") =>
+      api.patch<UserProfile>("/tenants/me/profile/advisor-status", { status }),
+    onSuccess: (data) => {
+      queryClient.setQueryData<UserProfile>(USER_PROFILE_QUERY_KEY, data);
+      queryClient.invalidateQueries({ queryKey: ["advisors"] });
+    },
+  });
+}
+
 export function useUploadProfilePhoto() {
   const queryClient = useQueryClient();
   return useMutation({

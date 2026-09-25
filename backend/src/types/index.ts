@@ -661,6 +661,8 @@ export interface UserProfile {
   name: string;
   role: TenantMemberRole;
   profilePhotoUrl?: string;
+  advisorId?: string;
+  advisorStatus?: "active" | "inactive";
 }
 
 export interface OrganizationTeam {

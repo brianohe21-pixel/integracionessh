@@ -12,7 +12,8 @@ import { cn } from "@/lib/utils";
 export function NotificationsPanel() {
   const t = useT();
   const { isAdvisor } = useTenantRole();
-  const { isOpen, close, notifications, unreadCount, markAllAsRead } = useNotifications();
+  const { isOpen, close, notifications, unreadCount, markAllAsRead, clearAll } =
+    useNotifications();
   const conversationsHref = isAdvisor ? "/inbox" : "/conversations";
 
   return (
@@ -48,18 +49,31 @@ export function NotificationsPanel() {
           </button>
         </div>
 
-        {unreadCount > 0 ? (
-          <div className="flex items-center justify-between border-b border-default px-5 py-2.5">
+        {notifications.length > 0 ? (
+          <div className="flex items-center justify-between gap-3 border-b border-default px-5 py-2.5">
             <span className="text-xs text-secondary">
-              {t("notifications.unreadCount", { count: unreadCount })}
+              {unreadCount > 0
+                ? t("notifications.unreadCount", { count: unreadCount })
+                : t("notifications.allRead")}
             </span>
-            <button
-              type="button"
-              onClick={markAllAsRead}
-              className="text-xs font-medium text-accent hover:text-accent-hover"
-            >
-              {t("notifications.markAllRead")}
-            </button>
+            <div className="flex items-center gap-3">
+              {unreadCount > 0 ? (
+                <button
+                  type="button"
+                  onClick={markAllAsRead}
+                  className="text-xs font-medium text-accent hover:text-accent-hover"
+                >
+                  {t("notifications.markAllRead")}
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={clearAll}
+                className="text-xs font-medium text-secondary hover:text-danger"
+              >
+                {t("notifications.clearAll")}
+              </button>
+            </div>
           </div>
         ) : null}
 

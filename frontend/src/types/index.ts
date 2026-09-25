@@ -1263,6 +1263,8 @@ export interface UserProfile {
   name: string;
   role: "member" | "supervisor" | "advisor";
   profilePhotoUrl?: string;
+  advisorId?: string;
+  advisorStatus?: "active" | "inactive";
 }
 
 export interface TenantMembersResponse {

@@ -81,6 +81,29 @@ export async function getAdvisorByCognitoUserId(
   return rest as Advisor;
 }
 
+export async function findAdvisorByCognitoUserId(
+  tenantId: string,
+  cognitoUserId: string
+): Promise<Advisor | null> {
+  const result = await docClient.send(
+    new QueryCommand({
+      TableName: TABLE_NAME,
+      KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+      FilterExpression: "cognitoUserId = :uid",
+      ExpressionAttributeValues: {
+        ":pk": `TENANT#${tenantId}`,
+        ":sk": "ADVISOR#",
+        ":uid": cognitoUserId,
+      },
+    })
+  );
+
+  if (!result.Items?.length) return null;
+
+  const { PK, SK, GSI1PK, GSI1SK, ...rest } = result.Items[0];
+  return rest as Advisor;
+}
+
 export async function listAdvisors(tenantId: string): Promise<Advisor[]> {
   const result = await docClient.send(
     new QueryCommand({

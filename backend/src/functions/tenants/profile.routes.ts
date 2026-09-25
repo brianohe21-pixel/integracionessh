@@ -3,6 +3,11 @@ import { z } from "zod";
 import type { AuthContext, TenantMember, TenantMemberRole, UserProfile } from "../../types/index.js";
 import { getMember, putMember, updateMember } from "../../lib/dynamodb/member.repository.js";
 import {
+  findAdvisorByCognitoUserId,
+  getAdvisor,
+  updateAdvisor,
+} from "../../lib/dynamodb/advisor.repository.js";
+import {
   extensionForContentType,
   normalizeLogoContentType,
 } from "../../lib/branding/resolve.js";
@@ -12,11 +17,15 @@ import {
   getPresignedReadUrl,
   putObjectBuffer,
 } from "../../lib/s3/client.js";
-import { badRequest, ok, parseJsonBody } from "../../lib/http.js";
+import { badRequest, notFound, ok, parseJsonBody } from "../../lib/http.js";
 
 const ProfilePhotoUploadSchema = z.object({
   contentType: z.string().min(1),
   data: z.string().min(1).max(2_500_000),
+});
+
+const AdvisorStatusSchema = z.object({
+  status: z.enum(["active", "inactive"]),
 });
 
 function formatZodError(error: z.ZodError): string {
@@ -59,14 +68,26 @@ async function resolveProfilePhotoUrl(profilePhotoS3Key?: string): Promise<strin
   }
 }
 
-async function toUserProfile(member: TenantMember): Promise<UserProfile> {
+async function resolveLinkedAdvisor(auth: AuthContext, member: TenantMember) {
+  if (member.advisorId) {
+    const byId = await getAdvisor(auth.tenantId, member.advisorId);
+    if (byId) return byId;
+  }
+  return findAdvisorByCognitoUserId(auth.tenantId, auth.userId);
+}
+
+async function toUserProfile(auth: AuthContext, member: TenantMember): Promise<UserProfile> {
   const profilePhotoUrl = await resolveProfilePhotoUrl(member.profilePhotoS3Key);
+  const advisor = await resolveLinkedAdvisor(auth, member);
   return {
     userId: member.userId,
     email: member.email,
     name: member.name,
     role: member.role,
     ...(profilePhotoUrl ? { profilePhotoUrl } : {}),
+    ...(advisor
+      ? { advisorId: advisor.advisorId, advisorStatus: advisor.status }
+      : {}),
   };
 }
 
@@ -81,7 +102,29 @@ export async function handleProfileRoutes(
   const member = await ensureMember(auth);
 
   if (method === "GET" && rawPath.endsWith("/tenants/me/profile")) {
-    return ok(await toUserProfile(member));
+    return ok(await toUserProfile(auth, member));
+  }
+
+  if (method === "PATCH" && rawPath.endsWith("/tenants/me/profile/advisor-status")) {
+    const body = parseJsonBody(event);
+    const parsed = AdvisorStatusSchema.safeParse(body);
+    if (!parsed.success) {
+      return badRequest(formatZodError(parsed.error));
+    }
+
+    const advisor = await resolveLinkedAdvisor(auth, member);
+    if (!advisor) return notFound("Advisor profile not found");
+
+    const updated = await updateAdvisor(auth.tenantId, advisor.advisorId, {
+      status: parsed.data.status,
+    });
+    if (!updated) return notFound("Advisor not found");
+
+    if (!member.advisorId) {
+      await updateMember(auth.tenantId, auth.userId, { advisorId: updated.advisorId });
+    }
+
+    return ok(await toUserProfile(auth, { ...member, advisorId: updated.advisorId }));
   }
 
   if (method === "POST" && rawPath.endsWith("/tenants/me/profile/photo")) {
@@ -120,7 +163,7 @@ export async function handleProfileRoutes(
         profilePhotoS3Key,
       };
 
-    return ok(await toUserProfile(updated));
+    return ok(await toUserProfile(auth, updated));
   }
 
   if (method === "DELETE" && rawPath.endsWith("/tenants/me/profile/photo")) {
@@ -130,7 +173,7 @@ export async function handleProfileRoutes(
     const updated: TenantMember = { ...member };
     delete updated.profilePhotoS3Key;
     await putMember(updated, auth.tenantId);
-    return ok(await toUserProfile(updated));
+    return ok(await toUserProfile(auth, updated));
   }
 
   return badRequest("Route not found");

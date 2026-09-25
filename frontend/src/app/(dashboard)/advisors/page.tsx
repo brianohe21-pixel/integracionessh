@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Plus, Users, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Users } from "lucide-react";
 import {
   useAdvisors,
   useCreateAdvisor,
   useDeleteAdvisor,
+  useUpdateAdvisor,
 } from "@/hooks/useAdvisors";
 import { useBots } from "@/hooks/useBots";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -21,11 +22,13 @@ import {
 } from "@/components/ui/DataTable";
 import { useT } from "@/i18n/context";
 import { useFormatters } from "@/hooks/useFormatters";
+import { AdvisorActionsMenu } from "@/components/advisors/AdvisorActionsMenu";
 import { AdvisorDateFilters } from "@/components/advisors/AdvisorDateFilters";
 import { AdvisorFilters } from "@/components/advisors/AdvisorFilters";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EMPTY_ADVISOR_FILTERS, filterAdvisors } from "@/lib/advisor-filters";
+import type { Advisor } from "@/types";
 
 const ADVISORS_PAGE_SIZE = 20;
 
@@ -35,9 +38,11 @@ export default function AdvisorsPage() {
   const { data: advisors, isLoading } = useAdvisors();
   const { data: bots } = useBots();
   const createAdvisor = useCreateAdvisor();
+  const updateAdvisor = useUpdateAdvisor();
   const deleteAdvisor = useDeleteAdvisor();
 
   const [open, setOpen] = useState(false);
+  const [editingAdvisor, setEditingAdvisor] = useState<Advisor | null>(null);
   const [name, setName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
@@ -45,12 +50,15 @@ export default function AdvisorsPage() {
   const [inviteInfo, setInviteInfo] = useState<string | null>(null);
   const [inviteInfoType, setInviteInfoType] = useState<"success" | "warning">("success");
   const [error, setError] = useState("");
+  const [statusError, setStatusError] = useState("");
   const [deleteError, setDeleteError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<{ advisorId: string; name: string } | null>(
     null
   );
   const [filters, setFilters] = useState(EMPTY_ADVISOR_FILTERS);
   const [page, setPage] = useState(1);
+  const isEdit = Boolean(editingAdvisor);
+  const formBusy = createAdvisor.isPending || updateAdvisor.isPending;
 
   const filteredAdvisors = useMemo(
     () => filterAdvisors(advisors ?? [], filters),
@@ -97,6 +105,47 @@ export default function AdvisorsPage() {
     });
   }
 
+  function resetForm() {
+    setEditingAdvisor(null);
+    setName("");
+    setPhoneNumber("");
+    setInviteEmail("");
+    setSelectedBots([]);
+    setError("");
+  }
+
+  function closeForm() {
+    setOpen(false);
+    resetForm();
+  }
+
+  function openCreate() {
+    resetForm();
+    setOpen(true);
+  }
+
+  function openEdit(advisor: Advisor) {
+    setEditingAdvisor(advisor);
+    setName(advisor.name);
+    setPhoneNumber(advisor.phoneNumber);
+    setInviteEmail("");
+    setSelectedBots(advisor.botIds ?? []);
+    setError("");
+    setOpen(true);
+  }
+
+  function setAdvisorStatus(advisorId: string, status: "active" | "inactive") {
+    setStatusError("");
+    updateAdvisor.mutate(
+      { advisorId, status },
+      {
+        onError: (err) => {
+          setStatusError(err.message || t("advisors.statusError"));
+        },
+      }
+    );
+  }
+
   function advisorErrorMessage(message: string): string {
     if (message === "A user with this email already exists") {
       return t("advisors.emailAlreadyExists");
@@ -104,17 +153,31 @@ export default function AdvisorsPage() {
     if (message === "This email is already linked to an active advisor") {
       return t("advisors.emailAlreadyLinked");
     }
+    if (message === "An advisor with this phone number already exists") {
+      return t("advisors.phoneAlreadyExists");
+    }
     return message;
   }
 
-  async function handleCreate(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setInviteInfo(null);
     try {
+      if (editingAdvisor) {
+        await updateAdvisor.mutateAsync({
+          advisorId: editingAdvisor.advisorId,
+          name: name.trim(),
+          phoneNumber: phoneNumber.trim(),
+          botIds: selectedBots,
+        });
+        closeForm();
+        return;
+      }
+
       const result = await createAdvisor.mutateAsync({
-        name,
-        phoneNumber,
+        name: name.trim(),
+        phoneNumber: phoneNumber.trim(),
         ...(inviteEmail ? { inviteEmail } : {}),
         ...(selectedBots.length ? { botIds: selectedBots } : {}),
       });
@@ -129,11 +192,7 @@ export default function AdvisorsPage() {
             : t("advisors.inviteEmailFailed", { email: result.invite.email })
         );
       }
-      setName("");
-      setPhoneNumber("");
-      setInviteEmail("");
-      setSelectedBots([]);
-      setOpen(false);
+      closeForm();
     } catch (err) {
       setError(advisorErrorMessage((err as Error).message));
     }
@@ -145,7 +204,7 @@ export default function AdvisorsPage() {
         title={t("advisors.title")}
         subtitle={t("advisors.subtitle")}
         actions={
-          <Button onClick={() => setOpen(true)}>
+          <Button onClick={openCreate}>
             <Plus className="h-4 w-4" />
             {t("advisors.newAdvisor")}
           </Button>
@@ -161,6 +220,12 @@ export default function AdvisorsPage() {
           }`}
         >
           {inviteInfo}
+        </div>
+      )}
+
+      {statusError && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          {statusError}
         </div>
       )}
 
@@ -190,7 +255,7 @@ export default function AdvisorsPage() {
           title={t("advisors.emptyTitle")}
           description={t("advisors.emptyDescription")}
           action={
-            <Button onClick={() => setOpen(true)}>
+            <Button onClick={openCreate}>
               <Plus className="h-4 w-4" />
               {t("advisors.newAdvisor")}
             </Button>
@@ -260,21 +325,22 @@ export default function AdvisorsPage() {
                   </DataTableCell>
                   <DataTableCell>
                     <Badge variant={advisor.status === "active" ? "success" : "default"}>
-                      {advisor.status === "active" ? t("advisors.active") : t("advisors.inactive")}
+                      {advisor.status === "active"
+                        ? t("advisors.online")
+                        : t("advisors.offline")}
                     </Badge>
                   </DataTableCell>
                   <DataTableCell className="text-right">
-                    <button
-                      type="button"
-                      onClick={() =>
+                    <AdvisorActionsMenu
+                      status={advisor.status}
+                      busy={updateAdvisor.isPending || deleteAdvisor.isPending}
+                      onEdit={() => openEdit(advisor)}
+                      onSetOffline={() => setAdvisorStatus(advisor.advisorId, "inactive")}
+                      onSetOnline={() => setAdvisorStatus(advisor.advisorId, "active")}
+                      onDelete={() =>
                         setDeleteTarget({ advisorId: advisor.advisorId, name: advisor.name })
                       }
-                      disabled={deleteAdvisor.isPending}
-                      className="rounded border border-default p-1.5 text-danger hover:bg-danger/10 disabled:opacity-50"
-                      aria-label={t("advisors.delete")}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                    />
                   </DataTableCell>
                 </DataTableRow>
               ))}
@@ -345,10 +411,12 @@ export default function AdvisorsPage() {
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <form
-            onSubmit={handleCreate}
+            onSubmit={(e) => void handleSubmit(e)}
             className="bg-surface-elevated rounded-xl shadow-xl w-full max-w-md p-6 space-y-4"
           >
-            <h2 className="text-lg font-semibold text-primary">{t("advisors.newAdvisor")}</h2>
+            <h2 className="text-lg font-semibold text-primary">
+              {isEdit ? t("advisors.editAdvisor") : t("advisors.newAdvisor")}
+            </h2>
             {error && <p className="text-sm text-red-600">{error}</p>}
             <input
               required
@@ -364,13 +432,15 @@ export default function AdvisorsPage() {
               placeholder={t("advisors.phonePlaceholder")}
               className="w-full px-3 py-2 border border-default rounded-lg text-sm"
             />
-            <input
-              type="email"
-              value={inviteEmail}
-              onChange={(e) => setInviteEmail(e.target.value)}
-              placeholder={t("advisors.emailPlaceholder")}
-              className="w-full px-3 py-2 border border-default rounded-lg text-sm"
-            />
+            {!isEdit ? (
+              <input
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder={t("advisors.emailPlaceholder")}
+                className="w-full px-3 py-2 border border-default rounded-lg text-sm"
+              />
+            ) : null}
             {bots && bots.length > 0 && (
               <div className="space-y-2">
                 <p className="text-xs text-secondary">{t("advisors.botsOptional")}</p>
@@ -397,17 +467,18 @@ export default function AdvisorsPage() {
             <div className="flex justify-end gap-2 pt-2">
               <button
                 type="button"
-                onClick={() => setOpen(false)}
+                onClick={closeForm}
+                disabled={formBusy}
                 className="px-4 py-2 text-sm text-secondary"
               >
                 {t("common.cancel")}
               </button>
               <button
                 type="submit"
-                disabled={createAdvisor.isPending}
-                className="px-4 py-2 text-sm bg-accent text-white rounded-lg"
+                disabled={formBusy}
+                className="px-4 py-2 text-sm bg-accent text-white rounded-lg disabled:opacity-50"
               >
-                {t("common.save")}
+                {formBusy ? t("common.loading") : t("common.save")}
               </button>
             </div>
           </form>

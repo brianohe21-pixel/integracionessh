@@ -25,6 +25,7 @@ type NotificationsContextValue = {
   toggle: () => void;
   markAsRead: (id: string) => void;
   markAllAsRead: () => void;
+  clearAll: () => void;
   removeNotification: (id: string) => void;
 };
 
@@ -127,6 +128,11 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const clearAll = useCallback(() => {
+    setNotifications([]);
+    saveNotifications([]);
+  }, []);
+
   const removeNotification = useCallback((id: string) => {
     setNotifications((current) => {
       const next = current.filter((item) => item.id !== id);
@@ -147,6 +153,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       toggle,
       markAsRead,
       markAllAsRead,
+      clearAll,
       removeNotification,
     }),
     [
@@ -158,6 +165,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       toggle,
       markAsRead,
       markAllAsRead,
+      clearAll,
       removeNotification,
     ]
   );
