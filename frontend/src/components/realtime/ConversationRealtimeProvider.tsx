@@ -148,6 +148,10 @@ function ConversationRealtimeInner({ children }: { children: React.ReactNode }) 
             return;
           }
 
+          if (parsed.type === "ops.alert") {
+            return;
+          }
+
           queryClient.setQueriesData<InfiniteData<ConversationsListResponse>>(
             { queryKey: ["conversations", "list"] },
             (current) => mergeConversationInList(current, parsed.conversation)

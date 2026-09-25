@@ -11,9 +11,26 @@ import {
   shouldRetryDelivery,
 } from "../../lib/integrations/deliver.js";
 import type { IntegrationEventPayload, IntegrationQueueMessage } from "../../types/index.js";
+import { emitOpsAlertSafe } from "../../lib/ops-alerts/emit.js";
 
 const sqs = new SQSClient({});
 const QUEUE_URL = process.env.INTEGRATION_SQS_QUEUE_URL ?? "";
+
+function notifyWebhookFailed(params: {
+  tenantId: string;
+  deliveryId: string;
+  lastError: string;
+}): void {
+  emitOpsAlertSafe({
+    tenantId: params.tenantId,
+    ruleId: "webhook_failed",
+    title: "Webhook delivery failed",
+    body: params.lastError.slice(0, 500),
+    href: "/developer",
+    severity: "warning",
+    dedupeKey: `webhook_failed:${params.deliveryId}`,
+  });
+}
 
 export async function handler(event: SQSEvent): Promise<void> {
   for (const record of event.Records) {
@@ -38,6 +55,11 @@ async function processRecord(record: SQSRecord): Promise<void> {
     await updateIntegrationDelivery(tenantId, createdAt, deliveryId, {
       status: "failed",
       attempts: attempt,
+      lastError: "Integration not configured",
+    });
+    notifyWebhookFailed({
+      tenantId,
+      deliveryId,
       lastError: "Integration not configured",
     });
     return;
@@ -84,6 +106,11 @@ async function processRecord(record: SQSRecord): Promise<void> {
           attempts: attempt,
           lastError: `${errMsg}; retry enqueue: ${enqueueMsg}`,
         });
+        notifyWebhookFailed({
+          tenantId,
+          deliveryId,
+          lastError: `${errMsg}; retry enqueue: ${enqueueMsg}`,
+        });
         return;
       }
     }
@@ -91,6 +118,11 @@ async function processRecord(record: SQSRecord): Promise<void> {
     await updateIntegrationDelivery(tenantId, createdAt, deliveryId, {
       status: "failed",
       attempts: attempt,
+      lastError: errMsg,
+    });
+    notifyWebhookFailed({
+      tenantId,
+      deliveryId,
       lastError: errMsg,
     });
   }

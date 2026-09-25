@@ -1,4 +1,4 @@
-import type { Conversation, Message } from "@/types";
+import type { Conversation, Message, OpsAlert } from "@/types";
 
 export type RealtimeEvent =
   | {
@@ -22,6 +22,10 @@ export type RealtimeEvent =
       href: string;
       createdAt: string;
       advisorId?: string;
+    }
+  | {
+      type: "ops.alert";
+      alert: OpsAlert;
     };
 
 export function parseRealtimeEvent(raw: string): RealtimeEvent | null {

@@ -87,6 +87,10 @@ export async function publishRealtimeEvent(
     targets = connections.filter((connection) =>
       shouldDeliverTaskReminder(connection, event.advisorId, event.userIds)
     );
+  } else if (event.type === "ops.alert") {
+    targets = connections.filter(
+      (connection) => connection.role === "member" || connection.role === "supervisor"
+    );
   }
 
   if (targets.length === 0) return;

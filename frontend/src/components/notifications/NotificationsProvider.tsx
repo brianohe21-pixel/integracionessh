@@ -14,6 +14,8 @@ import { conversationHref, conversationLabel } from "@/lib/notifications/convers
 import { loadNotifications, saveNotifications } from "@/lib/notifications/storage";
 import { useTenantRole } from "@/hooks/useTenantRole";
 import { useT } from "@/i18n/context";
+import { api } from "@/lib/api";
+import type { OpsAlert } from "@/types";
 import type { AppNotification } from "@/types/notifications";
 
 type NotificationsContextValue = {
@@ -37,27 +39,57 @@ function truncate(text: string, max = 120): string {
   return `${trimmed.slice(0, max - 1)}…`;
 }
 
+function opsToNotification(alert: OpsAlert): AppNotification {
+  return {
+    id: `ops-${alert.alertId}`,
+    type: "ops",
+    title: alert.title,
+    body: truncate(alert.body),
+    href: alert.href || "/alerts",
+    alertId: alert.alertId,
+    createdAt: alert.createdAt,
+    read: Boolean(alert.readAt),
+  };
+}
+
+function persistLocal(notifications: AppNotification[]) {
+  saveNotifications(notifications.filter((item) => item.type !== "ops"));
+}
+
 export function NotificationsProvider({ children }: { children: ReactNode }) {
   const t = useT();
-  const { isAdvisor } = useTenantRole();
+  const { isAdvisor, loading: roleLoading } = useTenantRole();
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
   useEffect(() => {
-    setNotifications(loadNotifications());
+    const local = loadNotifications().filter((item) => item.type !== "ops");
+    setNotifications(local);
   }, []);
 
-  const addNotification = useCallback(
-    (notification: AppNotification) => {
-      setNotifications((current) => {
-        if (current.some((item) => item.id === notification.id)) return current;
-        const next = [notification, ...current].slice(0, 100);
-        saveNotifications(next);
-        return next;
-      });
-    },
-    []
-  );
+  useEffect(() => {
+    if (roleLoading || isAdvisor) return;
+
+    void api
+      .get<{ alerts: OpsAlert[] }>("/tenants/me/ops-alerts/history?unreadOnly=true&limit=50")
+      .then((data) => {
+        const ops = (data.alerts ?? []).map(opsToNotification);
+        setNotifications((current) => {
+          const withoutOps = current.filter((item) => item.type !== "ops");
+          return [...ops, ...withoutOps].slice(0, 100);
+        });
+      })
+      .catch(() => undefined);
+  }, [isAdvisor, roleLoading]);
+
+  const addNotification = useCallback((notification: AppNotification) => {
+    setNotifications((current) => {
+      if (current.some((item) => item.id === notification.id)) return current;
+      const next = [notification, ...current].slice(0, 100);
+      persistLocal(next);
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     return subscribeRealtimeEvents((event) => {
@@ -104,6 +136,11 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
           createdAt: event.createdAt,
           read: false,
         });
+        return;
+      }
+
+      if (event.type === "ops.alert") {
+        addNotification(opsToNotification(event.alert));
       }
     });
   }, [addNotification, isAdvisor, t]);
@@ -114,36 +151,46 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
   const markAsRead = useCallback((id: string) => {
     setNotifications((current) => {
+      const target = current.find((item) => item.id === id);
+      if (target?.type === "ops" && target.alertId) {
+        void api
+          .post(`/tenants/me/ops-alerts/${encodeURIComponent(target.alertId)}/read`, {})
+          .catch(() => undefined);
+      }
       const next = current.map((item) => (item.id === id ? { ...item, read: true } : item));
-      saveNotifications(next);
+      persistLocal(next);
       return next;
     });
   }, []);
 
   const markAllAsRead = useCallback(() => {
+    void api.post("/tenants/me/ops-alerts/read-all", {}).catch(() => undefined);
     setNotifications((current) => {
       const next = current.map((item) => ({ ...item, read: true }));
-      saveNotifications(next);
+      persistLocal(next);
       return next;
     });
   }, []);
 
   const clearAll = useCallback(() => {
     setNotifications([]);
-    saveNotifications([]);
+    persistLocal([]);
   }, []);
 
   const removeNotification = useCallback((id: string) => {
     setNotifications((current) => {
       const next = current.filter((item) => item.id !== id);
-      saveNotifications(next);
+      persistLocal(next);
       return next;
     });
   }, []);
 
-  const unreadCount = notifications.filter((item) => !item.read).length;
+  const unreadCount = useMemo(
+    () => notifications.filter((item) => !item.read).length,
+    [notifications]
+  );
 
-  const value = useMemo<NotificationsContextValue>(
+  const value = useMemo(
     () => ({
       isOpen,
       notifications,
@@ -170,13 +217,15 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     ]
   );
 
-  return <NotificationsContext.Provider value={value}>{children}</NotificationsContext.Provider>;
+  return (
+    <NotificationsContext.Provider value={value}>{children}</NotificationsContext.Provider>
+  );
 }
 
 export function useNotifications() {
-  const context = useContext(NotificationsContext);
-  if (!context) {
+  const ctx = useContext(NotificationsContext);
+  if (!ctx) {
     throw new Error("useNotifications must be used within NotificationsProvider");
   }
-  return context;
+  return ctx;
 }

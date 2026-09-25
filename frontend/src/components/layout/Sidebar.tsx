@@ -17,6 +17,7 @@ import {
   LayoutGrid,
   LayoutDashboard,
   BarChart3,
+  Bell,
   Settings,
   Megaphone,
   MessageSquareText,
@@ -156,6 +157,7 @@ const memberNavCategories: NavCategory[] = [
       { href: "/support", labelKey: "nav.support", icon: LifeBuoy },
       { href: "/billing", labelKey: "nav.billing", icon: CreditCard },
       { href: "/users", labelKey: "nav.userCenter", icon: Users },
+      { href: "/alerts", labelKey: "nav.alerts", icon: Bell },
       { href: "/settings", labelKey: "nav.settings", icon: Settings },
     ],
   },
@@ -193,7 +195,10 @@ const supervisorNavCategories: NavCategory[] = [
   {
     id: "account",
     labelKey: "nav.categoryAccount",
-    items: [{ href: "/users", labelKey: "nav.userCenter", icon: Users }],
+    items: [
+      { href: "/alerts", labelKey: "nav.alerts", icon: Bell },
+      { href: "/users", labelKey: "nav.userCenter", icon: Users },
+    ],
   },
 ];
 
@@ -1295,6 +1300,7 @@ export function Sidebar() {
       { href: "/bots", labelKey: "nav.bots", icon: BotMessageSquare, permission: "bots.read" },
       { href: "/contacts", labelKey: "nav.contacts", icon: BookUser, permission: "contacts.read" },
       { href: "/campaigns", labelKey: "nav.campaigns", icon: Megaphone, permission: "campaigns.read" },
+      { href: "/alerts", labelKey: "nav.alerts", icon: Bell, permission: "settings.read" },
       { href: "/settings", labelKey: "nav.settings", icon: Settings, permission: "settings.read" },
     ];
     for (const extra of extras) {

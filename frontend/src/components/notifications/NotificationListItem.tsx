@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CheckSquare, MessageSquare, UserRound, X } from "lucide-react";
+import { BellRing, CheckSquare, MessageSquare, UserRound, X } from "lucide-react";
 import { useNotifications } from "@/components/notifications/NotificationsProvider";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useT } from "@/i18n/context";
@@ -19,6 +19,9 @@ function NotificationIcon({ type }: { type: AppNotification["type"] }) {
   }
   if (type === "task") {
     return <CheckSquare className="h-4 w-4" />;
+  }
+  if (type === "ops") {
+    return <BellRing className="h-4 w-4" />;
   }
   return <MessageSquare className="h-4 w-4" />;
 }
@@ -55,7 +58,9 @@ export function NotificationListItem({ notification, onNavigate }: NotificationL
                 ? "bg-warning/15 text-warning"
                 : notification.type === "task"
                   ? "bg-info/15 text-info"
-                  : "bg-accent-muted text-accent"
+                  : notification.type === "ops"
+                    ? "bg-danger/15 text-danger"
+                    : "bg-accent-muted text-accent"
             )}
           >
             <NotificationIcon type={notification.type} />

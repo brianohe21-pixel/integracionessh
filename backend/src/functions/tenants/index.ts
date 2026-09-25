@@ -82,6 +82,7 @@ import { handleMemberRoutes } from "./members.routes.js";
 import { handleProfileRoutes } from "./profile.routes.js";
 import { handleTeamRoutes } from "./teams.routes.js";
 import { handleEmailSettingsRoutes } from "./email-settings.routes.js";
+import { handleOpsAlertsRoutes } from "./ops-alerts.routes.js";
 import { handleAccessRoutes } from "./access.routes.js";
 import { handleGoogleBusinessOAuthCallbackRoute, handleGoogleCalendarOAuthCallbackRoute, handleIntegrationRoutes } from "./integrations.routes.js";
 import { getPublicAuthMethodsByHost } from "../../lib/integrations/microsoft-sso.service.js";
@@ -759,6 +760,9 @@ export async function handler(
     const inboxSlaResponse = await handleInboxSlaRoutes(event, auth);
     if (inboxSlaResponse) return inboxSlaResponse;
 
+    const opsAlertsResponse = await handleOpsAlertsRoutes(event, auth);
+    if (opsAlertsResponse) return opsAlertsResponse;
+
     const taskReminderWhatsAppResponse = await handleTaskReminderWhatsAppRoutes(event, auth);
     if (taskReminderWhatsAppResponse) return taskReminderWhatsAppResponse;
 
@@ -842,7 +846,13 @@ export async function handler(
       }
     }
 
-    if (method === "GET" && tenantId) {
+    const tenantPath = rawPath.replace(/\/$/, "");
+    const isExactTenantRead =
+      method === "GET" &&
+      !!tenantId &&
+      (tenantPath === `/tenants/${tenantId}` || tenantPath === "/tenants/me");
+
+    if (isExactTenantRead && tenantId) {
       const resolvedId = tenantId === "me" ? auth.tenantId : tenantId;
       if (resolvedId === auth.tenantId) {
         const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
@@ -892,7 +902,12 @@ export async function handler(
       return created(newTenant);
     }
 
-    if (method === "PUT" && tenantId) {
+    const isExactTenantWrite =
+      method === "PUT" &&
+      !!tenantId &&
+      (tenantPath === `/tenants/${tenantId}` || tenantPath === "/tenants/me");
+
+    if (isExactTenantWrite && tenantId) {
       const resolvedId = tenantId === "me" ? auth.tenantId : tenantId;
       if (resolvedId !== auth.tenantId && auth.role !== "admin") {
         return handleError(Object.assign(new Error("Forbidden"), { statusCode: 403 }));

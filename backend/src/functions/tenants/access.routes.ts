@@ -42,8 +42,12 @@ export async function handleAccessRoutes(
   auth: AuthContext
 ): Promise<APIGatewayProxyResultV2 | null> {
   const rawPath = event.rawPath ?? event.requestContext.http.path ?? "";
+  const proxy = event.pathParameters?.proxy ?? "";
+  const path = proxy && !rawPath.includes("/tenants/me/")
+    ? `/tenants/me/${proxy}`
+    : rawPath;
 
-  if (method === "GET" && rawPath.endsWith("/tenants/me/permissions")) {
+  if (method === "GET" && path.endsWith("/tenants/me/permissions")) {
     if (auth.role === "admin") return forbidden("Platform admin cannot access tenant product APIs");
     const permissions = await resolveEffectivePermissions(auth);
     return ok({
@@ -57,8 +61,8 @@ export async function handleAccessRoutes(
     });
   }
 
-  if (rawPath.includes("/tenants/me/roles")) {
-    if (method === "GET" && rawPath.endsWith("/tenants/me/roles")) {
+  if (path.includes("/tenants/me/roles")) {
+    if (method === "GET" && path.endsWith("/tenants/me/roles")) {
       if (auth.role !== "member" && auth.role !== "supervisor") {
         return forbidden("Access denied");
       }
@@ -74,7 +78,7 @@ export async function handleAccessRoutes(
       throw error;
     }
 
-    if (method === "POST" && rawPath.endsWith("/tenants/me/roles")) {
+    if (method === "POST" && path.endsWith("/tenants/me/roles")) {
       const parsed = RoleBodySchema.safeParse(parseJsonBody(event));
       if (!parsed.success) return badRequest(formatZodError(parsed.error));
       const now = new Date().toISOString();
@@ -89,7 +93,7 @@ export async function handleAccessRoutes(
       return created(role);
     }
 
-    const roleId = roleIdFromPath(rawPath);
+    const roleId = roleIdFromPath(path);
     if (!roleId) return badRequest("Role id is required");
 
     if (method === "PATCH") {
@@ -120,7 +124,7 @@ export async function handleAccessRoutes(
     }
   }
 
-  if (method === "GET" && rawPath.endsWith("/tenants/me/audit")) {
+  if (method === "GET" && path.endsWith("/tenants/me/audit")) {
     await assertPermission(auth, "audit.read");
     const moduleParam = event.queryStringParameters?.module;
     const module = AUDIT_MODULES.find((item) => item === moduleParam) as AuditModule | undefined;

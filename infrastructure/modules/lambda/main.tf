@@ -702,6 +702,8 @@ locals {
         ENVIRONMENT            = var.environment
         SCHEDULER_ROLE_ARN     = var.scheduler_role_arn
         CAMPAIGNS_FUNCTION_ARN = local.campaigns_function_arn
+        SES_FROM_EMAIL         = var.ses_from_email
+        WEBSOCKET_API_ENDPOINT = local.websocket_management_endpoint
       }
     }
     process_campaign = {
@@ -715,6 +717,8 @@ locals {
         SCHEDULER_ROLE_ARN     = var.scheduler_role_arn
         CAMPAIGNS_FUNCTION_ARN = local.campaigns_function_arn
         API_PUBLIC_URL         = var.api_public_url
+        SES_FROM_EMAIL         = var.ses_from_email
+        WEBSOCKET_API_ENDPOINT = local.websocket_management_endpoint
       }
     }
     public_api = {
@@ -760,6 +764,8 @@ locals {
         TABLE_NAME                = var.dynamodb_table_name
         ENVIRONMENT               = var.environment
         INTEGRATION_SQS_QUEUE_URL = var.integration_sqs_queue_url
+        SES_FROM_EMAIL            = var.ses_from_email
+        WEBSOCKET_API_ENDPOINT    = local.websocket_management_endpoint
       }
     }
     automations = {
@@ -1062,9 +1068,34 @@ locals {
       timeout     = 300
       memory      = 512
       environment = {
-        TABLE_NAME   = var.dynamodb_table_name
-        ENVIRONMENT  = var.environment
-        MEDIA_BUCKET = var.media_bucket_name
+        TABLE_NAME             = var.dynamodb_table_name
+        ENVIRONMENT            = var.environment
+        MEDIA_BUCKET           = var.media_bucket_name
+        SES_FROM_EMAIL         = var.ses_from_email
+        WEBSOCKET_API_ENDPOINT = local.websocket_management_endpoint
+      }
+    }
+    evaluate_ops_alerts = {
+      handler     = "evaluate-ops-alerts/index.handler"
+      description = "Evaluates scheduled operational alerts for all tenants"
+      timeout     = 300
+      memory      = 512
+      environment = {
+        TABLE_NAME             = var.dynamodb_table_name
+        ENVIRONMENT            = var.environment
+        SES_FROM_EMAIL         = var.ses_from_email
+        WEBSOCKET_API_ENDPOINT = local.websocket_management_endpoint
+      }
+    }
+    check_service_status = {
+      handler     = "check-service-status/index.handler"
+      description = "Probes platform components and stores public status snapshot"
+      timeout     = 30
+      memory      = 256
+      environment = {
+        TABLE_NAME               = var.dynamodb_table_name
+        ENVIRONMENT              = var.environment
+        TELEPHONY_GATEWAY_WS_URL = var.telephony_gateway_ws_url
       }
     }
     google_business = {
@@ -1246,6 +1277,48 @@ resource "aws_lambda_permission" "imap_poll" {
   function_name = aws_lambda_function.functions["poll_imap_inbound"].function_name
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.imap_poll.arn
+}
+
+resource "aws_cloudwatch_event_rule" "ops_alerts_eval" {
+  name                = "${var.project}-${var.environment}-ops-alerts-eval"
+  description         = "Evaluate operational alerts for all tenants"
+  schedule_expression = "rate(15 minutes)"
+  tags                = var.tags
+}
+
+resource "aws_cloudwatch_event_target" "ops_alerts_eval" {
+  rule      = aws_cloudwatch_event_rule.ops_alerts_eval.name
+  target_id = "evaluate-ops-alerts"
+  arn       = aws_lambda_function.functions["evaluate_ops_alerts"].arn
+}
+
+resource "aws_lambda_permission" "ops_alerts_eval" {
+  statement_id  = "AllowEventBridgeOpsAlertsEval"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.functions["evaluate_ops_alerts"].function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.ops_alerts_eval.arn
+}
+
+resource "aws_cloudwatch_event_rule" "service_status_check" {
+  name                = "${var.project}-${var.environment}-service-status-check"
+  description         = "Probe platform components for the public status page"
+  schedule_expression = "rate(5 minutes)"
+  tags                = var.tags
+}
+
+resource "aws_cloudwatch_event_target" "service_status_check" {
+  rule      = aws_cloudwatch_event_rule.service_status_check.name
+  target_id = "check-service-status"
+  arn       = aws_lambda_function.functions["check_service_status"].arn
+}
+
+resource "aws_lambda_permission" "service_status_check" {
+  statement_id  = "AllowEventBridgeServiceStatusCheck"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.functions["check_service_status"].function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.service_status_check.arn
 }
 
 resource "aws_cloudwatch_log_group" "lambda_logs" {

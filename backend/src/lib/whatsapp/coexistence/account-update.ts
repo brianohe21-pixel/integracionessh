@@ -3,6 +3,7 @@ import { getBot, updateBot } from "../../dynamodb/bot.repository.js";
 import {
   handleAccountUpdateEnforcement,
 } from "../enforcement.js";
+import { emitOpsAlertSafe } from "../../ops-alerts/emit.js";
 import type { WhatsAppAccountUpdateValue } from "../../../types/index.js";
 
 export async function handleAccountUpdate(params: {
@@ -24,6 +25,15 @@ export async function handleAccountUpdate(params: {
       whatsappDisconnectionReason:
         params.value.disconnection_info?.reason ?? "PARTNER_REMOVED",
       status: "inactive",
+    });
+    emitOpsAlertSafe({
+      tenantId: lookup.tenantId,
+      ruleId: "channel_down",
+      title: "WhatsApp channel disconnected",
+      body: `Bot ${bot.name} lost WhatsApp coexistence (${params.value.disconnection_info?.reason ?? "PARTNER_REMOVED"}).`,
+      href: `/bots/${lookup.botId}`,
+      severity: "critical",
+      dedupeKey: `channel_down:bot:${lookup.botId}:partner_removed`,
     });
     return;
   }

@@ -177,6 +177,78 @@ export interface WebsiteAnalyticsSettings {
   googleAnalyticsMeasurementId?: string;
 }
 
+export type OpsAlertRuleId =
+  | "sla_breached"
+  | "webhook_failed"
+  | "campaign_stopped"
+  | "whatsapp_quality"
+  | "plan_usage"
+  | "telephony_spend"
+  | "channel_down";
+
+export const OPS_ALERT_RULE_IDS: OpsAlertRuleId[] = [
+  "sla_breached",
+  "webhook_failed",
+  "campaign_stopped",
+  "whatsapp_quality",
+  "plan_usage",
+  "telephony_spend",
+  "channel_down",
+];
+
+export interface OpsAlertRuleSettings {
+  id: OpsAlertRuleId;
+  enabled: boolean;
+  inApp: boolean;
+  email: boolean;
+  thresholdPercent?: number;
+  thresholdUsd?: number;
+}
+
+export interface OpsAlertsSettings {
+  emailRecipients: string[];
+  rules: OpsAlertRuleSettings[];
+}
+
+export type OpsAlertSeverity = "info" | "warning" | "critical";
+
+export interface OpsAlert {
+  alertId: string;
+  tenantId: string;
+  ruleId: OpsAlertRuleId;
+  title: string;
+  body: string;
+  href: string;
+  severity: OpsAlertSeverity;
+  dedupeKey: string;
+  createdAt: string;
+  readAt?: string;
+}
+
+export type ServiceStatusLevel = "operational" | "degraded" | "outage" | "unknown";
+
+export type ServiceComponentId = "api" | "data" | "telephony";
+
+export interface ServiceStatusDay {
+  date: string;
+  status: ServiceStatusLevel;
+}
+
+export interface ServiceComponentStatus {
+  id: ServiceComponentId;
+  status: ServiceStatusLevel;
+  latencyMs?: number;
+  checkedAt: string;
+  days: ServiceStatusDay[];
+}
+
+export interface PublicServiceStatusResponse {
+  updatedAt: string;
+  overall: ServiceStatusLevel;
+  stale: boolean;
+  components: ServiceComponentStatus[];
+}
+
 export type InboxSlaStatus = "disabled" | "ok" | "at_risk" | "breached" | "met" | "missed";
 
 export interface InboxSlaAdvisorMetric {
@@ -245,6 +317,7 @@ export interface Tenant {
   inboxSla?: InboxSlaSettings;
   taskReminderWhatsApp?: TaskReminderWhatsAppSettings;
   websiteAnalytics?: WebsiteAnalyticsSettings;
+  opsAlerts?: OpsAlertsSettings;
   law2300Exempt?: boolean;
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;

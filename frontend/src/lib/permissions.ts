@@ -39,6 +39,7 @@ const NAV_PERMISSION: Record<string, Permission> = {
   "/campaigns": "campaigns.read",
   "/contacts": "contacts.read",
   "/settings": "settings.read",
+  "/alerts": "settings.read",
 };
 
 export function permissionForNavHref(href: string): Permission | null {

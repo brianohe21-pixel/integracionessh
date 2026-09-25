@@ -41,7 +41,17 @@ export function usePermissions() {
   const { isAdmin, loading: roleLoading } = useTenantRole();
   const query = useQuery({
     queryKey: ["tenant-permissions"],
-    queryFn: () => api.get<PermissionsResponse>("/tenants/me/permissions"),
+    queryFn: async () => {
+      try {
+        return await api.get<PermissionsResponse>("/tenants/me/permissions");
+      } catch {
+        return {
+          permissions: [] as Permission[],
+          catalog: [] as Permission[],
+          presets: { member: [], supervisor: [], advisor: [] },
+        } satisfies PermissionsResponse;
+      }
+    },
     enabled: !roleLoading && !isAdmin,
   });
 
@@ -62,8 +72,18 @@ export function usePermissions() {
 export function useCustomRoles(enabled = true) {
   return useQuery({
     queryKey: ["custom-roles"],
-    queryFn: () => api.get<{ roles: CustomRole[] }>("/tenants/me/roles"),
+    queryFn: async () => {
+      try {
+        return await api.get<{ roles: CustomRole[] }>("/tenants/me/roles");
+      } catch (error) {
+        return {
+          roles: [] as CustomRole[],
+          error: error instanceof Error ? error.message : "Forbidden",
+        };
+      }
+    },
     enabled,
+    retry: false,
   });
 }
 

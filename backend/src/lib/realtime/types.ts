@@ -1,4 +1,4 @@
-import type { Conversation, Message } from "../../types/index.js";
+import type { Conversation, Message, OpsAlert } from "../../types/index.js";
 
 export type RealtimeEvent =
   | {
@@ -23,6 +23,10 @@ export type RealtimeEvent =
       createdAt: string;
       advisorId?: string;
       userIds?: string[];
+    }
+  | {
+      type: "ops.alert";
+      alert: OpsAlert;
     };
 
 export interface RealtimeConnection {
