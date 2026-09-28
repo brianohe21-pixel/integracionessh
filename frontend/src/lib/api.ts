@@ -3,20 +3,22 @@ import { localizeFlowError } from "@/lib/integration-errors";
 import { translate } from "@/i18n/standalone";
 
 const BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
-const TENANT_CONTEXT_KEY = "x-tenant-context";
+export const TENANT_CONTEXT_STORAGE_KEY = "x-tenant-context";
+export const TENANT_CONTEXT_CHANGED_EVENT = "tenant-context-changed";
 
 export function getTenantContext(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem(TENANT_CONTEXT_KEY);
+  return localStorage.getItem(TENANT_CONTEXT_STORAGE_KEY);
 }
 
 export function setTenantContext(tenantId: string | null): void {
   if (typeof window === "undefined") return;
   if (!tenantId) {
-    localStorage.removeItem(TENANT_CONTEXT_KEY);
-    return;
+    localStorage.removeItem(TENANT_CONTEXT_STORAGE_KEY);
+  } else {
+    localStorage.setItem(TENANT_CONTEXT_STORAGE_KEY, tenantId);
   }
-  localStorage.setItem(TENANT_CONTEXT_KEY, tenantId);
+  window.dispatchEvent(new Event(TENANT_CONTEXT_CHANGED_EVENT));
 }
 
 function assertApiBaseUrl(): void {

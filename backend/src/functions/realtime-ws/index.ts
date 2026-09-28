@@ -1,4 +1,5 @@
 import type { APIGatewayProxyWebsocketHandlerV2 } from "aws-lambda";
+import { assertTenantMemberEnabled, resolveAssumedTenant } from "../../lib/auth/cognito.js";
 import { verifyCognitoToken } from "../../lib/auth/verify-jwt.js";
 import { getAdvisorByCognitoUserId } from "../../lib/dynamodb/advisor.repository.js";
 import {
@@ -21,16 +22,21 @@ export const handler: APIGatewayProxyWebsocketHandlerV2 = async (event) => {
     }
 
     try {
-      const auth = await verifyCognitoToken(token);
-      if (auth.role === "admin") {
+      const homeAuth = await verifyCognitoToken(token);
+      if (homeAuth.role === "admin") {
         return { statusCode: 403, body: "Admin cannot connect to tenant realtime" };
       }
-      if (!auth.tenantId) {
+      if (!homeAuth.tenantId) {
         return { statusCode: 401, body: "Missing tenant" };
       }
-      if (auth.role !== "member" && auth.role !== "advisor") {
+      if (homeAuth.role !== "member" && homeAuth.role !== "advisor") {
         return { statusCode: 403, body: "Access denied" };
       }
+
+      const requestedTenantId =
+        (event as ConnectEvent).queryStringParameters?.tenantId?.trim() ?? "";
+      const auth = await resolveAssumedTenant(homeAuth, requestedTenantId);
+      await assertTenantMemberEnabled(auth);
 
       let advisorId: string | undefined;
       if (auth.role === "advisor") {
@@ -50,7 +56,11 @@ export const handler: APIGatewayProxyWebsocketHandlerV2 = async (event) => {
       });
 
       return { statusCode: 200, body: "Connected" };
-    } catch {
+    } catch (error) {
+      const statusCode = (error as { statusCode?: number }).statusCode;
+      if (statusCode === 403) {
+        return { statusCode: 403, body: (error as Error).message || "Access denied" };
+      }
       return { statusCode: 401, body: "Unauthorized" };
     }
   }
