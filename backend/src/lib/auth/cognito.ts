@@ -63,12 +63,12 @@ export function extractAuthContext(
   };
 }
 
-export async function applyTenantContext(
-  event: APIGatewayProxyEventV2WithJWTAuthorizer,
-  auth: AuthContext
+export async function resolveAssumedTenant(
+  auth: AuthContext,
+  contextTenantId: string
 ): Promise<AuthContext> {
-  const contextTenantId = readHeader(event, "x-tenant-context");
-  if (!contextTenantId || contextTenantId === auth.tenantId) {
+  const requested = contextTenantId.trim();
+  if (!requested || requested === auth.tenantId) {
     return auth;
   }
 
@@ -78,7 +78,7 @@ export async function applyTenantContext(
     throw error;
   }
 
-  const child = await getTenant(contextTenantId);
+  const child = await getTenant(requested);
   if (!child || child.parentTenantId !== auth.tenantId) {
     const error = new Error("Access denied: invalid tenant context");
     (error as Error & { statusCode: number }).statusCode = 403;
@@ -93,9 +93,16 @@ export async function applyTenantContext(
 
   return {
     ...auth,
-    tenantId: contextTenantId,
+    tenantId: requested,
     homeTenantId: auth.tenantId,
   };
+}
+
+export async function applyTenantContext(
+  event: APIGatewayProxyEventV2WithJWTAuthorizer,
+  auth: AuthContext
+): Promise<AuthContext> {
+  return resolveAssumedTenant(auth, readHeader(event, "x-tenant-context"));
 }
 
 export async function resolveRequestAuth(

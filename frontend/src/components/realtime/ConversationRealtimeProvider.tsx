@@ -4,6 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import { useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import { fetchAuthSession } from "aws-amplify/auth";
 import type { Conversation, ConversationsListResponse, Message } from "@/types";
+import {
+  getTenantContext,
+  TENANT_CONTEXT_CHANGED_EVENT,
+  TENANT_CONTEXT_STORAGE_KEY,
+} from "@/lib/api";
 import { emitRealtimeEvent } from "@/lib/notifications/bridge";
 import { parseRealtimeEvent } from "@/lib/realtime/events";
 import { RealtimeProvider } from "@/components/realtime/RealtimeProvider";
@@ -20,6 +25,14 @@ function resolveWebSocketBaseUrl(): string {
 const WS_BASE_URL = resolveWebSocketBaseUrl();
 const MIN_RECONNECT_MS = 1_000;
 const MAX_RECONNECT_MS = 30_000;
+
+function buildWebSocketUrl(token: string): string {
+  const url = new URL(WS_BASE_URL);
+  url.searchParams.set("token", token);
+  const tenantId = getTenantContext();
+  if (tenantId) url.searchParams.set("tenantId", tenantId);
+  return url.toString();
+}
 
 function mergeConversationInList(
   data: InfiniteData<ConversationsListResponse> | undefined,
@@ -84,28 +97,47 @@ function ConversationRealtimeInner({ children }: { children: React.ReactNode }) 
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectDelayRef = useRef(MIN_RECONNECT_MS);
   const mountedRef = useRef(true);
+  const sessionRef = useRef(0);
 
   useEffect(() => {
     mountedRef.current = true;
 
     if (!WS_BASE_URL) return undefined;
 
+    function restart() {
+      sessionRef.current += 1;
+      const current = socketRef.current;
+      socketRef.current = null;
+      current?.close();
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+      reconnectDelayRef.current = MIN_RECONNECT_MS;
+      void connect();
+    }
+
     async function connect() {
       if (!mountedRef.current) return;
+      const session = sessionRef.current;
 
       try {
-        const session = await fetchAuthSession();
-        const token = session.tokens?.idToken?.toString();
-        if (!token) {
-          scheduleReconnect();
+        const authSession = await fetchAuthSession();
+        const token = authSession.tokens?.idToken?.toString();
+        if (!token || session !== sessionRef.current) {
+          if (session === sessionRef.current) scheduleReconnect();
           return;
         }
 
-        const socket = new WebSocket(`${WS_BASE_URL}?token=${encodeURIComponent(token)}`);
+        const socket = new WebSocket(buildWebSocketUrl(token));
+        if (session !== sessionRef.current) {
+          socket.close();
+          return;
+        }
         socketRef.current = socket;
 
         socket.onopen = () => {
-          if (!mountedRef.current) return;
+          if (!mountedRef.current || session !== sessionRef.current) {
+            socket.close();
+            return;
+          }
           reconnectDelayRef.current = MIN_RECONNECT_MS;
           setConnected(true);
         };
@@ -159,7 +191,7 @@ function ConversationRealtimeInner({ children }: { children: React.ReactNode }) 
         };
 
         socket.onclose = () => {
-          if (!mountedRef.current) return;
+          if (!mountedRef.current || session !== sessionRef.current) return;
           setConnected(false);
           socketRef.current = null;
           scheduleReconnect();
@@ -169,7 +201,7 @@ function ConversationRealtimeInner({ children }: { children: React.ReactNode }) 
           socket.close();
         };
       } catch {
-        scheduleReconnect();
+        if (session === sessionRef.current) scheduleReconnect();
       }
     }
 
@@ -182,6 +214,17 @@ function ConversationRealtimeInner({ children }: { children: React.ReactNode }) 
       }, reconnectDelayRef.current);
     }
 
+    function onTenantContextChanged() {
+      restart();
+    }
+
+    function onStorage(event: StorageEvent) {
+      if (event.key === TENANT_CONTEXT_STORAGE_KEY) restart();
+    }
+
+    window.addEventListener(TENANT_CONTEXT_CHANGED_EVENT, onTenantContextChanged);
+    window.addEventListener("storage", onStorage);
+
     void connect();
 
     const keepAlive = window.setInterval(() => {
@@ -192,6 +235,8 @@ function ConversationRealtimeInner({ children }: { children: React.ReactNode }) 
 
     return () => {
       mountedRef.current = false;
+      window.removeEventListener(TENANT_CONTEXT_CHANGED_EVENT, onTenantContextChanged);
+      window.removeEventListener("storage", onStorage);
       window.clearInterval(keepAlive);
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
       socketRef.current?.close();
