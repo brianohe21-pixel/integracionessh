@@ -615,6 +615,7 @@ export const en: Messages = {
     filterWhatsappNumberHint: "Select a bot to filter by WhatsApp number.",
     replyingFrom: "Replying from {{number}}",
     receiverNumber: "Receiver number: {{number}}",
+    whatsappUsernameOnly: "WhatsApp username (no phone)",
     channelWhatsapp: "WhatsApp",
     channelInstagram: "Instagram",
     channelWebchat: "Web chat",

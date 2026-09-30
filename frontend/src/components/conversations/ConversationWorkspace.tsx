@@ -35,6 +35,11 @@ import { useT, useLocale } from "@/i18n/context";
 import { useDialog } from "@/components/ui/DialogProvider";
 import { buildWaMeLink, normalizeWhatsAppPhone } from "@/lib/wa-link";
 import {
+  conversationIdentityLabel,
+  conversationSecondaryIdentity,
+  isWhatsAppBsuid,
+} from "@/lib/whatsapp-identity";
+import {
   MessageSquare,
   ChevronLeft,
   PanelRightClose,
@@ -74,7 +79,14 @@ import {
 import type { InboxSlaStatus } from "@/types";
 
 function matchesSearchQuery(
-  conv: { contactName?: string; phoneNumber: string; participantId?: string; emailSubject?: string },
+  conv: {
+    contactName?: string;
+    phoneNumber: string;
+    participantId?: string;
+    emailSubject?: string;
+    whatsappUsername?: string;
+    whatsappUserId?: string;
+  },
   query: string
 ): boolean {
   const q = query.trim().toLowerCase();
@@ -84,6 +96,8 @@ function matchesSearchQuery(
     conv.phoneNumber,
     conv.participantId,
     conv.emailSubject,
+    conv.whatsappUsername,
+    conv.whatsappUserId,
   ].filter(Boolean);
   return fields.some((field) => field!.toLowerCase().includes(q));
 }
@@ -331,7 +345,12 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
 
   const selectedConversation = conversations.find((c) => c.conversationId === selectedId);
   const selectedContactPhone =
-    selectedConversation?.phoneNumber || selectedConversation?.participantId;
+    selectedConversation?.phoneNumber && !isWhatsAppBsuid(selectedConversation.phoneNumber)
+      ? selectedConversation.phoneNumber
+      : selectedConversation?.participantId &&
+          !isWhatsAppBsuid(selectedConversation.participantId)
+        ? selectedConversation.participantId
+        : undefined;
   const { data: activeLead } = useActiveLeadByPhone(selectedContactPhone);
   const convertLead = useConvertLead();
   const createLead = useCreateLead();
@@ -435,13 +454,18 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     return t("conversations.channelWhatsapp");
   }
 
-  function contactDisplay(conv: { contactName?: string; phoneNumber: string; participantId?: string; channel?: Channel }) {
+  function contactDisplay(conv: {
+    contactName?: string;
+    phoneNumber: string;
+    participantId?: string;
+    channel?: Channel;
+    whatsappUsername?: string;
+  }) {
+    if ((conv.channel ?? "whatsapp") === "whatsapp") {
+      return conversationIdentityLabel(conv);
+    }
     if (conv.contactName) return conv.contactName;
-    if (
-      (conv.channel ?? "whatsapp") === "whatsapp" ||
-      conv.channel === "sms" ||
-      conv.channel === "phone"
-    ) {
+    if (conv.channel === "sms" || conv.channel === "phone") {
       return conv.phoneNumber || conv.participantId;
     }
     return conv.participantId ?? conv.phoneNumber;
@@ -874,12 +898,16 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                   <p className="hidden truncate text-xs text-secondary lg:block">
                     {channelLabel(selectedConversation.channel)}
                     {" · "}
-                    {(selectedConversation.channel ?? "whatsapp") === "whatsapp" ||
-                    selectedConversation.channel === "sms" ||
-                    selectedConversation.channel === "phone"
-                      ? selectedConversation.phoneNumber || selectedConversation.participantId
-                      : selectedConversation.channel === "email"
-                        ? selectedConversation.participantId
+                    {(selectedConversation.channel ?? "whatsapp") === "whatsapp"
+                      ? conversationSecondaryIdentity(selectedConversation) ||
+                        (!isWhatsAppBsuid(selectedConversation.phoneNumber)
+                          ? selectedConversation.phoneNumber
+                          : undefined) ||
+                        selectedConversation.whatsappUsername ||
+                        t("conversations.whatsappUsernameOnly")
+                      : selectedConversation.channel === "sms" ||
+                          selectedConversation.channel === "phone"
+                        ? selectedConversation.phoneNumber || selectedConversation.participantId
                         : selectedConversation.participantId}
                   </p>
                   {(selectedConversation.channel ?? "whatsapp") === "whatsapp" &&

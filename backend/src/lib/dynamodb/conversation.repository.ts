@@ -22,6 +22,8 @@ import {
   incrementWhatsAppUsage,
   type WhatsAppUsageBucket,
 } from "./whatsapp-usage-metrics.repository.js";
+import { isWhatsAppBsuid } from "../whatsapp/identity.js";
+import { rememberWhatsAppIdentityLink } from "./whatsapp-identity.repository.js";
 
 const REALTIME_CONVERSATION_FIELDS = new Set([
   "handoffMode",
@@ -221,6 +223,10 @@ export async function updateConversation(
       | "locale"
       | "lastMessageAt"
       | "messageCount"
+      | "whatsappUserId"
+      | "whatsappParentUserId"
+      | "whatsappUsername"
+      | "businessPhoneNumberId"
     >
   >
 ): Promise<Conversation | null> {
@@ -437,6 +443,30 @@ export async function ensureConversationContactId(
   return result;
 }
 
+async function findActiveConversationByGsi1pk(
+  gsi1pk: string
+): Promise<Conversation | null> {
+  const result = await docClient.send(
+    new QueryCommand({
+      TableName: TABLE_NAME,
+      IndexName: "GSI1",
+      KeyConditionExpression: "GSI1PK = :gsi1pk",
+      ExpressionAttributeValues: { ":gsi1pk": gsi1pk },
+      ScanIndexForward: false,
+      Limit: 25,
+    })
+  );
+
+  const active = (result.Items ?? []).find((item) => item.status === "active");
+  if (!active) return null;
+  const { PK, SK, GSI1PK, GSI1SK, ...rest } = active;
+  void PK;
+  void SK;
+  void GSI1PK;
+  void GSI1SK;
+  return normalizeConversation(rest as Conversation);
+}
+
 export async function getOrCreateConversation(
   tenantId: string,
   botId: string,
@@ -447,8 +477,47 @@ export async function getOrCreateConversation(
     channelId?: string;
     businessPhoneNumberId?: string;
     whatsappDisplayNumber?: string;
+    whatsappUserId?: string;
+    whatsappParentUserId?: string;
+    whatsappUsername?: string;
+    alternateParticipantIds?: string[];
+    phoneNumber?: string;
   }
 ): Promise<Conversation> {
+  const whatsappUserId = whatsappContext?.whatsappUserId?.trim();
+  const whatsappParentUserId = whatsappContext?.whatsappParentUserId?.trim();
+  const whatsappUsername = whatsappContext?.whatsappUsername?.trim();
+  const lookupIds = [
+    ...new Set(
+      [
+        participantId,
+        ...(whatsappContext?.alternateParticipantIds ?? []),
+        whatsappUserId,
+        whatsappParentUserId,
+      ]
+        .filter((value): value is string => Boolean(value?.trim()))
+        .map((value) => value.trim())
+    ),
+  ];
+
+  const candidateKeys: string[] = [];
+  for (const lookupId of lookupIds) {
+    if (channel === "whatsapp" && whatsappContext?.businessPhoneNumberId) {
+      candidateKeys.push(
+        whatsappConversationLookupGsi1pk(
+          tenantId,
+          botId,
+          whatsappContext.businessPhoneNumberId,
+          lookupId
+        )
+      );
+    }
+    candidateKeys.push(conversationLookupGsi1pk(tenantId, botId, channel, lookupId));
+    if (channel === "whatsapp") {
+      candidateKeys.push(legacyPhoneGsi1pk(tenantId, botId, lookupId));
+    }
+  }
+
   const gsi1pk =
     channel === "whatsapp" && whatsappContext?.businessPhoneNumberId
       ? whatsappConversationLookupGsi1pk(
@@ -459,64 +528,98 @@ export async function getOrCreateConversation(
         )
       : conversationLookupGsi1pk(tenantId, botId, channel, participantId);
 
-  const existing = await docClient.send(
-    new QueryCommand({
-      TableName: TABLE_NAME,
-      IndexName: "GSI1",
-      KeyConditionExpression: "GSI1PK = :gsi1pk",
-      FilterExpression: "#status = :status",
-      ExpressionAttributeNames: { "#status": "status" },
-      ExpressionAttributeValues: { ":gsi1pk": gsi1pk, ":status": "active" },
-      Limit: 1,
-    })
-  );
+  for (const key of [...new Set(candidateKeys)]) {
+    const found = await findActiveConversationByGsi1pk(key);
+    if (!found) continue;
 
-  if (existing.Items?.length) {
-    const { PK, SK, GSI1PK, GSI1SK, ...rest } = existing.Items[0];
-    return ensureConversationContactId(normalizeConversation(rest as Conversation));
-  }
-
-  if (channel === "whatsapp") {
-    const legacyGsi = legacyPhoneGsi1pk(tenantId, botId, participantId);
-    const legacy = await docClient.send(
-      new QueryCommand({
-        TableName: TABLE_NAME,
-        IndexName: "GSI1",
-        KeyConditionExpression: "GSI1PK = :gsi1pk",
-        FilterExpression: "#status = :status",
-        ExpressionAttributeNames: { "#status": "status" },
-        ExpressionAttributeValues: { ":gsi1pk": legacyGsi, ":status": "active" },
-        Limit: 1,
-      })
-    );
-    if (legacy.Items?.length) {
-      const { PK, SK, GSI1PK, GSI1SK, ...rest } = legacy.Items[0];
-      const conv = normalizeConversation(rest as Conversation);
-      if (!conv.channel || !conv.participantId) {
-        await docClient.send(
-          new UpdateCommand({
-            TableName: TABLE_NAME,
-            Key: conversationKeys(tenantId, botId, conv.conversationId),
-            UpdateExpression:
-              "SET #channel = :channel, participantId = :participantId, GSI1PK = :gsi1pk",
-            ExpressionAttributeNames: { "#channel": "channel" },
-            ExpressionAttributeValues: {
-              ":channel": "whatsapp",
-              ":participantId": participantId,
-              ":gsi1pk": gsi1pk,
-            },
-          })
-        );
-        return ensureConversationContactId(
-          normalizeConversation({
-            ...conv,
-            channel: "whatsapp",
-            participantId,
-          })
-        );
-      }
-      return ensureConversationContactId(conv);
+    const patch: Parameters<typeof updateConversation>[3] = {};
+    if (whatsappUserId && found.whatsappUserId !== whatsappUserId) {
+      patch.whatsappUserId = whatsappUserId;
     }
+    if (whatsappParentUserId && found.whatsappParentUserId !== whatsappParentUserId) {
+      patch.whatsappParentUserId = whatsappParentUserId;
+    }
+    if (whatsappUsername && found.whatsappUsername !== whatsappUsername) {
+      patch.whatsappUsername = whatsappUsername;
+    }
+    if (
+      whatsappContext?.phoneNumber &&
+      !isWhatsAppBsuid(whatsappContext.phoneNumber) &&
+      (!found.phoneNumber || isWhatsAppBsuid(found.phoneNumber))
+    ) {
+      patch.phoneNumber = whatsappContext.phoneNumber;
+    }
+
+    const shouldMigrateLookupKey =
+      channel === "whatsapp" &&
+      found.participantId !== participantId &&
+      (Boolean(whatsappUserId) ||
+        !found.channel ||
+        !found.participantId ||
+        !found.businessPhoneNumberId);
+
+    if (shouldMigrateLookupKey) {
+      const migrateValues: Record<string, unknown> = {
+        ":channel": "whatsapp",
+        ":participantId": participantId,
+        ":gsi1pk": gsi1pk,
+      };
+      let updateExpression =
+        "SET #channel = :channel, participantId = :participantId, GSI1PK = :gsi1pk";
+      if (whatsappContext?.businessPhoneNumberId) {
+        updateExpression += ", businessPhoneNumberId = :businessPhoneNumberId";
+        migrateValues[":businessPhoneNumberId"] = whatsappContext.businessPhoneNumberId;
+      }
+      await docClient.send(
+        new UpdateCommand({
+          TableName: TABLE_NAME,
+          Key: conversationKeys(tenantId, botId, found.conversationId),
+          UpdateExpression: updateExpression,
+          ExpressionAttributeNames: { "#channel": "channel" },
+          ExpressionAttributeValues: migrateValues,
+        })
+      );
+      found.channel = "whatsapp";
+      found.participantId = participantId;
+      if (whatsappContext?.businessPhoneNumberId) {
+        found.businessPhoneNumberId = whatsappContext.businessPhoneNumberId;
+      }
+    }
+
+    const updated =
+      Object.keys(patch).length > 0
+        ? ((await updateConversation(tenantId, botId, found.conversationId, patch)) ?? found)
+        : found;
+
+    if (
+      channel === "whatsapp" &&
+      (whatsappUserId || whatsappParentUserId || whatsappContext?.phoneNumber)
+    ) {
+      rememberWhatsAppIdentityLink({
+        tenantId,
+        botId,
+        canonicalParticipantId: updated.participantId,
+        ...(whatsappContext?.phoneNumber && !isWhatsAppBsuid(whatsappContext.phoneNumber)
+          ? { phoneNumber: whatsappContext.phoneNumber }
+          : updated.phoneNumber && !isWhatsAppBsuid(updated.phoneNumber)
+            ? { phoneNumber: updated.phoneNumber }
+            : {}),
+        ...(whatsappUserId || updated.whatsappUserId
+          ? { whatsappUserId: whatsappUserId ?? updated.whatsappUserId }
+          : {}),
+        ...(whatsappParentUserId || updated.whatsappParentUserId
+          ? {
+              whatsappParentUserId:
+                whatsappParentUserId ?? updated.whatsappParentUserId,
+            }
+          : {}),
+        ...(whatsappContext?.businessPhoneNumberId
+          ? { businessPhoneNumberId: whatsappContext.businessPhoneNumberId }
+          : {}),
+      }).catch((err) => console.warn("WhatsApp identity link failed:", err));
+    }
+
+    return ensureConversationContactId(normalizeConversation(updated));
   }
 
   const now = new Date().toISOString();
@@ -525,8 +628,13 @@ export async function getOrCreateConversation(
       ? `${participantId}-${Date.now()}`
       : `${channel}-${participantId}-${Date.now()}`;
 
-  const phoneNumber =
-    channel === "whatsapp" || channel === "sms" || channel === "phone" ? participantId : "";
+  const rawPhone =
+    whatsappContext?.phoneNumber ||
+    ((channel === "whatsapp" || channel === "sms" || channel === "phone") &&
+    !isWhatsAppBsuid(participantId)
+      ? participantId
+      : "");
+  const phoneNumber = rawPhone && !isWhatsAppBsuid(rawPhone) ? rawPhone : "";
 
   const conversation: Conversation = {
     conversationId,
@@ -540,6 +648,9 @@ export async function getOrCreateConversation(
     messageCount: 0,
     lastMessageAt: now,
     createdAt: now,
+    ...(whatsappUserId ? { whatsappUserId } : {}),
+    ...(whatsappParentUserId ? { whatsappParentUserId } : {}),
+    ...(whatsappUsername ? { whatsappUsername } : {}),
     ...(contactName !== undefined && contactName !== ""
       ? { contactName }
       : {}),
@@ -572,6 +683,20 @@ export async function getOrCreateConversation(
       source: "sync",
       ...(contactName ? { displayName: contactName } : {}),
     }).catch((err) => console.warn("Contact sync failed:", err));
+  }
+
+  if (channel === "whatsapp" && (whatsappUserId || whatsappParentUserId || phoneNumber)) {
+    rememberWhatsAppIdentityLink({
+      tenantId,
+      botId,
+      canonicalParticipantId: participantId,
+      ...(phoneNumber ? { phoneNumber } : {}),
+      ...(whatsappUserId ? { whatsappUserId } : {}),
+      ...(whatsappParentUserId ? { whatsappParentUserId } : {}),
+      ...(whatsappContext?.businessPhoneNumberId
+        ? { businessPhoneNumberId: whatsappContext.businessPhoneNumberId }
+        : {}),
+    }).catch((err) => console.warn("WhatsApp identity link failed:", err));
   }
 
   return ensureConversationContactId(normalizeConversation(conversation));

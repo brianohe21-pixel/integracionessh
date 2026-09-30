@@ -1086,6 +1086,9 @@ export interface Conversation {
   whatsappDisplayNumber?: string;
   participantId?: string;
   phoneNumber: string;
+  whatsappUserId?: string;
+  whatsappParentUserId?: string;
+  whatsappUsername?: string;
   contactId?: string;
   contactName?: string;
   status: "active" | "closed";

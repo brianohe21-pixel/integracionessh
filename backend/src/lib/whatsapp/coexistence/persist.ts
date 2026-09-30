@@ -42,7 +42,11 @@ export async function persistCoexistenceHistoryChunk(params: {
       bot.tenantId,
       bot.botId,
       "whatsapp",
-      participantId
+      participantId,
+      undefined,
+      {
+        businessPhoneNumberId: params.phoneNumberId,
+      }
     );
 
     for (const waMessage of sorted) {
@@ -168,7 +172,13 @@ export async function persistMediaHistoryMessage(params: {
     params.bot.tenantId,
     params.bot.botId,
     "whatsapp",
-    params.threadId
+    params.threadId,
+    undefined,
+    {
+      ...(params.bot.phoneNumberId
+        ? { businessPhoneNumberId: params.bot.phoneNumberId }
+        : {}),
+    }
   );
 
   const built = buildMessageFromHistory({

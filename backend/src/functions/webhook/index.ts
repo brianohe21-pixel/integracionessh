@@ -610,9 +610,18 @@ async function handleWhatsAppWebhook(payload: WhatsAppWebhookEvent): Promise<voi
           contacts.find(
             (c) =>
               (message.from && c.wa_id === message.from) ||
-              (message.from_user_id && c.user_id === message.from_user_id)
+              (message.from_user_id && c.user_id === message.from_user_id) ||
+              (message.from_parent_user_id && c.parent_user_id === message.from_parent_user_id) ||
+              (message.system?.user_id && c.user_id === message.system.user_id) ||
+              (message.system?.previous_user_id &&
+                c.user_id === message.system.previous_user_id)
           ) ?? contacts[0];
-        const participantId = resolveInboundParticipantId(message, matchedContact);
+        const participantId =
+          resolveInboundParticipantId(message, matchedContact) ||
+          message.system?.user_id?.trim() ||
+          message.system?.previous_user_id?.trim() ||
+          message.system?.wa_id?.trim() ||
+          null;
         if (!participantId) {
           console.warn("Skipping WhatsApp message without participant identity", {
             messageId: message.id,

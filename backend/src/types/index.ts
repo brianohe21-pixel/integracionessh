@@ -582,6 +582,9 @@ export interface Conversation {
   channel: Channel;
   participantId: string;
   phoneNumber: string;
+  whatsappUserId?: string;
+  whatsappParentUserId?: string;
+  whatsappUsername?: string;
   contactId?: string;
   contactName?: string;
   status: "active" | "closed";
@@ -1709,6 +1712,18 @@ export interface WhatsAppContact {
   profile?: { name: string; username?: string; country_code?: string };
   wa_id?: string;
   user_id?: string;
+  parent_user_id?: string;
+}
+
+export interface WhatsAppSystemMessage {
+  type?: string;
+  body?: string;
+  wa_id?: string;
+  user_id?: string;
+  previous_wa_id?: string;
+  previous_user_id?: string;
+  parent_user_id?: string;
+  previous_parent_user_id?: string;
 }
 
 export interface WhatsAppInteractiveReply {
@@ -1745,6 +1760,7 @@ export interface WhatsAppReferral {
 export interface WhatsAppMessage {
   from?: string;
   from_user_id?: string;
+  from_parent_user_id?: string;
   id: string;
   timestamp: string;
   type:
@@ -1756,13 +1772,15 @@ export interface WhatsAppMessage {
     | "location"
     | "interactive"
     | "order"
-    | "reaction";
+    | "reaction"
+    | "system";
   text?: { body: string };
   image?: { id: string; mime_type: string; caption?: string };
   audio?: { id: string; mime_type: string };
   interactive?: WhatsAppInteractiveReply;
   order?: WhatsAppOrderPayload;
   referral?: WhatsAppReferral;
+  system?: WhatsAppSystemMessage;
   reaction?: {
     message_id: string;
     emoji: string;
