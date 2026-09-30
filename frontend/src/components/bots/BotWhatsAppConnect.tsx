@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Phone, Plus, Star, Trash2 } from "lucide-react";
 import { useWhatsAppConnect } from "@/hooks/useWhatsAppConnect";
@@ -361,15 +360,6 @@ export function BotWhatsAppConnect({ bot }: BotWhatsAppConnectProps) {
           </Button>
         ) : null}
       </div>
-
-      {!multiChannelEnabled && hasChannels ? (
-        <div className="rounded-lg border border-accent/20 bg-accent-muted/40 p-4 text-sm text-secondary">
-          <p>{t("whatsapp.channels.upgradeHint")}</p>
-          <Link href="/billing" className="mt-2 inline-block text-sm font-medium text-accent hover:underline">
-            {t("billing.viewAllPlans")}
-          </Link>
-        </div>
-      ) : null}
 
       {blockedChannelCount > 0 ? (
         <div className="rounded-lg border border-danger/25 bg-danger/5 p-4 text-sm text-secondary">

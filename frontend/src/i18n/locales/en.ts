@@ -536,7 +536,6 @@ export const en: Messages = {
       legacyHint:
         "{{number}} uses an older bot-level connection. Reconnect it as a channel to use the new Meta app and receive messages in Conversations.",
       legacyAction: "Reconnect number",
-      upgradeHint: "Upgrade to Scale to connect multiple WhatsApp numbers per bot.",
     },
     cloudApiTest: {
       title: "Cloud API test",
