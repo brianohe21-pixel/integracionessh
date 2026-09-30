@@ -23,7 +23,7 @@ import {
 } from "@/components/whatsapp/WhatsAppEnforcementPanel";
 import { Button } from "@/components/ui/Button";
 import { api } from "@/lib/api";
-import { isScaleOrResellerPlan } from "@/lib/normalize-plan";
+import { getMaxWhatsAppChannelsPerBot } from "@/lib/plan-config";
 import type { Bot, Tenant, WhatsAppChannel } from "@/types";
 
 interface BotWhatsAppConnectProps {
@@ -61,7 +61,8 @@ export function BotWhatsAppConnect({ bot }: BotWhatsAppConnectProps) {
   const registerChannel = useRegisterWhatsAppChannel(bot.botId);
   const { connectManual, status: whatsappStatus } = useWhatsAppConnect(bot.botId);
 
-  const multiChannelEnabled = isScaleOrResellerPlan(tenant?.plan);
+  const maxWhatsAppChannels = getMaxWhatsAppChannelsPerBot(tenant);
+  const multiChannelEnabled = maxWhatsAppChannels > 1;
   const [showAddPanel, setShowAddPanel] = useState(false);
   const [editingLabelId, setEditingLabelId] = useState<string | null>(null);
   const [labelDraft, setLabelDraft] = useState("");
@@ -89,7 +90,7 @@ export function BotWhatsAppConnect({ bot }: BotWhatsAppConnectProps) {
   const hasChannels = sortedChannels.length > 0;
   const blockedChannelCount = countBlockedWhatsAppChannels(sortedChannels);
   const legacyConnected = Boolean(bot.phoneNumberId?.trim()) && !hasChannels;
-  const canAddChannel = multiChannelEnabled || !hasChannels;
+  const canAddChannel = sortedChannels.length < maxWhatsAppChannels;
   const isSaving =
     updateChannel.isPending ||
     deleteChannel.isPending ||
