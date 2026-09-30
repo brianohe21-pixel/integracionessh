@@ -48,7 +48,7 @@ const ConvertLeadSchema = z.object({
 
 const CreateLeadSchema = z.object({
   botId: z.string().uuid(),
-  conversationId: z.string().uuid(),
+  conversationId: z.string().min(1).max(256),
   name: z.string().max(128).optional(),
   email: z.string().email().max(256).optional(),
   notes: z.string().max(2000).optional(),
