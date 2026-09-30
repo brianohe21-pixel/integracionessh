@@ -16,6 +16,7 @@ import { extractSampleFields, FormBindingField } from "./FormBindingField";
 import { FlowWebhookPanel } from "./FlowWebhookPanel";
 import { FlowWebhookGuideAccordion } from "./FlowWebhookGuideAccordion";
 import { TemplatePicker } from "@/components/templates/TemplatePicker";
+import { SendAudioNodeFields } from "@/components/flows/SendAudioNodeFields";
 import type { OutreachChannel } from "@/types";
 
 interface NodePropertiesPanelProps {
@@ -578,6 +579,13 @@ export function NodePropertiesPanel({
             })}
           </div>
         </>
+      )}
+
+      {type === "send_audio" && (
+        <div>
+          <FieldLabel>{t("flows.fields.audioVoiceNote")}</FieldLabel>
+          <SendAudioNodeFields flowId={flowId} data={d} onUpdate={onUpdate} />
+        </div>
       )}
 
       {type === "save_contact" && (

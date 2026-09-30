@@ -1969,6 +1969,7 @@ export type FlowNodeType =
   | "send_products"
   | "await_order"
   | "send_otp"
+  | "send_audio"
   | "save_contact"
   | "create_lead"
   | "create_opportunity"
@@ -2098,6 +2099,10 @@ export interface FlowNodeData {
   otpWhatsAppTemplateName?: string;
   otpWhatsAppTemplateLanguage?: string;
   otpMaxAttempts?: number;
+  audioS3Key?: string;
+  audioFilename?: string;
+  audioMimeType?: string;
+  audioMediaId?: string;
 }
 
 export interface FlowNode {

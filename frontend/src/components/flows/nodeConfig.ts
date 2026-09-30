@@ -23,6 +23,7 @@ import {
   Webhook,
   Bot,
   ShieldCheck,
+  Mic,
 } from "lucide-react";
 import type { FlowNodeData, FlowNodeType, LocalizedText } from "@/types";
 import { resolveLocalizedText } from "@/lib/localized-text";
@@ -55,6 +56,7 @@ export const FLOW_NODE_META: Record<FlowNodeType, FlowNodeMeta> = {
     hasOutput: true,
     branchHandles: "otp",
   },
+  send_audio: { category: "messaging", icon: Mic, hasInput: true, hasOutput: true },
   buttons: {
     category: "messaging",
     icon: MousePointerClick,
@@ -101,7 +103,7 @@ export const FLOW_NODE_CATEGORIES: FlowPaletteCategory[] = [
 
 export const FLOW_PALETTE_NODES: Record<FlowPaletteCategory, FlowNodeType[]> = {
   crm: ["save_contact", "create_lead", "create_opportunity", "send_notification"],
-  messaging: ["message", "template", "buttons", "send_otp"],
+  messaging: ["message", "template", "buttons", "send_otp", "send_audio"],
   logic: ["condition", "delay", "set_variable"],
   integrations: ["assign_bot", "webhook", "meta_flow", "http_request", "handoff"],
   apps: [
@@ -213,6 +215,8 @@ export function buildNodePreview(type: FlowNodeType, data: FlowNodeData, locale:
       return text(data.messageText) || text(data.orderConfirmationMessage);
     case "send_otp":
       return text(data.otpMessageText) || data.otpWhatsAppTemplateName || "OTP";
+    case "send_audio":
+      return data.audioFilename || (data.audioS3Key ? "voice note" : "");
     case "save_contact":
       return data.contactPhoneBinding ?? "";
     case "create_lead":
