@@ -732,6 +732,18 @@ export const es = {
       "SLA de primera respuesta vencido hace {{duration}} (objetivo: {{minutes}} min)",
     slaAtRiskBanner:
       "SLA de primera respuesta en riesgo: {{duration}} transcurridos (objetivo: {{minutes}} min)",
+    window24Open: "Ventana de 24 h abierta · quedan {{duration}} para mensajes libres",
+    window24Expiring: "Ventana de 24 h por cerrar · quedan {{duration}}",
+    window24Closed:
+      "Ventana de 24 h cerrada · usa una plantilla para contactar de nuevo",
+    window24Unknown: "Ventana de 24 h · esperando el próximo mensaje del cliente",
+    window72Eligible:
+      "Ventana gratuita de 72 h (anuncio) · responde en {{duration}} para abrirla",
+    window72Open: "Ventana gratuita de 72 h abierta · quedan {{duration}}",
+    window72Expiring: "Ventana gratuita de 72 h por cerrar · quedan {{duration}}",
+    window72Closed: "Ventana gratuita de 72 h cerrada",
+    window72Missed:
+      "Ventana gratuita de 72 h no abierta · no se respondió a tiempo al anuncio",
     deleteTitle: "Eliminar conversación",
     deleteConfirm:
       "¿Eliminar esta conversación y todos sus mensajes? Esta acción no se puede deshacer.",

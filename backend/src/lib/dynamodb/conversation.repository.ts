@@ -24,6 +24,7 @@ import {
 } from "./whatsapp-usage-metrics.repository.js";
 import { isWhatsAppBsuid } from "../whatsapp/identity.js";
 import { rememberWhatsAppIdentityLink } from "./whatsapp-identity.repository.js";
+import { shouldOpenFreeEntryPoint } from "../whatsapp/messaging-windows.js";
 
 const REALTIME_CONVERSATION_FIELDS = new Set([
   "handoffMode",
@@ -222,6 +223,8 @@ export async function updateConversation(
       | "emailThreadMessageId"
       | "locale"
       | "lastMessageAt"
+      | "lastInboundAt"
+      | "freeEntryPointOpenedAt"
       | "messageCount"
       | "whatsappUserId"
       | "whatsappParentUserId"
@@ -743,6 +746,25 @@ export async function addMessageIdempotent(
     return false;
   }
 
+  const isInbound =
+    message.source !== "whatsapp_history" &&
+    (message.source === "whatsapp_inbound" || message.role === "user");
+  const isOutbound =
+    message.role === "advisor" ||
+    message.role === "assistant" ||
+    message.source === "panel";
+
+  let openFreeEntryPoint = false;
+  let conversationForWindow: Conversation | null = null;
+  if (isOutbound) {
+    conversationForWindow = await getConversation(
+      message.tenantId,
+      botId,
+      message.conversationId
+    );
+    openFreeEntryPoint = shouldOpenFreeEntryPoint(conversationForWindow, now);
+  }
+
   const transactItems: Array<Record<string, unknown>> = [
     {
       Put: {
@@ -759,17 +781,28 @@ export async function addMessageIdempotent(
     },
   ];
 
-  if (updateCounters || updateLastMessageAt) {
-    const updateParts: string[] = [];
-    const values: Record<string, unknown> = {};
-    if (updateCounters) {
-      updateParts.push("messageCount = messageCount + :inc");
-      values[":inc"] = 1;
-    }
-    if (updateLastMessageAt) {
-      updateParts.push("lastMessageAt = :now");
-      values[":now"] = now;
-    }
+  const updateParts: string[] = [];
+  const values: Record<string, unknown> = {};
+  if (updateCounters) {
+    updateParts.push("messageCount = messageCount + :inc");
+    values[":inc"] = 1;
+  }
+  if (updateLastMessageAt) {
+    updateParts.push("lastMessageAt = :now");
+    values[":now"] = now;
+  }
+  if (isInbound) {
+    updateParts.push("lastInboundAt = :lastInboundAt");
+    values[":lastInboundAt"] = now;
+  }
+  if (openFreeEntryPoint) {
+    updateParts.push(
+      "freeEntryPointOpenedAt = if_not_exists(freeEntryPointOpenedAt, :freeEntryPointOpenedAt)"
+    );
+    values[":freeEntryPointOpenedAt"] = now;
+  }
+
+  if (updateParts.length > 0) {
     transactItems.push({
       Update: {
         TableName: TABLE_NAME,
@@ -800,7 +833,9 @@ export async function addMessageIdempotent(
   }
 
   if (publishRealtime) {
-    const conversation = await getConversation(message.tenantId, botId, message.conversationId);
+    const conversation =
+      conversationForWindow ??
+      (await getConversation(message.tenantId, botId, message.conversationId));
     if (conversation) {
       publishRealtimeEventSafe(message.tenantId, {
         type: "message.created",
@@ -812,6 +847,8 @@ export async function addMessageIdempotent(
           messageCount: updateCounters
             ? (conversation.messageCount ?? 0) + 1
             : conversation.messageCount,
+          ...(isInbound ? { lastInboundAt: now } : {}),
+          ...(openFreeEntryPoint ? { freeEntryPointOpenedAt: now } : {}),
         },
       });
     }

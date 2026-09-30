@@ -607,6 +607,8 @@ export interface Conversation {
   attribution?: AdsAttribution;
   messageCount: number;
   lastMessageAt: string;
+  lastInboundAt?: string;
+  freeEntryPointOpenedAt?: string;
   welcomeSentAt?: string;
   activeFlowRunId?: string;
   pendingMetaFlowId?: string;

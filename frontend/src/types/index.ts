@@ -1110,6 +1110,8 @@ export interface Conversation {
   attribution?: AdsAttribution;
   messageCount: number;
   lastMessageAt: string;
+  lastInboundAt?: string;
+  freeEntryPointOpenedAt?: string;
   emailSubject?: string;
   emailThreadMessageId?: string;
   locale?: BotLocale;

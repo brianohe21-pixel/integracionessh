@@ -76,6 +76,10 @@ import {
   getElapsedSecondsSinceHandoff,
   resolveInboxSlaSettings,
 } from "@/lib/inbox-sla";
+import {
+  formatWindowRemaining,
+  getWhatsAppMessagingWindows,
+} from "@/lib/whatsapp-messaging-windows";
 import type { InboxSlaStatus } from "@/types";
 
 function matchesSearchQuery(
@@ -496,6 +500,26 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
   const showBookingAction = canCompose;
   const showAttachmentAction =
     canCompose && (selectedConversation?.channel ?? "whatsapp") === "whatsapp";
+  const [windowNowMs, setWindowNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    if (!selectedConversation || (selectedConversation.channel ?? "whatsapp") !== "whatsapp") {
+      return;
+    }
+    const timer = window.setInterval(() => setWindowNowMs(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, [selectedConversation?.conversationId, selectedConversation?.channel]);
+  const messagingWindows = useMemo(
+    () =>
+      getWhatsAppMessagingWindows(selectedConversation ?? null, messages, windowNowMs),
+    [
+      selectedConversation,
+      messages,
+      windowNowMs,
+      selectedConversation?.lastInboundAt,
+      selectedConversation?.freeEntryPointOpenedAt,
+      selectedConversation?.attribution?.source,
+    ]
+  );
   const assignedAdvisor = advisors?.find(
     (a) => a.advisorId === selectedConversation?.assignedAdvisorId
   );
@@ -1000,6 +1024,44 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
               <p className="hidden border-b border-warning/30 bg-warning/10 px-4 py-2 text-xs leading-relaxed text-primary sm:px-6 lg:block">
                 {t("conversations.personalChannelHint")}
               </p>
+            )}
+            {messagingWindows.show && (
+              <div className="border-b border-default border-l-4 border-l-accent bg-surface-muted px-4 py-2 text-xs leading-relaxed text-primary sm:px-6">
+                <p>
+                  {messagingWindows.window24.status === "open"
+                    ? t("conversations.window24Open", {
+                        duration: formatWindowRemaining(messagingWindows.window24.remainingMs),
+                      })
+                    : messagingWindows.window24.status === "expiring"
+                      ? t("conversations.window24Expiring", {
+                          duration: formatWindowRemaining(messagingWindows.window24.remainingMs),
+                        })
+                      : messagingWindows.window24.status === "closed"
+                        ? t("conversations.window24Closed")
+                        : t("conversations.window24Unknown")}
+                </p>
+                {messagingWindows.window72.status !== "hidden" ? (
+                  <p className="mt-1 text-secondary">
+                    {messagingWindows.window72.status === "eligible"
+                      ? t("conversations.window72Eligible", {
+                          duration: formatWindowRemaining(messagingWindows.window72.remainingMs),
+                        })
+                      : messagingWindows.window72.status === "open"
+                        ? t("conversations.window72Open", {
+                            duration: formatWindowRemaining(messagingWindows.window72.remainingMs),
+                          })
+                        : messagingWindows.window72.status === "expiring"
+                          ? t("conversations.window72Expiring", {
+                              duration: formatWindowRemaining(
+                                messagingWindows.window72.remainingMs
+                              ),
+                            })
+                          : messagingWindows.window72.status === "closed"
+                            ? t("conversations.window72Closed")
+                            : t("conversations.window72Missed")}
+                  </p>
+                ) : null}
+              </div>
             )}
             {resolvedSlaSettings.enabled &&
               (selectedSlaStatus === "breached" || selectedSlaStatus === "at_risk") &&

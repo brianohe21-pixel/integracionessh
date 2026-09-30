@@ -730,6 +730,17 @@ export const en: Messages = {
       "First response SLA breached {{duration}} ago (target: {{minutes}} min)",
     slaAtRiskBanner:
       "First response SLA at risk: {{duration}} elapsed (target: {{minutes}} min)",
+    window24Open: "24 h window open · {{duration}} left for free-form messages",
+    window24Expiring: "24 h window closing soon · {{duration}} left",
+    window24Closed: "24 h window closed · use a template to reach out again",
+    window24Unknown: "24 h window · waiting for the next customer message",
+    window72Eligible:
+      "72 h free entry window (ad) · reply within {{duration}} to open it",
+    window72Open: "72 h free entry window open · {{duration}} left",
+    window72Expiring: "72 h free entry window closing soon · {{duration}} left",
+    window72Closed: "72 h free entry window closed",
+    window72Missed:
+      "72 h free entry window not opened · no timely reply to the ad message",
     deleteTitle: "Delete conversation",
     deleteConfirm:
       "Delete this conversation and all its messages? This action cannot be undone.",
