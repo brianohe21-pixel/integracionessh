@@ -70,6 +70,13 @@ export function formatWindowRemaining(ms: number | null): string {
   return formatRemaining(ms);
 }
 
+export function canSendFreeFormWhatsAppMessages(
+  windows: WhatsAppMessagingWindows
+): boolean {
+  if (!windows.show) return true;
+  return windows.window24.status === "open" || windows.window24.status === "expiring";
+}
+
 export function getWhatsAppMessagingWindows(
   conversation: Pick<
     Conversation,

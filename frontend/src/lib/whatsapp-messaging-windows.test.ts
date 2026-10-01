@@ -1,6 +1,7 @@
 import {
   formatWindowRemaining,
   getWhatsAppMessagingWindows,
+  canSendFreeFormWhatsAppMessages,
 } from "./whatsapp-messaging-windows";
 import type { Conversation, Message } from "@/types";
 
@@ -120,6 +121,52 @@ describe("getWhatsAppMessagingWindows", () => {
       now
     );
     expect(result.window72.status).toBe("missed");
+  });
+});
+
+describe("canSendFreeFormWhatsAppMessages", () => {
+  it("allows free-form when window is open or expiring", () => {
+    expect(
+      canSendFreeFormWhatsAppMessages({
+        show: true,
+        window24: { status: "open", remainingMs: 10_000 },
+        window72: { status: "hidden", remainingMs: null },
+      })
+    ).toBe(true);
+    expect(
+      canSendFreeFormWhatsAppMessages({
+        show: true,
+        window24: { status: "expiring", remainingMs: 10_000 },
+        window72: { status: "hidden", remainingMs: null },
+      })
+    ).toBe(true);
+  });
+
+  it("requires template when closed or unknown", () => {
+    expect(
+      canSendFreeFormWhatsAppMessages({
+        show: true,
+        window24: { status: "closed", remainingMs: 0 },
+        window72: { status: "hidden", remainingMs: null },
+      })
+    ).toBe(false);
+    expect(
+      canSendFreeFormWhatsAppMessages({
+        show: true,
+        window24: { status: "unknown", remainingMs: null },
+        window72: { status: "hidden", remainingMs: null },
+      })
+    ).toBe(false);
+  });
+
+  it("allows free-form for non-whatsapp channels", () => {
+    expect(
+      canSendFreeFormWhatsAppMessages({
+        show: false,
+        window24: { status: "unknown", remainingMs: null },
+        window72: { status: "hidden", remainingMs: null },
+      })
+    ).toBe(true);
   });
 });
 

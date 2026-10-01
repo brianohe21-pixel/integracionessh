@@ -733,7 +733,15 @@ export const en: Messages = {
     window24Open: "24 h window open · {{duration}} left for free-form messages",
     window24Expiring: "24 h window closing soon · {{duration}} left",
     window24Closed: "24 h window closed · use a template to reach out again",
-    window24Unknown: "24 h window · waiting for the next customer message",
+    window24Unknown:
+      "No 24 h window · start the conversation with an approved template",
+    templateComposeTitle: "Start conversation with a template",
+    templateComposeHint:
+      "Per Meta, outside the 24-hour customer service window you can only send approved templates. Once the customer replies, free-form messages are allowed.",
+    templateComposeManage: "Manage templates",
+    templateSend: "Send template",
+    templateSending: "Sending…",
+    templateSendFailed: "Could not send the template",
     window72Eligible:
       "72 h free entry window (ad) · reply within {{duration}} to open it",
     window72Open: "72 h free entry window open · {{duration}} left",

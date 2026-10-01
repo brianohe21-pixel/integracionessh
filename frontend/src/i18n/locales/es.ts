@@ -736,7 +736,15 @@ export const es = {
     window24Expiring: "Ventana de 24 h por cerrar · quedan {{duration}}",
     window24Closed:
       "Ventana de 24 h cerrada · usa una plantilla para contactar de nuevo",
-    window24Unknown: "Ventana de 24 h · esperando el próximo mensaje del cliente",
+    window24Unknown:
+      "Sin ventana de 24 h · inicia la conversación con una plantilla aprobada",
+    templateComposeTitle: "Iniciar conversación con plantilla",
+    templateComposeHint:
+      "Según Meta, fuera de la ventana de servicio de 24 h solo puedes enviar plantillas aprobadas. Cuando el cliente responda, podrás escribir mensajes libres.",
+    templateComposeManage: "Gestionar plantillas",
+    templateSend: "Enviar plantilla",
+    templateSending: "Enviando…",
+    templateSendFailed: "No se pudo enviar la plantilla",
     window72Eligible:
       "Ventana gratuita de 72 h (anuncio) · responde en {{duration}} para abrirla",
     window72Open: "Ventana gratuita de 72 h abierta · quedan {{duration}}",

@@ -30,6 +30,7 @@ import {
   phoneNumberIdForOutbound,
   resolveWhatsAppChannelForConversation,
 } from "../whatsapp/channel-context.js";
+import { assertCustomerServiceWindowOpen } from "../whatsapp/messaging-windows.js";
 import type { AuthContext, Bot, Channel, Conversation, Message } from "../../types/index.js";
 
 const UPLOAD_URL_TTL_SECONDS = 900;
@@ -125,6 +126,7 @@ export async function sendConversationAttachment(input: {
   resolveAccessToken: ResolveAccessToken;
 }): Promise<Message> {
   await assertWhatsAppHumanConversation(input.conversation);
+  assertCustomerServiceWindowOpen(input.conversation);
 
   if (!isAllowedConversationAttachmentFilename(input.filename)) {
     throw new ConversationAttachmentError("Unsupported attachment file type");

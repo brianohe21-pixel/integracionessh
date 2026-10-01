@@ -27,6 +27,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Select } from "@/components/ui/Input";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ConversationComposeBar } from "@/components/conversations/ConversationComposeBar";
+import { ConversationTemplateComposeBar } from "@/components/conversations/ConversationTemplateComposeBar";
 import { ConversationContextMenu, type ConversationContextMenuState } from "@/components/conversations/ConversationContextMenu";
 import { TaskFormModal, type TaskFormValues } from "@/components/tasks/TaskFormModal";
 import { useCreateSalesTask } from "@/hooks/useSales";
@@ -77,6 +78,7 @@ import {
   resolveInboxSlaSettings,
 } from "@/lib/inbox-sla";
 import {
+  canSendFreeFormWhatsAppMessages,
   formatWindowRemaining,
   getWhatsAppMessagingWindows,
 } from "@/lib/whatsapp-messaging-windows";
@@ -498,8 +500,6 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
     !selectedConversation.assignedAdvisorId;
   const canCompose = isHuman && !!selectedConversation && !needsClaim && !isImapReadOnly;
   const showBookingAction = canCompose;
-  const showAttachmentAction =
-    canCompose && (selectedConversation?.channel ?? "whatsapp") === "whatsapp";
   const [windowNowMs, setWindowNowMs] = useState(() => Date.now());
   useEffect(() => {
     if (!selectedConversation || (selectedConversation.channel ?? "whatsapp") !== "whatsapp") {
@@ -520,6 +520,11 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
       selectedConversation?.attribution?.source,
     ]
   );
+  const canSendFreeForm = canSendFreeFormWhatsAppMessages(messagingWindows);
+  const showAttachmentAction =
+    canCompose &&
+    canSendFreeForm &&
+    (selectedConversation?.channel ?? "whatsapp") === "whatsapp";
   const assignedAdvisor = advisors?.find(
     (a) => a.advisorId === selectedConversation?.assignedAdvisorId
   );
@@ -1172,30 +1177,34 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
               {canCompose ? (
                 <div className="conversations-chat-footer relative z-20 flex-shrink-0">
                   <div className="conversations-chat-footer-inner w-full">
-                    {selectedConversation ? (
+                    {selectedConversation && canSendFreeForm ? (
                       <AdvisorCopilotPanel
                         conversation={selectedConversation}
                         onInsertSuggestion={setDraft}
                       />
                     ) : null}
-                    <ConversationComposeBar
-                      draft={draft}
-                      onDraftChange={setDraft}
-                      onSubmit={handleSend}
-                      sending={sendMessage.isPending || sendAttachment.isPending}
-                      conversation={selectedConversation}
-                      macroPlaceholderContext={macroPlaceholderContext}
-                      onOpenQuotation={() => setShowQuotationDrawer(true)}
-                      onOpenBooking={() => setShowBookingDrawer(true)}
-                      onOpenTask={() => openTaskModal()}
-                      showBooking={showBookingAction}
-                      showAttachment={showAttachmentAction}
-                      onAttachFile={handleAttachFile}
-                      onSendVoiceNote={handleSendVoiceNote}
-                      onMicDenied={handleMicDenied}
-                      onInvalidVoiceNote={handleInvalidVoiceNote}
-                      attaching={sendAttachment.isPending}
-                    />
+                    {selectedConversation && !canSendFreeForm ? (
+                      <ConversationTemplateComposeBar conversation={selectedConversation} />
+                    ) : (
+                      <ConversationComposeBar
+                        draft={draft}
+                        onDraftChange={setDraft}
+                        onSubmit={handleSend}
+                        sending={sendMessage.isPending || sendAttachment.isPending}
+                        conversation={selectedConversation}
+                        macroPlaceholderContext={macroPlaceholderContext}
+                        onOpenQuotation={() => setShowQuotationDrawer(true)}
+                        onOpenBooking={() => setShowBookingDrawer(true)}
+                        onOpenTask={() => openTaskModal()}
+                        showBooking={showBookingAction}
+                        showAttachment={showAttachmentAction}
+                        onAttachFile={handleAttachFile}
+                        onSendVoiceNote={handleSendVoiceNote}
+                        onMicDenied={handleMicDenied}
+                        onInvalidVoiceNote={handleInvalidVoiceNote}
+                        attaching={sendAttachment.isPending}
+                      />
+                    )}
                   </div>
                 </div>
               ) : null}
