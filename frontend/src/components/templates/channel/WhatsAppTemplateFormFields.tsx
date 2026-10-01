@@ -4,7 +4,6 @@ import { Plus, Trash2 } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { extractBodyVariables, sortBodyVariables } from "@/lib/templates/variables";
-import type { TemplateButton } from "@/types";
 import {
   BUTTON_TEXT_MAX_LENGTH,
   getButtonGroup,
@@ -92,7 +91,7 @@ export function WhatsAppTemplateFormFields({ values, onChange }: WhatsAppTemplat
     );
   }
 
-  function handleButtonTypeChange(index: number, type: TemplateButton["type"]) {
+  function handleButtonTypeChange(index: number, type: TemplateButtonFormValue["type"]) {
     const next: TemplateButtonFormValue = { type, text: values.buttons[index]?.text ?? "" };
     if (type === "URL") {
       next.url = values.buttons[index]?.url ?? "";
@@ -225,7 +224,10 @@ export function WhatsAppTemplateFormFields({ values, onChange }: WhatsAppTemplat
                 <Select
                   value={button.type}
                   onChange={(e) =>
-                    handleButtonTypeChange(index, e.target.value as TemplateButton["type"])
+                    handleButtonTypeChange(
+                      index,
+                      e.target.value as TemplateButtonFormValue["type"]
+                    )
                   }
                 >
                   <option value="QUICK_REPLY">{t("templates.buttonTypeQuickReply")}</option>

@@ -42,6 +42,8 @@ const ComponentSchema = z
     type: z.enum(["HEADER", "BODY", "FOOTER", "BUTTONS"]),
     format: z.enum(["TEXT", "IMAGE", "VIDEO", "DOCUMENT"]).optional(),
     text: z.string().optional(),
+    add_security_recommendation: z.boolean().optional(),
+    code_expiration_minutes: z.number().int().min(1).max(90).optional(),
     example: z
       .object({
         header_text: z.array(z.string()).optional(),
@@ -51,10 +53,11 @@ const ComponentSchema = z
     buttons: z
       .array(
         z.object({
-          type: z.enum(["QUICK_REPLY", "URL", "PHONE_NUMBER"]),
-          text: z.string(),
+          type: z.enum(["QUICK_REPLY", "URL", "PHONE_NUMBER", "OTP"]),
+          text: z.string().optional(),
           url: z.string().optional(),
           phone_number: z.string().optional(),
+          otp_type: z.enum(["COPY_CODE", "ONE_TAP", "ZERO_TAP"]).optional(),
           example: z.array(z.string()).optional(),
         })
       )
@@ -83,6 +86,25 @@ const ComponentSchema = z
           message:
             'BODY component has variables ({{N}}) but is missing "example.body_text" with realistic sample values. Meta requires examples for every variable.',
         });
+      }
+    }
+    if (comp.type === "BUTTONS" && comp.buttons?.length) {
+      for (const [index, button] of comp.buttons.entries()) {
+        if (button.type === "OTP") {
+          if (!button.otp_type) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `BUTTONS.buttons[${index}] of type OTP requires otp_type.`,
+            });
+          }
+          continue;
+        }
+        if (!button.text?.trim()) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `BUTTONS.buttons[${index}] requires text.`,
+          });
+        }
       }
     }
   });
@@ -133,6 +155,8 @@ const SendTemplateSchema = z.object({
     .array(
       z.object({
         type: z.string(),
+        sub_type: z.string().optional(),
+        index: z.union([z.string(), z.number()]).optional(),
         parameters: z
           .array(
             z.object({

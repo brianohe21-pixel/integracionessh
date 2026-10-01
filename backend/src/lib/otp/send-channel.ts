@@ -108,6 +108,12 @@ export async function sendOtpViaChannel(
           type: "body",
           parameters: [{ type: "text", text: params.code }],
         },
+        {
+          type: "button",
+          sub_type: "url",
+          index: "0",
+          parameters: [{ type: "text", text: params.code }],
+        },
       ],
     });
 

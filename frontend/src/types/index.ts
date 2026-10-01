@@ -1392,19 +1392,24 @@ export interface Macro {
   updatedAt: string;
 }
 
+export type TemplateOtpType = "COPY_CODE" | "ONE_TAP" | "ZERO_TAP";
+
 export interface TemplateComponent {
   type: "HEADER" | "BODY" | "FOOTER" | "BUTTONS";
   format?: "TEXT" | "IMAGE" | "VIDEO" | "DOCUMENT";
   text?: string;
+  add_security_recommendation?: boolean;
+  code_expiration_minutes?: number;
   example?: { header_text?: string[]; body_text?: string[][] };
   buttons?: TemplateButton[];
 }
 
 export interface TemplateButton {
-  type: "QUICK_REPLY" | "URL" | "PHONE_NUMBER";
-  text: string;
+  type: "QUICK_REPLY" | "URL" | "PHONE_NUMBER" | "OTP";
+  text?: string;
   url?: string;
   phone_number?: string;
+  otp_type?: TemplateOtpType;
   example?: string[];
 }
 
