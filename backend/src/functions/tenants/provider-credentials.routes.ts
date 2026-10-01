@@ -24,20 +24,44 @@ import { badRequest, handleError, ok, parseJsonBody } from "../../lib/http.js";
 
 const ProviderSchema = z.enum(["openai", "telnyx", "elevenlabs", "deepgram"]);
 
+export function providerFromRequest(event: {
+  rawPath?: string;
+  pathParameters?: { provider?: string; proxy?: string } | null;
+  requestContext?: { http?: { path?: string } };
+}): string | undefined {
+  const named = event.pathParameters?.provider?.trim();
+  if (named) return decodeURIComponent(named);
+
+  const rawPath = event.rawPath ?? event.requestContext?.http?.path ?? "";
+  const proxy = event.pathParameters?.proxy ?? "";
+  const source = /\/provider-credentials\/[^/]+/.test(rawPath)
+    ? rawPath
+    : `/${proxy.replace(/^\/+/, "")}`;
+  const match = source.match(/\/provider-credentials\/([^/]+)/);
+  const value = match?.[1]?.trim();
+  return value ? decodeURIComponent(value) : undefined;
+}
+
 export async function handleProviderCredentialRoutes(
   event: APIGatewayProxyEventV2WithJWTAuthorizer,
   method: string,
   auth: AuthContext,
   environment: string
 ): Promise<APIGatewayProxyResultV2 | null> {
-  const rawPath = event.rawPath ?? "";
-  if (!rawPath.includes("/provider-credentials")) return null;
+  const rawPath = event.rawPath ?? event.requestContext?.http?.path ?? "";
+  const proxy = (event.pathParameters?.proxy ?? "").replace(/^\/+/, "");
+  const path = rawPath.includes("/provider-credentials")
+    ? rawPath
+    : proxy
+      ? `/tenants/me/${proxy}`
+      : rawPath;
+  if (!path.includes("/provider-credentials")) return null;
 
   await assertSettingsAccess(auth, method);
-  const providerParam = event.pathParameters?.provider;
+  const providerParam = providerFromRequest(event);
   const apiBaseUrl = resolveApiBaseUrl(event);
 
-  if (method === "GET" && rawPath.endsWith("/provider-credentials")) {
+  if (method === "GET" && path.endsWith("/provider-credentials")) {
     const items = await getProviderCredentialStatuses(auth.tenantId, environment, apiBaseUrl);
     return ok({ items });
   }
