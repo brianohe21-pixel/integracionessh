@@ -6,6 +6,7 @@ import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
 import { requireBotContext } from "../types.js";
 import { getNextNodeId } from "../graph.js";
 import { skipWhatsAppOnlyNode } from "./channel-guard.js";
+import { persistFlowOutboundMessage } from "../persist-outbound.js";
 
 export async function executeSendAudioNode(
   node: FlowNode,
@@ -28,7 +29,7 @@ export async function executeSendAudioNode(
     throw new Error("Voice note must be a valid OGG Opus audio file");
   }
 
-  await sendChannelAudio(
+  const result = await sendChannelAudio(
     buildOutboundContext({
       tenantId: ctx.tenantId,
       botId,
@@ -45,6 +46,20 @@ export async function executeSendAudioNode(
       voice: true,
     }
   );
+
+  await persistFlowOutboundMessage({
+    ctx,
+    content: filename,
+    messageType: "audio",
+    skipIfAdapterPersists: false,
+    ...(result.externalMessageId ? { externalMessageId: result.externalMessageId } : {}),
+    metadata: {
+      kind: "voice_note",
+      filename,
+      mimeType,
+      ...(s3Key ? { s3Key } : {}),
+    },
+  });
 
   return {
     nextNodeId: getNextNodeId(ctx.flow, node.id),

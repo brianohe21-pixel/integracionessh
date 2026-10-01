@@ -5,6 +5,7 @@ import { requireMessagingContext } from "../types.js";
 import { getNextNodeId } from "../graph.js";
 import { skipWhatsAppOnlyNode } from "./channel-guard.js";
 import { getBotLocale, templateLanguageForLocale } from "../../i18n/index.js";
+import { persistFlowOutboundMessage } from "../persist-outbound.js";
 
 export async function executeTemplateNode(
   node: FlowNode,
@@ -19,11 +20,12 @@ export async function executeTemplateNode(
   }
   const { conversation, phoneNumberId, accessToken, customerPhone } = requireMessagingContext(ctx);
   const locale = getBotLocale(conversation, ctx.bot);
-  await sendTemplateMessage({
+  const language = templateLanguage || templateLanguageForLocale(locale);
+  const result = await sendTemplateMessage({
     phoneNumberId,
     to: customerPhone,
     templateName,
-    language: templateLanguage || templateLanguageForLocale(locale),
+    language,
     accessToken,
     ...(templateVariables
       ? {
@@ -39,6 +41,20 @@ export async function executeTemplateNode(
         }
       : {}),
   });
+
+  await persistFlowOutboundMessage({
+    ctx,
+    content: templateName,
+    skipIfAdapterPersists: false,
+    ...(result.messages?.[0]?.id ? { externalMessageId: result.messages[0].id } : {}),
+    metadata: {
+      kind: "whatsapp_template",
+      templateName,
+      language,
+      ...(templateVariables ? { templateVariables } : {}),
+    },
+  });
+
   return {
     nextNodeId: getNextNodeId(ctx.flow, node.id),
     halt: false,

@@ -1,9 +1,10 @@
-import { buildOutboundContext, sendChannelText } from "../../channels/router.js";
+import { buildOutboundContext } from "../../channels/router.js";
 import type { FlowNode, FlowRun } from "../../../types/index.js";
 import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
 import { requireBotContext } from "../types.js";
 import { getNextNodeId } from "../graph.js";
 import { getBotLocale, resolveLocalizedText } from "../../i18n/index.js";
+import { sendFlowChannelText } from "../send-text.js";
 
 export async function executeMessageNode(
   node: FlowNode,
@@ -14,7 +15,8 @@ export async function executeMessageNode(
   const locale = getBotLocale(ctx.conversation!, bot);
   const text = resolveLocalizedText(node.data.messageText, locale);
   if (text) {
-    await sendChannelText(
+    await sendFlowChannelText(
+      ctx,
       buildOutboundContext({
         tenantId: ctx.tenantId,
         botId,

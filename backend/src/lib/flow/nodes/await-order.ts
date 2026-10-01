@@ -1,4 +1,5 @@
-import { buildOutboundContext, sendChannelText } from "../../channels/router.js";
+import { buildOutboundContext } from "../../channels/router.js";
+import { sendFlowChannelText } from "../send-text.js";
 import type { FlowNode, FlowRun } from "../../../types/index.js";
 import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
 import { requireBotContext, requireConversation } from "../types.js";
@@ -17,7 +18,8 @@ export async function executeAwaitOrderNode(
   try {
     await requireEnabledCatalog(ctx.tenantId, botId);
   } catch {
-    await sendChannelText(
+    await sendFlowChannelText(
+      ctx,
       buildOutboundContext({
         tenantId: ctx.tenantId,
         botId,
@@ -35,7 +37,8 @@ export async function executeAwaitOrderNode(
     resolveLocalizedText(node.data.messageText, locale) ||
     getSystemMessage("awaitOrderPrompt", locale);
 
-  await sendChannelText(
+  await sendFlowChannelText(
+    ctx,
     buildOutboundContext({
       tenantId: ctx.tenantId,
       botId,

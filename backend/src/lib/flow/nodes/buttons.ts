@@ -4,6 +4,7 @@ import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
 import { requireMessagingContext } from "../types.js";
 import { skipWhatsAppOnlyNode } from "./channel-guard.js";
 import { getBotLocale, getSystemMessage, resolveLocalizedText } from "../../i18n/index.js";
+import { persistFlowOutboundMessage } from "../persist-outbound.js";
 
 export async function executeButtonsNode(
   node: FlowNode,
@@ -32,13 +33,22 @@ export async function executeButtonsNode(
     };
   }
 
-  await sendInteractiveButtons({
+  const result = await sendInteractiveButtons({
     phoneNumberId,
     to: customerPhone,
     accessToken,
     bodyText,
     buttons,
     ...(ctx.replyToMessageId ? { replyToMessageId: ctx.replyToMessageId } : {}),
+  });
+
+  await persistFlowOutboundMessage({
+    ctx,
+    content: bodyText,
+    messageType: "interactive",
+    skipIfAdapterPersists: false,
+    ...(result.messages?.[0]?.id ? { externalMessageId: result.messages[0].id } : {}),
+    metadata: { kind: "interactive_buttons", buttons },
   });
 
   return {
