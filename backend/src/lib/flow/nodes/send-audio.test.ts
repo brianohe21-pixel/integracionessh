@@ -9,14 +9,20 @@ jest.mock("../../channels/router.js", () => ({
   sendChannelAudio: jest.fn(),
 }));
 
+jest.mock("../../dynamodb/conversation.repository.js", () => ({
+  addMessage: jest.fn(),
+}));
+
 import { getObjectBuffer } from "../../s3/client.js";
 import { sendChannelAudio } from "../../channels/router.js";
+import { addMessage } from "../../dynamodb/conversation.repository.js";
 import { executeSendAudioNode } from "./send-audio.js";
 import type { Bot, Conversation, FlowDefinition, FlowNode, FlowRun } from "../../../types/index.js";
 import type { FlowExecutionContext } from "../types.js";
 
 const mockedGetObjectBuffer = jest.mocked(getObjectBuffer);
 const mockedSendChannelAudio = jest.mocked(sendChannelAudio);
+const mockedAddMessage = jest.mocked(addMessage);
 
 const oggBuffer = new Uint8Array([0x4f, 0x67, 0x67, 0x53, 0x00, 0x01]);
 
@@ -109,8 +115,10 @@ describe("executeSendAudioNode", () => {
   beforeEach(() => {
     mockedGetObjectBuffer.mockReset();
     mockedSendChannelAudio.mockReset();
+    mockedAddMessage.mockReset();
     mockedGetObjectBuffer.mockResolvedValue(oggBuffer);
     mockedSendChannelAudio.mockResolvedValue({ externalMessageId: "wamid.1" });
+    mockedAddMessage.mockResolvedValue(undefined);
   });
 
   it("sends the uploaded voice note on WhatsApp", async () => {
@@ -125,6 +133,16 @@ describe("executeSendAudioNode", () => {
         filename: "voice.ogg",
         voice: true,
       })
+    );
+    expect(mockedAddMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        conversationId: "conv-1",
+        role: "assistant",
+        content: "voice.ogg",
+        messageType: "audio",
+        externalMessageId: "wamid.1",
+      }),
+      "bot-1"
     );
     expect(result).toEqual({
       nextNodeId: "end-1",

@@ -1,6 +1,10 @@
 import type { FlowNode, FlowRun } from "../../../types/index.js";
 import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
-import { buildBindingContext, resolveBindingValue } from "../binding.js";
+import {
+  buildBindingContext,
+  conversationBindingFromContext,
+  resolveBindingValue,
+} from "../binding.js";
 import { getNextNodeId } from "../graph.js";
 import { normalizePhone } from "../../dynamodb/contact.repository.js";
 import { createOpportunityFromFormData } from "../../opportunities/form-opportunity.js";
@@ -13,6 +17,7 @@ export async function executeCreateOpportunityNode(
   const bindingContext = buildBindingContext({
     formPayload: ctx.formPayload,
     variables: run.variables,
+    conversation: conversationBindingFromContext(ctx),
   });
 
   const title = resolveBindingValue(node.data.opportunityTitleBinding, bindingContext).trim();

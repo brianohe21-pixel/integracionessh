@@ -733,7 +733,15 @@ export const en: Messages = {
     window24Open: "24 h window open · {{duration}} left for free-form messages",
     window24Expiring: "24 h window closing soon · {{duration}} left",
     window24Closed: "24 h window closed · use a template to reach out again",
-    window24Unknown: "24 h window · waiting for the next customer message",
+    window24Unknown:
+      "No 24 h window · start the conversation with an approved template",
+    templateComposeTitle: "Start conversation with a template",
+    templateComposeHint:
+      "Per Meta, outside the 24-hour customer service window you can only send approved templates. Once the customer replies, free-form messages are allowed.",
+    templateComposeManage: "Manage templates",
+    templateSend: "Send template",
+    templateSending: "Sending…",
+    templateSendFailed: "Could not send the template",
     window72Eligible:
       "72 h free entry window (ad) · reply within {{duration}} to open it",
     window72Open: "72 h free entry window open · {{duration}} left",
@@ -4331,9 +4339,17 @@ export const en: Messages = {
       opportunityStageWon: "Won",
       opportunityStageLost: "Lost",
       opportunityPhoneBinding: "Phone",
+      opportunityPhoneBindingHint:
+        "From WhatsApp use {{phone}} or {{contact_phone}} (conversation number).",
       opportunityNameBinding: "Name",
+      opportunityNameBindingHint:
+        "From WhatsApp use {{contact_name}} or {{name}} (profile name). Also {{last_input}} if you asked for it in chat.",
       opportunityEmailBinding: "Email",
       opportunityDescriptionBinding: "Description",
+      opportunityDescriptionBindingHint:
+        "You can use {{last_input}} or {{contact_name}}. For forms use {{form.field}}.",
+      opportunityTitleBindingHint:
+        "Example: Opportunity {{contact_name}}. Also {{phone}} or {{last_input}}.",
       opportunityTags: "Tags (comma-separated)",
       notificationChannel: "Channel",
       notificationMessageType: "Message type",
@@ -4495,6 +4511,8 @@ export const en: Messages = {
     hints: {
       conditionBranches: "Connect each output (Yes / No) to the corresponding next node.",
       buttonBranches: "Each button has its own output. Maximum 3 buttons.",
+      opportunityWhatsAppBindings:
+        "WhatsApp variables: {{phone}} (phone), {{contact_name}} (profile name). For forms use {{form.field}}. The user's last message is {{last_input}}.",
     },
     previewModal: {
       title: "Flow preview",
@@ -4583,7 +4601,8 @@ export const en: Messages = {
       },
       create_opportunity: {
         description: "Creates a sales opportunity with title, amount, and contact.",
-        usage: "Use {{form.field}} bindings for title, amount, and customer data.",
+        usage:
+          "From WhatsApp use {{phone}} and {{contact_name}}. For forms use {{form.field}}. The last message is {{last_input}}.",
       },
       send_notification: {
         description: "Sends WhatsApp, SMS, or email to the recipient.",
@@ -4627,6 +4646,9 @@ export const en: Messages = {
     statusInactive: "Inactive",
     saved: "Settings saved",
     promptRequired: "System prompt is required to enable AI Assistant",
+    openaiNotConfigured:
+      "OpenAI is not configured. Add an API key in Settings before enabling AI Assistant.",
+    openaiNotConfiguredLink: "Go to Settings",
     disableBlockedTelephony: "Disable telephony before turning off AI Assistant. Go to",
     disableBlockedVoicebot: "Disable voicebot before turning off AI Assistant. Go to",
     defaultPrompt: "You are a helpful virtual assistant. Reply clearly and professionally.",

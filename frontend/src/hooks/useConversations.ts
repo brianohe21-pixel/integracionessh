@@ -252,6 +252,37 @@ export function useSendConversationMessage() {
   });
 }
 
+export function useSendConversationTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: {
+      conversationId: string;
+      botId: string;
+      templateName: string;
+      language: string;
+      components?: Array<{
+        type: string;
+        sub_type?: string;
+        index?: string | number;
+        parameters?: Array<{ type: string; text?: string; image?: { link: string } }>;
+      }>;
+    }) =>
+      api.post<Message>(
+        `/conversations/${encodeURIComponent(body.conversationId)}/messages/template`,
+        {
+          botId: body.botId,
+          templateName: body.templateName,
+          language: body.language,
+          ...(body.components ? { components: body.components } : {}),
+        }
+      ),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["conversation-messages", vars.conversationId] });
+      qc.invalidateQueries({ queryKey: ["conversations"] });
+    },
+  });
+}
+
 export function useUpdateConversationStatus() {
   const qc = useQueryClient();
   return useMutation({

@@ -19,7 +19,11 @@ import {
 import { parseTelnyxWebhookBody, verifyTelnyxWebhookSignature } from "../../lib/telnyx/webhook.js";
 import { markTelnyxEventProcessed } from "../../lib/telnyx/idempotency.js";
 import { getTelnyxSecrets } from "../../lib/telnyx/secrets.js";
-import { resolveProviderCredential, assertOwnTelnyxCredential } from "../../lib/integrations/provider-credentials.js";
+import {
+  resolveProviderCredential,
+  assertOwnTelnyxCredential,
+  assertOpenAIConfigured,
+} from "../../lib/integrations/provider-credentials.js";
 import { normalizeE164 } from "../../lib/telnyx/phone.js";
 import { getBotByTelephonyNumber } from "../../lib/dynamodb/bot-lookup.repository.js";
 import { reassignTelephonyNumber, clearStaleTelephonyNumberLookup } from "../../lib/telephony/number-assignment.js";
@@ -717,6 +721,9 @@ export async function handler(
       if (parsed.data.enabled === true) {
         await assertCanUseVoicebot(tenant);
         await assertCanEnableChannel(tenant, bot, "phone");
+        if (aiAssistantUpdates.responseMode === "openai") {
+          await assertOpenAIConfigured(auth.tenantId, ENVIRONMENT);
+        }
       }
 
       if (parsed.data.telephonyWebhookUrl) {

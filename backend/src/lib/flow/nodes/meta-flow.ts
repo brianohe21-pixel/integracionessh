@@ -6,6 +6,7 @@ import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
 import { requireBotId, requireMessagingContext } from "../types.js";
 import { skipWhatsAppOnlyNode } from "./channel-guard.js";
 import { getBotLocale, getSystemMessage, resolveLocalizedText } from "../../i18n/index.js";
+import { persistFlowOutboundMessage } from "../persist-outbound.js";
 
 export async function executeMetaFlowNode(
   node: FlowNode,
@@ -24,7 +25,7 @@ export async function executeMetaFlowNode(
     resolveLocalizedText(node.data.metaFlowCta, locale) ||
     getSystemMessage("metaFlowCtaDefault", locale);
 
-  await sendFlowMessage({
+  const result = await sendFlowMessage({
     phoneNumberId,
     to: customerPhone,
     accessToken,
@@ -32,6 +33,15 @@ export async function executeMetaFlowNode(
     flowCta,
     flowToken,
     ...(ctx.replyToMessageId ? { replyToMessageId: ctx.replyToMessageId } : {}),
+  });
+
+  await persistFlowOutboundMessage({
+    ctx,
+    content: flowCta,
+    messageType: "interactive",
+    skipIfAdapterPersists: false,
+    ...(result.messages?.[0]?.id ? { externalMessageId: result.messages[0].id } : {}),
+    metadata: { kind: "meta_flow", metaFlowId, flowToken },
   });
 
   await setMetaFlowSession(

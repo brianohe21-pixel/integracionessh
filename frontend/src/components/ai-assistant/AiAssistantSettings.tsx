@@ -10,8 +10,13 @@ import { Button } from "@/components/ui/Button";
 import { getAllowedModelDefinitionsForPlan } from "@/lib/plan-config";
 import { AI_MODELS, DEFAULT_MODEL_ID } from "@/lib/ai-models";
 import { AiAssistantDisableBlockers } from "@/components/ai-assistant/AiAssistantDisableBlockers";
+import {
+  AiAssistantOpenAIBlocker,
+  mapAiAssistantEnableError,
+} from "@/components/ai-assistant/AiAssistantOpenAIBlocker";
 import { AiModelPicker } from "@/components/ai-assistant/AiModelPicker";
 import { useBot } from "@/hooks/useBots";
+import { useProviderCredentials } from "@/hooks/useProviderCredentials";
 import { canDisableAiAssistant } from "@/lib/ai-assistant-policy";
 import {
   useAiAssistant,
@@ -31,12 +36,17 @@ export function AiAssistantSettings({ bot }: AiAssistantSettingsProps) {
   const t = useT();
   const { data: config, isLoading } = useAiAssistant(bot.botId);
   const { data: liveBot } = useBot(bot.botId);
+  const { data: credentials } = useProviderCredentials();
   const save = useSaveAiAssistant(bot.botId);
   const enable = useEnableAiAssistant(bot.botId);
   const disable = useDisableAiAssistant(bot.botId);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
   const [showPromptModal, setShowPromptModal] = useState(false);
+  const credentialsReady = credentials !== undefined;
+  const openaiConfigured = Boolean(
+    credentials?.items.some((item) => item.provider === "openai" && item.configured)
+  );
 
   const [form, setForm] = useState({
     systemPrompt: bot.systemPrompt ?? "",
@@ -87,6 +97,10 @@ export function AiAssistantSettings({ bot }: AiAssistantSettingsProps) {
 
   async function handleEnable() {
     setError("");
+    if (credentialsReady && !openaiConfigured) {
+      setError(t("aiAssistant.openaiNotConfigured"));
+      return;
+    }
     if (!form.systemPrompt.trim()) {
       setError(t("aiAssistant.promptRequired"));
       return;
@@ -104,7 +118,7 @@ export function AiAssistantSettings({ bot }: AiAssistantSettingsProps) {
         knowledgeEnabled: form.knowledgeEnabled,
       });
     } catch (err) {
-      setError((err as Error).message);
+      setError(mapAiAssistantEnableError((err as Error).message, t));
     }
   }
 
@@ -165,7 +179,7 @@ export function AiAssistantSettings({ bot }: AiAssistantSettingsProps) {
             <button
               type="button"
               onClick={() => void handleEnable()}
-              disabled={isPending}
+              disabled={isPending || (credentialsReady && !openaiConfigured)}
               className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-60"
             >
               {enable.isPending ? t("common.loading") : t("aiAssistant.enable")}
@@ -192,6 +206,7 @@ export function AiAssistantSettings({ bot }: AiAssistantSettingsProps) {
           )}
         </div>
 
+        {!enabled && credentialsReady && !openaiConfigured ? <AiAssistantOpenAIBlocker /> : null}
         {enabled && disableBlocked ? <AiAssistantDisableBlockers bot={agent} /> : null}
 
         {error && <p className="text-sm text-red-600">{error}</p>}

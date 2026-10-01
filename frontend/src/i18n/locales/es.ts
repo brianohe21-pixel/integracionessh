@@ -736,7 +736,15 @@ export const es = {
     window24Expiring: "Ventana de 24 h por cerrar · quedan {{duration}}",
     window24Closed:
       "Ventana de 24 h cerrada · usa una plantilla para contactar de nuevo",
-    window24Unknown: "Ventana de 24 h · esperando el próximo mensaje del cliente",
+    window24Unknown:
+      "Sin ventana de 24 h · inicia la conversación con una plantilla aprobada",
+    templateComposeTitle: "Iniciar conversación con plantilla",
+    templateComposeHint:
+      "Según Meta, fuera de la ventana de servicio de 24 h solo puedes enviar plantillas aprobadas. Cuando el cliente responda, podrás escribir mensajes libres.",
+    templateComposeManage: "Gestionar plantillas",
+    templateSend: "Enviar plantilla",
+    templateSending: "Enviando…",
+    templateSendFailed: "No se pudo enviar la plantilla",
     window72Eligible:
       "Ventana gratuita de 72 h (anuncio) · responde en {{duration}} para abrirla",
     window72Open: "Ventana gratuita de 72 h abierta · quedan {{duration}}",
@@ -4340,9 +4348,17 @@ export const es = {
       opportunityStageWon: "Ganada",
       opportunityStageLost: "Perdida",
       opportunityPhoneBinding: "Teléfono",
+      opportunityPhoneBindingHint:
+        "Desde WhatsApp usa {{phone}} o {{contact_phone}} (número de la conversación).",
       opportunityNameBinding: "Nombre",
+      opportunityNameBindingHint:
+        "Desde WhatsApp usa {{contact_name}} o {{name}} (nombre de perfil). También {{last_input}} si lo pediste en el chat.",
       opportunityEmailBinding: "Correo",
       opportunityDescriptionBinding: "Descripción",
+      opportunityDescriptionBindingHint:
+        "Puedes usar {{last_input}} o {{contact_name}}. En formularios usa {{form.campo}}.",
+      opportunityTitleBindingHint:
+        "Ejemplo: Oportunidad {{contact_name}}. También {{phone}} o {{last_input}}.",
       opportunityTags: "Etiquetas (separadas por coma)",
       notificationChannel: "Canal",
       notificationMessageType: "Tipo de mensaje",
@@ -4504,6 +4520,8 @@ export const es = {
     hints: {
       conditionBranches: "Conecta cada salida (Sí / No) al siguiente nodo correspondiente.",
       buttonBranches: "Cada botón tiene su propia salida. Máximo 3 botones.",
+      opportunityWhatsAppBindings:
+        "Variables de WhatsApp: {{phone}} (teléfono), {{contact_name}} (nombre de perfil). En formularios usa {{form.campo}}. El último mensaje del usuario es {{last_input}}.",
     },
     previewModal: {
       title: "Vista previa del flujo",
@@ -4592,7 +4610,8 @@ export const es = {
       },
       create_opportunity: {
         description: "Crea una oportunidad de venta con título, monto y contacto.",
-        usage: "Usa bindings {{form.campo}} para título, monto y datos del cliente.",
+        usage:
+          "Desde WhatsApp usa {{phone}} y {{contact_name}}. En formularios usa {{form.campo}}. El último mensaje es {{last_input}}.",
       },
       send_notification: {
         description: "Envía WhatsApp, SMS o email al destinatario indicado.",
@@ -4636,6 +4655,9 @@ export const es = {
     statusInactive: "Inactivo",
     saved: "Configuración guardada",
     promptRequired: "El prompt del sistema es obligatorio para activar el Asistente IA",
+    openaiNotConfigured:
+      "OpenAI no está configurado. Configura la API key en Ajustes antes de activar el Asistente IA.",
+    openaiNotConfiguredLink: "Ir a Ajustes",
     disableBlockedTelephony:
       "Desactiva la telefonía antes de apagar el Asistente IA. Ve a",
     disableBlockedVoicebot:

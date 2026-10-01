@@ -36,13 +36,18 @@ import { buildWaMeLink } from "../../lib/advisor/wa-link.js";
 import { getConversation } from "../../lib/dynamodb/conversation.repository.js";
 import {
   getWhatsAppAccessToken,
+  sendTemplateMessage,
   truncateWhatsAppText,
+  type SendTemplateOptions,
 } from "../../lib/whatsapp/client.js";
 import { getWhatsAppAccessTokenForAccount } from "../../lib/whatsapp/secrets.js";
 import {
   phoneNumberIdForOutbound,
   resolveWhatsAppChannelForConversation,
 } from "../../lib/whatsapp/channel-context.js";
+import { assertCustomerServiceWindowOpen } from "../../lib/whatsapp/messaging-windows.js";
+import { assertWhatsAppOutboundAllowed } from "../../lib/whatsapp/outbound-guard.js";
+import { resolveWhatsAppOutboundRecipient } from "../../lib/whatsapp/identity.js";
 import { getInstagramAccessToken } from "../../lib/instagram/secrets.js";
 import { getTelegramBotToken } from "../../lib/telegram/secrets.js";
 import { getMessengerAccessToken } from "../../lib/messenger/secrets.js";
@@ -122,6 +127,30 @@ const BulkHandoffSchema = z.object({
 const SendMessageSchema = z.object({
   botId: z.string().uuid(),
   content: z.string().min(1).max(1024),
+});
+
+const SendTemplateMessageSchema = z.object({
+  botId: z.string().uuid(),
+  templateName: z.string().min(1).max(512),
+  language: z.string().min(2).max(10),
+  components: z
+    .array(
+      z.object({
+        type: z.string(),
+        sub_type: z.string().optional(),
+        index: z.union([z.string(), z.number()]).optional(),
+        parameters: z
+          .array(
+            z.object({
+              type: z.string(),
+              text: z.string().optional(),
+              image: z.object({ link: z.string() }).optional(),
+            })
+          )
+          .optional(),
+      })
+    )
+    .optional(),
 });
 
 const WorkflowStatusSchema = z.object({
@@ -779,6 +808,10 @@ export async function handler(
       if (!bot) return notFound("Bot not found");
 
       const channel = conversation.channel ?? "whatsapp";
+      if (channel === "whatsapp") {
+        assertCustomerServiceWindowOpen(conversation);
+      }
+
       const tenant = await getTenant(auth.tenantId);
       if (tenant) {
         try {
@@ -890,6 +923,131 @@ export async function handler(
       if (channel !== "webchat") {
         await addMessage(message, parsed.data.botId);
       }
+      await incrementMessages(auth.tenantId);
+
+      const convPatch: Parameters<typeof updateConversation>[3] = {
+        workflowStatus: "open",
+      };
+      if (!conversation.firstHumanResponseAt) {
+        convPatch.firstHumanResponseAt = now;
+      }
+      await updateConversation(
+        auth.tenantId,
+        parsed.data.botId,
+        conversationId,
+        convPatch
+      );
+
+      return created(message);
+    }
+
+    if (method === "POST" && rawPath.endsWith("/messages/template")) {
+      const body = JSON.parse(event.body ?? "{}");
+      const parsed = SendTemplateMessageSchema.safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const conversation = await findConversationById(auth.tenantId, conversationId);
+      if (!conversation || conversation.botId !== parsed.data.botId) {
+        return notFound("Conversation not found");
+      }
+
+      await assertCanAccessConversation(auth, conversation);
+
+      if ((conversation.handoffMode ?? "bot") !== "human") {
+        return badRequest("Conversation is not in human handoff mode");
+      }
+      if ((conversation.channel ?? "whatsapp") !== "whatsapp") {
+        return badRequest("Template messages are only supported for WhatsApp conversations");
+      }
+
+      const bot = await getBot(auth.tenantId, parsed.data.botId);
+      if (!bot) return notFound("Bot not found");
+
+      const tenant = await getTenant(auth.tenantId);
+      if (tenant) {
+        try {
+          await assertCanSendMessages(tenant);
+        } catch (err) {
+          if (err instanceof PlanLimitError) {
+            return forbidden(err.message);
+          }
+          throw err;
+        }
+      }
+
+      const resolvedChannel = await resolveWhatsAppChannelForConversation(conversation, bot);
+      const accessToken = await resolveAccessTokenForChannel(
+        auth.tenantId,
+        "whatsapp",
+        parsed.data.botId,
+        resolvedChannel?.channel.accountId
+      );
+      if (!accessToken) {
+        return badRequest("WhatsApp is not configured for this bot");
+      }
+
+      const outboundPhoneNumberId = phoneNumberIdForOutbound(
+        conversation,
+        bot,
+        resolvedChannel?.channel
+      );
+      if (!outboundPhoneNumberId) {
+        return badRequest("WhatsApp phone number is not configured for this bot");
+      }
+
+      const to = resolveWhatsAppOutboundRecipient({
+        participantId: conversation.participantId,
+        phoneNumber: conversation.phoneNumber,
+        ...(conversation.whatsappUserId ? { whatsappUserId: conversation.whatsappUserId } : {}),
+      });
+
+      await assertWhatsAppOutboundAllowed({
+        tenantId: auth.tenantId,
+        phoneNumberId: outboundPhoneNumberId,
+        kind: "service",
+        to,
+      });
+
+      const result = await sendTemplateMessage({
+        phoneNumberId: outboundPhoneNumberId,
+        to,
+        templateName: parsed.data.templateName,
+        language: parsed.data.language,
+        accessToken,
+        ...(parsed.data.components ? { components: parsed.data.components } : {}),
+      } as SendTemplateOptions);
+
+      let sentByAdvisorId: string | undefined;
+      if (auth.role === "advisor") {
+        const advisor = await resolveAdvisorRecord(auth);
+        sentByAdvisorId = advisor?.advisorId;
+      }
+
+      const now = new Date().toISOString();
+      const externalMessageId = result.messages?.[0]?.id;
+      const message: Message = {
+        messageId: externalMessageId ?? `adv-${randomUUID()}`,
+        conversationId,
+        tenantId: auth.tenantId,
+        role: "advisor",
+        content: parsed.data.templateName,
+        channel: "whatsapp",
+        messageType: "text",
+        source: "panel",
+        metadata: {
+          kind: "whatsapp_template",
+          templateName: parsed.data.templateName,
+          language: parsed.data.language,
+          ...(parsed.data.components ? { components: parsed.data.components } : {}),
+        },
+        ...(sentByAdvisorId ? { sentByAdvisorId } : {}),
+        ...(externalMessageId
+          ? { externalMessageId, whatsappMessageId: externalMessageId }
+          : {}),
+        timestamp: now,
+      };
+
+      await addMessage(message, parsed.data.botId);
       await incrementMessages(auth.tenantId);
 
       const convPatch: Parameters<typeof updateConversation>[3] = {

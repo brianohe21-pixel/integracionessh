@@ -608,6 +608,30 @@ export async function importContactsBatch(
   return { created, updated };
 }
 
+export async function deleteContact(tenantId: string, phone: string): Promise<Contact | null> {
+  const normalized = normalizePhone(phone);
+  const existing = await getContactByPhone(tenantId, normalized);
+  if (!existing) return null;
+
+  await docClient.send(
+    new DeleteCommand({
+      TableName: TABLE_NAME,
+      Key: contactKeys(tenantId, normalized),
+    })
+  );
+
+  if (existing.email) {
+    await docClient.send(
+      new DeleteCommand({
+        TableName: TABLE_NAME,
+        Key: contactEmailKeys(tenantId, existing.email),
+      })
+    );
+  }
+
+  return existing;
+}
+
 export async function suppressContact(tenantId: string, phone: string): Promise<Contact | null> {
   const now = new Date().toISOString();
   return updateContact(tenantId, phone, {

@@ -7,6 +7,7 @@ export type ComplianceAction =
   | "consent_updated"
   | "suppressed"
   | "unsuppressed"
+  | "deleted"
   | "law2300_blocked"
   | "law2300_deferred"
   | "whatsapp_enforcement_blocked"

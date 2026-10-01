@@ -243,6 +243,20 @@ export async function resolveOpenAIApiKey(
   return resolved.payload.apiKey;
 }
 
+export async function assertOpenAIConfigured(
+  tenantId: string,
+  environment: string
+): Promise<void> {
+  try {
+    await resolveOpenAIApiKey(tenantId, environment);
+  } catch {
+    throw Object.assign(
+      new Error("OpenAI is not configured. Configure credentials in account settings."),
+      { statusCode: 400, code: "OPENAI_NOT_CONFIGURED" }
+    );
+  }
+}
+
 export async function resolveTelnyxSecrets(
   tenantId: string,
   environment: string

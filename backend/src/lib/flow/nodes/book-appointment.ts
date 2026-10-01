@@ -1,4 +1,5 @@
-import { buildOutboundContext, sendChannelText } from "../../channels/router.js";
+import { buildOutboundContext } from "../../channels/router.js";
+import { sendFlowChannelText } from "../send-text.js";
 import { sendInteractiveButtons } from "../../whatsapp/flows.js";
 import type { FlowNode, FlowRun } from "../../../types/index.js";
 import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
@@ -82,7 +83,7 @@ async function sendOptions(
   }
 
   const numbered = buildNumberedOptions(options);
-  await sendChannelText(outbound, `${bodyText}\n\n${numbered.text}`);
+  await sendFlowChannelText(ctx, outbound, `${bodyText}\n\n${numbered.text}`);
 }
 
 export async function executeBookAppointmentNode(
@@ -97,7 +98,8 @@ export async function executeBookAppointmentNode(
   try {
     config = await requireEnabledCalendar(ctx.tenantId, botId);
   } catch {
-    await sendChannelText(
+    await sendFlowChannelText(
+      ctx,
       buildOutboundContext({
         tenantId: ctx.tenantId,
         botId: botId,
@@ -147,7 +149,8 @@ export async function executeBookAppointmentNode(
         const confirmation = result.payment
           ? `${confirmationBase} ${getSystemMessage("bookingPaymentLink", locale)}`
           : confirmationBase;
-        await sendChannelText(
+        await sendFlowChannelText(
+          ctx,
           buildOutboundContext({
             tenantId: ctx.tenantId,
             botId: botId,
@@ -172,7 +175,8 @@ export async function executeBookAppointmentNode(
         };
       } catch (err) {
         const message = err instanceof Error ? err.message : "No se pudo agendar la cita";
-        await sendChannelText(
+        await sendFlowChannelText(
+          ctx,
           buildOutboundContext({
             tenantId: ctx.tenantId,
             botId: botId,
@@ -192,7 +196,8 @@ export async function executeBookAppointmentNode(
       }
     }
     if (selection === CONFIRM_NO || selection === "2") {
-      await sendChannelText(
+      await sendFlowChannelText(
+        ctx,
         buildOutboundContext({
           tenantId: ctx.tenantId,
           botId: botId,
@@ -219,7 +224,8 @@ export async function executeBookAppointmentNode(
       maxDays,
     });
     if (dates.length === 0) {
-      await sendChannelText(
+      await sendFlowChannelText(
+        ctx,
         buildOutboundContext({
           tenantId: ctx.tenantId,
           botId: botId,
@@ -280,7 +286,8 @@ export async function executeBookAppointmentNode(
       isoDate,
     });
     if (slots.length === 0) {
-      await sendChannelText(
+      await sendFlowChannelText(
+        ctx,
         buildOutboundContext({
           tenantId: ctx.tenantId,
           botId: botId,

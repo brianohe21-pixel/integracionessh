@@ -16,3 +16,35 @@ export function shouldOpenFreeEntryPoint(
   if (!Number.isFinite(createdMs) || !Number.isFinite(replyMs)) return false;
   return replyMs - createdMs <= FREE_ENTRY_POINT_REPLY_WINDOW_MS;
 }
+
+export function isCustomerServiceWindowOpen(
+  conversation: Pick<Conversation, "lastInboundAt" | "channel"> | null,
+  nowMs: number = Date.now()
+): boolean {
+  if (!conversation) return false;
+  if ((conversation.channel ?? "whatsapp") !== "whatsapp") return true;
+  if (!conversation.lastInboundAt) return false;
+  const lastInboundMs = new Date(conversation.lastInboundAt).getTime();
+  if (!Number.isFinite(lastInboundMs)) return false;
+  return nowMs - lastInboundMs <= CUSTOMER_SERVICE_WINDOW_MS;
+}
+
+export class CustomerServiceWindowClosedError extends Error {
+  statusCode = 400;
+  code = "CUSTOMER_SERVICE_WINDOW_CLOSED";
+
+  constructor(
+    message = "Customer service window is closed. Send an approved WhatsApp template message instead."
+  ) {
+    super(message);
+  }
+}
+
+export function assertCustomerServiceWindowOpen(
+  conversation: Pick<Conversation, "lastInboundAt" | "channel"> | null,
+  nowMs: number = Date.now()
+): void {
+  if (!isCustomerServiceWindowOpen(conversation, nowMs)) {
+    throw new CustomerServiceWindowClosedError();
+  }
+}

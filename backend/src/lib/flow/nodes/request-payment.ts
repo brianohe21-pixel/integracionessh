@@ -1,4 +1,5 @@
-import { buildOutboundContext, sendChannelText } from "../../channels/router.js";
+import { buildOutboundContext } from "../../channels/router.js";
+import { sendFlowChannelText } from "../send-text.js";
 import type { FlowNode, FlowRun } from "../../../types/index.js";
 import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
 import { requireBotContext, requireMessagingContext } from "../types.js";
@@ -23,7 +24,8 @@ export async function executeRequestPaymentNode(
     getSystemMessage("paymentDefault", locale);
 
   if (!amountInCents || amountInCents < 1000) {
-    await sendChannelText(
+    await sendFlowChannelText(
+      ctx,
       buildOutboundContext({
         tenantId: ctx.tenantId,
         botId,
@@ -60,7 +62,8 @@ export async function executeRequestPaymentNode(
       description
     );
 
-    await sendChannelText(
+    await sendFlowChannelText(
+      ctx,
       buildOutboundContext({
         tenantId: ctx.tenantId,
         botId,
@@ -97,7 +100,8 @@ export async function executeRequestPaymentNode(
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : "No se pudo crear el cobro";
-    await sendChannelText(
+    await sendFlowChannelText(
+      ctx,
       buildOutboundContext({
         tenantId: ctx.tenantId,
         botId,
