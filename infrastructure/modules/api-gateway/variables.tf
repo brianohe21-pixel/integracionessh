@@ -390,6 +390,14 @@ variable "google_business_function_arn" {
   type = string
 }
 
+variable "shopify_invoke_arn" {
+  type = string
+}
+
+variable "shopify_function_arn" {
+  type = string
+}
+
 variable "allowed_origins" {
   type    = list(string)
   default = ["*"]

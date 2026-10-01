@@ -4,7 +4,7 @@ import type { TemplateButton, TemplateComponent } from "@/types";
 export type TemplateCategory = "MARKETING" | "UTILITY" | "AUTHENTICATION";
 
 export type TemplateButtonFormValue = {
-  type: TemplateButton["type"];
+  type: Exclude<TemplateButton["type"], "OTP">;
   text: string;
   url?: string;
   phone_number?: string;
@@ -14,6 +14,8 @@ export type TemplateButtonFormValue = {
 export const MAX_QUICK_REPLY_BUTTONS = 3;
 export const MAX_CTA_BUTTONS = 2;
 export const BUTTON_TEXT_MAX_LENGTH = 25;
+export const AUTH_OTP_CODE_EXPIRATION_MIN = 1;
+export const AUTH_OTP_CODE_EXPIRATION_MAX = 90;
 
 export interface WhatsAppTemplateFormValues {
   headerText: string;
@@ -22,6 +24,13 @@ export interface WhatsAppTemplateFormValues {
   headerExamples: Record<string, string>;
   bodyExamples: Record<string, string>;
   buttons: TemplateButtonFormValue[];
+}
+
+export interface AuthOtpTemplateFormValues {
+  addSecurityRecommendation: boolean;
+  includeCodeExpiration: boolean;
+  codeExpirationMinutes: number;
+  copyCodeButtonText: string;
 }
 
 export interface SmsTemplateFormValues {
@@ -35,6 +44,13 @@ export const EMPTY_WHATSAPP_FORM: WhatsAppTemplateFormValues = {
   headerExamples: {},
   bodyExamples: {},
   buttons: [],
+};
+
+export const EMPTY_AUTH_OTP_FORM: AuthOtpTemplateFormValues = {
+  addSecurityRecommendation: true,
+  includeCodeExpiration: true,
+  codeExpirationMinutes: 5,
+  copyCodeButtonText: "",
 };
 
 function isQuickReplyButton(type: TemplateButton["type"]): boolean {
@@ -89,6 +105,83 @@ function buildTemplateButton(button: TemplateButtonFormValue): TemplateButton {
     built.phone_number = button.phone_number?.trim();
   }
   return built;
+}
+
+export function buildAuthOtpComponents(values: AuthOtpTemplateFormValues): TemplateComponent[] {
+  const components: TemplateComponent[] = [
+    {
+      type: "BODY",
+      add_security_recommendation: values.addSecurityRecommendation,
+    },
+  ];
+
+  if (values.includeCodeExpiration) {
+    components.push({
+      type: "FOOTER",
+      code_expiration_minutes: values.codeExpirationMinutes,
+    });
+  }
+
+  const buttonText = values.copyCodeButtonText.trim();
+  const otpButton: TemplateButton = {
+    type: "OTP",
+    otp_type: "COPY_CODE",
+    ...(buttonText ? { text: buttonText } : {}),
+  };
+
+  components.push({
+    type: "BUTTONS",
+    buttons: [otpButton],
+  });
+
+  return components;
+}
+
+export function authOtpFormFromComponents(
+  components: TemplateComponent[]
+): AuthOtpTemplateFormValues {
+  const body = components.find((c) => c.type === "BODY");
+  const footer = components.find((c) => c.type === "FOOTER");
+  const buttons = components.find((c) => c.type === "BUTTONS");
+  const otpButton = buttons?.buttons?.find((b) => b.type === "OTP");
+  const expiration = footer?.code_expiration_minutes;
+
+  return {
+    addSecurityRecommendation: body?.add_security_recommendation ?? true,
+    includeCodeExpiration:
+      typeof expiration === "number" &&
+      expiration >= AUTH_OTP_CODE_EXPIRATION_MIN &&
+      expiration <= AUTH_OTP_CODE_EXPIRATION_MAX,
+    codeExpirationMinutes:
+      typeof expiration === "number" &&
+      expiration >= AUTH_OTP_CODE_EXPIRATION_MIN &&
+      expiration <= AUTH_OTP_CODE_EXPIRATION_MAX
+        ? expiration
+        : EMPTY_AUTH_OTP_FORM.codeExpirationMinutes,
+    copyCodeButtonText: otpButton?.text?.trim() ?? "",
+  };
+}
+
+export function isAuthOtpFormValid(values: AuthOtpTemplateFormValues): boolean {
+  if (values.copyCodeButtonText.trim().length > BUTTON_TEXT_MAX_LENGTH) return false;
+  if (!values.includeCodeExpiration) return true;
+  return (
+    Number.isInteger(values.codeExpirationMinutes) &&
+    values.codeExpirationMinutes >= AUTH_OTP_CODE_EXPIRATION_MIN &&
+    values.codeExpirationMinutes <= AUTH_OTP_CODE_EXPIRATION_MAX
+  );
+}
+
+export function isAuthenticationTemplate(components: TemplateComponent[]): boolean {
+  return components.some(
+    (component) =>
+      typeof component.add_security_recommendation === "boolean" ||
+      typeof component.code_expiration_minutes === "number" ||
+      component.buttons?.some(
+        (button) =>
+          button.type === "OTP" || String(button.otp_type ?? "").toUpperCase() === "COPY_CODE"
+      )
+  );
 }
 
 export const EMPTY_SMS_FORM: SmsTemplateFormValues = {
@@ -161,13 +254,18 @@ export function whatsAppFormFromComponents(components: TemplateComponent[]): Wha
   }
   const buttonsComponent = components.find((c) => c.type === "BUTTONS");
   const buttons: TemplateButtonFormValue[] =
-    buttonsComponent?.buttons?.map((button) => ({
-      type: button.type,
-      text: button.text,
-      ...(button.url ? { url: button.url } : {}),
-      ...(button.phone_number ? { phone_number: button.phone_number } : {}),
-      ...(button.example?.[0] ? { urlExample: button.example[0] } : {}),
-    })) ?? [];
+    buttonsComponent?.buttons
+      ?.filter(
+        (button): button is TemplateButton & { type: Exclude<TemplateButton["type"], "OTP"> } =>
+          button.type !== "OTP"
+      )
+      .map((button) => ({
+        type: button.type,
+        text: button.text ?? "",
+        ...(button.url ? { url: button.url } : {}),
+        ...(button.phone_number ? { phone_number: button.phone_number } : {}),
+        ...(button.example?.[0] ? { urlExample: button.example[0] } : {}),
+      })) ?? [];
 
   return {
     headerText,

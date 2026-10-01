@@ -101,6 +101,7 @@ locals {
     mailrelay          = var.mailrelay_function_arn
     mailrelay_webhook  = var.mailrelay_webhook_function_arn
     google_business    = var.google_business_function_arn
+    shopify            = var.shopify_function_arn
   }
 
   lambda_invoke_arns = {
@@ -151,6 +152,7 @@ locals {
     mailrelay          = var.mailrelay_invoke_arn
     mailrelay_webhook  = var.mailrelay_webhook_invoke_arn
     google_business    = var.google_business_invoke_arn
+    shopify            = var.shopify_invoke_arn
   }
 
   http_proxy_groups = {
@@ -208,6 +210,14 @@ locals {
       methods      = ["GET", "PUT", "DELETE"]
       invoke_arn   = var.google_business_invoke_arn
       function_arn = var.google_business_function_arn
+      protected    = true
+    }
+    shopify = {
+      path         = "/shopify/{proxy+}"
+      slug         = "shopify"
+      methods      = ["GET", "POST", "PATCH", "DELETE"]
+      invoke_arn   = var.shopify_invoke_arn
+      function_arn = var.shopify_function_arn
       protected    = true
     }
     sales = {
@@ -1152,6 +1162,20 @@ locals {
       slug         = "tenants"
       invoke_arn   = var.tenants_invoke_arn
       function_arn = var.tenants_function_arn
+      protected    = false
+    }
+    public_shopify_oauth_callback = {
+      route_key    = "GET /public/integrations/shopify/oauth/callback"
+      slug         = "shopify"
+      invoke_arn   = var.shopify_invoke_arn
+      function_arn = var.shopify_function_arn
+      protected    = false
+    }
+    public_shopify_webhook = {
+      route_key    = "POST /public/integrations/shopify/webhook"
+      slug         = "shopify"
+      invoke_arn   = var.shopify_invoke_arn
+      function_arn = var.shopify_function_arn
       protected    = false
     }
     auth_portal_access = {

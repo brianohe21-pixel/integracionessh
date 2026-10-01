@@ -402,6 +402,18 @@ output "google_business_function_arn" {
   value = aws_lambda_function.functions["google_business"].arn
 }
 
+output "shopify_invoke_arn" {
+  value = aws_lambda_function.functions["shopify"].invoke_arn
+}
+
+output "shopify_function_arn" {
+  value = aws_lambda_function.functions["shopify"].arn
+}
+
+output "process_shopify_function_arn" {
+  value = aws_lambda_function.functions["process_shopify"].arn
+}
+
 output "lambda_log_group_ids" {
   value = {
     for k, _ in local.functions : k => "/aws/lambda/${var.project}-${var.environment}-${replace(k, "_", "-")}"

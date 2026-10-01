@@ -17,11 +17,17 @@ import type { MessageTemplate, OutreachChannel } from "@/types";
 import { isSmsTemplate } from "@/types";
 import { OutreachChannelSelect } from "@/components/outreach/OutreachChannelSelect";
 import { SmsTemplatePreview } from "@/components/templates/SmsTemplatePreview";
-import { TemplateChannelForm } from "@/components/templates/channel/TemplateChannelForm";
+import { TemplateMessagePreview } from "@/components/templates/TemplateMessagePreview";
+import { TemplateEditorDialog } from "@/components/templates/TemplateEditorDialog";
 import {
+  authOtpFormFromComponents,
+  buildAuthOtpComponents,
   buildWhatsAppComponents,
+  EMPTY_AUTH_OTP_FORM,
   EMPTY_SMS_FORM,
   EMPTY_WHATSAPP_FORM,
+  isAuthOtpFormValid,
+  isAuthenticationTemplate,
   isWhatsAppFormValid,
   whatsAppFormFromComponents,
 } from "@/components/templates/channel/types";
@@ -46,7 +52,7 @@ import { TableContainer } from "@/components/ui/TableContainer";
 import { ContextualHint } from "@/components/help-center/ContextualHint";
 import { TourPageSuggestion } from "@/components/help-center/TourList";
 import { Modal } from "@/components/ui/Modal";
-import { Input, Select } from "@/components/ui/Input";
+import { Input } from "@/components/ui/Input";
 
 type DialogMode = "create" | "edit" | null;
 
@@ -113,6 +119,7 @@ export default function TemplatesPage() {
   const [formLanguage, setFormLanguage] = useState("es");
   const [formCategory, setFormCategory] = useState<"MARKETING" | "UTILITY" | "AUTHENTICATION">("UTILITY");
   const [whatsappForm, setWhatsappForm] = useState(EMPTY_WHATSAPP_FORM);
+  const [authOtpForm, setAuthOtpForm] = useState(EMPTY_AUTH_OTP_FORM);
   const [smsForm, setSmsForm] = useState(EMPTY_SMS_FORM);
 
   const [sendTo, setSendTo] = useState("");
@@ -129,6 +136,7 @@ export default function TemplatesPage() {
     setDialogChannel(channelFilter);
     setFormBotId(botFilter);
     setWhatsappForm(EMPTY_WHATSAPP_FORM);
+    setAuthOtpForm(EMPTY_AUTH_OTP_FORM);
     setSmsForm(EMPTY_SMS_FORM);
     setEditingTemplate(null);
     setDialogMode("create");
@@ -152,7 +160,16 @@ export default function TemplatesPage() {
     setFormLanguage(template.language);
     setFormCategory(template.category);
     setDialogChannel("whatsapp");
-    setWhatsappForm(whatsAppFormFromComponents(template.components));
+    if (
+      template.category === "AUTHENTICATION" ||
+      isAuthenticationTemplate(template.components)
+    ) {
+      setAuthOtpForm(authOtpFormFromComponents(template.components));
+      setWhatsappForm(EMPTY_WHATSAPP_FORM);
+    } else {
+      setWhatsappForm(whatsAppFormFromComponents(template.components));
+      setAuthOtpForm(EMPTY_AUTH_OTP_FORM);
+    }
     setEditingTemplate(template);
     setDialogMode("edit");
   }
@@ -160,6 +177,14 @@ export default function TemplatesPage() {
   function openSend(template: MessageTemplate) {
     setSendTo("");
     setSendRequestDlr(false);
+    if (
+      !isSmsTemplate(template) &&
+      (template.category === "AUTHENTICATION" || isAuthenticationTemplate(template.components))
+    ) {
+      setSendParams({ "{{1}}": "" });
+      setSendTarget(template);
+      return;
+    }
     const bodyText = isSmsTemplate(template)
       ? template.body
       : template.components.find((c) => c.type === "BODY")?.text ?? "";
@@ -174,9 +199,18 @@ export default function TemplatesPage() {
     const activeChannel = dialogMode === "create" ? dialogChannel : channelFilter;
     const targetBotId =
       dialogMode === "create" ? formBotId : editingTemplate?.botId ?? botFilter;
+    const isAuthOtpWhatsapp =
+      activeChannel === "whatsapp" && formCategory === "AUTHENTICATION";
     if (!targetBotId) return;
     if (activeChannel === "sms" && !smsForm.body.trim()) return;
-    if (activeChannel === "whatsapp" && !isWhatsAppFormValid(whatsappForm)) return;
+    if (isAuthOtpWhatsapp && !isAuthOtpFormValid(authOtpForm)) return;
+    if (
+      activeChannel === "whatsapp" &&
+      !isAuthOtpWhatsapp &&
+      !isWhatsAppFormValid(whatsappForm)
+    ) {
+      return;
+    }
 
     setFormError("");
     try {
@@ -203,14 +237,18 @@ export default function TemplatesPage() {
           name: formName,
           language: formLanguage,
           category: formCategory,
-          components: buildWhatsAppComponents(whatsappForm),
+          components: isAuthOtpWhatsapp
+            ? buildAuthOtpComponents(authOtpForm)
+            : buildWhatsAppComponents(whatsappForm),
         });
       } else if (dialogMode === "edit" && editingTemplate) {
         await updateWhatsappMutation.mutateAsync({
           name: editingTemplate.name,
           botId: targetBotId,
           language: editingTemplate.language,
-          components: buildWhatsAppComponents(whatsappForm),
+          components: isAuthOtpWhatsapp
+            ? buildAuthOtpComponents(authOtpForm)
+            : buildWhatsAppComponents(whatsappForm),
         });
       }
 
@@ -239,13 +277,31 @@ export default function TemplatesPage() {
   async function handleSend() {
     if (!sendTarget || !sendTo.trim()) return;
 
+    const isAuthOtpSend =
+      !isSmsTemplate(sendTarget) &&
+      (sendTarget.category === "AUTHENTICATION" ||
+        isAuthenticationTemplate(sendTarget.components));
     const bodyVarKeys = Object.keys(sendParams);
-    const bodyParams = bodyVarKeys.length
-      ? [{
-          type: "body",
-          parameters: bodyVarKeys.map((k) => ({ type: "text" as const, text: sendParams[k] })),
-        }]
-      : undefined;
+    const otpCode = sendParams["{{1}}"]?.trim() || Object.values(sendParams)[0]?.trim() || "";
+    const bodyParams = isAuthOtpSend
+      ? [
+          {
+            type: "body",
+            parameters: [{ type: "text" as const, text: otpCode }],
+          },
+          {
+            type: "button",
+            sub_type: "url",
+            index: "0",
+            parameters: [{ type: "text" as const, text: otpCode }],
+          },
+        ]
+      : bodyVarKeys.length
+        ? [{
+            type: "body",
+            parameters: bodyVarKeys.map((k) => ({ type: "text" as const, text: sendParams[k] })),
+          }]
+        : undefined;
 
     const sendMutation = isSmsTemplate(sendTarget) ? sendSmsMutation : sendWhatsappMutation;
 
@@ -284,7 +340,9 @@ export default function TemplatesPage() {
     (dialogMode !== "create" || !!formBotId) &&
     (activeDialogChannel === "sms"
       ? !!smsForm.body.trim()
-      : isWhatsAppFormValid(whatsappForm));
+      : formCategory === "AUTHENTICATION"
+        ? isAuthOtpFormValid(authOtpForm)
+        : isWhatsAppFormValid(whatsappForm));
 
   return (
     <DashboardPage>
@@ -543,110 +601,50 @@ export default function TemplatesPage() {
       )}
 
       {dialogMode && (
-        <Modal>
-          <div className="bg-surface-elevated rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-default">
-              <h2 className="text-lg font-semibold text-primary">
-                {dialogMode === "create" ? t("templates.createDialog") : t("templates.editDialog")}
-              </h2>
-              <button
-                onClick={() => setDialogMode(null)}
-                className="p-1 rounded-md text-muted hover:text-secondary hover:bg-surface-muted"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="px-6 py-5 space-y-4">
-              {formError && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                  <p className="text-sm text-red-600">{formError}</p>
-                </div>
-              )}
-              <div>
-                <label className="block text-sm font-medium text-secondary mb-1">{t("templates.name")}</label>
-                <Input
-                  type="text"
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_"))}
-                  disabled={dialogMode === "edit"}
-                  placeholder={t("templates.namePlaceholder")}
-                />
-                <p className="text-xs text-muted mt-1">{t("templates.nameHint")}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-secondary mb-1">{t("templates.language")}</label>
-                  <Select
-                    value={formLanguage}
-                    onChange={(e) => setFormLanguage(e.target.value)}
-                    disabled={dialogMode === "edit"}
-                  >
-                    {LANGUAGES.map((l) => (
-                      <option key={l.code} value={l.code}>{l.label}</option>
-                    ))}
-                  </Select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-secondary mb-1">{t("templates.category")}</label>
-                  <Select
-                    value={formCategory}
-                    onChange={(e) => setFormCategory(e.target.value as typeof formCategory)}
-                    disabled={dialogMode === "edit"}
-                  >
-                    <option value="UTILITY">{t("templates.categoryUtility")}</option>
-                    <option value="MARKETING">{t("templates.categoryMarketing")}</option>
-                    <option value="AUTHENTICATION">{t("templates.categoryAuth")}</option>
-                  </Select>
-                </div>
-              </div>
-              {dialogMode === "create" && (
-                <div>
-                  <label className="block text-sm font-medium text-secondary mb-1">{t("templates.colBot")}</label>
-                  <Select
-                    value={formBotId}
-                    onChange={(e) => setFormBotId(e.target.value)}
-                  >
-                    <option value="">{t("templates.selectBotTitle")}</option>
-                    {dialogBots.map((bot) => (
-                      <option key={bot.botId} value={bot.botId}>
-                        {bot.name}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-              )}
-              <TemplateChannelForm
-                channel={activeDialogChannel}
-                onChannelChange={dialogMode === "create" ? setDialogChannel : undefined}
-                showChannelSelect={dialogMode === "create"}
-                whatsapp={whatsappForm}
-                onWhatsappChange={setWhatsappForm}
-                sms={smsForm}
-                onSmsChange={setSmsForm}
-                previewName={formName || "preview"}
-              />
-            </div>
-            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-default">
-              <button
-                onClick={() => setDialogMode(null)}
-                className="px-4 py-2 text-sm font-medium text-secondary bg-surface-elevated border border-field-border rounded-lg hover:bg-surface transition-colors"
-              >
-                {t("templates.cancelDialog")}
-              </button>
-              <button
-                onClick={handleCreateOrUpdate}
-                disabled={
-                  isSubmitting ||
-                  !canSubmitForm ||
-                  (dialogMode === "create" && !formName.trim())
+        <TemplateEditorDialog
+          mode={dialogMode}
+          channel={activeDialogChannel}
+          onChannelChange={
+            dialogMode === "create"
+              ? (nextChannel) => {
+                  setDialogChannel(nextChannel);
+                  if (nextChannel === "sms" && formCategory === "AUTHENTICATION") {
+                    setFormCategory("UTILITY");
+                    setWhatsappForm(EMPTY_WHATSAPP_FORM);
+                  }
                 }
-                className="px-4 py-2 text-sm font-medium text-white bg-accent rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? t("auth.saving") : dialogMode === "create" ? t("common.create") : t("common.update")}
-              </button>
-            </div>
-          </div>
-        </Modal>
+              : undefined
+          }
+          showChannelSelect={dialogMode === "create"}
+          bots={dialogBots.map((bot) => ({ botId: bot.botId, name: bot.name }))}
+          botId={formBotId}
+          onBotIdChange={setFormBotId}
+          name={formName}
+          onNameChange={setFormName}
+          language={formLanguage}
+          onLanguageChange={setFormLanguage}
+          languages={LANGUAGES}
+          category={formCategory}
+          onCategoryChange={(next) => {
+            setFormCategory(next);
+            if (next === "AUTHENTICATION") {
+              setAuthOtpForm(EMPTY_AUTH_OTP_FORM);
+            } else {
+              setWhatsappForm(EMPTY_WHATSAPP_FORM);
+            }
+          }}
+          whatsapp={whatsappForm}
+          onWhatsappChange={setWhatsappForm}
+          authOtp={authOtpForm}
+          onAuthOtpChange={setAuthOtpForm}
+          sms={smsForm}
+          onSmsChange={setSmsForm}
+          error={formError}
+          submitting={isSubmitting}
+          canSubmit={canSubmitForm}
+          onClose={() => setDialogMode(null)}
+          onSubmit={handleCreateOrUpdate}
+        />
       )}
 
       {sendTarget && (
@@ -695,19 +693,32 @@ export default function TemplatesPage() {
               {Object.keys(sendParams).length > 0 && (
                 <div className="space-y-3">
                   <p className="text-sm font-medium text-secondary">{t("templates.templateVars")}</p>
-                  {Object.keys(sendParams).map((key) => (
-                    <div key={key}>
-                      <label className="block text-xs text-secondary mb-1">{key}</label>
-                      <Input
-                        type="text"
-                        value={sendParams[key]}
-                        onChange={(e) =>
-                          setSendParams((prev) => ({ ...prev, [key]: e.target.value }))
-                        }
-                        placeholder={t("templates.valueFor", { key })}
-                      />
-                    </div>
-                  ))}
+                  {Object.keys(sendParams).map((key) => {
+                    const isAuthCodeField =
+                      !isSmsTemplate(sendTarget) &&
+                      (sendTarget.category === "AUTHENTICATION" ||
+                        isAuthenticationTemplate(sendTarget.components)) &&
+                      key === "{{1}}";
+                    return (
+                      <div key={key}>
+                        <label className="block text-xs text-secondary mb-1">
+                          {isAuthCodeField ? t("templates.authOtpCodeLabel") : key}
+                        </label>
+                        <Input
+                          type="text"
+                          value={sendParams[key]}
+                          onChange={(e) =>
+                            setSendParams((prev) => ({ ...prev, [key]: e.target.value }))
+                          }
+                          placeholder={
+                            isAuthCodeField
+                              ? "123456"
+                              : t("templates.valueFor", { key })
+                          }
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
@@ -717,30 +728,17 @@ export default function TemplatesPage() {
                   label={t("templates.previewLabel")}
                 />
               ) : (
-              <div className="bg-surface rounded-xl p-4">
-                <p className="text-xs font-medium text-secondary mb-2">{t("templates.previewLabel")}</p>
-                <div className="bg-surface-elevated rounded-lg p-3 border border-default">
-                  {sendTarget.components.find((c) => c.type === "HEADER")?.text && (
-                    <p className="text-sm font-semibold text-primary mb-1">
-                      {sendTarget.components.find((c) => c.type === "HEADER")!.text}
-                    </p>
-                  )}
-                  <p className="text-sm text-secondary whitespace-pre-wrap">
-                    {(() => {
-                      let body = sendTarget.components.find((c) => c.type === "BODY")?.text ?? "";
-                      Object.entries(sendParams).forEach(([key, val]) => {
-                        if (val) body = body.replace(key, val);
-                      });
-                      return body;
-                    })()}
-                  </p>
-                  {sendTarget.components.find((c) => c.type === "FOOTER")?.text && (
-                    <p className="text-xs text-muted mt-2">
-                      {sendTarget.components.find((c) => c.type === "FOOTER")!.text}
-                    </p>
-                  )}
-                </div>
-              </div>
+                <TemplateMessagePreview
+                  template={sendTarget}
+                  variableValues={
+                    Object.keys(sendParams).length
+                      ? Object.keys(sendParams)
+                          .sort()
+                          .map((key) => sendParams[key] ?? "")
+                      : undefined
+                  }
+                  label={t("templates.previewLabel")}
+                />
               )}
             </div>
             {sendError && (

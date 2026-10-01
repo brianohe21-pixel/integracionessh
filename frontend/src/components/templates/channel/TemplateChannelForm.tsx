@@ -6,16 +6,25 @@ import { Select } from "@/components/ui/Input";
 import { SmsTemplatePreview } from "@/components/templates/SmsTemplatePreview";
 import { TemplateMessagePreview } from "@/components/templates/TemplateMessagePreview";
 import type { OutreachChannel } from "@/types";
+import { AuthOtpTemplateFormFields } from "./AuthOtpTemplateFormFields";
 import { SmsTemplateFormFields } from "./SmsTemplateFormFields";
 import { WhatsAppTemplateFormFields } from "./WhatsAppTemplateFormFields";
-import { buildWhatsAppComponents } from "./types";
-import type { SmsTemplateFormValues, WhatsAppTemplateFormValues } from "./types";
+import { buildAuthOtpComponents, buildWhatsAppComponents } from "./types";
+import type {
+  AuthOtpTemplateFormValues,
+  SmsTemplateFormValues,
+  TemplateCategory,
+  WhatsAppTemplateFormValues,
+} from "./types";
 
 interface TemplateChannelFormProps {
   channel: OutreachChannel;
   onChannelChange?: (channel: OutreachChannel) => void;
+  category?: TemplateCategory;
   whatsapp: WhatsAppTemplateFormValues;
   onWhatsappChange: (values: WhatsAppTemplateFormValues) => void;
+  authOtp: AuthOtpTemplateFormValues;
+  onAuthOtpChange: (values: AuthOtpTemplateFormValues) => void;
   sms: SmsTemplateFormValues;
   onSmsChange: (values: SmsTemplateFormValues) => void;
   showChannelSelect?: boolean;
@@ -26,8 +35,11 @@ interface TemplateChannelFormProps {
 export function TemplateChannelForm({
   channel,
   onChannelChange,
+  category = "UTILITY",
   whatsapp,
   onWhatsappChange,
+  authOtp,
+  onAuthOtpChange,
   sms,
   onSmsChange,
   showChannelSelect = false,
@@ -35,6 +47,7 @@ export function TemplateChannelForm({
   previewName = "preview",
 }: TemplateChannelFormProps) {
   const t = useT();
+  const isAuthOtp = channel === "whatsapp" && category === "AUTHENTICATION";
 
   const whatsappPreview = useMemo(
     () => ({
@@ -43,13 +56,15 @@ export function TemplateChannelForm({
       botId: "",
       name: previewName,
       language: "es",
-      category: "UTILITY" as const,
+      category: isAuthOtp ? ("AUTHENTICATION" as const) : ("UTILITY" as const),
       status: "APPROVED" as const,
-      components: buildWhatsAppComponents(whatsapp),
+      components: isAuthOtp
+        ? buildAuthOtpComponents(authOtp)
+        : buildWhatsAppComponents(whatsapp),
       syncedAt: "",
       createdAt: "",
     }),
-    [whatsapp, previewName]
+    [authOtp, isAuthOtp, previewName, whatsapp]
   );
 
   const smsPreview = useMemo(
@@ -89,6 +104,8 @@ export function TemplateChannelForm({
 
       {channel === "sms" ? (
         <SmsTemplateFormFields values={sms} onChange={onSmsChange} />
+      ) : isAuthOtp ? (
+        <AuthOtpTemplateFormFields values={authOtp} onChange={onAuthOtpChange} />
       ) : (
         <WhatsAppTemplateFormFields values={whatsapp} onChange={onWhatsappChange} />
       )}
@@ -97,7 +114,7 @@ export function TemplateChannelForm({
         <SmsTemplatePreview template={smsPreview} label={t("templates.previewLabel")} />
       )}
 
-      {showPreview && channel === "whatsapp" && whatsapp.bodyText.trim() && (
+      {showPreview && channel === "whatsapp" && (isAuthOtp || whatsapp.bodyText.trim()) && (
         <TemplateMessagePreview template={whatsappPreview} label={t("templates.previewLabel")} />
       )}
     </div>

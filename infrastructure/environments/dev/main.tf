@@ -162,6 +162,7 @@ resource "aws_iam_role_policy" "scheduler_invoke" {
         module.lambda.calendar_function_arn,
         module.lambda.reports_function_arn,
         module.lambda.sales_function_arn,
+        module.lambda.process_shopify_function_arn,
       ]
     }]
   })
@@ -215,6 +216,8 @@ module "lambda" {
   whatsapp_sync_sqs_queue_arn    = module.sqs.whatsapp_sync_queue_arn
   sequence_sqs_queue_url         = module.sqs.sequence_queue_url
   sequence_sqs_queue_arn         = module.sqs.sequence_queue_arn
+  shopify_events_sqs_queue_url   = module.sqs.shopify_events_queue_url
+  shopify_events_sqs_queue_arn   = module.sqs.shopify_events_queue_arn
   mailrelay_event_types          = var.mailrelay_event_types
   scheduler_role_arn             = aws_iam_role.scheduler.arn
   media_bucket_arn               = module.s3.media_bucket_arn
@@ -256,6 +259,9 @@ module "lambda" {
   google_business_client_secret  = var.google_business_client_secret
   google_calendar_client_id      = var.google_calendar_client_id
   google_calendar_client_secret  = var.google_calendar_client_secret
+  shopify_api_key                = var.shopify_api_key
+  shopify_api_secret             = var.shopify_api_secret
+  shopify_api_version            = var.shopify_api_version
   enable_newrelic                = var.enable_newrelic
   newrelic_account_id            = var.newrelic_account_id
   newrelic_license_key           = var.newrelic_license_key
@@ -364,6 +370,8 @@ module "api_gateway" {
   mailrelay_webhook_function_arn  = module.lambda.mailrelay_webhook_function_arn
   google_business_invoke_arn      = module.lambda.google_business_invoke_arn
   google_business_function_arn    = module.lambda.google_business_function_arn
+  shopify_invoke_arn              = module.lambda.shopify_invoke_arn
+  shopify_function_arn            = module.lambda.shopify_function_arn
   allowed_origins                 = ["*"]
   api_custom_domain               = var.api_custom_domain
   tags                            = local.tags

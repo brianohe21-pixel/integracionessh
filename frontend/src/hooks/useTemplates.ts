@@ -83,6 +83,8 @@ export function useSendTemplate(channel: OutreachChannel = "whatsapp") {
       requestDlr?: boolean;
       components?: Array<{
         type: string;
+        sub_type?: string;
+        index?: string | number;
         parameters?: Array<{ type: string; text?: string; image?: { link: string } }>;
       }>;
     }) =>

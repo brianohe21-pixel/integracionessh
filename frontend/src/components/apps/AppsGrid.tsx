@@ -1,23 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { Calendar, CreditCard, LayoutGrid, ShoppingBag, Sparkles } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { usePermissions } from "@/hooks/usePermissions";
 import type { AppCatalogItem } from "@/types";
-
-const APP_ICONS: Record<string, typeof Calendar> = {
-  "ai-assistant": Sparkles,
-  calendar: Calendar,
-  payments: CreditCard,
-  catalog: ShoppingBag,
-};
+import { AppBrandIcon } from "@/components/apps/AppBrandIcon";
 
 const APP_ROUTES: Record<string, string> = {
   "ai-assistant": "/apps/ai-assistant",
   calendar: "/apps/calendar",
   payments: "/apps/payments",
   catalog: "/apps/catalog",
+  shopify: "/apps/shopify",
 };
 
 const APP_I18N_KEYS: Record<string, { name: string; description: string }> = {
@@ -28,6 +22,7 @@ const APP_I18N_KEYS: Record<string, { name: string; description: string }> = {
   calendar: { name: "apps.calendarName", description: "apps.calendarDescription" },
   payments: { name: "apps.paymentsName", description: "apps.paymentsDescription" },
   catalog: { name: "apps.catalogName", description: "apps.catalogDescription" },
+  shopify: { name: "apps.shopifyName", description: "apps.shopifyDescription" },
 };
 
 export function AppsGrid({ apps }: { apps: AppCatalogItem[] }) {
@@ -38,7 +33,6 @@ export function AppsGrid({ apps }: { apps: AppCatalogItem[] }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {visibleApps.map((app) => {
-        const Icon = APP_ICONS[app.id] ?? LayoutGrid;
         const enabledCount = app.installedBots.filter((b) => b.enabled).length;
         const tenantEnabled = app.enabled ?? app.configured;
         const route = APP_ROUTES[app.id];
@@ -50,8 +44,8 @@ export function AppsGrid({ apps }: { apps: AppCatalogItem[] }) {
             className="rounded-xl border border-default bg-surface-elevated p-6 shadow-sm"
           >
             <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent-muted text-accent">
-                <Icon className="h-5 w-5" />
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-surface">
+                <AppBrandIcon appId={app.id} className="h-10 w-10" />
               </div>
               <div>
                 <h3 className="font-semibold text-primary">
