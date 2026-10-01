@@ -2949,6 +2949,69 @@ export interface CatalogConfig {
   updatedAt: string;
 }
 
+export type ShopifyConnectionStatus = "pending" | "connected" | "error" | "disconnected";
+
+export type ShopifyNotificationEvent =
+  | "abandoned_checkout"
+  | "order_paid"
+  | "order_cancelled"
+  | "fulfillment_shipped";
+
+export interface ShopifyTemplateMapping {
+  templateName: string;
+  templateLanguage: string;
+  variableKeys: string[];
+}
+
+export interface ShopifyConfig {
+  tenantId: string;
+  shopDomain: string;
+  status: ShopifyConnectionStatus;
+  enabled: boolean;
+  botId?: string;
+  abandonDelayMinutes: number;
+  defaultCountry: string;
+  templates: Partial<Record<ShopifyNotificationEvent, ShopifyTemplateMapping>>;
+  webhookIds?: string[];
+  connectedAt?: string;
+  lastError?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ShopifyCheckoutStatus = "pending" | "converted" | "notified" | "cancelled";
+
+export interface ShopifyCheckout {
+  tenantId: string;
+  checkoutToken: string;
+  shopDomain: string;
+  phone?: string;
+  customerName?: string;
+  totalPrice?: string;
+  currency?: string;
+  abandonedCheckoutUrl?: string;
+  scheduleName?: string;
+  notifyAt?: string;
+  status: ShopifyCheckoutStatus;
+  notifiedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ShopifyDeliveryStatus = "sent" | "skipped" | "failed";
+
+export interface ShopifyDelivery {
+  deliveryId: string;
+  tenantId: string;
+  event: ShopifyNotificationEvent;
+  phone?: string;
+  templateName?: string;
+  status: ShopifyDeliveryStatus;
+  reason?: string;
+  shopifyResourceId?: string;
+  createdAt: string;
+}
+
 export interface CatalogProduct {
   productId: string;
   tenantId: string;

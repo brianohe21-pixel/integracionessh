@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Calendar, CreditCard, LayoutGrid, ShoppingBag, Sparkles } from "lucide-react";
+import { Calendar, CreditCard, LayoutGrid, ShoppingBag, Sparkles, Store } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { usePermissions } from "@/hooks/usePermissions";
 import type { AppCatalogItem } from "@/types";
@@ -11,6 +11,7 @@ const APP_ICONS: Record<string, typeof Calendar> = {
   calendar: Calendar,
   payments: CreditCard,
   catalog: ShoppingBag,
+  shopify: Store,
 };
 
 const APP_ROUTES: Record<string, string> = {
@@ -18,6 +19,7 @@ const APP_ROUTES: Record<string, string> = {
   calendar: "/apps/calendar",
   payments: "/apps/payments",
   catalog: "/apps/catalog",
+  shopify: "/apps/shopify",
 };
 
 const APP_I18N_KEYS: Record<string, { name: string; description: string }> = {
@@ -28,6 +30,7 @@ const APP_I18N_KEYS: Record<string, { name: string; description: string }> = {
   calendar: { name: "apps.calendarName", description: "apps.calendarDescription" },
   payments: { name: "apps.paymentsName", description: "apps.paymentsDescription" },
   catalog: { name: "apps.catalogName", description: "apps.catalogDescription" },
+  shopify: { name: "apps.shopifyName", description: "apps.shopifyDescription" },
 };
 
 export function AppsGrid({ apps }: { apps: AppCatalogItem[] }) {

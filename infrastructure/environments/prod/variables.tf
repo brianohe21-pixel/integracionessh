@@ -291,6 +291,22 @@ variable "google_calendar_client_secret" {
   sensitive = true
 }
 
+variable "shopify_api_key" {
+  type    = string
+  default = ""
+}
+
+variable "shopify_api_secret" {
+  type      = string
+  default   = ""
+  sensitive = true
+}
+
+variable "shopify_api_version" {
+  type    = string
+  default = "2025-01"
+}
+
 variable "mailrelay_event_types" {
   type        = string
   default     = ""

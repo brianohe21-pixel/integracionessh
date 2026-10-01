@@ -526,3 +526,51 @@ resource "aws_sqs_queue_policy" "sequence_run" {
     ]
   })
 }
+
+resource "aws_sqs_queue" "shopify_events_dlq" {
+  name                        = "${var.project}-${var.environment}-shopify-events-dlq.fifo"
+  fifo_queue                  = true
+  content_based_deduplication = true
+  message_retention_seconds   = 1209600
+  tags                        = var.tags
+}
+
+resource "aws_sqs_queue" "shopify_events" {
+  name                        = "${var.project}-${var.environment}-shopify-events.fifo"
+  fifo_queue                  = true
+  content_based_deduplication = true
+  visibility_timeout_seconds  = 120
+  message_retention_seconds   = 86400
+
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.shopify_events_dlq.arn
+    maxReceiveCount     = 3
+  })
+
+  tags = var.tags
+}
+
+resource "aws_sqs_queue_redrive_allow_policy" "shopify_events_dlq" {
+  queue_url = aws_sqs_queue.shopify_events_dlq.id
+
+  redrive_allow_policy = jsonencode({
+    redrivePermission = "byQueue"
+    sourceQueueArns   = [aws_sqs_queue.shopify_events.arn]
+  })
+}
+
+resource "aws_sqs_queue_policy" "shopify_events" {
+  queue_url = aws_sqs_queue.shopify_events.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect    = "Allow"
+        Principal = { AWS = var.lambda_role_arns }
+        Action    = ["sqs:SendMessage", "sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes"]
+        Resource  = aws_sqs_queue.shopify_events.arn
+      }
+    ]
+  })
+}

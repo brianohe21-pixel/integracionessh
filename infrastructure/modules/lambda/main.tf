@@ -105,6 +105,7 @@ resource "aws_iam_role_policy" "lambda_permissions" {
           var.mailrelay_sync_sqs_queue_arn,
           var.whatsapp_sync_sqs_queue_arn,
           var.sequence_sqs_queue_arn,
+          var.shopify_events_sqs_queue_arn,
         ]
       },
       {
@@ -259,8 +260,11 @@ locals {
   sales_function_arn             = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.sales_function_name}"
   voicebot_session_function_name = "${var.project}-${var.environment}-voicebot-session"
   voicebot_session_function_arn  = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.voicebot_session_function_name}"
+  process_shopify_function_name  = "${var.project}-${var.environment}-process-shopify"
+  process_shopify_function_arn   = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:${local.process_shopify_function_name}"
 
   google_calendar_redirect_uri = trimspace(var.api_public_url) != "" ? "${trimsuffix(trimspace(var.api_public_url), "/")}/public/integrations/google-calendar/oauth/callback" : ""
+  shopify_redirect_uri         = trimspace(var.api_public_url) != "" ? "${trimsuffix(trimspace(var.api_public_url), "/")}/public/integrations/shopify/oauth/callback" : ""
 
   functions = {
     webhook = {
@@ -1098,6 +1102,40 @@ locals {
         TELEPHONY_GATEWAY_WS_URL = var.telephony_gateway_ws_url
       }
     }
+    shopify = {
+      handler     = "shopify/index.handler"
+      description = "Shopify OAuth, settings, and webhook intake"
+      timeout     = 60
+      memory      = 256
+      environment = {
+        TABLE_NAME                 = var.dynamodb_table_name
+        ENVIRONMENT                = var.environment
+        API_PUBLIC_URL             = var.api_public_url
+        FRONTEND_URL               = var.frontend_url
+        SHOPIFY_API_KEY            = var.shopify_api_key
+        SHOPIFY_API_SECRET         = var.shopify_api_secret
+        SHOPIFY_API_VERSION        = var.shopify_api_version
+        SHOPIFY_REDIRECT_URI       = local.shopify_redirect_uri
+        SHOPIFY_EVENTS_QUEUE_URL   = var.shopify_events_sqs_queue_url
+        SCHEDULER_ROLE_ARN         = var.scheduler_role_arn
+        PROCESS_SHOPIFY_FUNCTION_ARN = local.process_shopify_function_arn
+      }
+    }
+    process_shopify = {
+      handler     = "process-shopify/index.handler"
+      description = "Processes Shopify webhook events and abandoned checkout jobs"
+      timeout     = 120
+      memory      = 512
+      environment = {
+        TABLE_NAME                   = var.dynamodb_table_name
+        ENVIRONMENT                  = var.environment
+        SHOPIFY_API_KEY              = var.shopify_api_key
+        SHOPIFY_API_SECRET           = var.shopify_api_secret
+        SHOPIFY_API_VERSION          = var.shopify_api_version
+        SCHEDULER_ROLE_ARN           = var.scheduler_role_arn
+        PROCESS_SHOPIFY_FUNCTION_ARN = local.process_shopify_function_arn
+      }
+    }
     google_business = {
       handler     = "google-business/index.handler"
       description = "Google Business Profile reviews API"
@@ -1254,6 +1292,15 @@ resource "aws_lambda_event_source_mapping" "whatsapp_sync_sqs_trigger" {
   function_name                      = aws_lambda_function.functions["process_whatsapp_sync"].arn
   batch_size                         = 1
   enabled                            = var.whatsapp_sync_sqs_queue_arn != ""
+  function_response_types            = ["ReportBatchItemFailures"]
+  maximum_batching_window_in_seconds = 0
+}
+
+resource "aws_lambda_event_source_mapping" "shopify_events_sqs_trigger" {
+  event_source_arn                   = var.shopify_events_sqs_queue_arn
+  function_name                      = aws_lambda_function.functions["process_shopify"].arn
+  batch_size                         = 1
+  enabled                            = var.shopify_events_sqs_queue_arn != ""
   function_response_types            = ["ReportBatchItemFailures"]
   maximum_batching_window_in_seconds = 0
 }

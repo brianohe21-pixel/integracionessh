@@ -25,6 +25,7 @@ output "dlq_arns" {
     mailrelay_sync = aws_sqs_queue.mailrelay_sync_dlq.arn
     whatsapp_sync  = aws_sqs_queue.whatsapp_sync_dlq.arn
     sequence       = aws_sqs_queue.sequence_dlq.arn
+    shopify_events = aws_sqs_queue.shopify_events_dlq.arn
   }
 }
 
@@ -43,6 +44,7 @@ output "queue_arns" {
     mailrelay_sync = aws_sqs_queue.mailrelay_sync.arn
     whatsapp_sync  = aws_sqs_queue.whatsapp_sync.arn
     sequence       = aws_sqs_queue.sequence_run.arn
+    shopify_events = aws_sqs_queue.shopify_events.arn
   }
 }
 
@@ -148,4 +150,16 @@ output "sequence_queue_url" {
 
 output "sequence_queue_arn" {
   value = aws_sqs_queue.sequence_run.arn
+}
+
+output "shopify_events_queue_url" {
+  value = aws_sqs_queue.shopify_events.url
+}
+
+output "shopify_events_queue_arn" {
+  value = aws_sqs_queue.shopify_events.arn
+}
+
+output "shopify_events_dlq_arn" {
+  value = aws_sqs_queue.shopify_events_dlq.arn
 }

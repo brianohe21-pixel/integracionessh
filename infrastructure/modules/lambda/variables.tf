@@ -122,6 +122,16 @@ variable "sequence_sqs_queue_arn" {
   default = ""
 }
 
+variable "shopify_events_sqs_queue_url" {
+  type    = string
+  default = ""
+}
+
+variable "shopify_events_sqs_queue_arn" {
+  type    = string
+  default = ""
+}
+
 variable "mailrelay_event_types" {
   type        = string
   default     = ""
@@ -301,6 +311,25 @@ variable "google_calendar_client_secret" {
   default     = ""
   sensitive   = true
   description = "Google OAuth client secret for Calendar integration"
+}
+
+variable "shopify_api_key" {
+  type        = string
+  default     = ""
+  description = "Shopify public app API key (client id)"
+}
+
+variable "shopify_api_secret" {
+  type        = string
+  default     = ""
+  sensitive   = true
+  description = "Shopify public app API secret"
+}
+
+variable "shopify_api_version" {
+  type        = string
+  default     = "2025-01"
+  description = "Shopify Admin API version"
 }
 
 variable "ses_from_email" {

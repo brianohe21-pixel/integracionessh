@@ -2,14 +2,17 @@ import { listBots } from "../dynamodb/bot.repository.js";
 import { listCalendarConfigs } from "../dynamodb/calendar-config.repository.js";
 import { listPaymentsConfigs } from "../dynamodb/payments-config.repository.js";
 import { listCatalogConfigs } from "../dynamodb/catalog-config.repository.js";
+import { getShopifyConfig } from "../dynamodb/shopify.repository.js";
 
 export async function listAppsCatalog(tenantId: string) {
-  const [bots, calendarConfigs, paymentsConfigs, catalogConfigs] = await Promise.all([
-    listBots(tenantId),
-    listCalendarConfigs(tenantId),
-    listPaymentsConfigs(tenantId),
-    listCatalogConfigs(tenantId),
-  ]);
+  const [bots, calendarConfigs, paymentsConfigs, catalogConfigs, shopifyConfig] =
+    await Promise.all([
+      listBots(tenantId),
+      listCalendarConfigs(tenantId),
+      listPaymentsConfigs(tenantId),
+      listCatalogConfigs(tenantId),
+      getShopifyConfig(tenantId),
+    ]);
   const calendarByBot = new Map(calendarConfigs.map((c) => [c.botId, c]));
   const paymentsByBot = new Map(paymentsConfigs.map((c) => [c.botId, c]));
   const catalogByBot = new Map(catalogConfigs.map((c) => [c.botId, c]));
@@ -56,6 +59,15 @@ export async function listAppsCatalog(tenantId: string) {
           ...bot,
           enabled: catalogByBot.get(bot.botId)?.enabled ?? false,
         })),
+      },
+      {
+        id: "shopify",
+        name: "Shopify",
+        description: "Abandoned cart, order and shipping notifications via WhatsApp",
+        installedBots: [],
+        configured: Boolean(
+          shopifyConfig?.shopDomain && shopifyConfig.status === "connected"
+        ),
       },
     ],
   };
