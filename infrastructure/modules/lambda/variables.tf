@@ -476,6 +476,8 @@ variable "cloudwatch_log_group_import_exclude" {
     "process_sequence",
     "evaluate_ops_alerts",
     "check_service_status",
+    "shopify",
+    "process_shopify",
   ]
   description = "Lambda keys whose log groups are created by Terraform instead of imported (new functions without pre-existing log groups in AWS)"
 }
