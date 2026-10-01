@@ -4339,9 +4339,17 @@ export const en: Messages = {
       opportunityStageWon: "Won",
       opportunityStageLost: "Lost",
       opportunityPhoneBinding: "Phone",
+      opportunityPhoneBindingHint:
+        "From WhatsApp use {{phone}} or {{contact_phone}} (conversation number).",
       opportunityNameBinding: "Name",
+      opportunityNameBindingHint:
+        "From WhatsApp use {{contact_name}} or {{name}} (profile name). Also {{last_input}} if you asked for it in chat.",
       opportunityEmailBinding: "Email",
       opportunityDescriptionBinding: "Description",
+      opportunityDescriptionBindingHint:
+        "You can use {{last_input}} or {{contact_name}}. For forms use {{form.field}}.",
+      opportunityTitleBindingHint:
+        "Example: Opportunity {{contact_name}}. Also {{phone}} or {{last_input}}.",
       opportunityTags: "Tags (comma-separated)",
       notificationChannel: "Channel",
       notificationMessageType: "Message type",
@@ -4503,6 +4511,8 @@ export const en: Messages = {
     hints: {
       conditionBranches: "Connect each output (Yes / No) to the corresponding next node.",
       buttonBranches: "Each button has its own output. Maximum 3 buttons.",
+      opportunityWhatsAppBindings:
+        "WhatsApp variables: {{phone}} (phone), {{contact_name}} (profile name). For forms use {{form.field}}. The user's last message is {{last_input}}.",
     },
     previewModal: {
       title: "Flow preview",
@@ -4591,7 +4601,8 @@ export const en: Messages = {
       },
       create_opportunity: {
         description: "Creates a sales opportunity with title, amount, and contact.",
-        usage: "Use {{form.field}} bindings for title, amount, and customer data.",
+        usage:
+          "From WhatsApp use {{phone}} and {{contact_name}}. For forms use {{form.field}}. The last message is {{last_input}}.",
       },
       send_notification: {
         description: "Sends WhatsApp, SMS, or email to the recipient.",

@@ -166,7 +166,17 @@ export async function startFlowRun(params: {
     customerPhone: params.customerPhone,
     status: "active",
     currentNodeId: entryId,
-    variables: { last_input: params.inbound.text },
+    variables: {
+      last_input: params.inbound.text,
+      phone: params.customerPhone,
+      contact_phone: params.customerPhone,
+      ...(params.conversation.contactName
+        ? {
+            contact_name: params.conversation.contactName,
+            name: params.conversation.contactName,
+          }
+        : {}),
+    },
     stepHistory: [],
     stepCount: 0,
     createdAt: now,

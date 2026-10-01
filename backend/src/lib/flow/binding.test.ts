@@ -35,4 +35,27 @@ describe("flow binding", () => {
   it("reads nested values", () => {
     expect(getNestedValue({ form: { email: "a@b.com" } }, "form.email")).toBe("a@b.com");
   });
+
+  it("exposes WhatsApp conversation phone and name as bindings", () => {
+    const context = buildBindingContext({
+      conversation: {
+        phone: "573001112233",
+        contactName: "Ana Pérez",
+      },
+    });
+    expect(resolveBindingValue("{{phone}}", context)).toBe("573001112233");
+    expect(resolveBindingValue("{{contact_phone}}", context)).toBe("573001112233");
+    expect(resolveBindingValue("{{contact_name}}", context)).toBe("Ana Pérez");
+    expect(resolveBindingValue("{{name}}", context)).toBe("Ana Pérez");
+  });
+
+  it("lets explicit variables override conversation defaults", () => {
+    const context = buildBindingContext({
+      conversation: { phone: "573001112233", contactName: "Ana" },
+      variables: { phone: "57000999888", name: "Otro" },
+    });
+    expect(resolveBindingValue("{{phone}}", context)).toBe("57000999888");
+    expect(resolveBindingValue("{{name}}", context)).toBe("Otro");
+    expect(resolveBindingValue("{{contact_name}}", context)).toBe("Ana");
+  });
 });

@@ -1,6 +1,10 @@
 import type { FlowNode, FlowRun } from "../../../types/index.js";
 import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
-import { buildBindingContext, resolveBindingValue } from "../binding.js";
+import {
+  buildBindingContext,
+  conversationBindingFromContext,
+  resolveBindingValue,
+} from "../binding.js";
 import { getNextNodeId } from "../graph.js";
 import { normalizePhone } from "../../dynamodb/contact.repository.js";
 import { createLeadFromFormData } from "../../leads/form-lead.js";
@@ -14,6 +18,7 @@ export async function executeCreateLeadNode(
   const bindingContext = buildBindingContext({
     formPayload: ctx.formPayload,
     variables: run.variables,
+    conversation: conversationBindingFromContext(ctx),
   });
 
   const phone = normalizePhone(resolveBindingValue(node.data.leadPhoneBinding, bindingContext));

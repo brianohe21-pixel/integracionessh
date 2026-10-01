@@ -595,12 +595,16 @@ export function NodePropertiesPanel({
             value={d.contactPhoneBinding ?? ""}
             onChange={(v) => onUpdate({ contactPhoneBinding: v })}
             sampleFields={sampleFields}
+            extraBindings={["{{phone}}", "{{contact_phone}}"]}
+            placeholder="{{phone}}"
           />
           <FormBindingField
             label={t("flows.fields.contactNameBinding")}
             value={d.contactNameBinding ?? ""}
             onChange={(v) => onUpdate({ contactNameBinding: v })}
             sampleFields={sampleFields}
+            extraBindings={["{{contact_name}}", "{{name}}", "{{last_input}}"]}
+            placeholder="{{contact_name}}"
           />
           <FormBindingField
             label={t("flows.fields.contactEmailBinding")}
@@ -629,12 +633,16 @@ export function NodePropertiesPanel({
             value={d.leadPhoneBinding ?? ""}
             onChange={(v) => onUpdate({ leadPhoneBinding: v })}
             sampleFields={sampleFields}
+            extraBindings={["{{phone}}", "{{contact_phone}}"]}
+            placeholder="{{phone}}"
           />
           <FormBindingField
             label={t("flows.fields.leadNameBinding")}
             value={d.leadNameBinding ?? ""}
             onChange={(v) => onUpdate({ leadNameBinding: v })}
             sampleFields={sampleFields}
+            extraBindings={["{{contact_name}}", "{{name}}", "{{last_input}}"]}
+            placeholder="{{contact_name}}"
           />
           <FormBindingField
             label={t("flows.fields.leadEmailBinding")}
@@ -663,6 +671,9 @@ export function NodePropertiesPanel({
             value={d.opportunityTitleBinding ?? ""}
             onChange={(v) => onUpdate({ opportunityTitleBinding: v })}
             sampleFields={sampleFields}
+            extraBindings={["{{contact_name}}", "{{phone}}", "{{last_input}}"]}
+            placeholder="Oportunidad {{contact_name}}"
+            hint={t("flows.fields.opportunityTitleBindingHint")}
           />
           <FormBindingField
             label={t("flows.fields.opportunityAmountBinding")}
@@ -701,12 +712,18 @@ export function NodePropertiesPanel({
             value={d.opportunityPhoneBinding ?? ""}
             onChange={(v) => onUpdate({ opportunityPhoneBinding: v })}
             sampleFields={sampleFields}
+            extraBindings={["{{phone}}", "{{contact_phone}}"]}
+            placeholder="{{phone}}"
+            hint={t("flows.fields.opportunityPhoneBindingHint")}
           />
           <FormBindingField
             label={t("flows.fields.opportunityNameBinding")}
             value={d.opportunityNameBinding ?? ""}
             onChange={(v) => onUpdate({ opportunityNameBinding: v })}
             sampleFields={sampleFields}
+            extraBindings={["{{contact_name}}", "{{name}}", "{{last_input}}"]}
+            placeholder="{{contact_name}}"
+            hint={t("flows.fields.opportunityNameBindingHint")}
           />
           <FormBindingField
             label={t("flows.fields.opportunityEmailBinding")}
@@ -719,6 +736,8 @@ export function NodePropertiesPanel({
             value={d.opportunityDescriptionBinding ?? ""}
             onChange={(v) => onUpdate({ opportunityDescriptionBinding: v })}
             sampleFields={sampleFields}
+            extraBindings={["{{last_input}}", "{{contact_name}}"]}
+            hint={t("flows.fields.opportunityDescriptionBindingHint")}
           />
           <div>
             <FieldLabel>{t("flows.fields.opportunityTags")}</FieldLabel>

@@ -36,10 +36,46 @@ export function resolveBindingValue(
 export function buildBindingContext(params: {
   formPayload?: Record<string, unknown> | undefined;
   variables?: Record<string, string> | undefined;
+  conversation?: {
+    phone?: string;
+    contactName?: string;
+  } | undefined;
 }): Record<string, unknown> {
+  const phone = params.conversation?.phone?.trim() || "";
+  const contactName = params.conversation?.contactName?.trim() || "";
+  const defaults: Record<string, string> = {};
+  if (phone) {
+    defaults.phone = phone;
+    defaults.contact_phone = phone;
+  }
+  if (contactName) {
+    defaults.contact_name = contactName;
+    defaults.name = contactName;
+  }
   return {
     form: params.formPayload ?? {},
+    ...defaults,
     ...params.variables,
+  };
+}
+
+export function conversationBindingFromContext(ctx: {
+  customerPhone?: string;
+  conversation?: {
+    phoneNumber?: string;
+    participantId?: string;
+    contactName?: string;
+  };
+}): { phone?: string; contactName?: string } {
+  const phone =
+    ctx.customerPhone?.trim() ||
+    ctx.conversation?.phoneNumber?.trim() ||
+    ctx.conversation?.participantId?.trim() ||
+    "";
+  const contactName = ctx.conversation?.contactName?.trim() || "";
+  return {
+    ...(phone ? { phone } : {}),
+    ...(contactName ? { contactName } : {}),
   };
 }
 

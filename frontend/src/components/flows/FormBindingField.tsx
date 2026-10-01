@@ -5,7 +5,9 @@ interface FormBindingFieldProps {
   value: string;
   onChange: (value: string) => void;
   sampleFields?: string[];
+  extraBindings?: string[];
   placeholder?: string;
+  hint?: string;
 }
 
 export function FormBindingField({
@@ -13,8 +15,23 @@ export function FormBindingField({
   value,
   onChange,
   sampleFields = [],
+  extraBindings = [],
   placeholder,
+  hint,
 }: FormBindingFieldProps) {
+  const chips = [
+    ...extraBindings.map((binding) => ({
+      key: binding,
+      label: binding.replace(/^\{\{|\}\}$/g, ""),
+      value: binding,
+    })),
+    ...sampleFields.map((field) => ({
+      key: `form.${field}`,
+      label: field,
+      value: `{{form.${field}}}`,
+    })),
+  ];
+
   return (
     <div>
       {label ? (
@@ -26,16 +43,17 @@ export function FormBindingField({
         placeholder={placeholder ?? "{{form.field}}"}
         className="w-full text-sm border border-field-border rounded-lg p-2 bg-surface-elevated shadow-sm focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none"
       />
-      {sampleFields.length > 0 && (
+      {hint ? <p className="mt-1 text-xs text-secondary">{hint}</p> : null}
+      {chips.length > 0 && (
         <div className="mt-1.5 flex flex-wrap gap-1">
-          {sampleFields.map((field) => (
+          {chips.map((chip) => (
             <button
-              key={field}
+              key={chip.key}
               type="button"
-              onClick={() => onChange(`{{form.${field}}}`)}
+              onClick={() => onChange(chip.value)}
               className="rounded-md border border-field-border px-2 py-0.5 text-[10px] text-secondary hover:border-accent/40 hover:text-primary"
             >
-              {field}
+              {chip.label}
             </button>
           ))}
         </div>
@@ -58,3 +76,5 @@ export function extractSampleFields(payload?: Record<string, unknown>): string[]
   }
   return fields;
 }
+
+export const WHATSAPP_CONTACT_BINDINGS = ["{{phone}}", "{{contact_name}}"] as const;

@@ -4348,9 +4348,17 @@ export const es = {
       opportunityStageWon: "Ganada",
       opportunityStageLost: "Perdida",
       opportunityPhoneBinding: "Teléfono",
+      opportunityPhoneBindingHint:
+        "Desde WhatsApp usa {{phone}} o {{contact_phone}} (número de la conversación).",
       opportunityNameBinding: "Nombre",
+      opportunityNameBindingHint:
+        "Desde WhatsApp usa {{contact_name}} o {{name}} (nombre de perfil). También {{last_input}} si lo pediste en el chat.",
       opportunityEmailBinding: "Correo",
       opportunityDescriptionBinding: "Descripción",
+      opportunityDescriptionBindingHint:
+        "Puedes usar {{last_input}} o {{contact_name}}. En formularios usa {{form.campo}}.",
+      opportunityTitleBindingHint:
+        "Ejemplo: Oportunidad {{contact_name}}. También {{phone}} o {{last_input}}.",
       opportunityTags: "Etiquetas (separadas por coma)",
       notificationChannel: "Canal",
       notificationMessageType: "Tipo de mensaje",
@@ -4512,6 +4520,8 @@ export const es = {
     hints: {
       conditionBranches: "Conecta cada salida (Sí / No) al siguiente nodo correspondiente.",
       buttonBranches: "Cada botón tiene su propia salida. Máximo 3 botones.",
+      opportunityWhatsAppBindings:
+        "Variables de WhatsApp: {{phone}} (teléfono), {{contact_name}} (nombre de perfil). En formularios usa {{form.campo}}. El último mensaje del usuario es {{last_input}}.",
     },
     previewModal: {
       title: "Vista previa del flujo",
@@ -4600,7 +4610,8 @@ export const es = {
       },
       create_opportunity: {
         description: "Crea una oportunidad de venta con título, monto y contacto.",
-        usage: "Usa bindings {{form.campo}} para título, monto y datos del cliente.",
+        usage:
+          "Desde WhatsApp usa {{phone}} y {{contact_name}}. En formularios usa {{form.campo}}. El último mensaje es {{last_input}}.",
       },
       send_notification: {
         description: "Envía WhatsApp, SMS o email al destinatario indicado.",
