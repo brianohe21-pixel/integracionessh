@@ -1,10 +1,54 @@
-import type { TenantPlan } from "@/types";
+import type { Tenant, TenantPlan } from "@/types";
 import {
   getModelsForPlan,
   type AiModelDefinition,
 } from "@/lib/ai-models";
 import type { BillingPlanPrice } from "@/hooks/useBilling";
+import { normalizeTenantPlan } from "@/lib/normalize-plan";
 import { buildWaMeLink } from "@/lib/wa-link";
+
+const MAX_WHATSAPP_CHANNELS_PER_BOT_BY_PLAN: Record<
+  ReturnType<typeof normalizeTenantPlan>,
+  number
+> = {
+  free: 1,
+  starter: 5,
+  pro: 5,
+  scale: 60,
+  reseller: Number.MAX_SAFE_INTEGER,
+};
+
+export function getMaxWhatsAppChannelsPerBot(
+  tenant: Tenant | undefined | null
+): number {
+  if (!tenant) return 1;
+
+  const plan = normalizeTenantPlan(tenant.plan);
+  const base = MAX_WHATSAPP_CHANNELS_PER_BOT_BY_PLAN[plan];
+  const isSubaccount =
+    tenant.tenantKind === "subaccount" || Boolean(tenant.parentTenantId);
+
+  if (isSubaccount && tenant.serviceLimits?.maxWhatsAppChannelsPerBot != null) {
+    return tenant.serviceLimits.maxWhatsAppChannelsPerBot;
+  }
+
+  if (
+    plan === "reseller" &&
+    tenant.resellerConfig?.limitsOverride?.maxWhatsAppChannelsPerBot != null
+  ) {
+    return tenant.resellerConfig.limitsOverride.maxWhatsAppChannelsPerBot;
+  }
+
+  if (
+    plan === "pro" &&
+    !isSubaccount &&
+    tenant.planLimitsOverride?.maxWhatsAppChannelsPerBot != null
+  ) {
+    return tenant.planLimitsOverride.maxWhatsAppChannelsPerBot;
+  }
+
+  return base;
+}
 
 export type AllowedModel = string;
 export type PaidBillingPlan = "starter" | "pro";

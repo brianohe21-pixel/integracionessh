@@ -1,4 +1,5 @@
 import type { InboundNormalized, MessageType, WhatsAppMessage } from "../../types/index.js";
+import { isWhatsAppIdentityChangeMessage } from "./identity.js";
 
 function formatFlowResponseJson(responseJson: string): string {
   try {
@@ -15,6 +16,7 @@ export function isReactionInboundMessage(message: WhatsAppMessage): boolean {
 }
 
 export function isProcessableInboundMessage(message: WhatsAppMessage): boolean {
+  if (isWhatsAppIdentityChangeMessage(message)) return true;
   if (isReactionInboundMessage(message)) return true;
   if (message.type === "text" && message.text?.body) return true;
   if (message.type === "order" && message.order?.product_items?.length) return true;

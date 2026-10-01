@@ -1,4 +1,5 @@
 import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
+import { randomUUID } from "crypto";
 import { z } from "zod";
 import { resolveRequestAuth, assertMemberRole } from "../../lib/auth/cognito.js";
 import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
@@ -18,6 +19,12 @@ import {
   makeFlowId,
   updateFlowDefinition,
 } from "../../lib/dynamodb/flow.repository.js";
+import {
+  CONVERSATION_ATTACHMENT_MAX_BYTES,
+  inferConversationAttachmentMimeType,
+  isVoiceNoteMimeType,
+} from "../../lib/conversations/attachment-policy.js";
+import { buildFlowMediaS3Key, getPresignedUploadUrl } from "../../lib/s3/client.js";
 import {
   deleteFlowHookConfig,
   getFlowHookConfig,
@@ -85,6 +92,8 @@ const FlowNodeSchema = z.object({
     "send_catalog",
     "send_products",
     "await_order",
+    "send_otp",
+    "send_audio",
     "save_contact",
     "create_lead",
     "create_opportunity",
@@ -117,6 +126,12 @@ const FlowSchema = z.object({
 const FlowSecretSchema = z.object({
   name: z.string().min(1).max(120),
   value: z.string().min(1).max(4096),
+});
+
+const FlowMediaUploadUrlSchema = z.object({
+  filename: z.string().min(1).max(200),
+  mimeType: z.string().min(1).max(120),
+  sizeBytes: z.number().int().positive().max(CONVERSATION_ATTACHMENT_MAX_BYTES),
 });
 
 const TaxiTemplateSchema = z.object({
@@ -411,6 +426,36 @@ export async function handler(
       });
       await createFlowDefinition(flow);
       return created(flow);
+    }
+
+    if (method === "POST" && flowId && path.endsWith("/media/upload-url")) {
+      const flow = await getFlowDefinition(auth.tenantId, flowId);
+      if (!flow) return notFound("Flow not found");
+      const body = FlowMediaUploadUrlSchema.safeParse(JSON.parse(apiEvent.body ?? "{}"));
+      if (!body.success) return badRequest(body.error.message);
+
+      const lowerName = body.data.filename.trim().toLowerCase();
+      if (!lowerName.endsWith(".ogg") && !lowerName.endsWith(".opus")) {
+        return badRequest("Voice notes must be .ogg or .opus");
+      }
+      const resolvedMime = inferConversationAttachmentMimeType(
+        body.data.filename,
+        body.data.mimeType
+      );
+      if (!resolvedMime || !isVoiceNoteMimeType(resolvedMime)) {
+        return badRequest("Voice notes must use audio/ogg");
+      }
+
+      const mediaId = randomUUID();
+      const s3Key = buildFlowMediaS3Key(auth.tenantId, flowId, mediaId, body.data.filename);
+      const uploadUrl = await getPresignedUploadUrl(s3Key, resolvedMime);
+      return created({
+        mediaId,
+        s3Key,
+        uploadUrl,
+        mimeType: resolvedMime,
+        filename: body.data.filename,
+      });
     }
 
     if (method === "GET" && flowId && path.endsWith("/secrets")) {

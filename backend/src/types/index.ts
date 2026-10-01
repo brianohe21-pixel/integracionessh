@@ -582,6 +582,9 @@ export interface Conversation {
   channel: Channel;
   participantId: string;
   phoneNumber: string;
+  whatsappUserId?: string;
+  whatsappParentUserId?: string;
+  whatsappUsername?: string;
   contactId?: string;
   contactName?: string;
   status: "active" | "closed";
@@ -604,6 +607,8 @@ export interface Conversation {
   attribution?: AdsAttribution;
   messageCount: number;
   lastMessageAt: string;
+  lastInboundAt?: string;
+  freeEntryPointOpenedAt?: string;
   welcomeSentAt?: string;
   activeFlowRunId?: string;
   pendingMetaFlowId?: string;
@@ -1709,6 +1714,18 @@ export interface WhatsAppContact {
   profile?: { name: string; username?: string; country_code?: string };
   wa_id?: string;
   user_id?: string;
+  parent_user_id?: string;
+}
+
+export interface WhatsAppSystemMessage {
+  type?: string;
+  body?: string;
+  wa_id?: string;
+  user_id?: string;
+  previous_wa_id?: string;
+  previous_user_id?: string;
+  parent_user_id?: string;
+  previous_parent_user_id?: string;
 }
 
 export interface WhatsAppInteractiveReply {
@@ -1745,6 +1762,7 @@ export interface WhatsAppReferral {
 export interface WhatsAppMessage {
   from?: string;
   from_user_id?: string;
+  from_parent_user_id?: string;
   id: string;
   timestamp: string;
   type:
@@ -1756,13 +1774,15 @@ export interface WhatsAppMessage {
     | "location"
     | "interactive"
     | "order"
-    | "reaction";
+    | "reaction"
+    | "system";
   text?: { body: string };
   image?: { id: string; mime_type: string; caption?: string };
   audio?: { id: string; mime_type: string };
   interactive?: WhatsAppInteractiveReply;
   order?: WhatsAppOrderPayload;
   referral?: WhatsAppReferral;
+  system?: WhatsAppSystemMessage;
   reaction?: {
     message_id: string;
     emoji: string;
@@ -3089,6 +3109,7 @@ export type FlowNodeType =
   | "send_products"
   | "await_order"
   | "send_otp"
+  | "send_audio"
   | "save_contact"
   | "create_lead"
   | "create_opportunity"
@@ -3209,6 +3230,10 @@ export interface FlowNodeData {
   otpWhatsAppTemplateName?: string;
   otpWhatsAppTemplateLanguage?: string;
   otpMaxAttempts?: number;
+  audioS3Key?: string;
+  audioFilename?: string;
+  audioMimeType?: string;
+  audioMediaId?: string;
 }
 
 export interface FlowNode {

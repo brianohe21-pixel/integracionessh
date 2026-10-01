@@ -17,6 +17,7 @@ import { webchatAdapter } from "./webchat.adapter.js";
 import { voicebotAdapter } from "./voicebot.adapter.js";
 import { whatsappAdapter } from "./whatsapp.adapter.js";
 import { phoneNumberIdForOutbound } from "../whatsapp/channel-context.js";
+import { resolveWhatsAppOutboundRecipient } from "../whatsapp/identity.js";
 
 const adapters: Record<Channel, ChannelAdapter> = {
   whatsapp: whatsappAdapter,
@@ -98,7 +99,15 @@ export function buildOutboundContext(params: {
 }): OutboundContext {
   const channel = params.conversation.channel ?? "whatsapp";
   const participantId =
-    params.conversation.participantId ?? params.conversation.phoneNumber;
+    channel === "whatsapp"
+      ? resolveWhatsAppOutboundRecipient({
+          participantId: params.conversation.participantId,
+          phoneNumber: params.conversation.phoneNumber,
+          ...(params.conversation.whatsappUserId
+            ? { whatsappUserId: params.conversation.whatsappUserId }
+            : {}),
+        })
+      : params.conversation.participantId ?? params.conversation.phoneNumber;
 
   const resolvedPhoneNumberId =
     params.phoneNumberId ??

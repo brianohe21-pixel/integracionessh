@@ -28,6 +28,7 @@ const CONVERSATION_ONLY_NODES = [
   "send_products",
   "await_order",
   "send_otp",
+  "send_audio",
 ] as const;
 
 const BRANCHING_NODES = ["condition", "buttons", "send_otp"] as const;
@@ -308,13 +309,29 @@ export function validateFlowDefinition(flow: FlowDefinition): FlowValidationIssu
 
     if (
       voiceFlow &&
-      ["buttons", "meta_flow", "book_appointment", "request_payment", "send_catalog", "send_products", "await_order", "send_otp"].includes(
-        node.type
-      )
+      [
+        "buttons",
+        "meta_flow",
+        "book_appointment",
+        "request_payment",
+        "send_catalog",
+        "send_products",
+        "await_order",
+        "send_otp",
+        "send_audio",
+      ].includes(node.type)
     ) {
       issues.push({
         code: "unsupported_voice_node",
         message: `${node.type} is not supported in voice flows`,
+        nodeId: node.id,
+      });
+    }
+
+    if (node.type === "send_audio" && !node.data.audioS3Key?.trim()) {
+      issues.push({
+        code: "missing_audio",
+        message: "send_audio requires an uploaded voice note",
         nodeId: node.id,
       });
     }

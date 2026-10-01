@@ -100,6 +100,18 @@ describe("isProcessableInboundMessage", () => {
     ).toBe(false);
     expect(
       isProcessableInboundMessage({
+        id: "1",
+        timestamp: "1",
+        type: "system",
+        system: {
+          type: "user_changed_user_id",
+          previous_user_id: "CO.OLD",
+          user_id: "CO.NEW",
+        },
+      })
+    ).toBe(true);
+    expect(
+      isProcessableInboundMessage({
         from: "1",
         id: "1",
         timestamp: "1",

@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Phone, Plus, Star, Trash2 } from "lucide-react";
 import { useWhatsAppConnect } from "@/hooks/useWhatsAppConnect";
@@ -24,7 +23,7 @@ import {
 } from "@/components/whatsapp/WhatsAppEnforcementPanel";
 import { Button } from "@/components/ui/Button";
 import { api } from "@/lib/api";
-import { isScaleOrResellerPlan } from "@/lib/normalize-plan";
+import { getMaxWhatsAppChannelsPerBot } from "@/lib/plan-config";
 import type { Bot, Tenant, WhatsAppChannel } from "@/types";
 
 interface BotWhatsAppConnectProps {
@@ -62,7 +61,8 @@ export function BotWhatsAppConnect({ bot }: BotWhatsAppConnectProps) {
   const registerChannel = useRegisterWhatsAppChannel(bot.botId);
   const { connectManual, status: whatsappStatus } = useWhatsAppConnect(bot.botId);
 
-  const multiChannelEnabled = isScaleOrResellerPlan(tenant?.plan);
+  const maxWhatsAppChannels = getMaxWhatsAppChannelsPerBot(tenant);
+  const multiChannelEnabled = maxWhatsAppChannels > 1;
   const [showAddPanel, setShowAddPanel] = useState(false);
   const [editingLabelId, setEditingLabelId] = useState<string | null>(null);
   const [labelDraft, setLabelDraft] = useState("");
@@ -90,7 +90,7 @@ export function BotWhatsAppConnect({ bot }: BotWhatsAppConnectProps) {
   const hasChannels = sortedChannels.length > 0;
   const blockedChannelCount = countBlockedWhatsAppChannels(sortedChannels);
   const legacyConnected = Boolean(bot.phoneNumberId?.trim()) && !hasChannels;
-  const canAddChannel = multiChannelEnabled || !hasChannels;
+  const canAddChannel = sortedChannels.length < maxWhatsAppChannels;
   const isSaving =
     updateChannel.isPending ||
     deleteChannel.isPending ||
@@ -361,15 +361,6 @@ export function BotWhatsAppConnect({ bot }: BotWhatsAppConnectProps) {
           </Button>
         ) : null}
       </div>
-
-      {!multiChannelEnabled && hasChannels ? (
-        <div className="rounded-lg border border-accent/20 bg-accent-muted/40 p-4 text-sm text-secondary">
-          <p>{t("whatsapp.channels.upgradeHint")}</p>
-          <Link href="/billing" className="mt-2 inline-block text-sm font-medium text-accent hover:underline">
-            {t("billing.viewAllPlans")}
-          </Link>
-        </div>
-      ) : null}
 
       {blockedChannelCount > 0 ? (
         <div className="rounded-lg border border-danger/25 bg-danger/5 p-4 text-sm text-secondary">

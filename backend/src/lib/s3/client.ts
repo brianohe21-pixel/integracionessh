@@ -83,6 +83,16 @@ export function buildConversationAttachmentS3Key(
   return `tenants/${tenantId}/bots/${botId}/conversations/${conversationId}/attachments/${attachmentId}/${safeName}`;
 }
 
+export function buildFlowMediaS3Key(
+  tenantId: string,
+  flowId: string,
+  mediaId: string,
+  filename: string
+): string {
+  const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
+  return `tenants/${tenantId}/flows/${flowId}/media/${mediaId}/${safeName}`;
+}
+
 export function buildMemberProfilePhotoS3Key(
   tenantId: string,
   userId: string,

@@ -43,6 +43,9 @@ export function buildDefaultNodeData(
     defaultData.otpMessageText = "Tu codigo de verificacion es {{code}}. Expira en 5 minutos.";
     defaultData.otpMaxAttempts = 3;
   }
+  if (type === "send_audio") {
+    defaultData.audioMimeType = "audio/ogg";
+  }
   if (type === "assign_bot" && suggestedBotId) {
     defaultData.botId = suggestedBotId;
   }

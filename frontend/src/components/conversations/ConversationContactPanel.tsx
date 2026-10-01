@@ -22,6 +22,11 @@ import { useFormatters } from "@/hooks/useFormatters";
 import { useT } from "@/i18n/context";
 import { interactionCategoryLabelKey } from "@/lib/interaction-categories";
 import { resolveWhatsAppRisk, type WhatsAppRiskResponse } from "@/hooks/useWhatsAppRisk";
+import {
+  conversationIdentityLabel,
+  conversationSecondaryIdentity,
+  isWhatsAppBsuid,
+} from "@/lib/whatsapp-identity";
 import { INTERACTION_CATEGORIES, type Channel, Conversation, InteractionCategory, Lead } from "@/types";
 
 type PanelTab = "contact" | "sales" | "details";
@@ -100,20 +105,26 @@ export function ConversationContactPanel({
   }
   const assignedAdvisor = advisors?.find((a) => a.advisorId === conversation.assignedAdvisorId);
   const displayName =
-    conversation.contactName ??
-    ((conversation.channel ?? "whatsapp") === "whatsapp" ||
-    conversation.channel === "sms" ||
-    conversation.channel === "phone"
-      ? conversation.phoneNumber || conversation.participantId
-      : conversation.participantId ?? conversation.phoneNumber);
+    (conversation.channel ?? "whatsapp") === "whatsapp"
+      ? conversationIdentityLabel(conversation)
+      : conversation.contactName ??
+        (conversation.channel === "sms" || conversation.channel === "phone"
+          ? conversation.phoneNumber || conversation.participantId
+          : conversation.participantId ?? conversation.phoneNumber);
 
   const tags = activeLead?.tags ?? [];
   const isHuman = (conversation.handoffMode ?? "bot") === "human";
   const phone =
-    (conversation.channel ?? "whatsapp") === "whatsapp" ||
-    conversation.channel === "sms" ||
-    conversation.channel === "phone"
-      ? conversation.phoneNumber || conversation.participantId
+    (conversation.channel ?? "whatsapp") === "whatsapp"
+      ? conversation.phoneNumber && !isWhatsAppBsuid(conversation.phoneNumber)
+        ? conversation.phoneNumber
+        : null
+      : conversation.channel === "sms" || conversation.channel === "phone"
+        ? conversation.phoneNumber || conversation.participantId
+        : null;
+  const whatsappIdentity =
+    (conversation.channel ?? "whatsapp") === "whatsapp"
+      ? conversationSecondaryIdentity(conversation)
       : null;
   const email =
     conversation.channel === "email"
@@ -154,6 +165,9 @@ export function ConversationContactPanel({
               {displayName}
             </h2>
             {phone ? <p className="mt-0.5 truncate text-sm text-secondary">{phone}</p> : null}
+            {!phone && whatsappIdentity ? (
+              <p className="mt-0.5 truncate text-sm text-secondary">{whatsappIdentity}</p>
+            ) : null}
             <p className="mt-0.5 text-xs text-muted">{channelLabel(conversation.channel)}</p>
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               <Badge variant={isHuman ? "warning" : "default"}>
@@ -209,6 +223,12 @@ export function ConversationContactPanel({
                   <div className="flex items-center gap-3 rounded-lg bg-surface-muted px-3 py-2.5 text-secondary">
                     <Phone className="h-4 w-4 flex-shrink-0 text-muted" />
                     <span className="truncate">{phone}</span>
+                  </div>
+                ) : null}
+                {!phone && whatsappIdentity ? (
+                  <div className="flex items-center gap-3 rounded-lg bg-surface-muted px-3 py-2.5 text-secondary">
+                    <User className="h-4 w-4 flex-shrink-0 text-muted" />
+                    <span className="truncate">{whatsappIdentity}</span>
                   </div>
                 ) : null}
                 {email ? (

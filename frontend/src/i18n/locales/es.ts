@@ -538,7 +538,6 @@ export const es = {
       legacyHint:
         "{{number}} usa una conexión antigua del bot. Reconéctalo como canal para usar la app nueva de Meta y recibir mensajes en Conversaciones.",
       legacyAction: "Reconectar número",
-      upgradeHint: "Actualiza a Scale para conectar varios números de WhatsApp por bot.",
     },
     cloudApiTest: {
       title: "Prueba Cloud API",
@@ -617,6 +616,7 @@ export const es = {
     filterWhatsappNumberHint: "Selecciona un bot para filtrar por número de WhatsApp.",
     replyingFrom: "Respondiendo desde {{number}}",
     receiverNumber: "Número receptor: {{number}}",
+    whatsappUsernameOnly: "Usuario de WhatsApp (sin teléfono)",
     channelWhatsapp: "WhatsApp",
     channelInstagram: "Instagram",
     channelWebchat: "Web chat",
@@ -732,6 +732,18 @@ export const es = {
       "SLA de primera respuesta vencido hace {{duration}} (objetivo: {{minutes}} min)",
     slaAtRiskBanner:
       "SLA de primera respuesta en riesgo: {{duration}} transcurridos (objetivo: {{minutes}} min)",
+    window24Open: "Ventana de 24 h abierta · quedan {{duration}} para mensajes libres",
+    window24Expiring: "Ventana de 24 h por cerrar · quedan {{duration}}",
+    window24Closed:
+      "Ventana de 24 h cerrada · usa una plantilla para contactar de nuevo",
+    window24Unknown: "Ventana de 24 h · esperando el próximo mensaje del cliente",
+    window72Eligible:
+      "Ventana gratuita de 72 h (anuncio) · responde en {{duration}} para abrirla",
+    window72Open: "Ventana gratuita de 72 h abierta · quedan {{duration}}",
+    window72Expiring: "Ventana gratuita de 72 h por cerrar · quedan {{duration}}",
+    window72Closed: "Ventana gratuita de 72 h cerrada",
+    window72Missed:
+      "Ventana gratuita de 72 h no abierta · no se respondió a tiempo al anuncio",
     deleteTitle: "Eliminar conversación",
     deleteConfirm:
       "¿Eliminar esta conversación y todos sus mensajes? Esta acción no se puede deshacer.",
@@ -4178,6 +4190,7 @@ export const es = {
       send_products: "Productos",
       await_order: "Esperar pedido",
       send_otp: "Enviar OTP",
+      send_audio: "Nota de voz",
       save_contact: "Guardar contacto",
       create_lead: "Crear lead",
       create_opportunity: "Oportunidad",
@@ -4205,6 +4218,16 @@ export const es = {
       otpWhatsAppTemplateName: "Plantilla WhatsApp (opcional)",
       otpWhatsAppTemplateLanguage: "Idioma de plantilla WhatsApp",
       otpMaxAttempts: "Intentos máximos",
+      audioVoiceNote: "Nota de voz",
+      audioHint: "Se envía siempre como nota de voz en WhatsApp. Usa un archivo OGG Opus o grábala aquí.",
+      audioUpload: "Subir audio",
+      audioReplace: "Reemplazar audio",
+      audioRecord: "Grabar",
+      audioUseRecording: "Usar grabación",
+      audioUploaded: "Audio cargado",
+      audioRequired: "Sube o graba una nota de voz para este nodo.",
+      audioFormatError: "El archivo debe ser OGG Opus (.ogg o .opus).",
+      audioUploadError: "No se pudo subir la nota de voz.",
       localizedPlaceholder: "Texto en este idioma",
       localizedHint: "También puedes editar la versión en el otro idioma.",
       templateName: "Nombre de plantilla",
@@ -4511,6 +4534,10 @@ export const es = {
       send_otp: {
         description: "Envía un código OTP por SMS o WhatsApp y valida la respuesta del contacto.",
         usage: "Conecta las ramas verified y failed. Usa {{code}} en el mensaje o una plantilla AUTHENTICATION en WhatsApp.",
+      },
+      send_audio: {
+        description: "Envía una nota de voz grabada al contacto por WhatsApp.",
+        usage: "Sube o graba un audio OGG Opus. Solo funciona en conversaciones de WhatsApp.",
       },
       save_contact: {
         description: "Guarda teléfono, nombre y correo en el CRM.",

@@ -1086,6 +1086,9 @@ export interface Conversation {
   whatsappDisplayNumber?: string;
   participantId?: string;
   phoneNumber: string;
+  whatsappUserId?: string;
+  whatsappParentUserId?: string;
+  whatsappUsername?: string;
   contactId?: string;
   contactName?: string;
   status: "active" | "closed";
@@ -1107,6 +1110,8 @@ export interface Conversation {
   attribution?: AdsAttribution;
   messageCount: number;
   lastMessageAt: string;
+  lastInboundAt?: string;
+  freeEntryPointOpenedAt?: string;
   emailSubject?: string;
   emailThreadMessageId?: string;
   locale?: BotLocale;
@@ -1964,6 +1969,7 @@ export type FlowNodeType =
   | "send_products"
   | "await_order"
   | "send_otp"
+  | "send_audio"
   | "save_contact"
   | "create_lead"
   | "create_opportunity"
@@ -2093,6 +2099,10 @@ export interface FlowNodeData {
   otpWhatsAppTemplateName?: string;
   otpWhatsAppTemplateLanguage?: string;
   otpMaxAttempts?: number;
+  audioS3Key?: string;
+  audioFilename?: string;
+  audioMimeType?: string;
+  audioMediaId?: string;
 }
 
 export interface FlowNode {

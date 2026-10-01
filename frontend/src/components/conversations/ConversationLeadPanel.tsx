@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { useDialog } from "@/components/ui/DialogProvider";
 import { useCreateLead, useConvertLead } from "@/hooks/useLeads";
 import { useT } from "@/i18n/context";
+import { isWhatsAppBsuid } from "@/lib/whatsapp-identity";
 import type { Conversation, Lead } from "@/types";
 
 type Props = {
@@ -18,14 +19,15 @@ function conversationPhone(conversation: Conversation): string | undefined {
   if (conversation.channel === "email") {
     return conversation.phoneNumber || undefined;
   }
-  if (
-    (conversation.channel ?? "whatsapp") === "whatsapp" ||
+  const raw =
+    conversation.phoneNumber ||
+    ((conversation.channel ?? "whatsapp") === "whatsapp" ||
     conversation.channel === "sms" ||
     conversation.channel === "phone"
-  ) {
-    return conversation.phoneNumber || conversation.participantId;
-  }
-  return conversation.phoneNumber || conversation.participantId || undefined;
+      ? conversation.participantId
+      : conversation.participantId);
+  if (!raw || isWhatsAppBsuid(raw)) return undefined;
+  return raw;
 }
 
 function conversationEmail(conversation: Conversation): string | undefined {

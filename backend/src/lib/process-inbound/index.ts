@@ -42,6 +42,14 @@ import {
 import { inboundSourceForChannel } from "../channels/types.js";
 import { getWhatsAppAccessToken } from "../whatsapp/client.js";
 import { getWhatsAppAccessTokenForAccount } from "../whatsapp/secrets.js";
+import {
+  extractWhatsAppIdentityChange,
+  resolveWhatsAppIdentities,
+} from "../whatsapp/identity.js";
+import {
+  applyWhatsAppIdentityChange,
+  resolveCanonicalWhatsAppParticipant,
+} from "../dynamodb/whatsapp-identity.repository.js";
 import { getInstagramAccessToken } from "../instagram/secrets.js";
 import { getTelegramBotToken } from "../telegram/secrets.js";
 import { getMessengerAccessToken } from "../messenger/secrets.js";
@@ -219,21 +227,61 @@ export async function processInboundMessage(
       ? (body.payload as import("../../types/index.js").WhatsAppInboundPayload)
       : undefined;
 
+  if (channel === "whatsapp" && whatsappPayload) {
+    const identityChange = extractWhatsAppIdentityChange(whatsappPayload.message);
+    if (identityChange) {
+      await applyWhatsAppIdentityChange({
+        tenantId,
+        botId,
+        change: identityChange,
+        businessPhoneNumberId: whatsappPayload.phoneNumberId,
+      });
+      return;
+    }
+  }
+
   if (channel === "whatsapp" && whatsappPayload && isReactionInboundMessage(whatsappPayload.message)) {
     const reactionData = extractInboundReaction(whatsappPayload.message);
     if (!reactionData) return;
+
+    const identities =
+      resolveWhatsAppIdentities(whatsappPayload.message, whatsappPayload.contact) ?? {
+        participantId,
+        lookupIds: [participantId],
+      };
+    const resolvedIdentity = await resolveCanonicalWhatsAppParticipant({
+      tenantId,
+      botId,
+      participantId: identities.participantId,
+      ...(identities.phoneNumber ? { phoneNumber: identities.phoneNumber } : {}),
+      ...(identities.whatsappUserId ? { whatsappUserId: identities.whatsappUserId } : {}),
+      ...(identities.whatsappParentUserId
+        ? { whatsappParentUserId: identities.whatsappParentUserId }
+        : {}),
+    });
 
     const conversation = await getOrCreateConversation(
       tenantId,
       botId,
       channel,
-      participantId,
+      resolvedIdentity.participantId,
       displayName,
       {
         ...(whatsappPayload.whatsappChannelId
           ? { channelId: whatsappPayload.whatsappChannelId }
           : {}),
         businessPhoneNumberId: whatsappPayload.phoneNumberId,
+        ...(resolvedIdentity.whatsappUserId
+          ? { whatsappUserId: resolvedIdentity.whatsappUserId }
+          : {}),
+        ...(resolvedIdentity.whatsappParentUserId
+          ? { whatsappParentUserId: resolvedIdentity.whatsappParentUserId }
+          : {}),
+        ...(identities.whatsappUsername
+          ? { whatsappUsername: identities.whatsappUsername }
+          : {}),
+        ...(resolvedIdentity.phoneNumber ? { phoneNumber: resolvedIdentity.phoneNumber } : {}),
+        alternateParticipantIds: resolvedIdentity.lookupIds,
       }
     );
 
@@ -260,11 +308,37 @@ export async function processInboundMessage(
     whatsappPayload?.whatsappAccountId
   );
 
+  let whatsappIdentity:
+    | Awaited<ReturnType<typeof resolveCanonicalWhatsAppParticipant>>
+    | undefined;
+  let inboundWhatsAppIdentities: ReturnType<typeof resolveWhatsAppIdentities> | undefined;
+  if (channel === "whatsapp" && whatsappPayload) {
+    inboundWhatsAppIdentities =
+      resolveWhatsAppIdentities(whatsappPayload.message, whatsappPayload.contact) ?? {
+        participantId,
+        lookupIds: [participantId],
+      };
+    whatsappIdentity = await resolveCanonicalWhatsAppParticipant({
+      tenantId,
+      botId,
+      participantId: inboundWhatsAppIdentities.participantId || participantId,
+      ...(inboundWhatsAppIdentities.phoneNumber
+        ? { phoneNumber: inboundWhatsAppIdentities.phoneNumber }
+        : {}),
+      ...(inboundWhatsAppIdentities.whatsappUserId
+        ? { whatsappUserId: inboundWhatsAppIdentities.whatsappUserId }
+        : {}),
+      ...(inboundWhatsAppIdentities.whatsappParentUserId
+        ? { whatsappParentUserId: inboundWhatsAppIdentities.whatsappParentUserId }
+        : {}),
+    });
+  }
+
   let conversation = await getOrCreateConversation(
     tenantId,
     botId,
     channel,
-    participantId,
+    whatsappIdentity?.participantId ?? participantId,
     displayName,
     whatsappPayload
       ? {
@@ -272,6 +346,19 @@ export async function processInboundMessage(
             ? { channelId: whatsappPayload.whatsappChannelId }
             : {}),
           businessPhoneNumberId: whatsappPayload.phoneNumberId,
+          ...(whatsappIdentity?.whatsappUserId
+            ? { whatsappUserId: whatsappIdentity.whatsappUserId }
+            : {}),
+          ...(whatsappIdentity?.whatsappParentUserId
+            ? { whatsappParentUserId: whatsappIdentity.whatsappParentUserId }
+            : {}),
+          ...(inboundWhatsAppIdentities?.whatsappUsername
+            ? { whatsappUsername: inboundWhatsAppIdentities.whatsappUsername }
+            : {}),
+          ...(whatsappIdentity?.phoneNumber
+            ? { phoneNumber: whatsappIdentity.phoneNumber }
+            : {}),
+          ...(whatsappIdentity ? { alternateParticipantIds: whatsappIdentity.lookupIds } : {}),
         }
       : undefined
   );

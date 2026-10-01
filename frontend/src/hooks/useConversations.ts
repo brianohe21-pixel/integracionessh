@@ -121,6 +121,9 @@ export function useConversations(options?: {
   });
 }
 
+const MESSAGES_CACHE_STALE_MS = 5 * 60_000;
+const MESSAGES_CACHE_GC_MS = 30 * 60_000;
+
 export function useConversationMessages(conversationId: string, enabled = true) {
   const { connected } = useRealtimeConnection();
 
@@ -133,6 +136,10 @@ export function useConversationMessages(conversationId: string, enabled = true) 
       return Array.isArray(raw) ? (raw as Message[]) : [];
     },
     enabled: !!conversationId && enabled,
+    staleTime: connected ? MESSAGES_CACHE_STALE_MS : 0,
+    gcTime: MESSAGES_CACHE_GC_MS,
+    refetchOnMount: connected ? false : true,
+    refetchOnWindowFocus: !connected,
     refetchInterval: connected ? false : 30_000,
     refetchIntervalInBackground: false,
   });
@@ -150,6 +157,10 @@ export function useCrossChannelHistory(conversationId: string, enabled = true) {
       return raw.messages ?? [];
     },
     enabled: !!conversationId && enabled,
+    staleTime: connected ? MESSAGES_CACHE_STALE_MS : 0,
+    gcTime: MESSAGES_CACHE_GC_MS,
+    refetchOnMount: connected ? false : true,
+    refetchOnWindowFocus: !connected,
     refetchInterval: connected ? false : 60_000,
     refetchIntervalInBackground: false,
   });

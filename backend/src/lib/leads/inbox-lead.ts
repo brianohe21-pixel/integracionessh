@@ -9,6 +9,7 @@ import { emitIntegrationEvent } from "../integrations/emit.js";
 import { buildLeadCreatedPayload } from "../integrations/payloads.js";
 import type { Conversation, Lead } from "../../types/index.js";
 import { upsertContactFromLead } from "./convert.js";
+import { isWhatsAppBsuid } from "../whatsapp/identity.js";
 
 export function resolveConversationPhone(conversation: Conversation): string | null {
   const channel = conversation.channel ?? "whatsapp";
@@ -16,7 +17,7 @@ export function resolveConversationPhone(conversation: Conversation): string | n
     return conversation.phoneNumber?.trim() ? normalizePhone(conversation.phoneNumber) : null;
   }
   const raw = conversation.phoneNumber || conversation.participantId;
-  if (!raw?.trim()) return null;
+  if (!raw?.trim() || isWhatsAppBsuid(raw)) return null;
   const phone = normalizePhone(raw);
   return phone.length >= 10 ? phone : null;
 }
