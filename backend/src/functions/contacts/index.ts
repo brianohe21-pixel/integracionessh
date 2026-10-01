@@ -7,7 +7,7 @@ import {
   listContactsForExport,
   importContactsBatch,
   updateContact,
-  suppressContact,
+  deleteContact,
   normalizePhone,
   countContacts,
 } from "../../lib/dynamodb/contact.repository.js";
@@ -382,10 +382,10 @@ export async function handler(
       const existing = await getContactByPhone(auth.tenantId, phone);
       if (!existing) return notFound("Contact not found");
 
-      await suppressContact(auth.tenantId, phone);
+      await deleteContact(auth.tenantId, phone);
       await writeComplianceLog({
         tenantId: auth.tenantId,
-        action: "suppressed",
+        action: "deleted",
         phone,
         reason: "delete",
         actorUserId: auth.userId,
@@ -399,7 +399,7 @@ export async function handler(
         action: "delete",
         entityType: "contact",
         entityId: phone,
-        summary: `Suppressed contact ${phone}`,
+        summary: `Deleted contact ${phone}`,
       });
       return noContent();
     }
