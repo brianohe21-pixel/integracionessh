@@ -12,14 +12,20 @@ import {
   useEnableAiAssistant,
 } from "@/hooks/useAiAssistant";
 import { AiAssistantDisableBlockers } from "@/components/ai-assistant/AiAssistantDisableBlockers";
+import {
+  AiAssistantOpenAIBlocker,
+  mapAiAssistantEnableError,
+} from "@/components/ai-assistant/AiAssistantOpenAIBlocker";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { canDisableAiAssistant } from "@/lib/ai-assistant-policy";
+import { useProviderCredentials } from "@/hooks/useProviderCredentials";
 
 export default function AiAssistantAppsPage() {
   const t = useT();
   const { data: appsData } = useApps();
   const { data: botsData } = useBots();
+  const { data: credentials } = useProviderCredentials();
   const bots = botsData ?? [];
   const [botId, setBotId] = useState("");
   const { data: config } = useAiAssistant(botId);
@@ -30,6 +36,10 @@ export default function AiAssistantAppsPage() {
   const enabled = config?.enabled ?? false;
   const selectedBot = bots.find((bot) => bot.botId === botId);
   const disableBlocked = Boolean(enabled && selectedBot && !canDisableAiAssistant(selectedBot));
+  const credentialsReady = credentials !== undefined;
+  const openaiConfigured = Boolean(
+    credentials?.items.some((item) => item.provider === "openai" && item.configured)
+  );
   const aiApp = appsData?.apps.find((app) => app.id === "ai-assistant");
   const activeBots = aiApp?.installedBots.filter((bot) => bot.enabled) ?? [];
 
@@ -37,6 +47,10 @@ export default function AiAssistantAppsPage() {
     if (!botId) return;
     setError("");
     if (enabled && selectedBot && !canDisableAiAssistant(selectedBot)) return;
+    if (!enabled && credentialsReady && !openaiConfigured) {
+      setError(t("aiAssistant.openaiNotConfigured"));
+      return;
+    }
     try {
       if (enabled) {
         await disable.mutateAsync();
@@ -46,7 +60,7 @@ export default function AiAssistantAppsPage() {
         });
       }
     } catch (err) {
-      setError((err as Error).message);
+      setError(mapAiAssistantEnableError((err as Error).message, t));
     }
   }
 
@@ -113,7 +127,12 @@ export default function AiAssistantAppsPage() {
             <button
               type="button"
               onClick={() => void handleToggle()}
-              disabled={enable.isPending || disable.isPending || disableBlocked}
+              disabled={
+                enable.isPending ||
+                disable.isPending ||
+                disableBlocked ||
+                (!enabled && credentialsReady && !openaiConfigured)
+              }
               className={`rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-60 ${
                 enabled ? "bg-gray-600 hover:bg-gray-700" : "bg-accent hover:bg-accent-hover"
               }`}
@@ -128,6 +147,12 @@ export default function AiAssistantAppsPage() {
                 {t("aiAssistant.configure")}
               </Link>
             )}
+          </div>
+        ) : null}
+
+        {!enabled && botId && credentialsReady && !openaiConfigured ? (
+          <div className="mt-3">
+            <AiAssistantOpenAIBlocker />
           </div>
         ) : null}
 

@@ -4635,6 +4635,9 @@ export const en: Messages = {
     statusInactive: "Inactive",
     saved: "Settings saved",
     promptRequired: "System prompt is required to enable AI Assistant",
+    openaiNotConfigured:
+      "OpenAI is not configured. Add an API key in Settings before enabling AI Assistant.",
+    openaiNotConfiguredLink: "Go to Settings",
     disableBlockedTelephony: "Disable telephony before turning off AI Assistant. Go to",
     disableBlockedVoicebot: "Disable voicebot before turning off AI Assistant. Go to",
     defaultPrompt: "You are a helpful virtual assistant. Reply clearly and professionally.",

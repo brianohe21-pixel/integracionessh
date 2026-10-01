@@ -4644,6 +4644,9 @@ export const es = {
     statusInactive: "Inactivo",
     saved: "Configuración guardada",
     promptRequired: "El prompt del sistema es obligatorio para activar el Asistente IA",
+    openaiNotConfigured:
+      "OpenAI no está configurado. Configura la API key en Ajustes antes de activar el Asistente IA.",
+    openaiNotConfiguredLink: "Ir a Ajustes",
     disableBlockedTelephony:
       "Desactiva la telefonía antes de apagar el Asistente IA. Ve a",
     disableBlockedVoicebot:

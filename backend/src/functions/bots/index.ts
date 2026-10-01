@@ -40,6 +40,7 @@ import {
 import { ok, created, noContent, badRequest, notFound, handleError } from "../../lib/http.js";
 import { shouldRegisterSmsInboundLookup } from "../../lib/sms/client.js";
 import { enqueueWhatsAppSync } from "../../lib/whatsapp/coexistence/sync-queue.js";
+import { assertOpenAIConfigured } from "../../lib/integrations/provider-credentials.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 const WHATSAPP_SYNC_QUEUE_URL = process.env.WHATSAPP_SYNC_QUEUE_URL ?? "";
@@ -364,6 +365,9 @@ export async function handler(
       if (parsed.data.enabled === true) {
         await assertCanUseVoicebot(tenant);
         await assertCanEnableChannel(tenant, existing, "voicebot");
+        if (aiAssistantUpdates.responseMode === "openai") {
+          await assertOpenAIConfigured(auth.tenantId, ENVIRONMENT);
+        }
       }
 
       let widgetKey = existing.voicebotWidgetKey;
@@ -489,6 +493,7 @@ export async function handler(
       if (parsed.data.knowledgeEnabled === true) {
         assertCanEnableKnowledge(tenant);
       }
+      await assertOpenAIConfigured(auth.tenantId, ENVIRONMENT);
 
       const updated = await updateBotAudited(auth.tenantId, botId, {
         responseMode: "openai",

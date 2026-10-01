@@ -65,6 +65,7 @@ jest.mock("../dynamodb/tenant.repository.js", () => ({
 }));
 
 import {
+  assertOpenAIConfigured,
   deleteTenantProviderCredential,
   getProviderCredentialStatuses,
   hasTenantProviderCredential,
@@ -152,5 +153,21 @@ describe("provider credentials resolution", () => {
     expect(await hasTenantProviderCredential("reseller-1", ENV, "elevenlabs")).toBe(true);
     await deleteTenantProviderCredential("reseller-1", ENV, "elevenlabs");
     expect(await hasTenantProviderCredential("reseller-1", ENV, "elevenlabs")).toBe(false);
+  });
+
+  it("asserts OpenAI is configured before enabling AI features", async () => {
+    const previous = process.env.OPENAI_API_KEY;
+    delete process.env.OPENAI_API_KEY;
+    await expect(assertOpenAIConfigured("standalone", ENV)).rejects.toMatchObject({
+      message: "OpenAI is not configured. Configure credentials in account settings.",
+      statusCode: 400,
+      code: "OPENAI_NOT_CONFIGURED",
+    });
+
+    secretStore.set(`/${ENV}/tenants/standalone/openai`, JSON.stringify({ apiKey: "sk-own" }));
+    await expect(assertOpenAIConfigured("standalone", ENV)).resolves.toBeUndefined();
+
+    if (previous === undefined) delete process.env.OPENAI_API_KEY;
+    else process.env.OPENAI_API_KEY = previous;
   });
 });
