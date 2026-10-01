@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Eye, EyeOff, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -11,6 +12,9 @@ import {
   type ProviderId,
 } from "@/hooks/useProviderCredentials";
 import { useT } from "@/i18n/context";
+import { api } from "@/lib/api";
+import { isSubaccountTenant } from "@/lib/subaccount-services";
+import type { Tenant } from "@/types";
 
 interface FieldConfig {
   key: string;
@@ -38,6 +42,10 @@ function sourceBadgeVariant(source: string): "info" | "success" | "default" | "w
 export function ProviderCredentialCard({ provider }: { provider: ProviderId }) {
   const t = useT();
   const { data, isLoading } = useProviderCredentials();
+  const { data: me } = useQuery({
+    queryKey: ["tenants", "me"],
+    queryFn: () => api.get<Tenant>("/tenants/me"),
+  });
   const save = useSaveProviderCredential(provider);
   const remove = useDeleteProviderCredential(provider);
 
@@ -48,6 +56,7 @@ export function ProviderCredentialCard({ provider }: { provider: ProviderId }) {
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const hideResellerSource = isSubaccountTenant(me);
 
   useEffect(() => {
     if (!saved) return;
@@ -61,7 +70,9 @@ export function ProviderCredentialCard({ provider }: { provider: ProviderId }) {
 
   function sourceLabel(source: string | undefined): string {
     if (source === "own") return t("settings.ownBadge");
-    if (source === "reseller") return t("settings.resellerBadge");
+    if (source === "reseller") {
+      return hideResellerSource ? t("settings.configured") : t("settings.resellerBadge");
+    }
     if (source === "platform") return t("settings.platformBadge");
     return t("settings.notConfiguredBadge");
   }
