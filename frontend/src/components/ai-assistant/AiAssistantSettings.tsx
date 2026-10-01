@@ -81,7 +81,6 @@ export function AiAssistantSettings({ bot }: AiAssistantSettingsProps) {
 
   const agent = liveBot ?? bot;
   const enabled = config?.enabled ?? bot.responseMode === "openai";
-  const promptEditable = enabled || enable.isPending;
   const systemPromptTooLong = form.systemPrompt.length > BOT_SYSTEM_PROMPT_MAX_LENGTH;
   const isPending = save.isPending || enable.isPending || disable.isPending;
   const disableBlocked = enabled && !canDisableAiAssistant(agent);
@@ -217,8 +216,8 @@ export function AiAssistantSettings({ bot }: AiAssistantSettingsProps) {
             rows={5}
             value={form.systemPrompt}
             onChange={(e) => setForm((prev) => ({ ...prev, systemPrompt: e.target.value }))}
-            disabled={!promptEditable}
-            className="w-full resize-none rounded-lg border border-default px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-60"
+            maxLength={BOT_SYSTEM_PROMPT_MAX_LENGTH}
+            className="w-full resize-none rounded-lg border border-default px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
             placeholder={t("bots.systemPromptPlaceholder")}
           />
           <p className="mt-1 text-xs text-muted">
@@ -317,7 +316,6 @@ export function AiAssistantSettings({ bot }: AiAssistantSettingsProps) {
                 autoFocus
                 value={form.systemPrompt}
                 onChange={(e) => setForm((prev) => ({ ...prev, systemPrompt: e.target.value }))}
-                disabled={!promptEditable}
                 maxLength={BOT_SYSTEM_PROMPT_MAX_LENGTH}
                 rows={16}
                 className="min-h-[50vh] w-full resize-y rounded-lg border border-default px-3 py-2 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-60"
