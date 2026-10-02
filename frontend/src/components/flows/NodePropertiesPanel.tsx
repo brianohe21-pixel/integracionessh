@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ExternalLink, Plus, X } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { useMetaFlows } from "@/hooks/useMetaFlows";
@@ -33,8 +33,18 @@ interface NodePropertiesPanelProps {
   hideHeader?: boolean;
 }
 
+const INPUT_CLASS =
+  "w-full text-sm border border-field-border rounded-lg px-3 py-2.5 bg-surface-elevated shadow-sm transition-all focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none";
+
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return <label className="block text-sm font-medium text-primary mb-2">{children}</label>;
+}
+
+function parseCommaSeparated(value: string): string[] {
+  return value
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
 function textInput(
@@ -46,8 +56,51 @@ function textInput(
     <input
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full text-sm border border-field-border rounded-lg px-3 py-2.5 bg-surface-elevated shadow-sm transition-all focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none"
+      className={INPUT_CLASS}
       {...props}
+    />
+  );
+}
+
+function CommaSeparatedInput({
+  values,
+  onChange,
+  placeholder,
+}: {
+  values: string[];
+  onChange: (values: string[]) => void;
+  placeholder?: string;
+}) {
+  const serialized = values.join(", ");
+  const [draft, setDraft] = useState(serialized);
+  const [focused, setFocused] = useState(false);
+
+  useEffect(() => {
+    if (!focused) {
+      setDraft(serialized);
+    }
+  }, [serialized, focused]);
+
+  return (
+    <input
+      value={focused ? draft : serialized}
+      onFocus={() => {
+        setDraft(serialized);
+        setFocused(true);
+      }}
+      onBlur={() => {
+        const parsed = parseCommaSeparated(draft);
+        setDraft(parsed.join(", "));
+        setFocused(false);
+        onChange(parsed);
+      }}
+      onChange={(e) => {
+        const next = e.target.value;
+        setDraft(next);
+        onChange(parseCommaSeparated(next));
+      }}
+      placeholder={placeholder}
+      className={INPUT_CLASS}
     />
   );
 }
@@ -193,14 +246,10 @@ export function NodePropertiesPanel({
               </label>
               <div>
                 <FieldLabel>{t("flows.fields.keywords")}</FieldLabel>
-                {textInput((d.keywords ?? []).join(", "), (v) =>
-                  onUpdate({
-                    keywords: v
-                      .split(",")
-                      .map((s) => s.trim())
-                      .filter(Boolean),
-                  })
-                )}
+                <CommaSeparatedInput
+                  values={d.keywords ?? []}
+                  onChange={(keywords) => onUpdate({ keywords })}
+                />
               </div>
               {(d.keywords ?? []).length > 0 && (
                 <div>
@@ -534,14 +583,10 @@ export function NodePropertiesPanel({
           </div>
           <div>
             <FieldLabel>{t("flows.fields.productRetailerIds")}</FieldLabel>
-            {textInput((d.productRetailerIds ?? []).join(", "), (v) =>
-              onUpdate({
-                productRetailerIds: v
-                  .split(",")
-                  .map((s) => s.trim())
-                  .filter(Boolean),
-              })
-            )}
+            <CommaSeparatedInput
+              values={d.productRetailerIds ?? []}
+              onChange={(productRetailerIds) => onUpdate({ productRetailerIds })}
+            />
           </div>
         </>
       )}
@@ -614,14 +659,10 @@ export function NodePropertiesPanel({
           />
           <div>
             <FieldLabel>{t("flows.fields.contactTags")}</FieldLabel>
-            {textInput((d.contactTags ?? []).join(", "), (v) =>
-              onUpdate({
-                contactTags: v
-                  .split(",")
-                  .map((s) => s.trim())
-                  .filter(Boolean),
-              })
-            )}
+            <CommaSeparatedInput
+              values={d.contactTags ?? []}
+              onChange={(contactTags) => onUpdate({ contactTags })}
+            />
           </div>
         </>
       )}
@@ -652,14 +693,10 @@ export function NodePropertiesPanel({
           />
           <div>
             <FieldLabel>{t("flows.fields.leadTags")}</FieldLabel>
-            {textInput((d.leadTags ?? []).join(", "), (v) =>
-              onUpdate({
-                leadTags: v
-                  .split(",")
-                  .map((s) => s.trim())
-                  .filter(Boolean),
-              })
-            )}
+            <CommaSeparatedInput
+              values={d.leadTags ?? []}
+              onChange={(leadTags) => onUpdate({ leadTags })}
+            />
           </div>
         </>
       )}
@@ -741,14 +778,10 @@ export function NodePropertiesPanel({
           />
           <div>
             <FieldLabel>{t("flows.fields.opportunityTags")}</FieldLabel>
-            {textInput((d.opportunityTags ?? []).join(", "), (v) =>
-              onUpdate({
-                opportunityTags: v
-                  .split(",")
-                  .map((s) => s.trim())
-                  .filter(Boolean),
-              })
-            )}
+            <CommaSeparatedInput
+              values={d.opportunityTags ?? []}
+              onChange={(opportunityTags) => onUpdate({ opportunityTags })}
+            />
           </div>
         </>
       )}
