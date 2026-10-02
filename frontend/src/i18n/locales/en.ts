@@ -2342,7 +2342,7 @@ export const en: Messages = {
     smsBodyPlaceholder: "Hello {{1}}, your order {{2}} is on its way.",
     channelBuilderHint: "Each channel has its own format and approval rules.",
     pickerPlaceholder: "Select an approved template",
-    pickerEmpty: "No approved templates for {channel}. Create them in Templates.",
+    pickerEmpty: "No approved templates for {{channel}}. Create them in Templates.",
   },
   bulkSend: {
     title: "Bulk send",

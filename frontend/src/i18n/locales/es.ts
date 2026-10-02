@@ -2348,7 +2348,7 @@ export const es = {
     smsBodyPlaceholder: "Hola {{1}}, tu pedido {{2}} está en camino.",
     channelBuilderHint: "Cada canal tiene su propio formato y reglas de aprobación.",
     pickerPlaceholder: "Selecciona una plantilla aprobada",
-    pickerEmpty: "No hay plantillas aprobadas para {channel}. Créalas en Templates.",
+    pickerEmpty: "No hay plantillas aprobadas para {{channel}}. Créalas en Templates.",
   },
   bulkSend: {
     title: "Envío masivo",
