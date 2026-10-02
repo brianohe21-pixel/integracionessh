@@ -33,6 +33,7 @@ import { incrementBulkRecipients, incrementCampaignsStarted } from "../../lib/dy
 import { listContactsByTags } from "../../lib/dynamodb/contact.repository.js";
 import { checkMarketingRecipients } from "../../lib/compliance/recipient-policy.js";
 import { getWhatsAppAccessToken } from "../../lib/whatsapp/client.js";
+import { normalizeWhatsAppRecipientId } from "../../lib/whatsapp/identity.js";
 import { assertWhatsAppQualityForCampaign } from "../../lib/whatsapp/assert-campaign-quality.js";
 import { ok, created, badRequest, notFound, forbidden, unprocessableEntity, handleError } from "../../lib/http.js";
 import type { CampaignRecipient as CampaignRecipientType } from "../../types/index.js";
@@ -177,7 +178,12 @@ async function resolveUniqueRecipients(
   }
 
   return [
-    ...new Map(recipients.map((r) => [r.to.replace(/\D/g, ""), r])).values(),
+    ...new Map(
+      recipients.map((r) => {
+        const to = normalizeWhatsAppRecipientId(r.to);
+        return [to, { ...r, to }];
+      })
+    ).values(),
   ] as CampaignRecipientType[];
 }
 
@@ -367,7 +373,12 @@ export async function handler(
       }
 
       const uniqueRecipients = [
-        ...new Map(recipients.map((r) => [r.to.replace(/\D/g, ""), r])).values(),
+        ...new Map(
+          recipients.map((r) => {
+            const to = normalizeWhatsAppRecipientId(r.to);
+            return [to, { ...r, to }];
+          })
+        ).values(),
       ];
 
       if (uniqueRecipients.length === 0) {
@@ -375,7 +386,7 @@ export async function handler(
       }
 
       if (requireOptIn) {
-        const phones = uniqueRecipients.map((r) => r.to.replace(/\D/g, ""));
+        const phones = uniqueRecipients.map((r) => normalizeWhatsAppRecipientId(r.to));
         const { blocked } = await checkMarketingRecipients(auth.tenantId, phones, auth.userId);
         if (blocked.length > 0) {
           return unprocessableEntity("Some recipients cannot receive marketing messages", {
@@ -466,7 +477,7 @@ export async function handler(
       }
 
       if (requireOptIn) {
-        const phones = uniqueRecipients.map((r) => r.to.replace(/\D/g, ""));
+        const phones = uniqueRecipients.map((r) => normalizeWhatsAppRecipientId(r.to));
         const { blocked } = await checkMarketingRecipients(auth.tenantId, phones, auth.userId);
         if (blocked.length > 0) {
           return unprocessableEntity("Some recipients cannot receive marketing messages", {
@@ -586,12 +597,14 @@ export async function handler(
         );
       } else {
         const pending = await listPendingRecipients(auth.tenantId, campaignId, 5000);
-        const phones = pending.map((r) => r.to.replace(/\D/g, ""));
+        const phones = pending.map((r) => normalizeWhatsAppRecipientId(r.to));
         let eligible = pending;
         if (campaign.requireOptIn) {
           const { allowed } = await checkMarketingRecipients(auth.tenantId, phones, auth.userId);
           const allowedSet = new Set(allowed);
-          eligible = pending.filter((r) => allowedSet.has(r.to.replace(/\D/g, "")));
+          eligible = pending.filter((r) =>
+            allowedSet.has(normalizeWhatsAppRecipientId(r.to))
+          );
         }
         if (eligible.length > 0) {
           await enqueueRecipients(campaign, eligible);

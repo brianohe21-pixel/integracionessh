@@ -52,6 +52,7 @@ import {
 } from "../../lib/whatsapp/messaging-windows.js";
 import { assertWhatsAppOutboundAllowed } from "../../lib/whatsapp/outbound-guard.js";
 import { resolveWhatsAppOutboundRecipient } from "../../lib/whatsapp/identity.js";
+import { resolveWhatsAppTemplateDisplayContent } from "../../lib/whatsapp/template-content.js";
 import { getInstagramAccessToken } from "../../lib/instagram/secrets.js";
 import { getTelegramBotToken } from "../../lib/telegram/secrets.js";
 import { getMessengerAccessToken } from "../../lib/messenger/secrets.js";
@@ -876,12 +877,19 @@ export async function handler(
 
       const now = new Date().toISOString();
       const externalMessageId = result.messages?.[0]?.id;
+      const content = await resolveWhatsAppTemplateDisplayContent({
+        tenantId: auth.tenantId,
+        botId: parsed.data.botId,
+        templateName: parsed.data.templateName,
+        language: parsed.data.language,
+        ...(parsed.data.components ? { components: parsed.data.components } : {}),
+      });
       const message: Message = {
         messageId: externalMessageId ?? `adv-${randomUUID()}`,
         conversationId,
         tenantId: auth.tenantId,
         role: "advisor",
-        content: parsed.data.templateName,
+        content,
         channel: "whatsapp",
         messageType: "text",
         source: "panel",

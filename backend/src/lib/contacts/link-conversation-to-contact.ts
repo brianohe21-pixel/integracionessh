@@ -3,6 +3,7 @@ import {
   updateConversation,
 } from "../dynamodb/conversation.repository.js";
 import { normalizePhone } from "../dynamodb/contact.repository.js";
+import { isWhatsAppBsuid } from "../whatsapp/identity.js";
 import { resolveContactId } from "./resolve-contact-id.js";
 import { indexContactConversation } from "./contact-conversation-index.js";
 import { updateWebChatSessionIdentity } from "../webchat/session.repository.js";
@@ -39,7 +40,11 @@ export async function linkConversationToContact(
   if (!conversation) return null;
 
   const normalizedPhone = params.phone ? normalizePhone(params.phone) : "";
-  const phone = normalizedPhone.length >= 10 ? normalizedPhone : undefined;
+  const phone = isWhatsAppBsuid(normalizedPhone)
+    ? normalizedPhone
+    : normalizedPhone.length >= 10
+      ? normalizedPhone
+      : undefined;
   const email = params.email?.trim().toLowerCase() || undefined;
 
   if (!phone && !email && !params.displayName) return conversation;

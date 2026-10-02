@@ -5,6 +5,7 @@ import {
   getNestedValue,
   resolveBinding,
   resolveBindingValue,
+  resolveContactIdentity,
   resolveNormalizedContactPhone,
 } from "./binding.js";
 
@@ -96,14 +97,22 @@ describe("conversationBindingFromContext", () => {
     ).toEqual({ phone: "573015094213", contactName: "Oscar" });
   });
 
-  it("returns no phone when only BSUID is available", () => {
+  it("returns BSUID when no phone is available", () => {
     expect(
       conversationBindingFromContext({
         customerPhone: "CO.2936076990083649",
         conversation: {
           participantId: "CO.2936076990083649",
+          whatsappUserId: "CO.2936076990083649",
         },
       })
-    ).toEqual({});
+    ).toEqual({ phone: "CO.2936076990083649" });
+  });
+});
+
+describe("resolveContactIdentity", () => {
+  it("accepts phones and BSUIDs", () => {
+    expect(resolveContactIdentity("+57 300 111 2233")).toBe("573001112233");
+    expect(resolveContactIdentity("CO.1776217717045877")).toBe("CO.1776217717045877");
   });
 });

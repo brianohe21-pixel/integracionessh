@@ -221,6 +221,7 @@ export async function processInboundMessage(
     console.error(`Bot not found: tenantId=${tenantId} botId=${botId}`);
     return;
   }
+  let responseBot = bot;
 
   const whatsappPayload =
     channel === "whatsapp"
@@ -655,6 +656,10 @@ export async function processInboundMessage(
       );
     }
     if (flowAdvance.halt) return;
+    if (flowAdvance.continueWithBotId && flowAdvance.continueWithBotId !== responseBot.botId) {
+      const nextBot = await getBot(tenantId, flowAdvance.continueWithBotId);
+      if (nextBot) responseBot = nextBot;
+    }
   }
 
   if (!flowAdvance.handled) {
@@ -682,6 +687,10 @@ export async function processInboundMessage(
             );
           }
           if (flowStart.halt) return;
+          if (flowStart.continueWithBotId && flowStart.continueWithBotId !== responseBot.botId) {
+            const nextBot = await getBot(tenantId, flowStart.continueWithBotId);
+            if (nextBot) responseBot = nextBot;
+          }
         }
       } catch (err) {
         console.error(
@@ -744,7 +753,7 @@ export async function processInboundMessage(
   let shouldHandoff = false;
   let handoffReason: "ai" | "webhook" | "no_ai" = "ai";
 
-  if (bot.responseMode === "none") {
+  if (responseBot.responseMode === "none") {
     const handedOff = await performInboxHandoff({
       tenantId,
       botId,
@@ -767,16 +776,20 @@ export async function processInboundMessage(
     return;
   }
 
-  if (bot.responseMode === "webhook" && bot.webhookUrl) {
-    const webhookResult = await callCustomWebhook(bot.webhookUrl, bot.webhookSecret, {
-      message: userMessageText,
-      from: participantId,
-      conversationId: conversation.conversationId,
-      botId,
-      contact: { name: contactName ?? "" },
-      channel,
-      locale: conversationLocale,
-    });
+  if (responseBot.responseMode === "webhook" && responseBot.webhookUrl) {
+    const webhookResult = await callCustomWebhook(
+      responseBot.webhookUrl,
+      responseBot.webhookSecret,
+      {
+        message: userMessageText,
+        from: participantId,
+        conversationId: conversation.conversationId,
+        botId: responseBot.botId,
+        contact: { name: contactName ?? "" },
+        channel,
+        locale: conversationLocale,
+      }
+    );
     if (webhookResult.handoff) {
       shouldHandoff = true;
       handoffReason = "webhook";
@@ -816,7 +829,7 @@ export async function processInboundMessage(
       throw keyErr;
     }
     const result = await generateChatResponse(
-      bot,
+      responseBot,
       history,
       userMessageText,
       openAIKey,
@@ -848,7 +861,7 @@ export async function processInboundMessage(
       if (handoffErrMsg.includes("No active advisors")) {
         const openAIKey = await getOpenAIApiKey(tenantId, environment);
         const fallback = await generateChatResponse(
-          bot,
+          responseBot,
           history,
           userMessageText,
           openAIKey,

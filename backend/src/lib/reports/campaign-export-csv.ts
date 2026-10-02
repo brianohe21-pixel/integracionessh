@@ -1,6 +1,7 @@
 import { getCampaign, listCampaignRecipients } from "../dynamodb/campaign.repository.js";
 import { listAllBulkSendFailures } from "../dynamodb/bulk-job.repository.js";
 import { listCampaignSendAttempts } from "../dynamodb/campaign-send-attempt.repository.js";
+import { normalizeWhatsAppRecipientId } from "../whatsapp/identity.js";
 import type { Campaign, CampaignSendAttempt, OutreachChannel } from "../../types/index.js";
 
 function escapeCsvCell(value: string | number | null | undefined): string {
@@ -33,7 +34,7 @@ function attemptSortKey(attempt: CampaignSendAttempt): string {
 function assignAttemptNumbers(attempts: CampaignSendAttempt[]): Map<string, number> {
   const byPhone = new Map<string, CampaignSendAttempt[]>();
   for (const attempt of attempts) {
-    const phone = attempt.to.replace(/\D/g, "");
+    const phone = normalizeWhatsAppRecipientId(attempt.to);
     const group = byPhone.get(phone) ?? [];
     group.push(attempt);
     byPhone.set(phone, group);
@@ -214,21 +215,21 @@ async function buildLegacyRows(
   ]);
 
   const recipientByPhone = new Map(
-    recipients.map((r) => [r.to.replace(/\D/g, ""), r])
+    recipients.map((r) => [normalizeWhatsAppRecipientId(r.to), r])
   );
 
   const rows: string[] = [];
   const failuresByPhone = new Map<string, typeof failures>();
   for (const failure of failures) {
-    const phone = failure.to.replace(/\D/g, "");
+    const phone = normalizeWhatsAppRecipientId(failure.to);
     const group = failuresByPhone.get(phone) ?? [];
     group.push(failure);
     failuresByPhone.set(phone, group);
   }
 
   const allPhones = new Set<string>([
-    ...recipients.map((r) => r.to.replace(/\D/g, "")),
-    ...failures.map((f) => f.to.replace(/\D/g, "")),
+    ...recipients.map((r) => normalizeWhatsAppRecipientId(r.to)),
+    ...failures.map((f) => normalizeWhatsAppRecipientId(f.to)),
   ]);
 
   for (const phone of allPhones) {

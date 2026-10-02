@@ -43,6 +43,13 @@ export function resolveNormalizedContactPhone(value?: string | null): string | n
   return phone.length >= 10 ? phone : null;
 }
 
+export function resolveContactIdentity(value?: string | null): string | null {
+  const trimmed = value?.trim() || "";
+  if (!trimmed) return null;
+  if (isWhatsAppBsuid(trimmed)) return trimmed;
+  return resolveNormalizedContactPhone(trimmed);
+}
+
 function sanitizePhoneVariables(
   variables?: Record<string, string>
 ): Record<string, string> | undefined {
@@ -66,7 +73,7 @@ export function buildBindingContext(params: {
     contactName?: string;
   } | undefined;
 }): Record<string, unknown> {
-  const phone = resolveNormalizedContactPhone(params.conversation?.phone) || "";
+  const phone = resolveContactIdentity(params.conversation?.phone) || "";
   const contactName = params.conversation?.contactName?.trim() || "";
   const defaults: Record<string, string> = {};
   if (phone) {
@@ -89,13 +96,17 @@ export function conversationBindingFromContext(ctx: {
   conversation?: {
     phoneNumber?: string;
     participantId?: string;
+    whatsappUserId?: string;
     contactName?: string;
   };
 }): { phone?: string; contactName?: string } {
   const phone =
     resolveNormalizedContactPhone(ctx.conversation?.phoneNumber) ||
     resolveNormalizedContactPhone(ctx.customerPhone) ||
-    resolveNormalizedContactPhone(ctx.conversation?.participantId) ||
+    resolveContactIdentity(ctx.conversation?.whatsappUserId) ||
+    resolveContactIdentity(ctx.conversation?.participantId) ||
+    resolveContactIdentity(ctx.customerPhone) ||
+    resolveContactIdentity(ctx.conversation?.phoneNumber) ||
     undefined;
   const contactName = ctx.conversation?.contactName?.trim() || "";
   return {

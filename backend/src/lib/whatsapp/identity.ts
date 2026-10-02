@@ -14,6 +14,13 @@ export function normalizeWhatsAppPhoneId(value: string): string {
   return value.trim().replace(/\D/g, "");
 }
 
+export function normalizeWhatsAppRecipientId(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (isWhatsAppBsuid(trimmed)) return trimmed;
+  return normalizeWhatsAppPhoneId(trimmed);
+}
+
 export type WhatsAppIdentities = {
   participantId: string;
   phoneNumber?: string;

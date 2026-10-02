@@ -285,16 +285,26 @@ export function NodePropertiesPanel({
           )}
           {isMessagingFlow && (
             <>
-              <label className="flex items-center gap-2 text-sm text-secondary">
-                <input
-                  type="checkbox"
-                  checked={(d.triggerType ?? "any_message") === "first_message"}
-                  onChange={(e) =>
-                    onUpdate({ triggerType: e.target.checked ? "first_message" : "any_message" })
-                  }
-                />
-                {t("flows.fields.triggerFirstMessage")}
-              </label>
+              <div className="rounded-xl border border-field-border bg-surface-muted/30 p-4">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={(d.triggerType ?? "any_message") === "first_message"}
+                    onChange={(e) =>
+                      onUpdate({ triggerType: e.target.checked ? "first_message" : "any_message" })
+                    }
+                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-field-border text-accent focus:ring-accent"
+                  />
+                  <span className="text-sm text-secondary">
+                    <span className="font-medium text-primary">
+                      {t("flows.fields.triggerFirstMessage")}
+                    </span>
+                    <span className="mt-0.5 block text-xs text-muted">
+                      {t("flows.fields.triggerFirstMessageHint")}
+                    </span>
+                  </span>
+                </label>
+              </div>
               <div>
                 <FieldLabel>{t("flows.fields.keywords")}</FieldLabel>
                 <CommaSeparatedInput
@@ -1268,9 +1278,42 @@ export function NodePropertiesPanel({
       )}
 
       {type === "assign_bot" && (
-        <div className="rounded-xl border border-field-border bg-surface-muted/30 p-4 space-y-2">
-          <p className="text-sm font-medium text-primary">{t("flows.fields.assignBotAiTitle")}</p>
-          <p className="text-xs text-secondary">{t("flows.fields.assignBotHint")}</p>
+        <div className="space-y-4">
+          <div className="rounded-xl border border-field-border bg-surface-muted/30 p-4 space-y-2">
+            <p className="text-sm font-medium text-primary">{t("flows.fields.assignBotAiTitle")}</p>
+            <p className="text-xs text-secondary">{t("flows.fields.assignBotHint")}</p>
+          </div>
+          <div>
+            <FieldLabel>{t("flows.fields.assignBotAgent")}</FieldLabel>
+            <Select
+              value={d.botId ?? botId ?? ""}
+              onChange={(e) => onUpdate({ botId: e.target.value || undefined })}
+            >
+              <option value="">{t("flows.bot.placeholder")}</option>
+              {(bots ?? []).map((bot) => (
+                <option key={bot.botId} value={bot.botId}>
+                  {bot.name}
+                  {bot.responseMode === "openai" ? "" : ` (${t("flows.fields.assignBotNoAi")})`}
+                </option>
+              ))}
+            </Select>
+            <p className="mt-1 text-xs text-secondary">{t("flows.fields.assignBotAgentHint")}</p>
+            {(() => {
+              const selectedId = d.botId ?? botId ?? "";
+              const selected = (bots ?? []).find((item) => item.botId === selectedId);
+              if (!selectedId) {
+                return (
+                  <p className="mt-1 text-xs text-warning">{t("flows.fields.assignBotAgentRequired")}</p>
+                );
+              }
+              if (selected && selected.responseMode !== "openai") {
+                return (
+                  <p className="mt-1 text-xs text-warning">{t("flows.fields.assignBotAiDisabled")}</p>
+                );
+              }
+              return null;
+            })()}
+          </div>
         </div>
       )}
 

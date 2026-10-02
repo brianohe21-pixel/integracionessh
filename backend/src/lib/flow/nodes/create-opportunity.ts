@@ -4,7 +4,7 @@ import {
   buildBindingContext,
   conversationBindingFromContext,
   resolveBindingValue,
-  resolveNormalizedContactPhone,
+  resolveContactIdentity,
 } from "../binding.js";
 import { getNextNodeId } from "../graph.js";
 import { createOpportunityFromFormData } from "../../opportunities/form-opportunity.js";
@@ -23,7 +23,7 @@ export async function executeCreateOpportunityNode(
   const title = resolveBindingValue(node.data.opportunityTitleBinding, bindingContext).trim();
   if (!title) throw new Error("Opportunity title binding is required");
 
-  const phone = resolveNormalizedContactPhone(
+  const phone = resolveContactIdentity(
     resolveBindingValue(node.data.opportunityPhoneBinding, bindingContext)
   );
   if (!phone) {

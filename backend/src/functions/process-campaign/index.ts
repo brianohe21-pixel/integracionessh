@@ -24,6 +24,7 @@ import { getContactByPhone } from "../../lib/dynamodb/contact.repository.js";
 import { sendTemplateMessage, getWhatsAppAccessToken } from "../../lib/whatsapp/client.js";
 import { assertWhatsAppOutboundAllowed } from "../../lib/whatsapp/outbound-guard.js";
 import { applyCoexistenceSendThrottle } from "../../lib/whatsapp/coexistence/throughput.js";
+import { normalizeWhatsAppRecipientId } from "../../lib/whatsapp/identity.js";
 import { sendSmsFromTemplate } from "../../lib/sms/send-outbound.js";
 import type { CampaignSQSBody } from "../../types/index.js";
 import { computeNextBatchAt } from "../../lib/campaign/batch.js";
@@ -107,7 +108,7 @@ async function processRecipient(body: CampaignSQSBody, sqsMessageId: string): Pr
   } = body;
 
   if (!to) {
-    console.warn("Campaign recipient message missing phone number");
+    console.warn("Campaign recipient message missing recipient identity");
     return;
   }
 
@@ -134,7 +135,7 @@ async function processRecipient(body: CampaignSQSBody, sqsMessageId: string): Pr
     }
   }
 
-  const normalizedTo = to.replace(/\D/g, "");
+  const normalizedTo = normalizeWhatsAppRecipientId(to);
   const attemptId = sqsMessageId;
 
   const { attempt, isNew } = await ensureCampaignSendAttempt({
@@ -277,7 +278,7 @@ async function processRecipient(body: CampaignSQSBody, sqsMessageId: string): Pr
       });
       const result = await sendTemplateMessage({
         phoneNumberId: bot.phoneNumberId,
-        to,
+        to: normalizedTo,
         templateName,
         language,
         ...(components ? { components } : {}),

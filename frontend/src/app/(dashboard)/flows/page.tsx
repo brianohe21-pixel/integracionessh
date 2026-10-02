@@ -59,6 +59,8 @@ export default function FlowsPage() {
 
       <TourPageSuggestion tourId="flows" />
 
+      <p className="mb-4 text-sm text-secondary">{t("flows.aiCoexistenceHint")}</p>
+
       {actionError ? (
         <IntegrationErrorSupport
           integration="flow"

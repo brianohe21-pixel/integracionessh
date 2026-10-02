@@ -58,8 +58,11 @@ function buildStepDetail(
     }
     case "condition":
       return `${d.conditionVariable ?? "last_input"} ${d.conditionOperator ?? "contains"} ${d.conditionValue ?? ""}`.trim();
-    case "assign_bot":
+    case "assign_bot": {
+      const botLabel = d.botId?.trim();
+      if (botLabel) return botLabel;
       return locale === "es" ? "Asistente IA" : "AI Assistant";
+    }
     case "save_contact":
       return [d.contactPhoneBinding, d.contactNameBinding, d.contactEmailBinding].filter(Boolean).join(" · ");
     case "create_lead":

@@ -8,12 +8,13 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 import { ConditionalCheckFailedException } from "@aws-sdk/client-dynamodb";
 import { docClient, TABLE_NAME } from "./client.js";
+import { normalizeWhatsAppRecipientId } from "../whatsapp/identity.js";
 import type { Campaign, CampaignStatus, CampaignRecipient } from "../../types/index.js";
 
 const RECIPIENT_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 function normalizePhone(phone: string): string {
-  return phone.replace(/\D/g, "");
+  return normalizeWhatsAppRecipientId(phone);
 }
 
 function campaignKeys(tenantId: string, campaignId: string) {

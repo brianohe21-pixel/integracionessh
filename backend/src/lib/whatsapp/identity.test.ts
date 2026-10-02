@@ -2,6 +2,7 @@ import {
   buildWhatsAppRecipientFields,
   extractWhatsAppIdentityChange,
   isWhatsAppBsuid,
+  normalizeWhatsAppRecipientId,
   resolveInboundParticipantId,
   resolveWhatsAppIdentities,
   resolveWhatsAppOutboundRecipient,
@@ -157,5 +158,12 @@ describe("buildWhatsAppRecipientFields", () => {
     expect(buildWhatsAppRecipientFields("+57 300 123 4567")).toEqual({
       to: "573001234567",
     });
+  });
+});
+
+describe("normalizeWhatsAppRecipientId", () => {
+  it("preserves BSUID and strips phone formatting", () => {
+    expect(normalizeWhatsAppRecipientId("CO.2268328677295906")).toBe("CO.2268328677295906");
+    expect(normalizeWhatsAppRecipientId("+57 300 123 4567")).toBe("573001234567");
   });
 });

@@ -2,6 +2,7 @@ import { GetCommand, PutCommand, QueryCommand, UpdateCommand, DeleteCommand } fr
 import { ConditionalCheckFailedException } from "@aws-sdk/client-dynamodb";
 import { docClient, TABLE_NAME } from "./client.js";
 import { parseDeliveryFailureError } from "./bulk-job.repository.js";
+import { normalizeWhatsAppRecipientId } from "../whatsapp/identity.js";
 import type {
   CampaignSendAttempt,
   CampaignSendAttemptStatus,
@@ -63,7 +64,7 @@ export async function ensureCampaignSendAttempt(
     attemptId: input.attemptId,
     tenantId: input.tenantId,
     campaignId: input.campaignId,
-    to: input.to.replace(/\D/g, ""),
+    to: normalizeWhatsAppRecipientId(input.to),
     channel: input.channel,
     status: "queued",
     templateName: input.templateName,
