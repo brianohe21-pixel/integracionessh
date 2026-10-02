@@ -173,7 +173,7 @@ export function FlowEditorToolbar({
         <Button type="button" variant="secondary" size="sm" onClick={onPreview}>
           {t("flows.preview")}
         </Button>
-        <Button type="button" variant="secondary" size="sm" onClick={() => onSave()} disabled={isSaving || !isDirty}>
+        <Button type="button" variant="primary" size="sm" onClick={() => onSave()} disabled={isSaving || !isDirty}>
           {isSaving ? t("common.saving") : t("flows.save")}
         </Button>
         {onPublish ? (
