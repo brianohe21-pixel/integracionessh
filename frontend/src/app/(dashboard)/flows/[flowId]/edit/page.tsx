@@ -63,6 +63,7 @@ export default function EditFlowPage() {
     canRedo,
     reset: resetHistory,
     commit: commitHistory,
+    flushPending: flushHistory,
     undo,
     redo,
   } = useFlowEditorHistory();
@@ -223,6 +224,7 @@ export default function EditFlowPage() {
 
   async function handleSave(): Promise<boolean> {
     if (!flow || update.isPending) return !isDirty;
+    flushHistory();
     const nodesToSave = localNodes.length > 0 ? localNodes : resolveDraftNodes(flow);
     const edgesToSave = localNodes.length > 0 ? localEdges : resolveDraftEdges(flow);
     const voiceMode = resolveEditorVoiceMode(flow, nodesToSave);
@@ -238,7 +240,11 @@ export default function EditFlowPage() {
         edges: edgesToSave,
         entryNodeId: nodes.find((n) => n.type === "trigger")?.id ?? flow.entryNodeId,
       });
+      const draftNodes = resolveDraftNodes(updated);
+      const draftEdges = resolveDraftEdges(updated);
       const draftKey = flowDraftEditorSnapshotKey(updated);
+      initializedFlowKeyRef.current = `${updated.flowId}:${updated.version}:${draftKey}`;
+      resetHistory({ nodes: draftNodes, edges: draftEdges });
       setSavedKey(draftKey);
       setPublishedKey(
         hasUnpublishedFlowChanges(updated)
@@ -498,10 +504,11 @@ export default function EditFlowPage() {
         onDelete={deleteSelectedNode}
         canDelete={canDeleteSelected}
         onClose={() => setSelectedNodeId(null)}
-        onSave={() => void handleSave()}
+        onSave={handleSave}
         isSaving={update.isPending}
         isDirty={isDirty}
         justSaved={savedMessage}
+        saveError={saveError}
       />
     </div>
   );

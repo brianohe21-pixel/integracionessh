@@ -20,10 +20,11 @@ interface NodePropertiesModalProps {
   onDelete: () => void;
   canDelete: boolean;
   onClose: () => void;
-  onSave: () => void;
+  onSave: () => void | Promise<boolean>;
   isSaving?: boolean;
   isDirty?: boolean;
   justSaved?: boolean;
+  saveError?: string;
 }
 
 export function NodePropertiesModal({
@@ -42,6 +43,7 @@ export function NodePropertiesModal({
   isSaving = false,
   isDirty = false,
   justSaved = false,
+  saveError = "",
 }: NodePropertiesModalProps) {
   const t = useT();
 
@@ -55,6 +57,11 @@ export function NodePropertiesModal({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [selected, onClose]);
+
+  async function handleSaveClick() {
+    const saved = await onSave();
+    if (saved) onClose();
+  }
 
   if (!selected) return null;
 
@@ -123,6 +130,11 @@ export function NodePropertiesModal({
             canDelete={canDelete}
             hideHeader
           />
+          {saveError ? (
+            <p className="mt-4 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
+              {saveError}
+            </p>
+          ) : null}
         </div>
 
         <div className="flex flex-shrink-0 items-center justify-between gap-3 border-t border-default bg-surface-muted/40 px-6 py-4">
@@ -141,7 +153,7 @@ export function NodePropertiesModal({
           <Button
             type="button"
             size="sm"
-            onClick={onSave}
+            onClick={() => void handleSaveClick()}
             disabled={isSaving || !isDirty}
           >
             <Save className="h-4 w-4" />
