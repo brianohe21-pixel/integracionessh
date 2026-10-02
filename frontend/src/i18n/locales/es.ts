@@ -2342,6 +2342,8 @@ export const es = {
     sendToHint: "Código de país + número sin espacios",
     templateVars: "Variables del template",
     valueFor: "Valor para {{key}}",
+    sendVarHeader: "Encabezado {{key}}",
+    sendVarButton: "Botón {{name}} {{key}}",
     previewLabel: "Vista previa",
     sendTitle: "Enviar: {{name}}",
     smsLifecycleNote: "Los templates SMS son locales y están listos para usar en envíos masivos y campañas.",

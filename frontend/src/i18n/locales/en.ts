@@ -2336,6 +2336,8 @@ export const en: Messages = {
     sendToHint: "Country code + number without spaces",
     templateVars: "Template variables",
     valueFor: "Value for {{key}}",
+    sendVarHeader: "Header {{key}}",
+    sendVarButton: "Button {{name}} {{key}}",
     previewLabel: "Preview",
     sendTitle: "Send: {{name}}",
     smsLifecycleNote: "SMS templates are local and ready to use in bulk send and campaigns.",
