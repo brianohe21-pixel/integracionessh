@@ -1,11 +1,12 @@
 import { sendTemplateMessage } from "../../whatsapp/client.js";
 import type { FlowNode, FlowRun } from "../../../types/index.js";
 import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
-import { requireMessagingContext } from "../types.js";
+import { requireBotId, requireMessagingContext } from "../types.js";
 import { getNextNodeId } from "../graph.js";
 import { skipWhatsAppOnlyNode } from "./channel-guard.js";
 import { getBotLocale, templateLanguageForLocale } from "../../i18n/index.js";
 import { persistFlowOutboundMessage } from "../persist-outbound.js";
+import { resolveWhatsAppTemplateDisplayContent } from "../../whatsapp/template-content.js";
 
 export async function executeTemplateNode(
   node: FlowNode,
@@ -42,9 +43,17 @@ export async function executeTemplateNode(
       : {}),
   });
 
+  const content = await resolveWhatsAppTemplateDisplayContent({
+    tenantId: ctx.tenantId,
+    botId: requireBotId(ctx),
+    templateName,
+    language,
+    ...(templateVariables ? { templateVariables } : {}),
+  });
+
   await persistFlowOutboundMessage({
     ctx,
-    content: templateName,
+    content,
     skipIfAdapterPersists: false,
     ...(result.messages?.[0]?.id ? { externalMessageId: result.messages[0].id } : {}),
     metadata: {
@@ -59,6 +68,6 @@ export async function executeTemplateNode(
     nextNodeId: getNextNodeId(ctx.flow, node.id),
     halt: false,
     wait: false,
-    output: templateName,
+    output: content,
   };
 }
