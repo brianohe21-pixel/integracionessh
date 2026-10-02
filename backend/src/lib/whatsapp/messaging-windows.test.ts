@@ -2,6 +2,7 @@ import {
   assertCustomerServiceWindowOpen,
   CustomerServiceWindowClosedError,
   isCustomerServiceWindowOpen,
+  resolveLastInboundAtFromMessages,
   shouldOpenFreeEntryPoint,
 } from "./messaging-windows.js";
 
@@ -37,6 +38,28 @@ describe("isCustomerServiceWindowOpen", () => {
         now
       )
     ).toBe(false);
+  });
+});
+
+describe("resolveLastInboundAtFromMessages", () => {
+  it("returns the latest user message timestamp", () => {
+    expect(
+      resolveLastInboundAtFromMessages([
+        {
+          role: "assistant",
+          timestamp: "2026-09-30T09:00:00.000Z",
+        },
+        {
+          role: "user",
+          source: "whatsapp_inbound",
+          timestamp: "2026-09-30T11:00:00.000Z",
+        },
+        {
+          role: "advisor",
+          timestamp: "2026-09-30T11:30:00.000Z",
+        },
+      ])
+    ).toBe("2026-09-30T11:00:00.000Z");
   });
 });
 

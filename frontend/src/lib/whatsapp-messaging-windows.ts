@@ -38,15 +38,19 @@ function resolveLastInboundAt(
   messages?: Message[]
 ): number | null {
   const stored = parseMs(conversation.lastInboundAt);
-  if (stored !== null) return stored;
-  if (!messages?.length) return null;
-  for (let i = messages.length - 1; i >= 0; i -= 1) {
-    const message = messages[i];
-    if (message.role === "user" || message.source === "whatsapp_inbound") {
-      return parseMs(message.timestamp);
+  let fromMessages: number | null = null;
+  if (messages?.length) {
+    for (let i = messages.length - 1; i >= 0; i -= 1) {
+      const message = messages[i];
+      if (message.role === "user" || message.source === "whatsapp_inbound") {
+        fromMessages = parseMs(message.timestamp);
+        break;
+      }
     }
   }
-  return null;
+  if (stored === null) return fromMessages;
+  if (fromMessages === null) return stored;
+  return Math.max(stored, fromMessages);
 }
 
 function formatRemaining(ms: number): string {

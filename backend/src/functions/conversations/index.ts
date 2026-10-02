@@ -45,7 +45,11 @@ import {
   phoneNumberIdForOutbound,
   resolveWhatsAppChannelForConversation,
 } from "../../lib/whatsapp/channel-context.js";
-import { assertCustomerServiceWindowOpen } from "../../lib/whatsapp/messaging-windows.js";
+import {
+  assertCustomerServiceWindowOpen,
+  isCustomerServiceWindowOpen,
+  resolveLastInboundAtFromMessages,
+} from "../../lib/whatsapp/messaging-windows.js";
 import { assertWhatsAppOutboundAllowed } from "../../lib/whatsapp/outbound-guard.js";
 import { resolveWhatsAppOutboundRecipient } from "../../lib/whatsapp/identity.js";
 import { getInstagramAccessToken } from "../../lib/instagram/secrets.js";
@@ -809,6 +813,32 @@ export async function handler(
 
       const channel = conversation.channel ?? "whatsapp";
       if (channel === "whatsapp") {
+        if (!isCustomerServiceWindowOpen(conversation)) {
+          const recentMessages = await getConversationMessages(auth.tenantId, conversationId, 50);
+          const latestInboundAt = resolveLastInboundAtFromMessages(recentMessages);
+          if (latestInboundAt) {
+            const storedMs = conversation.lastInboundAt
+              ? Date.parse(conversation.lastInboundAt)
+              : Number.NaN;
+            const messageMs = Date.parse(latestInboundAt);
+            if (
+              Number.isFinite(messageMs) &&
+              (!Number.isFinite(storedMs) || messageMs > storedMs)
+            ) {
+              const refreshed = await updateConversation(
+                auth.tenantId,
+                conversation.botId,
+                conversation.conversationId,
+                { lastInboundAt: latestInboundAt }
+              );
+              if (refreshed) {
+                Object.assign(conversation, refreshed);
+              } else {
+                conversation.lastInboundAt = latestInboundAt;
+              }
+            }
+          }
+        }
         assertCustomerServiceWindowOpen(conversation);
       }
 

@@ -615,6 +615,12 @@ export async function processInboundMessage(
       contactName,
     });
     await incrementMessages(tenantId);
+  } else {
+    const refreshed = await updateConversation(tenantId, botId, conversation.conversationId, {
+      lastInboundAt: now,
+      lastMessageAt: now,
+    });
+    if (refreshed) conversation = refreshed;
   }
 
   let flowAdvance: Awaited<ReturnType<typeof advanceFlowRun>> = {

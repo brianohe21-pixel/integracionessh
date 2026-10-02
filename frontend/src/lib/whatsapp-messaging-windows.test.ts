@@ -79,6 +79,39 @@ describe("getWhatsAppMessagingWindows", () => {
     expect(result.window24.remainingMs).toBe(23 * 60 * 60 * 1000);
   });
 
+  it("reopens 24h window from newer user message when lastInboundAt is stale", () => {
+    const now = Date.parse("2026-09-30T12:00:00.000Z");
+    const messages: Message[] = [
+      {
+        messageId: "m-old",
+        conversationId: "c1",
+        tenantId: "t1",
+        role: "user",
+        content: "hola",
+        timestamp: "2026-09-28T10:00:00.000Z",
+      },
+      {
+        messageId: "m-new",
+        conversationId: "c1",
+        tenantId: "t1",
+        role: "user",
+        content: "hola de nuevo",
+        source: "whatsapp_inbound",
+        timestamp: "2026-09-30T11:30:00.000Z",
+      },
+    ];
+    const result = getWhatsAppMessagingWindows(
+      {
+        ...baseConversation,
+        lastInboundAt: "2026-09-28T10:00:00.000Z",
+      },
+      messages,
+      now
+    );
+    expect(result.window24.status).toBe("open");
+    expect(result.window24.remainingMs).toBe(22.5 * 60 * 60 * 1000);
+  });
+
   it("shows 72h eligible for CTWA before first reply deadline", () => {
     const now = Date.parse("2026-09-29T20:00:00.000Z");
     const result = getWhatsAppMessagingWindows(
