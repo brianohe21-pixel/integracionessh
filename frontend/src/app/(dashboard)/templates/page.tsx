@@ -344,6 +344,58 @@ export default function TemplatesPage() {
         ? isAuthOtpFormValid(authOtpForm)
         : isWhatsAppFormValid(whatsappForm));
 
+  const renderTemplateActions = (tpl: MessageTemplate, align: "start" | "end" = "end") => {
+    const sms = isSmsTemplate(tpl);
+    const canSend = tpl.status === "APPROVED";
+    const canEdit = sms || tpl.status === "REJECTED";
+    return (
+      <div className={`flex items-center gap-1 ${align === "end" ? "justify-end" : "justify-start"}`}>
+        {canSend && (
+          <button
+            type="button"
+            onClick={() => openSend(tpl)}
+            className="rounded-md p-2 text-muted transition-colors hover:bg-accent-muted hover:text-accent"
+            title={t("templates.send")}
+            aria-label={t("templates.send")}
+          >
+            <Send className="h-4 w-4" />
+          </button>
+        )}
+        {canEdit ? (
+          <button
+            type="button"
+            onClick={() => openEdit(tpl)}
+            className="rounded-md p-2 text-muted transition-colors hover:bg-surface-muted hover:text-secondary"
+            title={sms ? t("common.edit") : t("templates.editResubmit")}
+            aria-label={sms ? t("common.edit") : t("templates.editResubmit")}
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+        ) : (
+          <span
+            className="cursor-not-allowed rounded-md p-2 text-gray-300"
+            title={
+              tpl.status === "APPROVED"
+                ? t("templates.cannotEditApproved")
+                : t("templates.waitMetaReview")
+            }
+          >
+            <Pencil className="h-4 w-4" />
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={() => setDeleteConfirm(tpl)}
+          className="rounded-md p-2 text-muted transition-colors hover:bg-red-50 hover:text-red-600"
+          title={t("common.delete")}
+          aria-label={t("common.delete")}
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
+    );
+  };
+
   return (
     <DashboardPage>
       <div data-tour="templates-header">
@@ -473,130 +525,143 @@ export default function TemplatesPage() {
 
       {!isLoading && templates && templates.length > 0 && (
         <div data-tour="templates-table">
-        <TableContainer className="overflow-hidden rounded-xl border border-default bg-surface-elevated">
-          <table className="w-full min-w-[720px]">
-            <thead>
-              <tr className="border-b border-default bg-surface">
-                <th className="text-left text-xs font-medium text-secondary uppercase tracking-wider px-5 py-3">
-                  {t("templates.colName")}
-                </th>
-                {!botFilter && (
-                  <th className="text-left text-xs font-medium text-secondary uppercase tracking-wider px-5 py-3">
-                    {t("templates.colBot")}
-                  </th>
-                )}
-                <th className="text-left text-xs font-medium text-secondary uppercase tracking-wider px-5 py-3">
-                  {t("templates.language")}
-                </th>
-                <th className="text-left text-xs font-medium text-secondary uppercase tracking-wider px-5 py-3">
-                  {t("templates.category")}
-                </th>
-                <th className="text-left text-xs font-medium text-secondary uppercase tracking-wider px-5 py-3">
-                  {t("common.status")}
-                </th>
-                <th className="text-left text-xs font-medium text-secondary uppercase tracking-wider px-5 py-3">
-                  {t("templates.colSynced")}
-                </th>
-                <th className="text-right text-xs font-medium text-secondary uppercase tracking-wider px-5 py-3">
-                  {t("templates.colActions")}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {templates.map((tpl) => {
-                const sms = isSmsTemplate(tpl);
-                const statusInfo = STATUS_BADGE[tpl.status as keyof typeof STATUS_BADGE] ?? STATUS_BADGE.PENDING;
-                const canSend = tpl.status === "APPROVED";
-                const canEdit = sms || tpl.status === "REJECTED";
-                return (
-                  <tr key={`${tpl.botId}-${tpl.name}-${tpl.language}`} className="hover:bg-surface transition-colors">
-                    <td className="px-5 py-4">
+          <div className="space-y-3 md:hidden">
+            {templates.map((tpl) => {
+              const sms = isSmsTemplate(tpl);
+              const statusInfo = STATUS_BADGE[tpl.status as keyof typeof STATUS_BADGE] ?? STATUS_BADGE.PENDING;
+              return (
+                <div
+                  key={`${tpl.botId}-${tpl.name}-${tpl.language}`}
+                  className="rounded-xl border border-default bg-surface-elevated p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <LayoutTemplate className="w-4 h-4 text-muted" />
-                        <span className="text-sm font-medium text-primary">{tpl.name}</span>
+                        <LayoutTemplate className="h-4 w-4 shrink-0 text-muted" />
+                        <span className="truncate text-sm font-medium text-primary">{tpl.name}</span>
                       </div>
-                    </td>
-                    {!botFilter && (
-                      <td className="px-5 py-4 text-sm text-secondary">
-                        {botNameById.get(tpl.botId) ?? tpl.botId}
-                      </td>
-                    )}
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-1.5">
-                        <Languages className="w-3.5 h-3.5 text-muted" />
-                        <span className="text-sm text-secondary">{tpl.language}</span>
-                      </div>
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-1.5">
-                        <Tag className="w-3.5 h-3.5 text-muted" />
-                        <span className="text-sm text-secondary">
-                          {CATEGORY_LABELS[tpl.category as keyof typeof CATEGORY_LABELS] ?? tpl.category}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-5 py-4">
-                      <div
-                        title={
-                          tpl.status === "PENDING"
-                            ? t("templates.tooltipPending")
-                            : tpl.status === "REJECTED"
+                      {!botFilter ? (
+                        <p className="mt-1 truncate text-xs text-secondary">
+                          {botNameById.get(tpl.botId) ?? tpl.botId}
+                        </p>
+                      ) : null}
+                    </div>
+                    <div
+                      title={
+                        tpl.status === "PENDING"
+                          ? t("templates.tooltipPending")
+                          : tpl.status === "REJECTED"
                             ? t("templates.tooltipRejected")
                             : t("templates.tooltipApproved")
-                        }
-                      >
-                        <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
-                      </div>
-                    </td>
-                    <td className="px-5 py-4 text-sm text-secondary">
-                      {formatDate(sms ? tpl.updatedAt : tpl.syncedAt)}
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="flex items-center justify-end gap-1">
-                        {canSend && (
-                          <button
-                            onClick={() => openSend(tpl)}
-                            className="p-1.5 rounded-md text-muted hover:text-accent hover:bg-accent-muted transition-colors"
-                            title={t("templates.send")}
-                          >
-                            <Send className="w-4 h-4" />
-                          </button>
-                        )}
-                        {canEdit ? (
-                          <button
-                            onClick={() => openEdit(tpl)}
-                            className="p-1.5 rounded-md text-muted hover:text-secondary hover:bg-surface-muted transition-colors"
-                            title={sms ? t("common.edit") : t("templates.editResubmit")}
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                        ) : (
-                          <span
-                            className="p-1.5 rounded-md text-gray-300 cursor-not-allowed"
-                            title={
-                              tpl.status === "APPROVED"
-                                ? t("templates.cannotEditApproved")
-                                : t("templates.waitMetaReview")
-                            }
-                          >
-                            <Pencil className="w-4 h-4" />
+                      }
+                    >
+                      <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5 text-xs text-secondary">
+                    <span className="inline-flex items-center gap-1">
+                      <Languages className="h-3.5 w-3.5 text-muted" />
+                      {tpl.language}
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <Tag className="h-3.5 w-3.5 text-muted" />
+                      {CATEGORY_LABELS[tpl.category as keyof typeof CATEGORY_LABELS] ?? tpl.category}
+                    </span>
+                    <span>{formatDate(sms ? tpl.updatedAt : tpl.syncedAt)}</span>
+                  </div>
+
+                  <div className="mt-3 border-t border-default pt-3">
+                    {renderTemplateActions(tpl, "start")}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <TableContainer className="hidden rounded-xl border border-default bg-surface-elevated md:block">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-default bg-surface">
+                  <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-secondary">
+                    {t("templates.colName")}
+                  </th>
+                  {!botFilter && (
+                    <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-secondary">
+                      {t("templates.colBot")}
+                    </th>
+                  )}
+                  <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-secondary">
+                    {t("templates.language")}
+                  </th>
+                  <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-secondary">
+                    {t("templates.category")}
+                  </th>
+                  <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-secondary">
+                    {t("common.status")}
+                  </th>
+                  <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-secondary">
+                    {t("templates.colSynced")}
+                  </th>
+                  <th className="px-5 py-3 text-right text-xs font-medium uppercase tracking-wider text-secondary">
+                    {t("templates.colActions")}
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {templates.map((tpl) => {
+                  const sms = isSmsTemplate(tpl);
+                  const statusInfo = STATUS_BADGE[tpl.status as keyof typeof STATUS_BADGE] ?? STATUS_BADGE.PENDING;
+                  return (
+                    <tr key={`${tpl.botId}-${tpl.name}-${tpl.language}`} className="transition-colors hover:bg-surface">
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-2">
+                          <LayoutTemplate className="h-4 w-4 text-muted" />
+                          <span className="text-sm font-medium text-primary">{tpl.name}</span>
+                        </div>
+                      </td>
+                      {!botFilter && (
+                        <td className="px-5 py-4 text-sm text-secondary">
+                          {botNameById.get(tpl.botId) ?? tpl.botId}
+                        </td>
+                      )}
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-1.5">
+                          <Languages className="h-3.5 w-3.5 text-muted" />
+                          <span className="text-sm text-secondary">{tpl.language}</span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-1.5">
+                          <Tag className="h-3.5 w-3.5 text-muted" />
+                          <span className="text-sm text-secondary">
+                            {CATEGORY_LABELS[tpl.category as keyof typeof CATEGORY_LABELS] ?? tpl.category}
                           </span>
-                        )}
-                        <button
-                          onClick={() => setDeleteConfirm(tpl)}
-                          className="p-1.5 rounded-md text-muted hover:text-red-600 hover:bg-red-50 transition-colors"
-                          title={t("common.delete")}
+                        </div>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div
+                          title={
+                            tpl.status === "PENDING"
+                              ? t("templates.tooltipPending")
+                              : tpl.status === "REJECTED"
+                                ? t("templates.tooltipRejected")
+                                : t("templates.tooltipApproved")
+                          }
                         >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </TableContainer>
+                          <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+                        </div>
+                      </td>
+                      <td className="px-5 py-4 text-sm text-secondary">
+                        {formatDate(sms ? tpl.updatedAt : tpl.syncedAt)}
+                      </td>
+                      <td className="px-5 py-4">{renderTemplateActions(tpl)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </TableContainer>
         </div>
       )}
 
