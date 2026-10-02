@@ -6,6 +6,7 @@ import type { WhatsAppTemplate } from "@/types";
 interface TemplateMessagePreviewProps {
   template: WhatsAppTemplate;
   variableValues?: string[];
+  headerVariableValues?: string[];
   label?: string;
   className?: string;
 }
@@ -24,6 +25,7 @@ function formatBodyText(text: string, variableValues?: string[]): string {
 export function TemplateMessagePreview({
   template,
   variableValues,
+  headerVariableValues,
   label,
   className,
 }: TemplateMessagePreviewProps) {
@@ -68,7 +70,9 @@ export function TemplateMessagePreview({
           <div className="bg-surface-elevated rounded-2xl rounded-tr-sm shadow-sm overflow-hidden">
             {header?.text && (
               <div className="px-3 pt-3 pb-1">
-                <p className="text-sm font-semibold text-primary leading-snug">{header.text}</p>
+                <p className="text-sm font-semibold text-primary leading-snug">
+                  {formatBodyText(header.text, headerVariableValues)}
+                </p>
               </div>
             )}
             {bodyText && (

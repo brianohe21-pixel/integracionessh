@@ -7,15 +7,36 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { TemplatePicker, type TemplatePickerValue } from "@/components/templates/TemplatePicker";
 import { TemplateMessagePreview } from "@/components/templates/TemplateMessagePreview";
-import { isAuthenticationTemplate } from "@/components/templates/channel/types";
 import { useSendConversationTemplate } from "@/hooks/useConversations";
 import { useT } from "@/i18n/context";
-import { extractBodyVariables, sortBodyVariables } from "@/lib/templates/variables";
+import {
+  buildTemplateSendComponents,
+  emptySlotValues,
+  listTemplateSendSlots,
+  placeholderValues,
+  slotsAreComplete,
+  type TemplateSendSlot,
+} from "@/lib/templates/send-components";
 import { isSmsTemplate, type Conversation, type MessageTemplate } from "@/types";
 
 type Props = {
   conversation: Conversation;
 };
+
+function slotLabel(
+  slot: TemplateSendSlot,
+  t: (key: string, values?: Record<string, string | number>) => string
+): string {
+  if (slot.kind === "auth_code") return t("templates.authOtpCodeLabel");
+  if (slot.kind === "header_text") return t("templates.sendVarHeader", { key: slot.placeholder });
+  if (slot.kind === "button_url") {
+    return t("templates.sendVarButton", {
+      name: slot.buttonText?.trim() || String((slot.buttonIndex ?? 0) + 1),
+      key: slot.placeholder,
+    });
+  }
+  return slot.placeholder;
+}
 
 export function ConversationTemplateComposeBar({ conversation }: Props) {
   const t = useT();
@@ -32,21 +53,14 @@ export function ConversationTemplateComposeBar({ conversation }: Props) {
     setError("");
   }, [conversation.conversationId]);
 
-  const variableKeys = useMemo(() => {
+  const slots = useMemo(() => {
     if (!template || isSmsTemplate(template)) return [];
-    if (
-      template.category === "AUTHENTICATION" ||
-      isAuthenticationTemplate(template.components)
-    ) {
-      return ["{{1}}"];
-    }
-    const bodyText = template.components.find((c) => c.type === "BODY")?.text ?? "";
-    return sortBodyVariables(extractBodyVariables(bodyText));
+    return listTemplateSendSlots(template);
   }, [template]);
 
   const canSend =
     Boolean(selection && template) &&
-    variableKeys.every((key) => Boolean(params[key]?.trim())) &&
+    slotsAreComplete(slots, params) &&
     !sendTemplate.isPending;
 
   function handleTemplateChange(value: TemplatePickerValue, next: MessageTemplate) {
@@ -57,54 +71,14 @@ export function ConversationTemplateComposeBar({ conversation }: Props) {
       setParams({});
       return;
     }
-    if (
-      next.category === "AUTHENTICATION" ||
-      isAuthenticationTemplate(next.components)
-    ) {
-      setParams({ "{{1}}": "" });
-      return;
-    }
-    const bodyText = next.components.find((c) => c.type === "BODY")?.text ?? "";
-    const vars = sortBodyVariables(extractBodyVariables(bodyText));
-    const initial: Record<string, string> = {};
-    vars.forEach((v) => {
-      initial[v] = "";
-    });
-    setParams(initial);
+    setParams(emptySlotValues(listTemplateSendSlots(next)));
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!selection || !template || isSmsTemplate(template) || !canSend) return;
 
-    const isAuthOtp =
-      template.category === "AUTHENTICATION" ||
-      isAuthenticationTemplate(template.components);
-    const otpCode = params["{{1}}"]?.trim() || Object.values(params)[0]?.trim() || "";
-    const components = isAuthOtp
-      ? [
-          {
-            type: "body",
-            parameters: [{ type: "text" as const, text: otpCode }],
-          },
-          {
-            type: "button",
-            sub_type: "url",
-            index: "0",
-            parameters: [{ type: "text" as const, text: otpCode }],
-          },
-        ]
-      : variableKeys.length
-        ? [
-            {
-              type: "body",
-              parameters: variableKeys.map((key) => ({
-                type: "text" as const,
-                text: params[key] ?? "",
-              })),
-            },
-          ]
-        : undefined;
+    const components = buildTemplateSendComponents(template, params);
 
     setError("");
     try {
@@ -122,6 +96,8 @@ export function ConversationTemplateComposeBar({ conversation }: Props) {
       setError(err instanceof Error ? err.message : t("conversations.templateSendFailed"));
     }
   }
+
+  const whatsappTemplate = template && !isSmsTemplate(template) ? template : null;
 
   return (
     <form onSubmit={handleSubmit} className="conversations-compose-bar relative space-y-3 py-2 sm:py-3">
@@ -142,50 +118,42 @@ export function ConversationTemplateComposeBar({ conversation }: Props) {
             disabled={sendTemplate.isPending}
           />
 
-          {variableKeys.length > 0 ? (
+          {slots.length > 0 ? (
             <div className="space-y-2">
               <p className="text-xs font-medium text-secondary">
                 {t("templates.templateVars")}
               </p>
-              {variableKeys.map((key) => {
-                const isAuthCodeField =
-                  template &&
-                  !isSmsTemplate(template) &&
-                  (template.category === "AUTHENTICATION" ||
-                    isAuthenticationTemplate(template.components)) &&
-                  key === "{{1}}";
-                return (
-                  <div key={key}>
-                    <label className="mb-1 block text-xs text-secondary">
-                      {isAuthCodeField ? t("templates.authOtpCodeLabel") : key}
-                    </label>
-                    <Input
-                      type="text"
-                      value={params[key] ?? ""}
-                      onChange={(e) =>
-                        setParams((prev) => ({ ...prev, [key]: e.target.value }))
-                      }
-                      disabled={sendTemplate.isPending}
-                      placeholder={
-                        isAuthCodeField
-                          ? "123456"
-                          : t("templates.valueFor", { key })
-                      }
-                    />
-                  </div>
-                );
-              })}
+              {slots.map((slot) => (
+                <div key={slot.key}>
+                  <label className="mb-1 block text-xs text-secondary">
+                    {slotLabel(slot, t)}
+                  </label>
+                  <Input
+                    type="text"
+                    value={params[slot.key] ?? ""}
+                    onChange={(e) =>
+                      setParams((prev) => ({ ...prev, [slot.key]: e.target.value }))
+                    }
+                    disabled={sendTemplate.isPending}
+                    placeholder={
+                      slot.kind === "auth_code"
+                        ? "123456"
+                        : t("templates.valueFor", { key: slot.placeholder })
+                    }
+                  />
+                </div>
+              ))}
             </div>
           ) : null}
 
-          {template && !isSmsTemplate(template) ? (
+          {whatsappTemplate ? (
             <TemplateMessagePreview
-              template={template}
+              template={whatsappTemplate}
               variableValues={
-                variableKeys.length
-                  ? variableKeys.map((key) => params[key] ?? "")
-                  : undefined
+                placeholderValues(slots, params, "auth_code") ??
+                placeholderValues(slots, params, "body_text")
               }
+              headerVariableValues={placeholderValues(slots, params, "header_text")}
               label={t("templates.previewLabel")}
             />
           ) : null}
