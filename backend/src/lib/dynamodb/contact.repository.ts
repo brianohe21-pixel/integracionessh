@@ -7,6 +7,7 @@ import {
 import { docClient, TABLE_NAME } from "./client.js";
 import { resolveContactCountry } from "../phone/country-from-phone.js";
 import { isWithinDateRange } from "./call-metrics.js";
+import { normalizeWhatsAppRecipientId } from "../whatsapp/identity.js";
 import type {
   Contact,
   ContactDateField,
@@ -17,7 +18,7 @@ import type {
 } from "../../types/index.js";
 
 export function normalizePhone(phone: string): string {
-  return phone.replace(/\D/g, "");
+  return normalizeWhatsAppRecipientId(phone);
 }
 
 export function normalizeEmail(email: string): string {

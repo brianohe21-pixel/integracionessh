@@ -5,6 +5,7 @@ import {
 } from "../dynamodb/whatsapp-channel.repository.js";
 import { checkMarketingRecipients } from "../compliance/recipient-policy.js";
 import { isAccountOutboundBlocked, isChannelOutboundBlocked } from "./enforcement.js";
+import { normalizeWhatsAppRecipientId } from "./identity.js";
 import type { WhatsAppChannel, WhatsAppOutboundSendKind } from "../../types/index.js";
 
 export class WhatsAppOutboundBlockedError extends Error {
@@ -48,7 +49,7 @@ async function assertMarketingRecipient(
 ): Promise<void> {
   if (!requireOptIn || !to) return;
 
-  const normalized = to.replace(/\D/g, "");
+  const normalized = normalizeWhatsAppRecipientId(to);
   const { allowed } = await checkMarketingRecipients(tenantId, [normalized]);
   if (allowed.length === 0) {
     const contact = await getContactByPhone(tenantId, normalized);

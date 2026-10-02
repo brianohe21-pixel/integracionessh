@@ -4,7 +4,7 @@ import {
   buildBindingContext,
   conversationBindingFromContext,
   resolveBindingValue,
-  resolveNormalizedContactPhone,
+  resolveContactIdentity,
 } from "../binding.js";
 import { getNextNodeId } from "../graph.js";
 import { saveContactFromFormData } from "../../leads/form-lead.js";
@@ -21,7 +21,7 @@ export async function executeSaveContactNode(
     conversation: conversationBindingFromContext(ctx),
   });
 
-  const phone = resolveNormalizedContactPhone(
+  const phone = resolveContactIdentity(
     resolveBindingValue(node.data.contactPhoneBinding, bindingContext)
   );
   if (!phone) {

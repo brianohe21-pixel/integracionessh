@@ -8,6 +8,7 @@ import {
 } from "../dynamodb/campaign.repository.js";
 import { checkMarketingRecipients } from "../compliance/recipient-policy.js";
 import { deferCampaignDispatchForLaw2300 } from "../compliance/law2300-campaign.js";
+import { normalizeWhatsAppRecipientId } from "../whatsapp/identity.js";
 import type { Campaign, CampaignSQSBody } from "../../types/index.js";
 import type { PendingRecipient as RepoPendingRecipient } from "../dynamodb/campaign.repository.js";
 
@@ -29,10 +30,10 @@ async function filterPendingForMarketing(
 ): Promise<RepoPendingRecipient[]> {
   if (!requireOptIn) return pending;
 
-  const phones = pending.map((r) => r.to.replace(/\D/g, ""));
+  const phones = pending.map((r) => normalizeWhatsAppRecipientId(r.to));
   const { allowed } = await checkMarketingRecipients(tenantId, phones, actorUserId);
   const allowedSet = new Set(allowed);
-  return pending.filter((r) => allowedSet.has(r.to.replace(/\D/g, "")));
+  return pending.filter((r) => allowedSet.has(normalizeWhatsAppRecipientId(r.to)));
 }
 
 export async function enqueueRecipients(
@@ -72,7 +73,7 @@ export async function enqueueRecipients(
       channel,
       templateName,
       language,
-      to: recipient.to.replace(/\D/g, ""),
+      to: normalizeWhatsAppRecipientId(recipient.to),
       recipientKey: recipient.recipientKey,
       ...(options?.batchVersion !== undefined ? { batchVersion: options.batchVersion } : {}),
       ...(options?.batchIndex !== undefined ? { batchIndex: options.batchIndex } : {}),

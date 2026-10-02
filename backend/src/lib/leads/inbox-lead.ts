@@ -16,10 +16,21 @@ export function resolveConversationPhone(conversation: Conversation): string | n
   if (channel === "email") {
     return conversation.phoneNumber?.trim() ? normalizePhone(conversation.phoneNumber) : null;
   }
-  const raw = conversation.phoneNumber || conversation.participantId;
-  if (!raw?.trim() || isWhatsAppBsuid(raw)) return null;
-  const phone = normalizePhone(raw);
-  return phone.length >= 10 ? phone : null;
+
+  const phoneCandidates = [conversation.phoneNumber, conversation.participantId].filter(
+    (value): value is string => Boolean(value?.trim()) && !isWhatsAppBsuid(value)
+  );
+  for (const candidate of phoneCandidates) {
+    const phone = normalizePhone(candidate);
+    if (phone.length >= 10) return phone;
+  }
+
+  const bsuid = [
+    conversation.whatsappUserId,
+    conversation.participantId,
+    conversation.phoneNumber,
+  ].find((value) => value?.trim() && isWhatsAppBsuid(value));
+  return bsuid?.trim() || null;
 }
 
 export async function createLeadFromInbox(params: {

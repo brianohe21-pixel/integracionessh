@@ -1,4 +1,5 @@
 import { stripPhoneDigits } from "./normalize.js";
+import { isWhatsAppBsuid } from "../whatsapp/identity.js";
 
 const DEFAULT_COUNTRY_CODE = "57";
 
@@ -240,6 +241,7 @@ export function detectCountryFromPhone(phone: string): string | undefined {
 export function resolveContactCountry(phone: string, explicit?: string): string | undefined {
   const trimmed = explicit?.trim();
   if (trimmed) return trimmed;
+  if (isWhatsAppBsuid(phone)) return undefined;
   return detectCountryFromPhone(phone);
 }
 

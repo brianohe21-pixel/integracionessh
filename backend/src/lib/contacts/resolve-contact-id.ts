@@ -3,12 +3,15 @@ import {
   normalizeEmail,
   getContactByEmail,
 } from "../dynamodb/contact.repository.js";
+import { isWhatsAppBsuid } from "../whatsapp/identity.js";
 import type { Channel, Conversation } from "../../types/index.js";
 
 const PHONE_CHANNELS: Channel[] = ["whatsapp", "sms", "phone"];
 
 export function contactIdFromPhone(phone: string): string | null {
-  const normalized = normalizePhone(phone);
+  const trimmed = phone.trim();
+  if (!trimmed || isWhatsAppBsuid(trimmed)) return null;
+  const normalized = normalizePhone(trimmed);
   return normalized.length >= 10 ? `phone:${normalized}` : null;
 }
 
