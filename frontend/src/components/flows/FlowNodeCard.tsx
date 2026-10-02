@@ -80,7 +80,7 @@ function FlowNodeCardComponent({ id, data, selected }: NodeProps) {
             {nodeData.typeLabel}
           </span>
           {nodeData.preview ? (
-            <p className="mt-1.5 line-clamp-3 break-words text-sm leading-snug text-secondary">
+            <p className="mt-1.5 line-clamp-3 break-words text-sm leading-snug text-secondary whitespace-pre-line">
               {nodeData.preview}
             </p>
           ) : null}

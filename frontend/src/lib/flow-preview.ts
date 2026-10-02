@@ -56,8 +56,21 @@ function buildStepDetail(node: FlowNode, locale: BotLocale): string {
       return [d.contactPhoneBinding, d.contactNameBinding, d.contactEmailBinding].filter(Boolean).join(" · ");
     case "create_lead":
       return [d.leadPhoneBinding, d.leadNameBinding, d.leadEmailBinding].filter(Boolean).join(" · ");
-    case "create_opportunity":
-      return [d.opportunityTitleBinding, d.opportunityAmountBinding, d.opportunityPhoneBinding].filter(Boolean).join(" · ");
+    case "create_opportunity": {
+      const stage = d.opportunityStage ?? "new";
+      const amount = d.opportunityAmountBinding
+        ? `${d.opportunityAmountBinding} ${d.opportunityCurrency ?? "USD"}`
+        : "";
+      return [
+        d.opportunityTitleBinding,
+        stage,
+        amount,
+        d.opportunityPhoneBinding,
+        d.opportunityNameBinding,
+      ]
+        .filter(Boolean)
+        .join(" · ");
+    }
     case "send_notification": {
       const recipients =
         d.notificationRecipientBindings?.filter((item) => item.trim()).join(", ") ||

@@ -200,6 +200,7 @@ export default function EditFlowPage() {
       position: position ?? defaultPalettePosition(localNodes.length),
       label: t(`flows.nodeTypes.${type}`),
       suggestedBotId,
+      bindingPreset: isMessagingFlow ? "messaging" : "form",
     });
     if (type === "buttons") {
       node.data.messageText = t("flows.fields.defaultButtonPrompt");

@@ -230,8 +230,31 @@ export function buildNodePreview(type: FlowNodeType, data: FlowNodeData, locale:
       return data.contactPhoneBinding ?? "";
     case "create_lead":
       return data.leadPhoneBinding ?? "";
-    case "create_opportunity":
-      return data.opportunityTitleBinding || data.opportunityPhoneBinding || "";
+    case "create_opportunity": {
+      const stageLabels: Record<string, { es: string; en: string }> = {
+        new: { es: "Nueva", en: "New" },
+        quoted: { es: "Cotizada", en: "Quoted" },
+        negotiation: { es: "Negociación", en: "Negotiation" },
+        won: { es: "Ganada", en: "Won" },
+        lost: { es: "Perdida", en: "Lost" },
+      };
+      const stage = data.opportunityStage ?? "new";
+      const stageLabel = stageLabels[stage]?.[locale] ?? stage;
+      const title = data.opportunityTitleBinding?.trim();
+      const amount = data.opportunityAmountBinding?.trim();
+      const currency = data.opportunityCurrency ?? "USD";
+      const phone = data.opportunityPhoneBinding?.trim();
+      const meta = [
+        stageLabel,
+        amount ? `${amount} ${currency}` : "",
+        phone ?? "",
+      ].filter(Boolean);
+      if (title && meta.length) {
+        return `${truncate(title, 40)}\n${truncate(meta.join(" · "), 48)}`;
+      }
+      if (title) return truncate(title);
+      return truncate(meta.join(" · "));
+    }
     case "send_notification": {
       const channel = data.notificationChannel ?? "whatsapp";
       const channelLabel: Record<string, string> = { whatsapp: "WhatsApp", sms: "SMS", email: "Email" };

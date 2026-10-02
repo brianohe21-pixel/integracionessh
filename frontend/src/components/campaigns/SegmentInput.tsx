@@ -73,7 +73,7 @@ export function SegmentInput({
           onKeyDown={handleKeyDown}
           onBlur={() => addSegment(input)}
           placeholder={value.length === 0 ? (placeholder ?? t("campaigns.segmentsPlaceholder")) : undefined}
-          className="flex-1 min-w-[120px] outline-none text-sm text-secondary placeholder:text-muted bg-transparent"
+          className="input-bare flex-1 min-w-[120px] outline-none text-sm text-secondary placeholder:text-muted bg-transparent"
         />
       )}
     </div>
