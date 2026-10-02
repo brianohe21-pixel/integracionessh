@@ -31,6 +31,18 @@ export interface FlowPipelineResult {
   errorMessage?: string;
 }
 
+export function resolveFlowPipelineHalt(
+  node: FlowDefinition["nodes"][number],
+  result: { halt: boolean; nextNodeId: string | null }
+): boolean {
+  if (result.halt) return true;
+  if (result.nextNodeId) return false;
+  if (node.type === "assign_bot" || node.type === "end" || node.type === "handoff") {
+    return false;
+  }
+  return true;
+}
+
 function buildContext(params: {
   tenantId: string;
   botId: string;
@@ -137,6 +149,10 @@ async function runFromNode(
 
     if (result.halt || !result.nextNodeId) {
       const completed = node.type === "end" || !result.nextNodeId;
+      const halt = resolveFlowPipelineHalt(node, {
+        halt: result.halt,
+        nextNodeId: result.nextNodeId,
+      });
       await updateFlowRun(ctx.tenantId, run.runId, {
         status: completed ? "completed" : "active",
         currentNodeId: result.nextNodeId ?? node.id,
@@ -147,7 +163,7 @@ async function runFromNode(
       if (completed) {
         await clearActiveFlowRun(ctx.tenantId, botId, conversation.conversationId);
       }
-      return { handled: true, halt: result.halt };
+      return { handled: true, halt };
     }
 
     currentNodeId = result.nextNodeId;

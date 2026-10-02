@@ -164,6 +164,7 @@ export function AiAssistantSettings({ bot }: AiAssistantSettingsProps) {
           <div>
             <h2 className="text-lg font-semibold text-primary">{t("aiAssistant.title")}</h2>
             <p className="mt-1 text-sm text-secondary">{t("aiAssistant.subtitle")}</p>
+            <p className="mt-2 text-sm text-secondary">{t("aiAssistant.flowCoexistenceHint")}</p>
           </div>
           <span
             className={`rounded-full px-3 py-1 text-xs font-medium ${

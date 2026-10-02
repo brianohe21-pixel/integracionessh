@@ -4153,6 +4153,8 @@ export const es = {
   flows: {
     title: "Flujos visuales",
     subtitle: "Constructor no-code con nodos y ramas",
+    aiCoexistenceHint:
+      "Si el Asistente IA también está activo, el flujo visual tiene prioridad: responde primero cuando hace match. El asistente solo contesta si ningún flujo tomó el mensaje, o si el flujo termina en «Transferir al Asistente IA».",
     new: "Nuevo flujo",
     edit: "Editar flujo",
     enable: "Activar",
@@ -4664,6 +4666,8 @@ export const es = {
     appDescription: "Respuestas automáticas con IA y base de conocimiento por agente",
     title: "Asistente IA",
     subtitle: "Activa respuestas automáticas con IA para tus agentes",
+    flowCoexistenceHint:
+      "Puede coexistir con flujos visuales. Si hay un flujo activo que hace match, el flujo responde primero y el asistente no contesta ese mensaje. Usa el nodo «Transferir al Asistente IA» cuando quieras pasar del flujo al asistente.",
     selectAgentSubtitle: "Gestiona el Asistente IA en cada agente",
     manageTitle: "Asistente IA: {{name}}",
     manageSubtitle: "Prompt, modelo y base de conocimiento",
@@ -5464,7 +5468,7 @@ export const es = {
         troubleshooting: {
           title: "Si el flujo no se ejecuta",
           body:
-            "Verifica que el flujo esté habilitado, que el trigger coincida con el mensaje recibido y que no haya otro flujo o automatización con mayor prioridad bloqueándolo.",
+            "Verifica que el flujo esté habilitado, que el trigger coincida con el mensaje recibido y que no haya otro flujo o automatización con mayor prioridad bloqueándolo. Si también tienes el Asistente IA activo, el flujo tiene prioridad sobre el asistente.",
         },
       },
     },

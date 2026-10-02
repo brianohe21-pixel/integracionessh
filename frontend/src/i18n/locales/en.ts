@@ -4144,6 +4144,8 @@ export const en: Messages = {
   flows: {
     title: "Visual flows",
     subtitle: "No-code builder with nodes and branches",
+    aiCoexistenceHint:
+      "If the AI Assistant is also enabled, the visual flow has priority: it replies first when it matches. The assistant only replies if no flow handled the message, or if the flow ends with “Hand off to AI Assistant”.",
     new: "New flow",
     edit: "Edit flow",
     enable: "Enable",
@@ -4655,6 +4657,8 @@ export const en: Messages = {
     appDescription: "Automatic AI replies and knowledge base per agent",
     title: "AI Assistant",
     subtitle: "Enable automatic AI replies for your agents",
+    flowCoexistenceHint:
+      "It can coexist with visual flows. If an enabled flow matches, the flow replies first and the assistant does not answer that message. Use the “Hand off to AI Assistant” node when you want the flow to pass control to the assistant.",
     selectAgentSubtitle: "Manage the AI Assistant on each agent",
     manageTitle: "AI Assistant: {{name}}",
     manageSubtitle: "Prompt, model, and knowledge base",
@@ -5450,7 +5454,7 @@ export const en: Messages = {
         troubleshooting: {
           title: "If the flow does not run",
           body:
-            "Verify the flow is enabled, the trigger matches the incoming message, and no higher-priority flow or automation is blocking it.",
+            "Verify the flow is enabled, the trigger matches the incoming message, and no higher-priority flow or automation is blocking it. If the AI Assistant is also enabled, the flow has priority over the assistant.",
         },
       },
     },
