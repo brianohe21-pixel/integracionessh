@@ -11,12 +11,13 @@ import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Input";
 import { LocalizedTextField } from "@/components/ui/LocalizedTextField";
 import { LocalizedHtmlField } from "@/components/ui/LocalizedHtmlField";
-import type { FlowNode, FlowNodeType, LocalizedText } from "@/types";
+import type { FlowNode, FlowNodeType, LocalizedText, FlowAgentChannel } from "@/types";
 import { extractSampleFields, FormBindingField } from "./FormBindingField";
 import { FlowWebhookPanel } from "./FlowWebhookPanel";
 import { FlowWebhookGuideAccordion } from "./FlowWebhookGuideAccordion";
 import { TemplatePicker } from "@/components/templates/TemplatePicker";
 import { SendAudioNodeFields } from "@/components/flows/SendAudioNodeFields";
+import { useWhatsAppChannels } from "@/hooks/useWhatsAppChannels";
 import type { OutreachChannel } from "@/types";
 
 interface NodePropertiesPanelProps {
@@ -139,6 +140,10 @@ export function NodePropertiesPanel({
   const { data: metaFlows } = useMetaFlows(botId);
   const { data: bots } = useBots();
   const [metaFlowsModalOpen, setMetaFlowsModalOpen] = useState(false);
+  const agentChannel = (selected?.data.channel ?? "any") as FlowAgentChannel;
+  const { data: whatsappChannels } = useWhatsAppChannels(botId, {
+    enabled: selected?.type === "agent" && agentChannel === "whatsapp",
+  });
 
   const isEmailNotification =
     selected?.type === "send_notification" &&
@@ -268,6 +273,58 @@ export function NodePropertiesPanel({
           )}
           {hasWebhookNode && (
             <p className="text-xs text-secondary">{t("flows.fields.triggerWebhookHint")}</p>
+          )}
+        </>
+      )}
+
+      {type === "agent" && (
+        <>
+          <div>
+            <FieldLabel>{t("flows.fields.agentChannel")}</FieldLabel>
+            <Select
+              value={(d.channel ?? "any") as string}
+              onChange={(e) => {
+                const channel = e.target.value as FlowAgentChannel;
+                onUpdate({
+                  channel,
+                  ...(channel !== "whatsapp" ? { whatsappChannelId: undefined } : {}),
+                });
+              }}
+            >
+              <option value="any">{t("flows.fields.agentChannelAny")}</option>
+              <option value="whatsapp">WhatsApp</option>
+              <option value="webchat">Webchat</option>
+              <option value="instagram">Instagram</option>
+              <option value="messenger">Messenger</option>
+              <option value="telegram">Telegram</option>
+              <option value="sms">SMS</option>
+              <option value="email">Email</option>
+              <option value="voicebot">Voicebot</option>
+              <option value="phone">Phone</option>
+            </Select>
+            <p className="mt-1 text-xs text-secondary">{t("flows.fields.agentChannelHint")}</p>
+          </div>
+          {(d.channel ?? "any") === "whatsapp" && (
+            <div>
+              <FieldLabel>{t("flows.fields.whatsappChannel")}</FieldLabel>
+              <Select
+                value={d.whatsappChannelId ?? ""}
+                onChange={(e) =>
+                  onUpdate({ whatsappChannelId: e.target.value || undefined })
+                }
+                disabled={!botId}
+              >
+                <option value="">{t("flows.fields.whatsappChannelAny")}</option>
+                {(whatsappChannels ?? []).map((channel) => (
+                  <option key={channel.channelId} value={channel.channelId}>
+                    {channel.label || channel.displayPhoneNumber || channel.phoneNumberId}
+                  </option>
+                ))}
+              </Select>
+              {!botId ? (
+                <p className="mt-1 text-xs text-warning">{t("flows.fields.agentNeedsFlowBot")}</p>
+              ) : null}
+            </div>
           )}
         </>
       )}
@@ -1059,17 +1116,9 @@ export function NodePropertiesPanel({
       )}
 
       {type === "assign_bot" && (
-        <div>
-          <FieldLabel>{t("flows.selectBot")}</FieldLabel>
-          <Select value={d.botId ?? ""} onChange={(e) => onUpdate({ botId: e.target.value })}>
-            <option value="">{t("flows.bot.placeholder")}</option>
-            {bots?.map((bot) => (
-              <option key={bot.botId} value={bot.botId}>
-                {bot.name}
-              </option>
-            ))}
-          </Select>
-          <p className="mt-1 text-xs text-secondary">{t("flows.fields.assignBotHint")}</p>
+        <div className="rounded-xl border border-field-border bg-surface-muted/30 p-4 space-y-2">
+          <p className="text-sm font-medium text-primary">{t("flows.fields.assignBotAiTitle")}</p>
+          <p className="text-xs text-secondary">{t("flows.fields.assignBotHint")}</p>
         </div>
       )}
 

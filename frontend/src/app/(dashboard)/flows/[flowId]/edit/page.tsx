@@ -167,7 +167,7 @@ export default function EditFlowPage() {
   const isMessagingFlow = !isVoiceFlow && !hasWebhookNode;
   const samplePayload = resolveFlowSamplePayload(localNodes);
   const assignedBotId =
-    resolveFlowBotIdFromNodes(localNodes) || flow?.botId || suggestedBotId;
+    flow?.botId || suggestedBotId || resolveFlowBotIdFromNodes(localNodes);
   const triggerCount = localNodes.filter((n) => n.type === "trigger").length;
   const canDeleteSelected =
     !!selected && !(selected.type === "trigger" && triggerCount <= 1);

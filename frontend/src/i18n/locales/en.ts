@@ -4171,10 +4171,11 @@ export const en: Messages = {
     namePlaceholder: "Flow name",
     bot: {
       title: "Bot",
-      subtitle: "Optional. Add an assign bot node on the canvas when this flow needs one.",
+      subtitle: "Optional. Assign the flow to an agent when you need messaging or CRM.",
       placeholder: "Select bot",
-      optionalHint: "This flow can run without a bot. Add an assign bot node only if you need CRM, messaging, or Meta forms.",
-      createHint: "Add an assign bot node from the integrations palette when needed.",
+      optionalHint:
+        "This flow can run without an agent. Assign one when creating or editing if you need CRM, messaging, or Meta forms.",
+      createHint: "You can assign the flow to an agent when creating it. Use the Agent node to choose the channel.",
       unassigned: "Unassigned",
     },
     nodePanel: "Node properties",
@@ -4200,6 +4201,8 @@ export const en: Messages = {
     copySuffix: "copy",
     errors: {
       assignBotBeforeEnable: "Add an assign bot node before enabling this flow",
+      assignFlowToAgentBeforeEnable: "Assign the flow to an agent before enabling it",
+      aiAssistantNotEnabled: "AI Assistant is not enabled for this agent",
       onlyOneVoiceFlow: "Only one voice flow can be enabled per bot",
       flowNotFound: "Flow not found",
       botNotFound: "Bot not found",
@@ -4217,6 +4220,7 @@ export const en: Messages = {
     },
     nodeTypes: {
       trigger: "Start",
+      agent: "Agent",
       message: "Message",
       template: "Template",
       condition: "Condition",
@@ -4237,7 +4241,7 @@ export const en: Messages = {
       create_lead: "Create lead",
       create_opportunity: "Opportunity",
       send_notification: "Send notification",
-      assign_bot: "Assign bot",
+      assign_bot: "Add bot",
       webhook: "Webhook",
       end: "End",
     },
@@ -4250,6 +4254,12 @@ export const en: Messages = {
       triggerKeyword: "Keyword",
       triggerWebForm: "Web form",
       triggerVoiceCall: "Voice call",
+      agentChannel: "Channel",
+      agentChannelAny: "Any channel",
+      agentChannelHint: "Choose which channel can trigger this flow.",
+      agentNeedsFlowBot: "Assign the flow to an agent to list WhatsApp numbers.",
+      whatsappChannel: "WhatsApp number",
+      whatsappChannelAny: "Any number on the agent",
       samplePayload: "Sample payload (JSON)",
       keywords: "Keywords (comma-separated)",
       matchMode: "Match mode",
@@ -4291,7 +4301,9 @@ export const en: Messages = {
       metaFlowId: "Meta form",
       metaFlowCta: "Button text",
       haltPipeline: "Stop bot pipeline",
-      assignBotHint: "Optional. Place this node before WhatsApp, SMS, Meta forms, or other messaging actions.",
+      assignBotAiTitle: "Hand off to AI Assistant",
+      assignBotHint:
+        "When this node runs, the structured flow ends and the conversation continues with the agent's AI Assistant.",
       delaySeconds: "Delay seconds",
       variableName: "Variable name",
       variableValue: "Value",
@@ -4597,7 +4609,7 @@ export const en: Messages = {
       },
       create_lead: {
         description: "Creates a CRM lead from form data.",
-        usage: "Place an Assign bot node before it if the flow requires one.",
+        usage: "Use {{form.field}} bindings or conversation variables.",
       },
       create_opportunity: {
         description: "Creates a sales opportunity with title, amount, and contact.",
@@ -4609,9 +4621,13 @@ export const en: Messages = {
         usage:
           "Set channel, recipient, and message. For email, use your verified sender or Integraciones SH email by default.",
       },
+      agent: {
+        description: "Defines which channel can trigger this flow.",
+        usage: "Pick any channel or a specific one. For WhatsApp you can limit to one of the agent's numbers.",
+      },
       assign_bot: {
-        description: "Assigns the bot that runs the following nodes.",
-        usage: "Optional. Place it before CRM, notifications, or Meta forms.",
+        description: "Hands the conversation over to the agent's AI Assistant.",
+        usage: "Place it where the structured flow should end and AI should reply.",
       },
       webhook: {
         description: "Exposes a URL to receive JSON data from external systems.",

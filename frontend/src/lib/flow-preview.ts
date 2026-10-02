@@ -16,7 +16,7 @@ function text(value: LocalizedText | undefined, locale: BotLocale): string {
   return resolveLocalizedText(value, locale);
 }
 
-function buildStepDetail(node: FlowNode, locale: BotLocale, botName?: string): string {
+function buildStepDetail(node: FlowNode, locale: BotLocale): string {
   const d = node.data;
 
   switch (node.type) {
@@ -31,6 +31,13 @@ function buildStepDetail(node: FlowNode, locale: BotLocale, botName?: string): s
       }
       return triggerType;
     }
+    case "agent": {
+      const channel = d.channel ?? "any";
+      if (channel === "whatsapp" && d.whatsappChannelId) {
+        return `whatsapp:${d.whatsappChannelId}`;
+      }
+      return channel;
+    }
     case "message":
       return text(d.messageText, locale);
     case "buttons": {
@@ -44,7 +51,7 @@ function buildStepDetail(node: FlowNode, locale: BotLocale, botName?: string): s
     case "condition":
       return `${d.conditionVariable ?? "last_input"} ${d.conditionOperator ?? "contains"} ${d.conditionValue ?? ""}`.trim();
     case "assign_bot":
-      return botName ?? d.botId ?? "";
+      return locale === "es" ? "Asistente IA" : "AI Assistant";
     case "save_contact":
       return [d.contactPhoneBinding, d.contactNameBinding, d.contactEmailBinding].filter(Boolean).join(" · ");
     case "create_lead":
@@ -111,15 +118,11 @@ function walkPreview(params: {
   if (!node) return;
   if (params.visitedPath.has(params.nodeId)) return;
 
-  const botName = node.type === "assign_bot" && node.data.botId
-    ? params.botNames.get(node.data.botId)
-    : undefined;
-
   params.steps.push({
     nodeId: node.id,
     type: node.type,
     title: params.getTypeLabel(node.type),
-    detail: buildStepDetail(node, params.locale, botName),
+    detail: buildStepDetail(node, params.locale),
     ...(params.branchLabel ? { branchLabel: params.branchLabel } : {}),
   });
 

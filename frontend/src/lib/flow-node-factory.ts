@@ -46,8 +46,8 @@ export function buildDefaultNodeData(
   if (type === "send_audio") {
     defaultData.audioMimeType = "audio/ogg";
   }
-  if (type === "assign_bot" && suggestedBotId) {
-    defaultData.botId = suggestedBotId;
+  if (type === "agent") {
+    defaultData.channel = "any";
   }
 
   return defaultData;

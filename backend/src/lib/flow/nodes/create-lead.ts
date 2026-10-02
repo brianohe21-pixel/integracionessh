@@ -33,7 +33,7 @@ export async function executeCreateLeadNode(
       output: "skipped: missing phone",
     };
   }
-  if (!ctx.botId) throw new Error("Add an assign bot node before creating leads");
+  if (!ctx.botId) throw new Error("Assign the flow to an agent before creating leads");
 
   const name = resolveBindingValue(node.data.leadNameBinding, bindingContext) || undefined;
   const email = resolveBindingValue(node.data.leadEmailBinding, bindingContext) || undefined;

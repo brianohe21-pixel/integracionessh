@@ -38,6 +38,8 @@ const SAFE_ERROR_PATTERNS = [
   /phone number is already assigned/i,
   /plan limit/i,
   /add an assign bot node/i,
+  /assign the flow to an agent/i,
+  /ai assistant is not enabled/i,
   /only one voice flow can be enabled/i,
   /flow not found/i,
   /bot not found/i,
@@ -96,6 +98,18 @@ function localizeFlowErrorPart(
 
   if (/^add an assign bot node before enabling this flow$/i.test(trimmed)) {
     return t("flows.errors.assignBotBeforeEnable");
+  }
+  if (/^assign the flow to an agent before enabling it$/i.test(trimmed)) {
+    return t("flows.errors.assignFlowToAgentBeforeEnable");
+  }
+  if (/^ai assistant is not enabled for this bot$/i.test(trimmed)) {
+    return t("flows.errors.aiAssistantNotEnabled");
+  }
+  if (/^assign the flow to an agent before creating leads$/i.test(trimmed)) {
+    return t("flows.errors.assignFlowToAgentBeforeEnable");
+  }
+  if (/^add an assign bot node before creating leads$/i.test(trimmed)) {
+    return t("flows.errors.assignFlowToAgentBeforeEnable");
   }
   if (/^only one voice flow can be enabled per bot$/i.test(trimmed)) {
     return t("flows.errors.onlyOneVoiceFlow");

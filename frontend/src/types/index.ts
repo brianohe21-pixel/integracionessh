@@ -1959,6 +1959,7 @@ export interface FlowResponse {
 
 export type FlowNodeType =
   | "trigger"
+  | "agent"
   | "message"
   | "template"
   | "condition"
@@ -1982,6 +1983,8 @@ export type FlowNodeType =
   | "assign_bot"
   | "webhook"
   | "end";
+
+export type FlowAgentChannel = Channel | "any";
 
 export type FlowTriggerType =
   | "keyword"
@@ -2028,6 +2031,8 @@ export interface VoiceAgentHttpToolTestResult {
 export interface FlowNodeData {
   label?: string;
   triggerType?: FlowTriggerType;
+  channel?: FlowAgentChannel;
+  whatsappChannelId?: string;
   keywords?: string[];
   matchMode?: "contains" | "exact";
   messageText?: LocalizedText;

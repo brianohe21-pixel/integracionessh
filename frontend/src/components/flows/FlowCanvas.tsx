@@ -391,15 +391,21 @@ export function createDefaultFlowNodes(): FlowNode[] {
       data: { label: "Start", triggerType: "any_message" },
     },
     {
+      id: "agent-1",
+      type: "agent",
+      position: { x: 240, y: 180 },
+      data: { label: "Agent", channel: "any" },
+    },
+    {
       id: "message-1",
       type: "message",
-      position: { x: 240, y: 200 },
+      position: { x: 240, y: 320 },
       data: { label: "Welcome", messageText: "Hello! How can we help you?" },
     },
     {
       id: "end-1",
       type: "end",
-      position: { x: 240, y: 360 },
+      position: { x: 240, y: 460 },
       data: { label: "End", haltPipeline: true },
     },
   ];
@@ -407,7 +413,8 @@ export function createDefaultFlowNodes(): FlowNode[] {
 
 export function createDefaultFlowEdges(): FlowEdge[] {
   return [
-    { id: "e1", source: "trigger-1", target: "message-1" },
-    { id: "e2", source: "message-1", target: "end-1" },
+    { id: "e1", source: "trigger-1", target: "agent-1" },
+    { id: "e2", source: "agent-1", target: "message-1" },
+    { id: "e3", source: "message-1", target: "end-1" },
   ];
 }
