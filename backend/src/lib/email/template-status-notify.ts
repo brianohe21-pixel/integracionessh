@@ -114,3 +114,80 @@ export async function sendTemplateApprovedEmail(params: TemplateNotifyParams): P
 
   await sendTemplateNotifyEmail({ to: params.to, subject, text, html });
 }
+
+export async function sendTemplateRejectedEmail(
+  params: TemplateNotifyParams & { reason?: string }
+): Promise<void> {
+  const url = templatesUrl();
+  const reason = params.reason?.trim();
+  const subject = `Plantilla rechazada: ${params.templateName}`;
+  const text = [
+    `Hola,`,
+    "",
+    `Tu plantilla de WhatsApp "${params.templateName}" fue rechazada por Meta en ${params.tenantName}.`,
+    "",
+    `Nombre: ${params.templateName}`,
+    `Idioma: ${params.language}`,
+    `Categoría: ${params.category}`,
+    `Estado: REJECTED`,
+    ...(reason ? [`Motivo: ${reason}`] : []),
+    "",
+    `Puedes editarla y volver a enviarla a revisión.`,
+    "",
+    `Ver plantillas: ${url}`,
+  ].join("\n");
+
+  const html = `
+    <p>Hola,</p>
+    <p>Tu plantilla de WhatsApp <strong>${escapeHtml(params.templateName)}</strong> fue rechazada por Meta en <strong>${escapeHtml(params.tenantName)}</strong>.</p>
+    <table cellpadding="6" cellspacing="0" style="border-collapse:collapse">
+      <tr><td><strong>Nombre</strong></td><td>${escapeHtml(params.templateName)}</td></tr>
+      <tr><td><strong>Idioma</strong></td><td>${escapeHtml(params.language)}</td></tr>
+      <tr><td><strong>Categoría</strong></td><td>${escapeHtml(params.category)}</td></tr>
+      <tr><td><strong>Estado</strong></td><td>REJECTED</td></tr>
+      ${reason ? `<tr><td><strong>Motivo</strong></td><td>${escapeHtml(reason)}</td></tr>` : ""}
+    </table>
+    <p>Puedes editarla y volver a enviarla a revisión.</p>
+    <p><a href="${escapeHtml(url)}">Ver plantillas</a></p>
+  `.trim();
+
+  await sendTemplateNotifyEmail({ to: params.to, subject, text, html });
+}
+
+export async function sendTemplateStatusChangedEmail(
+  params: TemplateNotifyParams & { status: string; event: string; reason?: string }
+): Promise<void> {
+  const url = templatesUrl();
+  const reason = params.reason?.trim();
+  const subject = `Cambio de estado de plantilla: ${params.templateName}`;
+  const text = [
+    `Hola,`,
+    "",
+    `Meta actualizó el estado de tu plantilla de WhatsApp "${params.templateName}" en ${params.tenantName}.`,
+    "",
+    `Nombre: ${params.templateName}`,
+    `Idioma: ${params.language}`,
+    `Categoría: ${params.category}`,
+    `Evento: ${params.event}`,
+    `Estado: ${params.status}`,
+    ...(reason ? [`Detalle: ${reason}`] : []),
+    "",
+    `Ver plantillas: ${url}`,
+  ].join("\n");
+
+  const html = `
+    <p>Hola,</p>
+    <p>Meta actualizó el estado de tu plantilla de WhatsApp <strong>${escapeHtml(params.templateName)}</strong> en <strong>${escapeHtml(params.tenantName)}</strong>.</p>
+    <table cellpadding="6" cellspacing="0" style="border-collapse:collapse">
+      <tr><td><strong>Nombre</strong></td><td>${escapeHtml(params.templateName)}</td></tr>
+      <tr><td><strong>Idioma</strong></td><td>${escapeHtml(params.language)}</td></tr>
+      <tr><td><strong>Categoría</strong></td><td>${escapeHtml(params.category)}</td></tr>
+      <tr><td><strong>Evento</strong></td><td>${escapeHtml(params.event)}</td></tr>
+      <tr><td><strong>Estado</strong></td><td>${escapeHtml(params.status)}</td></tr>
+      ${reason ? `<tr><td><strong>Detalle</strong></td><td>${escapeHtml(reason)}</td></tr>` : ""}
+    </table>
+    <p><a href="${escapeHtml(url)}">Ver plantillas</a></p>
+  `.trim();
+
+  await sendTemplateNotifyEmail({ to: params.to, subject, text, html });
+}
