@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
-import { X, Trash2 } from "lucide-react";
+import { X, Trash2, Save } from "lucide-react";
 import { useT } from "@/i18n/context";
 import type { FlowNode } from "@/types";
+import { Button } from "@/components/ui/Button";
 import { NodePropertiesPanel } from "./NodePropertiesPanel";
 import { FLOW_NODE_META, CATEGORY_STYLES } from "./nodeConfig";
 
@@ -19,6 +20,7 @@ interface NodePropertiesModalProps {
   onDelete: () => void;
   canDelete: boolean;
   onClose: () => void;
+  onSave: () => void;
   isSaving?: boolean;
   isDirty?: boolean;
   justSaved?: boolean;
@@ -36,6 +38,7 @@ export function NodePropertiesModal({
   onDelete,
   canDelete,
   onClose,
+  onSave,
   isSaving = false,
   isDirty = false,
   justSaved = false,
@@ -122,8 +125,8 @@ export function NodePropertiesModal({
           />
         </div>
 
-        {canDelete && (
-          <div className="flex flex-shrink-0 items-center justify-end border-t border-default bg-surface-muted/40 px-6 py-4">
+        <div className="flex flex-shrink-0 items-center justify-between gap-3 border-t border-default bg-surface-muted/40 px-6 py-4">
+          {canDelete ? (
             <button
               type="button"
               onClick={onDelete}
@@ -132,8 +135,19 @@ export function NodePropertiesModal({
               <Trash2 className="h-4 w-4" />
               {t("flows.deleteNode")}
             </button>
-          </div>
-        )}
+          ) : (
+            <span />
+          )}
+          <Button
+            type="button"
+            size="sm"
+            onClick={onSave}
+            disabled={isSaving || !isDirty}
+          >
+            <Save className="h-4 w-4" />
+            {isSaving ? t("common.saving") : t("flows.save")}
+          </Button>
+        </div>
       </div>
 
       <style jsx>{`
