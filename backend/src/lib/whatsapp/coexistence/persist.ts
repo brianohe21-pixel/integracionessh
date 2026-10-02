@@ -11,7 +11,7 @@ import type {
   WhatsAppMessageEcho,
   WhatsAppStateSyncItem,
 } from "../../../types/index.js";
-import { buildMessageFromEcho, buildMessageFromHistory } from "./map-message.js";
+import { buildMessageFromEcho, buildMessageFromHistory, resolveParticipantFromHistory } from "./map-message.js";
 import { upsertCoexistenceContact } from "./contacts.js";
 
 export async function persistCoexistenceHistoryChunk(params: {
@@ -69,9 +69,29 @@ export async function persistCoexistenceHistoryChunk(params: {
     if (sorted.length > 0) {
       const last = sorted[sorted.length - 1];
       const lastTs = new Date(Number(last.timestamp) * 1000).toISOString();
+      let chunkLastInboundAt: string | undefined;
+      for (let i = sorted.length - 1; i >= 0; i -= 1) {
+        const { role } = resolveParticipantFromHistory(businessPhone, sorted[i].from);
+        if (role === "user") {
+          chunkLastInboundAt = new Date(Number(sorted[i].timestamp) * 1000).toISOString();
+          break;
+        }
+      }
+      const existingInboundMs = conversation.lastInboundAt
+        ? Date.parse(conversation.lastInboundAt)
+        : Number.NaN;
+      const chunkInboundMs = chunkLastInboundAt ? Date.parse(chunkLastInboundAt) : Number.NaN;
+      const shouldSetInbound =
+        Number.isFinite(chunkInboundMs) &&
+        (!Number.isFinite(existingInboundMs) || chunkInboundMs > existingInboundMs);
       await updateConversation(bot.tenantId, bot.botId, conversation.conversationId, {
         lastMessageAt: lastTs,
+        ...(shouldSetInbound && chunkLastInboundAt ? { lastInboundAt: chunkLastInboundAt } : {}),
       });
+      if (shouldSetInbound && chunkLastInboundAt) {
+        conversation.lastInboundAt = chunkLastInboundAt;
+      }
+      conversation.lastMessageAt = lastTs;
     }
   }
 }

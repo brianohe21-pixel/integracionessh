@@ -34,24 +34,12 @@ const runKeys = (tenantId: string, runId: string) => ({
   SK: `FLOWRUN#${runId}`,
 });
 
-const runGsi1 = (tenantId: string, conversationId: string) => ({
-  GSI1PK: `TENANT#${tenantId}#CONV#${conversationId}`,
-  GSI1SK: `FLOWRUN#ACTIVE`,
-});
-
 const runGsi1ByFlow = (tenantId: string, flowId: string, createdAt: string, runId: string) => ({
   GSI1PK: `TENANT#${tenantId}#FLOW#${flowId}#RUNS`,
   GSI1SK: `CREATED#${createdAt}#${runId}`,
 });
 
 function resolveRunGsi1(run: FlowRun, runId: string) {
-  if (
-    (run.status === "active" || run.status === "waiting") &&
-    run.conversationId &&
-    run.source !== "event"
-  ) {
-    return runGsi1(run.tenantId, run.conversationId);
-  }
   return runGsi1ByFlow(run.tenantId, run.flowId, run.createdAt, runId);
 }
 
@@ -237,8 +225,20 @@ export async function getFlowRun(
 
 export async function getActiveFlowRunForConversation(
   tenantId: string,
-  conversationId: string
+  conversationId: string,
+  botId?: string
 ): Promise<FlowRun | null> {
+  if (botId) {
+    const { getConversation } = await import("./conversation.repository.js");
+    const conversation = await getConversation(tenantId, botId, conversationId);
+    if (conversation?.activeFlowRunId) {
+      const run = await getFlowRun(tenantId, conversation.activeFlowRunId);
+      if (run && (run.status === "active" || run.status === "waiting")) {
+        return run;
+      }
+    }
+  }
+
   const result = await docClient.send(
     new QueryCommand({
       TableName: TABLE_NAME,

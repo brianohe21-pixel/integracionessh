@@ -414,9 +414,19 @@ export async function processInboundMessage(
   await markChannelRead(outboundCtxBase(), externalId).catch(() => {});
 
   const history = await getConversationMessages(tenantId, conversation.conversationId, 20);
-  if (history.some((m) => m.messageId === externalId && m.role === "user")) {
-    console.log(`Skipping duplicate inbound message ${externalId}`);
-    return;
+  const existingUserIdx = history.findIndex(
+    (m) => m.messageId === externalId && m.role === "user"
+  );
+  const inboundAlreadyPersisted = existingUserIdx >= 0;
+  if (inboundAlreadyPersisted) {
+    const hasLaterReply = history
+      .slice(existingUserIdx + 1)
+      .some((m) => m.role === "assistant" || m.role === "advisor");
+    if (hasLaterReply) {
+      console.log(`Skipping duplicate inbound message ${externalId}`);
+      return;
+    }
+    console.log(`Resuming incomplete inbound message ${externalId}`);
   }
   const userMessageText = inbound.text;
   const detectedLocale = resolveConversationLocale({
@@ -593,20 +603,7 @@ export async function processInboundMessage(
       ? (body.payload as import("../../types/index.js").WhatsAppInboundPayload).phoneNumberId
       : bot.phoneNumberId;
 
-  const flowAdvance = await advanceFlowRun({
-    tenantId,
-    botId,
-    bot,
-    conversation,
-    phoneNumberId,
-    accessToken: accessToken ?? "",
-    customerPhone: participantId,
-    replyToMessageId: externalId,
-    inbound,
-    channel,
-  });
-
-  if (flowAdvance.handled) {
+  if (!inboundAlreadyPersisted) {
     await addMessage(userMessage, botId);
     await emitMessageReceived({
       tenantId,
@@ -618,6 +615,45 @@ export async function processInboundMessage(
       contactName,
     });
     await incrementMessages(tenantId);
+  } else {
+    const refreshed = await updateConversation(tenantId, botId, conversation.conversationId, {
+      lastInboundAt: now,
+      lastMessageAt: now,
+    });
+    if (refreshed) conversation = refreshed;
+  }
+
+  let flowAdvance: Awaited<ReturnType<typeof advanceFlowRun>> = {
+    handled: false,
+    halt: false,
+  };
+  try {
+    flowAdvance = await advanceFlowRun({
+      tenantId,
+      botId,
+      bot,
+      conversation,
+      phoneNumberId,
+      accessToken: accessToken ?? "",
+      customerPhone: participantId,
+      replyToMessageId: externalId,
+      inbound,
+      channel,
+    });
+  } catch (err) {
+    console.error(
+      `Flow advance failed tenant=${tenantId} bot=${botId} conversation=${conversation.conversationId}:`,
+      err
+    );
+    flowAdvance = { handled: false, halt: false };
+  }
+
+  if (flowAdvance.handled) {
+    if (flowAdvance.errorMessage) {
+      console.warn(
+        `Flow run failed tenant=${tenantId} bot=${botId} conversation=${conversation.conversationId}: ${flowAdvance.errorMessage}`
+      );
+    }
     if (flowAdvance.halt) return;
   }
 
@@ -625,32 +661,33 @@ export async function processInboundMessage(
     const enabledFlows = await listEnabledFlowsForBot(tenantId, botId);
     const matchedFlow = findTriggerFlow(enabledFlows, inbound, conversation, isNewConversation);
     if (matchedFlow) {
-      const flowStart = await startFlowRun({
-        flow: matchedFlow,
-        tenantId,
-        botId,
-        bot,
-        conversation,
-        phoneNumberId,
-        accessToken: accessToken ?? "",
-        customerPhone: participantId,
-        replyToMessageId: externalId,
-        inbound,
-        channel,
-      });
-      if (flowStart.handled) {
-        await addMessage(userMessage, botId);
-        await emitMessageReceived({
+      try {
+        const flowStart = await startFlowRun({
+          flow: matchedFlow,
           tenantId,
           botId,
-          conversationId: conversation.conversationId,
+          bot,
+          conversation,
+          phoneNumberId,
+          accessToken: accessToken ?? "",
+          customerPhone: participantId,
+          replyToMessageId: externalId,
+          inbound,
           channel,
-          from: participantId,
-          message: userMessageText,
-          contactName,
         });
-        await incrementMessages(tenantId);
-        if (flowStart.halt) return;
+        if (flowStart.handled) {
+          if (flowStart.errorMessage) {
+            console.warn(
+              `Flow start failed tenant=${tenantId} bot=${botId} flow=${matchedFlow.flowId}: ${flowStart.errorMessage}`
+            );
+          }
+          if (flowStart.halt) return;
+        }
+      } catch (err) {
+        console.error(
+          `Flow start failed tenant=${tenantId} bot=${botId} flow=${matchedFlow.flowId}:`,
+          err
+        );
       }
     }
   }
@@ -682,17 +719,6 @@ export async function processInboundMessage(
     });
 
     if (matchedRule.stopProcessing !== false) {
-      await addMessage(userMessage, botId);
-      await emitMessageReceived({
-        tenantId,
-        botId,
-        conversationId: conversation.conversationId,
-        channel,
-        from: participantId,
-        message: userMessageText,
-        contactName,
-      });
-      await incrementMessages(tenantId);
       return;
     }
   }
@@ -700,18 +726,6 @@ export async function processInboundMessage(
   conversation = (await getConversation(tenantId, botId, conversation.conversationId)) ?? conversation;
 
   if ((conversation.handoffMode ?? "bot") === "human") {
-    await addMessage(userMessage, botId);
-    await emitMessageReceived({
-      tenantId,
-      botId,
-      conversationId: conversation.conversationId,
-      channel,
-      from: participantId,
-      message: userMessageText,
-      contactName,
-    });
-    await incrementMessages(tenantId);
-
     const refreshed = await getConversation(tenantId, botId, conversation.conversationId);
     if (refreshed) {
       await notifyAdvisorOfConversation({
@@ -731,17 +745,6 @@ export async function processInboundMessage(
   let handoffReason: "ai" | "webhook" | "no_ai" = "ai";
 
   if (bot.responseMode === "none") {
-    await addMessage(userMessage, botId);
-    await emitMessageReceived({
-      tenantId,
-      botId,
-      conversationId: conversation.conversationId,
-      channel,
-      from: participantId,
-      message: userMessageText,
-      contactName,
-    });
-
     const handedOff = await performInboxHandoff({
       tenantId,
       botId,
@@ -761,7 +764,6 @@ export async function processInboundMessage(
       });
     }
 
-    await incrementMessages(tenantId);
     return;
   }
 
@@ -788,16 +790,6 @@ export async function processInboundMessage(
     } catch (keyErr) {
       const keyErrMsg = (keyErr as Error).message ?? "";
       if (channel === "webchat" && keyErrMsg.includes("No OpenAI API key configured")) {
-        await addMessage(userMessage, botId);
-        await emitMessageReceived({
-          tenantId,
-          botId,
-          conversationId: conversation.conversationId,
-          channel,
-          from: participantId,
-          message: userMessageText,
-          contactName,
-        });
         const fallback = getSystemMessage("assistantUnavailable", conversationLocale);
         await sendChannelText(
           buildOutboundContext({
@@ -810,7 +802,6 @@ export async function processInboundMessage(
           }),
           fallback
         );
-        await incrementMessages(tenantId);
         await emitMessageSent({
           tenantId,
           botId,
@@ -840,17 +831,6 @@ export async function processInboundMessage(
     }
   }
 
-  await addMessage(userMessage, botId);
-  await emitMessageReceived({
-    tenantId,
-    botId,
-    conversationId: conversation.conversationId,
-    channel,
-    from: participantId,
-    message: userMessageText,
-    contactName,
-  });
-
   if (shouldHandoff) {
     try {
       await executeHandoff({
@@ -862,7 +842,6 @@ export async function processInboundMessage(
         reason: handoffReason,
         lastMessagePreview: userMessageText,
       });
-      await incrementMessages(tenantId);
       return;
     } catch (handoffErr) {
       const handoffErrMsg = (handoffErr as Error).message ?? "";
@@ -935,8 +914,6 @@ export async function processInboundMessage(
     };
     await addMessage(assistantMessage, botId);
   }
-
-  await incrementMessages(tenantId);
 
   await emitMessageSent({
     tenantId,

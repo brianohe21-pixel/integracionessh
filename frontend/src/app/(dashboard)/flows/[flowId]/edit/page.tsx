@@ -63,6 +63,7 @@ export default function EditFlowPage() {
     canRedo,
     reset: resetHistory,
     commit: commitHistory,
+    flushPending: flushHistory,
     undo,
     redo,
   } = useFlowEditorHistory();
@@ -77,7 +78,6 @@ export default function EditFlowPage() {
   const [savedKey, setSavedKey] = useState("");
   const [publishedKey, setPublishedKey] = useState("");
   const [activeTab, setActiveTab] = useState<FlowEditorTab>("editor");
-  const [autoSaveReady, setAutoSaveReady] = useState(false);
   const initializedFlowKeyRef = useRef<string | null>(null);
   const handleSaveRef = useRef<() => Promise<boolean>>(async () => true);
   const handlePublishRef = useRef<() => Promise<void>>(async () => {});
@@ -89,7 +89,6 @@ export default function EditFlowPage() {
     const key = `${flow.flowId}:${flow.version}:${flowDraftEditorSnapshotKey(flow)}`;
     if (initializedFlowKeyRef.current === key) return;
     initializedFlowKeyRef.current = key;
-    setAutoSaveReady(false);
     resetHistory({ nodes: draftNodes, edges: draftEdges });
     const draftKey = flowDraftEditorSnapshotKey(flow);
     setSavedKey(draftKey);
@@ -100,8 +99,6 @@ export default function EditFlowPage() {
     setPublishedMessage(false);
     setSaveError("");
     setPublishError("");
-    const readyTimer = window.setTimeout(() => setAutoSaveReady(true), 1000);
-    return () => window.clearTimeout(readyTimer);
   }, [flow, resetHistory]);
 
   useEffect(() => {
@@ -167,7 +164,7 @@ export default function EditFlowPage() {
   const isMessagingFlow = !isVoiceFlow && !hasWebhookNode;
   const samplePayload = resolveFlowSamplePayload(localNodes);
   const assignedBotId =
-    resolveFlowBotIdFromNodes(localNodes) || flow?.botId || suggestedBotId;
+    flow?.botId || suggestedBotId || resolveFlowBotIdFromNodes(localNodes);
   const triggerCount = localNodes.filter((n) => n.type === "trigger").length;
   const canDeleteSelected =
     !!selected && !(selected.type === "trigger" && triggerCount <= 1);
@@ -200,6 +197,7 @@ export default function EditFlowPage() {
       position: position ?? defaultPalettePosition(localNodes.length),
       label: t(`flows.nodeTypes.${type}`),
       suggestedBotId,
+      bindingPreset: isMessagingFlow ? "messaging" : "form",
     });
     if (type === "buttons") {
       node.data.messageText = t("flows.fields.defaultButtonPrompt");
@@ -226,6 +224,7 @@ export default function EditFlowPage() {
 
   async function handleSave(): Promise<boolean> {
     if (!flow || update.isPending) return !isDirty;
+    flushHistory();
     const nodesToSave = localNodes.length > 0 ? localNodes : resolveDraftNodes(flow);
     const edgesToSave = localNodes.length > 0 ? localEdges : resolveDraftEdges(flow);
     const voiceMode = resolveEditorVoiceMode(flow, nodesToSave);
@@ -241,7 +240,11 @@ export default function EditFlowPage() {
         edges: edgesToSave,
         entryNodeId: nodes.find((n) => n.type === "trigger")?.id ?? flow.entryNodeId,
       });
+      const draftNodes = resolveDraftNodes(updated);
+      const draftEdges = resolveDraftEdges(updated);
       const draftKey = flowDraftEditorSnapshotKey(updated);
+      initializedFlowKeyRef.current = `${updated.flowId}:${updated.version}:${draftKey}`;
+      resetHistory({ nodes: draftNodes, edges: draftEdges });
       setSavedKey(draftKey);
       setPublishedKey(
         hasUnpublishedFlowChanges(updated)
@@ -266,7 +269,6 @@ export default function EditFlowPage() {
     }
     setPublishError("");
     setPublishedMessage(false);
-    setAutoSaveReady(false);
     try {
       const updated = await publishFlow.mutateAsync();
       const publishedSnapshotKey = flowDraftEditorSnapshotKey(updated);
@@ -278,9 +280,7 @@ export default function EditFlowPage() {
       resetHistory({ nodes: draftNodes, edges: draftEdges });
       setPublishedMessage(true);
       window.setTimeout(() => setPublishedMessage(false), 2500);
-      window.setTimeout(() => setAutoSaveReady(true), 1500);
     } catch (err) {
-      setAutoSaveReady(true);
       setPublishError(err instanceof Error ? err.message : t("flows.noPublishChanges"));
     }
   }
@@ -301,7 +301,6 @@ export default function EditFlowPage() {
   function handleVersionRestored(updated: FlowDefinition) {
     const draftNodes = resolveDraftNodes(updated);
     const draftEdges = resolveDraftEdges(updated);
-    setAutoSaveReady(false);
     resetHistory({ nodes: draftNodes, edges: draftEdges });
     const draftKey = flowDraftEditorSnapshotKey(updated);
     setSavedKey(draftKey);
@@ -311,17 +310,7 @@ export default function EditFlowPage() {
     setSavedMessage(false);
     setPublishedMessage(false);
     setActiveTab("editor");
-    window.setTimeout(() => setAutoSaveReady(true), 1000);
   }
-
-  useEffect(() => {
-    if (!autoSaveReady || !isDirty || !flow || update.isPending) return;
-    const timer = window.setTimeout(() => {
-      void handleSaveRef.current();
-    }, 1200);
-
-    return () => window.clearTimeout(timer);
-  }, [autoSaveReady, isDirty, localNodes, localEdges, flow, update.isPending]);
 
   if (isLoading || !flow) {
     return (
@@ -515,9 +504,11 @@ export default function EditFlowPage() {
         onDelete={deleteSelectedNode}
         canDelete={canDeleteSelected}
         onClose={() => setSelectedNodeId(null)}
+        onSave={handleSave}
         isSaving={update.isPending}
         isDirty={isDirty}
         justSaved={savedMessage}
+        saveError={saveError}
       />
     </div>
   );

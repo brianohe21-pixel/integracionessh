@@ -23,6 +23,7 @@ import {
   Webhook,
   Bot,
   ShieldCheck,
+  Headset,
   Mic,
 } from "lucide-react";
 import type { FlowNodeData, FlowNodeType, LocalizedText } from "@/types";
@@ -47,6 +48,7 @@ export interface FlowNodeMeta {
 
 export const FLOW_NODE_META: Record<FlowNodeType, FlowNodeMeta> = {
   trigger: { category: "entry", icon: Play, hasInput: false, hasOutput: true },
+  agent: { category: "entry", icon: Headset, hasInput: true, hasOutput: true },
   message: { category: "messaging", icon: MessageSquare, hasInput: true, hasOutput: true },
   template: { category: "messaging", icon: FileText, hasInput: true, hasOutput: true },
   send_otp: {
@@ -105,7 +107,7 @@ export const FLOW_PALETTE_NODES: Record<FlowPaletteCategory, FlowNodeType[]> = {
   crm: ["save_contact", "create_lead", "create_opportunity", "send_notification"],
   messaging: ["message", "template", "buttons", "send_otp", "send_audio"],
   logic: ["condition", "delay", "set_variable"],
-  integrations: ["assign_bot", "webhook", "meta_flow", "http_request", "handoff"],
+  integrations: ["agent", "assign_bot", "webhook", "meta_flow", "http_request", "handoff"],
   apps: [
     "book_appointment",
     "request_payment",
@@ -187,6 +189,13 @@ export function buildNodePreview(type: FlowNodeType, data: FlowNodeData, locale:
       }
       return triggerType;
     }
+    case "agent": {
+      const channel = data.channel ?? "any";
+      if (channel === "whatsapp" && data.whatsappChannelId) {
+        return truncate(`whatsapp:${data.whatsappChannelId}`);
+      }
+      return channel;
+    }
     case "message":
       return text(data.messageText);
     case "template":
@@ -221,8 +230,31 @@ export function buildNodePreview(type: FlowNodeType, data: FlowNodeData, locale:
       return data.contactPhoneBinding ?? "";
     case "create_lead":
       return data.leadPhoneBinding ?? "";
-    case "create_opportunity":
-      return data.opportunityTitleBinding || data.opportunityPhoneBinding || "";
+    case "create_opportunity": {
+      const stageLabels: Record<string, { es: string; en: string }> = {
+        new: { es: "Nueva", en: "New" },
+        quoted: { es: "Cotizada", en: "Quoted" },
+        negotiation: { es: "Negociación", en: "Negotiation" },
+        won: { es: "Ganada", en: "Won" },
+        lost: { es: "Perdida", en: "Lost" },
+      };
+      const stage = data.opportunityStage ?? "new";
+      const stageLabel = stageLabels[stage]?.[locale] ?? stage;
+      const title = data.opportunityTitleBinding?.trim();
+      const amount = data.opportunityAmountBinding?.trim();
+      const currency = data.opportunityCurrency ?? "USD";
+      const phone = data.opportunityPhoneBinding?.trim();
+      const meta = [
+        stageLabel,
+        amount ? `${amount} ${currency}` : "",
+        phone ?? "",
+      ].filter(Boolean);
+      if (title && meta.length) {
+        return `${truncate(title, 40)}\n${truncate(meta.join(" · "), 48)}`;
+      }
+      if (title) return truncate(title);
+      return truncate(meta.join(" · "));
+    }
     case "send_notification": {
       const channel = data.notificationChannel ?? "whatsapp";
       const channelLabel: Record<string, string> = { whatsapp: "WhatsApp", sms: "SMS", email: "Email" };
@@ -240,7 +272,7 @@ export function buildNodePreview(type: FlowNodeType, data: FlowNodeData, locale:
       return truncate(`[${channelLabel[channel]}] ${recipient}`.trim());
     }
     case "assign_bot":
-      return data.botId ?? "";
+      return locale === "es" ? "Asistente IA" : "AI Assistant";
     case "webhook":
       return locale === "es" ? "Recibir JSON" : "Receive JSON";
   }

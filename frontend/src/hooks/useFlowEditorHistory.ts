@@ -140,6 +140,7 @@ export function useFlowEditorHistory() {
     canRedo,
     reset,
     commit,
+    flushPending,
     undo,
     redo,
   };

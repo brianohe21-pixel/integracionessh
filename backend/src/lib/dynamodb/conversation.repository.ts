@@ -32,6 +32,9 @@ const REALTIME_CONVERSATION_FIELDS = new Set([
   "workflowStatus",
   "status",
   "interactionCategory",
+  "lastInboundAt",
+  "lastMessageAt",
+  "freeEntryPointOpenedAt",
 ]);
 
 function resolveWhatsAppUsageBucket(message: Message): WhatsAppUsageBucket | null {
@@ -728,6 +731,14 @@ export async function addMessageIdempotent(
   const now = message.timestamp;
   const msgKey = messageKeys(message.tenantId, message.conversationId, now, message.messageId);
 
+  const isInbound =
+    message.source !== "whatsapp_history" &&
+    (message.source === "whatsapp_inbound" || message.role === "user");
+  const isOutbound =
+    message.role === "advisor" ||
+    message.role === "assistant" ||
+    message.source === "panel";
+
   const existing = await docClient.send(
     new QueryCommand({
       TableName: TABLE_NAME,
@@ -743,16 +754,14 @@ export async function addMessageIdempotent(
   );
 
   if (existing.Items?.length) {
+    if (isInbound) {
+      await updateConversation(message.tenantId, botId, message.conversationId, {
+        lastInboundAt: now,
+        ...(updateLastMessageAt ? { lastMessageAt: now } : {}),
+      });
+    }
     return false;
   }
-
-  const isInbound =
-    message.source !== "whatsapp_history" &&
-    (message.source === "whatsapp_inbound" || message.role === "user");
-  const isOutbound =
-    message.role === "advisor" ||
-    message.role === "assistant" ||
-    message.source === "panel";
 
   let openFreeEntryPoint = false;
   let conversationForWindow: Conversation | null = null;

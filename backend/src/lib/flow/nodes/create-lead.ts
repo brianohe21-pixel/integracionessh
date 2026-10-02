@@ -4,9 +4,9 @@ import {
   buildBindingContext,
   conversationBindingFromContext,
   resolveBindingValue,
+  resolveNormalizedContactPhone,
 } from "../binding.js";
 import { getNextNodeId } from "../graph.js";
-import { normalizePhone } from "../../dynamodb/contact.repository.js";
 import { createLeadFromFormData } from "../../leads/form-lead.js";
 import { requireConversation } from "../types.js";
 
@@ -21,9 +21,19 @@ export async function executeCreateLeadNode(
     conversation: conversationBindingFromContext(ctx),
   });
 
-  const phone = normalizePhone(resolveBindingValue(node.data.leadPhoneBinding, bindingContext));
-  if (!phone) throw new Error("Valid phone binding is required");
-  if (!ctx.botId) throw new Error("Add an assign bot node before creating leads");
+  const phone = resolveNormalizedContactPhone(
+    resolveBindingValue(node.data.leadPhoneBinding, bindingContext)
+  );
+  if (!phone) {
+    return {
+      nextNodeId: getNextNodeId(ctx.flow, node.id),
+      halt: false,
+      wait: false,
+      error: "Valid phone binding is required",
+      output: "skipped: missing phone",
+    };
+  }
+  if (!ctx.botId) throw new Error("Assign the flow to an agent before creating leads");
 
   const name = resolveBindingValue(node.data.leadNameBinding, bindingContext) || undefined;
   const email = resolveBindingValue(node.data.leadEmailBinding, bindingContext) || undefined;

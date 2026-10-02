@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { ExternalLink, Plus, X } from "lucide-react";
+import { useRef, useState, type KeyboardEvent } from "react";
+import { ExternalLink, Plus, Tag, X } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { useMetaFlows } from "@/hooks/useMetaFlows";
 import { useBots } from "@/hooks/useBots";
@@ -11,13 +11,15 @@ import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Input";
 import { LocalizedTextField } from "@/components/ui/LocalizedTextField";
 import { LocalizedHtmlField } from "@/components/ui/LocalizedHtmlField";
-import type { FlowNode, FlowNodeType, LocalizedText } from "@/types";
+import type { FlowNode, FlowNodeType, LocalizedText, FlowAgentChannel } from "@/types";
 import { extractSampleFields, FormBindingField } from "./FormBindingField";
 import { FlowWebhookPanel } from "./FlowWebhookPanel";
 import { FlowWebhookGuideAccordion } from "./FlowWebhookGuideAccordion";
 import { TemplatePicker } from "@/components/templates/TemplatePicker";
 import { SendAudioNodeFields } from "@/components/flows/SendAudioNodeFields";
+import { useWhatsAppChannels } from "@/hooks/useWhatsAppChannels";
 import type { OutreachChannel } from "@/types";
+import { cn } from "@/lib/utils";
 
 interface NodePropertiesPanelProps {
   selected: FlowNode | undefined;
@@ -33,6 +35,9 @@ interface NodePropertiesPanelProps {
   hideHeader?: boolean;
 }
 
+const INPUT_CLASS =
+  "w-full text-sm border border-field-border rounded-lg px-3 py-2.5 bg-surface-elevated shadow-sm transition-all focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none";
+
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return <label className="block text-sm font-medium text-primary mb-2">{children}</label>;
 }
@@ -46,9 +51,102 @@ function textInput(
     <input
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full text-sm border border-field-border rounded-lg px-3 py-2.5 bg-surface-elevated shadow-sm transition-all focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none"
+      className={INPUT_CLASS}
       {...props}
     />
+  );
+}
+
+function CommaSeparatedInput({
+  values,
+  onChange,
+  placeholder,
+  max = 20,
+}: {
+  values: string[];
+  onChange: (values: string[]) => void;
+  placeholder?: string;
+  max?: number;
+}) {
+  const [draft, setDraft] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function addValue(raw: string) {
+    const parts = raw
+      .split(",")
+      .map((part) => part.trim().slice(0, 50))
+      .filter(Boolean);
+    if (!parts.length) return;
+
+    const next = [...values];
+    for (const part of parts) {
+      if (next.length >= max) break;
+      if (!next.includes(part)) next.push(part);
+    }
+    if (next.length !== values.length) onChange(next);
+    setDraft("");
+  }
+
+  function removeValue(tag: string) {
+    onChange(values.filter((item) => item !== tag));
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Enter" || event.key === ",") {
+      event.preventDefault();
+      addValue(draft);
+      return;
+    }
+    if (event.key === "Backspace" && !draft && values.length > 0) {
+      onChange(values.slice(0, -1));
+    }
+  }
+
+  return (
+    <div
+      role="presentation"
+      onClick={() => inputRef.current?.focus()}
+      className={cn(
+        "flex min-h-11 w-full cursor-text flex-wrap items-center gap-1.5 rounded-xl border border-field-border bg-surface-elevated px-2.5 py-2 transition-all",
+        "hover:border-accent/40",
+        "focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20"
+      )}
+    >
+      {values.length === 0 ? (
+        <Tag className="h-3.5 w-3.5 shrink-0 text-muted" aria-hidden />
+      ) : null}
+      {values.map((tag) => (
+        <span
+          key={tag}
+          className="inline-flex max-w-full items-center gap-1 rounded-full bg-accent-muted px-2.5 py-1 text-xs font-medium text-accent"
+        >
+          <span className="truncate">{tag}</span>
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              removeValue(tag);
+            }}
+            className="inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full text-accent/70 transition-colors hover:bg-accent/15 hover:text-accent"
+            aria-label={tag}
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </span>
+      ))}
+      {values.length < max ? (
+        <input
+          ref={inputRef}
+          type="text"
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={() => addValue(draft)}
+          placeholder={values.length === 0 ? placeholder : undefined}
+          className="input-bare m-0 min-w-[8rem] flex-1 bg-transparent p-0 text-sm text-primary outline-none placeholder:text-muted"
+        />
+      ) : null}
+    </div>
   );
 }
 
@@ -86,6 +184,10 @@ export function NodePropertiesPanel({
   const { data: metaFlows } = useMetaFlows(botId);
   const { data: bots } = useBots();
   const [metaFlowsModalOpen, setMetaFlowsModalOpen] = useState(false);
+  const agentChannel = (selected?.data.channel ?? "any") as FlowAgentChannel;
+  const { data: whatsappChannels } = useWhatsAppChannels(botId, {
+    enabled: selected?.type === "agent" && agentChannel === "whatsapp",
+  });
 
   const isEmailNotification =
     selected?.type === "send_notification" &&
@@ -193,14 +295,10 @@ export function NodePropertiesPanel({
               </label>
               <div>
                 <FieldLabel>{t("flows.fields.keywords")}</FieldLabel>
-                {textInput((d.keywords ?? []).join(", "), (v) =>
-                  onUpdate({
-                    keywords: v
-                      .split(",")
-                      .map((s) => s.trim())
-                      .filter(Boolean),
-                  })
-                )}
+                <CommaSeparatedInput
+                  values={d.keywords ?? []}
+                  onChange={(keywords) => onUpdate({ keywords })}
+                />
               </div>
               {(d.keywords ?? []).length > 0 && (
                 <div>
@@ -219,6 +317,58 @@ export function NodePropertiesPanel({
           )}
           {hasWebhookNode && (
             <p className="text-xs text-secondary">{t("flows.fields.triggerWebhookHint")}</p>
+          )}
+        </>
+      )}
+
+      {type === "agent" && (
+        <>
+          <div>
+            <FieldLabel>{t("flows.fields.agentChannel")}</FieldLabel>
+            <Select
+              value={(d.channel ?? "any") as string}
+              onChange={(e) => {
+                const channel = e.target.value as FlowAgentChannel;
+                onUpdate({
+                  channel,
+                  ...(channel !== "whatsapp" ? { whatsappChannelId: undefined } : {}),
+                });
+              }}
+            >
+              <option value="any">{t("flows.fields.agentChannelAny")}</option>
+              <option value="whatsapp">WhatsApp</option>
+              <option value="webchat">Webchat</option>
+              <option value="instagram">Instagram</option>
+              <option value="messenger">Messenger</option>
+              <option value="telegram">Telegram</option>
+              <option value="sms">SMS</option>
+              <option value="email">Email</option>
+              <option value="voicebot">Voicebot</option>
+              <option value="phone">Phone</option>
+            </Select>
+            <p className="mt-1 text-xs text-secondary">{t("flows.fields.agentChannelHint")}</p>
+          </div>
+          {(d.channel ?? "any") === "whatsapp" && (
+            <div>
+              <FieldLabel>{t("flows.fields.whatsappChannel")}</FieldLabel>
+              <Select
+                value={d.whatsappChannelId ?? ""}
+                onChange={(e) =>
+                  onUpdate({ whatsappChannelId: e.target.value || undefined })
+                }
+                disabled={!botId}
+              >
+                <option value="">{t("flows.fields.whatsappChannelAny")}</option>
+                {(whatsappChannels ?? []).map((channel) => (
+                  <option key={channel.channelId} value={channel.channelId}>
+                    {channel.label || channel.displayPhoneNumber || channel.phoneNumberId}
+                  </option>
+                ))}
+              </Select>
+              {!botId ? (
+                <p className="mt-1 text-xs text-warning">{t("flows.fields.agentNeedsFlowBot")}</p>
+              ) : null}
+            </div>
           )}
         </>
       )}
@@ -534,14 +684,10 @@ export function NodePropertiesPanel({
           </div>
           <div>
             <FieldLabel>{t("flows.fields.productRetailerIds")}</FieldLabel>
-            {textInput((d.productRetailerIds ?? []).join(", "), (v) =>
-              onUpdate({
-                productRetailerIds: v
-                  .split(",")
-                  .map((s) => s.trim())
-                  .filter(Boolean),
-              })
-            )}
+            <CommaSeparatedInput
+              values={d.productRetailerIds ?? []}
+              onChange={(productRetailerIds) => onUpdate({ productRetailerIds })}
+            />
           </div>
         </>
       )}
@@ -614,14 +760,10 @@ export function NodePropertiesPanel({
           />
           <div>
             <FieldLabel>{t("flows.fields.contactTags")}</FieldLabel>
-            {textInput((d.contactTags ?? []).join(", "), (v) =>
-              onUpdate({
-                contactTags: v
-                  .split(",")
-                  .map((s) => s.trim())
-                  .filter(Boolean),
-              })
-            )}
+            <CommaSeparatedInput
+              values={d.contactTags ?? []}
+              onChange={(contactTags) => onUpdate({ contactTags })}
+            />
           </div>
         </>
       )}
@@ -652,103 +794,180 @@ export function NodePropertiesPanel({
           />
           <div>
             <FieldLabel>{t("flows.fields.leadTags")}</FieldLabel>
-            {textInput((d.leadTags ?? []).join(", "), (v) =>
-              onUpdate({
-                leadTags: v
-                  .split(",")
-                  .map((s) => s.trim())
-                  .filter(Boolean),
-              })
-            )}
+            <CommaSeparatedInput
+              values={d.leadTags ?? []}
+              onChange={(leadTags) => onUpdate({ leadTags })}
+            />
           </div>
         </>
       )}
 
       {type === "create_opportunity" && (
         <>
-          <FormBindingField
-            label={t("flows.fields.opportunityTitleBinding")}
-            value={d.opportunityTitleBinding ?? ""}
-            onChange={(v) => onUpdate({ opportunityTitleBinding: v })}
-            sampleFields={sampleFields}
-            extraBindings={["{{contact_name}}", "{{phone}}", "{{last_input}}"]}
-            placeholder="Oportunidad {{contact_name}}"
-            hint={t("flows.fields.opportunityTitleBindingHint")}
-          />
-          <FormBindingField
-            label={t("flows.fields.opportunityAmountBinding")}
-            value={d.opportunityAmountBinding ?? ""}
-            onChange={(v) => onUpdate({ opportunityAmountBinding: v })}
-            sampleFields={sampleFields}
-          />
-          <div>
-            <FieldLabel>{t("flows.fields.opportunityCurrency")}</FieldLabel>
-            <Select
-              value={d.opportunityCurrency ?? "USD"}
-              onChange={(e) => onUpdate({ opportunityCurrency: e.target.value })}
-            >
-              {["USD", "EUR", "GBP", "PEN", "COP", "MXN"].map((currency) => (
-                <option key={currency} value={currency}>
-                  {currency}
-                </option>
-              ))}
-            </Select>
+          <p className="rounded-lg border border-success/20 bg-success/10 px-3 py-2.5 text-xs leading-relaxed text-secondary">
+            {t("flows.hints.opportunityWhatsAppBindings")}
+          </p>
+
+          {!d.opportunityTitleBinding?.trim() || !d.opportunityPhoneBinding?.trim() ? (
+            <p className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
+              {t("flows.fields.opportunityMissingRequired")}
+            </p>
+          ) : null}
+
+          <div className="space-y-4 rounded-xl border border-field-border bg-surface-muted/20 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+              {t("flows.fields.opportunitySectionDeal")}
+            </p>
+            <FormBindingField
+              label={t("flows.fields.opportunityTitleBinding")}
+              value={d.opportunityTitleBinding ?? ""}
+              onChange={(v) => onUpdate({ opportunityTitleBinding: v })}
+              sampleFields={sampleFields}
+              extraBindings={
+                isMessagingFlow
+                  ? ["{{contact_name}}", "{{phone}}", "{{last_input}}"]
+                  : ["{{form.title}}", "{{form.name}}", "{{last_input}}"]
+              }
+              placeholder={
+                isMessagingFlow ? "{{contact_name}}" : "{{form.title}}"
+              }
+              hint={t("flows.fields.opportunityTitleBindingHint")}
+              required
+              requiredLabel={t("flows.fields.opportunityRequired")}
+            />
+            <div className="grid grid-cols-[1fr_7rem] gap-2">
+              <FormBindingField
+                label={t("flows.fields.opportunityAmountBinding")}
+                value={d.opportunityAmountBinding ?? ""}
+                onChange={(v) => onUpdate({ opportunityAmountBinding: v })}
+                sampleFields={sampleFields}
+                extraBindings={isMessagingFlow ? ["{{last_input}}"] : ["{{form.amount}}"]}
+                placeholder={
+                  isMessagingFlow ? "{{last_input}}" : "{{form.amount}}"
+                }
+              />
+              <div>
+                <label className="mb-1 block text-xs font-medium text-secondary">
+                  {t("flows.fields.opportunityCurrency")}
+                </label>
+                <Select
+                  value={d.opportunityCurrency ?? "USD"}
+                  onChange={(e) => onUpdate({ opportunityCurrency: e.target.value })}
+                >
+                  {["USD", "EUR", "GBP", "PEN", "COP", "MXN"].map((currency) => (
+                    <option key={currency} value={currency}>
+                      {currency}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            </div>
+            <div>
+              <FieldLabel>{t("flows.fields.opportunityStage")}</FieldLabel>
+              <div className="flex flex-wrap gap-1.5">
+                {(
+                  [
+                    ["new", "opportunityStageNew"],
+                    ["quoted", "opportunityStageQuoted"],
+                    ["negotiation", "opportunityStageNegotiation"],
+                    ["won", "opportunityStageWon"],
+                    ["lost", "opportunityStageLost"],
+                  ] as const
+                ).map(([value, labelKey]) => {
+                  const active = (d.opportunityStage ?? "new") === value;
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => onUpdate({ opportunityStage: value })}
+                      className={`rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-all ${
+                        active
+                          ? "border-success bg-success text-white"
+                          : "border-field-border bg-surface-elevated text-secondary hover:border-success/40"
+                      }`}
+                    >
+                      {t(`flows.fields.${labelKey}`)}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
-          <div>
-            <FieldLabel>{t("flows.fields.opportunityStage")}</FieldLabel>
-            <Select
-              value={d.opportunityStage ?? "new"}
-              onChange={(e) => onUpdate({ opportunityStage: e.target.value })}
-            >
-              <option value="new">{t("flows.fields.opportunityStageNew")}</option>
-              <option value="quoted">{t("flows.fields.opportunityStageQuoted")}</option>
-              <option value="negotiation">{t("flows.fields.opportunityStageNegotiation")}</option>
-              <option value="won">{t("flows.fields.opportunityStageWon")}</option>
-              <option value="lost">{t("flows.fields.opportunityStageLost")}</option>
-            </Select>
+
+          <div className="space-y-4 rounded-xl border border-field-border bg-surface-muted/20 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+              {t("flows.fields.opportunitySectionContact")}
+            </p>
+            <FormBindingField
+              label={t("flows.fields.opportunityPhoneBinding")}
+              value={d.opportunityPhoneBinding ?? ""}
+              onChange={(v) => onUpdate({ opportunityPhoneBinding: v })}
+              sampleFields={sampleFields}
+              extraBindings={
+                isMessagingFlow
+                  ? ["{{phone}}", "{{contact_phone}}"]
+                  : ["{{form.phone}}", "{{phone}}"]
+              }
+              placeholder={isMessagingFlow ? "{{phone}}" : "{{form.phone}}"}
+              hint={t("flows.fields.opportunityPhoneBindingHint")}
+              required
+              requiredLabel={t("flows.fields.opportunityRequired")}
+            />
+            <FormBindingField
+              label={t("flows.fields.opportunityNameBinding")}
+              value={d.opportunityNameBinding ?? ""}
+              onChange={(v) => onUpdate({ opportunityNameBinding: v })}
+              sampleFields={sampleFields}
+              extraBindings={
+                isMessagingFlow
+                  ? ["{{contact_name}}", "{{name}}", "{{last_input}}"]
+                  : ["{{form.name}}", "{{contact_name}}", "{{last_input}}"]
+              }
+              placeholder={isMessagingFlow ? "{{contact_name}}" : "{{form.name}}"}
+              hint={t("flows.fields.opportunityNameBindingHint")}
+            />
+            <FormBindingField
+              label={t("flows.fields.opportunityEmailBinding")}
+              value={d.opportunityEmailBinding ?? ""}
+              onChange={(v) => onUpdate({ opportunityEmailBinding: v })}
+              sampleFields={sampleFields}
+              extraBindings={isMessagingFlow ? [] : ["{{form.email}}"]}
+              placeholder="{{form.email}}"
+            />
           </div>
-          <FormBindingField
-            label={t("flows.fields.opportunityPhoneBinding")}
-            value={d.opportunityPhoneBinding ?? ""}
-            onChange={(v) => onUpdate({ opportunityPhoneBinding: v })}
-            sampleFields={sampleFields}
-            extraBindings={["{{phone}}", "{{contact_phone}}"]}
-            placeholder="{{phone}}"
-            hint={t("flows.fields.opportunityPhoneBindingHint")}
-          />
-          <FormBindingField
-            label={t("flows.fields.opportunityNameBinding")}
-            value={d.opportunityNameBinding ?? ""}
-            onChange={(v) => onUpdate({ opportunityNameBinding: v })}
-            sampleFields={sampleFields}
-            extraBindings={["{{contact_name}}", "{{name}}", "{{last_input}}"]}
-            placeholder="{{contact_name}}"
-            hint={t("flows.fields.opportunityNameBindingHint")}
-          />
-          <FormBindingField
-            label={t("flows.fields.opportunityEmailBinding")}
-            value={d.opportunityEmailBinding ?? ""}
-            onChange={(v) => onUpdate({ opportunityEmailBinding: v })}
-            sampleFields={sampleFields}
-          />
-          <FormBindingField
-            label={t("flows.fields.opportunityDescriptionBinding")}
-            value={d.opportunityDescriptionBinding ?? ""}
-            onChange={(v) => onUpdate({ opportunityDescriptionBinding: v })}
-            sampleFields={sampleFields}
-            extraBindings={["{{last_input}}", "{{contact_name}}"]}
-            hint={t("flows.fields.opportunityDescriptionBindingHint")}
-          />
-          <div>
-            <FieldLabel>{t("flows.fields.opportunityTags")}</FieldLabel>
-            {textInput((d.opportunityTags ?? []).join(", "), (v) =>
-              onUpdate({
-                opportunityTags: v
-                  .split(",")
-                  .map((s) => s.trim())
-                  .filter(Boolean),
-              })
-            )}
+
+          <div className="space-y-4 rounded-xl border border-field-border bg-surface-muted/20 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+              {t("flows.fields.opportunitySectionDetails")}
+            </p>
+            <FormBindingField
+              label={t("flows.fields.opportunityDescriptionBinding")}
+              value={d.opportunityDescriptionBinding ?? ""}
+              onChange={(v) => onUpdate({ opportunityDescriptionBinding: v })}
+              sampleFields={sampleFields}
+              extraBindings={["{{last_input}}", "{{contact_name}}"]}
+              hint={t("flows.fields.opportunityDescriptionBindingHint")}
+            />
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <label className="block text-xs font-medium text-secondary">
+                  {t("flows.fields.opportunityTags")}
+                </label>
+                {(d.opportunityTags ?? []).length > 0 ? (
+                  <span className="text-[10px] font-medium text-muted">
+                    {(d.opportunityTags ?? []).length}
+                  </span>
+                ) : null}
+              </div>
+              <CommaSeparatedInput
+                values={d.opportunityTags ?? []}
+                onChange={(opportunityTags) => onUpdate({ opportunityTags })}
+                placeholder={t("flows.fields.opportunityTagsPlaceholder")}
+              />
+              <p className="text-[11px] leading-relaxed text-muted">
+                {t("flows.fields.opportunityTagsHint")}
+              </p>
+            </div>
           </div>
         </>
       )}
@@ -1026,17 +1245,9 @@ export function NodePropertiesPanel({
       )}
 
       {type === "assign_bot" && (
-        <div>
-          <FieldLabel>{t("flows.selectBot")}</FieldLabel>
-          <Select value={d.botId ?? ""} onChange={(e) => onUpdate({ botId: e.target.value })}>
-            <option value="">{t("flows.bot.placeholder")}</option>
-            {bots?.map((bot) => (
-              <option key={bot.botId} value={bot.botId}>
-                {bot.name}
-              </option>
-            ))}
-          </Select>
-          <p className="mt-1 text-xs text-secondary">{t("flows.fields.assignBotHint")}</p>
+        <div className="rounded-xl border border-field-border bg-surface-muted/30 p-4 space-y-2">
+          <p className="text-sm font-medium text-primary">{t("flows.fields.assignBotAiTitle")}</p>
+          <p className="text-xs text-secondary">{t("flows.fields.assignBotHint")}</p>
         </div>
       )}
 

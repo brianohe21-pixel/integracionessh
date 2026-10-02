@@ -78,6 +78,7 @@ const FlowNodeSchema = z.object({
   id: z.string(),
   type: z.enum([
     "trigger",
+    "agent",
     "message",
     "template",
     "condition",
@@ -223,7 +224,7 @@ function assertBotForEnable(flow: FlowDefinition): string | null {
   const webhookFlow = isWebhookReceivingFlow(flow.nodes);
   const voiceFlow = isVoiceAiFlow(flow);
   if (!botId && (voiceFlow || (!formFlow && !webhookFlow))) {
-    return "Add an assign bot node before enabling this flow";
+    return "Assign the flow to an agent before enabling it";
   }
   return null;
 }

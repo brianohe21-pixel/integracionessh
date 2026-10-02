@@ -8,7 +8,7 @@ import {
   isOggOpusBuffer,
   isVoiceNoteMimeType,
 } from "./attachment-policy.js";
-import { addMessage, updateConversation } from "../dynamodb/conversation.repository.js";
+import { addMessage, getConversationMessages, updateConversation } from "../dynamodb/conversation.repository.js";
 import { getBot } from "../dynamodb/bot.repository.js";
 import { getTenant } from "../dynamodb/tenant.repository.js";
 import { incrementMessages } from "../dynamodb/usage.repository.js";
@@ -30,7 +30,11 @@ import {
   phoneNumberIdForOutbound,
   resolveWhatsAppChannelForConversation,
 } from "../whatsapp/channel-context.js";
-import { assertCustomerServiceWindowOpen } from "../whatsapp/messaging-windows.js";
+import {
+  assertCustomerServiceWindowOpen,
+  isCustomerServiceWindowOpen,
+  resolveLastInboundAtFromMessages,
+} from "../whatsapp/messaging-windows.js";
 import type { AuthContext, Bot, Channel, Conversation, Message } from "../../types/index.js";
 
 const UPLOAD_URL_TTL_SECONDS = 900;
@@ -126,7 +130,34 @@ export async function sendConversationAttachment(input: {
   resolveAccessToken: ResolveAccessToken;
 }): Promise<Message> {
   await assertWhatsAppHumanConversation(input.conversation);
-  assertCustomerServiceWindowOpen(input.conversation);
+  let conversation = input.conversation;
+  if (!isCustomerServiceWindowOpen(conversation)) {
+    const recentMessages = await getConversationMessages(
+      conversation.tenantId,
+      conversation.conversationId,
+      50
+    );
+    const latestInboundAt = resolveLastInboundAtFromMessages(recentMessages);
+    if (latestInboundAt) {
+      const storedMs = conversation.lastInboundAt
+        ? Date.parse(conversation.lastInboundAt)
+        : Number.NaN;
+      const messageMs = Date.parse(latestInboundAt);
+      if (
+        Number.isFinite(messageMs) &&
+        (!Number.isFinite(storedMs) || messageMs > storedMs)
+      ) {
+        const refreshed = await updateConversation(
+          conversation.tenantId,
+          conversation.botId,
+          conversation.conversationId,
+          { lastInboundAt: latestInboundAt }
+        );
+        conversation = refreshed ?? { ...conversation, lastInboundAt: latestInboundAt };
+      }
+    }
+  }
+  assertCustomerServiceWindowOpen(conversation);
 
   if (!isAllowedConversationAttachmentFilename(input.filename)) {
     throw new ConversationAttachmentError("Unsupported attachment file type");

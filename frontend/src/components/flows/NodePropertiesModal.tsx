@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
-import { X, Trash2 } from "lucide-react";
+import { X, Trash2, Save } from "lucide-react";
 import { useT } from "@/i18n/context";
 import type { FlowNode } from "@/types";
+import { Button } from "@/components/ui/Button";
 import { NodePropertiesPanel } from "./NodePropertiesPanel";
 import { FLOW_NODE_META, CATEGORY_STYLES } from "./nodeConfig";
 
@@ -19,9 +20,11 @@ interface NodePropertiesModalProps {
   onDelete: () => void;
   canDelete: boolean;
   onClose: () => void;
+  onSave: () => void | Promise<boolean>;
   isSaving?: boolean;
   isDirty?: boolean;
   justSaved?: boolean;
+  saveError?: string;
 }
 
 export function NodePropertiesModal({
@@ -36,9 +39,11 @@ export function NodePropertiesModal({
   onDelete,
   canDelete,
   onClose,
+  onSave,
   isSaving = false,
   isDirty = false,
   justSaved = false,
+  saveError = "",
 }: NodePropertiesModalProps) {
   const t = useT();
 
@@ -52,6 +57,11 @@ export function NodePropertiesModal({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [selected, onClose]);
+
+  async function handleSaveClick() {
+    const saved = await onSave();
+    if (saved) onClose();
+  }
 
   if (!selected) return null;
 
@@ -120,10 +130,15 @@ export function NodePropertiesModal({
             canDelete={canDelete}
             hideHeader
           />
+          {saveError ? (
+            <p className="mt-4 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
+              {saveError}
+            </p>
+          ) : null}
         </div>
 
-        {canDelete && (
-          <div className="flex flex-shrink-0 items-center justify-end border-t border-default bg-surface-muted/40 px-6 py-4">
+        <div className="flex flex-shrink-0 items-center justify-between gap-3 border-t border-default bg-surface-muted/40 px-6 py-4">
+          {canDelete ? (
             <button
               type="button"
               onClick={onDelete}
@@ -132,8 +147,19 @@ export function NodePropertiesModal({
               <Trash2 className="h-4 w-4" />
               {t("flows.deleteNode")}
             </button>
-          </div>
-        )}
+          ) : (
+            <span />
+          )}
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => void handleSaveClick()}
+            disabled={isSaving || !isDirty}
+          >
+            <Save className="h-4 w-4" />
+            {isSaving ? t("common.saving") : t("flows.save")}
+          </Button>
+        </div>
       </div>
 
       <style jsx>{`

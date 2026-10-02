@@ -18,6 +18,7 @@ import type {
   FlowRun,
   InboundNormalized,
 } from "../../types/index.js";
+import { resolveNormalizedContactPhone } from "./binding.js";
 import { executeNode } from "./nodes/index.js";
 import { scheduleFlowResume } from "./schedule.js";
 import { requireBotId, requireConversation, type FlowExecutionContext } from "./types.js";
@@ -27,6 +28,7 @@ const MAX_STEPS_PER_RUN = 50;
 export interface FlowPipelineResult {
   handled: boolean;
   halt: boolean;
+  errorMessage?: string;
 }
 
 function buildContext(params: {
@@ -64,16 +66,45 @@ async function runFromNode(
   while (currentNodeId && stepCount < MAX_STEPS_PER_RUN) {
     const node = flow.nodes.find((n) => n.id === currentNodeId);
     if (!node) {
+      const message = `Node ${currentNodeId} not found`;
       await updateFlowRun(ctx.tenantId, run.runId, {
         status: "failed",
         stepCount,
         variables,
+        errorMessage: message,
       });
       await clearActiveFlowRun(ctx.tenantId, botId, conversation.conversationId);
-      return { handled: true, halt: true };
+      return { handled: true, halt: true, errorMessage: message };
     }
 
-    const result = await executeNode(node, ctx, { ...run, variables, currentNodeId });
+    let result;
+    try {
+      result = await executeNode(node, ctx, { ...run, variables, currentNodeId });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Node execution failed";
+      console.error(
+        `Flow node failed tenant=${ctx.tenantId} flow=${flow.flowId} run=${run.runId} node=${node.id}:`,
+        err
+      );
+      const history = [
+        ...run.stepHistory,
+        {
+          nodeId: node.id,
+          at: new Date().toISOString(),
+          error: message,
+        },
+      ];
+      await updateFlowRun(ctx.tenantId, run.runId, {
+        status: "failed",
+        currentNodeId: node.id,
+        stepCount: stepCount + 1,
+        variables,
+        stepHistory: history,
+        errorMessage: message,
+      });
+      await clearActiveFlowRun(ctx.tenantId, botId, conversation.conversationId);
+      return { handled: true, halt: true, errorMessage: message };
+    }
 
     if (result.variables) {
       variables = { ...variables, ...result.variables };
@@ -84,6 +115,7 @@ async function runFromNode(
       nodeId: node.id,
       at: new Date().toISOString(),
       ...(result.output ? { output: result.output } : {}),
+      ...(result.error ? { error: result.error } : {}),
     };
     const history = [...run.stepHistory, step];
 
@@ -128,9 +160,10 @@ async function runFromNode(
     status: "failed",
     stepCount,
     variables,
+    errorMessage: "Maximum step count exceeded",
   });
   await clearActiveFlowRun(ctx.tenantId, botId, conversation.conversationId);
-  return { handled: true, halt: true };
+  return { handled: true, halt: true, errorMessage: "Maximum step count exceeded" };
 }
 
 export async function startFlowRun(params: {
@@ -156,6 +189,11 @@ export async function startFlowRun(params: {
     return { handled: false, halt: false };
   }
 
+  const contactPhone =
+    resolveNormalizedContactPhone(params.conversation.phoneNumber) ||
+    resolveNormalizedContactPhone(params.customerPhone) ||
+    "";
+
   const run: FlowRun = {
     runId: randomUUID(),
     flowId: params.flow.flowId,
@@ -168,8 +206,12 @@ export async function startFlowRun(params: {
     currentNodeId: entryId,
     variables: {
       last_input: params.inbound.text,
-      phone: params.customerPhone,
-      contact_phone: params.customerPhone,
+      ...(contactPhone
+        ? {
+            phone: contactPhone,
+            contact_phone: contactPhone,
+          }
+        : {}),
       ...(params.conversation.contactName
         ? {
             contact_name: params.conversation.contactName,
@@ -215,7 +257,11 @@ export async function advanceFlowRun(params: {
     (params.conversation.activeFlowRunId
       ? await getFlowRun(params.tenantId, params.conversation.activeFlowRunId)
       : null) ??
-    (await getActiveFlowRunForConversation(params.tenantId, params.conversation.conversationId));
+    (await getActiveFlowRunForConversation(
+      params.tenantId,
+      params.conversation.conversationId,
+      params.botId
+    ));
 
   if (!run || (run.status !== "active" && run.status !== "waiting")) {
     return { handled: false, halt: false };
@@ -405,7 +451,11 @@ export async function resumeFlowRunOnOrder(params: {
   subtotalInCents: number;
   itemsCount: number;
 }): Promise<void> {
-  const run = await getActiveFlowRunForConversation(params.tenantId, params.conversationId);
+  const run = await getActiveFlowRunForConversation(
+    params.tenantId,
+    params.conversationId,
+    params.botId
+  );
   if (!run || run.status !== "waiting") return;
 
   const flow = await getFlowDefinition(params.tenantId, run.flowId);

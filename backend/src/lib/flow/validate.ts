@@ -336,11 +336,23 @@ export function validateFlowDefinition(flow: FlowDefinition): FlowValidationIssu
       });
     }
 
-    if (node.type === "assign_bot") {
-      if (!node.data.botId?.trim()) {
+    if (node.type === "agent") {
+      const channel = node.data.channel ?? "any";
+      if (
+        channel !== "any" &&
+        channel !== "whatsapp" &&
+        channel !== "instagram" &&
+        channel !== "webchat" &&
+        channel !== "telegram" &&
+        channel !== "messenger" &&
+        channel !== "sms" &&
+        channel !== "email" &&
+        channel !== "voicebot" &&
+        channel !== "phone"
+      ) {
         issues.push({
-          code: "missing_bot",
-          message: "Select a bot in the assign bot node",
+          code: "invalid_channel",
+          message: "agent channel is invalid",
           nodeId: node.id,
         });
       }

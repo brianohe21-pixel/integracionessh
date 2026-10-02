@@ -20,6 +20,7 @@ import { executeCreateLeadNode } from "./create-lead.js";
 import { executeCreateOpportunityNode } from "./create-opportunity.js";
 import { executeSendNotificationNode } from "./send-notification.js";
 import { executeAssignBotNode } from "./assign-bot.js";
+import { executeAgentNode } from "./agent.js";
 import { executeWebhookNode } from "./webhook.js";
 import { executeTriggerNode } from "./trigger.js";
 import { executeSendOtpNode } from "./send-otp.js";
@@ -33,6 +34,8 @@ export async function executeNode(
   switch (node.type) {
     case "trigger":
       return executeTriggerNode(node, ctx, run);
+    case "agent":
+      return executeAgentNode(node, ctx, run);
     case "message":
       return executeMessageNode(node, ctx, run);
     case "template":

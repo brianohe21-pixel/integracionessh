@@ -2,12 +2,16 @@ import type { FlowNode, FlowNodeData, FlowNodeType } from "@/types";
 
 export const FLOW_NODE_DRAG_MIME = "application/flow-node-type";
 
+export type FlowBindingPreset = "messaging" | "form";
+
 export function buildDefaultNodeData(
   type: FlowNodeType,
   label: string,
-  suggestedBotId?: string
+  suggestedBotId?: string,
+  bindingPreset: FlowBindingPreset = "form"
 ): FlowNodeData {
   const defaultData: FlowNodeData = { label };
+  const messaging = bindingPreset === "messaging";
 
   if (type === "message") defaultData.messageText = "";
   if (type === "buttons") {
@@ -27,9 +31,11 @@ export function buildDefaultNodeData(
     defaultData.leadNameBinding = "{{form.name}}";
   }
   if (type === "create_opportunity") {
-    defaultData.opportunityTitleBinding = "{{form.title}}";
-    defaultData.opportunityPhoneBinding = "{{form.phone}}";
-    defaultData.opportunityNameBinding = "{{form.name}}";
+    defaultData.opportunityTitleBinding = messaging
+      ? "{{contact_name}}"
+      : "{{form.title}}";
+    defaultData.opportunityPhoneBinding = messaging ? "{{phone}}" : "{{form.phone}}";
+    defaultData.opportunityNameBinding = messaging ? "{{contact_name}}" : "{{form.name}}";
     defaultData.opportunityCurrency = "USD";
     defaultData.opportunityStage = "new";
   }
@@ -46,8 +52,8 @@ export function buildDefaultNodeData(
   if (type === "send_audio") {
     defaultData.audioMimeType = "audio/ogg";
   }
-  if (type === "assign_bot" && suggestedBotId) {
-    defaultData.botId = suggestedBotId;
+  if (type === "agent") {
+    defaultData.channel = "any";
   }
 
   return defaultData;
@@ -58,12 +64,18 @@ export function createFlowNode(params: {
   position: { x: number; y: number };
   label: string;
   suggestedBotId?: string;
+  bindingPreset?: FlowBindingPreset;
 }): FlowNode {
   return {
     id: `${params.type}-${Date.now()}`,
     type: params.type,
     position: params.position,
-    data: buildDefaultNodeData(params.type, params.label, params.suggestedBotId),
+    data: buildDefaultNodeData(
+      params.type,
+      params.label,
+      params.suggestedBotId,
+      params.bindingPreset
+    ),
   };
 }
 

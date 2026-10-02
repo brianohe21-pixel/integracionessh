@@ -266,12 +266,19 @@ body {
     linear-gradient(180deg, #141628 0%, var(--canvas) 100%);
 }
 
-input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="image"]):not([type="range"]):not([type="color"]),
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="image"]):not([type="range"]):not([type="color"]):not(.input-bare),
 select,
 textarea {
   border-width: var(--border-width);
   border-style: solid;
   border-color: var(--field-border);
+}
+
+input.input-bare {
+  border: none !important;
+  box-shadow: none !important;
+  outline: none;
+  background: transparent;
 }
 
 .react-flow-dark .react-flow__controls {
