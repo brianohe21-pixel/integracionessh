@@ -4184,7 +4184,7 @@ export const es = {
       placeholder: "Seleccionar agente",
       optionalHint:
         "Este flujo puede ejecutarse sin agente. Asígnale uno al crearlo o editarlo si necesitas CRM, mensajería o formularios Meta.",
-      createHint: "Puedes asignar el flujo a un agente al crearlo. Usa el nodo Agente para elegir el canal.",
+      createHint: "Puedes asignar el flujo a un agente desde el nodo Agente del editor visual.",
       unassigned: "Sin asignar",
     },
     nodePanel: "Propiedades del nodo",
@@ -4263,10 +4263,12 @@ export const es = {
       triggerKeyword: "Palabra clave",
       triggerWebForm: "Formulario web",
       triggerVoiceCall: "Llamada de voz",
+      agentBot: "Agente",
+      agentBotHint: "Elige el agente al que pertenece este flujo.",
       agentChannel: "Canal",
       agentChannelAny: "Cualquier canal",
       agentChannelHint: "Define en qué canal puede dispararse este flujo.",
-      agentNeedsFlowBot: "Asigna el flujo a un agente para listar números de WhatsApp.",
+      agentNeedsFlowBot: "Selecciona un agente para listar números de WhatsApp.",
       whatsappChannel: "Número de WhatsApp",
       whatsappChannelAny: "Cualquier número del agente",
       samplePayload: "Payload de ejemplo (JSON)",
@@ -4638,8 +4640,8 @@ export const es = {
           "Define canal, destinatario y mensaje. Para email, usa tu remitente verificado o el servicio de correo de Integraciones SH por defecto.",
       },
       agent: {
-        description: "Define el canal en el que puede dispararse este flujo.",
-        usage: "Elige cualquier canal o uno concreto. En WhatsApp puedes limitar a un número del agente.",
+        description: "Asigna el flujo a un agente y define el canal en el que puede dispararse.",
+        usage: "Selecciona el agente, el canal y, en WhatsApp, un número concreto si lo necesitas.",
       },
       assign_bot: {
         description: "Transfiere la conversación al Asistente IA del agente.",

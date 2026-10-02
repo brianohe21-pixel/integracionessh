@@ -185,7 +185,9 @@ export function NodePropertiesPanel({
   const { data: bots } = useBots();
   const [metaFlowsModalOpen, setMetaFlowsModalOpen] = useState(false);
   const agentChannel = (selected?.data.channel ?? "any") as FlowAgentChannel;
-  const { data: whatsappChannels } = useWhatsAppChannels(botId, {
+  const agentBotId =
+    selected?.type === "agent" ? (selected.data.botId?.trim() || botId) : botId;
+  const { data: whatsappChannels } = useWhatsAppChannels(agentBotId, {
     enabled: selected?.type === "agent" && agentChannel === "whatsapp",
   });
 
@@ -324,6 +326,27 @@ export function NodePropertiesPanel({
       {type === "agent" && (
         <>
           <div>
+            <FieldLabel>{t("flows.fields.agentBot")}</FieldLabel>
+            <Select
+              value={d.botId ?? botId ?? ""}
+              onChange={(e) => {
+                const nextBotId = e.target.value || undefined;
+                onUpdate({
+                  botId: nextBotId,
+                  whatsappChannelId: undefined,
+                });
+              }}
+            >
+              <option value="">{t("flows.bot.placeholder")}</option>
+              {(bots ?? []).map((bot) => (
+                <option key={bot.botId} value={bot.botId}>
+                  {bot.name}
+                </option>
+              ))}
+            </Select>
+            <p className="mt-1 text-xs text-secondary">{t("flows.fields.agentBotHint")}</p>
+          </div>
+          <div>
             <FieldLabel>{t("flows.fields.agentChannel")}</FieldLabel>
             <Select
               value={(d.channel ?? "any") as string}
@@ -356,7 +379,7 @@ export function NodePropertiesPanel({
                 onChange={(e) =>
                   onUpdate({ whatsappChannelId: e.target.value || undefined })
                 }
-                disabled={!botId}
+                disabled={!agentBotId}
               >
                 <option value="">{t("flows.fields.whatsappChannelAny")}</option>
                 {(whatsappChannels ?? []).map((channel) => (
@@ -365,7 +388,7 @@ export function NodePropertiesPanel({
                   </option>
                 ))}
               </Select>
-              {!botId ? (
+              {!agentBotId ? (
                 <p className="mt-1 text-xs text-warning">{t("flows.fields.agentNeedsFlowBot")}</p>
               ) : null}
             </div>

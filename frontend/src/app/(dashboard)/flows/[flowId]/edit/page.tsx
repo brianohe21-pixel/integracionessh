@@ -164,7 +164,7 @@ export default function EditFlowPage() {
   const isMessagingFlow = !isVoiceFlow && !hasWebhookNode;
   const samplePayload = resolveFlowSamplePayload(localNodes);
   const assignedBotId =
-    flow?.botId || suggestedBotId || resolveFlowBotIdFromNodes(localNodes);
+    resolveFlowBotIdFromNodes(localNodes) || flow?.botId || suggestedBotId;
   const triggerCount = localNodes.filter((n) => n.type === "trigger").length;
   const canDeleteSelected =
     !!selected && !(selected.type === "trigger" && triggerCount <= 1);
@@ -228,7 +228,13 @@ export default function EditFlowPage() {
     const nodesToSave = localNodes.length > 0 ? localNodes : resolveDraftNodes(flow);
     const edgesToSave = localNodes.length > 0 ? localEdges : resolveDraftEdges(flow);
     const voiceMode = resolveEditorVoiceMode(flow, nodesToSave);
-    const nodes = applyResolvedTriggerType(nodesToSave, voiceMode);
+    const fallbackBotId = flow.botId || suggestedBotId;
+    const nodesWithAgentBot = nodesToSave.map((node) => {
+      if (node.type !== "agent" || node.data.botId?.trim() || !fallbackBotId) return node;
+      return { ...node, data: { ...node.data, botId: fallbackBotId } };
+    });
+    const nodes = applyResolvedTriggerType(nodesWithAgentBot, voiceMode);
+    const resolvedBotId = resolveFlowBotIdFromNodes(nodes) || undefined;
     const snapshotKey = flowEditorSnapshotKey(nodesToSave, edgesToSave, voiceMode);
     if (snapshotKey === savedKey) return true;
     setSaveError("");
@@ -239,6 +245,7 @@ export default function EditFlowPage() {
         nodes,
         edges: edgesToSave,
         entryNodeId: nodes.find((n) => n.type === "trigger")?.id ?? flow.entryNodeId,
+        ...(resolvedBotId ? { botId: resolvedBotId } : {}),
       });
       const draftNodes = resolveDraftNodes(updated);
       const draftEdges = resolveDraftEdges(updated);

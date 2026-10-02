@@ -534,6 +534,7 @@ export async function handler(
         flowId: makeFlowId(),
         tenantId: auth.tenantId,
         name: body.data.name,
+        ...(body.data.botId ? { botId: body.data.botId } : {}),
         ...(body.data.flowKind ? { flowKind: body.data.flowKind as FlowKind } : {}),
         enabled: body.data.enabled,
         version: 0,
@@ -588,6 +589,7 @@ export async function handler(
         withBotFromNodes({
           ...existing,
           ...(body.data.name !== undefined ? { name: body.data.name } : {}),
+          ...(body.data.botId !== undefined ? { botId: body.data.botId } : {}),
           ...(body.data.flowKind !== undefined ? { flowKind: body.data.flowKind as FlowKind } : {}),
           ...(body.data.enabled !== undefined ? { enabled: body.data.enabled } : {}),
           ...(body.data.nodes || body.data.edges || body.data.entryNodeId !== undefined

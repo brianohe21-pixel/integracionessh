@@ -26,6 +26,7 @@ import { FlowNodeActionsContext } from "./FlowNodeActionsContext";
 import { buildNodePreview } from "./nodeConfig";
 import { FLOW_NODE_DRAG_MIME } from "@/lib/flow-node-factory";
 import { useLocale } from "@/i18n/context";
+import { useBots } from "@/hooks/useBots";
 
 const nodeTypes: NodeTypes = {
   flowNode: FlowNodeCard,
@@ -57,7 +58,8 @@ function toReactFlowNodes(
   selectedNodeId: string | null,
   getTypeLabel: (type: FlowNodeType) => string,
   getBranchLabel: (key: "true" | "false") => string,
-  locale: "es" | "en"
+  locale: "es" | "en",
+  botNames?: Record<string, string>
 ): Node[] {
   return nodes.map((n) => ({
     id: n.id,
@@ -67,7 +69,7 @@ function toReactFlowNodes(
     data: {
       flowType: n.type,
       typeLabel: getTypeLabel(n.type),
-      preview: buildNodePreview(n.type, n.data, locale),
+      preview: buildNodePreview(n.type, n.data, locale, botNames),
       buttons: n.data.buttons,
       trueLabel: getBranchLabel("true"),
       falseLabel: getBranchLabel("false"),
@@ -143,6 +145,11 @@ function FlowCanvasInner({
   onCannotDeleteTrigger,
 }: FlowCanvasProps) {
   const locale = useLocale();
+  const { data: bots } = useBots();
+  const botNames = useMemo(
+    () => Object.fromEntries((bots ?? []).map((bot) => [bot.botId, bot.name])),
+    [bots]
+  );
   const flowRef = useRef(flow);
   flowRef.current = flow;
   const onChangeRef = useRef(onChange);
@@ -163,8 +170,16 @@ function FlowCanvasInner({
   const lastExternalFingerprintRef = useRef("");
 
   const reactFlowNodes = useMemo(
-    () => toReactFlowNodes(flow.nodes, selectedNodeId, getTypeLabel, getBranchLabel, locale),
-    [flow.nodes, selectedNodeId, getTypeLabel, getBranchLabel, locale]
+    () =>
+      toReactFlowNodes(
+        flow.nodes,
+        selectedNodeId,
+        getTypeLabel,
+        getBranchLabel,
+        locale,
+        botNames
+      ),
+    [flow.nodes, selectedNodeId, getTypeLabel, getBranchLabel, locale, botNames]
   );
   const reactFlowEdges = useMemo(() => toReactFlowEdges(flow.edges, flow.nodes), [flow.edges, flow.nodes]);
 
@@ -172,7 +187,7 @@ function FlowCanvasInner({
   const [edges, setEdges, onEdgesChange] = useEdgesState(reactFlowEdges);
 
   useEffect(() => {
-    const fp = fingerprint(flow.nodes, flow.edges);
+    const fp = `${fingerprint(flow.nodes, flow.edges)}::${JSON.stringify(botNames)}`;
     if (fp === lastExternalFingerprintRef.current) return;
     lastExternalFingerprintRef.current = fp;
     skipNextNotifyRef.current = true;
@@ -182,11 +197,12 @@ function FlowCanvasInner({
         selectedNodeIdRef.current,
         getTypeLabelRef.current,
         getBranchLabelRef.current,
-        locale
+        locale,
+        botNames
       )
     );
     setEdges(toReactFlowEdges(flow.edges, flow.nodes));
-  }, [flow.nodes, flow.edges, locale, setNodes, setEdges]);
+  }, [flow.nodes, flow.edges, locale, botNames, setNodes, setEdges]);
 
   useEffect(() => {
     setNodes((current) => {
