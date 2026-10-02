@@ -14,6 +14,22 @@ import type {
 
 const BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
+export const CAMPAIGN_MAX_RECIPIENTS = 5000;
+
+export type ContactListFilters = {
+  tag?: string;
+  consent?: MarketingConsent;
+  suppressed?: boolean;
+  q?: string;
+  country?: string;
+  company?: string;
+  botId?: string;
+  sort?: ContactSortField;
+  dateField?: ContactDateField;
+  from?: string;
+  to?: string;
+};
+
 async function getAuthHeader(): Promise<Record<string, string>> {
   const { fetchAuthSession } = await import("aws-amplify/auth");
   try {
@@ -26,21 +42,9 @@ async function getAuthHeader(): Promise<Record<string, string>> {
   }
 }
 
-export function useContacts(options?: {
-  tag?: string;
-  consent?: MarketingConsent;
-  suppressed?: boolean;
-  q?: string;
-  country?: string;
-  company?: string;
-  botId?: string;
-  sort?: ContactSortField;
-  dateField?: ContactDateField;
-  from?: string;
-  to?: string;
-  limit?: number;
-  cursor?: string;
-}) {
+function buildContactsQuery(
+  options?: ContactListFilters & { limit?: number; cursor?: string }
+): string {
   const params = new URLSearchParams();
   if (options?.tag) params.set("tag", options.tag);
   if (options?.consent) params.set("consent", options.consent);
@@ -55,12 +59,47 @@ export function useContacts(options?: {
   if (options?.to) params.set("to", options.to);
   if (options?.limit) params.set("limit", String(options.limit));
   if (options?.cursor) params.set("cursor", options.cursor);
-  const qs = params.toString() ? `?${params.toString()}` : "";
+  const qs = params.toString();
+  return qs ? `?${qs}` : "";
+}
+
+export function useContacts(options?: ContactListFilters & { limit?: number; cursor?: string }) {
+  const qs = buildContactsQuery(options);
 
   return useQuery({
     queryKey: ["contacts", options],
     queryFn: () => api.get<ContactsListResponse>(`/contacts${qs}`),
   });
+}
+
+export async function fetchAllMatchingContactPhones(
+  filters: ContactListFilters,
+  options?: { max?: number }
+): Promise<{ phones: string[]; truncated: boolean; totalFetched: number }> {
+  const max = options?.max ?? CAMPAIGN_MAX_RECIPIENTS;
+  const phones: string[] = [];
+  let cursor: string | undefined;
+  let truncated = false;
+
+  do {
+    const qs = buildContactsQuery({
+      ...filters,
+      limit: 100,
+      ...(cursor ? { cursor } : {}),
+    });
+    const page = await api.get<ContactsListResponse>(`/contacts${qs}`);
+    for (const contact of page.items) {
+      if (phones.length >= max) {
+        truncated = true;
+        break;
+      }
+      phones.push(contact.phoneNumber);
+    }
+    if (truncated) break;
+    cursor = page.nextCursor;
+  } while (cursor);
+
+  return { phones, truncated, totalFetched: phones.length };
 }
 
 export function useContactMetrics() {
