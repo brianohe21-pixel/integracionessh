@@ -257,7 +257,11 @@ export async function advanceFlowRun(params: {
     (params.conversation.activeFlowRunId
       ? await getFlowRun(params.tenantId, params.conversation.activeFlowRunId)
       : null) ??
-    (await getActiveFlowRunForConversation(params.tenantId, params.conversation.conversationId));
+    (await getActiveFlowRunForConversation(
+      params.tenantId,
+      params.conversation.conversationId,
+      params.botId
+    ));
 
   if (!run || (run.status !== "active" && run.status !== "waiting")) {
     return { handled: false, halt: false };
@@ -447,7 +451,11 @@ export async function resumeFlowRunOnOrder(params: {
   subtotalInCents: number;
   itemsCount: number;
 }): Promise<void> {
-  const run = await getActiveFlowRunForConversation(params.tenantId, params.conversationId);
+  const run = await getActiveFlowRunForConversation(
+    params.tenantId,
+    params.conversationId,
+    params.botId
+  );
   if (!run || run.status !== "waiting") return;
 
   const flow = await getFlowDefinition(params.tenantId, run.flowId);
