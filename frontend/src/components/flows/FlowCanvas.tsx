@@ -168,6 +168,7 @@ function FlowCanvasInner({
   getBranchLabelRef.current = getBranchLabel;
   const skipNextNotifyRef = useRef(true);
   const lastExternalFingerprintRef = useRef("");
+  const lastPreviewMetaRef = useRef("");
 
   const reactFlowNodes = useMemo(
     () =>
@@ -187,7 +188,7 @@ function FlowCanvasInner({
   const [edges, setEdges, onEdgesChange] = useEdgesState(reactFlowEdges);
 
   useEffect(() => {
-    const fp = `${fingerprint(flow.nodes, flow.edges)}::${JSON.stringify(botNames)}`;
+    const fp = fingerprint(flow.nodes, flow.edges);
     if (fp === lastExternalFingerprintRef.current) return;
     lastExternalFingerprintRef.current = fp;
     skipNextNotifyRef.current = true;
@@ -203,6 +204,27 @@ function FlowCanvasInner({
     );
     setEdges(toReactFlowEdges(flow.edges, flow.nodes));
   }, [flow.nodes, flow.edges, locale, botNames, setNodes, setEdges]);
+
+  useEffect(() => {
+    const botNamesKey = Object.entries(botNames)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([id, name]) => `${id}:${name}`)
+      .join("|");
+    const previewMeta = `${locale}::${botNamesKey}`;
+    if (previewMeta === lastPreviewMetaRef.current) return;
+    lastPreviewMetaRef.current = previewMeta;
+    skipNextNotifyRef.current = true;
+    setNodes(
+      toReactFlowNodes(
+        flowRef.current.nodes,
+        selectedNodeIdRef.current,
+        getTypeLabelRef.current,
+        getBranchLabelRef.current,
+        locale,
+        botNames
+      )
+    );
+  }, [botNames, locale, setNodes]);
 
   useEffect(() => {
     setNodes((current) => {
