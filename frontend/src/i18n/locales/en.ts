@@ -4309,7 +4309,13 @@ export const en: Messages = {
       haltPipeline: "Stop bot pipeline",
       assignBotAiTitle: "Hand off to AI Assistant",
       assignBotHint:
-        "When this node runs, the structured flow ends and the conversation continues with the agent's AI Assistant.",
+        "When this node runs, the structured flow ends and the conversation continues with the selected agent's AI Assistant.",
+      assignBotAgent: "Agent",
+      assignBotAgentHint: "Choose the agent whose AI Assistant will reply after this node.",
+      assignBotAgentRequired: "Select an agent to continue with its AI Assistant.",
+      assignBotNoAi: "no AI Assistant",
+      assignBotAiDisabled:
+        "This agent does not have the AI Assistant enabled. Enable it in Apps → AI Assistant.",
       delaySeconds: "Delay seconds",
       variableName: "Variable name",
       variableValue: "Value",
@@ -4639,8 +4645,8 @@ export const en: Messages = {
         usage: "Select the agent, the channel, and for WhatsApp a specific number if needed.",
       },
       assign_bot: {
-        description: "Hands the conversation over to the agent's AI Assistant.",
-        usage: "Place it where the structured flow should end and AI should reply.",
+        description: "Hands the conversation over to a selected agent's AI Assistant.",
+        usage: "Select the agent and place it where the structured flow should end and AI should reply.",
       },
       webhook: {
         description: "Exposes a URL to receive JSON data from external systems.",

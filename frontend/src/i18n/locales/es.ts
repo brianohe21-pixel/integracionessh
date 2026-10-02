@@ -4318,7 +4318,14 @@ export const es = {
       haltPipeline: "Detener el flujo del bot",
       assignBotAiTitle: "Transferir al Asistente IA",
       assignBotHint:
-        "Al llegar a este nodo, el flujo termina y la conversación continúa con el Asistente IA del agente.",
+        "Al llegar a este nodo, el flujo termina y la conversación continúa con el Asistente IA del agente seleccionado.",
+      assignBotAgent: "Agente",
+      assignBotAgentHint:
+        "Elige el agente cuyo Asistente IA responderá después de este nodo.",
+      assignBotAgentRequired: "Selecciona un agente para continuar con su Asistente IA.",
+      assignBotNoAi: "sin Asistente IA",
+      assignBotAiDisabled:
+        "Este agente no tiene el Asistente IA activo. Actívalo en Apps → Asistente IA.",
       delaySeconds: "Segundos de espera",
       variableName: "Nombre de variable",
       variableValue: "Valor",
@@ -4648,8 +4655,8 @@ export const es = {
         usage: "Selecciona el agente, el canal y, en WhatsApp, un número concreto si lo necesitas.",
       },
       assign_bot: {
-        description: "Transfiere la conversación al Asistente IA del agente.",
-        usage: "Colócalo donde quieras que el flujo estructurado termine y responda la IA.",
+        description: "Transfiere la conversación al Asistente IA de un agente.",
+        usage: "Selecciona el agente y colócalo donde quieras que el flujo termine y responda la IA.",
       },
       webhook: {
         description: "Expone una URL para recibir datos JSON desde sistemas externos.",

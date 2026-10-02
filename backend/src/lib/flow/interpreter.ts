@@ -29,6 +29,7 @@ export interface FlowPipelineResult {
   handled: boolean;
   halt: boolean;
   errorMessage?: string;
+  continueWithBotId?: string;
 }
 
 export function resolveFlowPipelineHalt(
@@ -41,6 +42,20 @@ export function resolveFlowPipelineHalt(
     return false;
   }
   return true;
+}
+
+function buildPipelineResult(
+  halt: boolean,
+  variables: Record<string, string>,
+  errorMessage?: string
+): FlowPipelineResult {
+  const continueWithBotId = variables.ai_bot_id?.trim();
+  return {
+    handled: true,
+    halt,
+    ...(continueWithBotId ? { continueWithBotId } : {}),
+    ...(errorMessage ? { errorMessage } : {}),
+  };
 }
 
 function buildContext(params: {
@@ -163,7 +178,7 @@ async function runFromNode(
       if (completed) {
         await clearActiveFlowRun(ctx.tenantId, botId, conversation.conversationId);
       }
-      return { handled: true, halt };
+      return buildPipelineResult(halt, variables);
     }
 
     currentNodeId = result.nextNodeId;

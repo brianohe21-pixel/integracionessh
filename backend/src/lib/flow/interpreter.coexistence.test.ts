@@ -159,7 +159,7 @@ describe("startFlowRun coexistence with AI assistant", () => {
       halt: false,
       wait: false,
       output: "ai_assistant",
-      variables: { handed_off_to_ai: "true" },
+      variables: { handed_off_to_ai: "true", ai_bot_id: "bot-1" },
     } as never);
 
     const result = await startFlowRun({
@@ -168,7 +168,7 @@ describe("startFlowRun coexistence with AI assistant", () => {
           id: "assign-1",
           type: "assign_bot",
           position: { x: 0, y: 0 },
-          data: {},
+          data: { botId: "bot-1" },
         },
       ]),
       tenantId: "tenant-1",
@@ -182,6 +182,10 @@ describe("startFlowRun coexistence with AI assistant", () => {
       channel: "whatsapp",
     });
 
-    expect(result).toEqual({ handled: true, halt: false });
+    expect(result).toEqual({
+      handled: true,
+      halt: false,
+      continueWithBotId: "bot-1",
+    });
   });
 });

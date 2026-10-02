@@ -280,8 +280,14 @@ export function buildNodePreview(
       }
       return truncate(`[${channelLabel[channel]}] ${recipient}`.trim());
     }
-    case "assign_bot":
-      return locale === "es" ? "Asistente IA" : "AI Assistant";
+    case "assign_bot": {
+      const botLabel = data.botId
+        ? truncate(botNames?.[data.botId] || data.botId, 28)
+        : locale === "es"
+          ? "Asistente IA"
+          : "AI Assistant";
+      return botLabel;
+    }
     case "webhook":
       return locale === "es" ? "Recibir JSON" : "Receive JSON";
   }
