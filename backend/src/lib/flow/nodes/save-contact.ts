@@ -4,9 +4,9 @@ import {
   buildBindingContext,
   conversationBindingFromContext,
   resolveBindingValue,
+  resolveNormalizedContactPhone,
 } from "../binding.js";
 import { getNextNodeId } from "../graph.js";
-import { normalizePhone } from "../../dynamodb/contact.repository.js";
 import { saveContactFromFormData } from "../../leads/form-lead.js";
 import { requireConversation } from "../types.js";
 
@@ -21,10 +21,18 @@ export async function executeSaveContactNode(
     conversation: conversationBindingFromContext(ctx),
   });
 
-  const phone = normalizePhone(
+  const phone = resolveNormalizedContactPhone(
     resolveBindingValue(node.data.contactPhoneBinding, bindingContext)
   );
-  if (!phone) throw new Error("Valid phone binding is required");
+  if (!phone) {
+    return {
+      nextNodeId: getNextNodeId(ctx.flow, node.id),
+      halt: false,
+      wait: false,
+      error: "Valid phone binding is required",
+      output: "skipped: missing phone",
+    };
+  }
 
   const name = resolveBindingValue(node.data.contactNameBinding, bindingContext) || undefined;
   const email = resolveBindingValue(node.data.contactEmailBinding, bindingContext) || undefined;

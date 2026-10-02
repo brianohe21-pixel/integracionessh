@@ -4,9 +4,9 @@ import {
   buildBindingContext,
   conversationBindingFromContext,
   resolveBindingValue,
+  resolveNormalizedContactPhone,
 } from "../binding.js";
 import { getNextNodeId } from "../graph.js";
-import { normalizePhone } from "../../dynamodb/contact.repository.js";
 import { createOpportunityFromFormData } from "../../opportunities/form-opportunity.js";
 
 export async function executeCreateOpportunityNode(
@@ -23,8 +23,18 @@ export async function executeCreateOpportunityNode(
   const title = resolveBindingValue(node.data.opportunityTitleBinding, bindingContext).trim();
   if (!title) throw new Error("Opportunity title binding is required");
 
-  const phone = normalizePhone(resolveBindingValue(node.data.opportunityPhoneBinding, bindingContext));
-  if (!phone) throw new Error("Valid phone binding is required");
+  const phone = resolveNormalizedContactPhone(
+    resolveBindingValue(node.data.opportunityPhoneBinding, bindingContext)
+  );
+  if (!phone) {
+    return {
+      nextNodeId: getNextNodeId(ctx.flow, node.id),
+      halt: false,
+      wait: false,
+      error: "Valid phone binding is required",
+      output: "skipped: missing phone",
+    };
+  }
 
   const name = resolveBindingValue(node.data.opportunityNameBinding, bindingContext) || undefined;
   const email = resolveBindingValue(node.data.opportunityEmailBinding, bindingContext) || undefined;

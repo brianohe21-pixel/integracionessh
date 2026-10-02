@@ -1,3 +1,6 @@
+import { normalizePhone } from "../dynamodb/contact.repository.js";
+import { isWhatsAppBsuid } from "../whatsapp/identity.js";
+
 const BINDING_PATTERN = /\{\{([^}]+)\}\}/g;
 
 export function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
@@ -33,6 +36,28 @@ export function resolveBindingValue(
   return resolveBinding(template, context).trim();
 }
 
+export function resolveNormalizedContactPhone(value?: string | null): string | null {
+  const trimmed = value?.trim() || "";
+  if (!trimmed || isWhatsAppBsuid(trimmed)) return null;
+  const phone = normalizePhone(trimmed);
+  return phone.length >= 10 ? phone : null;
+}
+
+function sanitizePhoneVariables(
+  variables?: Record<string, string>
+): Record<string, string> | undefined {
+  if (!variables) return undefined;
+  const sanitized = { ...variables };
+  for (const key of ["phone", "contact_phone"] as const) {
+    const value = sanitized[key];
+    if (!value) continue;
+    if (isWhatsAppBsuid(value) || !resolveNormalizedContactPhone(value)) {
+      delete sanitized[key];
+    }
+  }
+  return sanitized;
+}
+
 export function buildBindingContext(params: {
   formPayload?: Record<string, unknown> | undefined;
   variables?: Record<string, string> | undefined;
@@ -41,7 +66,7 @@ export function buildBindingContext(params: {
     contactName?: string;
   } | undefined;
 }): Record<string, unknown> {
-  const phone = params.conversation?.phone?.trim() || "";
+  const phone = resolveNormalizedContactPhone(params.conversation?.phone) || "";
   const contactName = params.conversation?.contactName?.trim() || "";
   const defaults: Record<string, string> = {};
   if (phone) {
@@ -55,7 +80,7 @@ export function buildBindingContext(params: {
   return {
     form: params.formPayload ?? {},
     ...defaults,
-    ...params.variables,
+    ...(sanitizePhoneVariables(params.variables) ?? {}),
   };
 }
 
@@ -68,10 +93,10 @@ export function conversationBindingFromContext(ctx: {
   };
 }): { phone?: string; contactName?: string } {
   const phone =
-    ctx.customerPhone?.trim() ||
-    ctx.conversation?.phoneNumber?.trim() ||
-    ctx.conversation?.participantId?.trim() ||
-    "";
+    resolveNormalizedContactPhone(ctx.conversation?.phoneNumber) ||
+    resolveNormalizedContactPhone(ctx.customerPhone) ||
+    resolveNormalizedContactPhone(ctx.conversation?.participantId) ||
+    undefined;
   const contactName = ctx.conversation?.contactName?.trim() || "";
   return {
     ...(phone ? { phone } : {}),
