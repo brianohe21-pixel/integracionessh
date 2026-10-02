@@ -54,6 +54,7 @@ export function buildDefaultNodeData(
   }
   if (type === "agent") {
     defaultData.channel = "any";
+    if (suggestedBotId?.trim()) defaultData.botId = suggestedBotId.trim();
   }
 
   return defaultData;

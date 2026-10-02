@@ -5,17 +5,23 @@ export function resolveLegacyAssignBotId(nodes: FlowNode[]): string | undefined 
   return assignBotNode?.data.botId?.trim();
 }
 
+export function resolveAgentBotId(nodes: FlowNode[]): string | undefined {
+  const agentNode = nodes.find((node) => node.type === "agent" && node.data.botId?.trim());
+  return agentNode?.data.botId?.trim();
+}
+
 export function resolveFlowBotIdFromNodes(nodes: FlowNode[]): string | undefined {
-  return resolveLegacyAssignBotId(nodes);
+  return resolveAgentBotId(nodes) ?? resolveLegacyAssignBotId(nodes);
 }
 
 export function resolveFlowBotId(flow: FlowDefinition): string | undefined {
-  return flow.botId ?? resolveLegacyAssignBotId(flow.nodes);
+  const nodes = flow.draftNodes ?? flow.nodes;
+  return resolveFlowBotIdFromNodes(nodes) ?? (flow.botId?.trim() || undefined);
 }
 
 export function withBotFromNodes<T extends FlowDefinition>(flow: T): T {
-  if (flow.botId?.trim()) return flow;
-  const botId = resolveLegacyAssignBotId(flow.nodes);
+  const nodes = flow.draftNodes ?? flow.nodes;
+  const botId = resolveFlowBotIdFromNodes(nodes) ?? flow.botId?.trim();
   if (botId) return { ...flow, botId };
   const next = { ...flow };
   delete next.botId;

@@ -16,7 +16,11 @@ function text(value: LocalizedText | undefined, locale: BotLocale): string {
   return resolveLocalizedText(value, locale);
 }
 
-function buildStepDetail(node: FlowNode, locale: BotLocale): string {
+function buildStepDetail(
+  node: FlowNode,
+  locale: BotLocale,
+  botNames?: Map<string, string>
+): string {
   const d = node.data;
 
   switch (node.type) {
@@ -33,10 +37,14 @@ function buildStepDetail(node: FlowNode, locale: BotLocale): string {
     }
     case "agent": {
       const channel = d.channel ?? "any";
-      if (channel === "whatsapp" && d.whatsappChannelId) {
-        return `whatsapp:${d.whatsappChannelId}`;
-      }
-      return channel;
+      const botLabel = d.botId
+        ? botNames?.get(d.botId) || d.botId
+        : "";
+      const channelLabel =
+        channel === "whatsapp" && d.whatsappChannelId
+          ? `whatsapp:${d.whatsappChannelId}`
+          : channel;
+      return [botLabel, channelLabel].filter(Boolean).join(" · ");
     }
     case "message":
       return text(d.messageText, locale);
@@ -135,7 +143,7 @@ function walkPreview(params: {
     nodeId: node.id,
     type: node.type,
     title: params.getTypeLabel(node.type),
-    detail: buildStepDetail(node, params.locale),
+    detail: buildStepDetail(node, params.locale, params.botNames),
     ...(params.branchLabel ? { branchLabel: params.branchLabel } : {}),
   });
 

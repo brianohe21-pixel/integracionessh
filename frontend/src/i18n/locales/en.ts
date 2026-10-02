@@ -4175,7 +4175,7 @@ export const en: Messages = {
       placeholder: "Select bot",
       optionalHint:
         "This flow can run without an agent. Assign one when creating or editing if you need CRM, messaging, or Meta forms.",
-      createHint: "You can assign the flow to an agent when creating it. Use the Agent node to choose the channel.",
+      createHint: "You can assign the flow to an agent from the Agent node in the visual editor.",
       unassigned: "Unassigned",
     },
     nodePanel: "Node properties",
@@ -4254,10 +4254,12 @@ export const en: Messages = {
       triggerKeyword: "Keyword",
       triggerWebForm: "Web form",
       triggerVoiceCall: "Voice call",
+      agentBot: "Agent",
+      agentBotHint: "Choose which agent this flow belongs to.",
       agentChannel: "Channel",
       agentChannelAny: "Any channel",
       agentChannelHint: "Choose which channel can trigger this flow.",
-      agentNeedsFlowBot: "Assign the flow to an agent to list WhatsApp numbers.",
+      agentNeedsFlowBot: "Select an agent to list WhatsApp numbers.",
       whatsappChannel: "WhatsApp number",
       whatsappChannelAny: "Any number on the agent",
       samplePayload: "Sample payload (JSON)",
@@ -4629,8 +4631,8 @@ export const en: Messages = {
           "Set channel, recipient, and message. For email, use your verified sender or Integraciones SH email by default.",
       },
       agent: {
-        description: "Defines which channel can trigger this flow.",
-        usage: "Pick any channel or a specific one. For WhatsApp you can limit to one of the agent's numbers.",
+        description: "Assigns the flow to an agent and defines which channel can trigger it.",
+        usage: "Select the agent, the channel, and for WhatsApp a specific number if needed.",
       },
       assign_bot: {
         description: "Hands the conversation over to the agent's AI Assistant.",

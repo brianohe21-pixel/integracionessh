@@ -81,6 +81,12 @@ export default function EditFlowPage() {
   const initializedFlowKeyRef = useRef<string | null>(null);
   const handleSaveRef = useRef<() => Promise<boolean>>(async () => true);
   const handlePublishRef = useRef<() => Promise<void>>(async () => {});
+  const localNodesRef = useRef(localNodes);
+  const localEdgesRef = useRef(localEdges);
+  const savingRef = useRef(false);
+  const canvasAutosaveRef = useRef(false);
+  localNodesRef.current = localNodes;
+  localEdgesRef.current = localEdges;
 
   useEffect(() => {
     if (!flow) return;
@@ -164,7 +170,7 @@ export default function EditFlowPage() {
   const isMessagingFlow = !isVoiceFlow && !hasWebhookNode;
   const samplePayload = resolveFlowSamplePayload(localNodes);
   const assignedBotId =
-    flow?.botId || suggestedBotId || resolveFlowBotIdFromNodes(localNodes);
+    resolveFlowBotIdFromNodes(localNodes) || flow?.botId || suggestedBotId;
   const triggerCount = localNodes.filter((n) => n.type === "trigger").length;
   const canDeleteSelected =
     !!selected && !(selected.type === "trigger" && triggerCount <= 1);
@@ -180,11 +186,13 @@ export default function EditFlowPage() {
   );
 
   function handleCanvasChange(nodes: FlowNode[], edges: FlowEdge[]) {
+    canvasAutosaveRef.current = true;
     commitHistory({ nodes, edges }, { debounce: true });
   }
 
   function updateSelectedData(patch: Record<string, unknown>) {
     if (!selectedNodeId) return;
+    canvasAutosaveRef.current = false;
     const nodes = localNodes.map((node) =>
       node.id === selectedNodeId ? { ...node, data: { ...node.data, ...patch } } : node
     );
@@ -203,6 +211,7 @@ export default function EditFlowPage() {
       node.data.messageText = t("flows.fields.defaultButtonPrompt");
     }
     const nodes = [...localNodes, node];
+    canvasAutosaveRef.current = true;
     commitHistory({ nodes, edges: localEdges });
     setSelectedNodeId(node.id);
   }
@@ -213,6 +222,7 @@ export default function EditFlowPage() {
     const edges = localEdges.filter(
       (edge) => edge.source !== selectedNodeId && edge.target !== selectedNodeId
     );
+    canvasAutosaveRef.current = true;
     commitHistory({ nodes, edges });
     setSelectedNodeId(null);
   }
@@ -223,14 +233,23 @@ export default function EditFlowPage() {
   }
 
   async function handleSave(): Promise<boolean> {
-    if (!flow || update.isPending) return !isDirty;
+    if (!flow || update.isPending || savingRef.current) return !isDirty;
     flushHistory();
-    const nodesToSave = localNodes.length > 0 ? localNodes : resolveDraftNodes(flow);
-    const edgesToSave = localNodes.length > 0 ? localEdges : resolveDraftEdges(flow);
+    const nodesToSave =
+      localNodesRef.current.length > 0 ? localNodesRef.current : resolveDraftNodes(flow);
+    const edgesToSave =
+      localNodesRef.current.length > 0 ? localEdgesRef.current : resolveDraftEdges(flow);
     const voiceMode = resolveEditorVoiceMode(flow, nodesToSave);
-    const nodes = applyResolvedTriggerType(nodesToSave, voiceMode);
+    const fallbackBotId = flow.botId || suggestedBotId;
+    const nodesWithAgentBot = nodesToSave.map((node) => {
+      if (node.type !== "agent" || node.data.botId?.trim() || !fallbackBotId) return node;
+      return { ...node, data: { ...node.data, botId: fallbackBotId } };
+    });
+    const nodes = applyResolvedTriggerType(nodesWithAgentBot, voiceMode);
+    const resolvedBotId = resolveFlowBotIdFromNodes(nodes) || undefined;
     const snapshotKey = flowEditorSnapshotKey(nodesToSave, edgesToSave, voiceMode);
     if (snapshotKey === savedKey) return true;
+    savingRef.current = true;
     setSaveError("");
     setSavedMessage(false);
     try {
@@ -239,12 +258,21 @@ export default function EditFlowPage() {
         nodes,
         edges: edgesToSave,
         entryNodeId: nodes.find((n) => n.type === "trigger")?.id ?? flow.entryNodeId,
+        ...(resolvedBotId ? { botId: resolvedBotId } : {}),
       });
       const draftNodes = resolveDraftNodes(updated);
       const draftEdges = resolveDraftEdges(updated);
       const draftKey = flowDraftEditorSnapshotKey(updated);
       initializedFlowKeyRef.current = `${updated.flowId}:${updated.version}:${draftKey}`;
-      resetHistory({ nodes: draftNodes, edges: draftEdges });
+      const currentVoiceMode = resolveEditorVoiceMode(flow, localNodesRef.current);
+      const currentKey = flowEditorSnapshotKey(
+        localNodesRef.current,
+        localEdgesRef.current,
+        currentVoiceMode
+      );
+      if (currentKey === snapshotKey) {
+        resetHistory({ nodes: draftNodes, edges: draftEdges });
+      }
       setSavedKey(draftKey);
       setPublishedKey(
         hasUnpublishedFlowChanges(updated)
@@ -257,6 +285,8 @@ export default function EditFlowPage() {
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : t("flows.unsaved"));
       return false;
+    } finally {
+      savingRef.current = false;
     }
   }
 
@@ -297,6 +327,17 @@ export default function EditFlowPage() {
     if (flow) return hasUnpublishedFlowChanges(flow);
     return editorSnapshotKey !== publishedKey;
   })();
+
+  useEffect(() => {
+    if (!flow || !isDirty || !canvasAutosaveRef.current || update.isPending || savingRef.current) {
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      if (!canvasAutosaveRef.current) return;
+      void handleSaveRef.current();
+    }, 1200);
+    return () => window.clearTimeout(timer);
+  }, [flow, isDirty, editorSnapshotKey, update.isPending]);
 
   function handleVersionRestored(updated: FlowDefinition) {
     const draftNodes = resolveDraftNodes(updated);

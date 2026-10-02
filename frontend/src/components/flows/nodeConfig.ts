@@ -173,7 +173,12 @@ export const CATEGORY_STYLES: Record<
   },
 };
 
-export function buildNodePreview(type: FlowNodeType, data: FlowNodeData, locale: "es" | "en" = "es"): string {
+export function buildNodePreview(
+  type: FlowNodeType,
+  data: FlowNodeData,
+  locale: "es" | "en" = "es",
+  botNames?: Record<string, string>
+): string {
   const truncate = (s: string, max = 48) =>
     s.length > max ? `${s.slice(0, max)}…` : s;
   const text = (value: LocalizedText | undefined) =>
@@ -191,10 +196,14 @@ export function buildNodePreview(type: FlowNodeType, data: FlowNodeData, locale:
     }
     case "agent": {
       const channel = data.channel ?? "any";
-      if (channel === "whatsapp" && data.whatsappChannelId) {
-        return truncate(`whatsapp:${data.whatsappChannelId}`);
-      }
-      return channel;
+      const botLabel = data.botId
+        ? truncate(botNames?.[data.botId] || data.botId, 28)
+        : "";
+      const channelLabel =
+        channel === "whatsapp" && data.whatsappChannelId
+          ? truncate(`whatsapp:${data.whatsappChannelId}`)
+          : channel;
+      return [botLabel, channelLabel].filter(Boolean).join(" · ");
     }
     case "message":
       return text(data.messageText);
