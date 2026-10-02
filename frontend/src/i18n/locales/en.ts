@@ -4254,6 +4254,8 @@ export const en: Messages = {
       triggerType: "Trigger type",
       triggerAnyMessage: "Any message",
       triggerFirstMessage: "First message only",
+      triggerFirstMessageHint:
+        "Runs only when the contact writes for the first time. If unchecked, every message starts the flow again.",
       triggerWebhookHint: "Activation is configured with the flow's Webhook component.",
       triggerKeyword: "Keyword",
       triggerWebForm: "Web form",

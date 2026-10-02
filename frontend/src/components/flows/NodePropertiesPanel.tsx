@@ -285,16 +285,26 @@ export function NodePropertiesPanel({
           )}
           {isMessagingFlow && (
             <>
-              <label className="flex items-center gap-2 text-sm text-secondary">
-                <input
-                  type="checkbox"
-                  checked={(d.triggerType ?? "any_message") === "first_message"}
-                  onChange={(e) =>
-                    onUpdate({ triggerType: e.target.checked ? "first_message" : "any_message" })
-                  }
-                />
-                {t("flows.fields.triggerFirstMessage")}
-              </label>
+              <div className="rounded-xl border border-field-border bg-surface-muted/30 p-4">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={(d.triggerType ?? "any_message") === "first_message"}
+                    onChange={(e) =>
+                      onUpdate({ triggerType: e.target.checked ? "first_message" : "any_message" })
+                    }
+                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-field-border text-accent focus:ring-accent"
+                  />
+                  <span className="text-sm text-secondary">
+                    <span className="font-medium text-primary">
+                      {t("flows.fields.triggerFirstMessage")}
+                    </span>
+                    <span className="mt-0.5 block text-xs text-muted">
+                      {t("flows.fields.triggerFirstMessageHint")}
+                    </span>
+                  </span>
+                </label>
+              </div>
               <div>
                 <FieldLabel>{t("flows.fields.keywords")}</FieldLabel>
                 <CommaSeparatedInput

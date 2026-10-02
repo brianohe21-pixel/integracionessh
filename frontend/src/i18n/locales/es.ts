@@ -4263,6 +4263,8 @@ export const es = {
       triggerType: "Tipo de activación",
       triggerAnyMessage: "Cualquier mensaje",
       triggerFirstMessage: "Primer mensaje",
+      triggerFirstMessageHint:
+        "Solo se ejecuta cuando el contacto escribe por primera vez. Si no la marcas, cada mensaje vuelve a iniciar el flujo.",
       triggerWebhookHint: "La activación se define con el componente Webhook del flujo.",
       triggerKeyword: "Palabra clave",
       triggerWebForm: "Formulario web",
