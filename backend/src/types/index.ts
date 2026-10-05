@@ -3805,6 +3805,8 @@ export interface MailrelayCampaignRecord {
   updatedAt: string;
 }
 
+export type MailrelayBounceKind = "hard" | "soft" | "generic";
+
 export interface MailrelayCampaignMetrics {
   tenantId: string;
   campaignId: number;
@@ -3813,6 +3815,9 @@ export interface MailrelayCampaignMetrics {
   opened: number;
   clicked: number;
   bounced: number;
+  hardBounced: number;
+  softBounced: number;
+  genericBounced: number;
   unsubscribed: number;
   complained: number;
   updatedAt: string;
@@ -3826,6 +3831,7 @@ export interface MailrelayEvent {
   subscriberId?: number;
   email?: string;
   occurredAt: string;
+  bounceKind?: MailrelayBounceKind;
   payload: Record<string, unknown>;
 }
 

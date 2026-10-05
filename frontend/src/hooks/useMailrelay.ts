@@ -8,6 +8,9 @@ import type {
   MailrelayCampaignInput,
   MailrelayCampaignMetrics,
   MailrelayConfig,
+  MailrelayDeliverabilityCampaign,
+  MailrelayDeliverabilityDailyPoint,
+  MailrelayDeliverabilityReport,
   MailrelayCredentials,
   MailrelayCredentialsInput,
   MailrelayEmailTemplate,
@@ -352,17 +355,73 @@ export function useMailrelaySync(syncId: string) {
   });
 }
 
+function countMetric(value: unknown): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
+function normalizeDeliverabilityCounts(
+  value: unknown
+): Omit<MailrelayCampaignMetrics, "campaignId"> {
+  const metrics = record(value);
+  const hardBounces = countMetric(metrics.hardBounces ?? metrics.hardBounced);
+  const softBounces = countMetric(metrics.softBounces ?? metrics.softBounced);
+  const storedBounces = countMetric(metrics.bounces ?? metrics.bounced);
+  const genericSource = metrics.genericBounces ?? metrics.genericBounced;
+  const genericBounces =
+    genericSource == null
+      ? Math.max(0, storedBounces - hardBounces - softBounces)
+      : countMetric(genericSource);
+  return {
+    sent: countMetric(metrics.sent),
+    delivered: countMetric(metrics.delivered),
+    opens: countMetric(metrics.opens ?? metrics.opened),
+    clicks: countMetric(metrics.clicks ?? metrics.clicked),
+    hardBounces,
+    softBounces,
+    genericBounces,
+    bounces: hardBounces + softBounces + genericBounces,
+    unsubscribes: countMetric(metrics.unsubscribes ?? metrics.unsubscribed),
+    complaints: countMetric(metrics.complaints ?? metrics.complained),
+  };
+}
+
 function normalizeMetrics(value: unknown, campaignId: string): MailrelayCampaignMetrics {
   const metrics = record(value);
   return {
     campaignId: String(metrics.campaignId ?? campaignId),
-    sent: Number(metrics.sent ?? 0),
-    delivered: Number(metrics.delivered ?? 0),
-    opens: Number(metrics.opens ?? metrics.opened ?? 0),
-    clicks: Number(metrics.clicks ?? metrics.clicked ?? 0),
-    bounces: Number(metrics.bounces ?? metrics.bounced ?? 0),
-    unsubscribes: Number(metrics.unsubscribes ?? metrics.unsubscribed ?? 0),
-    complaints: Number(metrics.complaints ?? metrics.complained ?? 0),
+    ...normalizeDeliverabilityCounts(value),
+  };
+}
+
+function normalizeDailyPoint(value: unknown): MailrelayDeliverabilityDailyPoint {
+  const point = record(value);
+  return {
+    date: String(point.date ?? ""),
+    ...normalizeDeliverabilityCounts(value),
+  };
+}
+
+function normalizeDeliverabilityCampaign(value: unknown): MailrelayDeliverabilityCampaign {
+  const row = record(value);
+  const daily = Array.isArray(row.daily) ? row.daily : [];
+  return {
+    ...normalizeMetrics(value, String(row.campaignId ?? "")),
+    name: String(row.name ?? ""),
+    daily: daily.map(normalizeDailyPoint),
+  };
+}
+
+function normalizeDeliverabilityReport(value: unknown): MailrelayDeliverabilityReport {
+  const report = record(value);
+  const campaigns = Array.isArray(report.campaigns) ? report.campaigns : [];
+  const daily = Array.isArray(report.daily) ? report.daily : [];
+  return {
+    from: typeof report.from === "string" ? report.from : null,
+    to: typeof report.to === "string" ? report.to : null,
+    totals: normalizeDeliverabilityCounts(report.totals),
+    campaigns: campaigns.map(normalizeDeliverabilityCampaign),
+    daily: daily.map(normalizeDailyPoint),
   };
 }
 
@@ -503,6 +562,28 @@ export function useMailrelaySentCampaigns(enabled = true) {
       return {
         campaigns: response.campaigns.map((campaign) => normalizeCampaign(campaign, "sent")),
       };
+    },
+    enabled,
+  });
+}
+
+export function useMailrelayDeliverability(
+  range: { from: string; to: string } | null,
+  enabled = true
+) {
+  const params = new URLSearchParams();
+  if (range) {
+    params.set("from", range.from);
+    params.set("to", range.to);
+  }
+  const query = params.toString();
+  return useQuery<{ report: MailrelayDeliverabilityReport }>({
+    queryKey: [...key, "deliverability", range?.from ?? "lifetime", range?.to ?? "lifetime"],
+    queryFn: async () => {
+      const response = await api.get<{ report: unknown }>(
+        `/email-marketing/deliverability${query ? `?${query}` : ""}`
+      );
+      return { report: normalizeDeliverabilityReport(response.report) };
     },
     enabled,
   });

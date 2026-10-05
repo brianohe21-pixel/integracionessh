@@ -1,5 +1,7 @@
 import {
+  bounceKindForStoredMailrelayEvent,
   isMailrelaySuppressionEvent,
+  metricFieldsForMailrelayEvent,
   metricForMailrelayEvent,
   parseMailrelayWebhook,
   verifyMailrelayWebhookToken,
@@ -39,6 +41,41 @@ describe("Mailrelay webhook parsing", () => {
     expect(metricForMailrelayEvent("subscriber.unsubscribe")).toBe("unsubscribed");
     expect(isMailrelaySuppressionEvent("subscriber.unsubscribe")).toBe(true);
     expect(isMailrelaySuppressionEvent("campaign.clicked")).toBe(false);
+  });
+
+  it("keeps hard and soft bounces on distinct counters and preserves the payload", () => {
+    const input = {
+      event_type: "email.bounced",
+      bounce_type: "soft",
+      campaign_id: 4,
+      diagnostic: "mailbox full",
+    };
+    const event = parseMailrelayWebhook("tenant-1", input);
+
+    expect(event.bounceKind).toBe("soft");
+    expect(event.payload).toEqual(expect.objectContaining({ bounce_type: "soft", diagnostic: "mailbox full" }));
+    expect(metricFieldsForMailrelayEvent("campaign.hard_bounce")).toEqual(["hardBounced", "bounced"]);
+    expect(metricFieldsForMailrelayEvent("soft-bounce")).toEqual(["softBounced", "bounced"]);
+    expect(metricFieldsForMailrelayEvent("email.bounced")).toEqual(["bounced"]);
+    expect(metricFieldsForMailrelayEvent(event.type, event.payload, event.bounceKind)).toEqual([
+      "softBounced",
+      "bounced",
+    ]);
+    expect(input).toEqual({
+      event_type: "email.bounced",
+      bounce_type: "soft",
+      campaign_id: 4,
+      diagnostic: "mailbox full",
+    });
+  });
+
+  it("leaves stored bounce events without a kind as generic", () => {
+    expect(bounceKindForStoredMailrelayEvent({ type: "email_bounced" })).toBe("generic");
+    expect(
+      bounceKindForStoredMailrelayEvent({ type: "email_bounced", bounceKind: "hard" })
+    ).toBe("hard");
+    expect(bounceKindForStoredMailrelayEvent({ type: "campaign.hard_bounce" })).toBe("hard");
+    expect(metricForMailrelayEvent("software_bounce")).toBe("bounced");
   });
 
   it("compares webhook tokens safely", () => {

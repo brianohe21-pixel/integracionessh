@@ -2760,8 +2760,38 @@ export interface MailrelayCampaignMetrics {
   opens: number;
   clicks: number;
   bounces: number;
+  hardBounces: number;
+  softBounces: number;
+  genericBounces: number;
   unsubscribes: number;
   complaints: number;
+}
+
+export interface MailrelayDeliverabilityDailyPoint {
+  date: string;
+  sent: number;
+  delivered: number;
+  opens: number;
+  clicks: number;
+  bounces: number;
+  hardBounces: number;
+  softBounces: number;
+  genericBounces: number;
+  unsubscribes: number;
+  complaints: number;
+}
+
+export interface MailrelayDeliverabilityCampaign extends MailrelayCampaignMetrics {
+  name: string;
+  daily: MailrelayDeliverabilityDailyPoint[];
+}
+
+export interface MailrelayDeliverabilityReport {
+  from: string | null;
+  to: string | null;
+  totals: Omit<MailrelayCampaignMetrics, "campaignId">;
+  campaigns: MailrelayDeliverabilityCampaign[];
+  daily: MailrelayDeliverabilityDailyPoint[];
 }
 
 export interface MailrelayPagination {

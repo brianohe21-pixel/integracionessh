@@ -3,14 +3,14 @@ import { applyMailrelaySuppressionByEmail } from "../../lib/dynamodb/contact.rep
 import {
   findTenantIdByMailrelayCampaign,
   findTenantIdByMailrelayEmail,
-  incrementMailrelayCampaignMetric,
+  incrementMailrelayCampaignMetrics,
   recordMailrelayEvent,
 } from "../../lib/dynamodb/mailrelay.repository.js";
 import { badRequest, handleError, ok, unauthorized } from "../../lib/http.js";
 import { getMailrelayCredentials } from "../../lib/mailrelay/secrets.js";
 import {
   isMailrelaySuppressionEvent,
-  metricForMailrelayEvent,
+  metricFieldsForMailrelayEvent,
   parseMailrelayWebhook,
   verifyMailrelayWebhookToken,
 } from "../../lib/mailrelay/webhook.js";
@@ -69,13 +69,17 @@ export async function handler(
     if (!created) return ok({ received: true, duplicate: true });
 
     const operations: Promise<unknown>[] = [];
-    const metric = metricForMailrelayEvent(mailrelayEvent.type);
-    if (metric && mailrelayEvent.campaignId) {
+    const metrics = metricFieldsForMailrelayEvent(
+      mailrelayEvent.type,
+      mailrelayEvent.payload,
+      mailrelayEvent.bounceKind
+    );
+    if (metrics.length > 0 && mailrelayEvent.campaignId) {
       operations.push(
-        incrementMailrelayCampaignMetric(
+        incrementMailrelayCampaignMetrics(
           tenantId,
           mailrelayEvent.campaignId,
-          metric
+          metrics
         )
       );
     }

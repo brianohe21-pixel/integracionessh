@@ -14,8 +14,10 @@ import {
   getMailrelayEmailTemplate,
   getMailrelaySyncJob,
   listMailrelayCampaignMetrics,
+  listMailrelayCampaignRecords,
   listMailrelayEmailTemplates,
   listMailrelayEvents,
+  listMailrelayEventsInRange,
   listMailrelaySyncJobs,
   saveMailrelayCampaignSnapshot,
   saveMailrelayConfig,
@@ -32,6 +34,12 @@ import {
   parseJsonBody,
 } from "../../lib/http.js";
 import { buildMailrelaySendPayload, ensureMailrelayCampaignHtml } from "../../lib/mailrelay/campaign.js";
+import {
+  buildMailrelayDeliverabilityFromMetrics,
+  buildMailrelayDeliverabilityReport,
+  mailrelayCampaignDisplayName,
+  parseMailrelayDeliverabilityRange,
+} from "../../lib/mailrelay/deliverability.js";
 import { createMailrelayClient, type MailrelayClient } from "../../lib/mailrelay/client.js";
 import {
   getMailrelayCredentials,
@@ -429,6 +437,34 @@ export async function handler(
     if (segments[0] === "overview" && method === "GET") {
       const { client } = await authenticatedClient();
       return ok({ overview: await buildMailrelayOverview(auth.tenantId, client) });
+    }
+
+    if (segments[0] === "deliverability" && method === "GET") {
+      const names = new Map(
+        (await listMailrelayCampaignRecords(auth.tenantId)).map((record) => [
+          record.campaignId,
+          mailrelayCampaignDisplayName(record),
+        ])
+      );
+      const from = event.queryStringParameters?.from ?? "";
+      const to = event.queryStringParameters?.to ?? "";
+      if (from || to) {
+        const range = parseMailrelayDeliverabilityRange(from, to);
+        if (!range.ok) return badRequest(range.message);
+        const events = await listMailrelayEventsInRange(auth.tenantId, range.from, range.to);
+        return ok({
+          report: buildMailrelayDeliverabilityReport({
+            from: range.from,
+            to: range.to,
+            events,
+            names,
+          }),
+        });
+      }
+      const metrics = await listMailrelayCampaignMetrics(auth.tenantId);
+      return ok({
+        report: buildMailrelayDeliverabilityFromMetrics({ metrics, names }),
+      });
     }
 
     if (segments[0] === "events" && method === "GET") {
