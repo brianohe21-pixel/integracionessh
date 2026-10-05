@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { buildNrs360AuthorizationHeader, formatNrs360ScheduleDate } from "./client.js";
 import { normalizeNrs360BaseUrl } from "./secrets.js";
 import { ensureNrs360CampaignHtml, metricsFromNrs360Campaign } from "./campaign.js";
