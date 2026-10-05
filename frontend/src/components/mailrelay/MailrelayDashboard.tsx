@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
-import { BarChart3, Megaphone, Plug, Settings2, Users } from "lucide-react";
+import { BarChart3, FileText, Megaphone, Plug, Settings2, Users } from "lucide-react";
 import { useMailrelayCredentials } from "@/hooks/useMailrelay";
 import { useT } from "@/i18n/context";
 import { DashboardPage } from "@/components/layout/DashboardPage";
@@ -14,13 +14,21 @@ import { MailrelayCampaignsTab } from "./MailrelayCampaignsTab";
 import { MailrelayConnectionTab } from "./MailrelayConnectionTab";
 import { MailrelayOverviewStrip } from "./MailrelayOverviewStrip";
 import { MailrelaySettingsTab } from "./MailrelaySettingsTab";
+import { MailrelayTemplatesTab } from "./MailrelayTemplatesTab";
 
-type MailrelayTab = "settings" | "connection" | "audience" | "campaigns" | "analytics";
+type MailrelayTab =
+  | "settings"
+  | "connection"
+  | "audience"
+  | "templates"
+  | "campaigns"
+  | "analytics";
 
 function parseMailrelayTab(value: string | null): MailrelayTab {
   if (
     value === "settings" ||
     value === "audience" ||
+    value === "templates" ||
     value === "campaigns" ||
     value === "analytics" ||
     value === "connection"
@@ -57,6 +65,11 @@ export function MailrelayDashboard() {
           id: "audience" as const,
           label: t("mailrelay.tabs.audience"),
           icon: <Users className="h-4 w-4" />,
+        },
+        {
+          id: "templates" as const,
+          label: t("mailrelay.tabs.templates"),
+          icon: <FileText className="h-4 w-4" />,
         },
         {
           id: "campaigns" as const,
@@ -96,7 +109,13 @@ export function MailrelayDashboard() {
             <MailrelayConnectionTab onOpenSettings={() => setTab("settings")} />
           ) : null}
           {tab === "audience" ? <MailrelayAudienceTab connected={connected} /> : null}
-          {tab === "campaigns" ? <MailrelayCampaignsTab connected={connected} /> : null}
+          {tab === "templates" ? <MailrelayTemplatesTab connected={connected} /> : null}
+          {tab === "campaigns" ? (
+            <MailrelayCampaignsTab
+              connected={connected}
+              onOpenTemplates={() => setTab("templates")}
+            />
+          ) : null}
           {tab === "analytics" ? <MailrelayAnalyticsTab connected={connected} /> : null}
         </div>
       </div>

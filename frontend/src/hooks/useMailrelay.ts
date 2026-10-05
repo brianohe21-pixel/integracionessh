@@ -723,6 +723,27 @@ export function useCreateMailrelayTemplate() {
   });
 }
 
+export function useUpdateMailrelayTemplate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      templateId,
+      payload,
+    }: {
+      templateId: string;
+      payload: Pick<MailrelayEmailTemplate, "name" | "subject" | "previewText" | "html">;
+    }) =>
+      api.put<{ template: MailrelayEmailTemplate }>(
+        `/email-marketing/templates/${templateId}`,
+        payload
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: [...key, "templates"] });
+      void queryClient.invalidateQueries({ queryKey: [...key, "overview"] });
+    },
+  });
+}
+
 export function useDeleteMailrelayTemplate() {
   const queryClient = useQueryClient();
   return useMutation({

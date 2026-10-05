@@ -49,7 +49,13 @@ const emptyCampaign: MailrelayCampaignInput = {
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export function MailrelayCampaignsTab({ connected }: { connected: boolean }) {
+export function MailrelayCampaignsTab({
+  connected,
+  onOpenTemplates,
+}: {
+  connected: boolean;
+  onOpenTemplates?: () => void;
+}) {
   const t = useT();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -784,7 +790,11 @@ export function MailrelayCampaignsTab({ connected }: { connected: boolean }) {
         </Card>
       )}
 
-      <MailrelayTemplatesPanel connected={connected} draft={draft} onApply={applyTemplate} />
+      <MailrelayTemplatesPanel
+        connected={connected}
+        onApply={applyTemplate}
+        onOpenTemplates={onOpenTemplates}
+      />
 
       <ConfirmDialog
         open={Boolean(confirmSendId)}
