@@ -17,6 +17,13 @@ export const TENANT_REPORTS: TenantReport[] = [
     status: "available",
   },
   {
+    id: "message-windows",
+    titleKey: "reports.messageWindows.title",
+    descriptionKey: "reports.messageWindows.description",
+    href: "/reports/message-windows",
+    status: "available",
+  },
+  {
     id: "plan-usage",
     titleKey: "reports.planUsage.title",
     descriptionKey: "reports.planUsage.description",

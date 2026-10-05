@@ -1221,6 +1221,28 @@ export interface WhatsAppUsageReport {
   daily: WhatsAppUsageDailyPoint[];
 }
 
+export interface MessageWindowDayCounts {
+  inboundService24h: number;
+  outboundService24h: number;
+  inboundFreeEntry72h: number;
+  outboundFreeEntry72h: number;
+  inboundOutsideWindow: number;
+  outboundOutsideWindow: number;
+}
+
+export interface MessageWindowDailyPoint extends MessageWindowDayCounts {
+  date: string;
+  total: number;
+}
+
+export interface MessageWindowReport {
+  from: string;
+  to: string;
+  botId?: string;
+  totals: MessageWindowDayCounts & { total: number };
+  daily: MessageWindowDailyPoint[];
+}
+
 export type MessageRole = "user" | "assistant" | "advisor" | "system";
 
 export interface EmailMessageAttachment {
