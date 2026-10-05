@@ -18,6 +18,7 @@ import { getWebsiteMetrics } from "../../lib/dynamodb/website-metrics.repository
 import { getWhatsAppUsageReport } from "../../lib/dynamodb/whatsapp-usage-metrics.repository.js";
 import { getMessageWindowReport } from "../../lib/dynamodb/message-window-metrics.repository.js";
 import { getCampaignPerformanceReport } from "../../lib/dynamodb/campaign-performance.repository.js";
+import { getApiUsageReport, parseApiUsageRange } from "../../lib/reports/api-usage-report.js";
 import { buildUsageMarketingCsv } from "../../lib/reports/metrics-csv.js";
 import { getSmsHistoryPage, getSmsOverview } from "../../lib/dynamodb/sms-metrics.repository.js";
 import type { SmsDlrSource, SmsHistoryStatus } from "../../types/index.js";
@@ -270,6 +271,14 @@ export async function handler(
       if (botId) options.botId = botId;
       const website = await getWebsiteMetrics(auth.tenantId, options);
       return ok(website);
+    }
+
+    if (method === "GET" && rawPath.endsWith("/metrics/api-usage")) {
+      const qs = event.queryStringParameters ?? {};
+      const parsed = parseApiUsageRange(qs.from?.trim() ?? "", qs.to?.trim() ?? "");
+      if (!parsed.ok) return badRequest(parsed.message);
+      const report = await getApiUsageReport(auth.tenantId, parsed.from, parsed.to);
+      return ok(report);
     }
 
     if (method === "GET" && rawPath.endsWith("/metrics/whatsapp-usage")) {

@@ -1221,6 +1221,46 @@ export interface WhatsAppUsageReport {
   daily: WhatsAppUsageDailyPoint[];
 }
 
+export interface ApiUsageCount {
+  requests: number;
+  success: number;
+  error: number;
+}
+
+export interface ApiUsageDailyPoint extends ApiUsageCount {
+  date: string;
+}
+
+export interface ApiUsageByKey extends ApiUsageCount {
+  keyId: string;
+  keyName: string;
+  prefix: string;
+}
+
+export interface ApiUsageByEndpoint extends ApiUsageCount {
+  endpoint: string;
+  method: string;
+}
+
+export type ApiWebhookActivationStatus = "active" | "inactive";
+
+export interface ApiUsageWebhookStatus {
+  integrationId: string;
+  status: ApiWebhookActivationStatus;
+  url: string;
+  events: string[];
+}
+
+export interface ApiUsageReport {
+  from: string;
+  to: string;
+  totals: ApiUsageCount;
+  daily: ApiUsageDailyPoint[];
+  byKey: ApiUsageByKey[];
+  byEndpoint: ApiUsageByEndpoint[];
+  webhooks: ApiUsageWebhookStatus[];
+}
+
 export interface MessageWindowDayCounts {
   inboundService24h: number;
   outboundService24h: number;
