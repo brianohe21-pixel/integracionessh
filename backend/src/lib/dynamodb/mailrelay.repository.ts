@@ -88,7 +88,11 @@ export async function saveMailrelayConfig(
   data: Pick<
     MailrelayConfig,
     | "enabled"
+    | "provider"
     | "defaultSenderId"
+    | "fromEmail"
+    | "fromName"
+    | "replyTo"
     | "tagGroupMappings"
     | "defaultGroupIds"
     | "eventTypes"
@@ -97,10 +101,31 @@ export async function saveMailrelayConfig(
 ): Promise<MailrelayConfig> {
   const existing = await getMailrelayConfig(tenantId);
   const now = new Date().toISOString();
+  const provider = data.provider ?? existing?.provider ?? "mailrelay";
   const config: MailrelayConfig = {
     tenantId,
     enabled: data.enabled,
-    ...(data.defaultSenderId !== undefined ? { defaultSenderId: data.defaultSenderId } : {}),
+    provider,
+    ...(data.defaultSenderId !== undefined
+      ? { defaultSenderId: data.defaultSenderId }
+      : existing?.defaultSenderId !== undefined
+        ? { defaultSenderId: existing.defaultSenderId }
+        : {}),
+    ...(data.fromEmail !== undefined
+      ? { fromEmail: data.fromEmail }
+      : existing?.fromEmail !== undefined
+        ? { fromEmail: existing.fromEmail }
+        : {}),
+    ...(data.fromName !== undefined
+      ? { fromName: data.fromName }
+      : existing?.fromName !== undefined
+        ? { fromName: existing.fromName }
+        : {}),
+    ...(data.replyTo !== undefined
+      ? { replyTo: data.replyTo }
+      : existing?.replyTo !== undefined
+        ? { replyTo: existing.replyTo }
+        : {}),
     tagGroupMappings: data.tagGroupMappings,
     defaultGroupIds: data.defaultGroupIds,
     eventTypes: data.eventTypes,
@@ -416,6 +441,16 @@ export async function getMailrelaySubscriberByEmail(
   return result.Item ? strip<MailrelaySubscriberLink>(result.Item) : null;
 }
 
+export async function getMailrelayCampaignRecord(
+  tenantId: string,
+  campaignId: number
+): Promise<MailrelayCampaignRecord | null> {
+  const result = await docClient.send(
+    new GetCommand({ TableName: TABLE_NAME, Key: campaignKey(tenantId, campaignId) })
+  );
+  return result.Item ? strip<MailrelayCampaignRecord>(result.Item) : null;
+}
+
 export async function saveMailrelayCampaignSnapshot(
   tenantId: string,
   remote: Record<string, unknown>
@@ -453,6 +488,18 @@ export async function saveMailrelayCampaignSnapshot(
     })
   );
   return record;
+}
+
+export async function deleteMailrelayCampaignRecord(
+  tenantId: string,
+  campaignId: number
+): Promise<void> {
+  await docClient.send(
+    new DeleteCommand({ TableName: TABLE_NAME, Key: campaignKey(tenantId, campaignId) })
+  );
+  await docClient.send(
+    new DeleteCommand({ TableName: TABLE_NAME, Key: globalMailrelayCampaignKey(campaignId) })
+  );
 }
 
 export async function getMailrelayCampaignMetrics(

@@ -2668,14 +2668,24 @@ export interface AppCatalogItem {
   enabled?: boolean;
 }
 
+export type EmailMarketingProvider = "mailrelay" | "nrs360";
+
 export interface MailrelayCredentials {
   configured: boolean;
+  provider?: EmailMarketingProvider;
   apiKey?: string;
+  username?: string;
+  apiPassword?: string;
+  baseUrl?: string;
+  webhookToken?: string;
   updatedAt?: string;
 }
 
 export interface MailrelayCredentialsInput {
   apiKey?: string;
+  username?: string;
+  apiPassword?: string;
+  baseUrl?: string;
 }
 
 export interface MailrelayTagGroupMapping {
@@ -2689,6 +2699,10 @@ export interface MailrelayConfig {
   tagGroupMappings: MailrelayTagGroupMapping[];
   enabled?: boolean;
   eventTypes?: string[];
+  provider?: EmailMarketingProvider;
+  fromEmail?: string;
+  fromName?: string;
+  replyTo?: string;
 }
 
 export interface MailrelayGroup {

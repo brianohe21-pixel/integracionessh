@@ -4891,6 +4891,7 @@ export const es = {
     navSectionTitle: "Secciones",
     navSectionSubtitle: "Navega el email marketing",
     tabs: {
+      settings: "Configuración",
       connection: "Estado",
       audience: "Audiencia",
       campaigns: "Campañas",
@@ -4899,7 +4900,7 @@ export const es = {
     states: {
       connectionRequired: "El email marketing no está disponible",
       connectionRequiredDescription:
-        "El servicio de email marketing aún no está activo en tu cuenta. Contacta al administrador.",
+        "Configura el proveedor y las credenciales en la pestaña Configuración para activar el servicio.",
     },
     actions: {
       save: "Guardar",
@@ -4927,20 +4928,35 @@ export const es = {
       avgOpenRate: "Apertura media",
       avgClickRate: "Clics medios",
     },
-    connection: {
-      title: "Estado del servicio",
-      description: "Comprueba si el envío de campañas por email está disponible.",
-      globalDescription:
-        "El servicio de email marketing se activa a nivel de plataforma para todas las cuentas.",
-      globalSecretTitle: "Configuración del proveedor",
-      globalSecretDescription:
-        "Si eres administrador de la plataforma, configura las credenciales del proveedor de email y luego prueba la conexión.",
+    settings: {
+      providerTitle: "Proveedor de email",
+      providerDescription:
+        "Selecciona el proveedor de campañas y configura las credenciales de esta cuenta.",
+      provider: "Proveedor",
+      providerMailrelay: "Plataforma",
+      providerNrs360: "360nrs",
+      providerSaved: "Proveedor actualizado.",
+      mailrelayHint:
+        "El proveedor de plataforma se configura a nivel global. Contacta al administrador si el servicio no está disponible.",
+      nrsDescription:
+        "Introduce el usuario y la contraseña de API de 360nrs (APIs / Change API password). El canal email debe estar habilitado en tu cuenta.",
       connected: "Servicio de email activo",
       notConnected: "Servicio de email no disponible",
-      apiKey: "API key",
-      apiKeyPlaceholder: "Introduce tu API key",
-      replaceKey: "Introduce una nueva API key para reemplazarla",
-      securityHint: "La API key se almacena de forma segura y nunca se muestra completa.",
+      username: "Usuario",
+      usernamePlaceholder: "Usuario de la API 360nrs",
+      apiPassword: "Contraseña API",
+      apiPasswordPlaceholder: "Contraseña de API",
+      replacePassword: "Introduce una nueva contraseña para reemplazarla",
+      baseUrl: "Host de la API",
+      securityHint: "Las credenciales se almacenan de forma segura y nunca se muestran completas.",
+      senderTitle: "Remitente 360nrs",
+      senderDescription:
+        "fromEmail y replyTo deben estar validados en el panel de 360nrs antes de enviar.",
+      fromEmail: "Email remitente",
+      fromName: "Nombre remitente",
+      fromNamePlaceholder: "Nombre visible",
+      replyTo: "Responder a",
+      senderSaved: "Remitente guardado.",
       saved: "Credenciales guardadas.",
       tested: "Conexión verificada correctamente.",
       deleted: "Conexión eliminada.",
@@ -4948,12 +4964,24 @@ export const es = {
       deleteDescription:
         "Se desactivará el acceso al servicio de email marketing en esta cuenta. Las campañas locales no se borrarán.",
     },
+    connection: {
+      title: "Estado del servicio",
+      description: "Revisa si el proveedor seleccionado está listo para enviar campañas.",
+      activeProvider: "Proveedor activo",
+      openSettings: "Ir a configuración",
+      configureHint: "Configura el proveedor y las credenciales en la pestaña Configuración.",
+      connected: "Servicio de email activo",
+      notConnected: "Servicio de email no disponible",
+      tested: "Conexión verificada correctamente.",
+    },
     audience: {
       settingsTitle: "Configuración de audiencia",
       settingsDescription:
         "Define el remitente, el grupo predeterminado y cómo se asignan las etiquetas.",
       sender: "Remitente",
       selectSender: "Selecciona un remitente",
+      nrsSenderMissing: "Configura el remitente en la pestaña Configuración",
+      nrsSenderHint: "El remitente de 360nrs se configura en Configuración.",
       defaultGroup: "Grupo predeterminado",
       selectGroup: "Selecciona un grupo",
       mappingTitle: "Asignación etiqueta → grupo",
@@ -4994,8 +5022,8 @@ export const es = {
       audience: "Grupos destinatarios",
       segment: "Segmento",
       selectSegment: "Selecciona un segmento",
-      segmentIdPlaceholder: "ID del segmento en Mailrelay",
-      segmentIdHint: "Crea el segmento en Mailrelay y pega su ID si no aparece en la lista.",
+      segmentIdPlaceholder: "ID del segmento en la plataforma",
+      segmentIdHint: "Crea el segmento en la plataforma y pega su ID si no aparece en la lista.",
       showAdvanced: "Mostrar opciones avanzadas",
       hideAdvanced: "Ocultar opciones avanzadas",
       folder: "Carpeta",
@@ -5011,6 +5039,8 @@ export const es = {
       htmlPlaceholder: "Escribe el contenido del email o pega tu HTML",
       htmlUnsubscribeNote:
         "Si no incluyes un enlace de baja, se añadirá automáticamente al guardar.",
+      htmlUnsubscribeNoteNrs:
+        "Si no incluyes un enlace de baja, se añadirá [unsubscribe_link] automáticamente al guardar.",
       preview: "Vista previa segura",
       trackOpens: "Registrar aperturas",
       trackClicks: "Registrar clics",
@@ -5108,6 +5138,8 @@ export const es = {
     validation: {
       apiKey: "Introduce una API key antes de continuar.",
       senderAudience: "Selecciona un remitente y una audiencia antes de continuar.",
+      audienceGroup: "Selecciona un grupo predeterminado antes de continuar.",
+      nrsSender: "Configura fromEmail y replyTo de 360nrs en la pestaña Configuración.",
       mapping: "Completa la etiqueta y el grupo de cada asignación.",
       campaignRequired: "Completa el nombre, el asunto y el contenido HTML.",
       sender: "Selecciona un remitente.",

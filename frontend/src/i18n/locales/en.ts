@@ -4879,6 +4879,7 @@ export const en: Messages = {
     navSectionTitle: "Sections",
     navSectionSubtitle: "Navigate email marketing",
     tabs: {
+      settings: "Settings",
       connection: "Status",
       audience: "Audience",
       campaigns: "Campaigns",
@@ -4887,7 +4888,7 @@ export const en: Messages = {
     states: {
       connectionRequired: "Email marketing is not available",
       connectionRequiredDescription:
-        "The email marketing service is not active on your account yet. Contact your administrator.",
+        "Configure the provider and credentials in the Settings tab to enable the service.",
     },
     actions: {
       save: "Save",
@@ -4915,20 +4916,35 @@ export const en: Messages = {
       avgOpenRate: "Avg. open rate",
       avgClickRate: "Avg. click rate",
     },
-    connection: {
-      title: "Service status",
-      description: "Check whether email campaign delivery is available.",
-      globalDescription:
-        "The email marketing service is enabled at platform level for every account.",
-      globalSecretTitle: "Provider configuration",
-      globalSecretDescription:
-        "If you are a platform administrator, configure the email provider credentials and then test the connection.",
+    settings: {
+      providerTitle: "Email provider",
+      providerDescription:
+        "Select the campaign provider and configure credentials for this account.",
+      provider: "Provider",
+      providerMailrelay: "Platform",
+      providerNrs360: "360nrs",
+      providerSaved: "Provider updated.",
+      mailrelayHint:
+        "The platform provider is configured globally. Contact an administrator if the service is unavailable.",
+      nrsDescription:
+        "Enter your 360nrs API username and password (APIs / Change API password). The email channel must be enabled on your account.",
       connected: "Email service active",
       notConnected: "Email service unavailable",
-      apiKey: "API key",
-      apiKeyPlaceholder: "Enter your API key",
-      replaceKey: "Enter a new API key to replace it",
-      securityHint: "The API key is stored securely and is never displayed in full.",
+      username: "Username",
+      usernamePlaceholder: "360nrs API username",
+      apiPassword: "API password",
+      apiPasswordPlaceholder: "API password",
+      replacePassword: "Enter a new password to replace it",
+      baseUrl: "API host",
+      securityHint: "Credentials are stored securely and are never displayed in full.",
+      senderTitle: "360nrs sender",
+      senderDescription:
+        "fromEmail and replyTo must be validated in the 360nrs panel before sending.",
+      fromEmail: "From email",
+      fromName: "From name",
+      fromNamePlaceholder: "Display name",
+      replyTo: "Reply-to",
+      senderSaved: "Sender saved.",
       saved: "Credentials saved.",
       tested: "Connection verified successfully.",
       deleted: "Connection deleted.",
@@ -4936,11 +4952,23 @@ export const en: Messages = {
       deleteDescription:
         "Email marketing access will be disabled for this account. Local campaigns will not be deleted.",
     },
+    connection: {
+      title: "Service status",
+      description: "Check whether the selected provider is ready to send campaigns.",
+      activeProvider: "Active provider",
+      openSettings: "Open settings",
+      configureHint: "Configure the provider and credentials in the Settings tab.",
+      connected: "Email service active",
+      notConnected: "Email service unavailable",
+      tested: "Connection verified successfully.",
+    },
     audience: {
       settingsTitle: "Audience settings",
       settingsDescription: "Set the sender, default group, and tag assignment rules.",
       sender: "Sender",
       selectSender: "Select a sender",
+      nrsSenderMissing: "Configure the sender in the Settings tab",
+      nrsSenderHint: "The 360nrs sender is configured under Settings.",
       defaultGroup: "Default group",
       selectGroup: "Select a group",
       mappingTitle: "Tag → group mapping",
@@ -4980,8 +5008,8 @@ export const en: Messages = {
       audience: "Recipient groups",
       segment: "Segment",
       selectSegment: "Select a segment",
-      segmentIdPlaceholder: "Segment ID in Mailrelay",
-      segmentIdHint: "Create the segment in Mailrelay and paste its ID if it is not listed.",
+      segmentIdPlaceholder: "Platform segment ID",
+      segmentIdHint: "Create the segment on the platform and paste its ID if it is not listed.",
       showAdvanced: "Show advanced options",
       hideAdvanced: "Hide advanced options",
       folder: "Folder",
@@ -4997,6 +5025,8 @@ export const en: Messages = {
       htmlPlaceholder: "Write the email content or paste your HTML",
       htmlUnsubscribeNote:
         "If you do not include an unsubscribe link, one will be added automatically when saving.",
+      htmlUnsubscribeNoteNrs:
+        "If you do not include an unsubscribe link, [unsubscribe_link] will be added automatically when saving.",
       preview: "Safe preview",
       trackOpens: "Track opens",
       trackClicks: "Track clicks",
@@ -5093,6 +5123,8 @@ export const en: Messages = {
     validation: {
       apiKey: "Enter an API key before continuing.",
       senderAudience: "Select a sender and an audience before continuing.",
+      audienceGroup: "Select a default group before continuing.",
+      nrsSender: "Configure 360nrs fromEmail and replyTo in the Settings tab.",
       mapping: "Complete the tag and group for every mapping.",
       campaignRequired: "Complete the name, subject, and HTML content.",
       sender: "Select a sender.",

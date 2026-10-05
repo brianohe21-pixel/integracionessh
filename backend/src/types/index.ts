@@ -3713,6 +3713,8 @@ export interface IntegrationQueueMessage {
   attempt: number;
 }
 
+export type EmailMarketingProvider = "mailrelay" | "nrs360";
+
 export interface MailrelayCredentials {
   apiKey: string;
   webhookToken: string;
@@ -3721,10 +3723,19 @@ export interface MailrelayCredentials {
 
 export interface MaskedMailrelayCredentials {
   configured: boolean;
+  provider?: EmailMarketingProvider;
   apiKey?: string;
   webhookToken?: string;
   baseUrl?: string;
+  username?: string;
+  apiPassword?: string;
   secretId?: string;
+}
+
+export interface Nrs360Credentials {
+  username: string;
+  apiPassword: string;
+  baseUrl: string;
 }
 
 export interface MailrelayTagGroupMapping {
@@ -3735,7 +3746,11 @@ export interface MailrelayTagGroupMapping {
 export interface MailrelayConfig {
   tenantId: string;
   enabled: boolean;
+  provider?: EmailMarketingProvider;
   defaultSenderId?: number;
+  fromEmail?: string;
+  fromName?: string;
+  replyTo?: string;
   tagGroupMappings: MailrelayTagGroupMapping[];
   defaultGroupIds: number[];
   eventTypes: string[];

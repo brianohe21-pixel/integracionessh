@@ -56,6 +56,8 @@ export function MailrelayCampaignsTab({ connected }: { connected: boolean }) {
   const campaignsQuery = useMailrelayCampaigns(connected, { page, perPage: 20 });
   const configQuery = useMailrelayConfig(connected);
   const configDisabled = configQuery.data?.config.enabled === false;
+  const provider = configQuery.data?.config.provider ?? "mailrelay";
+  const isNrs360 = provider === "nrs360";
   const groupsQuery = useMailrelayGroups(connected);
   const segmentsQuery = useMailrelaySegments(connected);
   const foldersQuery = useMailrelayCampaignFolders(connected);
@@ -126,11 +128,14 @@ export function MailrelayCampaignsTab({ connected }: { connected: boolean }) {
     const config = configQuery.data?.config;
     setDraft({
       ...emptyCampaign,
-      senderId: config?.senderId ?? "",
+      senderId: isNrs360 ? "1" : config?.senderId ?? "",
       groupIds: config?.defaultGroupId ? [config.defaultGroupId] : [],
+      target: "groups",
+      replyTo: isNrs360 ? config?.replyTo || config?.fromEmail || "" : "",
     });
     setEditingId("");
     setTestEmails("");
+    setShowAdvanced(false);
     setShowForm(true);
   }
 
@@ -214,8 +219,11 @@ export function MailrelayCampaignsTab({ connected }: { connected: boolean }) {
     if (!draft.name.trim() || !draft.subject.trim() || !draft.html.trim()) {
       return t("mailrelay.validation.campaignRequired");
     }
-    if (!draft.senderId) return t("mailrelay.validation.sender");
-    if (draft.target === "segment") {
+    if (!isNrs360 && !draft.senderId) return t("mailrelay.validation.sender");
+    if (isNrs360 && !configQuery.data?.config.fromEmail) {
+      return t("mailrelay.validation.nrsSender");
+    }
+    if (!isNrs360 && draft.target === "segment") {
       if (!draft.segmentId) return t("mailrelay.validation.segment");
     } else if (draft.groupIds.length === 0) {
       return t("mailrelay.validation.audience");
@@ -232,11 +240,14 @@ export function MailrelayCampaignsTab({ connected }: { connected: boolean }) {
       setError(validationError);
       return;
     }
+    const payload = isNrs360
+      ? { ...draft, senderId: draft.senderId || "1", target: "groups" as const }
+      : draft;
     try {
       if (editingId) {
-        await updateCampaign.mutateAsync({ id: editingId, payload: draft });
+        await updateCampaign.mutateAsync({ id: editingId, payload, provider });
       } else {
-        const result = await createCampaign.mutateAsync(draft);
+        const result = await createCampaign.mutateAsync({ payload, provider });
         setEditingId(result.campaign.id);
       }
       setSuccess(t("mailrelay.campaigns.saved"));
@@ -273,12 +284,16 @@ export function MailrelayCampaignsTab({ connected }: { connected: boolean }) {
 
   async function handleSend() {
     const campaign = campaigns.find((item) => item.id === confirmSendId);
-    if (!campaign?.senderId) {
+    if (!campaign) {
+      setConfirmSendId("");
+      return;
+    }
+    if (!isNrs360 && !campaign.senderId) {
       setError(t("mailrelay.validation.senderAudience"));
       setConfirmSendId("");
       return;
     }
-    if (campaign.target === "segment" && !campaign.segmentId) {
+    if (!isNrs360 && campaign.target === "segment" && !campaign.segmentId) {
       setError(t("mailrelay.validation.segment"));
       setConfirmSendId("");
       return;
@@ -401,51 +416,64 @@ export function MailrelayCampaignsTab({ connected }: { connected: boolean }) {
                 }
               />
             </Field>
-            <Field label={t("mailrelay.audience.sender")}>
-              <Select
-                value={draft.senderId}
-                onChange={(event) =>
-                  setDraft((current) => ({ ...current, senderId: event.target.value }))
-                }
-              >
-                <option value="">{t("mailrelay.audience.selectSender")}</option>
-                {senders.map((sender) => (
-                  <option key={sender.id} value={sender.id}>
-                    {sender.name} ({sender.email})
-                  </option>
-                ))}
-              </Select>
-            </Field>
+            {isNrs360 ? (
+              <Field label={t("mailrelay.audience.sender")}>
+                <p className="rounded-lg border border-default bg-surface-muted px-3 py-2 text-sm text-secondary">
+                  {configQuery.data?.config.fromName
+                    ? `${configQuery.data.config.fromName} <${configQuery.data.config.fromEmail || "-"}>`
+                    : configQuery.data?.config.fromEmail ||
+                      t("mailrelay.audience.nrsSenderMissing")}
+                </p>
+              </Field>
+            ) : (
+              <Field label={t("mailrelay.audience.sender")}>
+                <Select
+                  value={draft.senderId}
+                  onChange={(event) =>
+                    setDraft((current) => ({ ...current, senderId: event.target.value }))
+                  }
+                >
+                  <option value="">{t("mailrelay.audience.selectSender")}</option>
+                  {senders.map((sender) => (
+                    <option key={sender.id} value={sender.id}>
+                      {sender.name} ({sender.email})
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            )}
           </div>
 
-          <Field label={t("mailrelay.campaigns.audienceType")}>
-            <div className="flex flex-wrap gap-4 text-sm text-primary">
-              <label className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="audience-type"
-                  checked={draft.target === "groups"}
-                  onChange={() =>
-                    setDraft((current) => ({ ...current, target: "groups", segmentId: "" }))
-                  }
-                />
-                {t("mailrelay.campaigns.audienceGroups")}
-              </label>
-              <label className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="audience-type"
-                  checked={draft.target === "segment"}
-                  onChange={() =>
-                    setDraft((current) => ({ ...current, target: "segment", groupIds: [] }))
-                  }
-                />
-                {t("mailrelay.campaigns.audienceSegment")}
-              </label>
-            </div>
-          </Field>
+          {!isNrs360 ? (
+            <Field label={t("mailrelay.campaigns.audienceType")}>
+              <div className="flex flex-wrap gap-4 text-sm text-primary">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="audience-type"
+                    checked={draft.target === "groups"}
+                    onChange={() =>
+                      setDraft((current) => ({ ...current, target: "groups", segmentId: "" }))
+                    }
+                  />
+                  {t("mailrelay.campaigns.audienceGroups")}
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="audience-type"
+                    checked={draft.target === "segment"}
+                    onChange={() =>
+                      setDraft((current) => ({ ...current, target: "segment", groupIds: [] }))
+                    }
+                  />
+                  {t("mailrelay.campaigns.audienceSegment")}
+                </label>
+              </div>
+            </Field>
+          ) : null}
 
-          {draft.target === "groups" ? (
+          {draft.target === "groups" || isNrs360 ? (
             <Field label={t("mailrelay.campaigns.audience")}>
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {groups.map((group) => (
@@ -518,21 +546,26 @@ export function MailrelayCampaignsTab({ connected }: { connected: boolean }) {
 
           {showAdvanced ? (
             <div className="grid gap-4 md:grid-cols-2">
-              <Field label={t("mailrelay.campaigns.folder")}>
-                <Select
-                  value={draft.campaignFolderId}
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, campaignFolderId: event.target.value }))
-                  }
-                >
-                  <option value="">{t("mailrelay.campaigns.noFolder")}</option>
-                  {folders.map((folder) => (
-                    <option key={folder.id} value={folder.id}>
-                      {folder.name}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
+              {!isNrs360 ? (
+                <Field label={t("mailrelay.campaigns.folder")}>
+                  <Select
+                    value={draft.campaignFolderId}
+                    onChange={(event) =>
+                      setDraft((current) => ({
+                        ...current,
+                        campaignFolderId: event.target.value,
+                      }))
+                    }
+                  >
+                    <option value="">{t("mailrelay.campaigns.noFolder")}</option>
+                    {folders.map((folder) => (
+                      <option key={folder.id} value={folder.id}>
+                        {folder.name}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              ) : null}
               <Field label={t("mailrelay.campaigns.replyTo")}>
                 <Input
                   type="email"
@@ -543,28 +576,35 @@ export function MailrelayCampaignsTab({ connected }: { connected: boolean }) {
                   placeholder={t("mailrelay.campaigns.replyToPlaceholder")}
                 />
               </Field>
-              <Field label={t("mailrelay.campaigns.utmCampaign")}>
-                <Input
-                  value={draft.analyticsUtmCampaign}
-                  onChange={(event) =>
-                    setDraft((current) => ({
-                      ...current,
-                      analyticsUtmCampaign: event.target.value,
-                    }))
-                  }
-                  placeholder={t("mailrelay.campaigns.utmCampaignPlaceholder")}
-                />
-              </Field>
-              <label className="flex items-center gap-2 self-end text-sm text-primary">
-                <input
-                  type="checkbox"
-                  checked={draft.usePremailer}
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, usePremailer: event.target.checked }))
-                  }
-                />
-                {t("mailrelay.campaigns.usePremailer")}
-              </label>
+              {!isNrs360 ? (
+                <>
+                  <Field label={t("mailrelay.campaigns.utmCampaign")}>
+                    <Input
+                      value={draft.analyticsUtmCampaign}
+                      onChange={(event) =>
+                        setDraft((current) => ({
+                          ...current,
+                          analyticsUtmCampaign: event.target.value,
+                        }))
+                      }
+                      placeholder={t("mailrelay.campaigns.utmCampaignPlaceholder")}
+                    />
+                  </Field>
+                  <label className="flex items-center gap-2 self-end text-sm text-primary">
+                    <input
+                      type="checkbox"
+                      checked={draft.usePremailer}
+                      onChange={(event) =>
+                        setDraft((current) => ({
+                          ...current,
+                          usePremailer: event.target.checked,
+                        }))
+                      }
+                    />
+                    {t("mailrelay.campaigns.usePremailer")}
+                  </label>
+                </>
+              ) : null}
             </div>
           ) : null}
 
@@ -574,7 +614,11 @@ export function MailrelayCampaignsTab({ connected }: { connected: boolean }) {
               onChange={(html) => setDraft((current) => ({ ...current, html }))}
               placeholder={t("mailrelay.campaigns.htmlPlaceholder")}
             />
-            <p className="text-xs text-muted">{t("mailrelay.campaigns.htmlUnsubscribeNote")}</p>
+            <p className="text-xs text-muted">
+              {isNrs360
+                ? t("mailrelay.campaigns.htmlUnsubscribeNoteNrs")
+                : t("mailrelay.campaigns.htmlUnsubscribeNote")}
+            </p>
           </Field>
 
           <div className="grid gap-4 lg:grid-cols-2">
