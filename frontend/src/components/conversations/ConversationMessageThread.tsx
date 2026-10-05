@@ -4,12 +4,14 @@ import { useEffect, useRef } from "react";
 import { CheckCheck } from "lucide-react";
 import { EmailMessageBubble } from "@/components/conversations/EmailMessageBubble";
 import { AttachmentMessageBubble } from "@/components/conversations/AttachmentMessageBubble";
+import { TemplateMessageBubble } from "@/components/conversations/TemplateMessageBubble";
 import { MessageReactions } from "@/components/conversations/MessageReactions";
 import { MessageTaskActions } from "@/components/conversations/MessageTaskActions";
 import { ConversationDateDivider } from "@/components/conversations/conversation-ui";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useLocale, useT } from "@/i18n/context";
 import { isDocumentMessage } from "@/lib/conversations/document-messages";
+import { getWhatsAppTemplateDisplay } from "@/lib/conversations/template-messages";
 import { cn } from "@/lib/utils";
 import type { Channel, Conversation, CrossChannelMessage, Message } from "@/types";
 
@@ -45,6 +47,7 @@ function renderMessageBubble(params: {
     (conversation.channel === "email" && isInbound && !channelBadge) ||
     (msg.channel === "email" && isInbound);
   const isAttachment = isDocumentMessage(msg);
+  const isTemplate = Boolean(getWhatsAppTemplateDisplay(msg));
   const canCreateTaskFromText =
     Boolean(onCreateTaskFromText) && !isEmailBubble && !isAttachment && Boolean(msg.content?.trim());
 
@@ -84,6 +87,8 @@ function renderMessageBubble(params: {
               conversationId={conversation.conversationId}
               botId={conversation.botId}
             />
+          ) : isTemplate ? (
+            <TemplateMessageBubble message={msg} />
           ) : (
             <p className="emoji-text whitespace-pre-wrap break-words">{msg.content}</p>
           )}

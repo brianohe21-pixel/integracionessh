@@ -877,7 +877,7 @@ export async function handler(
 
       const now = new Date().toISOString();
       const externalMessageId = result.messages?.[0]?.id;
-      const content = await resolveWhatsAppTemplateDisplayContent({
+      const resolved = await resolveWhatsAppTemplateDisplayContent({
         tenantId: auth.tenantId,
         botId: parsed.data.botId,
         templateName: parsed.data.templateName,
@@ -889,7 +889,7 @@ export async function handler(
         conversationId,
         tenantId: auth.tenantId,
         role: "advisor",
-        content,
+        content: resolved.content,
         channel: "whatsapp",
         messageType: "text",
         source: "panel",
@@ -897,6 +897,7 @@ export async function handler(
           kind: "whatsapp_template",
           templateName: parsed.data.templateName,
           language: parsed.data.language,
+          display: resolved.display,
           ...(parsed.data.components ? { components: parsed.data.components } : {}),
         },
         ...(sentByAdvisorId ? { sentByAdvisorId } : {}),

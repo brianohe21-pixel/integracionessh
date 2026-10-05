@@ -1280,6 +1280,20 @@ export interface DocumentMessageMetadata {
   downloadUrl?: string;
 }
 
+export interface WhatsAppTemplateDisplay {
+  headerText?: string;
+  bodyText?: string;
+  footerText?: string;
+  buttons?: string[];
+}
+
+export interface WhatsAppTemplateMessageMetadata {
+  kind: "whatsapp_template";
+  templateName?: string;
+  language?: string;
+  display?: WhatsAppTemplateDisplay;
+}
+
 export interface MessageReaction {
   emoji: string;
   userId: string;
@@ -1295,7 +1309,11 @@ export interface Message {
   content: string;
   channel?: Channel;
   messageType?: string;
-  metadata?: EmailMessageMetadata | DocumentMessageMetadata | Record<string, unknown>;
+  metadata?:
+    | EmailMessageMetadata
+    | DocumentMessageMetadata
+    | WhatsAppTemplateMessageMetadata
+    | Record<string, unknown>;
   source?: string;
   sentByAdvisorId?: string;
   whatsappMessageId?: string;
