@@ -225,6 +225,55 @@ export async function uploadWhatsAppMedia(
   return response.json() as Promise<UploadWhatsAppMediaResponse>;
 }
 
+export interface WhatsAppMediaMetadata {
+  url: string;
+  mime_type: string;
+  sha256?: string;
+  file_size?: number;
+  id: string;
+}
+
+export async function getWhatsAppMediaMetadata(
+  mediaId: string,
+  accessToken: string
+): Promise<WhatsAppMediaMetadata> {
+  const response = await fetch(`${GRAPH_API_URL}/${mediaId}`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throwGraphApiError(response.status, error);
+  }
+
+  return response.json() as Promise<WhatsAppMediaMetadata>;
+}
+
+export async function downloadWhatsAppMedia(
+  mediaId: string,
+  accessToken: string
+): Promise<{ buffer: Uint8Array; mimeType: string }> {
+  const meta = await getWhatsAppMediaMetadata(mediaId, accessToken);
+  const response = await fetch(meta.url, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to download WhatsApp media: HTTP ${response.status}`);
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  const headerMime = response.headers.get("content-type")?.split(";")[0]?.trim();
+  return {
+    buffer: new Uint8Array(arrayBuffer),
+    mimeType: meta.mime_type || headerMime || "application/octet-stream",
+  };
+}
+
 export async function sendDocumentMessage(
   options: SendDocumentMessageOptions
 ): Promise<SendTextMessageResponse> {

@@ -68,10 +68,56 @@ describe("normalizeInboundMessage", () => {
     expect(result.text).toContain("sku-1");
     expect(result.text).toContain("Sin cebolla");
   });
+
+  it("normalizes image messages with caption", () => {
+    const result = normalizeInboundMessage({
+      from: "57300",
+      id: "m5",
+      timestamp: "1",
+      type: "image",
+      image: {
+        id: "media-image-1",
+        mime_type: "image/jpeg",
+        caption: "Foto del producto",
+      },
+    });
+    expect(result.messageType).toBe("image");
+    expect(result.text).toBe("Foto del producto");
+  });
+
+  it("normalizes image messages without caption", () => {
+    const result = normalizeInboundMessage({
+      from: "57300",
+      id: "m6",
+      timestamp: "1",
+      type: "image",
+      image: {
+        id: "media-image-2",
+        mime_type: "image/png",
+      },
+    });
+    expect(result.messageType).toBe("image");
+    expect(result.text).toBe("[image]");
+  });
+
+  it("normalizes audio messages", () => {
+    const result = normalizeInboundMessage({
+      from: "57300",
+      id: "m7",
+      timestamp: "1",
+      type: "audio",
+      audio: {
+        id: "media-audio-1",
+        mime_type: "audio/ogg",
+      },
+    });
+    expect(result.messageType).toBe("audio");
+    expect(result.text).toBe("[audio]");
+  });
 });
 
 describe("isProcessableInboundMessage", () => {
-  it("accepts text and interactive", () => {
+  it("accepts text, interactive, image and audio", () => {
     expect(
       isProcessableInboundMessage({
         from: "1",
@@ -98,6 +144,24 @@ describe("isProcessableInboundMessage", () => {
         type: "image",
       })
     ).toBe(false);
+    expect(
+      isProcessableInboundMessage({
+        from: "1",
+        id: "1",
+        timestamp: "1",
+        type: "image",
+        image: { id: "media-1", mime_type: "image/jpeg" },
+      })
+    ).toBe(true);
+    expect(
+      isProcessableInboundMessage({
+        from: "1",
+        id: "1",
+        timestamp: "1",
+        type: "audio",
+        audio: { id: "media-2", mime_type: "audio/ogg" },
+      })
+    ).toBe(true);
     expect(
       isProcessableInboundMessage({
         id: "1",

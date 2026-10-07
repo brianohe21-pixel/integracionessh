@@ -19,6 +19,8 @@ export function isProcessableInboundMessage(message: WhatsAppMessage): boolean {
   if (isWhatsAppIdentityChangeMessage(message)) return true;
   if (isReactionInboundMessage(message)) return true;
   if (message.type === "text" && message.text?.body) return true;
+  if (message.type === "image" && message.image?.id) return true;
+  if (message.type === "audio" && message.audio?.id) return true;
   if (message.type === "order" && message.order?.product_items?.length) return true;
   if (message.type === "interactive" && message.interactive) {
     const t = message.interactive.type;
@@ -42,6 +44,23 @@ export function normalizeInboundMessage(message: WhatsAppMessage): InboundNormal
     return {
       text: message.text.body,
       messageType: "text",
+      raw: message,
+    };
+  }
+
+  if (message.type === "image" && message.image?.id) {
+    const caption = message.image.caption?.trim();
+    return {
+      text: caption || "[image]",
+      messageType: "image",
+      raw: message,
+    };
+  }
+
+  if (message.type === "audio" && message.audio?.id) {
+    return {
+      text: "[audio]",
+      messageType: "audio",
       raw: message,
     };
   }
