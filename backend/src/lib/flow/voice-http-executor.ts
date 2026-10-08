@@ -91,7 +91,8 @@ export async function executeVoiceHttpNode(params: {
     signal: AbortSignal.timeout(HTTP_TIMEOUT_MS),
   };
 
-  if (method !== "GET" && params.node.data.httpBody) {
+  const methodAllowsBody = method !== "GET" && method !== "HEAD";
+  if (methodAllowsBody && params.node.data.httpBody) {
     if (!headers["Content-Type"] && !headers["content-type"]) {
       headers["Content-Type"] = "application/json";
     }

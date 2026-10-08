@@ -2080,6 +2080,15 @@ export interface FlowHttpHeader {
   value: string;
 }
 
+export type FlowHttpMethod =
+  | "GET"
+  | "POST"
+  | "PUT"
+  | "PATCH"
+  | "DELETE"
+  | "HEAD"
+  | "OPTIONS";
+
 export interface VoiceAgentHttpTool {
   toolId: string;
   name: string;
@@ -2129,7 +2138,7 @@ export interface FlowNodeData {
   variableName?: string;
   variableValue?: string;
   httpUrl?: string;
-  httpMethod?: "GET" | "POST" | "PATCH";
+  httpMethod?: FlowHttpMethod;
   httpBody?: string;
   httpHeaders?: FlowHttpHeader[];
   httpResponseVariable?: string;

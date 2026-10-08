@@ -17,7 +17,7 @@ function httpNode(
   label: string,
   toolName: string,
   description: string,
-  method: "GET" | "POST" | "PATCH",
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | "OPTIONS",
   url: string,
   body: string,
   headers: Array<{ key: string; value: string }>,

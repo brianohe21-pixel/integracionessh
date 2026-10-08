@@ -3283,7 +3283,7 @@ export interface FlowNodeData {
   variableName?: string;
   variableValue?: string;
   httpUrl?: string;
-  httpMethod?: "GET" | "POST" | "PATCH";
+  httpMethod?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | "OPTIONS";
   httpBody?: string;
   httpHeaders?: FlowHttpHeader[];
   httpResponseVariable?: string;
