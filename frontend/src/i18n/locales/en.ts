@@ -878,20 +878,19 @@ export const en: Messages = {
     accountId: "Instagram Account ID (optional, detected from token)",
     pageToken: "Page Access Token",
     connect: "Connect Instagram",
+    connectWithMeta: "Connect account",
+    reconnect: "Reconnect",
+    connecting: "Connecting Instagram…",
+    connectingHint: "Complete the Meta login and return to this tab.",
+    loginConnected: "Instagram connected with Meta",
+    loginCancelled: "Meta login cancelled",
+    selectPage: "Select a page",
+    selectPageHint: "Multiple Instagram-linked pages were granted. Choose which one to connect to this bot.",
+    sdkLoading: "Loading Meta SDK…",
+    notConfigured: "Meta App ID is not configured. Set NEXT_PUBLIC_META_APP_ID.",
+    showManual: "Use Page Access Token manually",
+    hideManual: "Hide manual connection",
     connected: "Connected: {{pageName}} (page {{pageId}} · IG {{accountId}})",
-    setupTitle: "Before connecting",
-    setupStep1:
-      "The Instagram account must be Business or Creator and linked to a Facebook Page in Meta Business Suite.",
-    setupStep2:
-      "In developers.facebook.com → your platform app → Messenger → API Setup, generate the Page Access Token for that page.",
-    setupStep3:
-      "In the Meta app, enable Instagram Messaging / Webhooks (Instagram object) and subscribe to the messages field. Use the URL from Settings → Integrations.",
-    setupStep4:
-      "On connect, the platform validates the token, detects the linked Instagram account, and subscribes the page to messaging webhooks.",
-    tokenHint:
-      "The token must come from the same Meta app the platform uses for webhooks (pages_messaging and instagram_manage_messages permissions).",
-    windowHint:
-      "Instagram only allows DM replies within the 24-hour window after the user's last message.",
     connectError: "Could not connect Instagram",
   },
   telegram: {
@@ -4204,20 +4203,24 @@ export const en: Messages = {
     colTime: "Time",
     errors: {
       generic: "The integration could not be completed.",
-      masked: "We could not complete the {integration} connection. Reference: {reference}. Try again or contact support.",
-      maskedFlow: "We could not activate the visual flow. Reference: {reference}. Try again or contact support.",
+      masked:
+        "We could not complete the connection with {{integration}}. Reference code: {{reference}}. Try again or contact support.",
+      maskedFlow:
+        "We could not activate the visual flow. Reference code: {{reference}}. Try again or contact support.",
       requestSupport: "Open support case",
       hideSupport: "Hide form",
       goToSupport: "Go to support",
-      supportFormHint: "We prefilled the technical details for our team. Add any extra context before submitting.",
-      supportIntro: "Support request for {integration} integration.",
+      supportFormHint:
+        "We prefilled the technical details for our team. Add any extra context before submitting.",
+      supportIntro: "Support request for the {{integration}} integration.",
       supportIntroFlow: "Support request for visual flow activation.",
       supportTechnicalDetails: "Technical details:",
-      defaultSubject: "{integration} connection issue",
+      defaultSubject: "{{integration}} connection issue",
       defaultSubjectFlow: "Visual flow activation issue",
       ticketSubmitted: "Support case submitted. We will contact you soon.",
       kinds: {
         whatsapp: "WhatsApp",
+        instagram: "Instagram",
         telnyx: "Telnyx",
         google: "Google",
         microsoft: "Microsoft",

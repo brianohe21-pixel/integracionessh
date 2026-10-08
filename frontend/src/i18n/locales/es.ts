@@ -881,20 +881,19 @@ export const es = {
     accountId: "Instagram Account ID (opcional, se detecta del token)",
     pageToken: "Page Access Token",
     connect: "Conectar Instagram",
+    connectWithMeta: "Conectar cuenta",
+    reconnect: "Reconectar",
+    connecting: "Conectando Instagram…",
+    connectingHint: "Completa el inicio de sesión de Meta y vuelve a esta pestaña.",
+    loginConnected: "Instagram conectado con Meta",
+    loginCancelled: "Inicio de sesión de Meta cancelado",
+    selectPage: "Selecciona una página",
+    selectPageHint: "Se otorgaron varias páginas con Instagram. Elige cuál conectar a este bot.",
+    sdkLoading: "Cargando SDK de Meta…",
+    notConfigured: "Meta App ID no está configurado. Define NEXT_PUBLIC_META_APP_ID.",
+    showManual: "Usar Page Access Token manualmente",
+    hideManual: "Ocultar conexión manual",
     connected: "Conectado: {{pageName}} (página {{pageId}} · IG {{accountId}})",
-    setupTitle: "Antes de conectar",
-    setupStep1:
-      "La cuenta de Instagram debe ser Business o Creator y estar vinculada a una página de Facebook en Meta Business Suite.",
-    setupStep2:
-      "En developers.facebook.com → tu app de la plataforma → Messenger → API Setup, genera el Page Access Token de esa página.",
-    setupStep3:
-      "En la app de Meta, activa Instagram Messaging / Webhooks (objeto Instagram) y suscríbete al campo messages. Usa la URL de Configuración → Integraciones.",
-    setupStep4:
-      "Al conectar, la plataforma valida el token, detecta la cuenta de Instagram vinculada y suscribe la página a los webhooks de mensajería.",
-    tokenHint:
-      "El token debe generarse desde la misma app de Meta que usa la plataforma para webhooks (permisos pages_messaging e instagram_manage_messages).",
-    windowHint:
-      "Instagram solo permite responder DMs dentro de la ventana de 24 horas después del último mensaje del usuario.",
     connectError: "No se pudo conectar Instagram",
   },
   telegram: {
@@ -4213,20 +4212,24 @@ export const es = {
     colTime: "Fecha",
     errors: {
       generic: "No se pudo completar la integración.",
-      masked: "No pudimos completar la conexión con {integration}. Referencia: {reference}. Inténtalo de nuevo o contacta a soporte.",
-      maskedFlow: "No pudimos activar el flujo visual. Referencia: {reference}. Inténtalo de nuevo o contacta a soporte.",
+      masked:
+        "No se pudo completar la conexión con {{integration}}. Código de referencia: {{reference}}. Inténtalo de nuevo o contacta a soporte.",
+      maskedFlow:
+        "No se pudo activar el flujo visual. Código de referencia: {{reference}}. Inténtalo de nuevo o contacta a soporte.",
       requestSupport: "Abrir caso de soporte",
       hideSupport: "Ocultar formulario",
       goToSupport: "Ir a soporte",
-      supportFormHint: "Precargamos los detalles técnicos para nuestro equipo. Agrega contexto adicional antes de enviar.",
-      supportIntro: "Solicitud de soporte para la integración {integration}.",
+      supportFormHint:
+        "Precargamos los detalles técnicos para nuestro equipo. Agrega contexto adicional antes de enviar.",
+      supportIntro: "Solicitud de soporte para la integración de {{integration}}.",
       supportIntroFlow: "Solicitud de soporte por activación de flujo visual.",
       supportTechnicalDetails: "Detalles técnicos:",
-      defaultSubject: "Problema de conexión con {integration}",
+      defaultSubject: "Problema de conexión con {{integration}}",
       defaultSubjectFlow: "Problema al activar flujo visual",
       ticketSubmitted: "Caso de soporte enviado. Te contactaremos pronto.",
       kinds: {
         whatsapp: "WhatsApp",
+        instagram: "Instagram",
         telnyx: "Telnyx",
         google: "Google",
         microsoft: "Microsoft",

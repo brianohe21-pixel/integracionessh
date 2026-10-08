@@ -40,6 +40,12 @@ variable "meta_embedded_signup_config_id" {
   default = ""
 }
 
+variable "meta_instagram_login_config_id" {
+  type        = string
+  default     = ""
+  description = "Facebook Login for Business configuration ID for Instagram Messaging"
+}
+
 variable "lambda_zip_path" {
   type    = string
   default = "../../modules/lambda/bootstrap/functions.zip"

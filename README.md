@@ -221,8 +221,8 @@ Flujo para conectar una cuenta Instagram Business/Creator y operar DMs desde la 
    - Webhooks del objeto **Instagram** (y/o Page) apuntando a `GET/POST /webhook` con el Verify Token del despliegue.
    - Campo suscrito: `messages` (recomendado: también `messaging_postbacks`, `messaging_seen`, etc.).
    - Permisos: `pages_messaging`, `instagram_manage_messages`, `pages_manage_metadata`, `pages_show_list`.
-3. **Token**: en Messenger → API Setup, genera el **Page Access Token** de la página vinculada (debe pertenecer a la misma app Meta del despliegue: `META_APP_ID` / `META_APP_SECRET`).
-4. **Conexión en la plataforma**: Bot → pestaña Instagram → pega el token (Page ID e Instagram Account ID son opcionales; se detectan con Graph API). Al conectar se:
+3. **Facebook Login for Business** (recomendado): en Meta for Developers → Facebook Login for Business → Configurations, crea una configuración con permisos de Instagram Messaging y copia el Configuration ID a `NEXT_PUBLIC_META_INSTAGRAM_LOGIN_CONFIG_ID` / `meta_instagram_login_config_id`. Sin ese ID, el botón usa scopes clásicos con la misma app (`NEXT_PUBLIC_META_APP_ID`).
+4. **Conexión en la plataforma**: Bot → pestaña Instagram → **Conectar con Meta** (o token manual). Al conectar se:
    - Valida el token (`/me` + `debug_token`)
    - Resuelve la cuenta Instagram vinculada (`instagram_business_account`)
    - Guarda el secreto por bot en Secrets Manager
