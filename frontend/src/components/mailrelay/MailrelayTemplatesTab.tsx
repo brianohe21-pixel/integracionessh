@@ -6,6 +6,7 @@ import { ArrowLeft, Edit3, FileText, Plus, Save, Trash2 } from "lucide-react";
 import {
   useCreateMailrelayTemplate,
   useDeleteMailrelayTemplate,
+  useMailrelayConfig,
   useMailrelayTemplates,
   useUpdateMailrelayTemplate,
 } from "@/hooks/useMailrelay";
@@ -48,6 +49,8 @@ function stripPreview(html: string): string {
 
 export function MailrelayTemplatesTab({ connected }: { connected: boolean }) {
   const t = useT();
+  const configQuery = useMailrelayConfig(connected);
+  const isNrs360 = configQuery.data?.config.provider === "nrs360";
   const templatesQuery = useMailrelayTemplates(connected);
   const createTemplate = useCreateMailrelayTemplate();
   const updateTemplate = useUpdateMailrelayTemplate();
@@ -332,7 +335,11 @@ export function MailrelayTemplatesTab({ connected }: { connected: boolean }) {
         <ConfirmDialog
           open={Boolean(confirmDeleteId)}
           title={t("mailrelay.templates.deleteTitle")}
-          description={t("mailrelay.templates.deleteDescription")}
+          description={
+            isNrs360
+              ? t("mailrelay.templates.nrsDeleteDescription")
+              : t("mailrelay.templates.deleteDescription")
+          }
           confirmLabel={t("mailrelay.actions.delete")}
           onConfirm={() => void handleDelete()}
           onCancel={() => setConfirmDeleteId("")}
@@ -348,7 +355,11 @@ export function MailrelayTemplatesTab({ connected }: { connected: boolean }) {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="font-semibold text-primary">{t("mailrelay.templates.title")}</h2>
-          <p className="mt-1 text-sm text-secondary">{t("mailrelay.templates.manageDescription")}</p>
+          <p className="mt-1 text-sm text-secondary">
+            {isNrs360
+              ? t("mailrelay.templates.nrsManageDescription")
+              : t("mailrelay.templates.manageDescription")}
+          </p>
         </div>
         <Button onClick={openCreate}>
           <Plus className="h-4 w-4" />
@@ -364,7 +375,11 @@ export function MailrelayTemplatesTab({ connected }: { connected: boolean }) {
           <EmptyState
             icon={<FileText className="h-6 w-6" />}
             title={t("mailrelay.templates.empty")}
-            description={t("mailrelay.templates.emptyManageDescription")}
+            description={
+              isNrs360
+                ? t("mailrelay.templates.nrsEmptyManageDescription")
+                : t("mailrelay.templates.emptyManageDescription")
+            }
             action={
               <Button onClick={openCreate}>
                 <Plus className="h-4 w-4" />
@@ -441,7 +456,11 @@ export function MailrelayTemplatesTab({ connected }: { connected: boolean }) {
       <ConfirmDialog
         open={Boolean(confirmDeleteId)}
         title={t("mailrelay.templates.deleteTitle")}
-        description={t("mailrelay.templates.deleteDescription")}
+        description={
+          isNrs360
+            ? t("mailrelay.templates.nrsDeleteDescription")
+            : t("mailrelay.templates.deleteDescription")
+        }
         confirmLabel={t("mailrelay.actions.delete")}
         onConfirm={() => void handleDelete()}
         onCancel={() => setConfirmDeleteId("")}

@@ -361,4 +361,46 @@ export class Nrs360Client {
   listMailingCampaigns(): Promise<Record<string, unknown>[]> {
     return this.all("/campaigns", { channel: "mailing" });
   }
+
+  listV2Templates(): Promise<Record<string, unknown>[]> {
+    return this.all("/v2/templates");
+  }
+
+  getV2Template(id: number): Promise<Record<string, unknown>> {
+    return this.request("GET", `/v2/templates/${id}`).then(extractDataObject);
+  }
+
+  async listV2TemplatesWithHtml(): Promise<Record<string, unknown>[]> {
+    const summaries = await this.listV2Templates();
+    return Promise.all(
+      summaries.map(async (summary) => {
+        const id = Number(summary.id);
+        if (!Number.isInteger(id) || id <= 0) return summary;
+        try {
+          return await this.getV2Template(id);
+        } catch {
+          return summary;
+        }
+      })
+    );
+  }
+
+  createV2Template(payload: { name: string; html: string }): Promise<Record<string, unknown>> {
+    return this.request("POST", "/v2/templates", {
+      body: { name: payload.name, html: payload.html },
+    }).then(extractDataObject);
+  }
+
+  updateV2Template(
+    id: number,
+    payload: { name: string; html: string }
+  ): Promise<Record<string, unknown>> {
+    return this.request("PUT", `/v2/templates/${id}`, {
+      body: { name: payload.name, html: payload.html },
+    }).then(extractDataObject);
+  }
+
+  deleteV2Template(id: number): Promise<void> {
+    return this.request("DELETE", `/v2/templates/${id}`).then(() => undefined);
+  }
 }

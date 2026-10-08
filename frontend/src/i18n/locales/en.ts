@@ -5213,6 +5213,8 @@ export const en: Messages = {
       title: "Templates",
       description: "Save and reuse email content across campaigns.",
       manageDescription: "Create and edit email templates independently from campaigns.",
+      nrsManageDescription:
+        "Templates from your 360nrs account. They sync from the panel and can be reused in campaigns.",
       applyDescription: "Apply a template to the current draft. To create or edit, use Templates.",
       formDescription: "You're all set. Changes are saved when you press the button.",
       unsavedChanges: "You have unsaved changes.",
@@ -5237,6 +5239,8 @@ export const en: Messages = {
       empty: "No templates",
       emptyDescription: "Save a draft as a template to reuse it.",
       emptyManageDescription: "Create your first template to reuse it in campaigns.",
+      nrsEmptyManageDescription:
+        "No templates in 360nrs. Create them in the panel or here to reuse them in campaigns.",
       nameRequired: "Enter a template name.",
       required: "Complete the name, subject, and HTML content.",
       created: "Template created.",
@@ -5244,6 +5248,7 @@ export const en: Messages = {
       deleted: "Template deleted.",
       deleteTitle: "Delete template",
       deleteDescription: "This template will be permanently deleted.",
+      nrsDeleteDescription: "This template will be permanently deleted from your 360nrs account.",
     },
     metrics: {
       sent: "Sent",

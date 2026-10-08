@@ -695,13 +695,14 @@ export function useMailrelayTemplates(enabled = true) {
       return {
         templates: response.templates.map((value) => {
           const template = record(value);
+          const name = String(template.name ?? "");
           return {
-            templateId: String(template.templateId ?? ""),
-            name: String(template.name ?? ""),
-            subject: String(template.subject ?? ""),
+            templateId: String(template.templateId ?? template.id ?? ""),
+            name,
+            subject: String(template.subject ?? name),
             html: String(template.html ?? ""),
             createdAt: String(template.createdAt ?? ""),
-            updatedAt: String(template.updatedAt ?? ""),
+            updatedAt: String(template.updatedAt ?? template.createdAt ?? ""),
             ...(template.previewText ? { previewText: String(template.previewText) } : {}),
           };
         }),

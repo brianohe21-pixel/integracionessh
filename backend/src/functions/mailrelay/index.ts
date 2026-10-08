@@ -66,6 +66,7 @@ import {
   maskNrs360Credentials,
   saveNrs360Credentials,
 } from "../../lib/nrs360/secrets.js";
+import { mapNrs360Template, mapNrs360Templates } from "../../lib/nrs360/templates.js";
 import type {
   EmailMarketingProvider,
   MailrelayConfig,
@@ -254,7 +255,7 @@ async function buildNrs360Overview(
     listMailrelaySyncJobs(tenantId, 1),
     listMailrelayCampaignRecords(tenantId),
     client.listMailingCampaigns(),
-    listMailrelayEmailTemplates(tenantId),
+    client.listV2Templates(),
   ]);
   const draftCampaigns = localCampaigns.filter(
     (record) => String(record.status ?? record.remote.status ?? "draft") === "draft"
@@ -281,6 +282,74 @@ async function buildNrs360Overview(
   };
 }
 
+async function handleNrs360TemplateRoutes(
+  method: string,
+  segments: string[],
+  tenantId: string,
+  event: APIGatewayProxyEventV2WithJWTAuthorizer
+): Promise<APIGatewayProxyResultV2 | null> {
+  if (segments[0] !== "templates") return null;
+  const { client } = await createAuthenticatedNrs360Client(ENVIRONMENT, tenantId);
+  const templateId = segments[1];
+
+  if (method === "GET" && !templateId) {
+    const remote = await client.listV2TemplatesWithHtml();
+    return ok({ templates: mapNrs360Templates(remote) });
+  }
+  if (method === "POST" && !templateId) {
+    const body = TemplateSchema.parse(parseJsonBody(event));
+    const remote = await client.createV2Template({
+      name: body.name,
+      html: ensureNrs360CampaignHtml(body.html),
+    });
+    const template = mapNrs360Template(remote);
+    if (!template) return badRequest("Invalid template response from 360nrs");
+    return created({
+      template: {
+        ...template,
+        subject: body.subject || template.subject,
+        ...(body.previewText ? { previewText: body.previewText } : {}),
+      },
+    });
+  }
+  if (!templateId) return badRequest("Invalid template id");
+  const remoteId = Number(templateId);
+  if (!Number.isInteger(remoteId) || remoteId <= 0) {
+    return badRequest("Invalid template id");
+  }
+
+  if (method === "GET") {
+    const remote = await client.getV2Template(remoteId);
+    const template = mapNrs360Template(remote);
+    return template ? ok({ template }) : notFound("Template not found");
+  }
+  if (method === "PUT" || method === "PATCH") {
+    const existing = mapNrs360Template(await client.getV2Template(remoteId));
+    if (!existing) return notFound("Template not found");
+    const body = UpdateTemplateSchema.parse(parseJsonBody(event));
+    const remote = await client.updateV2Template(remoteId, {
+      name: body.name ?? existing.name,
+      html: ensureNrs360CampaignHtml(body.html ?? existing.html),
+    });
+    const template = mapNrs360Template(remote);
+    if (!template) return badRequest("Invalid template response from 360nrs");
+    return ok({
+      template: {
+        ...template,
+        subject: body.subject ?? existing.subject,
+        ...(body.previewText || existing.previewText
+          ? { previewText: body.previewText ?? existing.previewText }
+          : {}),
+      },
+    });
+  }
+  if (method === "DELETE") {
+    await client.deleteV2Template(remoteId);
+    return ok({ template: { templateId, deleted: true } });
+  }
+  return badRequest("Not found");
+}
+
 async function handleTemplateRoutes(
   method: string,
   segments: string[],
@@ -289,10 +358,11 @@ async function handleTemplateRoutes(
   provider: EmailMarketingProvider
 ): Promise<APIGatewayProxyResultV2 | null> {
   if (segments[0] !== "templates") return null;
-  const templateId = segments[1];
-  const ensureHtml =
-    provider === "nrs360" ? ensureNrs360CampaignHtml : ensureMailrelayCampaignHtml;
+  if (provider === "nrs360") {
+    return handleNrs360TemplateRoutes(method, segments, tenantId, event);
+  }
 
+  const templateId = segments[1];
   if (method === "GET" && !templateId) {
     const templates = await listMailrelayEmailTemplates(tenantId);
     return ok({ templates });
@@ -303,7 +373,7 @@ async function handleTemplateRoutes(
     const template = await saveMailrelayEmailTemplate(tenantId, id, {
       name: body.name,
       subject: body.subject,
-      html: ensureHtml(body.html),
+      html: ensureMailrelayCampaignHtml(body.html),
       ...(body.previewText ? { previewText: body.previewText } : {}),
     });
     return created({ template });
@@ -322,7 +392,7 @@ async function handleTemplateRoutes(
     const template = await saveMailrelayEmailTemplate(tenantId, templateId, {
       name: body.name ?? existing.name,
       subject: body.subject ?? existing.subject,
-      html: ensureHtml(body.html ?? existing.html),
+      html: ensureMailrelayCampaignHtml(body.html ?? existing.html),
       ...(previewText ? { previewText } : {}),
     });
     return ok({ template });

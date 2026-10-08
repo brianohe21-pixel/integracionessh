@@ -5228,6 +5228,8 @@ export const es = {
       title: "Plantillas",
       description: "Guarda y reutiliza contenido de email entre campañas.",
       manageDescription: "Crea y edita plantillas de email de forma independiente a las campañas.",
+      nrsManageDescription:
+        "Plantillas de tu cuenta 360nrs. Se sincronizan desde el panel y se pueden reutilizar en campañas.",
       applyDescription: "Aplica una plantilla al borrador actual. Para crear o editar, usa Plantillas.",
       formDescription: "Todo listo. Los cambios se guardan al pulsar el botón.",
       unsavedChanges: "Tienes cambios sin guardar.",
@@ -5252,6 +5254,8 @@ export const es = {
       empty: "Sin plantillas",
       emptyDescription: "Guarda un borrador como plantilla para reutilizarlo.",
       emptyManageDescription: "Crea tu primera plantilla para reutilizarla en campañas.",
+      nrsEmptyManageDescription:
+        "No hay plantillas en 360nrs. Créalas en el panel o desde aquí para reutilizarlas en campañas.",
       nameRequired: "Introduce un nombre para la plantilla.",
       required: "Completa el nombre, el asunto y el contenido HTML.",
       created: "Plantilla creada.",
@@ -5259,6 +5263,8 @@ export const es = {
       deleted: "Plantilla eliminada.",
       deleteTitle: "Eliminar plantilla",
       deleteDescription: "Esta plantilla se eliminará de forma permanente.",
+      nrsDeleteDescription:
+        "Esta plantilla se eliminará de tu cuenta 360nrs de forma permanente.",
     },
     metrics: {
       sent: "Enviados",
