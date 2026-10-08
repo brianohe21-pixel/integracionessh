@@ -85,12 +85,15 @@ export function classifyWhatsAppMessageWindow(params: {
   return "outboundOutsideWindow";
 }
 
+const MESSAGING_WINDOW_CHANNELS = new Set(["whatsapp", "instagram", "messenger"]);
+
 export function isCustomerServiceWindowOpen(
   conversation: Pick<Conversation, "lastInboundAt" | "channel"> | null,
   nowMs: number = Date.now()
 ): boolean {
   if (!conversation) return false;
-  if ((conversation.channel ?? "whatsapp") !== "whatsapp") return true;
+  const channel = conversation.channel ?? "whatsapp";
+  if (!MESSAGING_WINDOW_CHANNELS.has(channel)) return true;
   if (!conversation.lastInboundAt) return false;
   const lastInboundMs = new Date(conversation.lastInboundAt).getTime();
   if (!Number.isFinite(lastInboundMs)) return false;
@@ -115,7 +118,7 @@ export class CustomerServiceWindowClosedError extends Error {
   code = "CUSTOMER_SERVICE_WINDOW_CLOSED";
 
   constructor(
-    message = "Customer service window is closed. Send an approved WhatsApp template message instead."
+    message = "Customer service window is closed. The contact must message first, or use an approved template where available."
   ) {
     super(message);
   }

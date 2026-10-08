@@ -12,13 +12,28 @@ import {
 describe("isCustomerServiceWindowOpen", () => {
   const now = Date.parse("2026-09-30T12:00:00.000Z");
 
-  it("returns true for non-whatsapp channels", () => {
+  it("returns true for channels without a messaging window", () => {
     expect(
       isCustomerServiceWindowOpen(
-        { channel: "instagram", lastInboundAt: "2026-09-01T00:00:00.000Z" },
+        { channel: "webchat", lastInboundAt: "2026-09-01T00:00:00.000Z" },
         now
       )
     ).toBe(true);
+  });
+
+  it("enforces the 24h window for Instagram", () => {
+    expect(
+      isCustomerServiceWindowOpen(
+        { channel: "instagram", lastInboundAt: "2026-09-30T10:00:00.000Z" },
+        now
+      )
+    ).toBe(true);
+    expect(
+      isCustomerServiceWindowOpen(
+        { channel: "instagram", lastInboundAt: "2026-09-29T11:59:00.000Z" },
+        now
+      )
+    ).toBe(false);
   });
 
   it("returns false when lastInboundAt is missing", () => {

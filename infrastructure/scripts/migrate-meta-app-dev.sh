@@ -24,7 +24,7 @@ OLD_APP_ID="${OLD_APP_ID:-4505851696405995}"
 FRONTEND_ENV_FILE="${FRONTEND_ENV_FILE:-${REPO_ROOT}/frontend/.env.local}"
 GRAPH_API_VERSION="${GRAPH_API_VERSION:-v22.0}"
 
-LAMBDA_FUNCTIONS=(webhook whatsapp-connect messenger-connect)
+LAMBDA_FUNCTIONS=(webhook whatsapp-connect messenger-connect instagram-connect)
 WEBHOOK_FIELDS="${WEBHOOK_FIELDS:-messages,calls,message_template_status_update,message_template_quality_update,account_update,account_alerts,phone_number_quality_update,phone_number_name_update,security}"
 
 DRY_RUN=0
@@ -315,7 +315,25 @@ configure_meta_webhook() {
     -d "fields=${WEBHOOK_FIELDS}" \
     -d "access_token=${NEW_APP_ID}|${NEW_APP_SECRET}")"
 
-  log "Meta webhook response: ${response}"
+  log "Meta WhatsApp webhook response: ${response}"
+
+  response="$(graph_post_form "${NEW_APP_ID}/subscriptions" \
+    -d "object=instagram" \
+    -d "callback_url=${WEBHOOK_URL}" \
+    -d "verify_token=${VERIFY_TOKEN}" \
+    -d "fields=messages,messaging_postbacks,messaging_seen,message_reactions" \
+    -d "access_token=${NEW_APP_ID}|${NEW_APP_SECRET}")"
+
+  log "Meta Instagram webhook response: ${response}"
+
+  response="$(graph_post_form "${NEW_APP_ID}/subscriptions" \
+    -d "object=page" \
+    -d "callback_url=${WEBHOOK_URL}" \
+    -d "verify_token=${VERIFY_TOKEN}" \
+    -d "fields=messages,messaging_postbacks,leadgen" \
+    -d "access_token=${NEW_APP_ID}|${NEW_APP_SECRET}")"
+
+  log "Meta Page/Messenger webhook response: ${response}"
 }
 
 subscribe_waba() {

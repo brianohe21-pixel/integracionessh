@@ -90,7 +90,7 @@ async function resolveAccessToken(
     return getWhatsAppAccessToken(tenantId, environment);
   }
   if (channel === "instagram") {
-    return getInstagramAccessToken(tenantId, environment);
+    return getInstagramAccessToken(tenantId, environment, botId);
   }
   if (channel === "telegram" && botId) {
     return getTelegramBotToken(tenantId, botId, environment);

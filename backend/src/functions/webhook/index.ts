@@ -206,15 +206,23 @@ async function handleInstagramWebhook(payload: InstagramWebhookEvent): Promise<v
   for (const entry of payload.entry) {
     for (const event of entry.messaging ?? []) {
       const message = event.message;
-      if (!message || !isProcessableInstagramMessage(message)) continue;
+      if (!message) continue;
+      if (message.is_echo) continue;
+      if (!isProcessableInstagramMessage(message)) continue;
 
-      const pageId = event.recipient.id;
+      const recipientId = event.recipient.id;
       const senderId = event.sender.id;
-      const lookup = await getBotByInstagramPageId(pageId);
+      if (senderId === recipientId || senderId === entry.id) continue;
+
+      const lookup =
+        (await getBotByInstagramPageId(recipientId)) ??
+        (await getBotByInstagramPageId(entry.id));
       if (!lookup) {
-        console.log(`No bot for Instagram pageId: ${pageId}`);
+        console.log(`No bot for Instagram account: ${recipientId} (entry ${entry.id})`);
         continue;
       }
+
+      const pageId = recipientId;
 
       const { getBot } = await import("../../lib/dynamodb/bot.repository.js");
       const botRecord = await getBot(lookup.tenantId, lookup.botId);

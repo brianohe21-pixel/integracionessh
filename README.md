@@ -8,6 +8,7 @@ Monorepo serverless para crear, configurar y operar chatbots de WhatsApp Busines
 |------|-------------|
 | **Bots** | Configuración por tenant: modo `openai` (prompt, modelo, temperatura) o `webhook` (URL y secreto propios). |
 | **WhatsApp** | Webhooks de Meta, Embedded Signup para conectar números y envío de mensajes/plantillas. |
+| **Instagram DM** | API oficial de Meta (Page Access Token): verificación de token, suscripción de webhooks, inbox y respuestas en ventana de 24 h. |
 | **Conversaciones** | Historial de mensajes por contacto y métricas de uso. |
 | **Plantillas** | CRUD de plantillas aprobadas y envío individual o masivo. |
 | **Envío masivo** | Jobs CSV con seguimiento de fallos (`/bulk-send`). |
@@ -117,6 +118,7 @@ integracionessh/
 | `campaigns` / `process-campaign` | Campañas programadas |
 | `metrics` | Métricas agregadas del dashboard |
 | `whatsapp-connect` | Embedded Signup y credenciales |
+| `instagram-connect` | Conexión oficial Instagram DM (token Page + webhooks) |
 | `billing` | Checkout, portal y webhooks Wompi/Stripe |
 | `api-keys` / `public-api` | Claves API y REST pública |
 | `contacts` | Directorio de contactos y compliance |
@@ -145,6 +147,7 @@ Rutas expuestas (resumen). Las rutas autenticadas requieren JWT de Cognito salvo
 | * | `/bots/{botId}/knowledge` | Documentos RAG por bot |
 | * | `/integrations/webhook` | Configuración webhooks salientes |
 | POST | `/whatsapp/connect` | Conexión Embedded Signup |
+| POST | `/instagram/connect` | Conexión Instagram DM (Page Access Token) |
 | * | `/billing/*` | Planes y pagos |
 | POST | `/v1/messages` | API pública (header `X-API-Key`) |
 | * | `/api-keys` | Gestión de claves |
@@ -207,6 +210,30 @@ Los precios Wompi se configuran en `wompi_amount_pro_cents` y `wompi_amount_ente
 - App de Meta (WhatsApp Business API) con Embedded Signup configurado
 - Claves OpenAI (almacenadas por tenant en Secrets Manager tras el onboarding)
 - Opcional: cuentas Wompi y/o Stripe para facturación
+
+## Instagram DM (API oficial de Meta)
+
+Flujo para conectar una cuenta Instagram Business/Creator y operar DMs desde la plataforma:
+
+1. **Cuenta y página**: Instagram Business o Creator vinculada a una página de Facebook en Meta Business Suite.
+2. **App de Meta**: en [Meta for Developers](https://developers.facebook.com), misma app de la plataforma:
+   - Productos **Messenger** e **Instagram** activos.
+   - Webhooks del objeto **Instagram** (y/o Page) apuntando a `GET/POST /webhook` con el Verify Token del despliegue.
+   - Campo suscrito: `messages` (recomendado: también `messaging_postbacks`, `messaging_seen`, etc.).
+   - Permisos: `pages_messaging`, `instagram_manage_messages`, `pages_manage_metadata`, `pages_show_list`.
+3. **Token**: en Messenger → API Setup, genera el **Page Access Token** de la página vinculada (debe pertenecer a la misma app Meta del despliegue: `META_APP_ID` / `META_APP_SECRET`).
+4. **Conexión en la plataforma**: Bot → pestaña Instagram → pega el token (Page ID e Instagram Account ID son opcionales; se detectan con Graph API). Al conectar se:
+   - Valida el token (`/me` + `debug_token`)
+   - Resuelve la cuenta Instagram vinculada (`instagram_business_account`)
+   - Guarda el secreto por bot en Secrets Manager
+   - Registra lookups DynamoDB por Instagram Account ID (y Page ID)
+   - Suscribe la página a webhooks (`/{page-id}/subscribed_apps`)
+5. **Operación**:
+   - Entrantes: Meta → `/webhook` (`object=instagram`) → SQS → inbox (`channel=instagram`)
+   - Salientes: respuesta desde conversaciones con `POST /{page-id}/messages` (`messaging_type=RESPONSE`)
+   - Ventana: solo se puede responder dentro de **24 horas** tras el último mensaje del usuario
+
+Endpoint: `POST /instagram/connect`.
 
 ## Desarrollo local
 

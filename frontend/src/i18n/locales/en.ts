@@ -872,12 +872,27 @@ export const en: Messages = {
   },
   instagram: {
     title: "Instagram DM",
-    subtitle: "Connect the Facebook Page linked to your Instagram account",
-    pageId: "Page ID",
-    accountId: "Instagram Account ID (optional)",
+    subtitle:
+      "Connect an Instagram Business/Creator account linked to a Facebook Page via the official Meta API",
+    pageId: "Page ID (optional, detected from token)",
+    accountId: "Instagram Account ID (optional, detected from token)",
     pageToken: "Page Access Token",
     connect: "Connect Instagram",
-    connected: "Connected: page {{pageId}}",
+    connected: "Connected: {{pageName}} (page {{pageId}} · IG {{accountId}})",
+    setupTitle: "Before connecting",
+    setupStep1:
+      "The Instagram account must be Business or Creator and linked to a Facebook Page in Meta Business Suite.",
+    setupStep2:
+      "In developers.facebook.com → your platform app → Messenger → API Setup, generate the Page Access Token for that page.",
+    setupStep3:
+      "In the Meta app, enable Instagram Messaging / Webhooks (Instagram object) and subscribe to the messages field. Use the URL from Settings → Integrations.",
+    setupStep4:
+      "On connect, the platform validates the token, detects the linked Instagram account, and subscribes the page to messaging webhooks.",
+    tokenHint:
+      "The token must come from the same Meta app the platform uses for webhooks (pages_messaging and instagram_manage_messages permissions).",
+    windowHint:
+      "Instagram only allows DM replies within the 24-hour window after the user's last message.",
+    connectError: "Could not connect Instagram",
   },
   telegram: {
     title: "Telegram",
@@ -3070,9 +3085,11 @@ export const en: Messages = {
     copy: "Copy",
     webhookStepsTitle: "Steps to configure in Meta:",
     step0: "Open Meta for Developers → Your app",
-    step1: "Go to WhatsApp → Configuration → Webhooks (and Messenger → Settings → Webhooks for Facebook)",
+    step1:
+      "Go to WhatsApp → Configuration → Webhooks, Messenger → Settings → Webhooks, and Instagram → Webhooks",
     step2: "Paste the webhook URL and Verify Token from your deployment",
-    step3: "Subscribe to messages (WhatsApp, Messenger) and calls (WhatsApp)",
+    step3:
+      "Subscribe to messages (WhatsApp, Messenger, Instagram) and calls (WhatsApp). For Instagram DMs the page is also subscribed when you connect the bot",
     secretsTitle: "API Keys",
     secretsDescription:
       "WhatsApp credentials are saved when you connect a bot via Embedded Signup. Telnyx, OpenAI, and ElevenLabs can be configured at account level and inherited by subaccounts.",

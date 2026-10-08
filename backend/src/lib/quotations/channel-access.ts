@@ -11,7 +11,7 @@ export async function resolveAccessTokenForBot(
   environment: string
 ): Promise<string | undefined> {
   if (channel === "instagram") {
-    return getInstagramAccessToken(tenantId, environment);
+    return getInstagramAccessToken(tenantId, environment, botId);
   }
   if (channel === "whatsapp") {
     return getWhatsAppAccessToken(tenantId, environment);
