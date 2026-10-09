@@ -1283,6 +1283,34 @@ export interface MessageWindowReport {
   daily: MessageWindowDailyPoint[];
 }
 
+export interface ConversationsByClientRow {
+  clientKey: string;
+  clientName?: string;
+  conversations: number;
+  aiUsage: number;
+  serviceMessagesUsed: number;
+  serviceMessagesQuota: number;
+  inbound: number;
+  outbound: number;
+}
+
+export interface ConversationsByClientTotals {
+  conversations: number;
+  aiUsage: number;
+  serviceMessagesUsed: number;
+  inbound: number;
+  outbound: number;
+}
+
+export interface ConversationsByClientReport {
+  from: string;
+  to: string;
+  botId?: string;
+  serviceMessagesQuota: number;
+  rows: ConversationsByClientRow[];
+  totals: ConversationsByClientTotals;
+}
+
 export type MessageRole = "user" | "assistant" | "advisor" | "system";
 
 export interface EmailMessageAttachment {
