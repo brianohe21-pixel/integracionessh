@@ -6,24 +6,44 @@ export function isDocumentMessageMetadata(
   return Boolean(
     metadata &&
       typeof metadata === "object" &&
-      (metadata.kind === "document" || metadata.kind === "image" || metadata.kind === "audio") &&
+      (metadata.kind === "document" ||
+        metadata.kind === "image" ||
+        metadata.kind === "audio" ||
+        metadata.kind === "video") &&
       typeof metadata.filename === "string"
   );
 }
 
+function metadataMimeType(message: Message): string {
+  if (!isDocumentMessageMetadata(message.metadata)) return "";
+  return message.metadata.mimeType.trim().toLowerCase().split(";")[0]?.trim() ?? "";
+}
+
 export function isImageAttachmentMessage(message: Message): boolean {
   if (message.messageType === "image") return true;
-  return isDocumentMessageMetadata(message.metadata) && message.metadata.kind === "image";
+  if (!isDocumentMessageMetadata(message.metadata)) return false;
+  if (message.metadata.kind === "image") return true;
+  return metadataMimeType(message).startsWith("image/");
 }
 
 export function isAudioAttachmentMessage(message: Message): boolean {
   if (message.messageType === "audio") return true;
-  return isDocumentMessageMetadata(message.metadata) && message.metadata.kind === "audio";
+  if (!isDocumentMessageMetadata(message.metadata)) return false;
+  if (message.metadata.kind === "audio") return true;
+  return metadataMimeType(message).startsWith("audio/");
+}
+
+export function isVideoAttachmentMessage(message: Message): boolean {
+  if (message.messageType === "video") return true;
+  if (!isDocumentMessageMetadata(message.metadata)) return false;
+  if (message.metadata.kind === "video") return true;
+  return metadataMimeType(message).startsWith("video/");
 }
 
 export function isDocumentMessage(message: Message): boolean {
   if (isImageAttachmentMessage(message)) return true;
   if (isAudioAttachmentMessage(message)) return true;
+  if (isVideoAttachmentMessage(message)) return true;
   if (message.messageType === "document" && isDocumentMessageMetadata(message.metadata)) {
     return true;
   }

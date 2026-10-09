@@ -2,12 +2,17 @@ import { randomUUID } from "crypto";
 import { normalizeConversationAttachmentMimeType } from "../conversations/attachment-policy.js";
 import {
   buildConversationAttachmentS3Key,
+  getPresignedReadUrl,
   putObjectBuffer,
 } from "../s3/client.js";
 import type { DocumentMessageMetadata, WhatsAppMessage } from "../../types/index.js";
 import { downloadWhatsAppMedia } from "./client.js";
 
-function extensionForMimeType(mimeType: string, kind: "image" | "audio"): string {
+const INBOUND_MEDIA_URL_TTL_SECONDS = 3600;
+
+type InboundMediaKind = "image" | "audio" | "video";
+
+function extensionForMimeType(mimeType: string, kind: InboundMediaKind): string {
   const mime = normalizeConversationAttachmentMimeType(mimeType);
   switch (mime) {
     case "image/jpeg":
@@ -26,22 +31,47 @@ function extensionForMimeType(mimeType: string, kind: "image" | "audio"): string
       return "amr";
     case "audio/ogg":
       return "ogg";
+    case "video/mp4":
+      return "mp4";
+    case "video/3gpp":
+      return "3gp";
     default:
-      return kind === "image" ? "bin" : "ogg";
+      if (kind === "image") return "bin";
+      if (kind === "video") return "mp4";
+      return "ogg";
   }
 }
 
-export function filenameForInboundMedia(kind: "image" | "audio", mimeType: string): string {
+export function filenameForInboundMedia(kind: InboundMediaKind, mimeType: string): string {
   const ext = extensionForMimeType(mimeType, kind);
-  return kind === "image" ? `image.${ext}` : `audio.${ext}`;
+  return `${kind}.${ext}`;
 }
 
 export function resolveInboundMediaKind(
   message: WhatsAppMessage
-): "image" | "audio" | null {
+): InboundMediaKind | null {
   if (message.type === "image" && message.image?.id) return "image";
   if (message.type === "audio" && message.audio?.id) return "audio";
+  if (message.type === "video" && message.video?.id) return "video";
   return null;
+}
+
+function defaultMimeForKind(kind: InboundMediaKind): string {
+  if (kind === "image") return "image/jpeg";
+  if (kind === "video") return "video/mp4";
+  return "audio/ogg";
+}
+
+function mediaIdForKind(message: WhatsAppMessage, kind: InboundMediaKind): string {
+  if (kind === "image") return message.image!.id;
+  if (kind === "video") return message.video!.id;
+  return message.audio!.id;
+}
+
+function webhookMimeForKind(message: WhatsAppMessage, kind: InboundMediaKind): string | undefined {
+  if (kind === "image") return message.image?.mime_type;
+  if (kind === "video") return message.video?.mime_type;
+  return message.audio?.mime_type;
 }
 
 export async function persistInboundWhatsAppMedia(params: {
@@ -54,18 +84,12 @@ export async function persistInboundWhatsAppMedia(params: {
   const kind = resolveInboundMediaKind(params.message);
   if (!kind) return null;
 
-  const mediaId =
-    kind === "image" ? params.message.image!.id : params.message.audio!.id;
-  const webhookMime =
-    kind === "image"
-      ? params.message.image?.mime_type
-      : params.message.audio?.mime_type;
+  const mediaId = mediaIdForKind(params.message, kind);
+  const webhookMime = webhookMimeForKind(params.message, kind);
 
   const downloaded = await downloadWhatsAppMedia(mediaId, params.accessToken);
   const mimeType = normalizeConversationAttachmentMimeType(
-    downloaded.mimeType ||
-      webhookMime ||
-      (kind === "image" ? "image/jpeg" : "audio/ogg")
+    downloaded.mimeType || webhookMime || defaultMimeForKind(kind)
   );
   const filename = filenameForInboundMedia(kind, mimeType);
   const attachmentId = randomUUID();
@@ -78,11 +102,13 @@ export async function persistInboundWhatsAppMedia(params: {
   );
 
   await putObjectBuffer(s3Key, downloaded.buffer, mimeType);
+  const downloadUrl = await getPresignedReadUrl(s3Key, INBOUND_MEDIA_URL_TTL_SECONDS);
 
   return {
     kind,
     filename,
     mimeType,
     s3Key,
+    downloadUrl,
   };
 }

@@ -1312,7 +1312,7 @@ export interface EmailMessageMetadata {
 }
 
 export interface DocumentMessageMetadata {
-  kind: "document" | "image" | "audio";
+  kind: "document" | "image" | "audio" | "video";
   filename: string;
   mimeType: string;
   s3Key: string;

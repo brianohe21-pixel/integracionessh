@@ -6,6 +6,7 @@ import {
   isAudioAttachmentMimeType,
   isImageAttachmentMimeType,
   isOggOpusBuffer,
+  isVideoAttachmentMimeType,
   isVoiceNoteMimeType,
 } from "./attachment-policy.js";
 import { addMessage, getConversationMessages, updateConversation } from "../dynamodb/conversation.repository.js";
@@ -19,6 +20,7 @@ import {
   sendChannelAudio,
   sendChannelDocument,
   sendChannelImage,
+  sendChannelVideo,
 } from "../channels/router.js";
 import {
   buildConversationAttachmentS3Key,
@@ -223,6 +225,7 @@ export async function sendConversationAttachment(input: {
   const caption = input.caption?.trim() || undefined;
   const isImage = isImageAttachmentMimeType(resolvedMime);
   const isAudio = isAudioAttachmentMimeType(resolvedMime);
+  const isVideo = isVideoAttachmentMimeType(resolvedMime);
   const voiceNote =
     Boolean(input.voiceNote) &&
     isVoiceNoteMimeType(resolvedMime) &&
@@ -245,7 +248,9 @@ export async function sendConversationAttachment(input: {
           ...outboundPayload,
           voice: voiceNote,
         })
-      : await sendChannelDocument(outboundCtx, outboundPayload);
+      : isVideo
+        ? await sendChannelVideo(outboundCtx, outboundPayload)
+        : await sendChannelDocument(outboundCtx, outboundPayload);
 
   if (!outboundResult.externalMessageId) {
     throw new ConversationAttachmentError("WhatsApp did not accept the attachment", 502);
@@ -253,9 +258,9 @@ export async function sendConversationAttachment(input: {
 
   const downloadUrl = await getPresignedReadUrl(input.s3Key, DOWNLOAD_URL_TTL_SECONDS);
   const now = new Date().toISOString();
-  const messageType = isImage ? "image" : isAudio ? "audio" : "document";
+  const messageType = isImage ? "image" : isAudio ? "audio" : isVideo ? "video" : "document";
   const metadata = {
-    kind: isImage ? "image" : isAudio ? "audio" : "document",
+    kind: isImage ? "image" : isAudio ? "audio" : isVideo ? "video" : "document",
     filename: input.filename,
     mimeType: resolvedMime,
     s3Key: input.s3Key,

@@ -492,7 +492,9 @@ export async function processInboundMessage(
     channel === "whatsapp" &&
     whatsappPayload &&
     accessToken &&
-    (inbound.messageType === "image" || inbound.messageType === "audio")
+    (inbound.messageType === "image" ||
+      inbound.messageType === "audio" ||
+      inbound.messageType === "video")
   ) {
     const persisted = await persistInboundWhatsAppMedia({
       tenantId,
@@ -527,6 +529,9 @@ export async function processInboundMessage(
       persistedUserContent = attachmentMetadata.filename;
     } else if (inbound.messageType === "image") {
       const caption = whatsappPayload?.message.image?.caption?.trim();
+      persistedUserContent = caption || attachmentMetadata.filename;
+    } else if (inbound.messageType === "video") {
+      const caption = whatsappPayload?.message.video?.caption?.trim();
       persistedUserContent = caption || attachmentMetadata.filename;
     }
   }

@@ -1779,6 +1779,8 @@ export interface WhatsAppMessage {
   text?: { body: string };
   image?: { id: string; mime_type: string; caption?: string };
   audio?: { id: string; mime_type: string };
+  video?: { id: string; mime_type: string; caption?: string };
+  document?: { id: string; mime_type: string; caption?: string; filename?: string };
   interactive?: WhatsAppInteractiveReply;
   order?: WhatsAppOrderPayload;
   referral?: WhatsAppReferral;
@@ -1931,7 +1933,7 @@ export interface EmailMessageMetadata {
 }
 
 export interface DocumentMessageMetadata {
-  kind: "document" | "image" | "audio";
+  kind: "document" | "image" | "audio" | "video";
   filename: string;
   mimeType: string;
   s3Key: string;

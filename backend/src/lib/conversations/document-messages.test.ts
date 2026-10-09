@@ -105,6 +105,34 @@ describe("document message helpers", () => {
     });
   });
 
+  it("enriches video messages with download urls", async () => {
+    const messages = await enrichConversationMessages(
+      [
+        {
+          messageId: "m-video",
+          conversationId: "c-1",
+          tenantId: "t-1",
+          role: "user",
+          content: "video.mp4",
+          messageType: "video",
+          metadata: {
+            kind: "video",
+            filename: "video.mp4",
+            mimeType: "video/mp4",
+            s3Key: "tenants/t/bots/b/conversations/c-1/attachments/v/video.mp4",
+          },
+          timestamp: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+      { tenantId: "t-1", botId: "b-1" }
+    );
+
+    expect(messages[0]?.messageType).toBe("video");
+    expect(messages[0]?.metadata).toMatchObject({
+      downloadUrl: "https://example.com/file.pdf",
+    });
+  });
+
   it("upgrades legacy document messages using quotation pdf keys", async () => {
     listQuotationsMock.mockResolvedValue([
       {
