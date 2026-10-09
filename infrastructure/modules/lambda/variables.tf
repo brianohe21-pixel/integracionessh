@@ -266,7 +266,7 @@ variable "stripe_price_pro" {
 variable "stripe_price_enterprise" {
   type        = string
   default     = ""
-  description = "Stripe Price ID for Enterprise plan"
+  description = "Legacy Stripe Price ID. Subscriptions on this price activate Pro."
 }
 
 variable "frontend_url" {
@@ -386,7 +386,7 @@ variable "wompi_amount_pro_cents" {
 variable "wompi_amount_enterprise_cents" {
   type        = string
   default     = "286590000"
-  description = "Scale plan price in COP cents (default 2865900 COP)"
+  description = "Unused legacy Scale price in COP cents. Scale is no longer sold."
 }
 
 variable "wompi_api_base" {

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useBillingPortal, useBillingProviders } from "@/hooks/useBilling";
+import { normalizeTenantPlan } from "@/lib/normalize-plan";
 import { formatCopPrice, formatUsdPrice, SALES_WHATSAPP_URL } from "@/lib/plan-config";
 import { useT } from "@/i18n/context";
 import type { Tenant } from "@/types";
@@ -48,7 +49,7 @@ export function BillingActions() {
 
   const hasStripePortal = Boolean(tenant?.stripeCustomerId);
   const showWompiNote = defaultProvider === "wompi";
-  const currentPlan = tenant?.plan ?? "free";
+  const currentPlan = normalizeTenantPlan(tenant?.plan);
   const starterPrice = providers?.plans?.starter;
 
   return (
@@ -70,7 +71,7 @@ export function BillingActions() {
               : ""}
           </button>
         )}
-        {currentPlan !== "pro" && currentPlan !== "scale" && currentPlan !== "reseller" && (
+        {currentPlan !== "pro" && currentPlan !== "reseller" && (
           <a
             href={SALES_WHATSAPP_URL}
             target="_blank"

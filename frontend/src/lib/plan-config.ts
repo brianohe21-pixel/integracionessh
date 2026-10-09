@@ -14,7 +14,6 @@ const MAX_WHATSAPP_CHANNELS_PER_BOT_BY_PLAN: Record<
   free: 1,
   starter: 5,
   pro: 5,
-  scale: 60,
   reseller: Number.MAX_SAFE_INTEGER,
 };
 

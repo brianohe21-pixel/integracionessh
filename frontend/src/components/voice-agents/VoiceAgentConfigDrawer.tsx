@@ -104,7 +104,6 @@ function planLabel(plan: TenantPlan, t: ReturnType<typeof useT>): string {
   if (plan === "free") return t("common.planFree");
   if (plan === "starter") return t("common.planStarter");
   if (plan === "pro") return t("common.planPro");
-  if (plan === "scale") return t("common.planScale");
   return t("common.planReseller");
 }
 

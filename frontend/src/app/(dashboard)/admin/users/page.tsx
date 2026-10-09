@@ -15,6 +15,7 @@ import {
   useAdminUpdateCognitoUser,
 } from "@/hooks/useAdminCognitoUsers";
 import { useFormatters } from "@/hooks/useFormatters";
+import { normalizeTenantPlan } from "@/lib/normalize-plan";
 import { useT } from "@/i18n/context";
 import type { CognitoUserSummary, ResellerLimitsOverride, ResellerPlanDefaults, Tenant, TenantPlan } from "@/types";
 import { DashboardPage } from "@/components/layout/DashboardPage";
@@ -153,11 +154,11 @@ export default function AdminUsersPage() {
     );
   }
 
-  function tenantPlanLabel(plan: TenantPlan) {
-    if (plan === "starter") return t("common.planStarter");
-    if (plan === "pro") return t("common.planPro");
-    if (plan === "scale" || (plan as string) === "enterprise") return t("common.planScale");
-    if (plan === "reseller") return t("common.planReseller");
+  function tenantPlanLabel(plan: TenantPlan | string) {
+    const normalized = normalizeTenantPlan(plan);
+    if (normalized === "starter") return t("common.planStarter");
+    if (normalized === "pro") return t("common.planPro");
+    if (normalized === "reseller") return t("common.planReseller");
     return t("common.planFree");
   }
 

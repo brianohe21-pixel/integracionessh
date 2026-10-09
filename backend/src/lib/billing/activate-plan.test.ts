@@ -42,7 +42,7 @@ describe("activateTenantPlan", () => {
     await activateTenantPlan("tenant-1", "scale");
 
     expect(updateTenant).toHaveBeenCalledWith("tenant-1", {
-      plan: "scale",
+      plan: "pro",
       subscriptionStatus: "active",
       currentPeriodEnd: "2026-07-07T12:00:00.000Z",
       paymentProvider: "wompi",

@@ -54,8 +54,11 @@ describe("getEffectivePlanLimits", () => {
     expect(getEffectivePlanLimits(tenant("pro")).maxWhatsAppChannelsPerBot).toBe(5);
   });
 
-  it("allows 60 WhatsApp channels on scale", () => {
-    expect(getEffectivePlanLimits(tenant("scale")).maxWhatsAppChannelsPerBot).toBe(60);
+  it("treats legacy scale as pro limits", () => {
+    const legacy = tenant("pro", { plan: "scale" as Tenant["plan"] });
+    expect(getEffectivePlanLimits(legacy).maxWhatsAppChannelsPerBot).toBe(5);
+    expect(getEffectivePlanLimits(legacy).maxActiveBots).toBe(5);
+    expect(getEffectivePlanLimits(legacy).maxVoicebotMinutesPerMonth).toBe(300);
   });
 
   it("allows unlimited WhatsApp channels for reseller", () => {

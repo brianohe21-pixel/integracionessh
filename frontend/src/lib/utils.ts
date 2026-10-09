@@ -39,8 +39,8 @@ export function planLabel(plan: string): string {
     free: "Gratuito",
     starter: "Starter",
     pro: "Pro",
-    scale: "Scale",
-    enterprise: "Scale",
+    scale: "Pro",
+    enterprise: "Pro",
     reseller: "Reseller",
   };
   return labels[plan] ?? plan;

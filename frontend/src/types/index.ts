@@ -1,4 +1,4 @@
-export type TenantPlan = "free" | "starter" | "pro" | "scale" | "reseller";
+export type TenantPlan = "free" | "starter" | "pro" | "reseller";
 
 export type TenantKind = "standard" | "reseller" | "subaccount";
 

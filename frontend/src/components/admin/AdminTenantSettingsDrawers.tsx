@@ -5,6 +5,7 @@ import { Check } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { SideDrawer } from "@/components/ui/SideDrawer";
 import { useT } from "@/i18n/context";
+import { normalizeTenantPlan } from "@/lib/normalize-plan";
 import { cn } from "@/lib/utils";
 import type { Tenant, TenantPlan } from "@/types";
 
@@ -32,9 +33,10 @@ export function AdminTenantPlanDrawer({
   onSave: (plan: TenantPlan) => Promise<void>;
 }) {
   const t = useT();
-  const [plan, setPlan] = useState<TenantPlan>(tenant.plan);
+  const currentPlan = normalizeTenantPlan(tenant.plan);
+  const [plan, setPlan] = useState<TenantPlan>(currentPlan);
   const [error, setError] = useState<string | null>(null);
-  const dirty = plan !== tenant.plan;
+  const dirty = plan !== currentPlan;
 
   async function handleSave() {
     if (!dirty) {

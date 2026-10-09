@@ -100,6 +100,45 @@ async function deleteTenantEmailLookup(email: string): Promise<void> {
   );
 }
 
+function isLegacyScalePlan(plan: string | undefined): boolean {
+  return plan === "scale" || plan === "enterprise";
+}
+
+async function migrateLegacyScalePlan(tenant: Tenant): Promise<Tenant> {
+  const rawPlan = tenant.plan as string;
+  if (!isLegacyScalePlan(rawPlan)) return tenant;
+
+  const updatedAt = new Date().toISOString();
+  try {
+    await docClient.send(
+      new UpdateCommand({
+        TableName: TABLE_NAME,
+        Key: keys(tenant.tenantId),
+        UpdateExpression: "SET #plan = :plan, #updatedAt = :updatedAt",
+        ConditionExpression: "#plan = :legacyPlan",
+        ExpressionAttributeNames: {
+          "#plan": "plan",
+          "#updatedAt": "updatedAt",
+        },
+        ExpressionAttributeValues: {
+          ":plan": "pro",
+          ":legacyPlan": rawPlan,
+          ":updatedAt": updatedAt,
+        },
+      })
+    );
+  } catch (error) {
+    if (!(error instanceof ConditionalCheckFailedException)) {
+      console.error("Failed to migrate legacy scale plan", {
+        tenantId: tenant.tenantId,
+        error,
+      });
+    }
+  }
+
+  return { ...tenant, plan: "pro", updatedAt };
+}
+
 export async function getTenant(tenantId: string): Promise<Tenant | null> {
   const result = await docClient.send(
     new GetCommand({
@@ -109,7 +148,7 @@ export async function getTenant(tenantId: string): Promise<Tenant | null> {
   );
 
   if (!result.Item) return null;
-  return stripKeys(result.Item);
+  return migrateLegacyScalePlan(stripKeys(result.Item));
 }
 
 export async function createTenant(tenant: Tenant): Promise<void> {
@@ -347,7 +386,8 @@ export async function listTenants(): Promise<Tenant[]> {
     })
   );
 
-  return (result.Items ?? []).map((item) => stripKeys(item));
+  const tenants = (result.Items ?? []).map((item) => stripKeys(item));
+  return Promise.all(tenants.map((tenant) => migrateLegacyScalePlan(tenant)));
 }
 
 export async function listSubaccounts(parentTenantId: string): Promise<Tenant[]> {

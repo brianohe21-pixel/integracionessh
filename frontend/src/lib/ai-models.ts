@@ -19,7 +19,6 @@ const PLAN_RANK: Record<TenantPlan, number> = {
   free: 0,
   starter: 1,
   pro: 2,
-  scale: 3,
   reseller: 3,
 };
 
