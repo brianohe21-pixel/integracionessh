@@ -62,6 +62,7 @@ resource "aws_amplify_app" "frontend" {
     NEXT_PUBLIC_DEMO_PASSWORD                  = var.demo_account_password
     NEXT_PUBLIC_META_APP_ID                    = var.meta_app_id
     NEXT_PUBLIC_META_EMBEDDED_SIGNUP_CONFIG_ID = var.meta_embedded_signup_config_id
+    NEXT_PUBLIC_META_INSTAGRAM_LOGIN_CONFIG_ID = var.meta_instagram_login_config_id
     NODE_VERSION                               = "20"
   }
 
@@ -91,6 +92,7 @@ resource "aws_amplify_branch" "main" {
     NEXT_PUBLIC_DEMO_PASSWORD                  = var.demo_account_password
     NEXT_PUBLIC_META_APP_ID                    = var.meta_app_id
     NEXT_PUBLIC_META_EMBEDDED_SIGNUP_CONFIG_ID = var.meta_embedded_signup_config_id
+    NEXT_PUBLIC_META_INSTAGRAM_LOGIN_CONFIG_ID = var.meta_instagram_login_config_id
   }
 
   tags = var.tags

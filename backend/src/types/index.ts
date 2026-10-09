@@ -2688,6 +2688,46 @@ export interface ApiKeyUsageSummary {
   lastUsedAt?: string;
 }
 
+export interface ApiUsageCount {
+  requests: number;
+  success: number;
+  error: number;
+}
+
+export interface ApiUsageDailyPoint extends ApiUsageCount {
+  date: string;
+}
+
+export interface ApiUsageByKey extends ApiUsageCount {
+  keyId: string;
+  keyName: string;
+  prefix: string;
+}
+
+export interface ApiUsageByEndpoint extends ApiUsageCount {
+  endpoint: string;
+  method: string;
+}
+
+export type ApiWebhookActivationStatus = "active" | "inactive";
+
+export interface ApiUsageWebhookStatus {
+  integrationId: string;
+  status: ApiWebhookActivationStatus;
+  url: string;
+  events: string[];
+}
+
+export interface ApiUsageReport {
+  from: string;
+  to: string;
+  totals: ApiUsageCount;
+  daily: ApiUsageDailyPoint[];
+  byKey: ApiUsageByKey[];
+  byEndpoint: ApiUsageByEndpoint[];
+  webhooks: ApiUsageWebhookStatus[];
+}
+
 export type SupportTicketCategory = "general" | "technical" | "billing" | "whatsapp";
 
 export type SupportTicketStatus = "open" | "closed";
@@ -3243,7 +3283,7 @@ export interface FlowNodeData {
   variableName?: string;
   variableValue?: string;
   httpUrl?: string;
-  httpMethod?: "GET" | "POST" | "PATCH";
+  httpMethod?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | "OPTIONS";
   httpBody?: string;
   httpHeaders?: FlowHttpHeader[];
   httpResponseVariable?: string;
@@ -3673,6 +3713,8 @@ export interface IntegrationQueueMessage {
   attempt: number;
 }
 
+export type EmailMarketingProvider = "mailrelay" | "nrs360";
+
 export interface MailrelayCredentials {
   apiKey: string;
   webhookToken: string;
@@ -3681,10 +3723,19 @@ export interface MailrelayCredentials {
 
 export interface MaskedMailrelayCredentials {
   configured: boolean;
+  provider?: EmailMarketingProvider;
   apiKey?: string;
   webhookToken?: string;
   baseUrl?: string;
+  username?: string;
+  apiPassword?: string;
   secretId?: string;
+}
+
+export interface Nrs360Credentials {
+  username: string;
+  apiPassword: string;
+  baseUrl: string;
 }
 
 export interface MailrelayTagGroupMapping {
@@ -3695,7 +3746,11 @@ export interface MailrelayTagGroupMapping {
 export interface MailrelayConfig {
   tenantId: string;
   enabled: boolean;
+  provider?: EmailMarketingProvider;
   defaultSenderId?: number;
+  fromEmail?: string;
+  fromName?: string;
+  replyTo?: string;
   tagGroupMappings: MailrelayTagGroupMapping[];
   defaultGroupIds: number[];
   eventTypes: string[];
@@ -3765,6 +3820,8 @@ export interface MailrelayCampaignRecord {
   updatedAt: string;
 }
 
+export type MailrelayBounceKind = "hard" | "soft" | "generic";
+
 export interface MailrelayCampaignMetrics {
   tenantId: string;
   campaignId: number;
@@ -3773,6 +3830,9 @@ export interface MailrelayCampaignMetrics {
   opened: number;
   clicked: number;
   bounced: number;
+  hardBounced: number;
+  softBounced: number;
+  genericBounced: number;
   unsubscribed: number;
   complained: number;
   updatedAt: string;
@@ -3786,6 +3846,7 @@ export interface MailrelayEvent {
   subscriberId?: number;
   email?: string;
   occurredAt: string;
+  bounceKind?: MailrelayBounceKind;
   payload: Record<string, unknown>;
 }
 

@@ -1221,6 +1221,68 @@ export interface WhatsAppUsageReport {
   daily: WhatsAppUsageDailyPoint[];
 }
 
+export interface ApiUsageCount {
+  requests: number;
+  success: number;
+  error: number;
+}
+
+export interface ApiUsageDailyPoint extends ApiUsageCount {
+  date: string;
+}
+
+export interface ApiUsageByKey extends ApiUsageCount {
+  keyId: string;
+  keyName: string;
+  prefix: string;
+}
+
+export interface ApiUsageByEndpoint extends ApiUsageCount {
+  endpoint: string;
+  method: string;
+}
+
+export type ApiWebhookActivationStatus = "active" | "inactive";
+
+export interface ApiUsageWebhookStatus {
+  integrationId: string;
+  status: ApiWebhookActivationStatus;
+  url: string;
+  events: string[];
+}
+
+export interface ApiUsageReport {
+  from: string;
+  to: string;
+  totals: ApiUsageCount;
+  daily: ApiUsageDailyPoint[];
+  byKey: ApiUsageByKey[];
+  byEndpoint: ApiUsageByEndpoint[];
+  webhooks: ApiUsageWebhookStatus[];
+}
+
+export interface MessageWindowDayCounts {
+  inboundService24h: number;
+  outboundService24h: number;
+  inboundFreeEntry72h: number;
+  outboundFreeEntry72h: number;
+  inboundOutsideWindow: number;
+  outboundOutsideWindow: number;
+}
+
+export interface MessageWindowDailyPoint extends MessageWindowDayCounts {
+  date: string;
+  total: number;
+}
+
+export interface MessageWindowReport {
+  from: string;
+  to: string;
+  botId?: string;
+  totals: MessageWindowDayCounts & { total: number };
+  daily: MessageWindowDailyPoint[];
+}
+
 export type MessageRole = "user" | "assistant" | "advisor" | "system";
 
 export interface EmailMessageAttachment {
@@ -1258,6 +1320,20 @@ export interface DocumentMessageMetadata {
   downloadUrl?: string;
 }
 
+export interface WhatsAppTemplateDisplay {
+  headerText?: string;
+  bodyText?: string;
+  footerText?: string;
+  buttons?: string[];
+}
+
+export interface WhatsAppTemplateMessageMetadata {
+  kind: "whatsapp_template";
+  templateName?: string;
+  language?: string;
+  display?: WhatsAppTemplateDisplay;
+}
+
 export interface MessageReaction {
   emoji: string;
   userId: string;
@@ -1273,7 +1349,11 @@ export interface Message {
   content: string;
   channel?: Channel;
   messageType?: string;
-  metadata?: EmailMessageMetadata | DocumentMessageMetadata | Record<string, unknown>;
+  metadata?:
+    | EmailMessageMetadata
+    | DocumentMessageMetadata
+    | WhatsAppTemplateMessageMetadata
+    | Record<string, unknown>;
   source?: string;
   sentByAdvisorId?: string;
   whatsappMessageId?: string;
@@ -2000,6 +2080,15 @@ export interface FlowHttpHeader {
   value: string;
 }
 
+export type FlowHttpMethod =
+  | "GET"
+  | "POST"
+  | "PUT"
+  | "PATCH"
+  | "DELETE"
+  | "HEAD"
+  | "OPTIONS";
+
 export interface VoiceAgentHttpTool {
   toolId: string;
   name: string;
@@ -2049,7 +2138,7 @@ export interface FlowNodeData {
   variableName?: string;
   variableValue?: string;
   httpUrl?: string;
-  httpMethod?: "GET" | "POST" | "PATCH";
+  httpMethod?: FlowHttpMethod;
   httpBody?: string;
   httpHeaders?: FlowHttpHeader[];
   httpResponseVariable?: string;
@@ -2588,14 +2677,24 @@ export interface AppCatalogItem {
   enabled?: boolean;
 }
 
+export type EmailMarketingProvider = "mailrelay" | "nrs360";
+
 export interface MailrelayCredentials {
   configured: boolean;
+  provider?: EmailMarketingProvider;
   apiKey?: string;
+  username?: string;
+  apiPassword?: string;
+  baseUrl?: string;
+  webhookToken?: string;
   updatedAt?: string;
 }
 
 export interface MailrelayCredentialsInput {
   apiKey?: string;
+  username?: string;
+  apiPassword?: string;
+  baseUrl?: string;
 }
 
 export interface MailrelayTagGroupMapping {
@@ -2609,6 +2708,10 @@ export interface MailrelayConfig {
   tagGroupMappings: MailrelayTagGroupMapping[];
   enabled?: boolean;
   eventTypes?: string[];
+  provider?: EmailMarketingProvider;
+  fromEmail?: string;
+  fromName?: string;
+  replyTo?: string;
 }
 
 export interface MailrelayGroup {
@@ -2680,8 +2783,38 @@ export interface MailrelayCampaignMetrics {
   opens: number;
   clicks: number;
   bounces: number;
+  hardBounces: number;
+  softBounces: number;
+  genericBounces: number;
   unsubscribes: number;
   complaints: number;
+}
+
+export interface MailrelayDeliverabilityDailyPoint {
+  date: string;
+  sent: number;
+  delivered: number;
+  opens: number;
+  clicks: number;
+  bounces: number;
+  hardBounces: number;
+  softBounces: number;
+  genericBounces: number;
+  unsubscribes: number;
+  complaints: number;
+}
+
+export interface MailrelayDeliverabilityCampaign extends MailrelayCampaignMetrics {
+  name: string;
+  daily: MailrelayDeliverabilityDailyPoint[];
+}
+
+export interface MailrelayDeliverabilityReport {
+  from: string | null;
+  to: string | null;
+  totals: Omit<MailrelayCampaignMetrics, "campaignId">;
+  campaigns: MailrelayDeliverabilityCampaign[];
+  daily: MailrelayDeliverabilityDailyPoint[];
 }
 
 export interface MailrelayPagination {

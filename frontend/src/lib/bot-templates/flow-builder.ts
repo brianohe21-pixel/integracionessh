@@ -241,7 +241,7 @@ export function httpRequestNode(
   id: string,
   config: {
     url: string;
-    method?: "GET" | "POST" | "PATCH";
+    method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | "OPTIONS";
     body?: string;
     responseVariable?: string;
   },

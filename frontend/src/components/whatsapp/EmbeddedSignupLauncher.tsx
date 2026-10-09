@@ -43,11 +43,6 @@ interface EmbeddedSignupLauncherProps {
   onBusyChange?: (busy: boolean) => void;
 }
 
-interface FBLoginResponse {
-  authResponse?: { code?: string };
-  status?: string;
-}
-
 interface EmbeddedSignupMessage {
   type?: string;
   event?: string;
@@ -82,16 +77,6 @@ function formatMetaSignupError(
       : "";
 
   return reference ? `${message} (${reference})` : message;
-}
-
-declare global {
-  interface Window {
-    FB?: {
-      init: (params: Record<string, unknown>) => void;
-      login: (callback: (response: FBLoginResponse) => void, options: Record<string, unknown>) => void;
-    };
-    fbAsyncInit?: () => void;
-  }
 }
 
 function initFacebookSdk(appId: string) {

@@ -1,136 +1,169 @@
 "use client";
 
-import { useState } from "react";
-import { FileText, Trash2 } from "lucide-react";
-import {
-  useCreateMailrelayTemplate,
-  useDeleteMailrelayTemplate,
-  useMailrelayTemplates,
-} from "@/hooks/useMailrelay";
+import { useMemo, useState } from "react";
+import { ChevronDown, ChevronUp, FileText, LayoutTemplate } from "lucide-react";
+import { useMailrelayTemplates } from "@/hooks/useMailrelay";
 import { useT } from "@/i18n/context";
-import type { MailrelayCampaignInput } from "@/types";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Input } from "@/components/ui/Input";
+import { SearchInput } from "@/components/ui/SearchInput";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { cn } from "@/lib/utils";
 
 interface MailrelayTemplatesPanelProps {
   connected: boolean;
-  draft?: Pick<MailrelayCampaignInput, "name" | "subject" | "previewText" | "html">;
   onApply: (template: {
     name: string;
     subject: string;
     previewText: string;
     html: string;
   }) => void;
+  onOpenTemplates?: () => void;
+  defaultOpen?: boolean;
 }
 
-export function MailrelayTemplatesPanel({ connected, draft, onApply }: MailrelayTemplatesPanelProps) {
+export function MailrelayTemplatesPanel({
+  connected,
+  onApply,
+  onOpenTemplates,
+  defaultOpen = false,
+}: MailrelayTemplatesPanelProps) {
   const t = useT();
   const templatesQuery = useMailrelayTemplates(connected);
-  const createTemplate = useCreateMailrelayTemplate();
-  const deleteTemplate = useDeleteMailrelayTemplate();
-  const [templateName, setTemplateName] = useState("");
-  const [error, setError] = useState("");
-
-  if (!connected) return null;
-  if (templatesQuery.isLoading) return <Skeleton className="h-40 w-full" />;
+  const [open, setOpen] = useState(defaultOpen);
+  const [search, setSearch] = useState("");
 
   const templates = templatesQuery.data?.templates ?? [];
-  const canSave = Boolean(draft?.html.trim() && draft.subject.trim());
+  const filtered = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return templates;
+    return templates.filter(
+      (template) =>
+        template.name.toLowerCase().includes(query) ||
+        template.subject.toLowerCase().includes(query)
+    );
+  }, [search, templates]);
 
-  async function handleSave() {
-    if (!draft || !templateName.trim()) {
-      setError(t("mailrelay.templates.nameRequired"));
-      return;
-    }
-    try {
-      setError("");
-      await createTemplate.mutateAsync({
-        name: templateName.trim(),
-        subject: draft.subject,
-        previewText: draft.previewText,
-        html: draft.html,
-      });
-      setTemplateName("");
-    } catch (cause) {
-      setError((cause as Error).message);
-    }
+  if (!connected) return null;
+  if (templatesQuery.isLoading) return <Skeleton className="h-11 w-full" />;
+  if (templatesQuery.isError) {
+    return <Alert variant="danger">{templatesQuery.error.message}</Alert>;
   }
 
   return (
-    <Card padding="lg" className="space-y-4">
-      <div>
-        <h2 className="font-semibold text-primary">{t("mailrelay.templates.title")}</h2>
-        <p className="mt-1 text-sm text-secondary">{t("mailrelay.templates.description")}</p>
+    <div className="rounded-xl border border-default bg-surface-muted/40">
+      <div className="flex items-center gap-2 px-3 py-2">
+        <button
+          type="button"
+          onClick={() => setOpen((current) => !current)}
+          className="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-1 py-1 text-left transition-colors hover:bg-surface-elevated/80"
+        >
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-muted text-accent">
+            <LayoutTemplate className="h-4 w-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <p className="truncate text-sm font-semibold text-primary">
+                {t("mailrelay.templates.title")}
+              </p>
+              {templates.length > 0 ? (
+                <span className="shrink-0 rounded-full bg-surface-elevated px-2 py-0.5 text-[11px] font-medium text-secondary">
+                  {templates.length}
+                </span>
+              ) : null}
+            </div>
+            <p className="truncate text-xs text-secondary">
+              {templates.length === 0
+                ? t("mailrelay.templates.empty")
+                : t("mailrelay.templates.applyShortHint")}
+            </p>
+          </div>
+          <span
+            className={cn(
+              "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted",
+              open && "bg-surface-elevated"
+            )}
+          >
+            {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </span>
+        </button>
+
+        {onOpenTemplates ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onOpenTemplates}
+            className="shrink-0"
+          >
+            {t("mailrelay.templates.manage")}
+          </Button>
+        ) : null}
       </div>
 
-      {canSave ? (
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="min-w-[200px] flex-1 space-y-2 text-sm font-medium text-primary">
-            <span>{t("mailrelay.templates.saveAs")}</span>
-            <Input
-              value={templateName}
-              onChange={(event) => setTemplateName(event.target.value)}
-              placeholder={t("mailrelay.templates.namePlaceholder")}
+      {open ? (
+        <div className="space-y-3 border-t border-subtle bg-surface-elevated px-3 py-3">
+          {templates.length === 0 ? (
+            <EmptyState
+              icon={<FileText className="h-6 w-6" />}
+              title={t("mailrelay.templates.empty")}
+              description={t("mailrelay.templates.emptyManageDescription")}
             />
-          </label>
-          <Button onClick={() => void handleSave()} disabled={createTemplate.isPending}>
-            {t("mailrelay.templates.save")}
-          </Button>
+          ) : (
+            <>
+              <SearchInput
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                onClear={() => setSearch("")}
+                placeholder={t("mailrelay.templates.searchPlaceholder")}
+              />
+              {filtered.length === 0 ? (
+                <p className="py-3 text-center text-sm text-secondary">
+                  {t("mailrelay.templates.searchEmpty")}
+                </p>
+              ) : (
+                <div className="grid max-h-56 gap-2 overflow-y-auto sm:grid-cols-2 lg:grid-cols-3">
+                  {filtered.map((template) => {
+                    const subjectDiffers =
+                      template.subject.trim() &&
+                      template.subject.trim().toLowerCase() !==
+                        template.name.trim().toLowerCase();
+                    return (
+                      <button
+                        key={template.templateId}
+                        type="button"
+                        onClick={() => {
+                          onApply({
+                            name: template.name,
+                            subject: subjectDiffers ? template.subject : template.name,
+                            previewText: template.previewText ?? "",
+                            html: template.html,
+                          });
+                          setOpen(false);
+                        }}
+                        className="rounded-lg border border-default px-3 py-2.5 text-left transition-colors hover:border-accent/40 hover:bg-accent-muted/20"
+                      >
+                        <p className="truncate text-sm font-medium text-primary">
+                          {template.name}
+                        </p>
+                        {subjectDiffers ? (
+                          <p className="mt-0.5 truncate text-xs text-secondary">
+                            {template.subject}
+                          </p>
+                        ) : (
+                          <p className="mt-0.5 text-xs text-accent">
+                            {t("mailrelay.templates.apply")}
+                          </p>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
         </div>
       ) : null}
-
-      {error ? <Alert variant="danger">{error}</Alert> : null}
-
-      {templates.length === 0 ? (
-        <EmptyState
-          icon={<FileText className="h-6 w-6" />}
-          title={t("mailrelay.templates.empty")}
-          description={t("mailrelay.templates.emptyDescription")}
-        />
-      ) : (
-        <div className="space-y-2">
-          {templates.map((template) => (
-            <div
-              key={template.templateId}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-default p-3"
-            >
-              <div className="min-w-0">
-                <p className="font-medium text-primary">{template.name}</p>
-                <p className="truncate text-sm text-secondary">{template.subject}</p>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() =>
-                    onApply({
-                      name: template.name,
-                      subject: template.subject,
-                      previewText: template.previewText ?? "",
-                      html: template.html,
-                    })
-                  }
-                >
-                  {t("mailrelay.templates.apply")}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => void deleteTemplate.mutateAsync(template.templateId)}
-                  disabled={deleteTemplate.isPending}
-                  aria-label={t("mailrelay.actions.delete")}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </Card>
+    </div>
   );
 }

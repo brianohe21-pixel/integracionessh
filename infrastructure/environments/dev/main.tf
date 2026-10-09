@@ -413,6 +413,7 @@ module "amplify" {
   google_auth_enabled            = local.google_auth_enabled
   meta_app_id                    = var.meta_app_id
   meta_embedded_signup_config_id = var.meta_embedded_signup_config_id
+  meta_instagram_login_config_id = var.meta_instagram_login_config_id
   demo_account_email             = var.demo_account_email
   demo_account_password          = var.demo_account_password
   tags                           = local.tags

@@ -46,7 +46,8 @@ export async function executeHttpRequestNode(
   }
 
   const init: RequestInit = { method, headers };
-  if (method !== "GET" && body) {
+  const methodAllowsBody = method !== "GET" && method !== "HEAD";
+  if (methodAllowsBody && body) {
     if (!headers["Content-Type"] && !headers["content-type"]) {
       headers["Content-Type"] = "application/json";
     }

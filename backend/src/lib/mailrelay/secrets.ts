@@ -20,10 +20,11 @@ export function platformMailrelaySecretId(environment: string): string {
 export function maskMailrelayCredentials(
   credentials: MailrelayCredentials | null
 ): MaskedMailrelayCredentials {
-  if (!credentials) return { configured: false };
+  if (!credentials) return { configured: false, provider: "mailrelay" };
   const suffix = credentials.apiKey.slice(-4);
   return {
     configured: true,
+    provider: "mailrelay",
     apiKey: suffix ? `********${suffix}` : "********",
     webhookToken: "********",
     baseUrl: credentials.baseUrl,

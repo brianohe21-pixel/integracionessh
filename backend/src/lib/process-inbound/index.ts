@@ -60,6 +60,7 @@ import {
   externalMessageIdFromBody,
 } from "./parse.js";
 import { extractInboundReaction, isReactionInboundMessage } from "../whatsapp/inbound.js";
+import { persistInboundWhatsAppMedia } from "../whatsapp/inbound-media.js";
 import {
   handleInboundOrder,
   isOrderInbound,
@@ -89,7 +90,7 @@ async function resolveAccessToken(
     return getWhatsAppAccessToken(tenantId, environment);
   }
   if (channel === "instagram") {
-    return getInstagramAccessToken(tenantId, environment);
+    return getInstagramAccessToken(tenantId, environment, botId);
   }
   if (channel === "telegram" && botId) {
     return getTelegramBotToken(tenantId, botId, environment);
@@ -486,19 +487,59 @@ export async function processInboundMessage(
     }
   }
 
+  let attachmentMetadata: Record<string, unknown> | undefined;
+  if (
+    channel === "whatsapp" &&
+    whatsappPayload &&
+    accessToken &&
+    (inbound.messageType === "image" || inbound.messageType === "audio")
+  ) {
+    const persisted = await persistInboundWhatsAppMedia({
+      tenantId,
+      botId,
+      conversationId: conversation.conversationId,
+      message: whatsappPayload.message,
+      accessToken,
+    }).catch((err) => {
+      console.error(
+        `Failed to persist inbound WhatsApp media messageId=${externalId}:`,
+        err
+      );
+      return null;
+    });
+    if (persisted) {
+      attachmentMetadata = persisted as unknown as Record<string, unknown>;
+    }
+  }
+
+  const messageMetadata: Record<string, unknown> = {
+    ...(inbound.interactive?.responseJson
+      ? { responseJson: inbound.interactive.responseJson }
+      : {}),
+    ...(ctwaMetadata ?? {}),
+    ...(emailMetadata ?? {}),
+    ...(attachmentMetadata ?? {}),
+  };
+
+  let persistedUserContent = userMessageText;
+  if (attachmentMetadata && typeof attachmentMetadata.filename === "string") {
+    if (inbound.messageType === "audio") {
+      persistedUserContent = attachmentMetadata.filename;
+    } else if (inbound.messageType === "image") {
+      const caption = whatsappPayload?.message.image?.caption?.trim();
+      persistedUserContent = caption || attachmentMetadata.filename;
+    }
+  }
+
   const userMessage: Message = {
     messageId: externalId,
     conversationId: conversation.conversationId,
     tenantId,
     role: "user",
-    content: userMessageText,
+    content: persistedUserContent,
     channel,
     messageType: inbound.messageType,
-    ...(inbound.interactive?.responseJson
-      ? { metadata: { responseJson: inbound.interactive.responseJson } }
-      : {}),
-    ...(ctwaMetadata ? { metadata: ctwaMetadata } : {}),
-    ...(emailMetadata ? { metadata: emailMetadata } : {}),
+    ...(Object.keys(messageMetadata).length > 0 ? { metadata: messageMetadata } : {}),
     source,
     externalMessageId: externalId,
     ...(channel === "whatsapp" ? { whatsappMessageId: externalId } : {}),

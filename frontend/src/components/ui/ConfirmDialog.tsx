@@ -81,7 +81,7 @@ export function ConfirmDialog({
             <h2 id="confirm-dialog-title" className="text-lg font-semibold text-primary">
               {title}
             </h2>
-            <p className="text-sm text-secondary leading-relaxed">{description}</p>
+            <div className="text-sm text-secondary leading-relaxed">{description}</div>
           </div>
         </div>
         <div className="flex items-center justify-end gap-3 border-t border-default px-6 py-4">

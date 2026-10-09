@@ -8,6 +8,9 @@ import type {
   MailrelayCampaignInput,
   MailrelayCampaignMetrics,
   MailrelayConfig,
+  MailrelayDeliverabilityCampaign,
+  MailrelayDeliverabilityDailyPoint,
+  MailrelayDeliverabilityReport,
   MailrelayCredentials,
   MailrelayCredentialsInput,
   MailrelayEmailTemplate,
@@ -32,8 +35,9 @@ function normalizeConfig(value: unknown): MailrelayConfig {
   const raw = record(value);
   const defaultGroupIds = Array.isArray(raw.defaultGroupIds) ? raw.defaultGroupIds : [];
   const mappings = Array.isArray(raw.tagGroupMappings) ? raw.tagGroupMappings : [];
+  const provider = raw.provider === "nrs360" ? "nrs360" : "mailrelay";
   return {
-    senderId: String(raw.senderId ?? raw.defaultSenderId ?? ""),
+    senderId: String(raw.senderId ?? raw.defaultSenderId ?? (provider === "nrs360" ? "1" : "")),
     defaultGroupId: String(raw.defaultGroupId ?? defaultGroupIds[0] ?? ""),
     tagGroupMappings: mappings.map((value) => {
       const mapping = record(value);
@@ -47,19 +51,32 @@ function normalizeConfig(value: unknown): MailrelayConfig {
     eventTypes: Array.isArray(raw.eventTypes)
       ? raw.eventTypes.map((eventType) => String(eventType))
       : [],
+    provider,
+    fromEmail: String(raw.fromEmail ?? ""),
+    fromName: String(raw.fromName ?? ""),
+    replyTo: String(raw.replyTo ?? ""),
   };
 }
 
 function configPayload(config: MailrelayConfig) {
   return {
     enabled: config.enabled !== false,
-    defaultSenderId: config.senderId ? Number(config.senderId) : undefined,
+    provider: config.provider ?? "mailrelay",
+    defaultSenderId:
+      config.provider === "nrs360"
+        ? undefined
+        : config.senderId
+          ? Number(config.senderId)
+          : undefined,
     defaultGroupIds: config.defaultGroupId ? [Number(config.defaultGroupId)] : [],
     tagGroupMappings: config.tagGroupMappings.map((mapping) => ({
       tag: mapping.tag,
       groupIds: mapping.groupId ? [Number(mapping.groupId)] : [],
     })),
     eventTypes: config.eventTypes ?? [],
+    ...(config.fromEmail ? { fromEmail: config.fromEmail } : {}),
+    ...(config.fromName !== undefined ? { fromName: config.fromName } : {}),
+    ...(config.replyTo ? { replyTo: config.replyTo } : {}),
   };
 }
 
@@ -88,9 +105,19 @@ function normalizeSync(value: unknown): MailrelaySync {
   };
 }
 
-function ensureUnsubscribeHtml(html: string): string {
-  if (/unsubscribe_url|%UNSUBSCRIBE%/i.test(html)) return html.trim();
-  return `${html.trim()}\n<p style="font-size:12px;color:#666;margin-top:24px;"><a href="{{ unsubscribe_url }}">Unsubscribe</a></p>`;
+function ensureUnsubscribeHtml(html: string, provider: "mailrelay" | "nrs360" = "mailrelay"): string {
+  const trimmed = html.trim();
+  if (provider === "nrs360") {
+    if (/\[unsubscribe_link\]/i.test(trimmed)) return trimmed;
+    if (/unsubscribe_url|%UNSUBSCRIBE%/i.test(trimmed)) {
+      return trimmed
+        .replace(/\{\{\s*unsubscribe_url\s*\}\}/gi, "[unsubscribe_link]")
+        .replace(/%UNSUBSCRIBE%/gi, "[unsubscribe_link]");
+    }
+    return `${trimmed}\n<p style="font-size:12px;color:#666;margin-top:24px;"><a href="[unsubscribe_link]">Unsubscribe</a></p>`;
+  }
+  if (/unsubscribe_url|%UNSUBSCRIBE%/i.test(trimmed)) return trimmed;
+  return `${trimmed}\n<p style="font-size:12px;color:#666;margin-top:24px;"><a href="{{ unsubscribe_url }}">Unsubscribe</a></p>`;
 }
 
 function normalizeCampaign(value: unknown, defaultStatus: MailrelayCampaign["status"] = "draft") {
@@ -132,16 +159,22 @@ function normalizeCampaign(value: unknown, defaultStatus: MailrelayCampaign["sta
   } satisfies MailrelayCampaign;
 }
 
-function campaignPayload(payload: MailrelayCampaignInput) {
+function campaignPayload(
+  payload: MailrelayCampaignInput,
+  provider: "mailrelay" | "nrs360" = "mailrelay"
+) {
   const body: Record<string, unknown> = {
-    sender_id: Number(payload.senderId),
     subject: payload.subject,
+    ...(payload.name ? { name: payload.name } : {}),
     ...(payload.previewText ? { preview_text: payload.previewText } : {}),
-    html: ensureUnsubscribeHtml(payload.html),
+    html: ensureUnsubscribeHtml(payload.html, provider),
     target: payload.target,
     track_opens: payload.trackOpens,
     track_clicks: payload.trackClicks,
   };
+  if (provider !== "nrs360" && payload.senderId) {
+    body.sender_id = Number(payload.senderId);
+  }
 
   if (payload.target === "segment") {
     body.segment_id = Number(payload.segmentId);
@@ -352,17 +385,73 @@ export function useMailrelaySync(syncId: string) {
   });
 }
 
+function countMetric(value: unknown): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
+function normalizeDeliverabilityCounts(
+  value: unknown
+): Omit<MailrelayCampaignMetrics, "campaignId"> {
+  const metrics = record(value);
+  const hardBounces = countMetric(metrics.hardBounces ?? metrics.hardBounced);
+  const softBounces = countMetric(metrics.softBounces ?? metrics.softBounced);
+  const storedBounces = countMetric(metrics.bounces ?? metrics.bounced);
+  const genericSource = metrics.genericBounces ?? metrics.genericBounced;
+  const genericBounces =
+    genericSource == null
+      ? Math.max(0, storedBounces - hardBounces - softBounces)
+      : countMetric(genericSource);
+  return {
+    sent: countMetric(metrics.sent),
+    delivered: countMetric(metrics.delivered),
+    opens: countMetric(metrics.opens ?? metrics.opened),
+    clicks: countMetric(metrics.clicks ?? metrics.clicked),
+    hardBounces,
+    softBounces,
+    genericBounces,
+    bounces: hardBounces + softBounces + genericBounces,
+    unsubscribes: countMetric(metrics.unsubscribes ?? metrics.unsubscribed),
+    complaints: countMetric(metrics.complaints ?? metrics.complained),
+  };
+}
+
 function normalizeMetrics(value: unknown, campaignId: string): MailrelayCampaignMetrics {
   const metrics = record(value);
   return {
     campaignId: String(metrics.campaignId ?? campaignId),
-    sent: Number(metrics.sent ?? 0),
-    delivered: Number(metrics.delivered ?? 0),
-    opens: Number(metrics.opens ?? metrics.opened ?? 0),
-    clicks: Number(metrics.clicks ?? metrics.clicked ?? 0),
-    bounces: Number(metrics.bounces ?? metrics.bounced ?? 0),
-    unsubscribes: Number(metrics.unsubscribes ?? metrics.unsubscribed ?? 0),
-    complaints: Number(metrics.complaints ?? metrics.complained ?? 0),
+    ...normalizeDeliverabilityCounts(value),
+  };
+}
+
+function normalizeDailyPoint(value: unknown): MailrelayDeliverabilityDailyPoint {
+  const point = record(value);
+  return {
+    date: String(point.date ?? ""),
+    ...normalizeDeliverabilityCounts(value),
+  };
+}
+
+function normalizeDeliverabilityCampaign(value: unknown): MailrelayDeliverabilityCampaign {
+  const row = record(value);
+  const daily = Array.isArray(row.daily) ? row.daily : [];
+  return {
+    ...normalizeMetrics(value, String(row.campaignId ?? "")),
+    name: String(row.name ?? ""),
+    daily: daily.map(normalizeDailyPoint),
+  };
+}
+
+function normalizeDeliverabilityReport(value: unknown): MailrelayDeliverabilityReport {
+  const report = record(value);
+  const campaigns = Array.isArray(report.campaigns) ? report.campaigns : [];
+  const daily = Array.isArray(report.daily) ? report.daily : [];
+  return {
+    from: typeof report.from === "string" ? report.from : null,
+    to: typeof report.to === "string" ? report.to : null,
+    totals: normalizeDeliverabilityCounts(report.totals),
+    campaigns: campaigns.map(normalizeDeliverabilityCampaign),
+    daily: daily.map(normalizeDailyPoint),
   };
 }
 
@@ -400,10 +489,16 @@ export function useMailrelayCampaigns(
 export function useCreateMailrelayCampaign() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: MailrelayCampaignInput) => {
+    mutationFn: async ({
+      payload,
+      provider = "mailrelay",
+    }: {
+      payload: MailrelayCampaignInput;
+      provider?: "mailrelay" | "nrs360";
+    }) => {
       const response = await api.post<{ campaign: unknown }>(
         "/email-marketing/campaigns",
-        campaignPayload(payload)
+        campaignPayload(payload, provider)
       );
       return { campaign: normalizeCampaign(response.campaign) };
     },
@@ -429,10 +524,18 @@ export function useMailrelayCampaign(campaignId: string) {
 export function useUpdateMailrelayCampaign() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, payload }: { id: string; payload: MailrelayCampaignInput }) => {
+    mutationFn: async ({
+      id,
+      payload,
+      provider = "mailrelay",
+    }: {
+      id: string;
+      payload: MailrelayCampaignInput;
+      provider?: "mailrelay" | "nrs360";
+    }) => {
       const response = await api.put<{ campaign: unknown }>(
         `/email-marketing/campaigns/${id}`,
-        campaignPayload(payload)
+        campaignPayload(payload, provider)
       );
       return { campaign: normalizeCampaign(response.campaign) };
     },
@@ -508,6 +611,28 @@ export function useMailrelaySentCampaigns(enabled = true) {
   });
 }
 
+export function useMailrelayDeliverability(
+  range: { from: string; to: string } | null,
+  enabled = true
+) {
+  const params = new URLSearchParams();
+  if (range) {
+    params.set("from", range.from);
+    params.set("to", range.to);
+  }
+  const query = params.toString();
+  return useQuery<{ report: MailrelayDeliverabilityReport }>({
+    queryKey: [...key, "deliverability", range?.from ?? "lifetime", range?.to ?? "lifetime"],
+    queryFn: async () => {
+      const response = await api.get<{ report: unknown }>(
+        `/email-marketing/deliverability${query ? `?${query}` : ""}`
+      );
+      return { report: normalizeDeliverabilityReport(response.report) };
+    },
+    enabled,
+  });
+}
+
 export function useMailrelayCampaignMetrics(campaignId: string) {
   return useQuery<{ metrics: MailrelayCampaignMetrics }>({
     queryKey: [...key, "sent-campaigns", campaignId, "metrics"],
@@ -570,13 +695,14 @@ export function useMailrelayTemplates(enabled = true) {
       return {
         templates: response.templates.map((value) => {
           const template = record(value);
+          const name = String(template.name ?? "");
           return {
-            templateId: String(template.templateId ?? ""),
-            name: String(template.name ?? ""),
-            subject: String(template.subject ?? ""),
+            templateId: String(template.templateId ?? template.id ?? ""),
+            name,
+            subject: String(template.subject ?? name),
             html: String(template.html ?? ""),
             createdAt: String(template.createdAt ?? ""),
-            updatedAt: String(template.updatedAt ?? ""),
+            updatedAt: String(template.updatedAt ?? template.createdAt ?? ""),
             ...(template.previewText ? { previewText: String(template.previewText) } : {}),
           };
         }),
@@ -591,6 +717,27 @@ export function useCreateMailrelayTemplate() {
   return useMutation({
     mutationFn: (payload: Pick<MailrelayEmailTemplate, "name" | "subject" | "previewText" | "html">) =>
       api.post<{ template: MailrelayEmailTemplate }>("/email-marketing/templates", payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: [...key, "templates"] });
+      void queryClient.invalidateQueries({ queryKey: [...key, "overview"] });
+    },
+  });
+}
+
+export function useUpdateMailrelayTemplate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      templateId,
+      payload,
+    }: {
+      templateId: string;
+      payload: Pick<MailrelayEmailTemplate, "name" | "subject" | "previewText" | "html">;
+    }) =>
+      api.put<{ template: MailrelayEmailTemplate }>(
+        `/email-marketing/templates/${templateId}`,
+        payload
+      ),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: [...key, "templates"] });
       void queryClient.invalidateQueries({ queryKey: [...key, "overview"] });

@@ -90,7 +90,7 @@ async function resolveAccessTokenForChannel(
   accountId?: string
 ): Promise<string | undefined> {
   if (channel === "instagram") {
-    return getInstagramAccessToken(tenantId, ENVIRONMENT);
+    return getInstagramAccessToken(tenantId, ENVIRONMENT, botId);
   }
   if (channel === "whatsapp") {
     if (accountId) {
@@ -877,7 +877,7 @@ export async function handler(
 
       const now = new Date().toISOString();
       const externalMessageId = result.messages?.[0]?.id;
-      const content = await resolveWhatsAppTemplateDisplayContent({
+      const resolved = await resolveWhatsAppTemplateDisplayContent({
         tenantId: auth.tenantId,
         botId: parsed.data.botId,
         templateName: parsed.data.templateName,
@@ -889,7 +889,7 @@ export async function handler(
         conversationId,
         tenantId: auth.tenantId,
         role: "advisor",
-        content,
+        content: resolved.content,
         channel: "whatsapp",
         messageType: "text",
         source: "panel",
@@ -897,6 +897,7 @@ export async function handler(
           kind: "whatsapp_template",
           templateName: parsed.data.templateName,
           language: parsed.data.language,
+          display: resolved.display,
           ...(parsed.data.components ? { components: parsed.data.components } : {}),
         },
         ...(sentByAdvisorId ? { sentByAdvisorId } : {}),
@@ -945,7 +946,7 @@ export async function handler(
       if (!bot) return notFound("Bot not found");
 
       const channel = conversation.channel ?? "whatsapp";
-      if (channel === "whatsapp") {
+      if (channel === "whatsapp" || channel === "instagram" || channel === "messenger") {
         if (!isCustomerServiceWindowOpen(conversation)) {
           const recentMessages = await getConversationMessages(auth.tenantId, conversationId, 50);
           const latestInboundAt = resolveLastInboundAtFromMessages(recentMessages);

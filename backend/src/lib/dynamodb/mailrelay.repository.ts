@@ -8,6 +8,8 @@ import {
   UpdateCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { docClient, TABLE_NAME } from "./client.js";
+import { normalizeStoredMailrelayMetrics } from "../mailrelay/deliverability.js";
+import type { MailrelayMetricField } from "../mailrelay/webhook.js";
 import type {
   MailrelayCampaignMetrics,
   MailrelayCampaignRecord,
@@ -86,7 +88,11 @@ export async function saveMailrelayConfig(
   data: Pick<
     MailrelayConfig,
     | "enabled"
+    | "provider"
     | "defaultSenderId"
+    | "fromEmail"
+    | "fromName"
+    | "replyTo"
     | "tagGroupMappings"
     | "defaultGroupIds"
     | "eventTypes"
@@ -95,10 +101,31 @@ export async function saveMailrelayConfig(
 ): Promise<MailrelayConfig> {
   const existing = await getMailrelayConfig(tenantId);
   const now = new Date().toISOString();
+  const provider = data.provider ?? existing?.provider ?? "mailrelay";
   const config: MailrelayConfig = {
     tenantId,
     enabled: data.enabled,
-    ...(data.defaultSenderId !== undefined ? { defaultSenderId: data.defaultSenderId } : {}),
+    provider,
+    ...(data.defaultSenderId !== undefined
+      ? { defaultSenderId: data.defaultSenderId }
+      : existing?.defaultSenderId !== undefined
+        ? { defaultSenderId: existing.defaultSenderId }
+        : {}),
+    ...(data.fromEmail !== undefined
+      ? { fromEmail: data.fromEmail }
+      : existing?.fromEmail !== undefined
+        ? { fromEmail: existing.fromEmail }
+        : {}),
+    ...(data.fromName !== undefined
+      ? { fromName: data.fromName }
+      : existing?.fromName !== undefined
+        ? { fromName: existing.fromName }
+        : {}),
+    ...(data.replyTo !== undefined
+      ? { replyTo: data.replyTo }
+      : existing?.replyTo !== undefined
+        ? { replyTo: existing.replyTo }
+        : {}),
     tagGroupMappings: data.tagGroupMappings,
     defaultGroupIds: data.defaultGroupIds,
     eventTypes: data.eventTypes,
@@ -414,6 +441,16 @@ export async function getMailrelaySubscriberByEmail(
   return result.Item ? strip<MailrelaySubscriberLink>(result.Item) : null;
 }
 
+export async function getMailrelayCampaignRecord(
+  tenantId: string,
+  campaignId: number
+): Promise<MailrelayCampaignRecord | null> {
+  const result = await docClient.send(
+    new GetCommand({ TableName: TABLE_NAME, Key: campaignKey(tenantId, campaignId) })
+  );
+  return result.Item ? strip<MailrelayCampaignRecord>(result.Item) : null;
+}
+
 export async function saveMailrelayCampaignSnapshot(
   tenantId: string,
   remote: Record<string, unknown>
@@ -453,6 +490,18 @@ export async function saveMailrelayCampaignSnapshot(
   return record;
 }
 
+export async function deleteMailrelayCampaignRecord(
+  tenantId: string,
+  campaignId: number
+): Promise<void> {
+  await docClient.send(
+    new DeleteCommand({ TableName: TABLE_NAME, Key: campaignKey(tenantId, campaignId) })
+  );
+  await docClient.send(
+    new DeleteCommand({ TableName: TABLE_NAME, Key: globalMailrelayCampaignKey(campaignId) })
+  );
+}
+
 export async function getMailrelayCampaignMetrics(
   tenantId: string,
   campaignId: number
@@ -460,36 +509,36 @@ export async function getMailrelayCampaignMetrics(
   const result = await docClient.send(
     new GetCommand({ TableName: TABLE_NAME, Key: metricsKey(tenantId, campaignId) })
   );
-  if (result.Item) return strip<MailrelayCampaignMetrics>(result.Item);
-  return {
+  if (result.Item) {
+    return normalizeStoredMailrelayMetrics(strip<MailrelayCampaignMetrics>(result.Item));
+  }
+  return normalizeStoredMailrelayMetrics({
     tenantId,
     campaignId,
-    sent: 0,
-    delivered: 0,
-    opened: 0,
-    clicked: 0,
-    bounced: 0,
-    unsubscribed: 0,
-    complained: 0,
     updatedAt: new Date().toISOString(),
-  };
+  });
 }
 
-export async function incrementMailrelayCampaignMetric(
+export async function incrementMailrelayCampaignMetrics(
   tenantId: string,
   campaignId: number,
-  metric: keyof Pick<
-    MailrelayCampaignMetrics,
-    "sent" | "delivered" | "opened" | "clicked" | "bounced" | "unsubscribed" | "complained"
-  >
+  metrics: MailrelayMetricField[]
 ): Promise<void> {
+  const fields = [...new Set(metrics)];
+  if (fields.length === 0) return;
+  const names: Record<string, string> = {};
+  const adds = fields.map((field, index) => {
+    const token = `#metric${index}`;
+    names[token] = field;
+    return `${token} :one`;
+  });
   await docClient.send(
     new UpdateCommand({
       TableName: TABLE_NAME,
       Key: metricsKey(tenantId, campaignId),
       UpdateExpression:
-        "SET entityType = :type, tenantId = :tenantId, campaignId = :campaignId, updatedAt = :now ADD #metric :one",
-      ExpressionAttributeNames: { "#metric": metric },
+        `SET entityType = :type, tenantId = :tenantId, campaignId = :campaignId, updatedAt = :now ADD ${adds.join(", ")}`,
+      ExpressionAttributeNames: names,
       ExpressionAttributeValues: {
         ":type": "MailrelayCampaignMetrics",
         ":tenantId": tenantId,
@@ -549,6 +598,60 @@ export async function listMailrelayEvents(
   return events.slice(0, limit);
 }
 
+export async function listMailrelayEventsInRange(
+  tenantId: string,
+  from: string,
+  to: string
+): Promise<MailrelayEvent[]> {
+  const events: MailrelayEvent[] = [];
+  let lastKey: Record<string, unknown> | undefined;
+  do {
+    const result = await docClient.send(
+      new QueryCommand({
+        TableName: TABLE_NAME,
+        IndexName: "GSI1",
+        KeyConditionExpression: "GSI1PK = :pk AND GSI1SK BETWEEN :from AND :to",
+        ExpressionAttributeValues: {
+          ":pk": `${tenantPk(tenantId)}#MAILRELAY_EVENTS`,
+          ":from": `${from}T00:00:00.000Z`,
+          ":to": `${to}T23:59:59.999Z#\uffff`,
+        },
+        ExclusiveStartKey: lastKey,
+      })
+    );
+    for (const item of result.Items ?? []) {
+      events.push(strip<MailrelayEvent>(item));
+    }
+    lastKey = result.LastEvaluatedKey;
+  } while (lastKey);
+  return events;
+}
+
+export async function listMailrelayCampaignRecords(
+  tenantId: string
+): Promise<MailrelayCampaignRecord[]> {
+  const records: MailrelayCampaignRecord[] = [];
+  let lastKey: Record<string, unknown> | undefined;
+  do {
+    const result = await docClient.send(
+      new QueryCommand({
+        TableName: TABLE_NAME,
+        KeyConditionExpression: "PK = :pk AND begins_with(SK, :prefix)",
+        ExpressionAttributeValues: {
+          ":pk": tenantPk(tenantId),
+          ":prefix": "MAILRELAY#CAMPAIGN#",
+        },
+        ExclusiveStartKey: lastKey,
+      })
+    );
+    for (const item of result.Items ?? []) {
+      records.push(strip<MailrelayCampaignRecord>(item));
+    }
+    lastKey = result.LastEvaluatedKey;
+  } while (lastKey);
+  return records;
+}
+
 export async function listMailrelayCampaignMetrics(
   tenantId: string
 ): Promise<MailrelayCampaignMetrics[]> {
@@ -562,7 +665,9 @@ export async function listMailrelayCampaignMetrics(
       },
     })
   );
-  return (result.Items ?? []).map((item) => strip<MailrelayCampaignMetrics>(item));
+  return (result.Items ?? []).map((item) =>
+    normalizeStoredMailrelayMetrics(strip<MailrelayCampaignMetrics>(item))
+  );
 }
 
 export async function listMailrelayEmailTemplates(

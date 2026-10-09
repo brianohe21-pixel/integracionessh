@@ -37,6 +37,11 @@ import type { OutreachChannel, WhatsAppTemplate, TemplateComponent, SmsTemplate 
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 
+function zodErrorMessage(error: z.ZodError): string {
+  const messages = error.issues.map((issue) => issue.message).filter(Boolean);
+  return messages.length > 0 ? messages.join("; ") : error.message;
+}
+
 const ComponentSchema = z
   .object({
     type: z.enum(["HEADER", "BODY", "FOOTER", "BUTTONS"]),
@@ -334,7 +339,7 @@ export async function handler(
     if (method === "POST" && isSendRoute && templateName) {
       const body = JSON.parse(event.body ?? "{}") as Record<string, unknown>;
       const parsed = SendTemplateSchema.safeParse(body);
-      if (!parsed.success) return badRequest(parsed.error.message);
+      if (!parsed.success) return badRequest(zodErrorMessage(parsed.error));
 
       const { botId, to, language, components, requestDlr } = parsed.data;
       const channel = parseChannel(params, body);
@@ -383,7 +388,7 @@ export async function handler(
 
       if (body.channel === "sms") {
         const parsed = CreateSmsTemplateSchema.safeParse(body);
-        if (!parsed.success) return badRequest(parsed.error.message);
+        if (!parsed.success) return badRequest(zodErrorMessage(parsed.error));
 
         const { botId, name, language, category, body: smsBody } = parsed.data;
         const bot = await getBot(auth.tenantId, botId);
@@ -412,7 +417,7 @@ export async function handler(
       }
 
       const parsed = CreateTemplateSchema.safeParse(body);
-      if (!parsed.success) return badRequest(parsed.error.message);
+      if (!parsed.success) return badRequest(zodErrorMessage(parsed.error));
 
       const { botId, name, language, category } = parsed.data;
       const comps = parsed.data.components as TemplateComponent[];
@@ -466,7 +471,7 @@ export async function handler(
 
       if (parseChannel(params, body) === "sms") {
         const parsed = UpdateSmsTemplateSchema.safeParse(body);
-        if (!parsed.success) return badRequest(parsed.error.message);
+        if (!parsed.success) return badRequest(zodErrorMessage(parsed.error));
 
         const language = params.language ?? "es";
         const existing = await getSmsTemplate(
@@ -487,7 +492,7 @@ export async function handler(
       }
 
       const parsed = UpdateTemplateSchema.safeParse(body);
-      if (!parsed.success) return badRequest(parsed.error.message);
+      if (!parsed.success) return badRequest(zodErrorMessage(parsed.error));
 
       const { botId } = parsed.data;
       const comps = parsed.data.components as TemplateComponent[];

@@ -8,14 +8,18 @@ import { assertTenantManagerRole, resolveRequestAuth } from "../../lib/auth/cogn
 import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import {
   createMailrelaySyncJob,
+  deleteMailrelayCampaignRecord,
   deleteMailrelayEmailTemplate,
   getMailrelayCampaignMetrics,
+  getMailrelayCampaignRecord,
   getMailrelayConfig,
   getMailrelayEmailTemplate,
   getMailrelaySyncJob,
   listMailrelayCampaignMetrics,
+  listMailrelayCampaignRecords,
   listMailrelayEmailTemplates,
   listMailrelayEvents,
+  listMailrelayEventsInRange,
   listMailrelaySyncJobs,
   saveMailrelayCampaignSnapshot,
   saveMailrelayConfig,
@@ -32,6 +36,12 @@ import {
   parseJsonBody,
 } from "../../lib/http.js";
 import { buildMailrelaySendPayload, ensureMailrelayCampaignHtml } from "../../lib/mailrelay/campaign.js";
+import {
+  buildMailrelayDeliverabilityFromMetrics,
+  buildMailrelayDeliverabilityReport,
+  mailrelayCampaignDisplayName,
+  parseMailrelayDeliverabilityRange,
+} from "../../lib/mailrelay/deliverability.js";
 import { createMailrelayClient, type MailrelayClient } from "../../lib/mailrelay/client.js";
 import {
   getMailrelayCredentials,
@@ -42,7 +52,23 @@ import {
   ensureMailrelayEventSubscription,
 } from "../../lib/mailrelay/subscription.js";
 import { enqueueMailrelaySync } from "../../lib/mailrelay/sync-queue.js";
+import { ensureNrs360CampaignHtml, metricsFromNrs360Campaign } from "../../lib/nrs360/campaign.js";
+import { formatNrs360ScheduleDate, type Nrs360Client } from "../../lib/nrs360/client.js";
+import {
+  createAuthenticatedNrs360Client,
+  getMaskedEmailMarketingCredentials,
+  requireNrs360Sender,
+  resolveProvider,
+} from "../../lib/nrs360/provider.js";
+import {
+  deleteNrs360Credentials,
+  getNrs360Credentials,
+  maskNrs360Credentials,
+  saveNrs360Credentials,
+} from "../../lib/nrs360/secrets.js";
+import { mapNrs360Template, mapNrs360Templates } from "../../lib/nrs360/templates.js";
 import type {
+  EmailMarketingProvider,
   MailrelayConfig,
   MailrelayGroup,
   MailrelayOverview,
@@ -55,7 +81,11 @@ const SYNC_QUEUE_URL = process.env.MAILRELAY_SYNC_QUEUE_URL ?? "";
 
 const ConfigSchema = z.object({
   enabled: z.boolean(),
+  provider: z.enum(["mailrelay", "nrs360"]).optional(),
   defaultSenderId: z.number().int().positive().optional(),
+  fromEmail: z.string().email().optional(),
+  fromName: z.string().max(128).optional(),
+  replyTo: z.string().email().optional(),
   defaultGroupIds: z.array(z.number().int().positive()).max(100).default([]),
   tagGroupMappings: z
     .array(
@@ -68,9 +98,15 @@ const ConfigSchema = z.object({
     .default([]),
 });
 
+const CredentialsSchema = z.object({
+  username: z.string().trim().min(1).max(200),
+  apiPassword: z.string().trim().min(1).max(500),
+  baseUrl: z.string().trim().max(500).optional(),
+});
+
 const CampaignSchema = z
   .object({
-    sender_id: z.number().int().positive(),
+    sender_id: z.number().int().positive().optional(),
     subject: z.string().min(1).max(500),
     preview_text: z.string().max(500).optional(),
     html: z.string().min(1),
@@ -84,6 +120,7 @@ const CampaignSchema = z
     reply_to: z.string().email().optional(),
     track_opens: z.boolean().optional(),
     track_clicks: z.boolean().optional(),
+    name: z.string().max(200).optional(),
   })
   .passthrough();
 
@@ -116,6 +153,7 @@ function defaultConfig(tenantId: string): MailrelayConfig {
   return {
     tenantId,
     enabled: true,
+    provider: "mailrelay",
     defaultGroupIds: [],
     tagGroupMappings: [],
     eventTypes: configuredMailrelayEventTypes(),
@@ -141,7 +179,15 @@ function positiveId(value: string | undefined): number | null {
   return Number.isInteger(id) && id > 0 ? id : null;
 }
 
-async function authenticatedClient(): Promise<{
+function nextLocalCampaignId(): number {
+  return Date.now();
+}
+
+async function loadTenantConfig(tenantId: string): Promise<MailrelayConfig> {
+  return (await getMailrelayConfig(tenantId)) ?? defaultConfig(tenantId);
+}
+
+async function authenticatedMailrelayClient(): Promise<{
   client: MailrelayClient;
   credentials: NonNullable<Awaited<ReturnType<typeof getMailrelayCredentials>>>;
 }> {
@@ -155,7 +201,7 @@ async function authenticatedClient(): Promise<{
 }
 
 async function registerPlatformSubscription(): Promise<void> {
-  const { client, credentials } = await authenticatedClient();
+  const { client, credentials } = await authenticatedMailrelayClient();
   await ensureMailrelayEventSubscription({ credentials, client });
 }
 
@@ -200,15 +246,123 @@ async function buildMailrelayOverview(
   };
 }
 
-async function handleTemplateRoutes(
+async function buildNrs360Overview(
+  tenantId: string,
+  client: Nrs360Client
+): Promise<MailrelayOverview> {
+  const [groups, syncJobs, localCampaigns, remoteCampaigns, templates] = await Promise.all([
+    client.listGroups(),
+    listMailrelaySyncJobs(tenantId, 1),
+    listMailrelayCampaignRecords(tenantId),
+    client.listMailingCampaigns(),
+    client.listV2Templates(),
+  ]);
+  const draftCampaigns = localCampaigns.filter(
+    (record) => String(record.status ?? record.remote.status ?? "draft") === "draft"
+  ).length;
+  let openedTotal = 0;
+  let clickedTotal = 0;
+  let deliveredTotal = 0;
+  for (const campaign of remoteCampaigns) {
+    const metrics = metricsFromNrs360Campaign(campaign);
+    openedTotal += metrics.opened;
+    clickedTotal += metrics.clicked;
+    deliveredTotal += metrics.delivered;
+  }
+  const lastSync = syncJobs[0];
+  return {
+    subscriberCount: groups.length,
+    draftCampaigns,
+    sentCampaigns: remoteCampaigns.length,
+    templateCount: templates.length,
+    averageOpenRate: deliveredTotal > 0 ? openedTotal / deliveredTotal : 0,
+    averageClickRate: deliveredTotal > 0 ? clickedTotal / deliveredTotal : 0,
+    ...(lastSync?.createdAt ? { lastSyncAt: lastSync.createdAt } : {}),
+    ...(lastSync?.status ? { lastSyncStatus: lastSync.status } : {}),
+  };
+}
+
+async function handleNrs360TemplateRoutes(
   method: string,
   segments: string[],
   tenantId: string,
   event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): Promise<APIGatewayProxyResultV2 | null> {
   if (segments[0] !== "templates") return null;
+  const { client } = await createAuthenticatedNrs360Client(ENVIRONMENT, tenantId);
   const templateId = segments[1];
 
+  if (method === "GET" && !templateId) {
+    const remote = await client.listV2TemplatesWithHtml();
+    return ok({ templates: mapNrs360Templates(remote) });
+  }
+  if (method === "POST" && !templateId) {
+    const body = TemplateSchema.parse(parseJsonBody(event));
+    const remote = await client.createV2Template({
+      name: body.name,
+      html: ensureNrs360CampaignHtml(body.html),
+    });
+    const template = mapNrs360Template(remote);
+    if (!template) return badRequest("Invalid template response from 360nrs");
+    return created({
+      template: {
+        ...template,
+        subject: body.subject || template.subject,
+        ...(body.previewText ? { previewText: body.previewText } : {}),
+      },
+    });
+  }
+  if (!templateId) return badRequest("Invalid template id");
+  const remoteId = Number(templateId);
+  if (!Number.isInteger(remoteId) || remoteId <= 0) {
+    return badRequest("Invalid template id");
+  }
+
+  if (method === "GET") {
+    const remote = await client.getV2Template(remoteId);
+    const template = mapNrs360Template(remote);
+    return template ? ok({ template }) : notFound("Template not found");
+  }
+  if (method === "PUT" || method === "PATCH") {
+    const existing = mapNrs360Template(await client.getV2Template(remoteId));
+    if (!existing) return notFound("Template not found");
+    const body = UpdateTemplateSchema.parse(parseJsonBody(event));
+    const remote = await client.updateV2Template(remoteId, {
+      name: body.name ?? existing.name,
+      html: ensureNrs360CampaignHtml(body.html ?? existing.html),
+    });
+    const template = mapNrs360Template(remote);
+    if (!template) return badRequest("Invalid template response from 360nrs");
+    return ok({
+      template: {
+        ...template,
+        subject: body.subject ?? existing.subject,
+        ...(body.previewText || existing.previewText
+          ? { previewText: body.previewText ?? existing.previewText }
+          : {}),
+      },
+    });
+  }
+  if (method === "DELETE") {
+    await client.deleteV2Template(remoteId);
+    return ok({ template: { templateId, deleted: true } });
+  }
+  return badRequest("Not found");
+}
+
+async function handleTemplateRoutes(
+  method: string,
+  segments: string[],
+  tenantId: string,
+  event: APIGatewayProxyEventV2WithJWTAuthorizer,
+  provider: EmailMarketingProvider
+): Promise<APIGatewayProxyResultV2 | null> {
+  if (segments[0] !== "templates") return null;
+  if (provider === "nrs360") {
+    return handleNrs360TemplateRoutes(method, segments, tenantId, event);
+  }
+
+  const templateId = segments[1];
   if (method === "GET" && !templateId) {
     const templates = await listMailrelayEmailTemplates(tenantId);
     return ok({ templates });
@@ -257,7 +411,181 @@ function resourceSegments(event: APIGatewayProxyEventV2WithJWTAuthorizer): strin
   return index >= 0 ? segments.slice(index + 1) : segments;
 }
 
-async function handleCampaignRoutes(
+function localCampaignPayload(
+  body: z.infer<typeof CampaignSchema>,
+  config: MailrelayConfig,
+  id: number,
+  status = "draft"
+): Record<string, unknown> {
+  const sender = requireNrs360Sender(config);
+  const now = new Date().toISOString();
+  return {
+    id,
+    name: body.name?.trim() || body.subject,
+    subject: body.subject,
+    preview_text: body.preview_text ?? "",
+    html: ensureNrs360CampaignHtml(body.html),
+    target: body.target,
+    group_ids: body.group_ids ?? [],
+    reply_to: body.reply_to ?? sender.replyTo,
+    fromEmail: sender.fromEmail,
+    fromName: sender.fromName ?? "",
+    track_opens: body.track_opens ?? true,
+    track_clicks: body.track_clicks ?? true,
+    status,
+    created_at: now,
+    updated_at: now,
+  };
+}
+
+async function handleNrs360CampaignRoutes(
+  method: string,
+  segments: string[],
+  tenantId: string,
+  event: APIGatewayProxyEventV2WithJWTAuthorizer,
+  config: MailrelayConfig
+): Promise<APIGatewayProxyResultV2 | null> {
+  if (segments[0] !== "campaigns") return null;
+  const id = positiveId(segments[1]);
+  const { client } = await createAuthenticatedNrs360Client(ENVIRONMENT, tenantId);
+
+  if (method === "GET" && !id) {
+    const records = await listMailrelayCampaignRecords(tenantId);
+    const campaigns = records
+      .map((record) => ({
+        id: record.campaignId,
+        ...record.remote,
+        status: record.status ?? record.remote.status ?? "draft",
+        subject: record.subject ?? record.remote.subject,
+      }))
+      .sort((a, b) => Number(b.id) - Number(a.id));
+    const page = Number(event.queryStringParameters?.page ?? 1);
+    const perPage = Number(event.queryStringParameters?.per_page ?? 100);
+    const start = (page - 1) * perPage;
+    const items = campaigns.slice(start, start + perPage);
+    return ok({
+      campaigns: items,
+      pagination: {
+        items,
+        page,
+        perPage,
+        hasMore: start + perPage < campaigns.length,
+        totalPages: Math.max(1, Math.ceil(campaigns.length / perPage)),
+      },
+    });
+  }
+
+  if (method === "POST" && !id) {
+    const body = CampaignSchema.parse(parseJsonBody(event));
+    if (body.target !== "groups" || !body.group_ids?.length) {
+      return badRequest("360nrs campaigns require at least one audience group");
+    }
+    const campaignId = nextLocalCampaignId();
+    const campaign = localCampaignPayload(body, config, campaignId);
+    await saveMailrelayCampaignSnapshot(tenantId, campaign);
+    return created({ campaign });
+  }
+
+  if (!id) return badRequest("Invalid campaign id");
+  const existing = await getMailrelayCampaignRecord(tenantId, id);
+  if (!existing) return notFound("Campaign not found");
+
+  if (method === "GET" && segments.length === 2) {
+    return ok({
+      campaign: {
+        id,
+        ...existing.remote,
+        status: existing.status ?? existing.remote.status ?? "draft",
+      },
+    });
+  }
+
+  if ((method === "PUT" || method === "PATCH") && segments.length === 2) {
+    const body = UpdateCampaignSchema.parse(parseJsonBody(event));
+    const merged = {
+      ...existing.remote,
+      ...body,
+      id,
+      html:
+        body.html !== undefined
+          ? ensureNrs360CampaignHtml(body.html)
+          : String(existing.remote.html ?? ""),
+      updated_at: new Date().toISOString(),
+    };
+    await saveMailrelayCampaignSnapshot(tenantId, merged);
+    return ok({ campaign: merged });
+  }
+
+  if (method === "DELETE" && segments.length === 2) {
+    await deleteMailrelayCampaignRecord(tenantId, id);
+    return ok({ campaign: { id, deleted: true } });
+  }
+
+  if (method === "POST" && segments[2] === "send-test") {
+    const body = SendTestSchema.parse(parseJsonBody(event));
+    const sender = requireNrs360Sender(config);
+    const remote = existing.remote;
+    await client.sendMailing({
+      to: body.emails,
+      fromEmail: sender.fromEmail,
+      replyTo: String(remote.reply_to ?? sender.replyTo),
+      subject: String(remote.subject ?? "Test"),
+      body: ensureNrs360CampaignHtml(String(remote.html ?? "")),
+      campaignName: `TEST_${String(remote.name ?? remote.subject ?? id).slice(0, 40)}`,
+      trackOpens: Boolean(remote.track_opens ?? true),
+      trackClicks: Boolean(remote.track_clicks ?? true),
+      ...(sender.fromName ? { fromName: sender.fromName } : {}),
+    });
+    return ok({ campaign: { id, testSent: true } });
+  }
+
+  if (method === "POST" && segments[2] === "send") {
+    const override = SendCampaignSchema.parse(parseJsonBody(event)) ?? {};
+    const sender = requireNrs360Sender(config);
+    const remote = existing.remote;
+    const groupIds =
+      override.group_ids ??
+      (Array.isArray(remote.group_ids)
+        ? remote.group_ids.map(Number).filter((value) => Number.isInteger(value) && value > 0)
+        : []);
+    if (groupIds.length === 0) {
+      return badRequest("Campaign audience groups are missing");
+    }
+    const recipients = await client.listGroupEmails(groupIds);
+    if (recipients.length === 0) {
+      return badRequest("No contacts found in the selected groups");
+    }
+    const result = await client.sendMailing({
+      to: recipients,
+      fromEmail: sender.fromEmail,
+      replyTo: String(remote.reply_to ?? sender.replyTo),
+      subject: String(remote.subject ?? ""),
+      body: ensureNrs360CampaignHtml(String(remote.html ?? "")),
+      campaignName: String(remote.name ?? remote.subject ?? `campaign_${id}`).slice(0, 80),
+      trackOpens: Boolean(remote.track_opens ?? true),
+      trackClicks: Boolean(remote.track_clicks ?? true),
+      ...(sender.fromName ? { fromName: sender.fromName } : {}),
+      ...(override.scheduled_at
+        ? { scheduleDate: formatNrs360ScheduleDate(override.scheduled_at) }
+        : {}),
+    });
+    const campaign = {
+      ...remote,
+      id,
+      status: override.scheduled_at ? "sending" : "sent",
+      sent_at: new Date().toISOString(),
+      nrsCampaignId: result.campaignId,
+      nrsSendingId: result.sendingId,
+      messageIds: result.messageIds,
+    };
+    await saveMailrelayCampaignSnapshot(tenantId, campaign);
+    return accepted({ campaign });
+  }
+
+  return badRequest("Not found");
+}
+
+async function handleMailrelayCampaignRoutes(
   method: string,
   segments: string[],
   tenantId: string,
@@ -265,7 +593,7 @@ async function handleCampaignRoutes(
 ): Promise<APIGatewayProxyResultV2 | null> {
   if (segments[0] !== "campaigns") return null;
   const id = positiveId(segments[1]);
-  const { client } = await authenticatedClient();
+  const { client } = await authenticatedMailrelayClient();
 
   if (method === "GET" && !id) {
     const page = await client.page<Record<string, unknown>>("/campaigns", {
@@ -276,6 +604,7 @@ async function handleCampaignRoutes(
   }
   if (method === "POST" && !id) {
     const body = CampaignSchema.parse(parseJsonBody(event));
+    if (!body.sender_id) return badRequest("sender_id is required");
     const campaign = remoteRecord(
       await client.request("POST", "/campaigns", {
         body: { ...body, html: ensureMailrelayCampaignHtml(body.html) },
@@ -339,10 +668,54 @@ async function handleSentCampaignRoutes(
   method: string,
   segments: string[],
   tenantId: string,
-  event: APIGatewayProxyEventV2WithJWTAuthorizer
+  event: APIGatewayProxyEventV2WithJWTAuthorizer,
+  provider: EmailMarketingProvider
 ): Promise<APIGatewayProxyResultV2 | null> {
   if (segments[0] !== "sent-campaigns" || method !== "GET") return null;
-  const { client } = await authenticatedClient();
+
+  if (provider === "nrs360") {
+    const { client } = await createAuthenticatedNrs360Client(ENVIRONMENT, tenantId);
+    const id = positiveId(segments[1]);
+    const campaigns = await client.listMailingCampaigns();
+    if (!id) {
+      return ok({
+        campaigns,
+        pagination: {
+          items: campaigns,
+          page: 1,
+          perPage: campaigns.length || 100,
+          hasMore: false,
+          totalPages: 1,
+        },
+      });
+    }
+    const campaign = campaigns.find((item) => Number(item.id) === id);
+    if (!campaign) return notFound("Campaign not found");
+    if (segments[2] === "metrics") {
+      const values = metricsFromNrs360Campaign(campaign);
+      return ok({
+        metrics: {
+          tenantId,
+          campaignId: id,
+          ...values,
+          genericBounced: 0,
+          updatedAt: new Date().toISOString(),
+        },
+      });
+    }
+    return ok({
+      campaign,
+      metrics: {
+        tenantId,
+        campaignId: id,
+        ...metricsFromNrs360Campaign(campaign),
+        genericBounced: 0,
+        updatedAt: new Date().toISOString(),
+      },
+    });
+  }
+
+  const { client } = await authenticatedMailrelayClient();
   const id = positiveId(segments[1]);
   if (!id) {
     const page = await client.page<Record<string, unknown>>("/sent_campaigns", {
@@ -369,69 +742,202 @@ export async function handler(
     await assertAssignedServices(auth.tenantId, "emailMarketing");
     const method = event.requestContext.http.method;
     const segments = resourceSegments(event);
+    const config = await loadTenantConfig(auth.tenantId);
+    const provider = resolveProvider(config);
 
-    if (segments[0] === "credentials" && method === "GET") {
-      const credentials = await getMailrelayCredentials(ENVIRONMENT);
-      return ok({ credentials: maskMailrelayCredentials(credentials) });
+    if (segments[0] === "credentials") {
+      if (method === "GET") {
+        const credentials = await getMaskedEmailMarketingCredentials({
+          environment: ENVIRONMENT,
+          tenantId: auth.tenantId,
+          provider,
+        });
+        return ok({ credentials, provider });
+      }
+      if (method === "PUT") {
+        if (provider !== "nrs360") {
+          return badRequest("Only 360nrs credentials can be saved per tenant");
+        }
+        const body = CredentialsSchema.parse(parseJsonBody(event));
+        const saved = await saveNrs360Credentials(ENVIRONMENT, auth.tenantId, {
+          username: body.username,
+          apiPassword: body.apiPassword,
+          ...(body.baseUrl ? { baseUrl: body.baseUrl } : {}),
+        });
+        return ok({ credentials: maskNrs360Credentials(saved), provider });
+      }
+      if (method === "DELETE") {
+        if (provider !== "nrs360") {
+          return badRequest("Only 360nrs credentials can be deleted per tenant");
+        }
+        await deleteNrs360Credentials(ENVIRONMENT, auth.tenantId);
+        return ok({ credentials: maskNrs360Credentials(null), provider });
+      }
     }
 
     if (segments[0] === "test" && method === "POST") {
-      const { client, credentials } = await authenticatedClient();
+      if (provider === "nrs360") {
+        const { client, credentials } = await createAuthenticatedNrs360Client(
+          ENVIRONMENT,
+          auth.tenantId
+        );
+        const ping = await client.ping();
+        return ok({
+          success: true,
+          ping,
+          credentials: maskNrs360Credentials(credentials),
+          provider,
+        });
+      }
+      const { client, credentials } = await authenticatedMailrelayClient();
       const ping = await client.ping();
       await registerPlatformSubscription();
-      return ok({ success: true, ping, credentials: maskMailrelayCredentials(credentials) });
+      return ok({
+        success: true,
+        ping,
+        credentials: maskMailrelayCredentials(credentials),
+        provider,
+      });
     }
 
     if (segments[0] === "config") {
       if (method === "GET") {
-        const config = (await getMailrelayConfig(auth.tenantId)) ?? defaultConfig(auth.tenantId);
         return ok({ config });
       }
       if (method === "PUT") {
         const body = ConfigSchema.parse(parseJsonBody(event));
-        const config = await saveMailrelayConfig(auth.tenantId, {
+        const nextProvider = body.provider ?? provider;
+        if (nextProvider === "nrs360") {
+          const fromEmail = body.fromEmail ?? config.fromEmail;
+          const replyTo = body.replyTo ?? config.replyTo ?? fromEmail;
+          if (fromEmail && !replyTo) {
+            return badRequest("replyTo is required when fromEmail is set for 360nrs");
+          }
+        }
+        const saved = await saveMailrelayConfig(auth.tenantId, {
           enabled: body.enabled,
+          provider: nextProvider,
           defaultGroupIds: body.defaultGroupIds,
           tagGroupMappings: body.tagGroupMappings,
           eventTypes: configuredMailrelayEventTypes(),
           ...(body.defaultSenderId !== undefined
             ? { defaultSenderId: body.defaultSenderId }
             : {}),
+          ...(body.fromEmail !== undefined ? { fromEmail: body.fromEmail } : {}),
+          ...(body.fromName !== undefined ? { fromName: body.fromName } : {}),
+          ...(body.replyTo !== undefined ? { replyTo: body.replyTo } : {}),
         });
-        return ok({ config });
+        return ok({ config: saved });
       }
     }
 
     if (segments[0] === "groups" && method === "GET") {
-      const { client } = await authenticatedClient();
+      if (provider === "nrs360") {
+        const { client } = await createAuthenticatedNrs360Client(ENVIRONMENT, auth.tenantId);
+        const groups = await client.listGroups();
+        return ok({ groups });
+      }
+      const { client } = await authenticatedMailrelayClient();
       const groups = await client.all<MailrelayGroup>("/groups");
       return ok({ groups });
     }
 
     if (segments[0] === "senders" && method === "GET") {
-      const { client } = await authenticatedClient();
+      if (provider === "nrs360") {
+        const sender = config.fromEmail
+          ? [
+              {
+                id: 1,
+                name: config.fromName || config.fromEmail,
+                email: config.fromEmail,
+              } satisfies MailrelaySender,
+            ]
+          : [];
+        return ok({ senders: sender });
+      }
+      const { client } = await authenticatedMailrelayClient();
       const senders = await client.all<MailrelaySender>("/senders");
       return ok({ senders });
     }
 
     if (segments[0] === "segments" && method === "GET") {
-      const { client } = await authenticatedClient();
+      if (provider === "nrs360") return ok({ segments: [] });
+      const { client } = await authenticatedMailrelayClient();
       const segmentsList = await client.all<Record<string, unknown>>("/segments");
       return ok({ segments: segmentsList });
     }
 
     if (segments[0] === "campaign-folders" && method === "GET") {
-      const { client } = await authenticatedClient();
+      if (provider === "nrs360") return ok({ folders: [] });
+      const { client } = await authenticatedMailrelayClient();
       const folders = await client.all<Record<string, unknown>>("/campaign_folders");
       return ok({ folders });
     }
 
     if (segments[0] === "overview" && method === "GET") {
-      const { client } = await authenticatedClient();
+      if (provider === "nrs360") {
+        const { client } = await createAuthenticatedNrs360Client(ENVIRONMENT, auth.tenantId);
+        return ok({ overview: await buildNrs360Overview(auth.tenantId, client) });
+      }
+      const { client } = await authenticatedMailrelayClient();
       return ok({ overview: await buildMailrelayOverview(auth.tenantId, client) });
     }
 
+    if (segments[0] === "deliverability" && method === "GET") {
+      if (provider === "nrs360") {
+        const { client } = await createAuthenticatedNrs360Client(ENVIRONMENT, auth.tenantId);
+        const campaigns = await client.listMailingCampaigns();
+        const metrics = campaigns.map((campaign) => {
+          const campaignId = Number(campaign.id);
+          const values = metricsFromNrs360Campaign(campaign);
+          return {
+            tenantId: auth.tenantId,
+            campaignId: Number.isInteger(campaignId) ? campaignId : 0,
+            ...values,
+            genericBounced: 0,
+            updatedAt: new Date().toISOString(),
+          };
+        });
+        const names = new Map(
+          campaigns.map((campaign) => [
+            Number(campaign.id) || 0,
+            String(campaign.name ?? campaign.id ?? "Campaign"),
+          ])
+        );
+        return ok({
+          report: buildMailrelayDeliverabilityFromMetrics({ metrics, names }),
+        });
+      }
+
+      const names = new Map(
+        (await listMailrelayCampaignRecords(auth.tenantId)).map((record) => [
+          record.campaignId,
+          mailrelayCampaignDisplayName(record),
+        ])
+      );
+      const from = event.queryStringParameters?.from ?? "";
+      const to = event.queryStringParameters?.to ?? "";
+      if (from || to) {
+        const range = parseMailrelayDeliverabilityRange(from, to);
+        if (!range.ok) return badRequest(range.message);
+        const events = await listMailrelayEventsInRange(auth.tenantId, range.from, range.to);
+        return ok({
+          report: buildMailrelayDeliverabilityReport({
+            from: range.from,
+            to: range.to,
+            events,
+            names,
+          }),
+        });
+      }
+      const metrics = await listMailrelayCampaignMetrics(auth.tenantId);
+      return ok({
+        report: buildMailrelayDeliverabilityFromMetrics({ metrics, names }),
+      });
+    }
+
     if (segments[0] === "events" && method === "GET") {
+      if (provider === "nrs360") return ok({ events: [] });
       const campaignId = positiveId(event.queryStringParameters?.campaignId);
       const limit = Number(event.queryStringParameters?.limit ?? 50);
       const events = await listMailrelayEvents(auth.tenantId, {
@@ -442,7 +948,17 @@ export async function handler(
     }
 
     if (segments[0] === "sync" && method === "POST") {
-      await authenticatedClient();
+      if (provider === "nrs360") {
+        await getNrs360Credentials(ENVIRONMENT, auth.tenantId).then((credentials) => {
+          if (!credentials) {
+            throw Object.assign(new Error("360nrs credentials are not configured"), {
+              statusCode: 400,
+            });
+          }
+        });
+      } else {
+        await authenticatedMailrelayClient();
+      }
       const jobId = randomUUID();
       const job = await createMailrelaySyncJob(auth.tenantId, jobId, auth.userId);
       try {
@@ -475,21 +991,28 @@ export async function handler(
       return ok({ jobs });
     }
 
-    const campaignResult = await handleCampaignRoutes(
-      method,
-      segments,
-      auth.tenantId,
-      event
-    );
+    const campaignResult =
+      provider === "nrs360"
+        ? await handleNrs360CampaignRoutes(method, segments, auth.tenantId, event, config)
+        : await handleMailrelayCampaignRoutes(method, segments, auth.tenantId, event);
     if (campaignResult) return campaignResult;
+
     const sentCampaignResult = await handleSentCampaignRoutes(
       method,
       segments,
       auth.tenantId,
-      event
+      event,
+      provider
     );
     if (sentCampaignResult) return sentCampaignResult;
-    const templateResult = await handleTemplateRoutes(method, segments, auth.tenantId, event);
+
+    const templateResult = await handleTemplateRoutes(
+      method,
+      segments,
+      auth.tenantId,
+      event,
+      provider
+    );
     if (templateResult) return templateResult;
     return badRequest("Not found");
   } catch (error) {

@@ -2,6 +2,7 @@ import type { SupportTicketCategory } from "@/types";
 
 export type IntegrationKind =
   | "whatsapp"
+  | "instagram"
   | "telnyx"
   | "google"
   | "microsoft"

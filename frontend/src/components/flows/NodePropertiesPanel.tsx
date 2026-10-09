@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, type KeyboardEvent } from "react";
-import { ExternalLink, Plus, Tag, X } from "lucide-react";
+import { ExternalLink, Plus, Tag, Trash2, X } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { useMetaFlows } from "@/hooks/useMetaFlows";
 import { useBots } from "@/hooks/useBots";
@@ -11,14 +11,20 @@ import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Input";
 import { LocalizedTextField } from "@/components/ui/LocalizedTextField";
 import { LocalizedHtmlField } from "@/components/ui/LocalizedHtmlField";
-import type { FlowNode, FlowNodeType, LocalizedText, FlowAgentChannel } from "@/types";
+import type {
+  FlowHttpHeader,
+  FlowNode,
+  FlowNodeType,
+  LocalizedText,
+  FlowAgentChannel,
+  OutreachChannel,
+} from "@/types";
 import { extractSampleFields, FormBindingField } from "./FormBindingField";
 import { FlowWebhookPanel } from "./FlowWebhookPanel";
 import { FlowWebhookGuideAccordion } from "./FlowWebhookGuideAccordion";
 import { TemplatePicker } from "@/components/templates/TemplatePicker";
 import { SendAudioNodeFields } from "@/components/flows/SendAudioNodeFields";
 import { useWhatsAppChannels } from "@/hooks/useWhatsAppChannels";
-import type { OutreachChannel } from "@/types";
 import { cn } from "@/lib/utils";
 
 interface NodePropertiesPanelProps {
@@ -164,6 +170,99 @@ function textArea(
       placeholder={placeholder}
       className="w-full text-sm border border-field-border rounded-lg px-3 py-2.5 bg-surface-elevated shadow-sm transition-all focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none resize-y"
     />
+  );
+}
+
+const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"] as const;
+const HTTP_METHODS_WITH_BODY = new Set<string>(["POST", "PUT", "PATCH", "DELETE"]);
+
+function HttpHeadersEditor({
+  value,
+  onChange,
+  keyPlaceholder,
+  valuePlaceholder,
+  addLabel,
+  removeLabel,
+  emptyLabel,
+  hint,
+}: {
+  value: FlowHttpHeader[];
+  onChange: (headers: FlowHttpHeader[]) => void;
+  keyPlaceholder: string;
+  valuePlaceholder: string;
+  addLabel: string;
+  removeLabel: string;
+  emptyLabel: string;
+  hint: string;
+}) {
+  function updateHeader(index: number, patch: Partial<FlowHttpHeader>) {
+    onChange(value.map((header, i) => (i === index ? { ...header, ...patch } : header)));
+  }
+
+  function addHeader() {
+    onChange([...value, { key: "", value: "" }]);
+  }
+
+  function removeHeader(index: number) {
+    onChange(value.filter((_, i) => i !== index));
+  }
+
+  return (
+    <div className="space-y-2">
+      {value.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-field-border bg-surface-muted/40 px-3 py-3 text-xs text-secondary">
+          {emptyLabel}
+        </p>
+      ) : (
+        <div className="space-y-2">
+          <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_auto] gap-2 px-0.5">
+            <span className="text-[10px] font-medium uppercase tracking-wide text-muted">
+              {keyPlaceholder}
+            </span>
+            <span className="text-[10px] font-medium uppercase tracking-wide text-muted">
+              {valuePlaceholder}
+            </span>
+            <span className="w-8" />
+          </div>
+          {value.map((header, index) => (
+            <div
+              key={index}
+              className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_auto] gap-2 items-center"
+            >
+              <input
+                value={header.key}
+                onChange={(e) => updateHeader(index, { key: e.target.value })}
+                placeholder={keyPlaceholder}
+                className={cn(INPUT_CLASS, "font-mono text-xs py-2")}
+                autoComplete="off"
+              />
+              <input
+                value={header.value}
+                onChange={(e) => updateHeader(index, { value: e.target.value })}
+                placeholder={valuePlaceholder}
+                className={cn(INPUT_CLASS, "font-mono text-xs py-2")}
+                autoComplete="off"
+              />
+              <button
+                type="button"
+                onClick={() => removeHeader(index)}
+                className="inline-flex h-9 w-8 items-center justify-center rounded-lg text-secondary hover:bg-danger/10 hover:text-danger transition-colors"
+                aria-label={removeLabel}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-[11px] text-secondary leading-snug pt-1">{hint}</p>
+        <Button type="button" variant="ghost" size="sm" onClick={addHeader} className="shrink-0">
+          <Plus className="h-3.5 w-3.5" />
+          {addLabel}
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -600,43 +699,87 @@ export function NodePropertiesPanel({
 
       {type === "http_request" && (
         <>
-          <div>
-            <FieldLabel>{t("flows.fields.httpUrl")}</FieldLabel>
-            {textInput(d.httpUrl ?? "", (v) => onUpdate({ httpUrl: v }))}
+          <div className="rounded-xl border border-field-border bg-surface-muted/20 p-4 space-y-4">
+            <div>
+              <FieldLabel>{t("flows.fields.httpRequest")}</FieldLabel>
+              <div className="flex gap-2">
+                <select
+                  value={d.httpMethod ?? "GET"}
+                  onChange={(e) => onUpdate({ httpMethod: e.target.value })}
+                  className={cn(
+                    INPUT_CLASS,
+                    "w-[7.25rem] shrink-0 py-2.5 font-semibold tracking-wide"
+                  )}
+                  aria-label={t("flows.fields.httpMethod")}
+                >
+                  {HTTP_METHODS.map((method) => (
+                    <option key={method} value={method}>
+                      {method}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  value={d.httpUrl ?? ""}
+                  onChange={(e) => onUpdate({ httpUrl: e.target.value })}
+                  placeholder={t("flows.fields.httpUrlHint")}
+                  className={cn(INPUT_CLASS, "font-mono text-xs")}
+                  autoComplete="off"
+                />
+              </div>
+              <p className="mt-1.5 text-[11px] text-secondary">{t("flows.fields.httpUrlHelp")}</p>
+            </div>
+
+            <div>
+              <FieldLabel>{t("flows.fields.httpHeaders")}</FieldLabel>
+              <HttpHeadersEditor
+                value={d.httpHeaders ?? []}
+                onChange={(headers) => onUpdate({ httpHeaders: headers })}
+                keyPlaceholder={t("flows.fields.httpHeaderKey")}
+                valuePlaceholder={t("flows.fields.httpHeaderValue")}
+                addLabel={t("flows.fields.httpAddHeader")}
+                removeLabel={t("flows.fields.httpRemoveHeader")}
+                emptyLabel={t("flows.fields.httpHeadersEmpty")}
+                hint={t("flows.fields.httpHeadersHint")}
+              />
+            </div>
+
+            {HTTP_METHODS_WITH_BODY.has(d.httpMethod ?? "GET") ? (
+              <div>
+                <FieldLabel>{t("flows.fields.httpBody")}</FieldLabel>
+                <textarea
+                  value={d.httpBody ?? ""}
+                  onChange={(e) => onUpdate({ httpBody: e.target.value })}
+                  rows={5}
+                  placeholder={t("flows.fields.httpBodyHint")}
+                  className={cn(
+                    "w-full text-xs font-mono border border-field-border rounded-lg px-3 py-2.5 bg-surface-elevated shadow-sm transition-all focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none resize-y"
+                  )}
+                />
+                <p className="mt-1.5 text-[11px] text-secondary">{t("flows.fields.httpBodyHelp")}</p>
+              </div>
+            ) : null}
+
+            <div>
+              <FieldLabel>{t("flows.fields.httpResponseVariable")}</FieldLabel>
+              {textInput(
+                d.httpResponseVariable ?? "",
+                (v) => onUpdate({ httpResponseVariable: v }),
+                { placeholder: t("flows.fields.httpResponseVariableHint") }
+              )}
+              <p className="mt-1.5 text-[11px] text-secondary">
+                {t("flows.fields.httpResponseVariableHelp")}
+              </p>
+            </div>
           </div>
-          <div>
-            <FieldLabel>{t("flows.fields.httpMethod")}</FieldLabel>
-            <select
-              value={d.httpMethod ?? "GET"}
-              onChange={(e) => onUpdate({ httpMethod: e.target.value })}
-              className="w-full text-sm border border-field-border rounded-lg p-2 bg-surface-elevated shadow-sm"
-            >
-              <option value="GET">GET</option>
-              <option value="POST">POST</option>
-              <option value="PATCH">PATCH</option>
-            </select>
-          </div>
-          <div>
-            <FieldLabel>{t("flows.fields.httpHeaders")}</FieldLabel>
-            {textArea(
-              JSON.stringify(d.httpHeaders ?? [], null, 2),
-              (v) => {
-                try {
-                  onUpdate({ httpHeaders: JSON.parse(v || "[]") });
-                } catch {
-                  /* ignore invalid json while typing */
-                }
-              },
-              4,
-              t("flows.fields.httpHeadersHint")
-            )}
-          </div>
-          <div>
-            <FieldLabel>{t("flows.fields.httpBody")}</FieldLabel>
-            {textArea(d.httpBody ?? "", (v) => onUpdate({ httpBody: v }), 4)}
-          </div>
+
           {isVoiceFlow ? (
-            <>
+            <div className="rounded-xl border border-field-border bg-surface-muted/20 p-4 space-y-4">
+              <div>
+                <p className="text-sm font-semibold text-primary">{t("flows.fields.httpVoiceSection")}</p>
+                <p className="mt-0.5 text-[11px] text-secondary">
+                  {t("flows.fields.httpVoiceSectionHint")}
+                </p>
+              </div>
               <div>
                 <FieldLabel>{t("flows.fields.voiceToolName")}</FieldLabel>
                 {textInput(d.voiceToolName ?? "", (v) => onUpdate({ voiceToolName: v }))}
@@ -647,17 +790,20 @@ export function NodePropertiesPanel({
               </div>
               <div>
                 <FieldLabel>{t("flows.fields.voiceToolParameters")}</FieldLabel>
-                {textArea(d.voiceToolParameters ?? "", (v) => onUpdate({ voiceToolParameters: v }), 4)}
+                <textarea
+                  value={d.voiceToolParameters ?? ""}
+                  onChange={(e) => onUpdate({ voiceToolParameters: e.target.value })}
+                  rows={4}
+                  className={cn(
+                    "w-full text-xs font-mono border border-field-border rounded-lg px-3 py-2.5 bg-surface-elevated shadow-sm transition-all focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none resize-y"
+                  )}
+                />
               </div>
               <div>
                 <FieldLabel>{t("flows.fields.voiceInstruction")}</FieldLabel>
                 {textArea(d.voiceInstruction ?? "", (v) => onUpdate({ voiceInstruction: v }), 3)}
               </div>
-              <div>
-                <FieldLabel>{t("flows.fields.httpResponseVariable")}</FieldLabel>
-                {textInput(d.httpResponseVariable ?? "", (v) => onUpdate({ httpResponseVariable: v }))}
-              </div>
-            </>
+            </div>
           ) : null}
         </>
       )}

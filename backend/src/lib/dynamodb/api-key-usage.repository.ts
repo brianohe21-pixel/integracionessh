@@ -61,6 +61,54 @@ export interface ApiKeyUsagePeriodSummary {
   error: number;
 }
 
+export interface ApiKeyUsageLogSlice {
+  keyId: string;
+  endpoint: string;
+  method: string;
+  statusCode: number;
+  createdAt: string;
+}
+
+export async function listApiKeyUsageInRange(
+  tenantId: string,
+  keyId: string,
+  fromSk: string,
+  toSk: string
+): Promise<ApiKeyUsageLogSlice[]> {
+  const items: ApiKeyUsageLogSlice[] = [];
+  let lastKey: Record<string, unknown> | undefined;
+
+  do {
+    const result = await docClient.send(
+      new QueryCommand({
+        TableName: TABLE_NAME,
+        KeyConditionExpression: "PK = :pk AND SK BETWEEN :from AND :to",
+        ExpressionAttributeNames: { "#method": "method" },
+        ExpressionAttributeValues: {
+          ":pk": `APIUSAGE#${tenantId}#${keyId}`,
+          ":from": fromSk,
+          ":to": toSk,
+        },
+        ProjectionExpression: "keyId, endpoint, #method, statusCode, createdAt",
+        ExclusiveStartKey: lastKey,
+      })
+    );
+
+    for (const item of result.Items ?? []) {
+      items.push({
+        keyId: String(item.keyId ?? keyId),
+        endpoint: String(item.endpoint ?? ""),
+        method: String(item.method ?? ""),
+        statusCode: Number(item.statusCode ?? 0),
+        createdAt: String(item.createdAt ?? ""),
+      });
+    }
+    lastKey = result.LastEvaluatedKey;
+  } while (lastKey);
+
+  return items;
+}
+
 export async function summarizeApiKeyUsageByPeriod(
   tenantId: string,
   keyId: string,

@@ -24,7 +24,12 @@ import {
 } from "./whatsapp-usage-metrics.repository.js";
 import { isWhatsAppBsuid } from "../whatsapp/identity.js";
 import { rememberWhatsAppIdentityLink } from "./whatsapp-identity.repository.js";
-import { shouldOpenFreeEntryPoint } from "../whatsapp/messaging-windows.js";
+import {
+  classifyWhatsAppMessageWindow,
+  resolveWhatsAppMessageWindowDirection,
+  shouldOpenFreeEntryPoint,
+} from "../whatsapp/messaging-windows.js";
+import { incrementMessageWindowCount } from "./message-window-metrics.repository.js";
 
 const REALTIME_CONVERSATION_FIELDS = new Set([
   "handoffMode",
@@ -763,15 +768,18 @@ export async function addMessageIdempotent(
     return false;
   }
 
+  const windowDirection = resolveWhatsAppMessageWindowDirection(message);
   let openFreeEntryPoint = false;
   let conversationForWindow: Conversation | null = null;
-  if (isOutbound) {
+  if (isOutbound || windowDirection === "inbound") {
     conversationForWindow = await getConversation(
       message.tenantId,
       botId,
       message.conversationId
     );
-    openFreeEntryPoint = shouldOpenFreeEntryPoint(conversationForWindow, now);
+    if (isOutbound) {
+      openFreeEntryPoint = shouldOpenFreeEntryPoint(conversationForWindow, now);
+    }
   }
 
   const transactItems: Array<Record<string, unknown>> = [
@@ -879,6 +887,33 @@ export async function addMessageIdempotent(
         bucket: usageBucket,
         error: (error as Error).message,
       });
+    }
+  }
+
+  if (windowDirection) {
+    const atMs = Date.parse(message.timestamp || now);
+    const windowBucket = classifyWhatsAppMessageWindow({
+      direction: windowDirection,
+      atMs,
+      conversation: conversationForWindow,
+      opensFreeEntryPoint: openFreeEntryPoint,
+    });
+    if (windowBucket) {
+      try {
+        await incrementMessageWindowCount(
+          message.tenantId,
+          botId,
+          windowBucket,
+          new Date(atMs)
+        );
+      } catch (error) {
+        console.warn("message window metrics increment failed", {
+          tenantId: message.tenantId,
+          botId,
+          bucket: windowBucket,
+          error: (error as Error).message,
+        });
+      }
     }
   }
 

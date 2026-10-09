@@ -43,7 +43,7 @@ export async function executeTemplateNode(
       : {}),
   });
 
-  const content = await resolveWhatsAppTemplateDisplayContent({
+  const resolved = await resolveWhatsAppTemplateDisplayContent({
     tenantId: ctx.tenantId,
     botId: requireBotId(ctx),
     templateName,
@@ -53,13 +53,14 @@ export async function executeTemplateNode(
 
   await persistFlowOutboundMessage({
     ctx,
-    content,
+    content: resolved.content,
     skipIfAdapterPersists: false,
     ...(result.messages?.[0]?.id ? { externalMessageId: result.messages[0].id } : {}),
     metadata: {
       kind: "whatsapp_template",
       templateName,
       language,
+      display: resolved.display,
       ...(templateVariables ? { templateVariables } : {}),
     },
   });
@@ -68,6 +69,6 @@ export async function executeTemplateNode(
     nextNodeId: getNextNodeId(ctx.flow, node.id),
     halt: false,
     wait: false,
-    output: content,
+    output: resolved.content,
   };
 }

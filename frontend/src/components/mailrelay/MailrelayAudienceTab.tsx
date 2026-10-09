@@ -25,6 +25,10 @@ const emptyConfig: MailrelayConfig = {
   defaultGroupId: "",
   tagGroupMappings: [],
   enabled: true,
+  provider: "mailrelay",
+  fromEmail: "",
+  fromName: "",
+  replyTo: "",
 };
 
 export function MailrelayAudienceTab({ connected }: { connected: boolean }) {
@@ -70,9 +74,20 @@ export function MailrelayAudienceTab({ connected }: { connected: boolean }) {
     setSaved(false);
   }
 
+  const provider = config.provider ?? "mailrelay";
+  const isNrs360 = provider === "nrs360";
+
   async function handleSave() {
-    if (!config.senderId || !config.defaultGroupId) {
-      setError(t("mailrelay.validation.senderAudience"));
+    if ((!isNrs360 && !config.senderId) || !config.defaultGroupId) {
+      setError(
+        isNrs360
+          ? t("mailrelay.validation.audienceGroup")
+          : t("mailrelay.validation.senderAudience")
+      );
+      return;
+    }
+    if (isNrs360 && !config.fromEmail?.trim()) {
+      setError(t("mailrelay.validation.nrsSender"));
       return;
     }
     if (config.tagGroupMappings.some((mapping) => !mapping.tag.trim() || !mapping.groupId)) {
@@ -81,7 +96,11 @@ export function MailrelayAudienceTab({ connected }: { connected: boolean }) {
     }
     try {
       setError("");
-      await saveConfig.mutateAsync(config);
+      await saveConfig.mutateAsync({
+        ...config,
+        provider,
+        senderId: isNrs360 ? config.senderId || "1" : config.senderId,
+      });
       setSaved(true);
     } catch (cause) {
       setError((cause as Error).message);
@@ -135,23 +154,35 @@ export function MailrelayAudienceTab({ connected }: { connected: boolean }) {
         ) : null}
 
         <div className="grid gap-4 md:grid-cols-2">
-          <label className="space-y-2 text-sm font-medium text-primary">
-            <span>{t("mailrelay.audience.sender")}</span>
-            <Select
-              value={config.senderId}
-              onChange={(event) => {
-                setConfig((current) => ({ ...current, senderId: event.target.value }));
-                setSaved(false);
-              }}
-            >
-              <option value="">{t("mailrelay.audience.selectSender")}</option>
-              {senders.map((sender) => (
-                <option key={sender.id} value={sender.id}>
-                  {sender.name} ({sender.email})
-                </option>
-              ))}
-            </Select>
-          </label>
+          {isNrs360 ? (
+            <div className="space-y-2 text-sm">
+              <p className="font-medium text-primary">{t("mailrelay.audience.sender")}</p>
+              <p className="rounded-lg border border-default bg-surface-muted px-3 py-2 text-secondary">
+                {config.fromName
+                  ? `${config.fromName} <${config.fromEmail || "-"}>`
+                  : config.fromEmail || t("mailrelay.audience.nrsSenderMissing")}
+              </p>
+              <p className="text-xs text-secondary">{t("mailrelay.audience.nrsSenderHint")}</p>
+            </div>
+          ) : (
+            <label className="space-y-2 text-sm font-medium text-primary">
+              <span>{t("mailrelay.audience.sender")}</span>
+              <Select
+                value={config.senderId}
+                onChange={(event) => {
+                  setConfig((current) => ({ ...current, senderId: event.target.value }));
+                  setSaved(false);
+                }}
+              >
+                <option value="">{t("mailrelay.audience.selectSender")}</option>
+                {senders.map((sender) => (
+                  <option key={sender.id} value={sender.id}>
+                    {sender.name} ({sender.email})
+                  </option>
+                ))}
+              </Select>
+            </label>
+          )}
           <label className="space-y-2 text-sm font-medium text-primary">
             <span>{t("mailrelay.audience.defaultGroup")}</span>
             <Select
