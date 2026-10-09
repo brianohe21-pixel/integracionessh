@@ -66,10 +66,13 @@ jest.mock("../dynamodb/tenant.repository.js", () => ({
 
 import {
   assertOpenAIConfigured,
+  deletePlatformProviderCredential,
   deleteTenantProviderCredential,
+  getPlatformOpenAICredentialStatus,
   getProviderCredentialStatuses,
   hasTenantProviderCredential,
   resolveProviderCredential,
+  savePlatformProviderCredential,
   saveTenantProviderCredential,
 } from "./provider-credentials.js";
 
@@ -169,5 +172,34 @@ describe("provider credentials resolution", () => {
 
     if (previous === undefined) delete process.env.OPENAI_API_KEY;
     else process.env.OPENAI_API_KEY = previous;
+  });
+
+  it("saves and masks the platform OpenAI key", async () => {
+    expect(await getPlatformOpenAICredentialStatus(ENV)).toEqual({
+      configured: false,
+      maskedKey: null,
+    });
+
+    await savePlatformProviderCredential(ENV, "openai", {
+      apiKey: "sk-platform-secret-key-1234",
+    });
+
+    expect(await getPlatformOpenAICredentialStatus(ENV)).toEqual({
+      configured: true,
+      maskedKey: "sk-…1234",
+    });
+
+    const resolved = await resolveProviderCredential("standalone", ENV, "openai");
+    expect(resolved).toEqual({
+      payload: { apiKey: "sk-platform-secret-key-1234" },
+      source: "platform",
+      ownerTenantId: "platform",
+    });
+
+    await deletePlatformProviderCredential(ENV, "openai");
+    expect(await getPlatformOpenAICredentialStatus(ENV)).toEqual({
+      configured: false,
+      maskedKey: null,
+    });
   });
 });

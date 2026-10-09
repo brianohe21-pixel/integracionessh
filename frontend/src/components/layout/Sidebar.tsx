@@ -210,6 +210,7 @@ const adminNavCategories: NavCategory[] = [
     items: [
       { href: "/admin/users", labelKey: "nav.adminUsers", icon: Users },
       { href: "/admin/billing", labelKey: "nav.adminBilling", icon: Receipt },
+      { href: "/admin/openai", labelKey: "nav.adminOpenAI", icon: KeyRound },
       { href: "/admin/price-calculator", labelKey: "nav.adminPriceCalculator", icon: Calculator },
       { href: "/admin/reports", labelKey: "nav.adminReports", icon: FileSpreadsheet },
       { href: "/admin/payments", labelKey: "nav.adminPayments", icon: CreditCard },

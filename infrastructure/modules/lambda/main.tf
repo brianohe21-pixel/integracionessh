@@ -193,6 +193,16 @@ resource "aws_iam_role_policy" "lambda_permissions" {
       {
         Effect = "Allow"
         Action = [
+          "secretsmanager:CreateSecret",
+          "secretsmanager:PutSecretValue",
+          "secretsmanager:UpdateSecret",
+          "secretsmanager:DeleteSecret",
+        ]
+        Resource = "arn:aws:secretsmanager:*:*:secret:/${var.environment}/platform/openai*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
           "s3:GetObject",
           "s3:PutObject",
           "s3:DeleteObject",
@@ -501,6 +511,7 @@ locals {
       memory      = 256
       environment = {
         TABLE_NAME           = var.dynamodb_table_name
+        ENVIRONMENT          = var.environment
         COGNITO_USER_POOL_ID = var.cognito_user_pool_id
         COGNITO_CLIENT_ID    = var.cognito_client_id
         AMPLIFY_APP_NAME     = "${var.project}-${var.environment}"
