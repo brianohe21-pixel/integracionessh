@@ -46,7 +46,22 @@ function getPortalHostHeader(): Record<string, string> {
   return { "X-Portal-Host": host };
 }
 
+function localizeKnownApiError(message: string): string | null {
+  const trimmed = message.trim();
+  if (/^Bot misconfigured: whatsappBusinessAccountId is empty\b/i.test(trimmed)) {
+    return translate("bots.errors.wabaIdEmpty");
+  }
+  if (
+    /^Bot misconfigured: whatsappBusinessAccountId must be the WABA ID/i.test(trimmed)
+  ) {
+    return translate("bots.errors.wabaIdIsPhoneNumberId");
+  }
+  return null;
+}
+
 function localizeRequestError(message: string, path: string): string {
+  const known = localizeKnownApiError(message);
+  if (known) return known;
   if (!/\/flows(?:\/|$)/.test(path)) return message;
   return localizeFlowError(message, translate);
 }

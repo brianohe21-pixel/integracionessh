@@ -257,6 +257,12 @@ export const es = {
     salesSummarySub: "{{count}} cobros confirmados en los últimos {{days}} días",
     salesSummaryViewDetail: "Ver detalle",
     saveError: "Error al guardar el agente",
+    errors: {
+      wabaIdEmpty:
+        "El agente está mal configurado: falta el WhatsApp Business Account ID (WABA). Actualiza la configuración del agente.",
+      wabaIdIsPhoneNumberId:
+        "El agente está mal configurado: el WhatsApp Business Account ID debe ser el WABA ID, no el Phone Number ID. En Meta Business Suite → WhatsApp Manager → Configuración de la cuenta puedes encontrar el WABA ID correcto.",
+    },
     botName: "Nombre del agente",
     botNamePlaceholder: "Ej: Agente de Ventas",
     defaultLocale: "Idioma por defecto del agente",
@@ -2257,6 +2263,7 @@ export const es = {
     footerHintName: "Escribe un nombre válido para la plantilla.",
     footerHintContent: "Completa el contenido requerido para crear la plantilla.",
     footerHintReady: "Listo para guardar.",
+    footerHintError: "No se pudo guardar. Revisa el error e inténtalo de nuevo.",
     namePlaceholderMarketing: "promo_verano",
     namePlaceholderAuth: "otp_verificacion",
     authOtpTitle: "Plantilla OTP de autenticación (Meta)",

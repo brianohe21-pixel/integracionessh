@@ -33,6 +33,14 @@ import {
 } from "@/components/templates/channel/types";
 import { extractBodyVariables } from "@/lib/templates/variables";
 import {
+  buildTemplateSendComponents,
+  emptySlotValues,
+  listTemplateSendSlots,
+  placeholderValues,
+  slotsAreComplete,
+  type TemplateSendSlot,
+} from "@/lib/templates/send-components";
+import {
   LayoutTemplate,
   Plus,
   Send,
@@ -55,6 +63,21 @@ import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 
 type DialogMode = "create" | "edit" | null;
+
+function sendSlotLabel(
+  slot: TemplateSendSlot,
+  t: (key: string, values?: Record<string, string | number>) => string
+): string {
+  if (slot.kind === "auth_code") return t("templates.authOtpCodeLabel");
+  if (slot.kind === "header_text") return t("templates.sendVarHeader", { key: slot.placeholder });
+  if (slot.kind === "button_url") {
+    return t("templates.sendVarButton", {
+      name: slot.buttonText?.trim() || String((slot.buttonIndex ?? 0) + 1),
+      key: slot.placeholder,
+    });
+  }
+  return slot.placeholder;
+}
 
 export default function TemplatesPage() {
   const t = useT();
@@ -177,21 +200,18 @@ export default function TemplatesPage() {
   function openSend(template: MessageTemplate) {
     setSendTo("");
     setSendRequestDlr(false);
-    if (
-      !isSmsTemplate(template) &&
-      (template.category === "AUTHENTICATION" || isAuthenticationTemplate(template.components))
-    ) {
-      setSendParams({ "{{1}}": "" });
+    setSendError("");
+    if (isSmsTemplate(template)) {
+      const vars = extractBodyVariables(template.body);
+      const initial: Record<string, string> = {};
+      vars.forEach((v) => {
+        initial[v] = "";
+      });
+      setSendParams(initial);
       setSendTarget(template);
       return;
     }
-    const bodyText = isSmsTemplate(template)
-      ? template.body
-      : template.components.find((c) => c.type === "BODY")?.text ?? "";
-    const vars = extractBodyVariables(bodyText);
-    const initial: Record<string, string> = {};
-    vars.forEach((v) => { initial[v] = ""; });
-    setSendParams(initial);
+    setSendParams(emptySlotValues(listTemplateSendSlots(template)));
     setSendTarget(template);
   }
 
@@ -258,7 +278,8 @@ export default function TemplatesPage() {
       setDialogMode(null);
       refetch();
     } catch (err) {
-      setFormError((err as Error).message ?? t("templates.saveError"));
+      const message = err instanceof Error ? err.message.trim() : "";
+      setFormError(message || t("templates.saveError"));
     }
   }
 
@@ -277,33 +298,20 @@ export default function TemplatesPage() {
   async function handleSend() {
     if (!sendTarget || !sendTo.trim()) return;
 
-    const isAuthOtpSend =
-      !isSmsTemplate(sendTarget) &&
-      (sendTarget.category === "AUTHENTICATION" ||
-        isAuthenticationTemplate(sendTarget.components));
-    const bodyVarKeys = Object.keys(sendParams);
-    const otpCode = sendParams["{{1}}"]?.trim() || Object.values(sendParams)[0]?.trim() || "";
-    const bodyParams = isAuthOtpSend
-      ? [
-          {
-            type: "body",
-            parameters: [{ type: "text" as const, text: otpCode }],
-          },
-          {
-            type: "button",
-            sub_type: "url",
-            index: "0",
-            parameters: [{ type: "text" as const, text: otpCode }],
-          },
-        ]
-      : bodyVarKeys.length
-        ? [{
-            type: "body",
-            parameters: bodyVarKeys.map((k) => ({ type: "text" as const, text: sendParams[k] })),
-          }]
-        : undefined;
-
     const sendMutation = isSmsTemplate(sendTarget) ? sendSmsMutation : sendWhatsappMutation;
+    const components = isSmsTemplate(sendTarget)
+      ? Object.keys(sendParams).length
+        ? [
+            {
+              type: "body",
+              parameters: Object.keys(sendParams).map((k) => ({
+                type: "text" as const,
+                text: sendParams[k],
+              })),
+            },
+          ]
+        : undefined
+      : buildTemplateSendComponents(sendTarget, sendParams);
 
     setSendError("");
     try {
@@ -313,7 +321,7 @@ export default function TemplatesPage() {
         to: sendTo,
         language: sendTarget.language,
         ...(isSmsTemplate(sendTarget) && sendRequestDlr ? { requestDlr: true } : {}),
-        components: bodyParams,
+        components,
       });
       setSendTarget(null);
       setSendRequestDlr(false);
@@ -321,6 +329,22 @@ export default function TemplatesPage() {
       setSendError(error instanceof Error ? error.message : "Send failed");
     }
   }
+
+  const sendSlots = useMemo(() => {
+    if (!sendTarget || isSmsTemplate(sendTarget)) return [];
+    return listTemplateSendSlots(sendTarget);
+  }, [sendTarget]);
+
+  const sendSmsVarKeys = useMemo(() => {
+    if (!sendTarget || !isSmsTemplate(sendTarget)) return [];
+    return Object.keys(sendParams);
+  }, [sendTarget, sendParams]);
+
+  const canConfirmSend =
+    Boolean(sendTo.trim()) &&
+    (sendTarget && isSmsTemplate(sendTarget)
+      ? sendSmsVarKeys.every((key) => Boolean(sendParams[key]?.trim()))
+      : slotsAreComplete(sendSlots, sendParams));
 
   const activeDialogChannel = dialogMode === "create" ? dialogChannel : channelFilter;
   const dialogBots =
@@ -755,35 +779,45 @@ export default function TemplatesPage() {
                 </label>
               )}
 
-              {Object.keys(sendParams).length > 0 && (
+              {(sendSlots.length > 0 || sendSmsVarKeys.length > 0) && (
                 <div className="space-y-3">
                   <p className="text-sm font-medium text-secondary">{t("templates.templateVars")}</p>
-                  {Object.keys(sendParams).map((key) => {
-                    const isAuthCodeField =
-                      !isSmsTemplate(sendTarget) &&
-                      (sendTarget.category === "AUTHENTICATION" ||
-                        isAuthenticationTemplate(sendTarget.components)) &&
-                      key === "{{1}}";
-                    return (
-                      <div key={key}>
-                        <label className="block text-xs text-secondary mb-1">
-                          {isAuthCodeField ? t("templates.authOtpCodeLabel") : key}
-                        </label>
-                        <Input
-                          type="text"
-                          value={sendParams[key]}
-                          onChange={(e) =>
-                            setSendParams((prev) => ({ ...prev, [key]: e.target.value }))
-                          }
-                          placeholder={
-                            isAuthCodeField
-                              ? "123456"
-                              : t("templates.valueFor", { key })
-                          }
-                        />
-                      </div>
-                    );
-                  })}
+                  {isSmsTemplate(sendTarget)
+                    ? sendSmsVarKeys.map((key) => (
+                        <div key={key}>
+                          <label className="block text-xs text-secondary mb-1">{key}</label>
+                          <Input
+                            type="text"
+                            value={sendParams[key] ?? ""}
+                            onChange={(e) =>
+                              setSendParams((prev) => ({ ...prev, [key]: e.target.value }))
+                            }
+                            placeholder={t("templates.valueFor", { key })}
+                          />
+                        </div>
+                      ))
+                    : sendSlots.map((slot) => (
+                        <div key={slot.key}>
+                          <label className="block text-xs text-secondary mb-1">
+                            {sendSlotLabel(slot, t)}
+                          </label>
+                          <Input
+                            type="text"
+                            value={sendParams[slot.key] ?? ""}
+                            onChange={(e) =>
+                              setSendParams((prev) => ({
+                                ...prev,
+                                [slot.key]: e.target.value,
+                              }))
+                            }
+                            placeholder={
+                              slot.kind === "auth_code"
+                                ? "123456"
+                                : t("templates.valueFor", { key: slot.placeholder })
+                            }
+                          />
+                        </div>
+                      ))}
                 </div>
               )}
 
@@ -796,12 +830,14 @@ export default function TemplatesPage() {
                 <TemplateMessagePreview
                   template={sendTarget}
                   variableValues={
-                    Object.keys(sendParams).length
-                      ? Object.keys(sendParams)
-                          .sort()
-                          .map((key) => sendParams[key] ?? "")
-                      : undefined
+                    placeholderValues(sendSlots, sendParams, "auth_code") ??
+                    placeholderValues(sendSlots, sendParams, "body_text")
                   }
+                  headerVariableValues={placeholderValues(
+                    sendSlots,
+                    sendParams,
+                    "header_text"
+                  )}
                   label={t("templates.previewLabel")}
                 />
               )}
@@ -818,7 +854,11 @@ export default function TemplatesPage() {
               </button>
               <button
                 onClick={handleSend}
-                disabled={sendWhatsappMutation.isPending || sendSmsMutation.isPending || !sendTo.trim()}
+                disabled={
+                  sendWhatsappMutation.isPending ||
+                  sendSmsMutation.isPending ||
+                  !canConfirmSend
+                }
                 className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-accent rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Send className="w-4 h-4" />

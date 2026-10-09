@@ -257,6 +257,12 @@ export const en: Messages = {
     salesSummarySub: "{{count}} confirmed payments in the last {{days}} days",
     salesSummaryViewDetail: "View details",
     saveError: "Failed to save agent",
+    errors: {
+      wabaIdEmpty:
+        "Bot misconfigured: WhatsApp Business Account ID (WABA) is empty. Update the bot settings.",
+      wabaIdIsPhoneNumberId:
+        "Bot misconfigured: WhatsApp Business Account ID must be the WABA ID, not the Phone Number ID. Go to Meta Business Suite → WhatsApp Manager → Account settings to find the correct WABA ID.",
+    },
     botName: "Agent name",
     botNamePlaceholder: "e.g. Sales Agent",
     defaultLocale: "Agent default language",
@@ -2252,6 +2258,7 @@ export const en: Messages = {
     footerHintName: "Enter a valid template name.",
     footerHintContent: "Complete the required content to create the template.",
     footerHintReady: "Ready to save.",
+    footerHintError: "Could not save. Review the error and try again.",
     namePlaceholderMarketing: "summer_promo",
     namePlaceholderAuth: "otp_verification",
     authOtpTitle: "Authentication OTP template (Meta)",

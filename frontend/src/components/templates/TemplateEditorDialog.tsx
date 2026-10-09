@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   Check,
   Eye,
@@ -150,10 +150,16 @@ export function TemplateEditorDialog({
   onSubmit,
 }: TemplateEditorDialogProps) {
   const t = useT();
+  const formScrollRef = useRef<HTMLDivElement>(null);
   const isAuthOtp = channel === "whatsapp" && category === "AUTHENTICATION";
   const isCreate = mode === "create";
   const nameLocked = mode === "edit";
   const metaLocked = mode === "edit";
+
+  useEffect(() => {
+    if (!error) return;
+    formScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  }, [error]);
 
   const categoryOptions = CATEGORY_META.filter(
     (item) => !(item.whatsappOnly && channel === "sms")
@@ -261,32 +267,47 @@ export function TemplateEditorDialog({
       widthClass="max-w-6xl"
       contentClassName="min-h-0 overflow-hidden"
       footer={
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-muted">
-            {submitBlockedReason ?? t("templates.footerHintReady")}
-          </p>
-          <div className="flex items-center justify-end gap-2">
-            <Button variant="outline" onClick={onClose}>
-              {t("templates.cancelDialog")}
-            </Button>
-            <Button
-              onClick={onSubmit}
-              disabled={submitting || !canSubmit || (isCreate && !name.trim())}
+        <div className="flex flex-col gap-3">
+          {error ? (
+            <div
+              role="alert"
+              className="rounded-xl border border-red-200 bg-red-50 px-4 py-3"
             >
-              {submitting
-                ? t("auth.saving")
-                : isCreate
-                  ? t("common.create")
-                  : t("common.update")}
-            </Button>
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
+          ) : null}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className={`text-xs ${error ? "text-red-600" : "text-muted"}`}>
+              {error
+                ? t("templates.footerHintError")
+                : (submitBlockedReason ?? t("templates.footerHintReady"))}
+            </p>
+            <div className="flex items-center justify-end gap-2">
+              <Button variant="outline" onClick={onClose}>
+                {t("templates.cancelDialog")}
+              </Button>
+              <Button
+                onClick={onSubmit}
+                disabled={submitting || !canSubmit || (isCreate && !name.trim())}
+              >
+                {submitting
+                  ? t("auth.saving")
+                  : isCreate
+                    ? t("common.create")
+                    : t("common.update")}
+              </Button>
+            </div>
           </div>
         </div>
       }
     >
       <div className="grid h-full min-h-0 lg:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)]">
-        <div className="space-y-6 overflow-y-auto px-5 py-5">
+        <div ref={formScrollRef} className="space-y-6 overflow-y-auto px-5 py-5">
           {error && (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+            <div
+              role="alert"
+              className="rounded-xl border border-red-200 bg-red-50 px-4 py-3"
+            >
               <p className="text-sm text-red-600">{error}</p>
             </div>
           )}
