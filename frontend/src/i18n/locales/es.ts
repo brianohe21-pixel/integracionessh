@@ -281,7 +281,8 @@ export const es = {
     modelFilterAll: "Todos",
     modelSearchPlaceholder: "Buscar modelo...",
     modelSearchEmpty: "No se encontraron modelos.",
-    modelPlanHint: "Los modelos avanzados (GPT-5.6, GPT-4.1, GPT-4o, razonamiento) están disponibles en el plan Enterprise.",
+    modelPlanHint: "Los modelos avanzados (flagship, razonamiento y legacy) requieren el plan Pro.",
+    modelRequiresPro: "Este modelo requiere el plan Pro.",
     modelCategory: {
       economy: "Económico",
       flagship: "Flagship",

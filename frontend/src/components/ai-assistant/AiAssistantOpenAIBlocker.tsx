@@ -33,5 +33,12 @@ export function mapAiAssistantEnableError(message: string, t: (key: string) => s
   ) {
     return t("aiAssistant.openaiNotConfigured");
   }
+  if (
+    message.includes("PLAN_MODEL_NOT_ALLOWED") ||
+    message.includes("Upgrade to Pro for advanced models") ||
+    message.includes("is not available on the")
+  ) {
+    return t("bots.modelRequiresPro");
+  }
   return message;
 }

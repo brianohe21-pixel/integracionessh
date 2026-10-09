@@ -281,7 +281,8 @@ export const en: Messages = {
     modelFilterAll: "All",
     modelSearchPlaceholder: "Search models...",
     modelSearchEmpty: "No models found.",
-    modelPlanHint: "Advanced models (GPT-5.6, GPT-4.1, GPT-4o, reasoning) are available on the Enterprise plan.",
+    modelPlanHint: "Advanced models (flagship, reasoning, and legacy) require the Pro plan.",
+    modelRequiresPro: "This model requires the Pro plan.",
     modelCategory: {
       economy: "Economy",
       flagship: "Flagship",

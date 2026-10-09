@@ -874,15 +874,24 @@ export async function processInboundMessage(
       }
       throw keyErr;
     }
-    const result = await generateChatResponse(
-      responseBot,
-      history,
-      userMessageText,
-      openAIKey,
-      tenantId,
-      { contactPhone: participantId, conversationId: conversation.conversationId },
-      conversationLocale
-    );
+    let result;
+    try {
+      result = await generateChatResponse(
+        responseBot,
+        history,
+        userMessageText,
+        openAIKey,
+        tenantId,
+        { contactPhone: participantId, conversationId: conversation.conversationId },
+        conversationLocale
+      );
+    } catch (err) {
+      if (err instanceof PlanLimitError) {
+        console.warn(`Plan model limit for tenant ${tenantId}:`, err.message);
+        return;
+      }
+      throw err;
+    }
     if (result.handoff) {
       shouldHandoff = true;
     } else {
@@ -906,17 +915,25 @@ export async function processInboundMessage(
       const handoffErrMsg = (handoffErr as Error).message ?? "";
       if (handoffErrMsg.includes("No active advisors")) {
         const openAIKey = await getOpenAIApiKey(tenantId, environment);
-        const fallback = await generateChatResponse(
-          responseBot,
-          history,
-          userMessageText,
-          openAIKey,
-          tenantId,
-          { contactPhone: participantId, conversationId: conversation.conversationId },
-          conversationLocale
-        );
-        aiResponse =
-          fallback.reply ?? getSystemMessage("noAdvisorsAvailable", conversationLocale);
+        try {
+          const fallback = await generateChatResponse(
+            responseBot,
+            history,
+            userMessageText,
+            openAIKey,
+            tenantId,
+            { contactPhone: participantId, conversationId: conversation.conversationId },
+            conversationLocale
+          );
+          aiResponse =
+            fallback.reply ?? getSystemMessage("noAdvisorsAvailable", conversationLocale);
+        } catch (err) {
+          if (err instanceof PlanLimitError) {
+            console.warn(`Plan model limit for tenant ${tenantId}:`, err.message);
+            return;
+          }
+          throw err;
+        }
       } else {
         throw handoffErr;
       }

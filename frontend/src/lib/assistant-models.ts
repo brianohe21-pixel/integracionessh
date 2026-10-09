@@ -82,9 +82,6 @@ export function getVoiceAssistantModels(
         minPlan: "free",
         provider: "openai",
       });
-    } else {
-      const chat = AI_MODELS.find((model) => model.id === currentModelId);
-      if (chat) combined.push(toChatOption(chat));
     }
   }
 

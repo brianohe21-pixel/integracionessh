@@ -1,6 +1,7 @@
 import { getTenant, updateTenant } from "../dynamodb/tenant.repository.js";
 import { getResellerPlanDefaults } from "../dynamodb/platform-config.repository.js";
 import { normalizeTenantPlan } from "./normalize-plan.js";
+import { enforceBotModelsForPlan } from "./enforce-bot-models-for-plan.js";
 import type { ResellerConfig, Tenant, TenantPlan } from "../../types/index.js";
 
 const PLAN_DURATION_DAYS = 30;
@@ -57,6 +58,7 @@ export async function activateTenantPlan(
   }
 
   await updateTenant(tenantId, updates);
+  await enforceBotModelsForPlan(tenantId, resolvedPlan);
 }
 
 export async function applyAdminTenantPlan(
@@ -65,12 +67,14 @@ export async function applyAdminTenantPlan(
 ): Promise<Tenant> {
   const resolvedPlan = normalizeTenantPlan(plan);
   if (resolvedPlan === "free") {
-    return updateTenant(tenantId, {
+    const updated = await updateTenant(tenantId, {
       plan: "free",
       tenantKind: "standard",
       subscriptionStatus: "none",
       currentPeriodEnd: "",
     });
+    await enforceBotModelsForPlan(tenantId, "free");
+    return updated;
   }
 
   const tenant = await getTenant(tenantId);
@@ -87,5 +91,7 @@ export async function applyAdminTenantPlan(
     updates.tenantKind = "standard";
   }
 
-  return updateTenant(tenantId, updates);
+  const updated = await updateTenant(tenantId, updates);
+  await enforceBotModelsForPlan(tenantId, resolvedPlan);
+  return updated;
 }
