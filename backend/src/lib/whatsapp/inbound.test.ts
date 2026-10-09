@@ -114,6 +114,22 @@ describe("normalizeInboundMessage", () => {
     expect(result.messageType).toBe("audio");
     expect(result.text).toBe("[audio]");
   });
+
+  it("normalizes video messages", () => {
+    const result = normalizeInboundMessage({
+      from: "57300",
+      id: "m8",
+      timestamp: "1",
+      type: "video",
+      video: {
+        id: "media-video-1",
+        mime_type: "video/mp4",
+        caption: "mira esto",
+      },
+    });
+    expect(result.messageType).toBe("video");
+    expect(result.text).toBe("mira esto");
+  });
 });
 
 describe("isProcessableInboundMessage", () => {
@@ -160,6 +176,15 @@ describe("isProcessableInboundMessage", () => {
         timestamp: "1",
         type: "audio",
         audio: { id: "media-2", mime_type: "audio/ogg" },
+      })
+    ).toBe(true);
+    expect(
+      isProcessableInboundMessage({
+        from: "1",
+        id: "1",
+        timestamp: "1",
+        type: "video",
+        video: { id: "media-3", mime_type: "video/mp4" },
       })
     ).toBe(true);
     expect(

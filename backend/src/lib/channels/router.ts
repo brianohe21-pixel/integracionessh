@@ -12,6 +12,7 @@ import type {
   OutboundDocument,
   OutboundImage,
   OutboundResult,
+  OutboundVideo,
 } from "./types.js";
 import { webchatAdapter } from "./webchat.adapter.js";
 import { voicebotAdapter } from "./voicebot.adapter.js";
@@ -75,6 +76,17 @@ export async function sendChannelAudio(
     throw new Error(`Channel ${ctx.channel} does not support audio messages`);
   }
   return adapter.sendAudio(ctx, audio);
+}
+
+export async function sendChannelVideo(
+  ctx: OutboundContext,
+  video: OutboundVideo
+): Promise<OutboundResult> {
+  const adapter = getChannelAdapter(ctx.channel);
+  if (!adapter.sendVideo) {
+    throw new Error(`Channel ${ctx.channel} does not support video messages`);
+  }
+  return adapter.sendVideo(ctx, video);
 }
 
 export async function markChannelRead(

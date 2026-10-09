@@ -10,6 +10,8 @@ const ALLOWED_MIME_TYPES = new Set([
   "audio/aac",
   "audio/amr",
   "audio/ogg",
+  "video/mp4",
+  "video/3gpp",
 ]);
 
 const BLOCKED_EXTENSIONS = new Set([
@@ -55,6 +57,8 @@ export function isAllowedConversationAttachmentFilename(filename: string): boole
   if (lower.endsWith(".amr")) return true;
   if (lower.endsWith(".ogg")) return true;
   if (lower.endsWith(".opus")) return true;
+  if (lower.endsWith(".mp4")) return true;
+  if (lower.endsWith(".3gp")) return true;
   return false;
 }
 
@@ -77,16 +81,23 @@ export function inferConversationAttachmentMimeType(
   if (lower.endsWith(".aac")) return "audio/aac";
   if (lower.endsWith(".amr")) return "audio/amr";
   if (lower.endsWith(".ogg") || lower.endsWith(".opus")) return "audio/ogg";
+  if (lower.endsWith(".mp4")) return "video/mp4";
+  if (lower.endsWith(".3gp")) return "video/3gpp";
   return null;
 }
 
 export function isImageAttachmentMimeType(mimeType: string): boolean {
-  return mimeType.startsWith("image/");
+  return normalizeConversationAttachmentMimeType(mimeType).startsWith("image/");
 }
 
 export function isAudioAttachmentMimeType(mimeType: string): boolean {
   const normalized = normalizeConversationAttachmentMimeType(mimeType);
   return normalized.startsWith("audio/") && ALLOWED_MIME_TYPES.has(normalized);
+}
+
+export function isVideoAttachmentMimeType(mimeType: string): boolean {
+  const normalized = normalizeConversationAttachmentMimeType(mimeType);
+  return normalized.startsWith("video/") && ALLOWED_MIME_TYPES.has(normalized);
 }
 
 export function isVoiceNoteMimeType(mimeType: string): boolean {

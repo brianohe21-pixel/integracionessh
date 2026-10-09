@@ -7,7 +7,7 @@ import type { Message } from "@/types";
 export const CONVERSATION_ATTACHMENT_MAX_BYTES = 16 * 1024 * 1024;
 
 export const CONVERSATION_ATTACHMENT_ACCEPT =
-  "application/pdf,image/jpeg,image/png,image/webp,audio/mpeg,audio/mp4,audio/aac,audio/amr,audio/ogg,.pdf,.jpg,.jpeg,.png,.webp,.mp3,.m4a,.aac,.amr,.ogg,.opus";
+  "application/pdf,image/jpeg,image/png,image/webp,audio/mpeg,audio/mp4,audio/aac,audio/amr,audio/ogg,video/mp4,video/3gpp,.pdf,.jpg,.jpeg,.png,.webp,.mp3,.m4a,.aac,.amr,.ogg,.opus,.mp4,.3gp";
 
 export function isAudioAttachmentFile(file: File): boolean {
   const lower = file.name.toLowerCase();
@@ -47,10 +47,31 @@ export function validateConversationAttachmentFile(file: File): string | null {
     lower.endsWith(".aac") ||
     lower.endsWith(".amr") ||
     lower.endsWith(".ogg") ||
-    lower.endsWith(".opus");
+    lower.endsWith(".opus") ||
+    lower.endsWith(".mp4") ||
+    lower.endsWith(".3gp");
 
   if (!allowed) return "unsupported";
   return null;
+}
+
+function resolveAttachmentMimeType(file: File): string {
+  const mime = file.type.trim().toLowerCase();
+  if (mime && mime !== "application/octet-stream") return mime;
+
+  const lower = file.name.toLowerCase();
+  if (lower.endsWith(".pdf")) return "application/pdf";
+  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+  if (lower.endsWith(".png")) return "image/png";
+  if (lower.endsWith(".webp")) return "image/webp";
+  if (lower.endsWith(".mp3")) return "audio/mpeg";
+  if (lower.endsWith(".m4a")) return "audio/mp4";
+  if (lower.endsWith(".aac")) return "audio/aac";
+  if (lower.endsWith(".amr")) return "audio/amr";
+  if (lower.endsWith(".ogg") || lower.endsWith(".opus")) return "audio/ogg";
+  if (lower.endsWith(".mp4")) return "video/mp4";
+  if (lower.endsWith(".3gp")) return "video/3gpp";
+  return mime || "application/octet-stream";
 }
 
 export function useSendConversationAttachment() {
@@ -69,7 +90,7 @@ export function useSendConversationAttachment() {
         throw new Error(validationError);
       }
 
-      const mimeType = body.file.type || "application/octet-stream";
+      const mimeType = resolveAttachmentMimeType(body.file);
       const { uploadUrl, attachmentId, s3Key } = await api.post<{
         uploadUrl: string;
         attachmentId: string;

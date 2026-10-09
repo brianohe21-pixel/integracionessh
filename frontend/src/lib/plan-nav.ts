@@ -1,9 +1,9 @@
+import { normalizeTenantPlan } from "@/lib/normalize-plan";
 import type { TenantPlan } from "@/types";
 
-const PRO_PLUS_PLANS = new Set<TenantPlan>(["pro", "scale", "reseller"]);
-
-export function isProPlusPlan(plan: TenantPlan | undefined): boolean {
-  return plan ? PRO_PLUS_PLANS.has(plan) : false;
+export function isProPlusPlan(plan: TenantPlan | string | undefined): boolean {
+  const normalized = normalizeTenantPlan(plan);
+  return normalized === "pro" || normalized === "reseller";
 }
 
 export function isProOnlyNavPath(href: string): boolean {

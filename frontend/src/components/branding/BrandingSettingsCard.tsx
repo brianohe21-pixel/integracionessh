@@ -21,7 +21,7 @@ import { DEFAULT_PRIMARY_COLOR } from "@/lib/brand-colors";
 import type { Tenant } from "@/types";
 
 function planAllowsBranding(plan: string | undefined): boolean {
-  return plan === "scale" || plan === "enterprise" || plan === "reseller";
+  return plan === "reseller";
 }
 
 export function BrandingSettingsCard() {

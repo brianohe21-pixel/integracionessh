@@ -122,35 +122,6 @@ const LIMITS: Record<TenantPlan, PlanLimits> = {
     apiRateLimitPerMinute: 120,
     apiRateLimitPerDay: 50_000,
   },
-  scale: {
-    maxActiveBots: 15,
-    maxMessagesPerMonth: 40_000,
-    maxBulkRecipientsPerJob: 10_000,
-    maxActiveCampaigns: 50,
-    maxContacts: 50_000,
-    maxAutomationsPerBot: 100,
-    maxScheduledAutomations: 50,
-    maxDocumentsPerBot: 100,
-    maxKnowledgeStorageMb: 1024,
-    maxMetaFlowsPerBot: 50,
-    maxVisualFlowsPerBot: 50,
-    maxFlowNodes: 100,
-    maxActiveFlowRuns: 500,
-    maxChannelsPerBot: 8,
-    maxWhatsAppChannelsPerBot: 60,
-    maxActiveWebChatSessions: 1_000,
-    maxConcurrentLiveKitCalls: 10,
-    maxVoicebotMinutesPerMonth: 1_000,
-    maxCalendarAppsPerTenant: 10,
-    maxPaymentsAppsPerTenant: 10,
-    maxCatalogAppsPerTenant: 10,
-    maxHostedFormsPerTenant: 50,
-    maxProductsPerBot: 1_000,
-    maxOrdersPerMonth: 10_000,
-    canCustomizeBranding: true,
-    apiRateLimitPerMinute: 300,
-    apiRateLimitPerDay: 250_000,
-  },
   reseller: {
     maxActiveBots: Number.MAX_SAFE_INTEGER,
     maxMessagesPerMonth: 50_000,
@@ -204,17 +175,7 @@ import {
 } from "./subaccount-services.js";
 
 export function getPlanLimits(plan: TenantPlan | string | undefined): PlanLimits {
-  const normalized = normalizeTenantPlan(plan);
-  if (
-    normalized === "starter" ||
-    normalized === "pro" ||
-    normalized === "scale" ||
-    normalized === "free" ||
-    normalized === "reseller"
-  ) {
-    return LIMITS[normalized];
-  }
-  return LIMITS.free;
+  return LIMITS[normalizeTenantPlan(plan)];
 }
 
 function emptyNumericLimits(canCustomizeBranding: boolean): PlanLimits {

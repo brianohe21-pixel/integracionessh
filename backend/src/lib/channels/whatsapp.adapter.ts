@@ -4,6 +4,7 @@ import {
   sendDocumentMessage,
   sendImageMessage,
   sendTextMessage,
+  sendVideoMessage,
   truncateWhatsAppText,
   uploadWhatsAppMedia,
 } from "../whatsapp/client.js";
@@ -17,6 +18,7 @@ import type {
   OutboundDocument,
   OutboundImage,
   OutboundResult,
+  OutboundVideo,
 } from "./types.js";
 
 export const whatsappAdapter: ChannelAdapter = {
@@ -141,6 +143,33 @@ export const whatsappAdapter: ChannelAdapter = {
       throw new Error("WhatsApp did not return a message id for the audio");
     }
     return { externalMessageId };
+  },
+
+  async sendVideo(ctx: OutboundContext, video: OutboundVideo): Promise<OutboundResult> {
+    if (!ctx.phoneNumberId || !ctx.accessToken) {
+      throw new Error("WhatsApp outbound requires phoneNumberId and accessToken");
+    }
+    await assertWhatsAppOutboundAllowed({
+      tenantId: ctx.tenantId,
+      phoneNumberId: ctx.phoneNumberId,
+      kind: ctx.outboundKind ?? "service",
+      to: ctx.participantId,
+    });
+    const uploaded = await uploadWhatsAppMedia({
+      phoneNumberId: ctx.phoneNumberId,
+      accessToken: ctx.accessToken,
+      buffer: video.buffer,
+      mimeType: video.mimeType,
+      filename: video.filename,
+    });
+    const result = await sendVideoMessage({
+      phoneNumberId: ctx.phoneNumberId,
+      to: ctx.participantId,
+      accessToken: ctx.accessToken,
+      mediaId: uploaded.id,
+      ...(video.caption ? { caption: video.caption } : {}),
+    });
+    return { externalMessageId: result.messages?.[0]?.id };
   },
 
   async markRead(ctx: OutboundContext, externalMessageId: string): Promise<void> {

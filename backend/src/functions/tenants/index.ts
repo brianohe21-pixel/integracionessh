@@ -92,7 +92,7 @@ const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 const CreateTenantSchema = z.object({
   name: z.string().min(1).max(128),
   email: z.string().email(),
-  plan: z.enum(["free", "starter", "pro", "scale", "reseller"]).default("free"),
+  plan: z.enum(["free", "starter", "pro", "reseller"]).default("free"),
 });
 
 const PlanLimitValueSchema = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
@@ -130,7 +130,7 @@ const PlanLimitsOverrideSchema = z
 
 const UpdateTenantSchema = z.object({
   name: z.string().min(1).max(128).optional(),
-  plan: z.enum(["free", "starter", "pro", "scale", "reseller"]).optional(),
+  plan: z.enum(["free", "starter", "pro", "reseller"]).optional(),
   status: z.enum(["active", "suspended"]).optional(),
   law2300Exempt: z.boolean().optional(),
   pricePerMessageCents: z.number().int().min(0).max(1_000_000_000).optional(),

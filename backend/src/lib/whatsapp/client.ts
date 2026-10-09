@@ -200,6 +200,14 @@ export interface SendAudioMessageOptions {
   voice?: boolean;
 }
 
+export interface SendVideoMessageOptions {
+  phoneNumberId: string;
+  to: string;
+  accessToken: string;
+  mediaId: string;
+  caption?: string;
+}
+
 export async function uploadWhatsAppMedia(
   options: UploadWhatsAppMediaOptions
 ): Promise<UploadWhatsAppMediaResponse> {
@@ -348,6 +356,37 @@ export async function sendAudioMessage(
     audio: {
       id: options.mediaId,
       ...(options.voice ? { voice: true } : {}),
+    },
+  };
+
+  const response = await fetch(`${GRAPH_API_URL}/${options.phoneNumberId}/messages`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${options.accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throwGraphApiError(response.status, error);
+  }
+
+  return response.json() as Promise<SendTextMessageResponse>;
+}
+
+export async function sendVideoMessage(
+  options: SendVideoMessageOptions
+): Promise<SendTextMessageResponse> {
+  const body: Record<string, unknown> = {
+    messaging_product: "whatsapp",
+    recipient_type: "individual",
+    ...buildWhatsAppRecipientFields(options.to),
+    type: "video",
+    video: {
+      id: options.mediaId,
+      ...(options.caption ? { caption: truncateWhatsAppText(options.caption) } : {}),
     },
   };
 

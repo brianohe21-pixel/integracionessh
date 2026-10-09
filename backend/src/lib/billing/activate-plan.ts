@@ -1,5 +1,6 @@
 import { getTenant, updateTenant } from "../dynamodb/tenant.repository.js";
 import { getResellerPlanDefaults } from "../dynamodb/platform-config.repository.js";
+import { normalizeTenantPlan } from "./normalize-plan.js";
 import type { ResellerConfig, Tenant, TenantPlan } from "../../types/index.js";
 
 const PLAN_DURATION_DAYS = 30;
@@ -39,17 +40,18 @@ export async function buildResellerConfigFromDefaults(
 
 export async function activateTenantPlan(
   tenantId: string,
-  plan: TenantPlan
+  plan: TenantPlan | string
 ): Promise<void> {
+  const resolvedPlan = normalizeTenantPlan(plan);
   const tenant = await getTenant(tenantId);
   const updates: Partial<Omit<Tenant, "tenantId" | "createdAt">> = {
-    plan,
+    plan: resolvedPlan,
     subscriptionStatus: "active",
     currentPeriodEnd: periodEndFromTenant(tenant).toISOString(),
     paymentProvider: "wompi",
   };
 
-  if (plan === "reseller") {
+  if (resolvedPlan === "reseller") {
     updates.tenantKind = "reseller";
     updates.resellerConfig = await buildResellerConfigFromDefaults(tenant?.resellerConfig);
   }
@@ -59,9 +61,10 @@ export async function activateTenantPlan(
 
 export async function applyAdminTenantPlan(
   tenantId: string,
-  plan: TenantPlan
+  plan: TenantPlan | string
 ): Promise<Tenant> {
-  if (plan === "free") {
+  const resolvedPlan = normalizeTenantPlan(plan);
+  if (resolvedPlan === "free") {
     return updateTenant(tenantId, {
       plan: "free",
       tenantKind: "standard",
@@ -72,12 +75,12 @@ export async function applyAdminTenantPlan(
 
   const tenant = await getTenant(tenantId);
   const updates: Partial<Omit<Tenant, "tenantId" | "createdAt">> = {
-    plan,
+    plan: resolvedPlan,
     subscriptionStatus: "active",
     currentPeriodEnd: periodEndFromTenant(tenant).toISOString(),
   };
 
-  if (plan === "reseller") {
+  if (resolvedPlan === "reseller") {
     updates.tenantKind = "reseller";
     updates.resellerConfig = await buildResellerConfigFromDefaults(tenant?.resellerConfig);
   } else if (tenant?.tenantKind === "reseller") {

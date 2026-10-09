@@ -29,10 +29,12 @@ export function priceIdForPlan(plan: PaidTenantPlan): string {
   return id;
 }
 
-export function planFromPriceId(priceId: string): PaidTenantPlan | "scale" | null {
+export function planFromPriceId(priceId: string): PaidTenantPlan | null {
+  if (!priceId) return null;
   if (priceId === process.env.STRIPE_PRICE_STARTER) return "starter";
   if (priceId === process.env.STRIPE_PRICE_PRO) return "pro";
-  if (priceId === process.env.STRIPE_PRICE_ENTERPRISE) return "scale";
+  const enterprisePriceId = process.env.STRIPE_PRICE_ENTERPRISE;
+  if (enterprisePriceId && priceId === enterprisePriceId) return "pro";
   return null;
 }
 

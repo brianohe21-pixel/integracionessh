@@ -204,7 +204,7 @@ export function buildPaymentReference(
 
 export function parsePaymentReference(
   reference: string
-): { tenantId: string; plan: PaidTenantPlan | "scale" } | null {
+): { tenantId: string; plan: PaidTenantPlan } | null {
   const parts = reference.split("|");
   if (parts.length < 4 || parts[0] !== "wompi") return null;
   const tenantId = parts[1] ?? "";
@@ -219,9 +219,9 @@ export function parsePaymentReference(
   }
   if (!tenantId) return null;
   if (plan === "scale" || plan === "enterprise") {
-    return { tenantId, plan: "scale" };
+    return { tenantId, plan: "pro" };
   }
-  return { tenantId, plan: plan as PaidTenantPlan };
+  return { tenantId, plan };
 }
 
 export const FRONTEND_URL = (process.env.FRONTEND_URL ?? "http://localhost:3000").replace(

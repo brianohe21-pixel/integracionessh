@@ -1,13 +1,14 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
-import { ExternalLink, FileText } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { ExternalLink, FileText, Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { ChatAudioPlayer } from "@/components/conversations/ChatAudioPlayer";
 import {
   getDocumentMetadata,
   isAudioAttachmentMessage,
   isImageAttachmentMessage,
+  isVideoAttachmentMessage,
 } from "@/lib/conversations/document-messages";
 import { useT } from "@/i18n/context";
 import type { Message } from "@/types";
@@ -18,26 +19,55 @@ type Props = {
   botId: string;
 };
 
+async function fetchAttachmentUrl(params: {
+  conversationId: string;
+  messageId: string;
+  botId: string;
+}): Promise<string> {
+  const result = await api.get<{
+    url: string;
+    filename: string;
+  }>(
+    `/conversations/${encodeURIComponent(params.conversationId)}/messages/${encodeURIComponent(params.messageId)}/document?botId=${encodeURIComponent(params.botId)}`
+  );
+  return result.url;
+}
+
 export function AttachmentMessageBubble({ message, conversationId, botId }: Props) {
   const t = useT();
   const metadata = getDocumentMetadata(message);
   const isImage = isImageAttachmentMessage(message);
   const isAudio = isAudioAttachmentMessage(message);
+  const isVideo = isVideoAttachmentMessage(message);
+  const isInlineMedia = isImage || isAudio || isVideo;
+
+  const mediaUrlQuery = useQuery({
+    queryKey: ["conversation-attachment-url", conversationId, message.messageId],
+    queryFn: () =>
+      fetchAttachmentUrl({
+        conversationId,
+        messageId: message.messageId,
+        botId,
+      }),
+    enabled: Boolean(isInlineMedia && metadata && !metadata.downloadUrl),
+    staleTime: 30 * 60_000,
+  });
+
+  const mediaUrl = metadata?.downloadUrl || mediaUrlQuery.data || null;
 
   const openAttachment = useMutation({
     mutationFn: async () => {
-      if (metadata?.downloadUrl) {
-        window.open(metadata.downloadUrl, "_blank", "noopener,noreferrer");
+      if (mediaUrl) {
+        window.open(mediaUrl, "_blank", "noopener,noreferrer");
         return;
       }
 
-      const result = await api.get<{
-        url: string;
-        filename: string;
-      }>(
-        `/conversations/${encodeURIComponent(conversationId)}/messages/${encodeURIComponent(message.messageId)}/document?botId=${encodeURIComponent(botId)}`
-      );
-      window.open(result.url, "_blank", "noopener,noreferrer");
+      const url = await fetchAttachmentUrl({
+        conversationId,
+        messageId: message.messageId,
+        botId,
+      });
+      window.open(url, "_blank", "noopener,noreferrer");
     },
   });
 
@@ -50,11 +80,25 @@ export function AttachmentMessageBubble({ message, conversationId, botId }: Prop
       ? message.content.trim()
       : null;
 
-  if (isAudio && metadata.downloadUrl) {
-    return <ChatAudioPlayer src={metadata.downloadUrl} />;
+  if (isInlineMedia && !mediaUrl) {
+    return (
+      <div className="flex items-center gap-2 py-1 text-xs text-secondary">
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        <span>{metadata.filename}</span>
+      </div>
+    );
   }
 
-  if (isImage && metadata.downloadUrl) {
+  if (isAudio && mediaUrl) {
+    return (
+      <div className="space-y-2">
+        {caption ? <p className="emoji-text whitespace-pre-wrap break-words">{caption}</p> : null}
+        <ChatAudioPlayer src={mediaUrl} />
+      </div>
+    );
+  }
+
+  if (isImage && mediaUrl) {
     return (
       <div className="space-y-2">
         {caption ? <p className="emoji-text whitespace-pre-wrap break-words">{caption}</p> : null}
@@ -65,11 +109,29 @@ export function AttachmentMessageBubble({ message, conversationId, botId }: Prop
           className="block max-w-full overflow-hidden rounded-lg border border-default/80 bg-surface-muted/70 transition-colors hover:bg-surface-elevated"
         >
           <img
-            src={metadata.downloadUrl}
+            src={mediaUrl}
             alt={metadata.filename}
             className="max-h-64 w-full object-cover"
           />
         </button>
+        <p className="truncate text-xs text-secondary">{metadata.filename}</p>
+      </div>
+    );
+  }
+
+  if (isVideo && mediaUrl) {
+    return (
+      <div className="space-y-2">
+        {caption ? <p className="emoji-text whitespace-pre-wrap break-words">{caption}</p> : null}
+        <div className="overflow-hidden rounded-lg border border-default/80 bg-black/90">
+          <video
+            src={mediaUrl}
+            controls
+            playsInline
+            preload="metadata"
+            className="max-h-72 w-full"
+          />
+        </div>
         <p className="truncate text-xs text-secondary">{metadata.filename}</p>
       </div>
     );

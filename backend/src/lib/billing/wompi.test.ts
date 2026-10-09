@@ -70,6 +70,14 @@ describe("wompi billing", () => {
       tenantId: "tenant-1",
       plan: "pro",
     });
+    expect(parsePaymentReference("wompi|tenant-1|scale|abc")).toEqual({
+      tenantId: "tenant-1",
+      plan: "pro",
+    });
+    expect(parsePaymentReference("wompi|tenant-1|enterprise|abc")).toEqual({
+      tenantId: "tenant-1",
+      plan: "pro",
+    });
     expect(parsePaymentReference("invalid")).toBeNull();
   });
 

@@ -1,4 +1,4 @@
-export type TenantPlan = "free" | "starter" | "pro" | "scale" | "reseller";
+export type TenantPlan = "free" | "starter" | "pro" | "reseller";
 
 export type TenantKind = "standard" | "reseller" | "subaccount";
 
@@ -1312,7 +1312,7 @@ export interface EmailMessageMetadata {
 }
 
 export interface DocumentMessageMetadata {
-  kind: "document" | "image" | "audio";
+  kind: "document" | "image" | "audio" | "video";
   filename: string;
   mimeType: string;
   s3Key: string;

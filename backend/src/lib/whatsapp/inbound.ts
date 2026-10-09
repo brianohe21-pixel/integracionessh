@@ -21,6 +21,7 @@ export function isProcessableInboundMessage(message: WhatsAppMessage): boolean {
   if (message.type === "text" && message.text?.body) return true;
   if (message.type === "image" && message.image?.id) return true;
   if (message.type === "audio" && message.audio?.id) return true;
+  if (message.type === "video" && message.video?.id) return true;
   if (message.type === "order" && message.order?.product_items?.length) return true;
   if (message.type === "interactive" && message.interactive) {
     const t = message.interactive.type;
@@ -61,6 +62,15 @@ export function normalizeInboundMessage(message: WhatsAppMessage): InboundNormal
     return {
       text: "[audio]",
       messageType: "audio",
+      raw: message,
+    };
+  }
+
+  if (message.type === "video" && message.video?.id) {
+    const caption = message.video.caption?.trim();
+    return {
+      text: caption || "[video]",
+      messageType: "video",
       raw: message,
     };
   }

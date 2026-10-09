@@ -1,12 +1,9 @@
 import { normalizeTenantPlan } from "./normalize-plan.js";
 
 describe("normalizeTenantPlan", () => {
-  it("maps legacy enterprise to pro", () => {
+  it("maps legacy enterprise and scale to pro", () => {
     expect(normalizeTenantPlan("enterprise")).toBe("pro");
-  });
-
-  it("keeps scale unchanged", () => {
-    expect(normalizeTenantPlan("scale")).toBe("scale");
+    expect(normalizeTenantPlan("scale")).toBe("pro");
   });
 
   it("defaults unknown plans to free", () => {

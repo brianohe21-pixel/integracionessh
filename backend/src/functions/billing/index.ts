@@ -51,9 +51,10 @@ import {
   type PaidTenantPlan,
 } from "../../lib/billing/plan-config.js";
 import { assertCheckoutAllowed } from "../../lib/billing/checkout-policy.js";
+import { normalizeTenantPlan } from "../../lib/billing/normalize-plan.js";
 import { calculateUsdPriceInCopCents } from "../../lib/billing/trm.js";
 
-import type { SubscriptionStatus, TenantPlan } from "../../types/index.js";
+import type { SubscriptionStatus } from "../../types/index.js";
 
 const CheckoutSchema = z.object({
   plan: z.enum(["starter", "pro"]),
@@ -518,7 +519,7 @@ async function handleStripeWebhook(
         await syncSubscriptionToTenant(tenantId, sub);
       } else if (session.metadata?.plan) {
         await updateTenant(tenantId, {
-          plan: session.metadata.plan as TenantPlan,
+          plan: normalizeTenantPlan(session.metadata.plan),
           subscriptionStatus: "active",
           paymentProvider: "stripe",
         });

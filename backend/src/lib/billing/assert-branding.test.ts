@@ -15,8 +15,10 @@ function tenant(plan: Tenant["plan"]): Tenant {
 }
 
 describe("assertCanCustomizeBranding", () => {
-  it("allows enterprise tenants", () => {
-    expect(() => assertCanCustomizeBranding(tenant("scale"))).not.toThrow();
+  it("treats legacy scale as pro", () => {
+    const legacy = tenant("pro");
+    legacy.plan = "scale" as Tenant["plan"];
+    expect(() => assertCanCustomizeBranding(legacy)).not.toThrow();
   });
 
   it("allows pro tenants", () => {

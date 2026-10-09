@@ -6,12 +6,13 @@ import {
   isAudioAttachmentMimeType,
   isImageAttachmentMimeType,
   isOggOpusBuffer,
+  isVideoAttachmentMimeType,
   isVoiceNoteMimeType,
   normalizeConversationAttachmentMimeType,
 } from "./attachment-policy.js";
 
 describe("attachment-policy", () => {
-  it("allows pdf, image and audio mime types", () => {
+  it("allows pdf, image, audio and video mime types", () => {
     expect(isAllowedConversationAttachmentMimeType("application/pdf")).toBe(true);
     expect(isAllowedConversationAttachmentMimeType("image/jpeg")).toBe(true);
     expect(isAllowedConversationAttachmentMimeType("image/png")).toBe(true);
@@ -21,6 +22,8 @@ describe("attachment-policy", () => {
     expect(isAllowedConversationAttachmentMimeType("audio/aac")).toBe(true);
     expect(isAllowedConversationAttachmentMimeType("audio/amr")).toBe(true);
     expect(isAllowedConversationAttachmentMimeType("audio/ogg")).toBe(true);
+    expect(isAllowedConversationAttachmentMimeType("video/mp4")).toBe(true);
+    expect(isAllowedConversationAttachmentMimeType("video/3gpp")).toBe(true);
     expect(isAllowedConversationAttachmentMimeType("audio/webm")).toBe(false);
     expect(isAllowedConversationAttachmentMimeType("audio/wav")).toBe(false);
     expect(isAllowedConversationAttachmentMimeType("application/zip")).toBe(false);
@@ -32,6 +35,8 @@ describe("attachment-policy", () => {
     expect(isAllowedConversationAttachmentFilename("voice.ogg")).toBe(true);
     expect(isAllowedConversationAttachmentFilename("track.mp3")).toBe(true);
     expect(isAllowedConversationAttachmentFilename("note.m4a")).toBe(true);
+    expect(isAllowedConversationAttachmentFilename("clip.mp4")).toBe(true);
+    expect(isAllowedConversationAttachmentFilename("clip.3gp")).toBe(true);
     expect(isAllowedConversationAttachmentFilename("clip.wav")).toBe(false);
     expect(isAllowedConversationAttachmentFilename("script.exe")).toBe(false);
   });
@@ -41,6 +46,7 @@ describe("attachment-policy", () => {
       "application/pdf"
     );
     expect(inferConversationAttachmentMimeType("photo.png", "")).toBe("image/png");
+    expect(inferConversationAttachmentMimeType("clip.mp4", "")).toBe("video/mp4");
   });
 
   it("detects image attachments", () => {
@@ -57,6 +63,13 @@ describe("attachment-policy", () => {
     expect(isVoiceNoteMimeType("audio/mpeg")).toBe(false);
     expect(normalizeConversationAttachmentMimeType("audio/ogg; codecs=opus")).toBe("audio/ogg");
     expect(isOggOpusBuffer(new Uint8Array([0x4f, 0x67, 0x67, 0x53]))).toBe(true);
+  });
+
+  it("detects video attachments", () => {
+    expect(isVideoAttachmentMimeType("video/mp4")).toBe(true);
+    expect(isVideoAttachmentMimeType("video/3gpp")).toBe(true);
+    expect(isVideoAttachmentMimeType("video/webm")).toBe(false);
+    expect(isVideoAttachmentMimeType("audio/mp4")).toBe(false);
   });
 
   it("defines max size", () => {
