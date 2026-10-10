@@ -44,7 +44,13 @@ export function assessWhatsAppQuality(
     };
   }
 
-  const qualityRating = phone.qualityRating ?? "NA";
+  const qualityRating =
+    phone.qualityRating === "GREEN" ||
+    phone.qualityRating === "YELLOW" ||
+    phone.qualityRating === "RED" ||
+    phone.qualityRating === "NA"
+      ? phone.qualityRating
+      : "NA";
   const phoneStatus = phone.status ?? "UNKNOWN";
 
   if (qualityRating === "RED") {

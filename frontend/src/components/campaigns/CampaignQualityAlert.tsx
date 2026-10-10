@@ -16,6 +16,13 @@ const QUALITY_LABEL_KEYS = {
   NA: "bots.qualityNa",
 } as const;
 
+function qualityLabelKey(rating: string | null | undefined) {
+  if (rating && rating in QUALITY_LABEL_KEYS) {
+    return QUALITY_LABEL_KEYS[rating as keyof typeof QUALITY_LABEL_KEYS];
+  }
+  return QUALITY_LABEL_KEYS.NA;
+}
+
 interface CampaignQualityAlertProps {
   phone?: WhatsAppPhoneInfo | null;
   assessment?: WhatsAppQualityAssessment;
@@ -49,7 +56,7 @@ export function CampaignQualityAlert({
             <p className="font-medium">{t("campaigns.qualityOkTitle")}</p>
             <p className="text-green-800">
               {t("campaigns.qualityOkBody", {
-                rating: t(QUALITY_LABEL_KEYS[phone.qualityRating]),
+                rating: t(qualityLabelKey(phone.qualityRating)),
                 limit: formatMessagingLimit(phone.messagingLimit) ?? t("campaigns.qualityLimitUnknown"),
               })}
             </p>
@@ -74,7 +81,7 @@ export function CampaignQualityAlert({
             {phone?.qualityRating && (
               <p className="text-xs text-red-700">
                 {t("campaigns.qualityCurrentRating", {
-                  rating: t(QUALITY_LABEL_KEYS[phone.qualityRating]),
+                  rating: t(qualityLabelKey(phone.qualityRating)),
                   status: phone.status,
                 })}
               </p>
@@ -99,7 +106,7 @@ export function CampaignQualityAlert({
           {phone?.qualityRating && phone.qualityRating !== "NA" && (
             <p className="text-xs text-amber-700">
               {t("campaigns.qualityCurrentRating", {
-                rating: t(QUALITY_LABEL_KEYS[phone.qualityRating]),
+                rating: t(qualityLabelKey(phone.qualityRating)),
                 status: phone.status,
               })}
             </p>

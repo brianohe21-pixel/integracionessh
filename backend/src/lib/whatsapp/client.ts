@@ -611,6 +611,15 @@ export async function deleteMetaTemplate(
 
 export type WhatsAppQualityRating = "GREEN" | "YELLOW" | "RED" | "NA";
 
+const QUALITY_RATINGS = new Set<WhatsAppQualityRating>(["GREEN", "YELLOW", "RED", "NA"]);
+
+function normalizeQualityRating(value?: string): WhatsAppQualityRating {
+  if (value && QUALITY_RATINGS.has(value as WhatsAppQualityRating)) {
+    return value as WhatsAppQualityRating;
+  }
+  return "NA";
+}
+
 export interface WhatsAppPhoneInfo {
   qualityRating: WhatsAppQualityRating;
   status: string;
@@ -695,7 +704,7 @@ export async function getPhoneNumberInfo(
   };
 
   return {
-    qualityRating: json.quality_rating ?? "NA",
+    qualityRating: normalizeQualityRating(json.quality_rating),
     status: json.status ?? "UNKNOWN",
     ...(json.display_phone_number
       ? { displayPhoneNumber: json.display_phone_number }

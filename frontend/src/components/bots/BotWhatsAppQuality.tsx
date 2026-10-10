@@ -90,8 +90,8 @@ export function BotWhatsAppQuality({
           <div>
             <dt className="text-xs text-secondary mb-1">{t("bots.qualityTitle")}</dt>
             <dd>
-              <Badge variant={QUALITY_VARIANTS[whatsappPhone.qualityRating]}>
-                {t(QUALITY_KEYS[whatsappPhone.qualityRating])}
+              <Badge variant={QUALITY_VARIANTS[whatsappPhone.qualityRating] ?? "default"}>
+                {t(QUALITY_KEYS[whatsappPhone.qualityRating] ?? "bots.qualityNa")}
               </Badge>
             </dd>
           </div>
