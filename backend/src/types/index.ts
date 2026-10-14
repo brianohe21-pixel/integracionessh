@@ -100,12 +100,21 @@ export interface MaxMessagesPerMonthByPlan {
   reseller: number;
 }
 
+export interface AiMessagePack {
+  id: string;
+  messages: number;
+  priceCents: number;
+  active?: boolean;
+}
+
 export interface PlatformBillingConfig {
   pricePerMessageCents: number;
   currency: "COP";
   maxMessagesPerMonthByPlan: MaxMessagesPerMonthByPlan;
   /** Max accepted WhatsApp templates per Starter billing period (0 = unlimited). */
   templateCreditCapCount?: number;
+  /** Self-service AI message packs (paid plans only). */
+  aiMessagePacks?: AiMessagePack[];
   updatedAt?: string;
 }
 
@@ -314,6 +323,10 @@ export interface Tenant {
   billingPeriodTemplatesAcceptedCount?: number;
   /** Unit price (COP cents) locked for the current Starter billing period. */
   billingPeriodAppliedPricePerMessageCents?: number;
+  /** Calendar UTC period (YYYY-MM) for purchased AI message packs. */
+  aiBonusMessagesPeriod?: string;
+  /** Extra AI messages granted for aiBonusMessagesPeriod. */
+  aiBonusMessagesGranted?: number;
   onboardingCompletedAt?: string;
   onboardingSkippedAt?: string;
   onboardingBannerDismissedAt?: string;

@@ -15,7 +15,12 @@ import { TableContainer } from "@/components/ui/TableContainer";
 import { Button } from "@/components/ui/Button";
 import { SideDrawer } from "@/components/ui/SideDrawer";
 import { Download, Pencil, Settings2 } from "lucide-react";
-import type { AdminBillingOverviewRow, MaxMessagesPerMonthByPlan, PlatformBillingConfig } from "@/types";
+import type {
+  AdminBillingOverviewRow,
+  AiMessagePack,
+  MaxMessagesPerMonthByPlan,
+  PlatformBillingConfig,
+} from "@/types";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_AI_QUOTAS: MaxMessagesPerMonthByPlan = {
@@ -24,6 +29,29 @@ const DEFAULT_AI_QUOTAS: MaxMessagesPerMonthByPlan = {
   pro: 10_000,
   reseller: 50_000,
 };
+
+const DEFAULT_AI_PACKS: AiMessagePack[] = [
+  { id: "pack_500", messages: 500, priceCents: 3_000_000, active: true },
+  { id: "pack_2000", messages: 2_000, priceCents: 10_000_000, active: true },
+  { id: "pack_5000", messages: 5_000, priceCents: 22_000_000, active: true },
+];
+
+type PackDraft = {
+  id: string;
+  messages: string;
+  pricePesos: string;
+  active: boolean;
+};
+
+function packsToDraft(packs: AiMessagePack[] | undefined): PackDraft[] {
+  const source = packs?.length ? packs : DEFAULT_AI_PACKS;
+  return source.map((pack) => ({
+    id: pack.id,
+    messages: String(pack.messages),
+    pricePesos: pesosInputFromCents(pack.priceCents),
+    active: pack.active !== false,
+  }));
+}
 
 function formatCents(cents: number): string {
   return new Intl.NumberFormat(undefined, {
@@ -70,7 +98,10 @@ function DefaultBillingConfigDrawer({
   onSave: (
     config: Pick<
       PlatformBillingConfig,
-      "pricePerMessageCents" | "maxMessagesPerMonthByPlan" | "templateCreditCapCount"
+      | "pricePerMessageCents"
+      | "maxMessagesPerMonthByPlan"
+      | "templateCreditCapCount"
+      | "aiMessagePacks"
     >
   ) => Promise<void>;
 }) {
@@ -86,9 +117,11 @@ function DefaultBillingConfigDrawer({
     pro: String(initialQuotas.pro),
     reseller: String(initialQuotas.reseller),
   });
+  const [packs, setPacks] = useState<PackDraft[]>(() => packsToDraft(initialConfig.aiMessagePacks));
   const [priceError, setPriceError] = useState(false);
   const [creditCapError, setCreditCapError] = useState(false);
   const [quotaError, setQuotaError] = useState(false);
+  const [packError, setPackError] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -101,9 +134,11 @@ function DefaultBillingConfigDrawer({
         pro: String(next.pro),
         reseller: String(next.reseller),
       });
+      setPacks(packsToDraft(initialConfig.aiMessagePacks));
       setPriceError(false);
       setCreditCapError(false);
       setQuotaError(false);
+      setPackError(false);
     }
   }, [open, initialConfig]);
 
@@ -117,13 +152,42 @@ function DefaultBillingConfigDrawer({
     const priceInvalid = cents === null;
     const creditCapInvalid = creditCap === null;
     const quotaInvalid = free === null || starter === null || pro === null || reseller === null;
+
+    const seenIds = new Set<string>();
+    const aiMessagePacks: AiMessagePack[] = [];
+    let packsInvalid = packs.length === 0;
+    for (const pack of packs) {
+      const id = pack.id.trim();
+      const messages = parseQuotaInput(pack.messages);
+      const priceCents = centsFromPesosInput(pack.pricePesos);
+      if (
+        !id ||
+        seenIds.has(id) ||
+        messages === null ||
+        messages <= 0 ||
+        priceCents === null
+      ) {
+        packsInvalid = true;
+        break;
+      }
+      seenIds.add(id);
+      aiMessagePacks.push({
+        id,
+        messages,
+        priceCents,
+        active: pack.active,
+      });
+    }
+
     setPriceError(priceInvalid);
     setCreditCapError(creditCapInvalid);
     setQuotaError(quotaInvalid);
+    setPackError(packsInvalid);
     if (
       priceInvalid ||
       creditCapInvalid ||
       quotaInvalid ||
+      packsInvalid ||
       cents === null ||
       creditCap === null ||
       free === null ||
@@ -137,6 +201,7 @@ function DefaultBillingConfigDrawer({
       pricePerMessageCents: cents,
       templateCreditCapCount: creditCap,
       maxMessagesPerMonthByPlan: { free, starter, pro, reseller },
+      aiMessagePacks,
     });
   }
 
@@ -233,6 +298,127 @@ function DefaultBillingConfigDrawer({
           ))}
           {quotaError ? (
             <p className="text-sm text-red-600">{t("admin.billing.aiQuotaError")}</p>
+          ) : null}
+        </div>
+
+        <div className="space-y-3 border-t border-default pt-4">
+          <div>
+            <p className="text-sm font-medium text-primary">{t("admin.billing.aiPacksTitle")}</p>
+            <p className="mt-1 text-xs text-muted">{t("admin.billing.aiPacksHint")}</p>
+          </div>
+          {packs.map((pack, index) => (
+            <div
+              key={`${pack.id}-${index}`}
+              className="space-y-2 rounded-lg border border-default p-3"
+            >
+              <label className="flex flex-col gap-2 text-sm text-secondary">
+                <span>{t("admin.billing.aiPackId")}</span>
+                <input
+                  type="text"
+                  value={pack.id}
+                  onChange={(e) =>
+                    setPacks((prev) =>
+                      prev.map((item, i) =>
+                        i === index ? { ...item, id: e.target.value } : item
+                      )
+                    )
+                  }
+                  className={cn(
+                    "w-full rounded-lg border bg-surface px-3 py-2 text-primary",
+                    packError ? "border-danger" : "border-default"
+                  )}
+                />
+              </label>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <label className="flex flex-col gap-2 text-sm text-secondary">
+                  <span>{t("admin.billing.aiPackMessages")}</span>
+                  <input
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={pack.messages}
+                    onChange={(e) =>
+                      setPacks((prev) =>
+                        prev.map((item, i) =>
+                          i === index ? { ...item, messages: e.target.value } : item
+                        )
+                      )
+                    }
+                    className={cn(
+                      "w-full rounded-lg border bg-surface px-3 py-2 text-primary",
+                      packError ? "border-danger" : "border-default"
+                    )}
+                  />
+                </label>
+                <label className="flex flex-col gap-2 text-sm text-secondary">
+                  <span>{t("admin.billing.aiPackPrice")}</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    value={pack.pricePesos}
+                    onChange={(e) =>
+                      setPacks((prev) =>
+                        prev.map((item, i) =>
+                          i === index ? { ...item, pricePesos: e.target.value } : item
+                        )
+                      )
+                    }
+                    className={cn(
+                      "w-full rounded-lg border bg-surface px-3 py-2 text-primary",
+                      packError ? "border-danger" : "border-default"
+                    )}
+                  />
+                </label>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <label className="flex items-center gap-2 text-sm text-secondary">
+                  <input
+                    type="checkbox"
+                    checked={pack.active}
+                    onChange={(e) =>
+                      setPacks((prev) =>
+                        prev.map((item, i) =>
+                          i === index ? { ...item, active: e.target.checked } : item
+                        )
+                      )
+                    }
+                  />
+                  <span>{t("admin.billing.aiPackActive")}</span>
+                </label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    setPacks((prev) => prev.filter((_, i) => i !== index))
+                  }
+                >
+                  {t("admin.billing.aiPackRemove")}
+                </Button>
+              </div>
+            </div>
+          ))}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              setPacks((prev) => [
+                ...prev,
+                {
+                  id: `pack_${Date.now().toString(36)}`,
+                  messages: "500",
+                  pricePesos: "30000",
+                  active: true,
+                },
+              ])
+            }
+          >
+            {t("admin.billing.aiPackAdd")}
+          </Button>
+          {packError ? (
+            <p className="text-sm text-red-600">{t("admin.billing.aiPackError")}</p>
           ) : null}
         </div>
 
@@ -355,7 +541,10 @@ export default function AdminBillingPage() {
   async function handleSaveDefaultConfig(
     config: Pick<
       PlatformBillingConfig,
-      "pricePerMessageCents" | "maxMessagesPerMonthByPlan" | "templateCreditCapCount"
+      | "pricePerMessageCents"
+      | "maxMessagesPerMonthByPlan"
+      | "templateCreditCapCount"
+      | "aiMessagePacks"
     >
   ) {
     try {

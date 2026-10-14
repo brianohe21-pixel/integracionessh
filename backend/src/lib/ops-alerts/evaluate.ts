@@ -7,6 +7,7 @@ import {
   getConversationSlaStatus,
   resolveInboxSlaSettings,
 } from "../advisor/inbox-sla.js";
+import { buildAiUsageSnapshot } from "../billing/ai-pack-billing.js";
 import { resolveEffectivePlanLimits } from "../billing/plan-limits.js";
 import { emitOpsAlert } from "./emit.js";
 import {
@@ -60,7 +61,16 @@ async function evaluatePlanUsage(tenantId: string): Promise<void> {
   const period = currentUsagePeriod();
   const usage = await getMonthlyUsage(tenantId, period);
   const limits = await resolveEffectivePlanLimits(tenant);
-  const percentages = planUsagePercentages(usage, limits);
+  const aiUsage = buildAiUsageSnapshot(
+    tenant,
+    limits.maxMessagesPerMonth,
+    usage.messagesCount,
+    period
+  );
+  const percentages = planUsagePercentages(usage, {
+    ...limits,
+    maxMessagesPerMonth: aiUsage.effectiveLimit,
+  });
 
   const entries: Array<{ meter: string; pct: number }> = [];
   if (percentages.messages !== null && percentages.messages >= threshold) {

@@ -126,11 +126,30 @@ export interface MaxMessagesPerMonthByPlan {
   reseller: number;
 }
 
+export interface AiMessagePack {
+  id: string;
+  messages: number;
+  priceCents: number;
+  active?: boolean;
+}
+
+export interface AiUsageSnapshot {
+  period: string;
+  planLimit: number;
+  planUsed: number;
+  bonusGranted: number;
+  bonusUsed: number;
+  bonusRemaining: number;
+  effectiveLimit: number;
+  totalUsed: number;
+}
+
 export interface PlatformBillingConfig {
   pricePerMessageCents: number;
   currency: "COP";
   maxMessagesPerMonthByPlan?: MaxMessagesPerMonthByPlan;
   templateCreditCapCount?: number;
+  aiMessagePacks?: AiMessagePack[];
   updatedAt?: string;
 }
 
@@ -367,6 +386,7 @@ export interface PlanLimits {
 export interface BillingUsageResponse {
   usage: MonthlyUsage;
   limits: PlanLimits;
+  aiUsage?: AiUsageSnapshot;
   plan: TenantPlan;
   subscription?: SubscriptionStatus;
   from?: string;
@@ -1881,6 +1901,9 @@ export interface PaymentIntent {
   reference: string;
   tenantId: string;
   plan: TenantPlan;
+  kind?: "plan" | "ai_pack";
+  aiPackId?: string;
+  aiMessagesGranted?: number;
   amountInCents: number;
   status: PaymentStatus;
   wompiTransactionId?: string;

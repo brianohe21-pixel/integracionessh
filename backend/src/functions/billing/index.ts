@@ -37,6 +37,7 @@ import {
   buildCheckoutUrl,
   buildWompiCheckoutParams,
   buildPaymentReference,
+  buildAiPackPaymentReference,
   parsePaymentReference,
   verifyWompiEvent,
   fetchWompiTransaction,
@@ -44,6 +45,13 @@ import {
   FRONTEND_URL as WOMPI_FRONTEND_URL,
   type WompiWebhookEvent,
 } from "../../lib/billing/wompi.js";
+import {
+  buildAiUsageSnapshot,
+  findAiMessagePack,
+  listActiveAiMessagePacks,
+  resolveAiPackCheckout,
+  grantAiMessagePack,
+} from "../../lib/billing/ai-pack-billing.js";
 import {
   ok,
   badRequest,
@@ -65,10 +73,15 @@ import {
 
 import type { SubscriptionStatus } from "../../types/index.js";
 
-const CheckoutSchema = z.object({
-  plan: z.enum(["starter", "pro"]),
-  provider: z.enum(["wompi", "stripe"]).optional(),
-});
+const CheckoutSchema = z
+  .object({
+    plan: z.enum(["starter", "pro"]).optional(),
+    aiPackId: z.string().min(1).optional(),
+    provider: z.enum(["wompi", "stripe"]).optional(),
+  })
+  .refine((data) => Boolean(data.plan) !== Boolean(data.aiPackId), {
+    message: "Provide either plan or aiPackId",
+  });
 
 const WompiConfirmSchema = z.object({
   id: z.string().min(1),
@@ -187,6 +200,7 @@ async function handleWompiCheckout(
     reference,
     tenantId,
     plan,
+    kind: "plan",
     amountInCents,
     ...(planFeeCents !== undefined ? { planFeeCents } : {}),
     ...(templateFeeCents !== undefined ? { templateFeeCents } : {}),
@@ -214,6 +228,7 @@ async function handleWompiCheckout(
     url,
     reference,
     provider: "wompi",
+    kind: "plan",
     wompi: checkoutParams,
     ...(plan === "starter"
       ? {
@@ -226,6 +241,56 @@ async function handleWompiCheckout(
           },
         }
       : {}),
+  });
+}
+
+async function handleWompiAiPackCheckout(
+  tenant: Awaited<ReturnType<typeof ensureTenant>>,
+  email: string,
+  packId: string
+) {
+  const { pack, amountInCents } = await resolveAiPackCheckout(tenant, packId);
+  const tenantId = tenant.tenantId;
+  const reference = buildAiPackPaymentReference(tenantId, pack.id);
+  const plan = normalizeTenantPlan(tenant.plan);
+
+  await createPaymentIntent({
+    reference,
+    tenantId,
+    plan,
+    kind: "ai_pack",
+    aiPackId: pack.id,
+    aiMessagesGranted: pack.messages,
+    amountInCents,
+  });
+
+  const redirectUrl = `${WOMPI_FRONTEND_URL}/billing/success?reference=${encodeURIComponent(reference)}`;
+  const creds = getPlatformWompiCredentials();
+  if (!creds) throw new Error("Wompi is not configured");
+  const checkoutParams = buildWompiCheckoutParams(creds, {
+    reference,
+    amountInCents,
+    redirectUrl,
+    customerEmail: email,
+  });
+  const url = buildCheckoutUrl(creds, {
+    reference,
+    amountInCents,
+    redirectUrl,
+    customerEmail: email,
+  });
+
+  return ok({
+    url,
+    reference,
+    provider: "wompi",
+    kind: "ai_pack",
+    aiPack: {
+      id: pack.id,
+      messages: pack.messages,
+      priceCents: pack.priceCents,
+    },
+    wompi: checkoutParams,
   });
 }
 
@@ -265,25 +330,26 @@ async function fulfillWompiPayment(
   tenantId: string,
   reference: string,
   transactionId?: string
-): Promise<boolean> {
+): Promise<{ ok: boolean; kind?: "plan" | "ai_pack" }> {
   const parsed = parsePaymentReference(reference);
-  if (!parsed || parsed.tenantId !== tenantId) return false;
+  if (!parsed || parsed.tenantId !== tenantId) return { ok: false };
 
   const payment = await getPaymentByReference(tenantId, reference);
-  if (!payment) return false;
-  if (payment.status === "approved") return true;
+  if (!payment) return { ok: false };
+  const kind = payment.kind ?? (parsed.kind === "ai_pack" ? "ai_pack" : "plan");
+  if (payment.status === "approved") return { ok: true, kind };
 
   if (transactionId) {
     const creds = getPlatformWompiCredentials();
-    if (!creds) return false;
+    if (!creds) return { ok: false };
     const tx = await fetchWompiTransaction(creds, transactionId);
-    if (!tx || tx.reference !== reference) return false;
+    if (!tx || tx.reference !== reference) return { ok: false };
     if (tx.status !== "APPROVED") {
       await updatePaymentIntent(tenantId, reference, {
         status: tx.status === "DECLINED" || tx.status === "ERROR" ? "declined" : "pending",
         wompiTransactionId: transactionId,
       });
-      return false;
+      return { ok: false };
     }
   }
 
@@ -291,8 +357,30 @@ async function fulfillWompiPayment(
     status: "approved",
     ...(transactionId ? { wompiTransactionId: transactionId } : {}),
   });
+
+  if (kind === "ai_pack" || parsed.kind === "ai_pack") {
+    let grant =
+      typeof payment.aiMessagesGranted === "number" &&
+      Number.isFinite(payment.aiMessagesGranted)
+        ? Math.floor(payment.aiMessagesGranted)
+        : 0;
+    if (grant <= 0) {
+      const packId =
+        payment.aiPackId ?? (parsed.kind === "ai_pack" ? parsed.packId : "");
+      if (packId) {
+        const config = await getPlatformBillingConfig();
+        grant = findAiMessagePack(config, packId)?.messages ?? 0;
+      }
+    }
+    if (grant > 0) {
+      await grantAiMessagePack(tenantId, grant);
+    }
+    return { ok: true, kind: "ai_pack" };
+  }
+
+  if (parsed.kind !== "plan") return { ok: false };
   await activateTenantPlan(tenantId, parsed.plan);
-  return true;
+  return { ok: true, kind: "plan" };
 }
 
 export async function handler(
@@ -344,10 +432,22 @@ export async function handler(
         checkoutBreakdown = await resolveStarterCheckoutBreakdown(syncedTenant);
       }
 
+      const aiUsage = buildAiUsageSnapshot(
+        syncedTenant,
+        limits.maxMessagesPerMonth,
+        usage.messagesCount,
+        usage.period
+      );
+      const aiPacks =
+        plan === "free" ? [] : listActiveAiMessagePacks(billingConfig);
+
       return ok({
         plan,
         limits,
         usage,
+        aiUsage,
+        aiPacks,
+        canPurchaseAiPacks: plan !== "free",
         subscriptionStatus: syncedTenant.subscriptionStatus ?? "none",
         currentPeriodEnd: syncedTenant.currentPeriodEnd ?? null,
         paymentProvider:
@@ -386,12 +486,19 @@ export async function handler(
         }
         const periods = await listMonthlyUsageInRange(tenant.tenantId, from, to);
         const usage = sumMonthlyUsage(tenant.tenantId, periods);
+        const aiUsage = buildAiUsageSnapshot(
+          tenant,
+          limits.maxMessagesPerMonth,
+          usage.messagesCount,
+          usage.period
+        );
         return ok({
           from,
           to,
           usage,
           periods,
           limits,
+          aiUsage,
           plan,
           subscription: tenant.subscriptionStatus ?? "none",
           paymentProvider,
@@ -399,9 +506,16 @@ export async function handler(
       }
 
       const usage = await getMonthlyUsage(tenant.tenantId);
+      const aiUsage = buildAiUsageSnapshot(
+        tenant,
+        limits.maxMessagesPerMonth,
+        usage.messagesCount,
+        usage.period
+      );
       return ok({
         usage,
         limits,
+        aiUsage,
         plan,
         subscription: tenant.subscriptionStatus ?? "none",
         paymentProvider,
@@ -424,6 +538,9 @@ export async function handler(
       return ok({
         reference: payment.reference,
         plan: payment.plan,
+        kind: payment.kind ?? "plan",
+        aiPackId: payment.aiPackId ?? null,
+        aiMessagesGranted: payment.aiMessagesGranted ?? null,
         status: payment.status,
         amountInCents: payment.amountInCents,
         wompiTransactionId: payment.wompiTransactionId ?? null,
@@ -462,6 +579,7 @@ export async function handler(
         stripe,
         default: defaultProvider,
         plans,
+        aiPacks: listActiveAiMessagePacks(billingConfig),
       });
     }
 
@@ -476,13 +594,13 @@ export async function handler(
         "";
       if (!reference) return badRequest("reference is required");
 
-      const success = await fulfillWompiPayment(
+      const result = await fulfillWompiPayment(
         auth.tenantId,
         reference,
         parsed.data.id
       );
-      if (!success) return badRequest("Payment not approved");
-      return ok({ activated: true });
+      if (!result.ok) return badRequest("Payment not approved");
+      return ok({ activated: true, kind: result.kind ?? "plan" });
     }
 
     if (method === "POST" && path.endsWith("/billing/checkout")) {
@@ -495,6 +613,17 @@ export async function handler(
         return badRequest(
           "No payment provider configured. Deploy billing env vars (Wompi or Stripe) via Terraform."
         );
+      }
+
+      if (parsed.data.aiPackId) {
+        if (provider !== "wompi") {
+          return badRequest("AI message packs are only available with Wompi");
+        }
+        return handleWompiAiPackCheckout(tenant, auth.email, parsed.data.aiPackId);
+      }
+
+      if (!parsed.data.plan) {
+        return badRequest("plan is required");
       }
 
       assertCheckoutAllowed(tenant, parsed.data.plan);

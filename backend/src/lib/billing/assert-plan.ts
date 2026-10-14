@@ -31,6 +31,7 @@ import {
   assertSubscriptionAllowsSending,
 } from "./plan-limits.js";
 import { assertCanEnableKnowledge } from "./plan-config.js";
+import { buildAiUsageSnapshot } from "./ai-pack-billing.js";
 
 export function assertCanUseCopilot(tenant: Tenant): void {
   if (tenant.plan === "free") {
@@ -62,10 +63,16 @@ export async function assertCanSendMessages(
   assertSubscriptionAllowsSending(tenant);
   const limits = await resolveEffectivePlanLimits(tenant);
   const usage = await getMonthlyUsage(tenant.tenantId);
-  if (usage.messagesCount + additionalMessages > limits.maxMessagesPerMonth) {
+  const aiUsage = buildAiUsageSnapshot(
+    tenant,
+    limits.maxMessagesPerMonth,
+    usage.messagesCount,
+    usage.period
+  );
+  if (usage.messagesCount + additionalMessages > aiUsage.effectiveLimit) {
     throw new PlanLimitError(
       "PLAN_LIMIT_MESSAGES",
-      `Monthly AI response limit reached (${limits.maxMessagesPerMonth})`
+      `Monthly AI response limit reached (${aiUsage.effectiveLimit})`
     );
   }
 }

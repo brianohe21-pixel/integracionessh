@@ -17,7 +17,10 @@ export function useUpdateAdminBillingConfig() {
     mutationFn: (
       body: Pick<
         PlatformBillingConfig,
-        "pricePerMessageCents" | "maxMessagesPerMonthByPlan" | "templateCreditCapCount"
+        | "pricePerMessageCents"
+        | "maxMessagesPerMonthByPlan"
+        | "templateCreditCapCount"
+        | "aiMessagePacks"
       >
     ) => api.put<PlatformBillingConfig>("/admin/billing-config", body),
     onSuccess: () => {

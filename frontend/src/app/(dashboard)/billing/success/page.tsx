@@ -50,8 +50,18 @@ function BillingSuccessPageContent() {
         {approved && (
           <>
             <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto mb-4" />
-            <h1 className="text-xl font-semibold text-primary">{t("billing.wompiSuccess")}</h1>
-            <p className="text-sm text-secondary mt-2">{t("billing.successActiveBody")}</p>
+            <h1 className="text-xl font-semibold text-primary">
+              {transaction?.kind === "ai_pack"
+                ? t("billing.aiPackSuccessTitle")
+                : t("billing.wompiSuccess")}
+            </h1>
+            <p className="text-sm text-secondary mt-2">
+              {transaction?.kind === "ai_pack"
+                ? t("billing.aiPackSuccessBody", {
+                    count: (transaction.aiMessagesGranted ?? 0).toLocaleString(),
+                  })
+                : t("billing.successActiveBody")}
+            </p>
           </>
         )}
 

@@ -209,7 +209,7 @@ export function PaymentHistoryTab() {
               <thead className="bg-surface text-left text-secondary">
                 <tr>
                   <th className="px-4 py-3 font-medium">{t("common.date")}</th>
-                  <th className="px-4 py-3 font-medium">{t("billing.currentPlan")}</th>
+                  <th className="px-4 py-3 font-medium">{t("billing.paymentHistory.item")}</th>
                   <th className="px-4 py-3 font-medium">{t("billing.paymentHistory.amount")}</th>
                   <th className="px-4 py-3 font-medium">{t("common.status")}</th>
                 </tr>
@@ -218,7 +218,13 @@ export function PaymentHistoryTab() {
                 {pageItems.map((payment) => (
                   <tr key={payment.reference}>
                     <td className="px-4 py-3 text-secondary">{formatDate(payment.createdAt)}</td>
-                    <td className="px-4 py-3 text-primary">{planLabel(payment.plan)}</td>
+                    <td className="px-4 py-3 text-primary">
+                      {payment.kind === "ai_pack"
+                        ? t("billing.aiPackMessages", {
+                            count: (payment.aiMessagesGranted ?? 0).toLocaleString(),
+                          })
+                        : planLabel(payment.plan)}
+                    </td>
                     <td className="px-4 py-3 text-secondary">
                       {formatCurrency(payment.amountInCents)}
                     </td>

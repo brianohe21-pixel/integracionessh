@@ -57,10 +57,18 @@ const MaxMessagesPerMonthByPlanSchema = z.object({
   reseller: z.number().int().min(0).max(100_000_000),
 });
 
+const AiMessagePackSchema = z.object({
+  id: z.string().min(1).max(64),
+  messages: z.number().int().min(1).max(100_000_000),
+  priceCents: z.number().int().min(0).max(1_000_000_000_000),
+  active: z.boolean().optional(),
+});
+
 const BillingConfigSchema = z.object({
   pricePerMessageCents: z.number().int().min(0).max(1_000_000_000),
   maxMessagesPerMonthByPlan: MaxMessagesPerMonthByPlanSchema,
   templateCreditCapCount: z.number().int().min(0).max(100_000_000).optional(),
+  aiMessagePacks: z.array(AiMessagePackSchema).max(50).optional(),
 });
 
 export async function handler(
@@ -144,12 +152,19 @@ export async function handler(
       if (!parsed.success) {
         return badRequest(parsed.error.issues[0]?.message ?? "Invalid input");
       }
+      const aiMessagePacks = parsed.data.aiMessagePacks?.map((pack) => ({
+        id: pack.id,
+        messages: pack.messages,
+        priceCents: pack.priceCents,
+        ...(pack.active === undefined ? {} : { active: pack.active }),
+      }));
       return ok(
         await putPlatformBillingConfig({
           pricePerMessageCents: parsed.data.pricePerMessageCents,
           currency: "COP",
           maxMessagesPerMonthByPlan: parsed.data.maxMessagesPerMonthByPlan,
           templateCreditCapCount: parsed.data.templateCreditCapCount ?? 0,
+          ...(aiMessagePacks ? { aiMessagePacks } : {}),
         })
       );
     }

@@ -31,6 +31,8 @@ function BillingCheckoutPageContent() {
   const { planLabel } = useFormatters();
   const searchParams = useSearchParams();
   const plan = parsePlan(searchParams.get("plan"));
+  const packId = searchParams.get("packId")?.trim() || null;
+  const isAiPackCheckout = Boolean(packId);
   const checkout = useCheckout();
   const { data: providers } = useBillingProviders();
   const { data: status } = useBillingStatus();
@@ -38,13 +40,61 @@ function BillingCheckoutPageContent() {
   const [wompiConfig, setWompiConfig] = useState<WompiCheckoutParams | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [checkoutTotalCents, setCheckoutTotalCents] = useState<number | null>(null);
+  const [selectedPackMessages, setSelectedPackMessages] = useState<number | null>(null);
   const started = useRef(false);
 
   const defaultProvider =
     providers?.default ??
     (providers?.wompi ? "wompi" : providers?.stripe ? "stripe" : null);
 
+  const packFromProviders =
+    packId && providers?.aiPacks
+      ? providers.aiPacks.find((pack) => pack.id === packId) ?? null
+      : null;
+  const packFromStatus =
+    packId && status?.aiPacks
+      ? status.aiPacks.find((pack) => pack.id === packId) ?? null
+      : null;
+  const selectedPack = packFromProviders ?? packFromStatus;
+
   const startCheckout = useCallback(async () => {
+    if (isAiPackCheckout) {
+      if (!packId) {
+        setError(t("billing.checkoutInvalidPack"));
+        return;
+      }
+      if (!status?.canPurchaseAiPacks) {
+        setError(t("billing.aiPackFreeNotAllowed"));
+        return;
+      }
+      if (!providers?.wompi) {
+        setError(t("billing.noProviderConfigured"));
+        return;
+      }
+
+      setError("");
+      try {
+        const result = await checkout.mutateAsync({
+          aiPackId: packId,
+          provider: "wompi",
+        });
+        if (result.provider === "wompi" && result.wompi) {
+          setWompiConfig(result.wompi);
+          setCheckoutTotalCents(result.wompi.amountInCents ?? null);
+          setSelectedPackMessages(result.aiPack?.messages ?? selectedPack?.messages ?? null);
+          return;
+        }
+        if (result.url) {
+          window.location.href = result.url;
+          return;
+        }
+        setError(t("billing.checkoutError"));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : t("billing.checkoutError"));
+      }
+      return;
+    }
+
     if (!plan) {
       setError(t("billing.checkoutInvalidPlan"));
       return;
@@ -80,14 +130,30 @@ function BillingCheckoutPageContent() {
     } catch (err) {
       setError(err instanceof Error ? err.message : t("billing.checkoutError"));
     }
-  }, [checkout, defaultProvider, plan, t]);
+  }, [
+    checkout,
+    defaultProvider,
+    isAiPackCheckout,
+    packId,
+    plan,
+    providers?.wompi,
+    selectedPack?.messages,
+    status?.canPurchaseAiPacks,
+    t,
+  ]);
 
   useEffect(() => {
-    if (started.current || !plan || !providers || !status) return;
-    if (!isCheckoutAllowed(plan)) return;
+    if (started.current || !providers || !status) return;
+    if (isAiPackCheckout) {
+      if (!packId || !status.canPurchaseAiPacks || !providers.wompi) return;
+      started.current = true;
+      void startCheckout();
+      return;
+    }
+    if (!plan || !isCheckoutAllowed(plan)) return;
     started.current = true;
     void startCheckout();
-  }, [plan, providers, startCheckout, status]);
+  }, [isAiPackCheckout, packId, plan, providers, startCheckout, status]);
 
   const handleApproved = useCallback(
     (transactionId: string) => {
@@ -122,7 +188,28 @@ function BillingCheckoutPageContent() {
 
   const price = plan ? providers?.plans?.[plan] : null;
 
-  if (!plan || (status && !isCheckoutAllowed(plan))) {
+  if (isAiPackCheckout && status && !status.canPurchaseAiPacks) {
+    return (
+      <DashboardPage maxWidth="3xl">
+        <div className="rounded-xl border border-default bg-surface-elevated p-6 sm:p-8 text-center">
+          <AlertCircle className="mx-auto mb-4 h-12 w-12 text-amber-500" />
+          <h1 className="text-xl font-semibold text-primary">
+            {t("billing.aiPackFreeNotAllowed")}
+          </h1>
+          <div className="mt-6">
+            <Link
+              href="/billing"
+              className="inline-block rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover"
+            >
+              {t("billing.backToBilling")}
+            </Link>
+          </div>
+        </div>
+      </DashboardPage>
+    );
+  }
+
+  if (!isAiPackCheckout && (!plan || (status && !isCheckoutAllowed(plan)))) {
     return (
       <DashboardPage maxWidth="3xl">
         <div className="rounded-xl border border-default bg-surface-elevated p-6 sm:p-8 text-center">
@@ -164,17 +251,31 @@ function BillingCheckoutPageContent() {
           </>
         ) : (
           <>
-            <h1 className="text-xl font-semibold text-primary">{t("billing.checkoutTitle")}</h1>
+            <h1 className="text-xl font-semibold text-primary">
+              {isAiPackCheckout ? t("billing.aiPackCheckoutTitle") : t("billing.checkoutTitle")}
+            </h1>
             <p className="mt-2 text-sm text-secondary">
-              {planLabel(plan)}
-              {price?.listPriceUsd ? ` · ${formatUsdPrice(price.listPriceUsd)}` : ""}
+              {isAiPackCheckout
+                ? t("billing.aiPackMessages", {
+                    count: (
+                      selectedPackMessages ??
+                      selectedPack?.messages ??
+                      0
+                    ).toLocaleString(),
+                  })
+                : planLabel(plan!)}
+              {!isAiPackCheckout && price?.listPriceUsd
+                ? ` · ${formatUsdPrice(price.listPriceUsd)}`
+                : ""}
               {checkoutTotalCents != null
                 ? ` · ${formatCopPrice(checkoutTotalCents)}`
-                : price?.amountCents
+                : !isAiPackCheckout && price?.amountCents
                   ? ` · ${formatCopPrice(price.amountCents)}`
-                  : ""}
+                  : selectedPack
+                    ? ` · ${formatCopPrice(selectedPack.priceCents)}`
+                    : ""}
             </p>
-            {status?.checkoutBreakdown && plan === "starter" ? (
+            {!isAiPackCheckout && status?.checkoutBreakdown && plan === "starter" ? (
               <div className="mx-auto mt-4 max-w-sm space-y-1 rounded-xl bg-surface-muted/40 px-4 py-3 text-left text-sm">
                 <div className="flex justify-between gap-3">
                   <span className="text-secondary">{t("billing.templatePlanFee")}</span>
