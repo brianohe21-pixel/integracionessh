@@ -140,6 +140,64 @@ async function emitMessageSent(params: {
   ).catch((err) => console.error("Failed to emit message.sent:", err));
 }
 
+async function deliverAssistantText(params: {
+  tenantId: string;
+  botId: string;
+  conversationId: string;
+  channel: InboundQueueMessage["channel"];
+  participantId: string;
+  text: string;
+  outboundCtx: ReturnType<typeof buildOutboundContext>;
+}): Promise<void> {
+  const outboundText =
+    params.channel === "whatsapp" ? truncateWhatsAppText(params.text) : params.text;
+  const aiMessageId = `ai-${Date.now()}-${randomUUID().slice(0, 8)}`;
+  const aiTimestamp = new Date().toISOString();
+
+  if (params.channel === "webchat") {
+    const assistantMessage: Message = {
+      messageId: aiMessageId,
+      conversationId: params.conversationId,
+      tenantId: params.tenantId,
+      role: "assistant",
+      content: outboundText,
+      channel: params.channel,
+      timestamp: aiTimestamp,
+    };
+    await addMessage(assistantMessage, params.botId);
+    await sendChannelText(params.outboundCtx, outboundText);
+  } else {
+    const sendResult = await sendChannelText(params.outboundCtx, outboundText);
+    const externalMessageId = sendResult.externalMessageId;
+    const assistantMessage: Message = {
+      messageId: externalMessageId ?? aiMessageId,
+      conversationId: params.conversationId,
+      tenantId: params.tenantId,
+      role: "assistant",
+      content: outboundText,
+      channel: params.channel,
+      timestamp: aiTimestamp,
+      ...(externalMessageId
+        ? {
+            externalMessageId,
+            ...(params.channel === "whatsapp" ? { whatsappMessageId: externalMessageId } : {}),
+          }
+        : {}),
+    };
+    await addMessage(assistantMessage, params.botId);
+  }
+
+  await emitMessageSent({
+    tenantId: params.tenantId,
+    botId: params.botId,
+    conversationId: params.conversationId,
+    channel: params.channel,
+    to: params.participantId,
+    message: outboundText,
+    role: "assistant",
+  });
+}
+
 async function sendHandoffCourtesy(
   body: InboundQueueMessage,
   bot: NonNullable<Awaited<ReturnType<typeof getBot>>>,
@@ -157,7 +215,15 @@ async function sendHandoffCourtesy(
     environment: process.env.ENVIRONMENT ?? "dev",
     replyToExternalId,
   });
-  await sendChannelText(outboundCtx, getClientHandoffMessage(locale));
+  await deliverAssistantText({
+    tenantId: body.tenantId,
+    botId: body.botId,
+    conversationId: conversation.conversationId,
+    channel: body.channel,
+    participantId: body.participantId,
+    text: getClientHandoffMessage(locale),
+    outboundCtx,
+  });
 }
 
 async function executeHandoff(params: {
@@ -201,7 +267,12 @@ async function executeHandoff(params: {
       accessToken: params.accessToken ?? "",
       lastMessagePreview: params.lastMessagePreview,
       force: true,
-    });
+    }).catch((err) =>
+      console.error(
+        `Failed to notify advisor after handoff tenant=${params.body.tenantId} conversation=${params.conversation.conversationId}:`,
+        err
+      )
+    );
   }
 }
 
@@ -833,11 +904,10 @@ export async function processInboundMessage(
         locale: conversationLocale,
       }
     );
+    aiResponse = webhookResult.reply;
     if (webhookResult.handoff) {
       shouldHandoff = true;
       handoffReason = "webhook";
-    } else {
-      aiResponse = webhookResult.reply;
     }
   } else {
     let openAIKey: string;
@@ -891,13 +961,25 @@ export async function processInboundMessage(
     }
     if (result.handoff) {
       shouldHandoff = true;
-    } else {
+    }
+    if (result.reply) {
       aiResponse = result.reply;
     }
   }
 
   if (shouldHandoff) {
     try {
+      if (aiResponse) {
+        await deliverAssistantText({
+          tenantId,
+          botId,
+          conversationId: conversation.conversationId,
+          channel,
+          participantId,
+          text: aiResponse,
+          outboundCtx: outboundCtxBase(),
+        });
+      }
       await executeHandoff({
         body,
         bot,
@@ -941,60 +1023,13 @@ export async function processInboundMessage(
     throw new Error("No AI response generated");
   }
 
-  const outboundText = channel === "whatsapp" ? truncateWhatsAppText(aiResponse) : aiResponse;
-  const aiMessageId = `ai-${Date.now()}-${randomUUID().slice(0, 8)}`;
-  const aiTimestamp = new Date().toISOString();
-
-  if (channel === "webchat") {
-    const assistantMessage: Message = {
-      messageId: aiMessageId,
-      conversationId: conversation.conversationId,
-      tenantId,
-      role: "assistant",
-      content: outboundText,
-      channel,
-      timestamp: aiTimestamp,
-    };
-    await addMessage(assistantMessage, botId);
-    await sendChannelText(
-      buildOutboundContext({
-        tenantId,
-        botId,
-        bot,
-        conversation,
-        accessToken,
-        environment,
-      }),
-      outboundText
-    );
-  } else {
-    const sendResult = await sendChannelText(outboundCtxBase(), outboundText);
-    const externalMessageId = sendResult.externalMessageId;
-    const assistantMessage: Message = {
-      messageId: externalMessageId ?? aiMessageId,
-      conversationId: conversation.conversationId,
-      tenantId,
-      role: "assistant",
-      content: outboundText,
-      channel,
-      timestamp: aiTimestamp,
-      ...(externalMessageId
-        ? {
-            externalMessageId,
-            ...(channel === "whatsapp" ? { whatsappMessageId: externalMessageId } : {}),
-          }
-        : {}),
-    };
-    await addMessage(assistantMessage, botId);
-  }
-
-  await emitMessageSent({
+  await deliverAssistantText({
     tenantId,
     botId,
     conversationId: conversation.conversationId,
     channel,
-    to: participantId,
-    message: outboundText,
-    role: "assistant",
+    participantId,
+    text: aiResponse,
+    outboundCtx: outboundCtxBase(),
   });
 }

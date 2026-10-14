@@ -398,7 +398,8 @@ export class OpenAIProvider implements AiChatProvider {
           } catch {
             // use default reason
           }
-          return { reply: null, handoff: true, handoffReason: reason };
+          const reply = choice.content?.trim() ? choice.content.trim() : null;
+          return { reply, handoff: true, handoffReason: reason };
         }
 
         if (
