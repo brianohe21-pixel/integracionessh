@@ -174,6 +174,15 @@ export function getModelsForPlan(plan: TenantPlan | string | undefined): AiModel
   return AI_MODELS.filter((model) => planMeetsRequirement(resolvedPlan, model.minPlan));
 }
 
+export function isModelAllowedForPlan(
+  plan: TenantPlan | string | undefined,
+  modelId: string
+): boolean {
+  const definition = AI_MODELS.find((model) => model.id === modelId);
+  if (!definition) return false;
+  return planMeetsRequirement(normalizeTenantPlan(plan), definition.minPlan);
+}
+
 export function getModelLabel(modelId: string): string {
   return AI_MODELS.find((model) => model.id === modelId)?.label ?? modelId;
 }

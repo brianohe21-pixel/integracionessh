@@ -19,6 +19,7 @@ type AiModelPickerProps = {
   value: string;
   onChange: (modelId: string) => void;
   models: AiModelDefinition[];
+  allowedModelIds?: Set<string>;
   disabled?: boolean;
 };
 
@@ -77,13 +78,20 @@ function FilterChip({
   );
 }
 
-export function AiModelPicker({ value, onChange, models, disabled }: AiModelPickerProps) {
+export function AiModelPicker({
+  value,
+  onChange,
+  models,
+  allowedModelIds,
+  disabled,
+}: AiModelPickerProps) {
   const t = useT();
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
   const [search, setSearch] = useState("");
 
   const modelsByCategory = useMemo(() => groupModelsByCategory(models), [models]);
   const selectedModel = models.find((model) => model.id === value);
+  const isAllowed = (modelId: string) => !allowedModelIds || allowedModelIds.has(modelId);
 
   const categoriesWithModels = AI_MODEL_CATEGORIES.filter(
     (category) => (modelsByCategory[category]?.length ?? 0) > 0
@@ -118,6 +126,9 @@ export function AiModelPicker({ value, onChange, models, disabled }: AiModelPick
               <Badge variant={categoryBadgeVariant(selectedModel.category)}>
                 {t(`bots.modelCategory.${selectedModel.category}`)}
               </Badge>
+              {!isAllowed(selectedModel.id) ? (
+                <Badge variant="warning">{t("nav.proOnly")}</Badge>
+              ) : null}
             </div>
             <p className="text-sm leading-relaxed text-secondary">
               {t(categoryDescriptionKey(selectedModel.category))}
@@ -125,6 +136,10 @@ export function AiModelPicker({ value, onChange, models, disabled }: AiModelPick
             <p className="font-mono text-xs text-muted">{selectedModel.id}</p>
           </div>
         </div>
+      ) : null}
+
+      {allowedModelIds && allowedModelIds.size < models.length ? (
+        <p className="text-xs text-secondary">{t("bots.modelPlanHint")}</p>
       ) : null}
 
       <SearchInput
@@ -160,16 +175,20 @@ export function AiModelPicker({ value, onChange, models, disabled }: AiModelPick
           <ul className="max-h-72 overflow-y-auto">
             {filteredModels.map((model) => {
               const selected = model.id === value;
+              const locked = !isAllowed(model.id);
+              const itemDisabled = Boolean(disabled || locked);
               return (
                 <li key={model.id}>
                   <button
                     type="button"
-                    disabled={disabled}
+                    disabled={itemDisabled}
                     onClick={() => onChange(model.id)}
+                    title={locked ? t("bots.modelRequiresPro") : undefined}
                     className={cn(
                       "flex w-full gap-3 border-b border-default px-4 py-3 text-left transition-colors last:border-b-0",
                       selected ? "bg-accent-muted/50" : "hover:bg-surface-muted/60",
-                      disabled && "cursor-not-allowed opacity-60"
+                      itemDisabled && "cursor-not-allowed opacity-60",
+                      locked && !selected && "hover:bg-transparent"
                     )}
                   >
                     <SelectionIndicator selected={selected} />
@@ -179,9 +198,12 @@ export function AiModelPicker({ value, onChange, models, disabled }: AiModelPick
                         <Badge variant={categoryBadgeVariant(model.category)}>
                           {t(`bots.modelCategory.${model.category}`)}
                         </Badge>
+                        {locked ? <Badge variant="warning">{t("nav.proOnly")}</Badge> : null}
                       </div>
                       <p className="text-xs text-secondary line-clamp-1">
-                        {t(categoryDescriptionKey(model.category))}
+                        {locked
+                          ? t("bots.modelRequiresPro")
+                          : t(categoryDescriptionKey(model.category))}
                       </p>
                       <p className="font-mono text-[11px] text-muted">{model.id}</p>
                     </div>

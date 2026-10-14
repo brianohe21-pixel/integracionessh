@@ -42,7 +42,7 @@ export function assertAllowedModel(tenant: Tenant, model: string | undefined): v
     const definition = getModelDefinition(model);
     throw new PlanLimitError(
       "PLAN_MODEL_NOT_ALLOWED",
-      `Model ${definition?.label ?? model} is not available on the ${tenant.plan} plan. Upgrade to Enterprise for advanced models.`
+      `Model ${definition?.label ?? model} is not available on the ${tenant.plan} plan. Upgrade to Pro for advanced models.`
     );
   }
 }

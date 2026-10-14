@@ -709,7 +709,10 @@ export async function handler(
       const { assertCanUseVoicebot, assertCanEnableChannel } = await import(
         "../../lib/billing/assert-plan.js"
       );
-      const { assertCanEnableKnowledge } = await import("../../lib/billing/plan-config.js");
+      const { assertAllowedModel, assertCanEnableKnowledge } = await import(
+        "../../lib/billing/plan-config.js"
+      );
+      const { isValidModelId } = await import("../../lib/ai/models.js");
       const { buildAiAssistantAutoEnableUpdates } = await import(
         "../../lib/ai-assistant/config.js"
       );
@@ -724,6 +727,12 @@ export async function handler(
         if (aiAssistantUpdates.responseMode === "openai") {
           await assertOpenAIConfigured(auth.tenantId, ENVIRONMENT);
         }
+      }
+      if (
+        parsed.data.telephonyModel !== undefined &&
+        isValidModelId(parsed.data.telephonyModel)
+      ) {
+        assertAllowedModel(tenant, parsed.data.telephonyModel);
       }
 
       if (parsed.data.telephonyWebhookUrl) {

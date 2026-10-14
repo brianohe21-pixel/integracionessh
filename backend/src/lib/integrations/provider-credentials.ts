@@ -187,6 +187,39 @@ export async function getPlatformProviderCredential<P extends ProviderId>(
   return parseProvider(provider, raw);
 }
 
+export async function savePlatformProviderCredential<P extends ProviderId>(
+  environment: string,
+  provider: P,
+  payload: ProviderPayloadMap[P]
+): Promise<void> {
+  await writeSecret(platformSecretId(environment, provider), payload);
+}
+
+export async function deletePlatformProviderCredential(
+  environment: string,
+  provider: ProviderId
+): Promise<void> {
+  await removeSecret(platformSecretId(environment, provider));
+}
+
+export interface PlatformOpenAICredentialStatus {
+  configured: boolean;
+  maskedKey: string | null;
+}
+
+function maskApiKey(apiKey: string): string {
+  if (apiKey.length <= 8) return "••••••••";
+  return `${apiKey.slice(0, 3)}…${apiKey.slice(-4)}`;
+}
+
+export async function getPlatformOpenAICredentialStatus(
+  environment: string
+): Promise<PlatformOpenAICredentialStatus> {
+  const credential = await getPlatformProviderCredential(environment, "openai");
+  if (!credential) return { configured: false, maskedKey: null };
+  return { configured: true, maskedKey: maskApiKey(credential.apiKey) };
+}
+
 async function resolveChain(
   tenantId: string
 ): Promise<Array<{ tenantId: string; source: Exclude<CredentialSource, "none" | "platform"> }>> {

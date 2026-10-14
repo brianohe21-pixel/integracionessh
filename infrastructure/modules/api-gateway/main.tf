@@ -1017,6 +1017,27 @@ locals {
       function_arn = var.admin_function_arn
       protected    = true
     }
+    admin_platform_openai_get = {
+      route_key    = "GET /admin/platform/openai"
+      slug         = "admin"
+      invoke_arn   = var.admin_invoke_arn
+      function_arn = var.admin_function_arn
+      protected    = true
+    }
+    admin_platform_openai_put = {
+      route_key    = "PUT /admin/platform/openai"
+      slug         = "admin"
+      invoke_arn   = var.admin_invoke_arn
+      function_arn = var.admin_function_arn
+      protected    = true
+    }
+    admin_platform_openai_delete = {
+      route_key    = "DELETE /admin/platform/openai"
+      slug         = "admin"
+      invoke_arn   = var.admin_invoke_arn
+      function_arn = var.admin_function_arn
+      protected    = true
+    }
     admin_billing_config_get = {
       route_key    = "GET /admin/billing-config"
       slug         = "admin"

@@ -18,8 +18,19 @@ import {
   ensureResellerDomainInAmplify,
   getResellerDomainDnsInfo,
 } from "../../lib/amplify/custom-domain.js";
+import {
+  deletePlatformProviderCredential,
+  getPlatformOpenAICredentialStatus,
+  savePlatformProviderCredential,
+} from "../../lib/integrations/provider-credentials.js";
+import {
+  normalizeOpenAIPayload,
+  validateProviderCredential,
+} from "../../lib/integrations/provider-credentials.validation.js";
 import { ok, badRequest, notFound, handleError, parseJsonBody } from "../../lib/http.js";
 import type { ResellerConfig, ResellerPlanDefaults } from "../../types/index.js";
+
+const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 
 const CognitoPatchSchema = z.object({
   enabled: z.boolean().optional(),
@@ -94,6 +105,23 @@ export async function handler(
     if (method === "GET" && path.endsWith("/admin/payments")) {
       const payments = await listAllPayments();
       return ok(payments);
+    }
+
+    if (method === "GET" && path.endsWith("/admin/platform/openai")) {
+      return ok(await getPlatformOpenAICredentialStatus(ENVIRONMENT));
+    }
+
+    if (method === "PUT" && path.endsWith("/admin/platform/openai")) {
+      const body = parseJsonBody(event);
+      const payload = normalizeOpenAIPayload(body as { apiKey?: string });
+      await validateProviderCredential("openai", payload);
+      await savePlatformProviderCredential(ENVIRONMENT, "openai", payload);
+      return ok(await getPlatformOpenAICredentialStatus(ENVIRONMENT));
+    }
+
+    if (method === "DELETE" && path.endsWith("/admin/platform/openai")) {
+      await deletePlatformProviderCredential(ENVIRONMENT, "openai");
+      return ok(await getPlatformOpenAICredentialStatus(ENVIRONMENT));
     }
 
     if (method === "GET" && path.endsWith("/admin/billing-config")) {

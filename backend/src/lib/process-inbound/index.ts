@@ -75,6 +75,7 @@ import {
   buildCtwaMessageMetadata,
   handleCtwaAttribution,
 } from "../meta-ads/ctwa.js";
+import { inboundShouldSkipReadReceipt } from "../whatsapp/coexistence/read-receipt.js";
 
 async function resolveAccessToken(
   tenantId: string,
@@ -413,7 +414,18 @@ export async function processInboundMessage(
     console.warn("Failed to record campaign reply:", err)
   );
 
-  await markChannelRead(outboundCtxBase(), externalId).catch(() => {});
+  const skipReadReceipt =
+    channel === "whatsapp" &&
+    (await inboundShouldSkipReadReceipt({
+      tenantId,
+      botId,
+      bot,
+      phoneNumberId: whatsappPayload?.phoneNumberId,
+      channelId: whatsappPayload?.whatsappChannelId,
+    }));
+  if (!skipReadReceipt) {
+    await markChannelRead(outboundCtxBase(), externalId).catch(() => {});
+  }
 
   const history = await getConversationMessages(tenantId, conversation.conversationId, 20);
   const existingUserIdx = history.findIndex(
@@ -874,15 +886,24 @@ export async function processInboundMessage(
       }
       throw keyErr;
     }
-    const result = await generateChatResponse(
-      responseBot,
-      history,
-      userMessageText,
-      openAIKey,
-      tenantId,
-      { contactPhone: participantId, conversationId: conversation.conversationId },
-      conversationLocale
-    );
+    let result;
+    try {
+      result = await generateChatResponse(
+        responseBot,
+        history,
+        userMessageText,
+        openAIKey,
+        tenantId,
+        { contactPhone: participantId, conversationId: conversation.conversationId },
+        conversationLocale
+      );
+    } catch (err) {
+      if (err instanceof PlanLimitError) {
+        console.warn(`Plan model limit for tenant ${tenantId}:`, err.message);
+        return;
+      }
+      throw err;
+    }
     if (result.handoff) {
       shouldHandoff = true;
     } else {
@@ -906,17 +927,25 @@ export async function processInboundMessage(
       const handoffErrMsg = (handoffErr as Error).message ?? "";
       if (handoffErrMsg.includes("No active advisors")) {
         const openAIKey = await getOpenAIApiKey(tenantId, environment);
-        const fallback = await generateChatResponse(
-          responseBot,
-          history,
-          userMessageText,
-          openAIKey,
-          tenantId,
-          { contactPhone: participantId, conversationId: conversation.conversationId },
-          conversationLocale
-        );
-        aiResponse =
-          fallback.reply ?? getSystemMessage("noAdvisorsAvailable", conversationLocale);
+        try {
+          const fallback = await generateChatResponse(
+            responseBot,
+            history,
+            userMessageText,
+            openAIKey,
+            tenantId,
+            { contactPhone: participantId, conversationId: conversation.conversationId },
+            conversationLocale
+          );
+          aiResponse =
+            fallback.reply ?? getSystemMessage("noAdvisorsAvailable", conversationLocale);
+        } catch (err) {
+          if (err instanceof PlanLimitError) {
+            console.warn(`Plan model limit for tenant ${tenantId}:`, err.message);
+            return;
+          }
+          throw err;
+        }
       } else {
         throw handoffErr;
       }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Maximize2, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -8,7 +8,7 @@ import { useT } from "@/i18n/context";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { getAllowedModelDefinitionsForPlan } from "@/lib/plan-config";
-import { AI_MODELS, DEFAULT_MODEL_ID } from "@/lib/ai-models";
+import { AI_MODELS, DEFAULT_MODEL_ID, isModelAllowedForPlan } from "@/lib/ai-models";
 import { AiAssistantDisableBlockers } from "@/components/ai-assistant/AiAssistantDisableBlockers";
 import {
   AiAssistantOpenAIBlocker,
@@ -61,22 +61,32 @@ export function AiAssistantSettings({ bot }: AiAssistantSettingsProps) {
     queryFn: () => api.get<Tenant>("/tenants/me"),
   });
 
-  const allowedModels = getAllowedModelDefinitionsForPlan(tenant?.plan ?? "free");
-  const displayModels = [...allowedModels];
-  if (form.model && !displayModels.some((model) => model.id === form.model)) {
-    const currentModel = AI_MODELS.find((model) => model.id === form.model);
-    if (currentModel) displayModels.push(currentModel);
-  }
+  const tenantPlan = tenant?.plan ?? "free";
+  const allowedModelIds = useMemo(
+    () => new Set(getAllowedModelDefinitionsForPlan(tenantPlan).map((model) => model.id)),
+    [tenantPlan]
+  );
+
   useEffect(() => {
     if (!config) return;
+    const nextModel = config.model ?? DEFAULT_MODEL_ID;
     setForm({
       systemPrompt: config.systemPrompt ?? "",
-      model: config.model ?? DEFAULT_MODEL_ID,
+      model: isModelAllowedForPlan(tenantPlan, nextModel) ? nextModel : DEFAULT_MODEL_ID,
       temperature: config.temperature ?? 0.7,
       maxTokens: config.maxTokens ?? 1024,
       knowledgeEnabled: config.knowledgeEnabled ?? false,
     });
-  }, [config]);
+  }, [config, tenantPlan]);
+
+  useEffect(() => {
+    if (!tenant) return;
+    setForm((prev) =>
+      prev.model && !isModelAllowedForPlan(tenant.plan, prev.model)
+        ? { ...prev, model: DEFAULT_MODEL_ID }
+        : prev
+    );
+  }, [tenant]);
 
   useEffect(() => {
     if (!showPromptModal) return;
@@ -249,7 +259,8 @@ export function AiAssistantSettings({ bot }: AiAssistantSettingsProps) {
             <AiModelPicker
               value={form.model}
               onChange={(modelId) => setForm((prev) => ({ ...prev, model: modelId }))}
-              models={displayModels}
+              models={AI_MODELS}
+              allowedModelIds={allowedModelIds}
               disabled={!enabled}
             />
           </div>

@@ -1,9 +1,14 @@
 import { activateTenantPlan, applyAdminTenantPlan } from "./activate-plan.js";
 import { getTenant, updateTenant } from "../dynamodb/tenant.repository.js";
+import { enforceBotModelsForPlan } from "./enforce-bot-models-for-plan.js";
 
 jest.mock("../dynamodb/tenant.repository.js", () => ({
   getTenant: jest.fn(),
   updateTenant: jest.fn(),
+}));
+
+jest.mock("./enforce-bot-models-for-plan.js", () => ({
+  enforceBotModelsForPlan: jest.fn(),
 }));
 
 describe("activateTenantPlan", () => {
@@ -31,6 +36,7 @@ describe("activateTenantPlan", () => {
       currentPeriodEnd: "2026-07-20T12:00:00.000Z",
       paymentProvider: "wompi",
     });
+    expect(enforceBotModelsForPlan).toHaveBeenCalledWith("tenant-1", "pro");
   });
 
   it("starts a new period when previous one expired", async () => {
@@ -47,6 +53,18 @@ describe("activateTenantPlan", () => {
       currentPeriodEnd: "2026-07-07T12:00:00.000Z",
       paymentProvider: "wompi",
     });
+    expect(enforceBotModelsForPlan).toHaveBeenCalledWith("tenant-1", "pro");
+  });
+
+  it("enforces bot models when activating starter", async () => {
+    (getTenant as jest.Mock).mockResolvedValue({
+      tenantId: "tenant-1",
+      currentPeriodEnd: "2026-05-01T12:00:00.000Z",
+    });
+
+    await activateTenantPlan("tenant-1", "starter");
+
+    expect(enforceBotModelsForPlan).toHaveBeenCalledWith("tenant-1", "starter");
   });
 });
 
@@ -79,6 +97,7 @@ describe("applyAdminTenantPlan", () => {
       subscriptionStatus: "active",
       currentPeriodEnd: "2026-07-07T12:00:00.000Z",
     });
+    expect(enforceBotModelsForPlan).toHaveBeenCalledWith("tenant-1", "pro");
   });
 
   it("downgrades to free without active subscription", async () => {
@@ -97,5 +116,6 @@ describe("applyAdminTenantPlan", () => {
       subscriptionStatus: "none",
       currentPeriodEnd: "",
     });
+    expect(enforceBotModelsForPlan).toHaveBeenCalledWith("tenant-1", "free");
   });
 });
