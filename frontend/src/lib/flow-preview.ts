@@ -58,6 +58,8 @@ function buildStepDetail(
     }
     case "condition":
       return `${d.conditionVariable ?? "last_input"} ${d.conditionOperator ?? "contains"} ${d.conditionValue ?? ""}`.trim();
+    case "check_known_contact":
+      return locale === "es" ? "¿Ya está en contactos?" : "Already in contacts?";
     case "assign_bot": {
       const botLabel = d.botId?.trim();
       if (botLabel) return botLabel;

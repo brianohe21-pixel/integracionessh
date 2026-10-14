@@ -16,6 +16,7 @@ import { executeMetaFlowNode } from "./meta-flow.js";
 import { executeSetVariableNode } from "./set-variable.js";
 import { executeTemplateNode } from "./template.js";
 import { executeSaveContactNode } from "./save-contact.js";
+import { executeCheckKnownContactNode } from "./check-known-contact.js";
 import { executeCreateLeadNode } from "./create-lead.js";
 import { executeCreateOpportunityNode } from "./create-opportunity.js";
 import { executeSendNotificationNode } from "./send-notification.js";
@@ -70,6 +71,8 @@ export async function executeNode(
       return executeSendAudioNode(node, ctx, run);
     case "save_contact":
       return executeSaveContactNode(node, ctx, run);
+    case "check_known_contact":
+      return executeCheckKnownContactNode(node, ctx, run);
     case "create_lead":
       return executeCreateLeadNode(node, ctx, run);
     case "create_opportunity":

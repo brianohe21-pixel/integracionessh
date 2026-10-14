@@ -2119,6 +2119,7 @@ export type FlowNodeType =
   | "send_otp"
   | "send_audio"
   | "save_contact"
+  | "check_known_contact"
   | "create_lead"
   | "create_opportunity"
   | "send_notification"

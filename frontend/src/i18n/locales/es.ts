@@ -4552,6 +4552,7 @@ export const es = {
       send_otp: "Enviar OTP",
       send_audio: "Nota de voz",
       save_contact: "Guardar contacto",
+      check_known_contact: "Contacto existente",
       create_lead: "Crear lead",
       create_opportunity: "Crear oportunidad",
       send_notification: "Enviar notificación",
@@ -4868,6 +4869,8 @@ export const es = {
     },
     hints: {
       conditionBranches: "Conecta cada salida (Sí / No) al siguiente nodo correspondiente.",
+      checkKnownContactBranches:
+        "Sí = el número ya estaba en Contactos. No = es nuevo. Conecta Sí a humano y No a IA si quieres calificar solo leads nuevos.",
       buttonBranches: "Cada botón tiene su propia salida. Máximo 3 botones.",
       opportunityWhatsAppBindings:
         "Variables de WhatsApp: {{phone}} (teléfono), {{contact_name}} (nombre de perfil). En formularios usa {{form.campo}}. El último mensaje del usuario es {{last_input}}.",
@@ -4952,6 +4955,11 @@ export const es = {
       save_contact: {
         description: "Guarda teléfono, nombre y correo en el CRM.",
         usage: "Usa bindings {{form.campo}} en flujos de formulario web.",
+      },
+      check_known_contact: {
+        description: "Verifica si el número ya existe en Contactos antes de esta conversación.",
+        usage:
+          "Conecta Sí (existe) a pasar a humano y No (nuevo) al Asistente IA. Opcional: define {{phone}} si no usas el de la conversación.",
       },
       create_lead: {
         description: "Crea un lead en el CRM con los datos del formulario.",
