@@ -60,6 +60,7 @@ import {
   buildOutboundContext,
   sendChannelText,
 } from "../../lib/channels/router.js";
+import { markOpenedWhatsAppConversationRead } from "../../lib/whatsapp/read-on-open.js";
 import { ok, created, badRequest, notFound, forbidden, noContent, handleError } from "../../lib/http.js";
 import type { AuthContext, Conversation, Message, Channel } from "../../types/index.js";
 import {
@@ -161,6 +162,10 @@ const SendTemplateMessageSchema = z.object({
 const WorkflowStatusSchema = z.object({
   botId: z.string().uuid(),
   workflowStatus: z.enum(["new", "open", "pending", "resolved"]),
+});
+
+const ReadConversationSchema = z.object({
+  botId: z.string().uuid(),
 });
 
 const InteractionCategorySchema = z.object({
@@ -481,6 +486,31 @@ export async function handler(
         botId: conversation.botId,
       });
       return ok(enriched);
+    }
+
+    if (method === "POST" && subPath === "read") {
+      const body = JSON.parse(event.body ?? "{}");
+      const parsed = ReadConversationSchema.safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const conversation = await findConversationById(auth.tenantId, conversationId);
+      if (!conversation || conversation.botId !== parsed.data.botId) {
+        return notFound("Conversation not found");
+      }
+
+      await assertCanAccessConversation(auth, conversation);
+
+      const bot = await getBot(auth.tenantId, parsed.data.botId);
+      if (bot) {
+        await markOpenedWhatsAppConversationRead({
+          tenantId: auth.tenantId,
+          bot,
+          conversation,
+          environment: ENVIRONMENT,
+        }).catch((err) => console.error("Failed to mark WhatsApp conversation read:", err));
+      }
+
+      return ok({ ok: true });
     }
 
     if (method === "PATCH" && subPath === "status") {

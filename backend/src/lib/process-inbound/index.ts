@@ -36,7 +36,6 @@ import {
 import {
   buildOutboundContext,
   getChannelAdapter,
-  markChannelRead,
   sendChannelText,
 } from "../channels/router.js";
 import { inboundSourceForChannel } from "../channels/types.js";
@@ -75,7 +74,6 @@ import {
   buildCtwaMessageMetadata,
   handleCtwaAttribution,
 } from "../meta-ads/ctwa.js";
-import { inboundShouldSkipReadReceipt } from "../whatsapp/coexistence/read-receipt.js";
 
 async function resolveAccessToken(
   tenantId: string,
@@ -413,19 +411,6 @@ export async function processInboundMessage(
   await recordCampaignReply(tenantId, participantId, conversation.conversationId).catch((err) =>
     console.warn("Failed to record campaign reply:", err)
   );
-
-  const skipReadReceipt =
-    channel === "whatsapp" &&
-    (await inboundShouldSkipReadReceipt({
-      tenantId,
-      botId,
-      bot,
-      phoneNumberId: whatsappPayload?.phoneNumberId,
-      channelId: whatsappPayload?.whatsappChannelId,
-    }));
-  if (!skipReadReceipt) {
-    await markChannelRead(outboundCtxBase(), externalId).catch(() => {});
-  }
 
   const history = await getConversationMessages(tenantId, conversation.conversationId, 20);
   const existingUserIdx = history.findIndex(
