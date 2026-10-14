@@ -5,6 +5,7 @@ import { assertAssignedServices } from "../../lib/billing/subaccount-services.js
 import { assertCanEnableCatalog, assertCanAddProduct } from "../../lib/billing/assert-plan.js";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
 import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
+import { getDefaultWhatsAppChannel } from "../../lib/dynamodb/whatsapp-channel.repository.js";
 import { getWhatsAppAccessToken } from "../../lib/whatsapp/client.js";
 import {
   createProduct,
@@ -25,9 +26,56 @@ import {
   updateProduct,
 } from "../../lib/catalog/catalog.service.js";
 import { ok, badRequest, created, handleError } from "../../lib/http.js";
-import type { OrderStatus, ProductAvailability } from "../../types/index.js";
+import type { Bot, OrderStatus, ProductAvailability } from "../../types/index.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
+
+function resolveCatalogPathParams(
+  rawPath: string,
+  pathParameters?: {
+    botId?: string;
+    productId?: string;
+    orderId?: string;
+    proxy?: string;
+  } | null
+): { botId?: string; productId?: string; orderId?: string } {
+  if (pathParameters?.botId) {
+    return {
+      botId: pathParameters.botId,
+      ...(pathParameters.productId ? { productId: pathParameters.productId } : {}),
+      ...(pathParameters.orderId ? { orderId: pathParameters.orderId } : {}),
+    };
+  }
+
+  const proxy = (pathParameters?.proxy ?? "").replace(/^\/+/, "");
+  const relative = proxy || rawPath.replace(/^\/catalog\/?/, "");
+  const parts = relative.split("/").filter(Boolean);
+  const botId = parts[0];
+  if (!botId) return {};
+
+  const productId = parts[1] === "products" ? parts[2] : undefined;
+  const orderId = parts[1] === "orders" ? parts[2] : undefined;
+  return {
+    botId,
+    ...(productId ? { productId } : {}),
+    ...(orderId ? { orderId } : {}),
+  };
+}
+
+async function assertBotHasWhatsApp(tenantId: string, bot: Bot): Promise<string> {
+  const channel = await getDefaultWhatsAppChannel(tenantId, bot.botId);
+  const wabaId =
+    bot.whatsappBusinessAccountId?.trim() ||
+    channel?.whatsappBusinessAccountId?.trim() ||
+    "";
+  const hasPhone =
+    Boolean(bot.phoneNumberId?.trim()) || Boolean(channel?.phoneNumberId?.trim());
+
+  if (!wabaId || !hasPhone) {
+    throw new Error("WhatsApp is not connected for this bot");
+  }
+  return wabaId;
+}
 
 const ConfigSchema = z.object({
   autoCollectPayment: z.boolean().optional(),
@@ -95,9 +143,10 @@ export async function handler(
     await assertAssignedServices(auth.tenantId, "apps");
     const method = event.requestContext.http.method;
     const rawPath = event.rawPath ?? event.requestContext.http.path;
-    const botId = event.pathParameters?.botId;
-    const productId = event.pathParameters?.productId;
-    const orderId = event.pathParameters?.orderId;
+    const { botId, productId, orderId } = resolveCatalogPathParams(
+      rawPath,
+      event.pathParameters
+    );
 
     if (!botId) {
       return badRequest("botId is required");
@@ -134,6 +183,7 @@ export async function handler(
     if (method === "POST" && rawPath === `/catalog/${botId}/enable`) {
       const tenant = await getTenant(auth.tenantId);
       if (!tenant) throw new Error("Tenant not found");
+      await assertBotHasWhatsApp(auth.tenantId, bot);
       await assertCanEnableCatalog(tenant, botId);
       const config = await enableCatalog(auth.tenantId, botId);
       return ok({ config });
@@ -147,10 +197,8 @@ export async function handler(
     if (method === "GET" && rawPath === `/catalog/${botId}/meta-catalogs`) {
       const accessToken = await getAccessToken(auth.tenantId);
       if (!accessToken) throw new Error("WhatsApp is not connected");
-      const catalogs = await listMetaCatalogsForBot(
-        bot.whatsappBusinessAccountId,
-        accessToken
-      );
+      const wabaId = await assertBotHasWhatsApp(auth.tenantId, bot);
+      const catalogs = await listMetaCatalogsForBot(wabaId, accessToken);
       return ok({ catalogs });
     }
 

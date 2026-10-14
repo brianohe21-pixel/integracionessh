@@ -1,10 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { ShoppingBag } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { useCatalogOrders, useUpdateCatalogOrder } from "@/hooks/useCatalog";
 import type { OrderStatus } from "@/types";
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { SideDrawer } from "@/components/ui/SideDrawer";
 import { TableContainer } from "@/components/ui/TableContainer";
 
 function formatCop(cents: number): string {
@@ -19,6 +23,16 @@ const STATUSES: OrderStatus[] = [
   "delivered",
   "cancelled",
 ];
+
+function orderStatusVariant(
+  status: OrderStatus
+): "success" | "warning" | "danger" | "info" | "default" | "accent" {
+  if (status === "delivered" || status === "confirmed") return "success";
+  if (status === "cancelled") return "danger";
+  if (status === "shipped" || status === "preparing") return "info";
+  if (status === "pending") return "warning";
+  return "default";
+}
 
 export function CatalogOrdersList({ botId }: { botId: string }) {
   const t = useT();
@@ -37,11 +51,11 @@ export function CatalogOrdersList({ botId }: { botId: string }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
-        <label className="text-sm text-secondary">{t("catalog.filterStatus")}</label>
+        <label className="text-sm font-medium text-secondary">{t("catalog.filterStatus")}</label>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as OrderStatus | "")}
-          className="rounded-lg border border-default px-3 py-2 text-sm bg-surface-elevated"
+          className="rounded-lg border border-default bg-surface-elevated px-3 py-2 text-sm"
         >
           <option value="">{t("catalog.allStatuses")}</option>
           {STATUSES.map((status) => (
@@ -53,7 +67,11 @@ export function CatalogOrdersList({ botId }: { botId: string }) {
       </div>
 
       {orders.length === 0 ? (
-        <p className="text-sm text-secondary">{t("catalog.noOrders")}</p>
+        <EmptyState
+          icon={<ShoppingBag className="h-6 w-6" />}
+          title={t("catalog.noOrdersTitle")}
+          description={t("catalog.noOrders")}
+        />
       ) : (
         <TableContainer className="rounded-xl border border-default">
           <table className="min-w-full text-sm">
@@ -67,80 +85,136 @@ export function CatalogOrdersList({ botId }: { botId: string }) {
                 <th className="px-4 py-3" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-default">
               {orders.map((order) => {
                 const orderItems = order.items ?? [];
                 return (
-                <tr key={order.orderId}>
-                  <td className="px-4 py-3 text-secondary">
-                    {new Date(order.createdAt).toLocaleString()}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="font-medium text-primary">{order.contactPhone}</div>
-                    {order.contactName ? (
-                      <div className="text-secondary">{order.contactName}</div>
-                    ) : null}
-                  </td>
-                  <td className="px-4 py-3">{orderItems.length}</td>
-                  <td className="px-4 py-3">{formatCop(order.subtotalInCents ?? 0)}</td>
-                  <td className="px-4 py-3">
-                    <Badge variant={order.status === "cancelled" ? "danger" : "default"}>
-                      {t(`catalog.orderStatus.${order.status}`)}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedId(order.orderId)}
-                      className="text-xs text-accent hover:underline"
-                    >
-                      {t("common.edit")}
-                    </button>
-                  </td>
-                </tr>
-              )})}
+                  <tr
+                    key={order.orderId}
+                    className="cursor-pointer transition-colors hover:bg-surface-muted/40"
+                    onClick={() => setSelectedId(order.orderId)}
+                  >
+                    <td className="px-4 py-3 text-secondary">
+                      {new Date(order.createdAt).toLocaleString()}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="font-medium text-primary">{order.contactPhone}</div>
+                      {order.contactName ? (
+                        <div className="text-xs text-secondary">{order.contactName}</div>
+                      ) : null}
+                    </td>
+                    <td className="px-4 py-3">{orderItems.length}</td>
+                    <td className="px-4 py-3 font-medium text-primary">
+                      {formatCop(order.subtotalInCents ?? 0)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge variant={orderStatusVariant(order.status)} dot>
+                        {t(`catalog.orderStatus.${order.status}`)}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedId(order.orderId);
+                        }}
+                        className="text-xs font-medium text-accent hover:underline"
+                      >
+                        {t("common.edit")}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </TableContainer>
       )}
 
       {selected ? (
-        <div className="rounded-xl border border-default bg-surface-elevated p-4 space-y-4">
-          <h3 className="font-semibold text-primary">{t("catalog.orderDetail")}</h3>
-          <ul className="space-y-1 text-sm text-secondary">
-            {(selected.items ?? []).map((item) => (
-              <li key={`${selected.orderId}-${item.retailerId}`}>
-                {item.quantity}x {item.name} — {formatCop(item.unitPriceInCents * item.quantity)}
-              </li>
-            ))}
-          </ul>
-          {selected.customerNote ? (
-            <p className="text-sm text-secondary">{selected.customerNote}</p>
-          ) : null}
-          <div className="flex flex-wrap items-center gap-3">
-            <select
-              value={selected.status}
-              onChange={(e) =>
-                void updateOrder.mutateAsync({
-                  orderId: selected.orderId,
-                  status: e.target.value as OrderStatus,
-                })
-              }
-              className="rounded-lg border border-default px-3 py-2 text-sm bg-surface-elevated"
-            >
-              {STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {t(`catalog.orderStatus.${status}`)}
-                </option>
-              ))}
-            </select>
-            {selected.paymentId ? (
+        <SideDrawer
+          title={t("catalog.orderDetail")}
+          subtitle={selected.contactPhone}
+          onClose={() => setSelectedId(null)}
+          footer={
+            <div className="flex justify-end">
+              <Button type="button" variant="secondary" onClick={() => setSelectedId(null)}>
+                {t("catalog.closeDetail")}
+              </Button>
+            </div>
+          }
+        >
+          <div className="space-y-5">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant={orderStatusVariant(selected.status)} dot>
+                {t(`catalog.orderStatus.${selected.status}`)}
+              </Badge>
               <span className="text-sm text-secondary">
-                {t("catalog.paymentLinked")}: {selected.paymentId.slice(0, 8)}
+                {new Date(selected.createdAt).toLocaleString()}
               </span>
+            </div>
+
+            <div>
+              <p className="mb-2 text-sm font-medium text-primary">{t("catalog.orderItems")}</p>
+              <ul className="divide-y divide-default rounded-xl border border-default">
+                {(selected.items ?? []).map((item) => (
+                  <li
+                    key={`${selected.orderId}-${item.retailerId}`}
+                    className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm"
+                  >
+                    <span className="text-primary">
+                      {item.quantity}× {item.name}
+                    </span>
+                    <span className="font-medium text-primary">
+                      {formatCop(item.unitPriceInCents * item.quantity)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-3 text-right text-sm font-semibold text-primary">
+                {t("catalog.colTotal")}: {formatCop(selected.subtotalInCents ?? 0)}
+              </p>
+            </div>
+
+            {selected.customerNote ? (
+              <div>
+                <p className="mb-1 text-sm font-medium text-primary">{t("catalog.customerNote")}</p>
+                <p className="rounded-lg bg-surface-muted px-3 py-2 text-sm text-secondary">
+                  {selected.customerNote}
+                </p>
+              </div>
+            ) : null}
+
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-secondary">
+                {t("catalog.updateStatus")}
+              </label>
+              <select
+                value={selected.status}
+                onChange={(e) =>
+                  void updateOrder.mutateAsync({
+                    orderId: selected.orderId,
+                    status: e.target.value as OrderStatus,
+                  })
+                }
+                className="w-full rounded-lg border border-default bg-surface-elevated px-3 py-2 text-sm"
+              >
+                {STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {t(`catalog.orderStatus.${status}`)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {selected.paymentId ? (
+              <p className="text-sm text-secondary">
+                {t("catalog.paymentLinked")}: {selected.paymentId.slice(0, 8)}…
+              </p>
             ) : null}
           </div>
-        </div>
+        </SideDrawer>
       ) : null}
     </div>
   );
