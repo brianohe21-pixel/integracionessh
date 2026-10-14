@@ -17,6 +17,7 @@ import {
   ShoppingCart,
   Square,
   Contact,
+  ContactRound,
   UserPlus,
   Target,
   Bell,
@@ -73,6 +74,13 @@ export const FLOW_NODE_META: Record<FlowNodeType, FlowNodeMeta> = {
     hasOutput: true,
     branchHandles: "condition",
   },
+  check_known_contact: {
+    category: "crm",
+    icon: ContactRound,
+    hasInput: true,
+    hasOutput: true,
+    branchHandles: "condition",
+  },
   delay: { category: "logic", icon: Clock, hasInput: true, hasOutput: true },
   set_variable: { category: "logic", icon: Variable, hasInput: true, hasOutput: true },
   meta_flow: { category: "integrations", icon: FormInput, hasInput: true, hasOutput: true },
@@ -104,7 +112,7 @@ export const FLOW_NODE_CATEGORIES: FlowPaletteCategory[] = [
 ];
 
 export const FLOW_PALETTE_NODES: Record<FlowPaletteCategory, FlowNodeType[]> = {
-  crm: ["save_contact", "create_lead", "create_opportunity", "send_notification"],
+  crm: ["save_contact", "check_known_contact", "create_lead", "create_opportunity", "send_notification"],
   messaging: ["message", "template", "buttons", "send_otp", "send_audio"],
   logic: ["condition", "delay", "set_variable"],
   integrations: ["agent", "assign_bot", "webhook", "meta_flow", "http_request", "handoff"],
@@ -211,6 +219,8 @@ export function buildNodePreview(
       return data.templateName ? `${data.templateName} (${data.templateLanguage ?? "?"})` : "";
     case "condition":
       return `${data.conditionVariable ?? "last_input"} ${data.conditionOperator ?? "contains"} ${data.conditionValue ?? ""}`.trim();
+    case "check_known_contact":
+      return locale === "es" ? "¿Ya está en contactos?" : "Already in contacts?";
     case "buttons":
       return text(data.messageText);
     case "meta_flow":

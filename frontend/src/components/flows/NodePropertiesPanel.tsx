@@ -947,6 +947,22 @@ export function NodePropertiesPanel({
         </>
       )}
 
+      {type === "check_known_contact" && (
+        <>
+          <p className="text-xs text-amber-700 bg-amber-50 rounded-lg p-2">
+            {t("flows.hints.checkKnownContactBranches")}
+          </p>
+          <FormBindingField
+            label={t("flows.fields.contactPhoneBinding")}
+            value={d.contactPhoneBinding ?? ""}
+            onChange={(v) => onUpdate({ contactPhoneBinding: v })}
+            sampleFields={sampleFields}
+            extraBindings={["{{phone}}", "{{contact_phone}}"]}
+            placeholder="{{phone}}"
+          />
+        </>
+      )}
+
       {type === "create_lead" && (
         <>
           <FormBindingField

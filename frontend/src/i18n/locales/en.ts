@@ -4491,6 +4491,7 @@ export const en: Messages = {
       send_otp: "Send OTP",
       send_audio: "Voice note",
       save_contact: "Save contact",
+      check_known_contact: "Existing contact",
       create_lead: "Create lead",
       create_opportunity: "Create opportunity",
       send_notification: "Send notification",
@@ -4806,6 +4807,8 @@ export const en: Messages = {
     },
     hints: {
       conditionBranches: "Connect each output (Yes / No) to the corresponding next node.",
+      checkKnownContactBranches:
+        "Yes = the phone was already in Contacts. No = it is new. Connect Yes to human handoff and No to AI if you only want to qualify new leads.",
       buttonBranches: "Each button has its own output. Maximum 3 buttons.",
       opportunityWhatsAppBindings:
         "WhatsApp variables: {{phone}} (phone), {{contact_name}} (profile name). For forms use {{form.field}}. The user's last message is {{last_input}}.",
@@ -4890,6 +4893,11 @@ export const en: Messages = {
       save_contact: {
         description: "Saves phone, name, and email to the CRM.",
         usage: "Use {{form.field}} bindings in web form flows.",
+      },
+      check_known_contact: {
+        description: "Checks whether the phone already exists in Contacts before this conversation.",
+        usage:
+          "Connect Yes (exists) to human handoff and No (new) to the AI Assistant. Optional: set {{phone}} if you are not using the conversation phone.",
       },
       create_lead: {
         description: "Creates a CRM lead from form data.",

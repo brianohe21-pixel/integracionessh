@@ -31,7 +31,7 @@ const CONVERSATION_ONLY_NODES = [
   "send_audio",
 ] as const;
 
-const BRANCHING_NODES = ["condition", "buttons", "send_otp"] as const;
+const BRANCHING_NODES = ["condition", "check_known_contact", "buttons", "send_otp"] as const;
 
 function hasLocalizedText(value: LocalizedText | undefined): boolean {
   if (!value) return false;
@@ -385,13 +385,16 @@ export function validateFlowDefinition(flow: FlowDefinition): FlowValidationIssu
 
     if (BRANCHING_NODES.includes(node.type as (typeof BRANCHING_NODES)[number])) {
       const outgoing = flow.edges.filter((edge) => edge.source === node.id);
-      if (node.type === "condition") {
+      if (node.type === "condition" || node.type === "check_known_contact") {
         const handles = new Set(outgoing.map((edge) => edge.sourceHandle));
         for (const handle of ["true", "false"]) {
           if (!handles.has(handle)) {
             issues.push({
               code: "missing_branch",
-              message: `Condition node missing ${handle} branch`,
+              message:
+                node.type === "check_known_contact"
+                  ? `Known contact node missing ${handle} branch`
+                  : `Condition node missing ${handle} branch`,
               nodeId: node.id,
             });
           }
