@@ -122,6 +122,7 @@ async function processRecord(record: SQSRecord): Promise<void> {
       language,
       ...(components ? { components } : {}),
       accessToken,
+      billingTenantId: tenantId,
     });
 
     const messageId = result.messages?.[0]?.id;

@@ -52,6 +52,7 @@ export async function sendBookingReminder(params: {
       templateName: config.reminderTemplateName,
       language: config.reminderTemplateLanguage,
       accessToken,
+      billingTenantId: params.tenantId,
       components: [
         {
           type: "body",

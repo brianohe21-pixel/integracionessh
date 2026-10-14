@@ -147,6 +147,8 @@ export interface SendTemplateOptions {
     parameters?: Array<{ type: string; text?: string; image?: { link: string } }>;
   }>;
   accessToken: string;
+  /** When set, enforces Starter template billing gates and meters accepted sends. */
+  billingTenantId?: string;
 }
 
 export interface SendTextMessageOptions {
@@ -791,7 +793,22 @@ export async function requestSmbAppData(
 export async function sendTemplateMessage(
   options: SendTemplateOptions
 ): Promise<SendTextMessageResponse> {
-  const { phoneNumberId, to, templateName, language, components, accessToken } = options;
+  const {
+    phoneNumberId,
+    to,
+    templateName,
+    language,
+    components,
+    accessToken,
+    billingTenantId,
+  } = options;
+
+  if (billingTenantId) {
+    const { assertCanSendTemplatesByTenantId } = await import(
+      "../billing/template-billing.js"
+    );
+    await assertCanSendTemplatesByTenantId(billingTenantId);
+  }
 
   const body: Record<string, unknown> = {
     messaging_product: "whatsapp",
@@ -822,5 +839,14 @@ export async function sendTemplateMessage(
     throwGraphApiError(response.status, error);
   }
 
-  return response.json() as Promise<SendTextMessageResponse>;
+  const result = (await response.json()) as SendTextMessageResponse;
+
+  if (billingTenantId) {
+    const { recordAcceptedTemplateSend } = await import(
+      "../billing/template-billing.js"
+    );
+    await recordAcceptedTemplateSend(billingTenantId);
+  }
+
+  return result;
 }

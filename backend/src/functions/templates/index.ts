@@ -378,6 +378,7 @@ export async function handler(
         language,
         ...(components ? { components } : {}),
         accessToken,
+        billingTenantId: auth.tenantId,
       } as SendTemplateOptions);
 
       return ok(result);

@@ -103,6 +103,7 @@ export async function sendOtpViaChannel(
       templateName: params.whatsappTemplate.name,
       language: params.whatsappTemplate.language,
       accessToken: params.accessToken,
+      billingTenantId: params.tenantId,
       components: [
         {
           type: "body",

@@ -28,11 +28,31 @@ export interface WompiCheckoutParams {
   customerEmail: string;
 }
 
+export interface StarterCheckoutBreakdown {
+  planFeeCents: number;
+  templatesAcceptedCount: number;
+  unitPriceCents: number;
+  templateFeeCents: number;
+  totalCents: number;
+  trm?: number;
+}
+
+export interface TemplateBillingStatus {
+  templatesAcceptedCount: number;
+  unitPriceCents: number;
+  templateFeeCents: number;
+  creditCapCount: number | null;
+  creditCapReached: boolean;
+  templatesBlocked: boolean;
+  blockReason: "past_due" | "credit_cap" | "subscription" | null;
+}
+
 export interface BillingCheckoutResponse {
   url: string;
   reference?: string;
   provider: BillingProvider;
   wompi?: WompiCheckoutParams;
+  breakdown?: StarterCheckoutBreakdown;
 }
 
 export interface BillingProvidersResponse {
@@ -68,6 +88,8 @@ export interface BillingStatusResponse {
   paymentProvider: BillingProvider | string;
   canRenew: boolean;
   isExpired: boolean;
+  templateBilling?: TemplateBillingStatus;
+  checkoutBreakdown?: StarterCheckoutBreakdown | null;
 }
 
 export function useBillingStatus() {

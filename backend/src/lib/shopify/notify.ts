@@ -89,6 +89,7 @@ export async function sendShopifyWhatsAppTemplate(params: {
       templateName: mapping.templateName,
       language: mapping.templateLanguage || "es",
       accessToken,
+      billingTenantId: params.tenantId,
       ...(bodyParams.length
         ? {
             components: [

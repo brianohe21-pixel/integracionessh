@@ -130,6 +130,7 @@ export interface PlatformBillingConfig {
   pricePerMessageCents: number;
   currency: "COP";
   maxMessagesPerMonthByPlan?: MaxMessagesPerMonthByPlan;
+  templateCreditCapCount?: number;
   updatedAt?: string;
 }
 
@@ -333,6 +334,8 @@ export interface Tenant {
   currentPeriodEnd?: string;
   paymentProvider?: "stripe" | "wompi";
   pricePerMessageCents?: number;
+  billingPeriodTemplatesAcceptedCount?: number;
+  billingPeriodAppliedPricePerMessageCents?: number;
   onboardingCompletedAt?: string;
   onboardingSkippedAt?: string;
   onboardingBannerDismissedAt?: string;

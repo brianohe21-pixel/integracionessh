@@ -154,7 +154,7 @@ export function BillingPlanCards({ autoCheckoutPlan }: { autoCheckoutPlan?: Tena
 
           <div className="mt-6 flex-1" />
 
-          {isStarterCurrent ? (
+          {isStarterCurrent && !status?.canRenew ? (
             <p className="mt-6 text-center text-sm text-muted">{t("billing.currentPlan")}</p>
           ) : (
             <>
@@ -165,7 +165,9 @@ export function BillingPlanCards({ autoCheckoutPlan }: { autoCheckoutPlan?: Tena
                 className="mt-6 w-full"
                 size="lg"
               >
-                {t("billing.subscribe")}
+                {isStarterCurrent || status?.canRenew
+                  ? t("billing.renewPlan")
+                  : t("billing.subscribe")}
               </Button>
               {!defaultProvider ? (
                 <p className="mt-2 text-center text-xs text-red-600">

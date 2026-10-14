@@ -79,6 +79,7 @@ export async function executeAutomation(
         templateName: rule.templateName,
         language: rule.templateLanguage || templateLanguageForLocale(locale),
         accessToken: ctx.accessToken,
+        billingTenantId: ctx.tenantId,
         ...(rule.templateVariables
           ? {
               components: [

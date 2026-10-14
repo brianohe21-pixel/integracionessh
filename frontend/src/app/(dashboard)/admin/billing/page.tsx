@@ -68,12 +68,18 @@ function DefaultBillingConfigDrawer({
   saving: boolean;
   onClose: () => void;
   onSave: (
-    config: Pick<PlatformBillingConfig, "pricePerMessageCents" | "maxMessagesPerMonthByPlan">
+    config: Pick<
+      PlatformBillingConfig,
+      "pricePerMessageCents" | "maxMessagesPerMonthByPlan" | "templateCreditCapCount"
+    >
   ) => Promise<void>;
 }) {
   const t = useT();
   const initialQuotas = initialConfig.maxMessagesPerMonthByPlan ?? DEFAULT_AI_QUOTAS;
   const [priceInput, setPriceInput] = useState(pesosInputFromCents(initialConfig.pricePerMessageCents));
+  const [creditCapInput, setCreditCapInput] = useState(
+    String(initialConfig.templateCreditCapCount ?? 0)
+  );
   const [quotas, setQuotas] = useState({
     free: String(initialQuotas.free),
     starter: String(initialQuotas.starter),
@@ -81,12 +87,14 @@ function DefaultBillingConfigDrawer({
     reseller: String(initialQuotas.reseller),
   });
   const [priceError, setPriceError] = useState(false);
+  const [creditCapError, setCreditCapError] = useState(false);
   const [quotaError, setQuotaError] = useState(false);
 
   useEffect(() => {
     if (open) {
       const next = initialConfig.maxMessagesPerMonthByPlan ?? DEFAULT_AI_QUOTAS;
       setPriceInput(pesosInputFromCents(initialConfig.pricePerMessageCents));
+      setCreditCapInput(String(initialConfig.templateCreditCapCount ?? 0));
       setQuotas({
         free: String(next.free),
         starter: String(next.starter),
@@ -94,24 +102,30 @@ function DefaultBillingConfigDrawer({
         reseller: String(next.reseller),
       });
       setPriceError(false);
+      setCreditCapError(false);
       setQuotaError(false);
     }
   }, [open, initialConfig]);
 
   async function handleSave() {
     const cents = centsFromPesosInput(priceInput);
+    const creditCap = parseQuotaInput(creditCapInput);
     const free = parseQuotaInput(quotas.free);
     const starter = parseQuotaInput(quotas.starter);
     const pro = parseQuotaInput(quotas.pro);
     const reseller = parseQuotaInput(quotas.reseller);
     const priceInvalid = cents === null;
+    const creditCapInvalid = creditCap === null;
     const quotaInvalid = free === null || starter === null || pro === null || reseller === null;
     setPriceError(priceInvalid);
+    setCreditCapError(creditCapInvalid);
     setQuotaError(quotaInvalid);
     if (
       priceInvalid ||
+      creditCapInvalid ||
       quotaInvalid ||
       cents === null ||
+      creditCap === null ||
       free === null ||
       starter === null ||
       pro === null ||
@@ -121,6 +135,7 @@ function DefaultBillingConfigDrawer({
     }
     await onSave({
       pricePerMessageCents: cents,
+      templateCreditCapCount: creditCap,
       maxMessagesPerMonthByPlan: { free, starter, pro, reseller },
     });
   }
@@ -171,6 +186,25 @@ function DefaultBillingConfigDrawer({
           </div>
         </label>
         {priceError ? (
+          <p className="text-sm text-red-600">{t("admin.billing.configError")}</p>
+        ) : null}
+
+        <label className="flex flex-col gap-2 text-sm text-secondary">
+          <span>{t("admin.billing.templateCreditCap")}</span>
+          <input
+            type="number"
+            min={0}
+            step={1}
+            value={creditCapInput}
+            onChange={(e) => setCreditCapInput(e.target.value)}
+            className={cn(
+              "w-full rounded-lg border bg-surface px-3 py-2 text-primary",
+              creditCapError ? "border-danger" : "border-default"
+            )}
+          />
+          <span className="text-xs text-muted">{t("admin.billing.templateCreditCapHint")}</span>
+        </label>
+        {creditCapError ? (
           <p className="text-sm text-red-600">{t("admin.billing.configError")}</p>
         ) : null}
 
@@ -319,7 +353,10 @@ export default function AdminBillingPage() {
   const [downloadingCompanyId, setDownloadingCompanyId] = useState<string | null>(null);
 
   async function handleSaveDefaultConfig(
-    config: Pick<PlatformBillingConfig, "pricePerMessageCents" | "maxMessagesPerMonthByPlan">
+    config: Pick<
+      PlatformBillingConfig,
+      "pricePerMessageCents" | "maxMessagesPerMonthByPlan" | "templateCreditCapCount"
+    >
   ) {
     try {
       await updateConfig.mutateAsync(config);

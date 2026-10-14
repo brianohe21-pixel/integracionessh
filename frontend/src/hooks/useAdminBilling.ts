@@ -15,7 +15,10 @@ export function useUpdateAdminBillingConfig() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (
-      body: Pick<PlatformBillingConfig, "pricePerMessageCents" | "maxMessagesPerMonthByPlan">
+      body: Pick<
+        PlatformBillingConfig,
+        "pricePerMessageCents" | "maxMessagesPerMonthByPlan" | "templateCreditCapCount"
+      >
     ) => api.put<PlatformBillingConfig>("/admin/billing-config", body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-billing-config"] });

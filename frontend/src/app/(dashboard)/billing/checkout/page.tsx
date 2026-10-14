@@ -37,6 +37,7 @@ function BillingCheckoutPageContent() {
   const [error, setError] = useState("");
   const [wompiConfig, setWompiConfig] = useState<WompiCheckoutParams | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [checkoutTotalCents, setCheckoutTotalCents] = useState<number | null>(null);
   const started = useRef(false);
 
   const defaultProvider =
@@ -66,6 +67,9 @@ function BillingCheckoutPageContent() {
       }
       if (result.provider === "wompi" && result.wompi) {
         setWompiConfig(result.wompi);
+        setCheckoutTotalCents(
+          result.breakdown?.totalCents ?? result.wompi.amountInCents ?? null
+        );
         return;
       }
       if (result.url) {
@@ -163,10 +167,37 @@ function BillingCheckoutPageContent() {
             <h1 className="text-xl font-semibold text-primary">{t("billing.checkoutTitle")}</h1>
             <p className="mt-2 text-sm text-secondary">
               {planLabel(plan)}
-              {price?.listPriceUsd && price.amountCents
-                ? ` · ${formatUsdPrice(price.listPriceUsd)} · ${formatCopPrice(price.amountCents)}`
-                : ""}
+              {price?.listPriceUsd ? ` · ${formatUsdPrice(price.listPriceUsd)}` : ""}
+              {checkoutTotalCents != null
+                ? ` · ${formatCopPrice(checkoutTotalCents)}`
+                : price?.amountCents
+                  ? ` · ${formatCopPrice(price.amountCents)}`
+                  : ""}
             </p>
+            {status?.checkoutBreakdown && plan === "starter" ? (
+              <div className="mx-auto mt-4 max-w-sm space-y-1 rounded-xl bg-surface-muted/40 px-4 py-3 text-left text-sm">
+                <div className="flex justify-between gap-3">
+                  <span className="text-secondary">{t("billing.templatePlanFee")}</span>
+                  <span className="tabular-nums text-primary">
+                    {formatCopPrice(status.checkoutBreakdown.planFeeCents)}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <span className="text-secondary">{t("billing.templateFeeDue")}</span>
+                  <span className="tabular-nums text-primary">
+                    {formatCopPrice(status.checkoutBreakdown.templateFeeCents)}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-3 border-t border-subtle pt-2 font-medium">
+                  <span className="text-primary">{t("billing.templateRenewalTotal")}</span>
+                  <span className="tabular-nums text-primary">
+                    {formatCopPrice(
+                      checkoutTotalCents ?? status.checkoutBreakdown.totalCents
+                    )}
+                  </span>
+                </div>
+              </div>
+            ) : null}
             <p className="mt-2 text-sm text-secondary">{t("billing.checkoutWidgetHint")}</p>
           </>
         )}

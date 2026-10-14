@@ -60,6 +60,7 @@ const MaxMessagesPerMonthByPlanSchema = z.object({
 const BillingConfigSchema = z.object({
   pricePerMessageCents: z.number().int().min(0).max(1_000_000_000),
   maxMessagesPerMonthByPlan: MaxMessagesPerMonthByPlanSchema,
+  templateCreditCapCount: z.number().int().min(0).max(100_000_000).optional(),
 });
 
 export async function handler(
@@ -148,6 +149,7 @@ export async function handler(
           pricePerMessageCents: parsed.data.pricePerMessageCents,
           currency: "COP",
           maxMessagesPerMonthByPlan: parsed.data.maxMessagesPerMonthByPlan,
+          templateCreditCapCount: parsed.data.templateCreditCapCount ?? 0,
         })
       );
     }

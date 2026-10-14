@@ -104,6 +104,8 @@ export interface PlatformBillingConfig {
   pricePerMessageCents: number;
   currency: "COP";
   maxMessagesPerMonthByPlan: MaxMessagesPerMonthByPlan;
+  /** Max accepted WhatsApp templates per Starter billing period (0 = unlimited). */
+  templateCreditCapCount?: number;
   updatedAt?: string;
 }
 
@@ -308,6 +310,10 @@ export interface Tenant {
   currentPeriodEnd?: string;
   paymentProvider?: "stripe" | "wompi";
   pricePerMessageCents?: number;
+  /** Accepted WhatsApp templates in the current Starter billing period. */
+  billingPeriodTemplatesAcceptedCount?: number;
+  /** Unit price (COP cents) locked for the current Starter billing period. */
+  billingPeriodAppliedPricePerMessageCents?: number;
   onboardingCompletedAt?: string;
   onboardingSkippedAt?: string;
   onboardingBannerDismissedAt?: string;

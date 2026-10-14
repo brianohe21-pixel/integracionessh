@@ -70,6 +70,7 @@ async function executeWhatsAppStep(params: {
       templateName: params.step.templateName,
       language: params.step.templateLanguage || templateLanguageForLocale(locale),
       accessToken,
+      billingTenantId: params.tenantId,
     });
   } else if (params.step.messageText) {
     await sendTextMessage({

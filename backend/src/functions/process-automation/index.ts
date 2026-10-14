@@ -85,6 +85,7 @@ async function processRecord(record: SQSRecord): Promise<void> {
           templateName: rule.templateName,
           language: rule.templateLanguage || templateLanguageForLocale(locale),
           accessToken,
+          billingTenantId: tenantId,
           ...(rule.templateVariables
             ? {
                 components: [

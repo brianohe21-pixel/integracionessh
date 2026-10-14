@@ -895,6 +895,7 @@ export async function handler(
         templateName: parsed.data.templateName,
         language: parsed.data.language,
         accessToken,
+        billingTenantId: auth.tenantId,
         ...(parsed.data.components ? { components: parsed.data.components } : {}),
       } as SendTemplateOptions);
 

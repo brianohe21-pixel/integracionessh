@@ -57,6 +57,11 @@ import {
 import { assertCheckoutAllowed } from "../../lib/billing/checkout-policy.js";
 import { normalizeTenantPlan } from "../../lib/billing/normalize-plan.js";
 import { calculateUsdPriceInCopCents } from "../../lib/billing/trm.js";
+import {
+  buildTemplateBillingSnapshot,
+  resolveStarterCheckoutBreakdown,
+  syncStarterPeriodExpiry,
+} from "../../lib/billing/template-billing.js";
 
 import type { SubscriptionStatus } from "../../types/index.js";
 
@@ -158,15 +163,35 @@ async function handleWompiCheckout(
   plan: PaidTenantPlan
 ) {
   assertCheckoutAllowed(tenant, plan);
-  const { amountInCents } = await resolveCheckoutAmountInCents(plan);
   const tenantId = tenant.tenantId;
   const reference = buildPaymentReference(tenantId, plan);
+
+  let amountInCents: number;
+  let planFeeCents: number | undefined;
+  let templateFeeCents: number | undefined;
+  let templatesAcceptedCount: number | undefined;
+  let unitPriceCents: number | undefined;
+
+  if (plan === "starter") {
+    const breakdown = await resolveStarterCheckoutBreakdown(tenant);
+    amountInCents = breakdown.totalCents;
+    planFeeCents = breakdown.planFeeCents;
+    templateFeeCents = breakdown.templateFeeCents;
+    templatesAcceptedCount = breakdown.templatesAcceptedCount;
+    unitPriceCents = breakdown.unitPriceCents;
+  } else {
+    ({ amountInCents } = await resolveCheckoutAmountInCents(plan));
+  }
 
   await createPaymentIntent({
     reference,
     tenantId,
     plan,
     amountInCents,
+    ...(planFeeCents !== undefined ? { planFeeCents } : {}),
+    ...(templateFeeCents !== undefined ? { templateFeeCents } : {}),
+    ...(templatesAcceptedCount !== undefined ? { templatesAcceptedCount } : {}),
+    ...(unitPriceCents !== undefined ? { unitPriceCents } : {}),
   });
 
   const redirectUrl = `${WOMPI_FRONTEND_URL}/billing/success?reference=${encodeURIComponent(reference)}`;
@@ -185,7 +210,23 @@ async function handleWompiCheckout(
     customerEmail: email,
   });
 
-  return ok({ url, reference, provider: "wompi", wompi: checkoutParams });
+  return ok({
+    url,
+    reference,
+    provider: "wompi",
+    wompi: checkoutParams,
+    ...(plan === "starter"
+      ? {
+          breakdown: {
+            planFeeCents,
+            templateFeeCents,
+            templatesAcceptedCount,
+            unitPriceCents,
+            totalCents: amountInCents,
+          },
+        }
+      : {}),
+  });
 }
 
 async function handleStripeCheckout(
@@ -276,27 +317,53 @@ export async function handler(
     const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
 
     if (method === "GET" && path.endsWith("/billing/status")) {
-      const usage = await getMonthlyUsage(tenant.tenantId);
-      const plan = tenant.plan ?? "free";
-      const limits = await resolveEffectivePlanLimits(tenant);
-      const periodEnd = tenant.currentPeriodEnd
-        ? new Date(tenant.currentPeriodEnd)
+      const syncedTenant = await syncStarterPeriodExpiry(tenant);
+      const usage = await getMonthlyUsage(syncedTenant.tenantId);
+      const plan = syncedTenant.plan ?? "free";
+      const limits = await resolveEffectivePlanLimits(syncedTenant);
+      const billingConfig = await getPlatformBillingConfig();
+      const templateBilling = buildTemplateBillingSnapshot(syncedTenant, billingConfig);
+      const periodEnd = syncedTenant.currentPeriodEnd
+        ? new Date(syncedTenant.currentPeriodEnd)
         : null;
       const now = Date.now();
       const msUntilExpiry = periodEnd ? periodEnd.getTime() - now : null;
+      const isExpired = periodEnd ? periodEnd.getTime() <= now : false;
       const canRenew =
         plan !== "free" &&
-        (msUntilExpiry === null || msUntilExpiry <= 7 * 24 * 60 * 60 * 1000);
+        (isExpired ||
+          templateBilling.creditCapReached ||
+          (syncedTenant.subscriptionStatus ?? "none") === "past_due" ||
+          msUntilExpiry === null ||
+          msUntilExpiry <= 7 * 24 * 60 * 60 * 1000);
+
+      let checkoutBreakdown:
+        | Awaited<ReturnType<typeof resolveStarterCheckoutBreakdown>>
+        | null = null;
+      if (plan === "starter") {
+        checkoutBreakdown = await resolveStarterCheckoutBreakdown(syncedTenant);
+      }
 
       return ok({
         plan,
         limits,
         usage,
-        subscriptionStatus: tenant.subscriptionStatus ?? "none",
-        currentPeriodEnd: tenant.currentPeriodEnd ?? null,
-        paymentProvider: tenant.paymentProvider ?? (isWompiConfigured() ? "wompi" : "stripe"),
+        subscriptionStatus: syncedTenant.subscriptionStatus ?? "none",
+        currentPeriodEnd: syncedTenant.currentPeriodEnd ?? null,
+        paymentProvider:
+          syncedTenant.paymentProvider ?? (isWompiConfigured() ? "wompi" : "stripe"),
         canRenew,
-        isExpired: periodEnd ? periodEnd.getTime() <= now : false,
+        isExpired,
+        templateBilling: {
+          templatesAcceptedCount: templateBilling.templatesAcceptedCount,
+          unitPriceCents: templateBilling.unitPriceCents,
+          templateFeeCents: templateBilling.templateFeeCents,
+          creditCapCount: templateBilling.creditCapCount,
+          creditCapReached: templateBilling.creditCapReached,
+          templatesBlocked: templateBilling.templatesBlocked,
+          blockReason: templateBilling.blockReason,
+        },
+        checkoutBreakdown,
       });
     }
 
@@ -379,6 +446,8 @@ export async function handler(
           currency: "COP",
           periodDays: 30,
           maxMessagesPerMonth: starterLimits.maxMessagesPerMonth,
+          pricePerTemplateCents: billingConfig.pricePerMessageCents,
+          templateCreditCapCount: billingConfig.templateCreditCapCount ?? 0,
           ...(starterPrice.trm !== undefined ? { trm: starterPrice.trm } : {}),
         },
         pro: {

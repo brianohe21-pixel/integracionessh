@@ -3594,6 +3594,20 @@ export const es = {
     usageMessages: "Mensajes IA (mes)",
     usageBulk: "Destinatarios bulk (mes)",
     usageCampaigns: "Campañas iniciadas (mes)",
+    templateUsageTitle: "Plantillas WhatsApp (periodo)",
+    templateUsageHint:
+      "Solo se cobran plantillas aceptadas por Meta. Los mensajes dentro de la ventana de 24 h no generan este cargo.",
+    templateUnitPrice: "Precio por plantilla",
+    templateAcceptedCount: "Plantillas enviadas",
+    templateFeeDue: "Cargo por plantillas",
+    templateRenewalTotal: "Total al renovar",
+    templatePlanFee: "Fee del plan",
+    templateCreditCap: "Tope del periodo",
+    templateCreditCapReached:
+      "Alcanzaste el tope de plantillas. Paga lo consumido para seguir enviando.",
+    templatePastDue:
+      "Hay un pago pendiente. Renueva el plan para volver a enviar plantillas.",
+    renewPlan: "Renovar plan",
     upgradeStarter: "Contratar Starter",
     upgradePro: "Contratar Pro",
     subscribe: "Contratar plan",
@@ -3985,15 +3999,19 @@ export const es = {
       title: "Facturación",
       subtitle: "Configura el valor por mensaje, cupos de IA por plan y revisa el consumo estimado por cliente",
       configTitle: "Configuración de facturación",
-      configHint: "Define el precio por mensaje y el cupo mensual de respuestas de IA por plan.",
+      configHint:
+        "Define el precio por plantilla WhatsApp (Starter), el tope de crédito del periodo y el cupo mensual de respuestas de IA por plan.",
       configDefaultHint:
-        "El precio es el predeterminado por empresa. Los cupos de IA aplican a todos los tenants del plan salvo override.",
+        "El precio por plantilla es el predeterminado por empresa en Starter. Los cupos de IA aplican a todos los tenants del plan salvo override.",
       configureDefaultPrice: "Configurar facturación",
       configureCompanyPrice: "Configurar precio",
       companyPriceDrawerTitle: "Precio por mensaje — {name}",
       companyPriceDrawerHint: "Define un precio personalizado para esta empresa o usa el predeterminado de la plataforma.",
       currentDefaultPrice: "Precio predeterminado actual",
-      pricePerMessage: "Precio por mensaje (predeterminado)",
+      pricePerMessage: "Precio por plantilla WhatsApp (predeterminado)",
+      templateCreditCap: "Tope de plantillas por periodo (Starter)",
+      templateCreditCapHint:
+        "Cantidad máxima de plantillas aceptadas antes de pausar envíos. Usa 0 para ilimitado.",
       aiQuotaTitle: "Cupo mensual de respuestas de IA",
       aiQuotaHint: "Solo cuenta respuestas del bot generadas por el modelo. Plantillas y mensajes de asesor no descuentan.",
       aiQuotaFree: "Plan Free",

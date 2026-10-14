@@ -33,7 +33,15 @@ export const DEFAULT_PLATFORM_BILLING_CONFIG: PlatformBillingConfig = {
   pricePerMessageCents: 0,
   currency: "COP",
   maxMessagesPerMonthByPlan: { ...DEFAULT_MAX_MESSAGES_PER_MONTH_BY_PLAN },
+  templateCreditCapCount: 0,
 };
+
+function normalizeTemplateCreditCapCount(value: unknown): number {
+  if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
+    return Math.floor(value);
+  }
+  return 0;
+}
 
 function normalizeMaxMessagesByPlan(
   value: unknown
@@ -97,13 +105,23 @@ export async function getPlatformBillingConfig(): Promise<PlatformBillingConfig>
     })
   );
 
-  if (!result.Item) return { ...DEFAULT_PLATFORM_BILLING_CONFIG, maxMessagesPerMonthByPlan: { ...DEFAULT_MAX_MESSAGES_PER_MONTH_BY_PLAN } };
+  if (!result.Item) {
+    return {
+      ...DEFAULT_PLATFORM_BILLING_CONFIG,
+      maxMessagesPerMonthByPlan: { ...DEFAULT_MAX_MESSAGES_PER_MONTH_BY_PLAN },
+    };
+  }
 
-  const { PK, SK, updatedAt, maxMessagesPerMonthByPlan, ...rest } = result.Item;
+  const { PK, SK, updatedAt, maxMessagesPerMonthByPlan, templateCreditCapCount, ...rest } =
+    result.Item;
   return {
     ...DEFAULT_PLATFORM_BILLING_CONFIG,
-    ...(rest as Omit<PlatformBillingConfig, "maxMessagesPerMonthByPlan" | "updatedAt">),
+    ...(rest as Omit<
+      PlatformBillingConfig,
+      "maxMessagesPerMonthByPlan" | "templateCreditCapCount" | "updatedAt"
+    >),
     maxMessagesPerMonthByPlan: normalizeMaxMessagesByPlan(maxMessagesPerMonthByPlan),
+    templateCreditCapCount: normalizeTemplateCreditCapCount(templateCreditCapCount),
     ...(typeof updatedAt === "string" ? { updatedAt } : {}),
   };
 }
@@ -115,11 +133,15 @@ export async function putPlatformBillingConfig(
   const maxMessagesPerMonthByPlan = normalizeMaxMessagesByPlan(
     config.maxMessagesPerMonthByPlan
   );
+  const templateCreditCapCount = normalizeTemplateCreditCapCount(
+    config.templateCreditCapCount
+  );
   const item = {
     ...BILLING_KEYS,
     pricePerMessageCents: config.pricePerMessageCents,
     currency: "COP" as const,
     maxMessagesPerMonthByPlan,
+    templateCreditCapCount,
     updatedAt,
   };
   await docClient.send(
@@ -132,6 +154,7 @@ export async function putPlatformBillingConfig(
     pricePerMessageCents: config.pricePerMessageCents,
     currency: "COP",
     maxMessagesPerMonthByPlan,
+    templateCreditCapCount,
     updatedAt,
   };
 }

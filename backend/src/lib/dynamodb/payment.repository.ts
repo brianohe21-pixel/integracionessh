@@ -17,6 +17,10 @@ export interface PaymentIntent {
   amountInCents: number;
   status: PaymentStatus;
   wompiTransactionId?: string;
+  planFeeCents?: number;
+  templateFeeCents?: number;
+  templatesAcceptedCount?: number;
+  unitPriceCents?: number;
   createdAt: string;
   updatedAt: string;
 }

@@ -544,6 +544,7 @@ async function handleSendMessage(
         templateName: data.template.name,
         language: data.template.language,
         accessToken,
+        billingTenantId: apiKey.tenantId,
       };
       if (data.template.components?.length) {
         templateOptions.components = data.template.components as NonNullable<
