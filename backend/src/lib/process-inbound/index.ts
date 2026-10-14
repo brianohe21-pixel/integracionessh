@@ -75,6 +75,7 @@ import {
   buildCtwaMessageMetadata,
   handleCtwaAttribution,
 } from "../meta-ads/ctwa.js";
+import { inboundShouldSkipReadReceipt } from "../whatsapp/coexistence/read-receipt.js";
 
 async function resolveAccessToken(
   tenantId: string,
@@ -413,7 +414,18 @@ export async function processInboundMessage(
     console.warn("Failed to record campaign reply:", err)
   );
 
-  await markChannelRead(outboundCtxBase(), externalId).catch(() => {});
+  const skipReadReceipt =
+    channel === "whatsapp" &&
+    (await inboundShouldSkipReadReceipt({
+      tenantId,
+      botId,
+      bot,
+      phoneNumberId: whatsappPayload?.phoneNumberId,
+      channelId: whatsappPayload?.whatsappChannelId,
+    }));
+  if (!skipReadReceipt) {
+    await markChannelRead(outboundCtxBase(), externalId).catch(() => {});
+  }
 
   const history = await getConversationMessages(tenantId, conversation.conversationId, 20);
   const existingUserIdx = history.findIndex(
