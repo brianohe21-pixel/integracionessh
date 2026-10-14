@@ -25,6 +25,7 @@ import { getTenant } from "../dynamodb/tenant.repository.js";
 import type { Tenant, Channel } from "../../types/index.js";
 import {
   getEffectivePlanLimits,
+  resolveEffectivePlanLimits,
   isUnlimited,
   PlanLimitError,
   assertSubscriptionAllowsSending,
@@ -59,12 +60,12 @@ export async function assertCanSendMessages(
   additionalMessages = 1
 ): Promise<void> {
   assertSubscriptionAllowsSending(tenant);
-  const limits = getEffectivePlanLimits(tenant);
+  const limits = await resolveEffectivePlanLimits(tenant);
   const usage = await getMonthlyUsage(tenant.tenantId);
   if (usage.messagesCount + additionalMessages > limits.maxMessagesPerMonth) {
     throw new PlanLimitError(
       "PLAN_LIMIT_MESSAGES",
-      `Monthly message limit reached (${limits.maxMessagesPerMonth})`
+      `Monthly AI response limit reached (${limits.maxMessagesPerMonth})`
     );
   }
 }

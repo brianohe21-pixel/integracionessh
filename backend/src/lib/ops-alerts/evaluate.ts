@@ -7,7 +7,7 @@ import {
   getConversationSlaStatus,
   resolveInboxSlaSettings,
 } from "../advisor/inbox-sla.js";
-import { getEffectivePlanLimits } from "../billing/plan-limits.js";
+import { resolveEffectivePlanLimits } from "../billing/plan-limits.js";
 import { emitOpsAlert } from "./emit.js";
 import {
   resolveOpsAlertsSettings,
@@ -59,7 +59,7 @@ async function evaluatePlanUsage(tenantId: string): Promise<void> {
   const threshold = rule.thresholdPercent ?? 85;
   const period = currentUsagePeriod();
   const usage = await getMonthlyUsage(tenantId, period);
-  const limits = getEffectivePlanLimits(tenant);
+  const limits = await resolveEffectivePlanLimits(tenant);
   const percentages = planUsagePercentages(usage, limits);
 
   const entries: Array<{ meter: string; pct: number }> = [];

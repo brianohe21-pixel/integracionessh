@@ -15,9 +15,8 @@ import {
 import { getAdvisorByCognitoUserId } from "../../lib/dynamodb/advisor.repository.js";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
 import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
-import { assertCanSendMessages, assertCanUseCopilot } from "../../lib/billing/assert-plan.js";
-import { incrementMessages } from "../../lib/dynamodb/usage.repository.js";
-import { PlanLimitError } from "../../lib/billing/plan-limits.js";
+import { assertCanUseCopilot } from "../../lib/billing/assert-plan.js";
+import { assertSubscriptionAllowsSending, PlanLimitError } from "../../lib/billing/plan-limits.js";
 import {
   resolveRequestAuth,
   assertAdvisorOrMember,
@@ -848,7 +847,7 @@ export async function handler(
       const tenant = await getTenant(auth.tenantId);
       if (tenant) {
         try {
-          await assertCanSendMessages(tenant);
+          assertSubscriptionAllowsSending(tenant);
         } catch (err) {
           if (err instanceof PlanLimitError) {
             return forbidden(err.message);
@@ -938,7 +937,6 @@ export async function handler(
       };
 
       await addMessage(message, parsed.data.botId);
-      await incrementMessages(auth.tenantId);
 
       const convPatch: Parameters<typeof updateConversation>[3] = {
         workflowStatus: "open",
@@ -1009,7 +1007,7 @@ export async function handler(
       const tenant = await getTenant(auth.tenantId);
       if (tenant) {
         try {
-          await assertCanSendMessages(tenant);
+          assertSubscriptionAllowsSending(tenant);
         } catch (err) {
           if (err instanceof PlanLimitError) {
             return forbidden(err.message);
@@ -1117,7 +1115,6 @@ export async function handler(
       if (channel !== "webchat") {
         await addMessage(message, parsed.data.botId);
       }
-      await incrementMessages(auth.tenantId);
 
       const convPatch: Parameters<typeof updateConversation>[3] = {
         workflowStatus: "open",
@@ -1241,7 +1238,7 @@ export async function handler(
       const tenant = await getTenant(auth.tenantId);
       if (tenant) {
         try {
-          await assertCanSendMessages(tenant);
+          assertSubscriptionAllowsSending(tenant);
         } catch (err) {
           if (err instanceof PlanLimitError) {
             return forbidden(err.message);
@@ -1266,8 +1263,6 @@ export async function handler(
         ...(parsed.data.notes ? { notes: parsed.data.notes } : {}),
         ...(createdByAdvisorId ? { createdByAdvisorId } : {}),
       });
-
-      await incrementMessages(auth.tenantId);
 
       const now = new Date().toISOString();
       const convPatch: Parameters<typeof updateConversation>[3] = {
@@ -1329,7 +1324,7 @@ export async function handler(
       const tenant = await getTenant(auth.tenantId);
       if (tenant) {
         try {
-          await assertCanSendMessages(tenant);
+          assertSubscriptionAllowsSending(tenant);
         } catch (err) {
           if (err instanceof PlanLimitError) {
             return forbidden(err.message);
@@ -1359,8 +1354,6 @@ export async function handler(
           : {}),
         ...(createdByAdvisorId ? { createdByAdvisorId } : {}),
       });
-
-      await incrementMessages(auth.tenantId);
 
       const now = new Date().toISOString();
       const convPatch: Parameters<typeof updateConversation>[3] = {

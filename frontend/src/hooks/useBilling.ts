@@ -15,6 +15,7 @@ export interface BillingPlanPrice {
   trm?: number;
   salesOnly?: boolean;
   renewalOnly?: boolean;
+  maxMessagesPerMonth?: number;
 }
 
 export interface WompiCheckoutParams {

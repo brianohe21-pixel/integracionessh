@@ -1,5 +1,5 @@
 import type { Tenant } from "../../types/index.js";
-import { getEffectivePlanLimits } from "./plan-limits.js";
+import { getEffectivePlanLimits, getPlanLimits } from "./plan-limits.js";
 
 function reseller(overrides: Partial<Tenant> = {}): Tenant {
   return {
@@ -120,5 +120,32 @@ describe("getEffectivePlanLimits", () => {
     expect(limits.maxActiveBots).toBe(2);
     expect(limits.maxMessagesPerMonth).toBe(500);
     expect(limits.maxContacts).toBe(100);
+  });
+
+  it("applies platform maxMessagesPerMonthByPlan over hardcoded defaults", () => {
+    const byPlan = {
+      free: 100,
+      starter: 3_500,
+      pro: 12_000,
+      reseller: 60_000,
+    };
+    expect(getPlanLimits("starter", byPlan).maxMessagesPerMonth).toBe(3_500);
+    expect(getEffectivePlanLimits(tenant("starter"), byPlan).maxMessagesPerMonth).toBe(3_500);
+  });
+
+  it("keeps tenant planLimitsOverride above platform plan quota", () => {
+    const byPlan = {
+      free: 100,
+      starter: 3_500,
+      pro: 12_000,
+      reseller: 60_000,
+    };
+    const limits = getEffectivePlanLimits(
+      tenant("pro", {
+        planLimitsOverride: { maxMessagesPerMonth: 8_000 },
+      }),
+      byPlan
+    );
+    expect(limits.maxMessagesPerMonth).toBe(8_000);
   });
 });

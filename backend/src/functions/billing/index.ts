@@ -14,7 +14,11 @@ import {
   updatePaymentIntent,
 } from "../../lib/dynamodb/payment.repository.js";
 import { activateTenantPlan } from "../../lib/billing/activate-plan.js";
-import { getPlanLimits } from "../../lib/billing/plan-limits.js";
+import {
+  resolveEffectivePlanLimits,
+  resolvePlanLimits,
+} from "../../lib/billing/plan-limits.js";
+import { getPlatformBillingConfig } from "../../lib/dynamodb/platform-config.repository.js";
 import {
   getMonthlyUsage,
   listMonthlyUsageInRange,
@@ -274,7 +278,7 @@ export async function handler(
     if (method === "GET" && path.endsWith("/billing/status")) {
       const usage = await getMonthlyUsage(tenant.tenantId);
       const plan = tenant.plan ?? "free";
-      const limits = getPlanLimits(plan);
+      const limits = await resolveEffectivePlanLimits(tenant);
       const periodEnd = tenant.currentPeriodEnd
         ? new Date(tenant.currentPeriodEnd)
         : null;
@@ -301,7 +305,7 @@ export async function handler(
       const from = qs.from?.trim();
       const to = qs.to?.trim();
       const plan = tenant.plan ?? "free";
-      const limits = getPlanLimits(plan);
+      const limits = await resolveEffectivePlanLimits(tenant);
       const paymentProvider =
         tenant.paymentProvider ?? (isWompiConfigured() ? "wompi" : "stripe");
 
@@ -363,19 +367,25 @@ export async function handler(
       const wompi = isWompiConfigured();
       const stripe = isStripeConfigured();
       const defaultProvider = wompi ? "wompi" : stripe ? "stripe" : null;
-      const starterPrice = await resolveCheckoutAmountInCents("starter");
+      const [starterPrice, billingConfig] = await Promise.all([
+        resolveCheckoutAmountInCents("starter"),
+        getPlatformBillingConfig(),
+      ]);
+      const starterLimits = await resolvePlanLimits("starter");
       const plans: Record<string, Record<string, unknown>> = {
         starter: {
           amountCents: starterPrice.amountInCents,
           listPriceUsd: PLAN_LIST_PRICE_USD.starter,
           currency: "COP",
           periodDays: 30,
+          maxMessagesPerMonth: starterLimits.maxMessagesPerMonth,
           ...(starterPrice.trm !== undefined ? { trm: starterPrice.trm } : {}),
         },
         pro: {
           salesOnly: true,
           currency: "COP",
           periodDays: 30,
+          maxMessagesPerMonth: billingConfig.maxMessagesPerMonthByPlan.pro,
         },
       };
       return ok({

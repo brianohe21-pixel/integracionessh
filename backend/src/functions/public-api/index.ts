@@ -18,7 +18,6 @@ import {
   deleteCachedTemplate,
   syncTemplates,
 } from "../../lib/dynamodb/template.repository.js";
-import { incrementMessages } from "../../lib/dynamodb/usage.repository.js";
 import {
   sendTextMessage,
   sendTemplateMessage,
@@ -561,7 +560,6 @@ async function handleSendMessage(
       const result = await sendTemplateMessage(templateOptions);
       messageId = result.messages[0]?.id ?? null;
     }
-    await incrementMessages(apiKey.tenantId);
   } catch (err) {
     const loggedError = err as Error & { __apiUsageLogged?: boolean };
     loggedError.__apiUsageLogged = true;
@@ -625,7 +623,6 @@ async function handleSendSms(
       environment: ENVIRONMENT,
     });
 
-    await incrementMessages(apiKey.tenantId);
     await logUsage({
       apiKey,
       hashedKey,
@@ -716,7 +713,6 @@ async function handleOtpSend(
     environment: ENVIRONMENT,
   });
 
-  await incrementMessages(apiKey.tenantId);
   await logUsage({
     apiKey,
     hashedKey,

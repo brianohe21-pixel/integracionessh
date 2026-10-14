@@ -12,9 +12,7 @@ import {
 import { addMessage, getConversationMessages, updateConversation } from "../dynamodb/conversation.repository.js";
 import { getBot } from "../dynamodb/bot.repository.js";
 import { getTenant } from "../dynamodb/tenant.repository.js";
-import { incrementMessages } from "../dynamodb/usage.repository.js";
-import { assertCanSendMessages } from "../billing/assert-plan.js";
-import { PlanLimitError } from "../billing/plan-limits.js";
+import { assertSubscriptionAllowsSending, PlanLimitError } from "../billing/plan-limits.js";
 import {
   buildOutboundContext,
   sendChannelAudio,
@@ -180,7 +178,7 @@ export async function sendConversationAttachment(input: {
   const tenant = await getTenant(input.auth.tenantId);
   if (tenant) {
     try {
-      await assertCanSendMessages(tenant);
+      assertSubscriptionAllowsSending(tenant);
     } catch (err) {
       if (err instanceof PlanLimitError) {
         throw new ConversationAttachmentError(err.message, 403);
@@ -288,7 +286,6 @@ export async function sendConversationAttachment(input: {
   };
 
   await addMessage(message, input.bot.botId);
-  await incrementMessages(input.auth.tenantId);
 
   const convPatch: Parameters<typeof updateConversation>[3] = {
     workflowStatus: "open",

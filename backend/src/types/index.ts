@@ -93,9 +93,17 @@ export interface ResellerPlanDefaults {
   limitsOverride?: ResellerLimitsOverride;
 }
 
+export interface MaxMessagesPerMonthByPlan {
+  free: number;
+  starter: number;
+  pro: number;
+  reseller: number;
+}
+
 export interface PlatformBillingConfig {
   pricePerMessageCents: number;
   currency: "COP";
+  maxMessagesPerMonthByPlan: MaxMessagesPerMonthByPlan;
   updatedAt?: string;
 }
 

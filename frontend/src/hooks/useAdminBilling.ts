@@ -14,11 +14,15 @@ export function useAdminBillingConfig() {
 export function useUpdateAdminBillingConfig() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (body: Pick<PlatformBillingConfig, "pricePerMessageCents">) =>
-      api.put<PlatformBillingConfig>("/admin/billing-config", body),
+    mutationFn: (
+      body: Pick<PlatformBillingConfig, "pricePerMessageCents" | "maxMessagesPerMonthByPlan">
+    ) => api.put<PlatformBillingConfig>("/admin/billing-config", body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-billing-config"] });
       queryClient.invalidateQueries({ queryKey: ["admin-billing-overview"] });
+      queryClient.invalidateQueries({ queryKey: ["billing-providers"] });
+      queryClient.invalidateQueries({ queryKey: ["billing-usage"] });
+      queryClient.invalidateQueries({ queryKey: ["billing-status"] });
     },
   });
 }

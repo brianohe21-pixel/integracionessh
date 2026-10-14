@@ -50,8 +50,16 @@ const ActivateDomainSchema = z.object({
   status: z.enum(["pending_dns", "active", "error"]).optional().default("active"),
 });
 
+const MaxMessagesPerMonthByPlanSchema = z.object({
+  free: z.number().int().min(0).max(100_000_000),
+  starter: z.number().int().min(0).max(100_000_000),
+  pro: z.number().int().min(0).max(100_000_000),
+  reseller: z.number().int().min(0).max(100_000_000),
+});
+
 const BillingConfigSchema = z.object({
   pricePerMessageCents: z.number().int().min(0).max(1_000_000_000),
+  maxMessagesPerMonthByPlan: MaxMessagesPerMonthByPlanSchema,
 });
 
 export async function handler(
@@ -139,6 +147,7 @@ export async function handler(
         await putPlatformBillingConfig({
           pricePerMessageCents: parsed.data.pricePerMessageCents,
           currency: "COP",
+          maxMessagesPerMonthByPlan: parsed.data.maxMessagesPerMonthByPlan,
         })
       );
     }

@@ -8,8 +8,7 @@ import {
 } from "../../dynamodb/sequence-enrollment.repository.js";
 import { getSequenceById } from "../../dynamodb/sequence.repository.js";
 import { createSalesTask } from "../../dynamodb/sales-task.repository.js";
-import { assertCanSendMessages } from "../../billing/assert-plan.js";
-import { incrementMessages } from "../../dynamodb/usage.repository.js";
+import { assertSubscriptionAllowsSending } from "../../billing/plan-limits.js";
 import { checkMarketingRecipients } from "../../compliance/recipient-policy.js";
 import { sendTextMessage, sendTemplateMessage, getWhatsAppAccessToken } from "../../whatsapp/client.js";
 import { assertWhatsAppOutboundAllowed } from "../../whatsapp/outbound-guard.js";
@@ -43,7 +42,7 @@ async function executeWhatsAppStep(params: {
   const tenant = await getTenant(params.tenantId);
   if (tenant) {
     try {
-      await assertCanSendMessages(tenant);
+      assertSubscriptionAllowsSending(tenant);
     } catch {
       return;
     }
@@ -82,8 +81,6 @@ async function executeWhatsAppStep(params: {
   } else {
     return;
   }
-
-  await incrementMessages(params.tenantId);
 }
 
 async function executeEmailStep(params: {

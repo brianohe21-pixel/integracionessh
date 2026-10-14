@@ -196,6 +196,7 @@ async function deliverAssistantText(params: {
     message: outboundText,
     role: "assistant",
   });
+  await incrementMessages(params.tenantId);
 }
 
 async function sendHandoffCourtesy(
@@ -698,19 +699,6 @@ export async function processInboundMessage(
     await clearMetaFlowSession(tenantId, botId, conversation.conversationId);
   }
 
-  const tenant = await getTenant(tenantId);
-  if (tenant) {
-    try {
-      await assertCanSendMessages(tenant);
-    } catch (err) {
-      if (err instanceof PlanLimitError) {
-        console.warn(`Plan limit for tenant ${tenantId}:`, err.message);
-        return;
-      }
-      throw err;
-    }
-  }
-
   const contactName = displayName ?? conversation.contactName;
   const isNewConversation = conversation.messageCount === 0 && !conversation.welcomeSentAt;
   const phoneNumberId =
@@ -729,7 +717,6 @@ export async function processInboundMessage(
       message: userMessageText,
       contactName,
     });
-    await incrementMessages(tenantId);
   } else {
     const refreshed = await updateConversation(tenantId, botId, conversation.conversationId, {
       lastInboundAt: now,
@@ -888,6 +875,19 @@ export async function processInboundMessage(
     }
 
     return;
+  }
+
+  const tenant = await getTenant(tenantId);
+  if (tenant) {
+    try {
+      await assertCanSendMessages(tenant);
+    } catch (err) {
+      if (err instanceof PlanLimitError) {
+        console.warn(`Plan limit for tenant ${tenantId}:`, err.message);
+        return;
+      }
+      throw err;
+    }
   }
 
   if (responseBot.responseMode === "webhook" && responseBot.webhookUrl) {

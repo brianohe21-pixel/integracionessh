@@ -15,8 +15,15 @@ import { TableContainer } from "@/components/ui/TableContainer";
 import { Button } from "@/components/ui/Button";
 import { SideDrawer } from "@/components/ui/SideDrawer";
 import { Download, Pencil, Settings2 } from "lucide-react";
-import type { AdminBillingOverviewRow } from "@/types";
+import type { AdminBillingOverviewRow, MaxMessagesPerMonthByPlan, PlatformBillingConfig } from "@/types";
 import { cn } from "@/lib/utils";
+
+const DEFAULT_AI_QUOTAS: MaxMessagesPerMonthByPlan = {
+  free: 250,
+  starter: 2_000,
+  pro: 10_000,
+  reseller: 50_000,
+};
 
 function formatCents(cents: number): string {
   return new Intl.NumberFormat(undefined, {
@@ -39,43 +46,93 @@ function pesosInputFromCents(cents: number): string {
   return String(cents / 100);
 }
 
+function parseQuotaInput(value: string): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const n = Number(trimmed);
+  if (!Number.isFinite(n) || n < 0 || !Number.isInteger(n)) return null;
+  return n;
+}
+
 function DefaultBillingConfigDrawer({
   open,
-  initialCents,
+  initialConfig,
   lastUpdated,
   saving,
   onClose,
   onSave,
 }: {
   open: boolean;
-  initialCents: number;
+  initialConfig: PlatformBillingConfig;
   lastUpdated?: string;
   saving: boolean;
   onClose: () => void;
-  onSave: (pricePerMessageCents: number) => Promise<void>;
+  onSave: (
+    config: Pick<PlatformBillingConfig, "pricePerMessageCents" | "maxMessagesPerMonthByPlan">
+  ) => Promise<void>;
 }) {
   const t = useT();
-  const [priceInput, setPriceInput] = useState(pesosInputFromCents(initialCents));
-  const [error, setError] = useState(false);
+  const initialQuotas = initialConfig.maxMessagesPerMonthByPlan ?? DEFAULT_AI_QUOTAS;
+  const [priceInput, setPriceInput] = useState(pesosInputFromCents(initialConfig.pricePerMessageCents));
+  const [quotas, setQuotas] = useState({
+    free: String(initialQuotas.free),
+    starter: String(initialQuotas.starter),
+    pro: String(initialQuotas.pro),
+    reseller: String(initialQuotas.reseller),
+  });
+  const [priceError, setPriceError] = useState(false);
+  const [quotaError, setQuotaError] = useState(false);
 
   useEffect(() => {
     if (open) {
-      setPriceInput(pesosInputFromCents(initialCents));
-      setError(false);
+      const next = initialConfig.maxMessagesPerMonthByPlan ?? DEFAULT_AI_QUOTAS;
+      setPriceInput(pesosInputFromCents(initialConfig.pricePerMessageCents));
+      setQuotas({
+        free: String(next.free),
+        starter: String(next.starter),
+        pro: String(next.pro),
+        reseller: String(next.reseller),
+      });
+      setPriceError(false);
+      setQuotaError(false);
     }
-  }, [open, initialCents]);
+  }, [open, initialConfig]);
 
   async function handleSave() {
     const cents = centsFromPesosInput(priceInput);
-    if (cents === null) {
-      setError(true);
+    const free = parseQuotaInput(quotas.free);
+    const starter = parseQuotaInput(quotas.starter);
+    const pro = parseQuotaInput(quotas.pro);
+    const reseller = parseQuotaInput(quotas.reseller);
+    const priceInvalid = cents === null;
+    const quotaInvalid = free === null || starter === null || pro === null || reseller === null;
+    setPriceError(priceInvalid);
+    setQuotaError(quotaInvalid);
+    if (
+      priceInvalid ||
+      quotaInvalid ||
+      cents === null ||
+      free === null ||
+      starter === null ||
+      pro === null ||
+      reseller === null
+    ) {
       return;
     }
-    setError(false);
-    await onSave(cents);
+    await onSave({
+      pricePerMessageCents: cents,
+      maxMessagesPerMonthByPlan: { free, starter, pro, reseller },
+    });
   }
 
   if (!open) return null;
+
+  const quotaFields: Array<{ key: keyof MaxMessagesPerMonthByPlan; label: string }> = [
+    { key: "free", label: t("admin.billing.aiQuotaFree") },
+    { key: "starter", label: t("admin.billing.aiQuotaStarter") },
+    { key: "pro", label: t("admin.billing.aiQuotaPro") },
+    { key: "reseller", label: t("admin.billing.aiQuotaReseller") },
+  ];
 
   return (
     <SideDrawer
@@ -107,15 +164,44 @@ function DefaultBillingConfigDrawer({
               onChange={(e) => setPriceInput(e.target.value)}
               className={cn(
                 "w-full rounded-lg border bg-surface px-3 py-2 text-primary",
-                error ? "border-danger" : "border-default"
+                priceError ? "border-danger" : "border-default"
               )}
             />
             <span className="text-secondary whitespace-nowrap">COP</span>
           </div>
         </label>
-        {error ? (
+        {priceError ? (
           <p className="text-sm text-red-600">{t("admin.billing.configError")}</p>
         ) : null}
+
+        <div className="space-y-3 border-t border-default pt-4">
+          <div>
+            <p className="text-sm font-medium text-primary">{t("admin.billing.aiQuotaTitle")}</p>
+            <p className="mt-1 text-xs text-muted">{t("admin.billing.aiQuotaHint")}</p>
+          </div>
+          {quotaFields.map((field) => (
+            <label key={field.key} className="flex flex-col gap-2 text-sm text-secondary">
+              <span>{field.label}</span>
+              <input
+                type="number"
+                min={0}
+                step={1}
+                value={quotas[field.key]}
+                onChange={(e) =>
+                  setQuotas((prev) => ({ ...prev, [field.key]: e.target.value }))
+                }
+                className={cn(
+                  "w-full rounded-lg border bg-surface px-3 py-2 text-primary",
+                  quotaError ? "border-danger" : "border-default"
+                )}
+              />
+            </label>
+          ))}
+          {quotaError ? (
+            <p className="text-sm text-red-600">{t("admin.billing.aiQuotaError")}</p>
+          ) : null}
+        </div>
+
         {lastUpdated ? (
           <p className="text-xs text-secondary">
             {t("admin.billing.lastUpdated")}: {new Date(lastUpdated).toLocaleString()}
@@ -232,9 +318,11 @@ export default function AdminBillingPage() {
   const [downloading, setDownloading] = useState(false);
   const [downloadingCompanyId, setDownloadingCompanyId] = useState<string | null>(null);
 
-  async function handleSaveDefaultConfig(pricePerMessageCents: number) {
+  async function handleSaveDefaultConfig(
+    config: Pick<PlatformBillingConfig, "pricePerMessageCents" | "maxMessagesPerMonthByPlan">
+  ) {
     try {
-      await updateConfig.mutateAsync({ pricePerMessageCents });
+      await updateConfig.mutateAsync(config);
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
       setDefaultConfigOpen(false);
@@ -304,19 +392,38 @@ export default function AdminBillingPage() {
         {configQuery.isLoading ? (
           <div className="mt-6 h-10 w-full max-w-xs bg-surface-muted rounded-lg animate-pulse" />
         ) : configQuery.data ? (
-          <div className="mt-6 flex flex-wrap items-center gap-3 text-sm">
-            <span className="text-secondary">{t("admin.billing.currentDefaultPrice")}:</span>
-            <span className="font-medium text-primary">
-              {formatCents(configQuery.data.pricePerMessageCents)}
-            </span>
-            {saved ? (
-              <span className="text-green-600">{t("admin.billing.configSaved")}</span>
-            ) : null}
-            {configQuery.data.updatedAt ? (
-              <span className="text-xs text-muted">
-                {t("admin.billing.lastUpdated")}:{" "}
-                {new Date(configQuery.data.updatedAt).toLocaleString()}
+          <div className="mt-6 space-y-3 text-sm">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-secondary">{t("admin.billing.currentDefaultPrice")}:</span>
+              <span className="font-medium text-primary">
+                {formatCents(configQuery.data.pricePerMessageCents)}
               </span>
+              {saved ? (
+                <span className="text-green-600">{t("admin.billing.configSaved")}</span>
+              ) : null}
+              {configQuery.data.updatedAt ? (
+                <span className="text-xs text-muted">
+                  {t("admin.billing.lastUpdated")}:{" "}
+                  {new Date(configQuery.data.updatedAt).toLocaleString()}
+                </span>
+              ) : null}
+            </div>
+            {configQuery.data.maxMessagesPerMonthByPlan ? (
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-secondary">
+                <span>{t("admin.billing.currentAiQuotas")}:</span>
+                <span>
+                  Free {configQuery.data.maxMessagesPerMonthByPlan.free.toLocaleString()}
+                </span>
+                <span>
+                  Starter {configQuery.data.maxMessagesPerMonthByPlan.starter.toLocaleString()}
+                </span>
+                <span>
+                  Pro {configQuery.data.maxMessagesPerMonthByPlan.pro.toLocaleString()}
+                </span>
+                <span>
+                  Reseller {configQuery.data.maxMessagesPerMonthByPlan.reseller.toLocaleString()}
+                </span>
+              </div>
             ) : null}
           </div>
         ) : null}
@@ -464,7 +571,7 @@ export default function AdminBillingPage() {
       {defaultConfigOpen && configQuery.data ? (
         <DefaultBillingConfigDrawer
           open={defaultConfigOpen}
-          initialCents={configQuery.data.pricePerMessageCents}
+          initialConfig={configQuery.data}
           lastUpdated={configQuery.data.updatedAt}
           saving={updateConfig.isPending}
           onClose={() => setDefaultConfigOpen(false)}

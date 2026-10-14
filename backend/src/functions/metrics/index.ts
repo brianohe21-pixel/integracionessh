@@ -3,7 +3,6 @@ import { z } from "zod";
 import { resolveRequestAuth, assertMemberRole } from "../../lib/auth/cognito.js";
 import { assertAssignedServices } from "../../lib/billing/subaccount-services.js";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
-import { incrementMessages } from "../../lib/dynamodb/usage.repository.js";
 import { assertOtpChannelReady, sendOtp, verifyOtp } from "../../lib/otp/service.js";
 import { getTenantUsageMetrics } from "../../lib/dynamodb/metrics.repository.js";
 import { getMarketingMetrics } from "../../lib/dynamodb/marketing-metrics.repository.js";
@@ -146,7 +145,6 @@ export async function handler(
         environment: ENVIRONMENT,
       });
 
-      await incrementMessages(auth.tenantId);
       return ok({
         destination: result.destination,
         channel: result.channel,
