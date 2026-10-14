@@ -4620,6 +4620,10 @@ export const es = {
       metaFlowId: "Formulario Meta",
       metaFlowCta: "Texto del botón",
       haltPipeline: "Detener el flujo del bot",
+      handoffAdvisor: "Asesor",
+      handoffAdvisorAuto: "Asignación automática",
+      handoffAdvisorHint:
+        "Opcional. Déjalo en automático para asignar el asesor activo de este bot con menos asignación reciente.",
       assignBotAiTitle: "Transferir al Asistente IA",
       assignBotHint:
         "Al llegar a este nodo, el flujo termina y la conversación continúa con el Asistente IA del agente seleccionado.",
@@ -4922,7 +4926,8 @@ export const es = {
       },
       handoff: {
         description: "Transfiere la conversación a un asesor humano.",
-        usage: "Colócalo cuando el bot no pueda resolver la solicitud.",
+        usage:
+          "Colócalo cuando el bot no pueda resolver la solicitud. Opcionalmente elige un asesor, o deja la asignación automática.",
       },
       book_appointment: {
         description: "Permite al contacto agendar una cita desde el chat.",

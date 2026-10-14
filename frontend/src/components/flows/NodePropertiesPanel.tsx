@@ -5,6 +5,7 @@ import { ExternalLink, Plus, Tag, Trash2, X } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { useMetaFlows } from "@/hooks/useMetaFlows";
 import { useBots } from "@/hooks/useBots";
+import { useAdvisors } from "@/hooks/useAdvisors";
 import { useTenantEmailSettings } from "@/hooks/useTenantEmailSettings";
 import { MetaFlowsModal } from "@/components/meta-flows/MetaFlowsModal";
 import { Button } from "@/components/ui/Button";
@@ -282,6 +283,7 @@ export function NodePropertiesPanel({
   const t = useT();
   const { data: metaFlows } = useMetaFlows(botId);
   const { data: bots } = useBots();
+  const { data: advisors } = useAdvisors();
   const [metaFlowsModalOpen, setMetaFlowsModalOpen] = useState(false);
   const agentChannel = (selected?.data.channel ?? "any") as FlowAgentChannel;
   const agentBotId =
@@ -662,14 +664,37 @@ export function NodePropertiesPanel({
       )}
 
       {type === "handoff" && (
-        <label className="flex items-center gap-2 text-sm text-secondary">
-          <input
-            type="checkbox"
-            checked={d.haltPipeline !== false}
-            onChange={(e) => onUpdate({ haltPipeline: e.target.checked })}
-          />
-          {t("flows.fields.haltPipeline")}
-        </label>
+        <div className="space-y-4">
+          <div>
+            <FieldLabel>{t("flows.fields.handoffAdvisor")}</FieldLabel>
+            <Select
+              value={d.advisorId ?? ""}
+              onChange={(e) => onUpdate({ advisorId: e.target.value || undefined })}
+            >
+              <option value="">{t("flows.fields.handoffAdvisorAuto")}</option>
+              {(advisors ?? [])
+                .filter(
+                  (advisor) =>
+                    advisor.status === "active" &&
+                    (!advisor.botIds?.length || advisor.botIds.includes(botId))
+                )
+                .map((advisor) => (
+                  <option key={advisor.advisorId} value={advisor.advisorId}>
+                    {advisor.name}
+                  </option>
+                ))}
+            </Select>
+            <p className="mt-1 text-xs text-secondary">{t("flows.fields.handoffAdvisorHint")}</p>
+          </div>
+          <label className="flex items-center gap-2 text-sm text-secondary">
+            <input
+              type="checkbox"
+              checked={d.haltPipeline !== false}
+              onChange={(e) => onUpdate({ haltPipeline: e.target.checked })}
+            />
+            {t("flows.fields.haltPipeline")}
+          </label>
+        </div>
       )}
 
       {type === "delay" && (

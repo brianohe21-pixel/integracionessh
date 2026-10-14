@@ -3323,6 +3323,7 @@ export interface FlowNodeData {
   voiceInstruction?: string;
   flowVariables?: Record<string, string>;
   haltPipeline?: boolean;
+  advisorId?: string;
   confirmationMessage?: LocalizedText;
   maxDaysToShow?: number;
   amountInCents?: number;

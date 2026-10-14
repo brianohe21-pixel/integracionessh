@@ -8,11 +8,17 @@ export async function executeHandoffNode(
   ctx: FlowExecutionContext,
   _run: FlowRun
 ): Promise<NodeExecutionResult> {
+  const advisorId =
+    typeof node.data.advisorId === "string" && node.data.advisorId.trim()
+      ? node.data.advisorId.trim()
+      : undefined;
+
   await performHandoff({
     tenantId: ctx.tenantId,
     botId: requireBotId(ctx),
     conversationId: requireConversation(ctx).conversationId,
     reason: "ai",
+    ...(advisorId ? { advisorId } : {}),
   });
   return {
     nextNodeId: null,

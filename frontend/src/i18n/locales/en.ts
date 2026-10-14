@@ -4611,6 +4611,10 @@ export const en: Messages = {
       metaFlowId: "Meta form",
       metaFlowCta: "Button text",
       haltPipeline: "Stop bot pipeline",
+      handoffAdvisor: "Advisor",
+      handoffAdvisorAuto: "Automatic assignment",
+      handoffAdvisorHint:
+        "Optional. Leave automatic to assign the least recently assigned active advisor for this bot.",
       assignBotAiTitle: "Hand off to AI Assistant",
       assignBotHint:
         "When this node runs, the structured flow ends and the conversation continues with the selected agent's AI Assistant.",
@@ -4912,7 +4916,8 @@ export const en: Messages = {
       },
       handoff: {
         description: "Transfers the conversation to a human advisor.",
-        usage: "Place it when the bot cannot resolve the request.",
+        usage:
+          "Place it when the bot cannot resolve the request. Optionally pick a specific advisor, or leave automatic assignment.",
       },
       book_appointment: {
         description: "Lets the contact book an appointment from chat.",
