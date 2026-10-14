@@ -1,6 +1,7 @@
 import { activateTenantPlan, applyAdminTenantPlan } from "./activate-plan.js";
 import { getTenant, updateTenant } from "../dynamodb/tenant.repository.js";
 import { enforceBotModelsForPlan } from "./enforce-bot-models-for-plan.js";
+import { resetTemplateBillingPeriod } from "./template-billing.js";
 
 jest.mock("../dynamodb/tenant.repository.js", () => ({
   getTenant: jest.fn(),
@@ -9,6 +10,10 @@ jest.mock("../dynamodb/tenant.repository.js", () => ({
 
 jest.mock("./enforce-bot-models-for-plan.js", () => ({
   enforceBotModelsForPlan: jest.fn(),
+}));
+
+jest.mock("./template-billing.js", () => ({
+  resetTemplateBillingPeriod: jest.fn(),
 }));
 
 describe("activateTenantPlan", () => {
@@ -64,6 +69,7 @@ describe("activateTenantPlan", () => {
 
     await activateTenantPlan("tenant-1", "starter");
 
+    expect(resetTemplateBillingPeriod).toHaveBeenCalledWith("tenant-1");
     expect(enforceBotModelsForPlan).toHaveBeenCalledWith("tenant-1", "starter");
   });
 });
