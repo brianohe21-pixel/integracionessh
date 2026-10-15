@@ -102,6 +102,7 @@ locals {
     mailrelay_webhook  = var.mailrelay_webhook_function_arn
     google_business    = var.google_business_function_arn
     shopify            = var.shopify_function_arn
+    drive              = var.drive_function_arn
   }
 
   lambda_invoke_arns = {
@@ -153,6 +154,7 @@ locals {
     mailrelay_webhook  = var.mailrelay_webhook_invoke_arn
     google_business    = var.google_business_invoke_arn
     shopify            = var.shopify_invoke_arn
+    drive              = var.drive_invoke_arn
   }
 
   http_proxy_groups = {
@@ -218,6 +220,14 @@ locals {
       methods      = ["GET", "POST", "PATCH", "DELETE"]
       invoke_arn   = var.shopify_invoke_arn
       function_arn = var.shopify_function_arn
+      protected    = true
+    }
+    drive = {
+      path         = "/drive/{proxy+}"
+      slug         = "drive"
+      methods      = ["GET", "POST", "PATCH", "DELETE"]
+      invoke_arn   = var.drive_invoke_arn
+      function_arn = var.drive_function_arn
       protected    = true
     }
     sales = {
@@ -1197,6 +1207,20 @@ locals {
       slug         = "shopify"
       invoke_arn   = var.shopify_invoke_arn
       function_arn = var.shopify_function_arn
+      protected    = false
+    }
+    public_google_drive_oauth_callback = {
+      route_key    = "GET /public/integrations/google-drive/oauth/callback"
+      slug         = "drive"
+      invoke_arn   = var.drive_invoke_arn
+      function_arn = var.drive_function_arn
+      protected    = false
+    }
+    public_onedrive_oauth_callback = {
+      route_key    = "GET /public/integrations/onedrive/oauth/callback"
+      slug         = "drive"
+      invoke_arn   = var.drive_invoke_arn
+      function_arn = var.drive_function_arn
       protected    = false
     }
     auth_portal_access = {

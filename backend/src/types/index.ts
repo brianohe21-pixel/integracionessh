@@ -3128,6 +3128,42 @@ export interface ShopifyConfig {
   updatedAt: string;
 }
 
+export type CloudDriveConnectionStatus = "pending" | "connected" | "error" | "disconnected";
+
+export interface GoogleDriveConfig {
+  tenantId: string;
+  status: CloudDriveConnectionStatus;
+  enabled: boolean;
+  accountEmail?: string;
+  connectedAt?: string;
+  lastError?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OneDriveConfig {
+  tenantId: string;
+  status: CloudDriveConnectionStatus;
+  enabled: boolean;
+  accountEmail?: string;
+  displayName?: string;
+  connectedAt?: string;
+  lastError?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CloudDriveFileItem {
+  id: string;
+  name: string;
+  mimeType: string;
+  isFolder: boolean;
+  size?: number;
+  modifiedAt?: string;
+  webUrl?: string;
+  parentId?: string;
+}
+
 export type ShopifyCheckoutStatus = "pending" | "converted" | "notified" | "cancelled";
 
 export interface ShopifyCheckout {
@@ -3322,6 +3358,7 @@ export type FlowNodeType =
   | "set_variable"
   | "http_request"
   | "book_appointment"
+  | "cloud_drive_write"
   | "request_payment"
   | "send_catalog"
   | "send_products"
@@ -3336,6 +3373,9 @@ export type FlowNodeType =
   | "assign_bot"
   | "webhook"
   | "end";
+
+export type CloudDriveFlowProvider = "google-drive" | "onedrive";
+export type CloudDriveFlowTargetType = "document" | "spreadsheet";
 
 export type FlowAgentChannel = Channel | "any";
 
@@ -3406,6 +3446,11 @@ export interface FlowNodeData {
   advisorId?: string;
   confirmationMessage?: LocalizedText;
   maxDaysToShow?: number;
+  cloudDriveProvider?: CloudDriveFlowProvider;
+  cloudDriveTargetType?: CloudDriveFlowTargetType;
+  cloudDriveFileId?: string;
+  cloudDriveContent?: string;
+  cloudDriveSheetName?: string;
   amountInCents?: number;
   paymentDescription?: LocalizedText;
   paymentMessageTemplate?: LocalizedText;

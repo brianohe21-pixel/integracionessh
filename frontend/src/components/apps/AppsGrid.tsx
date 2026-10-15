@@ -12,6 +12,8 @@ const APP_ROUTES: Record<string, string> = {
   payments: "/apps/payments",
   catalog: "/apps/catalog",
   shopify: "/apps/shopify",
+  "google-drive": "/apps/google-drive",
+  onedrive: "/apps/onedrive",
 };
 
 const APP_I18N_KEYS: Record<string, { name: string; description: string }> = {
@@ -23,6 +25,11 @@ const APP_I18N_KEYS: Record<string, { name: string; description: string }> = {
   payments: { name: "apps.paymentsName", description: "apps.paymentsDescription" },
   catalog: { name: "apps.catalogName", description: "apps.catalogDescription" },
   shopify: { name: "apps.shopifyName", description: "apps.shopifyDescription" },
+  "google-drive": {
+    name: "apps.googleDriveName",
+    description: "apps.googleDriveDescription",
+  },
+  onedrive: { name: "apps.oneDriveName", description: "apps.oneDriveDescription" },
 };
 
 export function AppsGrid({ apps }: { apps: AppCatalogItem[] }) {

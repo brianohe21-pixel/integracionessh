@@ -414,6 +414,14 @@ output "process_shopify_function_arn" {
   value = aws_lambda_function.functions["process_shopify"].arn
 }
 
+output "drive_invoke_arn" {
+  value = aws_lambda_function.functions["drive"].invoke_arn
+}
+
+output "drive_function_arn" {
+  value = aws_lambda_function.functions["drive"].arn
+}
+
 output "lambda_log_group_ids" {
   value = {
     for k, _ in local.functions : k => "/aws/lambda/${var.project}-${var.environment}-${replace(k, "_", "-")}"

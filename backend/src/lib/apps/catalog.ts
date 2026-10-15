@@ -3,16 +3,27 @@ import { listCalendarConfigs } from "../dynamodb/calendar-config.repository.js";
 import { listPaymentsConfigs } from "../dynamodb/payments-config.repository.js";
 import { listCatalogConfigs } from "../dynamodb/catalog-config.repository.js";
 import { getShopifyConfig } from "../dynamodb/shopify.repository.js";
+import { getGoogleDriveConfig } from "../dynamodb/google-drive.repository.js";
+import { getOneDriveConfig } from "../dynamodb/onedrive.repository.js";
 
 export async function listAppsCatalog(tenantId: string) {
-  const [bots, calendarConfigs, paymentsConfigs, catalogConfigs, shopifyConfig] =
-    await Promise.all([
-      listBots(tenantId),
-      listCalendarConfigs(tenantId),
-      listPaymentsConfigs(tenantId),
-      listCatalogConfigs(tenantId),
-      getShopifyConfig(tenantId),
-    ]);
+  const [
+    bots,
+    calendarConfigs,
+    paymentsConfigs,
+    catalogConfigs,
+    shopifyConfig,
+    googleDriveConfig,
+    oneDriveConfig,
+  ] = await Promise.all([
+    listBots(tenantId),
+    listCalendarConfigs(tenantId),
+    listPaymentsConfigs(tenantId),
+    listCatalogConfigs(tenantId),
+    getShopifyConfig(tenantId),
+    getGoogleDriveConfig(tenantId),
+    getOneDriveConfig(tenantId),
+  ]);
   const calendarByBot = new Map(calendarConfigs.map((c) => [c.botId, c]));
   const paymentsByBot = new Map(paymentsConfigs.map((c) => [c.botId, c]));
   const catalogByBot = new Map(catalogConfigs.map((c) => [c.botId, c]));
@@ -68,6 +79,22 @@ export async function listAppsCatalog(tenantId: string) {
         configured: Boolean(
           shopifyConfig?.shopDomain && shopifyConfig.status === "connected"
         ),
+      },
+      {
+        id: "google-drive",
+        name: "Google Drive",
+        description: "Browse, link, and upload files from Google Drive",
+        installedBots: [],
+        configured: googleDriveConfig?.status === "connected",
+        enabled: Boolean(googleDriveConfig?.enabled),
+      },
+      {
+        id: "onedrive",
+        name: "OneDrive",
+        description: "Browse, link, and upload files from Microsoft OneDrive",
+        installedBots: [],
+        configured: oneDriveConfig?.status === "connected",
+        enabled: Boolean(oneDriveConfig?.enabled),
       },
     ],
   };

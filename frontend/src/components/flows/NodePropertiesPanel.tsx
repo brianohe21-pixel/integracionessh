@@ -847,6 +847,80 @@ export function NodePropertiesPanel({
         </>
       )}
 
+      {type === "cloud_drive_write" && (
+        <>
+          <div className="rounded-xl border border-field-border bg-surface-muted/20 p-4 space-y-4">
+            <div>
+              <FieldLabel>{t("flows.fields.cloudDriveProvider")}</FieldLabel>
+              <select
+                value={d.cloudDriveProvider ?? "google-drive"}
+                onChange={(e) =>
+                  onUpdate({
+                    cloudDriveProvider: e.target.value as "google-drive" | "onedrive",
+                  })
+                }
+                className={INPUT_CLASS}
+              >
+                <option value="google-drive">{t("flows.fields.cloudDriveProviderGoogle")}</option>
+                <option value="onedrive">{t("flows.fields.cloudDriveProviderOneDrive")}</option>
+              </select>
+            </div>
+            <div>
+              <FieldLabel>{t("flows.fields.cloudDriveTargetType")}</FieldLabel>
+              <select
+                value={d.cloudDriveTargetType ?? "document"}
+                onChange={(e) =>
+                  onUpdate({
+                    cloudDriveTargetType: e.target.value as "document" | "spreadsheet",
+                  })
+                }
+                className={INPUT_CLASS}
+              >
+                <option value="document">{t("flows.fields.cloudDriveTargetDocument")}</option>
+                <option value="spreadsheet">{t("flows.fields.cloudDriveTargetSpreadsheet")}</option>
+              </select>
+              <p className="mt-1.5 text-[11px] text-secondary">
+                {t("flows.fields.cloudDriveTargetHelp")}
+              </p>
+            </div>
+            <div>
+              <FieldLabel>{t("flows.fields.cloudDriveFileId")}</FieldLabel>
+              {textInput(d.cloudDriveFileId ?? "", (v) => onUpdate({ cloudDriveFileId: v }), {
+                placeholder: t("flows.fields.cloudDriveFileIdHint"),
+              })}
+              <p className="mt-1.5 text-[11px] text-secondary">
+                {t("flows.fields.cloudDriveFileIdHelp")}
+              </p>
+            </div>
+            {(d.cloudDriveTargetType ?? "document") === "spreadsheet" ? (
+              <div>
+                <FieldLabel>{t("flows.fields.cloudDriveSheetName")}</FieldLabel>
+                {textInput(
+                  d.cloudDriveSheetName ?? "Sheet1",
+                  (v) => onUpdate({ cloudDriveSheetName: v }),
+                  { placeholder: "Sheet1" }
+                )}
+              </div>
+            ) : null}
+            <div>
+              <FieldLabel>{t("flows.fields.cloudDriveContent")}</FieldLabel>
+              <textarea
+                value={d.cloudDriveContent ?? ""}
+                onChange={(e) => onUpdate({ cloudDriveContent: e.target.value })}
+                rows={5}
+                placeholder={t("flows.fields.cloudDriveContentHint")}
+                className={cn(
+                  "w-full text-xs font-mono border border-field-border rounded-lg px-3 py-2.5 bg-surface-elevated shadow-sm transition-all focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none resize-y"
+                )}
+              />
+              <p className="mt-1.5 text-[11px] text-secondary">
+                {t("flows.fields.cloudDriveContentHelp")}
+              </p>
+            </div>
+          </div>
+        </>
+      )}
+
       {type === "request_payment" && (
         <>
           <div>

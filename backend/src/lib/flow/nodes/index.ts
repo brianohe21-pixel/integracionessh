@@ -1,6 +1,7 @@
 import type { FlowNode, FlowRun } from "../../../types/index.js";
 import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
 import { executeBookAppointmentNode } from "./book-appointment.js";
+import { executeCloudDriveWriteNode } from "./cloud-drive-write.js";
 import { executeRequestPaymentNode } from "./request-payment.js";
 import { executeSendCatalogNode } from "./send-catalog.js";
 import { executeSendProductsNode } from "./send-products.js";
@@ -57,6 +58,8 @@ export async function executeNode(
       return executeHttpRequestNode(node, ctx, run);
     case "book_appointment":
       return executeBookAppointmentNode(node, ctx, run);
+    case "cloud_drive_write":
+      return executeCloudDriveWriteNode(node, ctx, run);
     case "request_payment":
       return executeRequestPaymentNode(node, ctx, run);
     case "send_catalog":

@@ -59,6 +59,15 @@ export function buildDefaultNodeData(
     defaultData.channel = "any";
     if (suggestedBotId?.trim()) defaultData.botId = suggestedBotId.trim();
   }
+  if (type === "cloud_drive_write") {
+    defaultData.cloudDriveProvider = "google-drive";
+    defaultData.cloudDriveTargetType = "document";
+    defaultData.cloudDriveFileId = "";
+    defaultData.cloudDriveContent = messaging
+      ? "{{name}} - {{phone}}\n"
+      : "{{form.name}} - {{form.phone}}\n";
+    defaultData.cloudDriveSheetName = "Sheet1";
+  }
 
   return defaultData;
 }

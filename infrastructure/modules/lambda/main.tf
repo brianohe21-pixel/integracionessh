@@ -275,6 +275,8 @@ locals {
 
   google_calendar_redirect_uri = trimspace(var.api_public_url) != "" ? "${trimsuffix(trimspace(var.api_public_url), "/")}/public/integrations/google-calendar/oauth/callback" : ""
   shopify_redirect_uri         = trimspace(var.api_public_url) != "" ? "${trimsuffix(trimspace(var.api_public_url), "/")}/public/integrations/shopify/oauth/callback" : ""
+  google_drive_redirect_uri    = trimspace(var.api_public_url) != "" ? "${trimsuffix(trimspace(var.api_public_url), "/")}/public/integrations/google-drive/oauth/callback" : ""
+  onedrive_redirect_uri        = trimspace(var.api_public_url) != "" ? "${trimsuffix(trimspace(var.api_public_url), "/")}/public/integrations/onedrive/oauth/callback" : ""
 
   functions = {
     webhook = {
@@ -1132,6 +1134,24 @@ locals {
         SHOPIFY_EVENTS_QUEUE_URL   = var.shopify_events_sqs_queue_url
         SCHEDULER_ROLE_ARN         = var.scheduler_role_arn
         PROCESS_SHOPIFY_FUNCTION_ARN = local.process_shopify_function_arn
+      }
+    }
+    drive = {
+      handler     = "drive/index.handler"
+      description = "Google Drive and OneDrive OAuth and file actions"
+      timeout     = 60
+      memory      = 256
+      environment = {
+        TABLE_NAME                 = var.dynamodb_table_name
+        ENVIRONMENT                = var.environment
+        API_PUBLIC_URL             = var.api_public_url
+        FRONTEND_URL               = var.frontend_url
+        GOOGLE_DRIVE_CLIENT_ID     = var.google_drive_client_id
+        GOOGLE_DRIVE_CLIENT_SECRET = var.google_drive_client_secret
+        GOOGLE_DRIVE_REDIRECT_URI  = local.google_drive_redirect_uri
+        ONEDRIVE_CLIENT_ID         = var.onedrive_client_id
+        ONEDRIVE_CLIENT_SECRET     = var.onedrive_client_secret
+        ONEDRIVE_REDIRECT_URI      = local.onedrive_redirect_uri
       }
     }
     process_shopify = {

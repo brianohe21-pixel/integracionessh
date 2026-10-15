@@ -82,6 +82,7 @@ const entryPoints = [
   "src/functions/google-business/index.ts",
   "src/functions/shopify/index.ts",
   "src/functions/process-shopify/index.ts",
+  "src/functions/drive/index.ts",
   "src/functions/evaluate-ops-alerts/index.ts",
   "src/functions/check-service-status/index.ts",
 ];

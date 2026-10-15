@@ -20,6 +20,27 @@ export function AppBrandIcon({ appId, className }: AppBrandIconProps) {
         </svg>
       );
 
+    case "google-drive":
+      return (
+        <svg viewBox="0 0 48 48" className={shared} aria-hidden>
+          <rect width="48" height="48" rx="12" fill="#F8F9FA" />
+          <path fill="#4285F4" d="M17.2 34.5h13.6l6.8-11.8H24z" />
+          <path fill="#FBBC04" d="M10.4 34.5 17.2 22.7h13.6L24 34.5z" />
+          <path fill="#34A853" d="M24 10.5h13.6L31 22.7H17.4z" />
+        </svg>
+      );
+
+    case "onedrive":
+      return (
+        <svg viewBox="0 0 48 48" className={shared} aria-hidden>
+          <rect width="48" height="48" rx="12" fill="#0078D4" />
+          <path
+            fill="#fff"
+            d="M28.8 18.2c1.8-.9 3.9-.9 5.7.1 2.4 1.3 3.5 4 2.8 6.5.2 0 .3 0 .5.1 2.5.5 4.1 2.9 3.6 5.4-.4 2.1-2.2 3.6-4.4 3.6H15.2c-3.3 0-6-2.7-6-6 0-2.9 2-5.3 4.8-5.9.8-3.5 3.9-6 7.6-6 2.8 0 5.3 1.4 6.8 3.6.1-.1.3-.2.4-.4z"
+          />
+        </svg>
+      );
+
     case "catalog":
       return (
         <svg viewBox="0 0 24 24" className={shared} aria-hidden>

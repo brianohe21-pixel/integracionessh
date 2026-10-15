@@ -2192,6 +2192,7 @@ export type FlowNodeType =
   | "set_variable"
   | "http_request"
   | "book_appointment"
+  | "cloud_drive_write"
   | "request_payment"
   | "send_catalog"
   | "send_products"
@@ -2206,6 +2207,9 @@ export type FlowNodeType =
   | "assign_bot"
   | "webhook"
   | "end";
+
+export type CloudDriveFlowProvider = "google-drive" | "onedrive";
+export type CloudDriveFlowTargetType = "document" | "spreadsheet";
 
 export type FlowAgentChannel = Channel | "any";
 
@@ -2294,6 +2298,11 @@ export interface FlowNodeData {
   advisorId?: string;
   confirmationMessage?: LocalizedText;
   maxDaysToShow?: number;
+  cloudDriveProvider?: CloudDriveFlowProvider;
+  cloudDriveTargetType?: CloudDriveFlowTargetType;
+  cloudDriveFileId?: string;
+  cloudDriveContent?: string;
+  cloudDriveSheetName?: string;
   amountInCents?: number;
   paymentDescription?: LocalizedText;
   paymentMessageTemplate?: LocalizedText;

@@ -11,6 +11,7 @@ import {
   Variable,
   Globe,
   Calendar,
+  HardDrive,
   CreditCard,
   ShoppingBag,
   Package,
@@ -87,6 +88,7 @@ export const FLOW_NODE_META: Record<FlowNodeType, FlowNodeMeta> = {
   http_request: { category: "integrations", icon: Globe, hasInput: true, hasOutput: true },
   handoff: { category: "integrations", icon: UserRound, hasInput: true, hasOutput: true },
   book_appointment: { category: "apps", icon: Calendar, hasInput: true, hasOutput: true },
+  cloud_drive_write: { category: "apps", icon: HardDrive, hasInput: true, hasOutput: true },
   request_payment: { category: "apps", icon: CreditCard, hasInput: true, hasOutput: true },
   send_catalog: { category: "apps", icon: ShoppingBag, hasInput: true, hasOutput: true },
   send_products: { category: "apps", icon: Package, hasInput: true, hasOutput: true },
@@ -118,6 +120,7 @@ export const FLOW_PALETTE_NODES: Record<FlowPaletteCategory, FlowNodeType[]> = {
   integrations: ["agent", "assign_bot", "webhook", "meta_flow", "http_request", "handoff"],
   apps: [
     "book_appointment",
+    "cloud_drive_write",
     "request_payment",
     "send_catalog",
     "send_products",
@@ -233,6 +236,11 @@ export function buildNodePreview(
       return truncate(data.httpUrl ?? "");
     case "book_appointment":
       return text(data.confirmationMessage);
+    case "cloud_drive_write": {
+      const provider = data.cloudDriveProvider ?? "google-drive";
+      const target = data.cloudDriveTargetType ?? "document";
+      return truncate(`${provider} · ${target} · ${data.cloudDriveFileId ?? ""}`);
+    }
     case "request_payment":
       return text(data.paymentDescription);
     case "send_catalog":

@@ -336,6 +336,43 @@ export function validateFlowDefinition(flow: FlowDefinition): FlowValidationIssu
       });
     }
 
+    if (node.type === "cloud_drive_write") {
+      if (
+        node.data.cloudDriveProvider !== "google-drive" &&
+        node.data.cloudDriveProvider !== "onedrive"
+      ) {
+        issues.push({
+          code: "missing_cloud_drive_provider",
+          message: "cloudDriveProvider must be google-drive or onedrive",
+          nodeId: node.id,
+        });
+      }
+      if (
+        node.data.cloudDriveTargetType !== "document" &&
+        node.data.cloudDriveTargetType !== "spreadsheet"
+      ) {
+        issues.push({
+          code: "missing_cloud_drive_target",
+          message: "cloudDriveTargetType must be document or spreadsheet",
+          nodeId: node.id,
+        });
+      }
+      if (!node.data.cloudDriveFileId?.trim()) {
+        issues.push({
+          code: "missing_cloud_drive_file",
+          message: "cloudDriveFileId is required",
+          nodeId: node.id,
+        });
+      }
+      if (!node.data.cloudDriveContent?.trim()) {
+        issues.push({
+          code: "missing_cloud_drive_content",
+          message: "cloudDriveContent is required",
+          nodeId: node.id,
+        });
+      }
+    }
+
     if (node.type === "agent") {
       const channel = node.data.channel ?? "any";
       if (
