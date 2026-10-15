@@ -148,6 +148,31 @@ function parseTagList(value: string): string[] {
   ].slice(0, 20);
 }
 
+function ActionToggle({
+  enabled,
+  onToggle,
+  label,
+  hint,
+  children,
+}: {
+  enabled: boolean;
+  onToggle: (value: boolean) => void;
+  label: string;
+  hint: string;
+  children?: ReactNode;
+}) {
+  return (
+    <div className="rounded-lg border border-default p-3">
+      <label className="flex items-center gap-2 text-sm font-medium text-primary">
+        <input type="checkbox" checked={enabled} onChange={(e) => onToggle(e.target.checked)} />
+        {label}
+      </label>
+      <p className="mt-1 text-xs text-secondary">{hint}</p>
+      {enabled && children ? <div className="mt-3 space-y-3">{children}</div> : null}
+    </div>
+  );
+}
+
 export default function TagsPage() {
   const t = useT();
   const router = useRouter();
@@ -438,31 +463,6 @@ export default function TagsPage() {
   if (permissionsLoading || !canRead) return null;
 
   const busy = createTag.isPending || updateTag.isPending;
-
-  function ActionToggle({
-    enabled,
-    onToggle,
-    label,
-    hint,
-    children,
-  }: {
-    enabled: boolean;
-    onToggle: (value: boolean) => void;
-    label: string;
-    hint: string;
-    children?: ReactNode;
-  }) {
-    return (
-      <div className="rounded-lg border border-default p-3">
-        <label className="flex items-center gap-2 text-sm font-medium text-primary">
-          <input type="checkbox" checked={enabled} onChange={(e) => onToggle(e.target.checked)} />
-          {label}
-        </label>
-        <p className="mt-1 text-xs text-secondary">{hint}</p>
-        {enabled && children ? <div className="mt-3 space-y-3">{children}</div> : null}
-      </div>
-    );
-  }
 
   return (
     <DashboardPage>
