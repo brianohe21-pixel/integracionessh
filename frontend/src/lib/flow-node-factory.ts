@@ -42,6 +42,13 @@ export function buildDefaultNodeData(
     defaultData.opportunityCurrency = "USD";
     defaultData.opportunityStage = "new";
   }
+  if (type === "message_received_trigger") {
+    defaultData.triggerType = "any_message";
+    defaultData.channel = "any";
+  }
+  if (type === "opportunity_stage_trigger") {
+    defaultData.triggerType = "opportunity_stage_entered";
+  }
   if (type === "move_opportunity_stage") {
     defaultData.opportunityIdBinding = "{{opportunity_id}}";
     defaultData.opportunityStage = "quoted";

@@ -19,6 +19,11 @@ import { FlowVersionsTab } from "@/components/flows/FlowVersionsTab";
 import { FlowPreviewModal } from "@/components/flows/FlowPreviewModal";
 import { resolveFlowBotIdFromNodes } from "@/lib/resolve-flow-bot";
 import { createFlowNode, defaultPalettePosition } from "@/lib/flow-node-factory";
+import {
+  countFlowEntryNodes,
+  getFlowEntryNode,
+  isFlowEntryNode,
+} from "@/lib/flow-entry-node";
 import { applyResolvedTriggerType, resolveFlowSamplePayload } from "@/lib/resolve-flow-trigger";
 import {
   flowDraftEditorSnapshotKey,
@@ -163,17 +168,20 @@ export default function EditFlowPage() {
   }, [isFullscreen, palettePanel.width]);
 
   const selected = localNodes.find((n) => n.id === selectedNodeId);
-  const triggerNode = localNodes.find((n) => n.type === "trigger");
+  const entryNode = getFlowEntryNode(localNodes);
   const hasWebhookNode = localNodes.some((node) => node.type === "webhook");
   const isVoiceFlow =
-    flow?.flowKind === "voice_ai" || triggerNode?.data.triggerType === "voice_call";
-  const isMessagingFlow = !isVoiceFlow && !hasWebhookNode;
+    flow?.flowKind === "voice_ai" || entryNode?.data.triggerType === "voice_call";
+  const isStageTriggerFlow =
+    entryNode?.type === "opportunity_stage_trigger" ||
+    entryNode?.data.triggerType === "opportunity_stage_entered";
+  const isMessagingFlow = !isVoiceFlow && !hasWebhookNode && !isStageTriggerFlow;
   const samplePayload = resolveFlowSamplePayload(localNodes);
   const assignedBotId =
     resolveFlowBotIdFromNodes(localNodes) || flow?.botId || suggestedBotId;
-  const triggerCount = localNodes.filter((n) => n.type === "trigger").length;
+  const entryCount = countFlowEntryNodes(localNodes);
   const canDeleteSelected =
-    !!selected && !(selected.type === "trigger" && triggerCount <= 1);
+    !!selected && !(isFlowEntryNode(selected) && entryCount <= 1);
 
   const getTypeLabel = useCallback(
     (type: FlowNodeType) => t(`flows.nodeTypes.${type}`),
@@ -199,7 +207,53 @@ export default function EditFlowPage() {
     commitHistory({ nodes, edges: localEdges }, { debounce: true });
   }
 
+  function replaceEntryNode(type: "message_received_trigger" | "opportunity_stage_trigger") {
+    const existingEntry = getFlowEntryNode(localNodes);
+    if (!existingEntry) return false;
+
+    const nodes = localNodes.map((node) => {
+      if (node.id !== existingEntry.id) return node;
+      if (type === "message_received_trigger") {
+        return {
+          ...node,
+          type: "message_received_trigger" as const,
+          data: {
+            ...node.data,
+            label: t("flows.nodeTypes.message_received_trigger"),
+            triggerType: (node.data.triggerType === "first_message"
+              ? "first_message"
+              : "any_message") as "first_message" | "any_message",
+            channel: node.data.channel ?? "any",
+            triggerStageKey: undefined,
+          },
+        };
+      }
+      return {
+        ...node,
+        type: "opportunity_stage_trigger" as const,
+        data: {
+          ...node.data,
+          label: t("flows.nodeTypes.opportunity_stage_trigger"),
+          triggerType: "opportunity_stage_entered" as const,
+          keywords: undefined,
+          matchMode: undefined,
+        },
+      };
+    });
+    canvasAutosaveRef.current = true;
+    commitHistory({ nodes, edges: localEdges });
+    setSelectedNodeId(existingEntry.id);
+    return true;
+  }
+
   function addNode(type: FlowNodeType, position?: { x: number; y: number }) {
+    if (
+      type === "message_received_trigger" ||
+      type === "opportunity_stage_trigger"
+    ) {
+      if (replaceEntryNode(type)) return;
+    }
+
     const node = createFlowNode({
       type,
       position: position ?? defaultPalettePosition(localNodes.length),
@@ -257,7 +311,7 @@ export default function EditFlowPage() {
         name: flow.name,
         nodes,
         edges: edgesToSave,
-        entryNodeId: nodes.find((n) => n.type === "trigger")?.id ?? flow.entryNodeId,
+        entryNodeId: getFlowEntryNode(nodes)?.id ?? flow.entryNodeId,
         ...(resolvedBotId ? { botId: resolvedBotId } : {}),
       });
       const draftNodes = resolveDraftNodes(updated);

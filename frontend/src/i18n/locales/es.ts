@@ -4634,6 +4634,8 @@ export const es = {
     },
     nodeTypes: {
       trigger: "Inicio",
+      message_received_trigger: "Inicio por mensaje",
+      opportunity_stage_trigger: "Inicio por etapa",
       agent: "Agente",
       message: "Mensaje",
       template: "Plantilla",
@@ -4666,10 +4668,20 @@ export const es = {
       label: "Etiqueta",
       triggerType: "Tipo de activación",
       triggerAnyMessage: "Cualquier mensaje",
+      triggerMessage: "Mensaje entrante",
+      triggerMessageReceivedHint:
+        "Este es el inicio del flujo al recibir un mensaje. Elige si solo aplica al primer mensaje y en qué canal.",
+      triggerChannelHint: "El flujo solo se dispara en el canal seleccionado.",
       triggerFirstMessage: "Primer mensaje",
       triggerFirstMessageHint:
         "Solo se ejecuta cuando el contacto escribe por primera vez. Si no la marcas, cada mensaje vuelve a iniciar el flujo.",
       triggerWebhookHint: "La activación se define con el componente Webhook del flujo.",
+      triggerOpportunityStage: "Entrada a etapa (ventas)",
+      triggerOpportunityStageHint:
+        "Este es el inicio del flujo. Se ejecuta cuando una oportunidad entra a la etapa elegida. Conecta nodos a continuación para lanzar más procesos.",
+      triggerOpportunityStageKey: "Etapa que dispara el flujo",
+      triggerOpportunityStageAny: "Cualquier etapa",
+      triggerGenericHint: "Punto de entrada del flujo. Conecta el siguiente paso desde aquí.",
       triggerKeyword: "Palabra clave",
       triggerWebForm: "Formulario web",
       triggerVoiceCall: "Llamada de voz",
@@ -5004,7 +5016,7 @@ export const es = {
       opportunityWhatsAppBindings:
         "Variables de WhatsApp: {{phone}} (teléfono), {{contact_name}} (nombre de perfil). En formularios usa {{form.campo}}. El último mensaje del usuario es {{last_input}}.",
       moveOpportunityStage:
-        "Mueve el negocio en Ventas. Úsalo después de Crear oportunidad para tener {{opportunity_id}}.",
+        "Mueve el negocio en Ventas. La salida Sí continúa el flujo si se movió; No si faltó el id o no se encontró. Al entrar a una etapa también se pueden disparar otros flujos con activación «Entrada a etapa».",
     },
     previewModal: {
       title: "Vista previa del flujo",
@@ -5017,7 +5029,17 @@ export const es = {
       addAction: "Añadir al tablero",
       trigger: {
         description: "Punto de entrada del flujo.",
-        usage: "En mensajería puedes limitar por primer mensaje o palabras clave. Para recibir datos externos, añade el componente Webhook.",
+        usage: "Conecta desde aquí el resto del flujo. Para datos externos, añade Webhook.",
+      },
+      message_received_trigger: {
+        description: "Inicio del flujo cuando llega un mensaje.",
+        usage:
+          "Configura primer mensaje, canal y palabras clave. Reemplaza el nodo de inicio actual.",
+      },
+      opportunity_stage_trigger: {
+        description: "Inicio del flujo al entrar a una etapa de ventas.",
+        usage:
+          "Reemplaza el nodo de inicio. Elige la etapa (o cualquiera) y conecta acciones después para automatizar el embudo.",
       },
       message: {
         description: "Envía un mensaje de texto al contacto.",

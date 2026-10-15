@@ -2181,6 +2181,8 @@ export interface FlowResponse {
 
 export type FlowNodeType =
   | "trigger"
+  | "message_received_trigger"
+  | "opportunity_stage_trigger"
   | "agent"
   | "message"
   | "template"
@@ -2219,7 +2221,8 @@ export type FlowTriggerType =
   | "first_message"
   | "any_message"
   | "web_form_submitted"
-  | "voice_call";
+  | "voice_call"
+  | "opportunity_stage_entered";
 
 export type FlowKind = "messaging" | "voice_ai";
 
@@ -2268,6 +2271,7 @@ export interface VoiceAgentHttpToolTestResult {
 export interface FlowNodeData {
   label?: string;
   triggerType?: FlowTriggerType;
+  triggerStageKey?: OpportunityStage;
   channel?: FlowAgentChannel;
   whatsappChannelId?: string;
   keywords?: string[];

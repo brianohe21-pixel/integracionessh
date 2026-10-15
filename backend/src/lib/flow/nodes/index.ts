@@ -36,6 +36,8 @@ export async function executeNode(
 ): Promise<NodeExecutionResult> {
   switch (node.type) {
     case "trigger":
+    case "message_received_trigger":
+    case "opportunity_stage_trigger":
       return executeTriggerNode(node, ctx, run);
     case "agent":
       return executeAgentNode(node, ctx, run);

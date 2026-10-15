@@ -78,6 +78,8 @@ const FlowNodeSchema = z.object({
   id: z.string(),
   type: z.enum([
     "trigger",
+    "message_received_trigger",
+    "opportunity_stage_trigger",
     "agent",
     "message",
     "template",

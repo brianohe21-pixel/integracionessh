@@ -20,6 +20,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import type { FlowDefinition, FlowEdge, FlowNode, FlowNodeType } from "@/types";
+import { countFlowEntryNodes, isFlowEntryNode, isFlowEntryNodeType } from "@/lib/flow-entry-node";
 import { FlowNodeCard } from "./FlowNodeCard";
 import { FlowDeletableEdge } from "./FlowDeletableEdge";
 import { FlowNodeActionsContext } from "./FlowNodeActionsContext";
@@ -295,12 +296,9 @@ function FlowCanvasInner({
   const deleteNode = useCallback(
     (nodeId: string) => {
       const flowNode = flowRef.current.nodes.find((node) => node.id === nodeId);
-      if (flowNode?.type === "trigger") {
-        const triggers = flowRef.current.nodes.filter((node) => node.type === "trigger").length;
-        if (triggers <= 1) {
-          onCannotDeleteTriggerRef.current?.();
-          return;
-        }
+      if (flowNode && isFlowEntryNode(flowNode) && countFlowEntryNodes(flowRef.current.nodes) <= 1) {
+        onCannotDeleteTriggerRef.current?.();
+        return;
       }
       if (nodeId === selectedNodeId) {
         onSelectNodeRef.current(null);
@@ -315,8 +313,8 @@ function FlowCanvasInner({
 
   const canDeleteNode = useCallback((nodeId: string) => {
     const flowNode = flowRef.current.nodes.find((node) => node.id === nodeId);
-    if (!flowNode || flowNode.type !== "trigger") return true;
-    return flowRef.current.nodes.filter((node) => node.type === "trigger").length > 1;
+    if (!flowNode || !isFlowEntryNode(flowNode)) return true;
+    return countFlowEntryNodes(flowRef.current.nodes) > 1;
   }, []);
 
   const onDragOver = useCallback((event: React.DragEvent) => {
@@ -346,12 +344,11 @@ function FlowCanvasInner({
       const filtered = changes.filter((change) => {
         if (change.type !== "remove") return true;
         const flowNode = flowRef.current.nodes.find((n) => n.id === change.id);
-        if (flowNode?.type !== "trigger") {
+        if (!flowNode || !isFlowEntryNodeType(flowNode.type)) {
           removedIds.add(change.id);
           return true;
         }
-        const triggerCount = flowRef.current.nodes.filter((n) => n.type === "trigger").length;
-        if (triggerCount <= 1) {
+        if (countFlowEntryNodes(flowRef.current.nodes) <= 1) {
           onCannotDeleteTriggerRef.current?.();
           return false;
         }

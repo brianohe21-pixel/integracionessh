@@ -4624,6 +4624,8 @@ export const en: Messages = {
     },
     nodeTypes: {
       trigger: "Start",
+      message_received_trigger: "Message start",
+      opportunity_stage_trigger: "Stage start",
       agent: "Agent",
       message: "Message",
       template: "Template",
@@ -4656,10 +4658,20 @@ export const en: Messages = {
       label: "Label",
       triggerType: "Trigger type",
       triggerAnyMessage: "Any message",
+      triggerMessage: "Incoming message",
+      triggerMessageReceivedHint:
+        "This is the flow start when a message arrives. Choose first-message-only and which channel applies.",
+      triggerChannelHint: "The flow only starts on the selected channel.",
       triggerFirstMessage: "First message only",
       triggerFirstMessageHint:
         "Runs only when the contact writes for the first time. If unchecked, every message starts the flow again.",
       triggerWebhookHint: "Activation is configured with the flow's Webhook component.",
+      triggerOpportunityStage: "Stage entered (sales)",
+      triggerOpportunityStageHint:
+        "This is the flow start. It runs when an opportunity enters the selected stage. Connect nodes after it to launch more processes.",
+      triggerOpportunityStageKey: "Stage that starts the flow",
+      triggerOpportunityStageAny: "Any stage",
+      triggerGenericHint: "Flow entry point. Connect the next step from here.",
       triggerKeyword: "Keyword",
       triggerWebForm: "Web form",
       triggerVoiceCall: "Voice call",
@@ -4993,7 +5005,7 @@ export const en: Messages = {
       opportunityWhatsAppBindings:
         "WhatsApp variables: {{phone}} (phone), {{contact_name}} (profile name). For forms use {{form.field}}. The user's last message is {{last_input}}.",
       moveOpportunityStage:
-        "Moves the deal in Sales. Use after Create opportunity so {{opportunity_id}} is available.",
+        "Moves the deal in Sales. Yes continues if the stage moved; No if the id was missing or not found. Entering a stage can also start other flows with the «Stage entered» trigger.",
     },
     previewModal: {
       title: "Flow preview",
@@ -5006,7 +5018,17 @@ export const en: Messages = {
       addAction: "Add to canvas",
       trigger: {
         description: "Flow entry point.",
-        usage: "For messaging you can limit by first message or keywords. To receive external data, add the Webhook component.",
+        usage: "Connect the rest of the flow from here. For external data, add Webhook.",
+      },
+      message_received_trigger: {
+        description: "Flow start when a message arrives.",
+        usage:
+          "Configure first message, channel, and keywords. Replaces the current start node.",
+      },
+      opportunity_stage_trigger: {
+        description: "Flow start when a sales stage is entered.",
+        usage:
+          "Replaces the start node. Pick a stage (or any) and connect actions after it to automate the funnel.",
       },
       message: {
         description: "Sends a text message to the contact.",

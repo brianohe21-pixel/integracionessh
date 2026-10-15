@@ -1,6 +1,8 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Play,
+  MessageCircle,
+  Flag,
   MessageSquare,
   FileText,
   GitBranch,
@@ -51,6 +53,18 @@ export interface FlowNodeMeta {
 
 export const FLOW_NODE_META: Record<FlowNodeType, FlowNodeMeta> = {
   trigger: { category: "entry", icon: Play, hasInput: false, hasOutput: true },
+  message_received_trigger: {
+    category: "entry",
+    icon: MessageCircle,
+    hasInput: false,
+    hasOutput: true,
+  },
+  opportunity_stage_trigger: {
+    category: "entry",
+    icon: Flag,
+    hasInput: false,
+    hasOutput: true,
+  },
   agent: { category: "entry", icon: Headset, hasInput: true, hasOutput: true },
   message: { category: "messaging", icon: MessageSquare, hasInput: true, hasOutput: true },
   template: { category: "messaging", icon: FileText, hasInput: true, hasOutput: true },
@@ -97,7 +111,13 @@ export const FLOW_NODE_META: Record<FlowNodeType, FlowNodeMeta> = {
   save_contact: { category: "crm", icon: Contact, hasInput: true, hasOutput: true },
   create_lead: { category: "crm", icon: UserPlus, hasInput: true, hasOutput: true },
   create_opportunity: { category: "crm", icon: Target, hasInput: true, hasOutput: true },
-  move_opportunity_stage: { category: "crm", icon: Kanban, hasInput: true, hasOutput: true },
+  move_opportunity_stage: {
+    category: "crm",
+    icon: Kanban,
+    hasInput: true,
+    hasOutput: true,
+    branchHandles: "condition",
+  },
   send_notification: { category: "crm", icon: Bell, hasInput: true, hasOutput: true },
   assign_bot: { category: "integrations", icon: Bot, hasInput: true, hasOutput: true },
   webhook: { category: "integrations", icon: Webhook, hasInput: true, hasOutput: true },
@@ -117,6 +137,7 @@ export const FLOW_NODE_CATEGORIES: FlowPaletteCategory[] = [
 
 export const FLOW_PALETTE_NODES: Record<FlowPaletteCategory, FlowNodeType[]> = {
   crm: [
+    "opportunity_stage_trigger",
     "save_contact",
     "check_known_contact",
     "create_lead",
@@ -124,7 +145,14 @@ export const FLOW_PALETTE_NODES: Record<FlowPaletteCategory, FlowNodeType[]> = {
     "move_opportunity_stage",
     "send_notification",
   ],
-  messaging: ["message", "template", "buttons", "send_otp", "send_audio"],
+  messaging: [
+    "message_received_trigger",
+    "message",
+    "template",
+    "buttons",
+    "send_otp",
+    "send_audio",
+  ],
   logic: ["condition", "delay", "set_variable"],
   integrations: ["agent", "assign_bot", "webhook", "meta_flow", "http_request", "handoff"],
   apps: [
@@ -209,10 +237,32 @@ export function buildNodePreview(
       const triggerType = data.triggerType ?? "any_message";
       if (triggerType === "web_form_submitted") return "webhook";
       if (triggerType === "voice_call") return "voice";
-      if (triggerType === "keyword" && data.keywords?.length) {
-        return truncate(data.keywords.join(", "));
+      return "";
+    }
+    case "message_received_trigger": {
+      const parts: string[] = [];
+      const channel = data.channel ?? "any";
+      parts.push(channel === "any" ? (locale === "es" ? "Cualquier canal" : "Any channel") : channel);
+      if ((data.triggerType ?? "any_message") === "first_message") {
+        parts.push(locale === "es" ? "Primer mensaje" : "First message");
       }
-      return triggerType;
+      if (data.keywords?.length) {
+        parts.push(truncate(data.keywords.join(", ")));
+      }
+      return parts.join(" · ");
+    }
+    case "opportunity_stage_trigger": {
+      const stageLabels: Record<string, { es: string; en: string }> = {
+        new: { es: "Nueva", en: "New" },
+        quoted: { es: "Cotizada", en: "Quoted" },
+        negotiation: { es: "Negociación", en: "Negotiation" },
+        won: { es: "Ganada", en: "Won" },
+        lost: { es: "Perdida", en: "Lost" },
+      };
+      if (!data.triggerStageKey) {
+        return locale === "es" ? "Cualquier etapa" : "Any stage";
+      }
+      return stageLabels[data.triggerStageKey]?.[locale] ?? data.triggerStageKey;
     }
     case "agent": {
       const channel = data.channel ?? "any";

@@ -19,6 +19,21 @@ function parseStage(value?: string): OpportunityStage | null {
   return null;
 }
 
+function skipped(
+  flow: FlowExecutionContext["flow"],
+  nodeId: string,
+  error: string,
+  output: string
+): NodeExecutionResult {
+  return {
+    nextNodeId: getNextNodeId(flow, nodeId, "false"),
+    halt: false,
+    wait: false,
+    error,
+    output,
+  };
+}
+
 export async function executeMoveOpportunityStageNode(
   node: FlowNode,
   ctx: FlowExecutionContext,
@@ -35,13 +50,7 @@ export async function executeMoveOpportunityStageNode(
     bindingContext
   ).trim();
   if (!opportunityId) {
-    return {
-      nextNodeId: getNextNodeId(ctx.flow, node.id),
-      halt: false,
-      wait: false,
-      error: "Opportunity id binding is required",
-      output: "skipped: missing opportunity_id",
-    };
+    return skipped(ctx.flow, node.id, "Opportunity id binding is required", "skipped: missing opportunity_id");
   }
 
   const stageKey =
@@ -53,13 +62,7 @@ export async function executeMoveOpportunityStageNode(
 
   const existing = await getOpportunityById(ctx.tenantId, opportunityId);
   if (!existing) {
-    return {
-      nextNodeId: getNextNodeId(ctx.flow, node.id),
-      halt: false,
-      wait: false,
-      error: "Opportunity not found",
-      output: "skipped: opportunity not found",
-    };
+    return skipped(ctx.flow, node.id, "Opportunity not found", "skipped: opportunity not found");
   }
 
   const pipeline = await getPipelineById(ctx.tenantId, existing.pipelineId);
@@ -91,7 +94,7 @@ export async function executeMoveOpportunityStageNode(
   }
 
   return {
-    nextNodeId: getNextNodeId(ctx.flow, node.id),
+    nextNodeId: getNextNodeId(ctx.flow, node.id, "true"),
     halt: false,
     wait: false,
     variables: {

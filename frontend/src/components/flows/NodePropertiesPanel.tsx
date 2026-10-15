@@ -288,9 +288,14 @@ export function NodePropertiesPanel({
   const agentChannel = (selected?.data.channel ?? "any") as FlowAgentChannel;
   const agentBotId =
     selected?.type === "agent" ? (selected.data.botId?.trim() || botId) : botId;
-  const { data: whatsappChannels } = useWhatsAppChannels(agentBotId, {
-    enabled: selected?.type === "agent" && agentChannel === "whatsapp",
-  });
+  const messageTriggerChannel = (selected?.data.channel ?? "any") as FlowAgentChannel;
+  const needsWhatsAppChannels =
+    (selected?.type === "agent" && agentChannel === "whatsapp") ||
+    (selected?.type === "message_received_trigger" && messageTriggerChannel === "whatsapp");
+  const { data: whatsappChannels } = useWhatsAppChannels(
+    selected?.type === "agent" ? agentBotId : botId,
+    { enabled: needsWhatsAppChannels }
+  );
 
   const isEmailNotification =
     selected?.type === "send_notification" &&
@@ -384,53 +389,150 @@ export function NodePropertiesPanel({
               )}
             </div>
           )}
-          {isMessagingFlow && (
-            <>
-              <div className="rounded-xl border border-field-border bg-surface-muted/30 p-4">
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={(d.triggerType ?? "any_message") === "first_message"}
-                    onChange={(e) =>
-                      onUpdate({ triggerType: e.target.checked ? "first_message" : "any_message" })
-                    }
-                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-field-border text-accent focus:ring-accent"
-                  />
-                  <span className="text-sm text-secondary">
-                    <span className="font-medium text-primary">
-                      {t("flows.fields.triggerFirstMessage")}
-                    </span>
-                    <span className="mt-0.5 block text-xs text-muted">
-                      {t("flows.fields.triggerFirstMessageHint")}
-                    </span>
-                  </span>
-                </label>
-              </div>
-              <div>
-                <FieldLabel>{t("flows.fields.keywords")}</FieldLabel>
-                <CommaSeparatedInput
-                  values={d.keywords ?? []}
-                  onChange={(keywords) => onUpdate({ keywords })}
-                />
-              </div>
-              {(d.keywords ?? []).length > 0 && (
-                <div>
-                  <FieldLabel>{t("flows.fields.matchMode")}</FieldLabel>
-                  <select
-                    value={d.matchMode ?? "contains"}
-                    onChange={(e) => onUpdate({ matchMode: e.target.value })}
-                    className="w-full text-sm border border-field-border rounded-lg p-2 bg-surface-elevated shadow-sm"
-                  >
-                    <option value="contains">{t("flows.fields.matchContains")}</option>
-                    <option value="exact">{t("flows.fields.matchExact")}</option>
-                  </select>
-                </div>
-              )}
-            </>
-          )}
           {hasWebhookNode && (
             <p className="text-xs text-secondary">{t("flows.fields.triggerWebhookHint")}</p>
           )}
+          {!isVoiceFlow && !hasWebhookNode && (
+            <p className="text-xs text-secondary">{t("flows.fields.triggerGenericHint")}</p>
+          )}
+        </>
+      )}
+
+      {type === "message_received_trigger" && (
+        <>
+          <p className="text-xs text-secondary">{t("flows.fields.triggerMessageReceivedHint")}</p>
+          <div className="rounded-xl border border-field-border bg-surface-muted/30 p-4">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={(d.triggerType ?? "any_message") === "first_message"}
+                onChange={(e) =>
+                  onUpdate({
+                    triggerType: e.target.checked ? "first_message" : "any_message",
+                  })
+                }
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-field-border text-accent focus:ring-accent"
+              />
+              <span className="text-sm text-secondary">
+                <span className="font-medium text-primary">
+                  {t("flows.fields.triggerFirstMessage")}
+                </span>
+                <span className="mt-0.5 block text-xs text-muted">
+                  {t("flows.fields.triggerFirstMessageHint")}
+                </span>
+              </span>
+            </label>
+          </div>
+          <div>
+            <FieldLabel>{t("flows.fields.agentChannel")}</FieldLabel>
+            <Select
+              value={(d.channel ?? "any") as string}
+              onChange={(e) => {
+                const channel = e.target.value as FlowAgentChannel;
+                onUpdate({
+                  channel,
+                  ...(channel !== "whatsapp" ? { whatsappChannelId: undefined } : {}),
+                });
+              }}
+            >
+              <option value="any">{t("flows.fields.agentChannelAny")}</option>
+              <option value="whatsapp">WhatsApp</option>
+              <option value="webchat">Webchat</option>
+              <option value="instagram">Instagram</option>
+              <option value="messenger">Messenger</option>
+              <option value="telegram">Telegram</option>
+              <option value="sms">SMS</option>
+              <option value="email">Email</option>
+            </Select>
+            <p className="mt-1 text-xs text-secondary">{t("flows.fields.triggerChannelHint")}</p>
+          </div>
+          {(d.channel ?? "any") === "whatsapp" && (
+            <div>
+              <FieldLabel>{t("flows.fields.whatsappChannel")}</FieldLabel>
+              <Select
+                value={d.whatsappChannelId ?? ""}
+                onChange={(e) =>
+                  onUpdate({ whatsappChannelId: e.target.value || undefined })
+                }
+                disabled={!botId}
+              >
+                <option value="">{t("flows.fields.whatsappChannelAny")}</option>
+                {(whatsappChannels ?? []).map((channel) => (
+                  <option key={channel.channelId} value={channel.channelId}>
+                    {channel.label || channel.displayPhoneNumber || channel.phoneNumberId}
+                  </option>
+                ))}
+              </Select>
+              {!botId ? (
+                <p className="mt-1 text-xs text-warning">{t("flows.fields.agentNeedsFlowBot")}</p>
+              ) : null}
+            </div>
+          )}
+          <div>
+            <FieldLabel>{t("flows.fields.keywords")}</FieldLabel>
+            <CommaSeparatedInput
+              values={d.keywords ?? []}
+              onChange={(keywords) => onUpdate({ keywords })}
+            />
+          </div>
+          {(d.keywords ?? []).length > 0 && (
+            <div>
+              <FieldLabel>{t("flows.fields.matchMode")}</FieldLabel>
+              <select
+                value={d.matchMode ?? "contains"}
+                onChange={(e) => onUpdate({ matchMode: e.target.value })}
+                className="w-full text-sm border border-field-border rounded-lg p-2 bg-surface-elevated shadow-sm"
+              >
+                <option value="contains">{t("flows.fields.matchContains")}</option>
+                <option value="exact">{t("flows.fields.matchExact")}</option>
+              </select>
+            </div>
+          )}
+        </>
+      )}
+
+      {type === "opportunity_stage_trigger" && (
+        <>
+          <p className="text-xs text-secondary">
+            {t("flows.fields.triggerOpportunityStageHint")}
+          </p>
+          <div>
+            <FieldLabel>{t("flows.fields.triggerOpportunityStageKey")}</FieldLabel>
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  ["", "triggerOpportunityStageAny"],
+                  ["new", "opportunityStageNew"],
+                  ["quoted", "opportunityStageQuoted"],
+                  ["negotiation", "opportunityStageNegotiation"],
+                  ["won", "opportunityStageWon"],
+                  ["lost", "opportunityStageLost"],
+                ] as const
+              ).map(([value, labelKey]) => {
+                const active = (d.triggerStageKey ?? "") === value;
+                return (
+                  <button
+                    key={labelKey}
+                    type="button"
+                    onClick={() =>
+                      onUpdate({
+                        triggerStageKey: value === "" ? undefined : value,
+                        triggerType: "opportunity_stage_entered",
+                      })
+                    }
+                    className={cn(
+                      "rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors",
+                      active
+                        ? "border-accent bg-accent/10 text-accent"
+                        : "border-field-border bg-surface-elevated text-secondary hover:border-accent/40"
+                    )}
+                  >
+                    {t(`flows.fields.${labelKey}`)}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </>
       )}
 

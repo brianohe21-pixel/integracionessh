@@ -1,5 +1,6 @@
 import type { FlowDefinition, FlowNode, LocalizedText } from "../../types/index.js";
 import { getFlowSecretNamesSet } from "./flow-secrets.repository.js";
+import { countFlowEntryNodes, getFlowEntryNode } from "./entry-node.js";
 import { isVoiceAiFlow } from "./voice-flow-compiler.js";
 import { isWebhookReceivingFlow } from "./webhook-flow.js";
 
@@ -44,7 +45,7 @@ function isFormFlow(flow: FlowDefinition): boolean {
 }
 
 function getTriggerNode(flow: FlowDefinition): FlowNode | undefined {
-  return flow.nodes.find((node) => node.type === "trigger");
+  return getFlowEntryNode(flow.nodes);
 }
 
 function reachableNodeIds(flow: FlowDefinition): Set<string> {
@@ -284,11 +285,11 @@ export async function validateFlowDefinitionWithSecrets(
 
 export function validateFlowDefinition(flow: FlowDefinition): FlowValidationIssue[] {
   const issues: FlowValidationIssue[] = [];
-  const triggers = flow.nodes.filter((node) => node.type === "trigger");
+  const triggers = countFlowEntryNodes(flow.nodes);
   const formFlow = isFormFlow(flow);
   const voiceFlow = isVoiceAiFlow(flow);
 
-  if (triggers.length !== 1) {
+  if (triggers !== 1) {
     issues.push({
       code: "trigger_count",
       message: "Flow must have exactly one trigger node",
