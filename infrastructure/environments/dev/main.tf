@@ -290,8 +290,6 @@ module "api_gateway" {
   advisors_function_arn           = module.lambda.advisors_function_arn
   contacts_invoke_arn             = module.lambda.contacts_invoke_arn
   contacts_function_arn           = module.lambda.contacts_function_arn
-  tags_invoke_arn                 = module.lambda.tags_invoke_arn
-  tags_function_arn               = module.lambda.tags_function_arn
   leads_invoke_arn                = module.lambda.leads_invoke_arn
   leads_function_arn              = module.lambda.leads_function_arn
   sales_invoke_arn                = module.lambda.sales_invoke_arn

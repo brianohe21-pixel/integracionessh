@@ -61,7 +61,6 @@ locals {
     conversations      = var.conversations_function_arn
     advisors           = var.advisors_function_arn
     contacts           = var.contacts_function_arn
-    tags               = var.tags_function_arn
     leads              = var.leads_function_arn
     sales              = var.sales_function_arn
     templates          = var.templates_function_arn
@@ -113,7 +112,6 @@ locals {
     conversations      = var.conversations_invoke_arn
     advisors           = var.advisors_invoke_arn
     contacts           = var.contacts_invoke_arn
-    tags               = var.tags_invoke_arn
     leads              = var.leads_invoke_arn
     sales              = var.sales_invoke_arn
     templates          = var.templates_invoke_arn
@@ -220,14 +218,6 @@ locals {
       methods      = ["GET", "POST", "PATCH", "DELETE"]
       invoke_arn   = var.shopify_invoke_arn
       function_arn = var.shopify_function_arn
-      protected    = true
-    }
-    tags = {
-      path         = "/tags/{proxy+}"
-      slug         = "tags"
-      methods      = ["GET", "POST", "PUT", "DELETE"]
-      invoke_arn   = var.tags_invoke_arn
-      function_arn = var.tags_function_arn
       protected    = true
     }
     sales = {
@@ -1879,20 +1869,6 @@ locals {
       slug         = "hosted_forms"
       invoke_arn   = var.hosted_forms_invoke_arn
       function_arn = var.hosted_forms_function_arn
-      protected    = true
-    }
-    tags_list = {
-      route_key    = "GET /tags"
-      slug         = "tags"
-      invoke_arn   = var.tags_invoke_arn
-      function_arn = var.tags_function_arn
-      protected    = true
-    }
-    tags_create = {
-      route_key    = "POST /tags"
-      slug         = "tags"
-      invoke_arn   = var.tags_invoke_arn
-      function_arn = var.tags_function_arn
       protected    = true
     }
     flow_runs_get = {

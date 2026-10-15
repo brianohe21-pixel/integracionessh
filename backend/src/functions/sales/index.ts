@@ -396,13 +396,25 @@ export async function handler(
     const apiEvent = event as APIGatewayProxyEventV2WithJWTAuthorizer;
     const auth = await resolveRequestAuth(apiEvent);
     assertAdvisorOrMember(auth);
-    await assertAssignedServices(auth.tenantId, "sales");
-    const advisorId = await resolveAdvisorIdForAuth(auth);
 
     const method = apiEvent.requestContext.http.method;
     const rawPath = apiEvent.rawPath ?? apiEvent.requestContext.http.path;
     const segments = parseSalesPath(rawPath);
     const params = apiEvent.queryStringParameters ?? {};
+
+    if (segments[0] === "tags") {
+      await assertAssignedServices(auth.tenantId, "contacts");
+      const { handleTagsRoutes } = await import("../../lib/tags/routes.js");
+      return handleTagsRoutes({
+        auth,
+        method,
+        segments: segments.slice(1),
+        body: apiEvent.body,
+      });
+    }
+
+    await assertAssignedServices(auth.tenantId, "sales");
+    const advisorId = await resolveAdvisorIdForAuth(auth);
 
     if (method === "GET" && segments.length === 1 && segments[0] === "metrics") {
       const pipelineId = params.pipelineId ?? (await ensureDefaultPipeline(auth.tenantId)).pipelineId;

@@ -50,14 +50,6 @@ output "contacts_function_arn" {
   value = aws_lambda_function.functions["contacts"].arn
 }
 
-output "tags_invoke_arn" {
-  value = aws_lambda_function.functions["tags"].invoke_arn
-}
-
-output "tags_function_arn" {
-  value = aws_lambda_function.functions["tags"].arn
-}
-
 output "leads_invoke_arn" {
   value = aws_lambda_function.functions["leads"].invoke_arn
 }

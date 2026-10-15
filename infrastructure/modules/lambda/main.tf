@@ -402,16 +402,6 @@ locals {
         ENVIRONMENT = var.environment
       }
     }
-    tags = {
-      handler     = "tags/index.handler"
-      description = "CRUD API for custom tags and tag actions"
-      timeout     = 30
-      memory      = 256
-      environment = {
-        TABLE_NAME  = var.dynamodb_table_name
-        ENVIRONMENT = var.environment
-      }
-    }
     leads = {
       handler     = "leads/index.handler"
       description = "CRUD API for lead pipeline and conversion"

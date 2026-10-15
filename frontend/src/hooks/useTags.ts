@@ -7,7 +7,7 @@ import type { TagAction, TagDefinition } from "@/types";
 export function useTags() {
   return useQuery({
     queryKey: ["tags"],
-    queryFn: () => api.get<{ items: TagDefinition[] }>("/tags"),
+    queryFn: () => api.get<{ items: TagDefinition[] }>("/sales/tags"),
     select: (data) => data.items,
   });
 }
@@ -20,7 +20,7 @@ export function useCreateTag() {
       color?: string;
       description?: string;
       onApply?: TagAction[];
-    }) => api.post<TagDefinition>("/tags", body),
+    }) => api.post<TagDefinition>("/sales/tags", body),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["tags"] }),
   });
 }
@@ -37,7 +37,7 @@ export function useUpdateTag() {
       color?: string | null;
       description?: string | null;
       onApply?: TagAction[];
-    }) => api.put<TagDefinition>(`/tags/${encodeURIComponent(tagId)}`, body),
+    }) => api.put<TagDefinition>(`/sales/tags/${encodeURIComponent(tagId)}`, body),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["tags"] }),
   });
 }
@@ -45,7 +45,8 @@ export function useUpdateTag() {
 export function useDeleteTag() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (tagId: string) => api.delete(`/tags/${encodeURIComponent(tagId)}`),
+    mutationFn: (tagId: string) =>
+      api.delete(`/sales/tags/${encodeURIComponent(tagId)}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["tags"] }),
   });
 }
