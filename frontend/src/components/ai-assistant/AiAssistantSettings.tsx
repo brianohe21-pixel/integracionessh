@@ -145,18 +145,28 @@ export function AiAssistantSettings({ bot }: AiAssistantSettingsProps) {
   async function handleSave() {
     setError("");
     setSaved(false);
+    if (!form.systemPrompt.trim()) {
+      setError(t("aiAssistant.promptRequired"));
+      return;
+    }
     if (systemPromptTooLong) {
       setError(t("bots.validationSystemPromptTooLong", { max: BOT_SYSTEM_PROMPT_MAX_LENGTH }));
       return;
     }
     try {
-      await save.mutateAsync({
-        systemPrompt: form.systemPrompt.trim(),
-        model: form.model,
-        temperature: form.temperature,
-        maxTokens: form.maxTokens,
-        knowledgeEnabled: form.knowledgeEnabled,
-      });
+      await save.mutateAsync(
+        enabled
+          ? {
+              systemPrompt: form.systemPrompt.trim(),
+              model: form.model,
+              temperature: form.temperature,
+              maxTokens: form.maxTokens,
+              knowledgeEnabled: form.knowledgeEnabled,
+            }
+          : {
+              systemPrompt: form.systemPrompt.trim(),
+            }
+      );
       setSaved(true);
     } catch (err) {
       setError((err as Error).message);
@@ -186,34 +196,32 @@ export function AiAssistantSettings({ bot }: AiAssistantSettingsProps) {
         </div>
 
         <div className="flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={() => void handleSave()}
+            disabled={isPending || systemPromptTooLong}
+            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-60"
+          >
+            {save.isPending ? t("common.loading") : t("common.save")}
+          </button>
           {!enabled ? (
             <button
               type="button"
               onClick={() => void handleEnable()}
               disabled={isPending || (credentialsReady && !openaiConfigured)}
-              className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-60"
+              className="rounded-lg bg-gray-600 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-60"
             >
               {enable.isPending ? t("common.loading") : t("aiAssistant.enable")}
             </button>
           ) : (
-            <>
-              <button
-                type="button"
-                onClick={() => void handleSave()}
-                disabled={isPending || systemPromptTooLong}
-                className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-60"
-              >
-                {save.isPending ? t("common.loading") : t("common.save")}
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleDisable()}
-                disabled={isPending || disableBlocked}
-                className="rounded-lg bg-gray-600 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-60"
-              >
-                {disable.isPending ? t("common.loading") : t("aiAssistant.disable")}
-              </button>
-            </>
+            <button
+              type="button"
+              onClick={() => void handleDisable()}
+              disabled={isPending || disableBlocked}
+              className="rounded-lg bg-gray-600 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-60"
+            >
+              {disable.isPending ? t("common.loading") : t("aiAssistant.disable")}
+            </button>
           )}
         </div>
 

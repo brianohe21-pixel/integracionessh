@@ -20,7 +20,6 @@ import { generateWidgetKey } from "../../lib/webchat/session.repository.js";
 import { generateVoicebotWidgetKey } from "../../lib/voicebot/session.repository.js";
 import { assertAllowedModel, assertCanEnableKnowledge } from "../../lib/billing/plan-config.js";
 import {
-  assertAiAssistantActive,
   assertCanDisableAiAssistant,
   buildAiAssistantAutoEnableUpdates,
   toAiAssistantConfig,
@@ -444,7 +443,6 @@ export async function handler(
       const existing = await getBot(auth.tenantId, botId);
       if (!existing) return notFound("Bot not found");
       assertTenantAccess(auth, existing.tenantId);
-      assertAiAssistantActive(existing);
 
       const body = JSON.parse(event.body ?? "{}");
       const parsed = AiAssistantUpdateSchema.safeParse(body);
