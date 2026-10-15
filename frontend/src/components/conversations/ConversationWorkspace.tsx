@@ -55,6 +55,7 @@ import {
   useSendConversationAttachment,
   validateConversationAttachmentFile,
 } from "@/hooks/useConversationAttachments";
+import { useContactByPhone } from "@/hooks/useContacts";
 import { useActiveLeadByPhone, useConvertLead, useCreateLead } from "@/hooks/useLeads";
 import Link from "next/link";
 import { AdvisorCallPanel } from "@/components/conversations/AdvisorCallPanel";
@@ -358,6 +359,12 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
         ? selectedConversation.participantId
         : undefined;
   const { data: activeLead } = useActiveLeadByPhone(selectedContactPhone);
+  const contactQuery = useContactByPhone(selectedContactPhone);
+  const contactSettled = contactQuery.isSuccess || contactQuery.isError;
+  const conversationTags =
+    selectedContactPhone && !contactSettled
+      ? []
+      : (contactQuery.data?.tags ?? activeLead?.tags ?? []);
   const convertLead = useConvertLead();
   const createLead = useCreateLead();
   const createTask = useCreateSalesTask();
@@ -915,7 +922,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
                           : t("ads.badge")}
                       </Badge>
                     ) : null}
-                    {activeLead?.tags?.slice(0, 2).map((tag) => (
+                    {conversationTags.slice(0, 2).map((tag) => (
                       <Badge key={tag} variant="default" className="hidden text-[10px] lg:inline-flex">
                         {tag}
                       </Badge>
@@ -1217,6 +1224,7 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
         <ConversationContactPanel
           conversation={selectedConversation}
           activeLead={activeLead}
+          tags={conversationTags}
           onAssignAdvisor={() => setShowHandoffModal(true)}
           channelLabel={channelLabel}
           locale={locale}

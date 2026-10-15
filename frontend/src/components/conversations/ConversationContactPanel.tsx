@@ -34,6 +34,7 @@ type PanelTab = "contact" | "sales" | "details";
 type Props = {
   conversation: Conversation;
   activeLead?: Lead | null;
+  tags?: string[];
   onAssignAdvisor: () => void;
   channelLabel: (channel?: Channel) => string;
   locale: string;
@@ -47,6 +48,7 @@ type Props = {
 export function ConversationContactPanel({
   conversation,
   activeLead,
+  tags = [],
   onAssignAdvisor,
   channelLabel,
   locale,
@@ -112,7 +114,6 @@ export function ConversationContactPanel({
           ? conversation.phoneNumber || conversation.participantId
           : conversation.participantId ?? conversation.phoneNumber);
 
-  const tags = activeLead?.tags ?? [];
   const isHuman = (conversation.handoffMode ?? "bot") === "human";
   const phone =
     (conversation.channel ?? "whatsapp") === "whatsapp"

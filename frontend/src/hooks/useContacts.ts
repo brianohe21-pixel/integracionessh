@@ -72,6 +72,24 @@ export function useContacts(options?: ContactListFilters & { limit?: number; cur
   });
 }
 
+export function useContactByPhone(phone: string | undefined) {
+  return useQuery({
+    queryKey: ["contacts", "by-phone", phone],
+    enabled: Boolean(phone),
+    queryFn: async () => {
+      if (!phone) return null;
+      try {
+        return await api.get<Contact>(`/contacts/${encodeURIComponent(phone)}`);
+      } catch (error) {
+        if (error instanceof Error && /not found/i.test(error.message)) return null;
+        throw error;
+      }
+    },
+    refetchOnMount: "always",
+    staleTime: 0,
+  });
+}
+
 export async function fetchAllMatchingContactPhones(
   filters: ContactListFilters,
   options?: { max?: number }
