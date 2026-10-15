@@ -42,6 +42,10 @@ export function buildDefaultNodeData(
     defaultData.opportunityCurrency = "USD";
     defaultData.opportunityStage = "new";
   }
+  if (type === "move_opportunity_stage") {
+    defaultData.opportunityIdBinding = "{{opportunity_id}}";
+    defaultData.opportunityStage = "quoted";
+  }
   if (type === "send_notification") {
     defaultData.notificationChannel = "whatsapp";
     defaultData.notificationMessageType = "text";

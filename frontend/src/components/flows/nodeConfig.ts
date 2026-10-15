@@ -21,6 +21,7 @@ import {
   ContactRound,
   UserPlus,
   Target,
+  Kanban,
   Bell,
   Webhook,
   Bot,
@@ -96,6 +97,7 @@ export const FLOW_NODE_META: Record<FlowNodeType, FlowNodeMeta> = {
   save_contact: { category: "crm", icon: Contact, hasInput: true, hasOutput: true },
   create_lead: { category: "crm", icon: UserPlus, hasInput: true, hasOutput: true },
   create_opportunity: { category: "crm", icon: Target, hasInput: true, hasOutput: true },
+  move_opportunity_stage: { category: "crm", icon: Kanban, hasInput: true, hasOutput: true },
   send_notification: { category: "crm", icon: Bell, hasInput: true, hasOutput: true },
   assign_bot: { category: "integrations", icon: Bot, hasInput: true, hasOutput: true },
   webhook: { category: "integrations", icon: Webhook, hasInput: true, hasOutput: true },
@@ -114,7 +116,14 @@ export const FLOW_NODE_CATEGORIES: FlowPaletteCategory[] = [
 ];
 
 export const FLOW_PALETTE_NODES: Record<FlowPaletteCategory, FlowNodeType[]> = {
-  crm: ["save_contact", "check_known_contact", "create_lead", "create_opportunity", "send_notification"],
+  crm: [
+    "save_contact",
+    "check_known_contact",
+    "create_lead",
+    "create_opportunity",
+    "move_opportunity_stage",
+    "send_notification",
+  ],
   messaging: ["message", "template", "buttons", "send_otp", "send_audio"],
   logic: ["condition", "delay", "set_variable"],
   integrations: ["agent", "assign_bot", "webhook", "meta_flow", "http_request", "handoff"],
@@ -257,6 +266,20 @@ export function buildNodePreview(
       return data.contactPhoneBinding ?? "";
     case "create_lead":
       return data.leadPhoneBinding ?? "";
+    case "move_opportunity_stage": {
+      const stageLabels: Record<string, { es: string; en: string }> = {
+        new: { es: "Nueva", en: "New" },
+        quoted: { es: "Cotizada", en: "Quoted" },
+        negotiation: { es: "Negociación", en: "Negotiation" },
+        won: { es: "Ganada", en: "Won" },
+        lost: { es: "Perdida", en: "Lost" },
+      };
+      const stage = data.opportunityStage ?? "quoted";
+      const stageLabel = stageLabels[stage]?.[locale] ?? stage;
+      return [data.opportunityIdBinding ?? "{{opportunity_id}}", stageLabel]
+        .filter(Boolean)
+        .join(" → ");
+    }
     case "create_opportunity": {
       const stageLabels: Record<string, { es: string; en: string }> = {
         new: { es: "Nueva", en: "New" },

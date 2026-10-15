@@ -4656,6 +4656,7 @@ export const es = {
       check_known_contact: "Contacto existente",
       create_lead: "Crear lead",
       create_opportunity: "Crear oportunidad",
+      move_opportunity_stage: "Mover etapa (ventas)",
       send_notification: "Enviar notificación",
       assign_bot: "Agregar bot",
       webhook: "Webhook",
@@ -4811,12 +4812,18 @@ export const es = {
       opportunityTitleBinding: "Título",
       opportunityAmountBinding: "Monto",
       opportunityCurrency: "Moneda",
-      opportunityStage: "Etapa inicial",
+      opportunityStage: "Etapa",
       opportunityStageNew: "Nueva",
       opportunityStageQuoted: "Cotizada",
       opportunityStageNegotiation: "Negociación",
       opportunityStageWon: "Ganada",
       opportunityStageLost: "Perdida",
+      opportunityIdBinding: "ID de oportunidad",
+      opportunityIdBindingHint:
+        "Normalmente {{opportunity_id}} de un nodo Crear oportunidad anterior.",
+      opportunityCloseReasonBinding: "Motivo de cierre",
+      opportunityCloseReasonBindingHint:
+        "Opcional al pasar a Ganada o Perdida. Usa {{last_input}} o {{form.reason}}.",
       opportunityPhoneBinding: "Teléfono",
       opportunityPhoneBindingHint:
         "Desde WhatsApp usa {{phone}} o {{contact_phone}} (número de la conversación).",
@@ -4996,6 +5003,8 @@ export const es = {
       buttonBranches: "Cada botón tiene su propia salida. Máximo 3 botones.",
       opportunityWhatsAppBindings:
         "Variables de WhatsApp: {{phone}} (teléfono), {{contact_name}} (nombre de perfil). En formularios usa {{form.campo}}. El último mensaje del usuario es {{last_input}}.",
+      moveOpportunityStage:
+        "Mueve el negocio en Ventas. Úsalo después de Crear oportunidad para tener {{opportunity_id}}.",
     },
     previewModal: {
       title: "Vista previa del flujo",
@@ -5098,6 +5107,11 @@ export const es = {
         description: "Crea una oportunidad de venta con título, monto y contacto.",
         usage:
           "Desde WhatsApp usa {{phone}} y {{contact_name}}. En formularios usa {{form.campo}}. El último mensaje es {{last_input}}.",
+      },
+      move_opportunity_stage: {
+        description: "Mueve una oportunidad existente a otra etapa del pipeline de ventas.",
+        usage:
+          "Colócalo después de Crear oportunidad. Usa {{opportunity_id}} por defecto y actualiza el embudo.",
       },
       send_notification: {
         description: "Envía WhatsApp, SMS o email al destinatario indicado.",

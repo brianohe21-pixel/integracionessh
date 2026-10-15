@@ -130,6 +130,17 @@ function validateBindings(node: FlowNode, issues: FlowValidationIssue[]): void {
     );
   }
 
+  if (node.type === "move_opportunity_stage") {
+    bindingFields.push(
+      ...(node.data.opportunityIdBinding
+        ? [{ field: "opportunityIdBinding", value: node.data.opportunityIdBinding, required: true as const }]
+        : [{ field: "opportunityIdBinding", required: true as const }]),
+      ...(node.data.opportunityCloseReasonBinding
+        ? [{ field: "opportunityCloseReasonBinding", value: node.data.opportunityCloseReasonBinding }]
+        : [])
+    );
+  }
+
   if (node.type === "send_notification") {
     const isEmail = node.data.notificationChannel === "email";
     const emailBindings = node.data.notificationRecipientBindings?.filter((item) => item.trim());
@@ -395,8 +406,34 @@ export function validateFlowDefinition(flow: FlowDefinition): FlowValidationIssu
       }
     }
 
-    if (node.type === "save_contact" || node.type === "create_lead" || node.type === "create_opportunity" || node.type === "send_notification") {
+    if (
+      node.type === "save_contact" ||
+      node.type === "create_lead" ||
+      node.type === "create_opportunity" ||
+      node.type === "move_opportunity_stage" ||
+      node.type === "send_notification"
+    ) {
       validateBindings(node, issues);
+    }
+
+    if (node.type === "move_opportunity_stage") {
+      if (!node.data.opportunityIdBinding?.trim()) {
+        issues.push({
+          code: "missing_opportunity_id",
+          message: "opportunityIdBinding is required",
+          nodeId: node.id,
+        });
+      }
+      if (
+        !node.data.opportunityStage &&
+        !node.data.opportunityStageBinding?.trim()
+      ) {
+        issues.push({
+          code: "missing_opportunity_stage",
+          message: "opportunityStage is required",
+          nodeId: node.id,
+        });
+      }
     }
 
     if (node.type === "send_notification") {

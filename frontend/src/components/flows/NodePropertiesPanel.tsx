@@ -1096,6 +1096,69 @@ export function NodePropertiesPanel({
         </>
       )}
 
+      {type === "move_opportunity_stage" && (
+        <>
+          <p className="rounded-lg border border-success/20 bg-success/10 px-3 py-2.5 text-xs leading-relaxed text-secondary">
+            {t("flows.hints.moveOpportunityStage")}
+          </p>
+          <div className="space-y-4 rounded-xl border border-field-border bg-surface-muted/20 p-4">
+            <FormBindingField
+              label={t("flows.fields.opportunityIdBinding")}
+              value={d.opportunityIdBinding ?? "{{opportunity_id}}"}
+              onChange={(v) => onUpdate({ opportunityIdBinding: v })}
+              sampleFields={sampleFields}
+              extraBindings={["{{opportunity_id}}", "{{form.opportunity_id}}"]}
+              placeholder="{{opportunity_id}}"
+              hint={t("flows.fields.opportunityIdBindingHint")}
+              required
+              requiredLabel={t("flows.fields.opportunityRequired")}
+            />
+            <div>
+              <FieldLabel>{t("flows.fields.opportunityStage")}</FieldLabel>
+              <div className="flex flex-wrap gap-1.5">
+                {(
+                  [
+                    ["new", "opportunityStageNew"],
+                    ["quoted", "opportunityStageQuoted"],
+                    ["negotiation", "opportunityStageNegotiation"],
+                    ["won", "opportunityStageWon"],
+                    ["lost", "opportunityStageLost"],
+                  ] as const
+                ).map(([value, labelKey]) => {
+                  const active = (d.opportunityStage ?? "quoted") === value;
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => onUpdate({ opportunityStage: value })}
+                      className={`rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-all ${
+                        active
+                          ? "border-success bg-success text-white"
+                          : "border-field-border bg-surface-elevated text-secondary hover:border-success/40"
+                      }`}
+                    >
+                      {t(`flows.fields.${labelKey}`)}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            {(d.opportunityStage ?? "quoted") === "lost" ||
+            (d.opportunityStage ?? "quoted") === "won" ? (
+              <FormBindingField
+                label={t("flows.fields.opportunityCloseReasonBinding")}
+                value={d.opportunityCloseReasonBinding ?? ""}
+                onChange={(v) => onUpdate({ opportunityCloseReasonBinding: v })}
+                sampleFields={sampleFields}
+                extraBindings={["{{last_input}}", "{{form.reason}}"]}
+                placeholder="{{last_input}}"
+                hint={t("flows.fields.opportunityCloseReasonBindingHint")}
+              />
+            ) : null}
+          </div>
+        </>
+      )}
+
       {type === "create_opportunity" && (
         <>
           <p className="rounded-lg border border-success/20 bg-success/10 px-3 py-2.5 text-xs leading-relaxed text-secondary">

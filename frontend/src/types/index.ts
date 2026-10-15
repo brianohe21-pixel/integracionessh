@@ -2203,6 +2203,7 @@ export type FlowNodeType =
   | "check_known_contact"
   | "create_lead"
   | "create_opportunity"
+  | "move_opportunity_stage"
   | "send_notification"
   | "assign_bot"
   | "webhook"
@@ -2325,6 +2326,10 @@ export interface FlowNodeData {
   opportunityAmountBinding?: string;
   opportunityCurrency?: string;
   opportunityStage?: OpportunityStage;
+  opportunityIdBinding?: string;
+  opportunityStageBinding?: string;
+  opportunityCloseReasonBinding?: string;
+  opportunityLossReason?: OpportunityLossReason;
   opportunityPhoneBinding?: string;
   opportunityNameBinding?: string;
   opportunityEmailBinding?: string;

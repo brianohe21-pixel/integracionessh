@@ -20,6 +20,7 @@ import { executeSaveContactNode } from "./save-contact.js";
 import { executeCheckKnownContactNode } from "./check-known-contact.js";
 import { executeCreateLeadNode } from "./create-lead.js";
 import { executeCreateOpportunityNode } from "./create-opportunity.js";
+import { executeMoveOpportunityStageNode } from "./move-opportunity-stage.js";
 import { executeSendNotificationNode } from "./send-notification.js";
 import { executeAssignBotNode } from "./assign-bot.js";
 import { executeAgentNode } from "./agent.js";
@@ -80,6 +81,8 @@ export async function executeNode(
       return executeCreateLeadNode(node, ctx, run);
     case "create_opportunity":
       return executeCreateOpportunityNode(node, ctx, run);
+    case "move_opportunity_stage":
+      return executeMoveOpportunityStageNode(node, ctx, run);
     case "send_notification":
       return executeSendNotificationNode(node, ctx, run);
     case "assign_bot":

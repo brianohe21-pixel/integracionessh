@@ -4646,6 +4646,7 @@ export const en: Messages = {
       check_known_contact: "Existing contact",
       create_lead: "Create lead",
       create_opportunity: "Create opportunity",
+      move_opportunity_stage: "Move opportunity stage",
       send_notification: "Send notification",
       assign_bot: "Add bot",
       webhook: "Webhook",
@@ -4800,12 +4801,18 @@ export const en: Messages = {
       opportunityTitleBinding: "Title",
       opportunityAmountBinding: "Amount",
       opportunityCurrency: "Currency",
-      opportunityStage: "Initial stage",
+      opportunityStage: "Stage",
       opportunityStageNew: "New",
       opportunityStageQuoted: "Quoted",
       opportunityStageNegotiation: "Negotiation",
       opportunityStageWon: "Won",
       opportunityStageLost: "Lost",
+      opportunityIdBinding: "Opportunity ID",
+      opportunityIdBindingHint:
+        "Usually {{opportunity_id}} from a previous Create opportunity node.",
+      opportunityCloseReasonBinding: "Close reason",
+      opportunityCloseReasonBindingHint:
+        "Optional note when moving to Won or Lost. Use {{last_input}} or {{form.reason}}.",
       opportunityPhoneBinding: "Phone",
       opportunityPhoneBindingHint:
         "From WhatsApp use {{phone}} or {{contact_phone}} (conversation number).",
@@ -4985,6 +4992,8 @@ export const en: Messages = {
       buttonBranches: "Each button has its own output. Maximum 3 buttons.",
       opportunityWhatsAppBindings:
         "WhatsApp variables: {{phone}} (phone), {{contact_name}} (profile name). For forms use {{form.field}}. The user's last message is {{last_input}}.",
+      moveOpportunityStage:
+        "Moves the deal in Sales. Use after Create opportunity so {{opportunity_id}} is available.",
     },
     previewModal: {
       title: "Flow preview",
@@ -5087,6 +5096,11 @@ export const en: Messages = {
         description: "Creates a sales opportunity with title, amount, and contact.",
         usage:
           "From WhatsApp use {{phone}} and {{contact_name}}. For forms use {{form.field}}. The last message is {{last_input}}.",
+      },
+      move_opportunity_stage: {
+        description: "Moves an existing sales opportunity to another pipeline stage.",
+        usage:
+          "Place it after Create opportunity. Uses {{opportunity_id}} by default and updates the sales pipeline.",
       },
       send_notification: {
         description: "Sends WhatsApp, SMS, or email to the recipient.",
