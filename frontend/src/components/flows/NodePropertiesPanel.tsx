@@ -25,6 +25,7 @@ import { FlowWebhookPanel } from "./FlowWebhookPanel";
 import { FlowWebhookGuideAccordion } from "./FlowWebhookGuideAccordion";
 import { TemplatePicker } from "@/components/templates/TemplatePicker";
 import { SendAudioNodeFields } from "@/components/flows/SendAudioNodeFields";
+import { CloudDriveFilePicker } from "@/components/flows/CloudDriveFilePicker";
 import { useWhatsAppChannels } from "@/hooks/useWhatsAppChannels";
 import { cn } from "@/lib/utils";
 
@@ -987,9 +988,28 @@ export function NodePropertiesPanel({
             </div>
             <div>
               <FieldLabel>{t("flows.fields.cloudDriveFileId")}</FieldLabel>
-              {textInput(d.cloudDriveFileId ?? "", (v) => onUpdate({ cloudDriveFileId: v }), {
-                placeholder: t("flows.fields.cloudDriveFileIdHint"),
-              })}
+              <CloudDriveFilePicker
+                provider={(d.cloudDriveProvider ?? "google-drive") as "google-drive" | "onedrive"}
+                targetType={(d.cloudDriveTargetType ?? "document") as "document" | "spreadsheet"}
+                value={d.cloudDriveFileId}
+                fileName={d.cloudDriveFileName}
+                onSelect={({ id, name }) =>
+                  onUpdate({ cloudDriveFileId: id, cloudDriveFileName: name })
+                }
+              />
+              <div className="mt-2">
+                {textInput(
+                  d.cloudDriveFileId ?? "",
+                  (v) =>
+                    onUpdate({
+                      cloudDriveFileId: v,
+                      ...(v !== d.cloudDriveFileId ? { cloudDriveFileName: undefined } : {}),
+                    }),
+                  {
+                    placeholder: t("flows.fields.cloudDriveFileIdHint"),
+                  }
+                )}
+              </div>
               <p className="mt-1.5 text-[11px] text-secondary">
                 {t("flows.fields.cloudDriveFileIdHelp")}
               </p>

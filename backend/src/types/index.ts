@@ -3454,6 +3454,7 @@ export interface FlowNodeData {
   cloudDriveProvider?: CloudDriveFlowProvider;
   cloudDriveTargetType?: CloudDriveFlowTargetType;
   cloudDriveFileId?: string;
+  cloudDriveFileName?: string;
   cloudDriveContent?: string;
   cloudDriveSheetName?: string;
   amountInCents?: number;

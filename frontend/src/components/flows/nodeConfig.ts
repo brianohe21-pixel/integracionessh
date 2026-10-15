@@ -298,7 +298,8 @@ export function buildNodePreview(
     case "cloud_drive_write": {
       const provider = data.cloudDriveProvider ?? "google-drive";
       const target = data.cloudDriveTargetType ?? "document";
-      return truncate(`${provider} · ${target} · ${data.cloudDriveFileId ?? ""}`);
+      const file = data.cloudDriveFileName || data.cloudDriveFileId || "";
+      return truncate(`${provider} · ${target} · ${file}`);
     }
     case "request_payment":
       return text(data.paymentDescription);
