@@ -43,7 +43,7 @@ function getCredentials(): OneDriveOAuthCredentials {
   const clientSecret = process.env.ONEDRIVE_CLIENT_SECRET?.trim() ?? "";
   const redirectUri =
     process.env.ONEDRIVE_REDIRECT_URI?.trim() ||
-    `${(process.env.API_PUBLIC_URL ?? "").replace(/\/$/, "")}/public/integrations/onedrive/oauth/callback`;
+    `${(process.env.API_PUBLIC_URL ?? "").replace(/\/$/, "")}/public/integrations/drive/onedrive/oauth/callback`;
   if (!clientId || !clientSecret || !redirectUri) {
     throw Object.assign(new Error("OneDrive OAuth is not configured"), {
       statusCode: 503,

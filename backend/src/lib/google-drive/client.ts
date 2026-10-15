@@ -44,7 +44,7 @@ function getCredentials(): GoogleOAuthCredentials {
   const clientSecret = process.env.GOOGLE_DRIVE_CLIENT_SECRET?.trim() ?? "";
   const redirectUri =
     process.env.GOOGLE_DRIVE_REDIRECT_URI?.trim() ||
-    `${(process.env.API_PUBLIC_URL ?? "").replace(/\/$/, "")}/public/integrations/google-drive/oauth/callback`;
+    `${(process.env.API_PUBLIC_URL ?? "").replace(/\/$/, "")}/public/integrations/drive/google-drive/oauth/callback`;
   if (!clientId || !clientSecret || !redirectUri) {
     throw Object.assign(new Error("Google Drive OAuth is not configured"), {
       statusCode: 503,

@@ -230,6 +230,22 @@ locals {
       function_arn = var.drive_function_arn
       protected    = true
     }
+    public_drive = {
+      path         = "/public/integrations/drive/{proxy+}"
+      slug         = "drive"
+      methods      = ["GET"]
+      invoke_arn   = var.drive_invoke_arn
+      function_arn = var.drive_function_arn
+      protected    = false
+    }
+    calendar = {
+      path         = "/calendar/{botId}/{proxy+}"
+      slug         = "calendar"
+      methods      = ["GET", "POST", "PUT", "PATCH", "DELETE"]
+      invoke_arn   = var.calendar_invoke_arn
+      function_arn = var.calendar_function_arn
+      protected    = true
+    }
     sales = {
       path         = "/sales/{proxy+}"
       slug         = "sales"
@@ -1209,20 +1225,6 @@ locals {
       function_arn = var.shopify_function_arn
       protected    = false
     }
-    public_google_drive_oauth_callback = {
-      route_key    = "GET /public/integrations/google-drive/oauth/callback"
-      slug         = "drive"
-      invoke_arn   = var.drive_invoke_arn
-      function_arn = var.drive_function_arn
-      protected    = false
-    }
-    public_onedrive_oauth_callback = {
-      route_key    = "GET /public/integrations/onedrive/oauth/callback"
-      slug         = "drive"
-      invoke_arn   = var.drive_invoke_arn
-      function_arn = var.drive_function_arn
-      protected    = false
-    }
     auth_portal_access = {
       route_key    = "GET /auth/portal-access"
       slug         = "tenants"
@@ -1477,153 +1479,6 @@ locals {
     }
     apps_list = {
       route_key    = "GET /apps"
-      slug         = "calendar"
-      invoke_arn   = var.calendar_invoke_arn
-      function_arn = var.calendar_function_arn
-      protected    = true
-    }
-    calendar_config_get = {
-      route_key    = "GET /calendar/{botId}/config"
-      slug         = "calendar"
-      invoke_arn   = var.calendar_invoke_arn
-      function_arn = var.calendar_function_arn
-      protected    = true
-    }
-    calendar_config_put = {
-      route_key    = "PUT /calendar/{botId}/config"
-      slug         = "calendar"
-      invoke_arn   = var.calendar_invoke_arn
-      function_arn = var.calendar_function_arn
-      protected    = true
-    }
-    calendar_enable = {
-      route_key    = "POST /calendar/{botId}/enable"
-      slug         = "calendar"
-      invoke_arn   = var.calendar_invoke_arn
-      function_arn = var.calendar_function_arn
-      protected    = true
-    }
-    calendar_disable = {
-      route_key    = "POST /calendar/{botId}/disable"
-      slug         = "calendar"
-      invoke_arn   = var.calendar_invoke_arn
-      function_arn = var.calendar_function_arn
-      protected    = true
-    }
-    calendar_slots = {
-      route_key    = "GET /calendar/{botId}/slots"
-      slug         = "calendar"
-      invoke_arn   = var.calendar_invoke_arn
-      function_arn = var.calendar_function_arn
-      protected    = true
-    }
-    calendar_bookings_list = {
-      route_key    = "GET /calendar/{botId}/bookings"
-      slug         = "calendar"
-      invoke_arn   = var.calendar_invoke_arn
-      function_arn = var.calendar_function_arn
-      protected    = true
-    }
-    calendar_bookings_create = {
-      route_key    = "POST /calendar/{botId}/bookings"
-      slug         = "calendar"
-      invoke_arn   = var.calendar_invoke_arn
-      function_arn = var.calendar_function_arn
-      protected    = true
-    }
-    calendar_bookings_patch = {
-      route_key    = "PATCH /calendar/{botId}/bookings/{bookingId}"
-      slug         = "calendar"
-      invoke_arn   = var.calendar_invoke_arn
-      function_arn = var.calendar_function_arn
-      protected    = true
-    }
-    calendar_public_link_get = {
-      route_key    = "GET /calendar/{botId}/public-link"
-      slug         = "calendar"
-      invoke_arn   = var.calendar_invoke_arn
-      function_arn = var.calendar_function_arn
-      protected    = true
-    }
-    calendar_public_link_enable = {
-      route_key    = "POST /calendar/{botId}/public-link/enable"
-      slug         = "calendar"
-      invoke_arn   = var.calendar_invoke_arn
-      function_arn = var.calendar_function_arn
-      protected    = true
-    }
-    calendar_public_link_disable = {
-      route_key    = "POST /calendar/{botId}/public-link/disable"
-      slug         = "calendar"
-      invoke_arn   = var.calendar_invoke_arn
-      function_arn = var.calendar_function_arn
-      protected    = true
-    }
-    calendar_public_link_rotate = {
-      route_key    = "POST /calendar/{botId}/public-link/rotate-key"
-      slug         = "calendar"
-      invoke_arn   = var.calendar_invoke_arn
-      function_arn = var.calendar_function_arn
-      protected    = true
-    }
-    calendar_waitlist_list = {
-      route_key    = "GET /calendar/{botId}/waitlist"
-      slug         = "calendar"
-      invoke_arn   = var.calendar_invoke_arn
-      function_arn = var.calendar_function_arn
-      protected    = true
-    }
-    calendar_waitlist_patch = {
-      route_key    = "PATCH /calendar/{botId}/waitlist/{waitlistId}"
-      slug         = "calendar"
-      invoke_arn   = var.calendar_invoke_arn
-      function_arn = var.calendar_function_arn
-      protected    = true
-    }
-    calendar_waitlist_convert = {
-      route_key    = "POST /calendar/{botId}/waitlist/{waitlistId}/convert"
-      slug         = "calendar"
-      invoke_arn   = var.calendar_invoke_arn
-      function_arn = var.calendar_function_arn
-      protected    = true
-    }
-    calendar_google_status = {
-      route_key    = "GET /calendar/{botId}/google"
-      slug         = "calendar"
-      invoke_arn   = var.calendar_invoke_arn
-      function_arn = var.calendar_function_arn
-      protected    = true
-    }
-    calendar_google_oauth_start = {
-      route_key    = "GET /calendar/{botId}/google/oauth/start"
-      slug         = "calendar"
-      invoke_arn   = var.calendar_invoke_arn
-      function_arn = var.calendar_function_arn
-      protected    = true
-    }
-    calendar_google_calendars_refresh = {
-      route_key    = "POST /calendar/{botId}/google/calendars/refresh"
-      slug         = "calendar"
-      invoke_arn   = var.calendar_invoke_arn
-      function_arn = var.calendar_function_arn
-      protected    = true
-    }
-    calendar_google_patch = {
-      route_key    = "PATCH /calendar/{botId}/google"
-      slug         = "calendar"
-      invoke_arn   = var.calendar_invoke_arn
-      function_arn = var.calendar_function_arn
-      protected    = true
-    }
-    calendar_google_delete = {
-      route_key    = "DELETE /calendar/{botId}/google"
-      slug         = "calendar"
-      invoke_arn   = var.calendar_invoke_arn
-      function_arn = var.calendar_function_arn
-      protected    = true
-    }
-    calendar_booking_retry_sync = {
-      route_key    = "POST /calendar/{botId}/bookings/{bookingId}/retry-sync"
       slug         = "calendar"
       invoke_arn   = var.calendar_invoke_arn
       function_arn = var.calendar_function_arn

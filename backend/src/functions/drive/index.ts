@@ -82,7 +82,11 @@ async function handlePublicRoutes(
   const method = event.requestContext.http.method;
   const rawPath = event.rawPath ?? event.requestContext.http.path ?? "";
 
-  if (method === "GET" && rawPath.includes("/public/integrations/google-drive/oauth/callback")) {
+  if (
+    method === "GET" &&
+    (rawPath.includes("/public/integrations/drive/google-drive/oauth/callback") ||
+      rawPath.includes("/public/integrations/google-drive/oauth/callback"))
+  ) {
     const code = queryValue(event, "code") ?? "";
     const state = queryValue(event, "state") ?? "";
     const oauthError = queryValue(event, "error");
@@ -100,7 +104,11 @@ async function handlePublicRoutes(
     return redirect(redirectUrl);
   }
 
-  if (method === "GET" && rawPath.includes("/public/integrations/onedrive/oauth/callback")) {
+  if (
+    method === "GET" &&
+    (rawPath.includes("/public/integrations/drive/onedrive/oauth/callback") ||
+      rawPath.includes("/public/integrations/onedrive/oauth/callback"))
+  ) {
     const code = queryValue(event, "code") ?? "";
     const state = queryValue(event, "state") ?? "";
     const oauthError = queryValue(event, "error");

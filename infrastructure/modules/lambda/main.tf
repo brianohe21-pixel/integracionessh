@@ -275,8 +275,8 @@ locals {
 
   google_calendar_redirect_uri = trimspace(var.api_public_url) != "" ? "${trimsuffix(trimspace(var.api_public_url), "/")}/public/integrations/google-calendar/oauth/callback" : ""
   shopify_redirect_uri         = trimspace(var.api_public_url) != "" ? "${trimsuffix(trimspace(var.api_public_url), "/")}/public/integrations/shopify/oauth/callback" : ""
-  google_drive_redirect_uri    = trimspace(var.api_public_url) != "" ? "${trimsuffix(trimspace(var.api_public_url), "/")}/public/integrations/google-drive/oauth/callback" : ""
-  onedrive_redirect_uri        = trimspace(var.api_public_url) != "" ? "${trimsuffix(trimspace(var.api_public_url), "/")}/public/integrations/onedrive/oauth/callback" : ""
+  google_drive_redirect_uri    = trimspace(var.api_public_url) != "" ? "${trimsuffix(trimspace(var.api_public_url), "/")}/public/integrations/drive/google-drive/oauth/callback" : ""
+  onedrive_redirect_uri        = trimspace(var.api_public_url) != "" ? "${trimsuffix(trimspace(var.api_public_url), "/")}/public/integrations/drive/onedrive/oauth/callback" : ""
 
   functions = {
     webhook = {
