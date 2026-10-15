@@ -653,6 +653,25 @@ export async function handler(
           auth.userId
         );
         if (!updated) return notFound("Opportunity not found");
+
+        if (parsed.data.tags !== undefined) {
+          const { syncOpportunityTagsAndRunActions } = await import("../../lib/tags/apply.js");
+          await syncOpportunityTagsAndRunActions({
+            tenantId: auth.tenantId,
+            opportunityId,
+            previousTags: existing.tags,
+            nextTags: parsed.data.tags,
+            changedBy: auth.userId,
+            ...(updated.phone ? { phone: updated.phone } : {}),
+          });
+          const refreshed = await getOpportunityById(auth.tenantId, opportunityId);
+          if (refreshed) {
+            const pipeline = await getPipelineById(auth.tenantId, refreshed.pipelineId);
+            const stage = pipeline ? findStageById(pipeline, refreshed.stageId) : undefined;
+            return ok(enrichOpportunity(refreshed, stage));
+          }
+        }
+
         const pipeline = await getPipelineById(auth.tenantId, updated.pipelineId);
         const stage = pipeline ? findStageById(pipeline, updated.stageId) : undefined;
         return ok(enrichOpportunity(updated, stage));

@@ -849,6 +849,84 @@ export interface Lead {
 
 export type OpportunityStage = "new" | "quoted" | "negotiation" | "won" | "lost";
 
+export type TagActionType =
+  | "move_opportunity_stage"
+  | "assign_advisor"
+  | "handoff"
+  | "enroll_sequence"
+  | "create_task"
+  | "set_consent"
+  | "apply_tags"
+  | "create_lead";
+
+export interface TagActionMoveOpportunityStage {
+  type: "move_opportunity_stage";
+  pipelineId: string;
+  stageId: string;
+  openOnly?: boolean;
+}
+
+export interface TagActionAssignAdvisor {
+  type: "assign_advisor";
+  advisorId: string;
+}
+
+export interface TagActionHandoff {
+  type: "handoff";
+  advisorId?: string;
+}
+
+export interface TagActionEnrollSequence {
+  type: "enroll_sequence";
+  sequenceId: string;
+}
+
+export interface TagActionCreateTask {
+  type: "create_task";
+  title: string;
+  description?: string;
+  dueInHours?: number;
+  advisorId?: string;
+  priority?: "low" | "medium" | "high" | "highest";
+}
+
+export interface TagActionSetConsent {
+  type: "set_consent";
+  marketingConsent: "opt_in" | "opt_out";
+}
+
+export interface TagActionApplyTags {
+  type: "apply_tags";
+  tags: string[];
+}
+
+export interface TagActionCreateLead {
+  type: "create_lead";
+  botId?: string;
+  tags?: string[];
+}
+
+export type TagAction =
+  | TagActionMoveOpportunityStage
+  | TagActionAssignAdvisor
+  | TagActionHandoff
+  | TagActionEnrollSequence
+  | TagActionCreateTask
+  | TagActionSetConsent
+  | TagActionApplyTags
+  | TagActionCreateLead;
+
+export interface TagDefinition {
+  tagId: string;
+  tenantId: string;
+  name: string;
+  color?: string;
+  description?: string;
+  onApply: TagAction[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface PipelineStage {
   stageId: string;
   key: string;

@@ -144,25 +144,48 @@ export async function saveContactFromFormData(params: {
   const now = new Date().toISOString();
 
   if (existing) {
+    const previousTags = existing.tags;
+    const nextTags = params.tags?.length
+      ? [...new Set([...existing.tags, ...params.tags])]
+      : existing.tags;
     await updateContact(params.tenantId, phone, {
       lastSeenAt: now,
       ...(params.botId ? { lastBotId: params.botId } : {}),
       ...(params.name ? { displayName: params.name } : {}),
       ...(params.email ? { email: params.email } : {}),
-      ...(params.tags?.length
-        ? { tags: [...new Set([...existing.tags, ...params.tags])] }
-        : {}),
+      ...(params.tags?.length ? { tags: nextTags } : {}),
     });
+    if (params.tags?.length) {
+      const { syncContactTagsAndRunActions } = await import("../tags/apply.js");
+      await syncContactTagsAndRunActions({
+        tenantId: params.tenantId,
+        phone,
+        previousTags,
+        nextTags,
+        changedBy: "flow:save_contact",
+      });
+    }
   } else {
+    const initialTags = params.tags ?? ["form"];
     await upsertFromConversation({
       tenantId: params.tenantId,
       phoneNumber: phone,
       ...(params.botId ? { botId: params.botId } : {}),
       source: "lead_capture",
-      tags: params.tags ?? ["form"],
+      tags: initialTags,
       ...(params.name ? { displayName: params.name } : {}),
       ...(params.email ? { email: params.email } : {}),
     });
+    if (initialTags.length) {
+      const { syncContactTagsAndRunActions } = await import("../tags/apply.js");
+      await syncContactTagsAndRunActions({
+        tenantId: params.tenantId,
+        phone,
+        previousTags: [],
+        nextTags: initialTags,
+        changedBy: "flow:save_contact",
+      });
+    }
   }
 
   if (params.linkConversationId && params.botId) {
