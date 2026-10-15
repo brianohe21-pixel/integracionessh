@@ -64,7 +64,10 @@ import {
   handleInboundOrder,
   isOrderInbound,
 } from "../catalog/order-handler.js";
-import { recordCampaignReply } from "../dynamodb/campaign.repository.js";
+import {
+  recordCampaignReply,
+  resolveCampaignAutoAssignAdvisor,
+} from "../dynamodb/campaign.repository.js";
 import {
   getSystemMessage,
   getBotLocale,
@@ -480,9 +483,18 @@ export async function processInboundMessage(
       replyToExternalId: externalId,
     });
 
-  await recordCampaignReply(tenantId, participantId, conversation.conversationId).catch((err) =>
-    console.warn("Failed to record campaign reply:", err)
-  );
+  const campaignReplyPhone =
+    conversation.phoneNumber || whatsappIdentity?.phoneNumber || participantId;
+  let repliedCampaignIds: string[] = [];
+  try {
+    repliedCampaignIds = await recordCampaignReply(
+      tenantId,
+      campaignReplyPhone,
+      conversation.conversationId
+    );
+  } catch (err) {
+    console.warn("Failed to record campaign reply:", err);
+  }
 
   const history = await getConversationMessages(tenantId, conversation.conversationId, 20);
   const existingUserIdx = history.findIndex(
@@ -834,6 +846,34 @@ export async function processInboundMessage(
   }
 
   conversation = (await getConversation(tenantId, botId, conversation.conversationId)) ?? conversation;
+
+  if (repliedCampaignIds.length > 0) {
+    const autoAssign = await resolveCampaignAutoAssignAdvisor(tenantId, repliedCampaignIds).catch(
+      (err) => {
+        console.warn("Failed to resolve campaign auto-assign advisor:", err);
+        return null;
+      }
+    );
+    const alreadyAssigned =
+      (conversation.handoffMode ?? "bot") === "human" && Boolean(conversation.assignedAdvisorId);
+    if (autoAssign && !alreadyAssigned) {
+      try {
+        const handedOff = await performHandoff({
+          tenantId,
+          botId,
+          conversationId: conversation.conversationId,
+          advisorId: autoAssign.advisorId,
+          reason: "campaign",
+        });
+        if (handedOff) conversation = handedOff;
+      } catch (err) {
+        console.warn(
+          `Campaign auto-assign failed campaign=${autoAssign.campaignId} advisor=${autoAssign.advisorId}:`,
+          err
+        );
+      }
+    }
+  }
 
   if ((conversation.handoffMode ?? "bot") === "human") {
     const refreshed = await getConversation(tenantId, botId, conversation.conversationId);

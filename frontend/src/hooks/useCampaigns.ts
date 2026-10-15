@@ -25,6 +25,8 @@ export interface CreateCampaignInput {
   audienceTags?: string[];
   requireOptIn?: boolean;
   requestDlr?: boolean;
+  advisorId?: string | null;
+  autoAssignAdvisor?: boolean;
 }
 
 export type UpdateCampaignInput = CreateCampaignInput;

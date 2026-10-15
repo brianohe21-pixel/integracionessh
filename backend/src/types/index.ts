@@ -569,7 +569,7 @@ export interface WhatsAppSyncStatus {
 
 export type HandoffMode = "bot" | "human";
 
-export type HandoffReason = "manual" | "ai" | "webhook" | "no_ai";
+export type HandoffReason = "manual" | "ai" | "webhook" | "no_ai" | "campaign";
 
 export interface AiAssistantConfig {
   enabled: boolean;
@@ -2201,6 +2201,8 @@ export interface Campaign {
   archivedAt?: string;
   requireOptIn?: boolean;
   requestDlr?: boolean;
+  advisorId?: string;
+  autoAssignAdvisor?: boolean;
 }
 
 export type SmsDlrSource = "campaign" | "template" | "api";

@@ -1,6 +1,7 @@
 import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
 import { z } from "zod";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
+import { getAdvisor } from "../../lib/dynamodb/advisor.repository.js";
 import {
   createCampaign,
   getCampaign,
@@ -114,7 +115,26 @@ const CampaignPayloadSchema = z.object({
   audienceTags: z.array(z.string().max(50)).max(20).optional(),
   requireOptIn: z.boolean().optional().default(true),
   requestDlr: z.boolean().optional().default(false),
+  advisorId: z.string().uuid().nullable().optional(),
+  autoAssignAdvisor: z.boolean().optional().default(false),
 });
+
+async function resolveActiveAdvisorId(
+  tenantId: string,
+  advisorId: string | null | undefined
+): Promise<{ ok: true; advisorId?: string | null } | { ok: false; response: APIGatewayProxyResultV2 }> {
+  if (advisorId === undefined) {
+    return { ok: true };
+  }
+  if (advisorId === null) {
+    return { ok: true, advisorId: null };
+  }
+  const advisor = await getAdvisor(tenantId, advisorId);
+  if (!advisor || advisor.status !== "active") {
+    return { ok: false, response: badRequest("Advisor not found or inactive") };
+  }
+  return { ok: true, advisorId };
+}
 
 const CreateCampaignSchema = CampaignPayloadSchema.superRefine((data, ctx) => {
   const hasRecipients = (data.recipients?.length ?? 0) > 0;
@@ -363,7 +383,14 @@ export async function handler(
         requireOptIn,
         requestDlr,
         batchConfig,
+        advisorId,
+        autoAssignAdvisor,
       } = parsed.data;
+
+      const advisorResult = await resolveActiveAdvisorId(auth.tenantId, advisorId);
+      if (!advisorResult.ok) return advisorResult.response;
+      const resolvedAdvisorId = advisorResult.advisorId;
+      const shouldAutoAssign = Boolean(autoAssignAdvisor && resolvedAdvisorId);
 
       let recipients = parsed.data.recipients ?? [];
       if (audienceTags?.length) {
@@ -423,6 +450,8 @@ export async function handler(
         ...(channel === "sms" && requestDlr ? { requestDlr: true } : {}),
         ...(scheduledAt ? { scheduledAt } : {}),
         ...(batchConfig ? { batchConfig } : {}),
+        ...(resolvedAdvisorId ? { advisorId: resolvedAdvisorId } : {}),
+        ...(shouldAutoAssign ? { autoAssignAdvisor: true } : {}),
         total: uniqueRecipients.length,
         createdAt: now,
         updatedAt: now,
@@ -464,7 +493,14 @@ export async function handler(
         requireOptIn,
         requestDlr,
         batchConfig,
+        advisorId,
+        autoAssignAdvisor,
       } = parsed.data;
+
+      const advisorResult = await resolveActiveAdvisorId(auth.tenantId, advisorId);
+      if (!advisorResult.ok) return advisorResult.response;
+      const resolvedAdvisorId = advisorResult.advisorId ?? null;
+      const shouldAutoAssign = Boolean(autoAssignAdvisor && resolvedAdvisorId);
 
       const uniqueRecipients = await resolveUniqueRecipients(auth.tenantId, {
         ...(parsed.data.recipients ? { recipients: parsed.data.recipients } : {}),
@@ -507,6 +543,8 @@ export async function handler(
         batchConfig: batchConfig ?? null,
         requireOptIn,
         requestDlr: channel === "sms" && requestDlr,
+        advisorId: resolvedAdvisorId,
+        autoAssignAdvisor: shouldAutoAssign,
         total: uniqueRecipients.length,
         status: nextStatus,
       });
@@ -701,6 +739,13 @@ export async function handler(
 
       const newCampaignId = makeCampaignId();
       const now = new Date().toISOString();
+      let clonedAdvisorId: string | undefined;
+      if (campaign.advisorId) {
+        const advisor = await getAdvisor(auth.tenantId, campaign.advisorId);
+        if (advisor?.status === "active") {
+          clonedAdvisorId = campaign.advisorId;
+        }
+      }
       const cloned = await createCampaign({
         campaignId: newCampaignId,
         tenantId: auth.tenantId,
@@ -714,6 +759,8 @@ export async function handler(
         requireOptIn: campaign.requireOptIn ?? false,
         ...(campaign.channel === "sms" && campaign.requestDlr ? { requestDlr: true } : {}),
         ...(campaign.batchConfig ? { batchConfig: campaign.batchConfig } : {}),
+        ...(clonedAdvisorId ? { advisorId: clonedAdvisorId } : {}),
+        ...(clonedAdvisorId && campaign.autoAssignAdvisor ? { autoAssignAdvisor: true } : {}),
         total: recipients.length,
         createdAt: now,
         updatedAt: now,

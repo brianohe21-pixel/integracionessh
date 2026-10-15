@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useMemo, useRef, useState, type ReactNode } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -18,6 +18,7 @@ import {
 import { useT } from "@/i18n/context";
 import { useBots } from "@/hooks/useBots";
 import { useTemplates } from "@/hooks/useTemplates";
+import { useAdvisors } from "@/hooks/useAdvisors";
 import type { CampaignRecipient } from "@/hooks/useCampaigns";
 import { SegmentInput } from "@/components/campaigns/SegmentInput";
 import { CampaignContactPicker } from "@/components/campaigns/CampaignContactPicker";
@@ -59,6 +60,7 @@ export interface CampaignConfigForm {
   language: string;
   segments: string[];
   scheduledAt: string;
+  advisorId: string;
 }
 
 export interface CampaignFormValues {
@@ -68,6 +70,7 @@ export interface CampaignFormValues {
   batchForm: BatchFormState;
   requireOptIn: boolean;
   requestDlr: boolean;
+  autoAssignAdvisor: boolean;
 }
 
 export interface CampaignFormSubmitInput {
@@ -83,6 +86,8 @@ export interface CampaignFormSubmitInput {
   audienceTags?: string[];
   requireOptIn?: boolean;
   requestDlr?: boolean;
+  advisorId?: string | null;
+  autoAssignAdvisor?: boolean;
 }
 
 interface CampaignFormWizardProps {
@@ -140,15 +145,28 @@ function SectionHeader({
   description: string;
 }) {
   return (
-    <div className="flex items-start gap-3 pb-1">
-      <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent-muted text-accent">
+    <div className="flex items-start gap-3">
+      <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-primary to-accent text-white shadow-sm shadow-brand-primary/25">
         {icon}
       </span>
-      <div className="min-w-0">
+      <div className="min-w-0 pt-0.5">
         <h3 className="text-sm font-semibold text-primary">{title}</h3>
-        <p className="text-xs text-muted">{description}</p>
+        <p className="mt-0.5 text-xs leading-relaxed text-secondary">{description}</p>
       </div>
     </div>
+  );
+}
+
+function FormSection({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <section
+      className={cn(
+        "space-y-4 rounded-2xl border border-brand-primary/10 bg-gradient-to-br from-surface-elevated via-surface-elevated to-brand-primary/[0.04] p-4 shadow-[var(--shadow-sm)] sm:p-5",
+        className
+      )}
+    >
+      {children}
+    </section>
   );
 }
 
@@ -173,6 +191,8 @@ export function campaignFormValuesFromCampaign(
     batchConfig?: { size: number; delaySeconds: number };
     requireOptIn?: boolean;
     requestDlr?: boolean;
+    advisorId?: string;
+    autoAssignAdvisor?: boolean;
   },
   recipients: CampaignRecipient[]
 ): CampaignFormValues {
@@ -197,12 +217,14 @@ export function campaignFormValuesFromCampaign(
       language: campaign.language,
       segments: campaign.segments,
       scheduledAt: toDatetimeLocalValue(campaign.scheduledAt),
+      advisorId: campaign.advisorId ?? "",
     },
     recipients,
     audienceTags: [],
     batchForm,
     requireOptIn: campaign.requireOptIn ?? false,
     requestDlr: campaign.requestDlr ?? false,
+    autoAssignAdvisor: Boolean(campaign.autoAssignAdvisor && campaign.advisorId),
   };
 }
 
@@ -229,6 +251,7 @@ export function CampaignFormWizard({
   const [batchForm, setBatchForm] = useState<BatchFormState>(initialValues.batchForm);
   const [requireOptIn, setRequireOptIn] = useState(initialValues.requireOptIn);
   const [requestDlr, setRequestDlr] = useState(initialValues.requestDlr);
+  const [autoAssignAdvisor, setAutoAssignAdvisor] = useState(initialValues.autoAssignAdvisor);
   const [parseError, setParseError] = useState("");
   const [submitError, setSubmitError] = useState("");
   const [dragOver, setDragOver] = useState(false);
@@ -237,8 +260,21 @@ export function CampaignFormWizard({
 
   const { data: bots = [], isLoading: botsLoading } = useBots();
   const { data: templates = [] } = useTemplates(config.botId || undefined, config.channel);
+  const { data: advisors = [] } = useAdvisors();
 
   const availableAgents = listOutreachAgents(bots, config.channel);
+  const selectableAdvisors = useMemo(() => {
+    const active = advisors.filter(
+      (advisor) =>
+        advisor.status === "active" &&
+        (!config.botId || !advisor.botIds?.length || advisor.botIds.includes(config.botId))
+    );
+    if (!config.advisorId) return active;
+    if (active.some((advisor) => advisor.advisorId === config.advisorId)) return active;
+    const current = advisors.find((advisor) => advisor.advisorId === config.advisorId);
+    return current ? [current, ...active] : active;
+  }, [advisors, config.advisorId, config.botId]);
+  const selectedAdvisor = advisors.find((advisor) => advisor.advisorId === config.advisorId);
   const configureAgentsHref = useMemo(() => {
     if (bots.length === 0) return "/bots/new";
     if (bots.length === 1) {
@@ -399,6 +435,8 @@ export function CampaignFormWizard({
         ...(audienceTags.length ? { audienceTags } : {}),
         requireOptIn,
         ...(config.channel === "sms" && requestDlr ? { requestDlr: true } : {}),
+        advisorId: config.advisorId || null,
+        autoAssignAdvisor: Boolean(config.advisorId && autoAssignAdvisor),
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : "";
@@ -434,80 +472,104 @@ export function CampaignFormWizard({
         : null;
 
   return (
-    <DashboardPage className="space-y-6">
+    <DashboardPage className="space-y-5">
       <PageHeader title={title} subtitle={subtitle} />
 
-      <div className="space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-xs font-medium text-muted">
-            {t("campaigns.stepProgress", {
-              current: stepIndex + 1,
-              total: STEPS.length,
-            })}
-          </p>
-          <p className="hidden text-xs text-secondary sm:block">{t(`campaigns.stepHint.${step}`)}</p>
-        </div>
+      <div className="overflow-hidden rounded-2xl border border-brand-primary/15 bg-gradient-to-br from-brand-primary/[0.08] via-surface-elevated to-surface-muted/80 shadow-[var(--shadow-sm)]">
+        <div className="h-1 bg-gradient-to-r from-brand-primary via-accent to-brand-primary/70" />
+        <div className="space-y-4 p-4 sm:p-5">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between sm:gap-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">
+                {t("campaigns.stepProgress", {
+                  current: stepIndex + 1,
+                  total: STEPS.length,
+                })}
+              </p>
+              <p className="mt-1 text-sm text-secondary">{t(`campaigns.stepHint.${step}`)}</p>
+            </div>
+            <p className="text-xs tabular-nums text-muted">
+              {Math.round(((stepIndex + 1) / STEPS.length) * 100)}%
+            </p>
+          </div>
 
-        <div
-          className="h-1.5 overflow-hidden rounded-full bg-surface-muted"
-          role="progressbar"
-          aria-valuenow={stepIndex + 1}
-          aria-valuemin={1}
-          aria-valuemax={STEPS.length}
-        >
           <div
-            className="h-full rounded-full bg-accent transition-all duration-300 ease-out"
-            style={{ width: `${((stepIndex + 1) / STEPS.length) * 100}%` }}
-          />
-        </div>
+            className="h-2 overflow-hidden rounded-full bg-surface-muted/90 ring-1 ring-brand-primary/10"
+            role="progressbar"
+            aria-valuenow={stepIndex + 1}
+            aria-valuemin={1}
+            aria-valuemax={STEPS.length}
+          >
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-brand-primary to-accent transition-all duration-300 ease-out"
+              style={{ width: `${((stepIndex + 1) / STEPS.length) * 100}%` }}
+            />
+          </div>
 
-        <nav aria-label={t("campaigns.newSubtitle")} className="flex flex-wrap items-center gap-2">
-          {STEPS.map((s, i) => {
-            const isActive = s === step;
-            const isComplete = stepIndex > i;
-            const isClickable = isComplete || i === stepIndex || i === stepIndex + 1;
-            return (
-              <Fragment key={s}>
+          <nav aria-label={t("campaigns.newSubtitle")} className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            {STEPS.map((s, i) => {
+              const isActive = s === step;
+              const isComplete = stepIndex > i;
+              const isClickable = isComplete || i === stepIndex || i === stepIndex + 1;
+              return (
                 <button
+                  key={s}
                   type="button"
                   onClick={() => goToStep(s)}
                   disabled={!isClickable || isSubmitting}
                   className={cn(
-                    "flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-all",
-                    isActive && "bg-accent text-white shadow-sm",
-                    isComplete && !isActive && "bg-accent-muted text-accent hover:bg-accent/15",
-                    !isActive && !isComplete && "bg-surface-muted text-muted",
+                    "flex items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all",
+                    isActive &&
+                      "bg-gradient-to-br from-brand-primary to-accent text-white shadow-md shadow-brand-primary/25",
+                    isComplete &&
+                      !isActive &&
+                      "border border-brand-primary/20 bg-accent-muted/70 text-accent hover:bg-accent-muted",
+                    !isActive &&
+                      !isComplete &&
+                      "border border-default bg-surface-elevated/80 text-muted",
                     isClickable && !isActive && "cursor-pointer",
-                    !isClickable && "cursor-default opacity-70"
+                    !isClickable && "cursor-default opacity-65"
                   )}
                 >
                   <span
                     className={cn(
-                      "flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold",
-                      isActive && "bg-white/20",
+                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold",
+                      isActive && "bg-white/20 text-white",
                       isComplete && !isActive && "bg-accent text-white",
-                      !isActive && !isComplete && "bg-surface-elevated/60"
+                      !isActive && !isComplete && "bg-surface-muted text-secondary"
                     )}
                   >
-                    {isComplete && !isActive ? <Check className="h-3 w-3" strokeWidth={3} /> : i + 1}
+                    {isComplete && !isActive ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : i + 1}
                   </span>
-                  {t(`campaigns.step.${s}`)}
+                  <span className="min-w-0">
+                    <span
+                      className={cn(
+                        "block text-sm font-semibold",
+                        isActive ? "text-white" : isComplete ? "text-accent" : "text-primary"
+                      )}
+                    >
+                      {t(`campaigns.step.${s}`)}
+                    </span>
+                    <span
+                      className={cn(
+                        "mt-0.5 block truncate text-[11px]",
+                        isActive ? "text-white/75" : "text-muted"
+                      )}
+                    >
+                      {t(`campaigns.stepHint.${s}`)}
+                    </span>
+                  </span>
                 </button>
-                {i < STEPS.length - 1 && (
-                  <ChevronRight className="hidden h-4 w-4 shrink-0 text-muted sm:block" />
-                )}
-              </Fragment>
-            );
-          })}
-        </nav>
-
-        <p className="text-xs text-secondary sm:hidden">{t(`campaigns.stepHint.${step}`)}</p>
+              );
+            })}
+          </nav>
+        </div>
       </div>
 
-      <div className="rounded-xl border border-default bg-surface-elevated p-5 sm:p-6">
+      <div className="rounded-2xl border border-brand-primary/10 bg-gradient-to-b from-surface-muted/40 via-canvas to-surface-muted/30 p-3 shadow-[var(--shadow-sm)] sm:p-4">
         {step === "config" && (
-          <div className="space-y-8">
-            <section className="space-y-4">
+          <div className="space-y-4">
+            <FormSection>
               <SectionHeader
                 icon={<MessageSquare className="h-4 w-4" />}
                 title={t("campaigns.sectionBasics")}
@@ -601,6 +663,52 @@ export function CampaignFormWizard({
                   </Alert>
                 )}
 
+                <div className="space-y-1.5">
+                  <label className="block text-sm font-medium text-secondary">
+                    {t("campaigns.advisorLabel")}
+                  </label>
+                  <SelectControl
+                    value={config.advisorId}
+                    onChange={(e) => {
+                      const nextAdvisorId = e.target.value;
+                      setConfig({ ...config, advisorId: nextAdvisorId });
+                      if (!nextAdvisorId) setAutoAssignAdvisor(false);
+                    }}
+                  >
+                    <option value="">{t("campaigns.advisorNone")}</option>
+                    {selectableAdvisors.map((advisor) => (
+                      <option key={advisor.advisorId} value={advisor.advisorId}>
+                        {advisor.name}
+                        {advisor.status !== "active" ? ` (${t("common.inactive")})` : ""}
+                      </option>
+                    ))}
+                  </SelectControl>
+                  <p className="text-xs text-muted">{t("campaigns.advisorHint")}</p>
+                </div>
+
+                <label
+                  className={cn(
+                    "flex items-start gap-3 rounded-xl border border-brand-primary/15 bg-surface-muted/40 px-3 py-3 transition-colors",
+                    config.advisorId
+                      ? "cursor-pointer hover:bg-accent-muted/40"
+                      : "cursor-not-allowed opacity-60"
+                  )}
+                >
+                  <input
+                    type="checkbox"
+                    checked={Boolean(config.advisorId && autoAssignAdvisor)}
+                    disabled={!config.advisorId}
+                    onChange={(e) => setAutoAssignAdvisor(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-default text-accent focus:ring-accent"
+                  />
+                  <span className="text-sm text-secondary">
+                    <span className="font-medium">{t("campaigns.autoAssignAdvisor")}</span>
+                    <span className="mt-0.5 block text-xs text-muted">
+                      {t("campaigns.autoAssignAdvisorHint")}
+                    </span>
+                  </span>
+                </label>
+
                 {config.botId && (
                   <div className="space-y-1.5">
                     <label className="block text-sm font-medium text-secondary">
@@ -645,11 +753,9 @@ export function CampaignFormWizard({
                   </div>
                 )}
               </div>
-            </section>
+            </FormSection>
 
-            <div className="border-t border-subtle" />
-
-            <section className="space-y-4">
+            <FormSection>
               <SectionHeader
                 icon={<Tags className="h-4 w-4" />}
                 title={t("campaigns.sectionOrganization")}
@@ -673,7 +779,7 @@ export function CampaignFormWizard({
                           setConfig({ ...config, segments: [...config.segments, preset] });
                         }
                       }}
-                      className="rounded-md bg-surface-muted px-2 py-1 text-xs text-secondary transition-colors hover:bg-gray-200"
+                      className="rounded-lg border border-brand-primary/15 bg-accent-muted/50 px-2.5 py-1 text-xs font-medium text-accent transition-colors hover:bg-accent-muted"
                     >
                       + {preset}
                     </button>
@@ -682,11 +788,9 @@ export function CampaignFormWizard({
                 <p className="text-xs text-muted">{t("campaigns.segmentsHint")}</p>
                 <p className="text-xs text-muted">{t("campaigns.leadSegmentsHint")}</p>
               </div>
-            </section>
+            </FormSection>
 
-            <div className="border-t border-subtle" />
-
-            <section className="space-y-4">
+            <FormSection>
               <SectionHeader
                 icon={<CalendarClock className="h-4 w-4" />}
                 title={t("campaigns.sectionDelivery")}
@@ -712,7 +816,7 @@ export function CampaignFormWizard({
                   totalRecipients={estimatedAudience || undefined}
                 />
 
-                <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-default px-3 py-3 transition-colors hover:bg-surface">
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-brand-primary/15 bg-surface-muted/40 px-3 py-3 transition-colors hover:bg-accent-muted/40">
                   <input
                     type="checkbox"
                     checked={requireOptIn}
@@ -728,7 +832,7 @@ export function CampaignFormWizard({
                 </label>
 
                 {config.channel === "sms" && (
-                  <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-default px-3 py-3 transition-colors hover:bg-surface">
+                  <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-brand-primary/15 bg-surface-muted/40 px-3 py-3 transition-colors hover:bg-accent-muted/40">
                     <input
                       type="checkbox"
                       checked={requestDlr}
@@ -744,12 +848,12 @@ export function CampaignFormWizard({
                   </label>
                 )}
               </div>
-            </section>
+            </FormSection>
           </div>
         )}
 
         {step === "recipients" && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {recipientsSource === "contacts" && recipients.length > 0 && (
               <Alert variant="info">
                 {recipients.length === 1
@@ -758,7 +862,7 @@ export function CampaignFormWizard({
               </Alert>
             )}
 
-            <section className="space-y-3">
+            <FormSection>
               <SectionHeader
                 icon={<Users className="h-4 w-4" />}
                 title={t("campaigns.sectionContacts")}
@@ -774,17 +878,17 @@ export function CampaignFormWizard({
                   requireOptIn={requireOptIn}
                 />
               </div>
-            </section>
+            </FormSection>
 
-            <div className="relative flex items-center gap-3 py-1">
-              <div className="h-px flex-1 bg-surface-muted" />
-              <span className="text-xs font-medium uppercase tracking-wide text-muted">
+            <div className="relative flex items-center gap-3 px-1 py-1">
+              <div className="h-px flex-1 bg-brand-primary/20" />
+              <span className="rounded-full bg-accent-muted px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-accent">
                 {t("campaigns.orDivider")}
               </span>
-              <div className="h-px flex-1 bg-surface-muted" />
+              <div className="h-px flex-1 bg-brand-primary/20" />
             </div>
 
-            <section className="space-y-3">
+            <FormSection>
               <SectionHeader
                 icon={<Tags className="h-4 w-4" />}
                 title={t("campaigns.sectionAudienceTags")}
@@ -797,17 +901,17 @@ export function CampaignFormWizard({
                   placeholder={t("campaigns.audienceTagsPlaceholder")}
                 />
               </div>
-            </section>
+            </FormSection>
 
-            <div className="relative flex items-center gap-3 py-1">
-              <div className="h-px flex-1 bg-surface-muted" />
-              <span className="text-xs font-medium uppercase tracking-wide text-muted">
+            <div className="relative flex items-center gap-3 px-1 py-1">
+              <div className="h-px flex-1 bg-brand-primary/20" />
+              <span className="rounded-full bg-accent-muted px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-accent">
                 {t("campaigns.orDivider")}
               </span>
-              <div className="h-px flex-1 bg-surface-muted" />
+              <div className="h-px flex-1 bg-brand-primary/20" />
             </div>
 
-            <section className="space-y-3">
+            <FormSection>
               <SectionHeader
                 icon={<FileSpreadsheet className="h-4 w-4" />}
                 title={t("campaigns.sectionCsv")}
@@ -832,12 +936,12 @@ export function CampaignFormWizard({
                   onDragLeave={() => setDragOver(false)}
                   onDrop={handleDrop}
                   className={cn(
-                    "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-8 text-center transition-colors",
+                    "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-10 text-center transition-all",
                     dragOver
-                      ? "border-accent bg-accent-muted/40"
+                      ? "border-accent bg-accent-muted/50 shadow-sm shadow-brand-primary/10"
                       : csvLoaded
                         ? "border-success/40 bg-[var(--alert-success-bg)]"
-                        : "border-default hover:border-accent/50 hover:bg-surface"
+                        : "border-brand-primary/25 bg-surface-muted/30 hover:border-accent/60 hover:bg-accent-muted/30"
                   )}
                 >
                   {csvLoaded ? (
@@ -932,19 +1036,20 @@ export function CampaignFormWizard({
                   </TableContainer>
                 )}
               </div>
-            </section>
+            </FormSection>
           </div>
         )}
 
         {step === "review" && (
-          <div className="space-y-5">
-            <SectionHeader
-              icon={<Check className="h-4 w-4" />}
-              title={t("campaigns.reviewTitle")}
-              description={t("campaigns.stepHint.review")}
-            />
+          <div className="space-y-4">
+            <FormSection>
+              <SectionHeader
+                icon={<Check className="h-4 w-4" />}
+                title={t("campaigns.reviewTitle")}
+                description={t("campaigns.stepHint.review")}
+              />
 
-            <dl className="divide-y divide-subtle rounded-xl border border-default bg-surface px-4 py-1 sm:pl-12">
+              <dl className="divide-y divide-brand-primary/10 overflow-hidden rounded-xl border border-brand-primary/10 bg-surface-muted/30 px-4 py-1 sm:ml-12">
               <div className="py-3">
                 <ReviewRow label={t("campaigns.nameLabel")}>{config.name}</ReviewRow>
               </div>
@@ -958,6 +1063,20 @@ export function CampaignFormWizard({
               <div className="py-3">
                 <ReviewRow label={t("outreach.agent")}>{selectedAgent?.name}</ReviewRow>
               </div>
+              <div className="py-3">
+                <ReviewRow label={t("campaigns.advisorLabel")}>
+                  {selectedAdvisor?.name ?? t("campaigns.advisorNone")}
+                </ReviewRow>
+              </div>
+              {config.advisorId ? (
+                <div className="py-3">
+                  <ReviewRow label={t("campaigns.autoAssignAdvisor")}>
+                    {autoAssignAdvisor
+                      ? t("campaigns.autoAssignAdvisorOn")
+                      : t("campaigns.autoAssignAdvisorOff")}
+                  </ReviewRow>
+                </div>
+              ) : null}
               <div className="py-3">
                 <ReviewRow label={t("bulkSend.template")}>
                   {config.templateName} ({config.language})
@@ -1007,7 +1126,8 @@ export function CampaignFormWizard({
                   </ReviewRow>
                 </div>
               )}
-            </dl>
+              </dl>
+            </FormSection>
 
             {config.channel === "whatsapp" && config.botId && (
               <CampaignQualityAlert
@@ -1018,23 +1138,27 @@ export function CampaignFormWizard({
             )}
 
             {selectedTemplate && isSmsTemplate(selectedTemplate) && (
-              <SmsTemplatePreview
-                template={selectedTemplate}
-                label={t("bulkSend.preview")}
-                variableValues={
-                  recipients[0]?.components?.[0]?.parameters?.map((p) => p.text ?? "") ?? undefined
-                }
-              />
+              <FormSection>
+                <SmsTemplatePreview
+                  template={selectedTemplate}
+                  label={t("bulkSend.preview")}
+                  variableValues={
+                    recipients[0]?.components?.[0]?.parameters?.map((p) => p.text ?? "") ?? undefined
+                  }
+                />
+              </FormSection>
             )}
 
             {selectedTemplate && !isSmsTemplate(selectedTemplate) && (
-              <TemplateMessagePreview
-                template={selectedTemplate}
-                label={t("bulkSend.preview")}
-                variableValues={
-                  recipients[0]?.components?.[0]?.parameters?.map((p) => p.text ?? "") ?? undefined
-                }
-              />
+              <FormSection>
+                <TemplateMessagePreview
+                  template={selectedTemplate}
+                  label={t("bulkSend.preview")}
+                  variableValues={
+                    recipients[0]?.components?.[0]?.parameters?.map((p) => p.text ?? "") ?? undefined
+                  }
+                />
+              </FormSection>
             )}
 
             {submitError && <Alert variant="danger">{submitError}</Alert>}
@@ -1042,7 +1166,7 @@ export function CampaignFormWizard({
         )}
       </div>
 
-      <div className="sticky bottom-0 z-10 -mx-1 border-t border-subtle bg-surface/95 px-1 py-3 backdrop-blur supports-[backdrop-filter]:bg-surface/80 sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+      <div className="sticky bottom-0 z-10 -mx-1 rounded-2xl border border-brand-primary/15 bg-gradient-to-r from-surface-elevated via-surface-elevated to-brand-primary/[0.06] px-3 py-3 shadow-[var(--shadow-md)] backdrop-blur supports-[backdrop-filter]:bg-surface-elevated/90 sm:static sm:mx-0">
         <div className="flex items-center justify-between gap-3">
           <Button
             type="button"

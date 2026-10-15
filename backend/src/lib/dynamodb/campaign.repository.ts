@@ -204,6 +204,8 @@ export async function updateCampaignDraft(
     batchConfig?: Campaign["batchConfig"] | null;
     requireOptIn?: boolean;
     requestDlr?: boolean;
+    advisorId?: string | null;
+    autoAssignAdvisor?: boolean;
     total?: number;
     status?: Extract<CampaignStatus, "draft" | "scheduled">;
   }
@@ -261,6 +263,20 @@ export async function updateCampaignDraft(
       setField("requestDlr", ":requestDlr", true);
     } else {
       removes.push("requestDlr");
+    }
+  }
+  if (patch.advisorId !== undefined) {
+    if (patch.advisorId === null) {
+      removes.push("advisorId");
+    } else {
+      setField("advisorId", ":advisorId", patch.advisorId);
+    }
+  }
+  if (patch.autoAssignAdvisor !== undefined) {
+    if (patch.autoAssignAdvisor) {
+      setField("autoAssignAdvisor", ":autoAssignAdvisor", true);
+    } else {
+      removes.push("autoAssignAdvisor");
     }
   }
   if (patch.total !== undefined) {
@@ -546,16 +562,42 @@ export async function recordCampaignReply(
   tenantId: string,
   phone: string,
   conversationId: string
-): Promise<void> {
+): Promise<string[]> {
   const lookups = await listCampaignLookupsForPhone(tenantId, phone);
+  const repliedCampaignIds: string[] = [];
   await Promise.all(
     lookups.map(async ({ campaignId, recipientSk }) => {
       const recorded = await markRecipientReplied(tenantId, recipientSk, conversationId);
       if (recorded) {
+        repliedCampaignIds.push(campaignId);
         await incrementCampaignReplyCount(tenantId, campaignId);
       }
     })
   );
+  return repliedCampaignIds;
+}
+
+export async function resolveCampaignAutoAssignAdvisor(
+  tenantId: string,
+  campaignIds: string[]
+): Promise<{ campaignId: string; advisorId: string } | null> {
+  if (campaignIds.length === 0) return null;
+
+  const campaigns = (
+    await Promise.all(campaignIds.map((campaignId) => getCampaign(tenantId, campaignId)))
+  ).filter((campaign): campaign is Campaign => Boolean(campaign));
+
+  const eligible = campaigns
+    .filter((campaign) => Boolean(campaign.autoAssignAdvisor && campaign.advisorId))
+    .sort((a, b) => {
+      const aAt = a.startedAt ?? a.createdAt;
+      const bAt = b.startedAt ?? b.createdAt;
+      return new Date(bAt).getTime() - new Date(aAt).getTime();
+    });
+
+  const selected = eligible[0];
+  if (!selected?.advisorId) return null;
+  return { campaignId: selected.campaignId, advisorId: selected.advisorId };
 }
 
 export interface CampaignRecipientRecord {
