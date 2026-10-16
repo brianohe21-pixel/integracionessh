@@ -32,6 +32,7 @@ export function throwGraphApiError(status: number, body: string): never {
         error_subcode?: number;
         error_user_msg?: string;
         message?: string;
+        type?: string;
         is_transient?: boolean;
       };
     };
@@ -64,6 +65,16 @@ export function throwGraphApiError(status: number, body: string): never {
       throw err;
     }
 
+    const isOAuthPermissionError =
+      graphError.code === 200 ||
+      (typeof graphError.type === "string" && /oauthexception/i.test(graphError.type));
+    if (isOAuthPermissionError) {
+      console.error("WhatsApp Graph API OAuth/permission error", { status, body });
+      const err = new Error(`WhatsApp API error ${status}`) as Error & { statusCode?: number };
+      err.statusCode = 502;
+      throw err;
+    }
+
     if (graphError.is_transient || graphError.code === 2) {
       const err = new Error(message) as Error & { statusCode?: number };
       err.statusCode = 502;
@@ -73,7 +84,8 @@ export function throwGraphApiError(status: number, body: string): never {
     if ((e as Error & { statusCode?: number }).statusCode) throw e;
   }
 
-  const err = new Error(`WhatsApp API error ${status}: ${body}`) as Error & { statusCode?: number };
+  console.error("WhatsApp Graph API error", { status, body });
+  const err = new Error(`WhatsApp API error ${status}`) as Error & { statusCode?: number };
   err.statusCode = 502;
   throw err;
 }

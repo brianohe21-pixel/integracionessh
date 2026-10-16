@@ -32,7 +32,8 @@ import {
   sendTemplateCreatedEmail,
 } from "../../lib/email/template-status-notify.js";
 import { sendSmsFromTemplate } from "../../lib/sms/send-outbound.js";
-import { ok, created, noContent, badRequest, notFound, handleError } from "../../lib/http.js";
+import { ok, created, noContent, badRequest, notFound } from "../../lib/http.js";
+import { handleIntegrationError } from "../../lib/integration-errors.js";
 import type { OutreachChannel, WhatsAppTemplate, TemplateComponent, SmsTemplate } from "../../types/index.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
@@ -551,6 +552,6 @@ export async function handler(
 
     return badRequest("Route not found");
   } catch (error) {
-    return handleError(error);
+    return handleIntegrationError(error, "whatsapp");
   }
 }

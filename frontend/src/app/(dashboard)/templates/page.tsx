@@ -16,6 +16,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import type { MessageTemplate, OutreachChannel } from "@/types";
 import { isSmsTemplate } from "@/types";
 import { OutreachChannelSelect } from "@/components/outreach/OutreachChannelSelect";
+import { IntegrationErrorSupport } from "@/components/support/IntegrationErrorSupport";
 import { SmsTemplatePreview } from "@/components/templates/SmsTemplatePreview";
 import { TemplateMessagePreview } from "@/components/templates/TemplateMessagePreview";
 import { TemplateEditorDialog } from "@/components/templates/TemplateEditorDialog";
@@ -522,11 +523,21 @@ export default function TemplatesPage() {
       )}
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-          <p className="text-sm text-red-600">{t("templates.loadErrorRetry")}</p>
-          {error instanceof Error && error.message && (
-            <p className="mt-2 text-xs text-red-700">{error.message}</p>
-          )}
+        <div className="space-y-2">
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+            <p className="text-sm text-red-600">{t("templates.loadErrorRetry")}</p>
+          </div>
+          {error instanceof Error && error.message ? (
+            channelFilter === "whatsapp" ? (
+              <IntegrationErrorSupport
+                integration="whatsapp"
+                error={error.message}
+                context={{ page: "/templates" }}
+              />
+            ) : (
+              <p className="text-xs text-red-700">{error.message}</p>
+            )
+          ) : null}
         </div>
       )}
 
@@ -842,9 +853,19 @@ export default function TemplatesPage() {
                 />
               )}
             </div>
-            {sendError && (
-              <p className="px-6 pb-2 text-sm text-red-600">{sendError}</p>
-            )}
+            {sendError ? (
+              <div className="px-6 pb-2">
+                {sendTarget && !isSmsTemplate(sendTarget) ? (
+                  <IntegrationErrorSupport
+                    integration="whatsapp"
+                    error={sendError}
+                    context={{ botId: sendTarget.botId, page: "/templates" }}
+                  />
+                ) : (
+                  <p className="text-sm text-red-600">{sendError}</p>
+                )}
+              </div>
+            ) : null}
             <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-default">
               <button
                 onClick={() => setSendTarget(null)}

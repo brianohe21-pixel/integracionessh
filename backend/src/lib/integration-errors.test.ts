@@ -30,4 +30,16 @@ describe("handleIntegrationError", () => {
     const body = parseBody(response);
     expect(body.error).toBe("PIN must be exactly 6 digits");
   });
+
+  it("masks WhatsApp OAuth API errors with reference", () => {
+    const response = handleIntegrationError(
+      Object.assign(new Error("WhatsApp API error 400"), { statusCode: 502 }),
+      "whatsapp"
+    );
+
+    expect(typeof response === "object" && "statusCode" in response ? response.statusCode : 0).toBe(502);
+    const body = parseBody(response);
+    expect(body.error).toMatch(/^Integration error\. Reference: INT-[A-Z0-9]{8}$/);
+    expect(body.error).not.toContain("OAuthException");
+  });
 });

@@ -44,14 +44,21 @@ const SAFE_ERROR_PATTERNS = [
   /only one voice flow can be enabled/i,
   /flow not found/i,
   /bot not found/i,
-  /integration error\. reference/i,
 ];
+
+const BACKEND_INT_REFERENCE = /(?:Reference:\s*)?(INT-[A-Z0-9]{8})\b/i;
 
 function createReferenceId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase();
   }
   return Date.now().toString(36).toUpperCase().slice(-8);
+}
+
+export function extractBackendIntegrationReference(message: string): string | null {
+  const match = message.trim().match(BACKEND_INT_REFERENCE);
+  if (!match?.[1]) return null;
+  return match[1].toUpperCase();
 }
 
 function integrationCategory(kind: IntegrationKind): SupportTicketCategory {
@@ -161,13 +168,14 @@ export function maskIntegrationError(
   context: IntegrationErrorContext = {}
 ): MaskedIntegrationError {
   const rawMessage = rawError.trim() || t("integrations.errors.generic");
-  const referenceId = createReferenceId();
+  const backendReference = extractBackendIntegrationReference(rawMessage);
+  const referenceId = backendReference ?? createReferenceId();
   const category = integrationCategory(kind);
   const integrationLabel = t(`integrations.errors.kinds.${kind}`);
   const localizedMessage =
     kind === "flow" ? localizeFlowError(rawMessage, t) : rawMessage;
 
-  const masked = shouldMask(rawMessage);
+  const masked = Boolean(backendReference) || shouldMask(rawMessage);
   const userMessage =
     masked
       ? kind === "flow"

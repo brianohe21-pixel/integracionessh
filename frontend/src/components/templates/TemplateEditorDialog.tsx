@@ -14,6 +14,7 @@ import { useT } from "@/i18n/context";
 import { SideDrawer } from "@/components/ui/SideDrawer";
 import { Button } from "@/components/ui/Button";
 import { Input, Select } from "@/components/ui/Input";
+import { IntegrationErrorSupport } from "@/components/support/IntegrationErrorSupport";
 import { SmsTemplatePreview } from "@/components/templates/SmsTemplatePreview";
 import { TemplateMessagePreview } from "@/components/templates/TemplateMessagePreview";
 import { AuthOtpTemplateFormFields } from "@/components/templates/channel/AuthOtpTemplateFormFields";
@@ -156,6 +157,27 @@ export function TemplateEditorDialog({
   const nameLocked = mode === "edit";
   const metaLocked = mode === "edit";
 
+  function renderError() {
+    if (!error) return null;
+    if (channel === "whatsapp") {
+      return (
+        <IntegrationErrorSupport
+          integration="whatsapp"
+          error={error}
+          context={{ botId: botId || undefined, page: "/templates" }}
+        />
+      );
+    }
+    return (
+      <div
+        role="alert"
+        className="rounded-xl border border-red-200 bg-red-50 px-4 py-3"
+      >
+        <p className="text-sm text-red-600">{error}</p>
+      </div>
+    );
+  }
+
   useEffect(() => {
     if (!error) return;
     formScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
@@ -268,14 +290,7 @@ export function TemplateEditorDialog({
       contentClassName="min-h-0 overflow-hidden"
       footer={
         <div className="flex flex-col gap-3">
-          {error ? (
-            <div
-              role="alert"
-              className="rounded-xl border border-red-200 bg-red-50 px-4 py-3"
-            >
-              <p className="text-sm text-red-600">{error}</p>
-            </div>
-          ) : null}
+          {renderError()}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className={`text-xs ${error ? "text-red-600" : "text-muted"}`}>
               {error
@@ -303,14 +318,7 @@ export function TemplateEditorDialog({
     >
       <div className="grid h-full min-h-0 lg:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)]">
         <div ref={formScrollRef} className="space-y-6 overflow-y-auto px-5 py-5">
-          {error && (
-            <div
-              role="alert"
-              className="rounded-xl border border-red-200 bg-red-50 px-4 py-3"
-            >
-              <p className="text-sm text-red-600">{error}</p>
-            </div>
-          )}
+          {renderError()}
 
           <section className="space-y-4 rounded-2xl border border-default bg-surface p-4">
             <SectionHeader
