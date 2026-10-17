@@ -20,6 +20,7 @@ const CreatePublicBookingSchema = z.object({
   startAt: z.string().datetime(),
   contactPhone: z.string().min(8).max(20),
   contactName: z.string().min(1).max(120),
+  contactEmail: z.string().email().max(254).optional(),
   notes: z.string().max(500).optional(),
 });
 
@@ -137,6 +138,7 @@ export async function handler(
         startAt: body.startAt,
         contactPhone: body.contactPhone,
         contactName: body.contactName,
+        ...(body.contactEmail ? { contactEmail: body.contactEmail } : {}),
         ...(body.notes ? { notes: body.notes } : {}),
         source: "public_link",
         environment: ENVIRONMENT,

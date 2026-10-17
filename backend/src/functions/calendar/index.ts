@@ -64,15 +64,55 @@ const ConfigSchema = z
     weeklySchedule: WeeklyScheduleSchema,
     reminderEnabled: z.boolean().optional(),
     reminderMinutesBefore: z.number().int().min(15).max(10080).optional(),
-    reminderChannel: z.enum(["whatsapp_text", "whatsapp_template"]).optional(),
+    reminderChannel: z.enum(["whatsapp_text", "whatsapp_template", "email"]).optional(),
     reminderMessage: z.string().max(500).optional(),
     reminderTemplateName: z.string().max(120).optional(),
     reminderTemplateLanguage: z.string().min(2).max(10).optional(),
+    ownerNotifyEnabled: z.boolean().optional(),
+    ownerNotifyEmail: z.boolean().optional(),
+    ownerNotifyWhatsApp: z.boolean().optional(),
+    ownerNotifyPhone: z.string().max(20).optional(),
+    ownerNotifyTemplateName: z.string().max(120).optional(),
+    ownerNotifyTemplateLanguage: z.string().min(2).max(10).optional(),
     autoCollectPayment: z.boolean().optional(),
     bookingPriceInCents: z.number().int().min(1000).max(100_000_000).optional(),
     waitlistEnabled: z.boolean().optional(),
   })
   .superRefine((data, ctx) => {
+    if (data.ownerNotifyEnabled) {
+      const emailOn = data.ownerNotifyEmail !== false;
+      const whatsappOn = Boolean(data.ownerNotifyWhatsApp);
+      if (!emailOn && !whatsappOn) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Select at least one owner notification channel",
+          path: ["ownerNotifyEmail"],
+        });
+      }
+      if (whatsappOn) {
+        if (!data.ownerNotifyPhone?.replace(/\D/g, "")) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "ownerNotifyPhone is required for WhatsApp owner notifications",
+            path: ["ownerNotifyPhone"],
+          });
+        }
+        if (!data.ownerNotifyTemplateName?.trim()) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "ownerNotifyTemplateName is required for WhatsApp owner notifications",
+            path: ["ownerNotifyTemplateName"],
+          });
+        }
+        if (!data.ownerNotifyTemplateLanguage?.trim()) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "ownerNotifyTemplateLanguage is required for WhatsApp owner notifications",
+            path: ["ownerNotifyTemplateLanguage"],
+          });
+        }
+      }
+    }
     if (!data.reminderEnabled) return;
     const channel = data.reminderChannel ?? "whatsapp_text";
     if (channel === "whatsapp_template") {
@@ -103,6 +143,7 @@ const CreateBookingSchema = z.object({
   startAt: z.string().datetime(),
   contactPhone: z.string().min(8).max(20),
   contactName: z.string().max(120).optional(),
+  contactEmail: z.string().email().max(254).optional(),
   conversationId: z.string().uuid().optional(),
   notes: z.string().max(500).optional(),
 });
@@ -286,6 +327,7 @@ export async function handler(
         startAt: body.startAt,
         contactPhone: body.contactPhone,
         ...(body.contactName ? { contactName: body.contactName } : {}),
+        ...(body.contactEmail ? { contactEmail: body.contactEmail } : {}),
         ...(body.conversationId ? { conversationId: body.conversationId } : {}),
         ...(body.notes ? { notes: body.notes } : {}),
         source: "manual",

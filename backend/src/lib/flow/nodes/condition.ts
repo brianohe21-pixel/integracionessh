@@ -2,6 +2,7 @@ import type { FlowNode, FlowRun } from "../../../types/index.js";
 import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
 import { buildBindingContext, resolveBindingValue } from "../binding.js";
 import { getNextNodeId } from "../graph.js";
+import { evaluateConditionMatch } from "./condition-match.js";
 
 export async function executeConditionNode(
   node: FlowNode,
@@ -25,15 +26,7 @@ export async function executeConditionNode(
     source = run.variables[variable] ?? resolveBindingValue(`{{${variable}}}`, bindingContext);
   }
 
-  let match = false;
-  if (operator === "contains") {
-    match = source.toLowerCase().includes(expected.toLowerCase());
-  } else if (operator === "equals") {
-    match = source.toLowerCase() === expected.toLowerCase();
-  } else if (operator === "not_equals") {
-    match = source.toLowerCase() !== expected.toLowerCase();
-  }
-
+  const match = evaluateConditionMatch(source, operator, expected);
   const handle = match ? "true" : "false";
   return {
     nextNodeId: getNextNodeId(ctx.flow, node.id, handle),

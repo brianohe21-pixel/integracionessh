@@ -2898,7 +2898,7 @@ export type CalendarProviderType = "native" | "google";
 export type GoogleCalendarStatus = "pending" | "active" | "error";
 export type ExternalSyncStatus = "pending" | "synced" | "failed";
 
-export type CalendarReminderChannel = "whatsapp_text" | "whatsapp_template";
+export type CalendarReminderChannel = "whatsapp_text" | "whatsapp_template" | "email";
 export type BookingReminderStatus = "scheduled" | "sent" | "skipped" | "cancelled";
 
 export interface CalendarConfig {
@@ -2926,6 +2926,12 @@ export interface CalendarConfig {
   reminderMessage?: string;
   reminderTemplateName?: string;
   reminderTemplateLanguage?: string;
+  ownerNotifyEnabled?: boolean;
+  ownerNotifyEmail?: boolean;
+  ownerNotifyWhatsApp?: boolean;
+  ownerNotifyPhone?: string;
+  ownerNotifyTemplateName?: string;
+  ownerNotifyTemplateLanguage?: string;
   autoCollectPayment?: boolean;
   bookingPriceInCents?: number;
   waitlistEnabled?: boolean;
@@ -2963,6 +2969,7 @@ export interface Booking {
   botId: string;
   contactPhone: string;
   contactName?: string;
+  contactEmail?: string;
   conversationId?: string;
   startAt: string;
   endAt: string;
@@ -3355,6 +3362,7 @@ export type FlowNodeType =
   | "template"
   | "condition"
   | "buttons"
+  | "list"
   | "meta_flow"
   | "handoff"
   | "delay"
@@ -3431,9 +3439,14 @@ export interface FlowNodeData {
   templateLanguage?: string;
   templateVariables?: Record<string, string>;
   conditionVariable?: string;
-  conditionOperator?: "contains" | "equals" | "not_equals";
+  conditionOperator?: "contains" | "equals" | "not_equals" | "matches" | "not_matches";
   conditionValue?: string;
   buttons?: Array<{ id: string; title: LocalizedText }>;
+  listButtonText?: LocalizedText;
+  listSectionTitle?: LocalizedText;
+  listHeaderText?: LocalizedText;
+  listFooterText?: LocalizedText;
+  listItems?: Array<{ id: string; title: LocalizedText; description?: LocalizedText }>;
   metaFlowId?: string;
   metaFlowCta?: LocalizedText;
   delaySeconds?: number;

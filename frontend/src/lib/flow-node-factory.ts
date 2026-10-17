@@ -18,6 +18,11 @@ export function buildDefaultNodeData(
     defaultData.messageText = "";
     defaultData.buttons = [{ id: "btn-1", title: "" }];
   }
+  if (type === "list") {
+    defaultData.messageText = "";
+    defaultData.listButtonText = "";
+    defaultData.listItems = [{ id: "row-1", title: "", description: "" }];
+  }
   if (type === "delay") defaultData.delaySeconds = 5;
   if (type === "condition") {
     defaultData.conditionVariable = "form.phone";

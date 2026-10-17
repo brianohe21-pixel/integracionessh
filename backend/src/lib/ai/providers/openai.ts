@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import type { BotLocale, Message } from "../../../types/index.js";
 import { messageRequestsHandoff } from "../../advisor/keywords.js";
 import { getCalendarConfig } from "../../dynamodb/calendar-config.repository.js";
+import { getContactByPhone } from "../../dynamodb/contact.repository.js";
 import {
   createBookingForBot,
   formatBookingConfirmation,
@@ -173,6 +174,9 @@ async function executeCalendarToolCall(params: {
     if (!parsed.startAt) {
       return JSON.stringify({ error: "startAt is required" });
     }
+    const contact = await getContactByPhone(tenantId, calendarContext.contactPhone).catch(
+      () => null
+    );
     const result = await createBookingForBot({
       tenantId,
       botId,
@@ -180,6 +184,7 @@ async function executeCalendarToolCall(params: {
       contactPhone: calendarContext.contactPhone,
       conversationId: calendarContext.conversationId,
       ...(parsed.contactName ? { contactName: parsed.contactName } : {}),
+      ...(contact?.email ? { contactEmail: contact.email } : {}),
       source: "openai",
     });
     const booking = result.booking;

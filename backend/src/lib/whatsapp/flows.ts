@@ -248,3 +248,86 @@ export async function sendInteractiveButtons(
   if (!response.ok) throwGraphApiError(response.status, await response.text());
   return response.json() as Promise<{ messages: Array<{ id: string }> }>;
 }
+
+export interface SendInteractiveListRow {
+  id: string;
+  title: string;
+  description?: string;
+}
+
+export interface SendInteractiveListOptions {
+  phoneNumberId: string;
+  to: string;
+  accessToken: string;
+  bodyText: string;
+  buttonText: string;
+  rows: SendInteractiveListRow[];
+  sectionTitle?: string;
+  headerText?: string;
+  footerText?: string;
+  replyToMessageId?: string;
+}
+
+export function buildInteractiveListPayload(options: SendInteractiveListOptions): Record<string, unknown> {
+  const rows = options.rows.slice(0, 10).map((row) => {
+    const entry: Record<string, string> = {
+      id: row.id.slice(0, 200),
+      title: row.title.slice(0, 24),
+    };
+    const description = row.description?.trim();
+    if (description) entry.description = description.slice(0, 72);
+    return entry;
+  });
+
+  const section: Record<string, unknown> = { rows };
+  const sectionTitle = options.sectionTitle?.trim();
+  if (sectionTitle) section.title = sectionTitle.slice(0, 24);
+
+  const interactive: Record<string, unknown> = {
+    type: "list",
+    body: { text: options.bodyText.slice(0, 1024) },
+    action: {
+      button: options.buttonText.slice(0, 20) || "Options",
+      sections: [section],
+    },
+  };
+
+  const headerText = options.headerText?.trim();
+  if (headerText) {
+    interactive.header = { type: "text", text: headerText.slice(0, 60) };
+  }
+  const footerText = options.footerText?.trim();
+  if (footerText) {
+    interactive.footer = { text: footerText.slice(0, 60) };
+  }
+
+  const body: Record<string, unknown> = {
+    messaging_product: "whatsapp",
+    recipient_type: "individual",
+    ...buildWhatsAppRecipientFields(options.to),
+    type: "interactive",
+    interactive,
+  };
+
+  if (options.replyToMessageId) {
+    body.context = { message_id: options.replyToMessageId };
+  }
+
+  return body;
+}
+
+export async function sendInteractiveList(
+  options: SendInteractiveListOptions
+): Promise<{ messages: Array<{ id: string }> }> {
+  const body = buildInteractiveListPayload(options);
+  const response = await fetch(`${GRAPH_API_URL}/${options.phoneNumberId}/messages`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${options.accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) throwGraphApiError(response.status, await response.text());
+  return response.json() as Promise<{ messages: Array<{ id: string }> }>;
+}

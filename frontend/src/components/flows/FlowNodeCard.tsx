@@ -34,17 +34,19 @@ function FlowNodeCardComponent({ id, data, selected }: NodeProps) {
   const meta = FLOW_NODE_META[nodeData.flowType] ?? fallbackMeta;
   const styles = CATEGORY_STYLES[meta.category];
   const Icon = meta.icon;
+  const isList = nodeData.flowType === "list";
+  const branchItemLabel = isList ? t("flows.fields.listItem") : t("flows.fields.button");
   const buttons =
-    nodeData.flowType === "buttons"
+    nodeData.flowType === "buttons" || isList
       ? nodeData.buttons?.length
         ? nodeData.buttons.map((btn, index) => {
             const title = resolveLocalizedText(btn.title, locale).trim();
             return {
               id: btn.id,
-              title: title || `${t("flows.fields.button")} ${index + 1}`,
+              title: title || `${branchItemLabel} ${index + 1}`,
             };
           })
-        : [{ id: "btn-1", title: `${t("flows.fields.button")} 1` }]
+        : [{ id: "btn-1", title: `${branchItemLabel} 1` }]
       : [];
   const canDelete = actions?.canDeleteNode(id) ?? false;
 

@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { X, Trash2, Save } from "lucide-react";
 import { useT } from "@/i18n/context";
 import type { FlowNode } from "@/types";
 import { Button } from "@/components/ui/Button";
 import { NodePropertiesPanel } from "./NodePropertiesPanel";
 import { FLOW_NODE_META, CATEGORY_STYLES } from "./nodeConfig";
+import { cn } from "@/lib/utils";
 
 interface NodePropertiesModalProps {
   selected: FlowNode | undefined;
@@ -46,6 +48,11 @@ export function NodePropertiesModal({
   saveError = "",
 }: NodePropertiesModalProps) {
   const t = useT();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!selected) return;
@@ -63,7 +70,7 @@ export function NodePropertiesModal({
     if (saved) onClose();
   }
 
-  if (!selected) return null;
+  if (!selected || !mounted) return null;
 
   const fallbackMeta = {
     category: "messaging" as const,
@@ -74,15 +81,19 @@ export function NodePropertiesModal({
   const meta = FLOW_NODE_META[selected.type] ?? fallbackMeta;
   const styles = CATEGORY_STYLES[meta.category];
   const Icon = meta.icon;
+  const isListNode = selected.type === "list";
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      className="fixed inset-0 z-[200] flex items-end justify-center bg-black/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
       onClick={onClose}
       style={{ animation: "fadeIn 0.15s ease-out" }}
     >
       <div
-        className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-default bg-surface-elevated shadow-2xl sm:max-h-[88vh] sm:rounded-2xl"
+        className={cn(
+          "flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-2xl border border-default bg-surface-elevated shadow-2xl sm:max-h-[88vh] sm:rounded-2xl",
+          isListNode ? "max-w-5xl" : "max-w-2xl"
+        )}
         role="dialog"
         aria-modal="true"
         aria-labelledby="node-properties-title"
@@ -122,7 +133,7 @@ export function NodePropertiesModal({
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 scrollbar-visible">
           <NodePropertiesPanel
             selected={selected}
             flowId={flowId}
@@ -174,16 +185,17 @@ export function NodePropertiesModal({
           to { opacity: 1; }
         }
         @keyframes slideUp {
-          from { 
+          from {
             opacity: 0;
             transform: translateY(20px) scale(0.98);
           }
-          to { 
+          to {
             opacity: 1;
             transform: translateY(0) scale(1);
           }
         }
       `}</style>
-    </div>
+    </div>,
+    document.body
   );
 }

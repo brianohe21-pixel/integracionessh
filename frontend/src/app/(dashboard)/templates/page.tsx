@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useT } from "@/i18n/context";
 import { useFormatters } from "@/hooks/useFormatters";
 import {
@@ -82,7 +83,10 @@ function sendSlotLabel(
 
 export default function TemplatesPage() {
   const t = useT();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { formatDate } = useFormatters();
+  const openedCreateFromQuery = useRef(false);
 
   const STATUS_BADGE = useMemo(
     () => ({
@@ -152,19 +156,48 @@ export default function TemplatesPage() {
   const [formError, setFormError] = useState("");
   const [sendError, setSendError] = useState("");
 
-  function openCreate() {
+  function openCreate(options?: { botId?: string; channel?: OutreachChannel }) {
     setFormError("");
     setFormName("");
     setFormLanguage("es");
     setFormCategory("UTILITY");
-    setDialogChannel(channelFilter);
-    setFormBotId(botFilter);
+    setDialogChannel(options?.channel ?? channelFilter);
+    setFormBotId(options?.botId ?? botFilter);
     setWhatsappForm(EMPTY_WHATSAPP_FORM);
     setAuthOtpForm(EMPTY_AUTH_OTP_FORM);
     setSmsForm(EMPTY_SMS_FORM);
     setEditingTemplate(null);
     setDialogMode("create");
   }
+
+  useEffect(() => {
+    if (openedCreateFromQuery.current) return;
+    if (searchParams.get("create") !== "1") return;
+    openedCreateFromQuery.current = true;
+    const botId = searchParams.get("botId")?.trim() || "";
+    const channelParam = searchParams.get("channel");
+    const channel: OutreachChannel =
+      channelParam === "sms" || channelParam === "whatsapp" ? channelParam : "whatsapp";
+    if (botId) setBotFilter(botId);
+    setChannelFilter(channel);
+    setFormError("");
+    setFormName("");
+    setFormLanguage("es");
+    setFormCategory("UTILITY");
+    setDialogChannel(channel);
+    setFormBotId(botId);
+    setWhatsappForm(EMPTY_WHATSAPP_FORM);
+    setAuthOtpForm(EMPTY_AUTH_OTP_FORM);
+    setSmsForm(EMPTY_SMS_FORM);
+    setEditingTemplate(null);
+    setDialogMode("create");
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("create");
+    params.delete("botId");
+    params.delete("channel");
+    const qs = params.toString();
+    router.replace(qs ? `/templates?${qs}` : "/templates", { scroll: false });
+  }, [searchParams, router]);
 
   function openEdit(template: MessageTemplate) {
     if (isSmsTemplate(template)) {
@@ -431,7 +464,7 @@ export default function TemplatesPage() {
             <button
               type="button"
               data-tour="templates-create"
-              onClick={openCreate}
+              onClick={() => openCreate()}
               className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover"
             >
               <Plus className="h-4 w-4" />
@@ -548,7 +581,7 @@ export default function TemplatesPage() {
           description={t("templates.emptyDescription")}
           action={
             <button
-              onClick={openCreate}
+              onClick={() => openCreate()}
               className="flex items-center gap-2 px-4 py-2 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-hover transition-colors"
             >
               <Plus className="w-4 h-4" />

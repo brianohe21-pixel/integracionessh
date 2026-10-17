@@ -31,6 +31,7 @@ export default function PublicBookPage() {
   const [waitlistScope, setWaitlistScope] = useState<WaitlistScope>("date");
   const [contactName, setContactName] = useState("");
   const [contactPhone, setContactPhone] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
   const [waitlistNotes, setWaitlistNotes] = useState("");
   const [booking, setBooking] = useState<PublicBookingResult["booking"] | null>(null);
   const [waitlistEntry, setWaitlistEntry] = useState<WaitlistEntry | null>(null);
@@ -132,6 +133,7 @@ export default function PublicBookPage() {
         startAt: selectedSlot.startAt,
         contactName: contactName.trim(),
         contactPhone: contactPhone.trim(),
+        ...(contactEmail.trim() ? { contactEmail: contactEmail.trim() } : {}),
       });
       if (result.payment?.checkoutUrl) {
         window.location.href = result.payment.checkoutUrl;
@@ -345,6 +347,18 @@ export default function PublicBookPage() {
                   maxLength={20}
                   value={contactPhone}
                   onChange={(e) => setContactPhone(e.target.value)}
+                  className="w-full rounded-lg border border-default px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-secondary">
+                  {t("publicBook.email")}
+                </label>
+                <input
+                  type="email"
+                  maxLength={254}
+                  value={contactEmail}
+                  onChange={(e) => setContactEmail(e.target.value)}
                   className="w-full rounded-lg border border-default px-3 py-2 text-sm"
                 />
               </div>

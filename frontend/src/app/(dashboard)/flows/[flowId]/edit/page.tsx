@@ -266,6 +266,10 @@ export default function EditFlowPage() {
     if (type === "buttons") {
       node.data.messageText = t("flows.fields.defaultButtonPrompt");
     }
+    if (type === "list") {
+      node.data.messageText = t("flows.fields.defaultButtonPrompt");
+      node.data.listButtonText = t("flows.fields.defaultListButton");
+    }
     const nodes = [...localNodes, node];
     canvasAutosaveRef.current = true;
     commitHistory({ nodes, edges: localEdges });

@@ -107,7 +107,7 @@ export function awaitOrderNode(
 export function conditionNode(
   id: string,
   conditionVariable: string,
-  conditionOperator: "contains" | "equals" | "not_equals",
+  conditionOperator: "contains" | "equals" | "not_equals" | "matches" | "not_matches",
   conditionValue: string,
   label: string,
   x: number,

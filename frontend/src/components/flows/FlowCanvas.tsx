@@ -73,7 +73,10 @@ function toReactFlowNodes(
       flowType: n.type,
       typeLabel: getTypeLabel(n.type),
       preview: buildNodePreview(n.type, n.data, locale, botNames),
-      buttons: n.data.buttons,
+      buttons:
+        n.type === "list"
+          ? n.data.listItems?.map((item) => ({ id: item.id, title: item.title }))
+          : n.data.buttons,
       trueLabel: getBranchLabel("true"),
       falseLabel: getBranchLabel("false"),
     },
@@ -277,11 +280,7 @@ function FlowCanvasInner({
     if (fp === lastExternalFingerprintRef.current) return;
 
     const local = fromReactFlow(nodesRef.current, edgesRef.current, flow);
-    if (fingerprint(local.nodes, local.edges) === fp) {
-      lastExternalFingerprintRef.current = fp;
-      return;
-    }
-
+    const localMatches = fingerprint(local.nodes, local.edges) === fp;
     lastExternalFingerprintRef.current = fp;
     skipNextNotifyRef.current = true;
     const nextNodes = toReactFlowNodes(
@@ -292,12 +291,13 @@ function FlowCanvasInner({
       locale,
       botNames
     );
-    const nextEdges = toReactFlowEdges(flow.edges, flow.nodes);
     setNodes((current) => {
       const merged = mergeReactFlowNodes(current, nextNodes);
       nodesRef.current = merged;
       return merged;
     });
+    if (localMatches) return;
+    const nextEdges = toReactFlowEdges(flow.edges, flow.nodes);
     setEdges((current) => {
       const merged = mergeReactFlowEdges(current, nextEdges);
       edgesRef.current = merged;
@@ -324,7 +324,10 @@ function FlowCanvasInner({
           flowType: flowNode.type,
           typeLabel: getTypeLabelRef.current(flowNode.type),
           preview: buildNodePreview(flowNode.type, flowNode.data, locale, botNames),
-          buttons: flowNode.data.buttons,
+          buttons:
+            flowNode.type === "list"
+              ? flowNode.data.listItems?.map((item) => ({ id: item.id, title: item.title }))
+              : flowNode.data.buttons,
           trueLabel: getBranchLabelRef.current("true"),
           falseLabel: getBranchLabelRef.current("false"),
         };
