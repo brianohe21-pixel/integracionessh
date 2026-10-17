@@ -3,8 +3,9 @@
 import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { Trash2 } from "lucide-react";
-import type { FlowNodeType } from "@/types";
-import { useT } from "@/i18n/context";
+import type { FlowNodeType, LocalizedText } from "@/types";
+import { useLocale, useT } from "@/i18n/context";
+import { resolveLocalizedText } from "@/lib/localized-text";
 import { cn } from "@/lib/utils";
 import { CATEGORY_STYLES, FLOW_NODE_META } from "./nodeConfig";
 import { useFlowNodeActions } from "./FlowNodeActionsContext";
@@ -13,7 +14,7 @@ export interface FlowNodeCardData {
   flowType: FlowNodeType;
   typeLabel: string;
   preview: string;
-  buttons?: Array<{ id: string; title: string }>;
+  buttons?: Array<{ id: string; title: LocalizedText }>;
   trueLabel?: string;
   falseLabel?: string;
   [key: string]: unknown;
@@ -21,6 +22,7 @@ export interface FlowNodeCardData {
 
 function FlowNodeCardComponent({ id, data, selected }: NodeProps) {
   const t = useT();
+  const locale = useLocale();
   const actions = useFlowNodeActions();
   const nodeData = data as FlowNodeCardData;
   const meta = FLOW_NODE_META[nodeData.flowType];
@@ -29,10 +31,12 @@ function FlowNodeCardComponent({ id, data, selected }: NodeProps) {
   const buttons =
     nodeData.flowType === "buttons"
       ? nodeData.buttons?.length
-        ? nodeData.buttons
+        ? nodeData.buttons.map((btn) => ({
+            id: btn.id,
+            title: resolveLocalizedText(btn.title, locale),
+          }))
         : [{ id: "btn-1", title: "…" }]
       : [];
-
   const canDelete = actions?.canDeleteNode(id) ?? false;
 
   return (
