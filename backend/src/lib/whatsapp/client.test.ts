@@ -75,4 +75,35 @@ describe("throwGraphApiError", () => {
       "unexpected error has occurred"
     );
   });
+
+  it("masks OAuth permission errors without leaking body details", () => {
+    const body = JSON.stringify({
+      error: {
+        message:
+          "Cannot call API for app 1588010216437809 on behalf of user 122113770873495178",
+        type: "OAuthException",
+        code: 200,
+        fbtrace_id: "AYWCDp17xy66BnxzI3ZKduA",
+      },
+    });
+    expectGraphError(body, 400, 502, "WhatsApp API error 400");
+    try {
+      throwGraphApiError(400, body);
+    } catch (error) {
+      const err = error as Error;
+      expect(err.message).not.toContain("1588010216437809");
+      expect(err.message).not.toContain("fbtrace_id");
+      expect(err.message).not.toContain("{");
+    }
+  });
+
+  it("does not embed raw Graph body in fallback errors", () => {
+    const body = "not-json-body-with-secrets";
+    expectGraphError(body, 500, 502, "WhatsApp API error 500");
+    try {
+      throwGraphApiError(500, body);
+    } catch (error) {
+      expect((error as Error).message).not.toContain(body);
+    }
+  });
 });

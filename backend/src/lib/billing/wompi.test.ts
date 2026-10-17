@@ -67,16 +67,24 @@ describe("wompi billing", () => {
 
   it("parses payment references", () => {
     expect(parsePaymentReference("wompi|tenant-1|pro|abc")).toEqual({
+      kind: "plan",
       tenantId: "tenant-1",
       plan: "pro",
     });
     expect(parsePaymentReference("wompi|tenant-1|scale|abc")).toEqual({
+      kind: "plan",
       tenantId: "tenant-1",
       plan: "pro",
     });
     expect(parsePaymentReference("wompi|tenant-1|enterprise|abc")).toEqual({
+      kind: "plan",
       tenantId: "tenant-1",
       plan: "pro",
+    });
+    expect(parsePaymentReference("wompi|tenant-1|ai_pack|pack_500|abc")).toEqual({
+      kind: "ai_pack",
+      tenantId: "tenant-1",
+      packId: "pack_500",
     });
     expect(parsePaymentReference("invalid")).toBeNull();
   });

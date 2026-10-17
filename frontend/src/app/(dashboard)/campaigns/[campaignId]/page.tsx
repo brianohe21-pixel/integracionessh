@@ -17,6 +17,7 @@ import {
 import { useT } from "@/i18n/context";
 import { useCampaign } from "@/hooks/useCampaigns";
 import { useBot } from "@/hooks/useBots";
+import { useAdvisors } from "@/hooks/useAdvisors";
 import { useCampaignExport } from "@/hooks/useCampaignExport";
 import { CampaignStatusBadge } from "@/components/campaigns/CampaignStatusBadge";
 import { CampaignProgressBar } from "@/components/campaigns/CampaignProgressBar";
@@ -71,6 +72,8 @@ export default function CampaignDetailPage({
 
   const { data: campaign, isLoading, error } = useCampaign(campaignId);
   const { data: campaignAgent } = useBot(campaign?.botId ?? "");
+  const { data: advisors = [] } = useAdvisors();
+  const assignedAdvisor = advisors.find((advisor) => advisor.advisorId === campaign?.advisorId);
   const { exportSendRecords, isExporting, exportError, canExport } = useCampaignExport(campaign);
   const campaignChannel = campaign?.channel ?? "whatsapp";
   const showSmsDeliveryMetrics = campaignChannel === "sms" && Boolean(campaign?.requestDlr);
@@ -125,6 +128,23 @@ export default function CampaignDetailPage({
             {" · "}
             {t("outreach.agent")}:{" "}
             <span className="font-medium">{campaignAgent?.name ?? campaign.botId}</span>
+            {" · "}
+            {t("campaigns.advisorLabel")}:{" "}
+            <span className="font-medium">
+              {assignedAdvisor?.name ??
+                (campaign.advisorId ? campaign.advisorId : t("campaigns.advisorNone"))}
+            </span>
+            {campaign.advisorId ? (
+              <>
+                {" · "}
+                {t("campaigns.autoAssignAdvisor")}:{" "}
+                <span className="font-medium">
+                  {campaign.autoAssignAdvisor
+                    ? t("campaigns.autoAssignAdvisorOn")
+                    : t("campaigns.autoAssignAdvisorOff")}
+                </span>
+              </>
+            ) : null}
             {" · "}
             {t("campaigns.templateLabel")}: <span className="font-medium">{campaign.templateName}</span>
             {" · "}

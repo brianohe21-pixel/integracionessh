@@ -1,6 +1,7 @@
 import type { FlowNode, FlowRun } from "../../../types/index.js";
 import type { FlowExecutionContext, NodeExecutionResult } from "../types.js";
 import { executeBookAppointmentNode } from "./book-appointment.js";
+import { executeCloudDriveWriteNode } from "./cloud-drive-write.js";
 import { executeRequestPaymentNode } from "./request-payment.js";
 import { executeSendCatalogNode } from "./send-catalog.js";
 import { executeSendProductsNode } from "./send-products.js";
@@ -19,6 +20,7 @@ import { executeSaveContactNode } from "./save-contact.js";
 import { executeCheckKnownContactNode } from "./check-known-contact.js";
 import { executeCreateLeadNode } from "./create-lead.js";
 import { executeCreateOpportunityNode } from "./create-opportunity.js";
+import { executeMoveOpportunityStageNode } from "./move-opportunity-stage.js";
 import { executeSendNotificationNode } from "./send-notification.js";
 import { executeAssignBotNode } from "./assign-bot.js";
 import { executeAgentNode } from "./agent.js";
@@ -34,6 +36,8 @@ export async function executeNode(
 ): Promise<NodeExecutionResult> {
   switch (node.type) {
     case "trigger":
+    case "message_received_trigger":
+    case "opportunity_stage_trigger":
       return executeTriggerNode(node, ctx, run);
     case "agent":
       return executeAgentNode(node, ctx, run);
@@ -57,6 +61,8 @@ export async function executeNode(
       return executeHttpRequestNode(node, ctx, run);
     case "book_appointment":
       return executeBookAppointmentNode(node, ctx, run);
+    case "cloud_drive_write":
+      return executeCloudDriveWriteNode(node, ctx, run);
     case "request_payment":
       return executeRequestPaymentNode(node, ctx, run);
     case "send_catalog":
@@ -77,6 +83,8 @@ export async function executeNode(
       return executeCreateLeadNode(node, ctx, run);
     case "create_opportunity":
       return executeCreateOpportunityNode(node, ctx, run);
+    case "move_opportunity_stage":
+      return executeMoveOpportunityStageNode(node, ctx, run);
     case "send_notification":
       return executeSendNotificationNode(node, ctx, run);
     case "assign_bot":

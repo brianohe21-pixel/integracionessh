@@ -66,6 +66,22 @@ describe("ai-assistant config", () => {
     expect(() => assertAiAssistantActive(makeBot({ responseMode: "openai" }))).not.toThrow();
   });
 
+  it("exposes system prompt in config even when assistant is inactive", () => {
+    expect(
+      toAiAssistantConfig(
+        makeBot({
+          responseMode: "none",
+          systemPrompt: "Draft prompt while inactive",
+        })
+      )
+    ).toEqual(
+      expect.objectContaining({
+        enabled: false,
+        systemPrompt: "Draft prompt while inactive",
+      })
+    );
+  });
+
   it("builds auto-enable updates from telephony prompt", () => {
     expect(
       buildAiAssistantAutoEnableUpdates(

@@ -11,6 +11,7 @@ import {
   BotMessageSquare,
   MessageSquare,
   BookUser,
+  Tags,
   UserPlus,
   LayoutTemplate,
   SendHorizonal,
@@ -107,6 +108,7 @@ const memberNavCategories: NavCategory[] = [
       { href: "/reviews", labelKey: "nav.reviews", icon: Star },
       { href: "/supervisor", labelKey: "nav.supervisor", icon: LayoutGrid },
       { href: "/contacts", labelKey: "nav.contacts", icon: BookUser },
+      { href: "/tags", labelKey: "nav.tags", icon: Tags },
       { href: "/leads", labelKey: "nav.leads", icon: UserPlus },
       { href: "/ads", labelKey: "nav.ads", icon: Megaphone },
       { href: "/sales", labelKey: "nav.sales", icon: TrendingUp },
@@ -767,14 +769,16 @@ function NavCategorySection({
       </button>
       <div
         className={cn(
-          "overflow-hidden transition-all duration-200",
-          isOpen ? "max-h-[32rem] opacity-100" : "max-h-0 opacity-0"
+          "grid transition-[grid-template-rows,opacity] duration-200",
+          isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
         )}
       >
-        <div className="nav-sub-list space-y-0.5 pb-1">
-          {category.items.map((item) =>
-            renderCategoryNavItem(item, pathname, searchParams, tenantPlan, onNavigate, totalUnread)
-          )}
+        <div className="min-h-0 overflow-hidden">
+          <div className="nav-sub-list space-y-0.5 pb-1">
+            {category.items.map((item) =>
+              renderCategoryNavItem(item, pathname, searchParams, tenantPlan, onNavigate, totalUnread)
+            )}
+          </div>
         </div>
       </div>
     </div>

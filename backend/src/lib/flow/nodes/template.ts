@@ -28,6 +28,7 @@ export async function executeTemplateNode(
     templateName,
     language,
     accessToken,
+    billingTenantId: ctx.tenantId,
     ...(templateVariables
       ? {
           components: [

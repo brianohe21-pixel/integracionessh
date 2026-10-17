@@ -1,5 +1,11 @@
-import type { Conversation, FlowDefinition, InboundNormalized } from "../../types/index.js";
+import type {
+  Conversation,
+  FlowDefinition,
+  FlowNode,
+  InboundNormalized,
+} from "../../types/index.js";
 import { normalizeText } from "../automation/evaluate.js";
+import { getFlowEntryNode } from "./entry-node.js";
 
 function matchesKeyword(
   text: string,
@@ -15,22 +21,36 @@ function matchesKeyword(
   });
 }
 
-function matchesAgentChannel(flow: FlowDefinition, conversation: Conversation): boolean {
-  const agentNode = flow.nodes.find((node) => node.type === "agent");
-  if (!agentNode) return true;
-
-  const channel = agentNode.data.channel ?? "any";
+function matchesChannelConfig(
+  node: FlowNode | undefined,
+  conversation: Conversation
+): boolean | null {
+  if (!node) return null;
+  const channel = node.data.channel ?? "any";
   if (channel === "any") return true;
 
   const conversationChannel = conversation.channel ?? "whatsapp";
   if (conversationChannel !== channel) return false;
 
-  if (channel === "whatsapp" && agentNode.data.whatsappChannelId?.trim()) {
+  if (channel === "whatsapp" && node.data.whatsappChannelId?.trim()) {
     if (!conversation.whatsappChannelId) return false;
-    return conversation.whatsappChannelId === agentNode.data.whatsappChannelId.trim();
+    return conversation.whatsappChannelId === node.data.whatsappChannelId.trim();
   }
 
   return true;
+}
+
+function matchesFlowChannel(flow: FlowDefinition, conversation: Conversation): boolean {
+  const entry = getFlowEntryNode(flow.nodes);
+  if (entry?.type === "message_received_trigger") {
+    return matchesChannelConfig(entry, conversation) ?? true;
+  }
+
+  const agentNode = flow.nodes.find((node) => node.type === "agent");
+  const agentMatch = matchesChannelConfig(agentNode, conversation);
+  if (agentMatch !== null) return agentMatch;
+
+  return matchesChannelConfig(entry, conversation) ?? true;
 }
 
 export function findTriggerFlow(
@@ -41,11 +61,24 @@ export function findTriggerFlow(
 ): FlowDefinition | null {
   const enabled = flows.filter((f) => f.enabled);
   for (const flow of enabled) {
-    const triggerNode = flow.nodes.find((n) => n.type === "trigger");
+    const triggerNode = getFlowEntryNode(flow.nodes);
     if (!triggerNode) continue;
-    if (!matchesAgentChannel(flow, conversation)) continue;
+    if (!matchesFlowChannel(flow, conversation)) continue;
 
     const triggerType = triggerNode.data.triggerType ?? "any_message";
+    if (
+      triggerNode.type === "opportunity_stage_trigger" ||
+      triggerType === "opportunity_stage_entered" ||
+      triggerType === "web_form_submitted" ||
+      triggerType === "voice_call"
+    ) {
+      continue;
+    }
+
+    if (triggerNode.type === "trigger") {
+      if (inbound.text.trim()) return flow;
+      continue;
+    }
 
     if (triggerType === "first_message") {
       if (!isNewConversation || conversation.welcomeSentAt) continue;

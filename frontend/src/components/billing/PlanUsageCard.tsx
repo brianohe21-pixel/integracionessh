@@ -66,12 +66,15 @@ export function PlanUsageCard({ hideActions = false }: { hideActions?: boolean }
   }
 
   const monthlyBulkLimit = data.limits.maxMessagesPerMonth * 10;
+  const aiUsage = data.aiUsage;
+  const messagesMax = aiUsage?.effectiveLimit ?? data.limits.maxMessagesPerMonth;
+  const messagesUsed = aiUsage?.totalUsed ?? data.usage.messagesCount ?? 0;
 
   const rows = [
     {
       label: t("billing.usageMessages"),
-      used: data.usage.messagesCount ?? 0,
-      max: data.limits.maxMessagesPerMonth,
+      used: messagesUsed,
+      max: messagesMax,
     },
     {
       label: t("billing.usageBulk"),
@@ -104,6 +107,17 @@ export function PlanUsageCard({ hideActions = false }: { hideActions?: boolean }
           <UsageMetricBar key={row.label} label={row.label} used={row.used} max={row.max} t={t} />
         ))}
       </div>
+
+      {aiUsage && aiUsage.bonusGranted > 0 ? (
+        <p className="mt-3 text-sm text-muted">
+          {t("billing.aiUsageBreakdown", {
+            planUsed: aiUsage.planUsed.toLocaleString(),
+            planLimit: aiUsage.planLimit.toLocaleString(),
+            bonusUsed: aiUsage.bonusUsed.toLocaleString(),
+            bonusGranted: aiUsage.bonusGranted.toLocaleString(),
+          })}
+        </p>
+      ) : null}
     </SettingsCard>
   );
 }

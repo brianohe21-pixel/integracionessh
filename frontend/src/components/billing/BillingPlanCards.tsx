@@ -13,14 +13,6 @@ import { Button } from "@/components/ui/Button";
 import { SettingsCallout } from "@/components/settings/SettingsCard";
 import type { TenantPlan } from "@/types";
 
-const STARTER_FEATURE_KEYS = [
-  "billing.starterFeatureBots",
-  "billing.starterFeatureWhatsApp",
-  "billing.starterFeatureAi",
-  "billing.starterFeatureCampaigns",
-  "billing.starterFeatureKnowledge",
-] as const;
-
 const PRO_FEATURE_KEYS = [
   "billing.proFeatureTailored",
   "billing.proFeatureSupport",
@@ -42,13 +34,13 @@ function PlanCardSkeleton() {
   );
 }
 
-function FeatureList({ keys, t }: { keys: readonly string[]; t: (key: string) => string }) {
+function FeatureList({ items }: { items: string[] }) {
   return (
     <ul className="mt-5 space-y-2.5">
-      {keys.map((key) => (
-        <li key={key} className="flex items-start gap-2.5 text-sm text-secondary">
+      {items.map((item) => (
+        <li key={item} className="flex items-start gap-2.5 text-sm text-secondary">
           <Check className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden />
-          <span>{t(key)}</span>
+          <span>{item}</span>
         </li>
       ))}
     </ul>
@@ -89,6 +81,16 @@ export function BillingPlanCards({ autoCheckoutPlan }: { autoCheckoutPlan?: Tena
 
   const currentPlan = status?.plan ?? "free";
   const starterPrice = providers?.plans?.starter;
+  const starterAiQuota = starterPrice?.maxMessagesPerMonth ?? 2_000;
+  const starterAiCount = starterAiQuota.toLocaleString();
+  const starterFeatures = [
+    t("billing.starterFeatureBots"),
+    t("billing.starterFeatureWhatsApp"),
+    t("billing.starterFeatureAi", { count: starterAiCount }),
+    t("billing.starterFeatureCampaigns"),
+    t("billing.starterFeatureKnowledge"),
+  ];
+  const proFeatures = PRO_FEATURE_KEYS.map((key) => t(key));
   const isStarterCurrent = currentPlan === "starter" && !status?.isExpired;
   const isProCurrent = currentPlan === "pro" && !status?.isExpired;
 
@@ -148,11 +150,11 @@ export function BillingPlanCards({ autoCheckoutPlan }: { autoCheckoutPlan?: Tena
             </p>
           </div>
 
-          <FeatureList keys={STARTER_FEATURE_KEYS} t={t} />
+          <FeatureList items={starterFeatures} />
 
           <div className="mt-6 flex-1" />
 
-          {isStarterCurrent ? (
+          {isStarterCurrent && !status?.canRenew ? (
             <p className="mt-6 text-center text-sm text-muted">{t("billing.currentPlan")}</p>
           ) : (
             <>
@@ -163,7 +165,9 @@ export function BillingPlanCards({ autoCheckoutPlan }: { autoCheckoutPlan?: Tena
                 className="mt-6 w-full"
                 size="lg"
               >
-                {t("billing.subscribe")}
+                {isStarterCurrent || status?.canRenew
+                  ? t("billing.renewPlan")
+                  : t("billing.subscribe")}
               </Button>
               {!defaultProvider ? (
                 <p className="mt-2 text-center text-xs text-red-600">
@@ -194,7 +198,7 @@ export function BillingPlanCards({ autoCheckoutPlan }: { autoCheckoutPlan?: Tena
 
           <p className="mt-3 text-sm text-secondary">{t("billing.salesOnlyHint")}</p>
 
-          <FeatureList keys={PRO_FEATURE_KEYS} t={t} />
+          <FeatureList items={proFeatures} />
 
           <div className="mt-6 flex-1" />
 

@@ -1,6 +1,8 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Play,
+  MessageCircle,
+  Flag,
   MessageSquare,
   FileText,
   GitBranch,
@@ -11,6 +13,7 @@ import {
   Variable,
   Globe,
   Calendar,
+  HardDrive,
   CreditCard,
   ShoppingBag,
   Package,
@@ -20,6 +23,7 @@ import {
   ContactRound,
   UserPlus,
   Target,
+  Kanban,
   Bell,
   Webhook,
   Bot,
@@ -49,6 +53,18 @@ export interface FlowNodeMeta {
 
 export const FLOW_NODE_META: Record<FlowNodeType, FlowNodeMeta> = {
   trigger: { category: "entry", icon: Play, hasInput: false, hasOutput: true },
+  message_received_trigger: {
+    category: "entry",
+    icon: MessageCircle,
+    hasInput: false,
+    hasOutput: true,
+  },
+  opportunity_stage_trigger: {
+    category: "entry",
+    icon: Flag,
+    hasInput: false,
+    hasOutput: true,
+  },
   agent: { category: "entry", icon: Headset, hasInput: true, hasOutput: true },
   message: { category: "messaging", icon: MessageSquare, hasInput: true, hasOutput: true },
   template: { category: "messaging", icon: FileText, hasInput: true, hasOutput: true },
@@ -87,6 +103,7 @@ export const FLOW_NODE_META: Record<FlowNodeType, FlowNodeMeta> = {
   http_request: { category: "integrations", icon: Globe, hasInput: true, hasOutput: true },
   handoff: { category: "integrations", icon: UserRound, hasInput: true, hasOutput: true },
   book_appointment: { category: "apps", icon: Calendar, hasInput: true, hasOutput: true },
+  cloud_drive_write: { category: "apps", icon: HardDrive, hasInput: true, hasOutput: true },
   request_payment: { category: "apps", icon: CreditCard, hasInput: true, hasOutput: true },
   send_catalog: { category: "apps", icon: ShoppingBag, hasInput: true, hasOutput: true },
   send_products: { category: "apps", icon: Package, hasInput: true, hasOutput: true },
@@ -94,6 +111,13 @@ export const FLOW_NODE_META: Record<FlowNodeType, FlowNodeMeta> = {
   save_contact: { category: "crm", icon: Contact, hasInput: true, hasOutput: true },
   create_lead: { category: "crm", icon: UserPlus, hasInput: true, hasOutput: true },
   create_opportunity: { category: "crm", icon: Target, hasInput: true, hasOutput: true },
+  move_opportunity_stage: {
+    category: "crm",
+    icon: Kanban,
+    hasInput: true,
+    hasOutput: true,
+    branchHandles: "condition",
+  },
   send_notification: { category: "crm", icon: Bell, hasInput: true, hasOutput: true },
   assign_bot: { category: "integrations", icon: Bot, hasInput: true, hasOutput: true },
   webhook: { category: "integrations", icon: Webhook, hasInput: true, hasOutput: true },
@@ -112,12 +136,28 @@ export const FLOW_NODE_CATEGORIES: FlowPaletteCategory[] = [
 ];
 
 export const FLOW_PALETTE_NODES: Record<FlowPaletteCategory, FlowNodeType[]> = {
-  crm: ["save_contact", "check_known_contact", "create_lead", "create_opportunity", "send_notification"],
-  messaging: ["message", "template", "buttons", "send_otp", "send_audio"],
+  crm: [
+    "opportunity_stage_trigger",
+    "save_contact",
+    "check_known_contact",
+    "create_lead",
+    "create_opportunity",
+    "move_opportunity_stage",
+    "send_notification",
+  ],
+  messaging: [
+    "message_received_trigger",
+    "message",
+    "template",
+    "buttons",
+    "send_otp",
+    "send_audio",
+  ],
   logic: ["condition", "delay", "set_variable"],
   integrations: ["agent", "assign_bot", "webhook", "meta_flow", "http_request", "handoff"],
   apps: [
     "book_appointment",
+    "cloud_drive_write",
     "request_payment",
     "send_catalog",
     "send_products",
@@ -197,10 +237,32 @@ export function buildNodePreview(
       const triggerType = data.triggerType ?? "any_message";
       if (triggerType === "web_form_submitted") return "webhook";
       if (triggerType === "voice_call") return "voice";
-      if (triggerType === "keyword" && data.keywords?.length) {
-        return truncate(data.keywords.join(", "));
+      return "";
+    }
+    case "message_received_trigger": {
+      const parts: string[] = [];
+      const channel = data.channel ?? "any";
+      parts.push(channel === "any" ? (locale === "es" ? "Cualquier canal" : "Any channel") : channel);
+      if ((data.triggerType ?? "any_message") === "first_message") {
+        parts.push(locale === "es" ? "Primer mensaje" : "First message");
       }
-      return triggerType;
+      if (data.keywords?.length) {
+        parts.push(truncate(data.keywords.join(", ")));
+      }
+      return parts.join(" · ");
+    }
+    case "opportunity_stage_trigger": {
+      const stageLabels: Record<string, { es: string; en: string }> = {
+        new: { es: "Nueva", en: "New" },
+        quoted: { es: "Cotizada", en: "Quoted" },
+        negotiation: { es: "Negociación", en: "Negotiation" },
+        won: { es: "Ganada", en: "Won" },
+        lost: { es: "Perdida", en: "Lost" },
+      };
+      if (!data.triggerStageKey) {
+        return locale === "es" ? "Cualquier etapa" : "Any stage";
+      }
+      return stageLabels[data.triggerStageKey]?.[locale] ?? data.triggerStageKey;
     }
     case "agent": {
       const channel = data.channel ?? "any";
@@ -233,6 +295,12 @@ export function buildNodePreview(
       return truncate(data.httpUrl ?? "");
     case "book_appointment":
       return text(data.confirmationMessage);
+    case "cloud_drive_write": {
+      const provider = data.cloudDriveProvider ?? "google-drive";
+      const target = data.cloudDriveTargetType ?? "document";
+      const file = data.cloudDriveFileName || data.cloudDriveFileId || "";
+      return truncate(`${provider} · ${target} · ${file}`);
+    }
     case "request_payment":
       return text(data.paymentDescription);
     case "send_catalog":
@@ -249,6 +317,20 @@ export function buildNodePreview(
       return data.contactPhoneBinding ?? "";
     case "create_lead":
       return data.leadPhoneBinding ?? "";
+    case "move_opportunity_stage": {
+      const stageLabels: Record<string, { es: string; en: string }> = {
+        new: { es: "Nueva", en: "New" },
+        quoted: { es: "Cotizada", en: "Quoted" },
+        negotiation: { es: "Negociación", en: "Negotiation" },
+        won: { es: "Ganada", en: "Won" },
+        lost: { es: "Perdida", en: "Lost" },
+      };
+      const stage = data.opportunityStage ?? "quoted";
+      const stageLabel = stageLabels[stage]?.[locale] ?? stage;
+      return [data.opportunityIdBinding ?? "{{opportunity_id}}", stageLabel]
+        .filter(Boolean)
+        .join(" → ");
+    }
     case "create_opportunity": {
       const stageLabels: Record<string, { es: string; en: string }> = {
         new: { es: "Nueva", en: "New" },

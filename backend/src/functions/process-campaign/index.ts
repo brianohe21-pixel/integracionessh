@@ -283,6 +283,7 @@ async function processRecipient(body: CampaignSQSBody, sqsMessageId: string): Pr
         language,
         ...(components ? { components } : {}),
         accessToken,
+        billingTenantId: tenantId,
       });
 
       const messageId = result.messages?.[0]?.id;

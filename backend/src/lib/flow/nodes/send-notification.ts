@@ -203,6 +203,7 @@ export async function executeSendNotificationNode(
       to: participantId,
       templateName: node.data.notificationTemplateName!.trim(),
       language: node.data.notificationTemplateLanguage ?? "es",
+      billingTenantId: ctx.tenantId,
       ...(parameters.length
         ? {
             components: [

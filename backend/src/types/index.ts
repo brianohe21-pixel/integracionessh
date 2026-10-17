@@ -93,9 +93,28 @@ export interface ResellerPlanDefaults {
   limitsOverride?: ResellerLimitsOverride;
 }
 
+export interface MaxMessagesPerMonthByPlan {
+  free: number;
+  starter: number;
+  pro: number;
+  reseller: number;
+}
+
+export interface AiMessagePack {
+  id: string;
+  messages: number;
+  priceCents: number;
+  active?: boolean;
+}
+
 export interface PlatformBillingConfig {
   pricePerMessageCents: number;
   currency: "COP";
+  maxMessagesPerMonthByPlan: MaxMessagesPerMonthByPlan;
+  /** Max accepted WhatsApp templates per Starter billing period (0 = unlimited). */
+  templateCreditCapCount?: number;
+  /** Self-service AI message packs (paid plans only). */
+  aiMessagePacks?: AiMessagePack[];
   updatedAt?: string;
 }
 
@@ -300,6 +319,14 @@ export interface Tenant {
   currentPeriodEnd?: string;
   paymentProvider?: "stripe" | "wompi";
   pricePerMessageCents?: number;
+  /** Accepted WhatsApp templates in the current Starter billing period. */
+  billingPeriodTemplatesAcceptedCount?: number;
+  /** Unit price (COP cents) locked for the current Starter billing period. */
+  billingPeriodAppliedPricePerMessageCents?: number;
+  /** Calendar UTC period (YYYY-MM) for purchased AI message packs. */
+  aiBonusMessagesPeriod?: string;
+  /** Extra AI messages granted for aiBonusMessagesPeriod. */
+  aiBonusMessagesGranted?: number;
   onboardingCompletedAt?: string;
   onboardingSkippedAt?: string;
   onboardingBannerDismissedAt?: string;
@@ -542,7 +569,7 @@ export interface WhatsAppSyncStatus {
 
 export type HandoffMode = "bot" | "human";
 
-export type HandoffReason = "manual" | "ai" | "webhook" | "no_ai";
+export type HandoffReason = "manual" | "ai" | "webhook" | "no_ai" | "campaign";
 
 export interface AiAssistantConfig {
   enabled: boolean;
@@ -821,6 +848,84 @@ export interface Lead {
 }
 
 export type OpportunityStage = "new" | "quoted" | "negotiation" | "won" | "lost";
+
+export type TagActionType =
+  | "move_opportunity_stage"
+  | "assign_advisor"
+  | "handoff"
+  | "enroll_sequence"
+  | "create_task"
+  | "set_consent"
+  | "apply_tags"
+  | "create_lead";
+
+export interface TagActionMoveOpportunityStage {
+  type: "move_opportunity_stage";
+  pipelineId: string;
+  stageId: string;
+  openOnly?: boolean;
+}
+
+export interface TagActionAssignAdvisor {
+  type: "assign_advisor";
+  advisorId: string;
+}
+
+export interface TagActionHandoff {
+  type: "handoff";
+  advisorId?: string;
+}
+
+export interface TagActionEnrollSequence {
+  type: "enroll_sequence";
+  sequenceId: string;
+}
+
+export interface TagActionCreateTask {
+  type: "create_task";
+  title: string;
+  description?: string;
+  dueInHours?: number;
+  advisorId?: string;
+  priority?: "low" | "medium" | "high" | "highest";
+}
+
+export interface TagActionSetConsent {
+  type: "set_consent";
+  marketingConsent: "opt_in" | "opt_out";
+}
+
+export interface TagActionApplyTags {
+  type: "apply_tags";
+  tags: string[];
+}
+
+export interface TagActionCreateLead {
+  type: "create_lead";
+  botId?: string;
+  tags?: string[];
+}
+
+export type TagAction =
+  | TagActionMoveOpportunityStage
+  | TagActionAssignAdvisor
+  | TagActionHandoff
+  | TagActionEnrollSequence
+  | TagActionCreateTask
+  | TagActionSetConsent
+  | TagActionApplyTags
+  | TagActionCreateLead;
+
+export interface TagDefinition {
+  tagId: string;
+  tenantId: string;
+  name: string;
+  color?: string;
+  description?: string;
+  onApply: TagAction[];
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface PipelineStage {
   stageId: string;
@@ -2174,6 +2279,8 @@ export interface Campaign {
   archivedAt?: string;
   requireOptIn?: boolean;
   requestDlr?: boolean;
+  advisorId?: string;
+  autoAssignAdvisor?: boolean;
 }
 
 export type SmsDlrSource = "campaign" | "template" | "api";
@@ -2667,6 +2774,7 @@ export interface ApiKeyUsageLog {
   messageId?: string;
   callId?: string;
   maskedPhone?: string;
+  messageContent?: string;
   errorMessage?: string;
   errorStack?: string;
   createdAt: string;
@@ -3021,6 +3129,42 @@ export interface ShopifyConfig {
   updatedAt: string;
 }
 
+export type CloudDriveConnectionStatus = "pending" | "connected" | "error" | "disconnected";
+
+export interface GoogleDriveConfig {
+  tenantId: string;
+  status: CloudDriveConnectionStatus;
+  enabled: boolean;
+  accountEmail?: string;
+  connectedAt?: string;
+  lastError?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OneDriveConfig {
+  tenantId: string;
+  status: CloudDriveConnectionStatus;
+  enabled: boolean;
+  accountEmail?: string;
+  displayName?: string;
+  connectedAt?: string;
+  lastError?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CloudDriveFileItem {
+  id: string;
+  name: string;
+  mimeType: string;
+  isFolder: boolean;
+  size?: number;
+  modifiedAt?: string;
+  webUrl?: string;
+  parentId?: string;
+}
+
 export type ShopifyCheckoutStatus = "pending" | "converted" | "notified" | "cancelled";
 
 export interface ShopifyCheckout {
@@ -3204,6 +3348,8 @@ export interface FlowResponse {
 
 export type FlowNodeType =
   | "trigger"
+  | "message_received_trigger"
+  | "opportunity_stage_trigger"
   | "agent"
   | "message"
   | "template"
@@ -3215,6 +3361,7 @@ export type FlowNodeType =
   | "set_variable"
   | "http_request"
   | "book_appointment"
+  | "cloud_drive_write"
   | "request_payment"
   | "send_catalog"
   | "send_products"
@@ -3225,10 +3372,14 @@ export type FlowNodeType =
   | "check_known_contact"
   | "create_lead"
   | "create_opportunity"
+  | "move_opportunity_stage"
   | "send_notification"
   | "assign_bot"
   | "webhook"
   | "end";
+
+export type CloudDriveFlowProvider = "google-drive" | "onedrive";
+export type CloudDriveFlowTargetType = "document" | "spreadsheet";
 
 export type FlowAgentChannel = Channel | "any";
 
@@ -3237,7 +3388,8 @@ export type FlowTriggerType =
   | "first_message"
   | "any_message"
   | "web_form_submitted"
-  | "voice_call";
+  | "voice_call"
+  | "opportunity_stage_entered";
 
 export type FlowKind = "messaging" | "voice_ai";
 
@@ -3268,6 +3420,7 @@ export interface VoiceAgentHttpTool {
 export interface FlowNodeData {
   label?: string;
   triggerType?: FlowTriggerType;
+  triggerStageKey?: OpportunityStage;
   channel?: FlowAgentChannel;
   whatsappChannelId?: string;
   keywords?: string[];
@@ -3296,8 +3449,15 @@ export interface FlowNodeData {
   voiceInstruction?: string;
   flowVariables?: Record<string, string>;
   haltPipeline?: boolean;
+  advisorId?: string;
   confirmationMessage?: LocalizedText;
   maxDaysToShow?: number;
+  cloudDriveProvider?: CloudDriveFlowProvider;
+  cloudDriveTargetType?: CloudDriveFlowTargetType;
+  cloudDriveFileId?: string;
+  cloudDriveFileName?: string;
+  cloudDriveContent?: string;
+  cloudDriveSheetName?: string;
   amountInCents?: number;
   paymentDescription?: LocalizedText;
   paymentMessageTemplate?: LocalizedText;
@@ -3320,6 +3480,10 @@ export interface FlowNodeData {
   opportunityAmountBinding?: string;
   opportunityCurrency?: string;
   opportunityStage?: OpportunityStage;
+  opportunityIdBinding?: string;
+  opportunityStageBinding?: string;
+  opportunityCloseReasonBinding?: string;
+  opportunityLossReason?: OpportunityLossReason;
   opportunityPhoneBinding?: string;
   opportunityNameBinding?: string;
   opportunityEmailBinding?: string;

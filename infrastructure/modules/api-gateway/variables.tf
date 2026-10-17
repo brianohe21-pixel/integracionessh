@@ -398,6 +398,14 @@ variable "shopify_function_arn" {
   type = string
 }
 
+variable "drive_invoke_arn" {
+  type = string
+}
+
+variable "drive_function_arn" {
+  type = string
+}
+
 variable "allowed_origins" {
   type    = list(string)
   default = ["*"]

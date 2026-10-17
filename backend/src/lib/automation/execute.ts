@@ -1,6 +1,5 @@
 import { performHandoff } from "../advisor/handoff.js";
 import { applyMarketingConsent } from "../compliance/contact-consent.js";
-import { getContactByPhone, updateContact } from "../dynamodb/contact.repository.js";
 import { updateConversation } from "../dynamodb/conversation.repository.js";
 import { sendTemplateMessage } from "../whatsapp/client.js";
 import { assertWhatsAppOutboundAllowed } from "../whatsapp/outbound-guard.js";
@@ -79,6 +78,7 @@ export async function executeAutomation(
         templateName: rule.templateName,
         language: rule.templateLanguage || templateLanguageForLocale(locale),
         accessToken: ctx.accessToken,
+        billingTenantId: ctx.tenantId,
         ...(rule.templateVariables
           ? {
               components: [
@@ -103,11 +103,13 @@ export async function executeAutomation(
     case "tag_contact": {
       if (channel !== "whatsapp") break;
       if (!rule.tags?.length) throw new Error("tags required for tag_contact");
-      const existing = await getContactByPhone(ctx.tenantId, ctx.customerPhone);
-      if (existing) {
-        const mergedTags = [...new Set([...existing.tags, ...rule.tags])];
-        await updateContact(ctx.tenantId, ctx.customerPhone, { tags: mergedTags });
-      }
+      const { applyTagsToContact } = await import("../tags/apply.js");
+      await applyTagsToContact({
+        tenantId: ctx.tenantId,
+        phone: ctx.customerPhone,
+        tagsToAdd: rule.tags,
+        changedBy: `automation:${rule.ruleId}`,
+      });
       break;
     }
     case "set_consent": {

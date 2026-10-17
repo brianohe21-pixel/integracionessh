@@ -42,6 +42,17 @@ export function buildDefaultNodeData(
     defaultData.opportunityCurrency = "USD";
     defaultData.opportunityStage = "new";
   }
+  if (type === "message_received_trigger") {
+    defaultData.triggerType = "any_message";
+    defaultData.channel = "any";
+  }
+  if (type === "opportunity_stage_trigger") {
+    defaultData.triggerType = "opportunity_stage_entered";
+  }
+  if (type === "move_opportunity_stage") {
+    defaultData.opportunityIdBinding = "{{opportunity_id}}";
+    defaultData.opportunityStage = "quoted";
+  }
   if (type === "send_notification") {
     defaultData.notificationChannel = "whatsapp";
     defaultData.notificationMessageType = "text";
@@ -58,6 +69,15 @@ export function buildDefaultNodeData(
   if (type === "agent") {
     defaultData.channel = "any";
     if (suggestedBotId?.trim()) defaultData.botId = suggestedBotId.trim();
+  }
+  if (type === "cloud_drive_write") {
+    defaultData.cloudDriveProvider = "google-drive";
+    defaultData.cloudDriveTargetType = "document";
+    defaultData.cloudDriveFileId = "";
+    defaultData.cloudDriveContent = messaging
+      ? "{{name}} - {{phone}}\n"
+      : "{{form.name}} - {{form.phone}}\n";
+    defaultData.cloudDriveSheetName = "Sheet1";
   }
 
   return defaultData;

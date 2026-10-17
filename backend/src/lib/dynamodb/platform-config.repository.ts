@@ -1,6 +1,14 @@
 import { GetCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
 import { docClient, TABLE_NAME } from "./client.js";
-import type { ResellerPlanDefaults, PlatformBillingConfig } from "../../types/index.js";
+import {
+  DEFAULT_AI_MESSAGE_PACKS,
+  normalizeAiMessagePacks,
+} from "../billing/ai-pack-config.js";
+import type {
+  MaxMessagesPerMonthByPlan,
+  ResellerPlanDefaults,
+  PlatformBillingConfig,
+} from "../../types/index.js";
 
 const RESELLER_KEYS = {
   PK: "PLATFORM#CONFIG",
@@ -18,10 +26,47 @@ export const DEFAULT_RESELLER_PLAN_DEFAULTS: ResellerPlanDefaults = {
   allowSubaccountBranding: false,
 };
 
+export const DEFAULT_MAX_MESSAGES_PER_MONTH_BY_PLAN: MaxMessagesPerMonthByPlan = {
+  free: 250,
+  starter: 2_000,
+  pro: 10_000,
+  reseller: 50_000,
+};
+
 export const DEFAULT_PLATFORM_BILLING_CONFIG: PlatformBillingConfig = {
   pricePerMessageCents: 0,
   currency: "COP",
+  maxMessagesPerMonthByPlan: { ...DEFAULT_MAX_MESSAGES_PER_MONTH_BY_PLAN },
+  templateCreditCapCount: 0,
+  aiMessagePacks: DEFAULT_AI_MESSAGE_PACKS.map((pack) => ({ ...pack })),
 };
+
+function normalizeTemplateCreditCapCount(value: unknown): number {
+  if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
+    return Math.floor(value);
+  }
+  return 0;
+}
+
+function normalizeMaxMessagesByPlan(
+  value: unknown
+): MaxMessagesPerMonthByPlan {
+  const source =
+    value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  const pick = (key: keyof MaxMessagesPerMonthByPlan): number => {
+    const raw = source[key];
+    if (typeof raw === "number" && Number.isFinite(raw) && raw >= 0) {
+      return Math.floor(raw);
+    }
+    return DEFAULT_MAX_MESSAGES_PER_MONTH_BY_PLAN[key];
+  };
+  return {
+    free: pick("free"),
+    starter: pick("starter"),
+    pro: pick("pro"),
+    reseller: pick("reseller"),
+  };
+}
 
 export async function getResellerPlanDefaults(): Promise<ResellerPlanDefaults> {
   const result = await docClient.send(
@@ -65,12 +110,35 @@ export async function getPlatformBillingConfig(): Promise<PlatformBillingConfig>
     })
   );
 
-  if (!result.Item) return { ...DEFAULT_PLATFORM_BILLING_CONFIG };
+  if (!result.Item) {
+    return {
+      ...DEFAULT_PLATFORM_BILLING_CONFIG,
+      maxMessagesPerMonthByPlan: { ...DEFAULT_MAX_MESSAGES_PER_MONTH_BY_PLAN },
+      aiMessagePacks: DEFAULT_AI_MESSAGE_PACKS.map((pack) => ({ ...pack })),
+    };
+  }
 
-  const { PK, SK, updatedAt, ...rest } = result.Item;
+  const {
+    PK,
+    SK,
+    updatedAt,
+    maxMessagesPerMonthByPlan,
+    templateCreditCapCount,
+    aiMessagePacks,
+    ...rest
+  } = result.Item;
   return {
     ...DEFAULT_PLATFORM_BILLING_CONFIG,
-    ...(rest as PlatformBillingConfig),
+    ...(rest as Omit<
+      PlatformBillingConfig,
+      | "maxMessagesPerMonthByPlan"
+      | "templateCreditCapCount"
+      | "aiMessagePacks"
+      | "updatedAt"
+    >),
+    maxMessagesPerMonthByPlan: normalizeMaxMessagesByPlan(maxMessagesPerMonthByPlan),
+    templateCreditCapCount: normalizeTemplateCreditCapCount(templateCreditCapCount),
+    aiMessagePacks: normalizeAiMessagePacks(aiMessagePacks),
     ...(typeof updatedAt === "string" ? { updatedAt } : {}),
   };
 }
@@ -79,10 +147,20 @@ export async function putPlatformBillingConfig(
   config: PlatformBillingConfig
 ): Promise<PlatformBillingConfig> {
   const updatedAt = new Date().toISOString();
+  const maxMessagesPerMonthByPlan = normalizeMaxMessagesByPlan(
+    config.maxMessagesPerMonthByPlan
+  );
+  const templateCreditCapCount = normalizeTemplateCreditCapCount(
+    config.templateCreditCapCount
+  );
+  const aiMessagePacks = normalizeAiMessagePacks(config.aiMessagePacks);
   const item = {
     ...BILLING_KEYS,
     pricePerMessageCents: config.pricePerMessageCents,
     currency: "COP" as const,
+    maxMessagesPerMonthByPlan,
+    templateCreditCapCount,
+    aiMessagePacks,
     updatedAt,
   };
   await docClient.send(
@@ -91,5 +169,12 @@ export async function putPlatformBillingConfig(
       Item: item,
     })
   );
-  return { ...config, currency: "COP", updatedAt };
+  return {
+    pricePerMessageCents: config.pricePerMessageCents,
+    currency: "COP",
+    maxMessagesPerMonthByPlan,
+    templateCreditCapCount,
+    aiMessagePacks,
+    updatedAt,
+  };
 }

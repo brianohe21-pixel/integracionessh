@@ -26,7 +26,7 @@ const messages = {
   respondInSpanish: "Responde siempre en español.",
   respondInEnglish: "Always respond in English.",
   handoffToolInstruction:
-    "Si el cliente necesita hablar con un asesor, usa la herramienta transfer_to_human.",
+    "Si el cliente necesita hablar con un asesor, escribe primero un mensaje breve al cliente y luego usa la herramienta transfer_to_human.",
   telephonyHandoffDisabledInstruction:
     "Nunca transfieras ni ofrezcas pasar la llamada a un asesor humano.",
   transferToHumanDescription: "Transfiere la conversación a un asesor",
@@ -74,7 +74,7 @@ const enMessages: Record<keyof typeof messages, string> = {
   respondInSpanish: "Responde siempre en español.",
   respondInEnglish: "Always respond in English.",
   handoffToolInstruction:
-    "If the customer needs to speak with an advisor, use the transfer_to_human tool.",
+    "If the customer needs to speak with an advisor, first write a brief message to the customer and then use the transfer_to_human tool.",
   telephonyHandoffDisabledInstruction:
     "Never transfer or offer to transfer the call to a human advisor.",
   transferToHumanDescription: "Transfer the conversation to an advisor",

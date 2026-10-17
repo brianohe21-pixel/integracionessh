@@ -1,8 +1,17 @@
 import type {
+  MaxMessagesPerMonthByPlan,
   ResellerLimitsOverride,
   Tenant,
   TenantPlan,
 } from "../../types/index.js";
+import { getPlatformBillingConfig } from "../dynamodb/platform-config.repository.js";
+import { normalizeTenantPlan } from "./normalize-plan.js";
+import {
+  fillMissingServiceLimitsFromPlan,
+  normalizeEnabledServices,
+  normalizeServiceLimits,
+  trimServiceLimitsForEnabled,
+} from "./subaccount-services.js";
 
 export interface PlanLimits {
   maxActiveBots: number;
@@ -166,16 +175,24 @@ function applyLimitsOverride(
   } as PlanLimits;
 }
 
-import { normalizeTenantPlan } from "./normalize-plan.js";
-import {
-  fillMissingServiceLimitsFromPlan,
-  normalizeEnabledServices,
-  normalizeServiceLimits,
-  trimServiceLimitsForEnabled,
-} from "./subaccount-services.js";
+export function getPlanLimits(
+  plan: TenantPlan | string | undefined,
+  maxMessagesByPlan?: MaxMessagesPerMonthByPlan | null
+): PlanLimits {
+  const normalized = normalizeTenantPlan(plan);
+  const base = LIMITS[normalized];
+  const fromConfig = maxMessagesByPlan?.[normalized];
+  if (typeof fromConfig === "number" && Number.isFinite(fromConfig) && fromConfig >= 0) {
+    return { ...base, maxMessagesPerMonth: Math.floor(fromConfig) };
+  }
+  return base;
+}
 
-export function getPlanLimits(plan: TenantPlan | string | undefined): PlanLimits {
-  return LIMITS[normalizeTenantPlan(plan)];
+export async function resolvePlanLimits(
+  plan: TenantPlan | string | undefined
+): Promise<PlanLimits> {
+  const config = await getPlatformBillingConfig();
+  return getPlanLimits(plan, config.maxMessagesPerMonthByPlan);
 }
 
 function emptyNumericLimits(canCustomizeBranding: boolean): PlanLimits {
@@ -210,8 +227,11 @@ function emptyNumericLimits(canCustomizeBranding: boolean): PlanLimits {
   };
 }
 
-export function getEffectivePlanLimits(tenant: Tenant): PlanLimits {
-  const base = getPlanLimits(normalizeTenantPlan(tenant.plan));
+export function getEffectivePlanLimits(
+  tenant: Tenant,
+  maxMessagesByPlan?: MaxMessagesPerMonthByPlan | null
+): PlanLimits {
+  const base = getPlanLimits(normalizeTenantPlan(tenant.plan), maxMessagesByPlan);
   if (tenant.plan === "reseller" && tenant.resellerConfig?.limitsOverride) {
     return {
       ...applyLimitsOverride(base, tenant.resellerConfig.limitsOverride),
@@ -240,6 +260,11 @@ export function getEffectivePlanLimits(tenant: Tenant): PlanLimits {
   }
 
   return base;
+}
+
+export async function resolveEffectivePlanLimits(tenant: Tenant): Promise<PlanLimits> {
+  const config = await getPlatformBillingConfig();
+  return getEffectivePlanLimits(tenant, config.maxMessagesPerMonthByPlan);
 }
 
 export function isUnlimited(value: number): boolean {

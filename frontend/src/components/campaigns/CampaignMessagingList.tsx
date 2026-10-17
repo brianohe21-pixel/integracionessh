@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight, Megaphone, Plus, Calendar, Tag } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { useBots } from "@/hooks/useBots";
+import { useAdvisors } from "@/hooks/useAdvisors";
 import { CampaignStatusBadge } from "@/components/campaigns/CampaignStatusBadge";
 import { CampaignProgressBar } from "@/components/campaigns/CampaignProgressBar";
 import { CampaignManagementActions } from "@/components/campaigns/CampaignManagementActions";
@@ -40,6 +41,11 @@ interface CampaignMessagingListProps {
 export function CampaignMessagingList({ campaigns }: CampaignMessagingListProps) {
   const t = useT();
   const { data: bots } = useBots();
+  const { data: advisors = [] } = useAdvisors();
+  const advisorNameById = useMemo(
+    () => new Map(advisors.map((advisor) => [advisor.advisorId, advisor.name])),
+    [advisors]
+  );
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"" | CampaignStatus>("");
   const [channelFilter, setChannelFilter] = useState<"" | OutreachChannel>("");
@@ -180,6 +186,23 @@ export function CampaignMessagingList({ campaigns }: CampaignMessagingListProps)
                     <p className="mt-0.5 text-sm text-secondary">
                       {t("campaigns.templateLabel")}:{" "}
                       <span className="font-medium text-secondary">{campaign.templateName}</span>
+                      {campaign.advisorId ? (
+                        <>
+                          {" · "}
+                          {t("campaigns.advisorLabel")}:{" "}
+                          <span className="font-medium text-secondary">
+                            {advisorNameById.get(campaign.advisorId) ?? campaign.advisorId}
+                          </span>
+                          {campaign.autoAssignAdvisor ? (
+                            <>
+                              {" · "}
+                              <span className="font-medium text-secondary">
+                                {t("campaigns.autoAssignAdvisorOn")}
+                              </span>
+                            </>
+                          ) : null}
+                        </>
+                      ) : null}
                     </p>
 
                     {campaign.segments.length > 0 && (

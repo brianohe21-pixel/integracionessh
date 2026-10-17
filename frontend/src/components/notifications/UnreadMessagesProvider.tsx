@@ -246,6 +246,12 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
         return next;
       });
 
+      if (botId) {
+        void api
+          .post(`/conversations/${encodeURIComponent(conversationId)}/read`, { botId })
+          .catch(() => undefined);
+      }
+
       if (botId && workflowStatus === "new") {
         void api
           .patch(`/conversations/${encodeURIComponent(conversationId)}/status`, {

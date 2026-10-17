@@ -310,6 +310,28 @@ variable "shopify_api_version" {
   default = "2025-01"
 }
 
+variable "google_drive_client_id" {
+  type    = string
+  default = ""
+}
+
+variable "google_drive_client_secret" {
+  type      = string
+  default   = ""
+  sensitive = true
+}
+
+variable "onedrive_client_id" {
+  type    = string
+  default = ""
+}
+
+variable "onedrive_client_secret" {
+  type      = string
+  default   = ""
+  sensitive = true
+}
+
 variable "mailrelay_event_types" {
   type        = string
   default     = ""

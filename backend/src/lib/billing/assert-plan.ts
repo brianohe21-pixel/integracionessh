@@ -25,11 +25,13 @@ import { getTenant } from "../dynamodb/tenant.repository.js";
 import type { Tenant, Channel } from "../../types/index.js";
 import {
   getEffectivePlanLimits,
+  resolveEffectivePlanLimits,
   isUnlimited,
   PlanLimitError,
   assertSubscriptionAllowsSending,
 } from "./plan-limits.js";
 import { assertCanEnableKnowledge } from "./plan-config.js";
+import { buildAiUsageSnapshot } from "./ai-pack-billing.js";
 
 export function assertCanUseCopilot(tenant: Tenant): void {
   if (tenant.plan === "free") {
@@ -59,12 +61,18 @@ export async function assertCanSendMessages(
   additionalMessages = 1
 ): Promise<void> {
   assertSubscriptionAllowsSending(tenant);
-  const limits = getEffectivePlanLimits(tenant);
+  const limits = await resolveEffectivePlanLimits(tenant);
   const usage = await getMonthlyUsage(tenant.tenantId);
-  if (usage.messagesCount + additionalMessages > limits.maxMessagesPerMonth) {
+  const aiUsage = buildAiUsageSnapshot(
+    tenant,
+    limits.maxMessagesPerMonth,
+    usage.messagesCount,
+    usage.period
+  );
+  if (usage.messagesCount + additionalMessages > aiUsage.effectiveLimit) {
     throw new PlanLimitError(
       "PLAN_LIMIT_MESSAGES",
-      `Monthly message limit reached (${limits.maxMessagesPerMonth})`
+      `Monthly AI response limit reached (${aiUsage.effectiveLimit})`
     );
   }
 }

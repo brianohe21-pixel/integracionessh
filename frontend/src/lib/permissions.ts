@@ -38,6 +38,7 @@ const NAV_PERMISSION: Record<string, Permission> = {
   "/bots": "bots.read",
   "/campaigns": "campaigns.read",
   "/contacts": "contacts.read",
+  "/tags": "contacts.read",
   "/settings": "settings.read",
   "/alerts": "settings.read",
 };

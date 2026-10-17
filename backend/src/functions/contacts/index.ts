@@ -305,6 +305,17 @@ export async function handler(
         });
       }
 
+      if (parsed.data.tags?.length) {
+        const { syncContactTagsAndRunActions } = await import("../../lib/tags/apply.js");
+        await syncContactTagsAndRunActions({
+          tenantId: auth.tenantId,
+          phone,
+          previousTags: [],
+          nextTags: parsed.data.tags,
+          changedBy: auth.userId,
+        });
+      }
+
       await writeAuditEvent({
         tenantId: auth.tenantId,
         actorUserId: auth.userId,
@@ -344,6 +355,17 @@ export async function handler(
 
       const updated = await updateContact(auth.tenantId, phone, patch);
       if (!updated) return notFound("Contact not found");
+
+      if (parsed.data.tags !== undefined) {
+        const { syncContactTagsAndRunActions } = await import("../../lib/tags/apply.js");
+        await syncContactTagsAndRunActions({
+          tenantId: auth.tenantId,
+          phone,
+          previousTags: existing.tags,
+          nextTags: parsed.data.tags,
+          changedBy: auth.userId,
+        });
+      }
 
       if (parsed.data.marketingConsent) {
         await writeComplianceLog({

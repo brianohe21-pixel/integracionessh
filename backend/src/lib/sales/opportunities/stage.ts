@@ -8,6 +8,7 @@ import { cancelEnrollmentsForOpportunity } from "../../dynamodb/sequence-enrollm
 import { findStageById, getPipelineById } from "../../dynamodb/pipeline.repository.js";
 import type { Opportunity, OpportunityLossReason, OpportunityStage } from "../../../types/index.js";
 import { recordOpportunityActivity } from "./activity.js";
+import { triggerFlowsForOpportunityStageEntered } from "../flows/triggers.js";
 import { triggerSequencesForOpportunity } from "../sequences/triggers.js";
 
 export async function moveOpportunityStage(params: {
@@ -27,12 +28,13 @@ export async function moveOpportunityStage(params: {
   const targetStage = findStageById(pipeline, params.stageId);
   if (!targetStage) return null;
 
+  const stageChanged = existing.stageId !== targetStage.stageId;
   const now = new Date().toISOString();
   const updates: Parameters<typeof updateOpportunity>[2] = {
     stageId: targetStage.stageId,
     stage: targetStage.key as OpportunityStage,
-    stageEnteredAt: now,
     lastActivityAt: now,
+    ...(stageChanged ? { stageEnteredAt: now } : {}),
   };
 
   if (targetStage.isClosed) {
@@ -45,40 +47,56 @@ export async function moveOpportunityStage(params: {
   const updated = await updateOpportunity(params.tenantId, params.opportunityId, updates);
   if (!updated) return null;
 
-  await appendStageHistory({
-    historyId: randomUUID(),
-    opportunityId: params.opportunityId,
-    tenantId: params.tenantId,
-    fromStageId: existing.stageId,
-    toStageId: targetStage.stageId,
-    fromStageKey: existing.stage,
-    toStageKey: targetStage.key,
-    ...(params.changedBy ? { changedBy: params.changedBy } : {}),
-    changedAt: now,
-  });
-
-  await recordOpportunityActivity({
-    tenantId: params.tenantId,
-    opportunityId: params.opportunityId,
-    type: targetStage.isClosed ? "closed" : "stage_changed",
-    message: `${existing.stage} → ${targetStage.key}`,
-    ...(params.changedBy ? { actorId: params.changedBy } : {}),
-    metadata: {
+  if (stageChanged) {
+    await appendStageHistory({
+      historyId: randomUUID(),
+      opportunityId: params.opportunityId,
+      tenantId: params.tenantId,
       fromStageId: existing.stageId,
       toStageId: targetStage.stageId,
-      ...(params.closeReason ? { closeReason: params.closeReason } : {}),
-      ...(params.lossReason ? { lossReason: params.lossReason } : {}),
-    },
-    touchLastActivity: false,
-  });
+      fromStageKey: existing.stage,
+      toStageKey: targetStage.key,
+      ...(params.changedBy ? { changedBy: params.changedBy } : {}),
+      changedAt: now,
+    });
 
-  if (!targetStage.isClosed) {
-    await triggerSequencesForOpportunity({
+    await recordOpportunityActivity({
       tenantId: params.tenantId,
       opportunityId: params.opportunityId,
-      trigger: "stage_entered",
-      stageId: targetStage.stageId,
-      pipelineId: updated.pipelineId,
+      type: targetStage.isClosed ? "closed" : "stage_changed",
+      message: `${existing.stage} → ${targetStage.key}`,
+      ...(params.changedBy ? { actorId: params.changedBy } : {}),
+      metadata: {
+        fromStageId: existing.stageId,
+        toStageId: targetStage.stageId,
+        ...(params.closeReason ? { closeReason: params.closeReason } : {}),
+        ...(params.lossReason ? { lossReason: params.lossReason } : {}),
+      },
+      touchLastActivity: false,
+    });
+
+    if (!targetStage.isClosed) {
+      await triggerSequencesForOpportunity({
+        tenantId: params.tenantId,
+        opportunityId: params.opportunityId,
+        trigger: "stage_entered",
+        stageId: targetStage.stageId,
+        pipelineId: updated.pipelineId,
+      });
+    }
+
+    await triggerFlowsForOpportunityStageEntered({
+      tenantId: params.tenantId,
+      opportunity: updated,
+      fromStageKey: existing.stage,
+      toStageKey: targetStage.key as OpportunityStage,
+      toStageId: targetStage.stageId,
+    }).catch((err) => {
+      console.error("Failed to trigger stage-entered flows", {
+        opportunityId: params.opportunityId,
+        stageId: targetStage.stageId,
+        error: err,
+      });
     });
   }
 

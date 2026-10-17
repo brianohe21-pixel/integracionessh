@@ -2,6 +2,7 @@ import { getTenant, updateTenant } from "../dynamodb/tenant.repository.js";
 import { getResellerPlanDefaults } from "../dynamodb/platform-config.repository.js";
 import { normalizeTenantPlan } from "./normalize-plan.js";
 import { enforceBotModelsForPlan } from "./enforce-bot-models-for-plan.js";
+import { resetTemplateBillingPeriod } from "./template-billing.js";
 import type { ResellerConfig, Tenant, TenantPlan } from "../../types/index.js";
 
 const PLAN_DURATION_DAYS = 30;
@@ -58,6 +59,9 @@ export async function activateTenantPlan(
   }
 
   await updateTenant(tenantId, updates);
+  if (resolvedPlan === "starter") {
+    await resetTemplateBillingPeriod(tenantId);
+  }
   await enforceBotModelsForPlan(tenantId, resolvedPlan);
 }
 
@@ -92,6 +96,9 @@ export async function applyAdminTenantPlan(
   }
 
   const updated = await updateTenant(tenantId, updates);
+  if (resolvedPlan === "starter") {
+    await resetTemplateBillingPeriod(tenantId);
+  }
   await enforceBotModelsForPlan(tenantId, resolvedPlan);
-  return updated;
+  return getTenant(tenantId).then((t) => t ?? updated);
 }

@@ -396,13 +396,25 @@ export async function handler(
     const apiEvent = event as APIGatewayProxyEventV2WithJWTAuthorizer;
     const auth = await resolveRequestAuth(apiEvent);
     assertAdvisorOrMember(auth);
-    await assertAssignedServices(auth.tenantId, "sales");
-    const advisorId = await resolveAdvisorIdForAuth(auth);
 
     const method = apiEvent.requestContext.http.method;
     const rawPath = apiEvent.rawPath ?? apiEvent.requestContext.http.path;
     const segments = parseSalesPath(rawPath);
     const params = apiEvent.queryStringParameters ?? {};
+
+    if (segments[0] === "tags") {
+      await assertAssignedServices(auth.tenantId, "contacts");
+      const { handleTagsRoutes } = await import("../../lib/tags/routes.js");
+      return handleTagsRoutes({
+        auth,
+        method,
+        segments: segments.slice(1),
+        body: apiEvent.body,
+      });
+    }
+
+    await assertAssignedServices(auth.tenantId, "sales");
+    const advisorId = await resolveAdvisorIdForAuth(auth);
 
     if (method === "GET" && segments.length === 1 && segments[0] === "metrics") {
       const pipelineId = params.pipelineId ?? (await ensureDefaultPipeline(auth.tenantId)).pipelineId;
@@ -653,6 +665,25 @@ export async function handler(
           auth.userId
         );
         if (!updated) return notFound("Opportunity not found");
+
+        if (parsed.data.tags !== undefined) {
+          const { syncOpportunityTagsAndRunActions } = await import("../../lib/tags/apply.js");
+          await syncOpportunityTagsAndRunActions({
+            tenantId: auth.tenantId,
+            opportunityId,
+            previousTags: existing.tags,
+            nextTags: parsed.data.tags,
+            changedBy: auth.userId,
+            ...(updated.phone ? { phone: updated.phone } : {}),
+          });
+          const refreshed = await getOpportunityById(auth.tenantId, opportunityId);
+          if (refreshed) {
+            const pipeline = await getPipelineById(auth.tenantId, refreshed.pipelineId);
+            const stage = pipeline ? findStageById(pipeline, refreshed.stageId) : undefined;
+            return ok(enrichOpportunity(refreshed, stage));
+          }
+        }
+
         const pipeline = await getPipelineById(auth.tenantId, updated.pipelineId);
         const stage = pipeline ? findStageById(pipeline, updated.stageId) : undefined;
         return ok(enrichOpportunity(updated, stage));

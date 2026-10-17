@@ -81,6 +81,18 @@ build_plan_args() {
   if [ -n "${GOOGLE_BUSINESS_CLIENT_SECRET:-}" ]; then
     PLAN_ARGS+=(-var="google_business_client_secret=${GOOGLE_BUSINESS_CLIENT_SECRET}")
   fi
+  if [ -n "${GOOGLE_DRIVE_CLIENT_ID:-}" ]; then
+    PLAN_ARGS+=(-var="google_drive_client_id=${GOOGLE_DRIVE_CLIENT_ID}")
+  fi
+  if [ -n "${GOOGLE_DRIVE_CLIENT_SECRET:-}" ]; then
+    PLAN_ARGS+=(-var="google_drive_client_secret=${GOOGLE_DRIVE_CLIENT_SECRET}")
+  fi
+  if [ -n "${ONEDRIVE_CLIENT_ID:-}" ]; then
+    PLAN_ARGS+=(-var="onedrive_client_id=${ONEDRIVE_CLIENT_ID}")
+  fi
+  if [ -n "${ONEDRIVE_CLIENT_SECRET:-}" ]; then
+    PLAN_ARGS+=(-var="onedrive_client_secret=${ONEDRIVE_CLIENT_SECRET}")
+  fi
   if [ -n "${TELEPHONY_GATEWAY_VPC_ID:-}" ]; then
     PLAN_ARGS+=(-var="telephony_gateway_vpc_id=${TELEPHONY_GATEWAY_VPC_ID}")
   fi

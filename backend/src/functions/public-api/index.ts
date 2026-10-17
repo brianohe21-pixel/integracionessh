@@ -18,7 +18,6 @@ import {
   deleteCachedTemplate,
   syncTemplates,
 } from "../../lib/dynamodb/template.repository.js";
-import { incrementMessages } from "../../lib/dynamodb/usage.repository.js";
 import {
   sendTextMessage,
   sendTemplateMessage,
@@ -76,6 +75,8 @@ import {
 } from "./voice-handlers.js";
 import { getServiceStatusSnapshot } from "../../lib/dynamodb/service-status.repository.js";
 import { buildPublicServiceStatusResponse } from "../../lib/service-status/public-response.js";
+import { formatApiUsageMessageContent } from "../../lib/public-api/usage-message-content.js";
+import { persistPublicApiWhatsAppOutbound } from "../../lib/public-api/persist-outbound.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 
@@ -413,6 +414,7 @@ async function logUsage(params: {
   messageId?: string;
   callId?: string;
   maskedPhone?: string;
+  messageContent?: string;
   errorMessage?: string;
   errorStack?: string;
 }): Promise<void> {
@@ -430,6 +432,7 @@ async function logUsage(params: {
       ...(params.messageId ? { messageId: params.messageId } : {}),
       ...(params.callId ? { callId: params.callId } : {}),
       ...(params.maskedPhone ? { maskedPhone: params.maskedPhone } : {}),
+      ...(params.messageContent ? { messageContent: params.messageContent } : {}),
       ...(params.errorMessage ? { errorMessage: params.errorMessage } : {}),
       ...(params.errorStack ? { errorStack: params.errorStack } : {}),
     }),
@@ -521,6 +524,19 @@ async function handleSendMessage(
   const { bot, accessToken } = await loadActiveBot(apiKey);
   let messageId: string | null = null;
   const statusCode = 200;
+  const messageContent =
+    parsed.data.type === "text"
+      ? formatApiUsageMessageContent({ type: "text", text: parsed.data.text })
+      : formatApiUsageMessageContent({
+          type: "template",
+          template: {
+            name: parsed.data.template.name,
+            language: parsed.data.template.language,
+            ...(parsed.data.template.components?.length
+              ? { components: parsed.data.template.components }
+              : {}),
+          },
+        });
 
   try {
     const data = parsed.data;
@@ -545,6 +561,7 @@ async function handleSendMessage(
         templateName: data.template.name,
         language: data.template.language,
         accessToken,
+        billingTenantId: apiKey.tenantId,
       };
       if (data.template.components?.length) {
         templateOptions.components = data.template.components as NonNullable<
@@ -561,7 +578,29 @@ async function handleSendMessage(
       const result = await sendTemplateMessage(templateOptions);
       messageId = result.messages[0]?.id ?? null;
     }
-    await incrementMessages(apiKey.tenantId);
+
+    await persistPublicApiWhatsAppOutbound({
+      tenantId: apiKey.tenantId,
+      botId: apiKey.botId,
+      phoneNumberId: bot.phoneNumberId,
+      to: data.to,
+      externalMessageId: messageId,
+      payload:
+        data.type === "text"
+          ? { type: "text", text: data.text }
+          : {
+              type: "template",
+              template: {
+                name: data.template.name,
+                language: data.template.language,
+                ...(data.template.components?.length
+                  ? { components: data.template.components }
+                  : {}),
+              },
+            },
+    }).catch((err) => {
+      console.warn("Failed to persist public API WhatsApp message to conversation:", err);
+    });
   } catch (err) {
     const loggedError = err as Error & { __apiUsageLogged?: boolean };
     loggedError.__apiUsageLogged = true;
@@ -573,6 +612,7 @@ async function handleSendMessage(
       statusCode: 502,
       durationMs: Date.now() - startMs,
       maskedPhone: maskPhone(parsed.data.to),
+      messageContent,
       ...captureError(err),
     });
     throw loggedError;
@@ -588,6 +628,7 @@ async function handleSendMessage(
     durationMs: Date.now() - startMs,
     ...(messageId ? { messageId } : {}),
     maskedPhone: maskPhone(parsed.data.to),
+    messageContent,
   });
 
   return {
@@ -614,6 +655,10 @@ async function handleSendSms(
 
   const bot = await loadBotForApiKey(apiKey);
   const now = new Date().toISOString();
+  const messageContent = formatApiUsageMessageContent({
+    type: "sms",
+    text: parsed.data.text,
+  });
 
   try {
     const result = await sendSmsTextWithDlr({
@@ -625,7 +670,6 @@ async function handleSendSms(
       environment: ENVIRONMENT,
     });
 
-    await incrementMessages(apiKey.tenantId);
     await logUsage({
       apiKey,
       hashedKey,
@@ -635,6 +679,7 @@ async function handleSendSms(
       durationMs: Date.now() - startMs,
       messageId: result.messageId,
       maskedPhone: maskPhone(parsed.data.to),
+      messageContent,
     });
 
     return {
@@ -661,6 +706,7 @@ async function handleSendSms(
       statusCode,
       durationMs: Date.now() - startMs,
       maskedPhone: maskPhone(parsed.data.to),
+      messageContent,
       ...captureError(err),
     });
 
@@ -716,7 +762,6 @@ async function handleOtpSend(
     environment: ENVIRONMENT,
   });
 
-  await incrementMessages(apiKey.tenantId);
   await logUsage({
     apiKey,
     hashedKey,

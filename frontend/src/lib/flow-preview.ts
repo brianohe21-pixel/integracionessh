@@ -179,7 +179,12 @@ export function buildFlowPreviewSteps(params: {
   branchTrue: string;
   branchFalse: string;
 }): FlowPreviewStep[] {
-  const trigger = params.nodes.find((node) => node.type === "trigger");
+  const trigger = params.nodes.find(
+    (node) =>
+      node.type === "trigger" ||
+      node.type === "message_received_trigger" ||
+      node.type === "opportunity_stage_trigger"
+  );
   if (!trigger) return [];
 
   const nodeMap = new Map(params.nodes.map((node) => [node.id, node]));

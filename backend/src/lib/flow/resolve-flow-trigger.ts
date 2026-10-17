@@ -1,4 +1,5 @@
 import type { FlowNode, FlowTriggerType } from "../../types/index.js";
+import { getFlowEntryNode, isFlowEntryNode } from "./entry-node.js";
 import { hasWebhookNode } from "./webhook-flow.js";
 
 export function resolveFlowTriggerType(
@@ -8,8 +9,26 @@ export function resolveFlowTriggerType(
   if (isVoiceFlow) return "voice_call";
   if (hasWebhookNode(nodes)) return "web_form_submitted";
 
-  const trigger = nodes.find((node) => node.type === "trigger");
-  const data = trigger?.data;
+  const entry = getFlowEntryNode(nodes);
+  if (entry?.type === "opportunity_stage_trigger") {
+    return "opportunity_stage_entered";
+  }
+  if (entry?.type === "message_received_trigger") {
+    const keywords = entry.data.keywords ?? [];
+    if (keywords.length > 0) return "keyword";
+    if (entry.data.triggerType === "first_message") return "first_message";
+    return "any_message";
+  }
+
+  const data = entry?.data;
+  if (data?.triggerType === "opportunity_stage_entered") {
+    return "opportunity_stage_entered";
+  }
+
+  if (entry?.type === "trigger") {
+    return "any_message";
+  }
+
   const keywords = data?.keywords ?? [];
 
   if (keywords.length > 0) return "keyword";
@@ -24,7 +43,7 @@ export function applyResolvedTriggerType(
   const triggerType = resolveFlowTriggerType(nodes, isVoiceFlow);
 
   return nodes.map((node) => {
-    if (node.type !== "trigger") return node;
+    if (!isFlowEntryNode(node)) return node;
     return {
       ...node,
       data: {

@@ -583,6 +583,7 @@ async function handleTestSend(
     templateName,
     language,
     accessToken,
+    billingTenantId: auth.tenantId,
   });
 
   const messageId = result.messages?.[0]?.id ?? null;

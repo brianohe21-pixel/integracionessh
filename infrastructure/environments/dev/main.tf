@@ -262,6 +262,10 @@ module "lambda" {
   shopify_api_key                = var.shopify_api_key
   shopify_api_secret             = var.shopify_api_secret
   shopify_api_version            = var.shopify_api_version
+  google_drive_client_id         = var.google_drive_client_id
+  google_drive_client_secret     = var.google_drive_client_secret
+  onedrive_client_id             = var.onedrive_client_id
+  onedrive_client_secret         = var.onedrive_client_secret
   enable_newrelic                = var.enable_newrelic
   newrelic_account_id            = var.newrelic_account_id
   newrelic_license_key           = var.newrelic_license_key
@@ -372,6 +376,8 @@ module "api_gateway" {
   google_business_function_arn    = module.lambda.google_business_function_arn
   shopify_invoke_arn              = module.lambda.shopify_invoke_arn
   shopify_function_arn            = module.lambda.shopify_function_arn
+  drive_invoke_arn                = module.lambda.drive_invoke_arn
+  drive_function_arn              = module.lambda.drive_function_arn
   allowed_origins                 = ["*"]
   api_custom_domain               = var.api_custom_domain
   tags                            = local.tags

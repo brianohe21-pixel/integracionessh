@@ -10,13 +10,22 @@ import type { TenantPlan } from "../../types/index.js";
 
 export type PaymentStatus = "pending" | "approved" | "declined";
 
+export type PaymentKind = "plan" | "ai_pack";
+
 export interface PaymentIntent {
   reference: string;
   tenantId: string;
   plan: TenantPlan;
+  kind?: PaymentKind;
+  aiPackId?: string;
+  aiMessagesGranted?: number;
   amountInCents: number;
   status: PaymentStatus;
   wompiTransactionId?: string;
+  planFeeCents?: number;
+  templateFeeCents?: number;
+  templatesAcceptedCount?: number;
+  unitPriceCents?: number;
   createdAt: string;
   updatedAt: string;
 }

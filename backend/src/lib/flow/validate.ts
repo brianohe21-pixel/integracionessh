@@ -1,5 +1,6 @@
 import type { FlowDefinition, FlowNode, LocalizedText } from "../../types/index.js";
 import { getFlowSecretNamesSet } from "./flow-secrets.repository.js";
+import { countFlowEntryNodes, getFlowEntryNode } from "./entry-node.js";
 import { isVoiceAiFlow } from "./voice-flow-compiler.js";
 import { isWebhookReceivingFlow } from "./webhook-flow.js";
 
@@ -44,7 +45,7 @@ function isFormFlow(flow: FlowDefinition): boolean {
 }
 
 function getTriggerNode(flow: FlowDefinition): FlowNode | undefined {
-  return flow.nodes.find((node) => node.type === "trigger");
+  return getFlowEntryNode(flow.nodes);
 }
 
 function reachableNodeIds(flow: FlowDefinition): Set<string> {
@@ -126,6 +127,17 @@ function validateBindings(node: FlowNode, issues: FlowValidationIssue[]): void {
         : []),
       ...(node.data.opportunityDescriptionBinding
         ? [{ field: "opportunityDescriptionBinding", value: node.data.opportunityDescriptionBinding }]
+        : [])
+    );
+  }
+
+  if (node.type === "move_opportunity_stage") {
+    bindingFields.push(
+      ...(node.data.opportunityIdBinding
+        ? [{ field: "opportunityIdBinding", value: node.data.opportunityIdBinding, required: true as const }]
+        : [{ field: "opportunityIdBinding", required: true as const }]),
+      ...(node.data.opportunityCloseReasonBinding
+        ? [{ field: "opportunityCloseReasonBinding", value: node.data.opportunityCloseReasonBinding }]
         : [])
     );
   }
@@ -273,11 +285,11 @@ export async function validateFlowDefinitionWithSecrets(
 
 export function validateFlowDefinition(flow: FlowDefinition): FlowValidationIssue[] {
   const issues: FlowValidationIssue[] = [];
-  const triggers = flow.nodes.filter((node) => node.type === "trigger");
+  const triggers = countFlowEntryNodes(flow.nodes);
   const formFlow = isFormFlow(flow);
   const voiceFlow = isVoiceAiFlow(flow);
 
-  if (triggers.length !== 1) {
+  if (triggers !== 1) {
     issues.push({
       code: "trigger_count",
       message: "Flow must have exactly one trigger node",
@@ -336,6 +348,43 @@ export function validateFlowDefinition(flow: FlowDefinition): FlowValidationIssu
       });
     }
 
+    if (node.type === "cloud_drive_write") {
+      if (
+        node.data.cloudDriveProvider !== "google-drive" &&
+        node.data.cloudDriveProvider !== "onedrive"
+      ) {
+        issues.push({
+          code: "missing_cloud_drive_provider",
+          message: "cloudDriveProvider must be google-drive or onedrive",
+          nodeId: node.id,
+        });
+      }
+      if (
+        node.data.cloudDriveTargetType !== "document" &&
+        node.data.cloudDriveTargetType !== "spreadsheet"
+      ) {
+        issues.push({
+          code: "missing_cloud_drive_target",
+          message: "cloudDriveTargetType must be document or spreadsheet",
+          nodeId: node.id,
+        });
+      }
+      if (!node.data.cloudDriveFileId?.trim()) {
+        issues.push({
+          code: "missing_cloud_drive_file",
+          message: "cloudDriveFileId is required",
+          nodeId: node.id,
+        });
+      }
+      if (!node.data.cloudDriveContent?.trim()) {
+        issues.push({
+          code: "missing_cloud_drive_content",
+          message: "cloudDriveContent is required",
+          nodeId: node.id,
+        });
+      }
+    }
+
     if (node.type === "agent") {
       const channel = node.data.channel ?? "any";
       if (
@@ -358,8 +407,34 @@ export function validateFlowDefinition(flow: FlowDefinition): FlowValidationIssu
       }
     }
 
-    if (node.type === "save_contact" || node.type === "create_lead" || node.type === "create_opportunity" || node.type === "send_notification") {
+    if (
+      node.type === "save_contact" ||
+      node.type === "create_lead" ||
+      node.type === "create_opportunity" ||
+      node.type === "move_opportunity_stage" ||
+      node.type === "send_notification"
+    ) {
       validateBindings(node, issues);
+    }
+
+    if (node.type === "move_opportunity_stage") {
+      if (!node.data.opportunityIdBinding?.trim()) {
+        issues.push({
+          code: "missing_opportunity_id",
+          message: "opportunityIdBinding is required",
+          nodeId: node.id,
+        });
+      }
+      if (
+        !node.data.opportunityStage &&
+        !node.data.opportunityStageBinding?.trim()
+      ) {
+        issues.push({
+          code: "missing_opportunity_stage",
+          message: "opportunityStage is required",
+          nodeId: node.id,
+        });
+      }
     }
 
     if (node.type === "send_notification") {

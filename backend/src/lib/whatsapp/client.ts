@@ -32,6 +32,7 @@ export function throwGraphApiError(status: number, body: string): never {
         error_subcode?: number;
         error_user_msg?: string;
         message?: string;
+        type?: string;
         is_transient?: boolean;
       };
     };
@@ -64,6 +65,16 @@ export function throwGraphApiError(status: number, body: string): never {
       throw err;
     }
 
+    const isOAuthPermissionError =
+      graphError.code === 200 ||
+      (typeof graphError.type === "string" && /oauthexception/i.test(graphError.type));
+    if (isOAuthPermissionError) {
+      console.error("WhatsApp Graph API OAuth/permission error", { status, body });
+      const err = new Error(`WhatsApp API error ${status}`) as Error & { statusCode?: number };
+      err.statusCode = 502;
+      throw err;
+    }
+
     if (graphError.is_transient || graphError.code === 2) {
       const err = new Error(message) as Error & { statusCode?: number };
       err.statusCode = 502;
@@ -73,7 +84,8 @@ export function throwGraphApiError(status: number, body: string): never {
     if ((e as Error & { statusCode?: number }).statusCode) throw e;
   }
 
-  const err = new Error(`WhatsApp API error ${status}: ${body}`) as Error & { statusCode?: number };
+  console.error("WhatsApp Graph API error", { status, body });
+  const err = new Error(`WhatsApp API error ${status}`) as Error & { statusCode?: number };
   err.statusCode = 502;
   throw err;
 }
@@ -147,6 +159,8 @@ export interface SendTemplateOptions {
     parameters?: Array<{ type: string; text?: string; image?: { link: string } }>;
   }>;
   accessToken: string;
+  /** When set, enforces Starter template billing gates and meters accepted sends. */
+  billingTenantId?: string;
 }
 
 export interface SendTextMessageOptions {
@@ -791,7 +805,22 @@ export async function requestSmbAppData(
 export async function sendTemplateMessage(
   options: SendTemplateOptions
 ): Promise<SendTextMessageResponse> {
-  const { phoneNumberId, to, templateName, language, components, accessToken } = options;
+  const {
+    phoneNumberId,
+    to,
+    templateName,
+    language,
+    components,
+    accessToken,
+    billingTenantId,
+  } = options;
+
+  if (billingTenantId) {
+    const { assertCanSendTemplatesByTenantId } = await import(
+      "../billing/template-billing.js"
+    );
+    await assertCanSendTemplatesByTenantId(billingTenantId);
+  }
 
   const body: Record<string, unknown> = {
     messaging_product: "whatsapp",
@@ -822,5 +851,14 @@ export async function sendTemplateMessage(
     throwGraphApiError(response.status, error);
   }
 
-  return response.json() as Promise<SendTextMessageResponse>;
+  const result = (await response.json()) as SendTextMessageResponse;
+
+  if (billingTenantId) {
+    const { recordAcceptedTemplateSend } = await import(
+      "../billing/template-billing.js"
+    );
+    await recordAcceptedTemplateSend(billingTenantId);
+  }
+
+  return result;
 }

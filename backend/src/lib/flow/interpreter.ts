@@ -213,7 +213,12 @@ export async function startFlowRun(params: {
   const now = new Date().toISOString();
   const entryId =
     params.flow.entryNodeId ||
-    params.flow.nodes.find((n) => n.type === "trigger")?.id ||
+    params.flow.nodes.find(
+      (n) =>
+        n.type === "trigger" ||
+        n.type === "message_received_trigger" ||
+        n.type === "opportunity_stage_trigger"
+    )?.id ||
     params.flow.nodes[0]?.id;
 
   if (!entryId) {

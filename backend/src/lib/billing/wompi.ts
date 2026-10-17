@@ -194,6 +194,10 @@ export async function fetchWompiTransaction(
   return json.data ?? null;
 }
 
+export type ParsedPaymentReference =
+  | { kind: "plan"; tenantId: string; plan: PaidTenantPlan }
+  | { kind: "ai_pack"; tenantId: string; packId: string };
+
 export function buildPaymentReference(
   tenantId: string,
   plan: PaidTenantPlan
@@ -202,12 +206,29 @@ export function buildPaymentReference(
   return `wompi|${tenantId}|${plan}|${rand}`;
 }
 
+export function buildAiPackPaymentReference(
+  tenantId: string,
+  packId: string
+): string {
+  const rand = Math.random().toString(36).slice(2, 10);
+  const safePackId = packId.replace(/\|/g, "_");
+  return `wompi|${tenantId}|ai_pack|${safePackId}|${rand}`;
+}
+
 export function parsePaymentReference(
   reference: string
-): { tenantId: string; plan: PaidTenantPlan } | null {
+): ParsedPaymentReference | null {
   const parts = reference.split("|");
   if (parts.length < 4 || parts[0] !== "wompi") return null;
   const tenantId = parts[1] ?? "";
+  if (!tenantId) return null;
+
+  if (parts[2] === "ai_pack") {
+    const packId = parts[3] ?? "";
+    if (!packId || parts.length < 5) return null;
+    return { kind: "ai_pack", tenantId, packId };
+  }
+
   const plan = parts[2];
   if (
     plan !== "starter" &&
@@ -217,11 +238,10 @@ export function parsePaymentReference(
   ) {
     return null;
   }
-  if (!tenantId) return null;
   if (plan === "scale" || plan === "enterprise") {
-    return { tenantId, plan: "pro" };
+    return { kind: "plan", tenantId, plan: "pro" };
   }
-  return { tenantId, plan };
+  return { kind: "plan", tenantId, plan };
 }
 
 export const FRONTEND_URL = (process.env.FRONTEND_URL ?? "http://localhost:3000").replace(

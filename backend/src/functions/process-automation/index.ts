@@ -3,8 +3,7 @@ import { getAutomation } from "../../lib/dynamodb/automation.repository.js";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
 import { listContactsByTags } from "../../lib/dynamodb/contact.repository.js";
 import { getTenant } from "../../lib/dynamodb/tenant.repository.js";
-import { assertCanSendMessages } from "../../lib/billing/assert-plan.js";
-import { incrementMessages } from "../../lib/dynamodb/usage.repository.js";
+import { assertSubscriptionAllowsSending } from "../../lib/billing/plan-limits.js";
 import { checkMarketingRecipients } from "../../lib/compliance/recipient-policy.js";
 import { sendTextMessage, sendTemplateMessage, getWhatsAppAccessToken } from "../../lib/whatsapp/client.js";
 import { assertWhatsAppOutboundAllowed } from "../../lib/whatsapp/outbound-guard.js";
@@ -37,9 +36,9 @@ async function processRecord(record: SQSRecord): Promise<void> {
   const tenant = await getTenant(tenantId);
   if (tenant) {
     try {
-      await assertCanSendMessages(tenant);
+      assertSubscriptionAllowsSending(tenant);
     } catch {
-      console.warn(`Plan limit for scheduled automation tenant=${tenantId}`);
+      console.warn(`Subscription inactive for scheduled automation tenant=${tenantId}`);
       return;
     }
   }
@@ -86,6 +85,7 @@ async function processRecord(record: SQSRecord): Promise<void> {
           templateName: rule.templateName,
           language: rule.templateLanguage || templateLanguageForLocale(locale),
           accessToken,
+          billingTenantId: tenantId,
           ...(rule.templateVariables
             ? {
                 components: [
@@ -101,7 +101,6 @@ async function processRecord(record: SQSRecord): Promise<void> {
             : {}),
         });
       }
-      await incrementMessages(tenantId);
     } catch (err) {
       console.error(`Scheduled automation send failed to=${to}:`, err);
     }

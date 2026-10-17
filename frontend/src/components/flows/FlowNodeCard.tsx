@@ -2,12 +2,12 @@
 
 import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { Trash2 } from "lucide-react";
+import { MessageSquare, Trash2 } from "lucide-react";
 import type { FlowNodeType, LocalizedText } from "@/types";
 import { useLocale, useT } from "@/i18n/context";
 import { resolveLocalizedText } from "@/lib/localized-text";
 import { cn } from "@/lib/utils";
-import { CATEGORY_STYLES, FLOW_NODE_META } from "./nodeConfig";
+import { CATEGORY_STYLES, FLOW_NODE_META, type FlowNodeMeta } from "./nodeConfig";
 import { useFlowNodeActions } from "./FlowNodeActionsContext";
 
 export interface FlowNodeCardData {
@@ -25,17 +25,26 @@ function FlowNodeCardComponent({ id, data, selected }: NodeProps) {
   const locale = useLocale();
   const actions = useFlowNodeActions();
   const nodeData = data as FlowNodeCardData;
-  const meta = FLOW_NODE_META[nodeData.flowType];
+  const fallbackMeta: FlowNodeMeta = {
+    category: "messaging",
+    icon: MessageSquare,
+    hasInput: true,
+    hasOutput: true,
+  };
+  const meta = FLOW_NODE_META[nodeData.flowType] ?? fallbackMeta;
   const styles = CATEGORY_STYLES[meta.category];
   const Icon = meta.icon;
   const buttons =
     nodeData.flowType === "buttons"
       ? nodeData.buttons?.length
-        ? nodeData.buttons.map((btn) => ({
-            id: btn.id,
-            title: resolveLocalizedText(btn.title, locale),
-          }))
-        : [{ id: "btn-1", title: "…" }]
+        ? nodeData.buttons.map((btn, index) => {
+            const title = resolveLocalizedText(btn.title, locale).trim();
+            return {
+              id: btn.id,
+              title: title || `${t("flows.fields.button")} ${index + 1}`,
+            };
+          })
+        : [{ id: "btn-1", title: `${t("flows.fields.button")} 1` }]
       : [];
   const canDelete = actions?.canDeleteNode(id) ?? false;
 
@@ -155,10 +164,10 @@ function FlowNodeCardComponent({ id, data, selected }: NodeProps) {
                   className="!h-2.5 !w-2.5 !border-2 !border-surface-elevated !bg-info"
                 />
                 <span
-                  className="absolute -bottom-4 max-w-[56px] truncate text-center text-[9px] text-muted"
+                  className="absolute -bottom-4 max-w-[72px] truncate text-center text-[9px] text-muted"
                   style={{ left, transform: "translateX(-50%)" }}
                 >
-                  {btn.title || `#${i + 1}`}
+                  {btn.title}
                 </span>
               </div>
             );

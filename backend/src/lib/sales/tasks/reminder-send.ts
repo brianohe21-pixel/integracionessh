@@ -238,6 +238,7 @@ async function sendWhatsAppReminder(params: {
     templateName: template.templateName,
     language: template.language,
     accessToken,
+    billingTenantId: params.tenantId,
     components: [
       {
         type: "body",

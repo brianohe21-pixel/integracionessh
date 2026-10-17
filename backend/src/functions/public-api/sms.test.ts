@@ -39,6 +39,7 @@ jest.mock("../../lib/dynamodb/sms-dlr.repository.js", () => ({
 }));
 
 import { getApiKeyByHash } from "../../lib/dynamodb/api-key.repository.js";
+import { logApiKeyUsage } from "../../lib/dynamodb/api-key-usage.repository.js";
 import { getBot } from "../../lib/dynamodb/bot.repository.js";
 import { getSmsDlrReceipt } from "../../lib/dynamodb/sms-dlr.repository.js";
 import { sendSmsTextWithDlr } from "../../lib/sms/send-outbound.js";
@@ -46,6 +47,7 @@ import { handler } from "./index.js";
 
 const mockedGetApiKeyByHash = jest.mocked(getApiKeyByHash);
 const mockedGetBot = jest.mocked(getBot);
+const mockedLogApiKeyUsage = jest.mocked(logApiKeyUsage);
 const mockedSendSmsTextWithDlr = jest.mocked(sendSmsTextWithDlr);
 const mockedGetSmsDlrReceipt = jest.mocked(getSmsDlrReceipt);
 
@@ -122,6 +124,13 @@ describe("public-api sms routes", () => {
       status: "sent",
       timestamp: expect.any(String),
     });
+    expect(mockedLogApiKeyUsage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        endpoint: "POST /v1/sms",
+        messageContent: "Hello",
+        messageId: "telcored-123",
+      })
+    );
   });
 
   it("returns traceId when provider send fails", async () => {

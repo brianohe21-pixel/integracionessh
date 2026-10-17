@@ -27,12 +27,14 @@ export default function NewCampaignPage() {
       language: "",
       segments: [],
       scheduledAt: "",
+      advisorId: "",
     },
     recipients: draft?.recipients ?? [],
     audienceTags: [],
     batchForm: DEFAULT_BATCH_FORM,
     requireOptIn: draft ? true : false,
     requestDlr: false,
+    autoAssignAdvisor: false,
   };
 
   async function handleSubmit(input: CampaignFormSubmitInput) {

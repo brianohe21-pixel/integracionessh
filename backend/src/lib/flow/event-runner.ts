@@ -180,7 +180,14 @@ export async function startEventFlowRun(params: {
   const resolvedBotId = resolveFlowBotId(flow);
 
   const entryId =
-    flow.entryNodeId || flow.nodes.find((n) => n.type === "trigger")?.id || flow.nodes[0]?.id;
+    flow.entryNodeId ||
+    flow.nodes.find(
+      (n) =>
+        n.type === "trigger" ||
+        n.type === "message_received_trigger" ||
+        n.type === "opportunity_stage_trigger"
+    )?.id ||
+    flow.nodes[0]?.id;
   if (!entryId) {
     throw new Error("Flow has no entry node");
   }

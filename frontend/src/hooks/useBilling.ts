@@ -3,7 +3,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { PaidBillingPlan } from "@/lib/plan-config";
-import type { BillingUsageResponse, PaymentIntent, TenantPlan } from "@/types";
+import type {
+  AiMessagePack,
+  AiUsageSnapshot,
+  BillingUsageResponse,
+  PaymentIntent,
+  TenantPlan,
+} from "@/types";
 
 export type BillingProvider = "wompi" | "stripe";
 
@@ -15,6 +21,7 @@ export interface BillingPlanPrice {
   trm?: number;
   salesOnly?: boolean;
   renewalOnly?: boolean;
+  maxMessagesPerMonth?: number;
 }
 
 export interface WompiCheckoutParams {
@@ -27,11 +34,33 @@ export interface WompiCheckoutParams {
   customerEmail: string;
 }
 
+export interface StarterCheckoutBreakdown {
+  planFeeCents: number;
+  templatesAcceptedCount: number;
+  unitPriceCents: number;
+  templateFeeCents: number;
+  totalCents: number;
+  trm?: number;
+}
+
+export interface TemplateBillingStatus {
+  templatesAcceptedCount: number;
+  unitPriceCents: number;
+  templateFeeCents: number;
+  creditCapCount: number | null;
+  creditCapReached: boolean;
+  templatesBlocked: boolean;
+  blockReason: "past_due" | "credit_cap" | "subscription" | null;
+}
+
 export interface BillingCheckoutResponse {
   url: string;
   reference?: string;
   provider: BillingProvider;
+  kind?: "plan" | "ai_pack";
+  aiPack?: AiMessagePack;
   wompi?: WompiCheckoutParams;
+  breakdown?: StarterCheckoutBreakdown;
 }
 
 export interface BillingProvidersResponse {
@@ -42,6 +71,7 @@ export interface BillingProvidersResponse {
     starter?: BillingPlanPrice;
     pro?: BillingPlanPrice;
   };
+  aiPacks?: AiMessagePack[];
 }
 
 export function useBillingProviders() {
@@ -62,11 +92,16 @@ export interface BillingStatusResponse {
   plan: TenantPlan;
   limits: BillingUsageResponse["limits"];
   usage: BillingUsageResponse["usage"];
+  aiUsage?: AiUsageSnapshot;
+  aiPacks?: AiMessagePack[];
+  canPurchaseAiPacks?: boolean;
   subscriptionStatus: string;
   currentPeriodEnd: string | null;
   paymentProvider: BillingProvider | string;
   canRenew: boolean;
   isExpired: boolean;
+  templateBilling?: TemplateBillingStatus;
+  checkoutBreakdown?: StarterCheckoutBreakdown | null;
 }
 
 export function useBillingStatus() {
@@ -79,6 +114,9 @@ export function useBillingStatus() {
 export interface BillingTransactionResponse {
   reference: string;
   plan: TenantPlan;
+  kind?: "plan" | "ai_pack";
+  aiPackId?: string | null;
+  aiMessagesGranted?: number | null;
   status: "pending" | "approved" | "declined";
   amountInCents: number;
   wompiTransactionId: string | null;
@@ -106,8 +144,11 @@ export function useBillingTransaction(reference: string | null) {
 
 export function useCheckout() {
   return useMutation({
-    mutationFn: (input: { plan: PaidBillingPlan; provider?: BillingProvider }) =>
-      api.post<BillingCheckoutResponse>("/billing/checkout", input),
+    mutationFn: (
+      input:
+        | { plan: PaidBillingPlan; provider?: BillingProvider; aiPackId?: never }
+        | { aiPackId: string; provider?: BillingProvider; plan?: never }
+    ) => api.post<BillingCheckoutResponse>("/billing/checkout", input),
   });
 }
 

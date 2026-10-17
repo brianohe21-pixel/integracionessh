@@ -332,6 +332,32 @@ variable "shopify_api_version" {
   description = "Shopify Admin API version"
 }
 
+variable "google_drive_client_id" {
+  type        = string
+  default     = ""
+  description = "Google OAuth client ID for Google Drive integration"
+}
+
+variable "google_drive_client_secret" {
+  type        = string
+  default     = ""
+  sensitive   = true
+  description = "Google OAuth client secret for Google Drive integration"
+}
+
+variable "onedrive_client_id" {
+  type        = string
+  default     = ""
+  description = "Microsoft OAuth client ID for OneDrive integration"
+}
+
+variable "onedrive_client_secret" {
+  type        = string
+  default     = ""
+  sensitive   = true
+  description = "Microsoft OAuth client secret for OneDrive integration"
+}
+
 variable "ses_from_email" {
   type        = string
   default     = ""
@@ -478,6 +504,7 @@ variable "cloudwatch_log_group_import_exclude" {
     "check_service_status",
     "shopify",
     "process_shopify",
+    "drive",
   ]
   description = "Lambda keys whose log groups are created by Terraform instead of imported (new functions without pre-existing log groups in AWS)"
 }
