@@ -56,6 +56,8 @@ import { buildTaxi355SatelitalVoiceFlow } from "../../lib/flow/voice-flow-templa
 import { isVoiceAiFlow } from "../../lib/flow/voice-flow-compiler.js";
 import { resolveFlowBotId, withBotFromNodes } from "../../lib/flow/resolve-flow-bot.js";
 import { sanitizeFlowEdges } from "../../lib/flow/graph.js";
+import { getEnableBotAssignmentError } from "../../lib/flow/enable-policy.js";
+import { buildPublishedFlowFromDraft } from "../../lib/flow/publish-from-draft.js";
 import { isWebhookReceivingFlow } from "../../lib/flow/webhook-flow.js";
 import { ok, created, badRequest, notFound, noContent, handleError } from "../../lib/http.js";
 import type { FlowDefinition, FlowEdge, FlowHookConfig, FlowNode, FlowKind } from "../../types/index.js";
@@ -66,7 +68,6 @@ import {
 } from "../../lib/dynamodb/flow-version.repository.js";
 import {
   hasUnpublishedChanges,
-  nextPublishedVersion,
   resolveDraftEdges,
   resolveDraftEntryNodeId,
   resolveDraftNodes,
@@ -208,26 +209,9 @@ async function validateFlowCandidate(
   return issues;
 }
 
-function isFormFlowDefinition(nodes: FlowNode[]): boolean {
-  return nodes.some(
-    (node) => node.type === "trigger" && node.data.triggerType === "web_form_submitted"
-  );
-}
-
 function resolveEntryNodeId(nodes: FlowNode[]): string {
   const trigger = nodes.find((n) => n.type === "trigger");
   return trigger?.id ?? nodes[0]?.id ?? "";
-}
-
-function assertBotForEnable(flow: FlowDefinition): string | null {
-  const botId = resolveFlowBotId(flow);
-  const formFlow = isFormFlowDefinition(flow.nodes);
-  const webhookFlow = isWebhookReceivingFlow(flow.nodes);
-  const voiceFlow = isVoiceAiFlow(flow);
-  if (!botId && (voiceFlow || (!formFlow && !webhookFlow))) {
-    return "Assign the flow to an agent before enabling it";
-  }
-  return null;
 }
 
 function buildDuplicateFlowName(name: string): string {
@@ -556,7 +540,7 @@ export async function handler(
       }
 
       if (body.data.enabled) {
-        const botError = assertBotForEnable(flow);
+        const botError = getEnableBotAssignmentError(flow);
         if (botError) return badRequest(botError);
       }
 
@@ -609,7 +593,7 @@ export async function handler(
       }
 
       if (body.data.enabled) {
-        const botError = assertBotForEnable(candidate);
+        const botError = getEnableBotAssignmentError(candidate);
         if (botError) return badRequest(botError);
       }
 
@@ -647,50 +631,25 @@ export async function handler(
       }
 
       const draftNodes = resolveDraftNodes(existing);
-      const draftEdges = resolveDraftEdges(existing);
-      const draftEntryNodeId = resolveDraftEntryNodeId(existing);
-      const candidate = sanitizeFlowEdges(
-        withBotFromNodes({
-          ...existing,
-          nodes: draftNodes,
-          edges: draftEdges,
-          entryNodeId: draftEntryNodeId,
-          draftNodes,
-          draftEdges,
-          draftEntryNodeId,
-        })
-      );
+      const publishedFlow = buildPublishedFlowFromDraft(existing);
 
       try {
-        await validateFlowCandidate(candidate, draftNodes);
+        await validateFlowCandidate(publishedFlow, draftNodes);
       } catch (err) {
         return badRequest(err instanceof Error ? err.message : "Invalid flow");
       }
 
-      const newVersion = nextPublishedVersion(existing);
-      const publishedAt = new Date().toISOString();
-      const publishedFlow = sanitizeFlowEdges({
-        ...existing,
-        nodes: draftNodes,
-        edges: draftEdges,
-        entryNodeId: draftEntryNodeId,
-        draftNodes,
-        draftEdges,
-        draftEntryNodeId,
-        version: newVersion,
-        publishedAt,
-      });
       const updated = await updateFlowDefinition(auth.tenantId, flowId, publishedFlow);
       if (!updated) return notFound("Flow not found");
 
       await createFlowVersionSnapshot({
         flowId,
         tenantId: auth.tenantId,
-        version: newVersion,
+        version: publishedFlow.version,
         nodes: publishedFlow.nodes,
         edges: publishedFlow.edges,
-        entryNodeId: draftEntryNodeId,
-        publishedAt,
+        entryNodeId: publishedFlow.entryNodeId,
+        publishedAt: publishedFlow.publishedAt!,
       });
 
       return ok(sanitizeFlowEdges(updated));
@@ -723,18 +682,41 @@ export async function handler(
     if (method === "POST" && flowId && path.endsWith("/enable")) {
       const tenant = await getTenant(auth.tenantId);
       if (tenant) await assertCanEnableVisualFlow(tenant);
-      const existing = await getFlowDefinition(auth.tenantId, flowId);
+      let existing = await getFlowDefinition(auth.tenantId, flowId);
       if (!existing) return notFound("Flow not found");
 
-      const botError = assertBotForEnable(existing);
+      const botError = getEnableBotAssignmentError(existing);
       if (botError) return badRequest(botError);
+
+      if (
+        hasUnpublishedChanges(existing) &&
+        isWebhookReceivingFlow(resolveDraftNodes(existing))
+      ) {
+        const draftNodes = resolveDraftNodes(existing);
+        const publishedFlow = buildPublishedFlowFromDraft(existing);
+        try {
+          await validateFlowCandidate(publishedFlow, draftNodes);
+        } catch (err) {
+          return badRequest(err instanceof Error ? err.message : "Invalid flow");
+        }
+        const published = await updateFlowDefinition(auth.tenantId, flowId, publishedFlow);
+        if (!published) return notFound("Flow not found");
+        await createFlowVersionSnapshot({
+          flowId,
+          tenantId: auth.tenantId,
+          version: publishedFlow.version,
+          nodes: publishedFlow.nodes,
+          edges: publishedFlow.edges,
+          entryNodeId: publishedFlow.entryNodeId,
+          publishedAt: publishedFlow.publishedAt!,
+        });
+        existing = published;
+      }
 
       const issues = isVoiceAiFlow(existing)
         ? await validateFlowDefinitionWithSecrets(existing, ENVIRONMENT)
         : validateFlowDefinition(existing);
-      const isFormFlow = existing.nodes.some(
-        (node) => node.type === "trigger" && node.data.triggerType === "web_form_submitted"
-      );
+      const isFormFlow = isWebhookReceivingFlow(existing.nodes);
       const isVoiceFlow = isVoiceAiFlow(existing);
       if ((isFormFlow || isVoiceFlow) && issues.length > 0) {
         return badRequest(issues.map((issue) => issue.message).join("; "));

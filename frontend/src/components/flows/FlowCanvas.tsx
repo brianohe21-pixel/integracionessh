@@ -41,13 +41,15 @@ function formatCoord(value: number): string {
 }
 
 function fingerprint(nodes: FlowNode[], edges: FlowEdge[]): string {
-  const nodePart = nodes
+  const nodePart = [...nodes]
+    .sort((a, b) => a.id.localeCompare(b.id))
     .map(
       (n) =>
         `${n.id}:${n.type}:${formatCoord(n.position.x)},${formatCoord(n.position.y)}:${JSON.stringify(n.data)}`
     )
     .join("|");
-  const edgePart = edges
+  const edgePart = [...edges]
+    .sort((a, b) => a.id.localeCompare(b.id))
     .map((e) => `${e.id}:${e.source}:${e.target}:${e.sourceHandle ?? ""}`)
     .join("|");
   return `${nodePart}::${edgePart}`;
@@ -77,27 +79,93 @@ function toReactFlowNodes(
   }));
 }
 
+function mergeReactFlowNodes(previous: Node[], next: Node[]): Node[] {
+  if (previous.length === 0) return next;
+  const previousById = new Map(previous.map((node) => [node.id, node]));
+  const nextById = new Map(next.map((node) => [node.id, node]));
+  const merged: Node[] = [];
+
+  for (const prev of previous) {
+    const incoming = nextById.get(prev.id);
+    if (!incoming) continue;
+    const samePosition =
+      prev.position.x === incoming.position.x && prev.position.y === incoming.position.y;
+    const sameSelected = Boolean(prev.selected) === Boolean(incoming.selected);
+    const sameType = prev.type === incoming.type;
+    const sameData = JSON.stringify(prev.data) === JSON.stringify(incoming.data);
+    if (samePosition && sameSelected && sameType && sameData) {
+      merged.push(prev);
+      continue;
+    }
+    merged.push({
+      ...prev,
+      type: incoming.type,
+      position: incoming.position,
+      selected: incoming.selected,
+      data: incoming.data,
+      measured: prev.measured,
+      width: prev.width ?? prev.measured?.width,
+      height: prev.height ?? prev.measured?.height,
+    });
+  }
+
+  for (const node of next) {
+    if (previousById.has(node.id)) continue;
+    merged.push(node);
+  }
+
+  return merged;
+}
+
 function toReactFlowEdges(edges: FlowEdge[], nodes: FlowNode[]): Edge[] {
   const nodeIds = new Set(nodes.map((node) => node.id));
   const nodeTypeById = new Map(nodes.map((n) => [n.id, n.type]));
   return edges
     .filter((edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target))
     .map((e) => {
-    const sourceType = nodeTypeById.get(e.source);
-    const isHumanEdge = sourceType === "handoff";
-    return {
-      id: e.id,
-      source: e.source,
-      target: e.target,
-      sourceHandle: e.sourceHandle,
-      deletable: true,
-      selectable: true,
-      style: isHumanEdge
-        ? { stroke: "var(--human)", strokeDasharray: "6 4" }
-        : { stroke: "var(--accent)" },
-      className: isHumanEdge ? "human-edge" : undefined,
-    };
-  });
+      const sourceType = nodeTypeById.get(e.source);
+      const isHumanEdge = sourceType === "handoff";
+      return {
+        id: e.id,
+        source: e.source,
+        target: e.target,
+        sourceHandle: e.sourceHandle,
+        deletable: true,
+        selectable: true,
+        style: isHumanEdge
+          ? { stroke: "var(--human)", strokeDasharray: "6 4" }
+          : { stroke: "var(--accent)" },
+        className: isHumanEdge ? "human-edge" : undefined,
+      };
+    });
+}
+
+function mergeReactFlowEdges(previous: Edge[], next: Edge[]): Edge[] {
+  if (previous.length === 0) return next;
+  const previousById = new Map(previous.map((edge) => [edge.id, edge]));
+  const nextById = new Map(next.map((edge) => [edge.id, edge]));
+  const merged: Edge[] = [];
+
+  for (const prev of previous) {
+    const incoming = nextById.get(prev.id);
+    if (!incoming) continue;
+    if (
+      prev.source === incoming.source &&
+      prev.target === incoming.target &&
+      prev.sourceHandle === incoming.sourceHandle
+    ) {
+      merged.push(prev);
+      continue;
+    }
+    merged.push({ ...prev, ...incoming });
+  }
+
+  for (const edge of next) {
+    if (previousById.has(edge.id)) continue;
+    merged.push(edge);
+  }
+
+  return merged;
 }
 
 function fromReactFlow(
@@ -169,6 +237,8 @@ function FlowCanvasInner({
   const skipNextNotifyRef = useRef(true);
   const lastExternalFingerprintRef = useRef("");
   const lastPreviewMetaRef = useRef("");
+  const nodesRef = useRef<Node[]>([]);
+  const edgesRef = useRef<Edge[]>([]);
 
   const reactFlowNodes = useMemo(
     () =>
@@ -186,23 +256,52 @@ function FlowCanvasInner({
 
   const [nodes, setNodes, onNodesChange] = useNodesState(reactFlowNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(reactFlowEdges);
+  nodesRef.current = nodes;
+  edgesRef.current = edges;
+
+  const commitGraph = useCallback((nextNodes: Node[], nextEdges: Edge[]) => {
+    const converted = fromReactFlow(nextNodes, nextEdges, flowRef.current);
+    const nextFingerprint = fingerprint(converted.nodes, converted.edges);
+    lastExternalFingerprintRef.current = nextFingerprint;
+    skipNextNotifyRef.current = true;
+    nodesRef.current = nextNodes;
+    edgesRef.current = nextEdges;
+    setNodes(nextNodes);
+    setEdges(nextEdges);
+    onChangeRef.current(converted.nodes, converted.edges);
+  }, [setEdges, setNodes]);
 
   useEffect(() => {
     const fp = fingerprint(flow.nodes, flow.edges);
     if (fp === lastExternalFingerprintRef.current) return;
+
+    const local = fromReactFlow(nodesRef.current, edgesRef.current, flow);
+    if (fingerprint(local.nodes, local.edges) === fp) {
+      lastExternalFingerprintRef.current = fp;
+      return;
+    }
+
     lastExternalFingerprintRef.current = fp;
     skipNextNotifyRef.current = true;
-    setNodes(
-      toReactFlowNodes(
-        flow.nodes,
-        selectedNodeIdRef.current,
-        getTypeLabelRef.current,
-        getBranchLabelRef.current,
-        locale,
-        botNames
-      )
+    const nextNodes = toReactFlowNodes(
+      flow.nodes,
+      selectedNodeIdRef.current,
+      getTypeLabelRef.current,
+      getBranchLabelRef.current,
+      locale,
+      botNames
     );
-    setEdges(toReactFlowEdges(flow.edges, flow.nodes));
+    const nextEdges = toReactFlowEdges(flow.edges, flow.nodes);
+    setNodes((current) => {
+      const merged = mergeReactFlowNodes(current, nextNodes);
+      nodesRef.current = merged;
+      return merged;
+    });
+    setEdges((current) => {
+      const merged = mergeReactFlowEdges(current, nextEdges);
+      edgesRef.current = merged;
+      return merged;
+    });
   }, [flow.nodes, flow.edges, locale, botNames, setNodes, setEdges]);
 
   useEffect(() => {
@@ -213,17 +312,30 @@ function FlowCanvasInner({
     const previewMeta = `${locale}::${botNamesKey}`;
     if (previewMeta === lastPreviewMetaRef.current) return;
     lastPreviewMetaRef.current = previewMeta;
-    skipNextNotifyRef.current = true;
-    setNodes(
-      toReactFlowNodes(
-        flowRef.current.nodes,
-        selectedNodeIdRef.current,
-        getTypeLabelRef.current,
-        getBranchLabelRef.current,
-        locale,
-        botNames
-      )
-    );
+    setNodes((current) => {
+      if (current.length === 0) return current;
+      const flowNodesById = new Map(flowRef.current.nodes.map((node) => [node.id, node]));
+      let changed = false;
+      const next = current.map((node) => {
+        const flowNode = flowNodesById.get(node.id);
+        if (!flowNode) return node;
+        const data = {
+          flowType: flowNode.type,
+          typeLabel: getTypeLabelRef.current(flowNode.type),
+          preview: buildNodePreview(flowNode.type, flowNode.data, locale, botNames),
+          buttons: flowNode.data.buttons,
+          trueLabel: getBranchLabelRef.current("true"),
+          falseLabel: getBranchLabelRef.current("false"),
+        };
+        if (JSON.stringify(node.data) === JSON.stringify(data)) return node;
+        changed = true;
+        return { ...node, data };
+      });
+      if (!changed) return current;
+      skipNextNotifyRef.current = true;
+      nodesRef.current = next;
+      return next;
+    });
   }, [botNames, locale, setNodes]);
 
   useEffect(() => {
@@ -237,6 +349,7 @@ function FlowCanvasInner({
       });
       if (!changed) return current;
       skipNextNotifyRef.current = true;
+      nodesRef.current = next;
       return next;
     });
   }, [selectedNodeId, setNodes]);
@@ -264,12 +377,9 @@ function FlowCanvasInner({
     [setEdges]
   );
 
-  const onNodeClick = useCallback(
-    (_: React.MouseEvent, node: Node) => {
-      onSelectNodeRef.current(node.id);
-    },
-    []
-  );
+  const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
+    onSelectNodeRef.current(node.id);
+  }, []);
 
   const onEdgeClick = useCallback(() => {
     onSelectNodeRef.current(null);
@@ -302,15 +412,16 @@ function FlowCanvasInner({
           return;
         }
       }
-      if (nodeId === selectedNodeId) {
+      if (nodeId === selectedNodeIdRef.current) {
         onSelectNodeRef.current(null);
       }
-      setNodes((current) => current.filter((node) => node.id !== nodeId));
-      setEdges((current) =>
-        current.filter((edge) => edge.source !== nodeId && edge.target !== nodeId)
+      const nextNodes = nodesRef.current.filter((node) => node.id !== nodeId);
+      const nextEdges = edgesRef.current.filter(
+        (edge) => edge.source !== nodeId && edge.target !== nodeId
       );
+      commitGraph(nextNodes, nextEdges);
     },
-    [selectedNodeId, setEdges, setNodes]
+    [commitGraph]
   );
 
   const canDeleteNode = useCallback((nodeId: string) => {
@@ -358,17 +469,24 @@ function FlowCanvasInner({
         removedIds.add(change.id);
         return true;
       });
-      if (filtered.some((c) => c.type === "remove" && c.id === selectedNodeId)) {
-        onSelectNodeRef.current(null);
-      }
-      onNodesChange(filtered);
+
       if (removedIds.size > 0) {
-        setEdges((current) =>
-          current.filter((edge) => !removedIds.has(edge.source) && !removedIds.has(edge.target))
+        if (removedIds.has(selectedNodeIdRef.current ?? "")) {
+          onSelectNodeRef.current(null);
+        }
+        const nextNodes = nodesRef.current.filter((node) => !removedIds.has(node.id));
+        const nextEdges = edgesRef.current.filter(
+          (edge) => !removedIds.has(edge.source) && !removedIds.has(edge.target)
         );
+        commitGraph(nextNodes, nextEdges);
+        const nonRemove = filtered.filter((change) => change.type !== "remove");
+        if (nonRemove.length > 0) onNodesChange(nonRemove);
+        return;
       }
+
+      onNodesChange(filtered);
     },
-    [onNodesChange, selectedNodeId, setEdges]
+    [commitGraph, onNodesChange]
   );
 
   return (
