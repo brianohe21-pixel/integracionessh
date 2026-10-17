@@ -7,6 +7,7 @@ import { CheckCircle } from "lucide-react";
 
 interface OnboardingStepWhatsAppProps {
   connected: boolean;
+  botId?: string | null;
   onConnected: (data: {
     phoneNumberId?: string;
     whatsappBusinessAccountId: string;
@@ -19,6 +20,7 @@ interface OnboardingStepWhatsAppProps {
 
 export function OnboardingStepWhatsApp({
   connected,
+  botId,
   onConnected,
 }: OnboardingStepWhatsAppProps) {
   const t = useT();
@@ -69,6 +71,7 @@ export function OnboardingStepWhatsApp({
           onboardingMode={mode}
           onBusyChange={setSignupBusy}
           onConnected={onConnected}
+          {...(botId ? { botId } : {})}
         />
       )}
     </div>

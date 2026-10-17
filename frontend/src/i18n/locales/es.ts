@@ -6130,18 +6130,18 @@ export const es = {
   },
   onboarding: {
     title: "Configura tu cuenta",
-    subtitle: "Conecta WhatsApp, crea tu primer bot y activa tu primer flujo en pocos minutos.",
+    subtitle: "Crea tu primer agente, conecta WhatsApp y activa tu primer flujo en pocos minutos.",
     skip: "Saltar por ahora",
     next: "Siguiente",
     back: "Atrás",
     stepOf: "Paso {{current}} de {{total}}",
     bannerTitle: "Termina de configurar tu cuenta",
-    bannerDescription: "Te faltan unos pasos para tener tu bot listo en WhatsApp.",
+    bannerDescription: "Te faltan unos pasos para tener tu agente listo en WhatsApp.",
     bannerResume: "Continuar configuración",
     bannerDismiss: "Cerrar aviso de configuración",
     step: {
       whatsapp: "WhatsApp",
-      createBot: "Crear bot",
+      createBot: "Crear agente",
       testMessage: "Probar mensaje",
       activateFlow: "Activar flujo",
     },
@@ -6151,11 +6151,11 @@ export const es = {
       connected: "WhatsApp conectado correctamente.",
     },
     createBot: {
-      title: "Crea tu primer bot",
-      description: "Dale un nombre a tu asistente. Usará inteligencia artificial para responder mensajes.",
-      nameLabel: "Nombre del bot",
+      title: "Crea tu primer agente",
+      description: "Dale un nombre a tu asistente. Luego conectarás WhatsApp a este agente.",
+      nameLabel: "Nombre del agente",
       namePlaceholder: "Ej. Soporte, Ventas, Mi negocio",
-      create: "Crear bot",
+      create: "Crear agente",
       creating: "Creando…",
     },
     testMessage: {
@@ -6212,11 +6212,11 @@ export const es = {
       gettingStarted: {
         title: "Primeros pasos",
         body:
-          "El asistente de onboarding te guía en cuatro pasos: conectar WhatsApp, crear un bot, enviar un mensaje de prueba y activar un flujo de bienvenida.",
+          "El asistente de onboarding te guía en cuatro pasos: crear un agente, conectar WhatsApp, enviar un mensaje de prueba y activar un flujo de bienvenida.",
         steps: {
           "0": "Inicia sesión y abre /onboarding desde el banner o el Centro de ayuda.",
-          "1": "Conecta tu número de WhatsApp Business con Embedded Signup o tokens de Meta.",
-          "2": "Crea tu primer bot y elige el modo OpenAI o webhook según tu caso de uso.",
+          "1": "Crea tu primer agente (bot) con un nombre y plantilla opcional.",
+          "2": "Conecta tu número de WhatsApp Business con Embedded Signup o tokens de Meta.",
           "3": "Envía un mensaje de prueba desde tu teléfono y activa el flujo automático de bienvenida.",
         },
         troubleshooting: {

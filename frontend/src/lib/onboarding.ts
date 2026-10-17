@@ -6,8 +6,8 @@ export type OnboardingStep =
   | "done";
 
 export const ONBOARDING_STEPS: OnboardingStep[] = [
-  "whatsapp",
   "create_bot",
+  "whatsapp",
   "test_message",
   "activate_flow",
 ];
@@ -20,8 +20,8 @@ export function resolveOnboardingStep(params: {
   hasEnabledFlow: boolean;
 }): OnboardingStep {
   if (params.onboardingCompletedAt) return "done";
-  if (!params.whatsappConnected && !params.hasBot) return "whatsapp";
   if (!params.hasBot) return "create_bot";
+  if (!params.whatsappConnected) return "whatsapp";
   if (!params.onboardingTestConfirmedAt) return "test_message";
   if (!params.hasEnabledFlow) return "activate_flow";
   return "done";
