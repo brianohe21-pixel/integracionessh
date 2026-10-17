@@ -572,7 +572,7 @@ export default function EditFlowPage() {
                 flow={{
                   ...flow,
                   nodes: localNodes.length > 0 ? localNodes : resolveDraftNodes(flow),
-                  edges: localEdges.length > 0 ? localEdges : resolveDraftEdges(flow),
+                  edges: localNodes.length > 0 ? localEdges : resolveDraftEdges(flow),
                 }}
                 selectedNodeId={selectedNodeId}
                 onSelectNode={setSelectedNodeId}
