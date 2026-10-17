@@ -9,22 +9,12 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
 interface OnboardingStepCreateBotProps {
-  phoneNumberId: string;
-  whatsappBusinessAccountId: string;
-  whatsappOnboardingMode?: "cloud_api" | "coexistence";
-  isOnBizApp?: boolean;
-  platformType?: string;
   templateId: BotIndustryTemplateId | null;
   onTemplateChange: (templateId: BotIndustryTemplateId | null) => void;
   onCreated: (botId: string, templateId: BotIndustryTemplateId | null) => void;
 }
 
 export function OnboardingStepCreateBot({
-  phoneNumberId,
-  whatsappBusinessAccountId,
-  whatsappOnboardingMode,
-  isOnBizApp,
-  platformType,
   templateId,
   onTemplateChange,
   onCreated,
@@ -58,11 +48,6 @@ export function OnboardingStepCreateBot({
       const bot = await createBot.mutateAsync({
         name: name.trim(),
         responseMode: "none",
-        phoneNumberId,
-        whatsappBusinessAccountId,
-        ...(whatsappOnboardingMode ? { whatsappOnboardingMode } : {}),
-        ...(isOnBizApp !== undefined ? { isOnBizApp } : {}),
-        ...(platformType ? { platformType } : {}),
       });
       onCreated(bot.botId, templateId);
     } catch (err) {

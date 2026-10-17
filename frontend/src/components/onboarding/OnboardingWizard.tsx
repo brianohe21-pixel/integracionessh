@@ -90,7 +90,7 @@ export function OnboardingWizard() {
   const updateOnboarding = useUpdateOnboarding();
   const { step: resolvedStep, isLoading, whatsappStatus, primaryBot, tenant } = useOnboardingStatus();
 
-  const [step, setStep] = useState<OnboardingStep>("whatsapp");
+  const [step, setStep] = useState<OnboardingStep>("create_bot");
   const [initialized, setInitialized] = useState(false);
   const [showDone, setShowDone] = useState(false);
   const [whatsappCredentials, setWhatsappCredentials] = useState<WhatsAppCredentials | null>(null);
@@ -130,26 +130,13 @@ export function OnboardingWizard() {
 
   const stepIndex = ONBOARDING_STEPS.indexOf(step);
   const whatsappConnected =
-    Boolean(whatsappCredentials) || Boolean(whatsappStatus?.connected) || Boolean(primaryBot);
+    Boolean(whatsappCredentials) || Boolean(whatsappStatus?.connected) || Boolean(primaryBot?.phoneNumberId);
 
   const activeBotId = botId ?? primaryBot?.botId ?? null;
-  const credentials =
-    whatsappCredentials ??
-    (whatsappStatus?.phoneNumberId && whatsappStatus?.whatsappBusinessAccountId
-      ? {
-          phoneNumberId: whatsappStatus.phoneNumberId,
-          whatsappBusinessAccountId: whatsappStatus.whatsappBusinessAccountId,
-        }
-      : primaryBot
-        ? {
-            phoneNumberId: primaryBot.phoneNumberId,
-            whatsappBusinessAccountId: primaryBot.whatsappBusinessAccountId,
-          }
-        : null);
 
   function canGoNext(): boolean {
-    if (step === "whatsapp") return whatsappConnected;
     if (step === "create_bot") return Boolean(activeBotId);
+    if (step === "whatsapp") return whatsappConnected;
     return false;
   }
 
@@ -245,9 +232,26 @@ export function OnboardingWizard() {
       </div>
 
       <div className="bg-surface-elevated rounded-xl border border-default p-6">
+        {step === "create_bot" && (
+          <OnboardingStepCreateBot
+            templateId={templateId}
+            onTemplateChange={(id) => {
+              setTemplateId(id);
+              storeTemplateId(id);
+            }}
+            onCreated={(id, selectedTemplateId) => {
+              setBotId(id);
+              setTemplateId(selectedTemplateId);
+              storeTemplateId(selectedTemplateId);
+              setStep("whatsapp");
+            }}
+          />
+        )}
+
         {step === "whatsapp" && (
           <OnboardingStepWhatsApp
             connected={whatsappConnected}
+            botId={activeBotId}
             onConnected={(data) => {
               if (!data.phoneNumberId) return;
               const credentials: WhatsAppCredentials = {
@@ -261,34 +265,6 @@ export function OnboardingWizard() {
               storeWhatsAppCredentials(credentials);
             }}
           />
-        )}
-
-        {step === "create_bot" && credentials && (
-          <OnboardingStepCreateBot
-            phoneNumberId={credentials.phoneNumberId}
-            whatsappBusinessAccountId={credentials.whatsappBusinessAccountId}
-            whatsappOnboardingMode={credentials.onboardingMode}
-            isOnBizApp={credentials.isOnBizApp}
-            platformType={credentials.platformType}
-            templateId={templateId}
-            onTemplateChange={(id) => {
-              setTemplateId(id);
-              storeTemplateId(id);
-            }}
-            onCreated={(id, selectedTemplateId) => {
-              setBotId(id);
-              setTemplateId(selectedTemplateId);
-              storeTemplateId(selectedTemplateId);
-              setStep("test_message");
-            }}
-          />
-        )}
-
-        {step === "create_bot" && !credentials && (
-          <div className="space-y-4">
-            <p className="text-sm text-secondary">{t("onboarding.whatsapp.description")}</p>
-            <Button onClick={() => setStep("whatsapp")}>{t("onboarding.back")}</Button>
-          </div>
         )}
 
         {step === "test_message" && activeBotId && (
@@ -325,7 +301,7 @@ export function OnboardingWizard() {
             </Button>
           )}
 
-          {(step === "whatsapp" || step === "create_bot") && (
+          {(step === "create_bot" || step === "whatsapp") && (
             <Button onClick={nextStep} disabled={!canGoNext()}>
               {t("onboarding.next")}
               <ChevronRight className="h-4 w-4" />
