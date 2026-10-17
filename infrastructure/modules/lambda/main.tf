@@ -306,6 +306,7 @@ locals {
         INTEGRATION_SQS_QUEUE_URL     = var.integration_sqs_queue_url
         MEDIA_BUCKET                  = var.media_bucket_name
         WEBSOCKET_API_ENDPOINT        = local.websocket_management_endpoint
+        SES_FROM_EMAIL                = var.ses_from_email
         GOOGLE_CALENDAR_CLIENT_ID     = var.google_calendar_client_id
         GOOGLE_CALENDAR_CLIENT_SECRET = var.google_calendar_client_secret
         GOOGLE_CALENDAR_REDIRECT_URI  = local.google_calendar_redirect_uri
@@ -971,6 +972,7 @@ locals {
         ENVIRONMENT                   = var.environment
         INTEGRATION_SQS_QUEUE_URL     = var.integration_sqs_queue_url
         FRONTEND_URL                  = var.frontend_url
+        SES_FROM_EMAIL                = var.ses_from_email
         SCHEDULER_ROLE_ARN            = var.scheduler_role_arn
         CALENDAR_FUNCTION_ARN         = local.calendar_function_arn
         GOOGLE_CALENDAR_CLIENT_ID     = var.google_calendar_client_id
@@ -988,6 +990,7 @@ locals {
         ENVIRONMENT                   = var.environment
         INTEGRATION_SQS_QUEUE_URL     = var.integration_sqs_queue_url
         FRONTEND_URL                  = var.frontend_url
+        SES_FROM_EMAIL                = var.ses_from_email
         MEDIA_BUCKET                  = var.media_bucket_name
         GOOGLE_CALENDAR_CLIENT_ID     = var.google_calendar_client_id
         GOOGLE_CALENDAR_CLIENT_SECRET = var.google_calendar_client_secret

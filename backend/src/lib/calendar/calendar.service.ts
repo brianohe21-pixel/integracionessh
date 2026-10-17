@@ -43,7 +43,7 @@ import {
 import { cancelBookingReminder,
   scheduleBookingReminder,
 } from "./reminder-schedule.js";
-import { notifyOwnerOfBookingSafe } from "./notify-owner.js";
+import { notifyOwnerOfBooking } from "./notify-owner.js";
 
 export function defaultCalendarConfig(tenantId: string, botId: string): CalendarConfig {
   const now = new Date().toISOString();
@@ -241,10 +241,12 @@ async function emitBookingCreated(
   );
 
   const calendarConfig = config ?? (await getConfigOrDefault(tenantId, booking.botId));
-  notifyOwnerOfBookingSafe({
+  await notifyOwnerOfBooking({
     tenantId,
     booking,
     config: calendarConfig,
+  }).catch((error) => {
+    console.error("Failed to notify owner of booking:", error);
   });
 }
 
