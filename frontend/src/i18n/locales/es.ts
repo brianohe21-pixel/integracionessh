@@ -5196,6 +5196,10 @@ export const es = {
     statusInactive: "Inactivo",
     saved: "Configuración guardada",
     promptRequired: "El prompt del sistema es obligatorio para activar el Asistente IA",
+    buttonsSyntaxChip: "Botones WhatsApp",
+    buttonsSyntaxHint: "Toca el chip para agregar al prompt la instrucción de botones con [[buttons]].",
+    buttonsSyntaxPrompt:
+      "Para ofrecer opciones, cierra tu respuesta con:\n[[buttons]]\nDemo\nVentas\n[[/buttons]]",
     openaiNotConfigured:
       "OpenAI no está configurado. Configura la API key en Ajustes antes de activar el Asistente IA.",
     openaiNotConfiguredLink: "Ir a Ajustes",

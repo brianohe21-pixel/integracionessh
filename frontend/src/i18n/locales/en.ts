@@ -5185,6 +5185,10 @@ export const en: Messages = {
     statusInactive: "Inactive",
     saved: "Settings saved",
     promptRequired: "System prompt is required to enable AI Assistant",
+    buttonsSyntaxChip: "WhatsApp buttons",
+    buttonsSyntaxHint: "Tap the chip to add the [[buttons]] instruction to your prompt.",
+    buttonsSyntaxPrompt:
+      "To offer options, end your reply with:\n[[buttons]]\nDemo\nSales\n[[/buttons]]",
     openaiNotConfigured:
       "OpenAI is not configured. Add an API key in Settings before enabling AI Assistant.",
     openaiNotConfiguredLink: "Go to Settings",

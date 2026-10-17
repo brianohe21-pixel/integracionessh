@@ -53,6 +53,11 @@ import { getInstagramAccessToken } from "../instagram/secrets.js";
 import { getTelegramBotToken } from "../telegram/secrets.js";
 import { getMessengerAccessToken } from "../messenger/secrets.js";
 import { truncateWhatsAppText } from "../whatsapp/client.js";
+import { sendInteractiveButtons } from "../whatsapp/flows.js";
+import {
+  formatAiButtonsFallbackText,
+  parseAiReplyButtons,
+} from "../ai/parse-reply-buttons.js";
 import type { InboundQueueMessage, Message } from "../../types/index.js";
 import {
   assertPayloadMatchesChannel,
@@ -151,13 +156,62 @@ async function deliverAssistantText(params: {
   participantId: string;
   text: string;
   outboundCtx: ReturnType<typeof buildOutboundContext>;
+  locale?: "es" | "en";
 }): Promise<void> {
-  const outboundText =
-    params.channel === "whatsapp" ? truncateWhatsAppText(params.text) : params.text;
+  const parsed = parseAiReplyButtons(params.text);
+  const locale = params.locale ?? "es";
+  const bodyText =
+    parsed.body ||
+    (parsed.buttons.length > 0 ? getSystemMessage("chooseOption", locale) : "");
+  const canSendWhatsAppButtons =
+    params.channel === "whatsapp" &&
+    parsed.buttons.length > 0 &&
+    Boolean(params.outboundCtx.phoneNumberId?.trim()) &&
+    Boolean(params.outboundCtx.accessToken?.trim());
+
+  let outboundText =
+    canSendWhatsAppButtons || parsed.buttons.length === 0
+      ? bodyText
+      : formatAiButtonsFallbackText(bodyText, parsed.buttons);
+  if (params.channel === "whatsapp") {
+    outboundText = truncateWhatsAppText(outboundText);
+  }
+
   const aiMessageId = `ai-${Date.now()}-${randomUUID().slice(0, 8)}`;
   const aiTimestamp = new Date().toISOString();
+  const buttonMetadata =
+    parsed.buttons.length > 0
+      ? { kind: "ai_buttons", buttons: parsed.buttons }
+      : undefined;
 
-  if (params.channel === "webchat") {
+  if (canSendWhatsAppButtons) {
+    const sendResult = await sendInteractiveButtons({
+      phoneNumberId: params.outboundCtx.phoneNumberId!,
+      to: params.outboundCtx.participantId,
+      accessToken: params.outboundCtx.accessToken!,
+      bodyText: truncateWhatsAppText(bodyText || getSystemMessage("chooseOption", locale)),
+      buttons: parsed.buttons,
+      ...(params.outboundCtx.replyToExternalId
+        ? { replyToMessageId: params.outboundCtx.replyToExternalId }
+        : {}),
+    });
+    const externalMessageId = sendResult.messages?.[0]?.id;
+    const assistantMessage: Message = {
+      messageId: externalMessageId ?? aiMessageId,
+      conversationId: params.conversationId,
+      tenantId: params.tenantId,
+      role: "assistant",
+      content: outboundText,
+      channel: params.channel,
+      messageType: "interactive",
+      timestamp: aiTimestamp,
+      ...(buttonMetadata ? { metadata: buttonMetadata } : {}),
+      ...(externalMessageId
+        ? { externalMessageId, whatsappMessageId: externalMessageId }
+        : {}),
+    };
+    await addMessage(assistantMessage, params.botId);
+  } else if (params.channel === "webchat") {
     const assistantMessage: Message = {
       messageId: aiMessageId,
       conversationId: params.conversationId,
@@ -166,6 +220,7 @@ async function deliverAssistantText(params: {
       content: outboundText,
       channel: params.channel,
       timestamp: aiTimestamp,
+      ...(buttonMetadata ? { metadata: buttonMetadata } : {}),
     };
     await addMessage(assistantMessage, params.botId);
     await sendChannelText(params.outboundCtx, outboundText);
@@ -180,6 +235,7 @@ async function deliverAssistantText(params: {
       content: outboundText,
       channel: params.channel,
       timestamp: aiTimestamp,
+      ...(buttonMetadata ? { metadata: buttonMetadata } : {}),
       ...(externalMessageId
         ? {
             externalMessageId,
@@ -1018,6 +1074,7 @@ export async function processInboundMessage(
           participantId,
           text: aiResponse,
           outboundCtx: outboundCtxBase(),
+          locale: conversationLocale,
         });
       }
       await executeHandoff({
@@ -1071,5 +1128,6 @@ export async function processInboundMessage(
     participantId,
     text: aiResponse,
     outboundCtx: outboundCtxBase(),
+    locale: conversationLocale,
   });
 }

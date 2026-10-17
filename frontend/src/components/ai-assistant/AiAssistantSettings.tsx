@@ -99,6 +99,20 @@ export function AiAssistantSettings({ bot }: AiAssistantSettingsProps) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [showPromptModal]);
 
+  function appendPromptChip(chip: string) {
+    setForm((prev) => {
+      const trimmed = prev.systemPrompt.trim();
+      if (trimmed.toLowerCase().includes(chip.toLowerCase())) {
+        return prev;
+      }
+      const next = trimmed ? `${trimmed}\n\n${chip}` : chip;
+      return {
+        ...prev,
+        systemPrompt: next.slice(0, BOT_SYSTEM_PROMPT_MAX_LENGTH),
+      };
+    });
+  }
+
   const agent = liveBot ?? bot;
   const enabled = config?.enabled ?? bot.responseMode === "openai";
   const systemPromptTooLong = form.systemPrompt.length > BOT_SYSTEM_PROMPT_MAX_LENGTH;
@@ -260,6 +274,18 @@ export function AiAssistantSettings({ bot }: AiAssistantSettingsProps) {
               max: BOT_SYSTEM_PROMPT_MAX_LENGTH,
             })}
           </p>
+          <div className="mt-2 space-y-1.5">
+            <p className="text-xs text-secondary">{t("aiAssistant.buttonsSyntaxHint")}</p>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => appendPromptChip(t("aiAssistant.buttonsSyntaxPrompt"))}
+                className="rounded-full border border-field-border bg-surface-muted/40 px-2.5 py-1 text-[11px] font-medium text-secondary transition-colors hover:border-accent/40 hover:bg-accent-muted hover:text-primary"
+              >
+                {t("aiAssistant.buttonsSyntaxChip")}
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
@@ -346,7 +372,19 @@ export function AiAssistantSettings({ bot }: AiAssistantSettingsProps) {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 space-y-2">
+              <div className="space-y-1.5">
+                <p className="text-xs text-secondary">{t("aiAssistant.buttonsSyntaxHint")}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => appendPromptChip(t("aiAssistant.buttonsSyntaxPrompt"))}
+                    className="rounded-full border border-field-border bg-surface-muted/40 px-2.5 py-1 text-[11px] font-medium text-secondary transition-colors hover:border-accent/40 hover:bg-accent-muted hover:text-primary"
+                  >
+                    {t("aiAssistant.buttonsSyntaxChip")}
+                  </button>
+                </div>
+              </div>
               <textarea
                 autoFocus
                 value={form.systemPrompt}

@@ -682,12 +682,6 @@ export function NodePropertiesPanel({
           {(d.buttons ?? [{ id: "btn-1", title: "" }]).map((btn, i) => (
             <div key={btn.id} className="space-y-1 border border-subtle rounded-lg p-2">
               <p className="text-xs text-secondary">{t("flows.fields.button")} {i + 1}</p>
-              <FieldLabel>{t("flows.fields.buttonId")}</FieldLabel>
-              {textInput(btn.id, (v) => {
-                const buttons = [...(d.buttons ?? [])];
-                buttons[i] = { ...buttons[i], id: v };
-                onUpdate({ buttons });
-              })}
               <FieldLabel>{t("flows.fields.buttonTitle")}</FieldLabel>
               {localizedField(btn.title, (v) => {
                 const buttons = [...(d.buttons ?? [])];
