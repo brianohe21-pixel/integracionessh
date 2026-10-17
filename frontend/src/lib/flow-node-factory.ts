@@ -45,9 +45,11 @@ export function buildDefaultNodeData(
   if (type === "message_received_trigger") {
     defaultData.triggerType = "any_message";
     defaultData.channel = "any";
+    if (suggestedBotId?.trim()) defaultData.botId = suggestedBotId.trim();
   }
   if (type === "opportunity_stage_trigger") {
     defaultData.triggerType = "opportunity_stage_entered";
+    if (suggestedBotId?.trim()) defaultData.botId = suggestedBotId.trim();
   }
   if (type === "move_opportunity_stage") {
     defaultData.opportunityIdBinding = "{{opportunity_id}}";
