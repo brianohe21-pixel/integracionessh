@@ -633,10 +633,21 @@ export function NodePropertiesPanel({
       )}
 
       {type === "message" && (
-        <div>
-          <FieldLabel>{t("flows.fields.messageText")}</FieldLabel>
-          {localizedField(d.messageText, (v) => onUpdate({ messageText: v }), 4)}
-        </div>
+        <>
+          <div>
+            <FieldLabel>{t("flows.fields.messageText")}</FieldLabel>
+            {localizedField(d.messageText, (v) => onUpdate({ messageText: v }), 4)}
+          </div>
+          <label className="flex items-center gap-2 text-sm text-secondary">
+            <input
+              type="checkbox"
+              checked={d.waitForReply ?? false}
+              onChange={(e) => onUpdate({ waitForReply: e.target.checked })}
+            />
+            {t("flows.fields.waitForReply")}
+          </label>
+          <p className="text-xs text-secondary">{t("flows.hints.waitForReply")}</p>
+        </>
       )}
 
       {type === "template" && (
