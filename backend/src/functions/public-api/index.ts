@@ -76,6 +76,7 @@ import {
 import { getServiceStatusSnapshot } from "../../lib/dynamodb/service-status.repository.js";
 import { buildPublicServiceStatusResponse } from "../../lib/service-status/public-response.js";
 import { formatApiUsageMessageContent } from "../../lib/public-api/usage-message-content.js";
+import { persistPublicApiWhatsAppOutbound } from "../../lib/public-api/persist-outbound.js";
 
 const ENVIRONMENT = process.env.ENVIRONMENT ?? "dev";
 
@@ -577,6 +578,29 @@ async function handleSendMessage(
       const result = await sendTemplateMessage(templateOptions);
       messageId = result.messages[0]?.id ?? null;
     }
+
+    await persistPublicApiWhatsAppOutbound({
+      tenantId: apiKey.tenantId,
+      botId: apiKey.botId,
+      phoneNumberId: bot.phoneNumberId,
+      to: data.to,
+      externalMessageId: messageId,
+      payload:
+        data.type === "text"
+          ? { type: "text", text: data.text }
+          : {
+              type: "template",
+              template: {
+                name: data.template.name,
+                language: data.template.language,
+                ...(data.template.components?.length
+                  ? { components: data.template.components }
+                  : {}),
+              },
+            },
+    }).catch((err) => {
+      console.warn("Failed to persist public API WhatsApp message to conversation:", err);
+    });
   } catch (err) {
     const loggedError = err as Error & { __apiUsageLogged?: boolean };
     loggedError.__apiUsageLogged = true;
