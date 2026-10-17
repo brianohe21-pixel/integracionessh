@@ -15,11 +15,14 @@ export async function executeListNode(
   if (skipped) return skipped;
   const { conversation, phoneNumberId, accessToken, customerPhone } = requireMessagingContext(ctx);
   const locale = getBotLocale(conversation, ctx.bot);
-  const rows = (node.data.listItems ?? []).map((item) => ({
-    id: item.id,
-    title: resolveLocalizedText(item.title, locale),
-    description: resolveLocalizedText(item.description, locale) || undefined,
-  }));
+  const rows = (node.data.listItems ?? []).map((item) => {
+    const description = resolveLocalizedText(item.description, locale).trim();
+    return {
+      id: item.id,
+      title: resolveLocalizedText(item.title, locale),
+      ...(description ? { description } : {}),
+    };
+  });
   const bodyText =
     resolveLocalizedText(node.data.messageText, locale) ||
     getSystemMessage("chooseOption", locale);
