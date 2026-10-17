@@ -3431,7 +3431,7 @@ export interface FlowNodeData {
   templateLanguage?: string;
   templateVariables?: Record<string, string>;
   conditionVariable?: string;
-  conditionOperator?: "contains" | "equals" | "not_equals";
+  conditionOperator?: "contains" | "equals" | "not_equals" | "matches" | "not_matches";
   conditionValue?: string;
   buttons?: Array<{ id: string; title: LocalizedText }>;
   listButtonText?: LocalizedText;

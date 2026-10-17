@@ -4718,6 +4718,14 @@ export const en: Messages = {
       opContains: "Contains",
       opEquals: "Equals",
       opNotEquals: "Not equals",
+      opMatches: "Matches pattern (regex)",
+      opNotMatches: "Does not match pattern",
+      conditionPattern: "Pattern (regex)",
+      conditionPatternHint:
+        "Document example: ^\\d{6,10}$ (digits only, 6 to 10). Connect Yes = valid, No = ask again.",
+      patternDigits6to10: "Document 6–10 digits",
+      patternDigitsOnly: "Digits only",
+      patternEmail: "Email",
       branchTrue: "Yes",
       branchFalse: "No",
       button: "Button",
@@ -5029,6 +5037,8 @@ export const en: Messages = {
     },
     hints: {
       conditionBranches: "Connect each output (Yes / No) to the corresponding next node.",
+      conditionRegex:
+        "With “Matches pattern” you can validate formats (document ID, email, etc.) using a regular expression.",
       checkKnownContactBranches:
         "Yes = the phone was already in Contacts. No = it is new. Connect Yes to human handoff and No to AI if you only want to qualify new leads.",
       buttonBranches: "Each button has its own output. Maximum 3 buttons.",
@@ -5079,8 +5089,10 @@ export const en: Messages = {
         usage: "Connect each option output to the next step in the flow.",
       },
       condition: {
-        description: "Branches the flow based on a variable or form field.",
-        usage: "Connect the Yes and No outputs to different paths.",
+        description:
+          "Branches the flow by variable or form field. Supports contains, equals, and regex patterns (document, email).",
+        usage:
+          "To validate an ID: variable last_input, operator “Matches pattern”, value ^\\d{6,10}$. Connect Yes and No.",
       },
       delay: {
         description: "Pauses execution for a few seconds.",

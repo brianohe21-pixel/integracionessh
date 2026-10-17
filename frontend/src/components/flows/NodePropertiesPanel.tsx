@@ -658,17 +658,60 @@ export function NodePropertiesPanel({
             <FieldLabel>{t("flows.fields.conditionOperator")}</FieldLabel>
             <select
               value={d.conditionOperator ?? "contains"}
-              onChange={(e) => onUpdate({ conditionOperator: e.target.value })}
+              onChange={(e) =>
+                onUpdate({
+                  conditionOperator: e.target.value as
+                    | "contains"
+                    | "equals"
+                    | "not_equals"
+                    | "matches"
+                    | "not_matches",
+                })
+              }
               className="w-full text-sm border border-field-border rounded-lg p-2 bg-surface-elevated shadow-sm"
             >
               <option value="contains">{t("flows.fields.opContains")}</option>
               <option value="equals">{t("flows.fields.opEquals")}</option>
               <option value="not_equals">{t("flows.fields.opNotEquals")}</option>
+              <option value="matches">{t("flows.fields.opMatches")}</option>
+              <option value="not_matches">{t("flows.fields.opNotMatches")}</option>
             </select>
           </div>
           <div>
-            <FieldLabel>{t("flows.fields.conditionValue")}</FieldLabel>
+            <FieldLabel>
+              {d.conditionOperator === "matches" || d.conditionOperator === "not_matches"
+                ? t("flows.fields.conditionPattern")
+                : t("flows.fields.conditionValue")}
+            </FieldLabel>
             {textInput(d.conditionValue ?? "", (v) => onUpdate({ conditionValue: v }))}
+            {(d.conditionOperator === "matches" || d.conditionOperator === "not_matches") && (
+              <>
+                <p className="mt-1 text-xs text-secondary">{t("flows.fields.conditionPatternHint")}</p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {(
+                    [
+                      { labelKey: "flows.fields.patternDigits6to10", value: "^\\d{6,10}$" },
+                      { labelKey: "flows.fields.patternDigitsOnly", value: "^\\d+$" },
+                      { labelKey: "flows.fields.patternEmail", value: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$" },
+                    ] as const
+                  ).map((preset) => (
+                    <button
+                      key={preset.value}
+                      type="button"
+                      onClick={() =>
+                        onUpdate({
+                          conditionOperator: d.conditionOperator ?? "matches",
+                          conditionValue: preset.value,
+                        })
+                      }
+                      className="rounded-md border border-field-border px-2 py-1 text-[11px] text-secondary hover:border-accent/40 hover:text-primary"
+                    >
+                      {t(preset.labelKey)}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </>
       )}

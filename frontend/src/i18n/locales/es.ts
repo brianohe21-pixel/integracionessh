@@ -4728,6 +4728,14 @@ export const es = {
       opContains: "Contiene",
       opEquals: "Igual a",
       opNotEquals: "Distinto de",
+      opMatches: "Coincide con patrón (regex)",
+      opNotMatches: "No coincide con patrón",
+      conditionPattern: "Patrón (regex)",
+      conditionPatternHint:
+        "Ejemplo documento: ^\\d{6,10}$ (solo dígitos, entre 6 y 10). Conecta Sí = válido, No = pedir de nuevo.",
+      patternDigits6to10: "Documento 6–10 dígitos",
+      patternDigitsOnly: "Solo números",
+      patternEmail: "Email",
       branchTrue: "Sí",
       branchFalse: "No",
       button: "Botón",
@@ -5040,6 +5048,8 @@ export const es = {
     },
     hints: {
       conditionBranches: "Conecta cada salida (Sí / No) al siguiente nodo correspondiente.",
+      conditionRegex:
+        "Con «Coincide con patrón» puedes validar formatos (cédula, email, etc.) usando una expresión regular.",
       checkKnownContactBranches:
         "Sí = el número ya estaba en Contactos. No = es nuevo. Conecta Sí a humano y No a IA si quieres calificar solo leads nuevos.",
       buttonBranches: "Cada botón tiene su propia salida. Máximo 3 botones.",
@@ -5091,8 +5101,10 @@ export const es = {
         usage: "Conecta cada salida de opción al siguiente paso del flujo.",
       },
       condition: {
-        description: "Ramifica el flujo según una variable o campo del formulario.",
-        usage: "Conecta las salidas Sí y No a rutas distintas.",
+        description:
+          "Ramifica el flujo según una variable o campo. Soporta contiene, igual y patrón regex (documento, email).",
+        usage:
+          "Para validar cédula: variable last_input, operador «Coincide con patrón», valor ^\\d{6,10}$. Conecta Sí y No.",
       },
       delay: {
         description: "Pausa la ejecución durante unos segundos.",
