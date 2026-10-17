@@ -1955,6 +1955,7 @@ export interface ApiKeyUsageLog {
   messageId?: string;
   callId?: string;
   maskedPhone?: string;
+  messageContent?: string;
   errorMessage?: string;
   errorStack?: string;
   createdAt: string;

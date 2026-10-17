@@ -108,7 +108,9 @@ export function ApiUsageLogsPanel({
             </thead>
             <tbody className="divide-y divide-gray-100">
               {logs.map((log) => {
-                const hasDetails = Boolean(log.errorMessage || log.errorStack);
+                const hasDetails = Boolean(
+                  log.messageContent || log.errorMessage || log.errorStack || log.messageId
+                );
                 const isExpanded = expandedLogId === log.logId;
                 return (
                   <Fragment key={log.logId}>
@@ -137,6 +139,9 @@ export function ApiUsageLogsPanel({
                       <td className="px-4 py-3">
                         <div className="font-mono text-xs text-primary">{log.method}</div>
                         <div className="font-mono text-xs text-secondary">{log.endpoint}</div>
+                        {log.messageContent && !isExpanded && (
+                          <p className="text-xs text-muted mt-1 line-clamp-2">{log.messageContent}</p>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <Badge variant={statusVariant(log.statusCode)}>{log.statusCode}</Badge>
@@ -149,6 +154,31 @@ export function ApiUsageLogsPanel({
                     {isExpanded && hasDetails && (
                       <tr className="bg-surface">
                         <td colSpan={5} className="px-6 py-4 space-y-3">
+                          {log.messageContent && (
+                            <div>
+                              <p className="text-xs font-medium uppercase tracking-wide text-secondary mb-1">
+                                {t("developer.logsMessageContent")}
+                              </p>
+                              <pre
+                                className={cn(
+                                  "text-xs font-mono text-primary bg-surface-elevated border border-default",
+                                  "rounded-lg p-3 overflow-x-auto whitespace-pre-wrap break-words max-h-64"
+                                )}
+                              >
+                                {log.messageContent}
+                              </pre>
+                            </div>
+                          )}
+                          {log.messageId && (
+                            <div>
+                              <p className="text-xs font-medium uppercase tracking-wide text-secondary mb-1">
+                                {t("developer.logsMessageId")}
+                              </p>
+                              <p className="text-sm text-primary font-mono break-all">
+                                {log.messageId}
+                              </p>
+                            </div>
+                          )}
                           {log.errorMessage && (
                             <div>
                               <p className="text-xs font-medium uppercase tracking-wide text-secondary mb-1">

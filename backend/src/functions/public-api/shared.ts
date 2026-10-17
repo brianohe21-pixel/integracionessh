@@ -19,6 +19,7 @@ export interface PublicApiAuth {
     messageId?: string;
     callId?: string;
     maskedPhone?: string;
+    messageContent?: string;
     errorMessage?: string;
     errorStack?: string;
   }) => Promise<void>;
