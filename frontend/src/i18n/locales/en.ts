@@ -4693,6 +4693,7 @@ export const en: Messages = {
       matchContains: "Contains",
       matchExact: "Exact",
       messageText: "Message text",
+      waitForReply: "Wait for user reply",
       otpMessageText: "OTP message (use {{code}})",
       otpWhatsAppTemplateName: "WhatsApp template (optional)",
       otpWhatsAppTemplateLanguage: "WhatsApp template language",
@@ -5044,6 +5045,8 @@ export const en: Messages = {
       buttonBranches: "Each button has its own output. Maximum 3 buttons.",
       listBranches:
         "WhatsApp list menu: up to 10 options with title and description. Each option has its own output.",
+      waitForReply:
+        "Pauses the flow until the user replies. Use this to ask name, email, etc. one at a time. Save the reply with a Variable node and value $last_input.",
       opportunityWhatsAppBindings:
         "WhatsApp variables: {{phone}} (phone), {{contact_name}} (profile name). For forms use {{form.field}}. The user's last message is {{last_input}}.",
       moveOpportunityStage:

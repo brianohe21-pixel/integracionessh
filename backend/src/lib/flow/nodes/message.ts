@@ -29,6 +29,14 @@ export async function executeMessageNode(
       text
     );
   }
+  if (node.data.waitForReply) {
+    return {
+      nextNodeId: null,
+      halt: true,
+      wait: true,
+      output: text,
+    };
+  }
   return {
     nextNodeId: getNextNodeId(ctx.flow, node.id),
     halt: false,

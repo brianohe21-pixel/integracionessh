@@ -3427,6 +3427,7 @@ export interface FlowNodeData {
   keywords?: string[];
   matchMode?: AutomationMatchMode;
   messageText?: LocalizedText;
+  waitForReply?: boolean;
   templateName?: string;
   templateLanguage?: string;
   templateVariables?: Record<string, string>;

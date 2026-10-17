@@ -2279,6 +2279,7 @@ export interface FlowNodeData {
   keywords?: string[];
   matchMode?: "contains" | "exact";
   messageText?: LocalizedText;
+  waitForReply?: boolean;
   templateName?: string;
   templateLanguage?: string;
   templateVariables?: Record<string, string>;

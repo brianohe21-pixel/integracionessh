@@ -225,6 +225,7 @@ export default function EditFlowPage() {
               : "any_message") as "first_message" | "any_message",
             channel: node.data.channel ?? "any",
             triggerStageKey: undefined,
+            botId: node.data.botId?.trim() || suggestedBotId || node.data.botId,
           },
         };
       }
@@ -237,6 +238,7 @@ export default function EditFlowPage() {
           triggerType: "opportunity_stage_entered" as const,
           keywords: undefined,
           matchMode: undefined,
+          botId: node.data.botId?.trim() || suggestedBotId || node.data.botId,
         },
       };
     });
@@ -300,7 +302,11 @@ export default function EditFlowPage() {
     const voiceMode = resolveEditorVoiceMode(flow, nodesToSave);
     const fallbackBotId = flow.botId || suggestedBotId;
     const nodesWithAgentBot = nodesToSave.map((node) => {
-      if (node.type !== "agent" || node.data.botId?.trim() || !fallbackBotId) return node;
+      const canInheritBot =
+        node.type === "agent" ||
+        node.type === "message_received_trigger" ||
+        node.type === "opportunity_stage_trigger";
+      if (!canInheritBot || node.data.botId?.trim() || !fallbackBotId) return node;
       return { ...node, data: { ...node.data, botId: fallbackBotId } };
     });
     const nodes = applyResolvedTriggerType(nodesWithAgentBot, voiceMode);
