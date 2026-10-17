@@ -87,7 +87,13 @@ export const publicCalendarApi = {
 
   createBooking: (
     publicKey: string,
-    body: { startAt: string; contactPhone: string; contactName: string; notes?: string }
+    body: {
+      startAt: string;
+      contactPhone: string;
+      contactName: string;
+      contactEmail?: string;
+      notes?: string;
+    }
   ) =>
     publicRequest<PublicBookingResult>(
       `/public/calendar/${encodeURIComponent(publicKey)}/bookings`,

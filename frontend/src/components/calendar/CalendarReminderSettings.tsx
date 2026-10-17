@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { ExternalLink } from "lucide-react";
 import type { CalendarConfig } from "@/types";
 import { useT } from "@/i18n/context";
 import { useTemplates } from "@/hooks/useTemplates";
@@ -110,25 +112,11 @@ export function CalendarReminderSettings({
             >
               <option value="whatsapp_text">{t("calendar.reminder.channelText")}</option>
               <option value="whatsapp_template">{t("calendar.reminder.channelTemplate")}</option>
+              <option value="email">{t("calendar.reminder.channelEmail")}</option>
             </select>
           </label>
 
-          {channel === "whatsapp_text" ? (
-            <label className="block text-sm">
-              <FieldLabel
-                label={t("calendar.reminder.message")}
-                tooltip={t("calendar.fieldHints.reminderMessage")}
-              />
-              <textarea
-                rows={4}
-                value={config.reminderMessage ?? ""}
-                onChange={(e) => onChange({ reminderMessage: e.target.value })}
-                className="w-full rounded-lg border border-default px-3 py-2"
-              />
-              <p className="mt-1 text-xs text-secondary">{t("calendar.reminder.placeholders")}</p>
-              <p className="mt-1 text-xs text-amber-700">{t("calendar.reminder.textHint")}</p>
-            </label>
-          ) : (
+          {channel === "whatsapp_template" ? (
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block text-sm">
                 <FieldLabel
@@ -160,10 +148,36 @@ export function CalendarReminderSettings({
                   className="w-full rounded-lg border border-default px-3 py-2"
                 />
               </label>
-              <p className="text-xs text-secondary sm:col-span-2">
-                {t("calendar.reminder.templateHint")}
-              </p>
+              <div className="space-y-2 sm:col-span-2">
+                <p className="text-xs text-secondary">{t("calendar.reminder.templateHint")}</p>
+                <Link
+                  href={`/templates?create=1&botId=${encodeURIComponent(botId)}&channel=whatsapp`}
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:underline"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  {t("calendar.reminder.createTemplate")}
+                </Link>
+              </div>
             </div>
+          ) : (
+            <label className="block text-sm">
+              <FieldLabel
+                label={t("calendar.reminder.message")}
+                tooltip={t("calendar.fieldHints.reminderMessage")}
+              />
+              <textarea
+                rows={4}
+                value={config.reminderMessage ?? ""}
+                onChange={(e) => onChange({ reminderMessage: e.target.value })}
+                className="w-full rounded-lg border border-default px-3 py-2"
+              />
+              <p className="mt-1 text-xs text-secondary">{t("calendar.reminder.placeholders")}</p>
+              <p className="mt-1 text-xs text-amber-700">
+                {channel === "email"
+                  ? t("calendar.reminder.emailHint")
+                  : t("calendar.reminder.textHint")}
+              </p>
+            </label>
           )}
         </div>
       ) : null}

@@ -12,6 +12,7 @@ import {
   getBookingSlotsForDate,
   requireEnabledCalendar,
 } from "../../calendar/calendar.service.js";
+import { getContactByPhone } from "../../dynamodb/contact.repository.js";
 import {
   getBotLocale,
   getSystemMessage,
@@ -133,12 +134,14 @@ export async function executeBookAppointmentNode(
         return { nextNodeId: null, halt: true, wait: false };
       }
       try {
+        const contact = await getContactByPhone(ctx.tenantId, customerPhone).catch(() => null);
         const result = await createBookingForBot({
           tenantId: ctx.tenantId,
           botId: botId,
           startAt,
           contactPhone: customerPhone,
           conversationId: conversation.conversationId,
+          ...(contact?.email ? { contactEmail: contact.email } : {}),
           source: "flow",
           environment: ctx.environment,
         });

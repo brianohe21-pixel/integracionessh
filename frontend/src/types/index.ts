@@ -2745,7 +2745,7 @@ export interface TimeRange {
 
 export type WeeklySchedule = Record<Weekday, TimeRange[]>;
 
-export type CalendarReminderChannel = "whatsapp_text" | "whatsapp_template";
+export type CalendarReminderChannel = "whatsapp_text" | "whatsapp_template" | "email";
 export type BookingReminderStatus = "scheduled" | "sent" | "skipped" | "cancelled";
 
 export type CalendarProviderType = "native" | "google";
@@ -2777,6 +2777,12 @@ export interface CalendarConfig {
   reminderMessage?: string;
   reminderTemplateName?: string;
   reminderTemplateLanguage?: string;
+  ownerNotifyEnabled?: boolean;
+  ownerNotifyEmail?: boolean;
+  ownerNotifyWhatsApp?: boolean;
+  ownerNotifyPhone?: string;
+  ownerNotifyTemplateName?: string;
+  ownerNotifyTemplateLanguage?: string;
   autoCollectPayment?: boolean;
   bookingPriceInCents?: number;
   waitlistEnabled?: boolean;
@@ -2813,6 +2819,7 @@ export interface Booking {
   botId: string;
   contactPhone: string;
   contactName?: string;
+  contactEmail?: string;
   conversationId?: string;
   startAt: string;
   endAt: string;

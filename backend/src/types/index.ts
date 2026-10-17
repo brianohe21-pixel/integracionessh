@@ -2898,7 +2898,7 @@ export type CalendarProviderType = "native" | "google";
 export type GoogleCalendarStatus = "pending" | "active" | "error";
 export type ExternalSyncStatus = "pending" | "synced" | "failed";
 
-export type CalendarReminderChannel = "whatsapp_text" | "whatsapp_template";
+export type CalendarReminderChannel = "whatsapp_text" | "whatsapp_template" | "email";
 export type BookingReminderStatus = "scheduled" | "sent" | "skipped" | "cancelled";
 
 export interface CalendarConfig {
@@ -2926,6 +2926,12 @@ export interface CalendarConfig {
   reminderMessage?: string;
   reminderTemplateName?: string;
   reminderTemplateLanguage?: string;
+  ownerNotifyEnabled?: boolean;
+  ownerNotifyEmail?: boolean;
+  ownerNotifyWhatsApp?: boolean;
+  ownerNotifyPhone?: string;
+  ownerNotifyTemplateName?: string;
+  ownerNotifyTemplateLanguage?: string;
   autoCollectPayment?: boolean;
   bookingPriceInCents?: number;
   waitlistEnabled?: boolean;
@@ -2963,6 +2969,7 @@ export interface Booking {
   botId: string;
   contactPhone: string;
   contactName?: string;
+  contactEmail?: string;
   conversationId?: string;
   startAt: string;
   endAt: string;

@@ -20,6 +20,7 @@ import { CalendarSlotsPreview } from "@/components/calendar/CalendarSlotsPreview
 import { CalendarPublicLinkPanel } from "@/components/calendar/CalendarPublicLinkPanel";
 import { CalendarGoogleConnectionPanel } from "@/components/calendar/CalendarGoogleConnectionPanel";
 import { CalendarReminderSettings } from "@/components/calendar/CalendarReminderSettings";
+import { CalendarOwnerNotifySettings } from "@/components/calendar/CalendarOwnerNotifySettings";
 import { CalendarPaymentSettings } from "@/components/calendar/CalendarPaymentSettings";
 import { CalendarWaitlistSettings } from "@/components/calendar/CalendarWaitlistSettings";
 import { CalendarWaitlistTable } from "@/components/calendar/CalendarWaitlistTable";
@@ -88,6 +89,12 @@ export default function CalendarBotPage() {
         reminderMessage: draft.reminderMessage,
         reminderTemplateName: draft.reminderTemplateName,
         reminderTemplateLanguage: draft.reminderTemplateLanguage,
+        ownerNotifyEnabled: draft.ownerNotifyEnabled,
+        ownerNotifyEmail: draft.ownerNotifyEmail,
+        ownerNotifyWhatsApp: draft.ownerNotifyWhatsApp,
+        ownerNotifyPhone: draft.ownerNotifyPhone,
+        ownerNotifyTemplateName: draft.ownerNotifyTemplateName,
+        ownerNotifyTemplateLanguage: draft.ownerNotifyTemplateLanguage,
         autoCollectPayment: draft.autoCollectPayment,
         bookingPriceInCents: draft.bookingPriceInCents,
         waitlistEnabled: draft.waitlistEnabled,
@@ -107,7 +114,7 @@ export default function CalendarBotPage() {
   }
 
   return (
-    <DashboardPage maxWidth="5xl">
+    <DashboardPage>
       <PageHeader title={t("calendar.manageTitle")} subtitle={t("calendar.manageSubtitle")} />
 
       <div className="mb-6 flex gap-2 border-b border-default">
@@ -132,6 +139,11 @@ export default function CalendarBotPage() {
           <CalendarGoogleConnectionPanel botId={botId} />
           <CalendarPublicLinkPanel botId={botId} calendarEnabled={draft.enabled} />
           <CalendarReminderSettings
+            botId={botId}
+            config={draft}
+            onChange={(patch) => setDraft((prev) => (prev ? { ...prev, ...patch } : prev))}
+          />
+          <CalendarOwnerNotifySettings
             botId={botId}
             config={draft}
             onChange={(patch) => setDraft((prev) => (prev ? { ...prev, ...patch } : prev))}

@@ -43,6 +43,7 @@ import {
 import { cancelBookingReminder,
   scheduleBookingReminder,
 } from "./reminder-schedule.js";
+import { notifyOwnerOfBookingSafe } from "./notify-owner.js";
 
 export function defaultCalendarConfig(tenantId: string, botId: string): CalendarConfig {
   const now = new Date().toISOString();
@@ -63,6 +64,9 @@ export function defaultCalendarConfig(tenantId: string, botId: string): Calendar
     reminderMessage:
       "Hola {{name}}, te recordamos tu cita el {{date}} a las {{time}}.",
     reminderTemplateLanguage: "es",
+    ownerNotifyEnabled: false,
+    ownerNotifyEmail: true,
+    ownerNotifyWhatsApp: false,
     createdAt: now,
     updatedAt: now,
   };
@@ -104,6 +108,12 @@ export async function saveCalendarConfig(
       | "reminderMessage"
       | "reminderTemplateName"
       | "reminderTemplateLanguage"
+      | "ownerNotifyEnabled"
+      | "ownerNotifyEmail"
+      | "ownerNotifyWhatsApp"
+      | "ownerNotifyPhone"
+      | "ownerNotifyTemplateName"
+      | "ownerNotifyTemplateLanguage"
       | "autoCollectPayment"
       | "bookingPriceInCents"
       | "waitlistEnabled"
@@ -205,7 +215,11 @@ function bookingBlocksSlot(booking: Booking): boolean {
   return booking.paymentStatus === "paid" || booking.paymentStatus === "not_required";
 }
 
-async function emitBookingCreated(booking: Booking, tenantId: string): Promise<void> {
+async function emitBookingCreated(
+  booking: Booking,
+  tenantId: string,
+  config?: CalendarConfig
+): Promise<void> {
   await emitIntegrationEvent(
     tenantId,
     "booking.created",
@@ -225,6 +239,13 @@ async function emitBookingCreated(booking: Booking, tenantId: string): Promise<v
       },
     })
   );
+
+  const calendarConfig = config ?? (await getConfigOrDefault(tenantId, booking.botId));
+  notifyOwnerOfBookingSafe({
+    tenantId,
+    booking,
+    config: calendarConfig,
+  });
 }
 
 export async function finalizeBookingAfterPayment(params: {
@@ -246,13 +267,13 @@ export async function finalizeBookingAfterPayment(params: {
     const synced = await syncBookingToExternalCalendar(params.tenantId, updated, config);
     if (synced.externalEventId) {
       const withReminder = await scheduleBookingReminder(synced, config);
-      await emitBookingCreated(withReminder, params.tenantId);
+      await emitBookingCreated(withReminder, params.tenantId, config);
       return withReminder;
     }
   }
 
   const withReminder = await scheduleBookingReminder(updated, config);
-  await emitBookingCreated(withReminder, params.tenantId);
+  await emitBookingCreated(withReminder, params.tenantId, config);
   return withReminder;
 }
 
@@ -444,6 +465,7 @@ export async function createBookingForBot(params: {
   startAt: string;
   contactPhone: string;
   contactName?: string;
+  contactEmail?: string;
   conversationId?: string;
   notes?: string;
   source: BookingSource;
@@ -507,6 +529,9 @@ export async function createBookingForBot(params: {
     botId: params.botId,
     contactPhone: params.contactPhone,
     ...(params.contactName ? { contactName: params.contactName } : {}),
+    ...(params.contactEmail?.trim()
+      ? { contactEmail: params.contactEmail.trim().toLowerCase() }
+      : {}),
     ...(params.conversationId ? { conversationId: params.conversationId } : {}),
     startAt: startAt.toISOString(),
     endAt: endAt.toISOString(),
@@ -528,7 +553,7 @@ export async function createBookingForBot(params: {
   if (!requiresPayment) {
     const synced = await syncBookingToExternalCalendar(params.tenantId, created, config);
     const withReminder = await scheduleBookingReminder(synced, config);
-    await emitBookingCreated(withReminder, params.tenantId);
+    await emitBookingCreated(withReminder, params.tenantId, config);
     return { booking: withReminder };
   }
 
