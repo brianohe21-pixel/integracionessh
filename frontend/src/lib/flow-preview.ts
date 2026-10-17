@@ -56,6 +56,14 @@ function buildStepDetail(
         .join(" · ");
       return labels ? `${prompt}\n→ ${labels}` : prompt;
     }
+    case "list": {
+      const prompt = text(d.messageText, locale);
+      const labels = (d.listItems ?? [])
+        .map((item) => text(item.title, locale))
+        .filter(Boolean)
+        .join(" · ");
+      return labels ? `${prompt}\n→ ${labels}` : prompt;
+    }
     case "condition":
       return `${d.conditionVariable ?? "last_input"} ${d.conditionOperator ?? "contains"} ${d.conditionValue ?? ""}`.trim();
     case "check_known_contact":
@@ -120,6 +128,11 @@ function resolveBranchLabel(
   if (node.type === "buttons" && edge.sourceHandle) {
     const button = node.data.buttons?.find((item) => item.id === edge.sourceHandle);
     const label = button ? text(button.title, locale) : "";
+    return label || edge.sourceHandle;
+  }
+  if (node.type === "list" && edge.sourceHandle) {
+    const item = node.data.listItems?.find((row) => row.id === edge.sourceHandle);
+    const label = item ? text(item.title, locale) : "";
     return label || edge.sourceHandle;
   }
   return undefined;

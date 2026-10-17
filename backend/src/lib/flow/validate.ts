@@ -21,6 +21,7 @@ const DRAFT_SAVE_BLOCKING_CODES = new Set([
 
 const CONVERSATION_ONLY_NODES = [
   "buttons",
+  "list",
   "meta_flow",
   "handoff",
   "book_appointment",
@@ -32,7 +33,7 @@ const CONVERSATION_ONLY_NODES = [
   "send_audio",
 ] as const;
 
-const BRANCHING_NODES = ["condition", "check_known_contact", "buttons", "send_otp"] as const;
+const BRANCHING_NODES = ["condition", "check_known_contact", "buttons", "list", "send_otp"] as const;
 
 function hasLocalizedText(value: LocalizedText | undefined): boolean {
   if (!value) return false;
@@ -323,6 +324,7 @@ export function validateFlowDefinition(flow: FlowDefinition): FlowValidationIssu
       voiceFlow &&
       [
         "buttons",
+        "list",
         "meta_flow",
         "book_appointment",
         "request_payment",
@@ -491,6 +493,13 @@ export function validateFlowDefinition(flow: FlowDefinition): FlowValidationIssu
         issues.push({
           code: "missing_buttons",
           message: "Buttons node requires at least one button",
+          nodeId: node.id,
+        });
+      }
+      if (node.type === "list" && (node.data.listItems ?? []).length === 0) {
+        issues.push({
+          code: "missing_list_items",
+          message: "List node requires at least one item",
           nodeId: node.id,
         });
       }

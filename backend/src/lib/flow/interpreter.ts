@@ -328,7 +328,10 @@ export async function advanceFlowRun(params: {
   }
 
   const currentNode = flow.nodes.find((n) => n.id === run.currentNodeId);
-  if (currentNode?.type === "buttons" && buttonReplyId) {
+  if (
+    (currentNode?.type === "buttons" || currentNode?.type === "list") &&
+    buttonReplyId
+  ) {
     const ctx = buildContext({ ...params, flow, buttonReplyId });
     return runFromNode(run, flow, ctx);
   }
@@ -401,6 +404,7 @@ export async function advanceFlowRun(params: {
 
   const waitingNodeTypes = [
     "buttons",
+    "list",
     "meta_flow",
     "book_appointment",
     "request_payment",

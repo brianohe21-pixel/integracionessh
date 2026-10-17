@@ -661,6 +661,7 @@ export const es = {
     emojiPickerLabel: "Insertar emoji",
     emojiCategorySmileys: "Caritas",
     emojiCategoryGestures: "Gestos",
+    emojiCategoryPeople: "Personas",
     emojiCategoryHearts: "Corazones",
     emojiCategoryAnimals: "Animales",
     emojiCategoryFood: "Comida",
@@ -4643,6 +4644,7 @@ export const es = {
       template: "Plantilla",
       condition: "Condición",
       buttons: "Botones",
+      list: "Lista",
       meta_flow: "Formulario Meta",
       handoff: "Pasar a humano",
       delay: "Espera",
@@ -4733,6 +4735,16 @@ export const es = {
       buttonTitle: "Texto del botón",
       addButton: "Añadir botón",
       defaultButtonPrompt: "Elige una opción:",
+      defaultListButton: "Opciones",
+      listButtonText: "Texto del botón del menú",
+      listSectionTitle: "Título de sección (opcional)",
+      listHeaderText: "Encabezado (opcional)",
+      listFooterText: "Pie (opcional)",
+      listItem: "Opción",
+      listItemTitle: "Título",
+      listItemDescription: "Descripción",
+      addListItem: "Añadir opción",
+      removeListItem: "Quitar",
       metaFlowId: "Formulario Meta",
       metaFlowCta: "Texto del botón",
       haltPipeline: "Detener el flujo del bot",
@@ -5026,6 +5038,8 @@ export const es = {
       checkKnownContactBranches:
         "Sí = el número ya estaba en Contactos. No = es nuevo. Conecta Sí a humano y No a IA si quieres calificar solo leads nuevos.",
       buttonBranches: "Cada botón tiene su propia salida. Máximo 3 botones.",
+      listBranches:
+        "Menú lista de WhatsApp: hasta 10 opciones con título y descripción. Cada opción tiene su propia salida.",
       opportunityWhatsAppBindings:
         "Variables de WhatsApp: {{phone}} (teléfono), {{contact_name}} (nombre de perfil). En formularios usa {{form.campo}}. El último mensaje del usuario es {{last_input}}.",
       moveOpportunityStage:
@@ -5065,6 +5079,11 @@ export const es = {
       buttons: {
         description: "Muestra un mensaje con hasta 3 botones de respuesta.",
         usage: "Conecta cada salida de botón al siguiente paso del flujo.",
+      },
+      list: {
+        description:
+          "Abre un menú lista de WhatsApp con hasta 10 opciones (título y descripción).",
+        usage: "Conecta cada salida de opción al siguiente paso del flujo.",
       },
       condition: {
         description: "Ramifica el flujo según una variable o campo del formulario.",

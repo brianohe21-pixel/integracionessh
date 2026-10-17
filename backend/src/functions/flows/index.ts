@@ -86,6 +86,7 @@ const FlowNodeSchema = z.object({
     "template",
     "condition",
     "buttons",
+    "list",
     "meta_flow",
     "handoff",
     "delay",

@@ -7,6 +7,7 @@ import {
   FileText,
   GitBranch,
   MousePointerClick,
+  List,
   FormInput,
   UserRound,
   Clock,
@@ -83,6 +84,13 @@ export const FLOW_NODE_META: Record<FlowNodeType, FlowNodeMeta> = {
     hasOutput: true,
     branchHandles: "buttons",
   },
+  list: {
+    category: "messaging",
+    icon: List,
+    hasInput: true,
+    hasOutput: true,
+    branchHandles: "buttons",
+  },
   condition: {
     category: "logic",
     icon: GitBranch,
@@ -150,6 +158,7 @@ export const FLOW_PALETTE_NODES: Record<FlowPaletteCategory, FlowNodeType[]> = {
     "message",
     "template",
     "buttons",
+    "list",
     "send_otp",
     "send_audio",
   ],
@@ -284,6 +293,8 @@ export function buildNodePreview(
     case "check_known_contact":
       return locale === "es" ? "¿Ya está en contactos?" : "Already in contacts?";
     case "buttons":
+      return text(data.messageText);
+    case "list":
       return text(data.messageText);
     case "meta_flow":
       return text(data.metaFlowCta) || data.metaFlowId || "";

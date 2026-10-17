@@ -2,9 +2,11 @@
 
 import { useRef, useState } from "react";
 import type { BotLocale, LocalizedText } from "@/types";
+import { EmojiPicker } from "@/components/conversations/EmojiPicker";
 import { fromLocalizedRecord, toLocalizedRecord } from "@/lib/localized-text";
 import { insertIntoText } from "@/lib/text-insert";
 import { useT } from "@/i18n/context";
+import { cn } from "@/lib/utils";
 
 interface LocalizedTextFieldProps {
   value: LocalizedText | undefined;
@@ -13,6 +15,7 @@ interface LocalizedTextFieldProps {
   placeholder?: string;
   sampleFields?: string[];
   hint?: string;
+  allowEmoji?: boolean;
 }
 
 export function LocalizedTextField({
@@ -22,6 +25,7 @@ export function LocalizedTextField({
   placeholder,
   sampleFields = [],
   hint,
+  allowEmoji = false,
 }: LocalizedTextFieldProps) {
   const t = useT();
   const [activeTab, setActiveTab] = useState<BotLocale>("es");
@@ -32,12 +36,11 @@ export function LocalizedTextField({
     onChange(fromLocalizedRecord({ ...record, [locale]: text }));
   }
 
-  function insertField(field: string) {
-    const token = `{{form.${field}}}`;
+  function insertAtCursor(token: string) {
     const current = record[activeTab];
     const el = textareaRef.current;
     if (!el) {
-      updateLocale(activeTab, current.trim() ? `${current} ${token}` : token);
+      updateLocale(activeTab, `${current}${token}`);
       return;
     }
     const start = el.selectionStart ?? current.length;
@@ -50,23 +53,35 @@ export function LocalizedTextField({
     });
   }
 
+  function insertField(field: string) {
+    insertAtCursor(`{{form.${field}}}`);
+  }
+
   return (
     <div className="space-y-2">
-      <div className="flex gap-1">
-        {(["es", "en"] as const).map((locale) => (
-          <button
-            key={locale}
-            type="button"
-            onClick={() => setActiveTab(locale)}
-            className={`rounded-md px-2.5 py-1 text-xs font-medium ${
-              activeTab === locale
-                ? "bg-accent text-white"
-                : "bg-surface text-secondary border border-field-border"
-            }`}
-          >
-            {locale.toUpperCase()}
-          </button>
-        ))}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex gap-1">
+          {(["es", "en"] as const).map((locale) => (
+            <button
+              key={locale}
+              type="button"
+              onClick={() => setActiveTab(locale)}
+              className={`rounded-md px-2.5 py-1 text-xs font-medium ${
+                activeTab === locale
+                  ? "bg-accent text-white"
+                  : "bg-surface text-secondary border border-field-border"
+              }`}
+            >
+              {locale.toUpperCase()}
+            </button>
+          ))}
+        </div>
+        {allowEmoji ? (
+          <EmojiPicker
+            onInsert={insertAtCursor}
+            triggerClassName="h-7 w-7 shrink-0 rounded-md border border-field-border text-secondary hover:bg-surface-muted hover:text-primary"
+          />
+        ) : null}
       </div>
       <textarea
         ref={textareaRef}
@@ -74,7 +89,10 @@ export function LocalizedTextField({
         onChange={(e) => updateLocale(activeTab, e.target.value)}
         placeholder={placeholder ?? t("flows.fields.localizedPlaceholder")}
         rows={rows}
-        className="w-full rounded-lg border border-field-border bg-surface-elevated px-3 py-2 text-sm shadow-sm focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none"
+        className={cn(
+          "emoji-text w-full rounded-lg border border-field-border bg-surface-elevated px-3 py-2 text-sm shadow-sm focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none",
+          allowEmoji && "pr-3"
+        )}
       />
       {sampleFields.length > 0 && (
         <div className="flex flex-wrap gap-1">

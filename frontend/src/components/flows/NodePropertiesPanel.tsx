@@ -320,15 +320,15 @@ export function NodePropertiesPanel({
     value: LocalizedText | undefined,
     onChange: (v: LocalizedText) => void,
     rows = 3,
-    sampleFieldsForField?: string[],
-    hint?: string
+    options?: { sampleFields?: string[]; hint?: string; allowEmoji?: boolean }
   ) => (
     <LocalizedTextField
       value={value}
       onChange={onChange}
       rows={rows}
-      sampleFields={sampleFieldsForField}
-      hint={hint}
+      sampleFields={options?.sampleFields}
+      hint={options?.hint}
+      allowEmoji={options?.allowEmoji}
     />
   );
 
@@ -704,6 +704,92 @@ export function NodePropertiesPanel({
               className="text-xs text-accent hover:underline"
             >
               {t("flows.fields.addButton")}
+            </button>
+          )}
+        </>
+      )}
+
+      {type === "list" && (
+        <>
+          <p className="text-xs text-blue-700 bg-blue-50 rounded-lg p-2">{t("flows.hints.listBranches")}</p>
+          <div>
+            <FieldLabel>{t("flows.fields.messageText")}</FieldLabel>
+            {localizedField(d.messageText, (v) => onUpdate({ messageText: v }), 2, { allowEmoji: true })}
+          </div>
+          <div>
+            <FieldLabel>{t("flows.fields.listButtonText")}</FieldLabel>
+            {localizedField(d.listButtonText, (v) => onUpdate({ listButtonText: v }), 1, { allowEmoji: true })}
+          </div>
+          <div>
+            <FieldLabel>{t("flows.fields.listSectionTitle")}</FieldLabel>
+            {localizedField(d.listSectionTitle, (v) => onUpdate({ listSectionTitle: v }), 1, { allowEmoji: true })}
+          </div>
+          <div>
+            <FieldLabel>{t("flows.fields.listHeaderText")}</FieldLabel>
+            {localizedField(d.listHeaderText, (v) => onUpdate({ listHeaderText: v }), 1, { allowEmoji: true })}
+          </div>
+          <div>
+            <FieldLabel>{t("flows.fields.listFooterText")}</FieldLabel>
+            {localizedField(d.listFooterText, (v) => onUpdate({ listFooterText: v }), 1, { allowEmoji: true })}
+          </div>
+          {(d.listItems ?? [{ id: "row-1", title: "", description: "" }]).map((item, i) => (
+            <div key={item.id} className="space-y-1 border border-subtle rounded-lg p-2">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs text-secondary">
+                  {t("flows.fields.listItem")} {i + 1}
+                </p>
+                {(d.listItems?.length ?? 1) > 1 ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onUpdate({
+                        listItems: (d.listItems ?? []).filter((_, index) => index !== i),
+                      })
+                    }
+                    className="text-xs text-danger hover:underline"
+                  >
+                    {t("flows.fields.removeListItem")}
+                  </button>
+                ) : null}
+              </div>
+              <FieldLabel>{t("flows.fields.listItemTitle")}</FieldLabel>
+              {localizedField(
+                item.title,
+                (v) => {
+                  const listItems = [...(d.listItems ?? [])];
+                  listItems[i] = { ...listItems[i], title: v };
+                  onUpdate({ listItems });
+                },
+                1,
+                { allowEmoji: true }
+              )}
+              <FieldLabel>{t("flows.fields.listItemDescription")}</FieldLabel>
+              {localizedField(
+                item.description,
+                (v) => {
+                  const listItems = [...(d.listItems ?? [])];
+                  listItems[i] = { ...listItems[i], description: v };
+                  onUpdate({ listItems });
+                },
+                2,
+                { allowEmoji: true }
+              )}
+            </div>
+          ))}
+          {(d.listItems?.length ?? 1) < 10 && (
+            <button
+              type="button"
+              onClick={() =>
+                onUpdate({
+                  listItems: [
+                    ...(d.listItems ?? [{ id: "row-1", title: "", description: "" }]),
+                    { id: `row-${Date.now()}`, title: "", description: "" },
+                  ],
+                })
+              }
+              className="text-xs text-accent hover:underline"
+            >
+              {t("flows.fields.addListItem")}
             </button>
           )}
         </>
@@ -1650,8 +1736,10 @@ export function NodePropertiesPanel({
                       d.notificationMessageText || d.notificationMessageBinding || "",
                       (v) => onUpdate({ notificationMessageText: v, notificationMessageBinding: "" }),
                       4,
-                      sampleFields,
-                      t("flows.fields.notificationMessageHint")
+                      {
+                        sampleFields,
+                        hint: t("flows.fields.notificationMessageHint"),
+                      }
                     )}
               </div>
             </>

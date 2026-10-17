@@ -6,6 +6,7 @@ const messages = {
   assistantUnavailable:
     "El asistente no está disponible en este momento. Configura tu API key de OpenAI en Ajustes.",
   chooseOption: "Elige una opción:",
+  listOptions: "Opciones",
   calendarUnavailable: "El calendario no está disponible en este momento.",
   catalogDefault: "Estos son nuestros productos disponibles:",
   orderConfirmationDefault: "¿Confirmas tu pedido?",
@@ -54,6 +55,7 @@ const enMessages: Record<keyof typeof messages, string> = {
   assistantUnavailable:
     "The assistant is not available right now. Configure your OpenAI API key in Settings.",
   chooseOption: "Choose an option:",
+  listOptions: "Options",
   calendarUnavailable: "The calendar is not available at this time.",
   catalogDefault: "Here are our available products:",
   orderConfirmationDefault: "Do you confirm your order?",

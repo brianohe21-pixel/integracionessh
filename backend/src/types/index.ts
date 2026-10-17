@@ -3355,6 +3355,7 @@ export type FlowNodeType =
   | "template"
   | "condition"
   | "buttons"
+  | "list"
   | "meta_flow"
   | "handoff"
   | "delay"
@@ -3433,6 +3434,11 @@ export interface FlowNodeData {
   conditionOperator?: "contains" | "equals" | "not_equals";
   conditionValue?: string;
   buttons?: Array<{ id: string; title: LocalizedText }>;
+  listButtonText?: LocalizedText;
+  listSectionTitle?: LocalizedText;
+  listHeaderText?: LocalizedText;
+  listFooterText?: LocalizedText;
+  listItems?: Array<{ id: string; title: LocalizedText; description?: LocalizedText }>;
   metaFlowId?: string;
   metaFlowCta?: LocalizedText;
   delaySeconds?: number;

@@ -7,6 +7,7 @@ import { executeSendCatalogNode } from "./send-catalog.js";
 import { executeSendProductsNode } from "./send-products.js";
 import { executeAwaitOrderNode } from "./await-order.js";
 import { executeButtonsNode } from "./buttons.js";
+import { executeListNode } from "./list.js";
 import { executeConditionNode } from "./condition.js";
 import { executeDelayNode } from "./delay.js";
 import { executeEndNode } from "./end.js";
@@ -49,6 +50,8 @@ export async function executeNode(
       return executeConditionNode(node, ctx, run);
     case "buttons":
       return executeButtonsNode(node, ctx, run);
+    case "list":
+      return executeListNode(node, ctx, run);
     case "meta_flow":
       return executeMetaFlowNode(node, ctx, run);
     case "handoff":

@@ -659,6 +659,7 @@ export const en: Messages = {
     emojiPickerLabel: "Insert emoji",
     emojiCategorySmileys: "Smileys",
     emojiCategoryGestures: "Gestures",
+    emojiCategoryPeople: "People",
     emojiCategoryHearts: "Hearts",
     emojiCategoryAnimals: "Animals",
     emojiCategoryFood: "Food",
@@ -4633,6 +4634,7 @@ export const en: Messages = {
       template: "Template",
       condition: "Condition",
       buttons: "Buttons",
+      list: "List",
       meta_flow: "Meta form",
       handoff: "Handoff",
       delay: "Delay",
@@ -4722,6 +4724,16 @@ export const en: Messages = {
       buttonId: "Button ID",
       buttonTitle: "Button label",
       addButton: "Add button",
+      defaultListButton: "Options",
+      listButtonText: "Menu button label",
+      listSectionTitle: "Section title (optional)",
+      listHeaderText: "Header (optional)",
+      listFooterText: "Footer (optional)",
+      listItem: "Option",
+      listItemTitle: "Title",
+      listItemDescription: "Description",
+      addListItem: "Add option",
+      removeListItem: "Remove",
       defaultButtonPrompt: "Choose an option:",
       metaFlowId: "Meta form",
       metaFlowCta: "Button text",
@@ -5015,6 +5027,8 @@ export const en: Messages = {
       checkKnownContactBranches:
         "Yes = the phone was already in Contacts. No = it is new. Connect Yes to human handoff and No to AI if you only want to qualify new leads.",
       buttonBranches: "Each button has its own output. Maximum 3 buttons.",
+      listBranches:
+        "WhatsApp list menu: up to 10 options with title and description. Each option has its own output.",
       opportunityWhatsAppBindings:
         "WhatsApp variables: {{phone}} (phone), {{contact_name}} (profile name). For forms use {{form.field}}. The user's last message is {{last_input}}.",
       moveOpportunityStage:
@@ -5054,6 +5068,10 @@ export const en: Messages = {
       buttons: {
         description: "Shows a message with up to 3 reply buttons.",
         usage: "Connect each button output to the next step.",
+      },
+      list: {
+        description: "Opens a WhatsApp list menu with up to 10 options (title and description).",
+        usage: "Connect each option output to the next step in the flow.",
       },
       condition: {
         description: "Branches the flow based on a variable or form field.",

@@ -73,7 +73,10 @@ function toReactFlowNodes(
       flowType: n.type,
       typeLabel: getTypeLabel(n.type),
       preview: buildNodePreview(n.type, n.data, locale, botNames),
-      buttons: n.data.buttons,
+      buttons:
+        n.type === "list"
+          ? n.data.listItems?.map((item) => ({ id: item.id, title: item.title }))
+          : n.data.buttons,
       trueLabel: getBranchLabel("true"),
       falseLabel: getBranchLabel("false"),
     },
@@ -324,7 +327,10 @@ function FlowCanvasInner({
           flowType: flowNode.type,
           typeLabel: getTypeLabelRef.current(flowNode.type),
           preview: buildNodePreview(flowNode.type, flowNode.data, locale, botNames),
-          buttons: flowNode.data.buttons,
+          buttons:
+            flowNode.type === "list"
+              ? flowNode.data.listItems?.map((item) => ({ id: item.id, title: item.title }))
+              : flowNode.data.buttons,
           trueLabel: getBranchLabelRef.current("true"),
           falseLabel: getBranchLabelRef.current("false"),
         };

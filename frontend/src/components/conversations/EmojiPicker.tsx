@@ -19,13 +19,14 @@ type PickerPosition = {
 
 type PickerPlacement = "above" | "below";
 
-const PICKER_WIDTH = 384;
+const PICKER_WIDTH = 360;
 const GAP_PX = 10;
-const ESTIMATED_HEIGHT = 360;
+const ESTIMATED_HEIGHT = 420;
 
 const CATEGORY_LABEL_KEYS: Record<EmojiCategoryId, `conversations.emojiCategory${Capitalize<EmojiCategoryId>}`> = {
   smileys: "conversations.emojiCategorySmileys",
   gestures: "conversations.emojiCategoryGestures",
+  people: "conversations.emojiCategoryPeople",
   hearts: "conversations.emojiCategoryHearts",
   animals: "conversations.emojiCategoryAnimals",
   food: "conversations.emojiCategoryFood",
@@ -134,13 +135,13 @@ export function EmojiPicker({ onInsert, triggerClassName }: Props) {
           top: position?.top ?? 0,
           left: position?.left ?? GAP_PX,
           width: PICKER_WIDTH,
-          maxHeight: `min(22rem, calc(100vh - ${GAP_PX * 2}px))`,
+          maxHeight: `min(26rem, calc(100vh - ${GAP_PX * 2}px))`,
           transform: placement === "above" ? "translateY(-100%)" : undefined,
           visibility: position ? "visible" : "hidden",
         }}
         className="fixed z-[300] flex flex-col overflow-hidden rounded-2xl border border-default bg-surface-elevated shadow-[0_12px_40px_rgba(0,0,0,0.18)]"
       >
-        <div className="flex shrink-0 gap-1 overflow-x-auto border-b border-default p-2.5">
+        <div className="grid shrink-0 grid-cols-9 border-b border-default px-2 py-2">
           {EMOJI_CATEGORIES.map((category) => (
             <button
               key={category.id}
@@ -148,7 +149,7 @@ export function EmojiPicker({ onInsert, triggerClassName }: Props) {
               onClick={() => setActiveCategory(category.id)}
               title={t(CATEGORY_LABEL_KEYS[category.id])}
               className={cn(
-                "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl text-2xl leading-none transition-colors",
+                "flex h-9 w-full items-center justify-center rounded-lg text-xl leading-none transition-colors",
                 activeCategory === category.id
                   ? "bg-surface text-primary"
                   : "text-secondary hover:bg-surface hover:text-primary"
@@ -158,13 +159,13 @@ export function EmojiPicker({ onInsert, triggerClassName }: Props) {
             </button>
           ))}
         </div>
-        <div className="grid min-h-0 flex-1 grid-cols-8 gap-1 overflow-y-auto p-3">
-          {activeEmojis.map((emoji) => (
+        <div className="grid min-h-0 flex-1 grid-cols-8 content-start gap-0.5 overflow-y-auto p-2.5 scrollbar-hidden">
+          {activeEmojis.map((emoji, index) => (
             <button
-              key={emoji}
+              key={`${emoji}-${index}`}
               type="button"
               onClick={() => handleSelect(emoji)}
-              className="flex h-11 w-11 items-center justify-center rounded-xl text-2xl leading-none transition-colors hover:bg-surface"
+              className="flex h-10 w-full items-center justify-center rounded-lg text-2xl leading-none transition-colors hover:bg-surface"
             >
               {emoji}
             </button>
