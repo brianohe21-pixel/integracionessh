@@ -4691,6 +4691,7 @@ export const en: Messages = {
       matchContains: "Contains",
       matchExact: "Exact",
       messageText: "Message text",
+      waitForReply: "Wait for user reply",
       otpMessageText: "OTP message (use {{code}})",
       otpWhatsAppTemplateName: "WhatsApp template (optional)",
       otpWhatsAppTemplateLanguage: "WhatsApp template language",
@@ -5015,6 +5016,8 @@ export const en: Messages = {
       checkKnownContactBranches:
         "Yes = the phone was already in Contacts. No = it is new. Connect Yes to human handoff and No to AI if you only want to qualify new leads.",
       buttonBranches: "Each button has its own output. Maximum 3 buttons.",
+      waitForReply:
+        "Pauses the flow until the user replies. Use this to ask name, email, etc. one at a time. Save the reply with a Variable node and value $last_input.",
       opportunityWhatsAppBindings:
         "WhatsApp variables: {{phone}} (phone), {{contact_name}} (profile name). For forms use {{form.field}}. The user's last message is {{last_input}}.",
       moveOpportunityStage:

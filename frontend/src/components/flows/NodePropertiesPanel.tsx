@@ -287,16 +287,17 @@ export function NodePropertiesPanel({
   const { data: advisors } = useAdvisors();
   const [metaFlowsModalOpen, setMetaFlowsModalOpen] = useState(false);
   const agentChannel = (selected?.data.channel ?? "any") as FlowAgentChannel;
-  const agentBotId =
-    selected?.type === "agent" ? (selected.data.botId?.trim() || botId) : botId;
   const messageTriggerChannel = (selected?.data.channel ?? "any") as FlowAgentChannel;
+  const resolvedPanelBotId =
+    selected?.type === "agent" || selected?.type === "message_received_trigger"
+      ? selected.data.botId?.trim() || botId
+      : botId;
   const needsWhatsAppChannels =
     (selected?.type === "agent" && agentChannel === "whatsapp") ||
     (selected?.type === "message_received_trigger" && messageTriggerChannel === "whatsapp");
-  const { data: whatsappChannels } = useWhatsAppChannels(
-    selected?.type === "agent" ? agentBotId : botId,
-    { enabled: needsWhatsAppChannels }
-  );
+  const { data: whatsappChannels } = useWhatsAppChannels(resolvedPanelBotId, {
+    enabled: needsWhatsAppChannels,
+  });
 
   const isEmailNotification =
     selected?.type === "send_notification" &&
@@ -402,6 +403,27 @@ export function NodePropertiesPanel({
       {type === "message_received_trigger" && (
         <>
           <p className="text-xs text-secondary">{t("flows.fields.triggerMessageReceivedHint")}</p>
+          <div>
+            <FieldLabel>{t("flows.fields.agentBot")}</FieldLabel>
+            <Select
+              value={d.botId ?? botId ?? ""}
+              onChange={(e) => {
+                const nextBotId = e.target.value || undefined;
+                onUpdate({
+                  botId: nextBotId,
+                  whatsappChannelId: undefined,
+                });
+              }}
+            >
+              <option value="">{t("flows.bot.placeholder")}</option>
+              {(bots ?? []).map((bot) => (
+                <option key={bot.botId} value={bot.botId}>
+                  {bot.name}
+                </option>
+              ))}
+            </Select>
+            <p className="mt-1 text-xs text-secondary">{t("flows.fields.agentBotHint")}</p>
+          </div>
           <div className="rounded-xl border border-field-border bg-surface-muted/30 p-4">
             <label className="flex items-start gap-3 cursor-pointer">
               <input
@@ -455,7 +477,7 @@ export function NodePropertiesPanel({
                 onChange={(e) =>
                   onUpdate({ whatsappChannelId: e.target.value || undefined })
                 }
-                disabled={!botId}
+                disabled={!resolvedPanelBotId}
               >
                 <option value="">{t("flows.fields.whatsappChannelAny")}</option>
                 {(whatsappChannels ?? []).map((channel) => (
@@ -464,7 +486,7 @@ export function NodePropertiesPanel({
                   </option>
                 ))}
               </Select>
-              {!botId ? (
+              {!resolvedPanelBotId ? (
                 <p className="mt-1 text-xs text-warning">{t("flows.fields.agentNeedsFlowBot")}</p>
               ) : null}
             </div>
@@ -593,7 +615,7 @@ export function NodePropertiesPanel({
                 onChange={(e) =>
                   onUpdate({ whatsappChannelId: e.target.value || undefined })
                 }
-                disabled={!agentBotId}
+                disabled={!resolvedPanelBotId}
               >
                 <option value="">{t("flows.fields.whatsappChannelAny")}</option>
                 {(whatsappChannels ?? []).map((channel) => (
@@ -602,7 +624,7 @@ export function NodePropertiesPanel({
                   </option>
                 ))}
               </Select>
-              {!agentBotId ? (
+              {!resolvedPanelBotId ? (
                 <p className="mt-1 text-xs text-warning">{t("flows.fields.agentNeedsFlowBot")}</p>
               ) : null}
             </div>
@@ -611,10 +633,21 @@ export function NodePropertiesPanel({
       )}
 
       {type === "message" && (
-        <div>
-          <FieldLabel>{t("flows.fields.messageText")}</FieldLabel>
-          {localizedField(d.messageText, (v) => onUpdate({ messageText: v }), 4)}
-        </div>
+        <>
+          <div>
+            <FieldLabel>{t("flows.fields.messageText")}</FieldLabel>
+            {localizedField(d.messageText, (v) => onUpdate({ messageText: v }), 4)}
+          </div>
+          <label className="flex items-center gap-2 text-sm text-secondary">
+            <input
+              type="checkbox"
+              checked={d.waitForReply ?? false}
+              onChange={(e) => onUpdate({ waitForReply: e.target.checked })}
+            />
+            {t("flows.fields.waitForReply")}
+          </label>
+          <p className="text-xs text-secondary">{t("flows.hints.waitForReply")}</p>
+        </>
       )}
 
       {type === "template" && (

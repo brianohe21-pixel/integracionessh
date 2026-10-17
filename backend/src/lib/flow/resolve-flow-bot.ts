@@ -10,8 +10,17 @@ export function resolveAgentBotId(nodes: FlowNode[]): string | undefined {
   return agentNode?.data.botId?.trim();
 }
 
+export function resolveEntryBotId(nodes: FlowNode[]): string | undefined {
+  const entryNode = nodes.find(
+    (node) =>
+      (node.type === "message_received_trigger" || node.type === "opportunity_stage_trigger") &&
+      node.data.botId?.trim()
+  );
+  return entryNode?.data.botId?.trim();
+}
+
 export function resolveFlowBotIdFromNodes(nodes: FlowNode[]): string | undefined {
-  return resolveAgentBotId(nodes) ?? resolveLegacyAssignBotId(nodes);
+  return resolveAgentBotId(nodes) ?? resolveEntryBotId(nodes) ?? resolveLegacyAssignBotId(nodes);
 }
 
 export function resolveFlowBotId(flow: FlowDefinition): string | undefined {

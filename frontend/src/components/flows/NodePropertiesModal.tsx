@@ -65,7 +65,13 @@ export function NodePropertiesModal({
 
   if (!selected) return null;
 
-  const meta = FLOW_NODE_META[selected.type];
+  const fallbackMeta = {
+    category: "messaging" as const,
+    icon: FLOW_NODE_META.message.icon,
+    hasInput: true,
+    hasOutput: true,
+  };
+  const meta = FLOW_NODE_META[selected.type] ?? fallbackMeta;
   const styles = CATEGORY_STYLES[meta.category];
   const Icon = meta.icon;
 
