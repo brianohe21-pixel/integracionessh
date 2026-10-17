@@ -584,6 +584,44 @@ input.input-bare {
   height: 0 !important;
 }
 
+.scrollbar-visible {
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(100, 116, 139, 0.55) transparent !important;
+  -ms-overflow-style: auto !important;
+}
+
+.scrollbar-visible::-webkit-scrollbar {
+  display: block !important;
+  width: 8px !important;
+  height: 8px !important;
+}
+
+.scrollbar-visible::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.scrollbar-visible::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.45) !important;
+  border-radius: 999px !important;
+}
+
+.scrollbar-visible::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.7) !important;
+}
+
+.flow-editor-shell .scrollbar-visible,
+.flow-editor-shell .scrollbar-visible * {
+  scrollbar-width: thin !important;
+  -ms-overflow-style: auto !important;
+}
+
+.flow-editor-shell .scrollbar-visible::-webkit-scrollbar,
+.flow-editor-shell .scrollbar-visible *::-webkit-scrollbar {
+  display: block !important;
+  width: 8px !important;
+  height: 8px !important;
+}
+
 .conversations-compose-action {
   display: inline-flex;
   height: 2.25rem;

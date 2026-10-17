@@ -34,10 +34,10 @@ function FlowNodeCardComponent({ id, data, selected }: NodeProps) {
   const meta = FLOW_NODE_META[nodeData.flowType] ?? fallbackMeta;
   const styles = CATEGORY_STYLES[meta.category];
   const Icon = meta.icon;
-  const branchItemLabel =
-    nodeData.flowType === "list" ? t("flows.fields.listItem") : t("flows.fields.button");
+  const isList = nodeData.flowType === "list";
+  const branchItemLabel = isList ? t("flows.fields.listItem") : t("flows.fields.button");
   const buttons =
-    nodeData.flowType === "buttons" || nodeData.flowType === "list"
+    nodeData.flowType === "buttons" || isList
       ? nodeData.buttons?.length
         ? nodeData.buttons.map((btn, index) => {
             const title = resolveLocalizedText(btn.title, locale).trim();

@@ -280,11 +280,7 @@ function FlowCanvasInner({
     if (fp === lastExternalFingerprintRef.current) return;
 
     const local = fromReactFlow(nodesRef.current, edgesRef.current, flow);
-    if (fingerprint(local.nodes, local.edges) === fp) {
-      lastExternalFingerprintRef.current = fp;
-      return;
-    }
-
+    const localMatches = fingerprint(local.nodes, local.edges) === fp;
     lastExternalFingerprintRef.current = fp;
     skipNextNotifyRef.current = true;
     const nextNodes = toReactFlowNodes(
@@ -295,12 +291,13 @@ function FlowCanvasInner({
       locale,
       botNames
     );
-    const nextEdges = toReactFlowEdges(flow.edges, flow.nodes);
     setNodes((current) => {
       const merged = mergeReactFlowNodes(current, nextNodes);
       nodesRef.current = merged;
       return merged;
     });
+    if (localMatches) return;
+    const nextEdges = toReactFlowEdges(flow.edges, flow.nodes);
     setEdges((current) => {
       const merged = mergeReactFlowEdges(current, nextEdges);
       edgesRef.current = merged;
