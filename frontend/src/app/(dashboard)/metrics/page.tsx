@@ -20,6 +20,7 @@ import { useInboxSlaMetrics } from "@/hooks/useInboxSlaMetrics";
 import { useMetrics } from "@/hooks/useMetrics";
 import { useSalesMetrics } from "@/hooks/useSalesMetrics";
 import { useWebsiteMetrics } from "@/hooks/useWebsiteMetrics";
+import { useWhatsAppCategoryMetrics } from "@/hooks/useWhatsAppCategoryReport";
 import {
   MetricsFiltersBar,
   useFilteredUsageMetrics,
@@ -42,6 +43,7 @@ import { MetricsCampaignFunnelChart } from "@/components/metrics/MetricsCampaign
 import { MetricsTopCampaignsChart } from "@/components/metrics/MetricsTopCampaignsChart";
 import { MetricsInboxStatusChart } from "@/components/metrics/MetricsInboxStatusChart";
 import { MetricsConversationCategoriesChart } from "@/components/metrics/MetricsConversationCategoriesChart";
+import { MetricsWhatsAppCategoriesChart } from "@/components/metrics/MetricsWhatsAppCategoriesChart";
 import { MetricsSlaByAdvisorChart } from "@/components/metrics/MetricsSlaByAdvisorChart";
 import { MetricsSalesBySourceChart } from "@/components/metrics/MetricsSalesBySourceChart";
 import { MetricsSalesByBotChart } from "@/components/metrics/MetricsSalesByBotChart";
@@ -96,6 +98,12 @@ export default function MetricsPage() {
     dateRange.to,
     filters.botId || undefined
   );
+  const { data: whatsappCategories, isLoading: whatsappCategoriesLoading } =
+    useWhatsAppCategoryMetrics(
+      dateRange.from,
+      dateRange.to,
+      filters.botId || undefined
+    );
   const { data: inboxSlaMetrics, isLoading: inboxSlaLoading } = useInboxSlaMetrics();
   const { data: calling, isLoading: callingLoading } = useCallingMetrics(
     dateRange,
@@ -229,6 +237,9 @@ export default function MetricsPage() {
           </div>
 
           <MetricsUsageByBotChart usage={filteredUsage} />
+          {!whatsappCategoriesLoading && whatsappCategories ? (
+            <MetricsWhatsAppCategoriesChart report={whatsappCategories} />
+          ) : null}
             </>
           )}
 

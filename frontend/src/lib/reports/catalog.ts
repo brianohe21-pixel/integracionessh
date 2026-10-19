@@ -24,6 +24,13 @@ export const TENANT_REPORTS: TenantReport[] = [
     status: "available",
   },
   {
+    id: "whatsapp-categories",
+    titleKey: "reports.whatsappCategories.title",
+    descriptionKey: "reports.whatsappCategories.description",
+    href: "/reports/whatsapp-categories",
+    status: "available",
+  },
+  {
     id: "message-windows",
     titleKey: "reports.messageWindows.title",
     descriptionKey: "reports.messageWindows.description",

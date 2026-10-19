@@ -70,6 +70,7 @@ export async function persistPublicApiWhatsAppOutbound(params: {
       templateName: template.name,
       language: template.language,
       display: resolved.display,
+      ...(resolved.category ? { templateCategory: resolved.category } : {}),
       ...(template.components?.length ? { components: template.components } : {}),
     };
   }

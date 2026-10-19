@@ -50,6 +50,7 @@ describe("resolveWhatsAppTemplateDisplayContent", () => {
 
     expect(resolved.content).toBe("Hola Ana, pedido 42");
     expect(resolved.display).toEqual({ bodyText: "Hola Ana, pedido 42" });
+    expect(resolved.category).toBe("UTILITY");
   });
 
   it("renders header, body, footer, and buttons", async () => {

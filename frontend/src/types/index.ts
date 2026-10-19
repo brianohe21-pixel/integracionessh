@@ -1330,6 +1330,38 @@ export interface WhatsAppUsageReport {
   daily: WhatsAppUsageDailyPoint[];
 }
 
+export type WhatsAppPricingCategory =
+  | "MARKETING"
+  | "UTILITY"
+  | "AUTHENTICATION"
+  | "SERVICE";
+
+export interface WhatsAppCategoryDayCounts {
+  marketing: number;
+  utility: number;
+  authentication: number;
+  service: number;
+}
+
+export interface WhatsAppCategoryDailyPoint extends WhatsAppCategoryDayCounts {
+  date: string;
+  total: number;
+}
+
+export interface WhatsAppCategoryByCategoryRow {
+  category: WhatsAppPricingCategory;
+  count: number;
+}
+
+export interface WhatsAppCategoryReport {
+  from: string;
+  to: string;
+  botId?: string;
+  totals: WhatsAppCategoryDayCounts & { total: number };
+  byCategory: WhatsAppCategoryByCategoryRow[];
+  daily: WhatsAppCategoryDailyPoint[];
+}
+
 export interface AiResponsesDailyPoint {
   date: string;
   responses: number;

@@ -30,6 +30,11 @@ import {
   shouldOpenFreeEntryPoint,
 } from "../whatsapp/messaging-windows.js";
 import { incrementMessageWindowCount } from "./message-window-metrics.repository.js";
+import {
+  resolveWhatsAppPricingCategory,
+  whatsappCategoryToBucket,
+} from "../whatsapp/message-category.js";
+import { incrementWhatsAppCategory } from "./whatsapp-category-metrics.repository.js";
 
 const REALTIME_CONVERSATION_FIELDS = new Set([
   "handoffMode",
@@ -888,6 +893,24 @@ export async function addMessageIdempotent(
         error: (error as Error).message,
       });
     }
+  }
+
+  try {
+    const pricingCategory = await resolveWhatsAppPricingCategory(message, botId);
+    if (pricingCategory) {
+      await incrementWhatsAppCategory(
+        message.tenantId,
+        botId,
+        whatsappCategoryToBucket(pricingCategory),
+        new Date(message.timestamp || now)
+      );
+    }
+  } catch (error) {
+    console.warn("whatsapp category metrics increment failed", {
+      tenantId: message.tenantId,
+      botId,
+      error: (error as Error).message,
+    });
   }
 
   if (windowDirection) {
