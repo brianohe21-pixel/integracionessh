@@ -33,6 +33,7 @@ import {
   Mic,
 } from "lucide-react";
 import type { FlowNodeData, FlowNodeType, LocalizedText } from "@/types";
+import { resolveConfiguredWhatsAppChannelIds } from "@/lib/flow-whatsapp-channels";
 import { resolveLocalizedText } from "@/lib/localized-text";
 
 export type FlowNodeCategory =
@@ -250,8 +251,26 @@ export function buildNodePreview(
     }
     case "message_received_trigger": {
       const parts: string[] = [];
+      const botLabel = data.botId
+        ? truncate(botNames?.[data.botId] || data.botId, 28)
+        : "";
+      if (botLabel) parts.push(botLabel);
       const channel = data.channel ?? "any";
       parts.push(channel === "any" ? (locale === "es" ? "Cualquier canal" : "Any channel") : channel);
+      if (channel === "whatsapp") {
+        const channelIds = resolveConfiguredWhatsAppChannelIds(data);
+        if (channelIds.length === 0) {
+          parts.push(locale === "es" ? "Todos los números" : "All numbers");
+        } else if (channelIds.length === 1) {
+          parts.push(locale === "es" ? "1 número" : "1 number");
+        } else {
+          parts.push(
+            locale === "es"
+              ? `${channelIds.length} números`
+              : `${channelIds.length} numbers`
+          );
+        }
+      }
       if ((data.triggerType ?? "any_message") === "first_message") {
         parts.push(locale === "es" ? "Primer mensaje" : "First message");
       }
@@ -278,10 +297,18 @@ export function buildNodePreview(
       const botLabel = data.botId
         ? truncate(botNames?.[data.botId] || data.botId, 28)
         : "";
-      const channelLabel =
-        channel === "whatsapp" && data.whatsappChannelId
-          ? truncate(`whatsapp:${data.whatsappChannelId}`)
-          : channel;
+      let channelLabel: string = channel;
+      if (channel === "whatsapp") {
+        const channelIds = resolveConfiguredWhatsAppChannelIds(data);
+        channelLabel =
+          channelIds.length === 0
+            ? locale === "es"
+              ? "whatsapp · todos"
+              : "whatsapp · all"
+            : locale === "es"
+              ? `whatsapp · ${channelIds.length} núm.`
+              : `whatsapp · ${channelIds.length} no.`;
+      }
       return [botLabel, channelLabel].filter(Boolean).join(" · ");
     }
     case "message":

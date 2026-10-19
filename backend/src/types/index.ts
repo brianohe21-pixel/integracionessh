@@ -3431,6 +3431,7 @@ export interface FlowNodeData {
   triggerStageKey?: OpportunityStage;
   channel?: FlowAgentChannel;
   whatsappChannelId?: string;
+  whatsappChannelIds?: string[];
   keywords?: string[];
   matchMode?: AutomationMatchMode;
   messageText?: LocalizedText;

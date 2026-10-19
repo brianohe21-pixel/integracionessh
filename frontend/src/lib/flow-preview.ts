@@ -35,16 +35,13 @@ function buildStepDetail(
       }
       return triggerType;
     }
-    case "agent": {
-      const channel = d.channel ?? "any";
-      const botLabel = d.botId
-        ? botNames?.get(d.botId) || d.botId
-        : "";
-      const channelLabel =
-        channel === "whatsapp" && d.whatsappChannelId
-          ? `whatsapp:${d.whatsappChannelId}`
-          : channel;
-      return [botLabel, channelLabel].filter(Boolean).join(" · ");
+    case "agent":
+    case "message_received_trigger": {
+      const names =
+        botNames && botNames.size > 0
+          ? Object.fromEntries(botNames.entries())
+          : undefined;
+      return buildNodePreview(node.type, d, locale === "en" ? "en" : "es", names);
     }
     case "message":
       return text(d.messageText, locale);
