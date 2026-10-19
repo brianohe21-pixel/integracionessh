@@ -323,6 +323,7 @@ export async function handler(
           status: mt.status,
           components: mt.components ?? [],
           metaTemplateId: mt.id,
+          ...(mt.qualityScore ? { qualityScore: mt.qualityScore } : {}),
           syncedAt: now,
           createdAt: now,
         }));

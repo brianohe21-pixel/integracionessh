@@ -19,6 +19,7 @@ const COEXISTENCE_WEBHOOK_FIELDS = [
   "account_alerts",
   "phone_number_quality_update",
   "message_template_status_update",
+  "message_template_quality_update",
 ];
 
 const CLOUD_API_WEBHOOK_FIELDS = [
@@ -28,6 +29,7 @@ const CLOUD_API_WEBHOOK_FIELDS = [
   "account_alerts",
   "phone_number_quality_update",
   "message_template_status_update",
+  "message_template_quality_update",
 ];
 
 export function assertDistinctWabaAndPhone(wabaId: string, phoneNumberId: string): void {

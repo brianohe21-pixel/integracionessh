@@ -97,6 +97,7 @@ export interface MetaTemplate {
   category: "MARKETING" | "UTILITY" | "AUTHENTICATION";
   status: "APPROVED" | "PENDING" | "REJECTED";
   components: TemplateComponent[];
+  qualityScore?: "GREEN" | "YELLOW" | "RED" | "UNKNOWN";
 }
 
 export interface MetaTemplatesResponse {
@@ -129,7 +130,26 @@ function normalizeTemplateStatus(status: unknown): MetaTemplate["status"] {
   return "PENDING";
 }
 
+export function normalizeTemplateQualityScore(
+  raw: unknown
+): MetaTemplate["qualityScore"] | undefined {
+  const score =
+    typeof raw === "string"
+      ? raw
+      : raw && typeof raw === "object" && "score" in raw
+        ? (raw as { score?: unknown }).score
+        : undefined;
+  const value = String(score ?? "").trim().toUpperCase();
+  if (value === "GREEN" || value === "YELLOW" || value === "RED" || value === "UNKNOWN") {
+    return value;
+  }
+  return undefined;
+}
+
 export function normalizeMetaTemplate(raw: Record<string, unknown>): MetaTemplate {
+  const qualityScore = normalizeTemplateQualityScore(
+    raw.quality_score ?? raw.qualityScore
+  );
   return {
     id: String(raw.id ?? ""),
     name: String(raw.name ?? ""),
@@ -137,6 +157,7 @@ export function normalizeMetaTemplate(raw: Record<string, unknown>): MetaTemplat
     category: normalizeTemplateCategory(raw.category),
     status: normalizeTemplateStatus(raw.status),
     components: Array.isArray(raw.components) ? (raw.components as TemplateComponent[]) : [],
+    ...(qualityScore ? { qualityScore } : {}),
   };
 }
 

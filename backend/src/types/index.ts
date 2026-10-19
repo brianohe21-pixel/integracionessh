@@ -2209,6 +2209,8 @@ export interface TemplateButton {
 
 export type OutreachChannel = "whatsapp" | "sms";
 
+export type WhatsAppTemplateQualityScore = "GREEN" | "YELLOW" | "RED" | "UNKNOWN";
+
 export interface WhatsAppTemplate {
   templateId: string;
   tenantId: string;
@@ -2220,6 +2222,7 @@ export interface WhatsAppTemplate {
   status: "APPROVED" | "PENDING" | "REJECTED";
   components: TemplateComponent[];
   metaTemplateId?: string;
+  qualityScore?: WhatsAppTemplateQualityScore;
   syncedAt: string;
   createdAt: string;
 }

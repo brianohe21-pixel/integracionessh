@@ -14,8 +14,8 @@ import {
 import { useBots } from "@/hooks/useBots";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
-import type { MessageTemplate, OutreachChannel } from "@/types";
-import { isSmsTemplate } from "@/types";
+import type { MessageTemplate, OutreachChannel, WhatsAppTemplateQualityScore } from "@/types";
+import { isSmsTemplate, isWhatsAppTemplate } from "@/types";
 import { OutreachChannelSelect } from "@/components/outreach/OutreachChannelSelect";
 import { IntegrationErrorSupport } from "@/components/support/IntegrationErrorSupport";
 import { SmsTemplatePreview } from "@/components/templates/SmsTemplatePreview";
@@ -94,6 +94,36 @@ export default function TemplatesPage() {
       PENDING: { label: t("templates.statusPending"), variant: "warning" as const },
       REJECTED: { label: t("templates.statusRejected"), variant: "danger" as const },
     }),
+    [t]
+  );
+
+  const QUALITY_BADGE = useMemo(
+    () =>
+      ({
+        GREEN: {
+          label: t("templates.qualityGreen"),
+          variant: "success" as const,
+          tooltip: t("templates.tooltipQualityGreen"),
+        },
+        YELLOW: {
+          label: t("templates.qualityYellow"),
+          variant: "warning" as const,
+          tooltip: t("templates.tooltipQualityYellow"),
+        },
+        RED: {
+          label: t("templates.qualityRed"),
+          variant: "danger" as const,
+          tooltip: t("templates.tooltipQualityRed"),
+        },
+        UNKNOWN: {
+          label: t("templates.qualityUnknown"),
+          variant: "default" as const,
+          tooltip: t("templates.tooltipQualityUnknown"),
+        },
+      }) satisfies Record<
+        WhatsAppTemplateQualityScore,
+        { label: string; variant: "success" | "warning" | "danger" | "default"; tooltip: string }
+      >,
     [t]
   );
 
@@ -597,6 +627,10 @@ export default function TemplatesPage() {
             {templates.map((tpl) => {
               const sms = isSmsTemplate(tpl);
               const statusInfo = STATUS_BADGE[tpl.status as keyof typeof STATUS_BADGE] ?? STATUS_BADGE.PENDING;
+              const qualityInfo =
+                isWhatsAppTemplate(tpl) && tpl.qualityScore
+                  ? QUALITY_BADGE[tpl.qualityScore]
+                  : null;
               return (
                 <div
                   key={`${tpl.botId}-${tpl.name}-${tpl.language}`}
@@ -614,16 +648,23 @@ export default function TemplatesPage() {
                         </p>
                       ) : null}
                     </div>
-                    <div
-                      title={
-                        tpl.status === "PENDING"
-                          ? t("templates.tooltipPending")
-                          : tpl.status === "REJECTED"
-                            ? t("templates.tooltipRejected")
-                            : t("templates.tooltipApproved")
-                      }
-                    >
-                      <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+                    <div className="flex shrink-0 flex-col items-end gap-1.5">
+                      <div
+                        title={
+                          tpl.status === "PENDING"
+                            ? t("templates.tooltipPending")
+                            : tpl.status === "REJECTED"
+                              ? t("templates.tooltipRejected")
+                              : t("templates.tooltipApproved")
+                        }
+                      >
+                        <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+                      </div>
+                      {qualityInfo ? (
+                        <div title={qualityInfo.tooltip}>
+                          <Badge variant={qualityInfo.variant}>{qualityInfo.label}</Badge>
+                        </div>
+                      ) : null}
                     </div>
                   </div>
 
@@ -668,6 +709,11 @@ export default function TemplatesPage() {
                   <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-secondary">
                     {t("common.status")}
                   </th>
+                  {channelFilter === "whatsapp" ? (
+                    <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-secondary">
+                      {t("templates.colQuality")}
+                    </th>
+                  ) : null}
                   <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-secondary">
                     {t("templates.colSynced")}
                   </th>
@@ -680,6 +726,10 @@ export default function TemplatesPage() {
                 {templates.map((tpl) => {
                   const sms = isSmsTemplate(tpl);
                   const statusInfo = STATUS_BADGE[tpl.status as keyof typeof STATUS_BADGE] ?? STATUS_BADGE.PENDING;
+                  const qualityInfo =
+                    isWhatsAppTemplate(tpl) && tpl.qualityScore
+                      ? QUALITY_BADGE[tpl.qualityScore]
+                      : null;
                   return (
                     <tr key={`${tpl.botId}-${tpl.name}-${tpl.language}`} className="transition-colors hover:bg-surface">
                       <td className="px-5 py-4">
@@ -720,6 +770,17 @@ export default function TemplatesPage() {
                           <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
                         </div>
                       </td>
+                      {channelFilter === "whatsapp" ? (
+                        <td className="px-5 py-4">
+                          {qualityInfo ? (
+                            <div title={qualityInfo.tooltip}>
+                              <Badge variant={qualityInfo.variant}>{qualityInfo.label}</Badge>
+                            </div>
+                          ) : (
+                            <span className="text-sm text-muted">—</span>
+                          )}
+                        </td>
+                      ) : null}
                       <td className="px-5 py-4 text-sm text-secondary">
                         {formatDate(sms ? tpl.updatedAt : tpl.syncedAt)}
                       </td>
