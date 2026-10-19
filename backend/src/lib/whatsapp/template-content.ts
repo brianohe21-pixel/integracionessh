@@ -17,6 +17,7 @@ export interface WhatsAppTemplateDisplay {
 export interface ResolvedWhatsAppTemplateContent {
   content: string;
   display: WhatsAppTemplateDisplay;
+  category?: WhatsAppTemplate["category"];
 }
 
 function findComponent(
@@ -171,5 +172,6 @@ export async function resolveWhatsAppTemplateDisplayContent(params: {
   return {
     content: toContent(display, params.templateName),
     display,
+    category: cached.category,
   };
 }

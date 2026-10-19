@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import { getBot } from "../dynamodb/bot.repository.js";
 import { getTenant } from "../dynamodb/tenant.repository.js";
 import { assertCanSendMessages } from "../billing/assert-plan.js";
+import { incrementAiUsage } from "../dynamodb/ai-usage-metrics.repository.js";
 import { incrementMessages } from "../dynamodb/usage.repository.js";
 import { PlanLimitError } from "../billing/plan-limits.js";
 import {
@@ -255,7 +256,10 @@ async function deliverAssistantText(params: {
     message: outboundText,
     role: "assistant",
   });
-  await incrementMessages(params.tenantId);
+  await Promise.all([
+    incrementMessages(params.tenantId),
+    incrementAiUsage(params.tenantId, params.botId),
+  ]);
 }
 
 async function sendHandoffCourtesy(

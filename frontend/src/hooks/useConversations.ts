@@ -1,7 +1,7 @@
 "use client";
 
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { api, getTenantContext } from "@/lib/api";
 import { useRealtimeConnection } from "@/components/realtime/RealtimeProvider";
 import type {
   BulkHandoffResult,
@@ -240,14 +240,73 @@ export function useReleaseConversation() {
 export function useSendConversationMessage() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: { conversationId: string; botId: string; content: string }) =>
+    mutationFn: (body: {
+      conversationId: string;
+      botId: string;
+      content: string;
+      channel?: Channel;
+    }) =>
       api.post<Message>(
         `/conversations/${encodeURIComponent(body.conversationId)}/messages`,
         { botId: body.botId, content: body.content }
       ),
-    onSuccess: (_, vars) => {
-      qc.invalidateQueries({ queryKey: ["conversation-messages", vars.conversationId] });
+    onMutate: async (vars) => {
+      await qc.cancelQueries({ queryKey: ["conversation-messages", vars.conversationId] });
+      const previous = qc.getQueryData<Message[]>([
+        "conversation-messages",
+        vars.conversationId,
+      ]);
+      const tempId = `pending-${crypto.randomUUID()}`;
+      const optimistic: Message = {
+        messageId: tempId,
+        conversationId: vars.conversationId,
+        tenantId: previous?.[0]?.tenantId ?? getTenantContext() ?? "",
+        role: "advisor",
+        content: vars.content,
+        channel: vars.channel,
+        source: "panel",
+        deliveryStatus: "pending",
+        timestamp: new Date().toISOString(),
+      };
+      qc.setQueryData<Message[]>(
+        ["conversation-messages", vars.conversationId],
+        (current) => [...(current ?? []), optimistic]
+      );
+      return { previous, tempId };
+    },
+    onError: (_error, vars, context) => {
+      if (context?.previous) {
+        qc.setQueryData(["conversation-messages", vars.conversationId], context.previous);
+      }
+    },
+    onSuccess: (message, vars, context) => {
+      qc.setQueryData<Message[]>(
+        ["conversation-messages", vars.conversationId],
+        (current) => {
+          if (!current) return [message];
+          if (context?.tempId) {
+            const replaced = current.map((item) =>
+              item.messageId === context.tempId ? message : item
+            );
+            if (replaced.some((item) => item.messageId === message.messageId)) {
+              return replaced.filter(
+                (item, index, arr) =>
+                  item.messageId !== message.messageId ||
+                  arr.findIndex((candidate) => candidate.messageId === message.messageId) ===
+                    index
+              );
+            }
+            return replaced;
+          }
+          return current.some((item) => item.messageId === message.messageId)
+            ? current
+            : [...current, message];
+        }
+      );
       qc.invalidateQueries({ queryKey: ["conversations"] });
+    },
+    onSettled: (_data, _error, vars) => {
+      qc.invalidateQueries({ queryKey: ["conversation-messages", vars.conversationId] });
     },
   });
 }

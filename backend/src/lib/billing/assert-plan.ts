@@ -80,7 +80,7 @@ export async function assertCanSendMessages(
 export async function assertBulkRecipients(tenant: Tenant, count: number): Promise<void> {
   assertSubscriptionAllowsSending(tenant);
   const limits = getEffectivePlanLimits(tenant);
-  if (count > limits.maxBulkRecipientsPerJob) {
+  if (!isUnlimited(limits.maxBulkRecipientsPerJob) && count > limits.maxBulkRecipientsPerJob) {
     throw new PlanLimitError(
       "PLAN_LIMIT_BULK",
       `Plan limit: maximum ${limits.maxBulkRecipientsPerJob} recipients per job`

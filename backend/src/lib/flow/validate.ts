@@ -143,6 +143,14 @@ function validateBindings(node: FlowNode, issues: FlowValidationIssue[]): void {
     );
   }
 
+  if (node.type === "assign_tags" || node.type === "remove_tags") {
+    bindingFields.push(
+      ...(node.data.contactPhoneBinding
+        ? [{ field: "contactPhoneBinding", value: node.data.contactPhoneBinding, required: true as const }]
+        : [{ field: "contactPhoneBinding", required: true as const }])
+    );
+  }
+
   if (node.type === "send_notification") {
     const isEmail = node.data.notificationChannel === "email";
     const emailBindings = node.data.notificationRecipientBindings?.filter((item) => item.trim());
@@ -414,9 +422,29 @@ export function validateFlowDefinition(flow: FlowDefinition): FlowValidationIssu
       node.type === "create_lead" ||
       node.type === "create_opportunity" ||
       node.type === "move_opportunity_stage" ||
+      node.type === "assign_tags" ||
+      node.type === "remove_tags" ||
       node.type === "send_notification"
     ) {
       validateBindings(node, issues);
+    }
+
+    if (node.type === "assign_tags" || node.type === "remove_tags") {
+      if (!node.data.contactPhoneBinding?.trim()) {
+        issues.push({
+          code: "missing_phone_binding",
+          message: "contactPhoneBinding is required",
+          nodeId: node.id,
+        });
+      }
+      const tags = node.data.contactTags?.map((tag) => tag.trim()).filter(Boolean) ?? [];
+      if (!tags.length) {
+        issues.push({
+          code: "missing_tags",
+          message: "At least one tag is required",
+          nodeId: node.id,
+        });
+      }
     }
 
     if (node.type === "move_opportunity_stage") {

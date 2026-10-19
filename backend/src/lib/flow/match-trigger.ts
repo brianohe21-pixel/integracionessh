@@ -6,6 +6,7 @@ import type {
 } from "../../types/index.js";
 import { normalizeText } from "../automation/evaluate.js";
 import { getFlowEntryNode } from "./entry-node.js";
+import { matchesWhatsAppChannelFilter } from "./whatsapp-channel-filter.js";
 
 function matchesKeyword(
   text: string,
@@ -32,9 +33,8 @@ function matchesChannelConfig(
   const conversationChannel = conversation.channel ?? "whatsapp";
   if (conversationChannel !== channel) return false;
 
-  if (channel === "whatsapp" && node.data.whatsappChannelId?.trim()) {
-    if (!conversation.whatsappChannelId) return false;
-    return conversation.whatsappChannelId === node.data.whatsappChannelId.trim();
+  if (channel === "whatsapp") {
+    return matchesWhatsAppChannelFilter(node.data, conversation.whatsappChannelId);
   }
 
   return true;

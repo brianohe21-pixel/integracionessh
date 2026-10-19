@@ -70,7 +70,29 @@ function appendMessage(
 ): Message[] {
   if (!messages) return [message];
   if (messages.some((item) => item.messageId === message.messageId)) return messages;
+
+  const pendingIndex = messages.findIndex(
+    (item) =>
+      item.deliveryStatus === "pending" &&
+      item.role === message.role &&
+      item.content === message.content
+  );
+  if (pendingIndex >= 0) {
+    const next = [...messages];
+    next[pendingIndex] = message;
+    return next;
+  }
+
   return [...messages, message];
+}
+
+function findMessageIndex(messages: Message[], message: Message): number {
+  return messages.findIndex(
+    (item) =>
+      item.messageId === message.messageId ||
+      (!!message.whatsappMessageId && item.whatsappMessageId === message.whatsappMessageId) ||
+      (!!message.externalMessageId && item.externalMessageId === message.externalMessageId)
+  );
 }
 
 function updateMessageReactions(
@@ -78,15 +100,29 @@ function updateMessageReactions(
   message: Message
 ): Message[] {
   if (!messages) return messages ?? [];
-  const index = messages.findIndex(
-    (item) =>
-      item.messageId === message.messageId ||
-      (!!message.whatsappMessageId && item.whatsappMessageId === message.whatsappMessageId) ||
-      (!!message.externalMessageId && item.externalMessageId === message.externalMessageId)
-  );
+  const index = findMessageIndex(messages, message);
   if (index < 0) return messages;
   const next = [...messages];
   next[index] = { ...next[index], reactions: message.reactions };
+  return next;
+}
+
+function updateMessageDeliveryStatus(
+  messages: Message[] | undefined,
+  message: Message
+): Message[] {
+  if (!messages) return messages ?? [];
+  const index = findMessageIndex(messages, message);
+  if (index < 0) return messages;
+  const next = [...messages];
+  next[index] = {
+    ...next[index],
+    deliveryStatus: message.deliveryStatus,
+    ...(message.deliveredAt ? { deliveredAt: message.deliveredAt } : {}),
+    ...(message.readAt ? { readAt: message.readAt } : {}),
+    ...(message.whatsappMessageId ? { whatsappMessageId: message.whatsappMessageId } : {}),
+    ...(message.externalMessageId ? { externalMessageId: message.externalMessageId } : {}),
+  };
   return next;
 }
 
@@ -165,6 +201,22 @@ function ConversationRealtimeInner({ children }: { children: React.ReactNode }) 
               ["conversation-messages", parsed.conversationId],
               (current) => {
                 const updated = updateMessageReactions(current, parsed.message);
+                if (updated === current) {
+                  void queryClient.invalidateQueries({
+                    queryKey: ["conversation-messages", parsed.conversationId],
+                  });
+                }
+                return updated;
+              }
+            );
+            return;
+          }
+
+          if (parsed.type === "message.status.updated") {
+            queryClient.setQueryData<Message[]>(
+              ["conversation-messages", parsed.conversationId],
+              (current) => {
+                const updated = updateMessageDeliveryStatus(current, parsed.message);
                 if (updated === current) {
                   void queryClient.invalidateQueries({
                     queryKey: ["conversation-messages", parsed.conversationId],

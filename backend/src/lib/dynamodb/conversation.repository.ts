@@ -8,7 +8,16 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 import { docClient, TABLE_NAME } from "./client.js";
 import { listBots } from "./bot.repository.js";
-import type { Conversation, HandoffMode, Message, MessageReaction, WorkflowStatus, Channel, InteractionCategory } from "../../types/index.js";
+import type {
+  Conversation,
+  HandoffMode,
+  Message,
+  MessageDeliveryStatus,
+  MessageReaction,
+  WorkflowStatus,
+  Channel,
+  InteractionCategory,
+} from "../../types/index.js";
 import {
   conversationLookupGsi1pk,
   whatsappConversationLookupGsi1pk,
@@ -30,6 +39,20 @@ import {
   shouldOpenFreeEntryPoint,
 } from "../whatsapp/messaging-windows.js";
 import { incrementMessageWindowCount } from "./message-window-metrics.repository.js";
+import {
+  resolveWhatsAppPricingCategory,
+  whatsappCategoryToBucket,
+} from "../whatsapp/message-category.js";
+import { incrementWhatsAppCategory } from "./whatsapp-category-metrics.repository.js";
+import { saveConversationMessageTracking } from "./bulk-job.repository.js";
+
+const DELIVERY_STATUS_RANK: Record<MessageDeliveryStatus, number> = {
+  pending: 0,
+  sent: 1,
+  delivered: 2,
+  read: 3,
+  failed: 4,
+};
 
 const REALTIME_CONVERSATION_FIELDS = new Set([
   "handoffMode",
@@ -782,6 +805,27 @@ export async function addMessageIdempotent(
     }
   }
 
+  const channel = (message.channel ?? conversationForWindow?.channel) as Channel | undefined;
+  const waMessageId =
+    message.whatsappMessageId ??
+    (channel === "whatsapp" ? message.externalMessageId : undefined);
+  const shouldTrackWhatsAppDelivery =
+    isOutbound &&
+    channel === "whatsapp" &&
+    Boolean(waMessageId) &&
+    message.role !== "system" &&
+    message.source !== "whatsapp_history";
+
+  const storedMessage: Message = shouldTrackWhatsAppDelivery
+    ? {
+        ...message,
+        ...(waMessageId && !message.whatsappMessageId
+          ? { whatsappMessageId: waMessageId }
+          : {}),
+        deliveryStatus: message.deliveryStatus ?? "sent",
+      }
+    : message;
+
   const transactItems: Array<Record<string, unknown>> = [
     {
       Put: {
@@ -791,7 +835,7 @@ export async function addMessageIdempotent(
           GSI1PK: `TENANT#${message.tenantId}#CONV#${message.conversationId}`,
           GSI1SK: `MSG#${now}`,
           ttl: Math.floor(Date.now() / 1000) + 90 * 24 * 60 * 60,
-          ...message,
+          ...storedMessage,
         },
         ConditionExpression: "attribute_not_exists(SK)",
       },
@@ -857,7 +901,7 @@ export async function addMessageIdempotent(
       publishRealtimeEventSafe(message.tenantId, {
         type: "message.created",
         conversationId: message.conversationId,
-        message,
+        message: storedMessage,
         conversation: {
           ...conversation,
           lastMessageAt: updateLastMessageAt ? now : conversation.lastMessageAt,
@@ -871,7 +915,26 @@ export async function addMessageIdempotent(
     }
   }
 
-  const usageBucket = resolveWhatsAppUsageBucket(message);
+  if (shouldTrackWhatsAppDelivery && waMessageId) {
+    const conversation =
+      conversationForWindow ??
+      (await getConversation(message.tenantId, botId, message.conversationId));
+    void saveConversationMessageTracking(waMessageId, {
+      tenantId: message.tenantId,
+      botId,
+      conversationId: message.conversationId,
+      messageId: storedMessage.messageId,
+      ...(conversation?.phoneNumber ? { to: conversation.phoneNumber } : {}),
+    }).catch((error) => {
+      console.warn("Failed to save WhatsApp conversation message tracking:", {
+        waMessageId,
+        conversationId: message.conversationId,
+        error: (error as Error).message,
+      });
+    });
+  }
+
+  const usageBucket = resolveWhatsAppUsageBucket(storedMessage);
   if (usageBucket) {
     try {
       await incrementWhatsAppUsage(
@@ -888,6 +951,24 @@ export async function addMessageIdempotent(
         error: (error as Error).message,
       });
     }
+  }
+
+  try {
+    const pricingCategory = await resolveWhatsAppPricingCategory(message, botId);
+    if (pricingCategory) {
+      await incrementWhatsAppCategory(
+        message.tenantId,
+        botId,
+        whatsappCategoryToBucket(pricingCategory),
+        new Date(message.timestamp || now)
+      );
+    }
+  } catch (error) {
+    console.warn("whatsapp category metrics increment failed", {
+      tenantId: message.tenantId,
+      botId,
+      error: (error as Error).message,
+    });
   }
 
   if (windowDirection) {
@@ -1046,6 +1127,86 @@ export async function upsertMessageReaction(params: {
   if (params.publishRealtime !== false) {
     publishRealtimeEventSafe(params.tenantId, {
       type: "message.reaction.updated",
+      conversationId: params.conversationId,
+      message: updatedMessage,
+    });
+  }
+
+  return updatedMessage;
+}
+
+export async function updateMessageDeliveryStatus(params: {
+  tenantId: string;
+  conversationId: string;
+  externalMessageId: string;
+  status: Exclude<MessageDeliveryStatus, "pending">;
+  eventAt: string;
+  publishRealtime?: boolean;
+}): Promise<Message | null> {
+  const record = await findMessageRecordByExternalId(
+    params.tenantId,
+    params.conversationId,
+    params.externalMessageId
+  );
+  if (!record) {
+    console.warn(
+      `Delivery status target not found: conversationId=${params.conversationId} target=${params.externalMessageId}`
+    );
+    return null;
+  }
+
+  const current = record.message.deliveryStatus ?? "sent";
+  if (
+    params.status !== "failed" &&
+    DELIVERY_STATUS_RANK[params.status] < DELIVERY_STATUS_RANK[current]
+  ) {
+    return record.message;
+  }
+  if (current === "failed" && params.status !== "failed") {
+    return record.message;
+  }
+  if (current === params.status) {
+    return record.message;
+  }
+
+  const sets = ["deliveryStatus = :deliveryStatus"];
+  const values: Record<string, unknown> = {
+    ":deliveryStatus": params.status,
+  };
+
+  if (params.status === "delivered" || params.status === "read") {
+    sets.push("deliveredAt = if_not_exists(deliveredAt, :eventAt)");
+    values[":eventAt"] = params.eventAt;
+  }
+  if (params.status === "read") {
+    sets.push("readAt = :readAt");
+    values[":readAt"] = params.eventAt;
+  }
+
+  await docClient.send(
+    new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: {
+        PK: record.pk,
+        SK: record.sk,
+      },
+      UpdateExpression: `SET ${sets.join(", ")}`,
+      ExpressionAttributeValues: values,
+    })
+  );
+
+  const updatedMessage: Message = {
+    ...record.message,
+    deliveryStatus: params.status,
+    ...(params.status === "delivered" || params.status === "read"
+      ? { deliveredAt: record.message.deliveredAt ?? params.eventAt }
+      : {}),
+    ...(params.status === "read" ? { readAt: params.eventAt } : {}),
+  };
+
+  if (params.publishRealtime !== false) {
+    publishRealtimeEventSafe(params.tenantId, {
+      type: "message.status.updated",
       conversationId: params.conversationId,
       message: updatedMessage,
     });

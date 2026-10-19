@@ -25,7 +25,7 @@ import { cn } from "@/lib/utils";
 
 const DEFAULT_AI_QUOTAS: MaxMessagesPerMonthByPlan = {
   free: 250,
-  starter: 2_000,
+  starter: 5_000,
   pro: 10_000,
   reseller: 50_000,
 };

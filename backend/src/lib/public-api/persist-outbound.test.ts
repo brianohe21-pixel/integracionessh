@@ -78,6 +78,7 @@ describe("persistPublicApiWhatsAppOutbound", () => {
     mockedResolveTemplate.mockResolvedValue({
       content: "Alerta para 2026-10-16",
       display: { bodyText: "Alerta para 2026-10-16" },
+      category: "UTILITY",
     });
 
     await persistPublicApiWhatsAppOutbound({
@@ -120,6 +121,7 @@ describe("persistPublicApiWhatsAppOutbound", () => {
         metadata: expect.objectContaining({
           origin: "public_api",
           kind: "whatsapp_template",
+          templateCategory: "UTILITY",
           templateName: "finder_trade",
           language: "es",
         }),

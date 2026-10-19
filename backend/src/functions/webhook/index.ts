@@ -21,6 +21,7 @@ import {
 } from "../../lib/dynamodb/bulk-job.repository.js";
 import { incrementCampaignAnalytics } from "../../lib/dynamodb/campaign.repository.js";
 import { applyWhatsAppStatusToAttempt } from "../../lib/dynamodb/campaign-send-attempt.repository.js";
+import { updateMessageDeliveryStatus } from "../../lib/dynamodb/conversation.repository.js";
 import {
   isCallStatusItem,
   normalizeCallConnectEvent,
@@ -539,7 +540,6 @@ async function handleWhatsAppWebhook(payload: WhatsAppWebhookEvent): Promise<voi
       const statuses = value.statuses ?? [];
       for (const status of statuses) {
         if (isCallStatusItem(status)) continue;
-        if (status.status === "sent") continue;
 
         sqsPromises.push(
           (async () => {
@@ -549,6 +549,34 @@ async function handleWhatsAppWebhook(payload: WhatsAppWebhookEvent): Promise<voi
 
               const isCampaign = tracking.kind === "campaign" && Boolean(tracking.campaignId);
               const campaignId = isCampaign ? tracking.campaignId : undefined;
+              const isConversation =
+                tracking.kind === "conversation" && Boolean(tracking.conversationId);
+
+              if (isConversation && tracking.conversationId) {
+                if (
+                  status.status === "sent" ||
+                  status.status === "delivered" ||
+                  status.status === "read" ||
+                  status.status === "failed"
+                ) {
+                  const eventAt = new Date(
+                    Number.parseInt(status.timestamp, 10) * 1000
+                  ).toISOString();
+                  await updateMessageDeliveryStatus({
+                    tenantId: tracking.tenantId,
+                    conversationId: tracking.conversationId,
+                    externalMessageId: status.id,
+                    status: status.status,
+                    eventAt,
+                  });
+                  if (status.status === "failed") {
+                    await deleteMessageTracking(status.id);
+                  }
+                }
+                return;
+              }
+
+              if (status.status === "sent") return;
 
               if (status.status === "delivered") {
                 if (isCampaign && campaignId) {

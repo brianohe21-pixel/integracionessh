@@ -704,6 +704,8 @@ export interface MessageReaction {
   timestamp: string;
 }
 
+export type MessageDeliveryStatus = "pending" | "sent" | "delivered" | "read" | "failed";
+
 export interface Message {
   messageId: string;
   conversationId: string;
@@ -719,6 +721,9 @@ export interface Message {
   externalMessageId?: string | undefined;
   callId?: string;
   reactions?: MessageReaction[];
+  deliveryStatus?: MessageDeliveryStatus;
+  deliveredAt?: string;
+  readAt?: string;
   timestamp: string;
 }
 
@@ -3381,6 +3386,8 @@ export type FlowNodeType =
   | "create_lead"
   | "create_opportunity"
   | "move_opportunity_stage"
+  | "assign_tags"
+  | "remove_tags"
   | "send_notification"
   | "assign_bot"
   | "webhook"
@@ -3431,6 +3438,7 @@ export interface FlowNodeData {
   triggerStageKey?: OpportunityStage;
   channel?: FlowAgentChannel;
   whatsappChannelId?: string;
+  whatsappChannelIds?: string[];
   keywords?: string[];
   matchMode?: AutomationMatchMode;
   messageText?: LocalizedText;

@@ -1,11 +1,13 @@
 "use client";
 
 import { useRef, useState, type KeyboardEvent } from "react";
+import Link from "next/link";
 import { ExternalLink, Plus, Tag, Trash2, X } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { useMetaFlows } from "@/hooks/useMetaFlows";
 import { useBots } from "@/hooks/useBots";
 import { useAdvisors } from "@/hooks/useAdvisors";
+import { useTags } from "@/hooks/useTags";
 import { useTenantEmailSettings } from "@/hooks/useTenantEmailSettings";
 import { MetaFlowsModal } from "@/components/meta-flows/MetaFlowsModal";
 import { Button } from "@/components/ui/Button";
@@ -19,6 +21,7 @@ import type {
   LocalizedText,
   FlowAgentChannel,
   OutreachChannel,
+  WhatsAppChannel,
 } from "@/types";
 import { extractSampleFields, FormBindingField } from "./FormBindingField";
 import { FlowWebhookPanel } from "./FlowWebhookPanel";
@@ -28,6 +31,11 @@ import { SendAudioNodeFields } from "@/components/flows/SendAudioNodeFields";
 import { ListNodeFields } from "@/components/flows/ListNodeFields";
 import { CloudDriveFilePicker } from "@/components/flows/CloudDriveFilePicker";
 import { useWhatsAppChannels } from "@/hooks/useWhatsAppChannels";
+import {
+  buildWhatsAppChannelScopePatch,
+  resolveConfiguredWhatsAppChannelIds,
+} from "@/lib/flow-whatsapp-channels";
+import type { EditableFlowEntryMode } from "@/lib/flow-entry-mode";
 import { cn } from "@/lib/utils";
 
 interface NodePropertiesPanelProps {
@@ -38,6 +46,8 @@ interface NodePropertiesPanelProps {
   botId: string;
   isVoiceFlow?: boolean;
   samplePayload?: Record<string, unknown>;
+  entryMode?: EditableFlowEntryMode | "voice";
+  onChangeEntryMode?: (mode: EditableFlowEntryMode) => void;
   onUpdate: (patch: Record<string, unknown>) => void;
   onDelete: () => void;
   canDelete: boolean;
@@ -49,6 +59,116 @@ const INPUT_CLASS =
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return <label className="block text-sm font-medium text-primary mb-2">{children}</label>;
+}
+
+function WhatsAppNumbersField({
+  channels,
+  selectedIds,
+  disabled,
+  onChange,
+}: {
+  channels: WhatsAppChannel[];
+  selectedIds: string[];
+  disabled?: boolean;
+  onChange: (channelIds: string[]) => void;
+}) {
+  const t = useT();
+  const mode = selectedIds.length > 0 ? "selected" : "all";
+  const activeChannels = channels.filter((channel) => channel.status !== "disconnected");
+
+  return (
+    <div className="space-y-3">
+      <FieldLabel>{t("flows.fields.whatsappChannel")}</FieldLabel>
+      <div className="space-y-2 rounded-xl border border-field-border bg-surface-muted/30 p-3">
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="radio"
+            name="whatsapp-number-scope"
+            checked={mode === "all"}
+            disabled={disabled}
+            onChange={() => onChange([])}
+            className="mt-0.5 h-4 w-4 shrink-0 border-field-border text-accent focus:ring-accent"
+          />
+          <span className="text-sm text-secondary">
+            <span className="font-medium text-primary">
+              {t("flows.fields.whatsappChannelAll")}
+            </span>
+            <span className="mt-0.5 block text-xs text-muted">
+              {t("flows.fields.whatsappChannelAllHint")}
+            </span>
+          </span>
+        </label>
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="radio"
+            name="whatsapp-number-scope"
+            checked={mode === "selected"}
+            disabled={disabled || activeChannels.length === 0}
+            onChange={() => {
+              if (activeChannels.length === 0) return;
+              onChange(
+                selectedIds.length > 0
+                  ? selectedIds
+                  : [activeChannels[0].channelId]
+              );
+            }}
+            className="mt-0.5 h-4 w-4 shrink-0 border-field-border text-accent focus:ring-accent"
+          />
+          <span className="text-sm text-secondary">
+            <span className="font-medium text-primary">
+              {t("flows.fields.whatsappChannelSelected")}
+            </span>
+            <span className="mt-0.5 block text-xs text-muted">
+              {t("flows.fields.whatsappChannelSelectedHint")}
+            </span>
+          </span>
+        </label>
+      </div>
+      {mode === "selected" ? (
+        <div className="space-y-2 rounded-xl border border-field-border bg-surface-elevated p-3">
+          {activeChannels.length === 0 ? (
+            <p className="text-xs text-warning">{t("flows.fields.whatsappChannelEmpty")}</p>
+          ) : (
+            activeChannels.map((channel) => {
+              const checked = selectedIds.includes(channel.channelId);
+              const label =
+                channel.label ||
+                channel.displayPhoneNumber ||
+                channel.phoneNumberId;
+              return (
+                <label
+                  key={channel.channelId}
+                  className="flex items-center gap-3 cursor-pointer text-sm text-secondary"
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    disabled={disabled}
+                    onChange={() => {
+                      const next = checked
+                        ? selectedIds.filter((id) => id !== channel.channelId)
+                        : [...selectedIds, channel.channelId];
+                      onChange(next);
+                    }}
+                    className="h-4 w-4 rounded border-field-border text-accent focus:ring-accent"
+                  />
+                  <span className="truncate">{label}</span>
+                </label>
+              );
+            })
+          )}
+          {activeChannels.length > 0 && selectedIds.length === 0 ? (
+            <p className="text-xs text-warning">
+              {t("flows.fields.whatsappChannelSelectAtLeastOne")}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+      {disabled ? (
+        <p className="text-xs text-warning">{t("flows.fields.agentNeedsFlowBot")}</p>
+      ) : null}
+    </div>
+  );
 }
 
 function textInput(
@@ -155,6 +275,90 @@ function CommaSeparatedInput({
           className="input-bare m-0 min-w-[8rem] flex-1 bg-transparent p-0 text-sm text-primary outline-none placeholder:text-muted"
         />
       ) : null}
+    </div>
+  );
+}
+
+function TagCatalogSelect({
+  values,
+  onChange,
+}: {
+  values: string[];
+  onChange: (values: string[]) => void;
+}) {
+  const t = useT();
+  const { data: tags, isLoading } = useTags();
+  const catalog = tags ?? [];
+  const selected = new Set(values.map((tag) => tag.trim().toLowerCase()).filter(Boolean));
+
+  function toggleTag(name: string) {
+    const key = name.trim().toLowerCase();
+    if (!key) return;
+    if (selected.has(key)) {
+      onChange(values.filter((tag) => tag.trim().toLowerCase() !== key));
+      return;
+    }
+    onChange([...values, name]);
+  }
+
+  if (isLoading) {
+    return (
+      <p className="rounded-lg border border-field-border bg-surface-muted/30 px-3 py-2 text-xs text-muted">
+        {t("flows.fields.tagsLoading")}
+      </p>
+    );
+  }
+
+  if (!catalog.length) {
+    return (
+      <div className="space-y-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2.5">
+        <p className="text-xs leading-relaxed text-warning">
+          {t("flows.fields.tagsEmpty")}
+        </p>
+        <Link
+          href="/tags"
+          className="inline-flex items-center gap-1 text-xs font-semibold text-accent hover:underline"
+        >
+          {t("flows.fields.tagsManageLink")}
+          <ExternalLink className="h-3 w-3" />
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-1.5">
+        {catalog.map((tag) => {
+          const active = selected.has(tag.name.trim().toLowerCase());
+          return (
+            <button
+              key={tag.tagId}
+              type="button"
+              onClick={() => toggleTag(tag.name)}
+              className={`rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-all ${
+                active
+                  ? "border-success bg-success text-white"
+                  : "border-field-border bg-surface-elevated text-secondary hover:border-success/40"
+              }`}
+              style={
+                !active && tag.color
+                  ? { borderColor: `${tag.color}66`, color: tag.color }
+                  : undefined
+              }
+            >
+              {tag.name}
+            </button>
+          );
+        })}
+      </div>
+      {values.length === 0 ? (
+        <p className="text-[11px] text-muted">{t("flows.fields.tagsRequiredHint")}</p>
+      ) : (
+        <p className="text-[11px] text-muted">
+          {t("flows.fields.tagsSelected", { count: values.length })}
+        </p>
+      )}
     </div>
   );
 }
@@ -277,6 +481,8 @@ export function NodePropertiesPanel({
   botId,
   isVoiceFlow = false,
   samplePayload,
+  entryMode,
+  onChangeEntryMode,
   onUpdate,
   onDelete,
   canDelete,
@@ -373,6 +579,45 @@ export function NodePropertiesPanel({
         {textInput(d.label ?? "", (v) => onUpdate({ label: v }))}
       </div>
 
+      {(type === "trigger" ||
+        type === "message_received_trigger" ||
+        type === "opportunity_stage_trigger") &&
+        !isVoiceFlow &&
+        onChangeEntryMode &&
+        entryMode &&
+        entryMode !== "voice" && (
+          <div>
+            <FieldLabel>{t("flows.fields.entryMode")}</FieldLabel>
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  ["message", "entryModeMessage"],
+                  ["webhook", "entryModeWebhook"],
+                  ["stage", "entryModeStage"],
+                ] as const
+              ).map(([mode, labelKey]) => {
+                const active = entryMode === mode;
+                return (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => onChangeEntryMode(mode)}
+                    className={cn(
+                      "rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors",
+                      active
+                        ? "border-accent bg-accent/10 text-accent"
+                        : "border-field-border bg-surface-elevated text-secondary hover:border-accent/40"
+                    )}
+                  >
+                    {t(`flows.fields.${labelKey}`)}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-1 text-xs text-secondary">{t("flows.fields.entryModeHint")}</p>
+          </div>
+        )}
+
       {type === "trigger" && (
         <>
           {isVoiceFlow && (
@@ -392,10 +637,10 @@ export function NodePropertiesPanel({
               )}
             </div>
           )}
-          {hasWebhookNode && (
-            <p className="text-xs text-secondary">{t("flows.fields.triggerWebhookHint")}</p>
+          {!isVoiceFlow && (hasWebhookNode || entryMode === "webhook") && (
+            <p className="text-xs text-secondary">{t("flows.fields.entryModeWebhookHint")}</p>
           )}
-          {!isVoiceFlow && !hasWebhookNode && (
+          {!isVoiceFlow && !hasWebhookNode && entryMode !== "webhook" && (
             <p className="text-xs text-secondary">{t("flows.fields.triggerGenericHint")}</p>
           )}
         </>
@@ -407,12 +652,12 @@ export function NodePropertiesPanel({
           <div>
             <FieldLabel>{t("flows.fields.agentBot")}</FieldLabel>
             <Select
-              value={d.botId ?? botId ?? ""}
+              value={d.botId ?? botId ?? (bots?.length === 1 ? bots[0].botId : "")}
               onChange={(e) => {
                 const nextBotId = e.target.value || undefined;
                 onUpdate({
                   botId: nextBotId,
-                  whatsappChannelId: undefined,
+                  ...buildWhatsAppChannelScopePatch([]),
                 });
               }}
             >
@@ -424,6 +669,9 @@ export function NodePropertiesPanel({
               ))}
             </Select>
             <p className="mt-1 text-xs text-secondary">{t("flows.fields.agentBotHint")}</p>
+            {!d.botId && !botId && (bots?.length ?? 0) > 1 ? (
+              <p className="mt-1 text-xs text-warning">{t("flows.fields.agentBotRequired")}</p>
+            ) : null}
           </div>
           <div className="rounded-xl border border-field-border bg-surface-muted/30 p-4">
             <label className="flex items-start gap-3 cursor-pointer">
@@ -455,7 +703,9 @@ export function NodePropertiesPanel({
                 const channel = e.target.value as FlowAgentChannel;
                 onUpdate({
                   channel,
-                  ...(channel !== "whatsapp" ? { whatsappChannelId: undefined } : {}),
+                  ...(channel !== "whatsapp"
+                    ? buildWhatsAppChannelScopePatch([])
+                    : {}),
                 });
               }}
             >
@@ -471,26 +721,12 @@ export function NodePropertiesPanel({
             <p className="mt-1 text-xs text-secondary">{t("flows.fields.triggerChannelHint")}</p>
           </div>
           {(d.channel ?? "any") === "whatsapp" && (
-            <div>
-              <FieldLabel>{t("flows.fields.whatsappChannel")}</FieldLabel>
-              <Select
-                value={d.whatsappChannelId ?? ""}
-                onChange={(e) =>
-                  onUpdate({ whatsappChannelId: e.target.value || undefined })
-                }
-                disabled={!resolvedPanelBotId}
-              >
-                <option value="">{t("flows.fields.whatsappChannelAny")}</option>
-                {(whatsappChannels ?? []).map((channel) => (
-                  <option key={channel.channelId} value={channel.channelId}>
-                    {channel.label || channel.displayPhoneNumber || channel.phoneNumberId}
-                  </option>
-                ))}
-              </Select>
-              {!resolvedPanelBotId ? (
-                <p className="mt-1 text-xs text-warning">{t("flows.fields.agentNeedsFlowBot")}</p>
-              ) : null}
-            </div>
+            <WhatsAppNumbersField
+              channels={whatsappChannels ?? []}
+              selectedIds={resolveConfiguredWhatsAppChannelIds(d)}
+              disabled={!resolvedPanelBotId}
+              onChange={(channelIds) => onUpdate(buildWhatsAppChannelScopePatch(channelIds))}
+            />
           )}
           <div>
             <FieldLabel>{t("flows.fields.keywords")}</FieldLabel>
@@ -565,12 +801,12 @@ export function NodePropertiesPanel({
           <div>
             <FieldLabel>{t("flows.fields.agentBot")}</FieldLabel>
             <Select
-              value={d.botId ?? botId ?? ""}
+              value={d.botId ?? botId ?? (bots?.length === 1 ? bots[0].botId : "")}
               onChange={(e) => {
                 const nextBotId = e.target.value || undefined;
                 onUpdate({
                   botId: nextBotId,
-                  whatsappChannelId: undefined,
+                  ...buildWhatsAppChannelScopePatch([]),
                 });
               }}
             >
@@ -591,7 +827,9 @@ export function NodePropertiesPanel({
                 const channel = e.target.value as FlowAgentChannel;
                 onUpdate({
                   channel,
-                  ...(channel !== "whatsapp" ? { whatsappChannelId: undefined } : {}),
+                  ...(channel !== "whatsapp"
+                    ? buildWhatsAppChannelScopePatch([])
+                    : {}),
                 });
               }}
             >
@@ -609,26 +847,12 @@ export function NodePropertiesPanel({
             <p className="mt-1 text-xs text-secondary">{t("flows.fields.agentChannelHint")}</p>
           </div>
           {(d.channel ?? "any") === "whatsapp" && (
-            <div>
-              <FieldLabel>{t("flows.fields.whatsappChannel")}</FieldLabel>
-              <Select
-                value={d.whatsappChannelId ?? ""}
-                onChange={(e) =>
-                  onUpdate({ whatsappChannelId: e.target.value || undefined })
-                }
-                disabled={!resolvedPanelBotId}
-              >
-                <option value="">{t("flows.fields.whatsappChannelAny")}</option>
-                {(whatsappChannels ?? []).map((channel) => (
-                  <option key={channel.channelId} value={channel.channelId}>
-                    {channel.label || channel.displayPhoneNumber || channel.phoneNumberId}
-                  </option>
-                ))}
-              </Select>
-              {!resolvedPanelBotId ? (
-                <p className="mt-1 text-xs text-warning">{t("flows.fields.agentNeedsFlowBot")}</p>
-              ) : null}
-            </div>
+            <WhatsAppNumbersField
+              channels={whatsappChannels ?? []}
+              selectedIds={resolveConfiguredWhatsAppChannelIds(d)}
+              disabled={!resolvedPanelBotId}
+              onChange={(channelIds) => onUpdate(buildWhatsAppChannelScopePatch(channelIds))}
+            />
           )}
         </>
       )}
@@ -1286,6 +1510,35 @@ export function NodePropertiesPanel({
             <CommaSeparatedInput
               values={d.leadTags ?? []}
               onChange={(leadTags) => onUpdate({ leadTags })}
+            />
+          </div>
+        </>
+      )}
+
+      {(type === "assign_tags" || type === "remove_tags") && (
+        <>
+          <p className="rounded-lg border border-success/20 bg-success/10 px-3 py-2.5 text-xs leading-relaxed text-secondary">
+            {t(
+              type === "assign_tags"
+                ? "flows.hints.assignTags"
+                : "flows.hints.removeTags"
+            )}
+          </p>
+          <FormBindingField
+            label={t("flows.fields.contactPhoneBinding")}
+            value={d.contactPhoneBinding ?? ""}
+            onChange={(v) => onUpdate({ contactPhoneBinding: v })}
+            sampleFields={sampleFields}
+            extraBindings={["{{phone}}", "{{contact_phone}}"]}
+            placeholder="{{phone}}"
+            required
+            requiredLabel={t("flows.fields.opportunityRequired")}
+          />
+          <div>
+            <FieldLabel>{t("flows.fields.manageTags")}</FieldLabel>
+            <TagCatalogSelect
+              values={d.contactTags ?? []}
+              onChange={(contactTags) => onUpdate({ contactTags })}
             />
           </div>
         </>

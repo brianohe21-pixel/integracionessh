@@ -14,6 +14,11 @@ import { useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import { api, getTenantContext } from "@/lib/api";
 import { subscribeRealtimeEvents } from "@/lib/notifications/bridge";
 import { conversationHref, conversationLabel } from "@/lib/notifications/conversation-link";
+import {
+  countUnreadConversations,
+  reconcileUnreadCounts,
+  unreadCountsEqual,
+} from "@/lib/unread-messages/counts";
 import { loadUnreadCounts, saveUnreadCounts } from "@/lib/unread-messages/storage";
 import { useTenantRole } from "@/hooks/useTenantRole";
 import { useT } from "@/i18n/context";
@@ -47,10 +52,6 @@ function truncate(text: string, max = 120): string {
   const trimmed = text.trim();
   if (trimmed.length <= max) return trimmed;
   return `${trimmed.slice(0, max - 1)}…`;
-}
-
-function sumUnreadCounts(counts: Record<string, number>): number {
-  return Object.values(counts).reduce((total, value) => total + value, 0);
 }
 
 function showBrowserNotification(title: string, body: string, href: string) {
@@ -155,20 +156,53 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
       queryKey: ["conversations", "list"],
     });
 
-    for (const [, data] of queries) {
-      for (const page of data?.pages ?? []) {
+    const conversationsById = new Map<string, Conversation>();
+    const defaultListIds = new Set<string>();
+    let hasFullyLoadedDefaultList = false;
+
+    for (const [queryKey, data] of queries) {
+      if (!data?.pages?.length) continue;
+
+      const isDefaultList =
+        Array.isArray(queryKey) &&
+        queryKey[0] === "conversations" &&
+        queryKey[1] === "list" &&
+        queryKey.slice(2).every((part) => part === "all");
+
+      const lastPage = data.pages[data.pages.length - 1];
+      if (isDefaultList && !lastPage?.nextCursor) {
+        hasFullyLoadedDefaultList = true;
+      }
+
+      for (const page of data.pages) {
         for (const conversation of page.items) {
-          if (conversation.workflowStatus !== "new") continue;
-          if (conversation.conversationId === activeConversationIdRef.current) continue;
-          setCounts((current) => {
-            if ((current[conversation.conversationId] ?? 0) >= 1) return current;
-            const next = { ...current, [conversation.conversationId]: 1 };
-            saveUnreadCounts(scopeRef.current, next);
-            return next;
-          });
+          conversationsById.set(conversation.conversationId, conversation);
+          if (isDefaultList) {
+            defaultListIds.add(conversation.conversationId);
+          }
         }
       }
     }
+
+    if (conversationsById.size === 0) return;
+
+    const conversationsForReconcile = hasFullyLoadedDefaultList
+      ? Array.from(conversationsById.values()).filter((conversation) =>
+          defaultListIds.has(conversation.conversationId)
+        )
+      : Array.from(conversationsById.values());
+
+    setCounts((current) => {
+      const next = reconcileUnreadCounts(
+        current,
+        conversationsForReconcile,
+        activeConversationIdRef.current,
+        { pruneUnknown: hasFullyLoadedDefaultList }
+      );
+      if (unreadCountsEqual(current, next)) return current;
+      saveUnreadCounts(scopeRef.current, next);
+      return next;
+    });
   }, [queryClient]);
 
   useEffect(() => {
@@ -272,7 +306,7 @@ export function UnreadMessagesProvider({ children }: { children: ReactNode }) {
     [counts]
   );
 
-  const totalUnread = useMemo(() => sumUnreadCounts(counts), [counts]);
+  const totalUnread = useMemo(() => countUnreadConversations(counts), [counts]);
 
   const dismissToast = useCallback(() => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);

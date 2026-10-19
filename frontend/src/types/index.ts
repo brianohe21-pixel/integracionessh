@@ -1330,6 +1330,86 @@ export interface WhatsAppUsageReport {
   daily: WhatsAppUsageDailyPoint[];
 }
 
+export type WhatsAppPricingCategory =
+  | "MARKETING"
+  | "UTILITY"
+  | "AUTHENTICATION"
+  | "SERVICE";
+
+export interface WhatsAppCategoryDayCounts {
+  marketing: number;
+  utility: number;
+  authentication: number;
+  service: number;
+}
+
+export interface WhatsAppCategoryDailyPoint extends WhatsAppCategoryDayCounts {
+  date: string;
+  total: number;
+}
+
+export interface WhatsAppCategoryByCategoryRow {
+  category: WhatsAppPricingCategory;
+  count: number;
+}
+
+export interface WhatsAppCategoryReport {
+  from: string;
+  to: string;
+  botId?: string;
+  totals: WhatsAppCategoryDayCounts & { total: number };
+  byCategory: WhatsAppCategoryByCategoryRow[];
+  daily: WhatsAppCategoryDailyPoint[];
+}
+
+export interface AiResponsesDailyPoint {
+  date: string;
+  responses: number;
+}
+
+export interface AiResponsesByBotRow {
+  botId: string;
+  botName: string;
+  responses: number;
+}
+
+export interface AiResponsesPeriodRow {
+  period: string;
+  responses: number;
+  planLimit: number;
+  effectiveLimit: number;
+  planUsed: number;
+  bonusGranted: number;
+  bonusUsed: number;
+  remaining: number;
+  percentUsed: number;
+}
+
+export interface AiResponsesQuota {
+  period: string;
+  planLimit: number;
+  effectiveLimit: number;
+  planUsed: number;
+  bonusGranted: number;
+  bonusUsed: number;
+  bonusRemaining: number;
+  totalUsed: number;
+  remaining: number;
+  percentUsed: number;
+}
+
+export interface AiResponsesReport {
+  from: string;
+  to: string;
+  botId?: string;
+  plan: string;
+  quota: AiResponsesQuota;
+  totals: { responses: number };
+  daily: AiResponsesDailyPoint[];
+  byBot: AiResponsesByBotRow[];
+  periods: AiResponsesPeriodRow[];
+}
+
 export interface ApiUsageCount {
   requests: number;
   success: number;
@@ -1478,6 +1558,8 @@ export interface MessageReaction {
   timestamp: string;
 }
 
+export type MessageDeliveryStatus = "pending" | "sent" | "delivered" | "read" | "failed";
+
 export interface Message {
   messageId: string;
   conversationId: string;
@@ -1497,6 +1579,9 @@ export interface Message {
   externalMessageId?: string;
   callId?: string;
   reactions?: MessageReaction[];
+  deliveryStatus?: MessageDeliveryStatus;
+  deliveredAt?: string;
+  readAt?: string;
   timestamp: string;
 }
 
@@ -2208,6 +2293,8 @@ export type FlowNodeType =
   | "create_lead"
   | "create_opportunity"
   | "move_opportunity_stage"
+  | "assign_tags"
+  | "remove_tags"
   | "send_notification"
   | "assign_bot"
   | "webhook"
@@ -2276,6 +2363,7 @@ export interface FlowNodeData {
   triggerStageKey?: OpportunityStage;
   channel?: FlowAgentChannel;
   whatsappChannelId?: string;
+  whatsappChannelIds?: string[];
   keywords?: string[];
   matchMode?: "contains" | "exact";
   messageText?: LocalizedText;

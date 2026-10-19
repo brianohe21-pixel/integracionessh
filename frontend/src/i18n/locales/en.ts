@@ -525,6 +525,10 @@ export const en: Messages = {
     channels: {
       multiDescription: "Connect and manage multiple WhatsApp numbers for this bot.",
       singleDescription: "Connect one WhatsApp Business number for this bot.",
+      quotaDescription:
+        "Your plan allows up to {{max}} WhatsApp numbers. Connected: {{used}} of {{max}}.",
+      limitReached:
+        "You reached your plan limit of {{max}} numbers. Upgrade to Pro to add more.",
       addNumber: "Add number",
       defaultBadge: "Default",
       setDefault: "Set as default",
@@ -2649,6 +2653,50 @@ export const en: Messages = {
     loadError: "Could not load the report. Try again.",
     emptyTitle: "No reports yet",
     emptyDescription: "When we add reports, they will show up in this list.",
+    aiResponses: {
+      title: "AI responses",
+      description:
+        "Detailed AI response usage: plan quota, daily breakdown, by agent, and by billing month.",
+      idleTitle: "Generate the report",
+      idleDescription:
+        "Click Generate and choose the date range (and agent, if needed) in the modal.",
+      modalTitle: "Generate report",
+      modalDescription: "Select the period and optionally an agent.",
+      appliedRange: "Period: {{from}} — {{to}} · Agent: {{bot}}",
+      noDataTitle: "No activity in this period",
+      noDataDescription:
+        "No AI responses are recorded for these dates. Daily detail is tracked from when this report went live; historical monthly usage still appears by month.",
+      kpiPlan: "Current plan",
+      kpiPlanHint: "Quota for month {{period}}",
+      kpiUsed: "Used this month",
+      kpiRemaining: "Remaining",
+      kpiRemainingHint: "Responses left in your quota",
+      kpiRange: "In selected range",
+      kpiRangeHint: "Daily sum for the selected period",
+      percentUsed: "{{percent}}% used",
+      dailyTitle: "Daily breakdown",
+      dailyEmpty:
+        "No daily counts in this range yet. Day-level detail is recorded going forward.",
+      byBotTitle: "By agent",
+      byBotEmpty: "No per-agent usage in this range.",
+      periodsTitle: "By billing month",
+      periodsHint:
+        "Monthly totals against plan quota. Includes every month that intersects the range.",
+      colDate: "Date",
+      colResponses: "AI responses",
+      colBot: "Agent",
+      colBotId: "Agent ID",
+      colPeriod: "Month",
+      colPlanLimit: "Plan quota",
+      colEffectiveLimit: "Total quota",
+      colPlanUsed: "Plan used",
+      colBonusUsed: "Pack used",
+      colRemaining: "Remaining",
+      colPercent: "%",
+      dailySheet: "Daily",
+      byBotSheet: "By agent",
+      periodsSheet: "By month",
+    },
     whatsappUsage: {
       title: "WhatsApp usage: API vs app",
       description:
@@ -2673,6 +2721,30 @@ export const en: Messages = {
       colInbound: "Inbound",
       colTotal: "Total",
       sheetName: "WhatsApp usage",
+    },
+    whatsappCategories: {
+      title: "WhatsApp messages by category",
+      description:
+        "Outbound WhatsApp messages grouped by Meta category: Marketing, Utility, Authentication, and Service (session).",
+      idleTitle: "Generate the report",
+      idleDescription: "Click Generate and choose the date range (and agent, if needed) in the modal.",
+      modalTitle: "Generate report",
+      modalDescription: "Select the period and optionally an agent.",
+      appliedRange: "Period: {{from}} — {{to}} · Agent: {{bot}}",
+      noDataTitle: "No activity in this period",
+      noDataDescription:
+        "There are no counts yet for these dates. Totals are recorded from when this report went live.",
+      kpiMarketing: "Marketing",
+      kpiUtility: "Utility",
+      kpiAuthentication: "Authentication",
+      kpiService: "Service",
+      colDate: "Date",
+      colMarketing: "Marketing",
+      colUtility: "Utility",
+      colAuthentication: "Authentication",
+      colService: "Service",
+      colTotal: "Total",
+      sheetName: "WhatsApp categories",
     },
     messageWindows: {
       title: "Messages by direction and window",
@@ -2973,6 +3045,15 @@ export const en: Messages = {
     chartConversationCategoriesSubtitle: "Human conversations in the selected period",
     chartConversationCategoriesEmpty: "No categories",
     chartConversationCategoriesEmptyDescription: "Categorize conversations to see the breakdown here.",
+    chartWhatsAppCategoriesTitle: "WhatsApp messages by category",
+    chartWhatsAppCategoriesSubtitle: "Outbound messages in the selected period",
+    chartWhatsAppCategoriesEmpty: "No WhatsApp messages",
+    chartWhatsAppCategoriesEmptyDescription:
+      "Counts appear when you send templates or session messages.",
+    whatsappCategoryMarketing: "Marketing",
+    whatsappCategoryUtility: "Utility",
+    whatsappCategoryAuthentication: "Authentication",
+    whatsappCategoryService: "Service",
     chartSlaByAdvisorTitle: "SLA compliance by advisor",
     chartSlaByAdvisorSubtitle: "Response target of {{minutes}} minutes",
     chartSlaByAdvisorEmpty: "No SLA data by advisor",
@@ -3693,9 +3774,10 @@ export const en: Messages = {
     renewalBannerTitle: "Your plan expires soon",
     renewalBannerBody: "Renew before {{date}} to keep access to your plan features.",
     perMonth: "/ month",
-    starterFeatureBots: "2 active bots",
-    starterFeatureWhatsApp: "Up to 5 WhatsApp numbers per bot",
+    starterFeatureBots: "1 active agent",
+    starterFeatureWhatsApp: "Up to 3 WhatsApp numbers",
     starterFeatureAi: "{{count}} AI replies per month",
+    starterFeatureEconomyModels: "Economy AI models only",
     starterFeatureCampaigns: "Campaigns and automations",
     starterFeatureKnowledge: "Knowledge base included",
     proFeatureTailored: "Limits and modules tailored to your operation",
@@ -3727,7 +3809,7 @@ export const en: Messages = {
     freePrice: "Free",
     freeDescription: "Try the platform with basic limits.",
     starterDescription:
-      "2 bots, up to 5 WhatsApp numbers per bot, {{count}} AI replies, campaigns, and knowledge base.",
+      "1 agent, up to 3 WhatsApp numbers, {{count}} AI replies with economy models, campaigns, and knowledge base.",
     contactSales: "Contact sales",
     salesOnlyPrice: "Custom pricing",
     salesOnlyHint: "Personalized quote from the sales team.",
@@ -4592,6 +4674,10 @@ export const en: Messages = {
     deleteNode: "Delete node",
     deleteEdge: "Delete connection",
     cannotDeleteTrigger: "You cannot delete the only start node in the flow.",
+    webhookConvertsMessageTrigger:
+      "Adding Webhook switches the start node to “Start” (external POST). It no longer runs on chat messages.",
+    webhookConflictMessageTrigger:
+      "This flow has a Webhook. Remove the Webhook if you want Start by message.",
     colName: "Name",
     colBot: "Bot",
     colStatus: "Status",
@@ -4618,6 +4704,7 @@ export const en: Messages = {
       planLimitActiveRuns: "Plan limit: maximum {limit} active flow run(s)",
     },
     nodeCategories: {
+      entry: "Flow start",
       crm: "CRM",
       messaging: "Messages",
       logic: "Logic",
@@ -4625,10 +4712,13 @@ export const en: Messages = {
       apps: "Apps",
       end: "End",
     },
+    nodeCategoryHints: {
+      entry: "One start node. Choose the mode in the node properties.",
+    },
     nodeTypes: {
       trigger: "Start",
-      message_received_trigger: "Message start",
-      opportunity_stage_trigger: "Stage start",
+      message_received_trigger: "Start",
+      opportunity_stage_trigger: "Start",
       agent: "Agent",
       message: "Message",
       template: "Template",
@@ -4653,6 +4743,8 @@ export const en: Messages = {
       create_lead: "Create lead",
       create_opportunity: "Create opportunity",
       move_opportunity_stage: "Move opportunity stage",
+      assign_tags: "Assign tags",
+      remove_tags: "Remove tags",
       send_notification: "Send notification",
       assign_bot: "Add bot",
       webhook: "Webhook",
@@ -4661,10 +4753,17 @@ export const en: Messages = {
     fields: {
       label: "Label",
       triggerType: "Trigger type",
+      entryMode: "How it starts",
+      entryModeMessage: "Message",
+      entryModeWebhook: "Webhook",
+      entryModeStage: "Sales stage",
+      entryModeHint: "Switch the mode without adding another start. The flow can only start one way.",
+      entryModeWebhookHint:
+        "The flow starts with an external POST. Configure the URL on the connected Webhook node.",
       triggerAnyMessage: "Any message",
       triggerMessage: "Incoming message",
       triggerMessageReceivedHint:
-        "This is the flow start when a message arrives. Choose first-message-only and which channel applies.",
+        "Choose the agent, first-message-only, the channel, and which WhatsApp numbers apply.",
       triggerChannelHint: "The flow only starts on the selected channel.",
       triggerFirstMessage: "First message only",
       triggerFirstMessageHint:
@@ -4681,12 +4780,19 @@ export const en: Messages = {
       triggerVoiceCall: "Voice call",
       agentBot: "Agent",
       agentBotHint: "Choose which agent this flow belongs to.",
+      agentBotRequired: "Select an agent before enabling this flow.",
       agentChannel: "Channel",
       agentChannelAny: "Any channel",
       agentChannelHint: "Choose which channel can trigger this flow.",
       agentNeedsFlowBot: "Select an agent to list WhatsApp numbers.",
-      whatsappChannel: "WhatsApp number",
+      whatsappChannel: "WhatsApp numbers",
       whatsappChannelAny: "Any number on the agent",
+      whatsappChannelAll: "All numbers",
+      whatsappChannelAllHint: "The flow starts on any WhatsApp number of the agent.",
+      whatsappChannelSelected: "Specific numbers",
+      whatsappChannelSelectedHint: "Pick one or more numbers. Only those start the flow.",
+      whatsappChannelEmpty: "This agent has no WhatsApp numbers connected yet.",
+      whatsappChannelSelectAtLeastOne: "Select at least one number.",
       samplePayload: "Sample payload (JSON)",
       keywords: "Keywords (comma-separated)",
       matchMode: "Match mode",
@@ -4840,6 +4946,13 @@ export const en: Messages = {
       contactNameBinding: "Name",
       contactEmailBinding: "Email",
       contactTags: "Tags (comma-separated)",
+      manageTags: "Tags",
+      tagsLoading: "Loading tags…",
+      tagsEmpty:
+        "There are no tags in this tenant yet. Create them under Tags to assign them in the flow.",
+      tagsManageLink: "Go to Tags",
+      tagsRequiredHint: "Select at least one tag.",
+      tagsSelected: "{{count}} selected",
       leadPhoneBinding: "Lead phone",
       leadNameBinding: "Lead name",
       leadEmailBinding: "Lead email",
@@ -5051,6 +5164,10 @@ export const en: Messages = {
         "WhatsApp variables: {{phone}} (phone), {{contact_name}} (profile name). For forms use {{form.field}}. The user's last message is {{last_input}}.",
       moveOpportunityStage:
         "Moves the deal in Sales. Yes continues if the stage moved; No if the id was missing or not found. Entering a stage can also start other flows with the «Stage entered» trigger.",
+      assignTags:
+        "Assign tenant tags to the contact (and active lead if any). Applying tags runs each tag's configured actions.",
+      removeTags:
+        "Remove tags from the contact (and active lead if any). Removing a tag does not undo funnel moves or other actions already run.",
     },
     previewModal: {
       title: "Flow preview",
@@ -5066,9 +5183,9 @@ export const en: Messages = {
         usage: "Connect the rest of the flow from here. For external data, add Webhook.",
       },
       message_received_trigger: {
-        description: "Flow start when a message arrives.",
+        description: "Flow start point. Choose message, webhook, or stage mode.",
         usage:
-          "Configure first message, channel, and keywords. Replaces the current start node.",
+          "Add it once. In properties, pick the start mode and complete the setup.",
       },
       opportunity_stage_trigger: {
         description: "Flow start when a sales stage is entered.",
@@ -5174,6 +5291,16 @@ export const en: Messages = {
         description: "Moves an existing sales opportunity to another pipeline stage.",
         usage:
           "Place it after Create opportunity. Uses {{opportunity_id}} by default and updates the sales pipeline.",
+      },
+      assign_tags: {
+        description: "Assign one or more tags to the contact from the conversation or form.",
+        usage:
+          "Pick tags from the tenant catalog. Use {{phone}} on WhatsApp or {{form.phone}} in forms. Triggers each tag's onApply actions.",
+      },
+      remove_tags: {
+        description: "Remove one or more tags from the contact from the conversation or form.",
+        usage:
+          "Select the tags to remove. Does not undo funnel moves or other actions already executed.",
       },
       send_notification: {
         description: "Sends WhatsApp, SMS, or email to the recipient.",

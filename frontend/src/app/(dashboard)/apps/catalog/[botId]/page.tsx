@@ -136,7 +136,7 @@ export default function CatalogBotPage() {
   const syncVariant = syncBadgeVariant(draft.syncStatus);
 
   return (
-    <DashboardPage maxWidth="5xl">
+    <DashboardPage>
       <div className="mb-4">
         <Link
           href="/apps/catalog"

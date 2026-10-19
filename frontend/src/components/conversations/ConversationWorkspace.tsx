@@ -543,12 +543,18 @@ export function ConversationWorkspace({ advisorMode = false }: Props) {
 
   async function handleSend() {
     if (!selectedConversation || !draft.trim()) return;
-    await sendMessage.mutateAsync({
-      conversationId: selectedConversation.conversationId,
-      botId: selectedConversation.botId,
-      content: draft.trim(),
-    });
+    const content = draft.trim();
     setDraft("");
+    try {
+      await sendMessage.mutateAsync({
+        conversationId: selectedConversation.conversationId,
+        botId: selectedConversation.botId,
+        content,
+        channel: selectedConversation.channel,
+      });
+    } catch {
+      setDraft(content);
+    }
   }
 
   async function handleAttachFile(file: File) {

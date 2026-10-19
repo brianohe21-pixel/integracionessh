@@ -237,7 +237,38 @@ export type MessageTracking = {
   jobId?: string;
   attemptId?: string;
   recipientKey?: string;
+  botId?: string;
+  conversationId?: string;
+  messageId?: string;
 };
+
+export async function saveConversationMessageTracking(
+  waMessageId: string,
+  params: {
+    tenantId: string;
+    botId: string;
+    conversationId: string;
+    messageId?: string;
+    to?: string;
+  }
+): Promise<void> {
+  const ttl = Math.floor(Date.now() / 1000) + 72 * 60 * 60;
+  await docClient.send(
+    new PutCommand({
+      TableName: TABLE_NAME,
+      Item: {
+        ...msgTrackingKeys(waMessageId),
+        kind: "conversation",
+        tenantId: params.tenantId,
+        botId: params.botId,
+        conversationId: params.conversationId,
+        ttl,
+        ...(params.messageId ? { messageId: params.messageId } : {}),
+        ...(params.to ? { to: params.to } : {}),
+      },
+    })
+  );
+}
 
 export async function getMessageTracking(
   messageId: string
@@ -257,6 +288,9 @@ export async function getMessageTracking(
   if (result.Item.jobId) tracking.jobId = result.Item.jobId as string;
   if (result.Item.attemptId) tracking.attemptId = result.Item.attemptId as string;
   if (result.Item.recipientKey) tracking.recipientKey = result.Item.recipientKey as string;
+  if (result.Item.botId) tracking.botId = result.Item.botId as string;
+  if (result.Item.conversationId) tracking.conversationId = result.Item.conversationId as string;
+  if (result.Item.messageId) tracking.messageId = result.Item.messageId as string;
 
   return tracking;
 }

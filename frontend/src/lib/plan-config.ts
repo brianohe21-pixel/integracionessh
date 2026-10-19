@@ -12,7 +12,7 @@ const MAX_WHATSAPP_CHANNELS_PER_BOT_BY_PLAN: Record<
   number
 > = {
   free: 1,
-  starter: 5,
+  starter: 3,
   pro: 5,
   reseller: Number.MAX_SAFE_INTEGER,
 };

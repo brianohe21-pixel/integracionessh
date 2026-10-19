@@ -62,6 +62,7 @@ export async function executeTemplateNode(
       templateName,
       language,
       display: resolved.display,
+      ...(resolved.category ? { templateCategory: resolved.category } : {}),
       ...(templateVariables ? { templateVariables } : {}),
     },
   });

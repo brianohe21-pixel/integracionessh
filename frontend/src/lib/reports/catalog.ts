@@ -10,10 +10,24 @@ export type TenantReport = {
 
 export const TENANT_REPORTS: TenantReport[] = [
   {
+    id: "ai-responses",
+    titleKey: "reports.aiResponses.title",
+    descriptionKey: "reports.aiResponses.description",
+    href: "/reports/ai-responses",
+    status: "available",
+  },
+  {
     id: "whatsapp-usage",
     titleKey: "reports.whatsappUsage.title",
     descriptionKey: "reports.whatsappUsage.description",
     href: "/reports/whatsapp-usage",
+    status: "available",
+  },
+  {
+    id: "whatsapp-categories",
+    titleKey: "reports.whatsappCategories.title",
+    descriptionKey: "reports.whatsappCategories.description",
+    href: "/reports/whatsapp-categories",
     status: "available",
   },
   {

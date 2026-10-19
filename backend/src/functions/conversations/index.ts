@@ -928,6 +928,7 @@ export async function handler(
           templateName: parsed.data.templateName,
           language: parsed.data.language,
           display: resolved.display,
+          ...(resolved.category ? { templateCategory: resolved.category } : {}),
           ...(parsed.data.components ? { components: parsed.data.components } : {}),
         },
         ...(sentByAdvisorId ? { sentByAdvisorId } : {}),

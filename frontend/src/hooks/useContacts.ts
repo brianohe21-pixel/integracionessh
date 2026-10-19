@@ -14,7 +14,7 @@ import type {
 
 const BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
-export const CAMPAIGN_MAX_RECIPIENTS = 5000;
+export const CAMPAIGN_MAX_RECIPIENTS = 50_000;
 
 export type ContactListFilters = {
   tag?: string;

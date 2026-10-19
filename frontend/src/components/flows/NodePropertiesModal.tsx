@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { X, Trash2, Save } from "lucide-react";
 import { useT } from "@/i18n/context";
 import type { FlowNode } from "@/types";
+import type { EditableFlowEntryMode } from "@/lib/flow-entry-mode";
 import { Button } from "@/components/ui/Button";
 import { NodePropertiesPanel } from "./NodePropertiesPanel";
 import { FLOW_NODE_META, CATEGORY_STYLES } from "./nodeConfig";
@@ -18,6 +19,8 @@ interface NodePropertiesModalProps {
   botId: string;
   isVoiceFlow?: boolean;
   samplePayload?: Record<string, unknown>;
+  entryMode?: EditableFlowEntryMode | "voice";
+  onChangeEntryMode?: (mode: EditableFlowEntryMode) => void;
   onUpdate: (patch: Record<string, unknown>) => void;
   onDelete: () => void;
   canDelete: boolean;
@@ -37,6 +40,8 @@ export function NodePropertiesModal({
   botId,
   isVoiceFlow,
   samplePayload,
+  entryMode,
+  onChangeEntryMode,
   onUpdate,
   onDelete,
   canDelete,
@@ -142,6 +147,8 @@ export function NodePropertiesModal({
             botId={botId}
             isVoiceFlow={isVoiceFlow}
             samplePayload={samplePayload}
+            entryMode={entryMode}
+            onChangeEntryMode={onChangeEntryMode}
             onUpdate={onUpdate}
             onDelete={onDelete}
             canDelete={canDelete}

@@ -4,12 +4,17 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LogOut, Power, PowerOff, Settings, User as UserIcon } from "lucide-react";
+import { CreditCard, LogOut, Power, PowerOff, Settings, User as UserIcon } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useFormatters } from "@/hooks/useFormatters";
+import { useTenant } from "@/hooks/useTenant";
 import { useUpdateAdvisorAvailability, useUserProfile } from "@/hooks/useUserProfile";
 import { useTenantRole, type TenantRole } from "@/hooks/useTenantRole";
+import { getTenantContext } from "@/lib/api";
 import { signOutUser } from "@/lib/auth-session";
+import { isBillingVisible } from "@/lib/subaccount-services";
 import { ThemeSwitcherMenu } from "@/components/theme/ThemeSwitcherMenu";
+import { Badge } from "@/components/ui/Badge";
 import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 
@@ -34,14 +39,18 @@ const menuItemClass =
 export function UserMenuTrigger() {
   const t = useT();
   const router = useRouter();
+  const { planLabel } = useFormatters();
   const { user, loading } = useCurrentUser();
   const { role, isAdmin, isAdvisor } = useTenantRole();
+  const { data: tenant } = useTenant(!isAdmin);
   const { data: profile } = useUserProfile(!isAdmin);
   const updateAvailability = useUpdateAdvisorAvailability();
   const [open, setOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [statusError, setStatusError] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
+  const currentPlan = tenant?.plan ? planLabel(tenant.plan) : null;
+  const canOpenBilling = isBillingVisible(tenant, getTenantContext());
 
   useEffect(() => {
     if (!open) return;
@@ -202,6 +211,33 @@ export function UserMenuTrigger() {
               </>
             ) : null}
             <ThemeSwitcherMenu />
+            {currentPlan ? (
+              <>
+                <div className="my-1.5 border-t border-subtle" />
+                {canOpenBilling ? (
+                  <Link
+                    href="/billing"
+                    role="menuitem"
+                    className={menuItemClass}
+                    onClick={() => setOpen(false)}
+                  >
+                    <CreditCard className="h-4 w-4 shrink-0" />
+                    <span className="flex-1 truncate">{t("billing.currentPlan")}</span>
+                    <Badge variant="info" className="shrink-0">
+                      {currentPlan}
+                    </Badge>
+                  </Link>
+                ) : (
+                  <div className={cn(menuItemClass, "pointer-events-none")}>
+                    <CreditCard className="h-4 w-4 shrink-0" />
+                    <span className="flex-1 truncate">{t("billing.currentPlan")}</span>
+                    <Badge variant="info" className="shrink-0">
+                      {currentPlan}
+                    </Badge>
+                  </div>
+                )}
+              </>
+            ) : null}
             <div className="my-1.5 border-t border-subtle" />
             <button
               type="button"

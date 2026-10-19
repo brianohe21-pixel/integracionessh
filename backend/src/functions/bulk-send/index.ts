@@ -24,7 +24,7 @@ import type { BulkSendSQSBody } from "../../types/index.js";
 
 const sqs = new SQSClient({});
 const BULK_QUEUE_URL = process.env.BULK_SQS_QUEUE_URL ?? "";
-const MAX_RECIPIENTS = 5000;
+const MAX_RECIPIENTS = 50_000;
 const SQS_BATCH_SIZE = 10;
 
 const RecipientSchema = z.object({

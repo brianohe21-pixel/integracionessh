@@ -111,7 +111,7 @@ const CampaignPayloadSchema = z.object({
   segments: z.array(z.string().max(50)).max(20).default([]),
   scheduledAt: z.string().datetime().optional(),
   batchConfig: BatchConfigSchema.optional(),
-  recipients: z.array(RecipientSchema).max(5000).optional(),
+  recipients: z.array(RecipientSchema).max(50_000).optional(),
   audienceTags: z.array(z.string().max(50)).max(20).optional(),
   requireOptIn: z.boolean().optional().default(true),
   requestDlr: z.boolean().optional().default(false),
