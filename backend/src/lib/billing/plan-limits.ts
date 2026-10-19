@@ -76,7 +76,7 @@ const LIMITS: Record<TenantPlan, PlanLimits> = {
   starter: {
     maxActiveBots: 1,
     maxMessagesPerMonth: 5_000,
-    maxBulkRecipientsPerJob: 500,
+    maxBulkRecipientsPerJob: Number.MAX_SAFE_INTEGER,
     maxActiveCampaigns: 2,
     maxContacts: 2_000,
     maxAutomationsPerBot: 5,
