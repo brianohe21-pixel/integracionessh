@@ -3381,6 +3381,8 @@ export type FlowNodeType =
   | "create_lead"
   | "create_opportunity"
   | "move_opportunity_stage"
+  | "assign_tags"
+  | "remove_tags"
   | "send_notification"
   | "assign_bot"
   | "webhook"

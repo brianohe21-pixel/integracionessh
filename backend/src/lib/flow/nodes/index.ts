@@ -22,6 +22,8 @@ import { executeCheckKnownContactNode } from "./check-known-contact.js";
 import { executeCreateLeadNode } from "./create-lead.js";
 import { executeCreateOpportunityNode } from "./create-opportunity.js";
 import { executeMoveOpportunityStageNode } from "./move-opportunity-stage.js";
+import { executeAssignTagsNode } from "./assign-tags.js";
+import { executeRemoveTagsNode } from "./remove-tags.js";
 import { executeSendNotificationNode } from "./send-notification.js";
 import { executeAssignBotNode } from "./assign-bot.js";
 import { executeAgentNode } from "./agent.js";
@@ -88,6 +90,10 @@ export async function executeNode(
       return executeCreateOpportunityNode(node, ctx, run);
     case "move_opportunity_stage":
       return executeMoveOpportunityStageNode(node, ctx, run);
+    case "assign_tags":
+      return executeAssignTagsNode(node, ctx, run);
+    case "remove_tags":
+      return executeRemoveTagsNode(node, ctx, run);
     case "send_notification":
       return executeSendNotificationNode(node, ctx, run);
     case "assign_bot":

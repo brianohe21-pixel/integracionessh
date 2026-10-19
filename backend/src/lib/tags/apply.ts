@@ -422,6 +422,28 @@ export async function applyTagsToContact(params: {
   return updated;
 }
 
+export async function removeTagsFromContact(params: {
+  tenantId: string;
+  phone: string;
+  tagsToRemove: string[];
+}): Promise<Contact | null> {
+  const phone = normalizePhone(params.phone);
+  const existing = await getContactByPhone(params.tenantId, phone);
+  if (!existing) return null;
+
+  const removeKeys = new Set(
+    params.tagsToRemove.map(normalizeTagName).filter(Boolean)
+  );
+  if (!removeKeys.size) return existing;
+
+  const remaining = existing.tags.filter(
+    (tag) => !removeKeys.has(normalizeTagName(tag))
+  );
+  if (remaining.length === existing.tags.length) return existing;
+
+  return updateContact(params.tenantId, phone, { tags: remaining });
+}
+
 export async function syncContactTagsAndRunActions(params: {
   tenantId: string;
   phone: string;

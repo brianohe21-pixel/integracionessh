@@ -34,6 +34,10 @@ export function buildDefaultNodeData(
   if (type === "check_known_contact") {
     defaultData.contactPhoneBinding = messaging ? "{{phone}}" : "{{form.phone}}";
   }
+  if (type === "assign_tags" || type === "remove_tags") {
+    defaultData.contactPhoneBinding = messaging ? "{{phone}}" : "{{form.phone}}";
+    defaultData.contactTags = [];
+  }
   if (type === "create_lead") {
     defaultData.leadPhoneBinding = "{{form.phone}}";
     defaultData.leadNameBinding = "{{form.name}}";

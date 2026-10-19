@@ -4743,6 +4743,8 @@ export const en: Messages = {
       create_lead: "Create lead",
       create_opportunity: "Create opportunity",
       move_opportunity_stage: "Move opportunity stage",
+      assign_tags: "Assign tags",
+      remove_tags: "Remove tags",
       send_notification: "Send notification",
       assign_bot: "Add bot",
       webhook: "Webhook",
@@ -4944,6 +4946,13 @@ export const en: Messages = {
       contactNameBinding: "Name",
       contactEmailBinding: "Email",
       contactTags: "Tags (comma-separated)",
+      manageTags: "Tags",
+      tagsLoading: "Loading tags…",
+      tagsEmpty:
+        "There are no tags in this tenant yet. Create them under Tags to assign them in the flow.",
+      tagsManageLink: "Go to Tags",
+      tagsRequiredHint: "Select at least one tag.",
+      tagsSelected: "{{count}} selected",
       leadPhoneBinding: "Lead phone",
       leadNameBinding: "Lead name",
       leadEmailBinding: "Lead email",
@@ -5155,6 +5164,10 @@ export const en: Messages = {
         "WhatsApp variables: {{phone}} (phone), {{contact_name}} (profile name). For forms use {{form.field}}. The user's last message is {{last_input}}.",
       moveOpportunityStage:
         "Moves the deal in Sales. Yes continues if the stage moved; No if the id was missing or not found. Entering a stage can also start other flows with the «Stage entered» trigger.",
+      assignTags:
+        "Assign tenant tags to the contact (and active lead if any). Applying tags runs each tag's configured actions.",
+      removeTags:
+        "Remove tags from the contact (and active lead if any). Removing a tag does not undo funnel moves or other actions already run.",
     },
     previewModal: {
       title: "Flow preview",
@@ -5278,6 +5291,16 @@ export const en: Messages = {
         description: "Moves an existing sales opportunity to another pipeline stage.",
         usage:
           "Place it after Create opportunity. Uses {{opportunity_id}} by default and updates the sales pipeline.",
+      },
+      assign_tags: {
+        description: "Assign one or more tags to the contact from the conversation or form.",
+        usage:
+          "Pick tags from the tenant catalog. Use {{phone}} on WhatsApp or {{form.phone}} in forms. Triggers each tag's onApply actions.",
+      },
+      remove_tags: {
+        description: "Remove one or more tags from the contact from the conversation or form.",
+        usage:
+          "Select the tags to remove. Does not undo funnel moves or other actions already executed.",
       },
       send_notification: {
         description: "Sends WhatsApp, SMS, or email to the recipient.",

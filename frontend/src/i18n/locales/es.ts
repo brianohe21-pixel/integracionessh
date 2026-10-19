@@ -4753,6 +4753,8 @@ export const es = {
       create_lead: "Crear lead",
       create_opportunity: "Crear oportunidad",
       move_opportunity_stage: "Mover etapa (ventas)",
+      assign_tags: "Asignar etiquetas",
+      remove_tags: "Quitar etiquetas",
       send_notification: "Enviar notificación",
       assign_bot: "Agregar bot",
       webhook: "Webhook",
@@ -4955,6 +4957,13 @@ export const es = {
       contactNameBinding: "Nombre",
       contactEmailBinding: "Correo",
       contactTags: "Etiquetas (separadas por coma)",
+      manageTags: "Etiquetas",
+      tagsLoading: "Cargando etiquetas…",
+      tagsEmpty:
+        "Aún no hay etiquetas en este tenant. Créalas en Etiquetas para poder asignarlas en el flujo.",
+      tagsManageLink: "Ir a Etiquetas",
+      tagsRequiredHint: "Selecciona al menos una etiqueta.",
+      tagsSelected: "{{count}} seleccionada(s)",
       leadPhoneBinding: "Teléfono del lead",
       leadNameBinding: "Nombre del lead",
       leadEmailBinding: "Correo del lead",
@@ -5166,6 +5175,10 @@ export const es = {
         "Variables de WhatsApp: {{phone}} (teléfono), {{contact_name}} (nombre de perfil). En formularios usa {{form.campo}}. El último mensaje del usuario es {{last_input}}.",
       moveOpportunityStage:
         "Mueve el negocio en Ventas. La salida Sí continúa el flujo si se movió; No si faltó el id o no se encontró. Al entrar a una etapa también se pueden disparar otros flujos con activación «Entrada a etapa».",
+      assignTags:
+        "Asigna etiquetas del tenant al contacto (y al lead activo si existe). Al aplicarlas se ejecutan las acciones configuradas en cada etiqueta.",
+      removeTags:
+        "Quita etiquetas del contacto (y del lead activo si existe). Quitar una etiqueta no revierte acciones como mover el funnel.",
     },
     previewModal: {
       title: "Vista previa del flujo",
@@ -5290,6 +5303,16 @@ export const es = {
         description: "Mueve una oportunidad existente a otra etapa del pipeline de ventas.",
         usage:
           "Colócalo después de Crear oportunidad. Usa {{opportunity_id}} por defecto y actualiza el embudo.",
+      },
+      assign_tags: {
+        description: "Asigna una o más etiquetas al contacto de la conversación o formulario.",
+        usage:
+          "Elige etiquetas del catálogo del tenant. Usa {{phone}} en WhatsApp o {{form.phone}} en formularios. Dispara las acciones onApply de cada etiqueta.",
+      },
+      remove_tags: {
+        description: "Quita una o más etiquetas del contacto de la conversación o formulario.",
+        usage:
+          "Selecciona las etiquetas a quitar. No revierte movimientos de funnel ni otras acciones ya ejecutadas.",
       },
       send_notification: {
         description: "Envía WhatsApp, SMS o email al destinatario indicado.",

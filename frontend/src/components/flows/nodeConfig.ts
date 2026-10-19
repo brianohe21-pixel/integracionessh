@@ -25,6 +25,8 @@ import {
   UserPlus,
   Target,
   Kanban,
+  Tags,
+  Tag,
   Bell,
   Webhook,
   Bot,
@@ -127,6 +129,8 @@ export const FLOW_NODE_META: Record<FlowNodeType, FlowNodeMeta> = {
     hasOutput: true,
     branchHandles: "condition",
   },
+  assign_tags: { category: "crm", icon: Tags, hasInput: true, hasOutput: true },
+  remove_tags: { category: "crm", icon: Tag, hasInput: true, hasOutput: true },
   send_notification: { category: "crm", icon: Bell, hasInput: true, hasOutput: true },
   assign_bot: { category: "integrations", icon: Bot, hasInput: true, hasOutput: true },
   webhook: { category: "integrations", icon: Webhook, hasInput: true, hasOutput: true },
@@ -153,6 +157,8 @@ export const FLOW_PALETTE_NODES: Record<FlowPaletteCategory, FlowNodeType[]> = {
     "create_lead",
     "create_opportunity",
     "move_opportunity_stage",
+    "assign_tags",
+    "remove_tags",
     "send_notification",
   ],
   messaging: [
@@ -365,6 +371,14 @@ export function buildNodePreview(
       return data.contactPhoneBinding ?? "";
     case "create_lead":
       return data.leadPhoneBinding ?? "";
+    case "assign_tags":
+    case "remove_tags": {
+      const tags = data.contactTags?.filter((tag) => tag.trim()) ?? [];
+      if (!tags.length) {
+        return locale === "es" ? "Sin etiquetas" : "No tags";
+      }
+      return truncate(tags.join(", "));
+    }
     case "move_opportunity_stage": {
       const stageLabels: Record<string, { es: string; en: string }> = {
         new: { es: "Nueva", en: "New" },
