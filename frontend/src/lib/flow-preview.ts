@@ -21,94 +21,16 @@ function buildStepDetail(
   locale: BotLocale,
   botNames?: Map<string, string>
 ): string {
-  const d = node.data;
-
-  switch (node.type) {
-    case "trigger": {
-      const triggerType = d.triggerType ?? "any_message";
-      if (triggerType === "web_form_submitted") {
-        const keys = Object.keys(d.formSamplePayload ?? {});
-        return keys.length ? keys.join(", ") : "webhook";
-      }
-      if (triggerType === "keyword" && d.keywords?.length) {
-        return d.keywords.join(", ");
-      }
-      return triggerType;
-    }
-    case "agent":
-    case "message_received_trigger": {
-      const names =
-        botNames && botNames.size > 0
-          ? Object.fromEntries(botNames.entries())
-          : undefined;
-      return buildNodePreview(node.type, d, locale === "en" ? "en" : "es", names);
-    }
-    case "message":
-      return text(d.messageText, locale);
-    case "buttons": {
-      const prompt = text(d.messageText, locale);
-      const labels = (d.buttons ?? [])
-        .map((btn) => text(btn.title, locale))
-        .filter(Boolean)
-        .join(" · ");
-      return labels ? `${prompt}\n→ ${labels}` : prompt;
-    }
-    case "list": {
-      const prompt = text(d.messageText, locale);
-      const labels = (d.listItems ?? [])
-        .map((item) => text(item.title, locale))
-        .filter(Boolean)
-        .join(" · ");
-      return labels ? `${prompt}\n→ ${labels}` : prompt;
-    }
-    case "condition":
-      return `${d.conditionVariable ?? "last_input"} ${d.conditionOperator ?? "contains"} ${d.conditionValue ?? ""}`.trim();
-    case "check_known_contact":
-      return locale === "es" ? "¿Ya está en contactos?" : "Already in contacts?";
-    case "assign_bot": {
-      const botLabel = d.botId?.trim();
-      if (botLabel) return botLabel;
-      return locale === "es" ? "Asistente IA" : "AI Assistant";
-    }
-    case "save_contact":
-      return [d.contactPhoneBinding, d.contactNameBinding, d.contactEmailBinding].filter(Boolean).join(" · ");
-    case "create_lead":
-      return [d.leadPhoneBinding, d.leadNameBinding, d.leadEmailBinding].filter(Boolean).join(" · ");
-    case "create_opportunity": {
-      const stage = d.opportunityStage ?? "new";
-      const amount = d.opportunityAmountBinding
-        ? `${d.opportunityAmountBinding} ${d.opportunityCurrency ?? "USD"}`
-        : "";
-      return [
-        d.opportunityTitleBinding,
-        stage,
-        amount,
-        d.opportunityPhoneBinding,
-        d.opportunityNameBinding,
-      ]
-        .filter(Boolean)
-        .join(" · ");
-    }
-    case "send_notification": {
-      const recipients =
-        d.notificationRecipientBindings?.filter((item) => item.trim()).join(", ") ||
-        d.notificationRecipientBinding ||
-        "";
-      return [d.notificationChannel, recipients].filter(Boolean).join(" → ");
-    }
-    case "http_request":
-      return `${d.httpMethod ?? "GET"} ${d.httpUrl ?? ""}`.trim();
-    case "webhook":
-      return locale === "es" ? "Recibir JSON externo" : "Receive external JSON";
-    case "delay":
-      return `${d.delaySeconds ?? 5}s`;
-    case "set_variable":
-      return d.variableName ? `${d.variableName} = ${d.variableValue ?? ""}` : "";
-    case "end":
-      return "";
-    default:
-      return buildNodePreview(node.type, d, locale);
-  }
+  const names =
+    botNames && botNames.size > 0
+      ? Object.fromEntries(botNames.entries())
+      : undefined;
+  return buildNodePreview(
+    node.type,
+    node.data,
+    locale === "en" ? "en" : "es",
+    names
+  );
 }
 
 function resolveBranchLabel(

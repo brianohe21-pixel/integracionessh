@@ -28,6 +28,7 @@ import { buildNodePreview } from "./nodeConfig";
 import { FLOW_NODE_DRAG_MIME } from "@/lib/flow-node-factory";
 import { useLocale } from "@/i18n/context";
 import { useBots } from "@/hooks/useBots";
+import { useAdvisors } from "@/hooks/useAdvisors";
 
 const nodeTypes: NodeTypes = {
   flowNode: FlowNodeCard,
@@ -62,7 +63,8 @@ function toReactFlowNodes(
   getTypeLabel: (type: FlowNodeType) => string,
   getBranchLabel: (key: "true" | "false") => string,
   locale: "es" | "en",
-  botNames?: Record<string, string>
+  botNames?: Record<string, string>,
+  advisorNames?: Record<string, string>
 ): Node[] {
   return nodes.map((n) => ({
     id: n.id,
@@ -72,7 +74,7 @@ function toReactFlowNodes(
     data: {
       flowType: n.type,
       typeLabel: getTypeLabel(n.type),
-      preview: buildNodePreview(n.type, n.data, locale, botNames),
+      preview: buildNodePreview(n.type, n.data, locale, botNames, advisorNames),
       buttons:
         n.type === "list"
           ? n.data.listItems?.map((item) => ({ id: item.id, title: item.title }))
@@ -218,9 +220,17 @@ function FlowCanvasInner({
 }: FlowCanvasProps) {
   const locale = useLocale();
   const { data: bots } = useBots();
+  const { data: advisors } = useAdvisors();
   const botNames = useMemo(
     () => Object.fromEntries((bots ?? []).map((bot) => [bot.botId, bot.name])),
     [bots]
+  );
+  const advisorNames = useMemo(
+    () =>
+      Object.fromEntries(
+        (advisors ?? []).map((advisor) => [advisor.advisorId, advisor.name])
+      ),
+    [advisors]
   );
   const flowRef = useRef(flow);
   flowRef.current = flow;
@@ -252,9 +262,10 @@ function FlowCanvasInner({
         getTypeLabel,
         getBranchLabel,
         locale,
-        botNames
+        botNames,
+        advisorNames
       ),
-    [flow.nodes, selectedNodeId, getTypeLabel, getBranchLabel, locale, botNames]
+    [flow.nodes, selectedNodeId, getTypeLabel, getBranchLabel, locale, botNames, advisorNames]
   );
   const reactFlowEdges = useMemo(() => toReactFlowEdges(flow.edges, flow.nodes), [flow.edges, flow.nodes]);
 
@@ -289,7 +300,8 @@ function FlowCanvasInner({
       getTypeLabelRef.current,
       getBranchLabelRef.current,
       locale,
-      botNames
+      botNames,
+      advisorNames
     );
     setNodes((current) => {
       const merged = mergeReactFlowNodes(current, nextNodes);
@@ -303,14 +315,18 @@ function FlowCanvasInner({
       edgesRef.current = merged;
       return merged;
     });
-  }, [flow.nodes, flow.edges, locale, botNames, setNodes, setEdges]);
+  }, [flow.nodes, flow.edges, locale, botNames, advisorNames, setNodes, setEdges]);
 
   useEffect(() => {
     const botNamesKey = Object.entries(botNames)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([id, name]) => `${id}:${name}`)
       .join("|");
-    const previewMeta = `${locale}::${botNamesKey}`;
+    const advisorNamesKey = Object.entries(advisorNames)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([id, name]) => `${id}:${name}`)
+      .join("|");
+    const previewMeta = `${locale}::${botNamesKey}::${advisorNamesKey}`;
     if (previewMeta === lastPreviewMetaRef.current) return;
     lastPreviewMetaRef.current = previewMeta;
     setNodes((current) => {
@@ -323,7 +339,13 @@ function FlowCanvasInner({
         const data = {
           flowType: flowNode.type,
           typeLabel: getTypeLabelRef.current(flowNode.type),
-          preview: buildNodePreview(flowNode.type, flowNode.data, locale, botNames),
+          preview: buildNodePreview(
+            flowNode.type,
+            flowNode.data,
+            locale,
+            botNames,
+            advisorNames
+          ),
           buttons:
             flowNode.type === "list"
               ? flowNode.data.listItems?.map((item) => ({ id: item.id, title: item.title }))
@@ -340,7 +362,7 @@ function FlowCanvasInner({
       nodesRef.current = next;
       return next;
     });
-  }, [botNames, locale, setNodes]);
+  }, [advisorNames, botNames, locale, setNodes]);
 
   useEffect(() => {
     setNodes((current) => {

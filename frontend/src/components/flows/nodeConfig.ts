@@ -237,16 +237,78 @@ export const CATEGORY_STYLES: Record<
   },
 };
 
+const OPPORTUNITY_STAGE_LABELS: Record<string, { es: string; en: string }> = {
+  new: { es: "Nueva", en: "New" },
+  quoted: { es: "Cotizada", en: "Quoted" },
+  negotiation: { es: "Negociación", en: "Negotiation" },
+  won: { es: "Ganada", en: "Won" },
+  lost: { es: "Perdida", en: "Lost" },
+};
+
+const CONDITION_OPERATOR_LABELS: Record<string, { es: string; en: string }> = {
+  contains: { es: "contiene", en: "contains" },
+  equals: { es: "=", en: "=" },
+  not_equals: { es: "≠", en: "≠" },
+  matches: { es: "coincide", en: "matches" },
+  not_matches: { es: "no coincide", en: "does not match" },
+};
+
+function formatDelaySeconds(seconds: number, locale: "es" | "en"): string {
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  if (rest === 0) {
+    return locale === "es" ? `${minutes} min` : `${minutes} min`;
+  }
+  return `${minutes}m ${rest}s`;
+}
+
+function formatHttpPreview(method: string, url: string, max = 52): string {
+  const prefix = method ? `${method} ` : "";
+  const available = Math.max(12, max - prefix.length);
+  if (url.length <= available) return `${prefix}${url}`.trim();
+  try {
+    const parsed = new URL(url);
+    const hostPath = `${parsed.host}${parsed.pathname}`;
+    const short =
+      hostPath.length > available
+        ? `${hostPath.slice(0, available - 1)}…`
+        : hostPath;
+    return `${prefix}${short}`.trim();
+  } catch {
+    return `${prefix}${url.length > available ? `${url.slice(0, available - 1)}…` : url}`.trim();
+  }
+}
+
+function joinOptionTitles(
+  titles: string[],
+  locale: "es" | "en",
+  truncate: (s: string, max?: number) => string
+): string {
+  const cleaned = titles.map((title) => title.trim()).filter(Boolean);
+  if (!cleaned.length) {
+    return locale === "es" ? "Sin opciones" : "No options";
+  }
+  const countLabel =
+    locale === "es"
+      ? `${cleaned.length} opción${cleaned.length === 1 ? "" : "es"}`
+      : `${cleaned.length} option${cleaned.length === 1 ? "" : "s"}`;
+  return truncate(`${countLabel} · ${cleaned.join(" · ")}`, 56);
+}
+
 export function buildNodePreview(
   type: FlowNodeType,
   data: FlowNodeData,
   locale: "es" | "en" = "es",
-  botNames?: Record<string, string>
+  botNames?: Record<string, string>,
+  advisorNames?: Record<string, string>
 ): string {
   const truncate = (s: string, max = 48) =>
     s.length > max ? `${s.slice(0, max)}…` : s;
-  const text = (value: LocalizedText | undefined) =>
-    truncate(resolveLocalizedText(value, locale));
+  const text = (value: LocalizedText | undefined, max = 48) =>
+    truncate(resolveLocalizedText(value, locale), max);
+  const stageLabel = (stage: string) =>
+    OPPORTUNITY_STAGE_LABELS[stage]?.[locale] ?? stage;
 
   switch (type) {
     case "trigger": {
@@ -293,19 +355,12 @@ export function buildNodePreview(
       return parts.join(" · ");
     }
     case "opportunity_stage_trigger": {
-      const stageLabels: Record<string, { es: string; en: string }> = {
-        new: { es: "Nueva", en: "New" },
-        quoted: { es: "Cotizada", en: "Quoted" },
-        negotiation: { es: "Negociación", en: "Negotiation" },
-        won: { es: "Ganada", en: "Won" },
-        lost: { es: "Perdida", en: "Lost" },
-      };
       const stage =
         !data.triggerStageKey
           ? locale === "es"
             ? "Cualquier etapa"
             : "Any stage"
-          : stageLabels[data.triggerStageKey]?.[locale] ?? data.triggerStageKey;
+          : stageLabel(data.triggerStageKey);
       return `${locale === "es" ? "Etapa" : "Stage"} · ${stage}`;
     }
     case "agent": {
@@ -324,53 +379,188 @@ export function buildNodePreview(
             : locale === "es"
               ? `whatsapp · ${channelIds.length} núm.`
               : `whatsapp · ${channelIds.length} no.`;
+      } else if (channel === "any") {
+        channelLabel = locale === "es" ? "Cualquier canal" : "Any channel";
       }
-      return [botLabel, channelLabel].filter(Boolean).join(" · ");
+      return [botLabel, channelLabel].filter(Boolean).join(" · ") ||
+        (locale === "es" ? "Agente" : "Agent");
     }
-    case "message":
-      return text(data.messageText);
-    case "template":
-      return data.templateName ? `${data.templateName} (${data.templateLanguage ?? "?"})` : "";
-    case "condition":
-      return `${data.conditionVariable ?? "last_input"} ${data.conditionOperator ?? "contains"} ${data.conditionValue ?? ""}`.trim();
+    case "message": {
+      const body = text(data.messageText, 72);
+      if (!body) return locale === "es" ? "Sin texto" : "No text";
+      if (data.waitForReply) {
+        return `${body}\n${locale === "es" ? "Espera respuesta" : "Waits for reply"}`;
+      }
+      return body;
+    }
+    case "template": {
+      if (!data.templateName) {
+        return locale === "es" ? "Sin plantilla" : "No template";
+      }
+      const vars = Object.keys(data.templateVariables ?? {}).length;
+      const base = `${data.templateName} (${data.templateLanguage ?? "?"})`;
+      if (!vars) return truncate(base);
+      return truncate(
+        locale === "es" ? `${base} · ${vars} vars` : `${base} · ${vars} vars`
+      );
+    }
+    case "condition": {
+      const variable = data.conditionVariable ?? "last_input";
+      const operatorKey = data.conditionOperator ?? "contains";
+      const operator =
+        CONDITION_OPERATOR_LABELS[operatorKey]?.[locale] ?? operatorKey;
+      const value = data.conditionValue?.trim() ?? "";
+      return truncate(`${variable} ${operator} ${value}`.trim(), 56);
+    }
     case "check_known_contact":
       return locale === "es" ? "¿Ya está en contactos?" : "Already in contacts?";
-    case "buttons":
-      return text(data.messageText);
-    case "list":
-      return text(data.messageText);
-    case "meta_flow":
-      return text(data.metaFlowCta) || data.metaFlowId || "";
+    case "buttons": {
+      const prompt = text(data.messageText, 56);
+      const options = joinOptionTitles(
+        (data.buttons ?? []).map((btn) => resolveLocalizedText(btn.title, locale)),
+        locale,
+        truncate
+      );
+      return prompt ? `${prompt}\n${options}` : options;
+    }
+    case "list": {
+      const prompt = text(data.messageText, 56);
+      const options = joinOptionTitles(
+        (data.listItems ?? []).map((item) => resolveLocalizedText(item.title, locale)),
+        locale,
+        truncate
+      );
+      return prompt ? `${prompt}\n${options}` : options;
+    }
+    case "meta_flow": {
+      const cta = text(data.metaFlowCta, 40);
+      const flowId = data.metaFlowId?.trim();
+      if (cta && flowId) return `${cta}\n${truncate(flowId, 36)}`;
+      return cta || flowId || (locale === "es" ? "Sin formulario" : "No form");
+    }
+    case "handoff": {
+      const advisorId = data.advisorId?.trim();
+      if (!advisorId) {
+        return locale === "es" ? "Asignación automática" : "Auto assign";
+      }
+      const advisorLabel = truncate(
+        advisorNames?.[advisorId] || advisorId,
+        36
+      );
+      return locale === "es" ? `Asesor · ${advisorLabel}` : `Advisor · ${advisorLabel}`;
+    }
     case "delay":
-      return `${data.delaySeconds ?? 5}s`;
+      return formatDelaySeconds(data.delaySeconds ?? 5, locale);
     case "set_variable":
-      return data.variableName ? `${data.variableName} = ${data.variableValue ?? ""}` : "";
-    case "http_request":
-      return truncate(data.httpUrl ?? "");
-    case "book_appointment":
-      return text(data.confirmationMessage);
+      return data.variableName
+        ? truncate(`${data.variableName} = ${data.variableValue ?? ""}`, 56)
+        : locale === "es"
+          ? "Sin variable"
+          : "No variable";
+    case "http_request": {
+      const method = (data.httpMethod ?? "GET").toUpperCase();
+      const url = data.httpUrl?.trim() ?? "";
+      if (!url) {
+        return locale === "es" ? `${method} · Sin URL` : `${method} · No URL`;
+      }
+      return formatHttpPreview(method, url);
+    }
+    case "book_appointment": {
+      const confirmation = text(data.confirmationMessage, 56);
+      const days =
+        data.maxDaysToShow != null
+          ? locale === "es"
+            ? `${data.maxDaysToShow} días`
+            : `${data.maxDaysToShow} days`
+          : "";
+      return [confirmation, days].filter(Boolean).join(" · ") ||
+        (locale === "es" ? "Agendar cita" : "Book appointment");
+    }
     case "cloud_drive_write": {
       const provider = data.cloudDriveProvider ?? "google-drive";
       const target = data.cloudDriveTargetType ?? "document";
       const file = data.cloudDriveFileName || data.cloudDriveFileId || "";
       return truncate(`${provider} · ${target} · ${file}`);
     }
-    case "request_payment":
-      return text(data.paymentDescription);
+    case "request_payment": {
+      const description = text(data.paymentDescription, 40);
+      const amount =
+        data.amountInCents != null
+          ? `$${(data.amountInCents / 100).toFixed(2)}`
+          : "";
+      return [amount, description].filter(Boolean).join(" · ") ||
+        (locale === "es" ? "Sin monto" : "No amount");
+    }
     case "send_catalog":
-      return text(data.catalogMessageText);
-    case "send_products":
-      return text(data.messageText);
+      return text(data.catalogMessageText, 56) ||
+        (locale === "es" ? "Catálogo" : "Catalog");
+    case "send_products": {
+      const prompt = text(data.messageText, 40);
+      const count = data.productRetailerIds?.filter((id) => id.trim()).length ?? 0;
+      const countLabel =
+        count > 0
+          ? locale === "es"
+            ? `${count} producto${count === 1 ? "" : "s"}`
+            : `${count} product${count === 1 ? "" : "s"}`
+          : locale === "es"
+            ? "Sin productos"
+            : "No products";
+      return prompt ? `${prompt}\n${countLabel}` : countLabel;
+    }
     case "await_order":
-      return text(data.messageText) || text(data.orderConfirmationMessage);
-    case "send_otp":
-      return text(data.otpMessageText) || data.otpWhatsAppTemplateName || "OTP";
+      return text(data.messageText, 56) ||
+        text(data.orderConfirmationMessage, 56) ||
+        (locale === "es" ? "Espera pedido" : "Await order");
+    case "send_otp": {
+      const msg = text(data.otpMessageText, 40);
+      const template = data.otpWhatsAppTemplateName?.trim();
+      const attempts =
+        data.otpMaxAttempts != null
+          ? locale === "es"
+            ? `${data.otpMaxAttempts} intentos`
+            : `${data.otpMaxAttempts} attempts`
+          : "";
+      return [msg || template || "OTP", attempts].filter(Boolean).join(" · ");
+    }
     case "send_audio":
-      return data.audioFilename || (data.audioS3Key ? "voice note" : "");
-    case "save_contact":
-      return data.contactPhoneBinding ?? "";
-    case "create_lead":
-      return data.leadPhoneBinding ?? "";
+      return data.audioFilename ||
+        (data.audioS3Key
+          ? locale === "es"
+            ? "Nota de voz"
+            : "Voice note"
+          : locale === "es"
+            ? "Sin audio"
+            : "No audio");
+    case "save_contact": {
+      const parts = [
+        data.contactPhoneBinding,
+        data.contactNameBinding,
+        data.contactEmailBinding,
+      ]
+        .map((item) => item?.trim())
+        .filter(Boolean) as string[];
+      return parts.length
+        ? truncate(parts.join(" · "), 56)
+        : locale === "es"
+          ? "Sin campos"
+          : "No fields";
+    }
+    case "create_lead": {
+      const parts = [
+        data.leadPhoneBinding,
+        data.leadNameBinding,
+        data.leadEmailBinding,
+      ]
+        .map((item) => item?.trim())
+        .filter(Boolean) as string[];
+      const tags = data.leadTags?.filter((tag) => tag.trim()) ?? [];
+      if (tags.length) parts.push(tags.join(", "));
+      return parts.length
+        ? truncate(parts.join(" · "), 56)
+        : locale === "es"
+          ? "Sin campos"
+          : "No fields";
+    }
     case "assign_tags":
     case "remove_tags": {
       const tags = data.contactTags?.filter((tag) => tag.trim()) ?? [];
@@ -380,35 +570,22 @@ export function buildNodePreview(
       return truncate(tags.join(", "));
     }
     case "move_opportunity_stage": {
-      const stageLabels: Record<string, { es: string; en: string }> = {
-        new: { es: "Nueva", en: "New" },
-        quoted: { es: "Cotizada", en: "Quoted" },
-        negotiation: { es: "Negociación", en: "Negotiation" },
-        won: { es: "Ganada", en: "Won" },
-        lost: { es: "Perdida", en: "Lost" },
-      };
       const stage = data.opportunityStage ?? "quoted";
-      const stageLabel = stageLabels[stage]?.[locale] ?? stage;
-      return [data.opportunityIdBinding ?? "{{opportunity_id}}", stageLabel]
+      return [
+        data.opportunityIdBinding ?? "{{opportunity_id}}",
+        stageLabel(stage),
+      ]
         .filter(Boolean)
         .join(" → ");
     }
     case "create_opportunity": {
-      const stageLabels: Record<string, { es: string; en: string }> = {
-        new: { es: "Nueva", en: "New" },
-        quoted: { es: "Cotizada", en: "Quoted" },
-        negotiation: { es: "Negociación", en: "Negotiation" },
-        won: { es: "Ganada", en: "Won" },
-        lost: { es: "Perdida", en: "Lost" },
-      };
       const stage = data.opportunityStage ?? "new";
-      const stageLabel = stageLabels[stage]?.[locale] ?? stage;
       const title = data.opportunityTitleBinding?.trim();
       const amount = data.opportunityAmountBinding?.trim();
       const currency = data.opportunityCurrency ?? "USD";
       const phone = data.opportunityPhoneBinding?.trim();
       const meta = [
-        stageLabel,
+        stageLabel(stage),
         amount ? `${amount} ${currency}` : "",
         phone ?? "",
       ].filter(Boolean);
@@ -416,23 +593,38 @@ export function buildNodePreview(
         return `${truncate(title, 40)}\n${truncate(meta.join(" · "), 48)}`;
       }
       if (title) return truncate(title);
-      return truncate(meta.join(" · "));
+      return truncate(meta.join(" · ")) ||
+        (locale === "es" ? "Nueva oportunidad" : "New opportunity");
     }
     case "send_notification": {
       const channel = data.notificationChannel ?? "whatsapp";
-      const channelLabel: Record<string, string> = { whatsapp: "WhatsApp", sms: "SMS", email: "Email" };
+      const channelLabel: Record<string, string> = {
+        whatsapp: "WhatsApp",
+        sms: "SMS",
+        email: "Email",
+      };
       if (channel === "email") {
         const recipients =
           data.notificationRecipientBindings?.filter((item) => item.trim()).join(", ") ||
           data.notificationRecipientBinding ||
           "";
-        return truncate(`[${channelLabel[channel]}] ${recipients}`.trim());
+        const subject = data.notificationEmailSubject?.trim();
+        return truncate(
+          [`[${channelLabel[channel]}]`, recipients, subject].filter(Boolean).join(" "),
+          56
+        );
       }
       const recipient = data.notificationRecipientBinding ?? "";
       if (data.notificationMessageType === "template") {
-        return truncate(`[${channelLabel[channel]}] ${data.notificationTemplateName ?? ""}`.trim());
+        return truncate(
+          `[${channelLabel[channel]}] ${data.notificationTemplateName ?? ""}`.trim()
+        );
       }
-      return truncate(`[${channelLabel[channel]}] ${recipient}`.trim());
+      const message = text(data.notificationMessageText, 28);
+      return truncate(
+        [`[${channelLabel[channel]}]`, recipient, message].filter(Boolean).join(" "),
+        56
+      );
     }
     case "assign_bot": {
       const botLabel = data.botId
@@ -442,8 +634,26 @@ export function buildNodePreview(
           : "AI Assistant";
       return botLabel;
     }
-    case "webhook":
-      return locale === "es" ? "Recibir JSON" : "Receive JSON";
+    case "webhook": {
+      const keys = Object.keys(data.formSamplePayload ?? {});
+      if (keys.length) {
+        return truncate(
+          locale === "es"
+            ? `Espera POST · ${keys.join(", ")}`
+            : `Wait for POST · ${keys.join(", ")}`,
+          56
+        );
+      }
+      return locale === "es" ? "Espera POST · JSON" : "Wait for POST · JSON";
+    }
+    case "end":
+      return data.haltPipeline === false
+        ? locale === "es"
+          ? "Continúa pipeline"
+          : "Continue pipeline"
+        : locale === "es"
+          ? "Fin del flujo"
+          : "End of flow";
   }
   return data.label ?? "";
 }
