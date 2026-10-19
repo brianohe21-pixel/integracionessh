@@ -704,6 +704,8 @@ export interface MessageReaction {
   timestamp: string;
 }
 
+export type MessageDeliveryStatus = "pending" | "sent" | "delivered" | "read" | "failed";
+
 export interface Message {
   messageId: string;
   conversationId: string;
@@ -719,6 +721,9 @@ export interface Message {
   externalMessageId?: string | undefined;
   callId?: string;
   reactions?: MessageReaction[];
+  deliveryStatus?: MessageDeliveryStatus;
+  deliveredAt?: string;
+  readAt?: string;
   timestamp: string;
 }
 

@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { CheckCheck } from "lucide-react";
 import { EmailMessageBubble } from "@/components/conversations/EmailMessageBubble";
 import { AttachmentMessageBubble } from "@/components/conversations/AttachmentMessageBubble";
 import { TemplateMessageBubble } from "@/components/conversations/TemplateMessageBubble";
 import { MessageReactions } from "@/components/conversations/MessageReactions";
 import { MessageTaskActions } from "@/components/conversations/MessageTaskActions";
+import { OutboundDeliveryStatus } from "@/components/conversations/OutboundDeliveryStatus";
 import { ConversationDateDivider } from "@/components/conversations/conversation-ui";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useLocale, useT } from "@/i18n/context";
@@ -107,7 +107,10 @@ function renderMessageBubble(params: {
               {formatMessageTime(msg.timestamp)}
             </p>
             {isOutbound ? (
-              <CheckCheck className="h-3 w-3 text-accent" aria-hidden />
+              <OutboundDeliveryStatus
+                channel={msg.channel ?? conversation.channel}
+                status={msg.deliveryStatus}
+              />
             ) : null}
             {canCreateTaskFromText && onCreateTaskFromText ? (
               <MessageTaskActions
