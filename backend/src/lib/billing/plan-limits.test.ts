@@ -50,7 +50,7 @@ describe("getEffectivePlanLimits", () => {
 
   it("limits WhatsApp channels by plan", () => {
     expect(getEffectivePlanLimits(tenant("free")).maxWhatsAppChannelsPerBot).toBe(1);
-    expect(getEffectivePlanLimits(tenant("starter")).maxWhatsAppChannelsPerBot).toBe(5);
+    expect(getEffectivePlanLimits(tenant("starter")).maxWhatsAppChannelsPerBot).toBe(3);
     expect(getEffectivePlanLimits(tenant("pro")).maxWhatsAppChannelsPerBot).toBe(5);
   });
 
@@ -96,7 +96,8 @@ describe("getEffectivePlanLimits", () => {
       })
     );
 
-    expect(limits.maxMessagesPerMonth).toBe(2_000);
+    expect(limits.maxMessagesPerMonth).toBe(5_000);
+    expect(limits.maxActiveBots).toBe(1);
   });
 
   it("prefers subaccount serviceLimits over planLimitsOverride", () => {

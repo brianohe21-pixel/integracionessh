@@ -28,7 +28,7 @@ export const DEFAULT_RESELLER_PLAN_DEFAULTS: ResellerPlanDefaults = {
 
 export const DEFAULT_MAX_MESSAGES_PER_MONTH_BY_PLAN: MaxMessagesPerMonthByPlan = {
   free: 250,
-  starter: 2_000,
+  starter: 5_000,
   pro: 10_000,
   reseller: 50_000,
 };

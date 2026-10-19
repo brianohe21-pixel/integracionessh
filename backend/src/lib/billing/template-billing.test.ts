@@ -26,7 +26,7 @@ const config: PlatformBillingConfig = {
   currency: "COP",
   maxMessagesPerMonthByPlan: {
     free: 250,
-    starter: 2_000,
+    starter: 5_000,
     pro: 10_000,
     reseller: 50_000,
   },

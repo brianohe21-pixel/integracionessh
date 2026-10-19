@@ -81,12 +81,13 @@ export function BillingPlanCards({ autoCheckoutPlan }: { autoCheckoutPlan?: Tena
 
   const currentPlan = status?.plan ?? "free";
   const starterPrice = providers?.plans?.starter;
-  const starterAiQuota = starterPrice?.maxMessagesPerMonth ?? 2_000;
+  const starterAiQuota = starterPrice?.maxMessagesPerMonth ?? 5_000;
   const starterAiCount = starterAiQuota.toLocaleString();
   const starterFeatures = [
     t("billing.starterFeatureBots"),
     t("billing.starterFeatureWhatsApp"),
     t("billing.starterFeatureAi", { count: starterAiCount }),
+    t("billing.starterFeatureEconomyModels"),
     t("billing.starterFeatureCampaigns"),
     t("billing.starterFeatureKnowledge"),
   ];
