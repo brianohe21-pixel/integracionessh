@@ -33,6 +33,7 @@ import {
   buildWhatsAppChannelScopePatch,
   resolveConfiguredWhatsAppChannelIds,
 } from "@/lib/flow-whatsapp-channels";
+import type { EditableFlowEntryMode } from "@/lib/flow-entry-mode";
 import { cn } from "@/lib/utils";
 
 interface NodePropertiesPanelProps {
@@ -43,6 +44,8 @@ interface NodePropertiesPanelProps {
   botId: string;
   isVoiceFlow?: boolean;
   samplePayload?: Record<string, unknown>;
+  entryMode?: EditableFlowEntryMode | "voice";
+  onChangeEntryMode?: (mode: EditableFlowEntryMode) => void;
   onUpdate: (patch: Record<string, unknown>) => void;
   onDelete: () => void;
   canDelete: boolean;
@@ -392,6 +395,8 @@ export function NodePropertiesPanel({
   botId,
   isVoiceFlow = false,
   samplePayload,
+  entryMode,
+  onChangeEntryMode,
   onUpdate,
   onDelete,
   canDelete,
@@ -488,6 +493,45 @@ export function NodePropertiesPanel({
         {textInput(d.label ?? "", (v) => onUpdate({ label: v }))}
       </div>
 
+      {(type === "trigger" ||
+        type === "message_received_trigger" ||
+        type === "opportunity_stage_trigger") &&
+        !isVoiceFlow &&
+        onChangeEntryMode &&
+        entryMode &&
+        entryMode !== "voice" && (
+          <div>
+            <FieldLabel>{t("flows.fields.entryMode")}</FieldLabel>
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  ["message", "entryModeMessage"],
+                  ["webhook", "entryModeWebhook"],
+                  ["stage", "entryModeStage"],
+                ] as const
+              ).map(([mode, labelKey]) => {
+                const active = entryMode === mode;
+                return (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => onChangeEntryMode(mode)}
+                    className={cn(
+                      "rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors",
+                      active
+                        ? "border-accent bg-accent/10 text-accent"
+                        : "border-field-border bg-surface-elevated text-secondary hover:border-accent/40"
+                    )}
+                  >
+                    {t(`flows.fields.${labelKey}`)}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-1 text-xs text-secondary">{t("flows.fields.entryModeHint")}</p>
+          </div>
+        )}
+
       {type === "trigger" && (
         <>
           {isVoiceFlow && (
@@ -507,10 +551,10 @@ export function NodePropertiesPanel({
               )}
             </div>
           )}
-          {hasWebhookNode && (
-            <p className="text-xs text-secondary">{t("flows.fields.triggerWebhookHint")}</p>
+          {!isVoiceFlow && (hasWebhookNode || entryMode === "webhook") && (
+            <p className="text-xs text-secondary">{t("flows.fields.entryModeWebhookHint")}</p>
           )}
-          {!isVoiceFlow && !hasWebhookNode && (
+          {!isVoiceFlow && !hasWebhookNode && entryMode !== "webhook" && (
             <p className="text-xs text-secondary">{t("flows.fields.triggerGenericHint")}</p>
           )}
         </>

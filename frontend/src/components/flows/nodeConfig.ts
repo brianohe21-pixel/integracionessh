@@ -67,7 +67,7 @@ export const FLOW_NODE_META: Record<FlowNodeType, FlowNodeMeta> = {
     hasInput: false,
     hasOutput: true,
   },
-  agent: { category: "entry", icon: Headset, hasInput: true, hasOutput: true },
+  agent: { category: "integrations", icon: Headset, hasInput: true, hasOutput: true },
   message: { category: "messaging", icon: MessageSquare, hasInput: true, hasOutput: true },
   template: { category: "messaging", icon: FileText, hasInput: true, hasOutput: true },
   send_otp: {
@@ -133,9 +133,10 @@ export const FLOW_NODE_META: Record<FlowNodeType, FlowNodeMeta> = {
   end: { category: "end", icon: Square, hasInput: true, hasOutput: false },
 };
 
-export type FlowPaletteCategory = Exclude<FlowNodeCategory, "entry">;
+export type FlowPaletteCategory = FlowNodeCategory;
 
 export const FLOW_NODE_CATEGORIES: FlowPaletteCategory[] = [
+  "entry",
   "crm",
   "messaging",
   "logic",
@@ -145,8 +146,8 @@ export const FLOW_NODE_CATEGORIES: FlowPaletteCategory[] = [
 ];
 
 export const FLOW_PALETTE_NODES: Record<FlowPaletteCategory, FlowNodeType[]> = {
+  entry: ["message_received_trigger"],
   crm: [
-    "opportunity_stage_trigger",
     "save_contact",
     "check_known_contact",
     "create_lead",
@@ -155,7 +156,6 @@ export const FLOW_PALETTE_NODES: Record<FlowPaletteCategory, FlowNodeType[]> = {
     "send_notification",
   ],
   messaging: [
-    "message_received_trigger",
     "message",
     "template",
     "buttons",
@@ -164,7 +164,7 @@ export const FLOW_PALETTE_NODES: Record<FlowPaletteCategory, FlowNodeType[]> = {
     "send_audio",
   ],
   logic: ["condition", "delay", "set_variable"],
-  integrations: ["agent", "assign_bot", "webhook", "meta_flow", "http_request", "handoff"],
+  integrations: ["agent", "assign_bot", "meta_flow", "http_request", "handoff"],
   apps: [
     "book_appointment",
     "cloud_drive_write",
@@ -245,12 +245,19 @@ export function buildNodePreview(
   switch (type) {
     case "trigger": {
       const triggerType = data.triggerType ?? "any_message";
-      if (triggerType === "web_form_submitted") return "webhook";
-      if (triggerType === "voice_call") return "voice";
-      return "";
+      if (triggerType === "web_form_submitted") {
+        return locale === "es" ? "Webhook · espera POST" : "Webhook · waits for POST";
+      }
+      if (triggerType === "voice_call") {
+        return locale === "es" ? "Voz" : "Voice";
+      }
+      return locale === "es" ? "Mensaje" : "Message";
     }
     case "message_received_trigger": {
-      const parts: string[] = [];
+      if ((data.triggerType ?? "any_message") === "web_form_submitted") {
+        return locale === "es" ? "Webhook · espera POST" : "Webhook · waits for POST";
+      }
+      const parts: string[] = [locale === "es" ? "Mensaje" : "Message"];
       const botLabel = data.botId
         ? truncate(botNames?.[data.botId] || data.botId, 28)
         : "";
@@ -287,10 +294,13 @@ export function buildNodePreview(
         won: { es: "Ganada", en: "Won" },
         lost: { es: "Perdida", en: "Lost" },
       };
-      if (!data.triggerStageKey) {
-        return locale === "es" ? "Cualquier etapa" : "Any stage";
-      }
-      return stageLabels[data.triggerStageKey]?.[locale] ?? data.triggerStageKey;
+      const stage =
+        !data.triggerStageKey
+          ? locale === "es"
+            ? "Cualquier etapa"
+            : "Any stage"
+          : stageLabels[data.triggerStageKey]?.[locale] ?? data.triggerStageKey;
+      return `${locale === "es" ? "Etapa" : "Stage"} · ${stage}`;
     }
     case "agent": {
       const channel = data.channel ?? "any";

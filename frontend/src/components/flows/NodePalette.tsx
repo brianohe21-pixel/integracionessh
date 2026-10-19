@@ -2,12 +2,20 @@
 
 import { useT } from "@/i18n/context";
 import type { FlowNodeType } from "@/types";
-import { FLOW_NODE_CATEGORIES, FLOW_PALETTE_NODES } from "./nodeConfig";
+import {
+  FLOW_NODE_CATEGORIES,
+  FLOW_PALETTE_NODES,
+  type FlowPaletteCategory,
+} from "./nodeConfig";
 import { NodePaletteItem } from "./NodePaletteItem";
 
 interface NodePaletteProps {
   onAddNode: (type: FlowNodeType) => void;
 }
+
+const CATEGORY_HINT_KEYS: Partial<Record<FlowPaletteCategory, string>> = {
+  entry: "flows.nodeCategoryHints.entry",
+};
 
 export function NodePalette({ onAddNode }: NodePaletteProps) {
   const t = useT();
@@ -16,18 +24,24 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
     <div className="min-w-0 space-y-3.5">
       <p className="text-xs font-semibold uppercase tracking-wide text-muted">{t("flows.components")}</p>
       <p className="text-[10px] text-secondary">{t("flows.paletteDragHint")}</p>
-      {FLOW_NODE_CATEGORIES.map((category) => (
-        <div key={category}>
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted">
-            {t(`flows.nodeCategories.${category}`)}
-          </p>
-          <div className="space-y-0.5">
-            {FLOW_PALETTE_NODES[category].map((type) => (
-              <NodePaletteItem key={type} type={type} onAddNode={onAddNode} />
-            ))}
+      {FLOW_NODE_CATEGORIES.map((category) => {
+        const hintKey = CATEGORY_HINT_KEYS[category];
+        return (
+          <div key={category}>
+            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted">
+              {t(`flows.nodeCategories.${category}`)}
+            </p>
+            {hintKey ? (
+              <p className="mb-1.5 text-[10px] leading-snug text-secondary">{t(hintKey)}</p>
+            ) : null}
+            <div className="space-y-0.5">
+              {FLOW_PALETTE_NODES[category].map((type) => (
+                <NodePaletteItem key={type} type={type} onAddNode={onAddNode} />
+              ))}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

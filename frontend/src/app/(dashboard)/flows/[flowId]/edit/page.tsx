@@ -26,6 +26,15 @@ import {
 } from "@/lib/flow-entry-node";
 import { applyResolvedTriggerType, resolveFlowSamplePayload } from "@/lib/resolve-flow-trigger";
 import {
+  applyFlowEntryMode,
+  resolveFlowEntryMode,
+  type EditableFlowEntryMode,
+} from "@/lib/flow-entry-mode";
+import {
+  coerceMessageEntryToWebhookTrigger,
+  hasWebhookNode as flowHasWebhookNode,
+} from "@/lib/flow-webhook";
+import {
   flowDraftEditorSnapshotKey,
   flowEditorSnapshotKey,
   flowPublishedEditorSnapshotKey,
@@ -95,7 +104,10 @@ export default function EditFlowPage() {
 
   useEffect(() => {
     if (!flow) return;
-    const draftNodes = resolveDraftNodes(flow);
+    const draftNodes = coerceMessageEntryToWebhookTrigger(
+      resolveDraftNodes(flow),
+      t("flows.nodeTypes.trigger")
+    );
     const draftEdges = resolveDraftEdges(flow);
     const key = `${flow.flowId}:${flow.version}:${flowDraftEditorSnapshotKey(flow)}`;
     if (initializedFlowKeyRef.current === key) return;
@@ -110,7 +122,7 @@ export default function EditFlowPage() {
     setPublishedMessage(false);
     setSaveError("");
     setPublishError("");
-  }, [flow, resetHistory]);
+  }, [flow, resetHistory, t]);
 
   useEffect(() => {
     if (selectedNodeId && !localNodes.some((node) => node.id === selectedNodeId)) {
@@ -169,7 +181,30 @@ export default function EditFlowPage() {
 
   const selected = localNodes.find((n) => n.id === selectedNodeId);
   const entryNode = getFlowEntryNode(localNodes);
-  const hasWebhookNode = localNodes.some((node) => node.type === "webhook");
+  const hasWebhookNode = flowHasWebhookNode(localNodes);
+  const entryMode = resolveFlowEntryMode(localNodes);
+
+  function entryModeLabels() {
+    return {
+      start: t("flows.nodeTypes.trigger"),
+      message: t("flows.fields.entryModeMessage"),
+      stage: t("flows.fields.entryModeStage"),
+      webhook: t("flows.nodeTypes.webhook"),
+    };
+  }
+
+  function changeEntryMode(mode: EditableFlowEntryMode) {
+    const result = applyFlowEntryMode({
+      nodes: localNodes,
+      edges: localEdges,
+      mode,
+      labels: entryModeLabels(),
+      suggestedBotId,
+    });
+    canvasAutosaveRef.current = true;
+    commitHistory({ nodes: result.nodes, edges: result.edges });
+    if (result.entryId) setSelectedNodeId(result.entryId);
+  }
   const isVoiceFlow =
     flow?.flowKind === "voice_ai" || entryNode?.data.triggerType === "voice_call";
   const isStageTriggerFlow =
@@ -207,53 +242,22 @@ export default function EditFlowPage() {
     commitHistory({ nodes, edges: localEdges }, { debounce: true });
   }
 
-  function replaceEntryNode(type: "message_received_trigger" | "opportunity_stage_trigger") {
-    const existingEntry = getFlowEntryNode(localNodes);
-    if (!existingEntry) return false;
-
-    const nodes = localNodes.map((node) => {
-      if (node.id !== existingEntry.id) return node;
-      if (type === "message_received_trigger") {
-        return {
-          ...node,
-          type: "message_received_trigger" as const,
-          data: {
-            ...node.data,
-            label: t("flows.nodeTypes.message_received_trigger"),
-            triggerType: (node.data.triggerType === "first_message"
-              ? "first_message"
-              : "any_message") as "first_message" | "any_message",
-            channel: node.data.channel ?? "any",
-            triggerStageKey: undefined,
-            botId: node.data.botId?.trim() || suggestedBotId || node.data.botId,
-          },
-        };
-      }
-      return {
-        ...node,
-        type: "opportunity_stage_trigger" as const,
-        data: {
-          ...node.data,
-          label: t("flows.nodeTypes.opportunity_stage_trigger"),
-          triggerType: "opportunity_stage_entered" as const,
-          keywords: undefined,
-          matchMode: undefined,
-          botId: node.data.botId?.trim() || suggestedBotId || node.data.botId,
-        },
-      };
-    });
-    canvasAutosaveRef.current = true;
-    commitHistory({ nodes, edges: localEdges });
-    setSelectedNodeId(existingEntry.id);
-    return true;
-  }
-
   function addNode(type: FlowNodeType, position?: { x: number; y: number }) {
     if (
       type === "message_received_trigger" ||
-      type === "opportunity_stage_trigger"
+      type === "opportunity_stage_trigger" ||
+      type === "trigger"
     ) {
-      if (replaceEntryNode(type)) return;
+      const existingEntry = getFlowEntryNode(localNodes);
+      if (existingEntry) {
+        setSelectedNodeId(existingEntry.id);
+        return;
+      }
+    }
+
+    if (type === "webhook") {
+      changeEntryMode("webhook");
+      return;
     }
 
     const node = createFlowNode({
@@ -270,6 +274,9 @@ export default function EditFlowPage() {
       node.data.messageText = t("flows.fields.defaultButtonPrompt");
       node.data.listButtonText = t("flows.fields.defaultListButton");
     }
+    if (type === "message_received_trigger") {
+      node.data.label = t("flows.nodeTypes.trigger");
+    }
     const nodes = [...localNodes, node];
     canvasAutosaveRef.current = true;
     commitHistory({ nodes, edges: localEdges });
@@ -278,10 +285,26 @@ export default function EditFlowPage() {
 
   function deleteSelectedNode() {
     if (!selectedNodeId || !canDeleteSelected) return;
+    const deleting = localNodes.find((node) => node.id === selectedNodeId);
     const nodes = localNodes.filter((node) => node.id !== selectedNodeId);
     const edges = localEdges.filter(
       (edge) => edge.source !== selectedNodeId && edge.target !== selectedNodeId
     );
+
+    if (deleting?.type === "webhook" && !flowHasWebhookNode(nodes)) {
+      const restored = applyFlowEntryMode({
+        nodes,
+        edges,
+        mode: "message",
+        labels: entryModeLabels(),
+        suggestedBotId,
+      });
+      canvasAutosaveRef.current = true;
+      commitHistory({ nodes: restored.nodes, edges: restored.edges });
+      setSelectedNodeId(restored.entryId);
+      return;
+    }
+
     canvasAutosaveRef.current = true;
     commitHistory({ nodes, edges });
     setSelectedNodeId(null);
@@ -309,7 +332,13 @@ export default function EditFlowPage() {
       if (!canInheritBot || node.data.botId?.trim() || !fallbackBotId) return node;
       return { ...node, data: { ...node.data, botId: fallbackBotId } };
     });
-    const nodes = applyResolvedTriggerType(nodesWithAgentBot, voiceMode);
+    const nodes = applyResolvedTriggerType(
+      coerceMessageEntryToWebhookTrigger(
+        nodesWithAgentBot,
+        t("flows.nodeTypes.trigger")
+      ),
+      voiceMode
+    );
     const resolvedBotId = resolveFlowBotIdFromNodes(nodes) || undefined;
     const snapshotKey = flowEditorSnapshotKey(nodesToSave, edgesToSave, voiceMode);
     if (snapshotKey === savedKey) return true;
@@ -515,7 +544,6 @@ export default function EditFlowPage() {
           {t("flows.cannotDeleteTrigger")}
         </p>
       )}
-
       <div className="flex flex-shrink-0 gap-1 overflow-x-auto border-b border-default bg-surface-elevated px-3">
         {(
           [
@@ -605,6 +633,8 @@ export default function EditFlowPage() {
         botId={assignedBotId}
         isVoiceFlow={isVoiceFlow}
         samplePayload={samplePayload}
+        entryMode={entryMode}
+        onChangeEntryMode={changeEntryMode}
         onUpdate={updateSelectedData}
         onDelete={deleteSelectedNode}
         canDelete={canDeleteSelected}

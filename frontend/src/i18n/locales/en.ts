@@ -4641,6 +4641,10 @@ export const en: Messages = {
     deleteNode: "Delete node",
     deleteEdge: "Delete connection",
     cannotDeleteTrigger: "You cannot delete the only start node in the flow.",
+    webhookConvertsMessageTrigger:
+      "Adding Webhook switches the start node to “Start” (external POST). It no longer runs on chat messages.",
+    webhookConflictMessageTrigger:
+      "This flow has a Webhook. Remove the Webhook if you want Start by message.",
     colName: "Name",
     colBot: "Bot",
     colStatus: "Status",
@@ -4667,6 +4671,7 @@ export const en: Messages = {
       planLimitActiveRuns: "Plan limit: maximum {limit} active flow run(s)",
     },
     nodeCategories: {
+      entry: "Flow start",
       crm: "CRM",
       messaging: "Messages",
       logic: "Logic",
@@ -4674,10 +4679,13 @@ export const en: Messages = {
       apps: "Apps",
       end: "End",
     },
+    nodeCategoryHints: {
+      entry: "One start node. Choose the mode in the node properties.",
+    },
     nodeTypes: {
       trigger: "Start",
-      message_received_trigger: "Message start",
-      opportunity_stage_trigger: "Stage start",
+      message_received_trigger: "Start",
+      opportunity_stage_trigger: "Start",
       agent: "Agent",
       message: "Message",
       template: "Template",
@@ -4710,10 +4718,17 @@ export const en: Messages = {
     fields: {
       label: "Label",
       triggerType: "Trigger type",
+      entryMode: "How it starts",
+      entryModeMessage: "Message",
+      entryModeWebhook: "Webhook",
+      entryModeStage: "Sales stage",
+      entryModeHint: "Switch the mode without adding another start. The flow can only start one way.",
+      entryModeWebhookHint:
+        "The flow starts with an external POST. Configure the URL on the connected Webhook node.",
       triggerAnyMessage: "Any message",
       triggerMessage: "Incoming message",
       triggerMessageReceivedHint:
-        "This is the flow start when a message arrives. Choose the agent, first-message-only, the channel, and which WhatsApp numbers apply.",
+        "Choose the agent, first-message-only, the channel, and which WhatsApp numbers apply.",
       triggerChannelHint: "The flow only starts on the selected channel.",
       triggerFirstMessage: "First message only",
       triggerFirstMessageHint:
@@ -5122,9 +5137,9 @@ export const en: Messages = {
         usage: "Connect the rest of the flow from here. For external data, add Webhook.",
       },
       message_received_trigger: {
-        description: "Flow start when a message arrives.",
+        description: "Flow start point. Choose message, webhook, or stage mode.",
         usage:
-          "Configure first message, channel, and keywords. Replaces the current start node.",
+          "Add it once. In properties, pick the start mode and complete the setup.",
       },
       opportunity_stage_trigger: {
         description: "Flow start when a sales stage is entered.",

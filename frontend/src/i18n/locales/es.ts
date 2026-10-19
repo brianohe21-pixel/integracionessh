@@ -4651,6 +4651,10 @@ export const es = {
     deleteNode: "Eliminar nodo",
     deleteEdge: "Eliminar conexión",
     cannotDeleteTrigger: "No puedes eliminar el único nodo de inicio del flujo.",
+    webhookConvertsMessageTrigger:
+      "Al agregar Webhook, el inicio pasa a “Inicio” (POST externo). Ya no se dispara por mensajes de chat.",
+    webhookConflictMessageTrigger:
+      "Este flujo tiene Webhook. Quita el Webhook si quieres usar Inicio por mensaje.",
     colName: "Nombre",
     colBot: "Agente",
     colStatus: "Estado",
@@ -4677,6 +4681,7 @@ export const es = {
       planLimitActiveRuns: "Límite del plan: máximo {limit} ejecución(es) de flujo activa(s)",
     },
     nodeCategories: {
+      entry: "Inicio del flujo",
       crm: "CRM",
       messaging: "Mensajes",
       logic: "Lógica",
@@ -4684,10 +4689,13 @@ export const es = {
       apps: "Apps",
       end: "Fin",
     },
+    nodeCategoryHints: {
+      entry: "Un solo inicio. Elige el modo en las propiedades del nodo.",
+    },
     nodeTypes: {
       trigger: "Inicio",
-      message_received_trigger: "Inicio por mensaje",
-      opportunity_stage_trigger: "Inicio por etapa",
+      message_received_trigger: "Inicio",
+      opportunity_stage_trigger: "Inicio",
       agent: "Agente",
       message: "Mensaje",
       template: "Plantilla",
@@ -4720,10 +4728,17 @@ export const es = {
     fields: {
       label: "Etiqueta",
       triggerType: "Tipo de activación",
+      entryMode: "Cómo arranca",
+      entryModeMessage: "Mensaje",
+      entryModeWebhook: "Webhook",
+      entryModeStage: "Etapa de ventas",
+      entryModeHint: "Cambia el modo sin agregar otro inicio. El flujo solo puede arrancar de una forma.",
+      entryModeWebhookHint:
+        "El flujo arranca con un POST externo. Configura la URL en el nodo Webhook conectado.",
       triggerAnyMessage: "Cualquier mensaje",
       triggerMessage: "Mensaje entrante",
       triggerMessageReceivedHint:
-        "Este es el inicio del flujo al recibir un mensaje. Elige el agente, si solo aplica al primer mensaje, el canal y en qué números de WhatsApp corre.",
+        "Elige el agente, si solo aplica al primer mensaje, el canal y en qué números de WhatsApp corre.",
       triggerChannelHint: "El flujo solo se dispara en el canal seleccionado.",
       triggerFirstMessage: "Primer mensaje",
       triggerFirstMessageHint:
@@ -5133,9 +5148,9 @@ export const es = {
         usage: "Conecta desde aquí el resto del flujo. Para datos externos, añade Webhook.",
       },
       message_received_trigger: {
-        description: "Inicio del flujo cuando llega un mensaje.",
+        description: "Punto de inicio del flujo. Elige si arranca por mensaje, webhook o etapa.",
         usage:
-          "Configura primer mensaje, canal y palabras clave. Reemplaza el nodo de inicio actual.",
+          "Agrégalo una vez. En propiedades selecciona el modo de inicio y completa la configuración.",
       },
       opportunity_stage_trigger: {
         description: "Inicio del flujo al entrar a una etapa de ventas.",
