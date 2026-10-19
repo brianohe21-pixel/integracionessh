@@ -4,8 +4,6 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CalendarClock } from "lucide-react";
 import { PlanUsageCard } from "@/components/billing/PlanUsageCard";
-import { AiPacksCard } from "@/components/billing/AiPacksCard";
-import { TemplateBillingCard } from "@/components/billing/TemplateBillingCard";
 import { BillingPlanCards } from "@/components/billing/BillingPlanCards";
 import { PaymentHistoryTab } from "@/components/billing/PaymentHistoryTab";
 import { useBillingPayments, useBillingStatus } from "@/hooks/useBilling";
@@ -106,8 +104,6 @@ function BillingPageContent() {
         {tab === "plans" ? (
           <>
             <PlanUsageCard hideActions />
-            <AiPacksCard />
-            <TemplateBillingCard />
 
             <section className="rounded-2xl border border-default bg-surface-elevated p-6 sm:p-8">
               <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
