@@ -1330,6 +1330,54 @@ export interface WhatsAppUsageReport {
   daily: WhatsAppUsageDailyPoint[];
 }
 
+export interface AiResponsesDailyPoint {
+  date: string;
+  responses: number;
+}
+
+export interface AiResponsesByBotRow {
+  botId: string;
+  botName: string;
+  responses: number;
+}
+
+export interface AiResponsesPeriodRow {
+  period: string;
+  responses: number;
+  planLimit: number;
+  effectiveLimit: number;
+  planUsed: number;
+  bonusGranted: number;
+  bonusUsed: number;
+  remaining: number;
+  percentUsed: number;
+}
+
+export interface AiResponsesQuota {
+  period: string;
+  planLimit: number;
+  effectiveLimit: number;
+  planUsed: number;
+  bonusGranted: number;
+  bonusUsed: number;
+  bonusRemaining: number;
+  totalUsed: number;
+  remaining: number;
+  percentUsed: number;
+}
+
+export interface AiResponsesReport {
+  from: string;
+  to: string;
+  botId?: string;
+  plan: string;
+  quota: AiResponsesQuota;
+  totals: { responses: number };
+  daily: AiResponsesDailyPoint[];
+  byBot: AiResponsesByBotRow[];
+  periods: AiResponsesPeriodRow[];
+}
+
 export interface ApiUsageCount {
   requests: number;
   success: number;
