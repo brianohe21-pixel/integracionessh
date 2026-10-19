@@ -3,17 +3,25 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2, Send } from "lucide-react";
 import { Textarea } from "@/components/ui/Input";
+import { ComposeFormatToolbar } from "@/components/conversations/ComposeFormatToolbar";
 import { EmojiPicker } from "@/components/conversations/EmojiPicker";
 import { ConversationComposeActionsMenu } from "@/components/conversations/ConversationComposeActionsMenu";
 import { ConversationVoiceRecorder } from "@/components/conversations/ConversationVoiceRecorder";
 import { VoiceNoteComposeBar } from "@/components/conversations/VoiceNoteComposeBar";
 import { useVoiceNoteRecorder } from "@/hooks/useVoiceNoteRecorder";
 import { useT } from "@/i18n/context";
+import {
+  applyWhatsAppTextFormat,
+  type WhatsAppTextFormat,
+} from "@/lib/conversations/whatsapp-text-format";
+import { getTextareaSelectionRect } from "@/lib/conversations/textarea-selection-rect";
 import { cn } from "@/lib/utils";
 import type { MacroPlaceholderContext } from "@/lib/macros/resolve-placeholders";
 import type { Conversation } from "@/types";
 
 const MAX_TEXTAREA_HEIGHT = 160;
+const TOOLBAR_GAP_PX = 8;
+const TOOLBAR_EDGE_PADDING_PX = 12;
 
 type Props = {
   draft: string;
@@ -55,6 +63,12 @@ export function ConversationComposeBar({
   const t = useT();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [scrollable, setScrollable] = useState(false);
+  const [hasSelection, setHasSelection] = useState(false);
+  const [toolbarPosition, setToolbarPosition] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
+  const selectionRef = useRef({ start: 0, end: 0 });
 
   const voice = useVoiceNoteRecorder({
     disabled: attaching || sending,
@@ -77,6 +91,54 @@ export function ConversationComposeBar({
     setScrollable(el.scrollHeight > MAX_TEXTAREA_HEIGHT);
   }, []);
 
+  const clearFormatToolbar = useCallback(() => {
+    setHasSelection(false);
+    setToolbarPosition(null);
+    selectionRef.current = { start: 0, end: 0 };
+  }, []);
+
+  const updateToolbarPosition = useCallback((start: number, end: number) => {
+    const el = textareaRef.current;
+    if (!el || start === end) {
+      setToolbarPosition(null);
+      return;
+    }
+
+    const selection = getTextareaSelectionRect(el, start, end);
+    const rect = el.getBoundingClientRect();
+    const top = rect.top + selection.top - TOOLBAR_GAP_PX;
+    const estimatedToolbarWidth = 260;
+    const rawLeft = rect.left + selection.left;
+    const left = Math.min(
+      Math.max(rawLeft, TOOLBAR_EDGE_PADDING_PX),
+      window.innerWidth - estimatedToolbarWidth - TOOLBAR_EDGE_PADDING_PX
+    );
+    setToolbarPosition({ top, left });
+  }, []);
+
+  const syncSelection = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el) {
+      clearFormatToolbar();
+      return;
+    }
+    const start = el.selectionStart ?? 0;
+    const end = el.selectionEnd ?? 0;
+    selectionRef.current = { start, end };
+    if (start === end) {
+      clearFormatToolbar();
+      return;
+    }
+    setHasSelection(true);
+    updateToolbarPosition(start, end);
+  }, [clearFormatToolbar, updateToolbarPosition]);
+
+  const scheduleSyncSelection = useCallback(() => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(syncSelection);
+    });
+  }, [syncSelection]);
+
   useEffect(() => {
     adjustTextareaHeight();
   }, [draft, adjustTextareaHeight]);
@@ -86,6 +148,42 @@ export function ConversationComposeBar({
     const timer = window.setTimeout(() => textareaRef.current?.focus(), 80);
     return () => window.clearTimeout(timer);
   }, [conversation?.conversationId, voice.active]);
+
+  useEffect(() => {
+    if (voice.active) clearFormatToolbar();
+  }, [voice.active, clearFormatToolbar]);
+
+  useEffect(() => {
+    if (!hasSelection) return;
+
+    function refreshPosition() {
+      const { start, end } = selectionRef.current;
+      if (start === end) return;
+      updateToolbarPosition(start, end);
+    }
+
+    function onSelectionChange() {
+      const el = textareaRef.current;
+      if (!el) {
+        clearFormatToolbar();
+        return;
+      }
+      if (document.activeElement !== el) {
+        clearFormatToolbar();
+        return;
+      }
+      syncSelection();
+    }
+
+    document.addEventListener("selectionchange", onSelectionChange);
+    window.addEventListener("resize", refreshPosition);
+    window.addEventListener("scroll", refreshPosition, true);
+    return () => {
+      document.removeEventListener("selectionchange", onSelectionChange);
+      window.removeEventListener("resize", refreshPosition);
+      window.removeEventListener("scroll", refreshPosition, true);
+    };
+  }, [hasSelection, updateToolbarPosition, syncSelection, clearFormatToolbar]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -100,7 +198,55 @@ export function ConversationComposeBar({
     requestAnimationFrame(adjustTextareaHeight);
   }
 
+  function applyFormat(format: WhatsAppTextFormat) {
+    const el = textareaRef.current;
+    if (!el) return;
+    const start = el.selectionStart ?? selectionRef.current.start;
+    const end = el.selectionEnd ?? selectionRef.current.end;
+    if (start === end && format !== "ordered" && format !== "unordered" && format !== "quote") {
+      return;
+    }
+    const result = applyWhatsAppTextFormat(draft, start, end, format);
+    onDraftChange(result.text);
+    selectionRef.current = {
+      start: result.selectionStart,
+      end: result.selectionEnd,
+    };
+    const stillSelected = result.selectionStart !== result.selectionEnd;
+    setHasSelection(stillSelected);
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(result.selectionStart, result.selectionEnd);
+      adjustTextareaHeight();
+      if (stillSelected) {
+        updateToolbarPosition(result.selectionStart, result.selectionEnd);
+      } else {
+        setToolbarPosition(null);
+      }
+    });
+  }
+
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    const mod = e.metaKey || e.ctrlKey;
+    if (mod && !e.altKey) {
+      const key = e.key.toLowerCase();
+      if (key === "b") {
+        e.preventDefault();
+        applyFormat("bold");
+        return;
+      }
+      if (key === "i") {
+        e.preventDefault();
+        applyFormat("italic");
+        return;
+      }
+      if (key === "x" && e.shiftKey) {
+        e.preventDefault();
+        applyFormat("strikethrough");
+        return;
+      }
+    }
+
     if (e.key !== "Enter" || e.shiftKey || e.nativeEvent.isComposing) return;
     e.preventDefault();
     if (!canSendText) return;
@@ -118,6 +264,7 @@ export function ConversationComposeBar({
     const next = `${draft.slice(0, start)}${emoji}${draft.slice(end)}`;
     onDraftChange(next);
     const cursor = start + emoji.length;
+    clearFormatToolbar();
     requestAnimationFrame(() => {
       el.focus();
       el.setSelectionRange(cursor, cursor);
@@ -125,8 +272,16 @@ export function ConversationComposeBar({
     });
   }
 
+  const showFormatToolbar = hasSelection && !voice.active && Boolean(toolbarPosition);
+
   return (
     <form onSubmit={handleSubmit} className="conversations-compose-bar relative py-2 sm:py-3">
+      <ComposeFormatToolbar
+        visible={showFormatToolbar}
+        onFormat={applyFormat}
+        position={toolbarPosition}
+      />
+
       <div className="conversations-compose-input overflow-hidden">
         {voice.active ? (
           <VoiceNoteComposeBar voice={voice} sending={sending || attaching} />
@@ -134,8 +289,17 @@ export function ConversationComposeBar({
           <Textarea
             ref={textareaRef}
             value={draft}
-            onChange={(e) => onDraftChange(e.target.value)}
+            onChange={(e) => {
+              onDraftChange(e.target.value);
+              scheduleSyncSelection();
+            }}
             onKeyDown={handleKeyDown}
+            onKeyUp={scheduleSyncSelection}
+            onSelect={scheduleSyncSelection}
+            onMouseDown={scheduleSyncSelection}
+            onMouseUp={scheduleSyncSelection}
+            onClick={scheduleSyncSelection}
+            onBlur={clearFormatToolbar}
             rows={1}
             placeholder={t("conversations.messagePlaceholderShort")}
             aria-label={t("conversations.messagePlaceholderShort")}
