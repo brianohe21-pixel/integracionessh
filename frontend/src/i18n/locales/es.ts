@@ -527,6 +527,10 @@ export const es = {
     channels: {
       multiDescription: "Conecta y administra varios números de WhatsApp para este bot.",
       singleDescription: "Conecta un número de WhatsApp Business para este bot.",
+      quotaDescription:
+        "Tu plan permite hasta {{max}} números de WhatsApp. Conectados: {{used}} de {{max}}.",
+      limitReached:
+        "Alcanzaste el límite de {{max}} números de tu plan. Actualiza a Pro para agregar más.",
       addNumber: "Agregar número",
       defaultBadge: "Predeterminado",
       setDefault: "Marcar como predeterminado",

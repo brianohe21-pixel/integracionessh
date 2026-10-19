@@ -63,6 +63,8 @@ export function BotWhatsAppConnect({ bot }: BotWhatsAppConnectProps) {
 
   const maxWhatsAppChannels = getMaxWhatsAppChannelsPerBot(tenant);
   const multiChannelEnabled = maxWhatsAppChannels > 1;
+  const unlimitedWhatsAppChannels =
+    maxWhatsAppChannels >= Number.MAX_SAFE_INTEGER / 2;
   const [showAddPanel, setShowAddPanel] = useState(false);
   const [editingLabelId, setEditingLabelId] = useState<string | null>(null);
   const [labelDraft, setLabelDraft] = useState("");
@@ -342,10 +344,22 @@ export function BotWhatsAppConnect({ bot }: BotWhatsAppConnectProps) {
         <div>
           <h2 className="text-lg font-semibold text-primary">{t("whatsapp.sectionTitle")}</h2>
           <p className="mt-1 text-sm text-secondary">
-            {multiChannelEnabled
-              ? t("whatsapp.channels.multiDescription")
-              : t("whatsapp.channels.singleDescription")}
+            {unlimitedWhatsAppChannels
+              ? multiChannelEnabled
+                ? t("whatsapp.channels.multiDescription")
+                : t("whatsapp.channels.singleDescription")
+              : t("whatsapp.channels.quotaDescription", {
+                  used: String(sortedChannels.length),
+                  max: String(maxWhatsAppChannels),
+                })}
           </p>
+          {!canAddChannel && !unlimitedWhatsAppChannels ? (
+            <p className="mt-1 text-xs text-warning">
+              {t("whatsapp.channels.limitReached", {
+                max: String(maxWhatsAppChannels),
+              })}
+            </p>
+          ) : null}
           <p className="mt-2 text-xs text-secondary">{t("whatsapp.adsHint")}</p>
         </div>
         {canAddChannel ? (
