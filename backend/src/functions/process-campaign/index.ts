@@ -156,7 +156,7 @@ async function processRecipient(body: CampaignSQSBody, sqsMessageId: string): Pr
     return;
   }
 
-  if (body.requireOptIn ?? campaign.requireOptIn ?? true) {
+  if (body.requireOptIn ?? campaign.requireOptIn ?? false) {
     const contact = await getContactByPhone(tenantId, normalizedTo);
     if (
       !contact ||
@@ -274,7 +274,7 @@ async function processRecipient(body: CampaignSQSBody, sqsMessageId: string): Pr
         phoneNumberId: bot.phoneNumberId,
         kind: body.outboundKind ?? "marketing",
         to: normalizedTo,
-        requireOptIn: body.requireOptIn ?? campaign.requireOptIn ?? true,
+        requireOptIn: body.requireOptIn ?? campaign.requireOptIn ?? false,
       });
       const result = await sendTemplateMessage({
         phoneNumberId: bot.phoneNumberId,

@@ -52,7 +52,7 @@ export async function enqueueRecipients(
     language,
     channel = "whatsapp",
     requestDlr,
-    requireOptIn = true,
+    requireOptIn = false,
   } = campaign;
   const BATCH_SIZE = SQS_BATCH_SIZE;
   let entryIndex = 0;
@@ -163,7 +163,7 @@ export async function dispatchCampaignBatch(
   const eligible = await filterPendingForMarketing(
     tenantId,
     pending,
-    campaign.requireOptIn ?? true,
+    campaign.requireOptIn ?? false,
     actorUserId
   );
 
@@ -228,6 +228,7 @@ export async function startCampaignDispatch(
       templateName,
       language,
       channel: campaign.channel ?? "whatsapp",
+      requireOptIn,
       ...(campaign.requestDlr ? { requestDlr: true } : {}),
     },
     eligible
