@@ -337,6 +337,6 @@ variable "onedrive_client_secret" {
 
 variable "mailrelay_event_types" {
   type        = string
-  default     = ""
-  description = "Comma-separated Mailrelay webhook event types for tenant subscriptions"
+  default     = "subscribed,unsubscribed"
+  description = "Comma-separated Mailrelay webhook event types for platform subscriptions"
 }

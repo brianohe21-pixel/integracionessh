@@ -198,7 +198,10 @@ resource "aws_iam_role_policy" "lambda_permissions" {
           "secretsmanager:UpdateSecret",
           "secretsmanager:DeleteSecret",
         ]
-        Resource = "arn:aws:secretsmanager:*:*:secret:/${var.environment}/platform/openai*"
+        Resource = [
+          "arn:aws:secretsmanager:*:*:secret:/${var.environment}/platform/openai*",
+          "arn:aws:secretsmanager:*:*:secret:/${var.environment}/platform/mailrelay*",
+        ]
       },
       {
         Effect = "Allow"

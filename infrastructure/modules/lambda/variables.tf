@@ -134,8 +134,8 @@ variable "shopify_events_sqs_queue_arn" {
 
 variable "mailrelay_event_types" {
   type        = string
-  default     = ""
-  description = "Comma-separated Mailrelay webhook event types enabled for tenant subscriptions"
+  default     = "subscribed,unsubscribed"
+  description = "Comma-separated Mailrelay webhook event types enabled for platform subscriptions"
 }
 
 variable "scheduler_role_arn" {
