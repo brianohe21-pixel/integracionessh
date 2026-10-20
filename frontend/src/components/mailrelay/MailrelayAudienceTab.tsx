@@ -44,7 +44,9 @@ export function MailrelayAudienceTab({ connected }: { connected: boolean }) {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    if (configQuery.data?.config) setConfig(configQuery.data.config);
+    if (!configQuery.data?.config) return;
+    setConfig(configQuery.data.config);
+    if (configQuery.data.config.defaultGroupId) setSaved(true);
   }, [configQuery.data]);
 
   if (!connected) {
@@ -108,8 +110,24 @@ export function MailrelayAudienceTab({ connected }: { connected: boolean }) {
   }
 
   async function handleSync() {
+    if ((!isNrs360 && !config.senderId) || !config.defaultGroupId) {
+      setError(
+        isNrs360
+          ? t("mailrelay.validation.audienceGroup")
+          : t("mailrelay.validation.senderAudience")
+      );
+      return;
+    }
     try {
       setError("");
+      if (!saved) {
+        await saveConfig.mutateAsync({
+          ...config,
+          provider,
+          senderId: isNrs360 ? config.senderId || "1" : config.senderId,
+        });
+        setSaved(true);
+      }
       await startSync.mutateAsync();
     } catch (cause) {
       setError((cause as Error).message);

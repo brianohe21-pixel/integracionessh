@@ -862,9 +862,21 @@ export async function handler(
 
     if (segments[0] === "segments" && method === "GET") {
       if (provider === "nrs360") return ok({ segments: [] });
-      const { client } = await authenticatedMailrelayClient();
-      const segmentsList = await client.all<Record<string, unknown>>("/segments");
-      return ok({ segments: segmentsList });
+      try {
+        const { client } = await authenticatedMailrelayClient();
+        const segmentsList = await client.all<Record<string, unknown>>("/segments");
+        return ok({ segments: segmentsList });
+      } catch (error) {
+        if (
+          error &&
+          typeof error === "object" &&
+          "statusCode" in error &&
+          (error as { statusCode?: number }).statusCode === 404
+        ) {
+          return ok({ segments: [] });
+        }
+        throw error;
+      }
     }
 
     if (segments[0] === "campaign-folders" && method === "GET") {
@@ -948,6 +960,15 @@ export async function handler(
     }
 
     if (segments[0] === "sync" && method === "POST") {
+      const storedConfig = await getMailrelayConfig(auth.tenantId);
+      if (!storedConfig) {
+        return badRequest(
+          "Save Audiencia settings (sender and default group) before syncing contacts"
+        );
+      }
+      if (storedConfig.enabled === false) {
+        return badRequest("Email marketing is disabled for this account");
+      }
       if (provider === "nrs360") {
         await getNrs360Credentials(ENVIRONMENT, auth.tenantId).then((credentials) => {
           if (!credentials) {
@@ -958,6 +979,9 @@ export async function handler(
         });
       } else {
         await authenticatedMailrelayClient();
+        if (storedConfig.defaultGroupIds.length === 0) {
+          return badRequest("Select a default group in Audiencia and save before syncing");
+        }
       }
       const jobId = randomUUID();
       const job = await createMailrelaySyncJob(auth.tenantId, jobId, auth.userId);
