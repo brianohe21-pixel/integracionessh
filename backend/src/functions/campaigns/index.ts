@@ -48,6 +48,10 @@ import {
 import { dispatchCampaignBatch, startCampaignDispatch, enqueueRecipients } from "../../lib/campaign/dispatch.js";
 import { assertSmsBotReady } from "../../lib/sms/send-outbound.js";
 import {
+  analyzeSmsMessages,
+  resolveSmsFreeTextMessages,
+} from "../../lib/sms/segments.js";
+import {
   canArchiveCampaign,
   canCloneCampaign,
   canEditCampaign,
@@ -122,6 +126,7 @@ const CampaignPayloadSchema = z.object({
   requestDlr: z.boolean().optional().default(false),
   advisorId: z.string().uuid().nullable().optional(),
   autoAssignAdvisor: z.boolean().optional().default(false),
+  failOnMultiSegment: z.boolean().optional().default(false),
 });
 
 function refineCampaignMessageMode(
@@ -469,6 +474,7 @@ export async function handler(
         batchConfig,
         advisorId,
         autoAssignAdvisor,
+        failOnMultiSegment,
       } = parsed.data;
       const isFreeText =
         channel === "sms" &&
@@ -525,6 +531,16 @@ export async function handler(
       const status = scheduledAt ? "scheduled" : "draft";
       const sharedText = text?.trim();
 
+      const segmentAnalysis = isFreeText
+        ? analyzeSmsMessages(resolveSmsFreeTextMessages(sharedText, uniqueRecipients))
+        : null;
+
+      if (failOnMultiSegment && segmentAnalysis && segmentAnalysis.overOneSegment > 0) {
+        return unprocessableEntity("One or more SMS messages exceed a single segment", {
+          segmentAnalysis,
+        });
+      }
+
       const campaign = await createCampaign({
         campaignId: newCampaignId,
         tenantId: auth.tenantId,
@@ -559,7 +575,9 @@ export async function handler(
       }
 
       await auditCampaign(auth, "create", newCampaignId, `Created campaign ${name}`);
-      return created(campaign);
+      return created(
+        segmentAnalysis ? { ...campaign, segmentAnalysis } : campaign
+      );
     }
 
     if (method === "PUT" && campaignId) {

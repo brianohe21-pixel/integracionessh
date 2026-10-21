@@ -21,6 +21,10 @@ import { evaluateLaw2300ForTenant } from "../../lib/compliance/law2300-tenant.js
 import { normalizePhoneWithCountryCode } from "../../lib/phone/normalize.js";
 import { ok, created, badRequest, notFound, unprocessableEntity, handleError } from "../../lib/http.js";
 import type { BulkSendSQSBody } from "../../types/index.js";
+import {
+  analyzeSmsMessages,
+  resolveSmsFreeTextMessages,
+} from "../../lib/sms/segments.js";
 
 const sqs = new SQSClient({});
 const BULK_QUEUE_URL = process.env.BULK_SQS_QUEUE_URL ?? "";
@@ -59,6 +63,7 @@ const CreateBulkSendSchema = z
     recipients: z.array(RecipientSchema).min(1).max(MAX_RECIPIENTS),
     requireOptIn: z.boolean().optional().default(true),
     requestDlr: z.boolean().optional(),
+    failOnMultiSegment: z.boolean().optional().default(false),
   })
   .superRefine((data, ctx) => {
     const hasTemplate = Boolean(data.templateName?.trim() && data.language?.trim());
@@ -223,8 +228,17 @@ export async function handler(
       const parsed = CreateBulkSendSchema.safeParse(body);
       if (!parsed.success) return badRequest(parsed.error.message);
 
-      const { botId, channel, templateName, language, text, recipients, requireOptIn, requestDlr } =
-        parsed.data;
+      const {
+        botId,
+        channel,
+        templateName,
+        language,
+        text,
+        recipients,
+        requireOptIn,
+        requestDlr,
+        failOnMultiSegment,
+      } = parsed.data;
       const isFreeText =
         channel === "sms" &&
         (Boolean(text?.trim()) || recipients.some((r) => Boolean(r.text?.trim())));
@@ -233,6 +247,15 @@ export async function handler(
       if (!bot) return notFound("Bot not found");
       if (channel === "sms" && !bot.smsEnabled) {
         return badRequest("SMS is not enabled for this bot");
+      }
+
+      const segmentAnalysis = isFreeText
+        ? analyzeSmsMessages(resolveSmsFreeTextMessages(text, recipients))
+        : null;
+      if (failOnMultiSegment && segmentAnalysis && segmentAnalysis.overOneSegment > 0) {
+        return unprocessableEntity("One or more SMS messages exceed a single segment", {
+          segmentAnalysis,
+        });
       }
 
       const tenant = await ensureTenant(auth.tenantId, auth.email, auth.name);
@@ -302,7 +325,7 @@ export async function handler(
       await incrementBulkRecipients(auth.tenantId, filteredRecipients.length);
 
       const job = await getBulkJob(auth.tenantId, newJobId);
-      return created(job);
+      return created(segmentAnalysis ? { ...job, segmentAnalysis } : job);
     }
 
     return badRequest("Route not found");

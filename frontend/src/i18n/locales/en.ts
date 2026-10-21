@@ -2512,7 +2512,14 @@ export const en: Messages = {
     freeTextCsvRequired:
       "For free text, the CSV must include a message per row, or write a shared message above. Audience tags require a shared message.",
     freeTextFromCsv: "Personalized message per row (from CSV)",
-    segmentCounter: "{{chars}} characters · {{segments}} segment(s) · max {{max}}",
+    segmentCounter:
+      "{{chars}} characters · {{segments}} segment(s) · {{encoding}} (1 seg. ≤ {{maxSingle}}) · send cap {{max}}",
+    segmentWarningTitle: "Messages exceeding 1 segment",
+    segmentWarningBody:
+      "{{over}} of {{total}} messages use more than 1 segment. Estimated cost: {{billable}} billable segments (multipart counts each part).",
+    segmentWarningHint:
+      "GSM-7 allows up to 160 characters (153 when concatenated). Non-GSM characters (e.g. á, emoji) switch to UCS-2 (70/67). Long CSV variables can push a message to 2+ segments.",
+    segmentWarningDownload: "Download over-limit messages CSV",
     customMessageLabel: "Custom text",
     template: "Template",
     selectTemplate: "Select an approved template",
