@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -13,17 +13,22 @@ import {
   Calendar,
   Tag,
   Download,
+  FileText,
+  Mail,
 } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { useCampaign } from "@/hooks/useCampaigns";
 import { useBot } from "@/hooks/useBots";
 import { useAdvisors } from "@/hooks/useAdvisors";
 import { useCampaignExport } from "@/hooks/useCampaignExport";
+import { useCampaignMetrics } from "@/hooks/useCampaignMetrics";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { CampaignStatusBadge } from "@/components/campaigns/CampaignStatusBadge";
 import { CampaignProgressBar } from "@/components/campaigns/CampaignProgressBar";
 import { CampaignFunnelChart } from "@/components/campaigns/CampaignFunnelChart";
 import { CampaignRealtimeMetricsPanel } from "@/components/campaigns/CampaignRealtimeMetricsPanel";
 import { CampaignManagementActions } from "@/components/campaigns/CampaignManagementActions";
+import { CampaignEmailResultsModal } from "@/components/campaigns/CampaignEmailResultsModal";
 import { formatBatchDelay } from "@/components/campaigns/CampaignBatchSettings";
 import { BulkJobFailures } from "@/components/bulk-send/BulkJobFailures";
 import { TemplateMessagePreview } from "@/components/templates/TemplateMessagePreview";
@@ -74,7 +79,24 @@ export default function CampaignDetailPage({
   const { data: campaignAgent } = useBot(campaign?.botId ?? "");
   const { data: advisors = [] } = useAdvisors();
   const assignedAdvisor = advisors.find((advisor) => advisor.advisorId === campaign?.advisorId);
-  const { exportSendRecords, isExporting, exportError, canExport } = useCampaignExport(campaign);
+  const {
+    exportSendRecords,
+    emailSendRecords,
+    exportResultsPdf,
+    isExporting,
+    isEmailing,
+    isExportingPdf,
+    exportError,
+    emailError,
+    pdfError,
+    emailSuccess,
+    setEmailError,
+    setEmailSuccess,
+    canExport,
+  } = useCampaignExport(campaign);
+  const { data: campaignMetrics } = useCampaignMetrics(campaignId, campaign?.status);
+  const { user } = useCurrentUser();
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
   const campaignChannel = campaign?.channel ?? "whatsapp";
   const showSmsDeliveryMetrics = campaignChannel === "sms" && Boolean(campaign?.requestDlr);
   const { data: templates = [] } = useTemplates(campaign?.botId, campaignChannel);
@@ -338,23 +360,88 @@ export default function CampaignDetailPage({
       )}
 
       <div className="bg-surface-elevated rounded-xl border border-default p-5">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="font-semibold text-primary">{t("campaigns.sendRecordsTitle")}</h2>
-          <button
-            type="button"
-            onClick={() => void exportSendRecords()}
-            disabled={!canExport || isExporting}
-            title={!canExport ? t("campaigns.exportSendRecordsDisabledDraft") : undefined}
-            className="inline-flex items-center gap-2 rounded-lg border border-default bg-surface-elevated px-3 py-2 text-sm font-medium text-primary disabled:opacity-50"
-          >
-            <Download className="h-4 w-4" />
-            {isExporting ? t("campaigns.exportingSendRecords") : t("campaigns.exportSendRecords")}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void exportSendRecords()}
+              disabled={!canExport || isExporting}
+              title={!canExport ? t("campaigns.exportSendRecordsDisabledDraft") : undefined}
+              className="inline-flex items-center gap-2 rounded-lg border border-default bg-surface-elevated px-3 py-2 text-sm font-medium text-primary disabled:opacity-50"
+            >
+              <Download className="h-4 w-4" />
+              {isExporting ? t("campaigns.exportingSendRecords") : t("campaigns.exportSendRecords")}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setEmailError("");
+                setEmailSuccess("");
+                setEmailModalOpen(true);
+              }}
+              disabled={!canExport || isEmailing}
+              title={!canExport ? t("campaigns.exportSendRecordsDisabledDraft") : undefined}
+              className="inline-flex items-center gap-2 rounded-lg border border-default bg-surface-elevated px-3 py-2 text-sm font-medium text-primary disabled:opacity-50"
+            >
+              <Mail className="h-4 w-4" />
+              {isEmailing ? t("campaigns.emailingResults") : t("campaigns.emailResults")}
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                void exportResultsPdf(campaignMetrics, {
+                  title: t("campaigns.resultsPdf.title"),
+                  metric: t("campaigns.resultsPdf.metric"),
+                  value: t("campaigns.resultsPdf.value"),
+                  channel: t("outreach.channel"),
+                  status: t("common.status"),
+                  template: t("campaigns.templateLabel"),
+                  language: t("campaigns.languageLabel"),
+                  createdAt: t("campaigns.createdAt"),
+                  startedAt: t("campaigns.startedAt"),
+                  completedAt: t("campaigns.completedAt"),
+                  total: t("campaigns.analytics.total"),
+                  sent: t("campaigns.analytics.sent"),
+                  delivered: t("campaigns.analytics.delivered"),
+                  read: t("campaigns.analytics.read"),
+                  failed: t("campaigns.analytics.failed"),
+                  replies: t("campaigns.resultsPdf.replies"),
+                  replyRate: t("campaigns.resultsPdf.replyRate"),
+                  funnelSent: t("campaigns.resultsPdf.funnelSent"),
+                  funnelReplied: t("campaigns.resultsPdf.funnelReplied"),
+                  funnelHandoff: t("campaigns.resultsPdf.funnelHandoff"),
+                  funnelAdvisorResponded: t("campaigns.resultsPdf.funnelAdvisorResponded"),
+                  funnelConverted: t("campaigns.resultsPdf.funnelConverted"),
+                })
+              }
+              disabled={!canExport || isExportingPdf}
+              title={!canExport ? t("campaigns.exportSendRecordsDisabledDraft") : undefined}
+              className="inline-flex items-center gap-2 rounded-lg border border-default bg-surface-elevated px-3 py-2 text-sm font-medium text-primary disabled:opacity-50"
+            >
+              <FileText className="h-4 w-4" />
+              {isExportingPdf ? t("campaigns.exportingResultsPdf") : t("campaigns.exportResultsPdf")}
+            </button>
+          </div>
         </div>
-        {exportError && (
-          <p className="mt-3 text-sm text-red-600">{exportError}</p>
+        {exportError && <p className="mt-3 text-sm text-red-600">{exportError}</p>}
+        {emailError && <p className="mt-3 text-sm text-red-600">{emailError}</p>}
+        {pdfError && <p className="mt-3 text-sm text-red-600">{pdfError}</p>}
+        {emailSuccess && (
+          <p className="mt-3 text-sm text-green-700">
+            {t("campaigns.emailResultsSuccess", { recipients: emailSuccess })}
+          </p>
         )}
       </div>
+
+      <CampaignEmailResultsModal
+        open={emailModalOpen}
+        defaultEmail={user?.email}
+        isSending={isEmailing}
+        error={emailError}
+        onClose={() => setEmailModalOpen(false)}
+        onSubmit={emailSendRecords}
+      />
 
       {(campaign.status === "completed" ||
         campaign.status === "failed" ||

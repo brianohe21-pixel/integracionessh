@@ -23,6 +23,7 @@ import {
 import { listBulkSendFailures } from "../../lib/dynamodb/bulk-job.repository.js";
 import { getCampaignMetrics } from "../../lib/dynamodb/campaign-metrics.repository.js";
 import { buildCampaignExportCsv } from "../../lib/reports/campaign-export-csv.js";
+import { sendCampaignResultsEmail } from "../../lib/reports/send-campaign-results-email.js";
 import { resolveRequestAuth } from "../../lib/auth/cognito.js";
 import { assertPermission, type Permission } from "../../lib/auth/permissions.js";
 import { writeAuditEvent } from "../../lib/audit/write-audit-event.js";
@@ -389,8 +390,10 @@ export async function handler(
     const pathSegments = rawPath.split("/").filter(Boolean);
     const action = pathSegments[pathSegments.length - 1];
     const sendAction = action === "start" || action === "pause" || action === "resume" || action === "retry";
+    const isExportEmail =
+      method === "POST" && Boolean(campaignId) && rawPath.endsWith("/export/email");
     const campaignPermission: Permission =
-      method === "GET"
+      method === "GET" || isExportEmail
         ? "campaigns.read"
         : method === "POST" && campaignId && sendAction
           ? "campaigns.send"
@@ -661,6 +664,52 @@ export async function handler(
       const updated = await getCampaign(auth.tenantId, campaignId);
       await auditCampaign(auth, "update", campaignId, `Updated campaign ${campaign.name}`);
       return ok(updated);
+    }
+
+    if (isExportEmail && campaignId) {
+      const body = JSON.parse(event.body ?? "{}");
+      const parsed = z
+        .object({
+          to: z.array(z.string().email().max(320)).max(20).optional(),
+        })
+        .safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const requested = (parsed.data.to ?? [])
+        .map((email) => email.trim().toLowerCase())
+        .filter(Boolean);
+      const fallback = auth.email?.trim().toLowerCase();
+      const uniqueRecipients = [
+        ...new Set(requested.length > 0 ? requested : fallback ? [fallback] : []),
+      ];
+      if (uniqueRecipients.length === 0) {
+        return badRequest("At least one recipient email is required");
+      }
+
+      try {
+        const result = await sendCampaignResultsEmail({
+          tenantId: auth.tenantId,
+          campaignId,
+          to: uniqueRecipients,
+        });
+        await auditCampaign(
+          auth,
+          "export_email",
+          campaignId,
+          `Emailed campaign results CSV to ${result.recipients.join(", ")}`
+        );
+        return ok(result);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "EMAIL_FAILED";
+        if (message === "CAMPAIGN_NOT_FOUND") return notFound("Campaign not found");
+        if (message === "CAMPAIGN_NOT_EXPORTABLE") {
+          return badRequest("Campaign must be started before exporting results");
+        }
+        if (message === "NO_RECIPIENTS") {
+          return badRequest("At least one recipient email is required");
+        }
+        throw error;
+      }
     }
 
     if (method === "POST" && campaignId && action === "start") {

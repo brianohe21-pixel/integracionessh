@@ -966,6 +966,13 @@ locals {
       function_arn = var.campaigns_function_arn
       protected    = true
     }
+    campaigns_export_email = {
+      route_key    = "POST /campaigns/{campaignId}/export/email"
+      slug         = "campaigns"
+      invoke_arn   = var.campaigns_invoke_arn
+      function_arn = var.campaigns_function_arn
+      protected    = true
+    }
     campaigns_archive = {
       route_key    = "POST /campaigns/{campaignId}/archive"
       slug         = "campaigns"
