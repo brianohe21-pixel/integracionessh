@@ -130,6 +130,7 @@ function refineCampaignMessageMode(
     language?: string | undefined;
     text?: string | undefined;
     recipients?: Array<{ text?: string | undefined }> | undefined;
+    audienceTags?: string[] | undefined;
   },
   ctx: z.RefinementCtx
 ): void {
@@ -138,6 +139,7 @@ function refineCampaignMessageMode(
   const recipientTexts = (data.recipients ?? []).map((r) => r.text?.trim() ?? "");
   const anyRecipientText = recipientTexts.some((t) => t.length > 0);
   const hasFreeText = rootText.length > 0 || anyRecipientText;
+  const hasAudienceTags = (data.audienceTags?.length ?? 0) > 0;
 
   if (data.channel === "whatsapp") {
     if (!hasTemplate) {
@@ -172,6 +174,26 @@ function refineCampaignMessageMode(
       message: "SMS campaigns require a template or free text",
       path: ["text"],
     });
+    return;
+  }
+
+  if (!hasTemplate && hasAudienceTags && !rootText) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Shared text is required when using audienceTags for free-text SMS",
+      path: ["text"],
+    });
+  }
+
+  if (!hasTemplate && anyRecipientText && !rootText) {
+    const allRecipientText = recipientTexts.every((t) => t.length > 0);
+    if (!allRecipientText) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Each recipient must include text, or provide a shared text field",
+        path: ["recipients"],
+      });
+    }
   }
 }
 

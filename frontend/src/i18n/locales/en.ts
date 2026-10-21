@@ -2502,10 +2502,16 @@ export const en: Messages = {
     modeTemplate: "Template",
     modeFreeText: "Free text",
     freeTextLabel: "SMS message",
+    freeTextLabelOptional: "SMS message (optional)",
     freeTextPlaceholder: "Write the SMS message recipients will get…",
     freeTextHint: "Only available for SMS. WhatsApp still requires an approved template.",
+    freeTextOrCsvHint:
+      "Optional if the CSV includes a message/text/mensaje column. Audience tags still require a shared message here.",
     freeTextCsvHint:
-      "Required column: phone. Optional: message/text/mensaje for a different text per row. If there is no message column, the text field above is used.",
+      "Columns: phone and message (or text/mensaje). The message can live only in the CSV, one row per recipient.",
+    freeTextCsvRequired:
+      "For free text, the CSV must include a message per row, or write a shared message above. Audience tags require a shared message.",
+    freeTextFromCsv: "Personalized message per row (from CSV)",
     segmentCounter: "{{chars}} characters · {{segments}} segment(s) · max {{max}}",
     customMessageLabel: "Custom text",
     template: "Template",

@@ -2509,10 +2509,16 @@ export const es = {
     modeTemplate: "Plantilla",
     modeFreeText: "Texto libre",
     freeTextLabel: "Mensaje SMS",
+    freeTextLabelOptional: "Mensaje SMS (opcional)",
     freeTextPlaceholder: "Escribe el mensaje SMS que recibirán los destinatarios…",
     freeTextHint: "Solo disponible para SMS. WhatsApp sigue requiriendo plantilla aprobada.",
+    freeTextOrCsvHint:
+      "Opcional si el CSV incluye la columna message/text/mensaje. Con tags de audiencia sí debes escribir el mensaje aquí.",
     freeTextCsvHint:
-      "Columna obligatoria: phone. Opcional: message/text/mensaje para un texto distinto por fila. Si no hay columna de mensaje, se usa el texto del campo de arriba.",
+      "Columnas: phone y message (o text/mensaje). El mensaje puede ir solo en el CSV, una fila por destinatario.",
+    freeTextCsvRequired:
+      "En texto libre, el CSV debe incluir message por fila, o escribe un mensaje común arriba. Si usas tags, el mensaje común es obligatorio.",
+    freeTextFromCsv: "Mensaje personalizado por fila (desde CSV)",
     segmentCounter: "{{chars}} caracteres · {{segments}} segmento(s) · máx. {{max}}",
     customMessageLabel: "Texto custom",
     template: "Template",
