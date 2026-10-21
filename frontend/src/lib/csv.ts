@@ -97,7 +97,35 @@ export function decodeCsvBytes(bytes: Uint8Array): string {
 }
 
 function parseLine(line: string): string[] {
-  return line.split(",").map((cell) => cell.trim().replace(/^"|"$/g, ""));
+  const cells: string[] = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    const next = line[i + 1];
+
+    if (char === '"') {
+      if (inQuotes && next === '"') {
+        current += '"';
+        i++;
+        continue;
+      }
+      inQuotes = !inQuotes;
+      continue;
+    }
+
+    if (char === "," && !inQuotes) {
+      cells.push(current.trim());
+      current = "";
+      continue;
+    }
+
+    current += char;
+  }
+
+  cells.push(current.trim());
+  return cells;
 }
 
 export function escapeCsvCell(value: string): string {
