@@ -138,6 +138,8 @@ describe("buildCampaignExportCsv", () => {
     expect(result!.filename).toMatch(/^campaign-sms-promo-verano-/);
     const lines = result!.content.replace("\uFEFF", "").split("\r\n");
     expect(lines[0]).toContain("sms_receipt_id");
+    expect(lines[0]).toContain("sms_message_id");
+    expect(lines[0]).not.toContain("telcored");
     expect(lines[0]).toContain("final_delivery_code");
     expect(lines[1]).toContain("receipt-1");
     expect(lines[1]).toContain("tel-1");
