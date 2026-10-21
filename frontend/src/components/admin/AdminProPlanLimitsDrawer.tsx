@@ -49,11 +49,7 @@ function buildOverrideFromValues(
     const catalogValue = catalog[key];
     let parsed: number;
     if (!raw) {
-      if (isUnlimitedPlanLimit(catalogValue)) {
-        parsed = Number.MAX_SAFE_INTEGER;
-      } else {
-        return { override: null, error: true };
-      }
+      parsed = Number.MAX_SAFE_INTEGER;
     } else {
       parsed = Number(raw);
       if (!Number.isInteger(parsed) || parsed < 0) {
@@ -161,7 +157,7 @@ export function AdminProPlanLimitsDrawer({
                   min={0}
                   step={1}
                   value={values[key]}
-                  placeholder={unlimitedCatalog ? t("admin.users.limitsUnlimitedPlaceholder") : undefined}
+                  placeholder={t("admin.users.limitsUnlimitedPlaceholder")}
                   onChange={(event) =>
                     setValues((prev) => ({ ...prev, [key]: event.target.value }))
                   }
@@ -172,7 +168,8 @@ export function AdminProPlanLimitsDrawer({
                     value: unlimitedCatalog
                       ? t("admin.users.limitsUnlimitedPlaceholder")
                       : String(catalogValue),
-                  })}
+                  })}{" "}
+                  · {t("admin.users.limitsUnlimitedHint")}
                 </span>
               </label>
             );

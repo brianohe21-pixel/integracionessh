@@ -4099,11 +4099,12 @@ export const es = {
       resellerLimitsHint:
         "Los campos vienen con los valores por defecto del plan Reseller. Sube cupos como destinatarios por envío para que pueda repartirlos a sus subcuentas.",
       limitsUnlimitedPlaceholder: "Ilimitado",
+      limitsUnlimitedHint: "Vacío = ilimitado",
       proLimitsCatalog: "Catálogo: {value}",
       proLimitsReset: "Restaurar catálogo",
       proLimitsSaved: "Cuotas actualizadas",
       proLimitsSaveError: "No se pudieron guardar las cuotas",
-      proLimitsInvalid: "Los cupos deben ser enteros mayores o iguales a 0. Vacío = ilimitado solo si el catálogo lo permite.",
+      proLimitsInvalid: "Los cupos deben ser enteros mayores o iguales a 0. Deja el campo vacío para ilimitado.",
       periodEnd: "Vigencia",
       tenantStatus: "Estado cuenta",
       subscription: "Suscripción",

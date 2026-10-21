@@ -4091,12 +4091,13 @@ export const en: Messages = {
       resellerLimitsHint:
         "Fields start with the Reseller plan defaults. Raise quotas such as recipients per job so they can allocate them to subaccounts.",
       limitsUnlimitedPlaceholder: "Unlimited",
+      limitsUnlimitedHint: "Empty = unlimited",
       proLimitsCatalog: "Catalog: {value}",
       proLimitsReset: "Restore catalog",
       proLimitsSaved: "Quotas updated",
       proLimitsSaveError: "Could not save quotas",
       proLimitsInvalid:
-        "Quotas must be integers greater than or equal to 0. Leave empty for unlimited only when the catalog allows it.",
+        "Quotas must be integers greater than or equal to 0. Leave the field empty for unlimited.",
       periodEnd: "Valid until",
       tenantStatus: "Account status",
       subscription: "Subscription",
