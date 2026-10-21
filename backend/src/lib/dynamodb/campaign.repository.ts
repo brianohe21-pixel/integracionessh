@@ -680,6 +680,35 @@ export async function incrementCampaignAnalytics(
   );
 }
 
+type RecipientWriteRequest = {
+  PutRequest: {
+    Item: Record<string, unknown>;
+  };
+};
+
+async function flushBatchWrite(requests: RecipientWriteRequest[], attempt = 0): Promise<void> {
+  if (!requests.length) return;
+
+  const result = await docClient.send(
+    new BatchWriteCommand({
+      RequestItems: {
+        [TABLE_NAME]: requests,
+      },
+    })
+  );
+
+  const unprocessed = (result.UnprocessedItems?.[TABLE_NAME] ?? []) as RecipientWriteRequest[];
+  if (unprocessed.length === 0) return;
+  if (attempt >= 5) {
+    throw Object.assign(new Error("Failed to persist campaign recipients after retries"), {
+      statusCode: 503,
+    });
+  }
+
+  await new Promise((resolve) => setTimeout(resolve, 50 * 2 ** attempt));
+  await flushBatchWrite(unprocessed, attempt + 1);
+}
+
 export async function saveRecipients(
   tenantId: string,
   campaignId: string,
@@ -687,29 +716,32 @@ export async function saveRecipients(
 ): Promise<void> {
   const ttl = Math.floor(Date.now() / 1000) + RECIPIENT_TTL_SECONDS;
   const BATCH_SIZE = 25;
+  const CONCURRENCY = 20;
+  const batches: RecipientWriteRequest[][] = [];
 
   for (let start = 0; start < recipients.length; start += BATCH_SIZE) {
-    const batch = recipients.slice(start, start + BATCH_SIZE);
-    await docClient.send(
-      new BatchWriteCommand({
-        RequestItems: {
-          [TABLE_NAME]: batch.map((r, i) => ({
-            PutRequest: {
-              Item: {
-                ...recipientKeys(tenantId, campaignId, start + i),
-                tenantId,
-                campaignId,
-                to: r.to,
-                ...(r.text ? { text: r.text } : {}),
-                ...(r.components ? { components: r.components } : {}),
-                status: "pending",
-                ttl,
-              },
-            },
-          })),
+    const slice = recipients.slice(start, start + BATCH_SIZE);
+    batches.push(
+      slice.map((r, i) => ({
+        PutRequest: {
+          Item: {
+            ...recipientKeys(tenantId, campaignId, start + i),
+            tenantId,
+            campaignId,
+            to: r.to,
+            ...(r.text ? { text: r.text } : {}),
+            ...(r.components ? { components: r.components } : {}),
+            status: "pending",
+            ttl,
+          },
         },
-      })
+      }))
     );
+  }
+
+  for (let i = 0; i < batches.length; i += CONCURRENCY) {
+    const wave = batches.slice(i, i + CONCURRENCY);
+    await Promise.all(wave.map((batch) => flushBatchWrite(batch)));
   }
 }
 
