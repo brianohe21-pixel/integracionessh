@@ -13,7 +13,7 @@ interface FunnelStep {
   labelKey: string;
   value: number;
   color: string;
-  bg: string;
+  bar: string;
 }
 
 export function CampaignFunnelChart({
@@ -29,13 +29,13 @@ export function CampaignFunnelChart({
       labelKey: "campaigns.analytics.total",
       value: total,
       color: "text-secondary",
-      bg: "bg-surface-muted",
+      bar: "bg-gray-400",
     },
     {
       labelKey: "campaigns.analytics.sent",
       value: sent,
       color: "text-blue-700",
-      bg: "bg-blue-100",
+      bar: "bg-blue-400",
     },
   ];
 
@@ -44,7 +44,7 @@ export function CampaignFunnelChart({
       labelKey: "campaigns.analytics.delivered",
       value: deliveredCount,
       color: "text-green-700",
-      bg: "bg-green-100",
+      bar: "bg-green-400",
     });
   }
 
@@ -53,7 +53,7 @@ export function CampaignFunnelChart({
       labelKey: "campaigns.analytics.read",
       value: readCount,
       color: "text-accent",
-      bg: "bg-accent-muted",
+      bar: "bg-accent",
     });
   }
 
@@ -74,7 +74,7 @@ export function CampaignFunnelChart({
             </div>
             <div className="h-3 rounded-full bg-surface-muted overflow-hidden">
               <div
-                className={`h-full ${step.bg.replace("100", "400")} rounded-full transition-all duration-500`}
+                className={`h-full ${step.bar} rounded-full transition-all duration-500`}
                 style={{ width: `${pct}%` }}
               />
             </div>
