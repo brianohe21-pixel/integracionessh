@@ -104,6 +104,7 @@ export async function sendSmsTextWithDlr(params: {
   to: string;
   text: string;
   environment?: string;
+  source?: SmsDlrSource;
 }): Promise<{ messageId: string; text: string; receiptId: string }> {
   const result = await deliverSms({
     tenantId: params.tenantId,
@@ -113,7 +114,7 @@ export async function sendSmsTextWithDlr(params: {
     text: params.text,
     ...(params.environment ? { environment: params.environment } : {}),
     requestDlr: true,
-    source: "api",
+    source: params.source ?? "api",
   });
 
   if (!result.receiptId) {
@@ -134,6 +135,7 @@ export async function sendSmsText(params: {
   to: string;
   text: string;
   environment?: string;
+  source?: SmsDlrSource;
 }): Promise<{ messageId: string; text: string }> {
   const result = await deliverSms({
     tenantId: params.tenantId,
@@ -143,7 +145,7 @@ export async function sendSmsText(params: {
     text: params.text,
     ...(params.environment ? { environment: params.environment } : {}),
     requestDlr: false,
-    source: "api",
+    source: params.source ?? "api",
   });
 
   return {

@@ -76,7 +76,7 @@ const SMS_HISTORY_STATUSES: SmsHistoryStatus[] = [
   "send_failed",
 ];
 
-const SMS_DLR_SOURCES: SmsOverviewSourcePoint["source"][] = ["api", "campaign", "template"];
+const SMS_DLR_SOURCES: SmsOverviewSourcePoint["source"][] = ["api", "campaign", "template", "bulk"];
 
 function buildDailyTrend(receipts: SmsDlrReceipt[]): SmsOverviewDailyPoint[] {
   const buckets = new Map<string, { total: number; delivered: number; failed: number }>();

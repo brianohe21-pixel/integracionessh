@@ -6,6 +6,7 @@ import type { Campaign } from "@/types";
 
 export interface CampaignRecipient {
   to: string;
+  text?: string;
   components?: Array<{
     type: string;
     parameters?: Array<{ type: string; text?: string }>;
@@ -16,8 +17,9 @@ export interface CreateCampaignInput {
   name: string;
   botId: string;
   channel?: "whatsapp" | "sms";
-  templateName: string;
-  language: string;
+  templateName?: string;
+  language?: string;
+  text?: string;
   segments?: string[];
   scheduledAt?: string | null;
   batchConfig?: { size: number; delaySeconds: number };

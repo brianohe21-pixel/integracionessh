@@ -77,8 +77,11 @@ async function assertCampaignChannelReady(
   await assertBotReadyForCampaign(tenantId, bot.phoneNumberId);
 }
 
+const SMS_FREE_TEXT_MAX = 1600;
+
 const RecipientSchema = z.object({
   to: z.string().min(10),
+  text: z.string().min(1).max(SMS_FREE_TEXT_MAX).optional(),
   components: z
     .array(
       z.object({
@@ -106,8 +109,9 @@ const CampaignPayloadSchema = z.object({
   name: z.string().min(1).max(120),
   botId: z.string().min(1),
   channel: z.enum(["whatsapp", "sms"]).optional().default("whatsapp"),
-  templateName: z.string().min(1),
-  language: z.string().min(2).max(10),
+  templateName: z.string().min(1).optional(),
+  language: z.string().min(2).max(10).optional(),
+  text: z.string().min(1).max(SMS_FREE_TEXT_MAX).optional(),
   segments: z.array(z.string().max(50)).max(20).default([]),
   scheduledAt: z.string().datetime().optional(),
   batchConfig: BatchConfigSchema.optional(),
@@ -118,6 +122,58 @@ const CampaignPayloadSchema = z.object({
   advisorId: z.string().uuid().nullable().optional(),
   autoAssignAdvisor: z.boolean().optional().default(false),
 });
+
+function refineCampaignMessageMode(
+  data: {
+    channel?: "whatsapp" | "sms" | undefined;
+    templateName?: string | undefined;
+    language?: string | undefined;
+    text?: string | undefined;
+    recipients?: Array<{ text?: string | undefined }> | undefined;
+  },
+  ctx: z.RefinementCtx
+): void {
+  const hasTemplate = Boolean(data.templateName?.trim() && data.language?.trim());
+  const rootText = data.text?.trim() ?? "";
+  const recipientTexts = (data.recipients ?? []).map((r) => r.text?.trim() ?? "");
+  const anyRecipientText = recipientTexts.some((t) => t.length > 0);
+  const hasFreeText = rootText.length > 0 || anyRecipientText;
+
+  if (data.channel === "whatsapp") {
+    if (!hasTemplate) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "WhatsApp campaigns require templateName and language",
+        path: ["templateName"],
+      });
+    }
+    if (hasFreeText) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Free-text campaigns are only allowed for SMS",
+        path: ["text"],
+      });
+    }
+    return;
+  }
+
+  if (hasTemplate && hasFreeText) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Provide either a template or free text for SMS, not both",
+      path: ["text"],
+    });
+    return;
+  }
+
+  if (!hasTemplate && !hasFreeText) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "SMS campaigns require a template or free text",
+      path: ["text"],
+    });
+  }
+}
 
 async function resolveActiveAdvisorId(
   tenantId: string,
@@ -137,6 +193,7 @@ async function resolveActiveAdvisorId(
 }
 
 const CreateCampaignSchema = CampaignPayloadSchema.superRefine((data, ctx) => {
+  refineCampaignMessageMode(data, ctx);
   const hasRecipients = (data.recipients?.length ?? 0) > 0;
   const hasTags = (data.audienceTags?.length ?? 0) > 0;
   if (!hasRecipients && !hasTags) {
@@ -159,6 +216,7 @@ const CreateCampaignSchema = CampaignPayloadSchema.superRefine((data, ctx) => {
 const UpdateCampaignSchema = CampaignPayloadSchema.extend({
   scheduledAt: z.string().datetime().nullable().optional(),
 }).superRefine((data, ctx) => {
+  refineCampaignMessageMode(data, ctx);
   const hasRecipients = (data.recipients?.length ?? 0) > 0;
   const hasTags = (data.audienceTags?.length ?? 0) > 0;
   if (!hasRecipients && !hasTags) {
@@ -377,6 +435,7 @@ export async function handler(
         channel,
         templateName,
         language,
+        text,
         segments,
         scheduledAt,
         audienceTags,
@@ -386,6 +445,10 @@ export async function handler(
         advisorId,
         autoAssignAdvisor,
       } = parsed.data;
+      const isFreeText =
+        channel === "sms" &&
+        (Boolean(text?.trim()) ||
+          (parsed.data.recipients ?? []).some((r) => Boolean(r.text?.trim())));
 
       const advisorResult = await resolveActiveAdvisorId(auth.tenantId, advisorId);
       if (!advisorResult.ok) return advisorResult.response;
@@ -435,6 +498,7 @@ export async function handler(
       const newCampaignId = makeCampaignId();
       const now = new Date().toISOString();
       const status = scheduledAt ? "scheduled" : "draft";
+      const sharedText = text?.trim();
 
       const campaign = await createCampaign({
         campaignId: newCampaignId,
@@ -442,8 +506,10 @@ export async function handler(
         botId,
         name,
         channel,
-        templateName,
-        language,
+        templateName: isFreeText ? "(custom)" : (templateName ?? ""),
+        language: isFreeText ? "und" : (language ?? ""),
+        messageMode: isFreeText ? "free_text" : "template",
+        ...(isFreeText && sharedText ? { text: sharedText } : {}),
         status,
         segments: mergedSegments,
         requireOptIn,
@@ -487,6 +553,7 @@ export async function handler(
         channel,
         templateName,
         language,
+        text,
         segments,
         scheduledAt,
         audienceTags,
@@ -496,6 +563,11 @@ export async function handler(
         advisorId,
         autoAssignAdvisor,
       } = parsed.data;
+      const isFreeText =
+        channel === "sms" &&
+        (Boolean(text?.trim()) ||
+          (parsed.data.recipients ?? []).some((r) => Boolean(r.text?.trim())));
+      const sharedText = text?.trim();
 
       const advisorResult = await resolveActiveAdvisorId(auth.tenantId, advisorId);
       if (!advisorResult.ok) return advisorResult.response;
@@ -536,8 +608,10 @@ export async function handler(
         name,
         botId,
         channel,
-        templateName,
-        language,
+        templateName: isFreeText ? "(custom)" : (templateName ?? ""),
+        language: isFreeText ? "und" : (language ?? ""),
+        messageMode: isFreeText ? "free_text" : "template",
+        text: isFreeText ? (sharedText ?? null) : null,
         segments: mergedSegments,
         scheduledAt: scheduledAt ?? null,
         batchConfig: batchConfig ?? null,
@@ -754,6 +828,8 @@ export async function handler(
         channel: campaign.channel ?? "whatsapp",
         templateName: campaign.templateName,
         language: campaign.language,
+        ...(campaign.messageMode ? { messageMode: campaign.messageMode } : {}),
+        ...(campaign.text ? { text: campaign.text } : {}),
         status: "draft",
         segments: [...campaign.segments],
         requireOptIn: campaign.requireOptIn ?? false,

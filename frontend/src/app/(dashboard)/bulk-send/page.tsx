@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useRef, useState } from "react";
+import { Fragment, useMemo, useRef, useState } from "react";
 import { useBots } from "@/hooks/useBots";
 import { useTemplates } from "@/hooks/useTemplates";
 import { useBulkSend, useBulkHistory, type BulkRecipient, type BulkSendJob } from "@/hooks/useBulkSend";
@@ -9,7 +9,15 @@ import { BulkSendResultBanner } from "@/components/bulk-send/BulkSendResultBanne
 import { Badge } from "@/components/ui/Badge";
 import { useFormatters } from "@/hooks/useFormatters";
 import { useT, useLocale } from "@/i18n/context";
-import { buildCsv, decodeCsvBytes, downloadCsvFile, parseRecipientsCsv } from "@/lib/csv";
+import {
+  buildCsv,
+  decodeCsvBytes,
+  downloadCsvFile,
+  parseRecipientsCsv,
+  SMS_FREE_TEXT_MAX,
+  type CsvRow,
+} from "@/lib/csv";
+import { getSmsSegmentInfo } from "@/lib/sms-segments";
 import { downloadBulkHistoryCsv, downloadBulkJobFailuresCsv } from "@/lib/bulk-send-csv";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -57,6 +65,7 @@ function buildComponents(
 }
 
 type Tab = "send" | "history";
+type SmsMessageMode = "template" | "free_text";
 
 export default function BulkSendPage() {
   const t = useT();
@@ -65,9 +74,11 @@ export default function BulkSendPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [tab, setTab] = useState<Tab>("send");
   const [channel, setChannel] = useState<OutreachChannel>("whatsapp");
+  const [messageMode, setMessageMode] = useState<SmsMessageMode>("template");
   const [botId, setBotId] = useState("");
   const [templateName, setTemplateName] = useState("");
-  const [csvRows, setCsvRows] = useState<ReturnType<typeof parseRecipientsCsv>>([]);
+  const [freeText, setFreeText] = useState("");
+  const [csvRows, setCsvRows] = useState<CsvRow[]>([]);
   const [fileName, setFileName] = useState("");
   const [parseError, setParseError] = useState("");
   const [progress, setProgress] = useState({ current: 0, total: 0, failed: 0, deliveryFailed: 0 });
@@ -84,6 +95,7 @@ export default function BulkSendPage() {
   const bulkMutation = useBulkSend();
   const { data: history, isLoading: loadingHistory, refetch: refetchHistory } = useBulkHistory();
 
+  const isFreeTextMode = channel === "sms" && messageMode === "free_text";
   const approvedTemplates = templates?.filter((template) =>
     isSmsTemplate(template) ? template.status === "APPROVED" : template.status === "APPROVED"
   ) ?? [];
@@ -95,6 +107,17 @@ export default function BulkSendPage() {
     : [];
   const availableBots =
     channel === "sms" ? bots?.filter((bot) => bot.smsEnabled) ?? [] : bots ?? [];
+
+  const segmentInfo = useMemo(() => getSmsSegmentInfo(freeText), [freeText]);
+  const freeTextReady =
+    freeText.trim().length > 0 ||
+    (csvRows.length > 0 && csvRows.every((row) => Boolean(row.message?.trim())));
+
+  function resetCsv() {
+    setCsvRows([]);
+    setFileName("");
+    setParseError("");
+  }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -120,6 +143,12 @@ export default function BulkSendPage() {
   }
 
   function downloadSample() {
+    if (isFreeTextMode) {
+      const headers = ["phone", "message"];
+      const rows = [["573001234567", t("common.example")]];
+      downloadCsvFile("plantilla_sms_custom.csv", buildCsv(headers, rows));
+      return;
+    }
     const headers = ["phone", ...bodyVars.map((_, i) => `var${i + 1}`)];
     const rows = [["573001234567", ...bodyVars.map(() => t("common.example"))]];
     downloadCsvFile("plantilla_envio_masivo.csv", buildCsv(headers, rows));
@@ -135,37 +164,66 @@ export default function BulkSendPage() {
   }
 
   async function handleBulkSend() {
-    if (!selectedTemplate || !botId || csvRows.length === 0) return;
+    if (!botId || csvRows.length === 0) return;
+    if (!isFreeTextMode && !selectedTemplate) return;
+    if (isFreeTextMode && !freeTextReady) return;
+    if (isFreeTextMode && freeText.length > SMS_FREE_TEXT_MAX) return;
 
     setResult(null);
     setSendError("");
     setProgress({ current: 0, total: csvRows.length, failed: 0, deliveryFailed: 0 });
 
-    const recipients: BulkRecipient[] = csvRows.map((row) => ({
-      to: row.phone,
-      components: buildComponents(bodyVars, row.variables),
-    }));
-
     try {
-      const res = await bulkMutation.mutateAsync({
-        botId,
-        channel,
-        templateName: selectedTemplate.name,
-        language: selectedTemplate.language,
-        recipients,
-        requireOptIn,
-        onProgress: (job) =>
-          setProgress({
-            current: job.sent + job.failed,
-            total: job.total,
-            failed: job.failed,
-            deliveryFailed: job.deliveryFailed ?? 0,
-          }),
-      });
+      let res;
+      if (isFreeTextMode) {
+        const shared = freeText.trim();
+        const recipients: BulkRecipient[] = csvRows.map((row) => {
+          const rowText = row.message?.trim() || shared;
+          return {
+            to: row.phone,
+            text: rowText,
+          };
+        });
+        res = await bulkMutation.mutateAsync({
+          botId,
+          channel,
+          recipients,
+          requireOptIn,
+          requestDlr: true,
+          onProgress: (job) =>
+            setProgress({
+              current: job.sent + job.failed,
+              total: job.total,
+              failed: job.failed,
+              deliveryFailed: job.deliveryFailed ?? 0,
+            }),
+        });
+        setLastCompletedTemplateName(t("bulkSend.customMessageLabel"));
+      } else {
+        const recipients: BulkRecipient[] = csvRows.map((row) => ({
+          to: row.phone,
+          components: buildComponents(bodyVars, row.variables),
+        }));
+        res = await bulkMutation.mutateAsync({
+          botId,
+          channel,
+          templateName: selectedTemplate!.name,
+          language: selectedTemplate!.language,
+          recipients,
+          requireOptIn,
+          onProgress: (job) =>
+            setProgress({
+              current: job.sent + job.failed,
+              total: job.total,
+              failed: job.failed,
+              deliveryFailed: job.deliveryFailed ?? 0,
+            }),
+        });
+        setLastCompletedTemplateName(selectedTemplate!.name);
+      }
 
       setResult({ sent: res.sent, failed: res.failed, deliveryFailed: res.deliveryFailed });
       setLastCompletedJobId(res.jobId);
-      setLastCompletedTemplateName(selectedTemplate.name);
       if (res.failed > 0 || res.deliveryFailed > 0) {
         setExpandedJobId(res.jobId);
       }
@@ -189,8 +247,17 @@ export default function BulkSendPage() {
     setLastCompletedTemplateName("");
   }
 
+  function jobDisplayName(job: BulkSendJob): string {
+    if (job.messageMode === "free_text" || job.templateName === "(custom)") {
+      return t("bulkSend.customMessageLabel");
+    }
+    return job.templateName;
+  }
+
   const isSending = bulkMutation.isPending;
-  const canSend = !!botId && !!templateName && csvRows.length > 0 && !isSending;
+  const canSend = isFreeTextMode
+    ? !!botId && freeTextReady && freeText.length <= SMS_FREE_TEXT_MAX && csvRows.length > 0 && !isSending
+    : !!botId && !!templateName && csvRows.length > 0 && !isSending;
 
   const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: "send", label: t("bulkSend.tabSend"), icon: <SendHorizonal className="w-4 h-4" /> },
@@ -243,8 +310,9 @@ export default function BulkSendPage() {
                     setChannel(value);
                     setBotId("");
                     setTemplateName("");
-                    setCsvRows([]);
-                    setFileName("");
+                    setFreeText("");
+                    setMessageMode("template");
+                    resetCsv();
                   }}
                 />
               </div>
@@ -256,8 +324,7 @@ export default function BulkSendPage() {
                   onChange={(e) => {
                     setBotId(e.target.value);
                     setTemplateName("");
-                    setCsvRows([]);
-                    setFileName("");
+                    resetCsv();
                   }}
                   className="w-full px-3 py-2 border border-default rounded-lg text-sm bg-surface-elevated focus:outline-none focus:ring-2 focus:ring-accent"
                 >
@@ -270,24 +337,87 @@ export default function BulkSendPage() {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-secondary mb-1">{t("bulkSend.template")}</label>
-                <select
-                  value={templateName}
-                  onChange={(e) => setTemplateName(e.target.value)}
-                  disabled={!botId || loadingTemplates}
-                  className="w-full px-3 py-2 border border-default rounded-lg text-sm bg-surface-elevated focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50"
-                >
-                  <option value="">{t("bulkSend.selectTemplate")}</option>
-                  {approvedTemplates.map((tpl) => (
-                    <option key={`${tpl.name}-${tpl.language}`} value={tpl.name}>
-                      {tpl.name} ({tpl.language})
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {channel === "sms" && (
+                <div>
+                  <label className="block text-sm font-medium text-secondary mb-1">
+                    {t("bulkSend.messageMode")}
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMessageMode("template");
+                        setFreeText("");
+                        resetCsv();
+                      }}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                        messageMode === "template"
+                          ? "border-accent bg-accent-muted text-accent"
+                          : "border-default text-secondary hover:border-accent/40"
+                      }`}
+                    >
+                      {t("bulkSend.modeTemplate")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMessageMode("free_text");
+                        setTemplateName("");
+                        resetCsv();
+                      }}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                        messageMode === "free_text"
+                          ? "border-accent bg-accent-muted text-accent"
+                          : "border-default text-secondary hover:border-accent/40"
+                      }`}
+                    >
+                      {t("bulkSend.modeFreeText")}
+                    </button>
+                  </div>
+                  <p className="text-xs text-secondary mt-1.5">{t("bulkSend.freeTextHint")}</p>
+                </div>
+              )}
 
-              {selectedTemplate && bodyVars.length > 0 && (
+              {isFreeTextMode ? (
+                <div>
+                  <label className="block text-sm font-medium text-secondary mb-1">
+                    {t("bulkSend.freeTextLabel")}
+                  </label>
+                  <textarea
+                    value={freeText}
+                    onChange={(e) => setFreeText(e.target.value.slice(0, SMS_FREE_TEXT_MAX))}
+                    rows={5}
+                    placeholder={t("bulkSend.freeTextPlaceholder")}
+                    className="w-full px-3 py-2 border border-default rounded-lg text-sm bg-surface-elevated focus:outline-none focus:ring-2 focus:ring-accent resize-y"
+                  />
+                  <p className="text-xs text-secondary mt-1.5">
+                    {t("bulkSend.segmentCounter", {
+                      chars: segmentInfo.chars,
+                      segments: segmentInfo.segments,
+                      max: SMS_FREE_TEXT_MAX,
+                    })}
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-secondary mb-1">{t("bulkSend.template")}</label>
+                  <select
+                    value={templateName}
+                    onChange={(e) => setTemplateName(e.target.value)}
+                    disabled={!botId || loadingTemplates}
+                    className="w-full px-3 py-2 border border-default rounded-lg text-sm bg-surface-elevated focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50"
+                  >
+                    <option value="">{t("bulkSend.selectTemplate")}</option>
+                    {approvedTemplates.map((tpl) => (
+                      <option key={`${tpl.name}-${tpl.language}`} value={tpl.name}>
+                        {tpl.name} ({tpl.language})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {!isFreeTextMode && selectedTemplate && bodyVars.length > 0 && (
                 <p className="text-xs text-secondary">
                   {t("bulkSend.varsRequired", { vars: bodyVars.join(", ") })}
                 </p>
@@ -306,11 +436,11 @@ export default function BulkSendPage() {
                 </span>
               </label>
 
-              {selectedTemplate && isSmsTemplate(selectedTemplate) && (
+              {!isFreeTextMode && selectedTemplate && isSmsTemplate(selectedTemplate) && (
                 <SmsTemplatePreview template={selectedTemplate} label={t("bulkSend.preview")} />
               )}
 
-              {selectedTemplate && !isSmsTemplate(selectedTemplate) && (
+              {!isFreeTextMode && selectedTemplate && !isSmsTemplate(selectedTemplate) && (
                 <div className="space-y-2">
                   <p className="text-xs font-medium text-secondary uppercase tracking-wider">{t("bulkSend.preview")}</p>
                   <div className="bg-[#e5ddd5] rounded-xl p-4">
@@ -368,7 +498,7 @@ export default function BulkSendPage() {
             <div className="bg-surface-elevated rounded-xl border border-default p-5 space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-primary">{t("bulkSend.csvFile")}</h2>
-                {selectedTemplate && (
+                {(isFreeTextMode || selectedTemplate) && (
                   <button
                     type="button"
                     onClick={downloadSample}
@@ -391,14 +521,16 @@ export default function BulkSendPage() {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                disabled={!botId || !templateName}
+                disabled={!botId || (!isFreeTextMode && !templateName)}
                 className="flex flex-col items-center justify-center w-full py-10 border-2 border-dashed border-default rounded-xl hover:border-accent/30 hover:bg-accent-muted/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Upload className="w-8 h-8 text-muted mb-2" />
                 <span className="text-sm font-medium text-secondary">
                   {fileName || t("bulkSend.selectCsv")}
                 </span>
-                <span className="text-xs text-muted mt-1">{t("bulkSend.csvColumnHint")}</span>
+                <span className="text-xs text-muted mt-1">
+                  {isFreeTextMode ? t("bulkSend.freeTextCsvHint") : t("bulkSend.csvColumnHint")}
+                </span>
               </button>
 
               {parseError && (
@@ -450,25 +582,37 @@ export default function BulkSendPage() {
                       <th className="text-left text-xs font-medium text-secondary uppercase tracking-wider px-5 py-2">
                         {t("bulkSend.colPhone")}
                       </th>
-                      {bodyVars.map((v) => (
-                        <th
-                          key={v}
-                          className="text-left text-xs font-medium text-secondary uppercase tracking-wider px-5 py-2"
-                        >
-                          {v}
+                      {isFreeTextMode ? (
+                        <th className="text-left text-xs font-medium text-secondary uppercase tracking-wider px-5 py-2">
+                          {t("bulkSend.colMessage")}
                         </th>
-                      ))}
+                      ) : (
+                        bodyVars.map((v) => (
+                          <th
+                            key={v}
+                            className="text-left text-xs font-medium text-secondary uppercase tracking-wider px-5 py-2"
+                          >
+                            {v}
+                          </th>
+                        ))
+                      )}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {csvRows.slice(0, 50).map((row, i) => (
                       <tr key={i} className="hover:bg-surface">
                         <td className="px-5 py-2 text-sm text-primary">{row.phone}</td>
-                        {bodyVars.map((_, vi) => (
-                          <td key={vi} className="px-5 py-2 text-sm text-secondary">
-                            {row.variables[vi] || "—"}
+                        {isFreeTextMode ? (
+                          <td className="px-5 py-2 text-sm text-secondary max-w-md truncate">
+                            {row.message?.trim() || freeText.trim() || "—"}
                           </td>
-                        ))}
+                        ) : (
+                          bodyVars.map((_, vi) => (
+                            <td key={vi} className="px-5 py-2 text-sm text-secondary">
+                              {row.variables[vi] || "—"}
+                            </td>
+                          ))
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -586,6 +730,8 @@ export default function BulkSendPage() {
                     : t("bulkSend.statusQueued");
                   const hasFailures = job.failed > 0 || (job.deliveryFailed ?? 0) > 0;
                   const isExpanded = expandedJobId === job.jobId;
+                  const displayName = jobDisplayName(job);
+                  const showLanguage = job.messageMode !== "free_text" && job.templateName !== "(custom)";
                   return (
                     <Fragment key={job.jobId}>
                       <tr
@@ -596,8 +742,10 @@ export default function BulkSendPage() {
                         }}
                       >
                         <td className="px-5 py-3 text-sm font-medium text-primary">
-                          {job.templateName}
-                          <span className="ml-1.5 text-xs text-muted font-normal">({job.language})</span>
+                          {displayName}
+                          {showLanguage && (
+                            <span className="ml-1.5 text-xs text-muted font-normal">({job.language})</span>
+                          )}
                           <span className="ml-1.5 text-xs text-muted font-normal">
                             [{job.channel ?? "whatsapp"}]
                           </span>
@@ -641,7 +789,7 @@ export default function BulkSendPage() {
                       {isExpanded && hasFailures && (
                         <tr key={`${job.jobId}-failures`}>
                           <td colSpan={9} className="p-0">
-                            <BulkJobFailures jobId={job.jobId} templateName={job.templateName} />
+                            <BulkJobFailures jobId={job.jobId} templateName={displayName} />
                           </td>
                         </tr>
                       )}

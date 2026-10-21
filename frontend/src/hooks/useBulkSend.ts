@@ -6,6 +6,7 @@ import type { OutreachChannel } from "@/types";
 
 export interface BulkRecipient {
   to: string;
+  text?: string;
   components?: Array<{
     type: string;
     parameters?: Array<{ type: string; text?: string }>;
@@ -47,6 +48,7 @@ export interface BulkSendJob {
   channel?: OutreachChannel;
   templateName: string;
   language: string;
+  messageMode?: "template" | "free_text";
   status: "queued" | "processing" | "completed" | "failed";
   total: number;
   sent: number;
@@ -59,10 +61,12 @@ export interface BulkSendJob {
 export interface BulkSendInput {
   botId: string;
   channel: OutreachChannel;
-  templateName: string;
-  language: string;
+  templateName?: string;
+  language?: string;
+  text?: string;
   recipients: BulkRecipient[];
   requireOptIn?: boolean;
+  requestDlr?: boolean;
   onProgress?: (job: BulkSendJob) => void;
 }
 
@@ -114,14 +118,18 @@ export function useBulkSend() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: BulkSendInput): Promise<BulkSendResult> => {
-      const job = await api.post<BulkSendJob>("/bulk-send", {
+      const payload: Record<string, unknown> = {
         botId: data.botId,
         channel: data.channel,
-        templateName: data.templateName,
-        language: data.language,
         recipients: data.recipients,
         requireOptIn: data.requireOptIn ?? false,
-      });
+      };
+      if (data.templateName) payload.templateName = data.templateName;
+      if (data.language) payload.language = data.language;
+      if (data.text) payload.text = data.text;
+      if (data.requestDlr !== undefined) payload.requestDlr = data.requestDlr;
+
+      const job = await api.post<BulkSendJob>("/bulk-send", payload);
 
       data.onProgress?.(job);
 

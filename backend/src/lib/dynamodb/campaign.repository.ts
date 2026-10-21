@@ -199,6 +199,8 @@ export async function updateCampaignDraft(
     channel?: Campaign["channel"];
     templateName?: string;
     language?: string;
+    messageMode?: Campaign["messageMode"];
+    text?: string | null;
     segments?: string[];
     scheduledAt?: string | null;
     batchConfig?: Campaign["batchConfig"] | null;
@@ -237,6 +239,16 @@ export async function updateCampaignDraft(
   }
   if (patch.language !== undefined) {
     setField("language", ":language", patch.language);
+  }
+  if (patch.messageMode !== undefined) {
+    setField("messageMode", ":messageMode", patch.messageMode);
+  }
+  if (patch.text !== undefined) {
+    if (patch.text === null || patch.text === "") {
+      removes.push("text");
+    } else {
+      setField("text", ":text", patch.text);
+    }
   }
   if (patch.segments !== undefined) {
     setField("segments", ":segments", patch.segments);
@@ -688,6 +700,7 @@ export async function saveRecipients(
                 tenantId,
                 campaignId,
                 to: r.to,
+                ...(r.text ? { text: r.text } : {}),
                 ...(r.components ? { components: r.components } : {}),
                 status: "pending",
                 ttl,
@@ -702,6 +715,7 @@ export async function saveRecipients(
 
 export interface PendingRecipient {
   to: string;
+  text?: string;
   components?: CampaignRecipient["components"];
   recipientKey: string;
 }
@@ -737,6 +751,9 @@ export async function listPendingRecipients(
         to: item.to as string,
         recipientKey: item.SK as string,
       };
+      if (typeof item.text === "string" && item.text.trim()) {
+        recipient.text = item.text;
+      }
       if (item.components) {
         recipient.components = item.components as CampaignRecipient["components"];
       }
@@ -804,6 +821,7 @@ export async function markRecipientFailed(
 
 export interface CampaignRecipientDetail {
   to: string;
+  text?: string;
   components?: CampaignRecipient["components"];
 }
 
@@ -830,6 +848,7 @@ export async function listCampaignRecipientDetails(
     for (const item of result.Items ?? []) {
       recipients.push({
         to: item.to as string,
+        ...(typeof item.text === "string" && item.text.trim() ? { text: item.text as string } : {}),
         ...(item.components
           ? { components: item.components as CampaignRecipient["components"] }
           : {}),
@@ -943,6 +962,9 @@ export async function listFailedRecipients(
         to: item.to as string,
         recipientKey: item.SK as string,
       };
+      if (typeof item.text === "string" && item.text.trim()) {
+        recipient.text = item.text;
+      }
       if (item.components) {
         recipient.components = item.components as CampaignRecipient["components"];
       }

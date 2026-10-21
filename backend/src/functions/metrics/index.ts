@@ -26,7 +26,7 @@ import { getSmsHistoryPage, getSmsOverview } from "../../lib/dynamodb/sms-metric
 import type { SmsDlrSource, SmsHistoryStatus } from "../../types/index.js";
 import { ok, badRequest, handleError } from "../../lib/http.js";
 
-const SMS_SOURCES = new Set<SmsDlrSource>(["api", "campaign", "template"]);
+const SMS_SOURCES = new Set<SmsDlrSource>(["api", "campaign", "template", "bulk"]);
 const SMS_STATUSES = new Set<SmsHistoryStatus>([
   "pending",
   "sent",

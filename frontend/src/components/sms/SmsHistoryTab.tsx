@@ -113,6 +113,7 @@ export function SmsHistoryTab() {
               <option value="api">{t("smsDashboard.history.source.api")}</option>
               <option value="campaign">{t("smsDashboard.history.source.campaign")}</option>
               <option value="template">{t("smsDashboard.history.source.template")}</option>
+              <option value="bulk">{t("smsDashboard.history.source.bulk")}</option>
             </select>
             <select
               value={status}
