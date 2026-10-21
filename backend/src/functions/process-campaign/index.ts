@@ -25,7 +25,7 @@ import { sendTemplateMessage, getWhatsAppAccessToken } from "../../lib/whatsapp/
 import { assertWhatsAppOutboundAllowed } from "../../lib/whatsapp/outbound-guard.js";
 import { applyCoexistenceSendThrottle } from "../../lib/whatsapp/coexistence/throughput.js";
 import { normalizeWhatsAppRecipientId } from "../../lib/whatsapp/identity.js";
-import { sendSmsFromTemplate } from "../../lib/sms/send-outbound.js";
+import { sendSmsFromTemplate, sendSmsText, sendSmsTextWithDlr } from "../../lib/sms/send-outbound.js";
 import type { CampaignSQSBody } from "../../types/index.js";
 import { computeNextBatchAt } from "../../lib/campaign/batch.js";
 import {
@@ -99,6 +99,7 @@ async function processRecipient(body: CampaignSQSBody, sqsMessageId: string): Pr
     botId,
     templateName,
     language,
+    text,
     to,
     components,
     recipientKey,
@@ -138,14 +139,27 @@ async function processRecipient(body: CampaignSQSBody, sqsMessageId: string): Pr
   const normalizedTo = normalizeWhatsAppRecipientId(to);
   const attemptId = sqsMessageId;
 
+  const freeText = text?.trim() || campaign.text?.trim() || "";
+  const attemptTemplateName = freeText
+    ? templateName || campaign.templateName || "(custom)"
+    : templateName || campaign.templateName;
+  const attemptLanguage = freeText
+    ? language || campaign.language || "und"
+    : language || campaign.language;
+
+  if (!attemptTemplateName || !attemptLanguage) {
+    console.warn(`Campaign ${campaignId} missing template or text for recipient ${to}`);
+    return;
+  }
+
   const { attempt, isNew } = await ensureCampaignSendAttempt({
     attemptId,
     tenantId,
     campaignId,
     to: normalizedTo,
     channel,
-    templateName,
-    language,
+    templateName: attemptTemplateName,
+    language: attemptLanguage,
     ...(recipientKey ? { recipientKey } : {}),
     ...(batchVersion !== undefined ? { batchVersion } : {}),
     ...(body.batchIndex !== undefined ? { batchIndex: body.batchIndex } : {}),
@@ -156,7 +170,7 @@ async function processRecipient(body: CampaignSQSBody, sqsMessageId: string): Pr
     return;
   }
 
-  if (body.requireOptIn ?? campaign.requireOptIn ?? true) {
+  if (body.requireOptIn ?? campaign.requireOptIn ?? false) {
     const contact = await getContactByPhone(tenantId, normalizedTo);
     if (
       !contact ||
@@ -234,21 +248,44 @@ async function processRecipient(body: CampaignSQSBody, sqsMessageId: string): Pr
 
     if (channel === "sms") {
       const shouldRequestDlr = requestDlr ?? campaign.requestDlr ?? false;
-      const result = await sendSmsFromTemplate({
-        tenantId,
-        bot,
-        botId,
-        templateName,
-        language,
-        to,
-        ...(components ? { components } : {}),
-        environment: ENVIRONMENT,
-        ...(shouldRequestDlr
-          ? { requestDlr: true, source: "campaign", campaignId }
-          : {}),
-        attemptId,
-        ...(recipientKey ? { recipientKey } : {}),
-      });
+      let result: { messageId: string; text: string; receiptId?: string };
+
+      if (freeText) {
+        const sendParams = {
+          tenantId,
+          bot,
+          botId,
+          to,
+          text: freeText,
+          environment: ENVIRONMENT,
+          source: "campaign" as const,
+          campaignId,
+          attemptId,
+          ...(recipientKey ? { recipientKey } : {}),
+        };
+        result = shouldRequestDlr
+          ? await sendSmsTextWithDlr(sendParams)
+          : await sendSmsText(sendParams);
+      } else {
+        if (!attemptTemplateName || !attemptLanguage) {
+          throw Object.assign(new Error("SMS campaign missing template"), { statusCode: 400 });
+        }
+        result = await sendSmsFromTemplate({
+          tenantId,
+          bot,
+          botId,
+          templateName: attemptTemplateName,
+          language: attemptLanguage,
+          to,
+          ...(components ? { components } : {}),
+          environment: ENVIRONMENT,
+          ...(shouldRequestDlr
+            ? { requestDlr: true, source: "campaign", campaignId }
+            : {}),
+          attemptId,
+          ...(recipientKey ? { recipientKey } : {}),
+        });
+      }
 
       await markCampaignSendAttemptSent(tenantId, campaignId, attemptId, {
         externalMessageId: result.messageId,
@@ -267,6 +304,14 @@ async function processRecipient(body: CampaignSQSBody, sqsMessageId: string): Pr
         console.warn(`Failed to save campaign message tracking for ${result.messageId}:`, err)
       );
     } else {
+      if (freeText) {
+        throw Object.assign(new Error("Free-text campaigns are only allowed for SMS"), {
+          statusCode: 400,
+        });
+      }
+      if (!attemptTemplateName || !attemptLanguage) {
+        throw Object.assign(new Error("WhatsApp campaign missing template"), { statusCode: 400 });
+      }
       await applyCoexistenceSendThrottle(bot.whatsappOnboardingMode);
       const accessToken = await getWhatsAppAccessToken(tenantId, ENVIRONMENT);
       await assertWhatsAppOutboundAllowed({
@@ -274,13 +319,13 @@ async function processRecipient(body: CampaignSQSBody, sqsMessageId: string): Pr
         phoneNumberId: bot.phoneNumberId,
         kind: body.outboundKind ?? "marketing",
         to: normalizedTo,
-        requireOptIn: body.requireOptIn ?? campaign.requireOptIn ?? true,
+        requireOptIn: body.requireOptIn ?? campaign.requireOptIn ?? false,
       });
       const result = await sendTemplateMessage({
         phoneNumberId: bot.phoneNumberId,
         to: normalizedTo,
-        templateName,
-        language,
+        templateName: attemptTemplateName,
+        language: attemptLanguage,
         ...(components ? { components } : {}),
         accessToken,
         billingTenantId: tenantId,

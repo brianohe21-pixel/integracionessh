@@ -34,7 +34,8 @@ import {
 } from "@/components/campaigns/CampaignBatchSettings";
 import { TemplateMessagePreview } from "@/components/templates/TemplateMessagePreview";
 import { useWhatsAppQualityGuard } from "@/hooks/useWhatsAppQualityGuard";
-import { parseRecipientsCsv, decodeCsvBytes } from "@/lib/csv";
+import { parseRecipientsCsv, decodeCsvBytes, SMS_FREE_TEXT_MAX } from "@/lib/csv";
+import { getSmsSegmentInfo } from "@/lib/sms-segments";
 import type { MessageTemplate, OutreachChannel } from "@/types";
 import { isSmsTemplate } from "@/types";
 import { OutreachChannelSelect } from "@/components/outreach/OutreachChannelSelect";
@@ -49,6 +50,7 @@ import { Input, SelectControl } from "@/components/ui/Input";
 import { cn } from "@/lib/utils";
 
 type Step = "config" | "recipients" | "review";
+type SmsMessageMode = "template" | "free_text";
 
 const STEPS: Step[] = ["config", "recipients", "review"];
 
@@ -56,8 +58,10 @@ export interface CampaignConfigForm {
   name: string;
   channel: OutreachChannel;
   botId: string;
+  messageMode: SmsMessageMode;
   templateName: string;
   language: string;
+  text: string;
   segments: string[];
   scheduledAt: string;
   advisorId: string;
@@ -77,8 +81,9 @@ export interface CampaignFormSubmitInput {
   name: string;
   botId: string;
   channel: OutreachChannel;
-  templateName: string;
-  language: string;
+  templateName?: string;
+  language?: string;
+  text?: string;
   segments: string[];
   scheduledAt?: string | null;
   batchConfig?: { size: number; delaySeconds: number };
@@ -186,6 +191,8 @@ export function campaignFormValuesFromCampaign(
     botId: string;
     templateName: string;
     language: string;
+    messageMode?: SmsMessageMode;
+    text?: string;
     segments: string[];
     scheduledAt?: string;
     batchConfig?: { size: number; delaySeconds: number };
@@ -207,14 +214,20 @@ export function campaignFormValuesFromCampaign(
         delayUnit: campaign.batchConfig.delaySeconds >= 3600 ? "hours" : "minutes",
       }
     : DEFAULT_BATCH_FORM;
+  const isFreeText =
+    campaign.messageMode === "free_text" ||
+    campaign.templateName === "(custom)" ||
+    Boolean(campaign.text?.trim());
 
   return {
     config: {
       name: campaign.name,
       channel: campaign.channel ?? "whatsapp",
       botId: campaign.botId,
-      templateName: campaign.templateName,
-      language: campaign.language,
+      messageMode: isFreeText ? "free_text" : "template",
+      templateName: isFreeText ? "" : campaign.templateName,
+      language: isFreeText ? "" : campaign.language,
+      text: campaign.text ?? "",
       segments: campaign.segments,
       scheduledAt: toDatetimeLocalValue(campaign.scheduledAt),
       advisorId: campaign.advisorId ?? "",
@@ -284,11 +297,13 @@ export function CampaignFormWizard({
     return "/bots";
   }, [bots, config.channel]);
   const selectedAgent = availableAgents.find((b) => b.botId === config.botId);
+  const isFreeTextMode = config.channel === "sms" && config.messageMode === "free_text";
   const selectedTemplate = templates.find(
     (template) => template.name === config.templateName && template.language === config.language
   );
   const approvedTemplates = templates.filter((template) => template.status === "APPROVED");
   const bodyVars = selectedTemplate ? extractBodyVariables(selectedTemplate) : [];
+  const segmentInfo = useMemo(() => getSmsSegmentInfo(config.text), [config.text]);
   const { assessment, phone, isLoading: qualityLoading } = useWhatsAppQualityGuard(
     config.botId,
     config.channel === "whatsapp"
@@ -300,18 +315,29 @@ export function CampaignFormWizard({
   const batchError = validateBatchForm(batchForm);
   const estimatedAudience = Math.max(recipients.length, audienceTags.length ? 1 : 0);
 
-  function canProceedConfig() {
-    if (batchError) return false;
-    return Boolean(
-      config.name.trim() &&
-        config.botId &&
-        config.templateName &&
-        config.language
+  function freeTextAudienceReady() {
+    const shared = config.text.trim();
+    if (shared.length > SMS_FREE_TEXT_MAX) return false;
+    if (audienceTags.length > 0) return shared.length > 0;
+    if (shared.length > 0) return true;
+    return (
+      recipients.length > 0 && recipients.every((recipient) => Boolean(recipient.text?.trim()))
     );
   }
 
+  function canProceedConfig() {
+    if (batchError) return false;
+    if (!config.name.trim() || !config.botId) return false;
+    if (isFreeTextMode) {
+      return config.text.trim().length <= SMS_FREE_TEXT_MAX;
+    }
+    return Boolean(config.templateName && config.language);
+  }
+
   function canProceedRecipients() {
-    return recipients.length > 0 || audienceTags.length > 0;
+    if (!(recipients.length > 0 || audienceTags.length > 0)) return false;
+    if (isFreeTextMode && !freeTextAudienceReady()) return false;
+    return true;
   }
 
   function configValidationMessage() {
@@ -321,7 +347,12 @@ export function CampaignFormWizard({
   }
 
   function recipientsValidationMessage() {
-    if (!canProceedRecipients()) return t("campaigns.validationRecipients");
+    if (!(recipients.length > 0 || audienceTags.length > 0)) {
+      return t("campaigns.validationRecipients");
+    }
+    if (isFreeTextMode && !freeTextAudienceReady()) {
+      return t("bulkSend.freeTextCsvRequired");
+    }
     return null;
   }
 
@@ -381,12 +412,25 @@ export function CampaignFormWizard({
         setParseError(t("bulkSend.parseErrorEmpty"));
         return;
       }
-      const built: CampaignRecipient[] = rows.map((row) => ({
-        to: row.phone,
-        ...(selectedTemplate && bodyVars.length > 0
-          ? { components: buildComponents(selectedTemplate, row.variables) }
-          : {}),
-      }));
+      const sharedText = config.text.trim();
+      if (
+        isFreeTextMode &&
+        !sharedText &&
+        rows.some((row) => !row.message?.trim())
+      ) {
+        setParseError(t("bulkSend.freeTextCsvRequired"));
+        return;
+      }
+      const built: CampaignRecipient[] = rows.map((row) => {
+        const rowText = row.message?.trim() || (isFreeTextMode ? sharedText : "");
+        return {
+          to: row.phone,
+          ...(isFreeTextMode && rowText ? { text: rowText } : {}),
+          ...(!isFreeTextMode && selectedTemplate && bodyVars.length > 0
+            ? { components: buildComponents(selectedTemplate, row.variables) }
+            : {}),
+        };
+      });
       setRecipients(built);
       setCsvLoaded(true);
     } catch {
@@ -413,17 +457,23 @@ export function CampaignFormWizard({
   }
 
   async function handleSubmit() {
-    if (!selectedTemplate) return;
+    if (!canProceedConfig()) return;
+    if (!canProceedRecipients()) return;
+    if (!isFreeTextMode && !selectedTemplate) return;
     if (validateBatchForm(batchForm)) return;
     setSubmitError("");
     const batchConfig = batchFormToConfig(batchForm);
+    const sharedText = config.text.trim();
     try {
       await onSubmit({
         name: config.name.trim(),
         botId: config.botId,
         channel: config.channel,
-        templateName: config.templateName,
-        language: config.language,
+        ...(isFreeTextMode
+          ? {
+              ...(sharedText ? { text: sharedText } : {}),
+            }
+          : { templateName: config.templateName, language: config.language }),
         segments: config.segments,
         scheduledAt: config.scheduledAt
           ? new Date(config.scheduledAt).toISOString()
@@ -431,7 +481,19 @@ export function CampaignFormWizard({
             ? null
             : undefined,
         ...(batchConfig ? { batchConfig } : {}),
-        ...(recipients.length ? { recipients } : {}),
+        ...(recipients.length
+          ? {
+              recipients: isFreeTextMode
+                ? recipients.map((recipient) => {
+                    const rowText = recipient.text?.trim() || sharedText;
+                    return {
+                      to: recipient.to,
+                      ...(rowText ? { text: rowText } : {}),
+                    };
+                  })
+                : recipients,
+            }
+          : {}),
         ...(audienceTags.length ? { audienceTags } : {}),
         requireOptIn,
         ...(config.channel === "sms" && requestDlr ? { requestDlr: true } : {}),
@@ -603,8 +665,10 @@ export function CampaignFormWizard({
                           ...config,
                           channel,
                           botId: "",
+                          messageMode: "template",
                           templateName: "",
                           language: "",
+                          text: "",
                         })
                       }
                     />
@@ -709,7 +773,85 @@ export function CampaignFormWizard({
                   </span>
                 </label>
 
-                {config.botId && (
+                {config.botId && config.channel === "sms" && (
+                  <div className="space-y-1.5">
+                    <label className="block text-sm font-medium text-secondary">
+                      {t("bulkSend.messageMode")}
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setConfig({
+                            ...config,
+                            messageMode: "template",
+                            text: "",
+                          })
+                        }
+                        className={cn(
+                          "rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+                          config.messageMode === "template"
+                            ? "border-accent bg-accent-muted text-accent"
+                            : "border-default text-secondary hover:border-accent/40"
+                        )}
+                      >
+                        {t("bulkSend.modeTemplate")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setConfig({
+                            ...config,
+                            messageMode: "free_text",
+                            templateName: "",
+                            language: "",
+                          })
+                        }
+                        className={cn(
+                          "rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+                          config.messageMode === "free_text"
+                            ? "border-accent bg-accent-muted text-accent"
+                            : "border-default text-secondary hover:border-accent/40"
+                        )}
+                      >
+                        {t("bulkSend.modeFreeText")}
+                      </button>
+                    </div>
+                    <p className="text-xs text-muted">{t("bulkSend.freeTextHint")}</p>
+                  </div>
+                )}
+
+                {config.botId && isFreeTextMode && (
+                  <div className="space-y-1.5">
+                    <label className="block text-sm font-medium text-secondary">
+                      {t("bulkSend.freeTextLabelOptional")}
+                    </label>
+                    <textarea
+                      value={config.text}
+                      onChange={(e) =>
+                        setConfig({
+                          ...config,
+                          text: e.target.value.slice(0, SMS_FREE_TEXT_MAX),
+                        })
+                      }
+                      rows={5}
+                      placeholder={t("bulkSend.freeTextPlaceholder")}
+                      className="w-full resize-y rounded-lg border border-default bg-surface-elevated px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                    />
+                    <p className="text-xs text-muted">{t("bulkSend.freeTextOrCsvHint")}</p>
+                    {config.text.trim().length > 0 && (
+                      <p className="text-xs text-muted">
+                        {t("bulkSend.segmentCounter", {
+                          chars: segmentInfo.chars,
+                          segments: segmentInfo.segments,
+                          max: SMS_FREE_TEXT_MAX,
+                        })}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {config.botId && !isFreeTextMode && (
                   <div className="space-y-1.5">
                     <label className="block text-sm font-medium text-secondary">
                       {t("bulkSend.template")}
@@ -915,7 +1057,9 @@ export function CampaignFormWizard({
               <SectionHeader
                 icon={<FileSpreadsheet className="h-4 w-4" />}
                 title={t("campaigns.sectionCsv")}
-                description={t("bulkSend.csvColumnHint")}
+                description={
+                  isFreeTextMode ? t("bulkSend.freeTextCsvHint") : t("bulkSend.csvColumnHint")
+                }
               />
 
               <div className="space-y-3 sm:pl-12">
@@ -1078,10 +1222,25 @@ export function CampaignFormWizard({
                 </div>
               ) : null}
               <div className="py-3">
-                <ReviewRow label={t("bulkSend.template")}>
-                  {config.templateName} ({config.language})
+                <ReviewRow
+                  label={isFreeTextMode ? t("bulkSend.freeTextLabel") : t("bulkSend.template")}
+                >
+                  {isFreeTextMode
+                    ? t("bulkSend.customMessageLabel")
+                    : `${config.templateName} (${config.language})`}
                 </ReviewRow>
               </div>
+              {isFreeTextMode && (
+                <div className="py-3">
+                  <ReviewRow label={t("bulkSend.colMessage")}>
+                    <span className="whitespace-pre-wrap break-words text-left sm:text-right">
+                      {config.text.trim() ||
+                        recipients.find((recipient) => recipient.text?.trim())?.text?.trim() ||
+                        t("bulkSend.freeTextFromCsv")}
+                    </span>
+                  </ReviewRow>
+                </div>
+              )}
               <div className="py-3">
                 <ReviewRow label={t("common.total")}>{audienceSummary()}</ReviewRow>
               </div>
@@ -1137,7 +1296,24 @@ export function CampaignFormWizard({
               />
             )}
 
-            {selectedTemplate && isSmsTemplate(selectedTemplate) && (
+            {isFreeTextMode &&
+              (config.text.trim() ||
+                recipients.some((recipient) => Boolean(recipient.text?.trim()))) && (
+              <FormSection>
+                <p className="text-xs font-medium uppercase tracking-wider text-secondary">
+                  {t("bulkSend.preview")}
+                </p>
+                <p className="mt-2 whitespace-pre-wrap rounded-xl border border-default bg-surface-muted/40 px-4 py-3 text-sm text-primary">
+                  {config.text.trim() ||
+                    recipients.find((recipient) => recipient.text?.trim())?.text?.trim()}
+                </p>
+                {!config.text.trim() && recipients.length > 1 && (
+                  <p className="mt-2 text-xs text-muted">{t("bulkSend.freeTextFromCsv")}</p>
+                )}
+              </FormSection>
+            )}
+
+            {!isFreeTextMode && selectedTemplate && isSmsTemplate(selectedTemplate) && (
               <FormSection>
                 <SmsTemplatePreview
                   template={selectedTemplate}
@@ -1149,7 +1325,7 @@ export function CampaignFormWizard({
               </FormSection>
             )}
 
-            {selectedTemplate && !isSmsTemplate(selectedTemplate) && (
+            {!isFreeTextMode && selectedTemplate && !isSmsTemplate(selectedTemplate) && (
               <FormSection>
                 <TemplateMessagePreview
                   template={selectedTemplate}

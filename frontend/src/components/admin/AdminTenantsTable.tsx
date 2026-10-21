@@ -46,6 +46,7 @@ interface AdminTenantsTableProps {
       status?: "active" | "suspended";
       law2300Exempt?: boolean;
       planLimitsOverride?: ResellerLimitsOverride | null;
+      resellerConfig?: Partial<Tenant["resellerConfig"]>;
     }
   ) => Promise<void>;
   formatDate: (iso: string) => string;
@@ -204,7 +205,8 @@ export function AdminTenantsTable({
                       <div className="space-y-1">
                         <div className="flex flex-wrap items-center gap-1.5">
                           <Badge variant="info">{tenantPlanLabel(tenant.plan)}</Badge>
-                          {tenant.plan === "pro" && tenantHasProPlanLimits(tenant) ? (
+                          {(tenant.plan === "pro" || tenant.plan === "reseller") &&
+                          tenantHasProPlanLimits(tenant) ? (
                             <Badge variant="accent">{t("admin.users.proLimitsCustomBadge")}</Badge>
                           ) : null}
                         </div>
@@ -343,8 +345,14 @@ export function AdminTenantsTable({
           tenant={drawer.tenant}
           saving={isUpdating}
           onClose={() => setDrawer(null)}
-          onSave={async (planLimitsOverride) => {
-            await onTenantUpdate(drawer.tenant, { planLimitsOverride });
+          onSave={async (limitsOverride) => {
+            if (drawer.tenant.plan === "reseller") {
+              await onTenantUpdate(drawer.tenant, {
+                resellerConfig: { limitsOverride: limitsOverride ?? null },
+              });
+            } else {
+              await onTenantUpdate(drawer.tenant, { planLimitsOverride: limitsOverride });
+            }
             setDrawer(null);
           }}
         />

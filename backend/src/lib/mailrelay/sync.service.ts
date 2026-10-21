@@ -181,7 +181,12 @@ export async function processMailrelaySync(
         ...(options.cursor ? { cursor: options.cursor } : {}),
       }),
     ]);
-    if (!config?.enabled) throw new Error("Email marketing is disabled");
+    if (!config) {
+      throw new Error(
+        "Email marketing audience settings are not saved. Save Audiencia settings before syncing."
+      );
+    }
+    if (config.enabled === false) throw new Error("Email marketing is disabled");
 
     const contacts: Contact[] = page.items.filter(isMailrelaySyncEligible);
     const provider = config.provider ?? "mailrelay";

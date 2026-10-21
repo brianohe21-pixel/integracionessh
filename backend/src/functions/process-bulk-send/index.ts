@@ -11,7 +11,7 @@ import { sendTemplateMessage, getWhatsAppAccessToken } from "../../lib/whatsapp/
 import { assertWhatsAppOutboundAllowed } from "../../lib/whatsapp/outbound-guard.js";
 import { getContactByPhone } from "../../lib/dynamodb/contact.repository.js";
 import { applyCoexistenceSendThrottle } from "../../lib/whatsapp/coexistence/throughput.js";
-import { sendSmsFromTemplate } from "../../lib/sms/send-outbound.js";
+import { sendSmsFromTemplate, sendSmsText, sendSmsTextWithDlr } from "../../lib/sms/send-outbound.js";
 import type { BulkSendSQSBody } from "../../types/index.js";
 import { evaluateLaw2300ForTenant } from "../../lib/compliance/law2300-tenant.js";
 
@@ -35,7 +35,20 @@ async function processRecord(record: SQSRecord): Promise<void> {
     return;
   }
 
-  const { jobId, tenantId, botId, templateName, language, to, components, channel = "whatsapp", requireOptIn = true, outboundKind = "marketing" } = body;
+  const {
+    jobId,
+    tenantId,
+    botId,
+    templateName,
+    language,
+    text,
+    to,
+    components,
+    channel = "whatsapp",
+    requireOptIn = true,
+    requestDlr,
+    outboundKind = "marketing",
+  } = body;
 
   const law2300 = await evaluateLaw2300ForTenant(tenantId);
   if (!law2300.allowed) {
@@ -71,6 +84,51 @@ async function processRecord(record: SQSRecord): Promise<void> {
     }
 
     if (channel === "sms") {
+      if (requireOptIn) {
+        const normalizedTo = to.replace(/\D/g, "");
+        const contact = await getContactByPhone(tenantId, normalizedTo);
+        if (!contact || contact.suppressed || contact.marketingConsent !== "opt_in") {
+          await recordBulkSendFailure(tenantId, jobId, "compliance", {
+            to,
+            errorMessage: "Recipient not eligible for marketing",
+          });
+          await incrementBulkJobProgress(tenantId, jobId, "failed");
+          return;
+        }
+      }
+
+      const freeText = text?.trim();
+      if (freeText) {
+        const sendParams = {
+          tenantId,
+          bot,
+          botId,
+          to,
+          text: freeText,
+          environment: ENVIRONMENT,
+          source: "bulk" as const,
+        };
+        const result =
+          requestDlr === false
+            ? await sendSmsText(sendParams)
+            : await sendSmsTextWithDlr(sendParams);
+
+        await saveMessageTracking(result.messageId, jobId, tenantId, to).catch((err) =>
+          console.warn(`Failed to save message tracking for ${result.messageId}:`, err)
+        );
+        await incrementBulkJobProgress(tenantId, jobId, "sent");
+        return;
+      }
+
+      if (!templateName || !language) {
+        await recordBulkSendFailure(tenantId, jobId, "send", {
+          to,
+          errorMessage: "SMS bulk send missing template or text",
+        });
+        await incrementBulkJobProgress(tenantId, jobId, "failed");
+        return;
+      }
+
       const result = await sendSmsFromTemplate({
         tenantId,
         bot,
@@ -86,6 +144,24 @@ async function processRecord(record: SQSRecord): Promise<void> {
         console.warn(`Failed to save message tracking for ${result.messageId}:`, err)
       );
       await incrementBulkJobProgress(tenantId, jobId, "sent");
+      return;
+    }
+
+    if (text?.trim()) {
+      await recordBulkSendFailure(tenantId, jobId, "send", {
+        to,
+        errorMessage: "Free-text bulk send is only allowed for SMS",
+      });
+      await incrementBulkJobProgress(tenantId, jobId, "failed");
+      return;
+    }
+
+    if (!templateName || !language) {
+      await recordBulkSendFailure(tenantId, jobId, "send", {
+        to,
+        errorMessage: "WhatsApp bulk send requires templateName and language",
+      });
+      await incrementBulkJobProgress(tenantId, jobId, "failed");
       return;
     }
 

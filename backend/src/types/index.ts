@@ -2209,6 +2209,8 @@ export interface TemplateButton {
 
 export type OutreachChannel = "whatsapp" | "sms";
 
+export type WhatsAppTemplateQualityScore = "GREEN" | "YELLOW" | "RED" | "UNKNOWN";
+
 export interface WhatsAppTemplate {
   templateId: string;
   tenantId: string;
@@ -2220,6 +2222,7 @@ export interface WhatsAppTemplate {
   status: "APPROVED" | "PENDING" | "REJECTED";
   components: TemplateComponent[];
   metaTemplateId?: string;
+  qualityScore?: WhatsAppTemplateQualityScore;
   syncedAt: string;
   createdAt: string;
 }
@@ -2262,6 +2265,8 @@ export interface Campaign {
   channel?: OutreachChannel;
   templateName: string;
   language: string;
+  messageMode?: "template" | "free_text";
+  text?: string;
   status: CampaignStatus;
   segments: string[];
   scheduledAt?: string;
@@ -2288,7 +2293,7 @@ export interface Campaign {
   autoAssignAdvisor?: boolean;
 }
 
-export type SmsDlrSource = "campaign" | "template" | "api";
+export type SmsDlrSource = "campaign" | "template" | "api" | "bulk";
 
 export type SmsHistoryStatus =
   | "pending"
@@ -2528,6 +2533,7 @@ export interface CampaignMetrics {
 
 export interface CampaignRecipient {
   to: string;
+  text?: string;
   components?: Array<{
     type: string;
     parameters?: Array<{ type: string; text?: string; image?: { link: string } }>;
@@ -2542,8 +2548,9 @@ export interface CampaignSQSBody {
   tenantId: string;
   botId: string;
   channel?: OutreachChannel;
-  templateName: string;
-  language: string;
+  templateName?: string;
+  language?: string;
+  text?: string;
   to?: string;
   recipientKey?: string;
   components?: CampaignRecipient["components"];
@@ -2563,6 +2570,7 @@ export interface BulkSendJob {
   channel?: OutreachChannel;
   templateName: string;
   language: string;
+  messageMode?: "template" | "free_text";
   status: BulkSendJobStatus;
   total: number;
   sent: number;
@@ -2577,14 +2585,16 @@ export interface BulkSendSQSBody {
   tenantId: string;
   botId: string;
   channel?: OutreachChannel;
-  templateName: string;
-  language: string;
+  templateName?: string;
+  language?: string;
+  text?: string;
   to: string;
   components?: Array<{
     type: string;
     parameters?: Array<{ type: string; text?: string; image?: { link: string } }>;
   }>;
   requireOptIn?: boolean;
+  requestDlr?: boolean;
   outboundKind?: WhatsAppOutboundSendKind;
 }
 

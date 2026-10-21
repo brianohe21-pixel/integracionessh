@@ -146,9 +146,19 @@ export default function CampaignDetailPage({
               </>
             ) : null}
             {" · "}
-            {t("campaigns.templateLabel")}: <span className="font-medium">{campaign.templateName}</span>
-            {" · "}
-            {t("campaigns.languageLabel")}: {campaign.language}
+            {campaign.messageMode === "free_text" || campaign.templateName === "(custom)" ? (
+              <>
+                {t("bulkSend.freeTextLabel")}:{" "}
+                <span className="font-medium">{t("bulkSend.customMessageLabel")}</span>
+              </>
+            ) : (
+              <>
+                {t("campaigns.templateLabel")}:{" "}
+                <span className="font-medium">{campaign.templateName}</span>
+                {" · "}
+                {t("campaigns.languageLabel")}: {campaign.language}
+              </>
+            )}
           </p>
         </div>
 
@@ -303,6 +313,16 @@ export default function CampaignDetailPage({
         </dl>
       </div>
 
+      {(campaign.messageMode === "free_text" || campaign.templateName === "(custom)") &&
+        campaign.text && (
+        <div className="bg-surface-elevated rounded-xl border border-default p-5">
+          <h2 className="font-semibold text-primary mb-4">{t("bulkSend.preview")}</h2>
+          <p className="whitespace-pre-wrap rounded-xl border border-default bg-surface-muted/40 px-4 py-3 text-sm text-primary">
+            {campaign.text}
+          </p>
+        </div>
+      )}
+
       {campaignTemplate && isSmsTemplate(campaignTemplate) && (
         <div className="bg-surface-elevated rounded-xl border border-default p-5">
           <h2 className="font-semibold text-primary mb-4">{t("bulkSend.preview")}</h2>
@@ -344,7 +364,11 @@ export default function CampaignDetailPage({
           <h2 className="font-semibold text-primary mb-4">{t("campaigns.failuresTitle")}</h2>
           <BulkJobFailures
             jobId={campaign.campaignId}
-            templateName={campaign.templateName}
+            templateName={
+              campaign.messageMode === "free_text" || campaign.templateName === "(custom)"
+                ? t("bulkSend.customMessageLabel")
+                : campaign.templateName
+            }
             resource="campaign"
             enabled={true}
           />

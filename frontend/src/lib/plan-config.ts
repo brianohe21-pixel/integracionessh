@@ -104,11 +104,55 @@ export const PRO_PLAN_CATALOG_LIMITS = {
   apiRateLimitPerDay: 50_000,
 } as const;
 
+export const RESELLER_PLAN_CATALOG_LIMITS: Record<
+  keyof typeof PRO_PLAN_CATALOG_LIMITS,
+  number
+> = {
+  maxActiveBots: Number.MAX_SAFE_INTEGER,
+  maxMessagesPerMonth: 50_000,
+  maxBulkRecipientsPerJob: 10_000,
+  maxActiveCampaigns: Number.MAX_SAFE_INTEGER,
+  maxContacts: Number.MAX_SAFE_INTEGER,
+  maxAutomationsPerBot: Number.MAX_SAFE_INTEGER,
+  maxScheduledAutomations: Number.MAX_SAFE_INTEGER,
+  maxDocumentsPerBot: 100,
+  maxKnowledgeStorageMb: 200,
+  maxMetaFlowsPerBot: Number.MAX_SAFE_INTEGER,
+  maxVisualFlowsPerBot: Number.MAX_SAFE_INTEGER,
+  maxFlowNodes: 100,
+  maxActiveFlowRuns: Number.MAX_SAFE_INTEGER,
+  maxChannelsPerBot: 8,
+  maxWhatsAppChannelsPerBot: Number.MAX_SAFE_INTEGER,
+  maxActiveWebChatSessions: 500,
+  maxConcurrentLiveKitCalls: 10,
+  maxVoicebotMinutesPerMonth: 2000,
+  maxCalendarAppsPerTenant: Number.MAX_SAFE_INTEGER,
+  maxPaymentsAppsPerTenant: Number.MAX_SAFE_INTEGER,
+  maxCatalogAppsPerTenant: Number.MAX_SAFE_INTEGER,
+  maxHostedFormsPerTenant: Number.MAX_SAFE_INTEGER,
+  maxProductsPerBot: Number.MAX_SAFE_INTEGER,
+  maxOrdersPerMonth: Number.MAX_SAFE_INTEGER,
+  apiRateLimitPerMinute: 200,
+  apiRateLimitPerDay: 100_000,
+};
+
 export type ProPlanLimitKey = keyof typeof PRO_PLAN_CATALOG_LIMITS;
 
 export const PRO_PLAN_LIMIT_KEYS = Object.keys(
   PRO_PLAN_CATALOG_LIMITS
 ) as ProPlanLimitKey[];
+
+export function getAdminQuotaCatalog(
+  plan: TenantPlan | string | undefined
+): Record<ProPlanLimitKey, number> {
+  return normalizeTenantPlan(plan) === "reseller"
+    ? RESELLER_PLAN_CATALOG_LIMITS
+    : PRO_PLAN_CATALOG_LIMITS;
+}
+
+export function isUnlimitedPlanLimit(value: number): boolean {
+  return value >= Number.MAX_SAFE_INTEGER / 2;
+}
 
 export function getAllowedModelsForPlan(plan: TenantPlan | string | undefined): AllowedModel[] {
   return getModelsForPlan(plan).map((model) => model.id);

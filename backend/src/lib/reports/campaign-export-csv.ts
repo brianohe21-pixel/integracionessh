@@ -106,7 +106,7 @@ const SMS_HEADERS = [
   "delivery_error_title",
   "delivery_error_message",
   "sms_receipt_id",
-  "telcored_message_id",
+  "sms_message_id",
   "delivery_status",
   "final_delivery_code",
   "last_intermediate_code",

@@ -36,6 +36,7 @@ import type {
 import { getMetaAppCredentialForOwner } from "../../lib/integrations/meta-app-credentials.js";
 import { getWhatsAppAccountByWabaId } from "../../lib/dynamodb/whatsapp-account.repository.js";
 import { processMessageTemplateStatusUpdate } from "../../lib/whatsapp/template-status-update.js";
+import { processMessageTemplateQualityUpdate } from "../../lib/whatsapp/template-quality-update.js";
 
 const sqs = new SQSClient({});
 const s3 = new S3Client({});
@@ -459,6 +460,16 @@ async function handleWhatsAppWebhook(payload: WhatsAppWebhookEvent): Promise<voi
         sqsPromises.push(
           processMessageTemplateStatusUpdate(entry.id, value).catch((error) =>
             console.error("Failed to process message_template_status_update:", error)
+          )
+        );
+        continue;
+      }
+
+      if (change.field === "message_template_quality_update") {
+        const value = change.value as unknown as Record<string, unknown>;
+        sqsPromises.push(
+          processMessageTemplateQualityUpdate(entry.id, value).catch((error) =>
+            console.error("Failed to process message_template_quality_update:", error)
           )
         );
         continue;

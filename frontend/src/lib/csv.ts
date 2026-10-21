@@ -3,9 +3,12 @@ import { normalizePhoneWithCountryCode } from "./phone";
 export interface CsvRow {
   phone: string;
   variables: string[];
+  message?: string;
 }
 
 const PHONE_HEADERS = ["phone", "telefono", "numero", "celular", "whatsapp"];
+const MESSAGE_HEADERS = ["message", "text", "mensaje", "sms", "body"];
+export const SMS_FREE_TEXT_MAX = 1600;
 
 const MOJIBAKE_PATTERN = /Ã[\u0080-\u00BF]|Â[\u0080-\u00BF]|â€|ï¿½/;
 const SPANISH_CHARS = /[áéíóúñÁÉÍÓÚÑüÜ]/g;
@@ -94,7 +97,35 @@ export function decodeCsvBytes(bytes: Uint8Array): string {
 }
 
 function parseLine(line: string): string[] {
-  return line.split(",").map((cell) => cell.trim().replace(/^"|"$/g, ""));
+  const cells: string[] = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    const next = line[i + 1];
+
+    if (char === '"') {
+      if (inQuotes && next === '"') {
+        current += '"';
+        i++;
+        continue;
+      }
+      inQuotes = !inQuotes;
+      continue;
+    }
+
+    if (char === "," && !inQuotes) {
+      cells.push(current.trim());
+      current = "";
+      continue;
+    }
+
+    current += char;
+  }
+
+  cells.push(current.trim());
+  return cells;
 }
 
 export function escapeCsvCell(value: string): string {
@@ -130,14 +161,25 @@ export function parseRecipientsCsv(text: string): CsvRow[] {
   const phoneIndex = headers.findIndex((h) => PHONE_HEADERS.includes(h));
   if (phoneIndex === -1) return [];
 
+  const messageIndex = headers.findIndex((h) => MESSAGE_HEADERS.includes(h));
   const varIndices = headers
     .map((_, i) => i)
-    .filter((i) => i !== phoneIndex);
+    .filter((i) => i !== phoneIndex && i !== messageIndex);
 
   return lines.slice(1).map((line) => {
     const cells = parseLine(line);
     const phone = normalizePhoneWithCountryCode(cells[phoneIndex] ?? "");
     const variables = varIndices.map((i) => sanitizeLatinText(cells[i] ?? ""));
-    return { phone, variables };
+    const message =
+      messageIndex >= 0 ? sanitizeLatinText(cells[messageIndex] ?? "").trim() : undefined;
+    return {
+      phone,
+      variables,
+      ...(message ? { message } : {}),
+    };
   }).filter((row) => row.phone.length > 0);
+}
+
+export function parseSmsFreeTextCsv(text: string): CsvRow[] {
+  return parseRecipientsCsv(text);
 }

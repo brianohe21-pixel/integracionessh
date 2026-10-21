@@ -26,9 +26,11 @@ const sqs = new SQSClient({});
 const BULK_QUEUE_URL = process.env.BULK_SQS_QUEUE_URL ?? "";
 const MAX_RECIPIENTS = 50_000;
 const SQS_BATCH_SIZE = 10;
+const SMS_FREE_TEXT_MAX = 1600;
 
 const RecipientSchema = z.object({
   to: z.string().min(10),
+  text: z.string().min(1).max(SMS_FREE_TEXT_MAX).optional(),
   components: z
     .array(
       z.object({
@@ -47,24 +49,93 @@ const RecipientSchema = z.object({
     .optional(),
 });
 
-const CreateBulkSendSchema = z.object({
-  botId: z.string().min(1),
-  channel: z.enum(["whatsapp", "sms"]).optional().default("whatsapp"),
-  templateName: z.string().min(1),
-  language: z.string().min(2).max(10),
-  recipients: z.array(RecipientSchema).min(1).max(MAX_RECIPIENTS),
-  requireOptIn: z.boolean().optional().default(true),
-});
+const CreateBulkSendSchema = z
+  .object({
+    botId: z.string().min(1),
+    channel: z.enum(["whatsapp", "sms"]).optional().default("whatsapp"),
+    templateName: z.string().min(1).optional(),
+    language: z.string().min(2).max(10).optional(),
+    text: z.string().min(1).max(SMS_FREE_TEXT_MAX).optional(),
+    recipients: z.array(RecipientSchema).min(1).max(MAX_RECIPIENTS),
+    requireOptIn: z.boolean().optional().default(true),
+    requestDlr: z.boolean().optional(),
+  })
+  .superRefine((data, ctx) => {
+    const hasTemplate = Boolean(data.templateName?.trim() && data.language?.trim());
+    const rootText = data.text?.trim() ?? "";
+    const recipientTexts = data.recipients.map((r) => r.text?.trim() ?? "");
+    const anyRecipientText = recipientTexts.some((t) => t.length > 0);
+    const allRecipientText = recipientTexts.every((t) => t.length > 0);
+    const hasFreeText = rootText.length > 0 || anyRecipientText;
+
+    if (data.channel === "whatsapp") {
+      if (!hasTemplate) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "WhatsApp bulk send requires templateName and language",
+          path: ["templateName"],
+        });
+      }
+      if (hasFreeText) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Free-text bulk send is only allowed for SMS",
+          path: ["text"],
+        });
+      }
+      return;
+    }
+
+    if (hasTemplate && hasFreeText) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Provide either a template or free text for SMS, not both",
+        path: ["text"],
+      });
+      return;
+    }
+
+    if (!hasTemplate && !hasFreeText) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "SMS bulk send requires a template or free text",
+        path: ["text"],
+      });
+      return;
+    }
+
+    if (!hasTemplate && anyRecipientText && !allRecipientText && !rootText) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Each recipient must include text, or provide a shared text field",
+        path: ["recipients"],
+      });
+    }
+  });
+
+type CreateBulkSendInput = z.infer<typeof CreateBulkSendSchema>;
+
+function resolveRecipientText(
+  recipient: CreateBulkSendInput["recipients"][number],
+  sharedText: string | undefined
+): string | undefined {
+  const perRecipient = recipient.text?.trim();
+  if (perRecipient) return perRecipient;
+  const shared = sharedText?.trim();
+  return shared || undefined;
+}
 
 async function enqueueRecipients(
   jobId: string,
   tenantId: string,
   botId: string,
   channel: "whatsapp" | "sms",
-  templateName: string,
-  language: string,
-  recipients: z.infer<typeof CreateBulkSendSchema>["recipients"],
-  requireOptIn: boolean
+  templateName: string | undefined,
+  language: string | undefined,
+  sharedText: string | undefined,
+  recipients: CreateBulkSendInput["recipients"],
+  requireOptIn: boolean,
+  requestDlr: boolean | undefined
 ): Promise<void> {
   const batches: typeof recipients[] = [];
   for (let i = 0; i < recipients.length; i += SQS_BATCH_SIZE) {
@@ -77,17 +148,23 @@ async function enqueueRecipients(
       new SendMessageBatchCommand({
         QueueUrl: BULK_QUEUE_URL,
         Entries: batch.map((recipient) => {
+          const freeText = resolveRecipientText(recipient, sharedText);
           const body: BulkSendSQSBody = {
             jobId,
             tenantId,
             botId,
             channel,
-            templateName,
-            language,
             to: normalizePhoneWithCountryCode(recipient.to),
             requireOptIn,
             outboundKind: "marketing",
           };
+          if (freeText) {
+            body.text = freeText;
+            if (requestDlr !== undefined) body.requestDlr = requestDlr;
+          } else {
+            body.templateName = templateName ?? "";
+            body.language = language ?? "";
+          }
           if (recipient.components?.length) {
             body.components = recipient.components as NonNullable<BulkSendSQSBody["components"]>;
           }
@@ -146,7 +223,11 @@ export async function handler(
       const parsed = CreateBulkSendSchema.safeParse(body);
       if (!parsed.success) return badRequest(parsed.error.message);
 
-      const { botId, channel, templateName, language, recipients, requireOptIn } = parsed.data;
+      const { botId, channel, templateName, language, text, recipients, requireOptIn, requestDlr } =
+        parsed.data;
+      const isFreeText =
+        channel === "sms" &&
+        (Boolean(text?.trim()) || recipients.some((r) => Boolean(r.text?.trim())));
 
       const bot = await getBot(auth.tenantId, botId);
       if (!bot) return notFound("Bot not found");
@@ -195,8 +276,9 @@ export async function handler(
         tenantId: auth.tenantId,
         botId,
         channel,
-        templateName,
-        language,
+        templateName: isFreeText ? "(custom)" : (templateName ?? ""),
+        language: isFreeText ? "und" : (language ?? ""),
+        messageMode: isFreeText ? "free_text" : "template",
         status: "queued",
         total: filteredRecipients.length,
         createdAt: now,
@@ -210,8 +292,10 @@ export async function handler(
         channel,
         templateName,
         language,
+        text,
         filteredRecipients,
-        requireOptIn
+        requireOptIn,
+        isFreeText ? (requestDlr ?? true) : requestDlr
       );
 
       await updateBulkJobStatus(auth.tenantId, newJobId, "processing");

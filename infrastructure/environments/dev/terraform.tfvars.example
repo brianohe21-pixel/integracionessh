@@ -31,7 +31,7 @@ api_custom_domain       = ""
 # Optional override when API Gateway does not exist yet. Otherwise Terraform resolves execute-api URL automatically.
 api_public_url          = ""
 # Mailrelay (global platform integration)
-# mailrelay_event_types = "email_sent,email_delivered,email_opened,email_clicked,email_bounced,email_unsubscribed"
+# mailrelay_event_types = "subscribed,unsubscribed"
 
 enable_telephony_gateway             = false
 telephony_gateway_vpc_id             = "vpc-xxxxxxxx"

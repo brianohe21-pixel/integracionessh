@@ -27,6 +27,7 @@ import { isAuthAllowedOnPortal, getActivePortalTenantId } from "../../lib/auth/h
 import type {
   AuthContext,
   ResellerConfig,
+  ResellerLimitsOverride,
   Tenant,
   TenantBranding,
   InboxSlaSettings,
@@ -144,7 +145,10 @@ const UpdateTenantSchema = z.object({
         .enum(["none", "pending_dns", "active", "error"])
         .optional(),
       allowSubaccountBranding: z.boolean().optional(),
-      limitsOverride: z.record(z.union([z.number(), z.boolean()])).optional(),
+      limitsOverride: z
+        .record(z.union([z.number(), z.boolean()]))
+        .nullable()
+        .optional(),
     })
     .optional(),
 });
@@ -994,12 +998,17 @@ export async function handler(
         } else if (base.customDomain) {
           merged.customDomain = base.customDomain;
         }
-        const limitsOverride = {
-          ...(base.limitsOverride ?? {}),
-          ...(patch.limitsOverride ?? {}),
-        };
-        if (Object.keys(limitsOverride).length > 0) {
-          merged.limitsOverride = limitsOverride;
+        if (patch.limitsOverride === null) {
+          // omit limitsOverride to clear negotiated reseller quotas
+        } else if (patch.limitsOverride !== undefined) {
+          const cleaned = Object.fromEntries(
+            Object.entries(patch.limitsOverride).filter(([, value]) => value !== undefined)
+          ) as ResellerLimitsOverride;
+          if (Object.keys(cleaned).length > 0) {
+            merged.limitsOverride = cleaned;
+          }
+        } else if (base.limitsOverride && Object.keys(base.limitsOverride).length > 0) {
+          merged.limitsOverride = base.limitsOverride;
         }
         if (
           patch.customDomainStatus === "active" &&

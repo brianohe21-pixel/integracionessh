@@ -39,7 +39,16 @@ async function filterPendingForMarketing(
 export async function enqueueRecipients(
   campaign: Pick<
     Campaign,
-    "campaignId" | "tenantId" | "botId" | "templateName" | "language" | "channel" | "requestDlr" | "requireOptIn"
+    | "campaignId"
+    | "tenantId"
+    | "botId"
+    | "templateName"
+    | "language"
+    | "channel"
+    | "requestDlr"
+    | "requireOptIn"
+    | "text"
+    | "messageMode"
   >,
   recipients: RepoPendingRecipient[],
   options?: EnqueueBatchOptions
@@ -52,10 +61,13 @@ export async function enqueueRecipients(
     language,
     channel = "whatsapp",
     requestDlr,
-    requireOptIn = true,
+    requireOptIn = false,
+    text: campaignText,
+    messageMode,
   } = campaign;
   const BATCH_SIZE = SQS_BATCH_SIZE;
   let entryIndex = 0;
+  const isFreeText = messageMode === "free_text" || Boolean(campaignText?.trim());
 
   const entries: Array<{
     Id: string;
@@ -65,14 +77,13 @@ export async function enqueueRecipients(
   }> = [];
 
   for (const recipient of recipients) {
+    const freeText = recipient.text?.trim() || campaignText?.trim() || undefined;
     const body: CampaignSQSBody = {
       kind: "recipient",
       campaignId,
       tenantId,
       botId,
       channel,
-      templateName,
-      language,
       to: normalizeWhatsAppRecipientId(recipient.to),
       recipientKey: recipient.recipientKey,
       ...(options?.batchVersion !== undefined ? { batchVersion: options.batchVersion } : {}),
@@ -81,6 +92,14 @@ export async function enqueueRecipients(
       requireOptIn,
       outboundKind: "marketing",
     };
+    if (isFreeText && freeText) {
+      body.text = freeText;
+      body.templateName = templateName || "(custom)";
+      body.language = language || "und";
+    } else {
+      body.templateName = templateName;
+      body.language = language;
+    }
     if (recipient.components?.length) {
       body.components = recipient.components as NonNullable<CampaignSQSBody["components"]>;
     }
@@ -101,8 +120,8 @@ export async function enqueueRecipients(
       tenantId,
       botId,
       channel,
-      templateName,
-      language,
+      templateName: templateName || (isFreeText ? "(custom)" : ""),
+      language: language || (isFreeText ? "und" : ""),
       batchVersion: options.batchVersion,
       batchIndex: options.batchIndex,
       ...(requestDlr ? { requestDlr: true } : {}),
@@ -163,7 +182,7 @@ export async function dispatchCampaignBatch(
   const eligible = await filterPendingForMarketing(
     tenantId,
     pending,
-    campaign.requireOptIn ?? true,
+    campaign.requireOptIn ?? false,
     actorUserId
   );
 
@@ -228,6 +247,9 @@ export async function startCampaignDispatch(
       templateName,
       language,
       channel: campaign.channel ?? "whatsapp",
+      requireOptIn,
+      ...(campaign.messageMode ? { messageMode: campaign.messageMode } : {}),
+      ...(campaign.text ? { text: campaign.text } : {}),
       ...(campaign.requestDlr ? { requestDlr: true } : {}),
     },
     eligible

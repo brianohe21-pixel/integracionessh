@@ -117,6 +117,7 @@ export async function processMessageTemplateStatusUpdate(
     status: mappedStatus,
     components: existing?.components ?? [],
     ...(resolvedMetaTemplateId ? { metaTemplateId: resolvedMetaTemplateId } : {}),
+    ...(existing?.qualityScore ? { qualityScore: existing.qualityScore } : {}),
     syncedAt: now,
     createdAt: existing?.createdAt ?? now,
   };

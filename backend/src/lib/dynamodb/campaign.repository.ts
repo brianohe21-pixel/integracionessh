@@ -199,6 +199,8 @@ export async function updateCampaignDraft(
     channel?: Campaign["channel"];
     templateName?: string;
     language?: string;
+    messageMode?: Campaign["messageMode"];
+    text?: string | null;
     segments?: string[];
     scheduledAt?: string | null;
     batchConfig?: Campaign["batchConfig"] | null;
@@ -237,6 +239,16 @@ export async function updateCampaignDraft(
   }
   if (patch.language !== undefined) {
     setField("language", ":language", patch.language);
+  }
+  if (patch.messageMode !== undefined) {
+    setField("messageMode", ":messageMode", patch.messageMode);
+  }
+  if (patch.text !== undefined) {
+    if (patch.text === null || patch.text === "") {
+      removes.push("text");
+    } else {
+      setField("text", ":text", patch.text);
+    }
   }
   if (patch.segments !== undefined) {
     setField("segments", ":segments", patch.segments);
@@ -668,6 +680,35 @@ export async function incrementCampaignAnalytics(
   );
 }
 
+type RecipientWriteRequest = {
+  PutRequest: {
+    Item: Record<string, unknown>;
+  };
+};
+
+async function flushBatchWrite(requests: RecipientWriteRequest[], attempt = 0): Promise<void> {
+  if (!requests.length) return;
+
+  const result = await docClient.send(
+    new BatchWriteCommand({
+      RequestItems: {
+        [TABLE_NAME]: requests,
+      },
+    })
+  );
+
+  const unprocessed = (result.UnprocessedItems?.[TABLE_NAME] ?? []) as RecipientWriteRequest[];
+  if (unprocessed.length === 0) return;
+  if (attempt >= 5) {
+    throw Object.assign(new Error("Failed to persist campaign recipients after retries"), {
+      statusCode: 503,
+    });
+  }
+
+  await new Promise((resolve) => setTimeout(resolve, 50 * 2 ** attempt));
+  await flushBatchWrite(unprocessed, attempt + 1);
+}
+
 export async function saveRecipients(
   tenantId: string,
   campaignId: string,
@@ -675,33 +716,38 @@ export async function saveRecipients(
 ): Promise<void> {
   const ttl = Math.floor(Date.now() / 1000) + RECIPIENT_TTL_SECONDS;
   const BATCH_SIZE = 25;
+  const CONCURRENCY = 20;
+  const batches: RecipientWriteRequest[][] = [];
 
   for (let start = 0; start < recipients.length; start += BATCH_SIZE) {
-    const batch = recipients.slice(start, start + BATCH_SIZE);
-    await docClient.send(
-      new BatchWriteCommand({
-        RequestItems: {
-          [TABLE_NAME]: batch.map((r, i) => ({
-            PutRequest: {
-              Item: {
-                ...recipientKeys(tenantId, campaignId, start + i),
-                tenantId,
-                campaignId,
-                to: r.to,
-                ...(r.components ? { components: r.components } : {}),
-                status: "pending",
-                ttl,
-              },
-            },
-          })),
+    const slice = recipients.slice(start, start + BATCH_SIZE);
+    batches.push(
+      slice.map((r, i) => ({
+        PutRequest: {
+          Item: {
+            ...recipientKeys(tenantId, campaignId, start + i),
+            tenantId,
+            campaignId,
+            to: r.to,
+            ...(r.text ? { text: r.text } : {}),
+            ...(r.components ? { components: r.components } : {}),
+            status: "pending",
+            ttl,
+          },
         },
-      })
+      }))
     );
+  }
+
+  for (let i = 0; i < batches.length; i += CONCURRENCY) {
+    const wave = batches.slice(i, i + CONCURRENCY);
+    await Promise.all(wave.map((batch) => flushBatchWrite(batch)));
   }
 }
 
 export interface PendingRecipient {
   to: string;
+  text?: string;
   components?: CampaignRecipient["components"];
   recipientKey: string;
 }
@@ -737,6 +783,9 @@ export async function listPendingRecipients(
         to: item.to as string,
         recipientKey: item.SK as string,
       };
+      if (typeof item.text === "string" && item.text.trim()) {
+        recipient.text = item.text;
+      }
       if (item.components) {
         recipient.components = item.components as CampaignRecipient["components"];
       }
@@ -804,6 +853,7 @@ export async function markRecipientFailed(
 
 export interface CampaignRecipientDetail {
   to: string;
+  text?: string;
   components?: CampaignRecipient["components"];
 }
 
@@ -830,6 +880,7 @@ export async function listCampaignRecipientDetails(
     for (const item of result.Items ?? []) {
       recipients.push({
         to: item.to as string,
+        ...(typeof item.text === "string" && item.text.trim() ? { text: item.text as string } : {}),
         ...(item.components
           ? { components: item.components as CampaignRecipient["components"] }
           : {}),
@@ -943,6 +994,9 @@ export async function listFailedRecipients(
         to: item.to as string,
         recipientKey: item.SK as string,
       };
+      if (typeof item.text === "string" && item.text.trim()) {
+        recipient.text = item.text;
+      }
       if (item.components) {
         recipient.components = item.components as CampaignRecipient["components"];
       }

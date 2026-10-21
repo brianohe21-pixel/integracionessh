@@ -16,7 +16,6 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { OnboardingBanner } from "@/components/onboarding/OnboardingBanner";
-import { SalesSummaryCard } from "@/components/metrics/SalesSummaryCard";
 import { ContextualHint } from "@/components/help-center/ContextualHint";
 import { TourPageSuggestion } from "@/components/help-center/TourList";
 
@@ -92,8 +91,6 @@ export default function BotsPage() {
       <div data-tour="bots-onboarding">
         <OnboardingBanner />
       </div>
-
-      <SalesSummaryCard />
 
       {!isLoading && !error && (bots?.length ?? 0) > 0 ? (
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

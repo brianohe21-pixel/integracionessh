@@ -198,7 +198,10 @@ resource "aws_iam_role_policy" "lambda_permissions" {
           "secretsmanager:UpdateSecret",
           "secretsmanager:DeleteSecret",
         ]
-        Resource = "arn:aws:secretsmanager:*:*:secret:/${var.environment}/platform/openai*"
+        Resource = [
+          "arn:aws:secretsmanager:*:*:secret:/${var.environment}/platform/openai*",
+          "arn:aws:secretsmanager:*:*:secret:/${var.environment}/platform/mailrelay*",
+        ]
       },
       {
         Effect = "Allow"
@@ -715,7 +718,7 @@ locals {
       handler     = "campaigns/index.handler"
       description = "CRUD API and control for WhatsApp bulk campaigns"
       timeout     = 60
-      memory      = 256
+      memory      = 512
       environment = {
         TABLE_NAME             = var.dynamodb_table_name
         CAMPAIGN_SQS_QUEUE_URL = var.campaign_sqs_queue_url

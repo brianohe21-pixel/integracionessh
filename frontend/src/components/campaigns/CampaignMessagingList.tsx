@@ -184,8 +184,15 @@ export function CampaignMessagingList({ campaigns }: CampaignMessagingListProps)
                     </div>
 
                     <p className="mt-0.5 text-sm text-secondary">
-                      {t("campaigns.templateLabel")}:{" "}
-                      <span className="font-medium text-secondary">{campaign.templateName}</span>
+                      {campaign.messageMode === "free_text" || campaign.templateName === "(custom)"
+                        ? t("bulkSend.freeTextLabel")
+                        : t("campaigns.templateLabel")}
+                      :{" "}
+                      <span className="font-medium text-secondary">
+                        {campaign.messageMode === "free_text" || campaign.templateName === "(custom)"
+                          ? t("bulkSend.customMessageLabel")
+                          : campaign.templateName}
+                      </span>
                       {campaign.advisorId ? (
                         <>
                           {" · "}

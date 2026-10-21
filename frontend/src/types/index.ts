@@ -109,7 +109,7 @@ export interface ResellerConfig {
   customDomain?: string;
   customDomainStatus?: CustomDomainStatus;
   allowSubaccountBranding: boolean;
-  limitsOverride?: ResellerLimitsOverride;
+  limitsOverride?: ResellerLimitsOverride | null;
 }
 
 export interface ResellerPlanDefaults {
@@ -1717,6 +1717,8 @@ export interface TemplateButton {
 
 export type OutreachChannel = "whatsapp" | "sms";
 
+export type WhatsAppTemplateQualityScore = "GREEN" | "YELLOW" | "RED" | "UNKNOWN";
+
 export interface WhatsAppTemplate {
   templateId: string;
   tenantId: string;
@@ -1728,6 +1730,7 @@ export interface WhatsAppTemplate {
   status: "APPROVED" | "PENDING" | "REJECTED";
   components: TemplateComponent[];
   metaTemplateId?: string;
+  qualityScore?: WhatsAppTemplateQualityScore;
   syncedAt: string;
   createdAt: string;
 }
@@ -1778,6 +1781,8 @@ export interface Campaign {
   channel?: OutreachChannel;
   templateName: string;
   language: string;
+  messageMode?: "template" | "free_text";
+  text?: string;
   status: CampaignStatus;
   segments: string[];
   scheduledAt?: string;
@@ -1890,10 +1895,12 @@ export interface BulkSendJob {
   channel?: OutreachChannel;
   templateName: string;
   language: string;
+  messageMode?: "template" | "free_text";
   status: BulkSendJobStatus;
   total: number;
   sent: number;
   failed: number;
+  deliveryFailed?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -1905,7 +1912,7 @@ export type SmsHistoryStatus =
   | "delivery_failed"
   | "send_failed";
 
-export type SmsDlrSource = "campaign" | "template" | "api";
+export type SmsDlrSource = "campaign" | "template" | "api" | "bulk";
 
 export interface SmsHistoryItem {
   receiptId: string;

@@ -191,3 +191,38 @@ export async function sendTemplateStatusChangedEmail(
 
   await sendTemplateNotifyEmail({ to: params.to, subject, text, html });
 }
+
+export async function sendTemplateQualityChangedEmail(
+  params: TemplateNotifyParams & { previousScore: string; newScore: string }
+): Promise<void> {
+  const url = templatesUrl();
+  const subject = `Calidad de plantilla actualizada: ${params.templateName}`;
+  const text = [
+    `Hola,`,
+    "",
+    `Meta actualizó la calidad de tu plantilla de WhatsApp "${params.templateName}" en ${params.tenantName}.`,
+    "",
+    `Nombre: ${params.templateName}`,
+    `Idioma: ${params.language}`,
+    `Categoría: ${params.category}`,
+    `Calidad anterior: ${params.previousScore}`,
+    `Calidad nueva: ${params.newScore}`,
+    "",
+    `Ver plantillas: ${url}`,
+  ].join("\n");
+
+  const html = `
+    <p>Hola,</p>
+    <p>Meta actualizó la calidad de tu plantilla de WhatsApp <strong>${escapeHtml(params.templateName)}</strong> en <strong>${escapeHtml(params.tenantName)}</strong>.</p>
+    <table cellpadding="6" cellspacing="0" style="border-collapse:collapse">
+      <tr><td><strong>Nombre</strong></td><td>${escapeHtml(params.templateName)}</td></tr>
+      <tr><td><strong>Idioma</strong></td><td>${escapeHtml(params.language)}</td></tr>
+      <tr><td><strong>Categoría</strong></td><td>${escapeHtml(params.category)}</td></tr>
+      <tr><td><strong>Calidad anterior</strong></td><td>${escapeHtml(params.previousScore)}</td></tr>
+      <tr><td><strong>Calidad nueva</strong></td><td>${escapeHtml(params.newScore)}</td></tr>
+    </table>
+    <p><a href="${escapeHtml(url)}">Ver plantillas</a></p>
+  `.trim();
+
+  await sendTemplateNotifyEmail({ to: params.to, subject, text, html });
+}

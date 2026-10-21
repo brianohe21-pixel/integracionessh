@@ -49,3 +49,5 @@ newrelic_license_key = ""
 # newrelic_layer_version      = 44
 # ops_alert_emails = ["brianohe21@gmail.com", "oncall@example.com"]
 ses_from_email    = "ops@integracionessh.lat"
+
+mailrelay_event_types = "subscribed,unsubscribed"

@@ -133,6 +133,9 @@ export async function syncTemplates(
           ...gsi1Keys(tenantId, template.status, template.name),
           ...template,
           createdAt: previous?.createdAt ?? template.createdAt,
+          ...(template.qualityScore || !previous?.qualityScore
+            ? {}
+            : { qualityScore: previous.qualityScore }),
         },
       },
     });
