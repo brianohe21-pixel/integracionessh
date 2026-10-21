@@ -109,7 +109,7 @@ export interface ResellerConfig {
   customDomain?: string;
   customDomainStatus?: CustomDomainStatus;
   allowSubaccountBranding: boolean;
-  limitsOverride?: ResellerLimitsOverride;
+  limitsOverride?: ResellerLimitsOverride | null;
 }
 
 export interface ResellerPlanDefaults {

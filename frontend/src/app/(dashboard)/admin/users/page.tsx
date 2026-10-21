@@ -195,7 +195,10 @@ export default function AdminUsersPage() {
           type: "success",
           message: t("admin.users.law2300Updated"),
         });
-      } else if (updates.planLimitsOverride !== undefined) {
+      } else if (
+        updates.planLimitsOverride !== undefined ||
+        updates.resellerConfig?.limitsOverride !== undefined
+      ) {
         setTenantFeedback({
           tenantId: tenant.tenantId,
           type: "success",
@@ -217,7 +220,10 @@ export default function AdminUsersPage() {
           type: "error",
           message: t("admin.users.law2300UpdateError"),
         });
-      } else if (updates.planLimitsOverride !== undefined) {
+      } else if (
+        updates.planLimitsOverride !== undefined ||
+        updates.resellerConfig?.limitsOverride !== undefined
+      ) {
         setTenantFeedback({
           tenantId: tenant.tenantId,
           type: "error",

@@ -4087,11 +4087,16 @@ export const en: Messages = {
       proLimitsTitle: "Pro quotas — {name}",
       proLimitsHint:
         "Fields start with the Pro plan defaults. Adjust them according to the deal with this company.",
+      resellerLimitsTitle: "Reseller quotas — {name}",
+      resellerLimitsHint:
+        "Fields start with the Reseller plan defaults. Raise quotas such as recipients per job so they can allocate them to subaccounts.",
+      limitsUnlimitedPlaceholder: "Unlimited",
       proLimitsCatalog: "Catalog: {value}",
       proLimitsReset: "Restore catalog",
       proLimitsSaved: "Quotas updated",
       proLimitsSaveError: "Could not save quotas",
-      proLimitsInvalid: "Quotas must be integers greater than or equal to 0",
+      proLimitsInvalid:
+        "Quotas must be integers greater than or equal to 0. Leave empty for unlimited only when the catalog allows it.",
       periodEnd: "Valid until",
       tenantStatus: "Account status",
       subscription: "Subscription",

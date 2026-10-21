@@ -125,7 +125,7 @@ export function AdminTenantActionsMenu({
       label: t("admin.users.proLimits"),
       icon: Gauge,
       onClick: () => onOpenDrawer("quotas"),
-      disabled: busy || tenant.plan !== "pro",
+      disabled: busy || (tenant.plan !== "pro" && tenant.plan !== "reseller"),
     },
   ];
 

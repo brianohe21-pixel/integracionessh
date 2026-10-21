@@ -4095,11 +4095,15 @@ export const es = {
       proLimitsTitle: "Cuotas Pro — {name}",
       proLimitsHint:
         "Los campos vienen con los valores por defecto del plan Pro. Ajústalos según la negociación con la empresa.",
+      resellerLimitsTitle: "Cuotas Reseller — {name}",
+      resellerLimitsHint:
+        "Los campos vienen con los valores por defecto del plan Reseller. Sube cupos como destinatarios por envío para que pueda repartirlos a sus subcuentas.",
+      limitsUnlimitedPlaceholder: "Ilimitado",
       proLimitsCatalog: "Catálogo: {value}",
       proLimitsReset: "Restaurar catálogo",
       proLimitsSaved: "Cuotas actualizadas",
       proLimitsSaveError: "No se pudieron guardar las cuotas",
-      proLimitsInvalid: "Los cupos deben ser enteros mayores o iguales a 0",
+      proLimitsInvalid: "Los cupos deben ser enteros mayores o iguales a 0. Vacío = ilimitado solo si el catálogo lo permite.",
       periodEnd: "Vigencia",
       tenantStatus: "Estado cuenta",
       subscription: "Suscripción",
