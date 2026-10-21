@@ -136,6 +136,9 @@ describe("process-campaign SMS free text", () => {
       expect.objectContaining({
         text: "Hola desde campaña",
         source: "campaign",
+        campaignId: "camp-1",
+        attemptId: "attempt-1",
+        recipientKey: "CAMPREC#camp-1#0",
         to: "573001234567",
       })
     );

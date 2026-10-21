@@ -105,6 +105,9 @@ export async function sendSmsTextWithDlr(params: {
   text: string;
   environment?: string;
   source?: SmsDlrSource;
+  campaignId?: string;
+  attemptId?: string;
+  recipientKey?: string;
 }): Promise<{ messageId: string; text: string; receiptId: string }> {
   const result = await deliverSms({
     tenantId: params.tenantId,
@@ -115,6 +118,9 @@ export async function sendSmsTextWithDlr(params: {
     ...(params.environment ? { environment: params.environment } : {}),
     requestDlr: true,
     source: params.source ?? "api",
+    ...(params.campaignId ? { campaignId: params.campaignId } : {}),
+    ...(params.attemptId ? { attemptId: params.attemptId } : {}),
+    ...(params.recipientKey ? { recipientKey: params.recipientKey } : {}),
   });
 
   if (!result.receiptId) {

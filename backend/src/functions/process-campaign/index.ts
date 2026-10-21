@@ -259,6 +259,9 @@ async function processRecipient(body: CampaignSQSBody, sqsMessageId: string): Pr
           text: freeText,
           environment: ENVIRONMENT,
           source: "campaign" as const,
+          campaignId,
+          attemptId,
+          ...(recipientKey ? { recipientKey } : {}),
         };
         result = shouldRequestDlr
           ? await sendSmsTextWithDlr(sendParams)
