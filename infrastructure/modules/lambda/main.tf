@@ -718,7 +718,7 @@ locals {
       handler     = "campaigns/index.handler"
       description = "CRUD API and control for WhatsApp bulk campaigns"
       timeout     = 60
-      memory      = 512
+      memory      = 1024
       environment = {
         TABLE_NAME             = var.dynamodb_table_name
         CAMPAIGN_SQS_QUEUE_URL = var.campaign_sqs_queue_url
@@ -727,6 +727,7 @@ locals {
         CAMPAIGNS_FUNCTION_ARN = local.campaigns_function_arn
         SES_FROM_EMAIL         = var.ses_from_email
         WEBSOCKET_API_ENDPOINT = local.websocket_management_endpoint
+        MEDIA_BUCKET           = var.media_bucket_name
       }
     }
     process_campaign = {
