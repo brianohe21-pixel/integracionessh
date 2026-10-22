@@ -24,6 +24,11 @@ import { listBulkSendFailures } from "../../lib/dynamodb/bulk-job.repository.js"
 import { getCampaignMetrics } from "../../lib/dynamodb/campaign-metrics.repository.js";
 import { buildCampaignExportCsv } from "../../lib/reports/campaign-export-csv.js";
 import { sendCampaignResultsEmail } from "../../lib/reports/send-campaign-results-email.js";
+import {
+  buildCampaignExportS3Key,
+  getPresignedDownloadUrl,
+  putObjectBuffer,
+} from "../../lib/s3/client.js";
 import { resolveRequestAuth } from "../../lib/auth/cognito.js";
 import { assertPermission, type Permission } from "../../lib/auth/permissions.js";
 import { writeAuditEvent } from "../../lib/audit/write-audit-event.js";
@@ -438,15 +443,22 @@ export async function handler(
       if (rawPath.endsWith("/export")) {
         const exportResult = await buildCampaignExportCsv(auth.tenantId, campaignId);
         if (!exportResult) return notFound("Campaign not found");
-        return {
-          statusCode: 200,
-          headers: {
-            "Content-Type": "text/csv; charset=utf-8",
-            "Content-Disposition": `attachment; filename="${exportResult.filename}"`,
-            "Access-Control-Allow-Origin": "*",
-          },
-          body: exportResult.content,
-        };
+        const s3Key = buildCampaignExportS3Key(
+          auth.tenantId,
+          campaignId,
+          exportResult.filename
+        );
+        await putObjectBuffer(
+          s3Key,
+          Buffer.from(exportResult.content, "utf8"),
+          "text/csv; charset=utf-8"
+        );
+        const downloadUrl = await getPresignedDownloadUrl(s3Key, {
+          filename: exportResult.filename,
+          contentType: "text/csv; charset=utf-8",
+          expiresIn: 900,
+        });
+        return ok({ downloadUrl, filename: exportResult.filename });
       }
 
       const campaign = await getCampaign(auth.tenantId, campaignId);
