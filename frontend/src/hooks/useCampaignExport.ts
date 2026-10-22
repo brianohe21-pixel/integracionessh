@@ -19,11 +19,20 @@ export function useCampaignExport(campaign: Campaign | undefined) {
     setExportError("");
     setIsExporting(true);
     try {
-      const filename = buildCampaignExportFilename(campaign);
-      await api.download(
-        `/campaigns/${encodeURIComponent(campaign.campaignId)}/export`,
-        filename
+      const fallbackFilename = buildCampaignExportFilename(campaign);
+      const result = await api.get<{ downloadUrl: string; filename: string }>(
+        `/campaigns/${encodeURIComponent(campaign.campaignId)}/export`
       );
+      if (!result.downloadUrl) {
+        throw new Error("Export download URL missing");
+      }
+      const anchor = document.createElement("a");
+      anchor.href = result.downloadUrl;
+      anchor.download = result.filename || fallbackFilename;
+      anchor.rel = "noopener";
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
     } catch (err) {
       setExportError(err instanceof Error ? err.message : "Export failed");
     } finally {

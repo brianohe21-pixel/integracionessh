@@ -103,6 +103,17 @@ export function buildMemberProfilePhotoS3Key(
   return `members/${tenantId}/${safeUserId}/profile.${safeExt}`;
 }
 
+export function buildCampaignExportS3Key(
+  tenantId: string,
+  campaignId: string,
+  filename: string
+): string {
+  const safeTenantId = tenantId.replace(/[^a-zA-Z0-9_-]/g, "");
+  const safeCampaignId = campaignId.replace(/[^a-zA-Z0-9_-]/g, "");
+  const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
+  return `tenants/${safeTenantId}/campaign-exports/${safeCampaignId}/${Date.now()}-${safeName}`;
+}
+
 export async function putObjectBuffer(
   s3Key: string,
   buffer: Uint8Array,
@@ -170,5 +181,27 @@ export async function getPresignedReadUrl(
     s3,
     new GetObjectCommand({ Bucket: BUCKET, Key: s3Key }),
     { expiresIn }
+  );
+}
+
+export async function getPresignedDownloadUrl(
+  s3Key: string,
+  options: {
+    filename: string;
+    contentType?: string;
+    expiresIn?: number;
+  }
+): Promise<string> {
+  if (!BUCKET) throw new Error("MEDIA_BUCKET not configured");
+  const safeFilename = options.filename.replace(/[^\w.-]+/g, "_") || "download.csv";
+  return getSignedUrl(
+    s3,
+    new GetObjectCommand({
+      Bucket: BUCKET,
+      Key: s3Key,
+      ResponseContentDisposition: `attachment; filename="${safeFilename}"`,
+      ResponseContentType: options.contentType ?? "application/octet-stream",
+    }),
+    { expiresIn: options.expiresIn ?? 900 }
   );
 }
