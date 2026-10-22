@@ -23,6 +23,7 @@ import {
 import { listBulkSendFailures } from "../../lib/dynamodb/bulk-job.repository.js";
 import { getCampaignMetrics } from "../../lib/dynamodb/campaign-metrics.repository.js";
 import { buildCampaignExportCsv } from "../../lib/reports/campaign-export-csv.js";
+import { sendCampaignResultsEmail } from "../../lib/reports/send-campaign-results-email.js";
 import {
   buildCampaignExportS3Key,
   getPresignedDownloadUrl,
@@ -51,6 +52,10 @@ import {
 } from "../../lib/campaign/scheduler.js";
 import { dispatchCampaignBatch, startCampaignDispatch, enqueueRecipients } from "../../lib/campaign/dispatch.js";
 import { assertSmsBotReady } from "../../lib/sms/send-outbound.js";
+import {
+  analyzeSmsMessages,
+  resolveSmsFreeTextMessages,
+} from "../../lib/sms/segments.js";
 import {
   canArchiveCampaign,
   canCloneCampaign,
@@ -126,6 +131,7 @@ const CampaignPayloadSchema = z.object({
   requestDlr: z.boolean().optional().default(false),
   advisorId: z.string().uuid().nullable().optional(),
   autoAssignAdvisor: z.boolean().optional().default(false),
+  failOnMultiSegment: z.boolean().optional().default(false),
 });
 
 function refineCampaignMessageMode(
@@ -394,8 +400,10 @@ export async function handler(
     const pathSegments = rawPath.split("/").filter(Boolean);
     const action = pathSegments[pathSegments.length - 1];
     const sendAction = action === "start" || action === "pause" || action === "resume" || action === "retry";
+    const isExportEmail =
+      method === "POST" && Boolean(campaignId) && rawPath.endsWith("/export/email");
     const campaignPermission: Permission =
-      method === "GET"
+      method === "GET" || isExportEmail
         ? "campaigns.read"
         : method === "POST" && campaignId && sendAction
           ? "campaigns.send"
@@ -478,6 +486,7 @@ export async function handler(
         batchConfig,
         advisorId,
         autoAssignAdvisor,
+        failOnMultiSegment,
       } = parsed.data;
       const isFreeText =
         channel === "sms" &&
@@ -534,6 +543,16 @@ export async function handler(
       const status = scheduledAt ? "scheduled" : "draft";
       const sharedText = text?.trim();
 
+      const segmentAnalysis = isFreeText
+        ? analyzeSmsMessages(resolveSmsFreeTextMessages(sharedText, uniqueRecipients))
+        : null;
+
+      if (failOnMultiSegment && segmentAnalysis && segmentAnalysis.overOneSegment > 0) {
+        return unprocessableEntity("One or more SMS messages exceed a single segment", {
+          segmentAnalysis,
+        });
+      }
+
       const campaign = await createCampaign({
         campaignId: newCampaignId,
         tenantId: auth.tenantId,
@@ -568,7 +587,9 @@ export async function handler(
       }
 
       await auditCampaign(auth, "create", newCampaignId, `Created campaign ${name}`);
-      return created(campaign);
+      return created(
+        segmentAnalysis ? { ...campaign, segmentAnalysis } : campaign
+      );
     }
 
     if (method === "PUT" && campaignId) {
@@ -673,6 +694,52 @@ export async function handler(
       const updated = await getCampaign(auth.tenantId, campaignId);
       await auditCampaign(auth, "update", campaignId, `Updated campaign ${campaign.name}`);
       return ok(updated);
+    }
+
+    if (isExportEmail && campaignId) {
+      const body = JSON.parse(event.body ?? "{}");
+      const parsed = z
+        .object({
+          to: z.array(z.string().email().max(320)).max(20).optional(),
+        })
+        .safeParse(body);
+      if (!parsed.success) return badRequest(parsed.error.message);
+
+      const requested = (parsed.data.to ?? [])
+        .map((email) => email.trim().toLowerCase())
+        .filter(Boolean);
+      const fallback = auth.email?.trim().toLowerCase();
+      const uniqueRecipients = [
+        ...new Set(requested.length > 0 ? requested : fallback ? [fallback] : []),
+      ];
+      if (uniqueRecipients.length === 0) {
+        return badRequest("At least one recipient email is required");
+      }
+
+      try {
+        const result = await sendCampaignResultsEmail({
+          tenantId: auth.tenantId,
+          campaignId,
+          to: uniqueRecipients,
+        });
+        await auditCampaign(
+          auth,
+          "export_email",
+          campaignId,
+          `Emailed campaign results CSV to ${result.recipients.join(", ")}`
+        );
+        return ok(result);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "EMAIL_FAILED";
+        if (message === "CAMPAIGN_NOT_FOUND") return notFound("Campaign not found");
+        if (message === "CAMPAIGN_NOT_EXPORTABLE") {
+          return badRequest("Campaign must be started before exporting results");
+        }
+        if (message === "NO_RECIPIENTS") {
+          return badRequest("At least one recipient email is required");
+        }
+        throw error;
+      }
     }
 
     if (method === "POST" && campaignId && action === "start") {

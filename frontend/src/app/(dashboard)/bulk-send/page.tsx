@@ -17,7 +17,11 @@ import {
   SMS_FREE_TEXT_MAX,
   type CsvRow,
 } from "@/lib/csv";
-import { getSmsSegmentInfo } from "@/lib/sms-segments";
+import {
+  analyzeSmsMessages,
+  getSmsSegmentInfo,
+  renderSmsTemplateBody,
+} from "@/lib/sms-segments";
 import { downloadBulkHistoryCsv, downloadBulkJobFailuresCsv } from "@/lib/bulk-send-csv";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -27,6 +31,7 @@ import type { MessageTemplate, OutreachChannel } from "@/types";
 import { isSmsTemplate } from "@/types";
 import { OutreachChannelSelect } from "@/components/outreach/OutreachChannelSelect";
 import { SmsTemplatePreview } from "@/components/templates/SmsTemplatePreview";
+import { SmsSegmentAnalysisAlert } from "@/components/sms/SmsSegmentAnalysisAlert";
 import {
   SendHorizonal,
   Upload,
@@ -109,6 +114,31 @@ export default function BulkSendPage() {
     channel === "sms" ? bots?.filter((bot) => bot.smsEnabled) ?? [] : bots ?? [];
 
   const segmentInfo = useMemo(() => getSmsSegmentInfo(freeText), [freeText]);
+  const smsSegmentAnalysis = useMemo(() => {
+    if (channel !== "sms" || csvRows.length === 0) return null;
+
+    if (isFreeTextMode) {
+      const shared = freeText.trim();
+      const rows = csvRows
+        .map((row) => ({
+          to: row.phone,
+          text: row.message?.trim() || shared,
+        }))
+        .filter((row) => row.text.length > 0);
+      if (rows.length === 0) return null;
+      return analyzeSmsMessages(rows);
+    }
+
+    if (!selectedTemplate || !isSmsTemplate(selectedTemplate)) return null;
+    const body = getTemplateBodyText(selectedTemplate);
+    if (!body.trim()) return null;
+    return analyzeSmsMessages(
+      csvRows.map((row) => ({
+        to: row.phone,
+        text: renderSmsTemplateBody(body, row.variables),
+      }))
+    );
+  }, [channel, csvRows, freeText, isFreeTextMode, selectedTemplate]);
   const freeTextReady =
     freeText.trim().length > 0 ||
     (csvRows.length > 0 && csvRows.every((row) => Boolean(row.message?.trim())));
@@ -390,10 +420,18 @@ export default function BulkSendPage() {
                     placeholder={t("bulkSend.freeTextPlaceholder")}
                     className="w-full px-3 py-2 border border-default rounded-lg text-sm bg-surface-elevated focus:outline-none focus:ring-2 focus:ring-accent resize-y"
                   />
-                  <p className="text-xs text-secondary mt-1.5">
+                  <p
+                    className={
+                      segmentInfo.segments > 1
+                        ? "text-xs text-warning mt-1.5"
+                        : "text-xs text-secondary mt-1.5"
+                    }
+                  >
                     {t("bulkSend.segmentCounter", {
                       chars: segmentInfo.chars,
                       segments: segmentInfo.segments,
+                      encoding: segmentInfo.encoding.toUpperCase(),
+                      maxSingle: segmentInfo.maxSingle,
                       max: SMS_FREE_TEXT_MAX,
                     })}
                   </p>
@@ -535,6 +573,12 @@ export default function BulkSendPage() {
 
               {parseError && (
                 <p className="text-sm text-red-600">{parseError}</p>
+              )}
+
+              {smsSegmentAnalysis && (
+                <div className="mt-3">
+                  <SmsSegmentAnalysisAlert analysis={smsSegmentAnalysis} />
+                </div>
               )}
             </div>
           </div>

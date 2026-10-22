@@ -35,11 +35,16 @@ import {
 import { TemplateMessagePreview } from "@/components/templates/TemplateMessagePreview";
 import { useWhatsAppQualityGuard } from "@/hooks/useWhatsAppQualityGuard";
 import { parseRecipientsCsv, decodeCsvBytes, SMS_FREE_TEXT_MAX } from "@/lib/csv";
-import { getSmsSegmentInfo } from "@/lib/sms-segments";
+import {
+  analyzeSmsMessages,
+  getSmsSegmentInfo,
+  renderSmsTemplateBody,
+} from "@/lib/sms-segments";
 import type { MessageTemplate, OutreachChannel } from "@/types";
 import { isSmsTemplate } from "@/types";
 import { OutreachChannelSelect } from "@/components/outreach/OutreachChannelSelect";
 import { SmsTemplatePreview } from "@/components/templates/SmsTemplatePreview";
+import { SmsSegmentAnalysisAlert } from "@/components/sms/SmsSegmentAnalysisAlert";
 import { listOutreachAgents } from "@/lib/outreach-agents";
 import { DashboardPage } from "@/components/layout/DashboardPage";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -108,10 +113,13 @@ interface CampaignFormWizardProps {
   onSubmit: (input: CampaignFormSubmitInput) => Promise<void>;
 }
 
+function getTemplateBodyText(template: MessageTemplate): string {
+  if (isSmsTemplate(template)) return template.body;
+  return template.components.find((c) => c.type === "BODY")?.text ?? "";
+}
+
 function extractBodyVariables(template: MessageTemplate): string[] {
-  const body = isSmsTemplate(template)
-    ? template.body
-    : template.components.find((c) => c.type === "BODY")?.text;
+  const body = getTemplateBodyText(template);
   if (!body) return [];
   const matches = body.match(/\{\{(\d+)\}\}/g) ?? [];
   return [...new Set(matches)].sort();
@@ -304,6 +312,42 @@ export function CampaignFormWizard({
   const approvedTemplates = templates.filter((template) => template.status === "APPROVED");
   const bodyVars = selectedTemplate ? extractBodyVariables(selectedTemplate) : [];
   const segmentInfo = useMemo(() => getSmsSegmentInfo(config.text), [config.text]);
+  const smsSegmentAnalysis = useMemo(() => {
+    if (config.channel !== "sms" || recipients.length === 0) return null;
+
+    if (isFreeTextMode) {
+      const shared = config.text.trim();
+      const rows = recipients
+        .map((recipient) => ({
+          to: recipient.to,
+          text: recipient.text?.trim() || shared,
+        }))
+        .filter((row) => row.text.length > 0);
+      if (rows.length === 0) return null;
+      return analyzeSmsMessages(rows);
+    }
+
+    if (!selectedTemplate) return null;
+    const body = getTemplateBodyText(selectedTemplate);
+    if (!body.trim()) return null;
+    const rows = recipients.map((recipient) => {
+      const values =
+        recipient.components
+          ?.find((component) => component.type === "body")
+          ?.parameters?.map((parameter) => parameter.text ?? "") ?? [];
+      return {
+        to: recipient.to,
+        text: renderSmsTemplateBody(body, values),
+      };
+    });
+    return analyzeSmsMessages(rows);
+  }, [
+    config.channel,
+    config.text,
+    isFreeTextMode,
+    recipients,
+    selectedTemplate,
+  ]);
   const { assessment, phone, isLoading: qualityLoading } = useWhatsAppQualityGuard(
     config.botId,
     config.channel === "whatsapp"
@@ -840,10 +884,18 @@ export function CampaignFormWizard({
                     />
                     <p className="text-xs text-muted">{t("bulkSend.freeTextOrCsvHint")}</p>
                     {config.text.trim().length > 0 && (
-                      <p className="text-xs text-muted">
+                      <p
+                        className={
+                          segmentInfo.segments > 1
+                            ? "text-xs text-warning"
+                            : "text-xs text-muted"
+                        }
+                      >
                         {t("bulkSend.segmentCounter", {
                           chars: segmentInfo.chars,
                           segments: segmentInfo.segments,
+                          encoding: segmentInfo.encoding.toUpperCase(),
+                          maxSingle: segmentInfo.maxSingle,
                           max: SMS_FREE_TEXT_MAX,
                         })}
                       </p>
@@ -1134,6 +1186,10 @@ export function CampaignFormWizard({
                   )}
                 </div>
 
+                {smsSegmentAnalysis && (
+                  <SmsSegmentAnalysisAlert analysis={smsSegmentAnalysis} />
+                )}
+
                 <input
                   ref={fileRef}
                   type="file"
@@ -1186,6 +1242,9 @@ export function CampaignFormWizard({
 
         {step === "review" && (
           <div className="space-y-4">
+            {smsSegmentAnalysis && (
+              <SmsSegmentAnalysisAlert analysis={smsSegmentAnalysis} />
+            )}
             <FormSection>
               <SectionHeader
                 icon={<Check className="h-4 w-4" />}
