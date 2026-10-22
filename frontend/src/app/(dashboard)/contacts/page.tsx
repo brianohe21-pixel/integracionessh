@@ -18,6 +18,7 @@ import {
   Megaphone,
   Calendar,
   TrendingUp,
+  Loader2,
 } from "lucide-react";
 import {
   useContacts,
@@ -111,6 +112,7 @@ export default function ContactsPage() {
   const [bulkLoading, setBulkLoading] = useState(false);
   const [showCompliance, setShowCompliance] = useState(true);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [cursorStack, setCursorStack] = useState<Array<string | undefined>>([undefined]);
   const [pageIndex, setPageIndex] = useState(0);
 
@@ -199,11 +201,16 @@ export default function ContactsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     setError("");
+    setSuccess("");
     try {
       const bytes = new Uint8Array(await file.arrayBuffer());
       const text = decodeCsvBytes(bytes);
       const lines = text.split(/\r?\n/).filter(Boolean);
-      const rows = lines.slice(1).map((line) => {
+      if (lines.length <= 1) {
+        setError(t("contacts.importEmpty"));
+        return;
+      }
+      const parsed = lines.slice(1).map((line) => {
         const [phoneCol, nameCol, countryCol, companyCol, consentCol] = line
           .split(",")
           .map((c) => c.trim().replace(/^"|"$/g, ""));
@@ -214,12 +221,28 @@ export default function ContactsPage() {
           company: companyCol || undefined,
           marketingConsent: (consentCol as MarketingConsent) || undefined,
         };
-      }).filter((r) => r.phone.length >= 10);
-      await importContacts.mutateAsync(rows);
+      });
+      const rows = parsed.filter((r) => r.phone.length >= 10);
+      const skipped = parsed.length - rows.length;
+      if (rows.length === 0) {
+        setError(t("contacts.importNoRows"));
+        return;
+      }
+      const result = await importContacts.mutateAsync(rows);
+      const summary = t("contacts.importSuccess", {
+        created: result.created,
+        updated: result.updated,
+      });
+      setSuccess(
+        skipped > 0
+          ? `${summary} ${t("contacts.importSkipped", { count: skipped })}`
+          : summary
+      );
     } catch (err) {
       setError((err as Error).message);
+    } finally {
+      if (fileRef.current) fileRef.current.value = "";
     }
-    if (fileRef.current) fileRef.current.value = "";
   }
 
   function togglePhoneSelection(phone: string) {
@@ -363,11 +386,15 @@ export default function ContactsPage() {
               type="button"
               variant="secondary"
               size="sm"
-              disabled={!canWrite}
+              disabled={!canWrite || importContacts.isPending}
               onClick={() => fileRef.current?.click()}
             >
-              <Upload className="h-4 w-4" />
-              {t("contacts.import")}
+              {importContacts.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4" />
+              )}
+              {importContacts.isPending ? t("contacts.importProcessing") : t("contacts.import")}
             </Button>
             <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleImport} />
             <Button
@@ -527,6 +554,23 @@ export default function ContactsPage() {
         filters={dateFilters}
         onChange={(patch) => setDateFilters((current) => ({ ...current, ...patch }))}
       />
+
+      {importContacts.isPending && (
+        <Alert variant="info" className="mb-4" title={t("contacts.importProcessing")}>
+          {t("contacts.importProcessingHint")}
+        </Alert>
+      )}
+
+      {success && (
+        <Alert
+          variant="success"
+          className="mb-4"
+          title={t("contacts.importSuccessTitle")}
+          onDismiss={() => setSuccess("")}
+        >
+          {success}
+        </Alert>
+      )}
 
       {error && (
         <Alert variant="danger" className="mb-4" onDismiss={() => setError("")}>
