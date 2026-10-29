@@ -535,9 +535,20 @@ export async function updateContact(
   return merged;
 }
 
+const IMPORT_ERROR_LIMIT = 100;
+
+export type ContactImportBatchResult = {
+  created: number;
+  updated: number;
+  unchanged: number;
+  rejected: number;
+  errors: Array<{ row: number; phone: string; reason: string }>;
+};
+
 export async function importContactsBatch(
   tenantId: string,
   rows: Array<{
+    row?: number;
     phone: string;
     name?: string;
     email?: string;
@@ -547,66 +558,88 @@ export async function importContactsBatch(
     marketingConsent?: MarketingConsent;
   }>,
   consentSource: ConsentSource = "import"
-): Promise<{ created: number; updated: number }> {
+): Promise<ContactImportBatchResult> {
   let created = 0;
   let updated = 0;
+  let unchanged = 0;
+  let rejected = 0;
+  const errors: ContactImportBatchResult["errors"] = [];
 
-  for (const row of rows) {
+  const pushError = (row: number, phone: string, reason: string) => {
+    rejected++;
+    if (errors.length < IMPORT_ERROR_LIMIT) {
+      errors.push({ row, phone, reason });
+    }
+  };
+
+  for (let index = 0; index < rows.length; index++) {
+    const row = rows[index];
+    if (!row) continue;
+    const line = row.row ?? index + 1;
     const phone = normalizePhone(row.phone);
-    if (phone.length < 10) continue;
+    if (phone.length < 10) {
+      pushError(line, row.phone, "invalid_phone");
+      continue;
+    }
 
-    const existing = await getContactByPhone(tenantId, phone);
-    const now = new Date().toISOString();
+    try {
+      const existing = await getContactByPhone(tenantId, phone);
+      const now = new Date().toISOString();
 
-    if (existing) {
-      const patch: Parameters<typeof updateContact>[2] = {};
-      if (row.name) patch.displayName = row.name;
-      if (row.email) patch.email = row.email;
-      const resolvedCountry = resolveContactCountry(phone, row.country ?? existing.country);
-      if (resolvedCountry && resolvedCountry !== existing.country) {
-        patch.country = resolvedCountry;
+      if (existing) {
+        const patch: Parameters<typeof updateContact>[2] = {};
+        if (row.name) patch.displayName = row.name;
+        if (row.email) patch.email = row.email;
+        const resolvedCountry = resolveContactCountry(phone, row.country ?? existing.country);
+        if (resolvedCountry && resolvedCountry !== existing.country) {
+          patch.country = resolvedCountry;
+        }
+        if (row.company) patch.company = row.company;
+        if (row.tags?.length) {
+          patch.tags = [...new Set([...existing.tags, ...row.tags])];
+        }
+        if (row.marketingConsent) {
+          patch.marketingConsent = row.marketingConsent;
+          patch.consentAt = now;
+          patch.consentSource = consentSource;
+        }
+        if (Object.keys(patch).length) {
+          await updateContact(tenantId, phone, patch);
+          updated++;
+        } else {
+          unchanged++;
+        }
+      } else {
+        await createContact({
+          phoneNumber: phone,
+          tenantId,
+          tags: row.tags ?? [],
+          marketingConsent: row.marketingConsent ?? "unknown",
+          suppressed: false,
+          firstSeenAt: now,
+          lastSeenAt: now,
+          source: "import",
+          createdAt: now,
+          updatedAt: now,
+          ...(row.name ? { displayName: row.name } : {}),
+          ...(row.email ? { email: row.email } : {}),
+          ...(() => {
+            const resolvedCountry = resolveContactCountry(phone, row.country);
+            return resolvedCountry ? { country: resolvedCountry } : {};
+          })(),
+          ...(row.company ? { company: row.company } : {}),
+          ...(row.marketingConsent
+            ? { consentAt: now, consentSource }
+            : {}),
+        });
+        created++;
       }
-      if (row.company) patch.company = row.company;
-      if (row.tags?.length) {
-        patch.tags = [...new Set([...existing.tags, ...row.tags])];
-      }
-      if (row.marketingConsent) {
-        patch.marketingConsent = row.marketingConsent;
-        patch.consentAt = now;
-        patch.consentSource = consentSource;
-      }
-      if (Object.keys(patch).length) {
-        await updateContact(tenantId, phone, patch);
-        updated++;
-      }
-    } else {
-      await createContact({
-        phoneNumber: phone,
-        tenantId,
-        tags: row.tags ?? [],
-        marketingConsent: row.marketingConsent ?? "unknown",
-        suppressed: false,
-        firstSeenAt: now,
-        lastSeenAt: now,
-        source: "import",
-        createdAt: now,
-        updatedAt: now,
-        ...(row.name ? { displayName: row.name } : {}),
-        ...(row.email ? { email: row.email } : {}),
-        ...(() => {
-          const resolvedCountry = resolveContactCountry(phone, row.country);
-          return resolvedCountry ? { country: resolvedCountry } : {};
-        })(),
-        ...(row.company ? { company: row.company } : {}),
-        ...(row.marketingConsent
-          ? { consentAt: now, consentSource }
-          : {}),
-      });
-      created++;
+    } catch {
+      pushError(line, phone, "import_failed");
     }
   }
 
-  return { created, updated };
+  return { created, updated, unchanged, rejected, errors };
 }
 
 export async function deleteContact(tenantId: string, phone: string): Promise<Contact | null> {

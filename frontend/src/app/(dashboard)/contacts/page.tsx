@@ -30,6 +30,10 @@ import {
   downloadContactsExport,
 } from "@/hooks/useContacts";
 import { ContactDetailPanel } from "@/components/contacts/ContactDetailPanel";
+import {
+  ContactsImportStatusModal,
+  type ContactImportReport,
+} from "@/components/contacts/ContactsImportStatusModal";
 import { ContactsDateFilters } from "@/components/contacts/ContactsDateFilters";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -48,7 +52,7 @@ import { useT } from "@/i18n/context";
 import { usePermissions } from "@/hooks/usePermissions";
 import type { Contact, ContactSortField, MarketingConsent } from "@/types";
 import { decodeCsvBytes } from "@/lib/csv";
-import { downloadContactsImportTemplate } from "@/lib/contacts-import-csv";
+import { downloadContactsImportTemplate, parseContactsImportCsv } from "@/lib/contacts-import-csv";
 import {
   contactsDateRange,
   EMPTY_CONTACTS_DATE_FILTERS,
@@ -74,6 +78,8 @@ function csatVariant(score: number): "success" | "warning" | "danger" {
 }
 
 const CONTACTS_PAGE_SIZE = 25;
+const IMPORT_BATCH_SIZE = 200;
+const IMPORT_ERROR_LIMIT = 50;
 
 function contactInitials(name?: string, phone?: string): string {
   if (name?.trim()) {
@@ -112,7 +118,7 @@ export default function ContactsPage() {
   const [bulkLoading, setBulkLoading] = useState(false);
   const [showCompliance, setShowCompliance] = useState(true);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [importReport, setImportReport] = useState<ContactImportReport | null>(null);
   const [cursorStack, setCursorStack] = useState<Array<string | undefined>>([undefined]);
   const [pageIndex, setPageIndex] = useState(0);
 
@@ -201,45 +207,90 @@ export default function ContactsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     setError("");
-    setSuccess("");
+    setImportReport({
+      status: "processing",
+      processed: 0,
+      total: 0,
+      created: 0,
+      updated: 0,
+      unchanged: 0,
+      rejected: 0,
+      errors: [],
+    });
     try {
       const bytes = new Uint8Array(await file.arrayBuffer());
-      const text = decodeCsvBytes(bytes);
-      const lines = text.split(/\r?\n/).filter(Boolean);
-      if (lines.length <= 1) {
-        setError(t("contacts.importEmpty"));
+      const parsed = parseContactsImportCsv(decodeCsvBytes(bytes));
+      if (parsed.total === 0) {
+        setImportReport({
+          status: "error",
+          processed: 0,
+          total: 0,
+          created: 0,
+          updated: 0,
+          unchanged: 0,
+          rejected: 0,
+          errors: [],
+          message: t("contacts.importEmpty"),
+        });
         return;
       }
-      const parsed = lines.slice(1).map((line) => {
-        const [phoneCol, nameCol, countryCol, companyCol, consentCol] = line
-          .split(",")
-          .map((c) => c.trim().replace(/^"|"$/g, ""));
-        return {
-          phone: phoneCol ?? "",
-          name: nameCol || undefined,
-          country: countryCol || undefined,
-          company: companyCol || undefined,
-          marketingConsent: (consentCol as MarketingConsent) || undefined,
-        };
+
+      let created = 0;
+      let updated = 0;
+      let unchanged = 0;
+      let rejected = parsed.rejected.length;
+      let processed = parsed.rejected.length;
+      const errors: ContactImportReport["errors"] = parsed.rejected.slice(0, IMPORT_ERROR_LIMIT);
+      let fatal: string | undefined;
+
+      const snapshot = (status: ContactImportReport["status"]): ContactImportReport => ({
+        status,
+        processed,
+        total: parsed.total,
+        created,
+        updated,
+        unchanged,
+        rejected,
+        errors: [...errors],
+        ...(fatal ? { message: fatal } : {}),
       });
-      const rows = parsed.filter((r) => r.phone.length >= 10);
-      const skipped = parsed.length - rows.length;
-      if (rows.length === 0) {
-        setError(t("contacts.importNoRows"));
-        return;
+
+      setImportReport(snapshot("processing"));
+
+      for (let offset = 0; offset < parsed.rows.length; offset += IMPORT_BATCH_SIZE) {
+        const batch = parsed.rows.slice(offset, offset + IMPORT_BATCH_SIZE);
+        try {
+          const result = await importContacts.mutateAsync(batch);
+          created += result.created;
+          updated += result.updated;
+          unchanged += result.unchanged ?? 0;
+          rejected += result.rejected ?? 0;
+          for (const item of result.errors ?? []) {
+            if (errors.length >= IMPORT_ERROR_LIMIT) break;
+            errors.push(item);
+          }
+        } catch (err) {
+          fatal = (err as Error).message;
+          break;
+        }
+        processed += batch.length;
+        setImportReport(snapshot("processing"));
       }
-      const result = await importContacts.mutateAsync(rows);
-      const summary = t("contacts.importSuccess", {
-        created: result.created,
-        updated: result.updated,
-      });
-      setSuccess(
-        skipped > 0
-          ? `${summary} ${t("contacts.importSkipped", { count: skipped })}`
-          : summary
-      );
+
+      if (!fatal) processed = parsed.total;
+      setImportReport(snapshot("done"));
     } catch (err) {
-      setError((err as Error).message);
+      setImportReport({
+        status: "error",
+        processed: 0,
+        total: 0,
+        created: 0,
+        updated: 0,
+        unchanged: 0,
+        rejected: 0,
+        errors: [],
+        message: (err as Error).message,
+      });
     } finally {
       if (fileRef.current) fileRef.current.value = "";
     }
@@ -386,15 +437,15 @@ export default function ContactsPage() {
               type="button"
               variant="secondary"
               size="sm"
-              disabled={!canWrite || importContacts.isPending}
+              disabled={!canWrite || importReport?.status === "processing"}
               onClick={() => fileRef.current?.click()}
             >
-              {importContacts.isPending ? (
+              {importReport?.status === "processing" ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <Upload className="h-4 w-4" />
               )}
-              {importContacts.isPending ? t("contacts.importProcessing") : t("contacts.import")}
+              {importReport?.status === "processing" ? t("contacts.importProcessing") : t("contacts.import")}
             </Button>
             <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleImport} />
             <Button
@@ -554,23 +605,6 @@ export default function ContactsPage() {
         filters={dateFilters}
         onChange={(patch) => setDateFilters((current) => ({ ...current, ...patch }))}
       />
-
-      {importContacts.isPending && (
-        <Alert variant="info" className="mb-4" title={t("contacts.importProcessing")}>
-          {t("contacts.importProcessingHint")}
-        </Alert>
-      )}
-
-      {success && (
-        <Alert
-          variant="success"
-          className="mb-4"
-          title={t("contacts.importSuccessTitle")}
-          onDismiss={() => setSuccess("")}
-        >
-          {success}
-        </Alert>
-      )}
 
       {error && (
         <Alert variant="danger" className="mb-4" onDismiss={() => setError("")}>
@@ -827,6 +861,10 @@ export default function ContactsPage() {
             </div>
           )}
         </div>
+      )}
+
+      {importReport && (
+        <ContactsImportStatusModal report={importReport} onClose={() => setImportReport(null)} />
       )}
 
       {showCreate && (

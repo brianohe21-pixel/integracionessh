@@ -72,6 +72,7 @@ const ImportSchema = z.object({
   rows: z
     .array(
       z.object({
+        row: z.number().int().min(1).optional(),
         phone: z.string().min(10),
         name: z.string().max(128).optional(),
         email: z.string().email().max(256).optional(),
@@ -232,6 +233,7 @@ export async function handler(
 
       const rows = parsed.data.rows.map((row) => ({
         phone: row.phone,
+        ...(row.row ? { row: row.row } : {}),
         ...(row.name ? { name: row.name } : {}),
         ...(row.email ? { email: row.email } : {}),
         ...(row.country ? { country: row.country } : {}),
@@ -248,7 +250,7 @@ export async function handler(
         action: "import",
         entityType: "contact",
         entityId: auth.tenantId,
-        summary: `Imported ${rows.length} contacts`,
+        summary: `Imported ${result.created} created, ${result.updated} updated, ${result.rejected} rejected`,
       });
       return ok(result);
     }

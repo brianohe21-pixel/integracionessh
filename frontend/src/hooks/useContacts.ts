@@ -170,17 +170,27 @@ export function useUpdateContact() {
   });
 }
 
+export type ContactImportBatchResult = {
+  created: number;
+  updated: number;
+  unchanged?: number;
+  rejected?: number;
+  errors?: Array<{ row: number; phone: string; reason: string }>;
+};
+
 export function useImportContacts() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (rows: Array<{
+      row?: number;
       phone: string;
       name?: string;
+      email?: string;
       country?: string;
       company?: string;
       tags?: string[];
       marketingConsent?: MarketingConsent;
-    }>) => api.post<{ created: number; updated: number }>("/contacts/import", { rows }),
+    }>) => api.post<ContactImportBatchResult>("/contacts/import", { rows }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["contacts"] });
       qc.invalidateQueries({ queryKey: ["metrics", "contacts"] });
